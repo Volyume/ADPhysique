@@ -24,7 +24,7 @@
  *  - over a photo the title sits at the top and the numbers at the bottom,
  *    so the middle of the photo stays clear.
  */
-import { drawShareCard, cardHeight } from '../drawShareCard';
+import { drawShareCard, cardHeight, sessionLiftsThatFit } from '../drawShareCard';
 
 // Every glyph one unit wide: measurement stays proportional to length, which
 // is all the layout maths needs, and the assertions stay font-independent.
@@ -54,10 +54,12 @@ function makeStubSkia() {
 function record(params, width = 1080, bgPhoto = null) {
   const texts = [];
   const rrects = [];
+  const rects = [];
   const canvas = new Proxy({}, {
     get: (_t, key) => {
       if (key === 'drawText') return (str, x, y) => texts.push({ str, x, y });
       if (key === 'drawRRect') return (r) => rrects.push(r.rect || {});
+      if (key === 'drawRect') return (r) => rects.push(r);
       return () => undefined;
     },
   });
@@ -74,8 +76,12 @@ function record(params, width = 1080, bgPhoto = null) {
   // Letter-spaced labels are drawn one character at a time (Skia has no
   // tracking), so a tracked caption is many drawText calls, not one. Assert
   // against the run as well as the individual strings.
-  return { texts, rrects, strings, run: strings.join('') };
+  return { texts, rrects, rects, strings, run: strings.join('') };
 }
+
+// The footer's hairline: the lowest rule on the card. The footer draws its
+// mark and address below it; the body must not.
+const footerTopOf = (rects) => Math.max(...rects.filter((r) => r.h <= 2).map((r) => r.y));
 
 const SESSION = (over = {}) => ({
   cardType: 'session',
@@ -182,14 +188,12 @@ describe('the top lift', () => {
 
   test('nothing is drawn over the footer on any format', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
-      const H = cardHeight(1080, aspect !== 'story', aspect);
-      const footerTop = H - (aspect === 'square' ? 128 : 150)
-        - (aspect === 'story' ? Math.round(H * 0.2) : 0);
       for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
-        const { texts } = record(SESSION({ aspect }), 1080, photo);
-        // The footer draws its own mark below this line; the BODY must not.
+        const { texts, rects } = record(SESSION({ aspect }), 1080, photo);
+        const footerTop = footerTopOf(rects);
         const body = texts.filter((t) => t.str !== 'volyume.app');
         body.forEach((t) => { expect(t.y).toBeLessThanOrEqual(footerTop); });
+        expect(texts.find((t) => t.str === 'volyume.app').y).toBeGreaterThan(footerTop);
       }
     }
   });
@@ -211,9 +215,46 @@ describe('the app\'s style, not a poster template (2026-09-26 restyle)', () => {
     });
   });
 
-  test('the session card draws no rounded shapes at all: rows and hairlines are the structure', () => {
+  // Founder, 2026-09-26: "Need the amber outline we have in other areas of
+  // the app", then, of an outline on the image's own edge, "that outline
+  // isn't the outline of the content it looks too high". The one rounded
+  // shape is that outline, round the content itself; rows and hairlines are
+  // still the structure inside it.
+  test('the one rounded shape is the outline, with every word on the card inside it', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
-      expect(record(SESSION({ aspect })).rrects).toEqual([]);
+      for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
+        const H = cardHeight(1080, aspect !== 'story', aspect);
+        const { rrects, texts } = record(SESSION({ aspect }), 1080, photo);
+        expect(rrects).toHaveLength(1);
+        const [o] = rrects;
+        expect(o.x).toBeGreaterThan(0);
+        expect(o.x + o.w).toBeLessThan(1080);
+        texts.forEach((t) => {
+          expect(t.x).toBeGreaterThanOrEqual(o.x);
+          expect(t.x).toBeLessThanOrEqual(o.x + o.w);
+          expect(t.y).toBeGreaterThan(o.y);
+          expect(t.y).toBeLessThan(o.y + o.h);
+        });
+        // On a story it stays clear of the platform's bars at the top and
+        // bottom, so none of it is hidden.
+        if (aspect === 'story') {
+          expect(o.y).toBeGreaterThanOrEqual(Math.round(H * 0.14));
+          expect(o.y + o.h).toBeLessThanOrEqual(H - Math.round(H * 0.2));
+        }
+      }
+    }
+  });
+
+  test('the outline hugs the content: no empty band inside it, top or bottom', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
+        const { rrects, texts } = record(SESSION({ aspect }), 1080, photo);
+        const [o] = rrects;
+        const first = Math.min(...texts.map((t) => t.y));
+        const last = Math.max(...texts.map((t) => t.y));
+        expect(first - o.y).toBeLessThan(120);
+        expect(o.y + o.h - last).toBeLessThan(120);
+      }
     }
   });
 
@@ -304,11 +345,9 @@ describe('the optional quote and highlights', () => {
 
   test('with every extra on, nothing is drawn over the footer on any format, photo or not', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
-      const H = cardHeight(1080, aspect !== 'story', aspect);
-      const footerTop = H - (aspect === 'square' ? 128 : 150)
-        - (aspect === 'story' ? Math.round(H * 0.2) : 0);
       for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
-        const { texts } = record(SESSION({ aspect, quote: QUOTE, highlights: HIGHLIGHTS }), 1080, photo);
+        const { texts, rects } = record(SESSION({ aspect, quote: QUOTE, highlights: HIGHLIGHTS }), 1080, photo);
+        const footerTop = footerTopOf(rects);
         texts.filter((t) => t.str !== 'volyume.app').forEach((t) => {
           expect(t.y).toBeLessThanOrEqual(footerTop);
         });
@@ -333,5 +372,86 @@ describe('the optional quote and highlights', () => {
     });
     expect(drawn).toContain('Leg day done');
     expect(drawn.some((t) => /\u{1F4AA}/u.test(t))).toBe(false);
+  });
+});
+
+// Founder, 2026-09-26: "Could we do Top Lifts? And they can select more than
+// one if they'd fit? Top Lift if only one selected Top Lifts if they select
+// more than one. They don't have to select any number it's the end users
+// choice."
+describe('top lifts', () => {
+  const LIFTS = [
+    { exerciseName: 'Lat Pulldown', weight: 90, reps: 8 },
+    { exerciseName: 'Seated Cable Row', weight: 75, reps: 10 },
+    { exerciseName: 'Dumbbell Lateral Raise', weight: 14, reps: 15 },
+  ];
+  const MANY = Array.from({ length: 12 }, (_, i) => ({ exerciseName: `Lift ${i + 1}`, weight: 50 + i, reps: 8 }));
+  const PHOTO = { width: () => 1000, height: () => 1500 };
+  const fit = (params, lifts, bgPhoto = null) => sessionLiftsThatFit({
+    Skia: makeStubSkia(), params, typefaces: { regular: {}, bold: {} }, wordmark: null, bgPhoto, lifts,
+  });
+  const drawnOf = (strings) => MANY.filter((l) => strings.includes(l.exerciseName));
+
+  test('one chosen lift is labelled TOP LIFT, more than one TOP LIFTS', () => {
+    const one = record(SESSION({ topSet: null, topLifts: LIFTS.slice(0, 1) }));
+    expect(one.run).toContain('TOP LIFT');
+    expect(one.run).not.toContain('TOP LIFTS');
+    const three = record(SESSION({ aspect: 'story', topSet: null, topLifts: LIFTS }));
+    expect(three.run).toContain('TOP LIFTS');
+    LIFTS.forEach((l) => { expect(three.strings).toContain(l.exerciseName); });
+  });
+
+  test('the lifts are drawn in the order given, one under another', () => {
+    const { texts } = record(SESSION({ aspect: 'story', topSet: null, topLifts: LIFTS }));
+    const ys = LIFTS.map((l) => texts.find((t) => t.str === l.exerciseName).y);
+    expect(ys[1]).toBeGreaterThan(ys[0]);
+    expect(ys[2]).toBeGreaterThan(ys[1]);
+  });
+
+  test('choosing none draws no lift section at all', () => {
+    const { run } = record(SESSION({ topSet: null, topLifts: [] }));
+    expect(run).not.toContain('TOP LIFT');
+  });
+
+  test('only as many as fit are drawn, the first always, and the screen is told the same number', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      for (const photo of [null, PHOTO]) {
+        for (const extras of [{}, { quote: { text: 'Stimulate, don\u2019t annihilate.', by: 'Lee Haney' }, highlights: ['Strongest workout in 4 weeks'] }]) {
+          const params = SESSION({ aspect, topSet: null, topLifts: MANY, ...extras });
+          const n = fit(params, MANY, photo);
+          expect(n).toBeGreaterThanOrEqual(1);
+          expect(n).toBeLessThan(MANY.length);
+          const { strings, texts, rects } = record(params, 1080, photo);
+          expect(drawnOf(strings)).toEqual(MANY.slice(0, n));
+          const footerTop = footerTopOf(rects);
+          texts.filter((t) => t.str !== 'volyume.app').forEach((t) => { expect(t.y).toBeLessThanOrEqual(footerTop); });
+        }
+      }
+    }
+  });
+
+  test('the preview and the saved image, drawn at different widths, show the same lifts', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const params = SESSION({ aspect, topSet: null, topLifts: MANY });
+      expect(drawnOf(record(params, 640).strings)).toEqual(drawnOf(record(params, 1080).strings));
+    }
+  });
+
+  test('a further lift never costs the title a line', () => {
+    const sessionName = 'Back, Biceps and Rear Delts Volume Day';
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const one = record(SESSION({ aspect, sessionName, topSet: null, topLifts: MANY.slice(0, 1) })).strings;
+      // The title takes two lines here, so there is a line to lose.
+      expect(one).not.toContain(sessionName);
+      const more = record(SESSION({ aspect, sessionName, topSet: null, topLifts: MANY })).strings;
+      one.filter((str) => !/^Lift \d+$/.test(str) && !/\u00D7/.test(str)).forEach((str) => { expect(more).toContain(str); });
+    }
+  });
+
+  test('an older caller that sends one set still gets it drawn as the top lift', () => {
+    const { run, strings } = record(SESSION());
+    expect(run).toContain('TOP LIFT');
+    expect(run).not.toContain('TOP LIFTS');
+    expect(strings).toContain('Chest-Supported T-Bar Row');
   });
 });

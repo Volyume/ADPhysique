@@ -495,24 +495,73 @@ function footerHeight(isSquare, s) {
 // Keeps the MARK_WIDTH_RATIO proportionality law and the story safe-bottom
 // law (brandLockup.guard R3/H2) -- only the lockup's own shape changes, from
 // three stacked tiers to one centred line.
-function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
-  const footerH = footerHeight(isSquare, s);
-  // On a 9:16 story the footer used to sit in the last ~10% of the canvas,
-  // which is exactly where platform chrome (reply bar / actions) overlays --
-  // so the logo and URL were the FIRST things a viewer lost (audit H2). D108
-  // widens that clearance to a stated bottom-20% platform-chrome safe zone.
-  const storyLift = isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
-  const fy = H - footerH - storyLift;
-  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
-
-  // ONE lockup, ONE relative size, on every format (share-card audit R3) --
-  // deriving the width as a fraction of canvas width keeps the brand
-  // identical everywhere regardless of the asset's pixel dimensions.
+// ONE lockup, ONE relative size, on every format (share-card audit R3) --
+// deriving the width as a fraction of canvas width keeps the brand identical
+// everywhere regardless of the asset's pixel dimensions.
+function markSize(W, isSquare, s, wordmark) {
   const markW = W * MARK_WIDTH_RATIO;
   const hasMark = !!(wordmark && wordmark.width && wordmark.height && wordmark.width() && wordmark.height());
   const markH = hasMark
     ? Math.round(markW / (wordmark.width() / wordmark.height()))
     : Math.round((isSquare ? 30 : 36) * s);
+  return { markW, markH, hasMark };
+}
+
+// From the footer's hairline to the bottom of the mark.
+function footerBlockHeight(W, isSquare, s, wordmark) {
+  return Math.round(footerHeight(isSquare, s) / 2 + markSize(W, isSquare, s, wordmark).markH / 2);
+}
+
+// ── the outline round the content ───────────────────────────────────────────
+//
+// Founder, 2026-09-26: "there's no border or outline so no obvious ending on
+// a share. Need the amber outline we have in other areas of the app", then,
+// of an outline on the image's own edge: "that outline isn't the outline of
+// the content it looks too high". So the outline goes round the content
+// itself, from the top line to the logo, the way the app outlines a card:
+// rounded, in the app's amber, with the same space outside it as inside it
+// (the app's screen margin and card padding are both 16). The footer follows
+// the content rather than sitting on its own lower down, so the outlined
+// panel holds no empty band.
+const FRAME_RADIUS = 44; // the app's card corner (radius.lg, 16) at card scale
+const FRAME_STROKE = 6;
+
+function frameInset(pad) {
+  return Math.round(pad / 2);
+}
+
+// Where the outlined panel may sit. On a story, between the platform-chrome
+// safe zones: the top 14%, and the bottom 20%, where the reply bar and
+// actions cover the image (audit H2 lifted the footer clear of that zone;
+// D108 set it at 20%), so the outline and the logo are never under them. On
+// square and portrait, inside the image's edge by the same margin as the
+// sides.
+function frameBand(W, H, isSquare, pad) {
+  const edge = frameInset(pad);
+  const storyLift = isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
+  const top = isSquare ? edge : Math.max(edge, Math.round(H * STORY_TOP_SAFE_RATIO));
+  return { top, bottom: H - Math.max(edge, storyLift) };
+}
+
+// The whole band as the panel, for the cards that fill it (before/after and
+// the floor card).
+function bandFrame(W, H, isSquare, pad) {
+  const band = frameBand(W, H, isSquare, pad);
+  const x = pad - frameInset(pad);
+  return { x, y: band.top, w: W - x * 2, h: band.bottom - band.top };
+}
+
+function drawOutline(canvas, Skia, frame, s) {
+  const lw = Math.max(2, Math.round(FRAME_STROKE * s));
+  strokeRRect(canvas, Skia, frame.x, frame.y, frame.w, frame.h, Math.round(FRAME_RADIUS * s), PALETTE.accent, lw);
+}
+
+// `fy` is the footer's hairline: the card's layout places it (composeCard,
+// or the band's foot on the cards that fill the band).
+function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark, fy) {
+  const footerH = footerHeight(isSquare, s);
+  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
+  const { markW, markH, hasMark } = markSize(W, isSquare, s, wordmark);
   // No fake wordmark. This used to draw the plain system-font word "Volyume"
   // when the asset was missing, which shipped an off-brand card that LOOKED
   // deliberate -- the reported "some don't have the logo". The screen refuses
@@ -832,37 +881,34 @@ function bodyFormat(p) {
   return p.isSquare ? 'square' : 'story'; // legacy callers with no aspect param
 }
 
-// The first content y. Story clamps it below the top-14% chrome safe zone;
-// square/portrait keep the card's own base offset.
-function headerTopY(H, fmt, base) {
-  return fmt === 'story' ? Math.max(base, Math.round(H * STORY_TOP_SAFE_RATIO)) : base;
-}
-
 /**
- * Compose a card from its head (the label row and the title) and its body
- * (the numbers), then draw the ground under them.
+ * Lay a card out from its head (the label row and the title) and its body
+ * (the numbers), with the footer under them and the outline round all three.
  *
- * Without a photo the two sit together as one block, centred between the
- * safe zones on every format, so no format ends on an empty band above the
- * footer (the dead zone the share-card audit measured on the square). With a
- * photo the head stays at the top and the body sits at the bottom, so the
- * middle of the photo stays clear for what the athlete framed there; the
- * scrim is then drawn from where the text actually is. The hero numeral is
- * the one flexible element: when the content is tall it steps down until
- * everything fits above the footer, and only then does the title drop to one
- * line. The top-lift row is never dropped to make room: the athlete chose it.
+ * Without a photo the head, body and footer sit together as one outlined
+ * panel, centred and inside the band (frameBand), so no format ends on an empty band
+ * above the footer (the dead zone the share-card audit measured on the
+ * square). With a photo the head stays at the top of the panel and the body
+ * and footer at the bottom, so the middle of the photo stays clear for what
+ * the athlete framed there; the scrim is then drawn from where the text
+ * actually is. The hero numeral is the one flexible element: when the
+ * content is tall it steps down until everything fits, and only then does
+ * the title drop to one line. `fitsFull` says whether it fitted without the
+ * title losing a line, which is what a further top lift must keep.
  */
-function composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody) {
+function layoutCard(W, H, s, p, drawHead, drawBody, wordmark) {
   const fmt = bodyFormat(p);
   const photo = hasPhoto();
   const pad = Math.round(W * 0.074);
-  const footerH = footerHeight(p.isSquare, s);
-  const storyLift = fmt === 'story' ? Math.round(H * STORY_SAFE_BOTTOM_RATIO) : 0;
-  const topY = headerTopY(H, fmt, pad + Math.round(28 * s));
-  const bottomY = H - footerH - storyLift - Math.round(28 * s);
-  const available = bottomY - topY;
+  const inset = frameInset(pad);
+  const band = frameBand(W, H, p.isSquare, pad);
   const z = cardSizes(fmt, photo);
   const gap = Math.round(z.headGap * s);
+  // The footer's hairline sits one section gap under the body, like the
+  // body's own hairlines.
+  const footGap = Math.round(z.gap * s);
+  const footBlock = footerBlockHeight(W, p.isSquare, s, wordmark);
+  const available = band.bottom - band.top - inset * 2 - footGap - footBlock;
   // Over a photo, keep at least this much of it clear between head and body.
   const clear = photo ? Math.round(H * (fmt === 'story' ? 0.16 : 0.1)) : gap;
   const noop = makeNoopCanvas();
@@ -874,22 +920,48 @@ function composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody) {
     scale = Math.round((scale - 0.06) * 100) / 100;
     bodyH = drawBody(noop, 0, scale);
   }
-  if (headH + clear + bodyH > available) {
+  const fitsFull = headH + clear + bodyH <= available;
+  if (!fitsFull) {
     compact = true;
     headH = drawHead(noop, 0, compact);
   }
-  let headY;
+  let top;
   let bodyY;
+  let footerY;
   if (photo) {
-    headY = topY;
-    bodyY = Math.max(headY + headH + gap, bottomY - bodyH);
+    top = band.top;
+    footerY = band.bottom - inset - footBlock;
+    bodyY = Math.max(top + inset + headH + gap, footerY - footGap - bodyH);
   } else {
-    headY = topY + Math.max(0, Math.round((available - (headH + gap + bodyH)) / 2));
-    bodyY = headY + headH + gap;
+    // Centred on the image itself, so the saved image looks balanced, and
+    // kept inside the band.
+    const panelH = inset * 2 + headH + gap + bodyH + footGap + footBlock;
+    top = Math.max(band.top, Math.min(Math.round((H - panelH) / 2), band.bottom - panelH));
+    bodyY = top + inset + headH + gap;
+    footerY = bodyY + bodyH + footGap;
   }
-  drawBackground(canvas, Skia, W, H, { headBottom: headY + headH, bodyTop: bodyY });
-  drawHead(canvas, headY, compact);
-  drawBody(canvas, bodyY, scale);
+  const x = pad - inset;
+  return {
+    pad,
+    headY: top + inset,
+    headH,
+    bodyY,
+    scale,
+    compact,
+    fitsFull,
+    footerY,
+    frame: { x, y: top, w: W - x * 2, h: footerY + footBlock + inset - top },
+  };
+}
+
+// Draws the laid-out card and returns where its outline goes.
+function composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody, font, wordmark) {
+  const L = layoutCard(W, H, s, p, drawHead, drawBody, wordmark);
+  drawBackground(canvas, Skia, W, H, { headBottom: L.headY + L.headH, bodyTop: L.bodyY });
+  drawHead(canvas, L.headY, L.compact);
+  drawBody(canvas, L.bodyY, L.scale);
+  drawFooter(canvas, Skia, W, H, L.pad, p.isSquare, s, font, wordmark, L.footerY);
+  return L.frame;
 }
 
 // ── card layouts ─────────────────────────────────────────────────────────────
@@ -921,7 +993,8 @@ function setString(weight, reps, unit) {
   return reps ? `${w} × ${reps}` : w;
 }
 
-function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
+// The session card's parts: its head, and its body for any list of lifts.
+function sessionParts(Skia, W, p, s, font) {
   const pad = Math.round(W * 0.074);
   const cw = W - pad * 2;
   const z = cardSizes(bodyFormat(p), hasPhoto());
@@ -937,31 +1010,68 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   if (p.showVolume && (p.tonnage || 0) > 0 && p.prCount > 0) stats.push({ label: 'Total lifted', value: Math.round(p.tonnage).toLocaleString('en-GB'), unit });
   else if (p.exerciseCount > 0) stats.push({ label: 'Exercises', value: String(p.exerciseCount) });
 
-  // The lift the athlete chose on the share screen (null when they chose
-  // none). There is no exercise-name line any more: founder order
-  // 2026-09-26, "I don't want exercise names list to be an option or show at
-  // all as it does not fit in the share and looks stupid."
-  const lift = p.topSet && p.topSet.weight > 0 ? p.topSet : null;
+  // The lifts the athlete chose on the share screen, in the screen's order
+  // (none when they chose none). There is no exercise-name line any more:
+  // founder order 2026-09-26, "I don't want exercise names list to be an
+  // option or show at all as it does not fit in the share and looks stupid."
+  const chosen = sessionLifts(p);
 
   const drawHead = (cv, y, compact) => {
     const by = drawOverlineRow(cv, Skia, pad, cw, y, p.showPlanName ? p.planName : '', p.showDate ? p.date : '', z.overline, s, font);
     const ty = drawTitle(cv, Skia, pad, cw, by, p.sessionName || 'Workout complete', z.title, compact ? 1 : 2, s, font);
     return drawQuote(cv, Skia, pad, cw, ty, p.quote, z.quote, z.overline, s, font);
   };
-  const drawBody = (cv, y, scale) => {
+  // One label over the lifts: "TOP LIFT" for one, "TOP LIFTS" for more
+  // (founder, 2026-09-26: "Top Lift if only one selected Top Lifts if they
+  // select more than one").
+  const bodyWith = (lifts) => (cv, y, scale) => {
     const gap = Math.round(z.gap * s);
     let by = drawHero(cv, Skia, pad, cw, y, [{ t: hero.value, ratio: 1 }, { t: hero.unit, ratio: 0.3 }], hero.label, Math.round(z.hero * scale), z.heroCap, p.isSquare, s, font);
     if (p.highlights && p.highlights.length) by = drawHighlights(cv, Skia, pad, cw, by + Math.round(gap * 0.5), p.highlights.map((l) => highlightUnderHero(l, hero.label)), z.heroCap, s, font);
     by = drawRule(cv, Skia, pad, cw, by + gap, s) + gap;
     by = drawStatRow(cv, Skia, pad, cw, by, stats, z.statVal, z.statCap, s, font);
-    if (lift) {
-      by = drawRule(cv, Skia, pad, cw, by + gap, s) + gap;
-      by = drawLiftRow(cv, Skia, pad, cw, by, 'TOP LIFT', '', lift.exerciseName || 'Top lift', setString(lift.weight, lift.reps, unit), z.overline, z.liftName, z.liftVal, s, font);
-    }
+    if (lifts.length) by = drawRule(cv, Skia, pad, cw, by + gap, s) + gap;
+    lifts.forEach((lift, i) => {
+      const label = i > 0 ? '' : lifts.length > 1 ? 'TOP LIFTS' : 'TOP LIFT';
+      by = drawLiftRow(cv, Skia, pad, cw, i > 0 ? by + Math.round(gap * 0.6) : by, label, '', lift.exerciseName || 'Lift', setString(lift.weight, lift.reps, unit), z.overline, z.liftName, z.liftVal, s, font);
+    });
     return by;
   };
-  composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody);
-  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+  return { chosen, drawHead, bodyWith };
+}
+
+// `liftCount`: how many of the chosen lifts to draw (sessionLiftCount).
+function drawSession(canvas, Skia, W, H, p, s, font, wordmark, liftCount) {
+  const { chosen, drawHead, bodyWith } = sessionParts(Skia, W, p, s, font);
+  return composeCard(canvas, Skia, W, H, s, p, drawHead, bodyWith(chosen.slice(0, liftCount)), font, wordmark);
+}
+
+// How many of the chosen lifts the card has room for, decided at the 1080
+// design width, so the preview and the saved image, drawn at different
+// widths, always show the same lifts.
+function sessionLiftCount(Skia, typefaces, wordmark, p) {
+  const W = 1080;
+  const H = cardHeight(W, p.isSquare, p.aspect);
+  const font = makeFonts(Skia, typefaces, 1);
+  const { chosen, drawHead, bodyWith } = sessionParts(Skia, W, p, 1, font);
+  return liftsThatFit(W, H, 1, p, drawHead, bodyWith, chosen, wordmark);
+}
+
+// The session card's lifts: the list the share screen hands over, or, from a
+// caller that still sends one set, that set alone.
+function sessionLifts(p) {
+  const list = Array.isArray(p.topLifts) ? p.topLifts : p.topSet ? [p.topSet] : [];
+  return list.filter((l) => l && Number(l.weight) > 0);
+}
+
+// How many of the chosen lifts, in order, the card has room for (founder,
+// 2026-09-26: "they can select more than one if they'd fit"). The first is
+// always drawn, as the single top lift always was; each further one only
+// while the whole card still fits without the title losing a line.
+function liftsThatFit(W, H, s, p, drawHead, bodyWith, lifts, wordmark) {
+  let n = Math.min(1, lifts.length);
+  while (n < lifts.length && layoutCard(W, H, s, p, drawHead, bodyWith(lifts.slice(0, n + 1)), wordmark).fitsFull) n += 1;
+  return n;
 }
 
 function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
@@ -984,8 +1094,7 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
   // The record is the whole card's reason to exist, so its numeral starts a
   // step above the other heroes.
   const drawBody = (cv, y, scale) => drawHero(cv, Skia, pad, cw, y, runs, caption, Math.round(z.hero * 1.12 * scale), z.heroCap, p.isSquare, s, font);
-  composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody);
-  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+  return composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody, font, wordmark);
 }
 
 function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
@@ -1018,8 +1127,7 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
     }
     return by;
   };
-  composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody);
-  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+  return composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody, font, wordmark);
 }
 
 // Weekly Precision Coaching recap. Leads with the user's real goal achievement
@@ -1069,8 +1177,7 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
     }
     return by;
   };
-  composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody);
-  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+  return composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody, font, wordmark);
 }
 
 // ── before/after progress card (progress-photos §3.8; S1/S2) ──────────────────
@@ -1162,21 +1269,20 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   const r = Math.round(16 * s);
   const gap = Math.round(14 * s);
 
-  let y = pad + Math.round(48 * s);
+  // This card fills the outlined band (frameBand): on a story, clear of the
+  // platform-chrome safe zones. The cells end above the footer, whose place
+  // they take from the same band: the footer once lifted clear of the story
+  // chrome while the cells did not, so the wordmark and URL painted straight
+  // over the lower photo and its caption (share-card audit R10/M7).
+  const frame = bandFrame(W, H, p.isSquare, pad);
+  const inset = frameInset(pad);
+  let y = frame.y + inset;
   y = drawElapsedLabel(canvas, Skia, W, y, p.elapsedLabel, s, font);
   y += Math.round(8 * s);
 
-  const footerH = footerHeight(p.isSquare, s);
-  // On the 'story' aspect the footer itself lifts clear of the platform-chrome
-  // safe zone (STORY_SAFE_BOTTOM_RATIO, drawFooter above); missing that lift
-  // here meant the bottom cell's photo (and its date/weight caption) rendered
-  // UNDER the lifted footer, so the wordmark and URL painted straight over the
-  // photo and its caption instead of below it -- found by actually rendering
-  // this card (share-card audit R10/M7, the first time this card type had any
-  // rendered-output coverage at all).
-  const storyLift = p.isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
+  const footerY = frame.y + frame.h - inset - footerBlockHeight(W, p.isSquare, s, wordmark);
   const cellsTop = y;
-  const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
+  const cellsBottom = footerY - Math.round(24 * s);
   const cellsH = Math.max(1, cellsBottom - cellsTop);
 
   if (p.aspect === 'story') {
@@ -1200,7 +1306,8 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
     drawCellCaption(canvas, Skia, x2, cellsTop, cellW, cellH, r, after, s, font);
   }
 
-  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark, footerY);
+  return frame;
 }
 
 
@@ -1259,31 +1366,46 @@ export function drawShareCard(canvas, {
   // moment's own headline rather than the caller getting null and the whole
   // screen dead-ending on "Couldn't build the preview". The failure is
   // reported through onDrawError so the screen still LOGS the cause.
+  let frame = null;
   try {
-    if (params.cardType === 'pr') drawPR(canvas, Skia, W, H, p, s, font, wordmark);
-    else if (params.cardType === 'milestone') drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
-    else if (params.cardType === 'weekly') drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
-    else if (params.cardType === 'beforeAfter') drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
-    else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
+    if (params.cardType === 'pr') frame = drawPR(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'milestone') frame = drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'weekly') frame = drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'beforeAfter') frame = drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
+    else frame = drawSession(canvas, Skia, W, H, p, s, font, wordmark, sessionLiftCount(Skia, typefaces, wordmark, p));
   } catch (e) {
+    frame = null;
     drawMinimalFallbackCard(canvas, Skia, W, H, p, s, font, wordmark);
     if (typeof params.onDrawError === 'function') {
       try { params.onDrawError(e); } catch (_) { /* reporting is best-effort */ }
     }
   }
-  drawOutline(canvas, Skia, W, H, s);
+  // Drawn last, so it sits over a photo too, on every card type and the
+  // floor card alike.
+  try {
+    drawOutline(canvas, Skia, frame || bandFrame(W, H, isSquare, Math.round(W * 0.074)), s);
+  } catch (_e) { /* the outline is best-effort; the card is already drawn */ }
   return { width: W, height: H };
 }
 
-// The amber outline (founder, 2026-09-26: "there's no border or outline so no
-// obvious ending on a share. Need the amber outline we have in other areas of
-// the app"): a frame on the image's own edge in the app's amber, drawn last so
-// it sits over a photo too, on every card type and the fallback alike.
-// Square-cornered, because the saved image is a rectangle: a rounded frame
-// would leave the photo showing outside it at the corners.
-function drawOutline(canvas, Skia, W, H, s) {
-  const lw = Math.max(2, Math.round(6 * s));
-  canvas.drawRect(Skia.XYWHRect(lw / 2, lw / 2, W - lw, H - lw), paintFor(Skia, PALETTE.accent, STROKE, lw));
+/**
+ * How many of `lifts`, in order, the session card has room for, with
+ * everything else in `params` (format, photo, quote, highlights) as it will
+ * be drawn. The share screen offers only lifts that fit; the card draws
+ * exactly this many.
+ */
+export function sessionLiftsThatFit({
+  Skia, params, typefaces, wordmark = null, bgPhoto = null, lifts = [],
+}) {
+  const saved = [BG, BG_CROP, OMIT_PHOTO];
+  BG = bgPhoto || null;
+  try {
+    const aspect = params.aspect || null;
+    const isSquare = aspect ? aspect !== 'story' : !!params.isSquare;
+    return sessionLiftCount(Skia, typefaces, wordmark, { ...params, isSquare, aspect, topLifts: lifts, topSet: null });
+  } finally {
+    [BG, BG_CROP, OMIT_PHOTO] = saved;
+  }
 }
 
 /**
@@ -1312,10 +1434,13 @@ function drawMinimalFallbackCard(canvas, Skia, W, H, p, s, font, wordmark) {
       const heroFont = fitFont(null, hero, W - pad * 2, 96, (px) => font(px), 28);
       text(canvas, Skia, hero, pad, Math.round(H * 0.42) + Math.round(110 * s), heroFont, PALETTE.accent, 'left');
     }
-    // The footer takes the card's own geometry. This call used to pass its
-    // arguments in the wrong order, which threw inside this try and left the
-    // floor card with no mark at all.
-    drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+    // The footer takes the card's own geometry, at the foot of the band the
+    // outline goes round (drawShareCard draws it). This call used to pass
+    // its arguments in the wrong order, which threw inside this try and left
+    // the floor card with no mark at all.
+    const bandPad = Math.round(W * 0.074);
+    const frame = bandFrame(W, H, p.isSquare, bandPad);
+    drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark, frame.y + frame.h - frameInset(bandPad) - footerBlockHeight(W, p.isSquare, s, wordmark));
   } catch (_e) { /* even the floor is best-effort; a dark card is acceptable */ }
 }
 

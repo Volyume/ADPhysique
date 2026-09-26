@@ -10,6 +10,7 @@
 
 const React = require('react');
 const TestRenderer = require('react-test-renderer');
+const SectionLabel = require('../../components/SectionLabel').default;
 
 // ── Native-module mocks ───────────────────────────────────────────────────────
 // These are the modules ShareCardScreen require()s behind try/catch. We give
@@ -85,6 +86,9 @@ jest.mock('@shopify/react-native-skia', () => {
 jest.mock('../../lib/shareCard/drawShareCard', () => ({
   drawShareCard: jest.fn(),
   cardHeight: () => 1080,
+  // How many of the lifts fit on the image: all of them, unless a test says
+  // otherwise.
+  sessionLiftsThatFit: jest.fn(({ lifts }) => lifts.length),
 }));
 
 jest.mock('../../lib/shareCard/greatWeek', () => ({
@@ -219,11 +223,14 @@ describe('ShareCardScreen — PR selector (founder 2026-07-01)', () => {
   });
 });
 
-// Founder order 2026-09-26: "I want the user to be able to select their Top
-// Lift rather than it just doing one" and "I don't want exercise names list
-// to be an option or show at all". The card is mocked here, so what the
-// screen HANDS the renderer is what is checked.
-describe('ShareCardScreen — top lift (founder order 2026-09-26)', () => {
+// Founder orders 2026-09-26: "I want the user to be able to select their Top
+// Lift rather than it just doing one", "I don't want exercise names list to
+// be an option or show at all", then "Could we do Top Lifts? And they can
+// select more than one if they'd fit? Top Lift if only one selected Top
+// Lifts if they select more than one. They don't have to select any number
+// it's the end users choice." The card is mocked here, so what the screen
+// HANDS the renderer is what is checked.
+describe('ShareCardScreen — top lifts (founder orders 2026-09-26)', () => {
   const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
   const LIFTS = {
     sessionData: {
@@ -243,29 +250,82 @@ describe('ShareCardScreen — top lift (founder order 2026-09-26)', () => {
     const calls = mockDraw.mock.calls.filter((c) => c[1] && c[1].params && c[1].params.cardType === 'session');
     return calls.length ? calls[calls.length - 1][1].params : null;
   };
+  const liftNames = () => (lastParams() && Array.isArray(lastParams().topLifts)
+    ? lastParams().topLifts.map((l) => l.exerciseName).join('|') : null);
+  const heading = (tree, str) => tree.root.findAll((n) => n.type === SectionLabel && n.props.children === str).length;
+  const press = async (node) => { await TestRenderer.act(async () => { node.props.onPress(); }); };
 
   test('it opens on the lift that set a new best, and the row says which', async () => {
     const tree = await mount(LIFTS);
     expect(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change').length).toBeGreaterThan(0);
-    await waitFor(() => lastParams() && lastParams().topSet && lastParams().topSet.exerciseName === 'Bench Press');
+    expect(heading(tree, 'Top lift')).toBe(1);
+    await waitFor(() => liftNames() === 'Bench Press');
   });
 
-  test('the list offers every lift and none; choosing one or none reaches the card', async () => {
+  test('any number can be ticked, in the list order, and the heading follows: Top lift, Top lifts, none', async () => {
     const tree = await mount(LIFTS);
-    const [row] = findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change');
-    await TestRenderer.act(async () => { row.props.onPress(); });
+    await press(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change')[0]);
     expect(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best today').length).toBeGreaterThan(0);
     expect(findByA11yLabel(tree, 'Leg Press, 120 kg × 5').length).toBeGreaterThan(0);
     expect(findByA11yLabel(tree, 'Cable Fly, 30 kg × 12').length).toBeGreaterThan(0);
-    const [fly] = findByA11yLabel(tree, 'Cable Fly, 30 kg × 12');
-    await TestRenderer.act(async () => { fly.props.onPress(); });
-    await waitFor(() => lastParams() && lastParams().topSet && lastParams().topSet.exerciseName === 'Cable Fly');
-    const [again] = findByA11yLabel(tree, 'Top lift: Cable Fly, 30 kg × 12. Change');
-    await TestRenderer.act(async () => { again.props.onPress(); });
-    const [none] = findByA11yLabel(tree, "Don't show a top lift");
-    await TestRenderer.act(async () => { none.props.onPress(); });
-    await waitFor(() => lastParams() && lastParams().topSet === null);
+    // Ticking adds to the choice rather than replacing it.
+    await press(findByA11yLabel(tree, 'Cable Fly, 30 kg × 12')[0]);
+    await waitFor(() => liftNames() === 'Bench Press|Cable Fly');
+    await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
+    await waitFor(() => liftNames() === 'Bench Press|Leg Press|Cable Fly');
+    await press(findByA11yLabel(tree, 'Done')[0]);
+    expect(findByA11yLabel(tree, 'Top lifts: Bench Press, 100 kg × 5; Leg Press, 120 kg × 5; Cable Fly, 30 kg × 12. Change').length).toBeGreaterThan(0);
+    expect(heading(tree, 'Top lifts')).toBe(1);
+    // Unticking takes one off; one left is "Top lift" again.
+    await press(findByA11yLabel(tree, 'Top lifts: Bench Press, 100 kg × 5; Leg Press, 120 kg × 5; Cable Fly, 30 kg × 12. Change')[0]);
+    await press(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best today')[0]);
+    await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
+    await waitFor(() => liftNames() === 'Cable Fly');
+    await press(findByA11yLabel(tree, 'Done')[0]);
+    expect(findByA11yLabel(tree, 'Top lift: Cable Fly, 30 kg × 12. Change').length).toBeGreaterThan(0);
+    expect(heading(tree, 'Top lift')).toBe(1);
+    // None at all is a choice too.
+    await press(findByA11yLabel(tree, 'Top lift: Cable Fly, 30 kg × 12. Change')[0]);
+    await press(findByA11yLabel(tree, "Don't show any lifts")[0]);
+    await waitFor(() => liftNames() === '');
     expect(findByA11yLabel(tree, 'Top lift: not shown. Choose a lift').length).toBeGreaterThan(0);
+  });
+
+  test('a lift with no room left on the image is shown but cannot be ticked', async () => {
+    const { sessionLiftsThatFit: mockFit } = require('../../lib/shareCard/drawShareCard');
+    mockFit.mockImplementation(({ lifts }) => Math.min(lifts.length, 2));
+    try {
+      const tree = await mount(LIFTS);
+      await press(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change')[0]);
+      await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
+      await waitFor(() => liftNames() === 'Bench Press|Leg Press');
+      await waitFor(() => findByA11yLabel(tree, 'Cable Fly, 30 kg × 12, No room on this image').length > 0);
+      const full = findByA11yLabel(tree, 'Cable Fly, 30 kg × 12, No room on this image');
+      expect(full.some((n) => n.props.disabled === true || (n.props.accessibilityState && n.props.accessibilityState.disabled === true))).toBe(true);
+      // Taking one off makes room again.
+      await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
+      await waitFor(() => findByA11yLabel(tree, 'Cable Fly, 30 kg × 12').length > 0);
+    } finally {
+      mockFit.mockImplementation(({ lifts }) => lifts.length);
+    }
+  });
+
+  test('when fewer fit than were chosen, the screen says so', async () => {
+    const { sessionLiftsThatFit: mockFit } = require('../../lib/shareCard/drawShareCard');
+    const tree = await mount(LIFTS);
+    await press(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change')[0]);
+    await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
+    await press(findByA11yLabel(tree, 'Cable Fly, 30 kg × 12')[0]);
+    await press(findByA11yLabel(tree, 'Done')[0]);
+    mockFit.mockImplementation(({ lifts }) => Math.min(lifts.length, 2));
+    try {
+      // A change that re-lays the image out (here, the format) re-checks.
+      const [square] = findByA11yLabel(tree, 'Square');
+      await press(square);
+      await waitFor(() => tree.root.findAll((n) => n.props && n.props.children === 'Only 2 of your 3 lifts fit on this image.').length > 0);
+    } finally {
+      mockFit.mockImplementation(({ lifts }) => lifts.length);
+    }
   });
 
   test('no exercise names reach the card, and there is no toggle for them', async () => {

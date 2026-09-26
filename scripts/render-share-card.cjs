@@ -68,6 +68,17 @@ async function main() {
     topSet: { weight: 42.5, reps: 10, exerciseName: 'Seated Dumbbell Shoulder Press' },
   };
   const sessionNoLift = { ...session, topSet: null, showPlanName: false };
+  // Three lifts chosen (founder, 2026-09-26: "they can select more than one
+  // if they'd fit"): the card shows as many as fit, under "TOP LIFTS".
+  const sessionLifts = {
+    ...session,
+    topSet: null,
+    topLifts: [
+      { exerciseName: 'Lat Pulldown', weight: 90, reps: 8 },
+      { exerciseName: 'Seated Cable Row', weight: 75, reps: 10 },
+      { exerciseName: 'Dumbbell Lateral Raise', weight: 14, reps: 15 },
+    ],
+  };
   // The optional extras (founder, 2026-09-26): a quote with its source, the
   // athlete's own caption, and highlight lines the app already showed them.
   const sessionExtras = {
@@ -124,7 +135,7 @@ async function main() {
   // Campaign 30 (ELITE-SHARE-SPEC pillar 3/#4): every non-beforeAfter card
   // type now renders all THREE aspect presets, not just square/story --
   // portrait 4:5 was previously only wired for beforeAfter.
-  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['sessionExtras', sessionExtras], ['sessionCaption', sessionCaption], ['sessionLongQuote', sessionLongQuote], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
+  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['sessionLifts', sessionLifts], ['sessionExtras', sessionExtras], ['sessionCaption', sessionCaption], ['sessionLongQuote', sessionLongQuote], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, aspect: 'square' }, 1080, `card_${n}_square`);
     render({ ...p, aspect: 'portrait' }, 1080, `card_${n}_portrait`);
     render({ ...p, aspect: 'story' }, 1080, `card_${n}_story`);

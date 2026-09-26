@@ -28,7 +28,9 @@ import SharePhotoFramer from '../components/SharePhotoFramer';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
-import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
+import {
+  drawShareCard, cardHeight, drawSticker, stickerHeight, sessionLiftsThatFit,
+} from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
@@ -184,21 +186,31 @@ export default function ShareCardScreen({ navigation, route }) {
   const [selectedPrIndex, setSelectedPrIndex] = useState(0);
   const [prSheetOpen, setPrSheetOpen] = useState(false);
 
-  // The session card's top lift is the athlete's choice. It opens on the
-  // heaviest lift that set a new best today, else the heaviest lift of the
-  // session (sessionShareData.defaultLiftIndex), and "Don't show a top
-  // lift" is always one of the options.
+  // The session card's top lifts are the athlete's choice (founder,
+  // 2026-09-26: "Could we do Top Lifts? And they can select more than one if
+  // they'd fit ... They don't have to select any number it's the end users
+  // choice"). It opens on one: the heaviest lift that set a new best today,
+  // else the heaviest lift of the session (sessionShareData.defaultLiftIndex).
+  // Any number can be chosen while they fit on the image, or none.
   const liftOptions = useMemo(() => sessionLiftOptions(sessionData), [sessionData]);
   const newBestNames = useMemo(
     () => new Set((Array.isArray(prList) ? prList : prData ? [prData] : [])
       .map((pr) => pr && pr.exerciseName).filter(Boolean)),
     [prList, prData],
   );
-  const [liftIndex, setLiftIndex] = useState(
-    () => defaultLiftIndex(sessionLiftOptions(sessionData), Array.isArray(prList) ? prList : prData ? [prData] : []),
-  );
+  const [liftPicks, setLiftPicks] = useState(() => {
+    const i = defaultLiftIndex(sessionLiftOptions(sessionData), Array.isArray(prList) ? prList : prData ? [prData] : []);
+    return i >= 0 ? [i] : [];
+  });
   const [liftSheetOpen, setLiftSheetOpen] = useState(false);
-  const chosenLift = liftIndex >= 0 && liftIndex < liftOptions.length ? liftOptions[liftIndex] : null;
+  // In the list's own order, which is the order the image shows them in.
+  const chosenLifts = useMemo(
+    () => liftPicks.filter((i) => i >= 0 && i < liftOptions.length).sort((a, b) => a - b).map((i) => liftOptions[i]),
+    [liftPicks, liftOptions],
+  );
+  const toggleLift = useCallback((i) => {
+    setLiftPicks((prev) => (prev.includes(i) ? prev.filter((k) => k !== i) : [...prev, i]));
+  }, []);
 
   // Optional highlights (founder, 2026-09-26: "Are there any stats that
   // could be included ... We don't want to force them on but optional?").
@@ -389,9 +401,9 @@ export default function ShareCardScreen({ navigation, route }) {
         tonnage: s.tonnage || 0,
         exerciseCount: s.exerciseCount || 0,
         prCount: s.prCount || 0,
-        // The lift the athlete chose, or null for none. No exercise-name
+        // The lifts the athlete chose, none included. No exercise-name
         // list reaches the card (founder order 2026-09-26).
-        topSet: chosenLift,
+        topLifts: chosenLifts,
         // Only the highlights the athlete switched on.
         highlights: chosenHighlights,
         intensityTier: s.intensityTier || 'solid',
@@ -414,7 +426,7 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLift, chosenHighlights]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights]);
 
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect).
@@ -422,6 +434,48 @@ export default function ShareCardScreen({ navigation, route }) {
     () => ({ ...buildParamsFor(cardType), aspect: cardAspect, quote }),
     [buildParamsFor, cardType, cardAspect, quote],
   );
+
+  // How many of a list of lifts the image has room for, laid out exactly as
+  // the card will be (size, photo, quote, highlights), or null while that
+  // cannot be worked out. It only guides the list: the card itself draws
+  // only the lifts that fit.
+  const liftsFitting = useCallback((lifts) => {
+    if (!isSession || isSticker || !cardReady || typeof sessionLiftsThatFit !== 'function') return null;
+    try {
+      return sessionLiftsThatFit({
+        Skia, params: buildParams(), typefaces, wordmark, bgPhoto, lifts,
+      });
+    } catch (e) {
+      logError('ShareCardScreen.liftsFitting', e, { format });
+      return null;
+    }
+  }, [isSession, isSticker, cardReady, buildParams, typefaces, wordmark, bgPhoto, format]);
+  const shownLiftCount = useMemo(() => {
+    const n = liftsFitting(chosenLifts);
+    return n == null ? chosenLifts.length : Math.min(n, chosenLifts.length);
+  }, [liftsFitting, chosenLifts]);
+  // For the open list: whether a lift not yet chosen would still fit.
+  const liftHasRoom = useMemo(() => {
+    const known = {};
+    return (i) => {
+      if (!liftSheetOpen) return true;
+      if (known[i] === undefined) {
+        const next = [...liftPicks, i].sort((a, b) => a - b).map((k) => liftOptions[k]).filter(Boolean);
+        const n = liftsFitting(next);
+        known[i] = n == null || n >= next.length;
+      }
+      return known[i];
+    };
+  }, [liftSheetOpen, liftPicks, liftOptions, liftsFitting]);
+  const liftUnit = sessionData?.units || units;
+  const liftRowValue = chosenLifts.length === 0 ? 'Not shown'
+    : chosenLifts.length === 1 ? chosenLifts[0].exerciseName : `${chosenLifts.length} lifts`;
+  const liftRowSub = chosenLifts.length === 0 ? 'Your image has no top lift.'
+    : chosenLifts.length === 1 ? setLabel(chosenLifts[0], liftUnit)
+      : chosenLifts.map((o) => o.exerciseName).join(', ');
+  const liftRowLabel = chosenLifts.length === 0 ? 'Top lift: not shown. Choose a lift'
+    : chosenLifts.length === 1 ? `Top lift: ${chosenLifts[0].exerciseName}, ${setLabel(chosenLifts[0], liftUnit)}. Change`
+      : `Top lifts: ${chosenLifts.map((o) => `${o.exerciseName}, ${setLabel(o, liftUnit)}`).join('; ')}. Change`;
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -969,33 +1023,33 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        {/* Top lift (founder order 2026-09-26): the athlete picks which lift
-            the session card shows, or none. One row that opens the list, the
-            way the app's own pickers work, rather than a strip of pills. */}
+        {/* Top lifts (founder orders 2026-09-26): the athlete picks which
+            lifts the session card shows, as many as fit, or none. One row
+            that opens the list, the way the app's own pickers work, rather
+            than a strip of pills. */}
         {isSession && liftOptions.length > 0 ? (
           <View style={styles.section}>
-            <SectionLabel>Top lift</SectionLabel>
+            <SectionLabel>{chosenLifts.length > 1 ? 'Top lifts' : 'Top lift'}</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
               <TouchableOpacity
                 style={styles.pickerRow}
                 onPress={() => setLiftSheetOpen(true)}
                 accessibilityRole="button"
-                accessibilityLabel={chosenLift
-                  ? `Top lift: ${chosenLift.exerciseName}, ${setLabel(chosenLift, sessionData?.units || units)}. Change`
-                  : 'Top lift: not shown. Choose a lift'}
+                accessibilityLabel={liftRowLabel}
               >
                 <View style={styles.pickerText}>
-                  <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={1}>
-                    {chosenLift ? chosenLift.exerciseName : 'Not shown'}
-                  </Text>
-                  <Text style={[styles.pickerSub, live.pickerSub]} numberOfLines={1}>
-                    {chosenLift ? setLabel(chosenLift, sessionData?.units || units) : 'Your image has no top lift.'}
-                  </Text>
+                  <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={1}>{liftRowValue}</Text>
+                  <Text style={[styles.pickerSub, live.pickerSub]} numberOfLines={1}>{liftRowSub}</Text>
                 </View>
                 <Text style={[styles.pickerAction, live.pickerAction]}>Change</Text>
                 <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
+            {shownLiftCount < chosenLifts.length ? (
+              <Text style={[styles.privacyNote, live.privacyNote]}>
+                {`Only ${shownLiftCount} of your ${chosenLifts.length} lifts fit on this image.`}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -1170,33 +1224,44 @@ export default function ShareCardScreen({ navigation, route }) {
       </ScrollView>
       </GestureDetector>
 
-      {/* The top-lift list: every lift from the session with its best set,
+      {/* The top-lifts list: every lift from the session with its best set,
           a note on the ones that set a new best today, and the option to
-          show none. Choosing closes the sheet and redraws the preview. */}
+          show none. Each lift is ticked on or off and the preview redraws;
+          a lift with no room left on the image is shown but cannot be
+          ticked. */}
       <BottomSheet
         visible={liftSheetOpen}
         onClose={() => setLiftSheetOpen(false)}
-        accessibilityLabel="Choose your top lift"
+        accessibilityLabel="Choose your top lifts"
         scroll
       >
-        <Text style={[styles.sheetTitle, live.sheetTitle]}>Top lift</Text>
-        <Text style={[styles.sheetSub, live.sheetSub]}>Choose the lift to show on your image.</Text>
-        {liftOptions.map((o, i) => (
-          <OptionRow
-            key={`${o.exerciseName}-${i}`}
-            title={o.exerciseName}
-            meta={setLabel(o, sessionData?.units || units)}
-            note={newBestNames.has(o.exerciseName) ? 'New best today' : ''}
-            selected={i === liftIndex}
-            onPress={() => { setLiftIndex(i); setLiftSheetOpen(false); }}
-          />
-        ))}
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Top lifts</Text>
+        <Text style={[styles.sheetSub, live.sheetSub]}>Choose which lifts to show on your image. You can choose more than one if they fit.</Text>
+        {liftOptions.map((o, i) => {
+          const on = liftPicks.includes(i);
+          const room = on || liftHasRoom(i);
+          return (
+            <OptionRow
+              key={`${o.exerciseName}-${i}`}
+              title={o.exerciseName}
+              meta={setLabel(o, liftUnit)}
+              note={[newBestNames.has(o.exerciseName) ? 'New best today' : '', room ? '' : 'No room on this image'].filter(Boolean).join(' · ')}
+              selected={on}
+              disabled={!room}
+              multi
+              onPress={() => toggleLift(i)}
+            />
+          );
+        })}
         <OptionRow
-          title="Don't show a top lift"
-          selected={liftIndex === -1}
-          onPress={() => { setLiftIndex(-1); setLiftSheetOpen(false); }}
+          title="Don't show any lifts"
+          selected={chosenLifts.length === 0}
+          onPress={() => { setLiftPicks([]); setLiftSheetOpen(false); }}
           last
         />
+        <View style={styles.sheetDone}>
+          <Button title="Done" onPress={() => setLiftSheetOpen(false)} />
+        </View>
       </BottomSheet>
 
       {/* Which PR, when a session set more than one: the same list pattern. */}
@@ -1283,15 +1348,18 @@ export default function ShareCardScreen({ navigation, route }) {
 // One choice in a picker sheet, the app's picker-row pattern
 // (HomeChangeWorkoutSheet): name over a quiet caption, a hairline between
 // rows, the chosen row tinted and ticked.
-function OptionRow({ title, meta, note, selected, onPress, last }) {
+// `multi`: one of a list where any number can be ticked (the top lifts), so
+// it announces as a checkbox. `disabled`: shown, but cannot be chosen.
+function OptionRow({ title, meta, note, selected, onPress, last, disabled = false, multi = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity
-      style={[styles.optionRow, live.optionRow, last && styles.optionRowLast, selected && [styles.optionRowActive, live.optionRowActive]]}
+      style={[styles.optionRow, live.optionRow, last && styles.optionRowLast, selected && [styles.optionRowActive, live.optionRowActive], disabled && styles.optionRowDisabled]}
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      disabled={disabled}
+      accessibilityRole={multi ? 'checkbox' : 'button'}
+      accessibilityState={multi ? { checked: !!selected, disabled: !!disabled } : { selected: !!selected }}
       accessibilityLabel={[title, meta, note].filter(Boolean).join(', ')}
     >
       <View style={styles.pickerText}>
@@ -1431,6 +1499,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   optionRowLast: { borderBottomWidth: 0 },
+  optionRowDisabled: { opacity: 0.5 },
+  sheetDone: { marginTop: spacing.lg },
   optionRowActive: {
     backgroundColor: colors.primaryBg,
     marginHorizontal: -spacing.xl,
