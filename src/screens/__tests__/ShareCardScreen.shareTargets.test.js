@@ -199,17 +199,88 @@ describe('ShareCardScreen — PR selector (founder 2026-07-01)', () => {
     ],
   };
 
-  test('multiple PRs render a selectable chip per PR', async () => {
+  // RE-ANCHORED 2026-09-26 (founder order on the share screen: "none of the
+  // pill nonsense"): the strip of PR chips is now one row that opens a list
+  // of every PR from the session, the app's own picker pattern.
+  test('multiple PRs render one row that opens a list of every PR', async () => {
     const tree = await mount(TWO_PRS);
-    expect(findByA11yLabel(tree, 'Feature Bench Press').length).toBeGreaterThan(0);
-    expect(findByA11yLabel(tree, 'Feature Back Squat').length).toBeGreaterThan(0);
+    const [row] = findByA11yLabel(tree, 'Personal record: Bench Press. Change');
+    expect(row).toBeTruthy();
+    await TestRenderer.act(async () => { row.props.onPress(); });
+    expect(findByA11yLabel(tree, 'Bench Press, 100 kg × 1').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Back Squat, 140 kg × 1').length).toBeGreaterThan(0);
   });
 
   test('a single PR shows NO selector (nothing to choose)', async () => {
     const tree = await mount({
       prData: { exerciseName: 'Bench Press', weight: '100', reps: '1', units: 'kg' },
     });
-    expect(findByA11yLabel(tree, 'Feature Bench Press').length).toBe(0);
+    expect(findByA11yLabel(tree, 'Personal record: Bench Press. Change').length).toBe(0);
+  });
+});
+
+// Founder order 2026-09-26: "I want the user to be able to select their Top
+// Lift rather than it just doing one" and "I don't want exercise names list
+// to be an option or show at all". The card is mocked here, so what the
+// screen HANDS the renderer is what is checked.
+describe('ShareCardScreen — top lift (founder order 2026-09-26)', () => {
+  const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
+  const LIFTS = {
+    sessionData: {
+      sessionName: 'Push Day', duration: 60, workingSets: 12, exerciseCount: 3, tonnage: 5400, prCount: 1, units: 'kg',
+      topSet: { weight: 120, reps: 5, exerciseName: 'Leg Press' },
+      liftOptions: [
+        { weight: 100, reps: 5, exerciseName: 'Bench Press' },
+        { weight: 120, reps: 5, exerciseName: 'Leg Press' },
+        { weight: 30, reps: 12, exerciseName: 'Cable Fly' },
+      ],
+    },
+    prList: [{ exerciseName: 'Bench Press', weight: '100', reps: '5', units: 'kg' }],
+  };
+  // (A pressable's label sits on both the composite and its host view, so a
+  // match is "at least one", the convention the rest of this file uses.)
+  const lastParams = () => {
+    const calls = mockDraw.mock.calls.filter((c) => c[1] && c[1].params && c[1].params.cardType === 'session');
+    return calls.length ? calls[calls.length - 1][1].params : null;
+  };
+
+  test('it opens on the lift that set a new best, and the row says which', async () => {
+    const tree = await mount(LIFTS);
+    expect(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change').length).toBeGreaterThan(0);
+    await waitFor(() => lastParams() && lastParams().topSet && lastParams().topSet.exerciseName === 'Bench Press');
+  });
+
+  test('the list offers every lift and none; choosing one or none reaches the card', async () => {
+    const tree = await mount(LIFTS);
+    const [row] = findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change');
+    await TestRenderer.act(async () => { row.props.onPress(); });
+    expect(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best today').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Leg Press, 120 kg × 5').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Cable Fly, 30 kg × 12').length).toBeGreaterThan(0);
+    const [fly] = findByA11yLabel(tree, 'Cable Fly, 30 kg × 12');
+    await TestRenderer.act(async () => { fly.props.onPress(); });
+    await waitFor(() => lastParams() && lastParams().topSet && lastParams().topSet.exerciseName === 'Cable Fly');
+    const [again] = findByA11yLabel(tree, 'Top lift: Cable Fly, 30 kg × 12. Change');
+    await TestRenderer.act(async () => { again.props.onPress(); });
+    const [none] = findByA11yLabel(tree, "Don't show a top lift");
+    await TestRenderer.act(async () => { none.props.onPress(); });
+    await waitFor(() => lastParams() && lastParams().topSet === null);
+    expect(findByA11yLabel(tree, 'Top lift: not shown. Choose a lift').length).toBeGreaterThan(0);
+  });
+
+  test('no exercise names reach the card, and there is no toggle for them', async () => {
+    const tree = await mount(SESSION);
+    await waitFor(() => !!lastParams());
+    expect(lastParams()).not.toHaveProperty('exercises');
+    expect(lastParams()).not.toHaveProperty('showExercises');
+    expect(tree.root.findAll((n) => n.props && n.props.label === 'Exercise names').length).toBe(0);
+  });
+
+  test('an older caller with only the heaviest set still gets a choice of it or none', async () => {
+    const tree = await mount({
+      sessionData: { sessionName: 'Legs', workingSets: 9, topSet: { weight: 140, reps: 3, exerciseName: 'Squat' } },
+    });
+    expect(findByA11yLabel(tree, 'Top lift: Squat, 140 kg × 3. Change').length).toBeGreaterThan(0);
   });
 });
 

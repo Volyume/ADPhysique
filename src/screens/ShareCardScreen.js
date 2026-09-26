@@ -22,23 +22,27 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import BottomSheet from '../components/BottomSheet';
+import SharePhotoFramer from '../components/SharePhotoFramer';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
+import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
+import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
-let FileSystem; let Sharing; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
+let FileSystem; let Sharing; let Skia; let matchFont; let ImageFormat; let ImagePicker; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
-try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; } catch (_) { /* optional */ }
+try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; ImageFormat = S.ImageFormat; } catch (_) { /* optional */ }
 
 // "Share to Stories" goes straight to the OS share sheet. The Instagram
 // Stories deep link (instagram-stories://share) cannot carry the rendered
@@ -48,11 +52,37 @@ try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont 
 // the PNG to Instagram (or any target the user picks), which is what we want.
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
-// System typeface family per platform; the card measures text with the active
-// font so layout is correct whatever this resolves to.
+// System typeface family per platform: the fallback the card draws with until
+// the app's own Inter faces have loaded (lib/shareCard/cardTypefaces.js). The
+// card measures text with the active font, so layout is correct either way.
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
+// The photo the positioning view shows: the same pixels the card draws,
+// scaled to at most this edge (enough for a 300dp frame at 4x zoom on a
+// dense screen) and encoded once, so the view and the card cannot disagree
+// on orientation or crop.
+const FRAMER_PHOTO_EDGE = 1280;
+
+// The lifts this session can show as its top lift (founder order 2026-09-26:
+// "I want the user to be able to select their Top Lift rather than it just
+// doing one"): one per exercise from the workout summary, or, from an older
+// caller that only sends the single heaviest set, that set alone.
+function sessionLiftOptions(sessionData) {
+  const list = Array.isArray(sessionData?.liftOptions)
+    ? sessionData.liftOptions.filter((o) => o && Number(o.weight) > 0)
+    : [];
+  if (list.length) return list;
+  const top = sessionData?.topSet;
+  return top && Number(top.weight) > 0 ? [top] : [];
+}
+
+// "90 kg × 8", or the weight alone when no reps were logged.
+function setLabel(o, unit) {
+  if (!o) return '';
+  const u = o.units || unit || 'kg';
+  return o.reps ? `${o.weight} ${u} × ${o.reps}` : `${o.weight} ${u}`;
+}
 
 export default function ShareCardScreen({ navigation, route }) {
   const toast = useToast();
@@ -117,7 +147,9 @@ export default function ShareCardScreen({ navigation, route }) {
   const [showVolume, setShowVolume] = useState(true);
   const [showDate, setShowDate] = useState(true);
   const [showPlanName, setShowPlanName] = useState(true);
-  const [showExercises, setShowExercises] = useState(true);
+  // No exercise-names toggle: founder order 2026-09-26, "I don't want
+  // exercise names list to be an option or show at all as it does not fit
+  // in the share and looks stupid." The list is gone from the card too.
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
   // Weekly recap: the real weight-progress hero is opt-in. It is force-stripped
@@ -127,6 +159,13 @@ export default function ShareCardScreen({ navigation, route }) {
   const [showBestLift, setShowBestLift] = useState(true);
   // Optional gym photo background (SkImage), available on every card type.
   const [bgPhoto, setBgPhoto] = useState(null);
+  // Where the athlete framed it ({ zoom, cx, cy }, null = centred), the same
+  // pixels as a data URI for the positioning view, and whether that view is
+  // open (founder order 2026-09-26: move and zoom the photo so it "shows
+  // best in the background").
+  const [photoCrop, setPhotoCrop] = useState(null);
+  const [framerPhoto, setFramerPhoto] = useState(null);
+  const [framing, setFraming] = useState(false);
 
   // The PRs available to feature on a PR card. A caller can pass a whole
   // session's PRs (prList) so the user picks which one; otherwise it is just the
@@ -137,6 +176,30 @@ export default function ShareCardScreen({ navigation, route }) {
     return prData ? [prData] : [];
   }, [prList, prData]);
   const [selectedPrIndex, setSelectedPrIndex] = useState(0);
+  const [prSheetOpen, setPrSheetOpen] = useState(false);
+
+  // The session card's top lift is the athlete's choice. It opens on the
+  // heaviest lift that set a new best today, else the heaviest lift of the
+  // session (sessionShareData.defaultLiftIndex), and "Don't show a top
+  // lift" is always one of the options.
+  const liftOptions = useMemo(() => sessionLiftOptions(sessionData), [sessionData]);
+  const newBestNames = useMemo(
+    () => new Set((Array.isArray(prList) ? prList : prData ? [prData] : [])
+      .map((pr) => pr && pr.exerciseName).filter(Boolean)),
+    [prList, prData],
+  );
+  const [liftIndex, setLiftIndex] = useState(
+    () => defaultLiftIndex(sessionLiftOptions(sessionData), Array.isArray(prList) ? prList : prData ? [prData] : []),
+  );
+  const [liftSheetOpen, setLiftSheetOpen] = useState(false);
+  const chosenLift = liftIndex >= 0 && liftIndex < liftOptions.length ? liftOptions[liftIndex] : null;
+  const prName = (pr) => (pr && (pr.exerciseName || pr.exercise)) || 'Exercise';
+  const prDetail = (pr) => (pr && pr.weight
+    ? `${pr.weight} ${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
+    : '');
+  const selectedPr = prs[Math.min(selectedPrIndex, Math.max(0, prs.length - 1))] || null;
+  const selectedPrName = prName(selectedPr);
+  const selectedPrDetail = prDetail(selectedPr);
 
   const isSession = cardType === 'session';
   const isWeekly = cardType === 'weekly';
@@ -166,9 +229,10 @@ export default function ShareCardScreen({ navigation, route }) {
   const cardAspect = isSticker ? 'square' : format;
   const isSquare = cardAspect !== 'story';
 
-  // System typefaces (regular + bold) for the Skia renderer. getTypeface() gives
-  // a typeface we can resize at any point in the draw.
-  const typefaces = useMemo(() => {
+  // System typefaces (regular + bold) for the Skia renderer: the floor the
+  // card can always draw with. getTypeface() gives a typeface we can resize
+  // at any point in the draw.
+  const systemTypefaces = useMemo(() => {
     if (!Skia || !matchFont) return null;
     try {
       const bold = matchFont({ fontFamily: FONT_FAMILY, fontWeight: 'bold' }).getTypeface();
@@ -176,6 +240,22 @@ export default function ShareCardScreen({ navigation, route }) {
       return (bold && regular) ? { bold, regular } : null;
     } catch (_) { return null; }
   }, []);
+  // The app's own Inter faces (founder order 2026-09-26: "Use styles from the
+  // rest of the app"). They load in the background and replace the system
+  // faces role by role; the card never waits for them (VOLYUME-2V law).
+  const [appTypefaces, setAppTypefaces] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadCardTypefaces(Skia)
+      .then((faces) => { if (!cancelled && faces) setAppTypefaces(faces); })
+      .catch(() => { /* the system faces stand; the loader logs its own failures */ });
+    return () => { cancelled = true; };
+  }, []);
+  const typefaces = useMemo(() => {
+    if (!systemTypefaces && !appTypefaces) return null;
+    const merged = { ...(systemTypefaces || {}), ...(appTypefaces || {}) };
+    return (merged.bold && merged.regular) ? merged : null;
+  }, [systemTypefaces, appTypefaces]);
 
   // Load the wordmark once as an SkImage for the card footer.
   const [wordmark, setWordmark] = useState(null);
@@ -265,7 +345,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (isSession) {
       const s = sessionData || {};
       return {
-        cardType: 'session', isSquare, showVolume, showDate, showPlanName, showExercises,
+        cardType: 'session', isSquare, showVolume, showDate, showPlanName,
         date: showDate ? formatLongDate(s.date) : '',
         planName: showPlanName ? (s.planName || '') : '',
         sessionName: s.sessionName || 'Workout complete',
@@ -273,9 +353,10 @@ export default function ShareCardScreen({ navigation, route }) {
         duration: s.duration || 0,
         tonnage: s.tonnage || 0,
         exerciseCount: s.exerciseCount || 0,
-        exercises: s.exercises || [],
         prCount: s.prCount || 0,
-        topSet: s.topSet || null,
+        // The lift the athlete chose, or null for none. No exercise-name
+        // list reaches the card (founder order 2026-09-26).
+        topSet: chosenLift,
         intensityTier: s.intensityTier || 'solid',
         // R8/M5 (share-card audit 2026-07-27): the session card hard-coded
         // 'kg' for the tonnage hero/stat/top-lift line. `sessionData.units`
@@ -296,7 +377,7 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLift]);
 
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect).
@@ -343,7 +424,9 @@ export default function ShareCardScreen({ navigation, route }) {
       if (isSticker) {
         drawSticker(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
       } else {
-        drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark, bgPhoto });
+        drawShareCard(surface.getCanvas(), {
+          Skia, width, params, typefaces, wordmark, bgPhoto, photoCrop,
+        });
       }
       surface.flush();
       const image = surface.makeImageSnapshot();
@@ -358,7 +441,7 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.renderCard', e, { cardType, format, hasPhoto: !!bgPhoto });
       return null;
     }
-  }, [typefaces, wordmark, buildParams, bgPhoto, isSticker, cardType, format]);
+  }, [typefaces, wordmark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);
 
   // Template-strip thumbnails (pillar 5, the Hevy pattern): one LIVE render
   // per card type this moment offers, drawn by the same renderer at a small
@@ -380,14 +463,16 @@ export default function ShareCardScreen({ navigation, route }) {
         const params = { ...buildParamsFor(thumbType), aspect: 'square' };
         const surface = Skia.Surface.MakeOffscreen(w, cardHeight(w, true, 'square'));
         if (!surface) continue;
-        drawShareCard(surface.getCanvas(), { Skia, width: w, params, typefaces, wordmark, bgPhoto });
+        drawShareCard(surface.getCanvas(), {
+          Skia, width: w, params, typefaces, wordmark, bgPhoto, photoCrop,
+        });
         surface.flush();
         const image = surface.makeImageSnapshot();
         if (image) out[thumbType] = image.encodeToBase64();
       } catch (_) { /* a failed thumb falls back to the labelled tile */ }
     }
     return out;
-  }, [typefaces, wordmark, buildParamsFor, bgPhoto, availableTypes]);
+  }, [typefaces, wordmark, buildParamsFor, bgPhoto, photoCrop, availableTypes]);
 
   // VOLYUME-2T (founder device SIGSEGV, 2026-08-18): a modern phone's
   // gallery photo can be 50MP - decoded that is a ~200MB native bitmap,
@@ -429,6 +514,55 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }, []);
 
+  // The positioning view's copy of the photo: the SAME SkImage the card
+  // draws, scaled down once and encoded, so the view can never show a
+  // different orientation or crop from the card. Null on failure, which
+  // simply leaves the photo centred with no Move option.
+  const makeFramerPhoto = useCallback((img) => {
+    try {
+      const w = img.width();
+      const h = img.height();
+      const scale = Math.min(1, FRAMER_PHOTO_EDGE / Math.max(w, h));
+      let src = img;
+      if (scale < 1) {
+        const dw = Math.max(1, Math.round(w * scale));
+        const dh = Math.max(1, Math.round(h * scale));
+        const surf = Skia.Surface.MakeOffscreen(dw, dh);
+        if (surf) {
+          surf.getCanvas().drawImageRect(img, Skia.XYWHRect(0, 0, w, h), Skia.XYWHRect(0, 0, dw, dh), Skia.Paint());
+          surf.flush();
+          src = surf.makeImageSnapshot() || img;
+        }
+      }
+      const jpeg = ImageFormat && ImageFormat.JPEG != null ? src.encodeToBase64(ImageFormat.JPEG, 85) : null;
+      const b64 = jpeg || src.encodeToBase64();
+      if (!b64) return null;
+      return { uri: `data:image/${jpeg ? 'jpeg' : 'png'};base64,${b64}`, width: w, height: h };
+    } catch (e) {
+      logError('ShareCardScreen.framerPhoto', e);
+      return null;
+    }
+  }, []);
+
+  // A new photo starts centred and opens the positioning view straight away,
+  // the way a photo app lets you crop before you post: the athlete sees at
+  // once that the photo can be moved, and Done keeps it as it is.
+  const acceptPhoto = useCallback((img) => {
+    const bounded = boundPhotoForCanvas(img);
+    const framer = makeFramerPhoto(bounded);
+    setBgPhoto(bounded);
+    setPhotoCrop(null);
+    setFramerPhoto(framer);
+    setFraming(!!framer);
+  }, [boundPhotoForCanvas, makeFramerPhoto]);
+
+  const clearPhoto = useCallback(() => {
+    setBgPhoto(null);
+    setPhotoCrop(null);
+    setFramerPhoto(null);
+    setFraming(false);
+  }, []);
+
   // Take a gym photo with the camera to use as the card background (all cards).
   // Camera capture only: uses the CAMERA permission (same as barcode scanning),
   // so no photo-library permission is needed.
@@ -446,12 +580,12 @@ export default function ShareCardScreen({ navigation, route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBgPhoto(boundPhotoForCanvas(img));
+      if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
       toast.show("Couldn't take that photo, try again", { variant: 'error' });
     }
-  }, [toast, boundPhotoForCanvas]);
+  }, [toast, acceptPhoto]);
 
   // Choose an existing photo from the gallery (ELITE-SHARE-SPEC pillar 1:
   // the photo becomes the canvas, and most gym photos already exist). Uses
@@ -470,12 +604,12 @@ export default function ShareCardScreen({ navigation, route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBgPhoto(boundPhotoForCanvas(img));
+      if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
       toast.show("Couldn't open your photos, try again", { variant: 'error' });
     }
-  }, [toast, boundPhotoForCanvas]);
+  }, [toast, acceptPhoto]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
@@ -499,6 +633,34 @@ export default function ShareCardScreen({ navigation, route }) {
   useEffect(() => {
     renderPreview();
   }, [renderPreview]);
+
+  // The positioning view is open only while there is a photo to move and a
+  // card with a background (the sticker has none).
+  const framerOpen = framing && !!framerPhoto && !!bgPhoto && !isSticker;
+
+  // The card laid over the photo in the positioning view: the one renderer,
+  // with the photo itself left out (`omitPhoto`), so the athlete lines the
+  // photo up against the real title, numbers and scrim. Redrawn when a
+  // gesture ends, because the scrim answers to what is now behind the text.
+  const framerOverlay = useMemo(() => {
+    if (!framerOpen || !Skia || !typefaces) return null;
+    try {
+      const params = buildParams();
+      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect);
+      const surface = Skia.Surface.MakeOffscreen(PREVIEW_RENDER_W, H);
+      if (!surface) return null;
+      drawShareCard(surface.getCanvas(), {
+        Skia, width: PREVIEW_RENDER_W, params, typefaces, wordmark, bgPhoto, photoCrop, omitPhoto: true,
+      });
+      surface.flush();
+      const image = surface.makeImageSnapshot();
+      const b64 = image ? image.encodeToBase64() : null;
+      return b64 ? `data:image/png;base64,${b64}` : null;
+    } catch (e) {
+      logError('ShareCardScreen.framerOverlay', e);
+      return null;
+    }
+  }, [framerOpen, typefaces, wordmark, buildParams, bgPhoto, photoCrop]);
 
   // Render the export-resolution PNG and write it to a cache file, returning the
   // file URI. Shared by the OS share sheet, Save to gallery and Instagram
@@ -595,7 +757,9 @@ export default function ShareCardScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* Scrolling pauses while the photo is being moved, so a drag moves
+          the photo rather than the page. */}
+      <ScrollView contentContainerStyle={styles.content} scrollEnabled={!framerOpen}>
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -699,18 +863,32 @@ export default function ShareCardScreen({ navigation, route }) {
             <SegmentBtn
               label="Dark"
               active={!bgPhoto}
-              onPress={() => setBgPhoto(null)}
+              onPress={clearPhoto}
               icon={<Ionicons name="moon-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
         </View>
         ) : null}
 
-        {/* Preview: the exact image that gets shared, scaled down */}
+        {/* Preview: the exact image that gets shared, scaled down. While the
+            photo is being moved, the positioning view takes its place: the
+            photo under the card drawn by the same renderer. */}
         <View style={styles.section}>
           <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
-            {previewStatus === 'ready' && previewB64 ? (
+            {framerOpen ? (
+              <SharePhotoFramer
+                photoUri={framerPhoto.uri}
+                photoWidth={framerPhoto.width}
+                photoHeight={framerPhoto.height}
+                frameWidth={previewW}
+                frameHeight={previewH}
+                crop={photoCrop}
+                overlayUri={framerOverlay}
+                onChange={setPhotoCrop}
+                onDone={() => setFraming(false)}
+              />
+            ) : previewStatus === 'ready' && previewB64 ? (
               <Image
                 source={{ uri: `data:image/png;base64,${previewB64}` }}
                 style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
@@ -735,39 +913,72 @@ export default function ShareCardScreen({ navigation, route }) {
               </View>
             )}
           </View>
+          {bgPhoto && framerPhoto && !framerOpen && !isSticker ? (
+            <Button
+              title="Move and zoom photo"
+              icon="move-outline"
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={() => setFraming(true)}
+              accessibilityLabel="Move and zoom your photo"
+              style={styles.movePhoto}
+            />
+          ) : null}
         </View>
+
+        {/* Top lift (founder order 2026-09-26): the athlete picks which lift
+            the session card shows, or none. One row that opens the list, the
+            way the app's own pickers work, rather than a strip of pills. */}
+        {isSession && liftOptions.length > 0 ? (
+          <View style={styles.section}>
+            <SectionLabel>Top lift</SectionLabel>
+            <View style={[styles.togglesCard, live.togglesCard]}>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => setLiftSheetOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={chosenLift
+                  ? `Top lift: ${chosenLift.exerciseName}, ${setLabel(chosenLift, sessionData?.units || units)}. Change`
+                  : 'Top lift: not shown. Choose a lift'}
+              >
+                <View style={styles.pickerText}>
+                  <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={1}>
+                    {chosenLift ? chosenLift.exerciseName : 'Not shown'}
+                  </Text>
+                  <Text style={[styles.pickerSub, live.pickerSub]} numberOfLines={1}>
+                    {chosenLift ? setLabel(chosenLift, sessionData?.units || units) : 'Your image has no top lift.'}
+                  </Text>
+                </View>
+                <Text style={[styles.pickerAction, live.pickerAction]}>Change</Text>
+                <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         {/* What to include */}
         <View style={styles.section}>
           {cardType === 'pr' && prs.length > 1 ? (
             <>
               <SectionLabel>Which PR</SectionLabel>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.prPickerRow}
-              >
-                {prs.map((pr, i) => {
-                  const active = i === selectedPrIndex;
-                  const name = pr.exerciseName || pr.exercise || 'Exercise';
-                  const detail = pr.weight
-                    ? `${pr.weight}${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
-                    : '';
-                  return (
-                    <TouchableOpacity
-                      key={`${name}-${i}`}
-                      style={[styles.prChip, live.prChip, active && [styles.prChipActive, live.prChipActive]]}
-                      onPress={() => setSelectedPrIndex(i)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`Feature ${name}`}
-                    >
-                      <Text style={[styles.prChipText, live.prChipText, active && [styles.prChipTextActive, live.prChipTextActive]]} numberOfLines={1}>{name}</Text>
-                      {detail ? <Text style={[styles.prChipSub, live.prChipSub, active && [styles.prChipSubActive, live.prChipSubActive]]}>{detail}</Text> : null}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+              <View style={[styles.togglesCard, live.togglesCard]}>
+                <TouchableOpacity
+                  style={styles.pickerRow}
+                  onPress={() => setPrSheetOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Personal record: ${selectedPrName}. Change`}
+                >
+                  <View style={styles.pickerText}>
+                    <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={1}>{selectedPrName}</Text>
+                    {selectedPrDetail ? (
+                      <Text style={[styles.pickerSub, live.pickerSub]} numberOfLines={1}>{selectedPrDetail}</Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Change</Text>
+                  <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </>
           ) : null}
           <SectionLabel>What to include</SectionLabel>
@@ -776,8 +987,7 @@ export default function ShareCardScreen({ navigation, route }) {
             {isSession && (
               <>
                 <ToggleRow label="Plan name" value={showPlanName} onChange={setShowPlanName} />
-                <ToggleRow label="Total weight lifted" value={showVolume} onChange={setShowVolume} />
-                <ToggleRow label="Exercise names" value={showExercises} onChange={setShowExercises} last />
+                <ToggleRow label="Total weight lifted" value={showVolume} onChange={setShowVolume} last />
               </>
             )}
             {cardType === 'pr' && (
@@ -864,7 +1074,81 @@ export default function ShareCardScreen({ navigation, route }) {
         />
         ) : null}
       </ScrollView>
+
+      {/* The top-lift list: every lift from the session with its best set,
+          a note on the ones that set a new best today, and the option to
+          show none. Choosing closes the sheet and redraws the preview. */}
+      <BottomSheet
+        visible={liftSheetOpen}
+        onClose={() => setLiftSheetOpen(false)}
+        accessibilityLabel="Choose your top lift"
+        scroll
+      >
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Top lift</Text>
+        <Text style={[styles.sheetSub, live.sheetSub]}>Choose the lift to show on your image.</Text>
+        {liftOptions.map((o, i) => (
+          <OptionRow
+            key={`${o.exerciseName}-${i}`}
+            title={o.exerciseName}
+            meta={setLabel(o, sessionData?.units || units)}
+            note={newBestNames.has(o.exerciseName) ? 'New best today' : ''}
+            selected={i === liftIndex}
+            onPress={() => { setLiftIndex(i); setLiftSheetOpen(false); }}
+          />
+        ))}
+        <OptionRow
+          title="Don't show a top lift"
+          selected={liftIndex === -1}
+          onPress={() => { setLiftIndex(-1); setLiftSheetOpen(false); }}
+          last
+        />
+      </BottomSheet>
+
+      {/* Which PR, when a session set more than one: the same list pattern. */}
+      <BottomSheet
+        visible={prSheetOpen}
+        onClose={() => setPrSheetOpen(false)}
+        accessibilityLabel="Choose which personal record to show"
+        scroll
+      >
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Which PR</Text>
+        <Text style={[styles.sheetSub, live.sheetSub]}>Choose the record to show on your image.</Text>
+        {prs.map((pr, i) => (
+          <OptionRow
+            key={`${prName(pr)}-${i}`}
+            title={prName(pr)}
+            meta={prDetail(pr)}
+            selected={i === selectedPrIndex}
+            onPress={() => { setSelectedPrIndex(i); setPrSheetOpen(false); }}
+            last={i === prs.length - 1}
+          />
+        ))}
+      </BottomSheet>
     </SafeAreaView>
+  );
+}
+
+// One choice in a picker sheet, the app's picker-row pattern
+// (HomeChangeWorkoutSheet): name over a quiet caption, a hairline between
+// rows, the chosen row tinted and ticked.
+function OptionRow({ title, meta, note, selected, onPress, last }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  return (
+    <TouchableOpacity
+      style={[styles.optionRow, live.optionRow, last && styles.optionRowLast, selected && [styles.optionRowActive, live.optionRowActive]]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      accessibilityLabel={[title, meta, note].filter(Boolean).join(', ')}
+    >
+      <View style={styles.pickerText}>
+        <Text style={[styles.optionName, live.optionName]} numberOfLines={2}>{title}</Text>
+        {meta ? <Text style={[styles.optionMeta, live.optionMeta]}>{meta}</Text> : null}
+        {note ? <Text style={[styles.optionNote, live.optionNote]}>{note}</Text> : null}
+      </View>
+      {selected ? <Ionicons name="checkmark" size={20} color={t.colors.primary} /> : null}
+    </TouchableOpacity>
   );
 }
 
@@ -967,18 +1251,32 @@ const styles = StyleSheet.create({
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
-  // "Which PR" selector chips (shown only when a session set more than one PR).
-  prPickerRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
-  prChip: {
-    minWidth: 92, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface, gap: 2,
+  // The top-lift and which-PR rows: one row in a card that opens its list
+  // (the "Which PR" pill strip is retired, founder order 2026-09-26).
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  prChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  prChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  prChipTextActive: { color: colors.primary },
-  prChipSub: { fontSize: fontSize.xs, color: colors.textMuted },
-  prChipSubActive: { color: colors.primary },
+  pickerText: { flex: 1, gap: spacing.xxs },
+  pickerValue: { ...type.bodyStrong, color: colors.textPrimary },
+  pickerSub: { ...type.caption, color: colors.textSecondary },
+  pickerAction: { ...type.label, color: colors.primary },
+  movePhoto: { alignSelf: 'center' },
+  sheetTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
+  sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
+  optionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
+  },
+  optionRowLast: { borderBottomWidth: 0 },
+  optionRowActive: {
+    backgroundColor: colors.primaryBg,
+    marginHorizontal: -spacing.xl,
+    paddingHorizontal: spacing.xl,
+  },
+  optionName: { ...type.bodyStrong, color: colors.textPrimary },
+  optionMeta: { ...type.caption, color: colors.textMuted },
+  optionNote: { ...type.caption, color: colors.primary },
   secondaryAction: { marginTop: spacing.md },
 });
 
@@ -1010,11 +1308,15 @@ function buildLiveStyles(t) {
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
-    prChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    prChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
-    prChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    prChipTextActive: { color: t.colors.primary },
-    prChipSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    prChipSubActive: { color: t.colors.primary },
+    pickerValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    pickerSub: { ...t.type.caption, color: t.colors.textSecondary },
+    pickerAction: { ...t.type.label, color: t.colors.primary },
+    sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    optionRow: { borderBottomColor: t.colors.borderSubtle },
+    optionRowActive: { backgroundColor: t.colors.primaryBg },
+    optionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    optionMeta: { ...t.type.caption, color: t.colors.textMuted },
+    optionNote: { ...t.type.caption, color: t.colors.primary },
   };
 }

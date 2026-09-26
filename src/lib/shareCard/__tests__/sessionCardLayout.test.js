@@ -12,12 +12,17 @@
  * What is pinned and why:
  *  - the intensity badge is GONE. It graded a session from thresholds the
  *    athlete never agreed to, directly under their own number.
- *  - the exercise line names two lifts and counts the rest honestly, rather
- *    than running five names to the edge and ellipsising the last.
- *  - the top lift never draws over the footer. Square is top-anchored with
- *    no overflow protection of its own, so an unconditional card printed
- *    straight through the brand mark; whether it fits is now measured.
- *  - a name that fits is not marked as truncated.
+ *  - NO exercise names (founder order 2026-09-26: "I don't want exercise
+ *    names list to be an option or show at all as it does not fit in the
+ *    share and looks stupid"). Even a caller that still hands over a name
+ *    list gets none of it drawn, and the toggle is gone from the source.
+ *  - the top lift is the one the athlete chose, drawn as a row, never over
+ *    the footer, and a long name takes its own line rather than being cut.
+ *  - the 2026-09-26 restyle ("Use styles from the rest of the app and none
+ *    of the pill nonsense"): no pills, glows, lit frame, trophy or icons;
+ *    the plan name is the card's section label.
+ *  - over a photo the title sits at the top and the numbers at the bottom,
+ *    so the middle of the photo stays clear.
  */
 import { drawShareCard, cardHeight } from '../drawShareCard';
 
@@ -46,7 +51,7 @@ function makeStubSkia() {
   };
 }
 
-function record(params, width = 1080) {
+function record(params, width = 1080, bgPhoto = null) {
   const texts = [];
   const rrects = [];
   const canvas = new Proxy({}, {
@@ -63,6 +68,7 @@ function record(params, width = 1080) {
     params,
     typefaces: { regular: {}, bold: {} },
     wordmark: null,
+    bgPhoto,
   });
   const strings = texts.map((t) => t.str);
   // Letter-spaced labels are drawn one character at a time (Skia has no
@@ -120,38 +126,40 @@ describe('the session card no longer grades the session', () => {
   });
 });
 
-describe('the exercise line', () => {
-  test('names two lifts and counts the rest', () => {
-    const { strings } = record(SESSION());
-    expect(strings).toContain('Ab Crunch Machine');
-    expect(strings).toContain('Seated Leg Curl');
-    expect(strings).toContain('+5 more');
-    // The names it did not show are not on the card at all.
-    expect(strings).not.toContain('Lying Leg Curl');
+describe('no exercise names on the card (founder order 2026-09-26)', () => {
+  test('a name list handed over by an older caller draws none of it', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const { strings, run } = record(SESSION({ aspect }));
+      ['Ab Crunch Machine', 'Seated Leg Curl', 'Lying Leg Curl', 'Machine Curl', 'Face Pull'].forEach((name) => {
+        expect(strings).not.toContain(name);
+      });
+      expect(run).not.toMatch(/\+\d+ more/);
+    }
   });
 
-  test('two lifts exactly get no remainder', () => {
-    const { strings } = record(SESSION({ exercises: ['Squat', 'Bench'] }));
-    expect(strings).toContain('Squat');
-    expect(strings).toContain('Bench');
-    expect(strings.some((t) => /more/.test(t))).toBe(false);
-  });
-
-  test('the toggle still turns it off', () => {
-    const { strings } = record(SESSION({ showExercises: false }));
-    expect(strings).not.toContain('Ab Crunch Machine');
+  test('the exercise line and its toggle are gone from the renderer source', () => {
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'drawShareCard.js'), 'utf8',
+    ).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(src).not.toContain('drawExerciseSummary');
+    expect(src).not.toContain('showExercises');
+    expect(src).not.toMatch(/p\.exercises\b/);
   });
 });
 
 describe('the top lift', () => {
-  test('is drawn on every format when it fits', () => {
+  test('is drawn on every format, as the lift the athlete chose', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
       const { run } = record(SESSION({ aspect }));
       expect(run).toContain('TOP LIFT');
       // withUnit joins the number to its unit with a non-breaking space, so
       // the pair can never wrap mid-token; match either kind of space.
       expect(run).toMatch(/180\skg × 10/);
+      expect(run).toContain('Chest-Supported T-Bar Row');
     }
+    const { run } = record(SESSION({ topSet: { weight: 60, reps: 12, exerciseName: 'Seated Leg Curl' } }));
+    expect(run).toMatch(/60\skg × 12/);
+    expect(run).toContain('Seated Leg Curl');
   });
 
   test('an exercise name that fits is not marked as truncated', () => {
@@ -162,32 +170,83 @@ describe('the top lift', () => {
     expect(strings).not.toContain('Lat Pulldown…');
   });
 
+  test('a name too long to sit beside the set takes its own line, uncut', () => {
+    const name = 'Single Arm Chest-Supported Dumbbell Row';
+    const { texts } = record(SESSION({ topSet: { weight: 40, reps: 10, exerciseName: name } }));
+    const nameAt = texts.find((t) => t.str === name);
+    const setAt = texts.find((t) => /40\skg × 10/.test(t.str));
+    expect(nameAt).toBeTruthy();
+    expect(setAt).toBeTruthy();
+    expect(setAt.y).toBeGreaterThan(nameAt.y);
+  });
+
   test('nothing is drawn over the footer on any format', () => {
     for (const aspect of ['square', 'portrait', 'story']) {
       const H = cardHeight(1080, aspect !== 'story', aspect);
       const footerTop = H - (aspect === 'square' ? 128 : 150)
         - (aspect === 'story' ? Math.round(H * 0.2) : 0);
-      const { texts, rrects } = record(SESSION({ aspect }));
-      // The footer draws its own mark below this line; the BODY must not.
-      const body = texts.filter((t) => t.str !== 'volyume.app');
-      body.forEach((t) => { expect(t.y).toBeLessThanOrEqual(footerTop); });
-      // The top-lift card is the tallest thing the body can add.
-      rrects.filter((r) => r.h > 60).forEach((r) => {
-        // The card frame itself spans the whole canvas by design.
-        if (r.h > H * 0.8) return;
-        expect(r.y + r.h).toBeLessThanOrEqual(footerTop);
-      });
+      for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
+        const { texts } = record(SESSION({ aspect }), 1080, photo);
+        // The footer draws its own mark below this line; the BODY must not.
+        const body = texts.filter((t) => t.str !== 'volyume.app');
+        body.forEach((t) => { expect(t.y).toBeLessThanOrEqual(footerTop); });
+      }
     }
   });
 
-  test('a session with no top set simply omits it', () => {
+  test('a session with no top lift simply omits it', () => {
     const { run } = record(SESSION({ topSet: null }));
     expect(run).not.toContain('TOP LIFT');
   });
 });
 
+describe('the app\'s style, not a poster template (2026-09-26 restyle)', () => {
+  const SRC = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'drawShareCard.js'), 'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('no pills, glows, lit frame, trophy or stat icons remain in the renderer', () => {
+    ['drawGlow', 'drawCardFrame', 'drawBackgroundGeometry', 'iconTrophy', 'iconDumbbell', 'iconClock', 'iconList', 'iconBars', 'STAT_ICONS', 'drawStatBoxes', 'drawElapsedBadge', 'MaskFilter'].forEach((name) => {
+      expect(SRC).not.toContain(name);
+    });
+  });
+
+  test('the session card draws no rounded shapes at all: rows and hairlines are the structure', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      expect(record(SESSION({ aspect })).rrects).toEqual([]);
+    }
+  });
+
+  test('the typefaces are the app\'s roles, with the system faces only as a fallback', () => {
+    expect(SRC).toMatch(/case 'display': return tf\.display \|\| tf\.bold/);
+    expect(SRC).toMatch(/case 'displayHeavy': return tf\.displayHeavy/);
+  });
+});
+
+describe('over a photo, the middle stays clear', () => {
+  const PHOTO = { width: () => 1000, height: () => 1500 };
+
+  test('the title sits at the top and the numbers at the bottom on the story', () => {
+    const H = cardHeight(1080, false, 'story');
+    // prCount 0: the hero is then the total lifted, a string no other part
+    // of the card draws.
+    const { texts } = record(SESSION({ aspect: 'story', prCount: 0 }), 1080, PHOTO);
+    const title = texts.find((t) => t.str === 'Back + Hams');
+    const hero = texts.find((t) => t.str === '24,142');
+    expect(title.y).toBeLessThan(H * 0.3);
+    expect(hero.y).toBeGreaterThan(H * 0.45);
+  });
+
+  test('without a photo the same card is one centred block', () => {
+    const { texts } = record(SESSION({ aspect: 'story', prCount: 0 }));
+    const title = texts.find((t) => t.str === 'Back + Hams');
+    const hero = texts.find((t) => t.str === '24,142');
+    expect(hero.y - title.y).toBeLessThan(420);
+  });
+});
+
 describe('the header', () => {
-  test('the plan name rides in its own pill and stays behind its toggle', () => {
+  test('the plan name is the card\'s label (not a pill) and stays behind its toggle', () => {
     expect(record(SESSION()).run).toContain('PUSH PULL LEGS');
     expect(record(SESSION({ showPlanName: false })).run).not.toContain('PUSH PULL LEGS');
   });

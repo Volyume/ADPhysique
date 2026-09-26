@@ -44,7 +44,9 @@ import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
-import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
+import {
+  topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle,
+} from '../lib/sessionShareData';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -1138,17 +1140,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const tier = intensityTier(detectedPRs.length, ton, sets);
 
     // Title with the real day name (e.g. "Back + Delts (Width)") when we have
-    // it. Fall back to a join of the first exercises, then a generic label.
-    const sessionName = shareSessionName(routineName, exerciseNames);
+    // it, otherwise the time of day the session started ("Morning workout").
+    // Founder order 2026-09-26: exercise names do not appear on the share
+    // image at all, so neither a name list nor the old join-of-exercises
+    // title is handed over.
+    const sessionName = shareCardTitle(routineName, startedAt ?? endedAt);
     const sessionData = {
       sessionName,
+      // The session's own day, so a workout shared later from history is
+      // dated when it happened rather than on the day it was shared.
+      date: startedAt ?? endedAt ?? null,
       duration: durationMinutes || 0,
       workingSets: sets,
       exerciseCount: exerciseCount || 0,
       tonnage: ton,
-      exercises: exerciseNames,
       prCount: detectedPRs.length,
       topSet,
+      // Every lift the athlete can choose as the image's top lift, one per
+      // exercise (founder order 2026-09-26: "I want the user to be able to
+      // select their Top Lift rather than it just doing one").
+      liftOptions: liftOptionsFromExerciseData(shareExerciseData),
       intensityTier: tier,
       // R8/M5 (share-card audit 2026-07-27): the session card hard-coded 'kg'
       // for the tonnage hero/stat/top-lift line regardless of the user's

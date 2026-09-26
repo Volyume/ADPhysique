@@ -44,8 +44,10 @@ describe('the share card', () => {
 
   test('the hero stat counts lifts too, so the card cannot disagree with the summary', () => {
     // prCount is handed straight from the summary's detectedPRs.length.
-    expect(SRC).toMatch(/'LIFT WITH A NEW BEST' : 'LIFTS WITH A NEW BEST'/);
-    expect(SRC).not.toMatch(/NEW PERSONAL RECORDS?'/);
+    // RE-ANCHORED 2026-09-26: the share-card restyle sets labels in sentence
+    // case, the app's caption style; the words still count lifts.
+    expect(SRC).toMatch(/'Lift with a new best' : 'Lifts with a new best'/);
+    expect(SRC).not.toMatch(/new personal records?'/i);
   });
 
   test('the summary is the source of that number, so the two move together', () => {

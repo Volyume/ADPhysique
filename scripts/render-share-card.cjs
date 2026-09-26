@@ -8,9 +8,10 @@
  *
  *   node scripts/render-share-card.cjs [outDir]   (default outDir: /tmp)
  *
- * Fonts: uses Liberation Sans (Arial-metric-compatible) from the OS if present;
- * device builds use the platform system font. Layout is measured per-font, so it
- * adapts either way.
+ * Fonts: the app's own Inter faces from assets/fonts (what the screen loads on
+ * device since the 2026-09-26 restyle), with Liberation Sans from the OS as the
+ * fallback when an asset is missing. Layout is measured per-font, so it adapts
+ * either way.
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,13 +19,21 @@ const path = require('path');
 const OUT = process.argv[2] || '/tmp';
 const FONT_BOLD = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf';
 const FONT_REG = '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf';
+const INTER = {
+  regular: 'Inter-Regular.ttf',
+  medium: 'Inter-Medium.ttf',
+  semibold: 'Inter-SemiBold.ttf',
+  bold: 'Inter-Bold.ttf',
+  display: 'InterDisplay-Bold.ttf',
+  displayHeavy: 'InterDisplay-ExtraBold.ttf',
+};
 
 function loadDrawModule() {
   const src = fs.readFileSync(path.join(__dirname, '../src/lib/shareCard/drawShareCard.js'), 'utf8')
     .replace(/export\s+(function|const|let|class)/g, '$1');
   const m = { exports: {} };
   // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight,drawSticker,stickerHeight};`)(m, m.exports);
+  new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight,drawSticker,stickerHeight,photoCoverRect};`)(m, m.exports);
   return m.exports;
 }
 
@@ -40,15 +49,25 @@ async function main() {
 
   const tf = (p) => Skia.Typeface.MakeFreeTypeFaceFromData(Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(p))));
   const typefaces = { bold: tf(FONT_BOLD), regular: tf(FONT_REG) };
+  Object.entries(INTER).forEach(([role, file]) => {
+    const p = path.join(__dirname, '../assets/fonts', file);
+    if (fs.existsSync(p)) typefaces[role] = tf(p);
+  });
   const wordmark = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(path.join(__dirname, '../assets/volyume-wordmark.png')))));
 
+  // The session card carries no exercise-name line (founder order
+  // 2026-09-26); `topSet` is the lift the athlete chose on the share screen.
   const session = {
     cardType: 'session', sessionName: 'Back + Delts (Width)', planName: 'Push Pull Legs',
-    date: 'Sat · 20 Jun 2026', showDate: true, showPlanName: true, showVolume: true, showExercises: true,
-    workingSets: 4, duration: 0, tonnage: 304, exerciseCount: 5, prCount: 0, intensityTier: 'solid',
-    exercises: ['Lat Pulldown', 'Seated Row', 'Lateral Raise', 'Face Pull', 'Rear Delt Fly'],
+    date: 'Sat · 20 Jun 2026', showDate: true, showPlanName: true, showVolume: true,
+    workingSets: 18, duration: 52, tonnage: 9340, exerciseCount: 5, prCount: 0, intensityTier: 'solid',
     topSet: { weight: 90, reps: 8, exerciseName: 'Lat Pulldown' },
   };
+  const sessionPRs = {
+    ...session, sessionName: 'Upper A', planName: 'Upper Lower', prCount: 2,
+    topSet: { weight: 42.5, reps: 10, exerciseName: 'Seated Dumbbell Shoulder Press' },
+  };
+  const sessionNoLift = { ...session, topSet: null, showPlanName: false };
   const pr = { cardType: 'pr', exerciseName: 'Barbell Bench Press', date: 'Sat · 20 Jun 2026', showDate: true, showPRWeight: true, showPrevBest: true, weight: 120, reps: 5, units: 'kg', previousBest: 115 };
   const milestone = { cardType: 'milestone', eyebrow: 'Year of Lifts', title: '2026 in the gym', showDate: false, heroValue: '1,240,000', heroUnit: 'total kg lifted', caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }, { label: 'PRs', value: '42' }, { label: 'Hours', value: '210' }] };
   const weekly = {
@@ -96,7 +115,7 @@ async function main() {
   // Campaign 30 (ELITE-SHARE-SPEC pillar 3/#4): every non-beforeAfter card
   // type now renders all THREE aspect presets, not just square/story --
   // portrait 4:5 was previously only wired for beforeAfter.
-  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
+  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, aspect: 'square' }, 1080, `card_${n}_square`);
     render({ ...p, aspect: 'portrait' }, 1080, `card_${n}_portrait`);
     render({ ...p, aspect: 'story' }, 1080, `card_${n}_story`);
@@ -147,10 +166,13 @@ async function main() {
   const block = (x, y, w, h, hex) => { const pt = Skia.Paint(); pt.setColor(Skia.Color(hex)); pc.drawRect(Skia.XYWHRect(x, y, w, h), pt); };
   block(0, 0, 600, 600, '#d8d2c4'); block(0, 0, 300, 600, '#b9a886'); block(150, 350, 450, 250, '#5a4a2e'); block(380, 60, 220, 220, '#e9e4d6');
   ps.flush(); const photo = ps.makeImageSnapshot();
-  const renderPhoto = (params, name) => {
-    const H = cardHeight(1080, params.isSquare);
+  const renderPhoto = (params, name, image = photo, crop = null) => {
+    const aspect = params.aspect || (params.isSquare ? 'square' : 'story');
+    const H = cardHeight(1080, aspect !== 'story', aspect);
     const surf = Skia.Surface.MakeOffscreen(1080, H);
-    drawShareCard(surf.getCanvas(), { Skia, width: 1080, params, typefaces, wordmark, bgPhoto: photo });
+    drawShareCard(surf.getCanvas(), {
+      Skia, width: 1080, params: { ...params, aspect }, typefaces, wordmark, bgPhoto: image, photoCrop: crop,
+    });
     surf.flush();
     fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
     console.log(`${name}  1080x${H}`);
@@ -158,6 +180,24 @@ async function main() {
   renderPhoto({ ...weekly, isSquare: true }, 'photo_weekly');
   renderPhoto({ ...session, isSquare: true }, 'photo_session');
   renderPhoto({ ...pr, isSquare: true }, 'photo_pr');
+
+  // A portrait "gym photo" with a subject in the middle third, to check that
+  // the title and the numbers leave the middle of the photo clear, and that
+  // the athlete's framing (photoCrop) moves what the card shows.
+  const gp = Skia.Surface.MakeOffscreen(900, 1200); const gc = gp.getCanvas();
+  const grad = Skia.Paint();
+  grad.setShader(Skia.Shader.MakeLinearGradient({ x: 0, y: 0 }, { x: 0, y: 1200 }, [Skia.Color('#e8dcc4'), Skia.Color('#7a6248'), Skia.Color('#2a2119')], [0, 0.45, 1], 0));
+  gc.drawRect(Skia.XYWHRect(0, 0, 900, 1200), grad);
+  const fillC = (hex) => { const pt = Skia.Paint(); pt.setAntiAlias(true); pt.setColor(Skia.Color(hex)); return pt; };
+  gc.drawCircle(450, 430, 120, fillC('#c98f68')); // head
+  gc.drawRRect(Skia.RRectXY(Skia.XYWHRect(250, 540, 400, 520), 120, 120), fillC('#b87c57')); // torso
+  gc.drawCircle(250, 640, 90, fillC('#c98f68')); gc.drawCircle(650, 640, 90, fillC('#c98f68')); // arms
+  gp.flush(); const gymPhoto = gp.makeImageSnapshot();
+  renderPhoto({ ...session, aspect: 'story' }, 'gym_session_story', gymPhoto);
+  renderPhoto({ ...session, aspect: 'story' }, 'gym_session_story_framed', gymPhoto, { zoom: 1.6, cx: 0.5, cy: 0.5 });
+  renderPhoto({ ...session, aspect: 'square' }, 'gym_session_square', gymPhoto);
+  renderPhoto({ ...session, aspect: 'portrait' }, 'gym_session_portrait', gymPhoto);
+  renderPhoto({ ...pr, aspect: 'story' }, 'gym_pr_story', gymPhoto);
   console.log(`\nWrote PNGs to ${OUT}`);
 }
 

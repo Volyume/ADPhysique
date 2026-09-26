@@ -38,6 +38,84 @@ export function topSetFromExerciseData(exerciseData) {
 }
 
 /**
+ * Every lift the athlete could put on the share image as its top lift
+ * (founder order 2026-09-26: "I want the user to be able to select their Top
+ * Lift rather than it just doing one"). One entry per exercise, in the order
+ * the session ran them: that exercise's heaviest working set, with more reps
+ * breaking a tie at the same weight. The exclusions are topSetFromExerciseData's
+ * (warm-ups, ballistic sets, sets with no weight), so the heaviest entry names
+ * the same exercise and weight that function picks. An exercise logged twice
+ * in one session is one entry. Display only.
+ *
+ * @param {Array} exerciseData  [{ name, loggedSets: [{ weight, reps, setType }] }]
+ * @returns {Array<{weight:number, reps:number, exerciseName:string}>}
+ */
+export function liftOptionsFromExerciseData(exerciseData) {
+  const byName = new Map();
+  for (const ex of exerciseData || []) {
+    const name = ex && ex.name;
+    if (!name) continue;
+    for (const s of ex.loggedSets || []) {
+      if (s.setType === 'warmup') continue;
+      const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
+      if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
+      const w = parseFloat(s.weight) || 0;
+      if (w <= 0) continue;
+      const reps = s.reps || 0;
+      const best = byName.get(name);
+      if (!best || w > best.weight || (w === best.weight && reps > best.reps)) {
+        byName.set(name, { weight: w, reps, exerciseName: name });
+      }
+    }
+  }
+  return [...byName.values()];
+}
+
+/**
+ * The lift a share image opens on: the heaviest lift among those that set a
+ * new best this session when there are any (the moment the athlete is most
+ * likely to want to show), otherwise the heaviest lift of the session. The
+ * athlete can change it or remove it on the share screen; this is only where
+ * the picker starts. Returns an index into `options`, or -1 when there are
+ * none.
+ *
+ * @param {Array<{weight:number, exerciseName:string}>} options
+ * @param {Array<{exerciseName?:string}>} newBests  the session's detected PRs
+ * @returns {number}
+ */
+export function defaultLiftIndex(options, newBests = []) {
+  const list = Array.isArray(options) ? options : [];
+  if (!list.length) return -1;
+  const bestNames = new Set((newBests || []).map((pr) => pr && pr.exerciseName).filter(Boolean));
+  const heaviest = (indices) => indices.reduce((best, i) => (best === -1 || list[i].weight > list[best].weight ? i : best), -1);
+  const withNewBest = list.map((o, i) => (bestNames.has(o.exerciseName) ? i : -1)).filter((i) => i >= 0);
+  if (withNewBest.length) return heaviest(withNewBest);
+  return heaviest(list.map((_, i) => i));
+}
+
+/**
+ * The share image's title. Founder order 2026-09-26: exercise names do not
+ * appear on the image "at all", so where shareSessionName falls back to a
+ * join of exercise names, the image uses the time of day the session started
+ * ("Morning workout") instead. A named routine always wins; 'Workout complete'
+ * when the start time is unknown.
+ *
+ * @param {string} routineName
+ * @param {number|string} startedAt  epoch ms or an ISO string
+ * @returns {string}
+ */
+export function shareCardTitle(routineName, startedAt) {
+  if (routineName && String(routineName).trim()) return String(routineName).trim();
+  const t = typeof startedAt === 'string' ? Date.parse(startedAt) : Number(startedAt);
+  if (!Number.isFinite(t) || t <= 0) return 'Workout complete';
+  const h = new Date(t).getHours();
+  if (h >= 5 && h < 12) return 'Morning workout';
+  if (h >= 12 && h < 17) return 'Afternoon workout';
+  if (h >= 17 && h < 22) return 'Evening workout';
+  return 'Night workout';
+}
+
+/**
  * Intensity tier badge for the share card. A heuristic, not a grade: any one of
  * the PR / tonnage / set-count thresholds is enough to reach a tier.
  *

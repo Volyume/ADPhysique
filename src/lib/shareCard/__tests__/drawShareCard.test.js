@@ -12,8 +12,9 @@
  *   transparent-background non-blank check for the new sticker export.
  */
 import {
-  drawShareCard, cardHeight, drawSticker, stickerHeight,
+  drawShareCard, cardHeight, drawSticker, stickerHeight, photoCoverRect, photoCropFromRect, MAX_PHOTO_ZOOM,
 } from '../drawShareCard';
+import { transformFromCrop, cropFromTransform } from '../photoFraming';
 
 const fs = require('fs');
 const path = require('path');
@@ -65,11 +66,11 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
   });
 
   const PARAMS = {
-    cardType: 'session', showDate: true, showVolume: true, showPlanName: true, showExercises: true,
+    cardType: 'session', showDate: true, showVolume: true, showPlanName: true,
     showPRWeight: true, showPrevBest: true,
     sessionName: 'Back + Delts (Width)', planName: 'Push Pull Legs', date: 'Sat · 20 Jun 2026',
     workingSets: 4, duration: 0, tonnage: 304, exerciseCount: 5,
-    exercises: ['Lat Pulldown', 'Seated Row', 'Lateral Raise'], topSet: { weight: 90, reps: 8, exerciseName: 'Lat Pulldown' },
+    topSet: { weight: 90, reps: 8, exerciseName: 'Lat Pulldown' },
     intensityTier: 'solid',
     exerciseName: 'Barbell Bench Press', weight: 120, reps: 5, units: 'kg', previousBest: 115,
     eyebrow: 'Year of Lifts', title: '2026 in the gym', heroValue: '1,240,000', heroUnit: 'total kg lifted',
@@ -318,7 +319,67 @@ describe('lead render-review pins (source guards)', () => {
     // and the bottom-weighted average alone never tripped the bright branch
     // for a bright-sky-top / dark-floor photo. The sampler must report the
     // top band separately and the opening stop must answer to it.
+    // RE-ANCHORED 2026-09-26: with the title at the top of a photo card
+    // (the restyle's split layout) the top band always carries a scrim, and
+    // a bright top gets the deeper one.
     expect(SRC).toMatch(/topLuminance/);
-    expect(SRC).toMatch(/const topAlpha = brightTop \? 0\.5 : 0\.06;/);
+    expect(SRC).toMatch(/const topAlpha = brightTop \? 0\.74 : 0\.52;/);
+  });
+});
+
+// Founder order 2026-09-26: "if I can move it up down left or right it will
+// show better". The framing is a point of the photo plus a zoom, and the
+// renderer and the positioning view share one piece of arithmetic.
+describe('photo framing', () => {
+  test('no framing is the centre crop the card always used', () => {
+    expect(photoCoverRect(1000, 1500, 1080, 1920, null)).toEqual(photoCoverRect(1000, 1500, 1080, 1920, { zoom: 1, cx: 0.5, cy: 0.5 }));
+    const r = photoCoverRect(1000, 1500, 1080, 1920, null);
+    expect(r.x).toBeCloseTo((1080 - r.w) / 2, 6);
+    expect(r.y).toBeCloseTo((1920 - r.h) / 2, 6);
+  });
+
+  test('the photo always covers the card, however far it is pushed', () => {
+    for (const crop of [{ zoom: 1, cx: 0, cy: 0 }, { zoom: 1, cx: 1, cy: 1 }, { zoom: 3, cx: -5, cy: 9 }, { zoom: 99, cx: 0.5, cy: 0.5 }]) {
+      const r = photoCoverRect(1000, 1500, 1080, 1920, crop);
+      expect(r.x).toBeLessThanOrEqual(0);
+      expect(r.y).toBeLessThanOrEqual(0);
+      expect(r.x + r.w).toBeGreaterThanOrEqual(1080 - 1e-6);
+      expect(r.y + r.h).toBeGreaterThanOrEqual(1920 - 1e-6);
+    }
+    // Zoom is capped.
+    const capped = photoCoverRect(1000, 1500, 1080, 1920, { zoom: 99, cx: 0.5, cy: 0.5 });
+    const cover = Math.max(1080 / 1000, 1920 / 1500);
+    expect(capped.w).toBeCloseTo(1000 * cover * MAX_PHOTO_ZOOM, 6);
+  });
+
+  test('moving the photo up shows more of its lower half, and the framing survives a round trip', () => {
+    const lower = photoCoverRect(1000, 1500, 1080, 1920, { zoom: 2, cx: 0.5, cy: 0.7 });
+    const centre = photoCoverRect(1000, 1500, 1080, 1920, { zoom: 2, cx: 0.5, cy: 0.5 });
+    expect(lower.y).toBeLessThan(centre.y);
+    const back = photoCropFromRect(1000, 1500, 1080, 1920, lower);
+    expect(back.zoom).toBeCloseTo(2, 6);
+    expect(back.cx).toBeCloseTo(0.5, 6);
+    expect(back.cy).toBeCloseTo(0.7, 6);
+  });
+
+  test('the framing is the same on the preview and the 1080 export', () => {
+    const crop = { zoom: 1.6, cx: 0.42, cy: 0.33 };
+    const small = photoCoverRect(1000, 1500, 300, cardHeight(300, false, 'story'), crop);
+    const big = photoCoverRect(1000, 1500, 1080, 1920, crop);
+    expect(small.x / 300).toBeCloseTo(big.x / 1080, 2);
+    expect(small.y / cardHeight(300, false, 'story')).toBeCloseTo(big.y / 1920, 2);
+  });
+
+  test("the positioning view's transform converts to the renderer's framing and back", () => {
+    const crop = { zoom: 1.8, cx: 0.4, cy: 0.62 };
+    const view = transformFromCrop(1200, 900, 300, 533, crop);
+    const again = cropFromTransform(1200, 900, 300, 533, view);
+    expect(again.zoom).toBeCloseTo(1.8, 6);
+    expect(again.cx).toBeCloseTo(0.4, 6);
+    expect(again.cy).toBeCloseTo(0.62, 6);
+    // A drag past the edge is clamped to the edge, never beyond it.
+    const pushed = cropFromTransform(1200, 900, 300, 533, { zoom: 1, tx: 5000, ty: 0 });
+    const r = photoCoverRect(1200, 900, 300, 533, pushed);
+    expect(r.x).toBeCloseTo(0, 6);
   });
 });

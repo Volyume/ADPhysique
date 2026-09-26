@@ -56,6 +56,7 @@ import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
+import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
 import {
   buildBeforeAfterParams,
   defaultPair,
@@ -202,8 +203,9 @@ export default function BeforeAfterShareSheet({
     : [items[0] || null, null];
   const pairReady = !!(older && newer);
 
-  // System typefaces for the Skia renderer.
-  const typefaces = useMemo(() => {
+  // System typefaces for the Skia renderer: the floor the card can always
+  // draw with.
+  const systemTypefaces = useMemo(() => {
     if (!Skia || !matchFont) return null;
     try {
       // These 'bold'/'normal' are Skia matchFont() OS-typeface descriptors, not
@@ -216,6 +218,21 @@ export default function BeforeAfterShareSheet({
       return (bold && regular) ? { bold, regular } : null;
     } catch (_) { return null; }
   }, []);
+  // The app's own Inter faces, the same as the share screen (2026-09-26
+  // share-card restyle: "Use styles from the rest of the app"). They load in
+  // the background and never gate the card (VOLYUME-2V law).
+  const [appTypefaces, setAppTypefaces] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadCardTypefaces(Skia)
+      .then((faces) => { if (!cancelled && faces) setAppTypefaces(faces); })
+      .catch(() => { /* the system faces stand; the loader logs its own failures */ });
+    return () => { cancelled = true; };
+  }, []);
+  const typefaces = useMemo(() => {
+    const merged = { ...(systemTypefaces || {}), ...(appTypefaces || {}) };
+    return (merged.bold && merged.regular) ? merged : null;
+  }, [systemTypefaces, appTypefaces]);
 
   // Load the wordmark once as an SkImage for the footer.
   useEffect(() => {
