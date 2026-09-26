@@ -34,10 +34,40 @@ export const SHARE_LINES = Object.freeze([
 
 /**
  * Quotes with a named source, shown in curly quotes with the name under
- * them. Each entry records where its wording was checked.
+ * them. Each entry records where its wording was checked: kept only when the
+ * exact words were seen in the person's own writing or recorded speech, or a
+ * reputable reproduction of it (research lane 2026-09-26; lines found only on
+ * quote-aggregator sites, and lines that glorify pain or mock others, were
+ * dropped, among them many commonly credited to famous lifters).
  * @type {ReadonlyArray<{text:string, by:string, source:string}>}
  */
-export const SHARE_QUOTES = Object.freeze([]);
+export const SHARE_QUOTES = Object.freeze([
+  Object.freeze({
+    text: 'Stimulate, don\u2019t annihilate.',
+    by: 'Lee Haney',
+    source: 'Lee Haney, his own Instagram post ("You\u2019ve heard me say stimulate, don\u2019t annihilate"), quoted in FitnessVolt, fitnessvolt.com/lee-haney-tips-safe-contest-prep',
+  }),
+  Object.freeze({
+    text: 'You\u2019ve got to recover first and then you can repair.',
+    by: 'Dorian Yates',
+    source: 'The Tim Ferriss Show #235, official transcript, tim.blog/2018/06/05/the-tim-ferriss-show-transcripts-dorian-yates (the sentence continues "and hopefully overcompensate a little bit")',
+  }),
+  Object.freeze({
+    text: 'Keep the goal the goal. Stay consistent. Repeat what works.',
+    by: 'Dan John',
+    source: 'Dan John, his own newsletter, coachdanjohn.substack.com/p/day-twenty-one-keep-the-goal-the',
+  }),
+  Object.freeze({
+    text: 'The Iron never lies to you.',
+    by: 'Henry Rollins',
+    source: '"Iron and the Soul", Details magazine, 1994, its opening line (reproduced by Art of Manliness)',
+  }),
+  Object.freeze({
+    text: 'It\u2019s about how hard you can get hit and keep moving forward.',
+    by: 'Rocky Balboa',
+    source: 'Rocky Balboa (2006), written and directed by Sylvester Stallone; verbatim part of the line, checked against IMDb and Wikiquote',
+  }),
+]);
 
 /**
  * The athlete's own caption, tidied: trimmed, inner runs of spaces and line
