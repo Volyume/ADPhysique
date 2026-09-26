@@ -10171,4 +10171,20 @@ guard is re-anchored to the primitive rather than to per-key literals.
 product decision about which of the coach's sentences to keep; the
 restyle keeps every sentence. Question delivered in chat 2026-09-26.
 
-In flight 2026-09-26 (Sonnet build lane against this ruling); the landing hash and the gate figures are recorded here at landing.
+**Lead review of the lane's diff (2026-09-26).** Two corrections by the
+lead's hand: the food-level receipt's headline is a full sentence from
+`planExplain.js` and the lane had set it as an uppercase overline, so the
+card now carries the label "Your meal plan" with the headline as
+`bodyStrong` text under it; and the great-week share pill, which the lane
+left as a hand-rolled success-tinted pill, is the shared `Button` in the
+standard primary treatment (raised surface, amber glyph), so a great
+week's share still carries more weight than the quiet actions around it
+without a bespoke chrome. Four guards re-anchored with notes, each still
+pinning its contract on the new literal: the apply-morph guard (the
+one-amber mapping), the radius-cohesion guard (the five cards through
+`Card`), the training-plan-link suite and the coach-ledger wiring guard
+(`outline` spelt `secondary`). Noted, not fixed, outside the order: the
+same non-existent `variant="ghost"` renders as `primary` in
+`NutritionTargetsScreen.js` and `MealPlanScreen.js`.
+
+Landed `16fd55a9` (gate `lint clean, tsc clean, check:imports OK over 2086 files, jest 1372 suites passed and 1 skipped, 21548 tests passed and 16 skipped, none failed`).
