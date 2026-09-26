@@ -113,20 +113,28 @@ function fatigueUnit(sets) {
 }
 
 /**
+ * One contributing session's residual at instant t, from its fatigue unit F,
+ * its end and its length in ms: max(0, F * (1 - (t - endMs) / Tms)). Zero
+ * when the length is not positive.
+ */
+function contributionAt(unit, endMs, tMs, t) {
+  if (!(tMs > 0)) return 0;
+  // Lead review: a session's contribution is capped at its own F. Before
+  // its end (a projection that pre-dates it, or an end stamped ahead of
+  // "now" by clock skew) the raw fraction exceeds 1 and would inflate the
+  // residual past what the session can carry.
+  const fraction = Math.min(1, 1 - (t - endMs) / tMs);
+  return Math.max(0, unit * fraction);
+}
+
+/**
  * The residual at instant t: the sum, over the given contributing sessions
  * (each { endMs, sets, hoursT }), of max(0, F * (1 - (t - endMs) / Tms)).
  */
 function residualAt(contributingSessions, t) {
   let residual = 0;
   for (const cs of contributingSessions) {
-    const tMs = cs.hoursT * MS_PER_HOUR;
-    if (!(tMs > 0)) continue;
-    // Lead review: a session's contribution is capped at its own F. Before
-    // its end (a projection that pre-dates it, or an end stamped ahead of
-    // "now" by clock skew) the raw fraction exceeds 1 and would inflate the
-    // residual past what the session can carry.
-    const fraction = Math.min(1, 1 - (t - cs.endMs) / tMs);
-    residual += Math.max(0, fatigueUnit(cs.sets) * fraction);
+    residual += contributionAt(fatigueUnit(cs.sets), cs.endMs, cs.hoursT * MS_PER_HOUR, t);
   }
   return residual;
 }
@@ -201,6 +209,40 @@ export function recoveredFractionAt(contributingSessions, atMs) {
   if (!Array.isArray(contributingSessions) || !contributingSessions.length) return 1;
   const peak = peakResidual(contributingSessions);
   return clamp(0, 1, 1 - residualAt(contributingSessions, atMs) / peak);
+}
+
+/**
+ * recoveredFractionAt for several recovery lengths of the same sessions at
+ * once. The personal learner (personalRecovery.js, register D210) reads
+ * every candidate recovery speed at each instant: `hours[c]` is a
+ * session's length in hours under candidate c, and entry c of the result
+ * equals recoveredFractionAt with each session's hoursT set to its
+ * hours[c], exactly (the same terms, summed in the same order). Each
+ * session's fatigue unit is worked out once, not once per candidate.
+ *
+ * @param {Array<{endMs:number, sets:number, hours:number[]}>} contributingSessions
+ *   sorted by endMs, each ending at or before atMs
+ * @param {number} atMs
+ * @param {number} count - the number of candidates (each hours list's length)
+ * @returns {number[]}
+ */
+export function recoveredFractionsAt(contributingSessions, atMs, count) {
+  const out = new Array(count).fill(1);
+  if (!Array.isArray(contributingSessions) || !contributingSessions.length) return out;
+  const units = contributingSessions.map((cs) => fatigueUnit(cs.sets));
+  const lastEndMs = contributingSessions[contributingSessions.length - 1].endMs;
+  for (let c = 0; c < count; c += 1) {
+    let peak = 0;
+    let residual = 0;
+    for (let i = 0; i < contributingSessions.length; i += 1) {
+      const cs = contributingSessions[i];
+      const tMs = cs.hours[c] * MS_PER_HOUR;
+      peak += contributionAt(units[i], cs.endMs, tMs, lastEndMs);
+      residual += contributionAt(units[i], cs.endMs, tMs, atMs);
+    }
+    out[c] = clamp(0, 1, 1 - residual / Math.max(FATIGUE_UNIT_MIN, peak));
+  }
+  return out;
 }
 
 /** recoveredPercent, status and readyAtMs at `atMs`, relative to the peak. */

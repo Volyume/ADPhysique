@@ -6,7 +6,8 @@
  * and feedback factors take their spec values; feedback never shortens an
  * estimate; recoveryHours is clamped to [24, 168] and deterministic; an
  * unknown muscle takes the most conservative baseline; the module does no
- * I/O.
+ * I/O; recoveryHoursAcross (register D210) gives exactly recoveryHours at
+ * each learned factor.
  *
  * LANE R-G addition (Opus review finding 25, spec section 9; D201 addendum,
  * lead ruling 3, and addendum 6 ruling 12): TYPICAL_WEEK_GAP_HOURS holds
@@ -22,7 +23,7 @@ import {
   DOSE_FACTOR_MIN, DOSE_FACTOR_MAX, RATING_FACTOR, FIRST_WEEK_FACTOR, FEEDBACK_FACTOR,
   RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, READY_PERCENT, NEARLY_PERCENT, LOOKBACK_DAYS,
   TYPICAL_WEEK_GAP_HOURS, PLAN_OPENING_RIR,
-  doseFactor, ratingFactor, intensityFactor, feedbackFactor, recoveryHours,
+  doseFactor, ratingFactor, intensityFactor, feedbackFactor, recoveryHours, recoveryHoursAcross,
 } from '../constants';
 
 describe('baselines', () => {
@@ -130,6 +131,27 @@ describe('recoveryHours', () => {
     const a = recoveryHours('back', { sets: 9, recoveryRating: 'good', rirTarget: 2, ratings: { joint: 2 } });
     const b = recoveryHours('back', { sets: 9, recoveryRating: 'good', rirTarget: 2, ratings: { joint: 2 } });
     expect(a).toBe(b);
+  });
+
+  test('recoveryHoursAcross gives exactly recoveryHours at each learned factor (register D210)', () => {
+    // The personal learner tries every candidate speed on every session; the
+    // shortcut must not move a single figure, so equality is exact.
+    const factors = [0.75, 0.8, 0.95, 1, 1.05, 1.4, 0.5, 2, null, undefined, '', 'x', 0, -1];
+    const cases = [
+      ['quads', {}],
+      ['calves', { sets: 1, recoveryRating: 'good', rirTarget: 4 }],
+      ['back', {
+        sets: 9, recoveryRating: 'poor', rirTarget: 0, firstWeek: true, ratings: { fatigue: 5, joint: 3 },
+      }],
+      ['chest', { sets: 0, rirTarget: null, ratings: { sorenessNext: 3 } }],
+      ['hamstrings', { sets: 7.5, rirTarget: '2', ratings: null }],
+      ['not_a_muscle', { sets: 60, recoveryRating: 'unknown' }],
+    ];
+    for (const [muscle, opts] of cases) {
+      expect(recoveryHoursAcross(muscle, opts, factors))
+        .toEqual(factors.map((f) => recoveryHours(muscle, { ...opts, personalFactor: f })));
+    }
+    expect(recoveryHoursAcross('quads', {}, [])).toEqual([]);
   });
 });
 

@@ -27,9 +27,11 @@ import {
 } from '../personalRecovery';
 import {
   PERFORMANCE_SENSITIVITY_MIN, PERFORMANCE_SENSITIVITY_MAX, PERSONAL_MAX_CHANGE, PERSONAL_MIN_PAIRS,
-  LOOKBACK_DAYS, recoveryHours,
+  PERSONAL_MIN_MUSCLE_PAIRS, PERSONAL_MAX_FIXED_REPS_SHARE, LOOKBACK_DAYS, recoveryHours,
 } from '../constants';
 import { sessionMuscleLoads, recoveredFractionAt } from '../muscleRecoveryModel';
+import * as constantsModule from '../constants';
+import * as modelModule from '../muscleRecoveryModel';
 import { calculate1RM } from '../../algorithms';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -116,102 +118,149 @@ describe('the same effort target', () => {
   });
 });
 
-describe('comparable pairs (spec sections 2 and 3)', () => {
-  test('each session pairs with the most recent earlier session of the same lift; the outcome is the log ratio', () => {
+describe('comparable pairs (spec sections 2 and 3, D210 addendum 3)', () => {
+  // NOW is a Monday; sessions a whole number of weeks back fall on Mondays.
+  test('each session pairs with the most recent earlier session of the same lift on the same weekday; the outcome is the log ratio', () => {
     const pairs = comparablePairs({
-      sessions: [session('a', 6, benchSets(100)), session('b', 4, benchSets(100, 9)), session('c', 2, benchSets(102.5))],
+      sessions: [session('a', 21, benchSets(100)), session('b', 14, benchSets(100, 9)), session('c', 7, benchSets(102.5))],
       exerciseById: EX,
       nowMs: NOW,
     });
     expect(pairs.chest).toHaveLength(2);
     expect(pairs.chest[0]).toEqual({
-      startB: NOW - 4 * DAY_MS, startP: NOW - 6 * DAY_MS, y: Math.log(calculate1RM(100, 9) / calculate1RM(100, 8)),
+      startB: NOW - 14 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 9) / calculate1RM(100, 8)),
     });
-    expect(pairs.chest[1].startP).toBe(NOW - 4 * DAY_MS);
+    expect(pairs.chest[1].startP).toBe(NOW - 14 * DAY_MS);
+  });
+
+  test('sessions on different weekdays never pair, however close (weekday strength would read as recovery)', () => {
+    const pairs = comparablePairs({
+      sessions: [session('a', 9, benchSets(100)), session('b', 8, benchSets(100, 9)), session('c', 6, benchSets(100, 10))],
+      exerciseById: EX,
+      nowMs: NOW,
+    });
+    expect(pairs.chest).toBeUndefined();
   });
 
   test('the walk back skips an incomparable session (another effort target) for an earlier comparable one', () => {
-    const planned = (id, daysAgo, rir) => session(id, daysAgo, benchSets(100), { weekRirTarget: rir, weekStatus: 'resolved' });
+    const planned = (id, daysAgo, rir, reps) => session(id, daysAgo, benchSets(100, reps), { weekRirTarget: rir, weekStatus: 'resolved' });
     const pairs = comparablePairs({
-      sessions: [planned('p1', 7, 2), planned('p2', 5, 1), planned('b', 3, 2)],
+      sessions: [planned('p1', 21, 2, 8), planned('p2', 14, 1, 9), planned('b', 7, 2, 10)],
       exerciseById: EX,
       nowMs: NOW,
     });
     // p2 (RIR 1) pairs with nothing; b (RIR 2) pairs with p1, skipping p2.
-    expect(pairs.chest).toEqual([{ startB: NOW - 3 * DAY_MS, startP: NOW - 7 * DAY_MS, y: 0 }]);
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 8)),
+    }]);
   });
 
-  test('a recovery week never pairs, as the session or its baseline', () => {
-    const pairs = comparablePairs({
-      sessions: [
-        session('a', 6, benchSets(100)),
-        session('d', 4, benchSets(80), { isDeload: true }),
-        session('b', 2, benchSets(100)),
-      ],
-      exerciseById: EX,
-      nowMs: NOW,
-    });
-    expect(pairs.chest).toEqual([{ startB: NOW - 2 * DAY_MS, startP: NOW - 6 * DAY_MS, y: 0 }]);
+  test('a recovery week never pairs: not as the later session, not as the baseline', () => {
+    // The recovery week keeps the load (within the change guard), so only
+    // the recovery-week rule can be what leaves it out.
+    const sessions = [
+      session('a', 21, benchSets(100, 8)),
+      session('d', 14, benchSets(100, 7), { isDeload: true }),
+      session('b', 7, benchSets(100, 9)),
+    ];
+    expect(comparablePairs({ sessions, exerciseById: EX, nowMs: NOW }).chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 9) / calculate1RM(100, 8)),
+    }]);
+    // With the recovery week as the latest session, it is never the later
+    // session of a pair either.
+    const deloadLast = [session('a', 14, benchSets(100, 8)), session('d', 7, benchSets(100, 9), { isDeload: true })];
+    expect(comparablePairs({ sessions: deloadLast, exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
   });
 
   test('an unresolved plan week never pairs', () => {
     const pairs = comparablePairs({
       sessions: [
-        session('a', 6, benchSets(100)),
-        session('u', 4, benchSets(100), { weekStatus: 'unresolved' }),
-        session('b', 2, benchSets(100)),
+        session('a', 21, benchSets(100, 8)),
+        session('u', 14, benchSets(100, 9), { weekStatus: 'unresolved' }),
+        session('b', 7, benchSets(100, 10)),
       ],
       exerciseById: EX,
       nowMs: NOW,
     });
-    expect(pairs.chest).toEqual([{ startB: NOW - 2 * DAY_MS, startP: NOW - 6 * DAY_MS, y: 0 }]);
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 8)),
+    }]);
   });
 
   test('a session under an injury limit for the muscle never pairs; other muscles in it still do', () => {
-    const both = (w) => [...benchSets(w), ...[1, 2, 3].map((n) => set('squat', 140, 6, n))];
-    const sessions = [session('a', 6, both(100)), session('x', 4, both(100)), session('b', 2, both(100))];
+    const both = (reps) => [...benchSets(100, reps), ...[1, 2, 3].map((n) => set('squat', 140, reps - 2, n))];
+    const sessions = [session('a', 21, both(8)), session('x', 14, both(9)), session('b', 7, both(10))];
     const pairs = comparablePairs({
       sessions, exerciseById: EX, nowMs: NOW, excluded: new Set(['x|chest']),
     });
-    expect(pairs.chest).toEqual([{ startB: NOW - 2 * DAY_MS, startP: NOW - 6 * DAY_MS, y: 0 }]);
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 8)),
+    }]);
     expect(pairs.quads).toHaveLength(2);
   });
 
-  test('a baseline further back than the gap allows is no baseline', () => {
+  test('a baseline further back than the gap allows is no baseline, even with something to recover from', () => {
     const pairs = comparablePairs({
-      sessions: [session('a', 40, benchSets(100)), session('m', 5, [set('row', 80, 8, 1)]), session('b', 2, benchSets(100))],
+      sessions: [
+        session('a', 42, benchSets(100, 8)), // a Monday 35 days before b
+        session('m', 10, [set('bench', 80, 10, 1)]), // chest trained 3 days before b
+        session('b', 7, benchSets(100, 9)),
+      ],
       exerciseById: EX,
       nowMs: NOW,
     });
+    expect(42 - 7).toBeGreaterThan(28);
     expect(pairs.chest).toBeUndefined();
   });
 
   test('a session with nothing on the muscle in the lookback before it has nothing to recover from', () => {
     const pairs = comparablePairs({
-      sessions: [session('a', 22, benchSets(100)), session('b', 2, benchSets(100))],
+      sessions: [session('a', 35, benchSets(100, 8)), session('b', 7, benchSets(100, 9))],
       exerciseById: EX,
       nowMs: NOW,
     });
-    expect(22 - 2).toBeGreaterThan(LOOKBACK_DAYS);
+    expect(35 - 7).toBeGreaterThan(LOOKBACK_DAYS);
     expect(pairs.chest).toBeUndefined();
   });
 
-  test('set counts are matched: the first k sets of each, k the smaller count (at most 3)', () => {
+  test('set counts are matched: the first k straight sets of each, k the smaller count (at most 3)', () => {
     const pairs = comparablePairs({
       sessions: [
-        session('a', 4, [set('bench', 100, 8, 1), set('bench', 100, 8, 2)]),
-        session('b', 2, [...benchSets(100), set('bench', 60, 5, 4), set('bench', 60, 5, 5)]),
+        session('a', 14, [set('bench', 100, 8, 1), set('bench', 100, 8, 2)]),
+        session('b', 7, [...benchSets(100, 9), set('bench', 60, 5, 4), set('bench', 60, 5, 5)]),
       ],
       exerciseById: EX,
       nowMs: NOW,
     });
     // The back-off sets in b are beyond k = 2: b is not "weaker".
-    expect(pairs.chest).toEqual([{ startB: NOW - 2 * DAY_MS, startP: NOW - 4 * DAY_MS, y: 0 }]);
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 14 * DAY_MS, y: Math.log(calculate1RM(100, 9) / calculate1RM(100, 8)),
+    }]);
+  });
+
+  test('only straight sets count: drop sets and AMRAP sets are left out (each measures a different effort)', () => {
+    const pairs = comparablePairs({
+      sessions: [
+        session('a', 14, benchSets(100, 8)),
+        session('b', 7, [
+          set('bench', 100, 9, 1),
+          set('bench', 85, 7, 2, { setType: 'dropset' }),
+          set('bench', 70, 8, 3, { setType: 'dropset' }),
+          set('bench', 100, 12, 4, { setType: 'amrap' }),
+        ]),
+      ],
+      exerciseById: EX,
+      nowMs: NOW,
+    });
+    // One straight set in b: k = 1, and the drops never read as fatigue.
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 7 * DAY_MS, startP: NOW - 14 * DAY_MS, y: Math.log(calculate1RM(100, 9) / calculate1RM(100, 8)),
+    }]);
   });
 
   test('a change too large to be recovery (a typing slip) is left out', () => {
     const pairs = comparablePairs({
-      sessions: [session('a', 6, benchSets(100)), session('t', 4, benchSets(1000)), session('b', 2, benchSets(100))],
+      sessions: [session('a', 21, benchSets(100)), session('t', 14, benchSets(1000, 9)), session('b', 7, benchSets(100, 10))],
       exerciseById: EX,
       nowMs: NOW,
     });
@@ -221,12 +270,31 @@ describe('comparable pairs (spec sections 2 and 3)', () => {
 
   test('only sessions inside the window are compared as the later session; older ones still serve as baselines', () => {
     const pairs = comparablePairs({
-      sessions: [session('a', 90, benchSets(100)), session('b', 86, benchSets(100)), session('c', 83, benchSets(100))],
+      sessions: [session('a', 98, benchSets(100, 8)), session('b', 91, benchSets(100, 9)), session('c', 84, benchSets(100, 10))],
       exerciseById: EX,
       nowMs: NOW,
     });
-    expect(pairs.chest).toEqual([{ startB: NOW - 83 * DAY_MS, startP: NOW - 86 * DAY_MS, y: 0 }]);
+    expect(pairs.chest).toEqual([{
+      startB: NOW - 84 * DAY_MS, startP: NOW - 91 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 9)),
+    }]);
     expect(PERSONAL_HISTORY_DAYS).toBe(84 + 28 + LOOKBACK_DAYS);
+  });
+
+  test('a lift whose comparisons mostly repeat the same reps set for set is left out and counted (logged as planned)', () => {
+    // Four Mondays at the same 3 x 8, the load climbing as a plan sets it.
+    const fixed = [28, 21, 14, 7].map((d, i) => session(`f${i}`, d, benchSets(100 + i * 2.5, 8)));
+    expect(comparablePairs({ sessions: fixed, exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
+    const evidence = personalRecoveryEvidence({ sessions: fixed, exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
+    expect(evidence.fixedRepsPairs).toBe(3);
+    // Over six Mondays, one tired day that drops a rep changes the two
+    // comparisons either side of it; three of five still repeat the same
+    // reps, so the lift is still read as logged as planned and left out.
+    const six = [35, 28, 21, 14, 7, 0].map((d, i) => session(`g${i}`, d, benchSets(100 + i * 2.5, i === 3 ? 7 : 8)));
+    expect(comparablePairs({ sessions: six, exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
+    // Reps that move most weeks are the day showing: kept.
+    const moving = [28, 21, 14, 7].map((d, i) => session(`h${i}`, d, benchSets(100, [8, 9, 7, 10][i])));
+    expect(comparablePairs({ sessions: moving, exerciseById: EX, nowMs: NOW }).chest).toHaveLength(3);
+    expect(PERSONAL_MAX_FIXED_REPS_SHARE).toBe(0.5);
   });
 });
 
@@ -263,22 +331,24 @@ describe('boundedFit', () => {
 /**
  * A clean (noise-free) athlete on a varied schedule whose lifts follow the
  * model exactly at `trueFactor` with sensitivity 0.1: every performance
- * change is recovery, so the fit must find the truth.
+ * change is recovery, so the fit must find the truth. Reps vary from session
+ * to session (4 to 8) and the load is set so the estimated max is exact, so
+ * the lifts are never read as logged-as-planned.
  */
-function cleanAthlete(trueFactor) {
-  const gaps = [1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 2, 4, 1, 3, 1, 2, 4, 3, 1, 2, 3, 4, 1, 2, 2, 3, 1];
+function cleanAthlete(trueFactor, days = 112) {
+  const gaps = [1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 2, 4, 1, 3, 1, 2, 4, 3, 1, 2, 3, 4, 1, 2, 2, 3, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 2, 4, 1, 3, 2, 1];
   const sessions = [];
   let day = 0;
-  gaps.forEach((gap, i) => {
-    day += gap;
-    const startedAt = NOW - 80 * DAY_MS + day * DAY_MS;
+  for (let i = 0; i < gaps.length && day + gaps[i] < days; i += 1) {
+    day += gaps[i];
+    const startedAt = NOW - days * DAY_MS + day * DAY_MS;
     sessions.push({
       id: `s${i}`, startedAt, endedAt: startedAt + HOUR_MS, durationMinutes: 60,
       weekRirTarget: null, weekStatus: 'none', isFirstWeek: false, isDeload: false,
       ratings: { sorenessNext: null, fatigue: null, joint: null },
       sets: [1, 2, 3].flatMap((n) => [set('bench', 1, 1, n), set('squat', 1, 1, n)]),
     });
-  });
+  }
   const curve = {};
   sessionMuscleLoads(sessions, EX).forEach((load, i) => {
     for (const [muscle, sets] of Object.entries(load.setsByMuscle)) {
@@ -294,12 +364,15 @@ function cleanAthlete(trueFactor) {
     const c = (curve[muscle] ?? []).filter((e) => e.endMs <= atMs && atMs - e.endMs <= LOOKBACK_DAYS * DAY_MS);
     return c.length ? recoveredFractionAt(c, atMs) : 1;
   };
-  for (const s of sessions) {
+  sessions.forEach((s, i) => {
     const bench = 100 * (1 - 0.1 * (1 - r('chest', s.startedAt)));
     const squat = 140 * (1 - 0.1 * (1 - r('quads', s.startedAt)));
-    // Single-rep sets: calculate1RM(w, 1) is w, so the estimated max IS the weight.
-    s.sets = [1, 2, 3].flatMap((n) => [set('bench', bench, 1, n), set('squat', squat, 1, n)]);
-  }
+    const reps = 4 + (i % 5);
+    // calculate1RM is linear in the load at fixed reps, so this load gives
+    // exactly the intended estimated max.
+    const loadFor = (max) => max / calculate1RM(1, reps);
+    s.sets = [1, 2, 3].flatMap((n) => [set('bench', loadFor(bench), reps, n), set('squat', loadFor(squat), reps, n)]);
+  });
   return sessions;
 }
 
@@ -346,32 +419,44 @@ describe('the fit (spec sections 4 and 5)', () => {
     expect(a.best).toBe(1.2);
   });
 
-  test('every muscle\'s pairs count only from three: a lone pair fits itself and carries nothing', () => {
+  test('a muscle\'s pairs count only from five: fewer fit themselves and carry nothing', () => {
     const sessions = [...cleanAthlete(1.0)];
-    sessions.push(session('r1', 3, [set('row', 80, 8, 1)]), session('r2', 1, [set('row', 80, 8, 1)]));
+    sessions.push(session('r1', 14, [set('row', 80, 8, 1)]), session('r2', 7, [set('row', 80, 9, 1)]));
     const evidence = personalRecoveryEvidence({ sessions, exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
     expect(evidence.pairsByMuscle.back).toBeUndefined();
     expect(Object.keys(evidence.pairsByMuscle).sort()).toEqual(['chest', 'quads']);
+    expect(PERSONAL_MIN_MUSCLE_PAIRS).toBe(5);
   });
 
   test('too few pairs: the start stands, and says so', () => {
     const learned = learnPersonalRecovery({
-      sessions: [session('a', 4, benchSets(100)), session('b', 2, benchSets(100))], exerciseById: EX, recoveryRating: 'poor', nowMs: NOW,
+      sessions: [session('a', 14, benchSets(100)), session('b', 7, benchSets(100, 9))], exerciseById: EX, recoveryRating: 'poor', nowMs: NOW,
     });
     expect(learned).toEqual({
       factor: 1.15, prior: 1.15, pairs: 0, reason: 'too_few', pairsByMuscle: {},
     });
   });
 
-  test('a steady schedule: the start stands, because the pairs sit at the same predicted recovery', () => {
-    // Every session exactly a week apart: fully recovered at every candidate.
-    const sessions = Array.from({ length: 12 }, (_, i) => session(`w${i}`, 80 - i * 7, [
-      ...benchSets(100 + i), ...[1, 2, 3].map((n) => set('squat', 140 + i, 6, n)),
-    ]));
-    // Something to recover from: a light accessory day in each week.
-    for (let i = 0; i < 12; i += 1) {
-      sessions.push(session(`x${i}`, 80 - i * 7 - 3, [set('bench', 60, 12, 1), set('squat', 60, 12, 1)].map((s2) => ({ ...s2, exerciseId: s2.exerciseId === 'bench' ? 'bench' : 'squat', setType: 'warmup' }))));
+  test('enough comparisons, but the reps never change: the start stands, and the reason says why', () => {
+    // Eleven Mondays of a fixed 3 x 8, plus a Thursday session each week so
+    // there is always something to recover from.
+    const sessions = [];
+    for (let w = 11; w >= 1; w -= 1) {
+      sessions.push(session(`mon${w}`, w * 7, [...benchSets(100 + (11 - w) * 2.5, 8), ...[1, 2, 3].map((n) => set('squat', 140, 5, n))]));
+      sessions.push(session(`thu${w}`, w * 7 - 3, [set('bench', 60, 12, 1), set('squat', 60, 12, 1)]));
     }
+    const learned = learnPersonalRecovery({ sessions, exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
+    expect(learned.reason).toBe('fixed_reps');
+    expect(learned.factor).toBe(1);
+    expect(personalDirection(learned)).toBe('fixed_reps');
+  });
+
+  test('a steady weekly schedule: the start stands, because the pairs sit at the same predicted recovery', () => {
+    // Every session exactly a week apart, reps varying: nothing to tell
+    // recovery apart from the day of the week.
+    const sessions = Array.from({ length: 12 }, (_, i) => session(`w${i}`, 84 - i * 7, [
+      ...benchSets(100 + i, 8 + (i % 3)), ...[1, 2, 3].map((n) => set('squat', 140 + i, 5 + (i % 3), n)),
+    ]));
     const learned = learnPersonalRecovery({ sessions, exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
     expect(['too_few', 'no_spread']).toContain(learned.reason);
     expect(learned.factor).toBe(1);
@@ -399,5 +484,56 @@ describe('personalDirection', () => {
     expect(personalDirection({ factor: 1, prior: 1, reason: 'no_spread' })).toBe('no_spread');
     expect(personalDirection({ factor: 1, prior: 1, reason: 'too_few' })).toBe('too_few');
     expect(personalDirection(null)).toBeNull();
+  });
+});
+
+describe('cost (spec section 8: an operation count, not a clock)', () => {
+  // The heaviest history load.js hands over: 126 days (PERSONAL_HISTORY_DAYS)
+  // of a session every day, 24 working sets each (three muscles, two lifts
+  // each, four sets), reps moving from day to day.
+  const ROTATION = [
+    ['chest', 'side_delts', 'triceps'], ['back', 'biceps', 'rear_delts'], ['quads', 'hamstrings', 'calves'],
+    ['chest', 'side_delts', 'triceps'], ['back', 'biceps', 'rear_delts'], ['quads', 'glutes', 'abs'],
+    ['chest', 'back', 'quads'],
+  ];
+  const LIBRARY = {};
+  for (const muscle of new Set(ROTATION.flat())) {
+    for (const k of ['a', 'b']) LIBRARY[`${muscle}_${k}`] = { id: `${muscle}_${k}`, primaryMuscle: muscle, secondaryMuscles: [] };
+  }
+  const heavy = Array.from({ length: PERSONAL_HISTORY_DAYS }, (_, i) => {
+    const daysAgo = PERSONAL_HISTORY_DAYS - i;
+    const sets = [];
+    ROTATION[daysAgo % 7].forEach((muscle, mi) => {
+      for (const k of ['a', 'b']) {
+        for (let n = 1; n <= 4; n += 1) sets.push(set(`${muscle}_${k}`, 60 + 10 * mi, 8 + ((daysAgo + n) % 3), n));
+      }
+    });
+    return session(`h${i}`, daysAgo, sets);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  test('each session\'s lengths are worked out once, each reading once, from the 14-day window only', () => {
+    const lengths = jest.spyOn(constantsModule, 'recoveryHoursAcross');
+    const readings = jest.spyOn(modelModule, 'recoveredFractionsAt');
+    const evidence = personalRecoveryEvidence({
+      sessions: heavy, exerciseById: LIBRARY, recoveryRating: 'average', nowMs: NOW,
+    });
+    expect(evidence.pairs).toBeGreaterThan(300); // the history is as heavy as intended
+
+    // At most one set of lengths per session and muscle it loaded.
+    const loaded = sessionMuscleLoads(heavy, LIBRARY)
+      .reduce((n, load) => n + Object.values(load.setsByMuscle).filter((v) => v > 0).length, 0);
+    expect(lengths.mock.calls.length).toBeLessThanOrEqual(loaded);
+    // At most one reading per muscle and session start (a session is B in
+    // one pair and P in the next: the memo reads it once).
+    expect(readings.mock.calls.length).toBeLessThanOrEqual(heavy.length * 3);
+    // Each reading takes its contributors from the 14-day window before it,
+    // never the whole history: at one session a day, at most 15.
+    const widest = Math.max(...readings.mock.calls.map(([contributing]) => contributing.length));
+    expect(widest).toBeLessThanOrEqual(LOOKBACK_DAYS + 1);
+    // Loosely, the total: every candidate at every reading, over its window.
+    const work = readings.mock.calls.reduce((n, [contributing, , count]) => n + contributing.length * count, 0);
+    expect(work).toBeLessThanOrEqual(40000);
   });
 });

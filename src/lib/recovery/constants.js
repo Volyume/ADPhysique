@@ -187,14 +187,21 @@ export const PERFORMANCE_SENSITIVITY_MIN = 0.04;
 export const PERFORMANCE_SENSITIVITY_MAX = 0.15;
 
 /**
- * A change bigger than this between two sessions of the same lift at the
- * same effort (as a log ratio, about 22%) is not read as recovery: the
+ * A change bigger than this between the two compared sessions of a lift
+ * (as a log ratio, about 22%) is not read as recovery: the
  * model's own largest recovery effect is PERFORMANCE_SENSITIVITY_MAX, so a
  * jump past this is a logging slip (a weight typed as 1000), a changed
  * set-up or an unlogged injury, and least squares would let one such pair
  * outweigh a dozen honest ones.
  */
 export const PERSONAL_MAX_CHANGE = 0.2;
+
+/**
+ * A lift whose comparisons repeat the same reps set for set at least this
+ * share of the time is logged as planned (the prescription as filled in, or
+ * a fixed 5 x 5), not as the day went, and teaches nothing about recovery.
+ */
+export const PERSONAL_MAX_FIXED_REPS_SHARE = 0.5;
 
 /** Fewer comparable pairs than this, across the person's lifts: not yet. */
 export const PERSONAL_MIN_PAIRS = 8;
@@ -204,23 +211,26 @@ export const PERSONAL_MIN_PAIRS = 8;
  * pairs than this leave almost nothing to test them against. */
 export const PERSONAL_MIN_MUSCLE_PAIRS = 5;
 
-/** The pairs must sit at different predicted recovery (the pooled
- * standard deviation of the predicted change, as a fraction, for some
- * candidate): a steady schedule carries no information about recovery time,
- * and says so. */
+/** The pairs must sit at different predicted recovery once the drift is
+ * taken out (the pooled standard deviation of the predicted change left
+ * after its fit on the days between the sessions, as a fraction, for some
+ * candidate): a steady schedule, or breaks too long to leave any fatigue,
+ * carries no information about recovery time, and says so. */
 export const PERSONAL_MIN_SPREAD = 0.1;
 
 /** How clearly the best factor must beat the start before it is used:
- * pairs x ln(SSE at the start / SSE at the best). Set by the calibration
- * simulation (personalRecovery.simulation.test.js) run in full
- * (PERSONAL_CALIBRATION=full, 600 simulated athletes a cell, 2026-09-26):
- * at 12, on the worst schedule, a person whose true recovery equals the
- * start is shown a direction 15 times in 600 (2.5%; the spec promises at
- * most 5%) and one who truly recovers faster or slower is shown the wrong
- * one 7 times in 600 (1.2%; the promise is at most 1 in 60). The smallest
- * gate meeting both on that run was 11; 12 keeps a margin. The everyday
- * run of the suite (60 a cell) is a regression guard at this gate. */
-export const PERSONAL_LR_MIN = 12;
+ * pairs x ln(SSE at the start / SSE at the best). Set from the full
+ * calibration (the suite run with PERSONAL_CALIBRATION=full, 600 simulated
+ * athletes a case, 2026-09-26, after the review's redesign: same-weekday
+ * pairs, lifts with fixed reps left out, weekday strength effects, breaks
+ * and prescribed-reps logging in the simulation): at 10, on the worst case,
+ * a person whose true recovery equals the start is shown a direction 13
+ * times in 600 (2.2%; the spec promises at most 5%) and one who truly
+ * recovers faster or slower the wrong one 4 times in 600 (0.7%; the promise
+ * is at most 1 in 60). 8 was the smallest gate meeting both on that run (a
+ * separate 600-a-case run on other seeds agreed); 10 keeps a margin. The
+ * suite's everyday run (60 a case) is a regression guard at this gate. */
+export const PERSONAL_LR_MIN = 10;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 
@@ -296,19 +306,56 @@ export function recoveryHours(muscle, {
   sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
   personalFactor = null,
 } = {}) {
-  const base = BASE_RECOVERY_HOURS[muscle] ?? Math.max(...Object.values(BASE_RECOVERY_HOURS));
+  return hoursFrom(sessionTerms(muscle, sets, rirTarget, firstWeek, ratings), speedFactor(personalFactor, recoveryRating));
+}
+
+/**
+ * recoveryHours for one session at several learned factors. The personal
+ * learner (personalRecovery.js, register D210) tries every candidate speed
+ * on every session: entry i equals recoveryHours(muscle, { ...opts,
+ * personalFactor: factors[i] }) exactly, and the session's own terms are
+ * worked out once rather than once per factor.
+ *
+ * @param {string} muscle
+ * @param {object} opts - as recoveryHours, without personalFactor
+ * @param {number[]} factors
+ * @returns {number[]}
+ */
+export function recoveryHoursAcross(muscle, {
+  sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
+} = {}, factors = []) {
+  const terms = sessionTerms(muscle, sets, rirTarget, firstWeek, ratings);
+  return factors.map((f) => hoursFrom(terms, speedFactor(f, recoveryRating)));
+}
+
+/** The speed factor: the learned one when given (clamped), else the recovery answer's. */
+function speedFactor(personalFactor, recoveryRating) {
   // The absent-value trap intensityFactor guards: Number(null) is 0.
   const learned = personalFactor === null || personalFactor === undefined || personalFactor === ''
     ? NaN : Number(personalFactor);
-  const personal = Number.isFinite(learned) && learned > 0
+  return Number.isFinite(learned) && learned > 0
     ? clamp(PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, learned)
     : ratingFactor(recoveryRating);
-  const hours = base
-    * doseFactor(sets)
-    * personal
-    * intensityFactor(rirTarget)
-    * (firstWeek ? FIRST_WEEK_FACTOR : 1.0)
-    * feedbackFactor(ratings ?? {});
+}
+
+/** Everything in a session's recovery length except the speed factor. */
+function sessionTerms(muscle, sets, rirTarget, firstWeek, ratings) {
+  const base = BASE_RECOVERY_HOURS[muscle] ?? Math.max(...Object.values(BASE_RECOVERY_HOURS));
+  return {
+    baseDose: base * doseFactor(sets),
+    intensity: intensityFactor(rirTarget),
+    firstWeek: firstWeek ? FIRST_WEEK_FACTOR : 1.0,
+    feedback: feedbackFactor(ratings ?? {}),
+  };
+}
+
+/** The length, multiplied in the estimate's own order and clamped. */
+function hoursFrom(terms, speed) {
+  const hours = terms.baseDose
+    * speed
+    * terms.intensity
+    * terms.firstWeek
+    * terms.feedback;
   return clamp(RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, hours);
 }
 

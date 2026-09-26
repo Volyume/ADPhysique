@@ -22,10 +22,11 @@
  *    re-run in full before it lands.
  *
  * How often the RIGHT direction is found is reported in the test names, not
- * floored: on a fixed schedule the sessions sit at much the same predicted
- * recovery every week, which carries little information about recovery
- * time, and the screen says so ("it learns when the time between your
- * sessions of the same lift varies").
+ * floored: on a fixed schedule the same lift on the same day of the week
+ * follows the same break every week, which carries no information about
+ * recovery time, and the screen says so ("It learns by comparing the same
+ * lift on the same day of the week after breaks of different lengths ...
+ * Your training so far does not give it that.").
  *
  * THE SIMULATED ATHLETE (spec section 7). Twelve weeks on one of five
  * schedules, with or without a plan (the plan's effort ladder is RIR 3, 2,
@@ -34,10 +35,14 @@
  * a true sensitivity per muscle drawn from [0.06, 0.12], a strength level, a
  * small weekly progression per exercise, and day-to-day noise (a shared day
  * effect, an exercise effect and a per-set effect, about 3% on each set's
- * estimated max in all). Loads come from the athlete's plan in whole plate
- * steps; the effort left in reserve varies by a rep either way; performance
- * shows as whole reps at that load. The true recovered fraction comes from
- * the model's own curve at the true factor.
+ * estimated max in all). Since the review of 2026-09-26 (D210 addendum 3)
+ * every athlete also has a steady strength effect per weekday (1.5% either
+ * way), half take an 8 to 14 day break and come back about 2% down, and
+ * extra cells log the reps AS PRESCRIBED (the logging screen fills them in),
+ * which hides every drop the day's reserve can absorb. Loads come from the
+ * athlete's plan in whole plate steps; the effort left in reserve varies by
+ * a rep either way; performance shows as whole reps at that load. The true
+ * recovered fraction comes from the model's own curve at the true factor.
  *
  * The random numbers are drawn HERE, from a seeded generator, so the suite
  * is the same on every run; the learner itself stays deterministic and never
@@ -68,7 +73,7 @@ const ATHLETES = FULL_RUN ? 600 : 60;
 const FALSE_ALLOWED = FULL_RUN ? Math.floor(ATHLETES * 0.05) : 5;
 const WRONG_ALLOWED = FULL_RUN ? Math.floor(ATHLETES / 60) : 3;
 // The gate the full calibration set (constants.js, PERSONAL_LR_MIN).
-const CALIBRATED_GATE = 12;
+const CALIBRATED_GATE = 10;
 const SETS_PER_EXERCISE = 4;
 const RIR_LADDER = [3, 2, 1, 0, 0, 4];
 const FREESTYLE_TARGET_RIR = 1;
@@ -141,15 +146,33 @@ const SCHEDULES = [
   { name: 'variable, gaps of 1 to 4 days', slots: variable, jitterHours: 3 },
 ];
 
-/** One simulated athlete's twelve weeks, in load.js's session shape. */
-function simulateAthlete(seed, schedule, withPlan, trueFactor) {
+/**
+ * One simulated athlete's twelve weeks, in load.js's session shape.
+ * `logging` is 'measured' (the reps the day allowed, to the effort target)
+ * or 'prescribed' (the reps the plan asked for, fewer only when the day
+ * could not reach them: the logging screen fills in the prescription and a
+ * person who logs it as given records the plan, not the day).
+ */
+function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measured') {
   const rand = seeded(seed);
   const strength = uniform(rand, 0.7, 1.3);
   const sensitivity = Object.fromEntries(MUSCLES.map((m) => [m, uniform(rand, 0.06, 0.12)]));
   const progression = Object.fromEntries(Object.keys(EXERCISES).map((id) => [id, uniform(rand, 0.002, 0.01)]));
+  // Some weekdays are stronger than others (sleep, work, what the day
+  // before held): a steady effect per weekday, 1.5% either way.
+  const weekdayEffect = Array.from({ length: 7 }, () => normal(rand) * 0.015);
+  // Half of athletes take a break of 8 to 14 days somewhere in weeks 3 to
+  // 10, and come back about 2% down, regained over the next two weeks.
+  const breakStart = rand() < 0.5 ? Math.floor(uniform(rand, 21, 70)) : null;
+  const breakEnd = breakStart === null ? null : breakStart + 8 + Math.floor(rand() * 7);
+  const detraining = (day) => {
+    if (breakEnd === null || day < breakEnd) return 0;
+    return Math.max(0, 0.02 * (1 - (day - breakEnd) / 14));
+  };
 
   const occurrences = new Map();
-  const sessions = schedule.slots(rand).map((slot, i) => {
+  const slots = schedule.slots(rand).filter((slot) => breakStart === null || slot.day < breakStart || slot.day >= breakEnd);
+  const sessions = slots.map((slot, i) => {
     const week = Math.floor(slot.day / 7);
     const blockWeek = week % RIR_LADDER.length;
     const jitter = uniform(rand, -schedule.jitterHours, schedule.jitterHours) * HOUR_MS;
@@ -162,6 +185,7 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor) {
     });
     return {
       id: `s${i}`,
+      day: slot.day,
       startedAt,
       endedAt: startedAt + HOUR_MS,
       durationMinutes: 60,
@@ -203,7 +227,8 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor) {
 
   for (const session of sessions) {
     const weeks = (session.startedAt - START_MS) / (7 * DAY_MS);
-    const dayEffect = normal(rand) * 0.02;
+    const weekday = new Date(session.startedAt).getDay();
+    const dayEffect = normal(rand) * 0.02 + weekdayEffect[weekday] - detraining(session.day);
     const targetRir = session.weekRirTarget ?? FREESTYLE_TARGET_RIR;
     session.sets = [];
     for (const exerciseId of session.exerciseIds) {
@@ -213,35 +238,44 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor) {
       const today = ability
         * (1 - sensitivity[muscle] * (1 - trueFraction(muscle, session.startedAt)))
         * Math.exp(dayEffect + normal(rand) * 0.02);
-      // The plan's load, chosen before the session (it cannot know today).
-      const load = Math.max(ex.step, Math.round(ability / (1 + (8 + targetRir) / 30) / ex.step) * ex.step);
+      // The plan's load, chosen before the session (it cannot know today):
+      // set from the week's ability when the plan prescribes it.
+      const planAbility = logging === 'prescribed'
+        ? ex.base * strength * Math.exp(progression[exerciseId] * Math.floor(weeks))
+        : ability;
+      const load = Math.max(ex.step, Math.round(planAbility / (1 + (8 + targetRir) / 30) / ex.step) * ex.step);
       const rir = Math.max(0, targetRir + pick(rand, [-1, 0, 0, 1]));
       for (let j = 0; j < SETS_PER_EXERCISE; j += 1) {
         const setMax = today * Math.exp(normal(rand) * 0.01);
         const toFailure = 30 * (setMax / load - 1);
+        const reps = logging === 'prescribed'
+          ? Math.max(1, Math.min(8, Math.round(toFailure)))
+          : Math.max(1, Math.round(toFailure - rir));
         session.sets.push({
           exerciseId,
           setType: 'straight',
           weight: load,
-          actualReps: Math.max(1, Math.round(toFailure - rir)),
+          actualReps: reps,
           setNumber: j + 1,
           createdAt: session.startedAt + j * 3 * 60 * 1000,
         });
       }
     }
     delete session.exerciseIds;
+    delete session.day;
   }
   return { sessions, nowMs: START_MS + WEEKS * 7 * DAY_MS };
 }
 
-/** Every athlete's evidence in one cell (schedule x plan x true factor). */
-function runCell(scheduleIndex, withPlan, trueFactor) {
+/** Every athlete's evidence in one cell (schedule x plan x logging x true factor). */
+function runCell(scheduleIndex, withPlan, trueFactor, logging = 'measured') {
   const schedule = SCHEDULES[scheduleIndex];
   const factorCode = Math.round(trueFactor * 100);
   const out = [];
   for (let a = 0; a < ATHLETES; a += 1) {
-    const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + factorCode * 10007 + a * 7919;
-    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor);
+    const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + (logging === 'prescribed' ? 250007 : 0)
+      + factorCode * 10007 + a * 7919;
+    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, logging);
     out.push(personalRecoveryEvidence({
       sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
     }));
@@ -266,6 +300,17 @@ SCHEDULES.forEach((schedule, si) => {
       slower: runCell(si, withPlan, 1.4),
     });
   }
+});
+// The review's case (D210 addendum 3): reps logged as prescribed. Run where
+// the learner otherwise has most to go on (no plan, the two schedules that
+// carry information), so a false direction has every chance to show.
+[0, 4].forEach((si) => {
+  CELLS.push({
+    label: `${SCHEDULES[si].name}, no plan, reps logged as prescribed`,
+    null: runCell(si, false, PRIOR, 'prescribed'),
+    faster: runCell(si, false, 0.75, 'prescribed'),
+    slower: runCell(si, false, 1.4, 'prescribed'),
+  });
 });
 
 /**
@@ -343,6 +388,17 @@ describe('personal recovery learning: calibration by simulation (spec section 7)
       expect(slowWrong).toBeLessThanOrEqual(WRONG_ALLOWED);
     });
   }
+
+  test('reps logged as prescribed on three set days a week: nobody is shown a direction, and the reps-never-change reason is given', () => {
+    const reasons = {};
+    for (let a = 0; a < 20; a += 1) {
+      const { sessions, nowMs } = simulateAthlete(97531 + a * 101, SCHEDULES[0], false, PRIOR, 'prescribed');
+      const learned = learnPersonalRecovery({ sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs });
+      reasons[learned.reason] = (reasons[learned.reason] || 0) + 1;
+    }
+    expect(reasons.adjusted).toBeUndefined();
+    expect(reasons.fixed_reps).toBeGreaterThan(0);
+  });
 
   test('the learner applies exactly these gates (its decision matches directionAt on simulated athletes)', () => {
     for (const trueFactor of [0.75, PRIOR, 1.4]) {

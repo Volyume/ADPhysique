@@ -12,13 +12,17 @@
  * lengthen the estimate, never shorten it; endMs falls back through
  * endedAt -> startedAt+durationMinutes -> startedAt+60min; projectRecovery
  * reproduces the map at the same instant and reads recovered at its own
- * readyAtMs; both functions are deterministic and the model does no I/O.
+ * readyAtMs; both functions are deterministic and the model does no I/O;
+ * recoveredFractionsAt (register D210) reads exactly what
+ * recoveredFractionAt reads, for every candidate length at once.
  */
 import fs from 'fs';
 import path from 'path';
 import { VOLUME_LANDMARKS, calculateWeeklyVolume } from '../../algorithms';
 import { LOOKBACK_DAYS, DEFAULT_SESSION_MINUTES } from '../constants';
-import { sessionMuscleLoads, buildMuscleRecoveryMap, projectRecovery } from '../muscleRecoveryModel';
+import {
+  sessionMuscleLoads, buildMuscleRecoveryMap, projectRecovery, recoveredFractionAt, recoveredFractionsAt,
+} from '../muscleRecoveryModel';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -328,5 +332,28 @@ describe('lead review: contributions cap at F and the ready-by walk stays exact 
     });
     const before = projectRecovery(map, now - 3 * HOUR);
     expect(before.chest.recoveredPercent).toBe(0);
+  });
+});
+
+describe('recoveredFractionsAt (register D210: every candidate speed read at once)', () => {
+  test('entry c is exactly recoveredFractionAt with each session at its hours[c]', () => {
+    const t0 = Date.UTC(2026, 5, 1, 18);
+    const H = 60 * 60 * 1000;
+    const contributing = [
+      { endMs: t0, sets: 3, hours: [24, 48, 72, 0, 168] },
+      { endMs: t0 + 30 * H, sets: 9, hours: [36, 60, 90, 50, 24] },
+      { endMs: t0 + 50 * H, sets: 20, hours: [30, 80, 168, 24, 36] },
+    ];
+    for (const atMs of [t0 + 50 * H, t0 + 51 * H, t0 + 60 * H, t0 + 100 * H, t0 + 300 * H]) {
+      const one = [0, 1, 2, 3, 4].map((c) => recoveredFractionAt(
+        contributing.map((cs) => ({ endMs: cs.endMs, sets: cs.sets, hoursT: cs.hours[c] })), atMs,
+      ));
+      expect(recoveredFractionsAt(contributing, atMs, 5)).toEqual(one);
+    }
+  });
+
+  test('nothing contributing reads fully recovered for every candidate', () => {
+    expect(recoveredFractionsAt([], Date.UTC(2026, 5, 1), 3)).toEqual([1, 1, 1]);
+    expect(recoveredFractionsAt(null, Date.UTC(2026, 5, 1), 2)).toEqual([1, 1]);
   });
 });

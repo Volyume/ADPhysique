@@ -26,18 +26,32 @@
  * taking the answer's place for every muscle.
  *
  * EVIDENCE (spec section 2). A pair is a completed session B and the most
- * recent earlier COMPARABLE session P of the same exercise X: inside
- * PERSONAL_BASELINE_MAX_GAP_DAYS; the same effort target (both week RIR
- * targets known and equal, or both sessions outside any plan; a session whose
- * plan week did not resolve is never comparable); neither in a recovery week;
- * neither under an injury limit for X's primary muscle nor inside its 14-day
- * return period (the caller's `excluded`, built with capability/eligibility's
+ * recent earlier COMPARABLE session P of the same exercise X ON THE SAME DAY
+ * OF THE WEEK (D210 addendum 3: a person can be stronger on some weekdays,
+ * and on a fixed weekly schedule the break before a session is set by its
+ * weekday, so comparing across weekdays read weekday strength as recovery;
+ * on the same weekday it cancels): inside PERSONAL_BASELINE_MAX_GAP_DAYS;
+ * the same effort target (both week RIR targets known and equal, or both
+ * sessions outside any plan; a session whose plan week did not resolve is
+ * never comparable); neither in a recovery week; neither under an injury
+ * limit for X's primary muscle nor inside its 14-day return period (the
+ * caller's `excluded`, built with capability/eligibility's
  * constrainedMusclesInWindow). X must be load-based strength: never an
  * assisted exercise (the entered number is assistance) nor a timed or
- * distance one (the columns hold seconds and metres), and only trend-eligible
- * rows count (no warm-up, myo-rep, rest-pause, ballistic or circuit rows).
- * B needs a session on X's primary muscle inside LOOKBACK_DAYS before it:
- * with nothing to recover from, a pair says nothing about recovery.
+ * distance one (the columns hold seconds and metres). Only STRAIGHT working
+ * sets count (no warm-up, drop, AMRAP, myo-rep, rest-pause, ballistic or
+ * circuit rows: each measures a different effort). B needs a session on X's
+ * primary muscle inside LOOKBACK_DAYS before it: with nothing to recover
+ * from, a pair says nothing about recovery.
+ *
+ * REPS THAT NEVER CHANGE (D210 addendum 3). The logging screen fills in the
+ * prescribed reps and load, and a person who logs them as given, or trains
+ * a fixed 5 x 5, records what was planned rather than how the day went: a
+ * tired day and a fresh one read the same, and the fit then reads the
+ * missing drops as fast recovery. So a lift whose pairs mostly repeat the
+ * same reps set for set (PERSONAL_MAX_FIXED_REPS_SHARE) teaches nothing and
+ * is left out; when that leaves too few pairs, the reason says so
+ * ('fixed_reps').
  *
  * OUTCOME (section 3). y = ln(PI_B / PI_P), where PI is the mean estimated
  * max (algorithms.calculate1RM) of the first k working sets of X in each
@@ -80,9 +94,9 @@ import {
   LOOKBACK_DAYS, PERSONAL_WINDOW_DAYS, PERSONAL_BASELINE_MAX_GAP_DAYS, PERSONAL_MATCHED_SETS,
   PERSONAL_FACTOR_GRID, PERFORMANCE_SENSITIVITY_MIN, PERFORMANCE_SENSITIVITY_MAX,
   PERSONAL_MIN_PAIRS, PERSONAL_MIN_MUSCLE_PAIRS, PERSONAL_MIN_SPREAD, PERSONAL_LR_MIN,
-  PERSONAL_MAX_CHANGE, ratingFactor, recoveryHours,
+  PERSONAL_MAX_CHANGE, PERSONAL_MAX_FIXED_REPS_SHARE, ratingFactor, recoveryHoursAcross,
 } from './constants';
-import { sessionMuscleLoads, recoveredFractionAt } from './muscleRecoveryModel';
+import { sessionMuscleLoads, recoveredFractionsAt } from './muscleRecoveryModel';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOOKBACK_MS = LOOKBACK_DAYS * DAY_MS;
@@ -95,6 +109,9 @@ const NON_LOAD_TYPES = new Set(['distance', 'duration']);
 export const PERSONAL_HISTORY_DAYS = PERSONAL_WINDOW_DAYS + PERSONAL_BASELINE_MAX_GAP_DAYS + LOOKBACK_DAYS;
 
 const isFlagSet = (v) => v === 1 || v === true;
+/** The session's local day of the week (0 Sunday to 6 Saturday): a pure
+ * conversion of the given instant, never a clock read. */
+const weekdayOf = (ms) => new Date(Number(ms)).getDay();
 const hasTarget = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
 
 /** Load-based strength: not assisted, not timed, not distance. */
@@ -124,14 +141,29 @@ export function sameEffortTarget(sessionB, sessionP) {
 }
 
 /**
- * One session's eligible working sets per load-strength exercise, in set
- * order: Map exerciseId -> { muscle, e1rms: number[] }.
+ * The primary mover of a load-strength exercise, or null. `cache` (a Map by
+ * exercise id) keeps the answer for the rest of one learner run, so the
+ * allocator reads each exercise once rather than once per session.
  */
-export function sessionLifts(session, exerciseById) {
+function liftMuscle(exerciseId, exerciseById, cache) {
+  if (cache && cache.has(exerciseId)) return cache.get(exerciseId);
+  const exercise = exerciseById?.[exerciseId];
+  const muscle = isLoadStrengthExercise(exercise) ? primaryMuscleOf(exercise) : null;
+  if (cache) cache.set(exerciseId, muscle);
+  return muscle;
+}
+
+/**
+ * One session's eligible working sets per load-strength exercise, in set
+ * order: Map exerciseId -> { muscle, e1rms: number[], reps: number[] }.
+ * Straight sets only (see the header). `cache`: see liftMuscle.
+ */
+export function sessionLifts(session, exerciseById, cache = null) {
   const rowsByExercise = new Map();
   for (const set of Array.isArray(session?.sets) ? session.sets : []) {
     if (!set || (set.deletedAt !== null && set.deletedAt !== undefined)) continue;
     if (!isTrendEligibleRow(set)) continue;
+    if ((set.setType ?? set.set_type ?? 'straight') !== 'straight') continue;
     const exerciseId = set.exerciseId ?? set.exercise_id;
     if (!exerciseId) continue;
     const weight = Number(set.weight);
@@ -142,9 +174,7 @@ export function sessionLifts(session, exerciseById) {
   }
   const out = new Map();
   for (const [exerciseId, rows] of rowsByExercise) {
-    const exercise = exerciseById?.[exerciseId];
-    if (!isLoadStrengthExercise(exercise)) continue;
-    const muscle = primaryMuscleOf(exercise);
+    const muscle = liftMuscle(exerciseId, exerciseById, cache);
     if (!muscle) continue;
     const ordered = rows.slice().sort((a, b) => {
       const na = Number(a.setNumber ?? a.set_number);
@@ -155,6 +185,7 @@ export function sessionLifts(session, exerciseById) {
     out.set(exerciseId, {
       muscle,
       e1rms: ordered.map((s) => calculate1RM(Number(s.weight), Number(s.actualReps ?? s.actual_reps))),
+      reps: ordered.map((s) => Number(s.actualReps ?? s.actual_reps)),
     });
   }
   return out;
@@ -235,29 +266,38 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
     .sort((a, b) => Number(a.startedAt) - Number(b.startedAt));
 
   const loads = sessionMuscleLoads(list, exerciseById);
-  const lifts = list.map((s) => sessionLifts(s, exerciseById));
+  const muscleCache = new Map();
+  const lifts = list.map((s) => sessionLifts(s, exerciseById, muscleCache));
+  const weekdays = list.map((s) => weekdayOf(s.startedAt));
   const isExcluded = (session, muscle) => !!excluded && typeof excluded.has === 'function'
     && excluded.has(`${session.id}|${muscle}`);
 
   // Per muscle, the sessions that loaded it (the curve's contributors), in
-  // end order, each with its recovery length at every candidate factor.
+  // end order. Each one's recovery length at every candidate factor is
+  // worked out the first time a reading needs it (hoursOf), so a session
+  // that no reading reaches, or a muscle no lift is compared on, costs
+  // nothing.
   const curve = {};
   loads.forEach((load, i) => {
     for (const muscle of Object.keys(load.setsByMuscle)) {
       const sets = load.setsByMuscle[muscle];
       if (!(sets > 0)) continue;
       if (!curve[muscle]) curve[muscle] = [];
-      const s = list[i];
       curve[muscle].push({
-        endMs: load.endMs,
-        sets,
-        hours: candidates.map((f) => recoveryHours(muscle, {
-          sets, rirTarget: s.weekRirTarget, firstWeek: s.isFirstWeek, ratings: s.ratings, personalFactor: f,
-        })),
+        muscle, endMs: load.endMs, sets, session: list[i], hours: null,
       });
     }
   });
   for (const muscle of Object.keys(curve)) curve[muscle].sort((a, b) => a.endMs - b.endMs);
+  const hoursOf = (entry) => {
+    if (!entry.hours) {
+      const s = entry.session;
+      entry.hours = recoveryHoursAcross(entry.muscle, {
+        sets: entry.sets, rirTarget: s.weekRirTarget, firstWeek: s.isFirstWeek, ratings: s.ratings,
+      }, candidates);
+    }
+    return entry.hours;
+  };
 
   // Every candidate's recovered fraction for `muscle` at `atMs`, as an array
   // indexed like `candidates`; null when no session on the muscle ended
@@ -281,27 +321,21 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
     const contributing = [];
     for (let i = lo; i < entries.length && entries[i].endMs <= atMs; i += 1) {
       const e = entries[i];
-      contributing.push({ endMs: e.endMs, sets: e.sets, hoursT: 0, hours: e.hours });
+      contributing.push({ endMs: e.endMs, sets: e.sets, hours: hoursOf(e) });
     }
-    let out = null;
-    if (contributing.length) {
-      out = new Array(candidates.length);
-      for (let ci = 0; ci < candidates.length; ci += 1) {
-        for (const c of contributing) c.hoursT = c.hours[ci];
-        out[ci] = recoveredFractionAt(contributing, atMs);
-      }
-    }
+    const out = contributing.length ? recoveredFractionsAt(contributing, atMs, candidates.length) : null;
     memo.set(key, out);
     return out;
   };
 
   const windowStartMs = nowMs - WINDOW_MS;
-  const pairsByMuscle = {};
+  const found = [];
   for (let b = 0; b < list.length; b += 1) {
     const sessionB = list[b];
     const startB = Number(sessionB.startedAt);
     if (startB < windowStartMs || startB > nowMs) continue;
     if (isFlagSet(sessionB.isDeload) || sessionB.weekStatus === 'unresolved') continue;
+    const weekdayB = weekdays[b];
     for (const [exerciseId, liftB] of lifts[b]) {
       const { muscle } = liftB;
       if (isExcluded(sessionB, muscle)) continue;
@@ -310,6 +344,7 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       for (let j = b - 1; j >= 0; j -= 1) {
         const sessionP = list[j];
         if (Number(sessionP.startedAt) < startB - BASELINE_GAP_MS) break;
+        if (weekdays[j] !== weekdayB) continue;
         if (!lifts[j].has(exerciseId)) continue;
         if (isFlagSet(sessionP.isDeload) || isExcluded(sessionP, muscle)) continue;
         if (!sameEffortTarget(sessionB, sessionP)) continue;
@@ -324,11 +359,33 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       if (!(piB > 0) || !(piP > 0)) continue;
       const y = Math.log(piB / piP);
       if (Math.abs(y) > PERSONAL_MAX_CHANGE) continue; // not a recovery signal (constants.js)
-      if (!pairsByMuscle[muscle]) pairsByMuscle[muscle] = [];
-      pairsByMuscle[muscle].push({ startB, startP: Number(list[p].startedAt), y });
+      let identical = true;
+      for (let i = 0; i < k; i += 1) if (liftB.reps[i] !== liftP.reps[i]) identical = false;
+      found.push({
+        muscle, exerciseId, startB, startP: Number(list[p].startedAt), y, identical,
+      });
     }
   }
-  return { pairsByMuscle, fractionsAt };
+
+  // A lift whose pairs mostly repeat the same reps set for set shows what
+  // was planned, not how the day went (see the header): its pairs are left
+  // out and counted.
+  const repeats = new Map();
+  for (const q of found) {
+    const r = repeats.get(q.exerciseId) ?? { pairs: 0, identical: 0 };
+    r.pairs += 1;
+    if (q.identical) r.identical += 1;
+    repeats.set(q.exerciseId, r);
+  }
+  const pairsByMuscle = {};
+  let fixedRepsPairs = 0;
+  for (const q of found) {
+    const r = repeats.get(q.exerciseId);
+    if (r.identical / r.pairs >= PERSONAL_MAX_FIXED_REPS_SHARE) { fixedRepsPairs += 1; continue; }
+    if (!pairsByMuscle[q.muscle]) pairsByMuscle[q.muscle] = [];
+    pairsByMuscle[q.muscle].push({ startB: q.startB, startP: q.startP, y: q.y });
+  }
+  return { pairsByMuscle, fixedRepsPairs, fractionsAt };
 }
 
 /**
@@ -367,21 +424,25 @@ export function comparablePairs({
  *
  * @param {object} params - as learnPersonalRecovery
  * @returns {{ prior:number, pairs:number, spread:number, best:number, lr:number,
- *   pairsByMuscle: object }} `best` the best-fitting factor (the start when
- *   nothing fits better); `lr` = pairs x ln(SSE(start) / SSE(best)), 0 when
- *   best is the start; `pairsByMuscle` the counted pairs per muscle
+ *   pairsByMuscle: object, fixedRepsPairs: number }} `best` the
+ *   best-fitting factor (the start when nothing fits better); `lr` =
+ *   pairs x ln(SSE(start) / SSE(best)), 0 when best is the start;
+ *   `pairsByMuscle` the counted pairs per muscle; `fixedRepsPairs` the pairs
+ *   left out because their lift's reps never change
  */
 export function personalRecoveryEvidence({
   sessions, exerciseById, recoveryRating, nowMs, excluded = null,
 } = {}) {
   const prior = ratingFactor(recoveryRating);
-  const none = { prior, pairs: 0, spread: 0, best: prior, lr: 0, pairsByMuscle: {} };
+  const none = {
+    prior, pairs: 0, spread: 0, best: prior, lr: 0, pairsByMuscle: {}, fixedRepsPairs: 0,
+  };
   if (!Number.isFinite(nowMs)) return none;
 
   // The start sits last, so its index is fixed whatever the grid holds.
   const candidates = [...PERSONAL_FACTOR_GRID.filter((f) => f !== prior), prior];
   const priorIndex = candidates.length - 1;
-  const { pairsByMuscle, fractionsAt } = collectPairs({
+  const { pairsByMuscle, fixedRepsPairs, fractionsAt } = collectPairs({
     sessions, exerciseById, nowMs, excluded, candidates,
   });
 
@@ -390,7 +451,7 @@ export function personalRecoveryEvidence({
     .sort();
   const counted = Object.fromEntries(muscles.map((m) => [m, pairsByMuscle[m].length]));
   const n = muscles.reduce((sum, m) => sum + counted[m], 0);
-  if (n < PERSONAL_MIN_PAIRS) return { ...none, pairs: n, pairsByMuscle: counted };
+  if (n < PERSONAL_MIN_PAIRS) return { ...none, pairs: n, pairsByMuscle: counted, fixedRepsPairs };
 
   // Per muscle, each pair's readings at B and at P for every candidate
   // (P with nothing before it reads fully recovered), and the days between
@@ -429,7 +490,9 @@ export function personalRecoveryEvidence({
   const lr = best.ci !== priorIndex && atPrior.sse > EPSILON
     ? n * Math.log(atPrior.sse / Math.max(best.sse, EPSILON))
     : 0;
-  return { prior, pairs: n, spread, best: candidates[best.ci], lr, pairsByMuscle: counted };
+  return {
+    prior, pairs: n, spread, best: candidates[best.ci], lr, pairsByMuscle: counted, fixedRepsPairs,
+  };
 }
 
 /**
@@ -453,11 +516,13 @@ export function personalRecoveryEvidence({
  */
 export function learnPersonalRecovery(params = {}) {
   const {
-    prior, pairs, spread, best, lr, pairsByMuscle,
+    prior, pairs, spread, best, lr, pairsByMuscle, fixedRepsPairs,
   } = personalRecoveryEvidence(params);
   let reason = 'not_clear';
-  if (pairs < PERSONAL_MIN_PAIRS) reason = 'too_few';
-  else if (spread < PERSONAL_MIN_SPREAD) reason = 'no_spread';
+  if (pairs < PERSONAL_MIN_PAIRS) {
+    // Enough comparisons existed, but their lifts' reps never change.
+    reason = pairs + fixedRepsPairs >= PERSONAL_MIN_PAIRS && fixedRepsPairs > 0 ? 'fixed_reps' : 'too_few';
+  } else if (spread < PERSONAL_MIN_SPREAD) reason = 'no_spread';
   else if (best !== prior && lr >= PERSONAL_LR_MIN) reason = 'adjusted';
   return {
     factor: reason === 'adjusted' ? best : prior, prior, pairs, reason, pairsByMuscle,
@@ -467,7 +532,8 @@ export function learnPersonalRecovery(params = {}) {
 /**
  * The learned figure in one word the screen can use: 'faster' or 'slower'
  * than the first estimate when adjusted, otherwise the reason it is not
- * ('too_few', 'no_spread', 'not_clear'). Null when there is no reading.
+ * ('too_few', 'fixed_reps', 'no_spread', 'not_clear'). Null when there is no
+ * reading.
  */
 export function personalDirection(personal) {
   if (!personal) return null;
