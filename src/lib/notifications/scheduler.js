@@ -562,7 +562,10 @@ export async function scheduleMealReminders(reminders = []) {
 function checkinCopy(name) {
   return {
     title: `How has your week gone${name}?`,
-    body: 'A two-minute check-in is all it takes, and your coach tunes next week around it.',
+    // Founder amendment 2026-09-26 (register D207, plain English): "tunes next
+    // week around it" was coach shorthand. Dated amendment in
+    // NOTIFICATIONS_LOCKED.md and COACHING_VOICE_SYNTHESIS_LOCKED.md.
+    body: 'A two-minute check-in is all it takes, and your coach uses it to plan your next week.',
   };
 }
 

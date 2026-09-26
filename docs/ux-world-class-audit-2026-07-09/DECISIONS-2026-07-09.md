@@ -10378,6 +10378,12 @@ programme copy; E, settings, onboarding, notifications and community. The
 sweep also found two D204 breaches on Consistency (D204 addendum 2). The
 board line carries each lane's state and hash.
 
+**Locked line amended (lead, under this order and the D17 precedent).** The
+weekly check-in reminder's body, "and your coach tunes next week around it",
+now reads "and your coach uses it to plan your next week", with dated
+amendments in `NOTIFICATIONS_LOCKED.md` and `COACHING_VOICE_SYNTHESIS_LOCKED.md`
+(Surface 6).
+
 ## D208 — Recovery gets its own place in Progress (founder question 2026-09-26, lead ruling)
 
 Founder, verbatim: "Should we have a place in Progress exclusively for

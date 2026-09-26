@@ -952,3 +952,27 @@ Deliberately NOT touched: every Stage-3 safety-cold string (ED lockout,
 FFM floor, rapid-loss - clinical by design), the D15
 exceeded_escalation string (founder-ruled verbatim 2026-07-09), and the
 precise register's terse composers (a chosen register, C1).
+
+## Founder amendment 2026-09-26 (D207): plain English
+
+Founder order, verbatim: "We need a sweep and a correction on any language
+like this. It needs to be understanding." The rule that follows from it is
+`docs/rules/plain-english.md`; it layers on every principle here and relaxes
+none of them, and it defers to this document's actor rule ("your coach" or an
+impersonal sentence, never a collaborative "we" for a coaching decision).
+
+Surface 6 change (old locked text -> new text, D17 precedent, applied in
+`src/lib/notifications/scheduler.js`, `checkinCopy`):
+
+- **Weekly check-in reminder**:
+  - Old body: `"A two-minute check-in is all it takes, and your coach tunes
+    next week around it."`
+  - New body: `"A two-minute check-in is all it takes, and your coach uses it
+    to plan your next week."`
+  - The title is unchanged. `NOTIFICATIONS_LOCKED.md` carries the same dated
+    amendment.
+
+Every other locked surface is unchanged. Safety copy (Surfaces 1 to 8 and the
+ED-pattern, floor and rapid-loss lines) is listed for the founder under D207
+and is never edited by a sweep.
+

@@ -110,9 +110,16 @@ Body:  Whenever you're ready, hop on the scales and log today's weight.
 ### Weekly check-in reminder
 ```
 Title: How has your week gone{, First}
-Body:  A two-minute check-in is all it takes, and your coach tunes next
-       week around it.
+Body:  A two-minute check-in is all it takes, and your coach uses it to
+       plan your next week.
 ```
+
+AMENDED 2026-09-26 (founder order, register D207: "We need a sweep and a
+correction on any language like this. It needs to be understanding."): the
+body read "... and your coach tunes next week around it." "Tunes ... around
+it" is coach shorthand a person who has never trained cannot say back. The
+meaning is unchanged; the same amendment is recorded in
+COACHING_VOICE_SYNTHESIS_LOCKED.md, Surface 6.
 
 ### Training day reminder
 ```
