@@ -50,7 +50,9 @@ export default function PlanPreviewScreen({ navigation }) {
           textStyle={[styles.ctaText, live.ctaText]}
           accessibilityLabel="Create an account to keep your plan"
         />
-        <Text style={[styles.fine, live.fine]}>No payment card. Nothing charged unless you choose.</Text>
+        {/* The "Nothing charged unless you choose" line is gone: Volyume is
+            fully free (D137), so no screen may speak of payment, even this
+            one, which the quiz-first flag keeps dormant. */}
       </View>
     </SafeAreaView>
   );
@@ -69,7 +71,6 @@ const styles = StyleSheet.create({
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
-  fine: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.sm },
 });
 
 // CP-10 batch D (2026-07-10): the frozen `styles` block above stays
@@ -91,6 +92,5 @@ function buildLiveStyles(t) {
     footer: { borderTopColor: t.colors.borderSubtle },
     cta: { backgroundColor: t.colors.primaryFill },
     ctaText: { color: t.colors.onPrimary, fontSize: t.fontSize.md },
-    fine: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
   };
 }
