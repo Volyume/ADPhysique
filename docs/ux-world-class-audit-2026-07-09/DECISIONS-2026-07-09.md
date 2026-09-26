@@ -10086,7 +10086,14 @@ it; the spoken label per row is unchanged; no amber (a status surface);
 D204 holds (it describes). The section order is as the spec first
 placed it (the D200-2 addendum is withdrawn, above). Pinned in
 `MuscleRecoveryList.test.js` and `ReadinessCards.recoveryByMuscle.test.js`.
-Landed `7bbdb9d4`.
+Landed `7bbdb9d4`. Fresh-eyes review (Sonnet, the same day): one blocker,
+the breakdown nested inside the row's labelled touchable was unreachable
+to VoiceOver and TalkBack; fixed as a sibling node, each line labelled.
+Also taken: an accessible group header naming the group and its count, a
+NaN-safe percent, the dot size from the spacing token, a selection that
+outlives its row reading as nothing open, and the pattern comment
+corrected (the tree's frozen-plus-live pattern, not the reverted
+"migrated-primitive" one). Landed `8de18983`.
 
 ## D205 — The number under the Respect heart is the heart's own count (founder defect 2026-09-26)
 
