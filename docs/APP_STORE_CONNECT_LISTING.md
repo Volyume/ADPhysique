@@ -304,24 +304,30 @@ None. Volyume does not track users across apps or websites owned by other compan
 
 ### Data Linked to You
 
-These data types are collected and linked to the user's account (only if the user creates an account):
+Re-derived from the code 2026-09-26 (register D212; the earlier table
+predated Community and said an account was optional, which it has not been
+since anonymous mode was removed). Every row: linked to the person, not used
+for tracking.
 
-| Category | Data Type | Purpose | Optional? |
+| Category | Data type | Purpose | Notes |
 |---|---|---|---|
-| Contact Info | Email Address | Account creation, app functionality | Yes — account is optional |
-| Contact Info | Name (first name only) | Personalisation within the app | Yes |
-| Health & Fitness | Fitness Information (workouts, sets, weights, reps) | Core app functionality | No — required for the app to work |
-| Health & Fitness | Health Information (body weight, measurements, entered body fat, cardio, steps, check-ins) | App functionality, coaching calculations | Yes |
-| Health & Fitness | Nutrition / food logs | Food diary, calorie and macro targets | Yes |
-| Health & Fitness | Progress photo metadata and Volyume Score analysis outputs | Progress tracking; image files stay device-local unless user shares/exports | Yes |
-| Usage Data | Product Interaction | First-party usage telemetry; opt-out in Settings | Yes |
-| Diagnostics | Crash Data and Performance Data | Crash reporting and app reliability through scrubbed Sentry events | No |
+| Contact Info | Email Address | App Functionality | The account |
+| Contact Info | Name | App Functionality | First name; Community display name |
+| Identifiers | User ID | App Functionality | Community handle |
+| Location | Coarse Location | App Functionality | The town and gym a person adds to their Community profile. The gym finder's "Use my location" reading is used for one search and never kept, which Apple's definition does not count as collected |
+| Health & Fitness | Fitness | App Functionality | Workouts, sets, weights, plans |
+| Health & Fitness | Health | App Functionality | Body weight, measurements, body fat, steps, cardio, check-ins, food and nutrition logs, progress-photo metadata and analysis outputs |
+| User Content | Emails or Text Messages | App Functionality | Community messages |
+| User Content | Other User Content | App Functionality | Community posts, comments and notes |
+| Usage Data | Product Interaction | Analytics | First-party telemetry, off in Settings |
+| Diagnostics | Crash Data, Performance Data | App Functionality | Scrubbed Sentry events |
+| Other Data | Other Data Types | App Functionality | Date of birth and sex (the calorie maths, the under-18 rules) |
 
 ---
 
 ### Data Not Linked to You
 
-None. All data collected is linked to the user's account if an account is created. Without an account, all data stays on-device only and is not collected by Volyume servers.
+None.
 
 ---
 
@@ -333,16 +339,11 @@ None.
 
 ### Data Not Collected
 
-Volyume does not collect:
-
-- Precise or coarse location
-- Browsing history or search history
-- Financial information or payment card data
-- Sensitive info (racial or ethnic data, sexual orientation, religious beliefs, etc.)
-- Contacts
-- Emails or text messages
-- Gameplay content or customer support data
-- Precise photo image files collected by Volyume servers
+Precise location, browsing or search history, financial or payment
+information, contacts, photos or videos (avatars are built-in presets;
+progress photo image files stay on the device unless shared or exported;
+scans are processed on the device), audio, sensitive info (racial or ethnic
+data, sexual orientation, religious beliefs and the like).
 
 ---
 

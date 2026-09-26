@@ -312,30 +312,41 @@ Answer these in the Play Console content rating questionnaire:
 
 ## Data Safety Section (Play Console)
 
-Derived from the code (the actual data flows), 2026-06-06. "Shared" in Play's
-sense means transfer to a third party for THEIR own use; Supabase (backend) and
-Sentry (crash reporting) are service providers / processors, so their data is
-"collected", not "shared". Nothing is sold or shared for third-party use.
+Re-derived from the code 2026-09-26 (register D212; the 2026-06-06 table
+predated Community, and said an account was optional, which it has not been
+since anonymous mode was removed). "Shared" in Play's sense means transfer
+to a third party for THEIR own use; Supabase (backend) and Sentry (crash
+reporting) are service providers, so their data is "collected", not
+"shared". Community posts, profiles and messages reach other Volyume users
+because the person chose to join Community and post, with the switch shown
+before joining: Play's user-initiated exemption, so not "shared". Nothing is
+sold or shared for third-party use.
 
 **Data collected:**
-| Data type | Category | Collected | Shared | Optional | Encrypted in transit | Deletable | Purpose |
-|---|---|---|---|---|---|---|---|
-| Email address | Personal info | Yes (account) | No | No (account needs it) | Yes | Yes | Account management, app functionality |
-| Name (first name) | Personal info | Yes | No | Yes | Yes | Yes | App functionality (personalisation) |
-| Workouts, sets, reps, weights, programmes | Health & fitness (fitness) | Yes | No | No | Yes | Yes | App functionality |
-| Body weight, measurements, body fat, steps, cardio, progress photo metadata, Volyume Score analysis outputs | Health & fitness (health) | Yes | No | Yes | Yes | Yes | App functionality |
-| Food / nutrition logs | Health & fitness | Yes | No | Yes | Yes | Yes | App functionality |
-| In-app events (analytics, e.g. workout/paywall) | App activity (app interactions) | Yes | No | Yes (opt-out in Settings) | Yes | Yes | Analytics, app functionality |
-| Crash logs | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Crash reporting |
-| Diagnostics (performance) | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Diagnostics |
-| Push token | Device or other IDs | Yes | No | Yes | Yes | Yes | Push notifications |
+| Data type (Play category) | Collected | Shared | Required or optional | Processed ephemerally | Purpose |
+|---|---|---|---|---|---|
+| Email address (Personal info) | Yes | No | Required (the account) | No | Account management, app functionality |
+| Name: first name, Community display name (Personal info) | Yes | No | Optional | No | App functionality |
+| User IDs: Community handle (Personal info) | Yes | No | Optional (Community) | No | App functionality |
+| Other info: date of birth, sex (Personal info) | Yes | No | Required (age and sex drive the calorie maths, the under-18 rules) | No | App functionality |
+| Approximate location: the town and gym a person adds to their Community profile; "Use my location" in the gym finder (Location) | Yes | No | Optional | The device reading only (one search, never stored); the chosen town and gym are stored | App functionality |
+| Fitness info: workouts, sets, reps, weights, plans (Health and fitness) | Yes | No | Required | No | App functionality |
+| Health info: body weight, measurements, body fat, steps, cardio, check-ins, progress-photo metadata and analysis outputs (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Food and nutrition logs (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Other in-app messages: Community messages (Messages) | Yes | No | Optional | No | App functionality |
+| Other user-generated content: Community posts, comments, notes (App activity) | Yes | No | Optional | No | App functionality |
+| Other actions: follows, Respect, group membership (App activity) | Yes | No | Optional | No | App functionality |
+| App interactions: in-app events (App activity) | Yes | No | Optional (off in Settings) | No | Analytics |
+| Crash logs (App info and performance) | Yes (Sentry) | No | Required | No | Crash reporting |
+| Diagnostics (App info and performance) | Yes (Sentry) | No | Required | No | Diagnostics |
+| Device or other IDs: push token | Yes | No | Optional | No | Push notifications |
 
-**Data NOT collected:** Financial / payment info (the app has no purchase or
-subscription of any kind), location, contacts, messages,
-calendar, web-browsing history, audio. **Photos / camera:** barcode and
-nutrition-label scans are processed on-device (MLKit / vision-camera) and are
-not uploaded or stored by Volyume. Progress photo image files
-are stored on-device only unless the user chooses to share or export them.
+**Data NOT collected:** financial or payment info (the app has no purchase of
+any kind), precise location, contacts, calendar, web-browsing history,
+audio, photos or videos (Community avatars are built-in presets; barcode and
+nutrition-label scans are processed on the device and never uploaded;
+progress photo image files stay on the device unless the person shares or
+exports them).
 
 **Third-party destinations (all processor / functional, no PII sold):**
 - **Supabase**: encrypted cloud backup of the account's own data (RLS, own-rows).
