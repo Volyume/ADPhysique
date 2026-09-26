@@ -74,7 +74,6 @@ const FALSE_ALLOWED = FULL_RUN ? Math.floor(ATHLETES * 0.05) : 5;
 const WRONG_ALLOWED = FULL_RUN ? Math.floor(ATHLETES / 60) : 3;
 // The gate the full calibration set (constants.js, PERSONAL_LR_MIN).
 const CALIBRATED_GATE = 10;
-const SETS_PER_EXERCISE = 4;
 const RIR_LADDER = [3, 2, 1, 0, 0, 4];
 const FREESTYLE_TARGET_RIR = 1;
 const PRIOR = 1.0; // recovery answer 'average'
@@ -147,13 +146,25 @@ const SCHEDULES = [
 ];
 
 /**
- * One simulated athlete's twelve weeks, in load.js's session shape.
- * `logging` is 'measured' (the reps the day allowed, to the effort target)
- * or 'prescribed' (the reps the plan asked for, fewer only when the day
- * could not reach them: the logging screen fills in the prescription and a
- * person who logs it as given records the plan, not the day).
+ * One simulated athlete's twelve weeks, in load.js's session shape. `style`
+ * is how they train and log (a string is the logging alone):
+ *  - logging: 'measured' (the reps the day allowed, to the effort target),
+ *    'prescribed' (the reps the plan asked for, fewer only when the day
+ *    could not reach them: the logging screen fills in the prescription and
+ *    a person who logs it as given records the plan, not the day), or
+ *    'lastFree' (as prescribed, but the last set taken as far as it goes);
+ *  - perMuscle: exercises for each muscle in a session (1 or 2);
+ *  - sets: sets of each exercise (4);
+ *  - fatiguePerSet: reps lost with each set after the first, as tiredness
+ *    builds through an exercise (0).
+ * The review of 2026-09-26 (D210 addendum 5) added all but the first two
+ * logging modes: the learner had been calibrated on one exercise a muscle
+ * and four fresh sets, and more of either broke its promise.
  */
-function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measured') {
+function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured') {
+  const {
+    logging = 'measured', perMuscle = 1, sets: setsPerExercise = 4, fatiguePerSet = 0,
+  } = typeof style === 'string' ? { logging: style } : style;
   const rand = seeded(seed);
   const strength = uniform(rand, 0.7, 1.3);
   const sensitivity = Object.fromEntries(MUSCLES.map((m) => [m, uniform(rand, 0.06, 0.12)]));
@@ -177,11 +188,13 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measur
     const blockWeek = week % RIR_LADDER.length;
     const jitter = uniform(rand, -schedule.jitterHours, schedule.jitterHours) * HOUR_MS;
     const startedAt = START_MS + slot.day * DAY_MS + 18 * HOUR_MS + Math.round(jitter);
-    const exerciseIds = slot.muscles.map((m) => {
+    const exerciseIds = slot.muscles.flatMap((m) => {
       const key = `${week}|${m}`;
       const n = occurrences.get(key) ?? 0;
       occurrences.set(key, n + 1);
-      return withPlan ? VARIANTS[m][n % VARIANTS[m].length] : VARIANTS[m][0];
+      const first = withPlan ? VARIANTS[m][n % VARIANTS[m].length] : VARIANTS[m][0];
+      if (perMuscle === 1) return [first];
+      return [first, VARIANTS[m][(VARIANTS[m].indexOf(first) + 1) % VARIANTS[m].length]];
     });
     return {
       id: `s${i}`,
@@ -195,7 +208,7 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measur
       isDeload: withPlan && blockWeek === RIR_LADDER.length - 1,
       ratings: { sorenessNext: null, fatigue: null, joint: null },
       exerciseIds,
-      sets: exerciseIds.flatMap((exerciseId) => Array.from({ length: SETS_PER_EXERCISE }, () => ({
+      sets: exerciseIds.flatMap((exerciseId) => Array.from({ length: setsPerExercise }, () => ({
         exerciseId, setType: 'straight', weight: 1, actualReps: 1,
       }))),
     };
@@ -240,17 +253,19 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measur
         * Math.exp(dayEffect + normal(rand) * 0.02);
       // The plan's load, chosen before the session (it cannot know today):
       // set from the week's ability when the plan prescribes it.
-      const planAbility = logging === 'prescribed'
-        ? ex.base * strength * Math.exp(progression[exerciseId] * Math.floor(weeks))
-        : ability;
+      const planAbility = logging === 'measured'
+        ? ability
+        : ex.base * strength * Math.exp(progression[exerciseId] * Math.floor(weeks));
       const load = Math.max(ex.step, Math.round(planAbility / (1 + (8 + targetRir) / 30) / ex.step) * ex.step);
       const rir = Math.max(0, targetRir + pick(rand, [-1, 0, 0, 1]));
-      for (let j = 0; j < SETS_PER_EXERCISE; j += 1) {
+      for (let j = 0; j < setsPerExercise; j += 1) {
         const setMax = today * Math.exp(normal(rand) * 0.01);
-        const toFailure = 30 * (setMax / load - 1);
-        const reps = logging === 'prescribed'
-          ? Math.max(1, Math.min(8, Math.round(toFailure)))
-          : Math.max(1, Math.round(toFailure - rir));
+        const toFailure = 30 * (setMax / load - 1) - fatiguePerSet * j;
+        const lastFree = logging === 'lastFree' && j === setsPerExercise - 1;
+        let reps;
+        if (logging === 'measured') reps = Math.max(1, Math.round(toFailure - rir));
+        else if (lastFree) reps = Math.max(1, Math.round(toFailure));
+        else reps = Math.max(1, Math.min(8, Math.round(toFailure)));
         session.sets.push({
           exerciseId,
           setType: 'straight',
@@ -267,15 +282,24 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, logging = 'measur
   return { sessions, nowMs: START_MS + WEEKS * 7 * DAY_MS };
 }
 
-/** Every athlete's evidence in one cell (schedule x plan x logging x true factor). */
-function runCell(scheduleIndex, withPlan, trueFactor, logging = 'measured') {
+/** A stable number for a training style, so each cell draws its own athletes. */
+function styleCode(style) {
+  if (style === 'measured') return 0;
+  if (style === 'prescribed') return 250007;
+  let code = 0;
+  for (const ch of JSON.stringify(style)) code = (code * 31 + ch.charCodeAt(0)) % 1000003;
+  return 3000017 + code;
+}
+
+/** Every athlete's evidence in one cell (schedule x plan x style x true factor). */
+function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured') {
   const schedule = SCHEDULES[scheduleIndex];
   const factorCode = Math.round(trueFactor * 100);
   const out = [];
   for (let a = 0; a < ATHLETES; a += 1) {
-    const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + (logging === 'prescribed' ? 250007 : 0)
+    const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + styleCode(style)
       + factorCode * 10007 + a * 7919;
-    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, logging);
+    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style);
     out.push(personalRecoveryEvidence({
       sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
     }));
@@ -301,15 +325,28 @@ SCHEDULES.forEach((schedule, si) => {
     });
   }
 });
-// The review's case (D210 addendum 3): reps logged as prescribed. Run where
-// the learner otherwise has most to go on (no plan, the two schedules that
-// carry information), so a false direction has every chance to show.
-[0, 4].forEach((si) => {
+// The reviews' cases (D210 addenda 3 and 5): how people really train and
+// log. Run without a plan, where the learner otherwise has most to go on,
+// so a false direction has every chance to show.
+[
+  [0, 'prescribed', 'reps logged as prescribed'],
+  [4, 'prescribed', 'reps logged as prescribed'],
+  [4, { perMuscle: 2 }, 'two exercises a muscle'],
+  [4, { perMuscle: 2, logging: 'prescribed' }, 'two exercises a muscle, reps logged as prescribed'],
+  [4, { logging: 'prescribed', fatiguePerSet: 1 }, 'reps logged as prescribed, tiring through the sets'],
+  [4, { perMuscle: 2, logging: 'prescribed', fatiguePerSet: 1 }, 'two exercises a muscle, prescribed, tiring'],
+  [4, { logging: 'prescribed', sets: 8 }, 'eight sets an exercise, reps logged as prescribed'],
+  [4, { fatiguePerSet: 1 }, 'tiring through the sets'],
+  [4, { logging: 'lastFree' }, 'last set taken as far as it goes'],
+  [0, { perMuscle: 2 }, 'two exercises a muscle'],
+  [0, { perMuscle: 2, logging: 'prescribed' }, 'two exercises a muscle, reps logged as prescribed'],
+  [2, { perMuscle: 2 }, 'two exercises a muscle'],
+].forEach(([si, style, words]) => {
   CELLS.push({
-    label: `${SCHEDULES[si].name}, no plan, reps logged as prescribed`,
-    null: runCell(si, false, PRIOR, 'prescribed'),
-    faster: runCell(si, false, 0.75, 'prescribed'),
-    slower: runCell(si, false, 1.4, 'prescribed'),
+    label: `${SCHEDULES[si].name}, no plan, ${words}`,
+    null: runCell(si, false, PRIOR, style),
+    faster: runCell(si, false, 0.75, style),
+    slower: runCell(si, false, 1.4, style),
   });
 });
 

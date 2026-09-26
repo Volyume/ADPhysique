@@ -103,6 +103,9 @@ const LOOKBACK_MS = LOOKBACK_DAYS * DAY_MS;
 const WINDOW_MS = PERSONAL_WINDOW_DAYS * DAY_MS;
 const BASELINE_GAP_MS = PERSONAL_BASELINE_MAX_GAP_DAYS * DAY_MS;
 const EPSILON = 1e-12;
+// Two sessions on the same weekday are either on the same day (hours apart)
+// or a week or more apart; three days tells them apart across any clock change.
+const EARLIER_WEEK_MS = 3 * DAY_MS;
 const NON_LOAD_TYPES = new Set(['distance', 'duration']);
 
 /** How far back load.js must read: the window, a pair's baseline gap, and the curve's lookback before that. */
@@ -112,6 +115,11 @@ const isFlagSet = (v) => v === 1 || v === true;
 /** The session's local day of the week (0 Sunday to 6 Saturday): a pure
  * conversion of the given instant, never a clock read. */
 const weekdayOf = (ms) => new Date(Number(ms)).getDay();
+/** The session's local calendar day, as a key: a pure conversion, never a clock read. */
+const localDayOf = (ms) => {
+  const d = new Date(Number(ms));
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+};
 const hasTarget = (v) => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
 
 /** Load-based strength: not assisted, not timed, not distance. */
@@ -345,6 +353,9 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
         const sessionP = list[j];
         if (Number(sessionP.startedAt) < startB - BASELINE_GAP_MS) break;
         if (weekdays[j] !== weekdayB) continue;
+        // The same day of the week in an EARLIER week: a second session of
+        // the lift on the same day is not a baseline for the first.
+        if (startB - Number(sessionP.startedAt) < EARLIER_WEEK_MS) continue;
         if (!lifts[j].has(exerciseId)) continue;
         if (isFlagSet(sessionP.isDeload) || isExcluded(sessionP, muscle)) continue;
         if (!sameEffortTarget(sessionB, sessionP)) continue;
@@ -378,14 +389,21 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
     repeats.set(q.exerciseId, r);
   }
   const pairsByMuscle = {};
+  const fixedRepsByMuscle = {};
   let fixedRepsPairs = 0;
   for (const q of found) {
     const r = repeats.get(q.exerciseId);
-    if (r.identical / r.pairs >= PERSONAL_MAX_FIXED_REPS_SHARE) { fixedRepsPairs += 1; continue; }
+    if (r.identical / r.pairs >= PERSONAL_MAX_FIXED_REPS_SHARE) {
+      fixedRepsPairs += 1;
+      fixedRepsByMuscle[q.muscle] = (fixedRepsByMuscle[q.muscle] ?? 0) + 1;
+      continue;
+    }
     if (!pairsByMuscle[q.muscle]) pairsByMuscle[q.muscle] = [];
     pairsByMuscle[q.muscle].push({ startB: q.startB, startP: q.startP, y: q.y });
   }
-  return { pairsByMuscle, fixedRepsPairs, fractionsAt };
+  return {
+    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt,
+  };
 }
 
 /**
@@ -435,14 +453,16 @@ export function personalRecoveryEvidence({
 } = {}) {
   const prior = ratingFactor(recoveryRating);
   const none = {
-    prior, pairs: 0, spread: 0, best: prior, lr: 0, pairsByMuscle: {}, fixedRepsPairs: 0,
+    prior, pairs: 0, workoutDays: 0, spread: 0, best: prior, lr: 0, pairsByMuscle: {}, fixedRepsPairs: 0, fixedRepsWouldCount: false,
   };
   if (!Number.isFinite(nowMs)) return none;
 
   // The start sits last, so its index is fixed whatever the grid holds.
   const candidates = [...PERSONAL_FACTOR_GRID.filter((f) => f !== prior), prior];
   const priorIndex = candidates.length - 1;
-  const { pairsByMuscle, fixedRepsPairs, fractionsAt } = collectPairs({
+  const {
+    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt,
+  } = collectPairs({
     sessions, exerciseById, nowMs, excluded, candidates,
   });
 
@@ -451,7 +471,19 @@ export function personalRecoveryEvidence({
     .sort();
   const counted = Object.fromEntries(muscles.map((m) => [m, pairsByMuscle[m].length]));
   const n = muscles.reduce((sum, m) => sum + counted[m], 0);
-  if (n < PERSONAL_MIN_PAIRS) return { ...none, pairs: n, pairsByMuscle: counted, fixedRepsPairs };
+  if (n < PERSONAL_MIN_PAIRS) {
+    // Would the lifts left out for repeating their reps have made enough?
+    // Only then are they the reason it cannot start (review of 2026-09-26).
+    const all = new Set([...Object.keys(pairsByMuscle), ...Object.keys(fixedRepsByMuscle)]);
+    let withFixed = 0;
+    for (const m of all) {
+      const k = (pairsByMuscle[m]?.length ?? 0) + (fixedRepsByMuscle[m] ?? 0);
+      if (k >= PERSONAL_MIN_MUSCLE_PAIRS) withFixed += k;
+    }
+    return {
+      ...none, pairs: n, pairsByMuscle: counted, fixedRepsPairs, fixedRepsWouldCount: fixedRepsPairs > 0 && withFixed >= PERSONAL_MIN_PAIRS,
+    };
+  }
 
   // Per muscle, each pair's readings at B and at P for every candidate
   // (P with nothing before it reads fully recovered), and the days between
@@ -487,11 +519,19 @@ export function personalRecoveryEvidence({
         || (distance === best.distance && f > candidates[best.ci])));
     if (better) best = { ci, sse, distance };
   });
+  // The comparisons from one day share that day's form (sleep, stress, the
+  // weekday), so they are not independent: the clarity test counts the
+  // days the later sessions fell on, not the comparisons (review of
+  // 2026-09-26: counting comparisons, two exercises a muscle or pre-filled
+  // reps showed a direction to up to 1 in 5 whose recovery equals the start).
+  const days = new Set();
+  for (const m of muscles) for (const q of pairsByMuscle[m]) days.add(localDayOf(q.startB));
+  const workoutDays = days.size;
   const lr = best.ci !== priorIndex && atPrior.sse > EPSILON
-    ? n * Math.log(atPrior.sse / Math.max(best.sse, EPSILON))
+    ? workoutDays * Math.log(atPrior.sse / Math.max(best.sse, EPSILON))
     : 0;
   return {
-    prior, pairs: n, spread, best: candidates[best.ci], lr, pairsByMuscle: counted, fixedRepsPairs,
+    prior, pairs: n, workoutDays, spread, best: candidates[best.ci], lr, pairsByMuscle: counted, fixedRepsPairs, fixedRepsWouldCount: false,
   };
 }
 
@@ -516,12 +556,12 @@ export function personalRecoveryEvidence({
  */
 export function learnPersonalRecovery(params = {}) {
   const {
-    prior, pairs, spread, best, lr, pairsByMuscle, fixedRepsPairs,
+    prior, pairs, spread, best, lr, pairsByMuscle, fixedRepsWouldCount,
   } = personalRecoveryEvidence(params);
   let reason = 'not_clear';
   if (pairs < PERSONAL_MIN_PAIRS) {
-    // Enough comparisons existed, but their lifts' reps never change.
-    reason = pairs + fixedRepsPairs >= PERSONAL_MIN_PAIRS && fixedRepsPairs > 0 ? 'fixed_reps' : 'too_few';
+    // Enough comparisons existed, but only with the lifts whose reps repeat.
+    reason = fixedRepsWouldCount ? 'fixed_reps' : 'too_few';
   } else if (spread < PERSONAL_MIN_SPREAD) reason = 'no_spread';
   else if (best !== prior && lr >= PERSONAL_LR_MIN) reason = 'adjusted';
   return {

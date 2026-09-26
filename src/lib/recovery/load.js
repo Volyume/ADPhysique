@@ -379,15 +379,12 @@ function normaliseMuscleKey(muscle) {
 /**
  * The `${sessionId}|${muscle}` pairs an injury limit leaves out of the
  * learning: a session under an episode for that muscle, or inside the
- * 14-day return period after one (the CC30 rule, capability/eligibility).
- * Throws when the injury rows cannot be read (the caller skips the learner).
+ * 14-day return period after one (the CC30 rule, capability/eligibility),
+ * from the injury rows already read.
  */
-async function excludedEvidence(userId, sessions, exercises) {
+function excludedEvidence(capRows, sessions, exercises) {
   const excluded = new Set();
-  const capRows = await getCapabilityConstraints(userId);
-  // The block ledger's own precondition (blockLedgerRunner.js): no episode
-  // row, nothing is constrained.
-  if (!Array.isArray(capRows) || !capRows.some((r) => r?.role === 'episode')) return excluded;
+  if (!hasEpisode(capRows)) return excluded;
   // Lazy, as database.getAdaptiveLandmarkHistory requires it.
   // eslint-disable-next-line global-require
   const elig = require('../capability/eligibility');
@@ -405,21 +402,47 @@ async function excludedEvidence(userId, sessions, exercises) {
   return excluded;
 }
 
+/** The block ledger's own precondition (blockLedgerRunner.js): no episode row, nothing is constrained. */
+function hasEpisode(capRows) {
+  return Array.isArray(capRows) && capRows.some((r) => r?.role === 'episode');
+}
+
 /**
- * Everything the learner reads, as one string: the user, the local day, the
- * recovery answer, what injury limits leave out, and for each session the
- * fields its pairing, its outcome and its curve read (times, the week's
- * target, first week and recovery week, the ratings, and each set's
- * exercise, type, weight, reps and order), with the exercises those sets
- * name. Any change to any of them, a set corrected, a rating added, a week
- * turned into a recovery week, an injury limit logged or backdated, re-runs
- * the learner the same day (review of 2026-09-26: a shorter key missed
- * all of these until the next day).
+ * What the injury scan reads besides the sessions: the injury rows as
+ * stored, and, only when there is an episode to scan for, the exercise
+ * library's size and newest edit (every edit a person can make stamps
+ * updated_at; a library migration runs at start-up, before any memo).
+ */
+function injuryInputsKey(capRows, exercises) {
+  const rows = Array.isArray(capRows) ? capRows : [];
+  if (!hasEpisode(rows)) return JSON.stringify(rows);
+  let newest = 0;
+  let removed = 0;
+  const library = Array.isArray(exercises) ? exercises : [];
+  for (const e of library) {
+    const t = Number(e?.updatedAt ?? e?.updated_at ?? e?.createdAt ?? e?.created_at);
+    if (Number.isFinite(t) && t > newest) newest = t;
+    if (e?.deletedAt ?? e?.deleted_at) removed += 1;
+  }
+  return `${JSON.stringify(rows)}|${library.length}|${removed}|${newest}`;
+}
+
+/**
+ * Everything the learner reads, as one string: the user, the local day and
+ * the phone's time zone (weekdays are local), the recovery answer, the
+ * injury inputs (injuryInputsKey), and for each session the fields its
+ * pairing, its outcome and its curve read (times, the week's target, first
+ * week and recovery week, the ratings, and each set's exercise, type,
+ * weight, reps and order), with the exercises those sets name. Any change
+ * to any of them, a set corrected, a rating added, a week turned into a
+ * recovery week, an injury limit logged or backdated, re-runs the learner
+ * the same day (review of 2026-09-26: a shorter key missed all of these
+ * until the next day).
  */
 function personalMemoKey({
-  userId, nowMs, recoveryRating, sessions, exerciseById, excluded,
+  userId, nowMs, recoveryRating, sessions, exerciseById, injuryKey,
 }) {
-  const parts = [userId, localDayKey(nowMs), recoveryRating, [...excluded].sort().join(',')];
+  const parts = [userId, localDayKey(nowMs), new Date(nowMs).getTimezoneOffset(), recoveryRating, injuryKey];
   const named = new Set();
   for (const session of sessions) {
     const r = session.ratings ?? {};
@@ -455,18 +478,23 @@ function personalMemoKey({
 async function learnFromSessions({
   userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
 }) {
-  let excluded;
+  // The injury rows are read on every call, so a limit logged or backdated
+  // today counts at once (CC30); the scan over the library they need runs
+  // only when the key has changed (review of 2026-09-26: run on every focus
+  // it cost up to 190 ms without a JIT).
+  let capRows;
   try {
-    excluded = await excludedEvidence(userId, sessions, exercises);
+    capRows = await getCapabilityConstraints(userId);
   } catch (e) {
     logError('recovery.load.capabilityConstraints', e, { userId });
     return null;
   }
   const key = personalMemoKey({
-    userId, nowMs, recoveryRating, sessions, exerciseById, excluded,
+    userId, nowMs, recoveryRating, sessions, exerciseById, injuryKey: injuryInputsKey(capRows, exercises),
   });
   if (personalMemo && personalMemo.key === key) return personalMemo.value;
   try {
+    const excluded = excludedEvidence(capRows, sessions, exercises);
     const value = learnPersonalRecovery({
       sessions, exerciseById, recoveryRating, nowMs, excluded,
     });
