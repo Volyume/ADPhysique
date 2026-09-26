@@ -10575,3 +10575,35 @@ best-effort), `src/lib/algorithms.js` (`E1RM_PROGRESS_MARGIN` exported),
 `load.test.js` (the window, the deload flag, the learned factor end to end,
 a failed injury-limit read never degrades), `MuscleRecoveryList.test.js`,
 `ReadinessCards.recoveryByMuscle.test.js`.
+
+## D211 — The Welcome screen's captures are rendered from the current app (founder, 2026-09-26; lead ruling under D33)
+
+Founder, verbatim, on the Welcome screen's product captures (the July store
+screenshots resized in by D145, which showed an old workout screen, the
+"Eat" tab and the old header): "I did not create the screenshots.
+Claudecode rendereed then itself." With the delegation of the same day
+("Make the decisions that bring the absolute best product for end users ...
+I do not need to make these decisions").
+
+**Ruling.** The three captures (Today, a set being logged, the day's
+nutrition) are rendered from the current app by the in-repo paper-render
+harness, not taken by hand, and refreshed whenever those screens change.
+`scripts/paper-render/run.sh` now makes them on every run (README section
+"The Welcome screen's captures"): the seeded demo persona "Alex", dark
+theme, one phone screen each with the real tab bar at the foot, on a clean
+account (the how-you-train offer and the meal-reminder offer dismissed
+through the storage keys their own buttons write), shot by headless
+Chromium and encoded at the assets' own 480 x 940. Two harness fixes made
+them true to a phone: Skia paths are recorded by the mock and drawn as SVG,
+so the calorie ring is the app's own geometry (it was an unknown-type box);
+the seeded meals are logged at breakfast, lunch and dinner times (every
+item read 21:40). `assets/welcome/{today,workout,nutrition}.jpg` replaced.
+
+**Rejected.** Hiding the one-time offers with CSS (the render would stop
+being the app's own output; the storage keys are the real dismissed state);
+hand-drawn mock-ups (D145's rule: real captures); keeping the July images
+(they show screens the app no longer has).
+
+**Open, founder-side.** The Play and App Store listing screenshots are
+separate uploads in the consoles and still show the July screens; the same
+harness can render a full store set on request.

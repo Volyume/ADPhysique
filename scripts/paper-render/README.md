@@ -36,6 +36,32 @@ default). Override the Chromium binary with `PAPER_RENDER_CHROME` and the
 output directory with `PAPER_RENDER_OUT_DIR` if ever needed; neither has to
 be set normally.
 
+## The Welcome screen's captures
+
+The first-launch Welcome screen shows three real captures of the app (register
+D145): Today, a set being logged, the day's nutrition. The founder,
+2026-09-26: the captures were rendered by Claude Code, not taken by hand, so
+they are rendered here from the current app and refreshed whenever those
+screens change (register D211).
+
+`run.sh` makes them on every run: `paper-render.test.js`'s Welcome pass
+mounts Today, the active workout and Nutrition for the same "Alex" persona as
+one phone screen each (`treeToHtml` `opts.phone`: the screen fills the
+height, the real `VolyumeTabBar` sits at its foot, the fold line is not
+drawn), on a clean account (the how-you-train offer and the meal-reminder
+offer dismissed through the storage keys their own buttons write, removed
+again after the pass); `welcome.js` shoots each at 412 CSS pixels and twice
+the density, crops the phone height (headless Chromium leaves the bottom of
+its window unpainted, so the window is shot taller), scales to the assets'
+480 x 940 and encodes JPEG with CanvasKit, into
+`<out>/welcome/{today,workout,nutrition}.jpg`. It never writes into
+`assets/`: copy the three files over `assets/welcome/` after looking at them.
+
+Skia drawing (the calorie ring) renders for real: the Skia mock in
+`mockPreamble.js` records each path's `moveTo`/`lineTo`/`close`, and
+`treeToHtml.js` draws a `Canvas`'s `Path`s as SVG from those commands, so
+the ring is the app's own geometry, not an unknown-type box.
+
 ## How it works
 
 Two stages, run in sequence by `run.sh`:

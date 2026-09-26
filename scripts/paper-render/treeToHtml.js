@@ -403,6 +403,49 @@ function renderSvgNode(node, ctx) {
   return `<${svgTag} ${attrs.join(' ')}>${inner}</${svgTag}>`;
 }
 
+// A react-native-skia Canvas. mockPreamble.js makes each Skia path record the
+// commands the app drew it with, so its Paths draw here as the same shapes in
+// SVG (the calorie ring reads as the ring). A path handed over as a shared
+// value (useDerivedValue) is read through its `.value`.
+function skiaPathData(p) {
+  const path = p && typeof p === 'object' && p.value && typeof p.value.toSVGString === 'function' ? p.value : p;
+  return path && typeof path.toSVGString === 'function' ? path.toSVGString() : '';
+}
+
+function renderSkiaCanvas(node, ctx) {
+  const style = flattenStyle(node.props.style);
+  const w = Number(style.width) || 0;
+  const h = Number(style.height) || 0;
+  const parts = [];
+  const walk = (children) => {
+    const arr = Array.isArray(children) ? children : (children ? [children] : []);
+    for (const c of arr) {
+      if (!c || typeof c !== 'object') continue;
+      if (c.type !== 'Path') {
+        bumpStat(ctx, 'unknownTypes', `Skia:${c.type}`);
+        walk(c.children);
+        continue;
+      }
+      const d = skiaPathData(c.props.path);
+      if (!d) continue;
+      const colour = escapeHtml(c.props.color || '#000000');
+      const attrs = [`d="${escapeHtml(d)}"`];
+      if (c.props.style === 'stroke') {
+        attrs.push('fill="none"', `stroke="${colour}"`, `stroke-width="${Number(c.props.strokeWidth) || 1}"`);
+        if (c.props.strokeCap) attrs.push(`stroke-linecap="${escapeHtml(c.props.strokeCap)}"`);
+        if (c.props.strokeJoin) attrs.push(`stroke-linejoin="${escapeHtml(c.props.strokeJoin)}"`);
+      } else {
+        attrs.push(`fill="${colour}"`);
+      }
+      if (c.props.opacity !== undefined && c.props.opacity !== null) attrs.push(`opacity="${Number(c.props.opacity)}"`);
+      parts.push(`<path ${attrs.join(' ')}/>`);
+    }
+  };
+  walk(node.children);
+  const css = mapContainerCss(style);
+  return `<div style="${cssToString(css)}"><svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${parts.join('')}</svg></div>`;
+}
+
 function renderUnknown(node, ctx) {
   bumpStat(ctx, 'unknownTypes', node.type);
   const style = mapContainerCss(flattenStyle(node.props.style));
@@ -417,6 +460,8 @@ function renderNode(node, ctx, forceInlineText) {
   const { type } = node;
 
   if (HIDDEN_TYPES.has(type)) return '';
+
+  if (type === 'Canvas') return renderSkiaCanvas(node, ctx);
 
   if (isModalLike(node)) {
     if (!node.props.visible) return '';
@@ -579,6 +624,12 @@ function estimateNode(node, availWidth) {
  *   name in FONT_FACES is always registered. Reserved for future faces.
  * @param {string} [opts.repoRoot]
  * @param {number} [opts.foldY] - default 915.
+ * @param {{height:number}} [opts.phone] - lay the page out as one phone
+ *   screen of this CSS height instead of the full scroll: the screen fills
+ *   the height (its own flex does the rest, so a pinned footer sits at the
+ *   bottom and a scroll view clips), anything rendered after it (the tab
+ *   bar) keeps its natural height at the foot, and the fold line is not
+ *   drawn. Used for the Welcome screen's product captures (welcome.js).
  * @returns {{ html: string, stats: { unknownTypes: object, converterFallbacks: object, estimatedHeightPx: number } }}
  */
 function treeToHtml(json, opts) {
@@ -631,7 +682,11 @@ body {
   position: absolute; left: 0; top: ${foldY}px; width: 412px; height: 0;
   border-top: 1px dashed #ff2d55; z-index: 100000; pointer-events: none;
 }
-#pr-fold::after {
+${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Number(opts.phone.height)}px; overflow: hidden; }
+#pr-page > * { flex-shrink: 0; }
+#pr-page > :first-child { flex: 1 1 0%; min-height: 0; overflow: hidden; }
+#pr-fold { display: none; }
+` : ''}#pr-fold::after {
   content: "fold"; position: absolute; right: 4px; top: 2px; font-family: monospace;
   font-size: 10px; color: #ff2d55; background: rgba(0,0,0,0.55); padding: 1px 4px; border-radius: 3px;
 }

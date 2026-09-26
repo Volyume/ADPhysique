@@ -377,7 +377,7 @@ async function processScreen(config, seed, theme, variant = {}) {
     // eslint-disable-next-line global-require
     const themeMod = require('../../src/styles/theme');
     const bg = theme === 'light' ? themeMod.resolveTheme({ theme: 'light' }).colors.background : themeMod.colors.background;
-    const { html, stats } = treeToHtml(json, { theme, title: label, backgroundColor: bg });
+    const { html, stats } = treeToHtml(json, { theme, title: label, backgroundColor: bg, phone: variant.phone || null });
     mergeConverterStats(stats);
     entry.pageHeightPx = stats.estimatedHeightPx;
 
@@ -455,6 +455,63 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
 
   jest.useRealTimers();
   expect(REPORT.screens.length).toBe(16 + configs.length);
+});
+
+// ── Test 1c: the Welcome screen's product captures (01/02/06) ───────────
+// The first-launch Welcome screen shows three real captures of the app
+// (register D145): Today, a set being logged, the day's nutrition. The
+// founder, 2026-09-26: the captures were rendered by Claude Code, not taken
+// by hand, so they are re-rendered here from the current app whenever it
+// changes. The same persona and dark theme as test 1, laid out as one phone
+// screen (treeToHtml opts.phone) with the real tab bar at its foot, on a
+// clean account: the two one-time offers (the how-you-train offer on Today,
+// the meal-reminder offer on Nutrition) are dismissed through the same
+// storage keys their own "No thanks" and "Not now" buttons write, and the
+// keys are removed again afterwards so the light pass below renders exactly
+// as before. The entries go to REPORT.welcome, not REPORT.screens, so the
+// contact sheet and its counts are unchanged; welcome.js shoots them.
+const WELCOME_CAPTURES = [
+  { n: '01', file: 'today' },
+  { n: '02', file: 'workout' },
+  { n: '06', file: 'nutrition' },
+];
+// 480 x 940, the Welcome assets' own size, at 412 CSS pixels wide.
+const WELCOME_PHONE_HEIGHT = Math.round(412 * (940 / 480));
+
+test('paper-render the Welcome captures (Today, a set being logged, Nutrition)', async () => {
+  const seed = global.__PAPER_RENDER_SEED__;
+  expect(seed).toBeTruthy();
+
+  jest.useFakeTimers({
+    now: NOW_MS,
+    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
+  });
+
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const { MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } = require('../../src/lib/food/mealReminderOffer');
+  const dismissed = [`@volyume_hyt_offer_${seed.userId}`, MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(seed.userId)];
+  for (const key of dismissed) {
+    // eslint-disable-next-line no-await-in-loop
+    await AsyncStorage.setItem(key, 'true');
+  }
+
+  REPORT.welcome = [];
+  try {
+    const configs = screenConfigs(seed);
+    for (const capture of WELCOME_CAPTURES) {
+      const config = configs.find((c) => c.n === capture.n);
+      // eslint-disable-next-line no-await-in-loop
+      const entry = await processScreen(config, seed, 'dark', { suffix: '-welcome', phone: { height: WELCOME_PHONE_HEIGHT } });
+      REPORT.welcome.push({ ...entry, file: capture.file, cssHeight: WELCOME_PHONE_HEIGHT });
+    }
+  } finally {
+    for (const key of dismissed) {
+      // eslint-disable-next-line no-await-in-loop
+      await AsyncStorage.removeItem(key);
+    }
+    jest.useRealTimers();
+  }
+  expect(REPORT.welcome.every((e) => e.mounted)).toBe(true);
 });
 
 // ── Test 2: light theme (01/04/06), with the resetModules reload ─────────

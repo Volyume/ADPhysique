@@ -49,4 +49,7 @@ npx jest --rootDir "${REPO_ROOT}" --testMatch '**/scripts/paper-render/*.test.js
 echo "[paper-render] screenshotting..."
 node "${SCRIPT_DIR}/shoot.js"
 
+echo "[paper-render] the Welcome screen's captures..."
+node "${SCRIPT_DIR}/welcome.js"
+
 echo "[paper-render] done. Deliverables in ${OUT_DIR}/ (index.html, report.md, one PNG per screen)."

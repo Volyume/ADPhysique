@@ -264,14 +264,20 @@ async function seedPersona() {
   //    2,650 kcal target (logFoodEntry; curated: refs resolve to a real
   //    named food + macros with no DB food-table seed required).
   const todayKey = dayKey.localDayKey(NOW_MS);
+  // Each meal is logged at its own time of day (logFoodEntry stamps the
+  // entry from the clock, so the fake clock moves for each meal and returns
+  // to NOW_MS after), so the diary reads like a real day rather than every
+  // item at the seed's evening "now".
   const meals = [
-    { mealSlot: 'breakfast', items: [['oats', 70], ['eggs', 120], ['banana', 100]] },
-    { mealSlot: 'lunch', items: [['chicken_breast', 160], ['white_rice', 180], ['mixed_veg', 150]] },
-    { mealSlot: 'dinner', items: [['salmon', 150], ['sweet_potato', 180], ['broccoli', 130]] },
+    { mealSlot: 'breakfast', hh: 7, mm: 45, items: [['oats', 70], ['eggs', 120], ['banana', 100]] },
+    { mealSlot: 'lunch', hh: 12, mm: 50, items: [['chicken_breast', 160], ['white_rice', 180], ['mixed_veg', 150]] },
+    { mealSlot: 'dinner', hh: 18, mm: 55, items: [['salmon', 150], ['sweet_potato', 180], ['broccoli', 130]] },
   ];
   const { CURATED_FOODS } = require('../../src/lib/food/curatedFoods');
   let diaryTotalKcal = 0;
+  const today = new Date(NOW_MS);
   for (const meal of meals) {
+    jest.setSystemTime(at(today.getFullYear(), today.getMonth(), today.getDate(), meal.hh, meal.mm));
     for (const [key, grams] of meal.items) {
       const food100 = CURATED_FOODS[key];
       if (!food100) { report.notes.push(`Curated food key "${key}" missing; a diary item was skipped.`); continue; }
@@ -292,6 +298,7 @@ async function seedPersona() {
       });
     }
   }
+  jest.setSystemTime(NOW_MS);
   report.notes.push(`Diary seeded: ${diaryTotalKcal} kcal across 3 curated-food meals (target 2,650 kcal).`);
 
   // 8. Weekly check-in completed last Sunday, plus a coach decision for

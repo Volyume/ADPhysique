@@ -256,10 +256,25 @@ jest.mock('@sentry/react-native', () => ({
   withScope: jest.fn(cb => cb({ setTag: () => {}, setContext: () => {}, setUser: () => {} })),
 }));
 
-jest.mock('@shopify/react-native-skia', () => ({
-  Canvas: 'Canvas', Path: 'Path', Skia: { Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {} }) } },
-  useFont: () => null, useImage: () => null,
-}));
+// A Skia path records the commands the app draws it with (moveTo, lineTo,
+// close: all MacroRings' calorie ring uses), so treeToHtml.js draws the
+// app's own geometry as SVG instead of an unknown-type box.
+jest.mock('@shopify/react-native-skia', () => {
+  const makePath = () => {
+    const cmds = [];
+    const path = {
+      moveTo: (x, y) => { cmds.push(`M${x} ${y}`); return path; },
+      lineTo: (x, y) => { cmds.push(`L${x} ${y}`); return path; },
+      close: () => { cmds.push('Z'); return path; },
+      toSVGString: () => cmds.join(' '),
+    };
+    return path;
+  };
+  return {
+    Canvas: 'Canvas', Path: 'Path', Skia: { Path: { Make: makePath } },
+    useFont: () => null, useImage: () => null,
+  };
+});
 
 jest.mock('react-native-svg', () => {
   const React = require('react');
