@@ -247,6 +247,10 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     const latest = BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
     await act(async () => { latest.onMuscleTap('triceps'); });
     expect(texts(tree).filter((t) => t === 'Based on')).toHaveLength(1);
+    // Tapping the open muscle again on the figure closes it.
+    const again = BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
+    await act(async () => { again.onMuscleTap('quads'); });
+    expect(texts(tree)).not.toContain('Based on');
   });
 
   test('the section heading carries accessibilityRole="header"', async () => {

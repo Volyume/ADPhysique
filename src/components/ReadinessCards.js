@@ -469,6 +469,11 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
   // session: <names>" line under the rows repeated them and was dropped).
   const rowMuscleKeys = new Set(muscleRecoveryRows.map((entry) => entry.muscle));
   const noRecentSessionEntries = freshnessEntries.filter((e) => !rowMuscleKeys.has(e.key));
+  // The open row, if its muscle still has one: a selection whose muscle
+  // has since left the rows (aged out of the 14-day window across a
+  // refocus reload) reads as nothing open, so the next tap on that muscle
+  // opens it rather than closing a phantom (review finding, 2026-09-26).
+  const openMuscle = selectedMuscle && rowMuscleKeys.has(selectedMuscle) ? selectedMuscle : null;
   // Next-workout row text (spec 4.2 point 4): the swap reason when one
   // applies ("Legs is next in your plan. Quads are estimated 64% recovered,
   // ready by Thursday. Push is ready now."), else "<Name> is next." plus
@@ -639,16 +644,16 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
               recoveryByMuscle={muscleRecovery.map}
               // A muscle tap opens that muscle's row below (a muscle with no
               // row, no session in 14 days, is left alone).
-              onMuscleTap={(muscle) => setSelectedMuscle((prev) => {
-                if (prev === muscle) return null;
-                return muscleRecoveryRows.some((entry) => entry.muscle === muscle) ? muscle : prev;
-              })}
+              onMuscleTap={(muscle) => {
+                if (openMuscle === muscle) { setSelectedMuscle(null); return; }
+                if (rowMuscleKeys.has(muscle)) setSelectedMuscle(muscle);
+              }}
             />
             <MuscleRecoveryList
               rows={muscleRecoveryRows}
               nowMs={muscleRecoveryNowMs}
               freshness={muscleFreshness}
-              selectedMuscle={selectedMuscle}
+              selectedMuscle={openMuscle}
               onSelect={setSelectedMuscle}
             />
             <Text style={[styles.rbmCaption, live.rbmCaption]}>

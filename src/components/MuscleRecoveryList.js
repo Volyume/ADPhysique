@@ -65,7 +65,7 @@ export const RECOVERY_GROUPS = Object.freeze([
   { status: 'recovered', label: 'Recovered' },
 ]);
 
-const DOT = 8;
+const DOT = spacing.sm;
 
 /** The band colour for a status: the same three tokens the body figure
  * uses (D201 addendum 5, ruling 8). */
@@ -139,46 +139,55 @@ function MuscleRecoveryRow({
   entry, nowMs, lastTrainedAt, expanded, onToggle, t, live,
 }) {
   const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
-  const percent = Math.max(0, Math.min(100, Math.round(entry.recoveredPercent)));
+  const percent = Number.isFinite(entry.recoveredPercent)
+    ? Math.max(0, Math.min(100, Math.round(entry.recoveredPercent)))
+    : 0;
   // The card's sub-line ("Estimated · last 14 days") and the spoken label
   // both say estimated; these two are that same estimated percent.
   const estimatedPercentText = `${percent}%`; // estimated recovery
   const estimatedFillWidth = `${percent}%`; // estimated recovery, the bar's fill
   const band = muscleRecoveryBandColour(entry.status, t.colors);
   const detail = expanded ? muscleRecoveryDetailLines(entry) : null;
+  // The breakdown is a SIBLING of the touchable, never its child: a
+  // touchable with its own accessibilityLabel is one opaque node to
+  // VoiceOver and TalkBack, so anything nested inside it is unreachable
+  // (the same mechanism BodyDiagramHeatmap's AX-04 note records, and the
+  // reason CollapsibleSection renders its body beside its toggle).
   return (
-    <TouchableOpacity
-      style={styles.row}
-      onPress={onToggle}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityState={{ expanded }}
-      accessibilityLabel={muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt)}
-      accessibilityHint={expanded ? 'Hides the sessions behind this estimate' : 'Shows the sessions behind this estimate'}
-    >
-      <View style={styles.rowTop}>
-        <View style={[styles.dot, { backgroundColor: band }]} />
-        <Text style={[styles.name, live.name]} numberOfLines={1}>{name}</Text>
-        <Text style={[styles.percent, live.percent]}>{estimatedPercentText}</Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
-      </View>
-      <View style={[styles.track, live.track]}>
-        <View style={[styles.fill, { width: estimatedFillWidth, backgroundColor: band }]} />
-      </View>
-      <Text style={[styles.meta, live.meta]} numberOfLines={1}>
-        {muscleRecoveryRowMeta(entry, nowMs, lastTrainedAt)}
-      </Text>
+    <View style={styles.row}>
+      <TouchableOpacity
+        style={styles.rowBody}
+        onPress={onToggle}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt)}
+        accessibilityHint={expanded ? 'Hides the sessions behind this estimate' : 'Shows the sessions behind this estimate'}
+      >
+        <View style={styles.rowTop}>
+          <View style={[styles.dot, { backgroundColor: band }]} />
+          <Text style={[styles.name, live.name]} numberOfLines={1}>{name}</Text>
+          <Text style={[styles.percent, live.percent]}>{estimatedPercentText}</Text>
+          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
+        </View>
+        <View style={[styles.track, live.track]}>
+          <View style={[styles.fill, { width: estimatedFillWidth, backgroundColor: band }]} />
+        </View>
+        <Text style={[styles.meta, live.meta]} numberOfLines={1}>
+          {muscleRecoveryRowMeta(entry, nowMs, lastTrainedAt)}
+        </Text>
+      </TouchableOpacity>
       {detail ? (
         <View style={[styles.detail, live.detail]}>
           {detail.map((line) => (
-            <View key={line.label} style={styles.detailLine}>
+            <View key={line.label} style={styles.detailLine} accessible accessibilityLabel={`${line.label}: ${line.value}`}>
               <Text style={[styles.detailLabel, live.detailLabel]}>{line.label}</Text>
               <Text style={[styles.detailValue, live.detailValue]}>{line.value}</Text>
             </View>
           ))}
         </View>
       ) : null}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -193,7 +202,12 @@ export default function MuscleRecoveryList({
     <View style={styles.list}>
       {groups.map((group) => (
         <View key={group.status} style={styles.group}>
-          <View style={styles.groupHeader} accessibilityRole="header">
+          <View
+            style={styles.groupHeader}
+            accessible
+            accessibilityRole="header"
+            accessibilityLabel={`${group.label}, ${group.rows.length} muscle${group.rows.length === 1 ? '' : 's'}`}
+          >
             <View style={[styles.dot, { backgroundColor: muscleRecoveryBandColour(group.status, t.colors) }]} />
             <Text style={[styles.groupLabel, live.groupLabel]}>{group.label}</Text>
             <Text style={[styles.groupCount, live.groupCount]}>{group.rows.length}</Text>
@@ -222,7 +236,8 @@ const styles = StyleSheet.create({
   groupHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.xxs },
   groupLabel: { ...type.overline, color: colors.textSecondary },
   groupCount: { ...type.overline, color: colors.textMuted },
-  row: { paddingVertical: spacing.sm, gap: spacing.xs },
+  row: { paddingVertical: spacing.sm },
+  rowBody: { gap: spacing.xs },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: DOT, height: DOT, borderRadius: circle(DOT), flexShrink: 0 },
   name: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
@@ -239,10 +254,12 @@ const styles = StyleSheet.create({
   detailValue: { ...type.captionStrong, color: colors.textPrimary, flexShrink: 1, textAlign: 'right' },
 });
 
-// Live theme override for the frozen block above (the migrated-primitive
-// pattern, docs/rules/styling.md): every colour, type spread and numeric
-// role is re-read from useTheme() so dark, light, higher-contrast and
-// colour-blind-safe all resolve.
+// Live theme override for the frozen block above: the frozen-plus-live
+// `buildLiveStyles` pattern the tree carries (SectionLabel.js,
+// CollapsibleSection.js, ReadinessCards.js), so a theme change re-reads
+// every colour and type role from useTheme() without an app restart. The
+// "migrated-primitive" pattern docs/rules/styling.md once named went with
+// the reverted redesign (its status note says so).
 function buildLiveStyles(t) {
   return {
     groupLabel: { ...t.type.overline, color: t.colors.textSecondary },

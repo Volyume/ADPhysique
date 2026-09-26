@@ -173,6 +173,38 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     expect(open.filter((t) => t === 'Based on')).toHaveLength(1);
   });
 
+  test('the breakdown is a sibling of the row button, never nested inside it (assistive tech can reach it)', () => {
+    const tree = render({ selectedMuscle: 'biceps' });
+    const button = rowButtons(tree).find((n) => n.props.accessibilityLabel.startsWith('Biceps'));
+    expect(button.props.accessibilityState).toEqual({ expanded: true });
+    // Nothing of the breakdown lives under the touchable's own subtree.
+    expect(button.findAll((n) => n.props?.children === 'Based on')).toHaveLength(0);
+    // Each breakdown line is one labelled accessible node.
+    const line = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Based on: Time, sets and your ratings');
+    expect(line.length).toBeGreaterThan(0);
+    expect(line[0].props.accessible).toBe(true);
+  });
+
+  test('a literal weekday: two days from a Wednesday noon reads "Ready by Friday"', () => {
+    const all = texts(render());
+    expect(all).toContain('Ready by Friday · Trained 2 days ago');
+    expect(all).toContain('Ready by tomorrow · Trained 1 day ago');
+  });
+
+  test('a non-finite percent renders as 0%, never NaN', () => {
+    const all = texts(render({ rows: [entry({ recoveredPercent: undefined })] }));
+    expect(all).toContain('0%');
+    expect(all.some((t) => /NaN/.test(t))).toBe(false);
+  });
+
+  test('each group header is one accessible header node naming the group and its count', () => {
+    const tree = render();
+    const header = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Recovering, 1 muscle')[0];
+    expect(header).toBeTruthy();
+    expect(header.props.accessibilityRole).toBe('header');
+    expect(header.props.accessible).toBe(true);
+  });
+
   test('muscleRecoveryDetailLines: the basis wording, and no 14-day line without contributing sessions', () => {
     const lines = muscleRecoveryDetailLines(entry({ contributingSessions: [] }));
     expect(lines.map((l) => l.label)).toEqual(['Last session', 'Based on']);
