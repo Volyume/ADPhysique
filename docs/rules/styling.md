@@ -198,7 +198,19 @@ are documented inline where they occur; see `docs/DESIGN_SYSTEM.md`'s
 
 ---
 
-## THE SEVEN LAWS (design direction D, "Ledger, dark")
+## THE SEVEN LAWS (design direction D, "Ledger, dark") - HISTORY, NOT LIVE
+
+> STATUS (added 2026-09-26): the redesign this section describes was
+> REVERTED on the founder's order of 2026-09-18 (commit `35fbdfeb`, app
+> code restored to `c58aab3d`; register D193 records the verdict). The
+> laws below, the direction-D guard they cite (deleted in the revert) and
+> the "migrated-primitive" components named under "Writing a new
+> component" (`BigNumber.js`, `WeekRibbon.js`, `LedgerRow.js`, all gone)
+> are history. The LIVE style is the sections above this one plus the
+> shipped primitives (`Card`, `Button`, `Chip`, `SectionLabel`,
+> `InfoTooltip`, the header trio) and the frozen-plus-live
+> `buildLiveStyles` pattern the tree carries. A lane that builds to the
+> laws below builds the wrong app.
 
 Ruled by the founder 2026-09-14 (**D165**, with **D164** behind it and
 **D166** carrying their ED-safety answers and three corrections to the lead's
