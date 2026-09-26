@@ -17,8 +17,9 @@ are paying. Every change affects them. Work accordingly.
 > profile is off; 184 and 185 applied 2026-09-26, 13:49 and 13:50 UTC,
 > under the founder's phrase given that day, 184 before 185: Community
 > session sharing on by default, existing profiles flipped; 176 to 183 on
-> 2026-09-24; the README status block is the live record) except **155**, which waits for the store apps
-> to move to a build without Partners (README status block). **182** (the
+> 2026-09-24; the README status block is the live record); **155** applied
+> 2026-09-26 under the founder's "run against production: 155" (the build
+> without Partners had long been live). **182** (the
 > ED-flag cloud push, raises and clears, forward-only, scoped to the
 > caller's own row, no signals; D92-11 answered, D196) is live, so the ED
 > arm of 180's server-side withhold and both edge-function ED gates arm the
@@ -54,7 +55,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_186`, applied through 186 except 155 and 049 HELD; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_186`, applied through 186 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

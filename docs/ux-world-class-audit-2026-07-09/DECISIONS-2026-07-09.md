@@ -10993,8 +10993,9 @@ calorie bank error ("so that much can't be moved"). The one guard that
 pinned the old title (`CoachOutputScreen.edPatternAnnounce.guard.test.js`)
 now pins the new one. Not changed: the dormant subscription page (billing
 copy, never shown) and the weekly coach's lighter-week note (it has no
-"we"). Migration 186 applied 18:44 UTC (supabase/README); 155 waits for a
-build without Partners in users' hands, 049 stays HELD.
+"we"). Migration 186 applied 18:44 UTC and 155 after it, once the founder
+confirmed the build without Partners had long been live and gave "run
+against production: 155" (supabase/README); 049 stays HELD.
 
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
