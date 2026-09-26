@@ -65,6 +65,11 @@ const PALETTE = {
   text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9C9C9C',
 };
 
+// The card's ground, shown wherever a zoomed-out photo leaves the canvas
+// uncovered. Exported so the screen's positioning view paints the same
+// colour behind the photo it moves.
+export const CARD_GROUND = PALETTE.bg0;
+
 // Central number+unit join (P-15, ux-copy-polish audit 2026-07-12 / format.js).
 // This file is deliberately import-free (see header), so `format.js`'s single
 // source of truth is mirrored here rather than imported: a non-breaking space
@@ -257,48 +262,72 @@ function fitFont(font, str, maxW, startPx, makeAt, minPx = 24) {
 // ── the photo ───────────────────────────────────────────────────────────────
 
 /**
- * Where a photo lands when it COVERS a W x H canvas, after the athlete's own
- * framing. Founder, 2026-09-26: "it just sticks it one size in the middle it
- * might not show my biceps if I can move it up down left or right it will
- * show better." `crop` is { zoom, cx, cy }: `zoom` >= 1 on top of the cover
- * fit, and (cx, cy) the point of the photo, as fractions of its width and
- * height, that sits at the centre of the canvas. The rectangle is clamped so
- * the photo always covers the canvas (no edge can be dragged into view), and
- * storing a point of the PHOTO rather than a pixel offset keeps the framing
- * when the athlete switches between story, square and 4:5. With no crop this
- * is the centre crop every card has always used. Pure, and exported so the
- * screen's positioning view uses the same arithmetic as the renderer.
+ * How far a photo can zoom on a W x H canvas, relative to the cover fit
+ * (zoom 1). Zooming out stops where the whole photo fits inside the canvas
+ * (the contain fit), so a landscape photo on a story can be shown in full;
+ * zooming in stops at MAX_PHOTO_ZOOM.
+ *
+ * @returns {{min:number, max:number}}
+ */
+export function photoZoomRange(iw, ih, W, H) {
+  const cover = Math.max(W / iw, H / ih);
+  const contain = Math.min(W / iw, H / ih);
+  return { min: Math.min(1, contain / cover), max: MAX_PHOTO_ZOOM };
+}
+
+// One axis of the placement: a photo larger than the canvas on this axis
+// may not leave a gap at either edge; a smaller one may not leave the canvas.
+function placeAxis(pos, size, frame) {
+  return size >= frame
+    ? Math.min(0, Math.max(frame - size, pos))
+    : Math.max(0, Math.min(frame - size, pos));
+}
+
+/**
+ * Where a photo lands on a W x H canvas after the athlete's own framing.
+ * Founder, 2026-09-26: "it just sticks it one size in the middle it might
+ * not show my biceps if I can move it up down left or right it will show
+ * better", and then: "Both should be adjustable in position and size".
+ * `crop` is { zoom, cx, cy }: `zoom` relative to the cover fit (1 covers the
+ * canvas exactly; below 1, down to the contain fit, the whole photo can sit
+ * inside it on the card's ground), and (cx, cy) the point of the photo, as
+ * fractions of its width and height, that sits at the centre of the canvas.
+ * The rectangle is clamped so a photo that covers leaves no gap and a photo
+ * that sits inside never leaves the canvas. Storing a point of the PHOTO
+ * rather than a pixel offset keeps the framing when the athlete switches
+ * between story, square and 4:5. With no crop this is the centre crop every
+ * card has always used. Pure, and exported so the screen's positioning view
+ * uses the same arithmetic as the renderer.
  *
  * @returns {{x:number, y:number, w:number, h:number}}
  */
 export function photoCoverRect(iw, ih, W, H, crop) {
-  const zoom = crop && Number.isFinite(crop.zoom) ? Math.min(MAX_PHOTO_ZOOM, Math.max(1, crop.zoom)) : 1;
+  const range = photoZoomRange(iw, ih, W, H);
+  const zoom = crop && Number.isFinite(crop.zoom) ? Math.min(range.max, Math.max(range.min, crop.zoom)) : 1;
   const cx = crop && Number.isFinite(crop.cx) ? crop.cx : 0.5;
   const cy = crop && Number.isFinite(crop.cy) ? crop.cy : 0.5;
   const scale = Math.max(W / iw, H / ih) * zoom;
   const w = iw * scale;
   const h = ih * scale;
-  const x = Math.min(0, Math.max(W - w, W / 2 - cx * w));
-  const y = Math.min(0, Math.max(H - h, H / 2 - cy * h));
-  return { x, y, w, h };
+  return { x: placeAxis(W / 2 - cx * w, w, W), y: placeAxis(H / 2 - cy * h, h, H), w, h };
 }
 
 /**
  * The inverse of photoCoverRect: the framing a placed photo rectangle stands
  * for. The positioning view tracks the photo in its own on-screen pixels and
- * turns the result into this resolution-free form once the athlete lets go.
+ * turns the result into this resolution-free form as the athlete lets go.
  *
  * @returns {{zoom:number, cx:number, cy:number}}
  */
 export function photoCropFromRect(iw, ih, W, H, rect) {
   const base = Math.max(W / iw, H / ih);
-  const zoom = Math.min(MAX_PHOTO_ZOOM, Math.max(1, rect.w / (iw * base)));
-  const cx = Math.min(1, Math.max(0, (W / 2 - rect.x) / rect.w));
-  const cy = Math.min(1, Math.max(0, (H / 2 - rect.y) / rect.h));
-  return { zoom, cx, cy };
+  const range = photoZoomRange(iw, ih, W, H);
+  const zoom = Math.min(range.max, Math.max(range.min, rect.w / (iw * base)));
+  return { zoom, cx: (W / 2 - rect.x) / rect.w, cy: (H / 2 - rect.y) / rect.h };
 }
 
-// Draw an image COVERING W x H, framed by `crop` (see photoCoverRect).
+// Draw an image on W x H, framed by `crop` (see photoCoverRect). Where a
+// zoomed-out photo leaves the canvas uncovered, the caller's ground shows.
 function drawImageCover(canvas, Skia, img, W, H, crop) {
   const iw = img.width(); const ih = img.height();
   if (!iw || !ih) return;
@@ -323,6 +352,9 @@ function sampleAverageTone(Skia, img, W, H, crop) {
     const NH = Math.max(6, Math.round(NW * (H / W)));
     const surf = Skia.Surface.MakeOffscreen(NW, NH);
     if (!surf) return null;
+    // The ground first, as on the card, so a zoomed-out photo is sampled
+    // with the dark around it rather than with transparent pixels.
+    fillRect(surf.getCanvas(), Skia, 0, 0, NW, NH, PALETTE.bg0);
     drawImageCover(surf.getCanvas(), Skia, img, NW, NH, crop);
     surf.flush();
     const snap = surf.makeImageSnapshot();
@@ -411,7 +443,12 @@ function drawBackground(canvas, Skia, W, H, bands) {
     // falls back to the plain ground rather than leaving the card groundless
     // (2026-08-18 law: nothing decorative may block a render).
     try {
-      if (!OMIT_PHOTO) drawImageCover(canvas, Skia, BG, W, H, BG_CROP);
+      if (!OMIT_PHOTO) {
+        // The ground under the photo: seen only where a zoomed-out photo
+        // leaves the canvas uncovered.
+        fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
+        drawImageCover(canvas, Skia, BG, W, H, BG_CROP);
+      }
       drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG, W, H, BG_CROP), bands);
       return;
     } catch (_e) { /* fall through to the plain ground */ }

@@ -16,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -30,6 +31,7 @@ import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/sh
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
+import { isCentreCrop } from '../lib/shareCard/photoFraming';
 import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -159,13 +161,13 @@ export default function ShareCardScreen({ navigation, route }) {
   const [showBestLift, setShowBestLift] = useState(true);
   // Optional gym photo background (SkImage), available on every card type.
   const [bgPhoto, setBgPhoto] = useState(null);
-  // Where the athlete framed it ({ zoom, cx, cy }, null = centred), the same
-  // pixels as a data URI for the positioning view, and whether that view is
-  // open (founder order 2026-09-26: move and zoom the photo so it "shows
-  // best in the background").
+  // Where the athlete placed and sized it ({ zoom, cx, cy }, null = centred)
+  // and the same pixels as a data URI for the live preview (founder orders
+  // 2026-09-26: the photo should show "best in the background", and camera
+  // and gallery photos alike are "adjustable in position and size on the
+  // render and final share in the most elegant way").
   const [photoCrop, setPhotoCrop] = useState(null);
   const [framerPhoto, setFramerPhoto] = useState(null);
-  const [framing, setFraming] = useState(false);
 
   // The PRs available to feature on a PR card. A caller can pass a whole
   // session's PRs (prList) so the user picks which one; otherwise it is just the
@@ -544,23 +546,20 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }, []);
 
-  // A new photo starts centred and opens the positioning view straight away,
-  // the way a photo app lets you crop before you post: the athlete sees at
-  // once that the photo can be moved, and Done keeps it as it is.
+  // A new photo, from the camera or the gallery alike, starts centred, and
+  // the preview itself becomes the place to move and resize it: there is no
+  // separate editing step to open or close.
   const acceptPhoto = useCallback((img) => {
     const bounded = boundPhotoForCanvas(img);
-    const framer = makeFramerPhoto(bounded);
     setBgPhoto(bounded);
     setPhotoCrop(null);
-    setFramerPhoto(framer);
-    setFraming(!!framer);
+    setFramerPhoto(makeFramerPhoto(bounded));
   }, [boundPhotoForCanvas, makeFramerPhoto]);
 
   const clearPhoto = useCallback(() => {
     setBgPhoto(null);
     setPhotoCrop(null);
     setFramerPhoto(null);
-    setFraming(false);
   }, []);
 
   // Take a gym photo with the camera to use as the card background (all cards).
@@ -634,16 +633,17 @@ export default function ShareCardScreen({ navigation, route }) {
     renderPreview();
   }, [renderPreview]);
 
-  // The positioning view is open only while there is a photo to move and a
-  // card with a background (the sticker has none).
-  const framerOpen = framing && !!framerPhoto && !!bgPhoto && !isSticker;
+  // With a photo (and a card that has a background: the sticker has none)
+  // the preview is live: the photo moves and resizes under the athlete's
+  // fingers, right on the card.
+  const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;
 
-  // The card laid over the photo in the positioning view: the one renderer,
-  // with the photo itself left out (`omitPhoto`), so the athlete lines the
-  // photo up against the real title, numbers and scrim. Redrawn when a
-  // gesture ends, because the scrim answers to what is now behind the text.
+  // The card laid over the photo in the live preview: the one renderer,
+  // with the photo itself left out (`omitPhoto`), so the athlete places the
+  // photo against the real title, numbers and scrim. Redrawn when a gesture
+  // ends, because the scrim answers to what is now behind the text.
   const framerOverlay = useMemo(() => {
-    if (!framerOpen || !Skia || !typefaces) return null;
+    if (!livePhoto || !Skia || !typefaces) return null;
     try {
       const params = buildParams();
       const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect);
@@ -660,7 +660,12 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.framerOverlay', e);
       return null;
     }
-  }, [framerOpen, typefaces, wordmark, buildParams, bgPhoto, photoCrop]);
+  }, [livePhoto, typefaces, wordmark, buildParams, bgPhoto, photoCrop]);
+
+  // The page's own scroll, made known to the gesture system so a drag that
+  // starts on the photo moves the photo and never the page (the photo's
+  // gestures block this one), while a drag anywhere else scrolls as normal.
+  const scrollGesture = useMemo(() => Gesture.Native(), []);
 
   // Render the export-resolution PNG and write it to a cache file, returning the
   // file URI. Shared by the OS share sheet, Save to gallery and Instagram
@@ -757,9 +762,8 @@ export default function ShareCardScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
-      {/* Scrolling pauses while the photo is being moved, so a drag moves
-          the photo rather than the page. */}
-      <ScrollView contentContainerStyle={styles.content} scrollEnabled={!framerOpen}>
+      <GestureDetector gesture={scrollGesture}>
+      <ScrollView contentContainerStyle={styles.content}>
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -870,13 +874,13 @@ export default function ShareCardScreen({ navigation, route }) {
         </View>
         ) : null}
 
-        {/* Preview: the exact image that gets shared, scaled down. While the
-            photo is being moved, the positioning view takes its place: the
-            photo under the card drawn by the same renderer. */}
+        {/* Preview: the exact image that gets shared, scaled down. With a
+            photo it is live: the photo under the card drawn by the same
+            renderer, moved and resized right here. */}
         <View style={styles.section}>
           <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
-            {framerOpen ? (
+            {livePhoto ? (
               <SharePhotoFramer
                 photoUri={framerPhoto.uri}
                 photoWidth={framerPhoto.width}
@@ -886,7 +890,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 crop={photoCrop}
                 overlayUri={framerOverlay}
                 onChange={setPhotoCrop}
-                onDone={() => setFraming(false)}
+                blocksGesture={scrollGesture}
               />
             ) : previewStatus === 'ready' && previewB64 ? (
               <Image
@@ -913,17 +917,20 @@ export default function ShareCardScreen({ navigation, route }) {
               </View>
             )}
           </View>
-          {bgPhoto && framerPhoto && !framerOpen && !isSticker ? (
-            <Button
-              title="Move and zoom photo"
-              icon="move-outline"
-              variant="secondary"
-              size="sm"
-              fullWidth={false}
-              onPress={() => setFraming(true)}
-              accessibilityLabel="Move and zoom your photo"
-              style={styles.movePhoto}
-            />
+          {livePhoto ? (
+            <View style={styles.photoHintRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>Drag to move your photo. Pinch to resize it.</Text>
+              {!isCentreCrop(photoCrop) ? (
+                <TouchableOpacity
+                  onPress={() => setPhotoCrop(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset the photo to the centre"
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : null}
         </View>
 
@@ -1074,6 +1081,7 @@ export default function ShareCardScreen({ navigation, route }) {
         />
         ) : null}
       </ScrollView>
+      </GestureDetector>
 
       {/* The top-lift list: every lift from the session with its best set,
           a note on the ones that set a new best today, and the option to
@@ -1261,7 +1269,10 @@ const styles = StyleSheet.create({
   pickerValue: { ...type.bodyStrong, color: colors.textPrimary },
   pickerSub: { ...type.caption, color: colors.textSecondary },
   pickerAction: { ...type.label, color: colors.primary },
-  movePhoto: { alignSelf: 'center' },
+  photoHintRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md,
+  },
+  photoHint: { ...type.captionTight, color: colors.textMuted, textAlign: 'center' },
   sheetTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
   sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
   optionRow: {
@@ -1311,6 +1322,7 @@ function buildLiveStyles(t) {
     pickerValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pickerSub: { ...t.type.caption, color: t.colors.textSecondary },
     pickerAction: { ...t.type.label, color: t.colors.primary },
+    photoHint: { ...t.type.captionTight, color: t.colors.textMuted },
     sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
     sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     optionRow: { borderBottomColor: t.colors.borderSubtle },

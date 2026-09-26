@@ -246,7 +246,12 @@ jest.mock('react-native-gesture-handler', () => {
   return {
     GestureHandlerRootView: passthrough('GHRoot'),
     GestureDetector: passthrough('GestureDetector'),
-    Gesture: { Pan: () => gestureStub, Tap: () => gestureStub, LongPress: () => gestureStub },
+    // Native: the share screen hands its page scroll to the gesture system
+    // (2026-09-26) so a drag on the photo never scrolls the page.
+    Gesture: {
+      Pan: () => gestureStub, Tap: () => gestureStub, LongPress: () => gestureStub,
+      Pinch: () => gestureStub, Native: () => gestureStub, Simultaneous: () => gestureStub,
+    },
     PanGestureHandler: passthrough('PanGH'),
     TapGestureHandler: passthrough('TapGH'),
     State: {},

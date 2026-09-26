@@ -1,16 +1,19 @@
 /**
- * The share screen's photo framing, fonts and hand-off (founder order
+ * The share screen's photo framing, fonts and hand-off (founder orders
  * 2026-09-26). Verbatim: "when adding a photo id like people to be able to
  * crop the photo or even move the alignment so that it shows best in the
  * background ... if I can move it up down left or right it will show
- * better", "Use styles from the rest of the app", and "I don't want exercise
- * names list to be an option or show at all".
+ * better", then "People can use camera or My Photo. Both should be
+ * adjustable in position and size on the render and final share in the most
+ * elegant way", "Use styles from the rest of the app", and "I don't want
+ * exercise names list to be an option or show at all".
  *
  * Source guards, because the pieces are native (Skia, gestures) and the
  * wiring is what can silently break:
- *  - a new photo opens the positioning view, the view draws the card over
- *    the photo with the one renderer (`omitPhoto`), and the page stops
- *    scrolling while a drag is moving the photo;
+ *  - a photo from the camera or the gallery makes the preview itself live:
+ *    the photo moves and resizes right on the card, which the one renderer
+ *    draws over it (`omitPhoto`); a drag that starts on the photo blocks the
+ *    page's scroll through the gesture system, not a timing trick;
  *  - the preview, the export and the thumbnails all draw the same framing;
  *  - the app's Inter faces load in the background and the system faces stay
  *    the fallback, so a font can never gate sharing (VOLYUME-2V);
@@ -26,23 +29,31 @@ const FRAMER = read('components/SharePhotoFramer.js');
 const FONTS = read('lib/shareCard/cardTypefaces.js');
 const SUMMARY = read('screens/WorkoutSummaryScreen.js');
 
-describe('moving and zooming the photo', () => {
-  test('a new photo, from the gallery or the camera, opens the positioning view centred', () => {
+describe('moving and resizing the photo, right on the preview', () => {
+  test('a photo from the camera or the gallery starts centred, and the preview is where it moves', () => {
     const accept = SCREEN.slice(SCREEN.indexOf('const acceptPhoto = useCallback('), SCREEN.indexOf('const clearPhoto = useCallback('));
     expect(accept).toContain('setPhotoCrop(null);');
-    expect(accept).toContain('setFraming(!!framer);');
+    expect(accept).toContain('setFramerPhoto(makeFramerPhoto(bounded));');
     expect(SCREEN.match(/if \(img\) acceptPhoto\(img\);/g)).toHaveLength(2);
+    // No separate editing step to open or close.
+    expect(SCREEN).not.toMatch(/setFraming|Move and zoom photo|onDone=/);
+    expect(SCREEN).toContain('const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;');
+    expect(SCREEN).toMatch(/\{livePhoto \? \(\s*<SharePhotoFramer/);
   });
 
-  test('the view lays the real card over the photo, drawn with the photo left out', () => {
-    const overlay = SCREEN.slice(SCREEN.indexOf('const framerOverlay = useMemo('), SCREEN.indexOf('}, [framerOpen, typefaces'));
+  test('the live preview lays the real card over the photo, drawn with the photo left out', () => {
+    const overlay = SCREEN.slice(SCREEN.indexOf('const framerOverlay = useMemo('), SCREEN.indexOf('}, [livePhoto, typefaces'));
     expect(overlay).toContain('omitPhoto: true');
     expect(overlay).toContain('photoCrop');
     expect(SCREEN).toMatch(/<SharePhotoFramer[\s\S]*overlayUri=\{framerOverlay\}[\s\S]*onChange=\{setPhotoCrop\}/);
   });
 
-  test('the page stops scrolling while the photo is being moved', () => {
-    expect(SCREEN).toContain('<ScrollView contentContainerStyle={styles.content} scrollEnabled={!framerOpen}>');
+  test('a drag on the photo can never scroll the page: the gestures block the page scroll', () => {
+    expect(SCREEN).toContain('const scrollGesture = useMemo(() => Gesture.Native(), []);');
+    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView contentContainerStyle=\{styles\.content\}>/);
+    expect(SCREEN).toContain('blocksGesture={scrollGesture}');
+    expect(FRAMER).toContain('pinch = pinch.blocksExternalGesture(blocksGesture);');
+    expect(FRAMER).toContain('pan = pan.blocksExternalGesture(blocksGesture);');
   });
 
   test('the preview, the export and the thumbnails draw the same framing', () => {
@@ -50,20 +61,23 @@ describe('moving and zooming the photo', () => {
     expect(SCREEN).toContain('}, [typefaces, wordmark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);');
   });
 
-  test('the photo can be moved again after Done, and Dark clears the framing with the photo', () => {
-    expect(SCREEN).toMatch(/title="Move and zoom photo"[\s\S]{0,200}onPress=\{\(\) => setFraming\(true\)\}/);
+  test('Reset appears once the photo has moved, and Dark clears the photo with its framing', () => {
+    expect(SCREEN).toMatch(/!isCentreCrop\(photoCrop\) \? \([\s\S]{0,120}onPress=\{\(\) => setPhotoCrop\(null\)\}/);
+    expect(SCREEN).toContain('Drag to move your photo. Pinch to resize it.');
     const clear = SCREEN.slice(SCREEN.indexOf('const clearPhoto = useCallback('), SCREEN.indexOf('}, []);', SCREEN.indexOf('const clearPhoto = useCallback(')));
     expect(clear).toContain('setBgPhoto(null);');
     expect(clear).toContain('setPhotoCrop(null);');
     expect(SCREEN).toMatch(/label="Dark"[\s\S]{0,80}onPress=\{clearPhoto\}/);
   });
 
-  test('the positioning view moves and zooms on the UI thread, within the photo, with a screen-reader route', () => {
+  test('the photo moves and resizes on the UI thread, down to where it fits, with a screen-reader route', () => {
     expect(FRAMER).toContain('Gesture.Simultaneous(pinch, pan)');
     expect(FRAMER).toMatch(/function clampAxis\([^)]*\) \{\n\s*'worklet';/);
+    expect(FRAMER).toContain('Math.max(minZoom, savedZoom.value * e.scale)');
     expect(FRAMER).toContain("{ name: 'moveUp', label: 'Move photo up' }");
     expect(FRAMER).toContain("{ name: 'increment', label: 'Zoom in' }");
-    expect(FRAMER).toContain('Drag to move your photo. Pinch to zoom in or out.');
+    // The ground behind a resized-down photo is the card's own, whatever the theme.
+    expect(FRAMER).toContain('backgroundColor: CARD_GROUND');
   });
 });
 

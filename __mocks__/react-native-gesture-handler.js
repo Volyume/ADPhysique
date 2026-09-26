@@ -36,6 +36,7 @@ module.exports = {
   Gesture: {
     Pinch: factory,
     Pan: factory,
+    Native: factory,
     Tap: factory,
     Fling: factory,
     LongPress: factory,

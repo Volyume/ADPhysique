@@ -198,6 +198,18 @@ async function main() {
   renderPhoto({ ...session, aspect: 'square' }, 'gym_session_square', gymPhoto);
   renderPhoto({ ...session, aspect: 'portrait' }, 'gym_session_portrait', gymPhoto);
   renderPhoto({ ...pr, aspect: 'story' }, 'gym_pr_story', gymPhoto);
+
+  // A landscape photo resized down on a story until the whole photo shows,
+  // sitting on the card's ground (founder: "adjustable in position and size").
+  const lp = Skia.Surface.MakeOffscreen(1200, 900); const lc = lp.getCanvas();
+  const lgrad = Skia.Paint();
+  lgrad.setShader(Skia.Shader.MakeLinearGradient({ x: 0, y: 0 }, { x: 1200, y: 900 }, [Skia.Color('#8fa3b8'), Skia.Color('#4b5563'), Skia.Color('#1f2937')], [0, 0.5, 1], 0));
+  lc.drawRect(Skia.XYWHRect(0, 0, 1200, 900), lgrad);
+  lc.drawCircle(600, 330, 110, fillC('#c98f68'));
+  lc.drawRRect(Skia.RRectXY(Skia.XYWHRect(420, 430, 360, 470), 110, 110), fillC('#b87c57'));
+  lp.flush(); const landscape = lp.makeImageSnapshot();
+  renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_fitted', landscape, { zoom: 0.01, cx: 0.5, cy: 0.5 });
+  renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_cover', landscape);
   console.log(`\nWrote PNGs to ${OUT}`);
 }
 

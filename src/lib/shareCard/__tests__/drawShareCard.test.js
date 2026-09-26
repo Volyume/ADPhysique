@@ -12,7 +12,7 @@
  *   transparent-background non-blank check for the new sticker export.
  */
 import {
-  drawShareCard, cardHeight, drawSticker, stickerHeight, photoCoverRect, photoCropFromRect, MAX_PHOTO_ZOOM,
+  drawShareCard, cardHeight, drawSticker, stickerHeight, photoCoverRect, photoCropFromRect, photoZoomRange, MAX_PHOTO_ZOOM,
 } from '../drawShareCard';
 import { transformFromCrop, cropFromTransform } from '../photoFraming';
 
@@ -338,7 +338,7 @@ describe('photo framing', () => {
     expect(r.y).toBeCloseTo((1920 - r.h) / 2, 6);
   });
 
-  test('the photo always covers the card, however far it is pushed', () => {
+  test('at cover size or bigger the photo always covers the card, however far it is pushed', () => {
     for (const crop of [{ zoom: 1, cx: 0, cy: 0 }, { zoom: 1, cx: 1, cy: 1 }, { zoom: 3, cx: -5, cy: 9 }, { zoom: 99, cx: 0.5, cy: 0.5 }]) {
       const r = photoCoverRect(1000, 1500, 1080, 1920, crop);
       expect(r.x).toBeLessThanOrEqual(0);
@@ -350,6 +350,29 @@ describe('photo framing', () => {
     const capped = photoCoverRect(1000, 1500, 1080, 1920, { zoom: 99, cx: 0.5, cy: 0.5 });
     const cover = Math.max(1080 / 1000, 1920 / 1500);
     expect(capped.w).toBeCloseTo(1000 * cover * MAX_PHOTO_ZOOM, 6);
+  });
+
+  // Founder, 2026-09-26: "adjustable in position and size". Resizing down
+  // stops where the whole photo fits; a smaller photo stays on the card.
+  test('resizing down stops where the whole photo fits, and a smaller photo never leaves the card', () => {
+    // A landscape photo on a story: the contain fit is much smaller than the cover fit.
+    const range = photoZoomRange(1200, 900, 1080, 1920);
+    const cover = Math.max(1080 / 1200, 1920 / 900);
+    const contain = Math.min(1080 / 1200, 1920 / 900);
+    expect(range.min).toBeCloseTo(contain / cover, 6);
+    const fit = photoCoverRect(1200, 900, 1080, 1920, { zoom: 0.01, cx: 0.5, cy: 0.5 });
+    expect(fit.w).toBeCloseTo(1080, 6); // the whole width, no smaller
+    for (const crop of [{ zoom: range.min, cx: 0.5, cy: -3 }, { zoom: range.min, cx: 0.5, cy: 4 }, { zoom: 0.7, cx: 9, cy: 0.5 }]) {
+      const r = photoCoverRect(1200, 900, 1080, 1920, crop);
+      expect(r.y).toBeGreaterThanOrEqual(-1e-6);
+      expect(r.y + r.h).toBeLessThanOrEqual(1920 + 1e-6);
+      expect(r.x + r.w).toBeGreaterThanOrEqual(Math.min(1080, r.w) - 1e-6);
+    }
+    // And the framing of a smaller photo survives the round trip.
+    const placed = photoCoverRect(1200, 900, 1080, 1920, { zoom: 0.6, cx: 0.5, cy: 0.35 });
+    const back = photoCropFromRect(1200, 900, 1080, 1920, placed);
+    expect(back.zoom).toBeCloseTo(0.6, 6);
+    expect(photoCoverRect(1200, 900, 1080, 1920, back)).toEqual(placed);
   });
 
   test('moving the photo up shows more of its lower half, and the framing survives a round trip', () => {
