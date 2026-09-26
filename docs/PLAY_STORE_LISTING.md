@@ -314,7 +314,12 @@ Answer these in the Play Console content rating questionnaire:
 
 Re-derived from the code 2026-09-26 (register D212; the 2026-06-06 table
 predated Community, and said an account was optional, which it has not been
-since anonymous mode was removed). "Shared" in Play's sense means transfer
+since anonymous mode was removed). Corrected the same day against the code:
+steps and cardio are no longer recorded (the phone health link was removed
+2026-06-30, `src/lib/health.js`; the check-in sends no steps,
+`WeeklyCheckInScreen.js`; cardio push was removed), though step history saved
+before then can still sync, inside the same Health info category, so the
+boxes ticked do not change; and Sentry receives the account id only. "Shared" in Play's sense means transfer
 to a third party for THEIR own use; Supabase (backend) and Sentry (crash
 reporting) are service providers, so their data is "collected", not
 "shared". Community posts, profiles and messages reach other Volyume users
@@ -331,7 +336,7 @@ sold or shared for third-party use.
 | Other info: date of birth, sex (Personal info) | Yes | No | Required (age and sex drive the calorie maths, the under-18 rules) | No | App functionality |
 | Approximate location: the town and gym a person adds to their Community profile; "Use my location" in the gym finder (Location) | Yes | No | Optional | The device reading only (one search, never stored); the chosen town and gym are stored | App functionality |
 | Fitness info: workouts, sets, reps, weights, plans (Health and fitness) | Yes | No | Required | No | App functionality |
-| Health info: body weight, measurements, body fat, steps, cardio, check-ins (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Health info: body weight, measurements, body fat, check-ins (Health and fitness) | Yes | No | Optional | No | App functionality |
 | Health info: Progress photo metadata and Volyume Score analysis outputs (Health and fitness) | Yes | No | Optional | No | App functionality |
 | Nutrition / food logs (Health and fitness) | Yes | No | Optional | No | App functionality |
 | Other in-app messages: Community messages (Messages) | Yes | No | Optional | No | App functionality |
@@ -351,10 +356,10 @@ exports them).
 
 **Third-party destinations (all processor / functional, no PII sold):**
 - **Supabase**: encrypted cloud backup of the account's own data (RLS, own-rows).
-- **Sentry**: crash + performance. Events run through a PII scrub; the user's
-  `id` and `email` are attached to crash reports (`src/lib/sentry.js`). *Note for
-  the founder: if you'd rather Sentry not receive the email, switch `setUser` to
-  id-only. Flagged, not changed.*
+- **Sentry**: crash + performance. Events run through a PII scrub; only the
+  account `id` is attached to crash reports (`src/lib/sentry.js` `setSentryUser`
+  omits email, username and IP at the source; `sentryScrub.js` redacts any email
+  that reaches an event anyway). Checked in the code 2026-09-26.
 - **OpenFoodFacts / USDA FoodData Central**: barcode or food-name lookups only,
   no personal data is sent.
 - **Expo push**: device push token for notifications.
