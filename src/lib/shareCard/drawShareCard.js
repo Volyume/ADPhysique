@@ -83,7 +83,9 @@ function withUnit(value, unit) {
 // the logo is identical across square, portrait and story (audit R3). D109-1
 // shrank it as part of dropping the loud stacked lockup for one quiet trailing
 // line (footer mark + sticker mark both derive from a ratio, per spec pillar 6).
-const MARK_WIDTH_RATIO = 0.16;
+// 0.26 since 2026-09-26 (founder: "the logo etc at the bottom a bit bigger too
+// it's very difficult to see what it is"); it was 0.16.
+const MARK_WIDTH_RATIO = 0.26;
 const STICKER_MARK_WIDTH_RATIO = 0.15;
 // Story 9:16 platform-chrome safe zones (ELITE-SHARE-SPEC pillar 3): nothing
 // meaningful renders in the top 14% (platform header/controls) or the bottom
@@ -518,25 +520,25 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
   // the app this branch is unreachable; it exists only so the Node render
   // harness and layout tests, which pass no wordmark, still lay out and do
   // not throw. Space is reserved either way so the footer geometry never
-  // shifts, and the URL still centres alone rather than the pair looking
-  // lopsided.
-  const urlFont = font(isSquare ? 20 : 24, 'regular');
+  // shifts.
+  // The mark on the content's left edge and the address on its right, the
+  // same two edges every other row keeps (the date line, the top lift), so
+  // the whole card reads as one aligned column (founder 2026-09-26: "The
+  // alignments look a bit off too"; the centred footer was the one line off
+  // those edges). Without a mark the address still sits on the right.
+  const urlFont = font(isSquare ? 28 : 32, 'regular');
   const urlStr = 'volyume.app';
-  const gap = Math.round(14 * s);
-  const rowW = (hasMark ? markW + gap : 0) + measure(urlFont, urlStr);
-  const rowX = (W - rowW) / 2;
   const lineY = fy + footerH / 2;
   if (hasMark) {
     const p = Skia.Paint(); p.setAntiAlias(true);
     canvas.drawImageRect(
       wordmark,
       Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()),
-      Skia.XYWHRect(rowX, lineY - markH / 2, markW, markH),
+      Skia.XYWHRect(pad, lineY - markH / 2, markW, markH),
       p,
     );
   }
-  const urlX = rowX + (hasMark ? markW + gap : 0);
-  text(canvas, Skia, urlStr, urlX, lineY + urlFont.getSize() * 0.34, urlFont, PALETTE.textMuted, 'left');
+  text(canvas, Skia, urlStr, W - pad, lineY + urlFont.getSize() * 0.34, urlFont, PALETTE.textSecondary, 'right');
 }
 
 // ── the card's building blocks (2026-09-26 restyle) ─────────────────────────
