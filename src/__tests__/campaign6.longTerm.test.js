@@ -568,7 +568,8 @@ describe('C6 closeout B1/B4 (founder-approved visibility pass)', () => {
   test('B4: the calorie hero provenance forks on a REAL applied change; day-0 wording unchanged', () => {
     const src = read('screens/NutritionTargetsScreen.js');
     expect(src).toMatch(/calorieEverApplied/);
-    expect(src).toMatch(/Worked out from your profile and the research, then adjusted as your own evidence arrives\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/Worked out from your profile and the research, then adjusted as your weigh-ins and food logging build up\./);
     expect(src).toMatch(/this target has since been adjusted from your own weigh-ins and logging\./);
     // The calibrated claim is about the TARGET, never the maintenance
     // estimate (the stored TDEE does not learn - RELATIONSHIP-MOMENTS B4).

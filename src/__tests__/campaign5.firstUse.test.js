@@ -1718,7 +1718,8 @@ describe('CHECK-IN: no false-confidence recommendation from a week with no check
 describe('NUTRITION: the first targets are described as profile and research based (C5-P21-01/02/03, D96)', () => {
   test('the target states where it came from, and claims no learned history', () => {
     const src = read('screens/NutritionTargetsScreen.js');
-    expect(src).toContain('Worked out from your profile and the research, then adjusted as your own evidence arrives.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('Worked out from your profile and the research, then adjusted as your weigh-ins and food logging build up.');
     expect(src).not.toMatch(/based on what we have learned about you/i);
   });
 

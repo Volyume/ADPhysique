@@ -174,7 +174,7 @@ export function deriveWeightTrend({
       hasSparkline: true,
       showRate: false,
       dot: 'neutral',
-      insight: 'Still building confidence. Keep logging and this sharpens.',
+      insight: 'Your trend is still taking shape. Keep logging and it will become clearer.',
       maintenance: hasMaintenance
         ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
         : { building: true },
@@ -192,9 +192,9 @@ export function deriveWeightTrend({
 
   let insight;
   if (!hasComparison) {
-    insight = 'Your smoothed weight trend is updated. Maintenance comes from your validated food and weight history.';
+    insight = 'Your weight trend is updated. Your maintenance calories are worked out from your own food and weight logs.';
   } else if (!diverging) {
-    insight = 'Trending inside your target range. Calories hold.';
+    insight = 'Trending inside your target range. Your calorie target stays the same.';
   } else if (above) {
     insight = 'Drifting a little above your target range. Nothing to change yet.';
   } else {

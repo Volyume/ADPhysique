@@ -1066,7 +1066,7 @@ export default function MealPlanScreen({ navigation, route }) {
     // (reason/severity/hint) instead of one generic sentence, so a genuinely
     // unfilled slot or an over-budget pin reads differently to a near-miss.
     if (day.diagnosis?.hint) return day.diagnosis.hint;
-    return 'Close. Your preferences make this day hard to hit exactly; the totals below are honest.';
+    return 'This day is close to your target but not exact. Your preferences make it hard to hit exactly, and the totals below are honest.';
   }, [day]);
 
   return (

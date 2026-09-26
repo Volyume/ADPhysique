@@ -104,7 +104,7 @@ export default function NutritionEducationScreen() {
           <KeyPoint>
             You don't have to do the maths. Log your morning weight and weekly
             check-in. Your coach watches the trend and nudges these numbers
-            up or down for you when a real signal is there.
+            up or down for you when there's a clear enough change to act on.
           </KeyPoint>
         </Section>
 
@@ -158,14 +158,15 @@ export default function NutritionEducationScreen() {
         <Section
           icon="trending-up-outline"
           tint={t.colors.primary}
-          title="6. The coach does the adjustments"
+          title="6. Your coach does the adjustments"
         >
           <Body>
-            You don't need to second-guess the numbers each week. Volyume's
-            weekly check-in watches your morning weight trend, compares it
-            to the target rate for your phase, and shifts your calories up
-            or down when a real signal appears, and ignores noisy single-
-            week swings (water, sodium, sleep, time of month).
+            You don't need to second-guess the numbers each week. At each
+            weekly check-in, your coach looks at your morning weight trend,
+            compares it to the target rate for your phase, and shifts your
+            calories up or down when there's a clear enough change to act
+            on. It ignores one-off swings from a single week (water, salt,
+            sleep, time of month).
           </Body>
           <Body>
             Two safety nets are built in: a 5% cap on any single change so
@@ -176,7 +177,7 @@ export default function NutritionEducationScreen() {
           </Body>
           <KeyPoint>
             Your job: log your morning weight most days and fill in the
-            weekly check-in. The coach does the rest.
+            weekly check-in. Your coach does the rest.
           </KeyPoint>
         </Section>
 
@@ -187,7 +188,7 @@ export default function NutritionEducationScreen() {
 
         <Text style={[styles.footer, live.footer]}>
           Volyume's starting numbers are estimates. The 2 to 4 week trend is what
-          counts. That's exactly what the coach watches for you.
+          counts. That's exactly what your coach watches for you.
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -65,7 +65,7 @@ const EXPLAINERS = {
         'A standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.',
       ] },
       { heading: 'Maintenance', lines: [
-        'The formula baseline adjusted by validated food and weight history when enough real logging exists. Without that evidence, the formula remains the honest starting point.',
+        'The formula estimate is adjusted using your logged food and weight once you have logged enough for it to be reliable. Without enough logging, the formula estimate stays as your honest starting point.',
       ] },
       { heading: 'Target', lines: [
         'Your maintenance adjusted for your goal (for example around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.',
@@ -1264,7 +1264,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                     <Text style={[styles.heroProvenance, live.heroProvenance]}>
                       {calorieEverApplied
                         ? 'Started from your profile and the research; this target has since been adjusted from your own weigh-ins and logging.'
-                        : 'Worked out from your profile and the research, then adjusted as your own evidence arrives.'}
+                        : 'Worked out from your profile and the research, then adjusted as your weigh-ins and food logging build up.'}
                     </Text>
                   </Card>
                 );
@@ -1487,7 +1487,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 const isMaintain = results.goal === 'maintain';
 
                 const calorieWhy = maintenanceKcal == null
-                  ? 'Your saved target is available, but maintenance cannot be verified from the current profile and evidence. Recalculate after confirming your baseline details; we will not invent a maintenance number from the target.'
+                  ? 'Your saved target is available, but maintenance cannot be verified from the current profile and logging history. Recalculate after checking your profile details; a maintenance number will not be invented from the target.'
                   : isGain
                   ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${formatEnergy(surplusDelta, energyUnit)} ${energyUnitLabel(energyUnit)}) puts you on track to gain roughly ${formatBodyWeightRate(rateAbs, bodyWeightUnits).replace('+', '')}. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
                   : isCut
@@ -1543,7 +1543,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
                   : isCut
-                  ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that is a signal to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that's a sign to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
                   : isMaintain
                   ? `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. At maintenance there's no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
                   : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
@@ -1728,7 +1728,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                         : results.maintenanceAuthority?.source === 'athlete_history'
                         ? 'Your logged intake and weight trend'
                         : results.maintenanceAuthority?.source === 'held_athlete_history'
-                          ? 'Earlier logged history, revalidating'
+                          ? 'Earlier logged history, being rechecked'
                           : 'Formula estimate, building your history'}
                     </Text>
                   </View>
