@@ -144,9 +144,19 @@ export async function loadMe({ force = false, userId = null } = {}) {
 /** Fetch and cache. Throws a CommunityError on failure. */
 export async function refreshMe(userId = null) {
   const uid = userId ?? currentUserId();
+  const fetchStartedAtMs = Date.now();
   const data = await callCommunity('community_get_me', {});
   const me = data && typeof data === 'object' ? data : emptyMe();
   await writeCachedMe(uid, me);
+  // D194 addendum 2: the row's own sharing setting is mirrored onto this
+  // device, unless a change made here is newer or still owed. Lazy require:
+  // trainingConsistency imports this file.
+  try {
+    // eslint-disable-next-line global-require
+    await require('./trainingConsistency').mirrorSharingFromServer(uid, me, { fetchStartedAtMs });
+  } catch (e) {
+    logError('Community.refreshMe.mirrorSharing', e);
+  }
   return me;
 }
 

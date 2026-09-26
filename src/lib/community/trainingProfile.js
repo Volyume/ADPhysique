@@ -201,12 +201,42 @@ export const TP_SHARE_PREFIX = '@volyume_community_tp_share_';
 export const TP_SYNCED_PREFIX = '@volyume_community_tp_synced_';
 export const TP_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Register D194 addendum 2 (2026-09-26): when this device last changed the
+ * sharing settings itself (a write, or a publish becoming owed or settling).
+ * The mirror of the server row (`mirrorSharingFromServer`,
+ * trainingConsistency.js) never applies a reading fetched before this
+ * instant, so a slow refresh can never overwrite a newer choice.
+ */
+export const TP_SHARE_MARK_PREFIX = '@volyume_community_tp_share_mark_';
+
 export function tpShareKey(uid) {
   return `${TP_SHARE_PREFIX}${uid ?? 'unknown'}`;
 }
 
 export function tpSyncedKey(uid) {
   return `${TP_SYNCED_PREFIX}${uid ?? 'unknown'}`;
+}
+
+export function tpShareMarkKey(uid) {
+  return `${TP_SHARE_MARK_PREFIX}${uid ?? 'unknown'}`;
+}
+
+/** Record that this device changed its sharing settings, now. Best effort. */
+export async function markShareSettingsChanged(uid, nowMs = Date.now()) {
+  try {
+    await AsyncStorage.setItem(tpShareMarkKey(uid), String(nowMs));
+  } catch (_e) { /* best effort: at worst one refresh mirrors a value the next corrects */ }
+}
+
+/** When this device last changed its sharing settings; 0 when never or unreadable. */
+export async function readShareSettingsMark(uid) {
+  try {
+    const n = Number(await AsyncStorage.getItem(tpShareMarkKey(uid)));
+    return Number.isFinite(n) ? n : 0;
+  } catch (_e) {
+    return 0;
+  }
 }
 
 // ─── The pure half ───────────────────────────────────────────────────
@@ -483,6 +513,7 @@ export async function writeShareSettings(uid, settings) {
   try {
     await AsyncStorage.setItem(tpShareKey(uid), JSON.stringify(next));
   } catch (_e) { /* best effort: the toggles re-derive from the defaults */ }
+  await markShareSettingsChanged(uid);
   return next;
 }
 
@@ -716,6 +747,6 @@ export async function syncTrainingProfile(userId, { force = false, nowMs = Date.
 /** Forget the throttle, so the next open recomputes. Used on leaving. */
 export async function clearTrainingProfileState(uid) {
   try {
-    await AsyncStorage.multiRemove([tpShareKey(uid), tpSyncedKey(uid)]);
+    await AsyncStorage.multiRemove([tpShareKey(uid), tpSyncedKey(uid), tpShareMarkKey(uid)]);
   } catch (_e) { /* best effort */ }
 }

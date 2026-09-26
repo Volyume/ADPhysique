@@ -158,6 +158,11 @@ export async function publishAmbientItems({
   let created = 0;
   let queued = 0;
   let sessionPostId = null;
+  // D194 addendum 2: a terminal refusal of the SESSION item is reported, so
+  // the summary can say it was not shared instead of inviting a post as if
+  // nothing had been tried ('not_allowed': the row's sharing is off, or its
+  // audience is narrower than this device asked for).
+  let sessionRefused = null;
 
   const sessionPayload = await buildSessionPayload(workoutId, { userId, units }).catch(() => null);
   if (sessionPayload) {
@@ -167,6 +172,7 @@ export async function publishAmbientItems({
     const out = await sendAutoItem(item);
     if (out.ok) { created += 1; sessionPostId = out.id ?? null; }
     else if (RETRYABLE_CODES.has(out.code)) { await queueItem(item); queued += 1; }
+    else sessionRefused = out.code ?? 'refused';
   }
 
   const prs = (Array.isArray(prList) ? prList : []).filter((p) => p?.exerciseId).slice(0, MAX_AUTO_PRS);
@@ -182,7 +188,12 @@ export async function publishAmbientItems({
   }
 
   return {
-    created, queued, skipped: null, sessionPostId, sessionPayload: sessionPostId ? sessionPayload : null,
+    created,
+    queued,
+    skipped: null,
+    sessionPostId,
+    sessionPayload: sessionPostId ? sessionPayload : null,
+    sessionRefused,
   };
 }
 

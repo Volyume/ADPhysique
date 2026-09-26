@@ -45,6 +45,7 @@ import { callCommunity } from './transport';
 import { currentUserId, readCachedMe } from './profile';
 import {
   loadTrainingProfile, readShareSettings, shareablePayload, TP_WINDOW_WEEKS,
+  writeShareSettings, markShareSettingsChanged, readShareSettingsMark, SESSIONS_AUDIENCE_VALUES,
 } from './trainingProfile';
 import { readEdOrCalmSuppressed } from '../../hooks/usePhotoSuppression';
 import {
@@ -444,6 +445,9 @@ export async function setSharingPublishPending(uid, pending, { removeShared = fa
     if (pending) await AsyncStorage.setItem(sharingPublishPendingKey(uid), JSON.stringify({ removeShared: !!removeShared }));
     else await AsyncStorage.removeItem(sharingPublishPendingKey(uid));
   } catch (_e) { /* best effort: worst case an extra retry, or one missed until next failure */ }
+  // D194 addendum 2: a publish becoming owed, or settling, is a device-side
+  // change too; a refresh fetched before it must not be mirrored over it.
+  await markShareSettingsChanged(uid);
 }
 
 /**
@@ -458,6 +462,49 @@ export async function setSharingPublishPending(uid, pending, { removeShared = fa
  * @param {string} userId
  * @returns {Promise<{sent: boolean, reason: (string|null)}>}
  */
+/**
+ * Register D194 addendum 2 (founder order 2026-09-26): mirror the Community
+ * row's own "Share what I did" setting and audience into this device's
+ * store. Until migrate_184 the device kept its own copy and never read the
+ * row back, so a phone could show sharing on while the row said off, and
+ * the server then refused every automatic post without a word.
+ *
+ * The device's own change always wins until it has reached the server:
+ * nothing is mirrored while a sharing publish is owed, or when this device
+ * changed its settings at or after the moment the reading was fetched.
+ * A server without the two fields (migrate_184 not applied) reads as "no
+ * reading" and changes nothing.
+ *
+ * @param {string} userId
+ * @param {object} me the `community_get_me` payload
+ * @param {{fetchStartedAtMs: number}} opts when that fetch started
+ * @returns {Promise<{mirrored: boolean, reason: (string|null)}>}
+ */
+export async function mirrorSharingFromServer(userId, me, { fetchStartedAtMs = 0 } = {}) {
+  const uid = userId ?? currentUserId();
+  if (!uid) return { mirrored: false, reason: 'no_user' };
+  const rowShare = me?.share_sessions;
+  if (typeof rowShare !== 'boolean') return { mirrored: false, reason: 'no_reading' };
+  let pending = null;
+  try {
+    pending = await AsyncStorage.getItem(sharingPublishPendingKey(uid));
+  } catch (_e) {
+    pending = 'unreadable'; // fail safe: never overwrite what might be owed
+  }
+  if (pending) return { mirrored: false, reason: 'publish_pending' };
+  const mark = await readShareSettingsMark(uid);
+  if (mark >= fetchStartedAtMs) return { mirrored: false, reason: 'changed_since_fetch' };
+  const current = await readShareSettings(uid);
+  const rowAudience = SESSIONS_AUDIENCE_VALUES.includes(me?.sessions_audience)
+    ? me.sessions_audience
+    : current.sessions_audience;
+  if (current.share_sessions === rowShare && current.sessions_audience === rowAudience) {
+    return { mirrored: false, reason: 'unchanged' };
+  }
+  await writeShareSettings(uid, { ...current, share_sessions: rowShare, sessions_audience: rowAudience });
+  return { mirrored: true, reason: null };
+}
+
 export async function retryPendingSharingPublish(userId) {
   const uid = userId ?? currentUserId();
   if (!uid) return { sent: false, reason: 'no_user' };

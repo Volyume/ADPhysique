@@ -66,9 +66,11 @@ const {
   computeConsistency, consistencyGateState, sessionShareGateState,
   publishConsistency, publishSharingSettings, loadConsistency,
   NO_PLAN_CONSISTENT_THRESHOLD, PR_WINDOW_DAYS,
-  setSharingPublishPending, retryPendingSharingPublish,
+  setSharingPublishPending, retryPendingSharingPublish, mirrorSharingFromServer,
 } = require('../trainingConsistency');
-const { shareablePayload, TP_DEFAULT_SHARE, writeShareSettings } = require('../trainingProfile');
+const {
+  shareablePayload, TP_DEFAULT_SHARE, writeShareSettings, readShareSettings, readShareSettingsMark,
+} = require('../trainingProfile');
 
 // Monday 2026-09-07 06:00 local. Every fixed-clock test below is expressed
 // relative to this so the week/month boundaries in the assertions are
@@ -437,6 +439,81 @@ describe('setSharingPublishPending / retryPendingSharingPublish (F4 fix): a fail
     await setSharingPublishPending('u1', false);
     const out = await retryPendingSharingPublish('u1');
     expect(out).toEqual({ sent: false, reason: 'nothing_pending' });
+  });
+});
+
+// Register D194 addendum 2 (founder order 2026-09-26): the device mirrors the
+// Community row's own sharing setting, so a phone can no longer show sharing
+// on while the row says off (every automatic post refused without a word).
+// The device's own change always wins until it has reached the server.
+describe('mirrorSharingFromServer (D194 addendum 2): the device follows the row, never over a newer local change', () => {
+  const later = () => Date.now() + 60 * 1000; // a fetch that started after every local write so far
+
+  test('no reading (a server without migrate_184, or no profile): nothing changes', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone' });
+    const out = await mirrorSharingFromServer('u1', { profile: { handle: 'a' } }, { fetchStartedAtMs: later() });
+    expect(out).toEqual({ mirrored: false, reason: 'no_reading' });
+    expect((await readShareSettings('u1')).share_sessions).toBe(true);
+  });
+
+  test("the row's off is mirrored over the device's on, and every other toggle survives", async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone', staple_lifts: false });
+    const out = await mirrorSharingFromServer('u1', { share_sessions: false, sessions_audience: 'followers' }, { fetchStartedAtMs: later() });
+    expect(out).toEqual({ mirrored: true, reason: null });
+    const now = await readShareSettings('u1');
+    expect(now.share_sessions).toBe(false);
+    expect(now.sessions_audience).toBe('followers');
+    expect(now.staple_lifts).toBe(false);
+  });
+
+  test("the audience alone is mirrored (a row on to followers, a device on to everyone: the server refused every post)", async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone' });
+    const out = await mirrorSharingFromServer('u1', { share_sessions: true, sessions_audience: 'followers' }, { fetchStartedAtMs: later() });
+    expect(out.mirrored).toBe(true);
+    expect((await readShareSettings('u1')).sessions_audience).toBe('followers');
+  });
+
+  test('a publish still owed from this device wins: nothing is mirrored', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    await setSharingPublishPending('u1', true);
+    const out = await mirrorSharingFromServer('u1', { share_sessions: true, sessions_audience: 'everyone' }, { fetchStartedAtMs: later() });
+    expect(out).toEqual({ mirrored: false, reason: 'publish_pending' });
+    expect((await readShareSettings('u1')).share_sessions).toBe(false);
+  });
+
+  test('a reading fetched before this device last changed its settings is never applied', async () => {
+    const fetchStartedAtMs = Date.now() - 1000;
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    const out = await mirrorSharingFromServer('u1', { share_sessions: true, sessions_audience: 'everyone' }, { fetchStartedAtMs });
+    expect(out).toEqual({ mirrored: false, reason: 'changed_since_fetch' });
+    expect((await readShareSettings('u1')).share_sessions).toBe(false);
+  });
+
+  test('a publish settling counts as a device change: a reading fetched before it is not applied', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    const fetchStartedAtMs = Date.now() + 5;
+    await new Promise((r) => setTimeout(r, 10));
+    await setSharingPublishPending('u1', false);
+    expect(await readShareSettingsMark('u1')).toBeGreaterThanOrEqual(fetchStartedAtMs);
+    const out = await mirrorSharingFromServer('u1', { share_sessions: true, sessions_audience: 'everyone' }, { fetchStartedAtMs });
+    expect(out.reason).toBe('changed_since_fetch');
+  });
+
+  test('an unrecognised audience keeps the device audience; the switch itself still mirrors', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'followers' });
+    const out = await mirrorSharingFromServer('u1', { share_sessions: false, sessions_audience: 'the_world' }, { fetchStartedAtMs: later() });
+    expect(out.mirrored).toBe(true);
+    const now = await readShareSettings('u1');
+    expect(now.share_sessions).toBe(false);
+    expect(now.sessions_audience).toBe('followers');
+  });
+
+  test('already in step: reported unchanged and nothing is written', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone' });
+    const markBefore = await readShareSettingsMark('u1');
+    const out = await mirrorSharingFromServer('u1', { share_sessions: true, sessions_audience: 'everyone' }, { fetchStartedAtMs: later() });
+    expect(out).toEqual({ mirrored: false, reason: 'unchanged' });
+    expect(await readShareSettingsMark('u1')).toBe(markBefore);
   });
 });
 

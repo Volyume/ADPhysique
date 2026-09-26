@@ -227,10 +227,15 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     const prevSettings = share;
     setShare(clamped);
     await writeShareSettings(uid, clamped);
+    // D194 addendum 2: owed from BEFORE the call, not only after a failure,
+    // so a profile refresh that lands while this publish is in flight never
+    // mirrors the old row back over the change just made.
+    await setSharingPublishPending(uid, true, { removeShared });
     const out = await publishSharingSettings(uid, clamped, { removeShared });
     if (out?.reason === 'rules_outdated') {
       setShare(prevSettings);
       await writeShareSettings(uid, prevSettings);
+      await setSharingPublishPending(uid, false);
       navigation.navigate('CommunityRules', { mustAccept: true });
       return;
     }

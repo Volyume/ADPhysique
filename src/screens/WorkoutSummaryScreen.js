@@ -57,7 +57,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
 import {
-  loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings,
+  loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings, refreshMe,
   publishConsistency, publishAmbientItems,
   flushPendingAmbientItems, hasSeenSessionShareOffer, recordSessionShareOfferSeen,
 } from '../lib/community';
@@ -408,6 +408,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         if (out?.sessionPostId) {
           setAutoSessionPost({ id: out.sessionPostId, payload: out.sessionPayload });
         }
+        // D194 addendum 2: the server refused the session because the
+        // profile's own setting does not allow it. Refresh the profile now,
+        // which mirrors the real setting onto this device, so the sharing
+        // screen the strip links to shows the truth.
+        if (out?.sessionRefused === 'not_allowed') refreshMe(user.id).catch(() => {});
       } catch (_e) {
         // best effort: never the reason the summary fails to show
         setAmbientOutcome((prev) => prev ?? { created: 0, queued: 0, skipped: 'failed' });
@@ -1322,6 +1327,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         sub: 'It goes up on its own. Nothing to redo.',
         action: null,
         link: null,
+      };
+    }
+    // D194 addendum 2: said plainly, never dressed as an invitation. The
+    // automatic post was tried and the profile's own setting refused it.
+    if (ambientOutcome.sessionRefused === 'not_allowed') {
+      return {
+        title: 'Not shared to Community',
+        sub: "Your Community sharing settings didn't allow this session, so it wasn't posted.",
+        action: {
+          title: 'Post this session',
+          a11y: 'Post this session to Community',
+          onPress: () => openCompose({ kind: 'session', workoutId }),
+        },
+        link: {
+          title: 'Check sharing settings',
+          a11y: 'Open your Community sharing settings',
+          onPress: () => navigation.navigate('CommunityTrainingProfile'),
+        },
       };
     }
     if (!communityMember) {
