@@ -10825,6 +10825,98 @@ comparisons so far"). The Recovery by muscle caption and each muscle's
 breakdown name the learned speed once it is in use. Plan sequencing stays
 on the population start (spec section 9).
 
+**D210 addendum 3 (2026-09-26, lead): the rebuild's own review said do not
+land; what changed, and what it now can and cannot do.** It supersedes
+addendum 2's gate, reach and cost figures. A fresh-eyes Opus review of the
+rebuild (the tree at 16:17 UTC) returned DO NOT LAND: one
+blocker, three major and five minor findings, each observed in simulation,
+by mutation or by measurement. Each, and what was done:
+
+1. BLOCKER: a false "faster" when the reps logged are the prescription.
+   The logging screen fills the prescription into the entry boxes
+   (`ActiveWorkoutScreen.js`), and a lifter who stops at the prescribed
+   reps logs no drop the day's reserve absorbs. With the day-to-day spread
+   that small, the sensitivity floor made every predicted drop costly and
+   the fastest candidate won: "faster" for 30 of 60 people whose recovery
+   equals the start on three days a week, 15 of 60 on a varied schedule.
+   A lifter 2% stronger on Mondays was shown "slower" 12 of 60. The fix is
+   a redesign, not a patch: pairs compare the same lift on the SAME DAY OF
+   THE WEEK, so a steady weekday difference cancels; a lift whose
+   comparisons repeat the same reps set for set in at least half of them
+   is left out (it shows the plan, not the day), and when that leaves too
+   few the card says so (reason `fixed_reps`); and the simulation got
+   harsher (a weekday strength effect for every athlete, a break of 8 to 14
+   days for half, two cells logging reps as prescribed) and the gate was
+   set again on it.
+2. MAJOR: the "not yet" sentence for too little spread gave a false reason
+   ("much the same length" for breaks that alternate 3 and 4 days). It now
+   says what the learner needs, which is true of every schedule that gets
+   it: "It learns by comparing the same lift on the same day of the week
+   after breaks of different lengths, short enough to leave some
+   tiredness. Your training so far does not give it that."
+3. MAJOR: "comparisons of the same lift at the same effort" claimed more
+   than was checked (outside a plan, effort is unknown). Now "From N
+   comparisons of the same lift on the same day of the week."
+4. MAJOR: this register and the spec contradicted the code. Spec section 0
+   is rewritten to the code as it stands, with every departure from
+   sections 2 to 8.
+5. MINOR: cost over the spec's budget and unpinned. Measured: the review's
+   80 ms was under Jest; plain node took 5 to 7 ms. Made exact-cheaper
+   anyway, since a phone runs no JIT: each exercise's muscle looked up once
+   a run, a session's candidate lengths worked out once and only when
+   reached (`recoveryHoursAcross`), every candidate read in one pass over
+   each 14-day window (`recoveredFractionsAt`). Now 4 to 5 ms in node and
+   33 ms under Jest for the heaviest history (126 days, a session every
+   day, 24 sets each); the outputs are identical bit for bit to the
+   previous code on 2,160 simulated athletes and 90 varied heavy histories;
+   an operation count pins it loosely.
+6. MINOR: three rules had no test with teeth. Now: a recovery week as the
+   later session; a baseline beyond 28 days with a real session inside the
+   lookback (so the gap alone excludes it); and the 14-day return period
+   on the REAL capability scan in the loader. Each was confirmed by
+   mutation: removing the rule fails its test.
+7. MINOR: drop sets read as fatigue. Only straight sets count now.
+8. MINOR: the loader's daily memo missed an injury limit logged or
+   backdated today (against CC30), week edits, ratings, and corrected set
+   types or exercises. The key is now everything the learner reads, and
+   injury limits are applied before it is checked; a test changes each of
+   them in turn the same day, and the old key fails it (mutation).
+9. MINOR: copy and accessibility. "Each muscle ... about N% sooner" was
+   untrue at the estimate's 24-hour minimum (calves after two sets move 5%,
+   not 15%): the sentence now speaks of the estimate and names its bounds
+   ("and never less than a day", "and never more than a week"). The
+   subtitle says "Learned" only once something has been. The card is no
+   longer one grouped screen-reader node, so the title keeps its heading
+   role and the footer ("An estimate, not a measurement") is read. The
+   "reps repeat" sentence states the rule as applied: "Where a lift is
+   logged with the same reps from one session to the next, it shows what
+   was planned rather than how each day went, so it is left out. That
+   leaves too few comparisons to learn from yet."
+
+The gate (`PERSONAL_LR_MIN`) is 10, set from the full calibration on the
+harsher simulation (600 simulated athletes a cell, the suite's own seeds):
+a person whose true recovery equals the start is shown a direction at most
+13 times in 600 (2.2%; the promise is at most 5%) and one who truly
+recovers faster or slower the wrong direction at most 4 times in 600
+(0.7%; the promise is at most 1 in 60); the smallest gate meeting both was
+8, and a separate 600-a-cell run on other seeds agreed.
+
+What it can and cannot do now, stated rather than hidden. It moves only
+where the evidence exists: on a varied schedule without a plan it finds 123
+of 600 slow recoverers and 11 of 600 fast ones in twelve weeks (52 and 13
+when reps are logged as prescribed). On every fixed weekly schedule, and
+for every plan user in the simulation, it found none in either direction:
+the same weekday follows the same break every week, and a plan's effort
+target changes weekly, so the same weekday rarely repeats a target within
+28 days. Those people see "Not learning yet" or "Still learning", with the
+reason. This is the conservative posture on purpose: a wrong direction is
+worse than none. Not tested: people whose muscles genuinely recover at
+different speeds (every simulated muscle shares one true speed). The reach
+for plan users is the open question this leaves (a comparison across
+effort targets would need the effort actually reached, and the logged
+reps in reserve face the same pre-filled-entry problem as reps); it goes to
+the founder with the numbers.
+
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
 absolutely no relevance or requirement for share cards why did you ignore

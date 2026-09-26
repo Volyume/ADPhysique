@@ -503,7 +503,7 @@ existing plans; ties keep the original order.
 
 ## 14. Personal recovery learning (register D210, added 2026-09-26)
 
-**STATUS 2026-09-26: the build described below was WITHDRAWN after its adversarial review (D210 addendum: noisy dips from missed-set counts, false guarantees, misread assisted and timed exercises, untrue copy, cost). Nothing reached main. It is REPLACED by `14-PERSONAL-LEARNING-V2.md` (the rebuild, as built: one recovery speed per person, calibrated by simulation, shown on the "Your recovery speed" card; D210 addendum 2). The text below is kept only as the record of what was withdrawn; build nothing from it.**
+**STATUS 2026-09-26: the build described below was WITHDRAWN after its adversarial review (D210 addendum: noisy dips from missed-set counts, false guarantees, misread assisted and timed exercises, untrue copy, cost). Nothing reached main. It is REPLACED by `14-PERSONAL-LEARNING-V2.md` (the rebuild, as built: one recovery speed per person, from the same lift on the same day of the week, calibrated by simulation, shown on the "Your recovery speed" card; D210 addenda 2 and 3). The text below is kept only as the record of what was withdrawn; build nothing from it.**
 
 Founder, 2026-09-26: "We had recovery intelligence that learns people's
 recovery and adjusts as it goes along based on performance from a start. Is

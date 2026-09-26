@@ -10,11 +10,13 @@ counts only. The first build of a recovery learner (`04c92d66`) was withdrawn
 after its adversarial review (D210 addendum). This spec is the rebuild. It
 replaces `00-SPEC.md` section 14 when it lands.
 
-## 0. As built (2026-09-26, D210 addendum 2)
+## 0. As built (2026-09-26, D210 addenda 2 and 3)
 
 Built in `src/lib/recovery/personalRecovery.js`, wired in `load.js`, shown
 by `src/components/RecoveryLearningCard.js`. Sections 2 to 9 below are
-followed with these changes, each decided by the calibration simulation:
+followed with these changes. The first four were decided by the calibration
+simulation (addendum 2); the rest answer the rebuild's own adversarial
+review, which said do not land (addendum 3).
 
 - **One factor per PERSON, not per muscle** (replaces "for each muscle m"
   in section 2 and the per-muscle output in section 5). Learned muscle by
@@ -24,46 +26,98 @@ followed with these changes, each decided by the calibration simulation:
   are pooled, each muscle keeps its own fitted drift and bounded
   sensitivity `s`, and a candidate's error is the sum over muscles. A
   muscle's pairs count only from `PERSONAL_MIN_MUSCLE_PAIRS` (5). Output:
-  `{ factor, prior, pairs, reason, pairsByMuscle }`.
+  `{ factor, prior, pairs, reason, pairsByMuscle }`. Not tested: people
+  whose muscles genuinely recover at different speeds (the simulation gives
+  every muscle the same true factor).
 - **Drift per day between the two sessions** (replaces the constant `a` of
   section 4): performance is modelled as `y = a + g * days + s * x`, with
   `a` and `g` fitted per muscle (`residualOnDays`, then the bounded fit on
   the residuals). A lifter who is still gaining gains more over a longer
   break, and a constant drift let that gain read as recovery.
-- **The spread gate reads the largest pooled spread across candidates**
-  (replaces "SD of x(start)" in section 5): a schedule the start calls
-  fully recovered at every session could otherwise never learn "slower".
+- **The spread gate reads the largest pooled spread across candidates**,
+  after the drift is taken out (replaces "SD of x(start)" in section 5): a
+  schedule the start calls fully recovered at every session could otherwise
+  never learn "slower".
 - **A change past `PERSONAL_MAX_CHANGE`** (0.2 as a log ratio, about 22%)
   between the two sessions is not read as recovery and the pair is left
   out: a typing slip, a changed set-up or an unlogged injury would
   otherwise outweigh a dozen honest pairs.
-- **The gate** `PERSONAL_LR_MIN` = 12, set from the FULL calibration (600
-  athletes a cell, `PERSONAL_CALIBRATION=full`), not from 60 a cell, which
-  is too few to set a gate on. Both promises of section 7 bind (section 7
-  named only the first). Results at 12: at a true factor equal to the start,
-  a direction shown for at most 15 of 600 (2.5%); at 0.75 or 1.40, the
-  wrong direction for at most 7 of 600 (1.2%); the smallest gate meeting
-  both was 11. A slow recoverer (1.40) found for 182 of 600 on three
-  full-body days a week without a plan and 166 of 600 on a varied schedule;
-  a fast one (0.75) for 31 of 600 on a varied schedule; plan users on fixed
-  days see "Not learning yet". The everyday run (60 a cell) is a regression
-  guard at the pinned gate: at most 5 of 60 shown any direction, 3 of 60
-  the wrong one.
+- **The same lift on the SAME DAY OF THE WEEK** (replaces "the most recent
+  earlier session with X" in section 2; addendum 3). A baseline is the most
+  recent earlier session of the lift on the same local weekday, within the
+  28-day gap and comparable as section 2 says. The review found a lifter 2%
+  stronger on Mondays shown "slower" for 12 of 60: comparing Monday with
+  Monday takes any steady weekday difference out. On a fixed weekly
+  schedule the same weekday then follows the same break every week, so
+  there is nothing to learn from, and the card says so (`no_spread`).
+- **Straight sets only** (adds to section 2's eligible rows; addendum 3): a
+  drop set read as fatigue (a 100 x 8 top set with drops at 85 and 70 read
+  as a 17% drop). Any set type other than `straight` is left out of the
+  matched sets.
+- **Lifts logged as planned are left out** (addendum 3): the logging screen
+  fills the prescription into the entry boxes, and a lifter who stops at
+  the prescribed reps logs no drop the day's reserve absorbs; in simulation
+  that showed "faster" to half the people whose recovery equals the start.
+  A lift whose comparisons repeat the same reps set for set in at least
+  `PERSONAL_MAX_FIXED_REPS_SHARE` (half) of them shows the plan, not the
+  day, and its pairs are left out and counted. When that is what leaves too
+  few, the reason is `fixed_reps`.
+- **The gate** `PERSONAL_LR_MIN` = 10, set from the FULL calibration (600
+  athletes a cell, `PERSONAL_CALIBRATION=full`) on the harsher simulation
+  of addendum 3: every athlete has a steady strength difference by weekday
+  (1.5% either way), half take an 8 to 14 day break and come back about 2%
+  down, and two extra cells log reps as prescribed. Results at 10: at a
+  true factor equal to the start, a direction shown for at most 13 of 600
+  (2.2%); at 0.75 or 1.40, the wrong direction for at most 4 of 600 (0.7%);
+  the smallest gate meeting both was 8. Both promises of section 7 bind.
+- **What it can find**, stated rather than hidden (the same run): on a
+  varied schedule without a plan, 123 of 600 slow recoverers (1.40) and 11
+  of 600 fast ones (0.75) in twelve weeks; 52 and 13 when the reps are
+  logged as prescribed. Every fixed schedule, and every plan (whose effort
+  target changes every week, so the same weekday rarely repeats a target
+  within 28 days), found none either way: those people see "Not learning
+  yet" or "Still learning", with the reason. A faster recoverer differs
+  from the start only after short breaks, which is why fast ones are
+  rarely found.
+- **Reasons**: `adjusted`, `too_few`, `fixed_reps`, `no_spread`,
+  `not_clear` (adds `fixed_reps` to section 5).
 - **On screen** (replaces section 6): the "Your recovery speed" card under
   Recovery by muscle. A faster-to-slower scale with "First estimate" marked
   and, when adjusted, "You"; a headline ("Faster than first estimated",
   "Slower than first estimated", "In line with the first estimate", "Not
   learning yet", "Still learning"); one sentence on what changed and by
-  about what percent; for an adjusted reading, the muscle the learning
-  rests on most after a 6-set session as two tiles (first estimate, you);
-  "From N comparisons of the same lift at the same effort."; while too few,
-  "N of 8 comparisons so far" with a bar. The Recovery by muscle caption
-  and each muscle's "Based on" line name the learned speed once it is in
-  use. Pinned in `RecoveryLearningCard.test.js` and
-  `ReadinessCards.recoveryByMuscle.test.js`.
-- **Cost**: about 3 ms per person in node at three sessions a week and 7
-  ms at seven over 126 days, once per user, day, answer and history (the
-  memo in `load.js`).
+  about what percent, with the estimate's own bounds ("and never less than a
+  day", "and never more than a week"); for an adjusted reading, the muscle
+  the learning rests on most after a 6-set session as two tiles (first
+  estimate, you); "From N comparisons of the same lift on the same day of
+  the week."; while too few, "N of 8 comparisons so far" with a bar; each
+  "not yet" names its own reason. The subtitle says "Learned from your
+  lifts" only once something has been learned. The card is not one grouped
+  screen-reader node: the title keeps its heading role and every line is
+  read. The Recovery by muscle caption and each muscle's "Based on" line
+  name the learned speed once it is in use. Pinned in
+  `RecoveryLearningCard.test.js` and `ReadinessCards.recoveryByMuscle.test.js`.
+- **Cost** (replaces section 8's measurement, keeps its budget): for the
+  heaviest history the loader hands over (126 days, a session every day,
+  24 sets each), 4 to 5 ms in node and about 33 ms under Jest, down from 80
+  (the review's figure). Each exercise's muscle is looked up once a run, a
+  session's candidate lengths are worked out once and only when a reading
+  reaches it (`recoveryHoursAcross`), and every candidate is read in one
+  pass over each 14-day window (`recoveredFractionsAt`); both helpers give
+  exactly what the one-candidate functions give (pinned), and the outputs
+  were checked bit for bit against the previous code on 2,160 simulated
+  athletes and 90 varied heavy histories. Pinned loosely by an operation
+  count in `personalRecovery.test.js` (lengths at most once per session and
+  muscle, one reading per muscle and session start, at most 15 contributors
+  a reading).
+- **The memo** (replaces section 8's key): `load.js` keys the learner's last
+  answer on everything it reads (user, local day, recovery answer, what
+  injury limits leave out, and each session's times, week target, first
+  and recovery week, ratings, and each set's exercise, type, weight, reps
+  and order, with the exercises named). Injury limits are read and applied
+  BEFORE the memo is checked, so a limit logged or backdated today counts
+  at once (CC30). Pinned in `load.test.js`, including the 14-day return
+  period on the real capability scan.
 
 ## 1. What the first build got wrong, and the rule each failure sets
 
