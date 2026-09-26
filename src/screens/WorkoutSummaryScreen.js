@@ -1164,7 +1164,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       // summary already works out, only the proud ones, none chosen by
       // default. A history open computes none of them, so it offers none.
       highlightOptions: readOnly ? [] : shareHighlightOptions({
-        comparison, milestone, weekProgress, mesoWeek, calmSuppressed,
+        comparison, milestone, weekProgress, calmSuppressed,
       }),
       intensityTier: tier,
       // R8/M5 (share-card audit 2026-07-27): the session card hard-coded 'kg'

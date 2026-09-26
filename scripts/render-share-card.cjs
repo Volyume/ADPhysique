@@ -73,7 +73,7 @@ async function main() {
   const sessionExtras = {
     ...session,
     quote: { text: 'Stimulate, don\u2019t annihilate.', by: 'Lee Haney' },
-    highlights: ['Total lifted up 12% on the 4-week average', 'Block week 3 of 5'],
+    highlights: ['Lifted 12% more than usual', 'All 4 workouts done this week'],
   };
   const sessionCaption = { ...session, quote: { text: 'Back day done before work \u{1F4AA}', by: null }, highlights: ['Strongest workout in 4 weeks'] };
   const pr = { cardType: 'pr', exerciseName: 'Barbell Bench Press', date: 'Sat · 20 Jun 2026', showDate: true, showPRWeight: true, showPrevBest: true, weight: 120, reps: 5, units: 'kg', previousBest: 115 };

@@ -121,63 +121,54 @@ export function shareCardTitle(routineName, startedAt) {
  * more volume than last time, heaviest session in x weeks and so on? They
  * display elsewhere? Consider what's used ... We don't want to force them on
  * but optional?"). Only facts the workout summary already works out, never a
- * new claim, and only the proud ones: a 'down' or 'on pace' comparison, a
- * recovery week and a first session offer nothing. The PR count is left out
- * because the image's own hero already shows it. Written for the people who
- * see the image, so no "you". None is chosen by default; the share screen
- * lets the athlete add up to two.
+ * new claim, and only the ones worth showing to someone else: a 'down' or
+ * 'on pace' comparison, a first session and a half-finished week offer
+ * nothing, and where the session sits in a training block was dropped the
+ * same day (founder: "What benefit is there at all ... We want things
+ * optional as well not just jamming the card full of data. And again, human
+ * understandable English!"). The PR count is left out because the image's
+ * own hero already shows it. Written in everyday words for the people who
+ * see the image, so no "you" and no app terms. None is chosen by default;
+ * the share screen lets the athlete add up to two.
  *
- *  - The 4-week comparison, in the summary's own terms: 'best' is
- *    "Strongest workout in 4 weeks"; 'up' is the total lifted against the
- *    4-week average.
+ *  - The 4-week comparison: 'best' is "Strongest workout in 4 weeks" (the
+ *    summary's own headline); 'up' is "Lifted 12% more than usual", the
+ *    total against the average of this workout over the last 4 weeks.
  *  - The early-win milestone this session earned. The summary only claims
  *    one when calm mode and an open ED flag are both off.
- *  - Where the session sits in the week and the block, as the summary's
- *    week line and block strip show it. The block line follows the strip's
- *    own calm-mode rule.
+ *  - A week of the plan finished with this session: "All 4 workouts done
+ *    this week".
  *
  * @param {object} facts
  * @param {{verdict:string, pct?:number, priorCount?:number}|null} [facts.comparison]
  * @param {{kind:string, threshold?:number}|null} [facts.milestone]
  * @param {{logged:number, planned:number|null}|null} [facts.weekProgress]
- * @param {{weekIndex:number, plannedWeeks:number, isDeload?:boolean}|null} [facts.mesoWeek]
  * @param {boolean} [facts.calmSuppressed]
  * @returns {Array<{key:string, text:string}>}
  */
 export function shareHighlightOptions({
-  comparison = null, milestone = null, weekProgress = null, mesoWeek = null, calmSuppressed = false,
+  comparison = null, milestone = null, weekProgress = null, calmSuppressed = false,
 } = {}) {
   const out = [];
   if (comparison && comparison.priorCount > 0) {
     if (comparison.verdict === 'best') {
       out.push({ key: 'best_4_weeks', text: 'Strongest workout in 4 weeks' });
     } else if (comparison.verdict === 'up' && Number.isFinite(comparison.pct) && comparison.pct > 0) {
-      out.push({ key: 'up_on_average', text: `Total lifted up ${comparison.pct}% on the 4-week average` });
+      out.push({ key: 'more_than_usual', text: `Lifted ${comparison.pct}% more than usual` });
     }
   }
   if (milestone && !calmSuppressed) {
     let text = null;
-    if (milestone.kind === 'sessions' && Number.isFinite(milestone.threshold)) text = `${milestone.threshold} sessions logged`;
-    else if (milestone.kind === 'first_week') text = 'First full training week';
-    else if (milestone.kind === 'first_pr') text = 'First personal record';
+    if (milestone.kind === 'sessions' && Number.isFinite(milestone.threshold)) text = `${milestone.threshold} workouts logged`;
+    else if (milestone.kind === 'first_week') text = 'First full week of training';
+    else if (milestone.kind === 'first_pr') text = 'First personal best';
     if (text) out.push({ key: 'milestone', text });
   }
   const logged = Number(weekProgress?.logged);
   const planned = Number(weekProgress?.planned);
-  if (weekProgress && weekProgress.planned != null && Number.isFinite(planned) && planned > 0
-    && Number.isFinite(logged) && logged > 0) {
-    out.push({
-      key: 'week_progress',
-      text: logged >= planned
-        ? `All ${planned} sessions done this week`
-        : `Session ${logged} of ${planned} this week`,
-    });
-  }
-  const weekIndex = Number(mesoWeek?.weekIndex);
-  const plannedWeeks = Number(mesoWeek?.plannedWeeks);
-  if (mesoWeek && !calmSuppressed && !mesoWeek.isDeload && Number.isFinite(weekIndex) && Number.isFinite(plannedWeeks)
-    && plannedWeeks >= 2 && weekIndex >= 1 && weekIndex <= plannedWeeks) {
-    out.push({ key: 'block_week', text: `Block week ${weekIndex} of ${plannedWeeks}` });
+  if (weekProgress && weekProgress.planned != null && Number.isFinite(planned) && planned > 1
+    && Number.isFinite(logged) && logged >= planned) {
+    out.push({ key: 'week_done', text: `All ${planned} workouts done this week` });
   }
   return out;
 }

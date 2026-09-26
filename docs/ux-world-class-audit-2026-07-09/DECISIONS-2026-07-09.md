@@ -10700,3 +10700,15 @@ return period applied; an unresolved plan week treated as not comparable;
 copy that says only what the evidence supports, including why a person's
 sessions cannot tell yet; and a cost small enough for every focus (computed
 once per day and history, not per render).
+
+**D209 addendum (2026-09-26, founder): the highlight lines trimmed and put
+in everyday words.** Founder, verbatim: "Get rid of the block 3 of week 5
+thing. What benefit is there at all if having that in the share card. We
+want things optional as well not just janiing the card full of data. And
+again, human understandable English!" The block-week line is gone, and so is
+the half-finished week ("Session 2 of 4 this week"), which tells a viewer as
+little. What remains, all optional and none on by default: "Strongest
+workout in 4 weeks", "Lifted 12% more than usual", a milestone ("50
+workouts logged", "First full week of training", "First personal best") and
+a finished week ("All 4 workouts done this week"). No app words (session,
+average, block) and no "you". Pinned in `sessionShareData.test.js`.

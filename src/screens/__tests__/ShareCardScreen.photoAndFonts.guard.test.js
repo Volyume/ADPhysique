@@ -105,7 +105,9 @@ describe('the workout summary hand-off', () => {
   });
 
   test('it hands over the optional highlight lines, and none from a history open', () => {
-    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{\s*comparison, milestone, weekProgress, mesoWeek, calmSuppressed,\s*\}\),/);
+    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{\s*comparison, milestone, weekProgress, calmSuppressed,\s*\}\),/);
+    // Founder, 2026-09-26: no training-block position on the image.
+    expect(share).not.toMatch(/mesoWeek/);
   });
 
   test('no exercise names travel to the share image, not even in the title', () => {
