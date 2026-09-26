@@ -398,13 +398,13 @@ export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
 
 export const ED_PATTERN_LOCKOUT_COPY = {
   header: 'Held this week',
-  title: 'We\'ve held your calorie cut',
+  title: 'Your coach has held your calorie cut',
   body:
-    "We've held your calorie cut. We've noticed a few signals together: your weight has been dropping faster than your intake suggests, your energy scores have been low, and your food log shows you eating less than your target for a few weeks running.\n\n" +
-    "Even when a cut is going well in numbers, sustained low energy is a safety signal. We'd rather pause than push.\n\n" +
-    "Once your fuelling and energy recover for two weeks, we'll suggest new targets.",
+    "Your coach has held your calorie cut, because a few signs have shown up together: your weight has been dropping faster than your intake suggests, your energy scores have been low, and your food log shows you eating less than your target for a few weeks running.\n\n" +
+    "Even when a cut is going well in numbers, low energy that lasts is a safety sign, so the cut pauses rather than pushes on.\n\n" +
+    "Once your eating and energy have recovered for two weeks, your coach will suggest new targets.",
   bodyGoalLockExtension:
-    "You set a goal lock for an aggressive cut, so we've held off until three signals stacked up instead of two. That happened this week.",
+    "You set a goal lock for a fast cut, so your coach waited until three signs showed up together instead of two. That happened this week.",
   ctaSupport: 'Get support',
   ctaReadMore: 'Read more about why',
   bottomNote:
@@ -412,7 +412,7 @@ export const ED_PATTERN_LOCKOUT_COPY = {
   // Tooltip body for the "Read more about why" InfoTooltip.
   readMoreBody:
     "Low energy that sticks around alongside fast weight loss is the body's signal that fuel intake is too low for what training is demanding. The condition has a name in sports medicine: relative energy deficiency. It shows up first as low energy, then in training quality, then in hormones and bone health.\n\n" +
-    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. The pattern that worries us is the combination.\n\n" +
+    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. It's the combination that matters.\n\n" +
     "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, Precision Coaching starts adjusting again.",
 };
 
@@ -432,9 +432,9 @@ export const ED_PATTERN_CLEARED_COPY = {
 // complete users -- safety output is tier-blind.
 export const RAPID_LOSS_CORRECTED_COPY = {
   header: 'Acted this week',
-  title: "We've added calories straight away",
+  title: 'Your coach has added calories straight away',
   body:
-    "Your weight dropped more than 1.5% this week and your energy is low. We're not waiting two weeks to react; we've bumped your daily target up immediately.\n\n" +
+    "Your weight dropped more than 1.5% this week and your energy is low. Rather than wait two weeks, your coach has raised your daily target now.\n\n" +
     "This isn't a punishment for hitting your goal too fast. It's a safety call. Steady is the goal.",
 };
 

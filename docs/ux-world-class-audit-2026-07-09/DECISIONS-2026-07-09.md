@@ -10979,6 +10979,23 @@ counted so far"; each memo-key field has its own same-day test, the scan
 runs only when its inputs change (tested), and a lift repeating its reps in
 exactly half its comparisons is left out (tested).
 
+**D204 addendum 4 (2026-09-26, founder): the held safety lines reworded,
+and 186 applied.** Founder, verbatim: "Approve changes to safety message"
+and "Run all against production". The ED-safety and floor lines that still
+said "we" now name your coach or read impersonally, with every number and
+condition unchanged: the held-cut card ("Your coach has held your calorie
+cut" and its body, the goal-lock line, "It's the combination that
+matters."), the calories-added card ("Your coach has added calories
+straight away"; "Rather than wait two weeks, your coach has raised your
+daily target now."), the Nutrition targets floor banner ("Your numbers
+came out below the safe minimum, so they were raised to it.") and the
+calorie bank error ("so that much can't be moved"). The one guard that
+pinned the old title (`CoachOutputScreen.edPatternAnnounce.guard.test.js`)
+now pins the new one. Not changed: the dormant subscription page (billing
+copy, never shown) and the weekly coach's lighter-week note (it has no
+"we"). Migration 186 applied 18:44 UTC (supabase/README); 155 waits for a
+build without Partners in users' hands, 049 stays HELD.
+
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
 absolutely no relevance or requirement for share cards why did you ignore

@@ -26,7 +26,7 @@ const BUMP_STEP = 50;
 const DEFAULT_BUMP = 150;
 
 const ERROR_COPY = {
-  floor: "That would take one of your days below your safe minimum, so we can't shift that much. Try a smaller amount.",
+  floor: "That would take one of your days below your safe minimum, so that much can't be moved. Try a smaller amount.",
   no_room: "This day is already at the top of its range, so there's nothing extra to add.",
   too_small: 'Pick a little more to plan a higher-calorie day.',
   invalid_input: "We couldn't plan that. Try a different day.",

@@ -73,9 +73,11 @@ describe('AY-7: ED-pattern lockout card announces itself on appearance', () => {
 
   test('the locked ED-safety copy itself is untouched by this change', () => {
     // AY-7 is announcement-only: no copy or logic change proposed. Pin the
-    // exact founder-approved strings still stand in whyThisTemplates.js.
+    // exact founder-approved strings still stand in whyThisTemplates.js
+    // (the title reworded to "your coach" on the founder's approval of
+    // 2026-09-26: "Approve changes to safety message").
     expect(TEMPLATES).toMatch(/header: 'Held this week'/);
-    expect(TEMPLATES).toMatch(/title: 'We\\'ve held your calorie cut'/);
+    expect(TEMPLATES).toMatch(/title: 'Your coach has held your calorie cut'/);
     expect(TEMPLATES).toMatch(/header: 'Hold lifted'/);
     expect(TEMPLATES).toMatch(/title: 'Your numbers are looking better'/);
   });

@@ -1621,8 +1621,8 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       <View style={[styles.floorBanner, live.floorBanner]}>
                         <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.success} />
                         <Text style={[styles.floorBannerText, live.floorBannerText]}>
-                          Your numbers came out below the minimum we hold targets at, so we
-                          raised them. The target above is your safe minimum. Eating below it
+                          Your numbers came out below the safe minimum, so they were raised
+                          to it. The target above is your safe minimum. Eating below it
                           would work against your training, recovery and health.
                         </Text>
                       </View>
