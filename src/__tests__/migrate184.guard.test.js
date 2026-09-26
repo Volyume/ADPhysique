@@ -7,8 +7,10 @@
  * turn it off if they want after."
  *
  * WHAT THIS SUITE PINS, and why every case is written to FAIL: both files
- * are WRITTEN, NOT APPLIED until the founder's phrase, so only source can
- * check them.
+ * were written before the founder's phrase, so only source could check
+ * them; both were APPLIED 2026-09-26 (184 at 13:49 UTC, 185 at 13:50 UTC,
+ * apply record in the supabase/README status block), and the suite keeps
+ * pinning the source that ran.
  *   - 184 re-issues two long functions IN FULL. A re-issue that drifts from
  *     its source silently changes behaviour nobody asked to change, so the
  *     bodies are re-derived here from migrate_175 and migrate_161 and diffed
@@ -23,8 +25,9 @@
  *     keeps a minor at followers (stored flag OR a fresh derivation), is
  *     idempotent, and its acceptance block fails on any pre-default row
  *     still off or any minor wider than followers.
- *   - Both carry the house header and sit in the supabase/README ledger as
- *     pending, never as applied, until an apply record exists.
+ *   - Both carry the house header, their headers record the apply, and
+ *     both sit in the supabase/README ledger as applied with the apply
+ *     record in the status block.
  */
 
 const fs = require('fs');
@@ -69,7 +72,7 @@ describe('migrate_184: house shape', () => {
     }
     expect(HEADER).toContain('It is on for all users by default.');
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/Applied remotely:\s+NO/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-26 13:49 UTC \(written 2026-09-26\)/);
   });
 
   test('the column default moves for share_sessions only; the audience keeps its narrow backstop', () => {
@@ -163,7 +166,7 @@ describe('migrate_185: the one-off flip', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('Flip them all');
-    expect(HEADER).toMatch(/Applied remotely:\s+NO/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-26 13:50 UTC \(written 2026-09-26\)/);
     expect(HEADER).toContain("WHERE handle = 'alland';");
     expect(HEADER).toContain("WHERE handle = 'allan';");
   });
@@ -191,15 +194,21 @@ describe('migrate_185: the one-off flip', () => {
   });
 });
 
-describe('both files are in the ledger as pending, never as applied', () => {
+describe('both files are in the ledger as applied, with the apply record', () => {
   const README = read('supabase/README.md');
   test.each([
-    ['184', '`migrate_184_community_sharing_default_on.sql`'],
-    ['185', '`migrate_185_community_sharing_flip_existing.sql`'],
-  ])('%s has a ledger row marked PENDING', (n, file) => {
+    ['184', '`migrate_184_community_sharing_default_on.sql`', '**APPLIED 2026-09-26 13:49 UTC**'],
+    ['185', '`migrate_185_community_sharing_flip_existing.sql`', '**APPLIED 2026-09-26 13:50 UTC**'],
+  ])('%s has a ledger row marked applied', (n, file, applied) => {
     const row = README.split('\n').find((l) => l.startsWith(`| ${n} | ${file} |`));
     expect(row).toBeDefined();
-    expect(row).toContain('**PENDING');
-    expect(row).not.toMatch(/\*\*APPLIED/);
+    expect(row).toContain(applied);
+    expect(row).not.toContain('**PENDING');
+  });
+
+  test('the status block records the batch, both checksums and the sweep', () => {
+    expect(README).toContain('- **184 AND 185 APPLIED 2026-09-26, 13:49 and 13:50 UTC');
+    expect(README).toContain('`d8389c40349001b8c304c8ca843550fd` / 27,476 bytes');
+    expect(README).toContain('`49898f45b38fbd2c945e23e558056801` / 5,723 bytes');
   });
 });

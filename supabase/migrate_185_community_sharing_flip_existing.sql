@@ -29,9 +29,19 @@
 -- Applied locally:   N/A - no local SQLite table; nothing in
 --                    `src/lib/database.js` changes, `PRAGMA user_version`
 --                    is untouched.
--- Applied remotely:  NO - written 2026-09-26. Waits for the founder's exact
---                    phrase "run against production" naming this file, and
---                    runs AFTER migrate_184 in the same batch.
+-- Applied remotely:  YES - 2026-09-26 13:50 UTC (written 2026-09-26), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-26 for the batch 184 and 185, run AFTER
+--                    migrate_184 as required; Claude-run through the
+--                    Supabase connector under the checksum protocol: one
+--                    chunk, whole file md5
+--                    `49898f45b38fbd2c945e23e558056801` / 5,723 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed. The pre-apply read matched the count
+--                    above exactly (the same two rows, no other); verified
+--                    read-only after the apply: both on/everyone, neither
+--                    a minor (supabase/README status block is the live
+--                    record).
 -- Safe to re-run:    YES. The UPDATE sets fixed target values and only
 --                    touches a row that differs from them, so a second run
 --                    changes nothing; the acceptance block is read-only.

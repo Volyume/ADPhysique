@@ -57,11 +57,15 @@
 -- Applied locally:   N/A - no local SQLite table; nothing in
 --                    `src/lib/database.js` changes, `PRAGMA user_version`
 --                    is untouched.
--- Applied remotely:  NO - written 2026-09-26. Waits for the founder's exact
---                    phrase "run against production" naming this file, then
---                    Claude-run through the Supabase connector under the
---                    checksum protocol (supabase/README status block is the
---                    live record).
+-- Applied remotely:  YES - 2026-09-26 13:49 UTC (written 2026-09-26), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-26 for the batch 184 and 185; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: five chunks verified, whole file md5
+--                    `d8389c40349001b8c304c8ca843550fd` / 27,476 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record).
 -- Safe to re-run:    YES. ALTER COLUMN ... SET DEFAULT is idempotent;
 --                    CREATE OR REPLACE FUNCTION replaces the body with the
 --                    same text; the REVOKE/GRANT pairs are idempotent; the
