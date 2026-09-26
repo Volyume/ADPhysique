@@ -22,6 +22,7 @@ import SectionLabel from './SectionLabel';
 import Button from './Button';
 import BodyDiagramHeatmap from './BodyDiagramHeatmap';
 import MuscleRecoveryList from './MuscleRecoveryList';
+import RecoveryLearningCard from './RecoveryLearningCard';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { trainingRecency } from '../lib/trainingRecency';
@@ -61,6 +62,19 @@ const MILESTONES = [
 
 function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
+}
+
+/**
+ * The "Recovery by muscle" caption: what the estimate is built from. Once the
+ * personal learning has moved (D210), the recovery speed learned from the
+ * lifts takes the recovery answer's place, and the caption says so; until
+ * then the answer is what the estimate uses.
+ */
+export function recoveryByMuscleCaption(personal) {
+  const adjustedBy = personal?.reason === 'adjusted'
+    ? 'your recovery speed, learned from your lifts, and your ratings'
+    : 'your recovery answer and your ratings';
+  return `Estimated from the time since each muscle's last session and how many sets it did, adjusted by ${adjustedBy}. Not a measurement.`;
 }
 
 // Task 2 (recovery/freshness UI factual-language amendment): this used to
@@ -668,9 +682,10 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
               freshness={muscleFreshness}
               selectedMuscle={openMuscle}
               onSelect={setSelectedMuscle}
+              learnedSpeed={muscleRecovery.personal?.reason === 'adjusted'}
             />
             <Text style={[styles.rbmCaption, live.rbmCaption]}>
-              Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer and your ratings. Not a measurement.
+              {recoveryByMuscleCaption(muscleRecovery.personal)}
             </Text>
             {nextWorkoutText && (
               <>
@@ -683,6 +698,12 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
             )}
           </View>
         )}
+
+        {/* D210: the personal recovery learning, shown as one thing that
+            moves (RecoveryLearningCard). Present whenever the loader
+            returned a reading, including the "still learning" states, and
+            absent with the section above when the read failed. */}
+        {muscleRecovery?.personal ? <RecoveryLearningCard personal={muscleRecovery.personal} /> : null}
 
         {recoveryTrendInsight && (
           <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>

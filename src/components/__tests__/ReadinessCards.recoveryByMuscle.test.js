@@ -109,7 +109,7 @@ jest.mock('../../lib/recovery/nextWorkoutRecommendation', () => ({
   recommendNextWorkout: jest.fn(),
 }));
 
-import ReadinessCards from '../ReadinessCards';
+import ReadinessCards, { recoveryByMuscleCaption } from '../ReadinessCards';
 import BodyDiagramHeatmap from '../BodyDiagramHeatmap';
 import * as database from '../../lib/database';
 import { logError } from '../../lib/errorLog';
@@ -272,6 +272,47 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     expect(texts(tree)).toContain(
       "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer and your ratings. Not a measurement.",
     );
+  });
+});
+
+describe('the personal recovery learning (register D210)', () => {
+  const ADJUSTED = {
+    factor: 1.2, prior: 1, pairs: 24, reason: 'adjusted', pairsByMuscle: { quads: 24 },
+  };
+
+  test('the learning card shows whenever the loader returned a reading, including "still learning"', async () => {
+    loadMuscleRecovery.mockResolvedValue({
+      ...RECOVERY_RESULT,
+      personal: {
+        factor: 1, prior: 1, pairs: 3, reason: 'too_few', pairsByMuscle: {},
+      },
+    });
+    const tree = await render({ sections: 'recovery' });
+    expect(texts(tree)).toEqual(expect.arrayContaining(['Your recovery speed', 'Still learning']));
+  });
+
+  test('no reading (the learner was skipped or failed): no card, and the caption names the recovery answer', async () => {
+    const tree = await render({ sections: 'recovery' });
+    expect(texts(tree)).not.toContain('Your recovery speed');
+    expect(texts(tree)).toContain(recoveryByMuscleCaption(null));
+  });
+
+  test('once the learned speed is in use, the caption and each breakdown name it', async () => {
+    loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, personal: ADJUSTED });
+    const tree = await render({ sections: 'recovery' });
+    expect(texts(tree)).toContain(
+      "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery speed, learned from your lifts, and your ratings. Not a measurement.",
+    );
+    expect(texts(tree)).toContain('Slower than first estimated');
+    const quadsRow = tree.root.findAll((n) => typeof n.props.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Quads,') && typeof n.props.onPress === 'function')[0];
+    await act(async () => { quadsRow.props.onPress(); });
+    expect(texts(tree)).toContain('Time, sets and your recovery speed');
+  });
+
+  test('recoveryByMuscleCaption: the answer until the learning has moved', () => {
+    expect(recoveryByMuscleCaption({ ...ADJUSTED, reason: 'not_clear' })).toBe(recoveryByMuscleCaption(null));
+    expect(recoveryByMuscleCaption(ADJUSTED)).toMatch(/your recovery speed, learned from your lifts, and your ratings/);
   });
 });
 

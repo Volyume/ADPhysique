@@ -43,6 +43,8 @@
  *                   getLastTrainedPerMuscle (the chip source)
  *   selectedMuscle  the muscle whose breakdown is open, or null
  *   onSelect        (muscle|null) => void
+ *   learnedSpeed    true when the recovery speed learned from the lifts is
+ *                   in use (D210), so "Based on" names it
  */
 
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -101,8 +103,14 @@ export function muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt) {
   return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent} percent recovered, ${muscleReadyClause(entry, nowMs)}, ${recency.label}`;
 }
 
-/** What the estimate rests on, in plain words (the model's `basis`). */
-export function muscleRecoveryBasisText(basis) {
+/** What the estimate rests on, in plain words (the model's `basis`, and
+ * whether the recovery speed learned from the lifts is in use, D210). */
+export function muscleRecoveryBasisText(basis, learnedSpeed = false) {
+  if (learnedSpeed) {
+    return basis === 'time_volume_and_ratings'
+      ? 'Time, sets, your ratings and your recovery speed'
+      : 'Time, sets and your recovery speed';
+  }
   return basis === 'time_volume_and_ratings' ? 'Time, sets and your ratings' : 'Time and sets';
 }
 
@@ -119,7 +127,7 @@ function plural(n, word) {
 }
 
 /** The breakdown lines behind one row's estimate. */
-export function muscleRecoveryDetailLines(entry) {
+export function muscleRecoveryDetailLines(entry, learnedSpeed = false) {
   const lines = [];
   if (Number.isFinite(entry.lastSessionEndMs)) {
     const when = safeFormatDate(entry.lastSessionEndMs, 'EEE d MMM', '');
@@ -131,12 +139,12 @@ export function muscleRecoveryDetailLines(entry) {
     const totalSets = sessions.reduce((sum, cs) => sum + (Number.isFinite(cs?.sets) ? cs.sets : 0), 0);
     lines.push({ label: 'Last 14 days', value: `${plural(sessions.length, 'session')} · ${plural(totalSets, 'set')}` });
   }
-  lines.push({ label: 'Based on', value: muscleRecoveryBasisText(entry.basis) });
+  lines.push({ label: 'Based on', value: muscleRecoveryBasisText(entry.basis, learnedSpeed) });
   return lines;
 }
 
 function MuscleRecoveryRow({
-  entry, nowMs, lastTrainedAt, expanded, onToggle, t, live,
+  entry, nowMs, lastTrainedAt, expanded, onToggle, t, live, learnedSpeed,
 }) {
   const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
   const percent = Number.isFinite(entry.recoveredPercent)
@@ -147,7 +155,7 @@ function MuscleRecoveryRow({
   const estimatedPercentText = `${percent}%`; // estimated recovery
   const estimatedFillWidth = `${percent}%`; // estimated recovery, the bar's fill
   const band = muscleRecoveryBandColour(entry.status, t.colors);
-  const detail = expanded ? muscleRecoveryDetailLines(entry) : null;
+  const detail = expanded ? muscleRecoveryDetailLines(entry, learnedSpeed) : null;
   // The breakdown is a SIBLING of the touchable, never its child: a
   // touchable with its own accessibilityLabel is one opaque node to
   // VoiceOver and TalkBack, so anything nested inside it is unreachable
@@ -192,7 +200,7 @@ function MuscleRecoveryRow({
 }
 
 export default function MuscleRecoveryList({
-  rows, nowMs, freshness = null, selectedMuscle = null, onSelect,
+  rows, nowMs, freshness = null, selectedMuscle = null, onSelect, learnedSpeed = false,
 }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -222,6 +230,7 @@ export default function MuscleRecoveryList({
               onToggle={() => onSelect?.(selectedMuscle === entry.muscle ? null : entry.muscle)}
               t={t}
               live={live}
+              learnedSpeed={learnedSpeed}
             />
           ))}
         </View>

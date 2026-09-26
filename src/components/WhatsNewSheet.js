@@ -63,11 +63,12 @@ export const WHATS_NEW = {
   // 2.3.0 (founder's number, D203). The first line is the in-app notice both
   // privacy policy copies promise for a material change ("we ... notify
   // signed-in users in the app"): the policy gained its Community section on
-  // 2026-09-26 (register D194 addendum 2). The other two are the changes a
-  // user would notice without being told where to look (D208, D206).
+  // 2026-09-26 (register D194 addendum 2). The rest are the changes a user
+  // would notice without being told where to look (D208, D210, D206, D209).
   '2.3.0': [
     { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
     { icon: 'battery-charging-outline', text: 'Recovery has its own place. Tap Recovery at the top of Progress to see how each muscle is recovering.' },
+    { icon: 'trending-up-outline', text: 'Recovery now learns how quickly you recover from how your lifts go. See what it has found under Your recovery speed.' },
     { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
     { icon: 'share-social-outline', text: 'Share images look like the app now. Choose which lift to show, and move or zoom your photo so it sits right.' },
   ],
