@@ -40,36 +40,52 @@
  *    carries no evidence about this specific session's lingering effect, so
  *    it stays null.
  *
- * The fetch window is LOOKBACK_DAYS plus 4 extra (older) days: a defensive
- * margin so a session right at the model's own 14-day contribution edge is
- * never short of the data it would need to find its pairing partner. The
- * model re-applies its own LOOKBACK_DAYS cutoff internally
+ * The fetch window is PERSONAL_HISTORY_DAYS (register D210): the personal
+ * learner (personalRecovery.js) reads 84 days of pairs, each with a baseline
+ * up to 28 days earlier and the curve's 14-day lookback before that. It used
+ * to be LOOKBACK_DAYS plus 4 days, the margin a session at the model's own
+ * edge needs for its soreness-pairing partner; the wider window covers it.
+ * The model re-applies its own LOOKBACK_DAYS cutoff internally
  * (buildMuscleRecoveryMap), so handing it the wider set is always safe --
- * the extra days simply never contribute. The window is applied IN THE
- * QUERY (getCompletedWorkoutsBetween), never by reading the whole workouts
- * table and filtering in JavaScript (Opus review finding 17: Home and
- * Consistency each do this on every focus).
+ * the extra days simply never contribute to the live reading. The window is
+ * applied IN THE QUERY (getCompletedWorkoutsBetween), never by reading the
+ * whole workouts table and filtering in JavaScript (Opus review finding 17:
+ * Home and Consistency each do this on every focus).
+ *
+ * THE PERSONAL FACTOR (register D210, spec 14-PERSONAL-LEARNING-V2.md). The
+ * learner runs over the same sessions, at most once per user, local day,
+ * recovery answer and history (a module-level memo: Home, Progress and the
+ * Recovery place all read this loader, and a fit on every focus cost up to
+ * 390 ms in review). When it has moved from the start, its factor takes the
+ * recovery answer's place in the map; the reading itself is returned as
+ * `personal` for the screens that show it. A session under an injury limit,
+ * or inside the 14-day return period after one, teaches its muscle nothing
+ * (the CC30 rule, through capability/eligibility's
+ * constrainedMusclesInWindow). If that read fails, the learner is skipped
+ * for this read rather than learning from sessions it cannot vouch for (the
+ * safe direction for learning is out, CAP-12): the map then reads with the
+ * recovery answer alone and `personal` is null. A failed learner does the
+ * same. Neither degrades the map.
  */
 import {
   getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercisesIncludingDeleted,
   getMesocycleWeeks, getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
+  getCapabilityConstraints,
 } from '../database';
 import { logError } from '../errorLog';
-import { localWeekStartMs } from '../dayKey';
+import { localWeekStartMs, localDayKey } from '../dayKey';
 import { allocateExerciseVolume } from '../algorithms';
 import {
   deriveHabitualTrainingWeekdays, HABIT_WINDOW_WEEKS, MIN_HISTORY_WEEKS,
 } from '../notifications/trainingHabitSchedule';
 import { buildMuscleRecoveryMap } from './muscleRecoveryModel';
-import { LOOKBACK_DAYS, DEFAULT_TRAINING_START_MINUTE } from './constants';
+import { DEFAULT_TRAINING_START_MINUTE } from './constants';
+import { learnPersonalRecovery, PERSONAL_HISTORY_DAYS } from './personalRecovery';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
-// The extra fetch margin described in the header. 4 days, matching the
-// model's own 96-hour soreness-pairing window (constants.js FEEDBACK_FACTOR
-// / spec 3.1).
-const FETCH_MARGIN_DAYS = 4;
 const SORENESS_PAIR_WINDOW_MS = 96 * 60 * 60 * 1000;
+const DEFAULT_SESSION_MS = 60 * 60 * 1000;
 
 const isTruthyFlag = (v) => v === 1 || v === true;
 
@@ -124,10 +140,12 @@ function readRecoveryRating() {
 }
 
 /**
- * Groups a mesocycle's week rows into { [weekId]: { rirTarget, isFirstWeek } }.
- * isFirstWeek: week_index 1, or the week immediately after one with is_deload
- * set -- derived purely from this one block's own week rows, in week_index
- * order, no block-level plannedWeeks/deloadWeek lookup required.
+ * Groups a mesocycle's week rows into { [weekId]: { rirTarget, isFirstWeek,
+ * isDeload } }. isFirstWeek: week_index 1, or the week immediately after one
+ * with is_deload set -- derived purely from this one block's own week rows,
+ * in week_index order, no block-level plannedWeeks/deloadWeek lookup
+ * required. isDeload (register D210): the recovery week itself, whose
+ * lowered loads the personal learner never compares.
  */
 export function indexWeeks(weekRows) {
   const sorted = (Array.isArray(weekRows) ? weekRows : [])
@@ -139,8 +157,9 @@ export function indexWeeks(weekRows) {
     if (!w?.id) continue;
     const weekIndex = Number(w.week_index);
     const isFirstWeek = weekIndex === 1 || previousWasDeload;
-    out.set(w.id, { rirTarget: w.rir_target ?? null, isFirstWeek });
-    previousWasDeload = isTruthyFlag(w.is_deload);
+    const isDeload = isTruthyFlag(w.is_deload);
+    out.set(w.id, { rirTarget: w.rir_target ?? null, isFirstWeek, isDeload });
+    previousWasDeload = isDeload;
   }
   return out;
 }
@@ -153,9 +172,15 @@ export function indexWeeks(weekRows) {
  * always null here; pairSorenessNext resolves it afterwards, since it needs
  * to see the FOLLOWING session too.
  *
+ * `weekStatus` (register D210) says whether the effort target is known:
+ * 'none' for a session outside any plan (no week id), 'resolved' when its
+ * week row was found, 'unresolved' when it has a week id whose row was not
+ * found (the personal learner never compares such a session: its effort is
+ * unknown).
+ *
  * @param {object} workout
  * @param {Array} workoutSets - this workout's own workout_sets rows
- * @param {{rirTarget: number|null, isFirstWeek: boolean}|null} week
+ * @param {{rirTarget: number|null, isFirstWeek: boolean, isDeload?: boolean}|null} week
  */
 export function buildRecoverySession(workout, workoutSets, week) {
   const sets = Array.isArray(workoutSets) ? workoutSets : [];
@@ -177,6 +202,8 @@ export function buildRecoverySession(workout, workoutSets, week) {
     sets,
     weekRirTarget: week?.rirTarget ?? null,
     isFirstWeek: !!week?.isFirstWeek,
+    isDeload: !!week?.isDeload,
+    weekStatus: workout.mesocycleWeekId ? (week ? 'resolved' : 'unresolved') : 'none',
     ratings: {
       fatigue: workout.fatigueLevel ?? null,
       joint: workout.jointDiscomfort ?? maxJointDiscomfort,
@@ -225,8 +252,9 @@ function selectCompletedWorkouts(allWorkouts, windowStartMs, nowMs) {
  * @param {string} userId
  * @param {number} [nowMs]
  * @returns {Promise<{ map: object, nowMs: number, recoveryRating: string,
- *   habitualWeekdays: number[]|null, typicalStartMinute: number,
- *   degraded: boolean }>}
+ *   personal: ({ factor: number, prior: number, pairs: number,
+ *   reason: string, pairsByMuscle: object }|null), habitualWeekdays: number[]|null,
+ *   typicalStartMinute: number, degraded: boolean }>}
  */
 export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   const recoveryRating = readRecoveryRating();
@@ -235,6 +263,7 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
       map: buildMuscleRecoveryMap({ sessions: [], exerciseById: {}, recoveryRating, nowMs }),
       nowMs,
       recoveryRating,
+      personal: null,
       habitualWeekdays: null,
       typicalStartMinute: DEFAULT_TRAINING_START_MINUTE,
       degraded: false,
@@ -242,7 +271,7 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   }
 
   let degraded = false;
-  const windowStartMs = nowMs - (LOOKBACK_DAYS + FETCH_MARGIN_DAYS) * DAY_MS;
+  const windowStartMs = nowMs - PERSONAL_HISTORY_DAYS * DAY_MS;
   let windowWorkouts = [];
   try {
     // Bounded in the query: completed workouts whose end (or start) falls
@@ -320,9 +349,99 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
     typicalStartMinute = DEFAULT_TRAINING_START_MINUTE;
   }
 
-  const map = buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs });
+  const personal = degraded ? null : await learnFromSessions({
+    userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
+  });
+  const map = buildMuscleRecoveryMap({
+    sessions,
+    exerciseById,
+    recoveryRating,
+    nowMs,
+    personalFactor: personal?.reason === 'adjusted' ? personal.factor : null,
+  });
 
-  return { map, nowMs, recoveryRating, habitualWeekdays, typicalStartMinute, degraded };
+  return {
+    map, nowMs, recoveryRating, personal, habitualWeekdays, typicalStartMinute, degraded,
+  };
+}
+
+// The learner's last answer (see the header): one entry, keyed by user,
+// local day, recovery answer and the history's shape (learnFromSessions).
+let personalMemo = null;
+
+/** The allocator's primary-muscle normalisation (algorithms.allocateExerciseVolume), for keys that arrive raw. */
+function normaliseMuscleKey(muscle) {
+  const key = String(muscle ?? '').toLowerCase();
+  return key === 'shoulders' ? 'side_delts' : key;
+}
+
+/**
+ * The personal reading (personalRecovery.learnPersonalRecovery), or null
+ * when it cannot be vouched for (see the header). Pure learner, best-effort
+ * reads.
+ */
+async function learnFromSessions({
+  userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
+}) {
+  const newest = sessions[sessions.length - 1];
+  // The history's shape: how many sessions and sets, the newest session, and
+  // the sum of weight x reps, so an edited set (same count, a corrected
+  // weight or rep count) re-runs the learner the same day.
+  let setCount = 0;
+  let workload = 0;
+  for (const session of sessions) {
+    for (const set of Array.isArray(session.sets) ? session.sets : []) {
+      setCount += 1;
+      const w = Number(set?.weight);
+      const r = Number(set?.actualReps ?? set?.actual_reps);
+      if (Number.isFinite(w) && Number.isFinite(r)) workload += w * r;
+    }
+  }
+  const key = [
+    userId, localDayKey(nowMs), recoveryRating, sessions.length, setCount, Math.round(workload * 100), newest?.id ?? '',
+  ].join('|');
+  if (personalMemo && personalMemo.key === key) return personalMemo.value;
+
+  const excluded = new Set();
+  try {
+    const capRows = await getCapabilityConstraints(userId);
+    // The block ledger's own precondition (blockLedgerRunner.js): no episode
+    // row, nothing is constrained.
+    if (Array.isArray(capRows) && capRows.some((r) => r?.role === 'episode')) {
+      // Lazy, as database.getAdaptiveLandmarkHistory requires it.
+      // eslint-disable-next-line global-require
+      const elig = require('../capability/eligibility');
+      for (const session of sessions) {
+        const startMs = Number(session.startedAt);
+        const endMs = Number(session.endedAt) > startMs ? Number(session.endedAt) : startMs + DEFAULT_SESSION_MS;
+        // No episode active across the session or the return period before
+        // it: nothing to scan the library for (anyEpisodeOverlap is the
+        // module's own fast pre-check, a superset of what the scan finds).
+        if (!elig.anyEpisodeOverlap(capRows, startMs - elig.REINTRODUCTION_CARRY_MS, endMs)) continue;
+        for (const muscle of elig.constrainedMusclesInWindow(capRows, exercises, startMs, endMs)) {
+          excluded.add(`${session.id}|${normaliseMuscleKey(muscle)}`);
+        }
+      }
+    }
+  } catch (e) {
+    logError('recovery.load.capabilityConstraints', e, { userId });
+    return null;
+  }
+  try {
+    const value = learnPersonalRecovery({
+      sessions, exerciseById, recoveryRating, nowMs, excluded,
+    });
+    personalMemo = { key, value };
+    return value;
+  } catch (e) {
+    logError('recovery.load.learnPersonalRecovery', e, { userId });
+    return null;
+  }
+}
+
+/** Test seam: forget the learner's memo. */
+export function __resetPersonalMemoForTests() {
+  personalMemo = null;
 }
 
 /**

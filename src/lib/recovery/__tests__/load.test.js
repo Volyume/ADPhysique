@@ -17,7 +17,10 @@
  * -> expo-notifications/react-native) are mocked; every pure lib module
  * (dayKey, algorithms, planVolumeTargets, muscleRecoveryModel, constants) is
  * the REAL one, matching this repo's "mock I/O, run the real engine"
- * convention (see muscleRecoveryModel.test.js).
+ * convention (see muscleRecoveryModel.test.js). The personal learner and the
+ * capability eligibility module are the real ones too, wrapped in spies so
+ * the wiring (what the loader hands the learner, and what it does with the
+ * answer) can be observed (register D210).
  */
 jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
 jest.mock('expo-notifications', () => ({
@@ -37,8 +40,18 @@ const mockDb = {
   getMesocycleWeeks: jest.fn(async () => []),
   getRoutineExercisesWithDetails: jest.fn(async () => []),
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
+  getCapabilityConstraints: jest.fn(async () => []),
 };
 jest.mock('../../database', () => mockDb);
+
+jest.mock('../personalRecovery', () => {
+  const actual = jest.requireActual('../personalRecovery');
+  return { ...actual, learnPersonalRecovery: jest.fn(actual.learnPersonalRecovery) };
+});
+jest.mock('../../capability/eligibility', () => {
+  const actual = jest.requireActual('../../capability/eligibility');
+  return { ...actual, constrainedMusclesInWindow: jest.fn(actual.constrainedMusclesInWindow) };
+});
 
 let mockStoreProfile = { recoveryRating: 'average' };
 jest.mock('../../../store/useAppStore', () => ({
@@ -49,8 +62,12 @@ jest.mock('../../../store/useAppStore', () => ({
 const {
   loadMuscleRecovery, loadPlannedSetsByRoutine, primarySetsFromRoutineRows,
   buildRecoverySession, pairSorenessNext, indexWeeks, medianHabitStartMinute,
+  __resetPersonalMemoForTests,
 } = require('../load');
 const { localWeekStartMs } = require('../../dayKey');
+const personalRecovery = require('../personalRecovery');
+const eligibility = require('../../capability/eligibility');
+const { PERSONAL_HISTORY_DAYS } = personalRecovery;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -64,7 +81,9 @@ beforeEach(() => {
   mockDb.getMesocycleWeeks.mockResolvedValue([]);
   mockDb.getRoutineExercisesWithDetails.mockResolvedValue([]);
   mockDb.getCompletedWorkoutStartTimestamps.mockResolvedValue([]);
+  mockDb.getCapabilityConstraints.mockResolvedValue([]);
   mockStoreProfile = { recoveryRating: 'average' };
+  __resetPersonalMemoForTests();
 });
 
 // ─── Pure helpers ───────────────────────────────────────────────────────────
@@ -77,9 +96,23 @@ describe('buildRecoverySession', () => {
     const session = buildRecoverySession(workout, [], { rirTarget: 2, isFirstWeek: true });
     expect(session).toEqual({
       id: 'w1', startedAt: 1000, endedAt: 2000, durationMinutes: 60, sets: [],
-      weekRirTarget: 2, isFirstWeek: true,
+      weekRirTarget: 2, isFirstWeek: true, isDeload: false, weekStatus: 'none',
       ratings: { fatigue: 4, joint: 2, sorenessNext: null },
     });
+  });
+
+  test('weekStatus (D210): none outside a plan, resolved when the week row was found, unresolved when it was not', () => {
+    expect(buildRecoverySession({ id: 'a', startedAt: 1 }, [], null).weekStatus).toBe('none');
+    expect(buildRecoverySession({ id: 'b', startedAt: 1, mesocycleWeekId: 'wk1' }, [], { rirTarget: 2, isFirstWeek: false })
+      .weekStatus).toBe('resolved');
+    expect(buildRecoverySession({ id: 'c', startedAt: 1, mesocycleWeekId: 'wk1' }, [], null).weekStatus).toBe('unresolved');
+  });
+
+  test('isDeload (D210) rides through from the week row, false when there is none', () => {
+    expect(buildRecoverySession({ id: 'a', startedAt: 1, mesocycleWeekId: 'wk6' }, [], {
+      rirTarget: 4, isFirstWeek: false, isDeload: true,
+    }).isDeload).toBe(true);
+    expect(buildRecoverySession({ id: 'b', startedAt: 1 }, [], null).isDeload).toBe(false);
   });
 
   test('joint discomfort falls back to the MAX across this session\'s own sets when the workout-level answer is absent', () => {
@@ -143,7 +176,7 @@ describe('pairSorenessNext', () => {
 describe('indexWeeks', () => {
   test('week_index 1 is always the first week', () => {
     const weeks = indexWeeks([{ id: 'wk1', week_index: 1, is_deload: 0, rir_target: 2 }]);
-    expect(weeks.get('wk1')).toEqual({ rirTarget: 2, isFirstWeek: true });
+    expect(weeks.get('wk1')).toEqual({ rirTarget: 2, isFirstWeek: true, isDeload: false });
   });
 
   test('a middle week (no preceding deload) is not a first week', () => {
@@ -151,7 +184,7 @@ describe('indexWeeks', () => {
       { id: 'wk1', week_index: 1, is_deload: 0, rir_target: 2 },
       { id: 'wk2', week_index: 2, is_deload: 0, rir_target: 1 },
     ]);
-    expect(weeks.get('wk2')).toEqual({ rirTarget: 1, isFirstWeek: false });
+    expect(weeks.get('wk2')).toEqual({ rirTarget: 1, isFirstWeek: false, isDeload: false });
   });
 
   test('the week immediately after a deload/recovery week IS a first week', () => {
@@ -258,8 +291,10 @@ describe('loadMuscleRecovery', () => {
     expect(result.map.chest.status).toBe('no_recent_session');
   });
 
-  test('a workout outside the fetch window (LOOKBACK_DAYS + 4) never contributes', async () => {
-    const startedAt = NOW - 30 * DAY_MS; // well past 14 + 4 days
+  test('a workout older than the model\'s own 14-day lookback never contributes to the reading', async () => {
+    // Inside the learner's wider history window (D210), which the loader
+    // reads, but the map re-applies its own LOOKBACK_DAYS cutoff.
+    const startedAt = NOW - 30 * DAY_MS;
     mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', userId: 'u1', isCompleted: 1, deletedAt: null, startedAt, endedAt: startedAt + 3600000 },
     ]);
@@ -354,7 +389,10 @@ describe('loadMuscleRecovery', () => {
     await loadMuscleRecovery('u1', NOW);
     const [userId, startMs, endMs] = mockDb.getCompletedWorkoutsBetween.mock.calls[0];
     expect(userId).toBe('u1');
-    expect(startMs).toBe(NOW - 18 * DAY_MS);
+    // The personal learner's history (D210): 84 days of pairs, a 28-day
+    // baseline gap and the 14-day lookback before that.
+    expect(PERSONAL_HISTORY_DAYS).toBe(126);
+    expect(startMs).toBe(NOW - PERSONAL_HISTORY_DAYS * DAY_MS);
     expect(endMs).toBe(NOW + 1);
   });
 
@@ -388,6 +426,153 @@ describe('loadMuscleRecovery', () => {
     const result = await loadMuscleRecovery('u1', NOW);
     expect(result.habitualWeekdays).toContain(new Date(monday(1)).getDay());
     expect(result.typicalStartMinute).toBe(18 * 60);
+  });
+});
+
+describe('loadMuscleRecovery: the personal factor (register D210)', () => {
+  const NOW = new Date(2026, 2, 16, 12, 0, 0).getTime();
+  const QUADS = [{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }];
+  const workout = (id, daysAgo) => {
+    const startedAt = NOW - daysAgo * DAY_MS;
+    return {
+      id, userId: 'u1', isCompleted: 1, deletedAt: null, startedAt, endedAt: startedAt + HOUR_MS, mesocycleId: null, mesocycleWeekId: null,
+    };
+  };
+  const quadSets = (workoutId) => [1, 2].map((n) => ({
+    id: `${workoutId}-s${n}`, workoutId, exerciseId: 'ex1', setType: 'straight', actualReps: 8, weight: 100, setNumber: n,
+  }));
+  const seed = (workouts) => {
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue(workouts);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue(QUADS);
+    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(workouts.flatMap((w) => quadSets(w.id)));
+  };
+
+  test('no userId: personal is null', async () => {
+    const result = await loadMuscleRecovery(null, NOW);
+    expect(result.personal).toBeNull();
+  });
+
+  test('the reading starts from the recovery answer and says why it has not moved', async () => {
+    seed([workout('w1', 2)]);
+    const result = await loadMuscleRecovery('u1', NOW);
+    expect(result.personal).toEqual({
+      factor: 1, prior: 1, pairs: 0, reason: 'too_few', pairsByMuscle: {},
+    });
+    mockStoreProfile = { recoveryRating: 'poor' };
+    __resetPersonalMemoForTests();
+    const poor = await loadMuscleRecovery('u1', NOW);
+    expect(poor.personal).toEqual({
+      factor: 1.15, prior: 1.15, pairs: 0, reason: 'too_few', pairsByMuscle: {},
+    });
+  });
+
+  test('an adjusted factor takes the answer\'s place in the map; any other reason leaves the map as the answer reads it', async () => {
+    seed([workout('w1', 1)]); // still recovering at either factor
+    const baseline = await loadMuscleRecovery('u1', NOW);
+
+    __resetPersonalMemoForTests();
+    personalRecovery.learnPersonalRecovery.mockReturnValueOnce({ factor: 1.4, prior: 1, pairs: 30, reason: 'adjusted' });
+    const slower = await loadMuscleRecovery('u1', NOW);
+    expect(slower.personal.reason).toBe('adjusted');
+    expect(slower.map.quads.recoveredPercent).toBeLessThan(baseline.map.quads.recoveredPercent);
+    expect(slower.map.quads.readyAtMs).toBeGreaterThan(baseline.map.quads.readyAtMs);
+
+    __resetPersonalMemoForTests();
+    personalRecovery.learnPersonalRecovery.mockReturnValueOnce({ factor: 1.4, prior: 1, pairs: 30, reason: 'not_clear' });
+    const unchanged = await loadMuscleRecovery('u1', NOW);
+    expect(unchanged.map.quads.recoveredPercent).toBe(baseline.map.quads.recoveredPercent);
+    expect(unchanged.map.quads.readyAtMs).toBe(baseline.map.quads.readyAtMs);
+  });
+
+  test('the learner runs once per user, day, answer and history, and again when any of them changes', async () => {
+    seed([workout('w1', 3)]);
+    await loadMuscleRecovery('u1', NOW);
+    await loadMuscleRecovery('u1', NOW + HOUR_MS);
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(1);
+
+    seed([workout('w1', 3), workout('w2', 1)]); // a new session
+    await loadMuscleRecovery('u1', NOW + HOUR_MS);
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(2);
+
+    await loadMuscleRecovery('u1', NOW + DAY_MS); // the next day
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(3);
+
+    mockStoreProfile = { recoveryRating: 'good' }; // a new answer
+    await loadMuscleRecovery('u1', NOW + DAY_MS);
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(4);
+
+    await loadMuscleRecovery('u2', NOW + DAY_MS); // another user
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(5);
+  });
+
+  test('an edited set (same count, a corrected weight) re-runs the learner the same day', async () => {
+    seed([workout('w1', 3)]);
+    await loadMuscleRecovery('u1', NOW);
+    await loadMuscleRecovery('u1', NOW);
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(1);
+    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(
+      quadSets('w1').map((s, i) => (i === 0 ? { ...s, weight: 102.5 } : s)),
+    );
+    await loadMuscleRecovery('u1', NOW);
+    expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failed injury-limit read skips the learner for this read: personal null, the map intact and not degraded', async () => {
+    seed([workout('w1', 2)]);
+    mockDb.getCapabilityConstraints.mockRejectedValue(new Error('locked'));
+    const result = await loadMuscleRecovery('u1', NOW);
+    expect(result.personal).toBeNull();
+    expect(result.degraded).toBe(false);
+    expect(result.map.quads.status).not.toBe('no_recent_session');
+    expect(personalRecovery.learnPersonalRecovery).not.toHaveBeenCalled();
+  });
+
+  test('a learner that throws leaves personal null and the map reading with the answer alone', async () => {
+    seed([workout('w1', 2)]);
+    const baseline = await loadMuscleRecovery('u1', NOW);
+    __resetPersonalMemoForTests();
+    personalRecovery.learnPersonalRecovery.mockImplementationOnce(() => { throw new Error('boom'); });
+    const result = await loadMuscleRecovery('u1', NOW);
+    expect(result.personal).toBeNull();
+    expect(result.map.quads.recoveredPercent).toBe(baseline.map.quads.recoveredPercent);
+  });
+
+  test('a degraded read never runs the learner', async () => {
+    mockDb.getCompletedWorkoutsBetween.mockRejectedValue(new Error('db locked'));
+    const result = await loadMuscleRecovery('u1', NOW);
+    expect(result.degraded).toBe(true);
+    expect(result.personal).toBeNull();
+    expect(personalRecovery.learnPersonalRecovery).not.toHaveBeenCalled();
+  });
+
+  test('a session under an injury limit, or in the return period after one, is handed to the learner as excluded for that muscle', async () => {
+    seed([workout('w_old', 60), workout('w_new', 2)]);
+    const episodeStart = NOW - 5 * DAY_MS;
+    mockDb.getCapabilityConstraints.mockResolvedValue([
+      { id: 'c1', role: 'episode', startsAt: episodeStart, endedAt: null, deletedAt: null },
+    ]);
+    // The scan itself is eligibility's own (tested there); here it reports
+    // the legacy 'shoulders' key, which the loader normalises as the
+    // volume allocator does.
+    eligibility.constrainedMusclesInWindow.mockImplementation((rows, library, fromMs) => (
+      fromMs >= episodeStart - eligibility.REINTRODUCTION_CARRY_MS ? new Set(['Shoulders', 'quads']) : new Set()
+    ));
+    await loadMuscleRecovery('u1', NOW);
+    const { excluded } = personalRecovery.learnPersonalRecovery.mock.calls[0][0];
+    expect([...excluded].sort()).toEqual(['w_new|quads', 'w_new|side_delts']);
+    // The session two months before the episode never reached the scan.
+    const scannedFrom = eligibility.constrainedMusclesInWindow.mock.calls.map((c) => c[2]);
+    expect(scannedFrom).toEqual([NOW - 2 * DAY_MS]);
+    eligibility.constrainedMusclesInWindow.mockReset();
+    eligibility.constrainedMusclesInWindow.mockImplementation(jest.requireActual('../../capability/eligibility').constrainedMusclesInWindow);
+  });
+
+  test('no episode row: nothing is scanned and nothing excluded', async () => {
+    seed([workout('w1', 2)]);
+    mockDb.getCapabilityConstraints.mockResolvedValue([{ id: 'c2', role: 'rule', startsAt: NOW - DAY_MS }]);
+    await loadMuscleRecovery('u1', NOW);
+    expect(eligibility.constrainedMusclesInWindow).not.toHaveBeenCalled();
+    expect(personalRecovery.learnPersonalRecovery.mock.calls[0][0].excluded.size).toBe(0);
   });
 });
 

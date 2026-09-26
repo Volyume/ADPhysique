@@ -25,7 +25,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const FILES = ['nextLikelyTrainingTime', 'nextWorkoutRecommendation', 'sequenceSessions'];
+// personalRecovery (register D210): the personal learner is engine code too.
+const FILES = ['nextLikelyTrainingTime', 'nextWorkoutRecommendation', 'sequenceSessions', 'personalRecovery'];
 
 /** `src` with block and line comments removed (a "//" inside a URL is
  * kept: only a "//" not preceded by ":" starts a line comment here). */
@@ -44,7 +45,7 @@ const FORBIDDEN = [
   'async-storage',
 ];
 
-describe('purity (source guard): nextLikelyTrainingTime, nextWorkoutRecommendation, sequenceSessions', () => {
+describe('purity (source guard): nextLikelyTrainingTime, nextWorkoutRecommendation, sequenceSessions, personalRecovery', () => {
   for (const name of FILES) {
     const src = codeOnly(fs.readFileSync(path.join(__dirname, '..', `${name}.js`), 'utf8'));
 

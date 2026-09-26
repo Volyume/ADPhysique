@@ -185,6 +185,24 @@ function peakResidual(contributingSessions) {
   return Math.max(FATIGUE_UNIT_MIN, residualAt(contributingSessions, last.endMs));
 }
 
+/**
+ * The recovered FRACTION at `atMs` (0 to 1, unrounded): the same reading as
+ * `readingAt`'s percent, without the ready-by walk. 1 when nothing
+ * contributes. Used by the personal learner (personalRecovery.js, register
+ * D210), which reads this curve at the start of many past sessions and
+ * needs neither rounding nor a ready-by instant.
+ *
+ * @param {Array<{endMs:number, sets:number, hoursT:number}>} contributingSessions
+ *   sorted by endMs, each ending at or before atMs
+ * @param {number} atMs
+ * @returns {number}
+ */
+export function recoveredFractionAt(contributingSessions, atMs) {
+  if (!Array.isArray(contributingSessions) || !contributingSessions.length) return 1;
+  const peak = peakResidual(contributingSessions);
+  return clamp(0, 1, 1 - residualAt(contributingSessions, atMs) / peak);
+}
+
 /** recoveredPercent, status and readyAtMs at `atMs`, relative to the peak. */
 function readingAt(contributingSessions, atMs) {
   const peak = peakResidual(contributingSessions);
@@ -237,11 +255,17 @@ function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContribu
  *   answer; unknown reads as average (constants.ratingFactor).
  * @param {number} params.nowMs - the caller's "now"; never read from a clock
  *   here.
+ * @param {number|null} [params.personalFactor] - register D210: the factor
+ *   personalRecovery.js learned from the athlete's own lifts, when it moved
+ *   from the start. It takes the place of the recovery answer's factor in
+ *   every session's length. Absent: the map reads exactly as before.
  * @returns {object} { [muscle]: { muscle, recoveredPercent, status,
  *   readyAtMs, lastSessionEndMs, lastSessionSets, basis,
  *   contributingSessions } }
  */
-export function buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs } = {}) {
+export function buildMuscleRecoveryMap({
+  sessions, exerciseById, recoveryRating, nowMs, personalFactor = null,
+} = {}) {
   const sessionList = Array.isArray(sessions) ? sessions : [];
   const loads = sessionMuscleLoads(sessionList, exerciseById);
 
@@ -262,6 +286,7 @@ export function buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating,
         rirTarget: session.weekRirTarget,
         firstWeek: session.isFirstWeek,
         ratings: session.ratings,
+        personalFactor,
       });
       if (feedbackFactor(session.ratings ?? {}) > 1) anyRatingsContributed = true;
       contributing.push({ workoutId: load.workoutId, endMs: load.endMs, sets: rawSets, hoursT });

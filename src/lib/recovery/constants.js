@@ -146,6 +146,82 @@ export const DEFAULT_SESSION_MINUTES = 60;
 /** Used to project "your next session" when the habit gives a day but no time. */
 export const DEFAULT_TRAINING_START_MINUTE = 18 * 60;
 
+/*
+ * PERSONAL RECOVERY LEARNING (register D210; spec
+ * docs/recovery-programme-2026-09-25/14-PERSONAL-LEARNING-V2.md). The learner
+ * is src/lib/recovery/personalRecovery.js; its numbers live here with the
+ * rest of the model's. The learned figure is the person's own recovery
+ * factor, which takes the place of the recovery answer's factor in
+ * recoveryHours for every muscle; it starts at that answer's factor and
+ * moves only when the athlete's own lifts clearly show a different recovery
+ * time.
+ */
+
+/** Sessions older than this teach nothing (about three training blocks). */
+export const PERSONAL_WINDOW_DAYS = 84;
+
+/** A lift's earlier session counts as its baseline only inside this gap. */
+export const PERSONAL_BASELINE_MAX_GAP_DAYS = 28;
+
+/** Performance compares the first sets of a lift, matched in number: at most this many. */
+export const PERSONAL_MATCHED_SETS = 3;
+
+/** The factors the fit chooses from, 5% apart; every recovery answer's factor is on the grid. */
+export const PERSONAL_FACTOR_MIN = 0.75;
+export const PERSONAL_FACTOR_MAX = 1.4;
+export const PERSONAL_FACTOR_GRID = Object.freeze(
+  Array.from({ length: 14 }, (_, i) => Math.round((PERSONAL_FACTOR_MIN + i * 0.05) * 100) / 100),
+);
+
+/**
+ * How much performance a muscle loses between fully fatigued and fully
+ * recovered, as a fraction: a BOUNDED ASSUMPTION, not a measurement. A 4% to
+ * 15% decrement right after a hard session spans Goulart 2021 (volume load
+ * down at 24 h after squats and leg press to failure), Moran-Navarro 2017
+ * (mechanical function reduced up to 48 h after sets to failure) and Ferreira
+ * 2017 (repeated best efforts not possible within 96 h after high-volume
+ * bench). The lower bound is what makes the question answerable: a factor
+ * that predicts a drop the lifts never show must pay for it in the fit.
+ */
+export const PERFORMANCE_SENSITIVITY_MIN = 0.04;
+export const PERFORMANCE_SENSITIVITY_MAX = 0.15;
+
+/**
+ * A change bigger than this between two sessions of the same lift at the
+ * same effort (as a log ratio, about 22%) is not read as recovery: the
+ * model's own largest recovery effect is PERFORMANCE_SENSITIVITY_MAX, so a
+ * jump past this is a logging slip (a weight typed as 1000), a changed
+ * set-up or an unlogged injury, and least squares would let one such pair
+ * outweigh a dozen honest ones.
+ */
+export const PERSONAL_MAX_CHANGE = 0.2;
+
+/** Fewer comparable pairs than this, across the person's lifts: not yet. */
+export const PERSONAL_MIN_PAIRS = 8;
+
+/** A muscle's pairs count only from this many: its own drift (an offset
+ * and a per-day gain) and sensitivity are fitted, three numbers, and fewer
+ * pairs than this leave almost nothing to test them against. */
+export const PERSONAL_MIN_MUSCLE_PAIRS = 5;
+
+/** The pairs must sit at different predicted recovery (the pooled
+ * standard deviation of the predicted change, as a fraction, for some
+ * candidate): a steady schedule carries no information about recovery time,
+ * and says so. */
+export const PERSONAL_MIN_SPREAD = 0.1;
+
+/** How clearly the best factor must beat the start before it is used:
+ * pairs x ln(SSE at the start / SSE at the best). Set by the calibration
+ * simulation (personalRecovery.simulation.test.js), run in full
+ * (PERSONAL_CALIBRATION=full, 600 simulated athletes a cell, 2026-09-26):
+ * at 12, on the worst schedule, a person whose true recovery equals the
+ * start is shown a direction 17 times in 600 (2.8%) and one who truly
+ * recovers faster or slower is shown the wrong one 3 times in 600 (0.5%);
+ * at 10 the first was 4.5%, too near the 5% the spec promises to hold on a
+ * 60-athlete run. The everyday run of the suite checks both promises at
+ * this gate. */
+export const PERSONAL_LR_MIN = 12;
+
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 
 /**
@@ -210,15 +286,26 @@ export function feedbackFactor({ sorenessNext = null, fatigue = null, joint = nu
  * @param {number|null} [opts.rirTarget] - the block week's RIR target
  * @param {boolean} [opts.firstWeek] - week 1 of a block, or the first after a recovery week
  * @param {object} [opts.ratings] - see feedbackFactor
+ * @param {number|null} [opts.personalFactor] - register D210: the factor
+ *   learned from the athlete's own lifts (personalRecovery.js). When given
+ *   it takes the place of the recovery answer's factor (it started there),
+ *   clamped to [PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX].
  * @returns {number} hours, clamped to [RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX]
  */
 export function recoveryHours(muscle, {
   sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
+  personalFactor = null,
 } = {}) {
   const base = BASE_RECOVERY_HOURS[muscle] ?? Math.max(...Object.values(BASE_RECOVERY_HOURS));
+  // The absent-value trap intensityFactor guards: Number(null) is 0.
+  const learned = personalFactor === null || personalFactor === undefined || personalFactor === ''
+    ? NaN : Number(personalFactor);
+  const personal = Number.isFinite(learned) && learned > 0
+    ? clamp(PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, learned)
+    : ratingFactor(recoveryRating);
   const hours = base
     * doseFactor(sets)
-    * ratingFactor(recoveryRating)
+    * personal
     * intensityFactor(rirTarget)
     * (firstWeek ? FIRST_WEEK_FACTOR : 1.0)
     * feedbackFactor(ratings ?? {});
