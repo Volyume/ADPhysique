@@ -60,6 +60,16 @@ export const WHATS_NEW = {
     { icon: 'trophy-outline', text: 'Personal records show every time you beat your best, including the first time you meet an exercise.' },
     { icon: 'stats-chart-outline', text: 'Your weekly volume targets come from your own plan and profile, not a general starting table.' },
   ],
+  // 2.3.0 (founder's number, D203). The first line is the in-app notice both
+  // privacy policy copies promise for a material change ("we ... notify
+  // signed-in users in the app"): the policy gained its Community section on
+  // 2026-09-26 (register D194 addendum 2). The other two are the changes a
+  // user would notice without being told where to look (D208, D206).
+  '2.3.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'battery-charging-outline', text: 'Recovery has its own place. Tap Recovery at the top of Progress to see how each muscle is recovering.' },
+    { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
