@@ -1,10 +1,12 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useToast } from '../components/Toast';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native';
+import { loadMuscleRecovery } from '../lib/recovery/load';
+import { buildRecoveryPillarCopy } from '../lib/recovery/recoveryPillar';
 import { format } from 'date-fns/format';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
@@ -155,6 +157,24 @@ export default function AnalyticsScreen({ navigation, route }) {
   // inside the hook); only fetches scan data for a Pro user once suppression
   // is confirmed lifted.
   const visualPillar = useVisualPillar(user?.id, tier);
+
+  // Register D208: the Recovery row's own read, the same per-muscle estimate
+  // the Recovery screen draws. undefined while loading, the loader's result
+  // after (its `degraded` shape on a failed read); refreshed on every focus
+  // so the row agrees with a session just logged.
+  const [recoveryLoad, setRecoveryLoad] = useState(undefined);
+  useFocusEffect(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useCallback(() => {
+      let cancelled = false;
+      if (!user?.id) { setRecoveryLoad(null); return undefined; }
+      loadMuscleRecovery(user.id)
+        .then((r) => { if (!cancelled) setRecoveryLoad(r ?? null); })
+        .catch(() => { if (!cancelled) setRecoveryLoad(null); });
+      return () => { cancelled = true; };
+    }, [user?.id]),
+  );
+  const recoveryCopy = useMemo(() => buildRecoveryPillarCopy(recoveryLoad), [recoveryLoad]);
 
   // Founder device order 2026-08-17: the lifetime-tonnage landmark Moment
   // (the last survivor of the COMP-018 landmark family) is retired - it sat
@@ -350,6 +370,19 @@ export default function AnalyticsScreen({ navigation, route }) {
                   />
                 </>
               )}
+              {/* Register D208 (founder question 2026-09-26: "a place in
+                  Progress exclusively for recovery ... it looks like a good
+                  feature now hard to find"): Recovery joins the top card,
+                  after the rows that were already there (their order is
+                  unchanged), and opens the Recovery screen. */}
+              <View style={[styles.answerDivider, live.answerDivider]} />
+              <PillarRow
+                icon="battery-charging-outline"
+                label="Recovery"
+                stateText={recoveryCopy.state}
+                evidenceText={recoveryCopy.evidence}
+                onPress={() => navigation.navigate('Recovery')}
+              />
             </Card>
           </AnimatedEntrance>
         )}

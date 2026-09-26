@@ -58,18 +58,17 @@ jest.mock('../../components/ProgressSections', () => ({
 // onRateLastSession callback ConsistencyScreen passes it, so this suite
 // can press it and see where the screen navigates. Not the component
 // under test here (that is ReadinessCards.rateLastSession.test.js).
-const RATE_PARAMS = { workoutId: 'w-last', durationMinutes: 30, readOnly: true, allowRating: true };
+// RE-ANCHORED 2026-09-26 (register D208, founder question "a place in
+// Progress exclusively for recovery"): the Recovery section, and with it the
+// rate-last-session control, moved to RecoveryScreen (its wiring is pinned in
+// RecoveryScreen.rateLastSession.test.js). Consistency now mounts the
+// milestone-only card, with no callback. The stub records its props.
+let mockCardsProps = null;
 jest.mock('../../components/ReadinessCards', () => {
-  const { TouchableOpacity, Text } = require('react-native');
-  return function MockReadinessCards({ onRateLastSession }) {
-    return (
-      <TouchableOpacity
-        accessibilityLabel="mock-rate-last-session"
-        onPress={() => onRateLastSession(RATE_PARAMS)}
-      >
-        <Text>mock ReadinessCards</Text>
-      </TouchableOpacity>
-    );
+  const { Text } = require('react-native');
+  return function MockReadinessCards(props) {
+    mockCardsProps = props;
+    return <Text accessibilityLabel="mock-readiness-cards">mock ReadinessCards</Text>;
   };
 });
 
@@ -104,23 +103,22 @@ function render(navigation) {
   return tree;
 }
 
-describe('ConsistencyScreen wires ReadinessCards.onRateLastSession to WorkoutSummary (F3, P3(a))', () => {
+describe('ConsistencyScreen mounts the milestone only (D208: the Recovery section moved)', () => {
   beforeEach(() => {
     mockProgressState = { ...baseProgress };
+    mockCardsProps = null;
   });
 
-  test('pressing the rate-last-session control navigates to WorkoutSummary with the params ReadinessCards handed it', () => {
-    const navigation = { navigate: jest.fn() };
-    const tree = render(navigation);
-    const control = tree.root.findByProps({ accessibilityLabel: 'mock-rate-last-session' });
-    act(() => { control.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledTimes(1);
-    expect(navigation.navigate).toHaveBeenCalledWith('WorkoutSummary', RATE_PARAMS);
+  test('ReadinessCards is mounted for the milestone, with no rate-last-session callback', () => {
+    const tree = render({ navigate: jest.fn() });
+    tree.root.findByProps({ accessibilityLabel: 'mock-readiness-cards' });
+    expect(mockCardsProps.sections).toBe('milestone');
+    expect(mockCardsProps.onRateLastSession).toBeUndefined();
   });
 
   test('ReadinessCards is not mounted while the screen has no data yet', () => {
     mockProgressState = { ...baseProgress, hasData: false };
     const tree = render({ navigate: jest.fn() });
-    expect(() => tree.root.findByProps({ accessibilityLabel: 'mock-rate-last-session' })).toThrow();
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'mock-readiness-cards' })).toThrow();
   });
 });

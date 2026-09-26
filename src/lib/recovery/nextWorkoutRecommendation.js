@@ -78,7 +78,7 @@ import { sessionReadiness } from './sessionReadiness';
 // small, low-stakes copy table -- not a product ruling -- kept local to this
 // module's own sentence-building so it is trivial for the lead to adjust.
 const SINGULAR_MUSCLE_KEYS = new Set(['chest', 'back', 'neck', 'tibialis']);
-function muscleVerb(muscleKey) {
+export function muscleVerb(muscleKey) {
   return SINGULAR_MUSCLE_KEYS.has(muscleKey) ? 'is' : 'are';
 }
 

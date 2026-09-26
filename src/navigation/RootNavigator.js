@@ -115,6 +115,8 @@ const SettingsAboutScreen = lazyScreen(() => require('../screens/SettingsAboutSc
 const SettingsFaqScreen = lazyScreen(() => require('../screens/SettingsFaqScreen').default);
 const LiftProgressScreen = lazyScreen(() => require('../screens/LiftProgressScreen').default);
 const ConsistencyScreen = lazyScreen(() => require('../screens/ConsistencyScreen').default);
+// D208: the Recovery section's own screen, opened from the Recovery row on Progress.
+const RecoveryScreen = lazyScreen(() => require('../screens/RecoveryScreen').default);
 const YouScreen = lazyScreen(() => require('../screens/YouScreen').default);
 const AthleteProfileScreen = lazyScreen(() => require('../screens/AthleteProfileScreen').default);
 const PlansScreen = lazyScreen(() => require('../screens/PlansScreen').default);
@@ -594,6 +596,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Recovery" component={RecoveryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />

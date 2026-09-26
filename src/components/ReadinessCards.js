@@ -220,7 +220,16 @@ function compareMuscleNames(a, b) {
 // fork on `tier` (muscle freshness, the recovery-trend insight, and the
 // learning-promise tooltip copy); the component no longer takes a tier prop
 // and always runs the full behaviour.
-export default function ReadinessCards({ userId, onRateLastSession }) {
+// Founder question 2026-09-26 ("Should we have a place in Progress
+// exclusively for recovery rather than it being hidden behind a button for
+// consistency?"), ruled by the lead (register D208): the Recovery section
+// moves to its own screen, reached from a Recovery row in the top card on
+// Progress. `sections` picks what this component draws: 'all' (the old
+// single block), 'milestone' (Consistency: the sessions milestone only) or
+// 'recovery' (the Recovery screen: the section exactly as it was, same
+// order, headed "Your ratings" because the screen itself is titled
+// "Recovery"). The recovery reads are skipped when they would not be drawn.
+export default function ReadinessCards({ userId, onRateLastSession, sections = 'all' }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -314,6 +323,9 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
         joint: gaugeRecent.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
       });
     } catch (_) {}
+
+    // Consistency draws only the milestone, which needs nothing below.
+    if (sections === 'milestone') return;
 
     try {
       const data = await getLastTrainedPerMuscle(userId);
@@ -421,7 +433,7 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
       setMuscleRecovery(null);
       setRecoveryRecommendation(null);
     }
-  }, [userId]);
+  }, [userId, sections]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -517,7 +529,7 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
       {/* Milestone progress */}
-      {(lastUnlocked || next) && (
+      {sections !== 'recovery' && (lastUnlocked || next) && (
         <View style={[styles.milestoneCard, live.milestoneCard]}>
           <View style={styles.milestoneTop}>
             {lastUnlocked && (
@@ -547,9 +559,10 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
       )}
 
       {/* Recovery: the signals and muscle readiness folded into one block. */}
+      {sections !== 'milestone' && (
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <SectionLabel>Recovery</SectionLabel>
+          <SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>
           <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable." />
         </View>
         <View style={[styles.recoveryCard, live.recoveryCard]}>
@@ -682,6 +695,7 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
           </View>
         )}
       </View>
+      )}
     </AnimatedEntrance>
   );
 }

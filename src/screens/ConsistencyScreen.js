@@ -28,8 +28,9 @@ import { useShallow } from 'zustand/react/shallow';
 // session length, how often each muscle gets hit, and the 12-week calendar.
 // Pulled off the Progress landing so the landing reads as a hub, not a wall.
 export default function ConsistencyScreen({ navigation }) {
-  const { user, tier } = useAppStore(useShallow(s => ({
-    user: s.user, tier: s.tier,
+  // D208: tier went with the Recovery section (ReadinessCards never read it).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
   })));
   const {
     activeMeso, mesoTonnage, mesoProgress, mesoCurrentWeek,
@@ -169,12 +170,15 @@ export default function ConsistencyScreen({ navigation }) {
         </AnimatedEntrance>
         ) : null}
 
-        {/* ── Recovery signals ── */}
+        {/* ── Sessions milestone ──
+            Register D208 (founder question 2026-09-26, "a place in Progress
+            exclusively for recovery"): the Recovery section moved to its own
+            screen, reached from the Recovery row in the top card on Progress.
+            Only the sessions milestone stays here, where it always sat. */}
         {!loading && hasData ? (
           <ReadinessCards
             userId={user?.id}
-            tier={tier}
-            onRateLastSession={(params) => navigation.navigate('WorkoutSummary', params)}
+            sections="milestone"
           />
         ) : null}
 
@@ -221,7 +225,9 @@ const styles = StyleSheet.create({
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
   },
-  deloadTitle: { ...type.bodyStrong, color: colors.warning, marginBottom: spacing.xxs },
+  // D204 addendum 2: the fatigue banner is a neutral description, so its
+  // title takes the text colour, not the warning colour.
+  deloadTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
   deloadSub: { ...type.bodySm, color: colors.textSecondary },
 });
 
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    deloadTitle: { ...t.type.bodyStrong, color: t.colors.warning },
+    deloadTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     deloadSub: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }
