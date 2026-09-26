@@ -32,7 +32,7 @@ import {
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import {
-  PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, PERSONAL_MIN_PAIRS, REFERENCE_SETS, recoveryHours,
+  PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, PERSONAL_MIN_PAIRS, PERSONAL_MIN_MUSCLE_PAIRS, REFERENCE_SETS, recoveryHours,
 } from '../lib/recovery/constants';
 import { personalDirection } from '../lib/recovery/personalRecovery';
 
@@ -162,7 +162,7 @@ export function recoveryLearningCopy(personal) {
   return {
     state: 'learning',
     headline: 'Still learning',
-    body: `Each exercise is compared with the same exercise on the same day in an earlier week. Learning starts once there are ${PERSONAL_MIN_PAIRS} of these comparisons.`,
+    body: `Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons count once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts when ${PERSONAL_MIN_PAIRS} count.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },
@@ -285,7 +285,7 @@ export default function RecoveryLearningCard({ personal = null }) {
             <View style={[styles.progressFill, live.progressFill, { width: progressPct }]} />
           </View>
           <Text style={[styles.meta, live.meta]}>
-            {`${copy.progress.done} of ${copy.progress.needed} comparisons so far`}
+            {`${copy.progress.done} of ${copy.progress.needed} counted so far`}
           </Text>
         </View>
       ) : null}

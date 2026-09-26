@@ -477,6 +477,18 @@ describe('the fit (spec sections 4 and 5)', () => {
   });
 });
 
+describe('reps that repeat: exactly half is enough to leave a lift out', () => {
+  test('a lift whose comparisons repeat the same reps in exactly half of them is left out', () => {
+    // Five Mondays: 8, 8, 9, 9, 10 reps a set. Four comparisons, two of them
+    // the same reps set for set: exactly PERSONAL_MAX_FIXED_REPS_SHARE.
+    expect(PERSONAL_MAX_FIXED_REPS_SHARE).toBe(0.5);
+    const sessions = [8, 8, 9, 9, 10].map((reps, i) => session(`m${i}`, 35 - i * 7, benchSets(100, reps)));
+    const evidence = personalRecoveryEvidence({ sessions, exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
+    expect(evidence.fixedRepsPairs).toBe(4);
+    expect(comparablePairs({ sessions, exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
+  });
+});
+
 describe('personalDirection', () => {
   test('adjusted reads as faster or slower; anything else as its reason; nothing as null', () => {
     expect(personalDirection({ factor: 0.85, prior: 1, reason: 'adjusted' })).toBe('faster');

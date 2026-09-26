@@ -138,7 +138,7 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few' }));
     expect(copy.state).toBe('learning');
     expect(copy.headline).toBe('Still learning');
-    expect(copy.body).toBe(`Each exercise is compared with the same exercise on the same day in an earlier week. Learning starts once there are ${PERSONAL_MIN_PAIRS} of these comparisons.`);
+    expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons count once it has 5, and learning starts when 8 count.');
     expect(copy.progress).toEqual({ done: 5, needed: PERSONAL_MIN_PAIRS });
     expect(copy.evidence).toBeNull();
   });
@@ -251,7 +251,7 @@ describe('rendering', () => {
     const shown = texts(tree);
     expect(shown).toContain('First estimate');
     expect(shown).toContain('Still learning');
-    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} comparisons so far`);
+    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} counted so far`);
     expect(shown).not.toContain('You');
   });
 

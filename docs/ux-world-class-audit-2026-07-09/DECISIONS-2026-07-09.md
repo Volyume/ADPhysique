@@ -10972,10 +10972,12 @@ recovery equals the start, at most 1 in 600 the wrong one. Lowering the
 gate to recover reach was refused by the session's safety check and is not
 pursued. The honest result: in twelve weeks it almost never moves anyone;
 the card shows "Still learning" or "Not learning yet" with the reason.
-Open, minor: the "Still learning" line does not say a muscle needs 5
-comparisons before they count, and six memo-key fields have no test of
-their own (the review's N3 and N4; their test edits were refused by the
-same check).
+The review's N3 and N4, done later the same day on the founder's word ("Do
+the small"): the "Still learning" line now says "A muscle's comparisons
+count once it has 5, and learning starts when 8 count." with "N of 8
+counted so far"; each memo-key field has its own same-day test, the scan
+runs only when its inputs change (tested), and a lift repeating its reps in
+exactly half its comparisons is left out (tested).
 
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
