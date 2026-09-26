@@ -10196,3 +10196,93 @@ on an amber-tinted backing is neutral now, so amber on this screen is the
 committing action alone. Noted by the review and left: the label "Your
 meal plan" above the receipt's sentence is new copy of the lead's, a
 label rather than coaching text. Landed `182e976e`.
+
+**Second correction (founder, the same day, on the restyled screen).**
+Verbatim: "You've just given me the coaching decision screen with the
+same issues as before. For example in Your Week. There's different
+styles of fonts and sizes and absolutely no clarity what the difference
+is. Why is there a mismatch? Is one a heading? Some text bigger than the
+seeming heading. Did you do anything here!?" The lead's first pass had
+changed the chrome and kept the type inside the cards: an 11-point caps
+label as a card's only heading over 16-point sentences, and grey 13-point
+lines floating between white ones with no visible reason. The type rule,
+now explicit and built by the lead's hand: a card's NAME is a title
+(`type.title`, the text colour, one `CardTitle` component); an EYEBROW
+(the overline) names a group inside a card or a section of the page
+above a card, never a card's only heading; a STATEMENT is `type.body` in
+the text colour; an EXPLANATION of the line above it is `bodySm` in the
+secondary colour, indented behind a hairline rule (`explainLine`) so the
+relationship is visible. Applied across Your week, What we held this
+week, Next check-in, Focus this week, the meal-plan cards, the
+progress-photo card, the lead card, the Nutrition and Training cards and
+Why this week; coaching copy unchanged. Superseded before landing by the
+redesign below.
+
+**The redesign (founder, the same day; lead, hands-on).** Verbatim: "Make
+it a consistently look and feel as I said. There's really no clarity on
+the whole screen. Use your eyes", "Are you really trying to pass that as
+well designed! It's still a fucking mismatch mess!!!!", "It's the worst
+screen in the entire app by miles! Look at what is in use elsewhere don't
+just guess and assume and make little tweaks you think with the least work
+will pass. Redesign it in line with the rest of the app this is meant to
+be an elite product", with the answers "Just bump to 2.3.0", "Cut the
+duplicate" and "A" (fix the other ghost buttons). The lead's diagnosis:
+the fault was never the fonts alone. The screen rendered the Campaign 18
+story (one account of the week) AND the older narrators it was built to
+replace (the stat chips, the coach's acknowledgement and trend read, the
+working/off ledger, the why block, the focus cue, the next-read card), so
+each fact printed three to five times in different shapes. Rulings (D33):
+
+1. **One source per fact.** The decision (hold, nothing to change, or the
+   hero adjustment with Apply) and its reason are the decision card. The
+   week's facts are the "Your week" rows, built by
+   `viewCopy.buildWeekRows` from the facts the screen already holds
+   (sessions, main lifts, PRs, the 7-day trend, the coaching rate, food
+   logged, the check-in's calorie, energy, soreness and sleep answers,
+   joints, recovery). What stayed and why is the engine's held-decision
+   list ("What we held"), because it also carries the safety holds. What
+   comes next is the reintroduction ramp's own lines and the coach's
+   forward line in the user's register. The last change's outcome
+   (Campaign 18) leads the decision card's footer. Retired from this
+   screen: the chips, the lead card (acknowledgement, trend read,
+   commitment answer), the ledger, the story's happened/means/staying/
+   watching lists, the why block, the focus cue and the pre-commitment
+   line; the builders stay in their libraries (`buildOffItems` and
+   `buildFocus` have no screen caller now, noted as dead code).
+2. **Only the app's own shapes, named.** The decision card is Today's
+   elevated hero: the week as its muted eyebrow, the decision at h2 (the
+   one loud line), the reason, the outcome, the confidence line, one
+   "How this decision was made" link. A change week's hero adjustment card
+   takes the same eyebrow and footer. Sections are the Coach tab's own: a
+   SectionLabel over one card. Data rows are the Weekly check-in's
+   grammar (small grey glyph, grey name, white value, a status mark) at
+   the app's row size. Rows that take you somewhere are the shared
+   SettingRow with its amber box, so amber keeps one meaning: "this goes
+   somewhere", plus the committing Apply. The actionable adjustment row
+   keeps its amber box for the same reason (the earlier neutralising is
+   reversed).
+3. **Marks are sparse and never on body weight or food.** Training effort
+   may be marked done or short; a wellbeing answer worth a look is marked;
+   the 7-day trend, the coaching rate, food logged and calories never
+   carry a mark (styling HARD RULES; conservative on food). The coaching
+   rate is signed like the 7-day row ("+0.28%/wk") from the engine's own
+   `coachingRatePct`.
+4. **Duplicate doors closed.** The held card's "See how Precision
+   Coaching decides" and the why block's link were two doors to one
+   screen: one link, on the decision. The held card's previous-weeks shelf
+   and "See all weeks" duplicated Coaching history: one row, under "Plan
+   ahead", always present. The two meal-planning buttons are one row whose
+   choices are the house alert's.
+5. **Untouched.** Every engine sentence (split only at its first full
+   stop into a row's title and reason, words unchanged), the ED-pattern,
+   ED-cleared and rapid-loss blocks and their chrome, the rapid-loss
+   alert, the safety zone's place (now directly under the decision),
+   the apply morph, telemetry, the progress-photo gate.
+6. **"Ghost" is not a variant.** `variant="ghost"` silently rendered as a
+   second primary on the Meal plan and Nutrition targets screens; both
+   declines are `secondary` now, and `buttonVariantExists.guard` fails
+   the build on any Button variant the primitive does not define.
+
+Preview: https://claude.ai/artifact/Sjq98WMVwpBirMkNYYaqgp. Landed
+`f16da7c4`; the version bump to 2.3.0 (founder's number, D203)
+`28158f75`; gate over the settled tree `lint clean, tsc clean, check:imports OK over 2090 files, jest 1376 suites passed and 1 skipped, 21581 tests passed and 16 skipped, none failed`.
