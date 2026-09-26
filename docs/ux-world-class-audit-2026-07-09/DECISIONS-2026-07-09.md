@@ -10056,6 +10056,38 @@ The recency fact, the row order, the caption and the Training-recency
 chip fold are untouched. Pinned in
 `ReadinessCards.recoveryByMuscle.test.js`.
 
+**D201 addendum 9 (2026-09-26, founder, on the same rows).** Verbatim: "I
+said this wall of text looks horrible it looks like raw text with no
+styles no interactivity no format at all. Investigate how JeFit does this
+and so on as this looks amateur. The order wasn't to change the order or
+lead with anything." A Sonnet research lane read JeFit's, Fitbod's,
+Hevy's and Whoop's own pages (JeFit BodyMap and Muscle Recovery, Fitbod
+Recovery tab, Hevy's volume map, Whoop's whole-body score; Garmin as
+corroboration). What recurs where per-muscle recovery exists: a 0-100
+percent always paired with a status word ("ready to train / still need
+rest", "fresh"), never bare; a body map whose muscle tap opens a
+breakdown or an action; rows that open a breakdown when tapped. Evidence
+gaps, stated rather than filled: no public source shows JeFit's or
+Fitbod's exact row anatomy or per-muscle palette, and no app puts a
+disclaimer beside the number (Volyume keeps its caption: the estimate
+law is ours). Lead ruling (D33): the rows are their own component,
+`MuscleRecoveryList.js`. Rows are grouped under the figure legend's
+three words in the spec's order, each group headed by its band dot,
+label and count. One row is the band dot, the name, the estimated
+percent in tabular figures, a chevron, a full-width bar filled to that
+percent in the band colour, and the muted "Ready by Thursday · Trained 2
+days ago" line. A tap on the row, or on its muscle in the body figure,
+opens the breakdown behind the estimate: the last session's counted sets
+and date, the sessions and sets inside the 14-day window, and what the
+estimate is based on (time and sets, or time, sets and your ratings);
+one row open at a time, held by the section. The card's sub-line
+"Estimated · last 14 days" carries "estimated" for every percent below
+it; the spoken label per row is unchanged; no amber (a status surface);
+D204 holds (it describes). The section order is as the spec first
+placed it (the D200-2 addendum is withdrawn, above). Pinned in
+`MuscleRecoveryList.test.js` and `ReadinessCards.recoveryByMuscle.test.js`.
+Landed `7bbdb9d4`.
+
 ## D205 — The number under the Respect heart is the heart's own count (founder defect 2026-09-26)
 
 Founder, from the Community hub on TestFlight with a screenshot of their
