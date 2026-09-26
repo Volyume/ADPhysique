@@ -2257,6 +2257,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    // Founder, 2026-09-26: this sat flush against the submit button above it
+    // (the scroll content has no gap of its own); one step of air between
+    // two stacked controls.
+    marginTop: spacing.sm,
   },
   fastExpandText: { ...type.label, color: colors.textPrimary },
 
