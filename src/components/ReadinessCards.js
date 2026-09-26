@@ -21,6 +21,7 @@ import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
 import Button from './Button';
 import BodyDiagramHeatmap from './BodyDiagramHeatmap';
+import MuscleRecoveryList from './MuscleRecoveryList';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { trainingRecency } from '../lib/trainingRecency';
@@ -41,13 +42,12 @@ import { logError } from '../lib/errorLog';
 // everything else here is pure derivation over their results.
 import { resolveProgrammePosition } from '../lib/programmePosition';
 import { SESSION_STATE } from '../lib/blockProgression';
-import { RECOVERY_ESTIMATE_LABEL } from '../lib/recovery/constants';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
-// readyClause: the one authority for the "ready now / later today / by
-// Thursday / in N days" wording (nextWorkoutRecommendation.js), reused
-// here rather than a second src/lib/recovery/readyByLabel.js.
-import { recommendNextWorkout, readyClause } from '../lib/recovery/nextWorkoutRecommendation';
+// The "ready now / later today / by Thursday / in N days" wording is
+// nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js
+// for the rows; this file only needs the recommendation itself.
+import { recommendNextWorkout } from '../lib/recovery/nextWorkoutRecommendation';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -212,50 +212,9 @@ function compareMuscleNames(a, b) {
   return nameA < nameB ? -1 : 1;
 }
 
-// D201: "ready by Thursday", "ready later today", or "ready now" for a
-// muscle already at/above the recovered threshold (status 'recovered',
-// readyAtMs null by muscleRecoveryModel's own contract) -- one authority,
-// nextWorkoutRecommendation.js's readyClause.
-function muscleReadyClause(entry, nowMs) {
-  if (entry.status === 'recovered' || !Number.isFinite(entry.readyAtMs)) return 'ready now';
-  return readyClause(entry.readyAtMs, nowMs);
-}
-
-// The row's one muted meta line under its bar: "Ready by Thursday · Trained
-// 2 days ago" (founder, 2026-09-26 TestFlight walk: the full sentence per
-// muscle read as a wall of text; the row is now name, bar, percent and this
-// line, the way a body-recovery list is read at a glance). The recency FACT
-// is the SAME reading the Training recency chip it replaces has always
-// shown: getLastTrainedPerMuscle's latest start for that muscle as a
-// primary mover, through trainingRecency's own unchanged label (Opus review
-// finding 13: the model's own lastSessionEndMs counts secondary credit and
-// session ends, so it could disagree with the chip by a day). The model's
-// instant is only the fallback when the chip source has no reading.
-// trainingRecency.js itself, and its label string, are untouched.
-function muscleRecoveryRowMeta(entry, nowMs, lastTrainedAt) {
-  const recency = trainingRecency(lastTrainedAt ?? entry.lastSessionEndMs, nowMs);
-  const ready = muscleReadyClause(entry, nowMs);
-  return `${ready.charAt(0).toUpperCase()}${ready.slice(1)} · ${recency.label}`;
-}
-
-/** The band colour for a row's bar: the same three tokens the body figure
- * uses (D201 addendum 5, ruling 8). */
-function muscleRecoveryBandColour(status, c) {
-  if (status === 'recovered') return c.success;
-  if (status === 'nearly') return c.warning;
-  return c.error;
-}
-
-// The row's spoken form: the same four facts (muscle, estimated N PERCENT
-// recovered, the ready-by phrase, the trained-ago fact) comma-joined as one
-// sentence -- same convention as VolumeHeatmapScreen's rowA11yLabel.
-// "percent" is spelled out (never "%") for a reliable screen-reader read.
-function muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt) {
-  const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
-  const percent = entry.recoveredPercent;
-  const recency = trainingRecency(lastTrainedAt ?? entry.lastSessionEndMs, nowMs);
-  return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent} percent recovered, ${muscleReadyClause(entry, nowMs)}, ${recency.label}`;
-}
+// The per-muscle rows (band dot, name, estimated percent, bar, the
+// ready-by and trained-ago line, and the tap-to-open breakdown) and their
+// helpers live in MuscleRecoveryList.js (D201 addendum 9).
 
 // FOUNDER DECISION (fully free, no tier split): every reader below used to
 // fork on `tier` (muscle freshness, the recovery-trend insight, and the
@@ -287,6 +246,9 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
   // "Recovery by muscle" section (figure, rows, caption, next-workout row)
   // without touching anything else this component renders (see load()).
   const [muscleRecovery, setMuscleRecovery] = useState(null);
+  // D201 addendum 9: the muscle whose breakdown is open (row tap or the
+  // figure's muscle tap); null when none.
+  const [selectedMuscle, setSelectedMuscle] = useState(null);
   // D201: recommendNextWorkout's result, or null when there is no active
   // block, no outstanding session to reason about, or the read failed.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
@@ -670,47 +632,25 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
         {muscleRecovery && (
           <View style={[styles.mfCard, live.mfCard]}>
             <Text style={[styles.mfTitle, live.mfTitle]} accessibilityRole="header">Recovery by muscle</Text>
-            <BodyDiagramHeatmap recoveryByMuscle={muscleRecovery.map} />
-            {muscleRecoveryRows.length > 0 && (
-              <View style={styles.rbmRowsList}>
-                {/* One compact row per muscle: name, a bar in the band colour,
-                    the percent, and a muted line with the ready-by and
-                    trained-ago facts. The column header carries "Estimated"
-                    for every percent below it (spec section 6's percent law);
-                    the spoken label per row stays the full sentence. */}
-                <View style={styles.rbmHeaderRow}>
-                  <Text style={[styles.rbmHeaderText, live.rbmHeaderText]}>Muscle</Text>
-                  <Text style={[styles.rbmHeaderText, live.rbmHeaderText]}>Estimated recovery</Text>
-                </View>
-                {muscleRecoveryRows.map((entry) => {
-                  const percent = Math.max(0, Math.min(100, Math.round(entry.recoveredPercent)));
-                  // Bar width and figure are the same estimated percent the
-                  // "Estimated recovery" column header covers.
-                  const estimatedFillWidth = `${percent}%`; // estimated recovery, the column header names it
-                  return (
-                    <View
-                      key={entry.muscle}
-                      style={styles.rbmRow}
-                      accessibilityRole="text"
-                      accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
-                    >
-                      <View style={styles.rbmRowTop}>
-                        <Text style={[styles.rbmName, live.rbmName]} numberOfLines={1}>
-                          {MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle}
-                        </Text>
-                        <View style={[styles.rbmTrack, live.rbmTrack]}>
-                          <View style={[styles.rbmFill, { width: estimatedFillWidth, backgroundColor: muscleRecoveryBandColour(entry.status, t.colors) }]} />
-                        </View>
-                        <Text style={[styles.rbmPercent, live.rbmPercent]}>{percent}%</Text>
-                      </View>
-                      <Text style={[styles.rbmMeta, live.rbmMeta]} numberOfLines={1}>
-                        {muscleRecoveryRowMeta(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+            {/* The sub-line carries "Estimated" for every percent in the list
+                below it (spec section 6's percent law). */}
+            <Text style={[styles.mfSub, live.mfSub]}>Estimated · last 14 days</Text>
+            <BodyDiagramHeatmap
+              recoveryByMuscle={muscleRecovery.map}
+              // A muscle tap opens that muscle's row below (a muscle with no
+              // row, no session in 14 days, is left alone).
+              onMuscleTap={(muscle) => setSelectedMuscle((prev) => {
+                if (prev === muscle) return null;
+                return muscleRecoveryRows.some((entry) => entry.muscle === muscle) ? muscle : prev;
+              })}
+            />
+            <MuscleRecoveryList
+              rows={muscleRecoveryRows}
+              nowMs={muscleRecoveryNowMs}
+              freshness={muscleFreshness}
+              selectedMuscle={selectedMuscle}
+              onSelect={setSelectedMuscle}
+            />
             <Text style={[styles.rbmCaption, live.rbmCaption]}>
               Estimated from the time since each muscle's last session and how much it did, adjusted by your recovery answer and your ratings. Not a measurement.
             </Text>
@@ -787,12 +727,6 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
   );
 }
 
-// "Recovery by muscle" row columns: the name column fits the longest
-// display name ("Front delts") at captionStrong; the percent column fits
-// "100%" right-aligned in tabular figures.
-const RBM_NAME_WIDTH = 88;
-const RBM_PERCENT_WIDTH = 44;
-
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
   milestoneCard: {
@@ -853,17 +787,6 @@ const styles = StyleSheet.create({
   // section's own rows/caption/next-workout styles. The section's outer
   // card reuses mfCard above (pre-existing, previously unused in this
   // file's own JSX); its heading reuses mfTitle.
-  rbmRowsList: { gap: spacing.sm },
-  rbmHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xxs },
-  rbmHeaderText: { ...type.captionTight, color: colors.textMuted },
-  rbmRow: { gap: spacing.xxs },
-  rbmRowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rbmName: { width: RBM_NAME_WIDTH, ...type.captionStrong, color: colors.textPrimary },
-  rbmTrack: { flex: 1, height: spacing.xs2, borderRadius: radius.xs, backgroundColor: colors.surface2, overflow: 'hidden' },
-  rbmFill: { height: '100%', borderRadius: radius.xs },
-  rbmPercent: { width: RBM_PERCENT_WIDTH, fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  // The meta line starts where the bar starts: under the name column.
-  rbmMeta: { ...type.captionTight, color: colors.textMuted, marginLeft: RBM_NAME_WIDTH + spacing.sm },
   rbmCaption: { ...type.caption, color: colors.textMuted },
   rbmNextWorkoutTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   rbmNextWorkoutText: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -905,11 +828,6 @@ function buildLiveStyles(t) {
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },
     mfChipLabel: { ...t.type.captionStrong },
-    rbmHeaderText: { ...t.type.captionTight, color: t.colors.textMuted },
-    rbmName: { ...t.type.captionStrong, color: t.colors.textPrimary },
-    rbmTrack: { backgroundColor: t.colors.surface2 },
-    rbmPercent: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    rbmMeta: { ...t.type.captionTight, color: t.colors.textMuted },
     rbmCaption: { ...t.type.caption, color: t.colors.textMuted },
     rbmNextWorkoutTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     rbmNextWorkoutText: { ...t.type.bodySm, color: t.colors.textSecondary },

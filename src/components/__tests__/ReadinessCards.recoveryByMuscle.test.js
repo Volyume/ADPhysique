@@ -196,14 +196,16 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     expect(all).not.toContain('Triceps');
   });
 
-  // Founder, 2026-09-26 TestFlight walk: the sentence per muscle read as a
-  // wall of text. Each row is now the name, a bar, the percent and one muted
-  // meta line ("Ready by Thursday · Trained 2 days ago"); the column header
-  // "Estimated recovery" covers every percent in the list.
+  // Founder, 2026-09-26: the sentence per muscle read as a wall of text,
+  // then "Investigate how JeFit does this". The rows are MuscleRecoveryList
+  // (its own suite pins the anatomy); this suite pins that the section
+  // feeds it: the card's sub-line carries "Estimated" for every percent
+  // below it, each row's percent and meta line render, and the figure's
+  // muscle tap opens that row's breakdown.
   test('a recovering row: name, percent and the ready-by plus trained-ago meta line', async () => {
     const tree = await render();
     const all = texts(tree);
-    expect(all).toContain('Estimated recovery');
+    expect(all).toContain('Estimated · last 14 days');
     expect(all).toContain('64%');
     const ready = readyClause(QUADS_READY_AT, NOW);
     expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 2 days ago`);
@@ -229,7 +231,22 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64 percent recovered, ${readyClause(QUADS_READY_AT, NOW)}, Trained 2 days ago`;
     const node = tree.root.findByProps({ accessibilityLabel: expected });
     expect(node).toBeTruthy();
-    expect(node.props.accessibilityRole).toBe('text');
+    expect(node.props.accessibilityRole).toBe('button');
+  });
+
+  test('the figure\'s muscle tap opens that muscle\'s breakdown; a muscle with no row is left alone', async () => {
+    const tree = await render();
+    expect(texts(tree)).not.toContain('Based on');
+    const props = BodyDiagramHeatmap.mock.calls[0][0];
+    expect(typeof props.onMuscleTap).toBe('function');
+    await act(async () => { props.onMuscleTap('quads'); });
+    const open = texts(tree);
+    expect(open).toContain('Based on');
+    expect(open.filter((t) => t === 'Based on')).toHaveLength(1);
+    // triceps has no row (no_recent_session): the open row stays as it was.
+    const latest = BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
+    await act(async () => { latest.onMuscleTap('triceps'); });
+    expect(texts(tree).filter((t) => t === 'Based on')).toHaveLength(1);
   });
 
   test('the section heading carries accessibilityRole="header"', async () => {
@@ -406,10 +423,20 @@ describe('loader failure: the section hides, the gauges stay intact', () => {
 });
 
 describe('source guard: every percent rendered in this section sits beside "estimated"', () => {
-  test('every ${percent} template line in ReadinessCards.js also names RECOVERY_ESTIMATE_LABEL or "estimated"', () => {
-    const src = fs.readFileSync(path.join(__dirname, '..', 'ReadinessCards.js'), 'utf8');
-    const percentLines = src.split('\n').filter((l) => l.includes('${percent}'));
-    expect(percentLines.length).toBeGreaterThan(0);
-    for (const line of percentLines) expect(line).toMatch(/RECOVERY_ESTIMATE_LABEL|estimated/i);
+  test('every ${percent} template line in the section\'s two files also names RECOVERY_ESTIMATE_LABEL or "estimated"', () => {
+    // The rows moved to MuscleRecoveryList.js (D201 addendum 9); the law
+    // covers both files, and the rows file must still carry the percent.
+    const files = ['ReadinessCards.js', 'MuscleRecoveryList.js'];
+    let total = 0;
+    for (const file of files) {
+      const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+      const percentLines = src.split('\n').filter((l) => l.includes('${percent}'));
+      total += percentLines.length;
+      for (const line of percentLines) expect(line).toMatch(/RECOVERY_ESTIMATE_LABEL|estimated/i);
+    }
+    expect(total).toBeGreaterThan(0);
+    const rows = fs.readFileSync(path.join(__dirname, '..', 'MuscleRecoveryList.js'), 'utf8');
+    expect(rows.includes('${percent}')).toBe(true);
+    expect(rows).toMatch(/Estimated|estimated/);
   });
 });

@@ -336,14 +336,20 @@ is a follow-on decision, not in this build.
   and hid the dials was withdrawn the same day on the founder's word,
   register D204): the body figure
   (`BodyDiagramHeatmap` with a recovery palette: recovered / nearly /
-  recovering / no recent session) and one compact row per muscle with a
-  logged session in 14 days, under a "Muscle / Estimated recovery"
-  header: the name, a thin bar in the band colour filled to the estimated
-  percent, the percent, and one muted meta line "Ready by Thu · Trained 2
-  days ago" (D201 addendum 8, 2026-09-26, on the founder's walk; the
-  first build showed one sentence per row, "Quads, estimated 64%
-  recovered, ready by Thu. Trained 2 days ago."). The header carries
-  "Estimated" for every percent in the list. The existing recency
+  recovering / no recent session), a sub-line "Estimated · last 14
+  days" that carries "Estimated" for every percent below it, and the
+  per-muscle list (`MuscleRecoveryList.js`, D201 addendum 9, 2026-09-26,
+  built from the JeFit/Fitbod research): rows grouped under the legend's
+  three words in the spec's order (Recovering, Nearly recovered,
+  Recovered), each group headed by its band dot, label and count; one
+  row is the band dot, the name, the estimated percent in tabular
+  figures, a chevron, a full-width bar filled to that percent in the
+  band colour, and one muted line "Ready by Thu · Trained 2 days ago";
+  tapping a row, or its muscle on the figure, opens the breakdown behind
+  the estimate (last session's counted sets and date, sessions and sets
+  in the 14-day window, what it is based on), one row open at a time.
+  The first build showed one sentence per row ("Quads, estimated 64%
+  recovered, ready by Thu. Trained 2 days ago."). The existing recency
   chips fold into these rows (the factual part stays verbatim). One
   caption: "Estimated from the time since each muscle's last session and
   how much it did, adjusted by your recovery answer and your ratings.
