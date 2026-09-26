@@ -358,9 +358,14 @@ describe('the training profile step (SD-22)', () => {
     expect(publishSharingSettings).toHaveBeenCalledWith(
       'u1', expect.objectContaining({ share_sessions: true, sessions_audience: 'everyone' }),
     );
+    // D212: the choice travels with the create itself.
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ share_sessions: true }));
   });
 
-  test('switched off before Create, nothing is published for it', async () => {
+  // D212: since migration 184 an omitted share_sessions on a NEW profile is
+  // stored as on, so "nothing published" no longer means off. The create
+  // itself must carry the person's off.
+  test('switched off before Create, the create says off and nothing else is published for it', async () => {
     const { tree } = await mount();
     const shareSwitch = tree.root.findAll(
       (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
@@ -373,6 +378,62 @@ describe('the training profile step (SD-22)', () => {
     await flush();
 
     expect(publishSharingSettings).not.toHaveBeenCalled();
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ share_sessions: false }));
+  });
+
+  // D212 (ICO Children's Code standard 7: high privacy by default): for a
+  // person under 18, "Share what I did" starts off and is only ever on
+  // when they switch it on themselves.
+  test('under 18: the switch starts off, and Create says off', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: false, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+    const shareSwitch = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+    )[0];
+    expect(shareSwitch.props.value).toBe(false);
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ share_sessions: false }));
+    expect(publishSharingSettings).not.toHaveBeenCalled();
+  });
+
+  test('under 18: switched on by the person, it is on, to followers only', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: false, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+    const shareSwitch = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+    )[0];
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ share_sessions: true }));
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: true, sessions_audience: 'followers' }),
+    );
+  });
+
+  test('an age not known yet reads as under 18 (fail closed): Create says off unless the person chose on', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: true, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ share_sessions: false }));
   });
 
   // F5 (fresh-eyes review): "My groups" with nobody to post to is a

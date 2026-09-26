@@ -10607,3 +10607,62 @@ hand-drawn mock-ups (D145's rule: real captures); keeping the July images
 **Open, founder-side.** The Play and App Store listing screenshots are
 separate uploads in the consoles and still show the July screens; the same
 harness can render a full store set on request.
+
+## D212 — The Community questions left open under D194, ruled; and sharing is never switched on unasked (lead, 2026-09-26, under the founder's delegation)
+
+The founder, 2026-09-26: "Make the decisions that bring the absolute best
+product for end users that will bring the best product I do not need to
+make these decisions." The questions D194 addendum 2 left open, ruled on
+that criterion with every Section 2 inviolable still binding (GDPR and
+Article 9, the ED-safety system, GC-D12's conservative reading of published
+authority for legal questions):
+
+1. **The volyume.app deploy: DEPLOYED** (run #81, 14:37 UTC, main
+   `546254ec`; verified live: `/get` reads "Free. No card, no time limit",
+   `/privacy` carries the Community section, the Community link pages and
+   the app-link file answer 200). The live site had advertised a trial and
+   £1.99 a month three weeks after the app went free (D137), described no
+   Community in its privacy policy while Community was live, and had no
+   pages for shared Community links. The four new iOS app-link paths are
+   inert: the iOS app carries no Associated Domains entitlement
+   (`campaign7.releaseConfig.test.js`, "stays off until the profile carries
+   it"), which is the gate the workflow header protects, and it still holds.
+2. **The in-app notice of the policy change: already provided.** The 2.3.0
+   What's New opens with it ("Our privacy policy now covers Community ...
+   Read it in Settings, under Privacy and legal"); a new install meets the
+   policy at sign-up.
+3. **The under-18 default: OFF.** The ICO Children's Code (standard 7) asks
+   for high-privacy defaults for children unless there is a compelling
+   reason otherwise, and GC-D12 takes the conservative reading. A person
+   under 18, or whose age is not known yet (the app's existing fail-closed
+   rule), starts with "Share what I did" off on the Join screen and shares
+   only when they switch it on themselves, and then only with followers.
+   The onboarding step never shows the Community step to a minor. No
+   existing profile changes (production has two adult test profiles).
+4. **The lawful basis: as the policy now states.** Community rests on
+   contract (a feature the person chooses) and legitimate interests (keeping
+   it safe), not consent, because a switch preset to on is not consent under
+   UK GDPR. A shared workout (name, date, duration, sets, total lifted,
+   exercises, best set, records) is ordinary personal data: it carries no
+   body weight, measurements, food, photos, check-ins or injury data, the
+   categories the policy's Article 9 list covers. The server comment of
+   2026-09-10 that called it "Article 9 training data" is to be corrected at
+   the next touch of that function; it changes no behaviour.
+
+**Defect found while ruling 3, fixed the same hour.** The Join screen
+created a profile without the "Share what I did" choice and published the
+choice afterwards only when it was on. Before migration 184 an omitted
+choice meant off; 184 (applied 13:49 UTC) made it mean ON for a new
+profile, so a person who switched sharing off before "Create profile" would
+have been stored as sharing, and the phone mirrors the server. Read-only
+check: no profile was created in the window. Fixed twice over: the Join
+screen now sends the choice with the create, on or off
+(`CommunityJoinScreen.js`, pinned in `CommunityJoin.test.js`), and
+`supabase/migrate_186_community_sharing_never_on_unasked.sql` makes an
+omitted choice on a new profile mean off again, protecting the builds
+already installed. The founder's on-by-default (D194) is unchanged for
+adults: the app shows the switch on and sends on. 186 waits for the
+founder's phrase.
+
+**Founder-side, still open:** the Play and App Store data-safety answers
+(console forms; the drafts predate Community and need its data types added).

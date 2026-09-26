@@ -25,7 +25,7 @@
  * say different things about what would be shared.
  */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Switch,
 } from 'react-native';
@@ -143,6 +143,11 @@ export default function CommunityJoinScreen({ navigation, route }) {
   // age band off).
   const [tpBands, setTpBands] = useState(null);
   const [tpShare, setTpShare] = useState(TP_DEFAULT_SHARE);
+  // D212 (ICO Children's Code standard 7, high privacy by default): for a
+  // person under 18, or whose age is not known yet (`isMinor` fails closed
+  // while `me` loads), "Share what I did" reads OFF until they switch it
+  // on themselves. An adult keeps the founder's default, on (D194).
+  const [shareChosen, setShareChosen] = useState(false);
   const [tpLoading, setTpLoading] = useState(true);
   const uid = currentUserId();
 
@@ -240,11 +245,18 @@ export default function CommunityJoinScreen({ navigation, route }) {
 
   async function toggleBand(key, next) {
     const settings = { ...tpShare, [key]: next };
+    if (key === 'share_sessions') setShareChosen(true);
     setTpShare(settings);
     await writeShareSettings(uid, settings);
   }
 
-  const tpPreview = previewLine(shareablePayload(tpBands ?? {}, tpShare));
+  // What the step shows and what "Create profile" sends (D212 above).
+  const effectiveShare = useMemo(
+    () => (isMinor && !shareChosen ? { ...tpShare, share_sessions: false } : tpShare),
+    [isMinor, shareChosen, tpShare],
+  );
+
+  const tpPreview = previewLine(shareablePayload(tpBands ?? {}, effectiveShare));
 
   useEffect(() => {
     const trimmed = handle.trim().toLowerCase();
@@ -304,6 +316,16 @@ export default function CommunityJoinScreen({ navigation, route }) {
         // profile IS the consent record, so the version being accepted is
         // stated at the call site rather than only inside the transport.
         accept_rules_version: COMMUNITY_RULES_VERSION,
+        // The person's own "Share what I did" choice travels WITH the
+        // create, on or off (D212). Since migration 184 an omitted value
+        // on a new profile is stored as on, so a choice of off that was
+        // only ever published when on would have been overridden. The
+        // audience is not sent here: the server's new-profile fallback
+        // already picks everyone for an adult and followers for a minor,
+        // and a stale minor reading on this device must never be able to
+        // block the create; the chosen audience follows through
+        // publishSharingSettings below, best effort as before.
+        share_sessions: !!effectiveShare.share_sessions,
       });
       // Best effort: the training profile bands (and, if switched on here,
       // the consistency counters) are sent through the same publish paths
@@ -311,15 +333,15 @@ export default function CommunityJoinScreen({ navigation, route }) {
       // made on this step take immediately rather than waiting for
       // tomorrow's throttle window or the next foreground trigger.
       syncTrainingProfile(uid, { force: true }).catch(() => { /* best effort */ });
-      if (tpShare.consistency) publishConsistency(uid).catch(() => { /* best effort */ });
+      if (effectiveShare.consistency) publishConsistency(uid).catch(() => { /* best effort */ });
       // Phase 3: "Share what I did" and its audience, chosen on this same
       // step, go through the separate community_upsert_profile call
       // (publishSharingSettings) rather than syncTrainingProfile above.
       // Belt and braces: a minor never gets an audience beyond followers
       // (the Chip row is never shown to one, so this is unreachable via
       // the UI, but the server-side force is not the only guard).
-      if (tpShare.share_sessions) {
-        const sharing = isMinor ? { ...tpShare, sessions_audience: 'followers' } : tpShare;
+      if (effectiveShare.share_sessions) {
+        const sharing = isMinor ? { ...effectiveShare, sessions_audience: 'followers' } : effectiveShare;
         publishSharingSettings(uid, sharing).catch(() => { /* best effort */ });
       }
       // Optional (GD-14), and best effort the same way: the profile itself
@@ -347,7 +369,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    uid, primaryGym, otherGyms, tpShare, disciplineKeys, isMinor,
+    uid, primaryGym, otherGyms, effectiveShare, disciplineKeys, isMinor,
   ]);
 
   return (
@@ -600,7 +622,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
                       </Text>
                     </View>
                     <Switch
-                      value={!!tpShare[row.key]}
+                      value={!!effectiveShare[row.key]}
                       onValueChange={(next) => toggleBand(row.key, next)}
                       disabled={tpLoading}
                       accessibilityLabel={`Share ${row.label.toLowerCase()}`}
@@ -616,7 +638,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
                       profile screen, which is the only place the toggle
                       can ever be switched off with items already shared
                       behind it. */}
-                  {isShareSessions && tpShare.share_sessions ? (
+                  {isShareSessions && effectiveShare.share_sessions ? (
                     isMinor ? (
                       <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
                         Shared with people who follow you.
@@ -628,7 +650,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
                             <Chip
                               key={value}
                               label={SESSIONS_AUDIENCE_LABELS[value]}
-                              selected={tpShare.sessions_audience === value}
+                              selected={effectiveShare.sessions_audience === value}
                               onPress={() => toggleBand('sessions_audience', value)}
                               accessibilityRole="radio"
                               disabled={value === 'groups' && !hasGroups}
