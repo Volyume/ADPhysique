@@ -9204,6 +9204,54 @@ pending; the strip names a refusal; the two pre-flip rows are the
 founder's to flip (by migration under the phrase) or set in-app. Nothing
 built yet.
 
+**Addendum 2 (2026-09-26, founder answers; lead rulings under D33).**
+Founder, verbatim: "Flip them all and I test with all. Make the decisions
+based on the best product. It is on for all users by default. New and
+existing they can turn it off if they want after. We need that in the
+privacy policy also". What was ruled and built:
+
+1. **The mirror fix is built** (lead ruling under the founder's standing
+   "make the call"): every profile refresh copies the row's
+   `share_sessions` and `sessions_audience` onto the device, unless a
+   device change is newer than the fetch or still owed; a sharing change is
+   marked owed from before its publish; the workout summary names a refused
+   automatic post ("Not shared to Community") and refreshes the profile.
+   A server without migrate_184 sends no setting, so the client can ship
+   first. `5a7dfcc0`.
+2. **Server default** (`migrate_184`, written, waits for the phrase): the
+   column default goes on; an omitted setting on a NEW profile means on,
+   to everyone for an adult and followers for a minor (minor-aware at the
+   fallback, because the clamp refuses everyone from a minor);
+   `community_get_me` returns both fields. `9aa9cba0`.
+3. **"Flip them all"** (`migrate_185`, written, waits for the phrase):
+   every profile created before 22 September, the D194 default date, goes
+   on, to everyone, followers for a minor. Read-only 2026-09-26: the two
+   founder test accounts, `alland` off/followers and `allan` on/followers,
+   both adults. Scoped to pre-default rows because a later profile saw the
+   switch on before joining, so an off one was turned off by its owner,
+   which is the "turn it off if they want" half of the order.
+4. **Privacy policy**: every copy carries a Community section, each line
+   checked against the code, and none claims "no community" any more
+   (`9aa9cba0`). The hosted copy goes live only with a site deploy.
+
+Observed: `allan`'s automatic posts were refused too, because its row
+audience was followers while the device asked for everyone, the second
+refusal rule in `community_create_post`.
+
+Open for the founder (asked in chat 2026-09-26): the production phrase for
+184 and 185; the volyume.app deploy (no deploy since 1 September, so the
+live site still shows prices and the trial; a deploy also publishes the
+Community link pages and switches on four iOS app-link paths, which the
+workflow says must not go live unchecked); an in-app notice of the policy
+change, which both policy copies promise and nothing provides; the store
+data-safety answers, whose drafts do not mention Community; the under-18
+default (the ICO Children's Code asks for high privacy by default; the
+order says on for all, and minors are clamped to followers); and the lawful
+basis (a switch pre-set to on is not consent under UK GDPR, so the policy
+rests Community on contract and legitimate interests and treats workout
+posts as ordinary personal data, as the policy's own Article 9 list does,
+although a 2026-09-10 server comment called them Article 9 training data).
+
 ## D195 — Community proposals 1 to 11, executed in order under the lead's orchestration (founder order 2026-09-22)
 
 Founder: "Do 1-11 in order. Utilise the lowest level agent suitable and you do
@@ -10095,6 +10143,19 @@ outlives its row reading as nothing open, and the pattern comment
 corrected (the tree's frozen-plus-live pattern, not the reverted
 "migrated-primitive" one). Landed `8de18983`.
 
+**Addendum 2 (2026-09-26, lead, found by the plain-English sweep).** Two
+more Consistency surfaces instructed. The fatigue trend card's line said
+"push your next session", "hold your weights and focus on form" and
+"consider a lighter day"; it now reports the athlete's own ratings in the
+rating scale's words. The four-week fatigue banner said "Lighter week
+recommended" in a warning card, with a tooltip on how to run your own
+deload; it now reads "Signs of building fatigue" in the app's neutral card,
+gives the check's own reason, and its tooltip says it is a picture of how
+you have been recovering, not an instruction, and that the plan sets the
+sessions. Two of `shouldDeload`'s reasons lost their jargon ("rep
+performance", "productive volume range") without changing when they fire.
+Pinned in `d204.consistencyDescribes.guard.test.js`. `7d7e423c`.
+
 ## D205 — The number under the Respect heart is the heart's own count (founder defect 2026-09-26)
 
 Founder, from the Community hub on TestFlight with a screenshot of their
@@ -10286,3 +10347,33 @@ each fact printed three to five times in different shapes. Rulings (D33):
 Preview: https://claude.ai/artifact/Sjq98WMVwpBirMkNYYaqgp. Landed
 `f16da7c4`; the version bump to 2.3.0 (founder's number, D203)
 `28158f75`; gate over the settled tree `lint clean, tsc clean, check:imports OK over 2090 files, jest 1376 suites passed and 1 skipped, 21581 tests passed and 16 skipped, none failed`.
+
+## D207 — Plain English for everyone (founder order 2026-09-26)
+
+Founder, verbatim, on the Coaching decision screen: "'Getting back to your
+full week is the thing that makes the rest readable' is not understandable
+plain British English to normal end users. It might make technical sense to
+you but this uninformed end users to understand. We need a sweep and a
+correction on any language like this. It needs to be understanding." Then,
+on the Coach tab: "Nobody is going to know what signals are ... fix the
+engine so it's human English and fully understood by normal humans", "Get
+rid of 'Your own numbers take precedence'" and "Sort the entire You page
+for these descriptions. Nobody is going to know what a 'weekly loop' is".
+
+**The rule** is `docs/rules/plain-english.md`: the test (an adult who has
+never lifted or counted calories understands it in one read), the coach
+shorthand that fails it, worked examples from real strings, the checks that
+still bind (the jargon check, the two registers, D204), and what stays out
+(ED-safety, legal and consent text, locked surfaces: listed for the
+founder, never edited). It defers to the locked voice doc's actor rule:
+"your coach" or an impersonal sentence, never a collaborative "we" for a
+coaching decision. The rule's first draft said "we"; it was corrected, and
+both running lanes told, before either had written a line.
+
+**The sweep** runs in lanes, two agents at a time, every changed line
+reviewed by the lead: A, the coaching copy and the engine's sentences
+(Opus); B, Today, Train and Progress (Sonnet, landed `75cfaee1`, 19 lines,
+one caption changed by the lead); C, nutrition (Sonnet); D, plan and
+programme copy; E, settings, onboarding, notifications and community. The
+sweep also found two D204 breaches on Consistency (D204 addendum 2). The
+board line carries each lane's state and hash.

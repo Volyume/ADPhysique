@@ -51,7 +51,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_183`, applied through 183 except 155 and 049 HELD; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_185`, applied through 183 except 155 and 049 HELD; 184 and 185 written 2026-09-26, waiting for the phrase; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
