@@ -10047,6 +10047,14 @@ left them alone). 2.1.0 is closed in App Store Connect; 2.2.0 was set
 earlier wording of this entry, which read the first message as "never
 bump", was wrong and is replaced by this one.
 
+Addendum (2026-09-26): 2.3.0 was set the same day on the founder's "Just
+bump to 2.3.0" and then burned; founder, verbatim: "Bump the version also
+as 2.3.0 has been burned. Use 2.4.0". 2.4.0 is set in `app.json`,
+`package.json` and `package-lock.json`, buildNumber and versionCode
+untouched. The What's New sheet shows the notes for the exact running
+version, so the 2.3.0 notes, whose first line is the privacy policy's
+promised in-app notice, carry over to 2.4.0 whole.
+
 ## D204 — The app never tells an athlete to change a session (founder rule 2026-09-26)
 
 Founder, from a TestFlight walk of Consistency, verbatim: "We don't want
