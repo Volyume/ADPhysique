@@ -80,13 +80,31 @@ async function loadFace(Skia, role, source) {
   return null;
 }
 
+// One load per app run: the share screen and the before/after sheet both ask,
+// and a typeface is safe to reuse. A load that found nothing is not kept, so
+// the next open tries again.
+let pending = null;
+
 /**
  * @param {object} Skia the react-native-skia Skia API
  * @returns {Promise<object|null>} { regular, medium, semibold, bold, display,
  *   displayHeavy } SkTypefaces (any that loaded), or null when none did
  */
-export async function loadCardTypefaces(Skia) {
-  if (!Skia || typeof Skia.Typeface?.MakeFreeTypeFaceFromData !== 'function') return null;
+export function loadCardTypefaces(Skia) {
+  if (!Skia || typeof Skia.Typeface?.MakeFreeTypeFaceFromData !== 'function') return Promise.resolve(null);
+  if (!pending) {
+    pending = loadAll(Skia).then((faces) => {
+      if (!faces) pending = null;
+      return faces;
+    }, () => {
+      pending = null;
+      return null;
+    });
+  }
+  return pending;
+}
+
+async function loadAll(Skia) {
   const out = {};
   await Promise.all(Object.entries(FACES).map(async ([role, source]) => {
     const face = await loadFace(Skia, role, source);
