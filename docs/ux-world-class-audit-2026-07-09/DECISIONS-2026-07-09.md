@@ -10188,3 +10188,11 @@ same non-existent `variant="ghost"` renders as `primary` in
 `NutritionTargetsScreen.js` and `MealPlanScreen.js`.
 
 Landed `16fd55a9` (gate `lint clean, tsc clean, check:imports OK over 2086 files, jest 1372 suites passed and 1 skipped, 21548 tests passed and 16 skipped, none failed`).
+
+**Fresh-eyes review (Sonnet, the same day): no blocker.** Taken: the
+next-check-in card joins the radius census (it had been converted like
+its five siblings but never pinned), and the adjustment rows' amber glyph
+on an amber-tinted backing is neutral now, so amber on this screen is the
+committing action alone. Noted by the review and left: the label "Your
+meal plan" above the receipt's sentence is new copy of the lead's, a
+label rather than coaching text. Landed `182e976e`.
