@@ -297,3 +297,69 @@ describe('ActivityItemRow rendering', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
+
+// Founder defect 2026-09-26 ("When I click the heart to like it doesn't
+// add a number"): the number under the heart was the comment count, so
+// a respect the server had recorded never moved it. The heart owns the
+// number under it; comments get their own glyph, and only when there
+// are any.
+describe('the trailing column: the number under the heart is the reaction count', () => {
+  function heartOf(tree, label = 'Give this respect') {
+    return tree.root.findAll((n) => n.props?.accessibilityLabel === label)[0];
+  }
+  /** The Text instance directly under the heart in the trailing column. */
+  function countUnderHeart(tree, label) {
+    const heart = heartOf(tree, label);
+    const column = heart.parent;
+    const next = column.children[column.children.indexOf(heart) + 1];
+    return next.props.children;
+  }
+
+  test('renders post.reaction_count under the heart, never post.comment_count', () => {
+    const tree = render({
+      item: item('session', { tonnage: 5400, duration: 52, workingSets: 18, prCount: 0 }, {
+        reaction_count: 3, comment_count: 7,
+      }),
+      onRespect: jest.fn(),
+    });
+    expect(countUnderHeart(tree)).toBe(3);
+  });
+
+  test('a given respect shows the filled heart and its count', () => {
+    const tree = render({
+      item: {
+        ...item('session', { tonnage: 5400, duration: 52, workingSets: 18, prCount: 0 }, { reaction_count: 1 }),
+        myReaction: true,
+      },
+      onRespect: jest.fn(),
+    });
+    expect(countUnderHeart(tree, 'Remove your respect')).toBe(1);
+  });
+
+  test('zero comments renders no comment count at all; comments render beside their own glyph', () => {
+    const none = render({
+      item: item('pr', { exerciseName: 'Bench press', weight: 100, reps: 5 }, { reaction_count: 2, comment_count: 0 }),
+    });
+    const noneTexts = none.root.findAll((n) => n.type === 'Text' || n.type?.displayName === 'Text')
+      .map((n) => flattenText(n.props.children));
+    expect(noneTexts).toContain('2');
+    expect(noneTexts).not.toContain('0');
+
+    const some = render({
+      item: item('pr', { exerciseName: 'Bench press', weight: 100, reps: 5 }, { reaction_count: 0, comment_count: 4 }),
+    });
+    const someTexts = some.root.findAll((n) => n.type === 'Text' || n.type?.displayName === 'Text')
+      .map((n) => flattenText(n.props.children));
+    expect(someTexts).toContain('0');
+    expect(someTexts).toContain('4');
+  });
+
+  test('the spoken label carries both counts', () => {
+    const tree = render({
+      item: item('pr', { exerciseName: 'Bench press', weight: 100, reps: 5 }, { reaction_count: 3, comment_count: 1 }),
+    });
+    const card = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes('Respect 3'))[0];
+    expect(card).toBeTruthy();
+    expect(card.props.accessibilityLabel).toContain('1 comment');
+  });
+});

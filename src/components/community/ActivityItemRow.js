@@ -9,7 +9,11 @@
  * Anatomy: avatar 32 with a ring dot when the item happened today; line
  * one, name plus a per-kind headline; line two, tabular per-kind figures;
  * the note text when the author wrote one; a trailing column, a Respect
- * heart and the comment count. Renders every kind
+ * heart with its own count under it and, only when there is at least one
+ * comment, a comment glyph with that count (founder defect 2026-09-26,
+ * "When I click the heart to like it doesn't add a number": the number
+ * under the heart used to be the COMMENT count, so a respect the server
+ * had taken never moved it). Renders every kind
  * `src/lib/community/validation.js`'s `POST_PAYLOAD_KEYS` carries (pr,
  * session, block, milestone, and 'note' since migrate_178 -- an empty
  * payload, so its line two is always ''), reading one named `payload`
@@ -48,7 +52,7 @@
  *
  * Props:
  *   item          { post: {id, kind, payload, caption, created_at,
- *                  comment_count}, author: {user_id, avatar_preset,
+ *                  reaction_count, comment_count}, author: {user_id, avatar_preset,
  *                  display_name, handle}, myReaction }
  *   onPress       opens the item
  *   onRespect     (next: boolean) toggles the viewer's own Respect
@@ -154,6 +158,9 @@ export default function ActivityItemRow({
   const { headline, figures } = activityItemLines(post);
   const note = typeof post.caption === 'string' ? post.caption.trim() : '';
   const respected = !!item?.myReaction;
+  // The number under the heart is the heart's own count; every screen
+  // that renders this row moves `post.reaction_count` with the tap.
+  const respects = count(post.reaction_count);
   const comments = count(post.comment_count);
   const isPr = post.kind === 'pr';
 
@@ -161,6 +168,7 @@ export default function ActivityItemRow({
     headline ? `${name}, ${headline}` : name,
     figures || null,
     note || null,
+    `Respect ${respects}`,
     `${comments} comment${comments === 1 ? '' : 's'}`,
   ].filter(Boolean).join('. ');
 
@@ -227,7 +235,15 @@ export default function ActivityItemRow({
               color={respected ? t.colors.primary : t.colors.textMuted}
             />
           </TouchableOpacity>
-          <Text style={[styles.comments, { color: t.colors.textMuted }]}>{comments}</Text>
+          <Text style={[styles.count, { color: t.colors.textMuted }]}>{respects}</Text>
+          {comments > 0 ? (
+            // Comments get their own glyph, and only when there are any: a
+            // bare "0" under the heart is what read as the heart's count.
+            <View style={styles.commentsWrap}>
+              <Ionicons name="chatbubble-outline" size={iconSize.sm} color={t.colors.textMuted} />
+              <Text style={[styles.count, { color: t.colors.textMuted }]}>{comments}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
       <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
@@ -252,6 +268,7 @@ const styles = StyleSheet.create({
   figures: { color: colors.textMuted },
   note: { ...type.bodySm, color: colors.textPrimary },
   trailing: { alignItems: 'center', gap: spacing.xxs },
-  comments: { ...type.caption, color: colors.textMuted },
+  count: { ...type.caption, color: colors.textMuted },
+  commentsWrap: { alignItems: 'center', gap: spacing.xxs, marginTop: spacing.xs },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });
