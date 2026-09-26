@@ -54,8 +54,9 @@
  *
  * THE PERSONAL FACTOR (register D210, spec 14-PERSONAL-LEARNING-V2.md). The
  * learner runs over the same sessions, at most once per user, local day,
- * recovery answer and history (a module-level memo: Home, Progress and the
- * Recovery place all read this loader, and a fit on every focus cost up to
+ * recovery answer and everything it reads from the history (a module-level
+ * memo keyed by personalMemoKey: Home, Progress and the Recovery place all
+ * read this loader, and the first build's fit on every focus cost up to
  * 390 ms in review). When it has moved from the start, its factor takes the
  * recovery answer's place in the map; the reading itself is returned as
  * `personal` for the screens that show it. A session under an injury limit,
@@ -365,14 +366,85 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   };
 }
 
-// The learner's last answer (see the header): one entry, keyed by user,
-// local day, recovery answer and the history's shape (learnFromSessions).
+// The learner's last answer (see the header): one entry, keyed by
+// everything it reads (personalMemoKey).
 let personalMemo = null;
 
 /** The allocator's primary-muscle normalisation (algorithms.allocateExerciseVolume), for keys that arrive raw. */
 function normaliseMuscleKey(muscle) {
   const key = String(muscle ?? '').toLowerCase();
   return key === 'shoulders' ? 'side_delts' : key;
+}
+
+/**
+ * The `${sessionId}|${muscle}` pairs an injury limit leaves out of the
+ * learning: a session under an episode for that muscle, or inside the
+ * 14-day return period after one (the CC30 rule, capability/eligibility).
+ * Throws when the injury rows cannot be read (the caller skips the learner).
+ */
+async function excludedEvidence(userId, sessions, exercises) {
+  const excluded = new Set();
+  const capRows = await getCapabilityConstraints(userId);
+  // The block ledger's own precondition (blockLedgerRunner.js): no episode
+  // row, nothing is constrained.
+  if (!Array.isArray(capRows) || !capRows.some((r) => r?.role === 'episode')) return excluded;
+  // Lazy, as database.getAdaptiveLandmarkHistory requires it.
+  // eslint-disable-next-line global-require
+  const elig = require('../capability/eligibility');
+  for (const session of sessions) {
+    const startMs = Number(session.startedAt);
+    const endMs = Number(session.endedAt) > startMs ? Number(session.endedAt) : startMs + DEFAULT_SESSION_MS;
+    // No episode active across the session or the return period before
+    // it: nothing to scan the library for (anyEpisodeOverlap is the
+    // module's own fast pre-check, a superset of what the scan finds).
+    if (!elig.anyEpisodeOverlap(capRows, startMs - elig.REINTRODUCTION_CARRY_MS, endMs)) continue;
+    for (const muscle of elig.constrainedMusclesInWindow(capRows, exercises, startMs, endMs)) {
+      excluded.add(`${session.id}|${normaliseMuscleKey(muscle)}`);
+    }
+  }
+  return excluded;
+}
+
+/**
+ * Everything the learner reads, as one string: the user, the local day, the
+ * recovery answer, what injury limits leave out, and for each session the
+ * fields its pairing, its outcome and its curve read (times, the week's
+ * target, first week and recovery week, the ratings, and each set's
+ * exercise, type, weight, reps and order), with the exercises those sets
+ * name. Any change to any of them, a set corrected, a rating added, a week
+ * turned into a recovery week, an injury limit logged or backdated, re-runs
+ * the learner the same day (review of 2026-09-26: a shorter key missed
+ * all of these until the next day).
+ */
+function personalMemoKey({
+  userId, nowMs, recoveryRating, sessions, exerciseById, excluded,
+}) {
+  const parts = [userId, localDayKey(nowMs), recoveryRating, [...excluded].sort().join(',')];
+  const named = new Set();
+  for (const session of sessions) {
+    const r = session.ratings ?? {};
+    parts.push([
+      session.id, session.startedAt, session.endedAt, session.durationMinutes, session.weekRirTarget,
+      session.isFirstWeek, session.isDeload, session.weekStatus, r.fatigue, r.joint, r.sorenessNext,
+    ].join('|'));
+    for (const set of Array.isArray(session.sets) ? session.sets : []) {
+      const exerciseId = set?.exerciseId ?? set?.exercise_id;
+      named.add(exerciseId);
+      parts.push([
+        set?.id, exerciseId, set?.setType ?? set?.set_type, set?.evidenceClass ?? set?.evidence_class,
+        set?.weight, set?.actualReps ?? set?.actual_reps, set?.setNumber ?? set?.set_number,
+        set?.createdAt ?? set?.created_at, set?.deletedAt ?? set?.deleted_at,
+      ].join('|'));
+    }
+  }
+  for (const id of named) {
+    const e = exerciseById?.[id];
+    parts.push(e ? [
+      id, e.primaryMuscle ?? e.primary_muscle, JSON.stringify(e.secondaryMuscles ?? e.secondary_muscles ?? null),
+      e.loadSemantics ?? e.load_semantics, e.exerciseType ?? e.exercise_type,
+    ].join('|') : `${id}|none`);
+  }
+  return parts.join('\n');
 }
 
 /**
@@ -383,50 +455,17 @@ function normaliseMuscleKey(muscle) {
 async function learnFromSessions({
   userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
 }) {
-  const newest = sessions[sessions.length - 1];
-  // The history's shape: how many sessions and sets, the newest session, and
-  // the sum of weight x reps, so an edited set (same count, a corrected
-  // weight or rep count) re-runs the learner the same day.
-  let setCount = 0;
-  let workload = 0;
-  for (const session of sessions) {
-    for (const set of Array.isArray(session.sets) ? session.sets : []) {
-      setCount += 1;
-      const w = Number(set?.weight);
-      const r = Number(set?.actualReps ?? set?.actual_reps);
-      if (Number.isFinite(w) && Number.isFinite(r)) workload += w * r;
-    }
-  }
-  const key = [
-    userId, localDayKey(nowMs), recoveryRating, sessions.length, setCount, Math.round(workload * 100), newest?.id ?? '',
-  ].join('|');
-  if (personalMemo && personalMemo.key === key) return personalMemo.value;
-
-  const excluded = new Set();
+  let excluded;
   try {
-    const capRows = await getCapabilityConstraints(userId);
-    // The block ledger's own precondition (blockLedgerRunner.js): no episode
-    // row, nothing is constrained.
-    if (Array.isArray(capRows) && capRows.some((r) => r?.role === 'episode')) {
-      // Lazy, as database.getAdaptiveLandmarkHistory requires it.
-      // eslint-disable-next-line global-require
-      const elig = require('../capability/eligibility');
-      for (const session of sessions) {
-        const startMs = Number(session.startedAt);
-        const endMs = Number(session.endedAt) > startMs ? Number(session.endedAt) : startMs + DEFAULT_SESSION_MS;
-        // No episode active across the session or the return period before
-        // it: nothing to scan the library for (anyEpisodeOverlap is the
-        // module's own fast pre-check, a superset of what the scan finds).
-        if (!elig.anyEpisodeOverlap(capRows, startMs - elig.REINTRODUCTION_CARRY_MS, endMs)) continue;
-        for (const muscle of elig.constrainedMusclesInWindow(capRows, exercises, startMs, endMs)) {
-          excluded.add(`${session.id}|${normaliseMuscleKey(muscle)}`);
-        }
-      }
-    }
+    excluded = await excludedEvidence(userId, sessions, exercises);
   } catch (e) {
     logError('recovery.load.capabilityConstraints', e, { userId });
     return null;
   }
+  const key = personalMemoKey({
+    userId, nowMs, recoveryRating, sessions, exerciseById, excluded,
+  });
+  if (personalMemo && personalMemo.key === key) return personalMemo.value;
   try {
     const value = learnPersonalRecovery({
       sessions, exerciseById, recoveryRating, nowMs, excluded,

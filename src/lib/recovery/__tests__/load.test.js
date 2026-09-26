@@ -517,6 +517,61 @@ describe('loadMuscleRecovery: the personal factor (register D210)', () => {
     expect(personalRecovery.learnPersonalRecovery).toHaveBeenCalledTimes(2);
   });
 
+  test('the same day, any change the learner reads re-runs it: a set, a rating, a week, the exercise, an injury limit', async () => {
+    // The review of 2026-09-26: a key of counts and the newest session missed
+    // each of these until the next day.
+    const planned = (id, daysAgo) => ({ ...workout(id, daysAgo), mesocycleId: 'm1', mesocycleWeekId: 'wk2' });
+    const weeks = (deload) => [
+      { id: 'wk1', week_index: 1, rir_target: 3, is_deload: 0 },
+      { id: 'wk2', week_index: 2, rir_target: 2, is_deload: deload ? 1 : 0 },
+    ];
+    const reset = () => {
+      mockDb.getCompletedWorkoutsBetween.mockResolvedValue([planned('w1', 3)]);
+      mockDb.getMesocycleWeeks.mockResolvedValue(weeks(false));
+      mockDb.getAllExercisesIncludingDeleted.mockResolvedValue(QUADS);
+      mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(quadSets('w1'));
+      mockDb.getCapabilityConstraints.mockResolvedValue([]);
+    };
+    const changes = [
+      ['a set type corrected', () => mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(
+        quadSets('w1').map((x, i) => (i === 0 ? { ...x, setType: 'warmup' } : x)),
+      )],
+      ['a set moved to another exercise', () => {
+        mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([...QUADS, { id: 'ex2', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+        mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(quadSets('w1').map((x) => ({ ...x, exerciseId: 'ex2' })));
+      }],
+      ['a fatigue rating added', () => mockDb.getCompletedWorkoutsBetween.mockResolvedValue([{ ...planned('w1', 3), fatigueLevel: 5 }])],
+      ['the week turned into a recovery week', () => mockDb.getMesocycleWeeks.mockResolvedValue(weeks(true))],
+      ['the exercise\'s muscle corrected', () => mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ ...QUADS[0], primaryMuscle: 'hamstrings' }])],
+      ['an injury limit logged, covering the session', () => mockDb.getCapabilityConstraints.mockResolvedValue([
+        { id: 'c9', role: 'episode', startsAt: NOW - 10 * DAY_MS, endedAt: null, deletedAt: null },
+      ])],
+    ];
+    // The scan itself is eligibility's own (tested there): here it reports
+    // quads for any session it is asked about.
+    eligibility.constrainedMusclesInWindow.mockImplementation(() => new Set(['quads']));
+    try {
+      for (const [what, change] of changes) {
+        reset();
+        __resetPersonalMemoForTests();
+        personalRecovery.learnPersonalRecovery.mockClear();
+        // eslint-disable-next-line no-await-in-loop
+        await loadMuscleRecovery('u1', NOW);
+        // eslint-disable-next-line no-await-in-loop
+        await loadMuscleRecovery('u1', NOW + HOUR_MS);
+        expect([what, personalRecovery.learnPersonalRecovery.mock.calls.length]).toEqual([what, 1]);
+        change();
+        // eslint-disable-next-line no-await-in-loop
+        await loadMuscleRecovery('u1', NOW + 2 * HOUR_MS);
+        expect([what, personalRecovery.learnPersonalRecovery.mock.calls.length]).toEqual([what, 2]);
+      }
+    } finally {
+      eligibility.constrainedMusclesInWindow.mockImplementation(
+        jest.requireActual('../../capability/eligibility').constrainedMusclesInWindow,
+      );
+    }
+  });
+
   test('a failed injury-limit read skips the learner for this read: personal null, the map intact and not degraded', async () => {
     seed([workout('w1', 2)]);
     mockDb.getCapabilityConstraints.mockRejectedValue(new Error('locked'));
@@ -565,6 +620,28 @@ describe('loadMuscleRecovery: the personal factor (register D210)', () => {
     expect(scannedFrom).toEqual([NOW - 2 * DAY_MS]);
     eligibility.constrainedMusclesInWindow.mockReset();
     eligibility.constrainedMusclesInWindow.mockImplementation(jest.requireActual('../../capability/eligibility').constrainedMusclesInWindow);
+  });
+
+  test('the return period, on the real scan: a session within 14 days after an injury limit ended is left out, one after it is not', async () => {
+    // Round 2 of the review: the only exclusion test used a live episode and
+    // a stand-in scan, so dropping the return period from the loader's
+    // pre-check went unnoticed. This one runs capability/eligibility itself.
+    const SQUAT = {
+      id: 'ex1', name: 'Barbell Back Squat', primaryMuscle: 'quads', secondaryMuscles: [], position: 'standing',
+      floorAccess: 0, overheadPosition: 0, gripDemand: 'bar', unilateralLoadable: 0, bilateralUpper: 1,
+      bilateralLower: 1, axialLoad: 1, impact: 0, balanceDemand: 'stable',
+    };
+    const endedAt = NOW - 20 * DAY_MS;
+    seed([workout('w_before', 60), workout('w_during', 30), workout('w_return', 10), workout('w_after', 2)]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([SQUAT]);
+    mockDb.getCapabilityConstraints.mockResolvedValue([{
+      id: 'c1', userId: 'u1', role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'standing',
+      laterality: null, startsAt: endedAt - 20 * DAY_MS, endsAt: null, state: 'ended', endedAt,
+      endedReason: 'user_ended', episodeGroupId: 'ep1', deletedAt: null,
+    }]);
+    await loadMuscleRecovery('u1', NOW);
+    const { excluded } = personalRecovery.learnPersonalRecovery.mock.calls[0][0];
+    expect([...excluded].sort()).toEqual(['w_during|quads', 'w_return|quads']);
   });
 
   test('no episode row: nothing is scanned and nothing excluded', async () => {
