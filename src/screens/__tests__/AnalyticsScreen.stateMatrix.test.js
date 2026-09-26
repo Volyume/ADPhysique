@@ -596,7 +596,8 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
     expect(body.length).toBe(1);
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your weight trend is updated\./);
     expect(body[0].props.accessibilityLabel).toMatch(/kg/);
 
     // Visual pillar: eligible, real buildVisualPillarCopy string.
@@ -652,7 +653,8 @@ describe('State matrix — B: training up, weight stalled', () => {
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts in the last 30 days/);
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your weight trend is updated\./);
     // No instruction/imperative anywhere in the Body pillar's copy.
     expect(body[0].props.accessibilityLabel).not.toMatch(/add|reduce|increase|decrease|deload/i);
   });
@@ -711,7 +713,8 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts in the last 30 days/);
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your weight trend is updated\./);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your visual trend. 2 more comparable scans until your first assessment.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/visible change/i);
