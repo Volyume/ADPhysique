@@ -735,7 +735,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quizBannerTitle, live.quizBannerTitle]}>Not sure where to start?</Text>
-                <Text style={[styles.quizBannerBody, live.quizBannerBody]}>Answer two quick questions and we'll point you to the right plan.</Text>
+                <Text style={[styles.quizBannerBody, live.quizBannerBody]}>Answer two quick questions and your coach will point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </Card>
@@ -943,7 +943,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <View style={styles.quizResultIcon}>
                   <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
                 </View>
-                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here's our suggestion</Text>
+                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here's your coach's suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
                   <Text style={[styles.quizResultName, live.quizResultName]}>{quizResult.name}</Text>
                   {quizResult.description ? (

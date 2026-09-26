@@ -94,7 +94,8 @@ describe('WHY ISN\'T THAT FOOD APPEARING', () => {
     const hit = out.find((x) => x.foodKey === 'pasta');
     expect(hit).toBeTruthy();
     expect(hit.excludedByUser).toBe(true);
-    expect(explainAbsence(hit)).toBe('You asked us not to suggest this food.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us"; "you asked" stays as the user's own action)
+    expect(explainAbsence(hit)).toBe('You asked for this food not to be suggested.');
   });
 
   test('an allergen exclusion is reported as an allergen, not as a preference', () => {
@@ -112,7 +113,8 @@ describe('WHY ISN\'T THAT FOOD APPEARING', () => {
       ...PREFS, excludeFoodKeys: ['pasta'], excludeTags: ['cereals_gluten'],
     });
     const pasta = out.find((x) => x.foodKey === 'pasta');
-    expect(explainAbsence(pasta)).toMatch(/You asked us not to suggest/);
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us"; "you asked" stays as the user's own action)
+    expect(explainAbsence(pasta)).toBe('You asked for this food not to be suggested.');
   });
 
   test('NO REASON IS INVENTED: a food dropped on macro fit is simply not listed', () => {

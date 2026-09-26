@@ -34,7 +34,8 @@ describe('PlanLibraryScreen quiz sheet (D36a)', () => {
     expect(quizWindow).toContain('QUIZ_STEPS[quizStep].question');
     expect(quizWindow).toContain('Skip and browse all plans');
     // Result step
-    expect(quizWindow).toContain("Here's our suggestion");
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: "our" was a collaborative "we" for a coaching decision, now "your coach's")
+    expect(quizWindow).toContain("Here's your coach's suggestion");
     expect(quizWindow).toContain('accessibilityLabel={`Add ${quizResult.name}`}');
     // No-result step
     expect(quizWindow).toContain('No exact match found');

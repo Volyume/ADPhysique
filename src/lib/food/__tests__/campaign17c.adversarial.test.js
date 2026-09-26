@@ -501,7 +501,8 @@ describe('WORK 7: product-critical helpers have live consumers', () => {
 
   test('unknown rationale codes render silence and names cannot manufacture provenance', () => {
     expect(explainMeal('because_the_name_sounds_healthy')).toBeNull();
-    expect(explainMeal(MEAL_REASON.PINNED)).toBe('You asked us to keep this one.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us", user's own action stays "you chose")
+    expect(explainMeal(MEAL_REASON.PINNED)).toBe('You chose to keep this one.');
   });
 
   test('when restrictions overlap, safety provenance outranks taste provenance', () => {

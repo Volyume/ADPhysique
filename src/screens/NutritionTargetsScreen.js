@@ -62,7 +62,7 @@ const EXPLAINERS = {
     title: 'How these numbers are worked out',
     sections: [
       { heading: 'Calorie baseline', lines: [
-        'A standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.',
+        'A standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, your coach can account for your likely lean mass with lower or higher confidence depending on the source.',
       ] },
       { heading: 'Maintenance', lines: [
         'The formula estimate is adjusted using your logged food and weight once you have logged enough for it to be reliable. Without enough logging, the formula estimate stays as your honest starting point.',
@@ -849,7 +849,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
             <Card style={styles.fastCard}>
               <Text style={[styles.fastTitle, live.fastTitle]}>Set it for me</Text>
               <Text style={[styles.fastSubtitle, live.fastSubtitle]}>
-                Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
+                Answer a few quick questions and your coach will set a starting daily target. You can fine-tune anything afterwards.
               </Text>
 
               <Text style={[styles.fieldLabel, live.fieldLabel]}>Your goal</Text>
@@ -1513,7 +1513,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       const lbmLine = `You have ${estimatedLabel} ${lbmKg} kg of muscle and bone. At ${results.proteinGPerKgLbm} g per kg of that muscle mass, ${results.proteinG}g is based on ${approachLabel}. `;
                       const scalingLine = results.confidence === 'low'
                         ? `Because this uses a best estimate, treat it as a sensible starting point rather than an exact measurement. `
-                        : `We scale to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
+                        : `Your coach scales to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
@@ -1527,7 +1527,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       const bwLine = safeProteinGPerKg != null
                         ? `At ${safeProteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `
                         : `Your target of ${results.proteinG}g is based on ${approachLabel}. `;
-                      const tipLine = `Tip: entering a body-fat estimate or measured figure lets us scale closer to your lean mass instead of total weight. A measured source is stronger, but even a good estimate can improve the starting point. `;
+                      const tipLine = `Tip: entering a body-fat estimate or measured figure lets your coach scale closer to your lean mass instead of total weight. A measured source is stronger, but even a good estimate can improve the starting point. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
@@ -1538,7 +1538,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       return bwLine + tipLine + purposeLine;
                     })();
 
-                const fatWhy = `Fat does two essential jobs: it supports hormone production, and lets your body absorb vitamins A, D, E, and K. Your ${results.fatG}g target is set by your phase rather than a fixed percentage of calories. ${isGain ? 'In a surplus we keep fat moderate so carbs can take the lion\'s share and fuel hard training.' : isCut ? 'In a deficit fat holds reasonably steady while carbs come down first, since carbs are easier to reduce without affecting hormonal recovery.' : isMaintain ? 'At maintenance fat sits at a comfortable middle, leaving carbs as your main training fuel.' : 'Fat is held moderate so carbs can cover most of your training fuel needs.'} The hard floor is ${fatFloorG}g. Sustained drops below that can disrupt hormonal recovery.`;
+                const fatWhy = `Fat does two essential jobs: it supports hormone production, and lets your body absorb vitamins A, D, E, and K. Your ${results.fatG}g target is set by your phase rather than a fixed percentage of calories. ${isGain ? 'In a surplus fat is kept moderate so carbs can take the lion\'s share and fuel hard training.' : isCut ? 'In a deficit fat holds reasonably steady while carbs come down first, since carbs are easier to reduce without affecting hormonal recovery.' : isMaintain ? 'At maintenance fat sits at a comfortable middle, leaving carbs as your main training fuel.' : 'Fat is held moderate so carbs can cover most of your training fuel needs.'} The hard floor is ${fatFloorG}g. Sustained drops below that can disrupt hormonal recovery.`;
 
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`

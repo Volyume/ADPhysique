@@ -956,7 +956,7 @@ export function computeAdaptiveDecision({ soreness = 3, performance = 3, pump = 
       decision: 'deload_trigger',
       delta: 0,
       reasonCode: 'systemic_mrv_breach',
-      reasonText: 'Still sore and performance dropped. Your body needs more recovery. A lighter week is recommended.',
+      reasonText: 'Still sore and performance dropped. Your body needs more recovery.',
     };
   }
 
