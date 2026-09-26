@@ -10917,6 +10917,44 @@ effort targets would need the effort actually reached, and the logged
 reps in reserve face the same pre-filled-entry problem as reps); it goes to
 the founder with the numbers.
 
+**D210 addendum 4 (2026-09-26, founder): plain English on the recovery
+card, and no builds.** Founder, verbatim: "No finish all tasks and push to
+main. I'll do a build when I am ready you do not have permission to push
+builds / Remember the copy rules at all times, understandable plain British
+English / I see parts breaking those". Every sentence the card, the
+Recovery by muscle caption and the 2.3.0 What's New line can show was
+re-read against `docs/rules/plain-english.md` (an adult who has never lifted
+must be able to say it back after one read). What failed, and why: a vague
+"it" with no clear subject ("so it now estimates"), lifting shorthand
+("your lifts hold up", "the same lift", "a 6-set session"), and a caption
+whose list read as three things when it meant two. Now, in the words shown:
+"When you train again soon after a workout, you lift more than first
+expected. So your recovery is now estimated to take about N% less time,
+though never less than a day." (and the slower mirror, "though never more
+than a week"); "So far, how much you lift after short and long breaks shows
+no clear difference from the first estimate, so the estimate stays the
+same."; "Your recovery speed is worked out by comparing the same exercise
+on the same day in different weeks, after breaks of different lengths. So
+far, the breaks before those workouts have been too alike, or long enough
+to recover fully."; "When an exercise is logged with exactly the same reps
+at least half the time, that shows the plan rather than how each workout
+went, so it is left out. That leaves too few comparisons so far."; "Each
+exercise is compared with the same exercise on the same day in an earlier
+week. Learning starts once there are 8 of these comparisons."; "Based on N
+comparisons of the same exercise on the same day in different weeks.";
+"Back after 6 sets, estimated recovery time"; the footer "It starts from
+your answer to ‘How’s your recovery?’ and only changes when your workouts
+show a clear difference. It’s an estimate, not a measurement."; the
+caption "Estimated from how long ago each muscle was last trained and how
+many sets it had, adjusted for your answer to ‘How’s your recovery?’ (or
+your recovery speed, learned from your workouts) and your ratings. Not a
+measurement."; What's New "Recovery can now learn how quickly you recover,
+from how your workouts go. ‘Your recovery speed’, under Recovery by muscle,
+shows how far it has got." (the old line said "See what it has found",
+untrue for everyone it has not found anything for yet). Each claim was
+checked against the code that produces it. Builds: CLAUDE.md's build rule
+now bars every build, Android included, without the founder's go.
+
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
 absolutely no relevance or requirement for share cards why did you ignore

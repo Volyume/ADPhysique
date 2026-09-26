@@ -86,13 +86,17 @@ review, which said do not land (addendum 3).
   and, when adjusted, "You"; a headline ("Faster than first estimated",
   "Slower than first estimated", "In line with the first estimate", "Not
   learning yet", "Still learning"); one sentence on what changed and by
-  about what percent, with the estimate's own bounds ("and never less than a
-  day", "and never more than a week"); for an adjusted reading, the muscle
-  the learning rests on most after a 6-set session as two tiles (first
-  estimate, you); "From N comparisons of the same lift on the same day of
-  the week."; while too few, "N of 8 comparisons so far" with a bar; each
-  "not yet" names its own reason. The subtitle says "Learned from your
-  lifts" only once something has been learned. The card is not one grouped
+  about what percent, with the estimate's own bounds ("When you train again
+  soon after a workout, you lift more than first expected. So your recovery
+  is now estimated to take about N% less time, though never less than a
+  day."); for an adjusted reading, the muscle the learning rests on most
+  after 6 sets as two tiles (first estimate, you); "Based on N comparisons
+  of the same exercise on the same day in different weeks."; while too few,
+  "N of 8 comparisons so far" with a bar; each "not yet" names its own
+  reason. The subtitle says "Learned from your workouts" only once something
+  has been learned. Every sentence was re-checked against
+  `docs/rules/plain-english.md` on the founder's order of 2026-09-26 (D210
+  addendum 4). The card is not one grouped
   screen-reader node: the title keeps its heading role and every line is
   read. The Recovery by muscle caption and each muscle's "Based on" line
   name the learned speed once it is in use. Pinned in
