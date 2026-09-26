@@ -117,7 +117,8 @@ describe('part 1: specific data-referenced acknowledgement', () => {
 
   test('a strong logging week rides along (5+ weigh-ins)', () => {
     const r = build({ weighInsThisWeek: 6 });
-    expect(r.acknowledgement).toBe("All 4 sessions in this week. And 6 weigh-ins, so the trend has plenty to go on.");
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.acknowledgement).toBe("All 4 sessions in this week. And 6 weigh-ins, which is plenty to see how your weight is moving.");
   });
 
   test('weigh-in counts are never surfaced under an open ED flag', () => {
@@ -135,7 +136,8 @@ describe('part 1: specific data-referenced acknowledgement', () => {
       output: fakeOutput({ sessionsCompleted: 0, sessionsPlanned: 3 }),
       weighInsThisWeek: 5,
     });
-    expect(r.acknowledgement).toBe('5 weigh-ins logged this week. Enough to read the trend from.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.acknowledgement).toBe('5 weigh-ins logged this week. Enough to see how your weight is moving.');
   });
 
   test('no training, thin weigh-ins: the answered check-in is named', () => {
@@ -235,7 +237,8 @@ describe('part 2: plain-language trend interpretation', () => {
     const r = build({
       output: fakeOutput({ trend: { ewma7: null, delta: null, onTarget: false } }),
     });
-    expect(r.interpretation).toBe("Not enough weigh-ins for a proper trend read yet. A few more mornings on the scales will sharpen it.");
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.interpretation).toBe("Not enough weigh-ins yet to see a clear trend in your weight. A few more mornings on the scales will make the trend clearer.");
   });
 
   describe('suppression (open ED flag or calm mode): direction only, no rate', () => {
@@ -353,7 +356,8 @@ describe('part 4: one cue for the week ahead', () => {
 
   test('priority 1: thin weigh-in data beats everything', () => {
     const r = build(everythingWrong);
-    expect(r.cue).toBe('Log your morning weight each day this week. Every log sharpens the read.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Log your morning weight each day this week. Every weigh-in makes the next check-in more accurate.');
   });
 
   test('priority 2: sleep, once the data is solid', () => {
@@ -362,7 +366,8 @@ describe('part 4: one cue for the week ahead', () => {
       output: fakeOutput({ sessionsCompleted: 1, sessionsPlanned: 4 }),
       weighInsThisWeek: 7,
     });
-    expect(r.cue).toBe('Sleep is the lever this week. Aim for 7 hours or more a night.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Sleep will make the biggest difference this week. Aim for 7 hours or more a night.');
   });
 
   test('priority 3: missed sessions, once sleep is fine', () => {
@@ -371,7 +376,8 @@ describe('part 4: one cue for the week ahead', () => {
       checkin: fakeCheckin({ jointPain: true, calsAdherence: 'untracked' }),
       weighInsThisWeek: 7,
     });
-    expect(r.cue).toBe('Get all 4 sessions in this week. Consistency moves the plan more than any single change.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Get all 4 sessions in this week. Doing your sessions week after week makes more difference than any single change to the plan.');
   });
 
   test('priority 4: joint pain, once sessions are in', () => {
@@ -379,7 +385,8 @@ describe('part 4: one cue for the week ahead', () => {
       checkin: fakeCheckin({ jointPain: true, calsAdherence: 'untracked' }),
       weighInsThisWeek: 7,
     });
-    expect(r.cue).toBe('Keep load off the sore joint this week. Swap any movement that aggravates it for a pain-free option.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md); D204 addendum 2: pain guidance points to a swap or Injuries & limitations.
+    expect(r.cue).toBe('If a movement hurts the sore joint, swap it for a pain-free option, or add it under Injuries & limitations so your plan works around it.');
   });
 
   test('priority 5: untracked calories', () => {
@@ -387,7 +394,8 @@ describe('part 4: one cue for the week ahead', () => {
       checkin: fakeCheckin({ calsAdherence: 'untracked' }),
       weighInsThisWeek: 7,
     });
-    expect(r.cue).toBe('Log your food this week. The calorie target can only be tuned against real intake.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Log your food this week. Your calorie target can only be adjusted using what you actually eat.');
   });
 
   test('priority 6: under-target eating gets the eat-to-target cue', () => {
@@ -403,7 +411,8 @@ describe('part 4: one cue for the week ahead', () => {
       checkin: fakeCheckin({ calsAdherence: 'over' }),
       weighInsThisWeek: 7,
     });
-    expect(r.cue).toBe('Stay inside the calorie target this week. One steady week tells the plan more than a mixed one.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Stay inside the calorie target this week. One steady week tells your coach more than a week that goes up and down.');
   });
 
   test('default: the consistency line', () => {
@@ -414,7 +423,8 @@ describe('part 4: one cue for the week ahead', () => {
   describe('suppression states', () => {
     test('no weigh-in ask under a flag: falls through to sleep', () => {
       const r = build({ ...everythingWrong, edFlagOpen: true });
-      expect(r.cue).toBe('Sleep is the lever this week. Aim for 7 hours or more a night.');
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      expect(r.cue).toBe('Sleep will make the biggest difference this week. Aim for 7 hours or more a night.');
     });
 
     test('no food-tracking push under a flag: falls to the safety default', () => {
@@ -451,7 +461,8 @@ describe('part 4: one cue for the week ahead', () => {
 describe('part 5: forward pull', () => {
   test('anchors the named check-in day', () => {
     const r = build({ weighInsThisWeek: 7 });
-    expect(r.forward).toBe('See you Sunday. The next weekly read takes it from there.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.forward).toBe('See you Sunday. Your coach will look at the week and decide what comes next.');
   });
 
   test('falls back when no day is known', () => {
@@ -471,7 +482,8 @@ describe('part 5: forward pull', () => {
       }),
       weighInsThisWeek: 7,
     });
-    expect(r.forward).toBe('See you Sunday. The next read checks the trend against the target again.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.forward).toBe('See you Sunday. The check-in will show how your weight responds to the new target.');
   });
 
   test('missed sessions anchor a conditional, honest pull', () => {
@@ -479,12 +491,14 @@ describe('part 5: forward pull', () => {
       output: fakeOutput({ sessionsCompleted: 2, sessionsPlanned: 4 }),
       weighInsThisWeek: 7,
     });
-    expect(r.forward).toBe('See you Sunday. Get the sessions in and the next read will show it.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.forward).toBe('See you Sunday. Get your sessions in, and the check-in will show how they went.');
   });
 
   test('thin data anchors the weigh-in habit', () => {
     const r = build({ weighInsThisWeek: 2 });
-    expect(r.forward).toBe('See you Sunday. Daily weigh-ins between now and then sharpen the read.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.forward).toBe('See you Sunday. Weighing yourself each morning until then makes the check-in more accurate.');
   });
 
   test('suppressed: a neutral, true anchor with no weight ask', () => {
@@ -524,7 +538,8 @@ describe('missing-data fallbacks', () => {
     expect(r.interpretation).toBeNull();
     expect(r.decision).toBeNull();
     expect(r.acknowledgement).toBe("2 of your 3 sessions in this week.");
-    expect(r.cue).toBe('Log your morning weight each day this week. Every log sharpens the read.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.cue).toBe('Log your morning weight each day this week. Every weigh-in makes the next check-in more accurate.');
     expect(r.forward).toBeTruthy();
   });
 
@@ -691,13 +706,15 @@ describe('S1c pre-commitment line', () => {
   const calOut = (change) => fakeOutput({ adjustments: { calories: { change }, training: { signal: 'hold' } } });
 
   test('names this week calorie cut and the check-in day', () => {
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday' }).preCommitment)
-      .toBe('Next Sunday, the read checks whether the trend responds to this 150 kcal cut.');
+      .toBe("Next Sunday's check-in will show whether your weight responds to this 150 kcal cut.");
   });
 
   test('reads "increase" for a calorie rise, and drops the day when unknown', () => {
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(buildCoachResponse({ output: calOut(120), checkinDayName: null }).preCommitment)
-      .toBe('The next read checks whether the trend responds to this 120 kcal increase.');
+      .toBe('The next check-in will show whether your weight responds to this 120 kcal increase.');
   });
 
   test('null when there is no calorie change', () => {
@@ -706,8 +723,9 @@ describe('S1c pre-commitment line', () => {
 
   test('drops the figure when the cut was floor-clamped (never overstates the real cut)', () => {
     const output = fakeOutput({ adjustments: { calories: { change: -150, clampedToFloor: true }, training: { signal: 'hold' } } });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(buildCoachResponse({ output, checkinDayName: 'Sunday' }).preCommitment)
-      .toBe("Next Sunday, the read checks whether the trend responds to this week's calorie change.");
+      .toBe("Next Sunday's check-in will show whether your weight responds to this week's calorie change.");
   });
 
   test('suppressed under an ED flag or calm mode', () => {
@@ -729,8 +747,9 @@ describe('S1c commitment answer', () => {
       weekStartMs: NOW,
       history: priorApplied(-150),
     });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(r.commitmentAnswer)
-      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
+      .toBe("Last week's 150 kcal cut was the one to watch. Your weight has responded, and it is moving at the planned rate again.");
   });
 
   test('applied cut that is still off target reads as no response yet', () => {
@@ -739,8 +758,9 @@ describe('S1c commitment answer', () => {
       weekStartMs: NOW,
       history: priorApplied(-150),
     });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(r.commitmentAnswer)
-      .toBe("Last week's 150 kcal cut was the call to watch. The trend has not responded yet, it is still off the set rate.");
+      .toBe("Last week's 150 kcal cut was the one to watch. Your weight has not responded yet, and it is still not moving at the planned rate.");
   });
 
   test('null when last week call was never applied', () => {
@@ -781,8 +801,9 @@ describe('S1c commitment answer', () => {
       weekStartMs: NOW,
       history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true, clampedToFloor: true } }, trend: { onTarget: false } }],
     });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(r.commitmentAnswer)
-      .toBe("Last week's calorie change was the call to watch. The trend has responded, it is back on the set rate.");
+      .toBe("Last week's calorie change was the one to watch. Your weight has responded, and it is moving at the planned rate again.");
   });
 
   test('null when last week applied training but not calories (a proposed-not-applied cut is not answered)', () => {
@@ -800,7 +821,8 @@ describe('S1c commitment answer', () => {
       weekStartMs: NOW,
       history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true }, training: { signal: 'push', applied: true } }, trend: { onTarget: false } }],
     });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(r.commitmentAnswer)
-      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
+      .toBe("Last week's 150 kcal cut was the one to watch. Your weight has responded, and it is moving at the planned rate again.");
   });
 });

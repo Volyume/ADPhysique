@@ -11,7 +11,8 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
     expect(CHECKIN).toMatch(/firstCheckinLabel/);
     expect(CHECKIN).toMatch(/const parsedCheckinDay = Number\(prefs\.checkinDay\)/);
     expect(CHECKIN).toMatch(/const safeFirstCheckinLabel = firstCheckinLabel\?\.startsWith\(scheduledDayName\)/);
-    expect(CHECKIN).toMatch(/Volyume waits for your next \{scheduledDayName\} after that baseline is ready/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(CHECKIN).toMatch(/Volyume waits for your next \{scheduledDayName\} after that, so each check-in compares like for like/);
     expect(CHECKIN).not.toMatch(/your chosen day/);
     expect(CHECKIN).not.toMatch(/first check-in lands on \{nextDayLabel\}/);
   });

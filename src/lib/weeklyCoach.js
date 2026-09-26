@@ -225,7 +225,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
       // morning do not satisfy it. The holdMessage already said so; this
       // reason line now matches it.
       reasons: ['Morning weights on fewer than 3 different days this week'],
-      holdMessage: "Need morning weights from at least 3 different days for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
+      holdMessage: "Need morning weights from at least 3 different days for a reliable trend. Your calorie target stays the same this week. Log your weight daily and the next check-in will have reliable information to act on.",
     };
   }
 
@@ -233,7 +233,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Unusual event flagged with limited weight data'],
-      holdMessage: "Unusual week flagged and weight data is thin. Scale isn't a reliable signal right now. Calories held. Log consistently next week for a clean read.",
+      holdMessage: "You flagged an unusual week and there are only a few weigh-ins. The scale isn't a reliable guide right now. Your calorie target stays the same. Weigh in regularly next week so the next check-in is more accurate.",
     };
   }
 
@@ -483,37 +483,48 @@ function stepsBand(goalPhase, bodyweightKg = null) {
 // applied to every line.
 const WHY_LIBRARY = {
   on_target_holding: [
-    "Weight is tracking the target rate. No change needed this week.",
+    "Your weight is moving at the planned rate. No change needed this week.",
+  ],
+  // Lead review 2026-09-26: the ladder's last branch used to be
+  // on_target_holding for EVERY week without a change, so an off-target
+  // week that was waiting (not enough off-target weeks yet, a recent change
+  // still settling, a hold) told the athlete their weight was on target.
+  // The branch now reads the engine's own onTarget.
+  holding_off_target: [
+    "Your weight isn't moving at the planned rate yet, but your targets stay the same this week.",
+  ],
+  holding_no_trend: [
+    "There isn't enough weight information yet to judge your rate, so your targets stay the same this week.",
   ],
   off_target_cal_up: [
-    "Trend is off target, so your calorie target goes up.",
+    "Your weight is not moving at the planned rate, so your calorie target goes up.",
   ],
   off_target_cal_down: [
-    "Trend is off target, so your calorie target comes down.",
+    "Your weight is not moving at the planned rate, so your calorie target comes down.",
   ],
   recovery_lagging: [
-    "Your recovery's down. Calories hold until it's back.",
+    "Your recovery's down. Your calorie target stays the same until it's back.",
   ],
   performance_regressed: [
-    "Your strength is dipping. Calories hold until it stabilises.",
+    "Your strength is dipping. Your calorie target stays the same until your strength steadies.",
   ],
   building_baseline: [
-    "Not enough data yet to adjust. Keep logging weight and sessions and the read will catch up.",
+    "Not enough information yet to make a change. Keep logging your weight and sessions until there is enough to go on.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week, so the plan holds steady until that settles.",
+    "Sessions were inconsistent this week, so the plan stays as it is until you're doing your sessions regularly again.",
   ],
   steps_bump: [
-    "Trend is behind target, so your step target goes up: it's the lowest-fatigue lever.",
+    "Your weight is behind target, so your step target goes up: it's the least tiring change to make.",
   ],
   deload_suggested: [
-    "Recovery's flagging across several signals, so next week is lighter to set up the next run.",
+    "Several signs show you are not recovering well, so next week is lighter, to set you up for the weeks after it.",
   ],
   diet_break_suggested: [
-    "You've been in a deficit a long stretch. A short break at maintenance will help the next one.",
+    "You've been in a calorie deficit for a long stretch. A short break at maintenance will help the next one.",
   ],
   push_volume: [
-    "Recovery's good and your lifts are moving, so there's a bit more work in the plan this week.",
+    "Recovery's good and your lifts are going up, so there's a bit more work in the plan this week.",
   ],
   // D15 (founder ruling 2026-07-09): fires only when exceededEscalationApplied
   // is true, i.e. only on the week the bounded one-step escalation actually
@@ -523,7 +534,7 @@ const WHY_LIBRARY = {
     "You have been ahead of your plan for three weeks running, so your coach is moving you along a little faster this week.",
   ],
   low_data_weight: [
-    "Weight data is thin this week. The trend will sharpen with more daily logs.",
+    "Only a few weigh-ins this week. Your weight trend gets clearer with more daily weigh-ins.",
   ],
   ffm_floor_hold: [
     "Your calorie target holds. Your seven-day average intake is at or below the safety floor for your lean mass.",
@@ -1176,7 +1187,7 @@ export function runWeeklyCoach(inputs) {
   if (!hasEnoughData) {
     const dataNote = weeksInPhase < 2
       ? 'Keep logging. Adjustments start after your second week.'
-      : 'Log your morning weight at least 4 days this week to get trend coaching.';
+      : 'Log your morning weight on at least 4 days this week to get coaching based on your weight trend.';
     return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context: preFilterContext() });
   }
 
@@ -1271,7 +1282,10 @@ export function runWeeklyCoach(inputs) {
       // parsed note, so it always says the plan is respecting what the
       // user answered - the materiality rule below governs free-text
       // provenance only.
-      safetyHoldNote = 'You flagged joint pain, so the plan holds rather than adding work. Ease the load on the sore movement or swap it for a pain-free variation.';
+      // D204 addendum 2 ruling (lead, 2026-09-26): pain guidance is a safety
+      // carve-out, but it points to the app's own tools (a swap, Injuries &
+      // limitations), never to lifting lighter than the plan says.
+      safetyHoldNote = 'You flagged joint pain, so the plan stays as it is rather than adding work. If a movement hurts, swap it for a pain-free one, or add the pain under Injuries & limitations so your plan works around it.';
     } else if (holdChangedDecision) {
       safetyHoldNote = noteFlags.injury
         ? 'Kept steady because you mentioned an injury in this check-in, rather than adding work until it settles.'
@@ -1286,7 +1300,7 @@ export function runWeeklyCoach(inputs) {
   // the generic "recovery is excellent" push copy — the user just reported
   // real (expected) fatigue. Name the actual mechanism instead.
   const baseTrainingNote = peakWeekContextApplied && trainingSignal === 'push'
-    ? 'Peak-week fatigue is part of the plan, not a warning. Strong work; your recovery week lands next.'
+    ? 'Tiredness in the hardest week of your block is part of the plan, not a warning. Strong work; your recovery week comes next.'
     : getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
   // D15: reassignable. The sustained-escalation block below only ever
   // overwrites this AFTER confirming safetyHold is false (so safetyHoldNote
@@ -1607,7 +1621,7 @@ export function runWeeklyCoach(inputs) {
       // pattern). Rides with calorieAdjustment so it disappears too if a senior
       // clamp (FFM floor / ED lockout) later nulls the change.
       let note = stepTrendApplied
-        ? `${calNote} Your step trend backed this up, so the change is sized with more confidence.`
+        ? `${calNote} Your step trend backed this up, so there is more confidence behind the size of this change.`
         : calNote;
       // Campaign 18: the receipt says WHY the step is bigger than last time,
       // in the user's own history rather than in a multiplier.
@@ -1618,7 +1632,11 @@ export function runWeeklyCoach(inputs) {
       // safety cap bound the rest; saying "bigger than last time" there would
       // be plainly false to anyone reading their own history.
       if (doseEscalated) {
-        note = `${note} Your last increase was not enough to move your weight as planned, so this adjustment is larger than we would normally make.`;
+        // Lead review 2026-09-26: escalation runs in both directions
+        // (coachIntervention.js matches the prior record's direction), so a
+        // cut must never be called an increase; and the actor is your coach.
+        const lastChange = change > 0 ? 'increase' : 'reduction';
+        note = `${note} Your last ${lastChange} was not enough to move your weight as planned, so this change is larger than your coach would normally make.`;
       }
       calorieAdjustment = { change, note };
     }
@@ -1820,11 +1838,11 @@ export function runWeeklyCoach(inputs) {
         // muscle scope only as our reading, never as the user's words.
         const pcFact = coachContext?.training?.physicalConstraint;
         const subject = typeof pcFact?.subject === 'string' && pcFact.subject ? pcFact.subject : null;
-        if (subject) return `Training worked around ${subject} this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.`;
+        if (subject) return `Training worked around ${subject} this week, so your volume stays where it is and this week is not used to judge your training. Everything unaffected carries on as normal.`;
         const scope = constraintScopePhrase(pcFact);
         return scope
-          ? `Training worked around your ${scope} this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.`
-          : 'Training ran around your temporary change this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.';
+          ? `Training worked around your ${scope} this week, so your volume stays where it is and this week is not used to judge your training. Everything unaffected carries on as normal.`
+          : 'Training worked around your temporary change this week, so your volume stays where it is and this week is not used to judge your training. Everything unaffected carries on as normal.';
       })()
       : getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
   }
@@ -1855,13 +1873,13 @@ export function runWeeklyCoach(inputs) {
         stepsAdjustment = {
           target: newTarget,
           change: newTarget - currentStepsTarget,
-          note: "Adding a bit more daily movement is the gentlest way to widen the deficit without touching your food.",
+          note: "Adding a bit more daily movement is the gentlest way to increase your calorie deficit without touching your food.",
         };
       } else {
         stepsAdjustment = {
           target: currentStepsTarget,
           change: 0,
-          note: "Steps are already near the upper limit, so this lever holds. Any further change comes from the calorie side.",
+          note: "Your step target is already near the upper limit, so it stays the same. Any further change comes from your calories.",
         };
       }
     }
@@ -1908,7 +1926,10 @@ export function runWeeklyCoach(inputs) {
     // share of each muscle's own recent volume (computeDeloadVolume),
     // so "around half" over-promised. The note stays qualitative; the
     // apply row states the exact share once it is applied.
-    deloadNote = 'Ease your sets right back this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets you up for a stronger run after.';
+    // D204 (lead review 2026-09-26): this is the COACH proposing a lighter
+    // week for the plan, so it describes the change instead of giving the
+    // athlete orders, and it no longer guesses how their body feels.
+    deloadNote = 'A lighter week: fewer sets this week, with the same exercises and weights. Several signs show fatigue building up, and one lighter week sets you up for stronger weeks after it.';
   }
 
   // ── DIET BREAK SUGGESTION ─────────────────────────────────────────────────
@@ -2030,8 +2051,8 @@ export function runWeeklyCoach(inputs) {
     heldDecisions.push({
       type: 'target_not_tested',
       reason: intakeDaysForCopy >= MIN_INTAKE_DAYS_FOR_COPY
-        ? `Calorie target held. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before we change the number.`
-        : 'Calorie target held. What you have told us about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before we change the number.',
+        ? `Calorie target stays the same. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before the number changes.`
+        : 'Calorie target stays the same. What you said in your check-in about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before the number changes.',
     });
   }
 
@@ -2049,7 +2070,7 @@ export function runWeeklyCoach(inputs) {
   if (oscillationHeld) {
     heldDecisions.push({
       type: 'awaiting_last_change',
-      reason: `Calorie target held. We ${oscillationHeld.direction > 0 ? 'raised' : 'lowered'} it recently and that change has not had long enough to show yet. Reversing it now would tell us nothing.`,
+      reason: `Calorie target stays the same. It was ${oscillationHeld.direction > 0 ? 'raised' : 'lowered'} recently and that change has not had long enough to show yet. Reversing it now would tell your coach nothing.`,
     });
   }
 
@@ -2061,8 +2082,8 @@ export function runWeeklyCoach(inputs) {
     heldDecisions.push({
       type: 'volume_outcome_memory',
       reason: volumeMemoryHeld === 'last_volume_increase_made_things_worse'
-        ? 'Training volume held. The last time we added work, your recovery and your lifts went the other way, so we are not asking for more of it this week.'
-        : 'Training volume held. We added work recently and that change has not had long enough to show yet, so undoing or repeating it now would tell us nothing.',
+        ? 'Training volume stays the same. The last time more work was added, your recovery and your lifts went the other way, so your coach is not adding more this week.'
+        : 'Training volume stays the same. More work was added recently and that change has not had long enough to show yet, so undoing or repeating it now would tell your coach nothing.',
     });
   }
 
@@ -2072,7 +2093,7 @@ export function runWeeklyCoach(inputs) {
   if (coordinationCalorieHeld === 'one_change_at_a_time') {
     heldDecisions.push({
       type: 'one_change_at_a_time',
-      reason: 'Calorie target held. Your training volume is changing this week, and changing both at once would leave us unable to tell which one did the work.',
+      reason: 'Calorie target stays the same. Your training volume is changing this week, and changing both at once would make it impossible to tell which change made the difference.',
     });
   }
   if (coordinationVolumeHeld) {
@@ -2080,10 +2101,10 @@ export function runWeeklyCoach(inputs) {
       type: coordinationVolumeHeld === 'one_change_at_a_time'
         ? 'one_change_at_a_time' : 'training_volume_held',
       reason: coordinationVolumeHeld === 'sessions_missed'
-        ? 'Training volume held. The sessions already planned have not been run consistently enough this week for adding more to be the answer.'
+        ? 'Training volume stays the same. The sessions already planned were not done consistently enough this week, so adding more is not the answer.'
         : coordinationVolumeHeld === 'recovery_calls_for_restraint'
-          ? 'Training volume held. Your recovery this week points to easing off rather than adding work.'
-          : 'Training volume held. Your calorie target is changing this week, and we cannot read your gym progress well enough to add work on top of it.',
+          ? 'Training volume stays the same. Your recovery this week points to easing off rather than adding work.'
+          : 'Training volume stays the same. Your calorie target is changing this week, so your gym progress cannot be judged clearly enough to add work on top of it.',
     });
   }
 
@@ -2119,12 +2140,12 @@ export function runWeeklyCoach(inputs) {
     } else if (cycleOverride) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal." });
     } else if (onTarget) {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Trend is on target." });
+      heldDecisions.push({ type: 'calories', reason: "Calorie target stays the same. Your weight trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Last adjustment needs more weeks to show in the trend." });
+      heldDecisions.push({ type: 'calories', reason: "Calorie target stays the same. The last change needs more weeks to show up in your weight trend." });
     } else if (consecutiveOffTargetWeeks < offTargetWeeksRequired) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
-      heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before adjusting.` });
+      heldDecisions.push({ type: 'calories', reason: `Calorie target stays the same. Your coach waits for ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same weight trend before changing it.` });
     } else if (calsAdherence === 'untracked') {
       heldDecisions.push({ type: 'calories', reason: "Calories stay where they are. Food wasn't tracked this week, so any change would be a guess." });
     }
@@ -2298,7 +2319,9 @@ export function runWeeklyCoach(inputs) {
   else if (calorieAdjustment?.change > 0)       whyKeys.push('off_target_cal_up');
   else if (calorieAdjustment?.change < 0)       whyKeys.push('off_target_cal_down');
   else if (stepsAdjustment?.target > currentStepsTarget) whyKeys.push('steps_bump');
-  else                                          whyKeys.push('on_target_holding');
+  else if (onTarget === true)                   whyKeys.push('on_target_holding');
+  else if (onTarget === false)                  whyKeys.push('holding_off_target');
+  else                                          whyKeys.push('holding_no_trend');
 
   if (!enoughWeightData) whyKeys.push('low_data_weight');
 
@@ -2610,14 +2633,14 @@ function appendWeeklyAnswerSuggestion(note, pcFact) {
   if (pcFact.weeklyAnswer === 'in_the_way') {
     if (subject) return `${note} You said working around ${subject} got in the way more than expected. If that carries on, you can adjust things under Injuries & limitations.`;
     return scope
-      ? `${note} You said it got in the way more than expected; that mainly touches your ${scope} work. If that carries on, you can adjust things under Injuries & limitations.`
-      : `${note} You said it got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.`;
+      ? `${note} You said working around your temporary change got in the way more than expected; that mainly touches your ${scope} work. If that carries on, you can adjust things under Injuries & limitations.`
+      : `${note} You said working around your temporary change got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
     if (subject) return `${note} You said working around ${subject} mostly didn't get in the way. If you're done working around it, you can end that under Injuries & limitations.`;
     return scope
-      ? `${note} You said it mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under Injuries & limitations.`
-      : `${note} You said it mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.`;
+      ? `${note} You said working around your temporary change mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under Injuries & limitations.`
+      : `${note} You said your temporary change mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.`;
   }
   // D112 R4 (audit T2-17): 'fine' is an answer too. It changes no
   // number, and saying so is the point - the one question the app asked
@@ -2698,8 +2721,8 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
       : 'Training worked around your temporary change this week, so the sessions that did not happen are not held against you. Your plan stays as it is, ready when you are.')
     : 'Get back to your full plan before changing anything.';
   const adherenceNote = constrained
-    ? `${sessionsCompleted} of ${sessionsPlanned} sessions completed, with your temporary change shaping the week. Nothing here counts against you, and no programming change is made from it.`
-    : `${sessionsCompleted} of ${sessionsPlanned} sessions completed. Getting back on schedule takes priority over any programming change.`;
+    ? `${sessionsCompleted} of ${sessionsPlanned} sessions completed, with your temporary change shaping the week. Nothing here counts against you, and no change to your programme is made from it.`
+    : `${sessionsCompleted} of ${sessionsPlanned} sessions completed. Getting back on schedule comes before any change to your programme.`;
   return {
     hasEnoughData: true,
     dataNote: null,

@@ -214,10 +214,11 @@ describe('disclosure rule: the FULL variant never reveals screening or safety st
       expect(DISCLOSURE_PROSE.test(reason)).toBe(true);
     }
     for (const benign of [
-      'Calories held. Trend is on target.',
-      'Calories held. Last adjustment needs more weeks to show in the trend.',
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      'Calorie target stays the same. Your weight trend is on target.',
+      'Calorie target stays the same. The last change needs more weeks to show up in your weight trend.',
       "Calories held. Adherence wasn't tracked, so adjusting now would be a guess.",
-      "Recovery's flagging across several signals, so next week is lighter to set up the next run.",
+      'Several signs show you are not recovering well, so next week is lighter, to set you up for the weeks after it.',
     ]) {
       expect(DISCLOSURE_PROSE.test(benign)).toBe(false);
     }

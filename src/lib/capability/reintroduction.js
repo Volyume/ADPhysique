@@ -107,7 +107,7 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
  *  2026-08-21); "restriction ended" never reaches the user. */
 export function reintroductionCopy(muscleLabel) {
   const muscle = String(muscleLabel ?? 'that muscle').toLowerCase();
-  return `Your ${muscle} work builds back up to your plan from here.`;
+  return `Training for your ${muscle} builds back up to your plan from here.`;
 }
 
 /**
@@ -143,5 +143,5 @@ export function reintroductionRampLine(muscleLabels) {
   const joined = labels.length === 1
     ? labels[0]
     : `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
-  return `Your ${joined} work builds back up to your plan from here.`;
+  return `Training for your ${joined} builds back up to your plan from here.`;
 }

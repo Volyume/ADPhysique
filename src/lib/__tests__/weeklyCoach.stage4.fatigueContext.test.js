@@ -143,7 +143,8 @@ describe('peak-week fatigue context (expected accumulating fatigue)', () => {
 
   test('the softened note names the mechanism and never claims excellent recovery', () => {
     const out = runWeeklyCoach(peakFatigueInputs({ top: PEAK }));
-    expect(out.adjustments.training.note).toContain('Peak-week fatigue');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(out.adjustments.training.note).toContain('Tiredness in the hardest week of your block');
     expect(out.adjustments.training.note.toLowerCase()).not.toContain('excellent');
   });
 
@@ -259,7 +260,8 @@ describe('the coach screen refuses to add sets to a recovery week (source pins)'
   test('a positive delta cannot apply into a deload row, and the card explains why', () => {
     const src = read('screens/CoachOutputScreen.js');
     expect(src).toMatch(/delta > 0 && nextWeekIsDeload/);
-    expect(src).toContain('recovery week, so the coach');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('recovery week, so your coach');
   });
 
   test('the weekly-coach caller threads the block week context, never for a finished block', () => {

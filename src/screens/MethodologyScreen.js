@@ -33,7 +33,7 @@ const INTRO =
   'Precision Coaching follows clear rules. Each week it ' +
   'reads your logged training, your morning-weight trend, your food data when ' +
   'you use the food diary, and your weekly check-in answers. It then decides what should ' +
-  'change, what should hold, and why.';
+  'change, what should stay the same, and why.';
 
 // Collapsible sections. Each opens with the rule and closes with the
 // mechanism (the "why the rule works", not just what it is).
@@ -42,39 +42,39 @@ const SECTIONS = [
     key: 'inputs',
     title: 'What Precision Coaching reads',
     body:
-      'The main inputs are your completed sessions, your morning-weight trend, ' +
-      'your nutrition target and diary data if you use the food diary, and the weekly ' +
-      'check-in. The check-in is where you add the context numbers cannot see: ' +
+      'Precision Coaching looks at your completed sessions, your morning-weight trend, ' +
+      'your nutrition target and your food diary if you use it, and the weekly ' +
+      'check-in. The check-in is where you add what the numbers cannot show: ' +
       'energy, soreness, sleep, stress, joint pain, illness, travel and anything ' +
-      'else that affected the week. Volyume uses those inputs together; one ' +
-      'noisy number on its own should not move the plan.',
+      'else that affected the week. It uses all of these together; one ' +
+      'unusual number on its own should not change the plan.',
   },
   {
     key: 'cooldown',
     title: 'Why changes wait',
     body:
       'Your calorie target normally changes at most once every two weeks, so the ' +
-      'weight trend has time to settle. Acting faster than that just chases noise. ' +
+      'weight trend has time to settle. Acting faster than that would just react to normal day-to-day ups and downs. ' +
       'The one exception is safety: if your weight is dropping faster than it should ' +
       'and your energy is low, Precision Coaching can raise your calories straight ' +
       'away, without waiting for the two weeks.',
   },
   {
     key: 'holds',
-    title: 'Why holds happen',
+    title: 'Why some things stay the same',
     body:
-      'When the trend is on target, when there is not enough data yet, when ' +
-      'recovery is low, or when a safety check applies, Precision Coaching holds ' +
-      'rather than acts. The held-decision section in your coaching decision shows exactly ' +
-      'which of these applied. A held week is Precision Coaching working, not asleep.',
+      'When your weight trend is on target, when there is not enough data yet, when ' +
+      'recovery is low, or when a safety check applies, Precision Coaching keeps things ' +
+      'as they are rather than changing them. Your coaching decision lists what stayed the same ' +
+      'and exactly which of these reasons applied. A week with no changes is Precision Coaching working, not asleep.',
   },
   {
     key: 'training',
-    title: 'Training inputs',
+    title: 'How your training changes',
     body:
       'Volume changes by removing up to 2 sets or adding up to 3 sets per muscle ' +
       'each week, based on how your energy, soreness and completed sessions scored ' +
-      'together. If recovery is low, volume holds or drops. If recovery is strong ' +
+      'together. If recovery is low, volume stays the same or drops. If recovery is strong ' +
       'and you hit your sessions, it adds. The same checks run every week.',
   },
   // D93 (Campaign 2, Phase 8): the level-3 statement of how recovery

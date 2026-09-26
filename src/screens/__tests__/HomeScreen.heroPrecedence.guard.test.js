@@ -160,7 +160,8 @@ describe('D-2 — the Manual-mode ownership note renders on hold weeks too', () 
     // note lives ONCE, in the decision footer, and that footer renders in
     // both branches: inside the hold card, and inside whichever
     // adjustment card is the hero on a change week.
-    const note = 'Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.';
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md): "The coach" broke the actor rule.
+    const note = 'Manual mode: these are suggestions. Your coach doesn\'t apply anything itself; any change is yours to make. Change modes in Settings, under Coaching.';
     expect((coachOutput.split(note).length - 1)).toBe(1);
     const footerAt = coachOutput.indexOf('const decisionFooter = (');
     expect(footerAt).toBeGreaterThan(-1);

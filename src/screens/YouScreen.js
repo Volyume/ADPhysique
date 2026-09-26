@@ -165,7 +165,7 @@ function buildPendingCoachCopy(readiness) {
   if (!readiness) {
     return {
       title: 'First check-in not open yet',
-      body: 'Log your morning weight and train as normal. Volyume will open the check-in once the baseline is ready.',
+      body: 'Keep logging your morning weight and training as normal. Your first check-in opens once you have logged enough days of morning weights.',
     };
   }
   if (readiness.edSuppressed) {
@@ -179,7 +179,7 @@ function buildPendingCoachCopy(readiness) {
   if (!readiness.firstWeightAt) {
     return {
       title: 'First check-in starts after your first morning weight',
-      body: 'Log your first morning weight from Today to start the baseline. Your coach will not change targets until enough data is in.',
+      body: "Log your first morning weight on the Today tab. Your coach won't change your targets until there are enough weigh-ins to go on.",
     };
   }
   const rows = readiness.ledger?.rows || [];
@@ -190,7 +190,7 @@ function buildPendingCoachCopy(readiness) {
   if (unlockIsTodayOrPast && weighInsReady && daysReady) {
     return {
       title: 'Weekly check-in is open',
-      body: 'Answer the weekly check-in to produce your coaching decision. Until you do, targets stay unchanged.',
+      body: "Answer the weekly check-in and your coach will make this week's decision. Until then, your targets stay the same.",
     };
   }
   if (daysReady && !weighInsReady) {
@@ -203,7 +203,7 @@ function buildPendingCoachCopy(readiness) {
     title: readiness.unlockDateMs
       ? `First check-in ${formatShortDate(readiness.unlockDateMs)}`
       : 'First check-in not open yet',
-    body: 'Keep logging morning weight and training. Volyume waits for enough baseline data before it changes targets.',
+    body: 'Keep logging your morning weight and training. Your coach waits until there are enough weigh-ins before changing your targets.',
   };
 }
 
@@ -375,7 +375,7 @@ export default function YouScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader
           title="Coach"
-          subtitle="Weekly coaching from your logs."
+          subtitle="Weekly coaching based on what you log."
           right={(
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -491,7 +491,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <Text style={[styles.statusBody, live.statusBody]}>
-              What changed, what was held, and the exact signals behind it.
+              What your coach changed this week, what stayed the same, and why.
             </Text>
           </Card>
         ) : null}
@@ -529,7 +529,7 @@ export default function YouScreen({ navigation }) {
             icon="clipboard-outline"
             label="Weekly check-in"
             sub={latestReview
-              ? "Answer this week's questions so the coach has context."
+              ? 'Answer a few questions so your coach knows how your week went.'
               : pendingCoachCopy.title}
             onPress={() => navigation.navigate('WeeklyCheckIn')}
           />
@@ -542,14 +542,14 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="pulse-outline"
               label="Coaching decision"
-              sub="Your latest decision stays readable here."
+              sub="Your latest coaching decision, kept here to look back on."
               onPress={() => navigation.navigate('CoachOutput')}
             />
           ) : null}
           <NavRow
             icon="book-outline"
             label="Your week"
-            sub="Training, eating, weighing in and the coach's decision, in one place."
+            sub="Your training, eating, weigh-ins and your coach's decision, in one place."
             onPress={() => navigation.navigate('WeeklyStory')}
           />
           </NavGroup>
@@ -583,13 +583,13 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="nutrition-outline"
             label="Nutrition targets"
-            sub="Calories, macros, protein level and target rationale."
+            sub="Your daily calories, protein, carbs and fat, and why they're set where they are."
             onPress={() => navigation.navigate('NutritionTargets')}
           />
           <NavRow
             icon="notifications-outline"
             label="Coaching reminders"
-            sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
+            sub="Reminders for your weekly check-in, weigh-ins and logging."
             onPress={() => navigation.navigate('CoachingReminders')}
           />
           {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
@@ -600,7 +600,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="stats-chart-outline"
             label="Volume targets"
-            sub="Weekly set ranges per muscle. Your own numbers take precedence."
+            sub="How many sets each muscle gets each week."
             // Review A finding 3: VolumeHeatmap lives in the Home and Progress
             // stacks, not ProfileTab; cross-tab helper or the tap is dead.
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}

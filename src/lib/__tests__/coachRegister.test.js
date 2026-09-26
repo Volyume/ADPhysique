@@ -231,16 +231,19 @@ describe('precise rendering', () => {
   });
   test('on-target streak counts in precise form', () => {
     const history = [{ trend: { onTarget: true } }, { trend: { onTarget: true } }];
-    expect(precise({ history }).interpretation).toMatch(/Week 3 running on the set rate\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(precise({ history }).interpretation).toMatch(/Your weight has moved at the planned rate for 3 weeks in a row\./);
   });
   test('forward names the check-in day', () => {
     expect(precise().forward).toMatch(/^Next check-in: Sunday\./);
   });
   test('S1c pre-commitment renders figure-led in precise', () => {
     const output = fakeOutput({ adjustments: { calories: { change: -150 }, training: { signal: 'hold' } } });
-    expect(precise({ output }).preCommitment).toBe('Next Sunday: does the trend respond to the 150 kcal cut.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(precise({ output }).preCommitment).toBe('Next Sunday: the check-in shows whether your weight responds to the 150 kcal cut.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(supportive({ output }).preCommitment)
-      .toBe('Next Sunday, the read checks whether the trend responds to this 150 kcal cut.');
+      .toBe("Next Sunday's check-in will show whether your weight responds to this 150 kcal cut.");
   });
   test('S1c commitment answer renders figure-led in precise, same verdict as supportive', () => {
     const WEEK = 7 * 86400000;
@@ -250,9 +253,11 @@ describe('precise rendering', () => {
       weekStartMs: NOW,
       history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true } }, trend: { onTarget: false } }],
     };
-    expect(precise(overrides).commitmentAnswer).toBe('Last 150 kcal cut: trend responded, back on rate.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(precise(overrides).commitmentAnswer).toBe('Last change, 150 kcal less a day: your weight is now moving at the planned rate.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(supportive(overrides).commitmentAnswer)
-      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
+      .toBe("Last week's 150 kcal cut was the one to watch. Your weight has responded, and it is moving at the planned rate again.");
   });
   test('deterministic: same inputs, same strings', () => {
     expect(precise()).toEqual(precise());

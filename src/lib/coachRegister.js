@@ -122,7 +122,7 @@ function preciseAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWee
   }
 
   if (weighIns != null && weighIns >= 3) {
-    return clean(`Weigh-ins: ${weighIns}. Enough data for a trend read.`);
+    return clean(`Weigh-ins: ${weighIns}. Enough to see how your weight is moving.`);
   }
 
   if (checkin) {
@@ -156,7 +156,7 @@ function preciseInterpretation({ output, history, units, showScience = false }) 
   const delta = Number.isFinite(trend?.delta) ? trend.delta : null;
 
   if (delta == null) {
-    return clean('Weigh-ins: too few for a weekly read. Daily logs sharpen it.');
+    return clean('Weigh-ins: too few to see a clear trend in your weight. Daily weigh-ins make the trend clearer.');
   }
 
   const u = units === 'lbs' ? 'lbs' : 'kg';
@@ -171,10 +171,10 @@ function preciseInterpretation({ output, history, units, showScience = false }) 
   if (trend?.onTarget) {
     const streak = onTargetStreak(true, history);
     verdict = streak >= 2
-      ? `Week ${streak} running on the set rate.`
-      : 'On the set rate for this phase.';
+      ? `Your weight has moved at the planned rate for ${streak} weeks in a row.`
+      : 'Your weight is moving at the planned rate for this phase.';
   } else {
-    verdict = 'Off the set rate for this phase.';
+    verdict = 'Your weight is not moving at the planned rate for this phase.';
   }
 
   return clean(`${lead} ${verdict}`);
@@ -191,7 +191,7 @@ function preciseCue({ output, checkin, weighInsThisWeek }) {
 
   // 1. Thin weigh-in data.
   if (delta == null || (weighIns != null && weighIns < 4)) {
-    return clean('Log morning weight daily. Each log sharpens the read.');
+    return clean('Log morning weight daily. Each weigh-in makes the next check-in more accurate.');
   }
   // 2. Sleep.
   if (sleepHours != null && sleepHours < 6.5) {
@@ -203,18 +203,18 @@ function preciseCue({ output, checkin, weighInsThisWeek }) {
   }
   // 4. Joint pain.
   if (checkin?.jointPain) {
-    return clean('Joint flagged. Swap any movement that aggravates it for a pain-free option.');
+    return clean('Joint flagged. Swap any movement that hurts it for a pain-free option.');
   }
   // 5. Untracked calories.
   if (cals === 'untracked') {
-    return clean('Food logs: missing. The calorie target only tunes against real intake.');
+    return clean('Food logs: missing. Your calorie target can only be adjusted using what you actually eat.');
   }
   // 6. Calorie adherence off target.
   if (cals === 'under') {
     return clean('Intake: under target. Eat to the target, not under it.');
   }
   if (cals === 'over') {
-    return clean('Intake: over target. Hold inside it this week.');
+    return clean('Intake: over target. Stay inside it this week.');
   }
   // 7. Default.
   return clean('Hold the week steady: log, train, eat to the target, weigh in.');
@@ -231,13 +231,13 @@ function preciseForward({ output, weighInsThisWeek, checkinDayName }) {
 
   let tail;
   if (calorieChange !== 0) {
-    tail = 'Next read: trend against the new target.';
+    tail = "Next week's check-in will show how your weight responds to the new target.";
   } else if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
-    tail = 'Sessions in, and the next read shows it.';
+    tail = "That check-in will show how this week's sessions went.";
   } else if (delta == null || (weighIns != null && weighIns < 4)) {
-    tail = 'Daily weigh-ins sharpen the next read.';
+    tail = 'Weighing yourself each morning makes the next check-in more accurate.';
   } else {
-    tail = 'The next read takes it from there.';
+    tail = 'Your coach looks at the week then and decides what comes next.';
   }
 
   return clean(`${opener} ${tail}`);
@@ -250,15 +250,17 @@ function precisePreCommitment({ output, checkinDayName }) {
   const facts = preCommitmentFacts(output);
   if (!facts) return null;
   const what = facts.clamped ? "this week's calorie change" : `the ${facts.amount} kcal ${facts.direction}`;
-  const when = checkinDayName ? `Next ${checkinDayName}` : 'Next read';
-  return clean(`${when}: does the trend respond to ${what}.`);
+  const when = checkinDayName ? `Next ${checkinDayName}` : 'Next week';
+  return clean(`${when}: the check-in shows whether your weight responds to ${what}.`);
 }
 
 function preciseCommitmentAnswer({ output, history, weekStartMs }) {
   const facts = commitmentOutcomeFacts({ output, history, weekStartMs });
   if (!facts) return null;
-  const label = facts.clamped ? 'Last calorie change' : `Last ${facts.amount} kcal ${facts.direction}`;
-  const verdict = facts.onTarget ? 'trend responded, back on rate.' : 'no response yet, off rate.';
+  const label = facts.clamped ? 'Last calorie change' : `Last change, ${facts.amount} kcal ${facts.direction === 'increase' ? 'more' : 'less'} a day`;
+  const verdict = facts.onTarget
+    ? 'your weight is now moving at the planned rate.'
+    : 'your weight has not responded yet and is not moving at the planned rate.';
   return clean(`${label}: ${verdict}`);
 }
 

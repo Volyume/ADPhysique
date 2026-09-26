@@ -196,6 +196,35 @@ describe('runWeeklyCoach output shape', () => {
     expect(calUp.primary.domain).toBe('calories');
   });
 
+  // Lead review 2026-09-26 (plain-English sweep): the ladder's last branch
+  // used to be on_target_holding for EVERY week without a change, so an
+  // off-target week that was still waiting told the athlete their weight
+  // was moving at the planned rate. It now reads the engine's onTarget.
+  test('a week that waits while OFF target never says the weight is on target', () => {
+    const waiting = runWeeklyCoach(baseInputs({
+      goalPhase: 'mild_bulk',
+      morningWeights: trend(80, 0),
+      bodyweightKg: 80,
+      currentCalTarget: 3000,
+      weeksInPhase: 5,
+      consecutiveOffTargetWeeks: 0,
+      lastCalAdjustmentWeeksAgo: 99,
+      checkin: checkin({ stepsAvg: 5000 }),
+    }));
+    expect(waiting.adjustments.calories?.change ?? 0).toBe(0);
+    expect(waiting.primary.reasonKey).toBe('holding_off_target');
+    expect(waiting.primary.domain).toBeNull();
+    expect(waiting.whyThisWeek).not.toMatch(/moving at the planned rate\. No change needed/);
+    expect(waiting.whyThisWeek).toBe("Your weight isn't moving at the planned rate yet, but your targets stay the same this week.");
+  });
+
+  test('the dose receipt names the direction of the last change, and the actor', () => {
+    const src = require('fs').readFileSync(require('path').resolve(__dirname, '../weeklyCoach.js'), 'utf8');
+    expect(src).toContain("const lastChange = change > 0 ? 'increase' : 'reduction';");
+    expect(src).toContain('Your last ${lastChange} was not enough to move your weight as planned, so this change is larger than your coach would normally make.');
+    expect(src).not.toContain('larger than we would normally make');
+  });
+
   test('no banned narrator/marketing phrases in any user-visible string', () => {
     const samples = [
       runWeeklyCoach(baseInputs({ morningWeights: [] })),

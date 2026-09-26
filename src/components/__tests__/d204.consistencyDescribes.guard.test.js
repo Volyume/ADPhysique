@@ -19,7 +19,7 @@ const path = require('path');
 const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', '..', p), 'utf8');
 
 // Instruction verbs and recommendation words a describing surface never uses.
-const INSTRUCTS = /\b(push your|hold your weights|focus on form|consider a lighter|lighter (day|week) recommended|recommended|train as normal|drop(ping)? the weights|stop well before|should feel)\b/i;
+const INSTRUCTS = /\b(push your|push the|hold your weights|focus on form|consider a lighter|consider reducing|lighter (day|week) recommended|recommended|train as normal|drop(ping)? the weights?|stop well before|should feel|ease in|catch up|keep the movement)\b/i;
 
 describe('the fatigue trend card describes what was reported', () => {
   const SRC = read('components/FatigueTrendCard.js');
@@ -65,6 +65,35 @@ describe('the four-week fatigue banner describes, in a neutral card', () => {
     for (const r of reasons) {
       expect(r).not.toMatch(INSTRUCTS);
       expect(r).not.toMatch(/productive volume|rep performance/i);
+    }
+  });
+});
+
+describe("Today's coach brief describes, never tells you what to lift (D204 addendum 2)", () => {
+  const { buildCoachBrief } = require('../../lib/homeCoachBrief');
+  const now = Date.now();
+  const rated = (level) => [
+    { fatigueLevel: level, startedAt: now - 1 * 86400000 },
+    { fatigueLevel: level, startedAt: now - 3 * 86400000 },
+  ];
+  const cases = {
+    deload: buildCoachBrief({ fatigueHistory: [], deloadSuggestion: { deload: true }, lastWorkoutDaysAgo: 1 }),
+    fatigue: buildCoachBrief({ fatigueHistory: rated(4), deloadSuggestion: null, lastWorkoutDaysAgo: 1 }),
+    gap: buildCoachBrief({ fatigueHistory: [], deloadSuggestion: null, lastWorkoutDaysAgo: 6 }),
+    onTrack: buildCoachBrief({ fatigueHistory: rated(1), deloadSuggestion: null, lastWorkoutDaysAgo: 1 }),
+  };
+
+  test('each rule says what it sees', () => {
+    expect(cases.deload.body).toBe('Your last four weeks of sessions show signs of it.');
+    expect(cases.fatigue.body).toBe('You rated your last two sessions as very tiring.');
+    expect(cases.gap.body).toBe("It's been a while since your last session.");
+    expect(cases.onTrack.body).toBe('Training is on track.');
+  });
+
+  test('no rule tells the athlete to lift lighter, ease in or push', () => {
+    for (const [name, brief] of Object.entries(cases)) {
+      expect({ name, text: `${brief.headline}. ${brief.body}` }).toEqual({ name, text: expect.not.stringMatching(INSTRUCTS) });
+      expect(brief.body).not.toMatch(/10%|reduc|drop the weight/i);
     }
   });
 });

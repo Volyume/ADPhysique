@@ -26,7 +26,8 @@ describe('MethodologyScreen honours locked Pattern 10', () => {
   });
 
   test('user-facing hold explanation does not use UI-card jargon', () => {
-    expect(CODE).toContain('held-decision section in your coaching decision');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(CODE).toContain('Your coaching decision lists what stayed the same');
     expect(CODE).not.toContain('held-decision card in your coaching decision');
   });
 

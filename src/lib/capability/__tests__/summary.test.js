@@ -25,8 +25,10 @@ describe('howYouTrainSummary', () => {
     expect(HOW_YOU_TRAIN_OFFER).not.toMatch(/disabled\?|are you/i);
   });
   test('unavailable and not-yet-loaded are told, never rendered as empty', () => {
-    expect(howYouTrainSummary({ ...empty, unavailable: true }).sub).toBe('Could not check just now.');
-    expect(howYouTrainSummary(null).sub).toBe('Checking.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(howYouTrainSummary({ ...empty, unavailable: true }).sub).toBe('Could not load this just now.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(howYouTrainSummary(null).sub).toBe('Loading.');
     expect(howYouTrainSummary(null).empty).toBe(false);
   });
   test('a temporary change names the subject and the date', () => {
@@ -35,7 +37,8 @@ describe('howYouTrainSummary', () => {
   });
   test('a change past its planned end, or an undecided one, asks for attention', () => {
     const awaiting = { ...empty, episodes: [{ groupId: 'g', status: 'awaiting_confirmation', rows: [rule({ endsAt: NOW - DAY })] }] };
-    expect(howYouTrainSummary(awaiting, { nowMs: NOW })).toMatchObject({ sub: 'Working around overhead work, still need it?', attention: true });
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(howYouTrainSummary(awaiting, { nowMs: NOW })).toMatchObject({ sub: 'Working around overhead work, still needed?', attention: true });
     const undecided = { ...empty, episodes: [{ groupId: 'g', status: 'active', rows: [rule({ effectiveChoice: null })] }] };
     expect(howYouTrainSummary(undecided, { nowMs: NOW }).attention).toBe(true);
     const held = { ...empty, episodes: [{ groupId: 'g', status: 'active', rows: [rule({ effectiveChoice: null, adaptationMode: 'hold' })] }] };
@@ -82,7 +85,8 @@ describe('howYouTrainSummary', () => {
     const mixed = { ...empty, baseline: [rule({ ruleValue: 'axial_load' }), allowance, allowance] };
     expect(howYouTrainSummary(mixed, { nowMs: NOW }).sub).toBe('Leaves out loading your spine');
     const onlyAllowances = { ...empty, baseline: [allowance] };
-    expect(howYouTrainSummary(onlyAllowances, { nowMs: NOW }).sub).toBe('Set up. Nothing is left out.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(howYouTrainSummary(onlyAllowances, { nowMs: NOW }).sub).toBe('Set up. Nothing is left out of your plan.');
   });
   test('the retired "things you told it" count can never come back', () => {
     const states = [

@@ -190,12 +190,14 @@ describe('adherence copy follows the truth (T2-15) - source pins', () => {
   test('the constrained branch exists and keeps the plan without accusation', () => {
     expect(src).toContain('const constrained = limiters?.training?.limiter === LIMITER.CONSTRAINED;');
     expect(src).toContain('are not held against you. Your plan stays as it is, ready when you are.');
-    expect(src).toContain('Nothing here counts against you, and no programming change is made from it.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('Nothing here counts against you, and no change to your programme is made from it.');
   });
 
   test('genuine no-show weeks keep the stabilise words', () => {
     expect(src).toContain("'Get back to your full plan before changing anything.'");
-    expect(src).toContain('Getting back on schedule takes priority over any programming change.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('Getting back on schedule comes before any change to your programme.');
   });
 });
 
@@ -215,7 +217,8 @@ describe('the check-in answers all land (T2-17) and speak the user\'s own subjec
   });
 
   test('the volume-hold note prefers the subject too', () => {
-    expect(src).toContain('Training worked around ${subject} this week, so volume holds');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('Training worked around ${subject} this week, so your volume stays where it is');
   });
 
   test('the fact carries the subject through screen and context', () => {

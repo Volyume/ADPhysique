@@ -103,7 +103,8 @@ describe('CASE B: THE LAW - an untested target is not a wrong one', () => {
     const o = bulker({ calsAdherence: 'under', intakeAvg: null, intakeDays: 0 });
     expect(o.adjustments.calories).toBeNull();
     const h = held(o, 'target_not_tested');
-    expect(h.reason).toMatch(/What you have told us/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(h.reason).toMatch(/What you said in your check-in/);
     expect(h.reason).not.toMatch(/\d+ kcal against/);
   });
 

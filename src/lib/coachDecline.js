@@ -178,12 +178,12 @@ export function returningCopy(decline, because) {
     coverage_worsened: 'there is less to go on than there was',
     training_worsened: 'your training has dropped off',
     recovery_worsened: 'your recovery has got harder',
-    weight_now_known: 'we can read your weight trend',
-    intake_now_known: 'we can read your intake',
-    coverage_now_known: 'you have logged enough for us to read it',
+    weight_now_known: 'your weight trend has become clear',
+    intake_now_known: 'your food log now shows what you are eating',
+    coverage_now_known: 'you have logged food on enough days to go on',
     training_now_known: 'we can see your training',
     recovery_now_known: 'we can see your recovery',
-    rate_moved_materially: 'your weight has moved on',
+    rate_moved_materially: 'the rate your weight is changing has shifted noticeably',
   };
   // Each clause slots into "Since then ..." below, so none of them may carry
   // its own "since then" - which is how the sentence came out saying it twice.

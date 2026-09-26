@@ -36,11 +36,17 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     };
   };
 
+  // D204 (founder rule 2026-09-26, "They don't choose sessions!"; lead
+  // review of the plain-English sweep): every rule below DESCRIBES. The
+  // brief used to say "drop the weight", "Consider reducing weight by 10%
+  // today", "Ease in" and "Push the quality today"; the plan sets the
+  // session, so the brief says what it sees and never what to lift.
+
   // Rule 1, deload suggested
   if (deloadSuggestion) {
     return applyConstraintLine({
-      headline: 'Recovery week',
-      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight. This is how you come back stronger.',
+      headline: 'Fatigue has been building',
+      body: 'Your last four weeks of sessions show signs of it.',
       type: 'recover',
     });
   }
@@ -60,7 +66,7 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     if (avg >= 3.5) {
       return applyConstraintLine({
         headline: 'Fatigue building',
-        body: 'Fatigue is building. Consider reducing weight by 10% today and focusing on quality reps.',
+        body: 'You rated your last two sessions as very tiring.',
         type: 'caution',
       });
     }
@@ -70,7 +76,7 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
     return applyConstraintLine({
       headline: 'Good to see you back',
-      body: "It's been a while since your last session. Ease in. Don't try to catch up in one workout.",
+      body: "It's been a while since your last session.",
       type: 'go',
     });
   }
@@ -94,7 +100,7 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     if (avg <= 2) {
       return applyConstraintLine({
         headline: 'Looking good',
-        body: 'Training is on track. Push the quality today.',
+        body: 'Training is on track.',
         type: 'go',
       });
     }

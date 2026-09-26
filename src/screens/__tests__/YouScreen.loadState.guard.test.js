@@ -24,7 +24,8 @@ describe('YouScreen coach hub load state', () => {
   });
 
   test('coach hub groups actions by user intent instead of internal labels', () => {
-    expect(source).toContain('subtitle="Weekly coaching from your logs."');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(source).toContain('subtitle="Weekly coaching based on what you log."');
     expect(source).toMatch(/<SectionLabel>This week<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Setup<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Safety checks<\/SectionLabel>/);

@@ -243,13 +243,15 @@ describe('A NUTRITION CO-OBSERVATION IS NOT A CAUSE (job 5)', () => {
   test('with real coverage and a real miss, it is mentioned - as a co-observation', () => {
     const text = storyLines(stalled({ recentIntakeDaysLogged: 6, recentIntakeAvgKcal: 2400, targetKcal: 3000 }))
       .join(' ');
-    expect(text).toMatch(/logged intake was away from your target this week as well/i);
-    expect(text).toMatch(/not something we can call the reason/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toMatch(/food you logged this week was also different from your target/i);
+    expect(text).toMatch(/your coach cannot say it is the reason/i);
   });
 
   test('THE GUARD: with a thin diary it is SILENT, not hedged', () => {
     const text = storyLines(stalled({ recentIntakeDaysLogged: 2, targetKcal: 3000 })).join(' ');
-    expect(text).not.toMatch(/logged intake was away/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).not.toMatch(/food you logged this week was also different/i);
     // And no insinuation in its place.
     expect(text).not.toMatch(/we do not know what you ate|your food might/i);
   });
@@ -257,7 +259,8 @@ describe('A NUTRITION CO-OBSERVATION IS NOT A CAUSE (job 5)', () => {
   test('and when they DID eat the target, nothing is implied at all', () => {
     const text = storyLines(stalled({ recentIntakeDaysLogged: 6, recentIntakeAvgKcal: 2980, targetKcal: 3000 }))
       .join(' ');
-    expect(text).not.toMatch(/logged intake was away/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).not.toMatch(/food you logged this week was also different/i);
   });
 });
 
@@ -269,7 +272,8 @@ describe('RECOVERY SCOPE IS TRUTHFUL (job 6)', () => {
       training: { sessionsCompleted: 4, sessionsPlanned: 4, blockE1rmSlopePct: -0.5 },
     });
     const text = storyLines(story).join(' ');
-    expect(text).toMatch(/Recovery overall is the thing to respect/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toMatch(/Recovery overall is what is holding things back/);
     // And it explicitly does NOT condemn the exercises.
     expect(text).toMatch(/rather than the exercises themselves/);
   });

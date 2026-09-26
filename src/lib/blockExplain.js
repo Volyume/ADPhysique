@@ -63,7 +63,7 @@ export const BLOCK_START_SENTENCE =
  * next or that Today then leads with this plan.
  */
 export const ACTIVATION_MEANING_SENTENCE =
-  'Today then leads with this plan, and you can still change the workouts afterwards.';
+  'The Today tab then shows this plan first, and you can still change the workouts afterwards.';
 
 /**
  * D139 (programme creation and planning masterpass, 2026-09-03, finding:
@@ -280,7 +280,7 @@ export function buildBlockStartLines({ summary = {}, limit = 3, previous = null,
     if (v.peak > v.week1 && v.peakWeek != null) {
       return `${muscleDisplayName(muscle)}: ${v.week1} sets in week 1, building to ${v.peak} by week ${v.peakWeek}, then a recovery week (${clause}${move}).`;
     }
-    return `${muscleDisplayName(muscle)}: ${v.week1} sets a week, held steady, then a recovery week (${clause}${move}).`;
+    return `${muscleDisplayName(muscle)}: ${v.week1} sets a week, kept steady, then a recovery week (${clause}${move}).`;
   });
   // FB-28: the cap is real, so say how much it hid. Only stated when the
   // comparison ran, since that is what makes the ordering meaningful.
@@ -330,7 +330,7 @@ export function buildLedgerReflectionRows(ledger) {
       let rationale;
       if (e.eligibility === 'constrained') {
         // For constrained entries, use a fixed narration about the restriction.
-        rationale = `${label} was held while your restriction was active`;
+        rationale = `${label} stayed the same while your temporary change was active`;
       } else if (e.upwardCarryPrevented) {
         rationale = `${e.rationale}${HELD_DELIBERATELY_CLAUSE}`;
       } else {
@@ -422,7 +422,7 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
   if (held > 0) {
     const parts = [];
     if (heldJudged > 0) {
-      parts.push(`${heldJudged} other ${groupNoun(heldJudged)} stayed where ${stayedVerb(heldJudged)}. Keeping a dose that worked is a decision too.`);
+      parts.push(`${heldJudged} other ${groupNoun(heldJudged)} stayed where ${stayedVerb(heldJudged)}. Keeping what worked is a decision too.`);
     }
     if (heldUnjudged > 0) {
       // C6 M-8 (D97-24): the old sentence hard-coded "did not log enough
@@ -430,7 +430,7 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
       // reason after an exercise change or a low-confidence read. The
       // honest cause-agnostic form claims only what is true for all of
       // them: the block could not be judged, so nothing moved on a guess.
-      parts.push(`${heldUnjudged} ${heldJudged > 0 ? 'more ' : 'other '}${groupNoun(heldUnjudged)} stayed where ${stayedVerb(heldUnjudged)}: there wasn't enough clear evidence this block to judge ${heldUnjudged === 1 ? 'it' : 'them'}, so nothing was moved on a guess.`);
+      parts.push(`${heldUnjudged} ${heldJudged > 0 ? 'more ' : 'other '}${groupNoun(heldUnjudged)} stayed where ${stayedVerb(heldUnjudged)}: there wasn't enough clear information this block to judge ${heldUnjudged === 1 ? 'it' : 'them'}, so nothing was moved on a guess.`);
     }
     if (heldManual > 0) {
       parts.push(`${heldManual} ${groupNoun(heldManual)} ${heldManual === 1 ? 'is' : 'are'} on your own settings and ${heldManual === 1 ? 'was' : 'were'} left exactly there.`);
@@ -453,7 +453,7 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
  */
 export function recoveryProposalLine(ledger) {
   if (num(ledger?.proposedRecoveryDays, 7) !== 10) return null;
-  return 'Several strain signals ran together this block, so a longer recovery of about 10 days is suggested before the next one starts. Your call.';
+  return 'Several signs of strain showed up together this block, so a longer recovery of about 10 days is suggested before the next one starts. Your call.';
 }
 
 /**
@@ -496,8 +496,8 @@ export function buildRampPositionLine({
     const mag = Math.abs(delta);
     const setWord = mag === 1 ? 'set' : 'sets';
     coachBit = delta > 0
-      ? ` This week the coach added ${mag} ${setWord} on top.`
-      : ` This week the coach pulled ${mag} ${setWord} back.`;
+      ? ` This week your coach added ${mag} ${setWord} on top.`
+      : ` This week your coach pulled ${mag} ${setWord} back.`;
   }
   return `Week ${week} of ${total} in your block.${direction}${coachBit}`;
 }

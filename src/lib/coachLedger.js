@@ -146,7 +146,7 @@ export function buildCoachLedger({
 export function buildHoldReceipt({ dataNote = null, ...ledgerArgs } = {}) {
   const ledger = buildCoachLedger(ledgerArgs);
   const rule = dataNote
-    || `Your coach needs at least ${MIN_WEIGH_INS} morning weigh-ins and ${FIRST_CHECKIN_MIN_DAYS} days of data before the first review. Adjustments start from week 2; the first review sets your baseline.`;
+    || `Your coach needs at least ${MIN_WEIGH_INS} morning weigh-ins and ${FIRST_CHECKIN_MIN_DAYS} days of data before the first review. Adjustments start from week 2; the first review sets your starting point.`;
   // The named date is future-conditional on data the gate still requires, so
   // every framing stays soft. The neutral (ED-flag) variant cannot mention
   // the weigh-in requirement, so it says "around" rather than promising a

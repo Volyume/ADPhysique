@@ -103,50 +103,50 @@ const EXERCISE_WHY_TEMPLATES = {
   // kept below so a device that has not yet run the tag migration still gets
   // sensible copy instead of the generic fallback.
   vertical_pull:      (name) => `${name} pulls your elbows down from overhead, which is the position that builds back width.`,
-  horizontal_lat:     (name) => `${name} pulls your elbow back close to your body, so the lats do the work through a long range.`,
+  horizontal_lat:     (name) => `${name} pulls your elbow back close to your body, so the lats do the work through a long range of movement.`,
   upper_mid_row:      (name) => `${name} pulls your elbows out and back, squeezing the shoulder blades together. This is where mid-back thickness comes from.`,
-  shoulder_extension: (name) => `${name} works the lats with a straight arm, so the biceps cannot take over. A useful addition to pulling, not a replacement for it.`,
-  spinal_erector:     (name) => `${name} loads the hips and the muscles either side of your spine. It builds the thickness that holds a heavy posture together.`,
+  shoulder_extension: (name) => `${name} works the lats with a straight arm, so the biceps cannot take over. A useful addition to pulling exercises, not a replacement for them.`,
+  spinal_erector:     (name) => `${name} loads the hips and the muscles either side of your spine. It builds the thickness that keeps your posture solid under heavy weights.`,
 
   // Superseded back tags, kept for devices still holding the old values.
   horizontal_row:   (name) => `${name} pulls the elbows back along your body. This angle is where your mid-back and rear shoulders work hardest.`,
   lower_lat:        (name) => `${name} loads the hips and the lower back together, building the thickness that supports every heavy lift.`,
 
   // Quad movement families (C16 job 3)
-  squat_press:      (name) => `${name} bends the hip and knee together under load. This is the pattern that builds most of your leg size.`,
+  squat_press:      (name) => `${name} bends the hip and knee together while carrying weight. This is the movement that builds most of your leg size.`,
   knee_extension:   (name) => `${name} straightens the knee with the hip held still, so the quads work without the hips and back sharing the load.`,
 
   // Chest subregions
   incline:          (name) => `${name} works your upper chest: the part most people under-train, and the one that gives the chest a full, 3D look.`,
-  flat:             (name) => `${name} spreads load across the whole chest and is the most efficient mass-builder for this group.`,
-  decline:          (name) => `${name} targets the lower chest with reduced shoulder stress, useful for fuller lower-pec development.`,
+  flat:             (name) => `${name} works the whole chest evenly and is the most efficient way to build size in this muscle group.`,
+  decline:          (name) => `${name} targets the lower chest with less strain on the shoulders, useful for building a fuller lower chest.`,
 
   // Shoulder subregions
-  overhead_press:   (name) => `${name} builds overall shoulder size and pressing strength. It is the most efficient shoulder exercise for both mass and function.`,
-  lateral_raise:    (name) => `${name} isolates the side shoulder head, which is responsible for visible width when viewed from the front.`,
+  overhead_press:   (name) => `${name} builds overall shoulder size and pressing strength. It is the most efficient shoulder exercise for both size and how well your shoulders work.`,
+  lateral_raise:    (name) => `${name} works the side of the shoulder on its own, which is what makes your shoulders look wider from the front.`,
   face_pull:        (name) => `${name} works the small rear shoulder muscles that rotate the shoulder joint. Healthy shoulders and better posture.`,
-  horiz_abduction:  (name) => `${name} pulls the arms apart against resistance, directly targeting the rear shoulder muscles often missed by pressing.`,
+  horiz_abduction:  (name) => `${name} pulls the arms apart against resistance, directly targeting the rear shoulder muscles often missed by pressing exercises.`,
 
   // Hamstring subregions
   hip_extension:    (name) => `${name} works the hamstrings where they attach to the hip, where the most muscle growth potential sits.`,
   knee_flexion:     (name) => `${name} works the hamstrings where they attach at the knee. Curling movements are essential to cover the full muscle.`,
 
   // Tricep subregions
-  overhead:         (name) => `${name} works the longest head of the tricep, which is only reachable when the arm is raised overhead. Often skipped.`,
-  pushdown:         (name) => `${name} targets the outer tricep heads in the most joint-friendly position, making it good for volume accumulation.`,
+  overhead:         (name) => `${name} works the longest part of the triceps, which is only fully worked when the arm is raised overhead. Often skipped.`,
+  pushdown:         (name) => `${name} targets the outer parts of the triceps in the position that is easiest on the joints, making it good for adding extra sets.`,
 
   // Calf subregions
-  gastro:           (name) => `${name} works the larger, upper calf muscle. Best trained with the knee straight for peak contraction.`,
+  gastro:           (name) => `${name} works the larger, upper calf muscle. Best trained with the knee straight, so the muscle squeezes fully.`,
   soleus:           (name) => `${name} targets the deeper calf muscle that only activates when the knee is bent, so it is necessary for complete calf development.`,
 
   // Ab subregions
   flexion:          (name) => `${name} trains the abs through their primary job of curling the spine. It is the most direct way to build ab thickness.`,
-  anti_extension:   (name) => `${name} teaches the core to resist extension forces. This functional strength transfers directly to every heavy compound lift.`,
-  rotation:         (name) => `${name} works the obliques through rotational resistance. These are the side abs that shape the waist.`,
+  anti_extension:   (name) => `${name} teaches your core to stop your lower back from arching. That strength carries straight over to every heavy lift that works several joints at once.`,
+  rotation:         (name) => `${name} works the obliques by twisting against resistance. These are the side abs that shape the waist.`,
 
   // Bicep subregions
-  supinated_curl:   (name) => `${name} curls with the palm facing up, which is the most effective position for peak bicep activation.`,
-  neutral_curl:     (name) => `${name} curls with a neutral palm. This reduces elbow stress and shifts some load to the brachialis for arm thickness.`,
+  supinated_curl:   (name) => `${name} curls with the palm facing up, which is the position that works the biceps hardest.`,
+  neutral_curl:     (name) => `${name} curls with your palms facing each other. This eases strain on the elbows and shifts some of the work to the muscle under your biceps, which adds arm thickness.`,
 
   // Generic fallback
   default:          (name) => `${name} is the best fit for your kit, the muscle you're training and the time you've got this session.`,
@@ -170,9 +170,9 @@ export function getExerciseWhyThis(exerciseName, subregion) {
 // ---------------------------------------------------------------------------
 
 const SPLIT_RATIONALE = {
-  full_body: `Every session trains all your muscle groups. Frequent practice of each movement builds skill and strength faster, which suits your training frequency well.`,
+  full_body: `Every session trains all your muscle groups. Frequent practice of each movement builds skill and strength faster, which suits how often you train.`,
   upper_lower: `Alternating upper and lower sessions means every muscle gets trained twice a week with 48 to 72 hours of recovery between. The most proven structure for consistent progress.`,
-  ppl: `Grouping muscles by movement (Push, Pull, Legs) means each group is fully rested before it trains again. Clean separation of recovery windows.`,
+  ppl: `Grouping muscles by movement (Push, Pull, Legs) means each group is fully rested before it trains again. Each group rests while the others train.`,
   ppl_ab: `Two Push / Pull / Legs rotations per week with different exercise choices (A and B). Each muscle group gets trained twice a week with varied exercises, which keeps progress moving.`,
   upper_lower_wp: `Upper-Lower on 4 days covers all muscle groups twice per week. The fifth session focuses entirely on your weaker areas, giving them extra attention where it matters most.`,
 };
@@ -184,7 +184,7 @@ const SPLIT_RATIONALE = {
  * @returns {string}
  */
 export function getSplitRationale(splitType) {
-  return clean(SPLIT_RATIONALE[splitType] ?? `Split selected to match your available days and training level.`);
+  return clean(SPLIT_RATIONALE[splitType] ?? `This way of splitting your training across the week was chosen to match your available days and training level.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -364,7 +364,7 @@ export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
       // sore); the sentence now states exactly those two facts, in the
       // sibling codes' register. The reason code and behaviour are
       // untouched.
-      msg = `${muscleName} took a light pump last time and nothing's been flagged sore. 1 set added today.`;
+      msg = `${muscleName} felt only lightly worked last time and nothing's been flagged sore. 1 set added today.`;
       break;
     case C.HOLD_WEEKLY_PRECEDENCE:
       msg = `Feeling sharp, but this is a lighter week. Sets stay as planned.`;
@@ -374,7 +374,7 @@ export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
       break;
     // Logged-only codes: plain reason_text for the adaptation_events record.
     case C.HOLD_JOINT:
-      msg = `${muscleName}: recent joint discomfort. Sets held as planned.`;
+      msg = `${muscleName}: recent joint discomfort. Sets stay as planned.`;
       break;
     case C.HOLD_STALE_SORENESS:
       msg = `${muscleName}: soreness looks systemic or stale. Holding sets; the coaching decision owns this.`;

@@ -81,8 +81,9 @@ describe('PRECEDENCE NOW HAS DECISION FORCE, not only copy', () => {
     expect(out.limiters.training.limiter).toBe(LIMITER.EXECUTION);
     expect(out.volumeSignal).toBe(0);
     expect(out.coordination.volumeHeld).toBe('sessions_missed');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(held(out, 'training_volume_held').reason)
-      .toBe('Training volume held. The sessions already planned have not been run consistently enough this week for adding more to be the answer.');
+      .toBe('Training volume stays the same. The sessions already planned were not done consistently enough this week, so adding more is not the answer.');
     // And the well-evidenced nutrition change is NOT collateral damage.
     expect(out.adjustments.calories.change).toBeGreaterThan(0);
   });
@@ -95,8 +96,9 @@ describe('PRECEDENCE NOW HAS DECISION FORCE, not only copy', () => {
     expect(out.adjustments.calories.change).toBeGreaterThan(0);
     expect(out.volumeSignal).toBe(0);
     expect(out.coordination.volumeHeld).toBe('one_change_at_a_time');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(held(out, 'one_change_at_a_time').reason)
-      .toBe('Training volume held. Your calorie target is changing this week, and we cannot read your gym progress well enough to add work on top of it.');
+      .toBe('Training volume stays the same. Your calorie target is changing this week, so your gym progress cannot be judged clearly enough to add work on top of it.');
   });
 
   test('CASE C: with no calorie change in play, the same unreadable week still pushes', () => {

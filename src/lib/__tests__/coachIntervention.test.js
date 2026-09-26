@@ -274,7 +274,8 @@ describe('THE REAL ENGINE REFUSES THE OSCILLATION', () => {
     const held = out.heldDecisions.find((h) => h.type === 'awaiting_last_change');
     expect(held).toBeTruthy();
     expect(held.reason).toMatch(/has not had long enough to show yet/);
-    expect(held.reason).toMatch(/Reversing it now would tell us nothing/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(held.reason).toMatch(/Reversing it now would tell your coach nothing/);
   });
 
   test('a recent DECREASE does not block a further decrease', () => {

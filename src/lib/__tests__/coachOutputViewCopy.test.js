@@ -33,23 +33,27 @@ describe('coach output view copy helpers', () => {
   });
 
   test('prioritises focus copy without recomputing coach policy', () => {
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(buildFocus(
       { sessionsCompleted: 4, sessionsPlanned: 4, trend: { delta: 0, deltaLabel: 'Log morning weight' } },
       {},
-    )).toBe('Log morning weight every day. The trend gets sharper with each log.');
+    )).toBe('Log your morning weight every day. Each weigh-in makes your weight trend clearer.');
 
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(buildFocus(
       { sessionsCompleted: 4, sessionsPlanned: 4, trend: { delta: 0.1, deltaLabel: 'up' } },
       { sleepHours: 6.1 },
-    )).toBe('Sleep is the priority this week. Aim for 7 hours or more. Nothing else moves until it does.');
+    )).toBe('Sleep is the priority this week. Aim for 7 hours or more. Nothing else will improve until your sleep does.');
   });
 
   test('exports the forward-pull day names and confidence captions used by the screen', () => {
     expect(DAY_NAMES_FULL[0]).toBe('Sunday');
     expect(CONFIDENCE_CAPTIONS).toEqual({
       high: 'Confidence: high. A full week of data sits behind this decision.',
-      medium: 'Confidence: medium. Some data was thin this week, so changes are sized cautiously.',
-      low: 'Confidence: low. The trend is still building, so this week stays conservative.',
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      medium: 'Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target.',
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      low: 'Confidence: low. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.',
     });
   });
 });

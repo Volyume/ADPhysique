@@ -82,13 +82,13 @@ export function buildFocus(output, checkin) {
   if (!output) return null;
   const { sessionsCompleted, sessionsPlanned, trend } = output;
   if (!trend?.delta && trend?.deltaLabel === 'Log morning weight') {
-    return 'Log morning weight every day. The trend gets sharper with each log.';
+    return 'Log your morning weight every day. Each weigh-in makes your weight trend clearer.';
   }
   if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    return 'Sleep is the priority this week. Aim for 7 hours or more. Nothing else moves until it does.';
+    return 'Sleep is the priority this week. Aim for 7 hours or more. Nothing else will improve until your sleep does.';
   }
   if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
-    return `Hit all ${sessionsPlanned} sessions. Adherence beats everything else.`;
+    return `Get all ${sessionsPlanned} sessions done. Sticking to the plan matters more than anything else.`;
   }
   if (checkin?.jointPain) {
     return 'Reduce load on the painful joint. Substitute exercises if needed.';
@@ -104,8 +104,12 @@ export function buildFocus(output, checkin) {
 
 export const CONFIDENCE_CAPTIONS = {
   high: 'Confidence: high. A full week of data sits behind this decision.',
-  medium: 'Confidence: medium. Some data was thin this week, so changes are sized cautiously.',
-  low: 'Confidence: low. The trend is still building, so this week stays conservative.',
+  // Lead review 2026-09-26: at low and medium confidence the engine needs
+  // three off-target weeks instead of two before it changes calories
+  // (weeklyCoach.js offTargetWeeksRequired). It never makes a change
+  // smaller, so the old "changes are sized cautiously" was not true.
+  medium: 'Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target.',
+  low: 'Confidence: low. Your weight trend is still taking shape, so your coach waits an extra week before changing your calorie target.',
 };
 
 // ─── The "Your week" rows (D206, founder order 2026-09-26) ─────────────────
@@ -173,7 +177,7 @@ export function buildWeekRows({
   }
   const progress = context?.training?.progress?.signal ?? null;
   if (progress === 'good') push('lifts', 'trending-up-outline', 'Main lifts', 'Moving up', 'good');
-  else if (progress === 'poor') push('lifts', 'trending-up-outline', 'Main lifts', 'Not moving', 'attention');
+  else if (progress === 'poor') push('lifts', 'trending-up-outline', 'Main lifts', 'Not going up', 'attention');
   const prs = finite(prsThisWeek);
   if (prs != null && prs > 0) push('prs', 'flash-outline', 'PRs', String(prs), 'good');
 

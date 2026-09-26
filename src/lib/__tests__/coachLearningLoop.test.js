@@ -90,8 +90,9 @@ describe('JOB A: a previous response can resize the next dose', () => {
     expect(learned).toBeLessThan(100);
 
     const note = out.adjustments.calories.note;
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md): the direction is named (a cut is never an increase) and the actor is your coach.
     expect(note).toMatch(/Your last increase was not enough to move your weight as planned/);
-    expect(note).toMatch(/larger than we would normally make/);
+    expect(note).toMatch(/larger than your coach would normally make/);
     // No comparison against the previous step, and no engine vocabulary.
     expect(note).not.toMatch(/bigger than last time|than last time|than before/i);
     expect(note).not.toMatch(/multiplier|1\.5|escalat/i);
@@ -106,7 +107,8 @@ describe('JOB A: a previous response can resize the next dose', () => {
     const learned = out.adjustments.calories.change;
     expect(learned).toBe(83);
     expect(learned).toBeGreaterThan(40);
-    expect(out.adjustments.calories.note).toMatch(/larger than we would normally make/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md): the actor is your coach.
+    expect(out.adjustments.calories.note).toMatch(/larger than your coach would normally make/);
   });
 
   test('CASE C: a CONFOUNDED prior teaches nothing - ordinary logic only', () => {

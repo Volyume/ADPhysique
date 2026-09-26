@@ -45,7 +45,8 @@ describe('a submitted check-in can never be reported as late (founder 2026-08-03
   test('the already_done state renders a calm confirmation, not a demand', () => {
     expect(SRC).toMatch(/gateState === 'already_done'/);
     expect(SRC).toContain('all caught up');
-    expect(SRC).toContain('Your next check-in lands on {dayName} as normal.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(SRC).toContain('Your next check-in is on {dayName} as normal.');
   });
 
   test('it routes to the coach review the submission produced', () => {

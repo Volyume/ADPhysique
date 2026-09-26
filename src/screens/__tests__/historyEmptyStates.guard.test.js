@@ -23,8 +23,9 @@ describe('history empty states', () => {
     // that states the unlock condition, in place of the CTA that bounced off
     // the check-in's own data gate. This suite pins the shared primitive and
     // the empty state's identity, both unchanged.
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(coachHistory).toMatch(
-      /<EmptyState[\s\S]*icon="book-outline"[\s\S]*title="No entries yet"[\s\S]*text="After your first weekly check-in, decisions and holds will appear here\.[^"]*"[\s\S]*compact/,
+      /<EmptyState[\s\S]*icon="book-outline"[\s\S]*title="No entries yet"[\s\S]*text="After your first weekly check-in, each week's decisions will appear here, including what stayed the same\.[^"]*"[\s\S]*compact/,
     );
     expect(coachHistory).not.toMatch(/styles\.empty(?:Card|Title|Body)/);
   });

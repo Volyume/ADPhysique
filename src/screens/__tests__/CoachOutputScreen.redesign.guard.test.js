@@ -38,7 +38,9 @@ describe('the order of the screen', () => {
     };
     const order = [
       at('{heroCardEl ?? ('),
-      at('<SectionLabel heading>What we held</SectionLabel>'),
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md;
+      // lead review: the heading names safety blocks when they show).
+      at('<SectionLabel heading>{heldSectionLabel(heldDecisions)}</SectionLabel>'),
       at('<SectionLabel heading>Your week</SectionLabel>'),
       at('<SectionLabel heading>Next</SectionLabel>'),
       at('<SectionLabel heading>Plan ahead</SectionLabel>'),
@@ -49,8 +51,18 @@ describe('the order of the screen', () => {
 
   test('the safety blocks stay directly under the decision, never collapsed', () => {
     const r = renderBlock();
-    expect(r.indexOf('<RapidLossAlert />')).toBeLessThan(r.indexOf('<SectionLabel heading>What we held</SectionLabel>'));
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(r.indexOf('<RapidLossAlert />')).toBeLessThan(r.indexOf('<SectionLabel heading>{heldSectionLabel(heldDecisions)}</SectionLabel>'));
     expect(r.indexOf('zones.dietBreakInSafety ? dietBreakCardEl : null')).toBeLessThan(r.indexOf('<SectionLabel heading>Your week</SectionLabel>'));
+  });
+
+  test('the held section heading says what is actually in it', () => {
+    const SRC = require('fs').readFileSync(require('path').resolve(__dirname, '../CoachOutputScreen.js'), 'utf8');
+    const fn = SRC.slice(SRC.indexOf('export function heldSectionLabel('), SRC.indexOf('function HeldDecisionsCard('));
+    expect(fn).toContain("if (safety && holds) return 'Safety checks, and what stays the same';");
+    expect(fn).toContain("if (safety) return 'Safety checks';");
+    expect(fn).toContain("return 'What stays the same';");
+    expect(SRC).toContain("const SAFETY_DECISION_TYPES = ['ed_pattern_lockout', 'ed_pattern_cleared', 'rapid_loss_corrected'];");
   });
 });
 

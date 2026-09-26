@@ -146,7 +146,8 @@ describe('JOB B1/B3: the record reaches the NEXT TRAINING DECISION', () => {
     const out = week({ prior: [increaseThatHurt()] });
     const row = out.heldDecisions.find((h) => h.type === 'volume_outcome_memory');
     expect(row).toBeTruthy();
-    expect(row.reason).toBe('Training volume held. The last time we added work, your recovery and your lifts went the other way, so we are not asking for more of it this week.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(row.reason).toBe('Training volume stays the same. The last time more work was added, your recovery and your lifts went the other way, so your coach is not adding more this week.');
     expect(row.reason).not.toContain('—');
   });
 

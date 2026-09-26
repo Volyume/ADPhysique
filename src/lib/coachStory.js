@@ -65,11 +65,11 @@ export function whatHappened(context) {
   else if (t?.signal === SIGNAL.POOR) out.push(line(`You trained ${t.detail}.`, 'training.execution'));
 
   if (p?.signal === SIGNAL.GOOD) out.push(line('Your main lifts are still moving up.', 'training.progress'));
-  else if (p?.signal === SIGNAL.POOR) out.push(line('Your main lifts have stopped moving.', 'training.progress'));
+  else if (p?.signal === SIGNAL.POOR) out.push(line('Your main lifts have stopped going up.', 'training.progress'));
 
   if (w?.signal === SIGNAL.GOOD) out.push(line('Your weight is moving the way we intended.', 'weight.trend'));
   else if (w?.signal === SIGNAL.POOR) out.push(line('Your weight is not moving the way we intended.', 'weight.trend'));
-  else if (w?.signal === SIGNAL.UNKNOWN) out.push(line('There are not enough weigh-ins to read a trend yet.', 'weight.trend'));
+  else if (w?.signal === SIGNAL.UNKNOWN) out.push(line('There are not enough weigh-ins yet to see how your weight is moving.', 'weight.trend'));
 
   // The coverage fact's own detail already reads "6 of 7 days logged", so the
   // sentence carries the count and not a second "logged".
@@ -120,7 +120,7 @@ export function whatItMeans(context, limiters) {
     // coach simply said nothing about training on most constrained
     // weeks. Calm, no blame, restriction named in the lane's own
     // vocabulary; the note beside the hold carries the specifics.
-    out.push(line('Training worked around your temporary change this week, so nothing here is judged by it.', 'training.execution'));
+    out.push(line('Training worked around your temporary change this week, so this week\'s training is not used to judge anything.', 'training.execution'));
   } else if (tr?.limiter === LIMITER.EXECUTION) {
     out.push(line('There were not enough sessions this block to judge the programme, so it stays as it is.', 'training.execution'));
   } else if (tr?.limiter === LIMITER.RECOVERY) {
@@ -128,13 +128,13 @@ export function whatItMeans(context, limiters) {
     // explanation must make the distinction truthful." This reading is
     // whole-body, and saying so is what stops it contradicting a
     // muscle-specific line elsewhere on the same screen.
-    out.push(line('Recovery overall is the thing to respect this week, rather than the exercises themselves.', 'recovery.systemic'));
+    out.push(line('Recovery overall is what is holding things back this week, rather than the exercises themselves.', 'recovery.systemic'));
   } else if (tr?.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
-    out.push(line('There is not enough training evidence yet to change anything.', 'training.execution'));
+    out.push(line('There is not enough information about your training yet to change anything.', 'training.execution'));
   } else if (tr?.progressing) {
     out.push(line('The programme is working, so it is worth leaving alone.', 'training.progress'));
   } else if (tr?.limiter === LIMITER.PLAN) {
-    out.push(line('You have run the programme and recovered from it, so the lifts not moving is about the training itself.', 'training.progress'));
+    out.push(line('You have followed the programme and recovered from it, so your lifts not going up points to the training itself.', 'training.progress'));
   }
 
   // MAY WE SAY ANYTHING ABOUT FOOD HERE? (job 5). Only where the evidence
@@ -149,7 +149,7 @@ export function whatItMeans(context, limiters) {
     const q = nutritionQualifier(context);
     if (q.state === 'qualifies') {
       out.push(line(
-        'Your logged intake was away from your target this week as well. Worth knowing alongside, though not something we can call the reason.',
+        'The food you logged this week was also different from your target. That is worth knowing, but your coach cannot say it is the reason.',
         'nutrition.intake',
       ));
     }
@@ -189,7 +189,7 @@ export function whatIsChanging(context, limiters, changes = {}) {
     out.push({
       domain: 'training',
       text: `${ex.name ?? 'One exercise'} is being replaced.`,
-      why: ex.why ?? 'Your numbers on it have stopped moving.',
+      why: ex.why ?? 'Your numbers on it have stopped going up.',
       from: 'training.progress',
     });
   }
@@ -198,7 +198,7 @@ export function whatIsChanging(context, limiters, changes = {}) {
     out.push({
       domain: 'training',
       text: changes.volumeNote,
-      why: 'Recovery was harder this block, so this holds rather than adds.',
+      why: 'Recovery was harder this block, so this keeps things as they are rather than adding more.',
       from: 'recovery.systemic',
     });
   }
@@ -265,8 +265,8 @@ const HOLD_COPY = Object.freeze({
   constraint_active: 'We are leaving your programme alone while training works around your temporary change.',
   target_not_eaten: 'We are leaving your target where it is until it has had a fair run.',
   sessions_missed: 'We are leaving your programme alone until there are enough sessions to judge it.',
-  intake_coverage_unknown: 'We are leaving your target where it is until there is enough logging to read it.',
-  intake_unknown: 'We are leaving your target where it is until there is enough to read.',
+  intake_coverage_unknown: 'Your coach is leaving your target where it is until there is enough food logged to judge it.',
+  intake_unknown: 'Your coach is leaving your target where it is until there is enough information to judge it.',
   weight_trend_unknown: 'We are leaving your target where it is until the weight trend is clearer.',
   execution_unknown: 'We are leaving your programme alone until there is a full week to judge.',
   progress_unknown: 'We are leaving your programme alone until there is more to go on.',
@@ -287,15 +287,15 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
     return line('Give the current target a fair run and we will judge it on that.', 'nutrition.intake');
   }
   if (limiters?.nutrition?.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
-    return line('A few more logged days would let us read this properly.', 'nutrition.coverage');
+    return line('A few more logged days would let your coach judge your food target properly.', 'nutrition.coverage');
   }
   if (limiters?.training?.limiter === LIMITER.CONSTRAINED) {
     // D112 R7 (audit T2-14): the commitment on a constrained week is the
     // return path, never "get back on schedule".
-    return line('When your temporary change ends, training builds back up and the programme is judged on full evidence again.', 'training.execution');
+    return line('When your temporary change ends, training builds back up and the programme is judged on your full training again.', 'training.execution');
   }
   if (limiters?.training?.limiter === LIMITER.EXECUTION) {
-    return line('Getting back to your full week is the thing that makes the rest readable.', 'training.execution');
+    return line('Once you\'re doing all your planned sessions again, your coach can see whether the rest of your plan is working.', 'training.execution');
   }
   if (limiters?.training?.limiter === LIMITER.RECOVERY) {
     return line('We will look at recovery again next week before adding anything.', 'recovery.systemic');
@@ -304,7 +304,7 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
   // the thing that would let the next decision be made properly. Stated as
   // what it would ENABLE, never as an instruction to log more.
   if (context?.nutrition?.coverage?.signal === SIGNAL.UNKNOWN) {
-    return line('A few more logged days would let us read your intake properly.', 'nutrition.coverage');
+    return line('A few more logged days would give your coach a proper picture of what you eat.', 'nutrition.coverage');
   }
   return null;
 }

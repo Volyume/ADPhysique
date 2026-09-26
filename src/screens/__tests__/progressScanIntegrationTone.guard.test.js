@@ -35,7 +35,8 @@ function assertClean(str) {
 // WeeklyCheckInScreen's own scan-prompt strings below, unchanged.
 const NEW_STRINGS = {
   'WeeklyCheckInScreen.js (scan prompt title)': 'Add a progress scan first?',
-  'WeeklyCheckInScreen.js (scan prompt body)': 'A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.',
+  // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+  'WeeklyCheckInScreen.js (scan prompt body)': 'A recent scan gives this check-in extra information from your photos. It is optional and skipping it changes nothing.',
   'WeeklyCheckInScreen.js (scan prompt CTA)': 'Do a scan',
   'WeeklyCheckInScreen.js (scan prompt dismiss)': 'Not now',
   'WeeklyCheckInScreen.js (no-scan-this-period line)': 'No photo set this period.',
@@ -54,7 +55,8 @@ describe('progress-scan integration wave: new user-facing strings are clean', ()
       ProgressPhotosScreen: fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8'),
     };
     expect(files.WeeklyCheckInScreen).toMatch(/Add a progress scan first\?/);
-    expect(files.WeeklyCheckInScreen).toMatch(/A recent scan gives this check-in extra visual context\. It is optional and skipping it changes nothing\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(files.WeeklyCheckInScreen).toMatch(/A recent scan gives this check-in extra information from your photos\. It is optional and skipping it changes nothing\./);
     expect(files.WeeklyCheckInScreen).toMatch(/No photo set this period\./);
     // The Home check-in nudge's scan subline is retired (see the NEW_STRINGS
     // comment above); pin its absence instead of its presence.

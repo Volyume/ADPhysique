@@ -25,13 +25,15 @@ describe('premium tab IA', () => {
   });
 
   test('Coach root is deterministic and links profile as a separate surface', () => {
-    expect(COACH).toContain('Weekly coaching from your logs.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(COACH).toContain('Weekly coaching based on what you log.');
     // Same-meaning re-anchor (C5-P7-08, D96): the Free pitch used to describe
     // the coach in the present tense ("Your coach reads your logs..."), on the
     // tab that then tells a Free user coaching is Pro. It now says what the
     // tab BECOMES on Pro, and what is here either way. The Pro half of the
     // card (the property this test pins for a Pro user) is unchanged.
-    expect(COACH).toContain('What changed, what was held, and the exact signals behind it.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(COACH).toContain('What your coach changed this week, what stayed the same, and why.');
     // 'On Pro this tab carries your weekly check-in' pinned the Free-vs-Pro
     // pitch copy on this card. D137 (fully free product) retired that whole
     // branch -- YouScreen.js:474-476 says so directly ("the Free pitch

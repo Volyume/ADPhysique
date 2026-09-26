@@ -180,7 +180,8 @@ describe('computeSessionAdjustments — R4 under-stimulus add', () => {
     // Re-anchored under RD6-2 (D97-25): the sentence now states the two
     // facts the engine actually read (light pump, nothing flagged sore)
     // instead of asserting recovery speed and strength.
-    expect(c.reasonText).toBe("Chest took a light pump last time and nothing's been flagged sore. 1 set added today.");
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(c.reasonText).toBe("Chest felt only lightly worked last time and nothing's been flagged sore. 1 set added today.");
   });
 
   test('blocked when an add for this muscle already happened this week', () => {

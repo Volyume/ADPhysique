@@ -79,7 +79,8 @@ describe('CoachHeldHistoryScreen fail-closed loading', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('After your first weekly check-in');
-    expect(text).toMatch(/opens once your coach has a few days of training and weigh-ins to read/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toMatch(/opens once your coach has a few days of training and weigh-ins to go on/);
     expect(text).not.toContain('Start check-in');
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
@@ -93,7 +94,8 @@ describe('CoachHeldHistoryScreen fail-closed loading', () => {
     const text = flattenText(tree.toJSON());
     expect(logError).toHaveBeenCalledWith('CoachHeldHistory.load', expect.any(Error), expect.objectContaining({ hasUser: true }));
     expect(text).toContain('No entries yet');
-    expect(text).not.toContain('Weeks you applied the call');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).not.toContain('Weeks you applied the change');
     expect(text).not.toContain('Applied');
   });
 });

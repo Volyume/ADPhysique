@@ -31,6 +31,10 @@ after one read, it fails. Rewrite it until they can.
 - Keep the meaning exactly. Never change a number, a decision, a threshold,
   a condition or what is claimed, and never add advice the original did not
   give. Describe; do not tell people to train easier or harder (D204).
+- A plain rewrite must still be TRUE. Check the claim against the code that
+  produces it: the lead review found three lines that were untrue before the
+  sweep (the confidence captions, the on-target reason on off-target weeks,
+  "your last increase" on a cut), and a clearer untrue line is worse.
 
 ## Coach shorthand that fails the test
 
@@ -41,7 +45,7 @@ to everyone else. Replace them with what they mean.
 | --- | --- |
 | "the next read", "a clear read", "the read" | "next week's check-in", "enough information", "what your coach can see" |
 | "readable", "makes the rest readable" | "lets your coach see whether ... is working" |
-| "sized cautiously", "changes are sized" | "any change is kept small" |
+| "sized cautiously", "changes are sized" | what the engine actually does (for confidence, "your coach waits an extra week before changing your calorie target"; it never shrinks a change) |
 | "thin" data, "the data was thin" | "less information than usual", "only N weigh-ins" |
 | "tunes against", "tunes" | "is adjusted using" |
 | "on rate", "off rate", "back on rate" | "moving at the planned rate", "not moving at the planned rate" |
@@ -62,7 +66,7 @@ block, 7-day trend) may stay, with its existing gloss.
 | Next check-in: Saturday. Sessions in, and the next read shows it. | Next check-in: Saturday. It will show how this week's sessions went. |
 | Next read: trend against the new target. | Next week's check-in will show how your weight responds to the new target. |
 | Daily weigh-ins sharpen the next read. | Weighing yourself each morning makes the next check-in more accurate. |
-| Confidence: medium. Some data was thin this week, so changes are sized cautiously. | Confidence: medium. There was less information than usual this week, so any change is kept small. |
+| Confidence: medium. Some data was thin this week, so changes are sized cautiously. | Confidence: medium. There was less information than usual this week, so your coach waits an extra week before changing your calorie target. |
 | Last 250 kcal increase: trend responded, back on rate. | Last change, 250 kcal more a day: your weight is now moving at the planned rate. |
 | Food logs: missing. The calorie target only tunes against real intake. | Food logs: missing. Your calorie target can only be adjusted using what you actually eat. |
 

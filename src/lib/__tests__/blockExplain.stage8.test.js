@@ -118,7 +118,8 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   test('REVIEW #8: a flat retention seed is never called a climb', () => {
     const flat = { hamstrings: { week1: 10, peak: 10, peakWeek: 1, deload: 5, source: 'seed_ledger' } };
     const [line] = buildBlockStartLines({ summary: flat });
-    expect(line).toContain('Hamstrings: 10 sets a week, held steady');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(line).toContain('Hamstrings: 10 sets a week, kept steady');
     expect(line).not.toContain('building');
     expect(line).not.toContain('climb');
   });
@@ -234,13 +235,15 @@ describe('the weekly ramp position line', () => {
     const applied = buildRampPositionLine({
       weekIndex: 3, plannedWeeks: 5, appliedDelta: 1, musclesChanged: 3,
     });
-    expect(applied).toContain('the coach added 1 set on top');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(applied).toContain('your coach added 1 set on top');
     const none = buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, appliedDelta: null });
     expect(none).not.toContain('coach');
     const down = buildRampPositionLine({
       weekIndex: 3, plannedWeeks: 5, appliedDelta: -2, musclesChanged: 2,
     });
-    expect(down).toContain('the coach pulled 2 sets back');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(down).toContain('your coach pulled 2 sets back');
   });
 
   test('REVIEW #6: an applied delta that changed ZERO rows earns no coach claim', () => {

@@ -220,7 +220,8 @@ describe('WeeklyCheckInScreen optional scan prompt', () => {
     const tree = await render({ scan: null });
     const text = flattenText(tree.toJSON());
     expect(text).toContain(VALUE_LINE_PROMPT_TITLE);
-    expect(text).toContain('A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('A recent scan gives this check-in extra information from your photos. It is optional and skipping it changes nothing.');
     const dismiss = findPressable(tree, 'Not now')[0];
     expect(dismiss).toBeTruthy();
     await act(async () => { dismiss.props.onPress(); });

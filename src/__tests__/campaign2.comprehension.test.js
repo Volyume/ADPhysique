@@ -36,7 +36,8 @@ describe('TRAINING comprehension', () => {
 
   test('peak week explains expected fatigue without pretending recovery is excellent', () => {
     const src = read('lib/weeklyCoach.js');
-    expect(src).toMatch(/Peak-week fatigue is part of the plan, not a warning/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/Tiredness in the hardest week of your block is part of the plan, not a warning/);
   });
 
   test('the recovery week says it is lighter ON PURPOSE and the gloss carries the why', () => {
@@ -221,6 +222,7 @@ describe('AUTOMATION comprehension', () => {
   });
 
   test('holds are stated as the coach WORKING, not asleep (not-changing is a decision)', () => {
-    expect(read('screens/MethodologyScreen.js')).toMatch(/A held week is Precision Coaching working, not asleep/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(read('screens/MethodologyScreen.js')).toMatch(/A week with no changes is Precision Coaching working, not asleep/);
   });
 });

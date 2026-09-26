@@ -315,7 +315,7 @@ function NextWeekCard({
     calories === null
       ? null
       : calories.change === 0
-      ? 'Hold at current target'
+      ? 'Target stays the same'
       : signedEnergyChange(calories.change, energyUnit);
 
   // NU-3: the floor hold (pre-tap classification) or a tap-time notice
@@ -360,7 +360,7 @@ function NextWeekCard({
       ) : (
         <AdjustmentRow
           iconName="flame-outline"
-          label="Calories held"
+          label="Calorie target stays the same"
           note="No change needed this week."
         />
       )}
@@ -408,10 +408,10 @@ function TrainingNextWeekCard({
   // C18: the shared state sentence, or null when there is nothing to say.
   const recoveryReviewLine = reviewRecoveryLine(currentRecoveryState);
   const label =
-    (upwardBlocked || upwardInRecovery) ? 'Hold through your recovery week'
+    (upwardBlocked || upwardInRecovery) ? 'Volume stays the same through your recovery week'
     : signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
-    : 'Hold your current volume';
+    : 'Volume stays the same';
   const applyable = canApply && signal !== 0 && !applied && !upwardBlocked;
 
   // When the coach calls a deload, the recovery week IS the training
@@ -433,7 +433,7 @@ function TrainingNextWeekCard({
               // muscle's achieved peak CAPPED at its current row, so
               // "recent working volume" is the claim the maths supports,
               // not "heaviest completed week".
-              ? `Recovery volume eased to about ${output.appliedAdjustments.deload.sharePct}% of each muscle's recent working volume.`
+              ? `Recovery week eased to about ${output.appliedAdjustments.deload.sharePct}% of the sets each muscle has been doing recently.`
               : deloadNote}
             tooltip={GLOSSARY.deload}
             applied={deloadApplied}
@@ -471,7 +471,7 @@ function TrainingNextWeekCard({
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
             <Text style={[styles.planNoteText, live.planNoteText]}>
               {blockFinished
-                ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
+                ? 'This block has finished, so there is no week for volume changes to go into yet. Choose your next block on the Train tab first.'
                 // FB-06 (D96): the third honest branch, checked before the
                 // next-week one so the copy names the week the user is
                 // actually in. Inside the scheduled recovery week there is
@@ -488,7 +488,7 @@ function TrainingNextWeekCard({
                 : currentWeekIsDeload
                   ? `Nothing is added this week. ${recoveryReviewLine ?? 'Volume changes start again with your next block.'}`
                   : upwardBlocked
-                    ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
+                    ? 'Next week is your recovery week, so your coach will not add sets to it. Recovery weeks stay light on purpose.'
                     : recoveryReviewLine
                       ? `${recoveryReviewLine} ${rampLine ? `${rampLine} ` : ''}These are next week's planned sets. Each session can still adjust them on the day.`
                       : rampLine
@@ -593,6 +593,21 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
 // are gone, along with the coach output that fed them: a Volyume athlete
 // trains whenever life allows, so a target that depends on knowing which
 // calendar day they train is a guess. There is ONE base daily target.
+
+// Lead review 2026-09-26 (plain-English sweep, accuracy): this section also
+// carries the safety blocks. A rapid-loss correction RAISES calories and a
+// lifted pause is not a hold, so "What stays the same" alone was untrue
+// whenever one of them showed. The heading now names what is actually there;
+// the ED-pattern and rapid-loss blocks themselves are untouched.
+const SAFETY_DECISION_TYPES = ['ed_pattern_lockout', 'ed_pattern_cleared', 'rapid_loss_corrected'];
+export function heldSectionLabel(decisions) {
+  const list = Array.isArray(decisions) ? decisions : [];
+  const safety = list.some((d) => SAFETY_DECISION_TYPES.includes(d?.type));
+  const holds = list.some((d) => !SAFETY_DECISION_TYPES.includes(d?.type));
+  if (safety && holds) return 'Safety checks, and what stays the same';
+  if (safety) return 'Safety checks';
+  return 'What stays the same';
+}
 
 function HeldDecisionsCard({ decisions, energyUnit }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
@@ -793,7 +808,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         <View style={styles.insufficientIconRow}>
           <Ionicons name="time-outline" size={32} color={t.colors.primary} />
         </View>
-        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Building your baseline.</Text>
+        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Not enough to go on yet.</Text>
         {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
             receipt, what the coach read, the rule it applied, and the named
             unlock date, not a bare "come back later" panel. The neutral
@@ -815,7 +830,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         ) : null}
         <Text style={[styles.insufficientBody, live.insufficientBody]}>
           {receipt?.rule ?? dataNote ??
-            'Your coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
+            'Your coach looks at your training and weight from day one. It waits to change your calories or training volume until it has about two weeks of weigh-ins plus a check-in, so any change follows a real trend rather than one unusual week. Keep logging your sessions, your morning weight and your weekly check-in. The first change comes once the trend is clear.'}
         </Text>
         {receipt?.unlockLine ? (
           <Text style={[styles.receiptUnlock, live.receiptUnlock]}>{receipt.unlockLine}</Text>
@@ -845,7 +860,7 @@ function LoadErrorView({ onRetry, onClose }) {
       <EmptyState
         icon="cloud-offline-outline"
         title="Couldn't load your coach."
-        text="Something went wrong fetching this week's data, usually a dropped connection. Your logs are safe. Try again in a moment."
+        text="Something went wrong fetching this week's data, usually a dropped connection. Everything you've logged is safe. Try again in a moment."
         actionLabel="Try again"
         onAction={onRetry}
         secondaryLabel="Close"
@@ -2567,7 +2582,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         : lastOutcomeLine ? { text: lastOutcomeLine, state: lastOutcome.outcome } : null,
     changes: {
       calorieKcal: adjustments?.calories?.change ?? 0,
-      volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume holds where it is.' : null,
+      volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume stays where it is.' : null,
       // T2-25: ready-made by reintroductionRampLine from the weeks' own
       // source-stamped rows (the load effect above); the story wraps it
       // with its own why, exactly as volumeNote arrives.
@@ -2728,7 +2743,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // photo-corroborated caption can never hide genuine data thinness.
   const confidenceLine = CONFIDENCE_CAPTIONS[displayConfidence]
     ? `${CONFIDENCE_CAPTIONS[displayConfidence]}${weighInsThisWeek != null && weighInsThisWeek < 4
-      ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
+      ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? ' was' : 's were'} logged this week.`
       : ''}`
     : null;
   const decisionFooter = (
@@ -2737,7 +2752,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           owns the change, on a hold week as on a change week. */}
       {applyDisabled ? (
         <Text style={[styles.decisionMeta, live.decisionMeta]}>
-          Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
+          Manual mode: these are suggestions. Your coach doesn't apply anything itself; any change is yours to make. Change modes in Settings, under Coaching.
         </Text>
       ) : null}
       {whyThisWeek ? <Text style={[styles.decisionWhy, live.decisionWhy]}>{whyThisWeek}</Text> : null}
@@ -2921,7 +2936,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.coachNoteRow}>
             <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
             <Text style={[styles.coachNoteText, live.coachNoteText]}>
-              Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
+              Your coach learns most from consistency. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
             </Text>
           </View>
         ) : null}
@@ -2937,7 +2952,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               {decisionEyebrow}
               <Text style={[styles.decisionTitle, live.decisionTitle]} accessibilityRole="header">
                 {heldDecisions && heldDecisions.length > 0
-                  ? 'Hold steady this week.'
+                  ? 'No changes this week.'
                   : 'Nothing to change. The plan is working.'}
               </Text>
               {decisionFooter}
@@ -2987,7 +3002,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {zones.dietBreakInSafety ? dietBreakCardEl : null}
         {heldDecisions && heldDecisions.length > 0 ? (
           <View style={styles.section}>
-            <SectionLabel heading>What we held</SectionLabel>
+            <SectionLabel heading>{heldSectionLabel(heldDecisions)}</SectionLabel>
             <HeldDecisionsCard decisions={heldDecisions} energyUnit={energyUnit} />
           </View>
         ) : null}
@@ -3112,7 +3127,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             <SettingRow
               icon="time-outline"
               label="Coaching history"
-              sub="Every week's decision and what was held."
+              sub="Every week's decision and what stayed the same."
               onPress={() => navigation.navigate('CoachHeldHistory')}
               accessibilityLabel="Coaching history"
             />

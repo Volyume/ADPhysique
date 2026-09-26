@@ -739,7 +739,8 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(receipt.changed.find((r) => r.muscle === 'biceps').change).toContain('peak down from 14 to 12 sets');
     expect(receipt.changed[0].rationale).toBeTruthy();
     expect(receipt.held).toBe(1);
-    expect(receipt.heldLine).toMatch(/Keeping a dose that worked is a decision too/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(receipt.heldLine).toMatch(/Keeping what worked is a decision too/);
     expect(read('screens/PlansScreen.js')).toContain('buildSeedReceipt');
   });
 
@@ -1067,7 +1068,8 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const coach = stripComments(read('screens/YouScreen.js'));
     expect(coach).not.toContain('Coach is available on Pro');
     expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    expect(coach).toContain('What changed, what was held, and the exact signals behind it.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(coach).toContain('What your coach changed this week, what stayed the same, and why.');
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
@@ -1577,19 +1579,22 @@ describe('CHECK-IN: the first check-in states its outcome before the work (C5-P2
   test('the first-run intro and CTA name the baseline instead of promising a decision', () => {
     const src = read('screens/WeeklyCheckInScreen.js');
     expect(src).toMatch(/hasPriorReview === false/);
-    expect(src).toContain('sets the baseline future weeks are measured against');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('sets the starting point future weeks are measured against');
     expect(src).toContain("hasPriorReview === false ? 'See my first review'");
   });
 
   test('the baseline statement also appears BEFORE the first check-in, on the gate', () => {
     const src = read('screens/WeeklyCheckInScreen.js');
     const gate = src.slice(src.indexOf("gateState === 'too_soon'"), src.indexOf("gateState === 'need_weights'"));
-    expect(gate).toMatch(/first review sets your baseline/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(gate).toMatch(/first review sets your starting point/);
   });
 
   test('neither line promises a hold: on most enrolment days the first review is real', () => {
     const src = read('screens/WeeklyCheckInScreen.js');
-    expect(src).toMatch(/may hold your targets steady/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/may keep your targets the same/);
     expect(stripComments(src)).not.toMatch(/your first review will hold/i);
   });
 });
@@ -1959,12 +1964,14 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     expect(unjudged.held).toBe(2);
     expect(unjudged.heldUnjudged).toBe(2);
     // Re-anchored under D97-24 M-8 (cause-agnostic honest wording, same meaning).
-    expect(unjudged.heldLine).toMatch(/wasn't enough clear evidence this block/);
-    expect(unjudged.heldLine).not.toMatch(/dose that worked/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(unjudged.heldLine).toMatch(/wasn't enough clear information this block/);
+    expect(unjudged.heldLine).not.toMatch(/Keeping what worked/);
     // A judged hold keeps the FB-27 sentence.
     const judged = buildSeedReceipt({ ranges, ledger: mk('RESPONSIVE') });
     expect(judged.heldUnjudged).toBe(0);
-    expect(judged.heldLine).toMatch(/Keeping a dose that worked is a decision too/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(judged.heldLine).toMatch(/Keeping what worked is a decision too/);
     // Mixed states both, judged first.
     const mixed = buildSeedReceipt({
       ranges,
@@ -1976,7 +1983,8 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
       },
     });
     // Re-anchored under D97-24 M-8 (cause-agnostic honest wording, same meaning).
-    expect(mixed.heldLine).toMatch(/dose that worked[\s\S]*wasn't enough clear evidence this block/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(mixed.heldLine).toMatch(/Keeping what worked[\s\S]*wasn't enough clear information this block/);
   });
 
   test('RA-2: the receipt sheet and decision card stop claiming change or difference that does not exist', () => {

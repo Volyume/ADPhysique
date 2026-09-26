@@ -348,7 +348,8 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // muscles they never made. The scope now appears clearly separated
       // from what they said; with a nameable rule subject on the fact,
       // the subject leads instead (pinned in constrainedTruth.w2).
-      expect(out.adjustments.training.note).toContain('You said it got in the way more than expected; that mainly touches your chest work');
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      expect(out.adjustments.training.note).toContain('You said working around your temporary change got in the way more than expected; that mainly touches your chest work');
       expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
       expect(out.adjustments.training.note).toContain('you can adjust things under Injuries & limitations');
       expect(out.adjustments.training.note).not.toContain('you can end that under Injuries & limitations');
@@ -356,7 +357,8 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
 
     it('"mostly didn\'t come up" appends the close suggestion, muscles as OUR reading only', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain("You said it mostly didn't get in the way; that mainly touches your chest work");
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      expect(out.adjustments.training.note).toContain("You said working around your temporary change mostly didn't get in the way; that mainly touches your chest work");
       expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
       expect(out.adjustments.training.note).toContain('you can end that under Injuries & limitations');
       expect(out.adjustments.training.note).not.toContain('you can adjust things under Injuries & limitations');
@@ -370,8 +372,9 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
           weeklyAnswer: CAPABILITY_WEEK_ANSWER.NOT_RELEVANT,
         },
       });
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
       expect(generic.adjustments.training.note)
-        .toContain("You said it mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.");
+        .toContain("You said your temporary change mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.");
       const wide = runWeeklyCoach({
         ...baseInputs,
         physicalConstraint: {
@@ -379,8 +382,9 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
           weeklyAnswer: CAPABILITY_WEEK_ANSWER.IN_THE_WAY,
         },
       });
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
       expect(wide.adjustments.training.note)
-        .toContain('You said it got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.');
+        .toContain('You said working around your temporary change got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.');
     });
 
     it('"fine" acknowledges without changing anything; no answer stays silent', () => {

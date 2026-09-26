@@ -30,8 +30,8 @@ export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, long-term conditions or disa
  * @returns {{ sub: string, attention: boolean, empty: boolean }}
  */
 export function howYouTrainSummary(state, { nameOf = () => null } = {}) {
-  if (!state) return { sub: 'Checking.', attention: false, empty: false };
-  if (state.unavailable) return { sub: 'Could not check just now.', attention: false, empty: false };
+  if (!state) return { sub: 'Loading.', attention: false, empty: false };
+  if (state.unavailable) return { sub: 'Could not load this just now.', attention: false, empty: false };
   const baseline = state.baseline ?? [];
   const episodes = state.episodes ?? [];
   if (!baseline.length && !episodes.length) {
@@ -55,7 +55,7 @@ export function howYouTrainSummary(state, { nameOf = () => null } = {}) {
     const head = subject
       ? `Working around ${subject}`
       : `Working around ${liveCount} temporary ${liveCount === 1 ? 'limitation' : 'limitations'}`;
-    const tail = awaiting ? 'still need it?' : (until != null ? `until about ${shortDate(until)}` : 'until you end it');
+    const tail = awaiting ? 'still needed?' : (until != null ? `until about ${shortDate(until)}` : 'until you end it');
     parts.push(`${head}, ${tail}`);
     if (episodes.length > 1) parts.push(`${episodes.length - 1} more`);
   }
@@ -65,7 +65,7 @@ export function howYouTrainSummary(state, { nameOf = () => null } = {}) {
     const kept = restrictions(baseline);
     const subject = subjectPhrase(kept, { nameOf });
     if (!episodes.length) {
-      if (!kept.length) parts.push('Set up. Nothing is left out.');
+      if (!kept.length) parts.push('Set up. Nothing is left out of your plan.');
       else if (subject) parts.push(`Leaves out ${subject}`);
       else parts.push(`${kept.length} ${kept.length === 1 ? 'injury or limitation' : 'injuries or limitations'} saved. Used when Volyume picks exercises and builds your plan.`);
     } else if (kept.length) {

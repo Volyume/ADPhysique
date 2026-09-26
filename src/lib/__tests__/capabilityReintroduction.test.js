@@ -153,7 +153,8 @@ describe('section 23: the return ramp', () => {
     const line = reintroductionCopy('Front delts');
     // Natural coach-language order (2026-08-21): the muscle is named in
     // plain words and "restriction ended" never reaches the user.
-    expect(line).toBe('Your front delts work builds back up to your plan from here.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(line).toBe('Training for your front delts builds back up to your plan from here.');
     expect(line).not.toMatch(/rehab|heal|safe|recover in|weeks|days|%/i);
     expect(line).not.toMatch(/restriction|episode/i);
   });
@@ -187,12 +188,15 @@ describe('section 23: the return ramp', () => {
     });
 
     test('one calm sentence for one, two or three muscles - same trajectory words as the toast', () => {
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
       expect(reintroductionRampLine(['Front delts']))
-        .toBe('Your front delts work builds back up to your plan from here.');
+        .toBe('Training for your front delts builds back up to your plan from here.');
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
       expect(reintroductionRampLine(['Front delts', 'Chest']))
-        .toBe('Your front delts and chest work builds back up to your plan from here.');
+        .toBe('Training for your front delts and chest builds back up to your plan from here.');
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
       expect(reintroductionRampLine(['Front delts', 'Chest', 'Quads']))
-        .toBe('Your front delts, chest and quads work builds back up to your plan from here.');
+        .toBe('Training for your front delts, chest and quads builds back up to your plan from here.');
       expect(reintroductionRampLine([])).toBeNull();
       expect(reintroductionRampLine(null)).toBeNull();
     });

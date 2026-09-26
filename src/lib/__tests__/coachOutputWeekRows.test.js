@@ -97,8 +97,9 @@ describe('marks are sparse, and never on body weight or food', () => {
   test('main lifts and recovery come from the coach context\'s own signals', () => {
     expect(byKey(buildWeekRows({ context: { training: { progress: { signal: 'good' } } } })).lifts)
       .toEqual(expect.objectContaining({ value: 'Moving up', mark: 'good' }));
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(byKey(buildWeekRows({ context: { training: { progress: { signal: 'poor' } } } })).lifts)
-      .toEqual(expect.objectContaining({ value: 'Not moving', mark: 'attention' }));
+      .toEqual(expect.objectContaining({ value: 'Not going up', mark: 'attention' }));
     expect(byKey(buildWeekRows({ context: { recovery: { systemic: { signal: 'poor' } } } })).recovery)
       .toEqual(expect.objectContaining({ value: 'Harder than usual', mark: 'attention' }));
   });

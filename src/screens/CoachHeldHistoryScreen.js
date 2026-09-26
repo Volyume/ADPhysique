@@ -40,7 +40,7 @@ function buildDecisionRows(week, pairs = []) {
     const p = pairs.find((x) => x.weekStart === week.weekStart && x.domain === domain);
     if (p) {
       row.applied = true;
-      row.verdictText = p.onTarget ? 'On target the following week.' : 'Off target the following week.';
+      row.verdictText = p.onTarget ? 'Your weight trend was on target the following week.' : 'Your weight trend was off target the following week.';
     }
     return row;
   };
@@ -183,7 +183,7 @@ export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
             suppression and below the minimum sample; counts only, no body data. */}
         {scorecard != null && (
           <Text style={[styles.scorecard, live.scorecard]}>
-            Weeks you applied the call and the next trend landed on target: {scorecard.onTarget} of {scorecard.of}.
+            Weeks you applied the change and your weight trend was on target the following week: {scorecard.onTarget} of {scorecard.of}.
           </Text>
         )}
 
@@ -209,7 +209,7 @@ export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
           <EmptyState
             icon="book-outline"
             title="No entries yet"
-            text="After your first weekly check-in, decisions and holds will appear here. Your first check-in opens once your coach has a few days of training and weigh-ins to read."
+            text="After your first weekly check-in, each week's decisions will appear here, including what stayed the same. Your first check-in opens once your coach has a few days of training and weigh-ins to go on."
             compact
           />
         )}
@@ -227,7 +227,7 @@ export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
                   style={styles.decisionRow}
                   accessible
                   accessibilityLabel={
-                    (row.label ? `${row.label}. ${row.detail}` : `Held. ${row.detail}`)
+                    (row.label ? `${row.label}. ${row.detail}` : `Stayed the same. ${row.detail}`)
                     + (row.applied ? ` Applied. ${row.verdictText}` : '')
                   }
                 >

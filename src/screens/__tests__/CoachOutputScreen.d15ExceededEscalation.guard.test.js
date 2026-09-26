@@ -82,8 +82,11 @@ describe('D15: adherence-why once-ever line', () => {
     );
     expect(renderMatch).toBeTruthy();
     const block = renderMatch[0];
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md). The founder's newer order (2026-09-26, "a sweep and a correction
+    // on any language like this") supersedes the D15 approved wording:
+    // "reads best" was coach shorthand. The meaning is unchanged.
     expect(block).toContain(
-      'Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.',
+      'Your coach learns most from consistency. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.',
     );
   });
 
