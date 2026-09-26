@@ -799,12 +799,16 @@ function drawHighlights(cv, Skia, x, w, y, lines, size, s, font) {
 // Type sizes per format. Over a photo the photo is the subject, so the text
 // steps down and packs tighter, and more of the photo shows between the title
 // at the top and the numbers at the bottom.
+// The workout name and the hero number were stepped down on 2026-09-26
+// (founder: "the weight lifted is too large aka as is the workout name. Make
+// them a bit more fitting and elegant in size"): the name about a fifth, the
+// hero about three tenths, so the hero is still the one amber number.
 function cardSizes(fmt, photo) {
   const base = fmt === 'square'
-    ? { overline: 22, title: 60, quote: 28, hero: 150, heroCap: 30, statVal: 52, statCap: 25, liftName: 34, liftVal: 38, gap: 30, headGap: 40 }
+    ? { overline: 22, title: 50, quote: 28, hero: 108, heroCap: 30, statVal: 52, statCap: 25, liftName: 34, liftVal: 38, gap: 30, headGap: 40 }
     : fmt === 'portrait'
-      ? { overline: 24, title: 72, quote: 32, hero: 196, heroCap: 32, statVal: 60, statCap: 27, liftName: 38, liftVal: 42, gap: 38, headGap: 60 }
-      : { overline: 26, title: 82, quote: 34, hero: 228, heroCap: 34, statVal: 64, statCap: 28, liftName: 40, liftVal: 46, gap: 44, headGap: 76 };
+      ? { overline: 24, title: 58, quote: 32, hero: 138, heroCap: 32, statVal: 60, statCap: 27, liftName: 38, liftVal: 42, gap: 38, headGap: 60 }
+      : { overline: 26, title: 64, quote: 34, hero: 160, heroCap: 34, statVal: 64, statCap: 28, liftName: 40, liftVal: 46, gap: 44, headGap: 76 };
   if (!photo) return base;
   return {
     ...base,
