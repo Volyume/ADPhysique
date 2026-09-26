@@ -26,7 +26,11 @@ describe('privacy, consent, export and store-copy truth', () => {
     const privacy = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js');
     const data = readRepoFile('src', 'screens', 'SettingsDataScreen.js');
 
-    expect(privacy).toContain("LAST_UPDATED = '4 July 2026'");
+    // RE-ANCHORED 2026-09-26 (founder order: "It is on for all users by
+    // default. New and existing they can turn it off if they want after.
+    // We need that in the privacy policy also"; register D194 addendum 2):
+    // the Community section was added, so the date moved with it.
+    expect(privacy).toContain("LAST_UPDATED = '26 September 2026'");
     expect(privacy).toMatch(/Volyume Score is a simple\s+progress read/);
     expect(privacy).toContain('not a DEXA scan, diagnosis, medical assessment, or medical advice');
     expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
@@ -69,6 +73,34 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(publicFiles).not.toMatch(/not a diet tracker/i);
     expect(publicFiles).not.toMatch(/visible only to you/i);
     expect(publicFiles).not.toMatch(/RevenueCat/i);
+  });
+
+  // Founder order 2026-09-26 (register D194 addendum 2): workouts are shared
+  // to Community by default, for new and existing members, and the privacy
+  // policy must say so. Every copy (in-app, the two hosted pages, the
+  // Markdown source and the docs/web mirror) carries the disclosure, the
+  // way to turn it off, the under-18 audience and the public-link reach,
+  // and none may claim again that Volyume has no community.
+  test('every privacy policy copy discloses default-on Community sharing', () => {
+    const copies = {
+      inApp: readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js'),
+      html: readRepoFile('public', 'privacy.html'),
+      htmlIndex: readRepoFile('public', 'privacy', 'index.html'),
+      markdown: readRepoFile('public', 'privacy-policy.md'),
+      docsWeb: readRepoFile('docs', 'web', 'privacy.html'),
+    };
+    for (const [name, text] of Object.entries(copies)) {
+      const flat = text.replace(/\s+/g, ' ');
+      expect({ name, ok: /Your workouts are shared by default\./.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /Share what I did/.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /if you are under 18 only your followers can/.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /opened from a link by people who do not use Volyume/.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /It never includes your body weight, measurements, food diary, photos or check-ins\./.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, bad: /no community/i.test(flat) }).toEqual({ name, bad: false });
+    }
+    // The three hosted HTML copies are the same file.
+    expect(copies.htmlIndex).toBe(copies.html);
+    expect(copies.docsWeb).toBe(copies.html);
   });
 
   test('store listing drafts include current progress photo, nutrition and diagnostic disclosures', () => {

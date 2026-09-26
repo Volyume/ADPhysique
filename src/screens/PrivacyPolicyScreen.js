@@ -4,7 +4,7 @@ import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 
-const LAST_UPDATED = '4 July 2026';
+const LAST_UPDATED = '26 September 2026';
 
 export default function PrivacyPolicyScreen() {
   // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
@@ -99,6 +99,71 @@ export default function PrivacyPolicyScreen() {
           </Body>
         </Section>
 
+        {/* Founder order 2026-09-26 (register D194 addendum 2): workouts are
+            shared to Community by default for every member, new and existing,
+            and "We need that in the privacy policy also". Every sentence here
+            is checked against the code it describes: the session payload
+            allow-list (posts.js buildSessionPayload), the ED/calm gate
+            (ambient.js), the minor clamp and the public-link 404 for minors
+            (community_upsert_profile, community-public), the three-reporter
+            auto-hide (_community_auto_hide) and Leave Community
+            (CommunityPrivacyScreen). */}
+        <Section title="Community">
+          <Body>
+            Community is optional. Nothing you log is shown to other people unless you join it.
+          </Body>
+          <Body>
+            When you join, you choose a handle and can add a display name, a short bio, your training styles and
+            goal, and your area and gym. Your profile is public unless you set it to followers only, and you can
+            hide your area and gym at any time. It also shows how many sessions you usually do a week, the lifts
+            you focus on and your experience level, and you can hide any of these. You can choose to show more:
+            the days and times you usually train, your age band, and your training consistency, such as how many
+            sessions you have done this week.
+          </Body>
+          <Body>
+            Your workouts are shared by default. Once you have joined, each workout you finish is posted to
+            Community automatically. The post shows the workout's name and date, how long it took, how many sets
+            you did, the total weight you lifted, the exercises, your best set and how many personal records you
+            set, and up to three of those records are posted alongside it. It never includes your body weight,
+            measurements, food diary, photos or check-ins. Everyone in Community can see these posts, except that
+            if you are under 18 only your followers can. The switch is shown, already on, before you create your
+            profile.
+          </Body>
+          <Body>
+            You can stop sharing at any time by turning off "Share what I did" in Community, under Training
+            profile, and you can remove what you have already shared at the same time. Automatic sharing also
+            pauses on its own while calm mode is on, or while Volyume's safety check has paused your calorie
+            changes.
+          </Body>
+          <Body>
+            A post, profile or training plan shared with everyone can be opened from a link by people who do not
+            use Volyume. Nothing from anyone under 18 is ever shown this way.
+          </Body>
+          <Body>
+            You can also write posts, comment, give Respect, share training plans, join groups and message people
+            you are connected with. Messages are private to the people in the conversation. If someone reports a
+            message, our moderators can see it.
+          </Body>
+          <Body>
+            If you tap "Use my location" in the gym finder, your phone's approximate location is used for that one
+            search and then discarded. It is never stored. Community can send you notifications, for example when
+            someone follows you, replies to you or messages you, and you can turn them off in Settings, under
+            Notifications.
+          </Body>
+          <Body>
+            You can block, mute and report people, posts, comments, plans, messages and groups. The Volyume team
+            reviews reports, and a post, comment or plan reported by three different people is hidden
+            automatically.
+          </Body>
+          <Body>
+            You can leave Community at any time in Community, under Privacy. Leaving deletes your profile, posts
+            and follows; your training, plans and food diary are not touched. Deleting your account deletes
+            everything you shared in Community too. Reports you made are kept for moderation, with your account
+            removed from them. We use this data to run the Community features you choose to use, which is part of
+            our agreement with you, and to keep Community safe, which is our legitimate interest.
+          </Body>
+        </Section>
+
         <Section title="Your rights">
           <Body>
             You can export your workout sets as CSV from Settings &gt; Your data &gt; Export workout log.
@@ -110,7 +175,7 @@ export default function PrivacyPolicyScreen() {
             You can permanently delete your account from Settings &gt; Account &gt; Delete account. Cloud removal
             starts immediately and local data is wiped on this device; if final sign-in removal cannot finish
             while offline, Volyume tells you and completes it when you reconnect. Backup copies are purged
-            within 30 days.
+            within 30 days. This includes your Community profile and everything you shared there.
           </Body>
           <Body>
             If you are in the European Economic Area or United Kingdom, you have additional rights under GDPR,
@@ -122,6 +187,10 @@ export default function PrivacyPolicyScreen() {
         <Section title="Children">
           <Body>
             Volyume is not directed at children under 13. We do not knowingly collect data from anyone under 13.
+          </Body>
+          <Body>
+            In Community, anyone under 18 shares with their followers only and never appears on pages shown
+            outside the app.
           </Body>
         </Section>
 
