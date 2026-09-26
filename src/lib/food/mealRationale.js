@@ -49,16 +49,16 @@ export const FOOD_REASON = Object.freeze({
 });
 
 const MEAL_COPY = Object.freeze({
-  [MEAL_REASON.PINNED]: 'You asked us to keep this one.',
+  [MEAL_REASON.PINNED]: 'You chose to keep this one.',
   [MEAL_REASON.SAVED_MEAL]: 'This is one of your saved meals.',
   [MEAL_REASON.RECIPE]: 'This is one of your recipes.',
-  [MEAL_REASON.USUAL]: 'You eat this regularly, so we have built around it.',
+  [MEAL_REASON.USUAL]: 'You eat this regularly, so your plan is built around it.',
   [MEAL_REASON.MACRO_FIT]: 'This fits the calories and protein left for this meal.',
-  [MEAL_REASON.GENERIC_START]: 'We do not have enough history yet, so we have used a simple option that fits your preferences.',
+  [MEAL_REASON.GENERIC_START]: 'There is not enough history yet, so this is a simple option that fits your preferences.',
 });
 
 const FOOD_COPY = Object.freeze({
-  [FOOD_REASON.PERSISTENT_REPLACEMENT]: 'You asked us to use this instead.',
+  [FOOD_REASON.PERSISTENT_REPLACEMENT]: 'You chose to use this instead.',
   [FOOD_REASON.TARGET_CHANGE]: 'The amount changed to match your new target.',
 });
 
@@ -84,7 +84,7 @@ export function explainFood(reason) {
 export function explainAbsence({ excludedByUser, excludedByAllergen, excludedByDiet } = {}) {
   if (excludedByAllergen) return 'This does not fit the allergens you avoid.';
   if (excludedByDiet) return 'This does not fit the diet you have chosen.';
-  if (excludedByUser) return 'You asked us not to suggest this food.';
+  if (excludedByUser) return 'You asked for this food not to be suggested.';
   return null;
 }
 
@@ -105,16 +105,16 @@ export function explainDay(slots = []) {
   const generic = count(MEAL_REASON.GENERIC_START);
 
   if (pinned && own) {
-    return `Built around the meal you asked us to keep and ${own === 1 ? 'one of your own meals' : 'your own meals'}.`;
+    return `Built around the meal you chose to keep and ${own === 1 ? 'one of your own meals' : 'your own meals'}.`;
   }
-  if (pinned) return 'Built around the meal you asked us to keep.';
+  if (pinned) return 'Built around the meal you chose to keep.';
   if (own) {
     return own === 1
       ? 'Built around one of your own meals, with the rest chosen to fit your target.'
       : 'Built around your own meals, with the rest chosen to fit your target.';
   }
   if (generic === list.length) {
-    return 'We do not have enough history yet, so these are simple options that fit your preferences and your target.';
+    return 'There is not enough history yet, so these are simple options that fit your preferences and your target.';
   }
   return 'Chosen to fit your calories and protein for the day, within your preferences.';
 }

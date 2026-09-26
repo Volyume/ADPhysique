@@ -82,7 +82,8 @@ describe('the REAL assembler records a reason for every meal it places', () => {
 
 describe('the copy answers the founder\'s four questions', () => {
   test('why did you keep this', () => {
-    expect(explainMeal(MEAL_REASON.PINNED)).toBe('You asked us to keep this one.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us", user's own action stays "you chose")
+    expect(explainMeal(MEAL_REASON.PINNED)).toBe('You chose to keep this one.');
   });
 
   test('why these meals: their own meals lead the summary', () => {
@@ -95,16 +96,19 @@ describe('the copy answers the founder\'s four questions', () => {
 
   test('why these meals, with nothing to go on: it says so plainly', () => {
     const slots = Array.from({ length: 4 }, () => ({ reason: MEAL_REASON.GENERIC_START }));
-    expect(explainDay(slots)).toMatch(/do not have enough history yet/i);
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: "We do not have" became the impersonal "There is not")
+    expect(explainDay(slots)).toMatch(/not enough history yet/i);
   });
 
   test('why did you use this food', () => {
-    expect(explainFood(FOOD_REASON.PERSISTENT_REPLACEMENT)).toBe('You asked us to use this instead.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us", user's own action stays "you chose")
+    expect(explainFood(FOOD_REASON.PERSISTENT_REPLACEMENT)).toBe('You chose to use this instead.');
     expect(explainFood(FOOD_REASON.TARGET_CHANGE)).toMatch(/match your new target/i);
   });
 
   test('why is that food not appearing', () => {
-    expect(explainAbsence({ excludedByUser: true })).toBe('You asked us not to suggest this food.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: dropped the collaborative "us"; "you asked" stays as the user's own action)
+    expect(explainAbsence({ excludedByUser: true })).toBe('You asked for this food not to be suggested.');
     expect(explainAbsence({ excludedByAllergen: true })).toMatch(/allergens you avoid/i);
     expect(explainAbsence({ excludedByDiet: true })).toMatch(/diet you have chosen/i);
     expect(explainAbsence({})).toBeNull();

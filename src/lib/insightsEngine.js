@@ -186,7 +186,7 @@ export function generateInsights(rawArgs = {}) {
   if (sorenessWoW != null && sorenessWoW >= 18) {
     insights.push(mkInsight(
       'recovery_warn', 2,
-      `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein. If it keeps climbing, a lighter week is coming.`,
+      `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein.`,
       'recovery_warn',
       { sorenessWoW: Math.round(sorenessWoW) },
     ));
@@ -214,7 +214,11 @@ export function generateInsights(rawArgs = {}) {
   if (overMrvWeeks >= 2 || (fatigue != null && fatigue >= 4.3)) {
     insights.push(mkInsight(
       'deload_due', 2,
-      `Your training load and fatigue are both running high. A lighter week soon will help you come back fresh. It's not a setback, it's part of the plan.`,
+      // D204 addendum 3 (Lane G, lead review): the lighter-week sentence
+      // went, and "It's not a setback, it's part of the plan" went with it,
+      // since it described the lighter week and would otherwise point at
+      // nothing.
+      `Your training load and fatigue are both running high.`,
       'deload_due',
       { overMrvWeeks, fatigue: fatigue != null ? Math.round(fatigue * 10) / 10 : null },
     ));

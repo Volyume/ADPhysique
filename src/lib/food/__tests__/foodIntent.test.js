@@ -364,6 +364,9 @@ describe('plain English (Campaign 16 copy law)', () => {
   });
 
   test('the founder\'s own example wording is what the early-evidence line says', () => {
-    expect(earlyEvidenceCopy()).toBe('We have not seen enough yet to change what we normally suggest.');
+    // RE-ANCHORED 2026-09-26 (D207 Lane G: the founder's original "We have not seen
+    // enough yet..." dropped the collaborative "we" under the founder's own D207 sweep
+    // order; same plain, honest shape, no actor named)
+    expect(earlyEvidenceCopy()).toBe('There is not enough history yet to change what is normally suggested.');
   });
 });

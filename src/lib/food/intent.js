@@ -332,7 +332,7 @@ export function preferenceBonus(state, foodKey) {
  */
 export function replacementCopy(fromName, toName) {
   if (!fromName || !toName) return null;
-  return `We will use ${toName} instead of ${fromName} in your future plans.`;
+  return `${toName} will be used instead of ${fromName} in your future plans.`;
 }
 
 /** The one-off case, said plainly so the user knows nothing was learned. */
@@ -347,5 +347,5 @@ export function justThisTimeCopy(toName) {
  * habits.
  */
 export function earlyEvidenceCopy() {
-  return 'We have not seen enough yet to change what we normally suggest.';
+  return 'There is not enough history yet to change what is normally suggested.';
 }

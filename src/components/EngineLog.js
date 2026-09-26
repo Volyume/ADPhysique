@@ -50,7 +50,7 @@ function detectRepRegressions(sets, exerciseMap) {
       warnings.push({
         id: `reg_${exId}`,
         exerciseName: ex?.name ?? 'Unknown exercise',
-        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} -> ${Math.round(r1 * 10) / 10} -> ${Math.round(r0 * 10) / 10} over 3 weeks. Consider dropping the weight slightly or taking a lighter week.`,
+        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} -> ${Math.round(r1 * 10) / 10} -> ${Math.round(r0 * 10) / 10} over 3 weeks, a sign the load may be too high.`,
       });
     }
   }
