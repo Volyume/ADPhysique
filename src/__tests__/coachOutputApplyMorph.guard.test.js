@@ -19,6 +19,20 @@
  *    the only amber fill (A1 one-amber rule as a variant mapping), and the
  *    row keeps the button mounted through 'success' so the checkmark beat
  *    is visible before the Applied chip replaces it.
+ *
+ * RE-ANCHORED (2026-09-26, founder order on the "Coaching decision" screen,
+ * verbatim: "Coaching Decisions looks shit too it doesn't appear to be
+ * following the style of the app at all and is a mismatch of texts styles
+ * and formats. Sort it."). Button's variant vocabulary is now
+ * emphatic/primary/secondary/tertiary/outline(=secondary)/destructive --
+ * `outline` still works but the screen no longer spells it that way, and
+ * `ghost` never existed as a real variant (it silently fell back to
+ * `primary`). The A1 one-amber-rule mapping below is unchanged in MEANING
+ * -- exactly one side of each ternary is the amber-filled variant, the
+ * other is quiet -- so this suite still pins it, on the new literals:
+ * `emphasis ? 'emphatic' : 'secondary'` (AdjustmentRow's Apply) and
+ * `hero ? 'emphatic' : 'secondary'` (DietBreakCard's "Set maintenance
+ * calories").
  */
 import fs from 'fs';
 import path from 'path';
@@ -105,8 +119,8 @@ describe('M4 morph wiring', () => {
   });
 
   test('A1 one-amber rule survives as the variant mapping', () => {
-    expect(SCREEN).toMatch(/variant=\{emphasis \? 'primary' : 'outline'\}/);
-    expect(SCREEN).toMatch(/variant=\{hero \? 'primary' : 'outline'\}/);
+    expect(SCREEN).toMatch(/variant=\{emphasis \? 'emphatic' : 'secondary'\}/);
+    expect(SCREEN).toMatch(/variant=\{hero \? 'emphatic' : 'secondary'\}/);
   });
 
   test('the row keeps the button mounted through the success beat', () => {

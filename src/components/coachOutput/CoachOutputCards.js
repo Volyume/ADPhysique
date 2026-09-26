@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha, fontFamily } from '../../styles/theme';
+import Button from '../Button';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, alpha, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { touchTarget } from '../../styles/layout';
 
 // L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
 // pattern already shipped on 26 other files (BodyMetricsScreen, EngineLog,
@@ -22,7 +22,13 @@ export function SectionHeader({ title, tooltip }) {
   );
 }
 
-export function StatChip({ icon, iconColor, label, value, valueColor, tooltip }) {
+// R2 cohesion (2026-09-26, founder order): every StatChip now renders in one
+// identical treatment (icon textSecondary, value textPrimary via the role
+// below) -- the per-call iconColor/valueColor props that used to colour-code
+// the trend arrow and warn-tint the PR chip are gone, so the four chips on
+// this screen can no longer drift apart in emphasis. The values and labels
+// themselves are unchanged.
+export function StatChip({ icon, label, value, tooltip }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -31,9 +37,9 @@ export function StatChip({ icon, iconColor, label, value, valueColor, tooltip })
   return (
     <View style={[styles.statChip, live.statChip]}>
       {icon ? (
-        <Ionicons name={icon} size={15} color={iconColor ?? t.colors.textSecondary} />
+        <Ionicons name={icon} size={15} color={t.colors.textSecondary} />
       ) : null}
-      <Text style={[styles.statChipValue, live.statChipValue, valueColor ? { color: valueColor } : null]}>
+      <Text style={[styles.statChipValue, live.statChipValue]}>
         {value}
       </Text>
       {label ? <Text style={[styles.statChipLabel, live.statChipLabel]}>{label}</Text> : null}
@@ -91,20 +97,21 @@ export function WhyBlock({ text, onLearnMore }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.whyBlock}>
-      <Text style={[styles.whyLabel, live.whyLabel]}>Why this week:</Text>
+      {/* R2 cohesion (2026-09-26, founder order): a section heading is
+          SectionLabel, default tone, everywhere on this screen -- "Why this
+          week" is a label, not a sentence, so the colon is dropped too. */}
+      <SectionLabel>Why this week</SectionLabel>
       <Text style={[styles.whyText, live.whyText]}>{text}</Text>
       {onLearnMore ? (
-        <TouchableOpacity
-          style={[styles.link44, live.link44]}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="information-circle-outline"
+          trailingIcon="chevron-forward"
+          title="Understand how this decision was made"
           onPress={onLearnMore}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityRole="button"
           accessibilityLabel="Understand how this decision was made"
-        >
-          <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text style={[styles.whyLearnMore, live.whyLearnMore]}>Understand how this decision was made</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
+        />
       ) : null}
     </View>
   );
@@ -157,14 +164,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+  // R2 cohesion (2026-09-26): value/label now ride the shared type roles
+  // (label/caption) instead of a hand-rolled size+weight pair.
   statChipValue: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
+    ...type.label,
     color: colors.textPrimary,
   },
   statChipLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    ...type.caption,
+    color: colors.textMuted,
   },
   bulletList: {
     gap: spacing.sm,
@@ -188,33 +196,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
-  whyLabel: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-  },
+  // R2 cohesion (2026-09-26): the "Why this week" label is a SectionLabel
+  // now (see WhyBlock above), so whyLabel is gone; the body drops its
+  // italic and reads as plain bodySm.
   whyText: {
     ...type.bodySm,
     color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  whyLearnMore: {
-    ...type.label,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  link44: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: touchTarget.minimum,
-    justifyContent: 'space-between',
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    marginTop: spacing.xs,
   },
   rapidLossCard: {
     backgroundColor: colors.errorBg ?? colors.warningBg,
@@ -252,13 +239,10 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     statChip: { backgroundColor: t.colors.surface2 },
-    statChipValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    statChipLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    statChipValue: { ...t.type.label, color: t.colors.textPrimary },
+    statChipLabel: { ...t.type.caption, color: t.colors.textMuted },
     bulletText: { ...t.type.body, color: t.colors.textPrimary },
-    whyLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     whyText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    whyLearnMore: { ...t.type.label, color: t.colors.textSecondary },
-    link44: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     rapidLossCard: {
       backgroundColor: t.colors.errorBg ?? t.colors.warningBg,
       borderColor: withAlpha(t.colors.error, alpha.mid),

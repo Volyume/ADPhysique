@@ -15,6 +15,22 @@
  * deterministic engine, gating or telemetry. The ED-safety blocks
  * (edLockoutCard/edClearedCard) are the recorded Banner class and stay
  * radius.md by design; asserted here so a future "fix" can't drift them.
+ *
+ * RE-ANCHORED (2026-09-26, founder order on the "Coaching decision" screen,
+ * verbatim: "Coaching Decisions looks shit too it doesn't appear to be
+ * following the style of the app at all and is a mismatch of texts styles
+ * and formats. Sort it."). The R2 census above still holds -- these five
+ * cards still read at the app-wide radius.lg corner -- but the MECHANISM
+ * changed: planEditCard/holdHeroCard/coachLeadCard/focusCard/countdownCard
+ * now render through the shared `<Card>` primitive (radius.lg is Card's own
+ * default), rather than hand-rolling backgroundColor/border/radius/padding
+ * locally. A `borderRadius: radius.lg` literal on these style keys would now
+ * be dead weight at best and a silent second source of truth at worst, so
+ * the census is re-pinned the other way round: each key carries NO
+ * `borderRadius` of its own, and the JSX actually renders it through
+ * `<Card`. edLockoutCard/edClearedCard (the ED-safety Banner class) and
+ * adjustmentIconWrap are untouched by the R2 cohesion pass and keep their
+ * original direct pins exactly as before.
  */
 import fs from 'fs';
 import path from 'path';
@@ -31,8 +47,23 @@ function radiusOf(styleName) {
   return m ? m[1] : null;
 }
 
+// The five R2 cards' style objects are flat (no nested braces), so a
+// non-greedy capture up to the FIRST closing brace is the object's whole
+// body -- it cannot overrun into a sibling key the way a `[\s\S]*?` scan
+// against a later, unrelated `borderRadius` could.
+function styleBodyOf(styleName) {
+  const m = SOURCE.match(new RegExp(`\\b${styleName}:\\s*\\{([^}]*)\\}`));
+  return m ? m[1] : null;
+}
+
+// A Card usage is one JSX opening tag; `[^>]*` is bounded to that tag so it
+// can't cross into an unrelated later `<Card`.
+function rendersThroughCard(styleName) {
+  return new RegExp(`<Card[^>]*styles\\.${styleName}\\b`).test(SOURCE);
+}
+
 describe('CoachOutputScreen R2 radius cohesion', () => {
-  test('every plain surface content card uses the app-wide card radius (lg)', () => {
+  test('the five former hand-rolled cards carry no borderRadius of their own and render through <Card> (radius.lg is the primitive\'s default)', () => {
     for (const card of [
       'planEditCard',
       'holdHeroCard',
@@ -40,7 +71,10 @@ describe('CoachOutputScreen R2 radius cohesion', () => {
       'focusCard',
       'countdownCard',
     ]) {
-      expect(radiusOf(card)).toBe('lg');
+      const body = styleBodyOf(card);
+      expect(body).not.toBeNull();
+      expect(body).not.toMatch(/borderRadius/);
+      expect(rendersThroughCard(card)).toBe(true);
     }
   });
 

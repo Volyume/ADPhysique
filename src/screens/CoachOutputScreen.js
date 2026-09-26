@@ -264,7 +264,7 @@ function AdjustmentRow({
         <ApplyExit style={styles.applySlot}>
           <Button
             title="Apply"
-            variant={emphasis ? 'primary' : 'outline'}
+            variant={emphasis ? 'emphatic' : 'secondary'}
             size="sm"
             fullWidth={false}
             state={applyState}
@@ -276,7 +276,7 @@ function AdjustmentRow({
           {onDecline ? (
             <Button
               title="Keep as is"
-              variant="ghost"
+              variant="secondary"
               size="sm"
               fullWidth={false}
               onPress={onDecline}
@@ -494,7 +494,7 @@ function TrainingNextWeekCard({
             // the hero Apply (A1 one-amber rule).
             <Button
               title="See your updated plan"
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon="barbell-outline"
               fullWidth={false}
@@ -556,7 +556,7 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
         <ApplyExit style={styles.applySlotStart}>
           <Button
             title="Set maintenance calories"
-            variant={hero ? 'primary' : 'outline'}
+            variant={hero ? 'emphatic' : 'secondary'}
             size="sm"
             fullWidth={false}
             state={applyState}
@@ -620,7 +620,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           {onLearnMore ? (
             <Button
               title="See how Precision Coaching decides"
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon="information-circle-outline"
               fullWidth={false}
@@ -660,7 +660,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
       {onSeeAll ? (
         <Button
           title="See all weeks"
-          variant="outline"
+          variant="secondary"
           size="sm"
           trailingIcon="chevron-forward"
           fullWidth={false}
@@ -2603,11 +2603,11 @@ export default function CoachOutputScreen({ navigation, route }) {
     },
   });
 
-  // Trend chip: arrow icon + colour. Class B body-data surface (COMP-027):
-  // a body-weight trend never wears red. On target reads onTrack; off target
-  // caps at watch (worth a look, not a verdict); under an open ED-pattern
-  // flag the chip drops to neutral entirely. The weight numeral itself is
-  // always textPrimary (set on the value below), colour lives on the icon.
+  // Trend chip: arrow icon shows direction only. Class B body-data surface
+  // (COMP-027): a body-weight trend never wears red. R2 cohesion (2026-09-26,
+  // founder order) retired the icon's onTrack/watch/neutral colour coding so
+  // every StatChip on this screen renders in one identical treatment; the
+  // weight numeral itself is always textPrimary (set on the value below).
   const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
   const canShowProgressScanCoachContext = !!progressScanCoachContext && !isPhotoSuppressed(calmMode, edPatternOpen);
   // v2 assessment receipt: dedupe the non-authority sentence against the
@@ -2628,23 +2628,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // one value, and older stored outputs simply display the confidence they
   // recorded. No render-time re-derivation, no photo-derived flags read.
   const displayConfidence = confidence;
+  // R2 cohesion (2026-09-26): trendColor (onTrack/watch/muted) is retired
+  // with the StatChip valence-colour treatment it fed; the arrow's shape is
+  // the only signal now, and it is unaffected by an open ED flag.
   let trendIcon = 'remove-outline';
-  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): stateColors
-  // is a frozen alias onto colors.success/warning/error/textMuted (theme.js),
-  // so its live equivalent is the same t.colors tokens it aliases -- no
-  // separate "live stateColors" builder needed.
-  let trendColor = t.colors.textMuted;
-  if (trend.delta !== null && !edPatternOpen) {
-    const dirColor = trend.onTarget ? t.colors.success : t.colors.warning;
-    if (trend.delta > 0.01) {
-      trendIcon = 'arrow-up-outline';
-      trendColor = dirColor;
-    } else if (trend.delta < -0.01) {
-      trendIcon = 'arrow-down-outline';
-      trendColor = dirColor;
-    }
-  } else if (trend.delta !== null) {
-    // Flag open: keep the direction arrow, drop the valence colour.
+  if (trend.delta !== null) {
     trendIcon = trend.delta > 0.01 ? 'arrow-up-outline'
       : trend.delta < -0.01 ? 'arrow-down-outline' : 'remove-outline';
   }
@@ -2877,29 +2865,34 @@ export default function CoachOutputScreen({ navigation, route }) {
             acknowledgement and the plain-language trend read lead the
             card before any decision detail. */}
         {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || baseCoachResponse.interpretation) ? (
+          // R2 cohesion (2026-09-26): the card box now renders through the
+          // shared Card primitive; the staged entrance and the accessible
+          // grouping (Card has no `accessible` prop to take it) stay on this
+          // outer animated wrapper exactly as before.
           <Reanimated.View
             entering={stage(1)}
-            style={[styles.coachLeadCard, live.coachLeadCard]}
             accessible
             accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, baseCoachResponse.interpretation].filter(Boolean).join(' ')}
           >
-            {/* S1c: last week's pre-commitment, answered. Leads the card, it is
-                the "did the coach get it right" payoff that pulls users back. */}
-            {coachResponse.commitmentAnswer ? (
-              <Text style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
-            ) : null}
-            {coachResponse.acknowledgement ? (
-              <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
-            ) : null}
-            {/* D86: the lead paragraph is the WEEKLY decision only, so it
-                renders the base interpretation. The photo sentence that
-                applyProgressScanCoachContext folds in (wiring unchanged, see
-                progressScanCoachIsolation.guard) now surfaces once, in the
-                compact Progress photos card low on the page, instead of
-                dominating the top of the screen. */}
-            {baseCoachResponse.interpretation ? (
-              <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{baseCoachResponse.interpretation}</Text>
-            ) : null}
+            <Card style={styles.coachLeadCard}>
+              {/* S1c: last week's pre-commitment, answered. Leads the card, it is
+                  the "did the coach get it right" payoff that pulls users back. */}
+              {coachResponse.commitmentAnswer ? (
+                <Text style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
+              ) : null}
+              {coachResponse.acknowledgement ? (
+                <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
+              ) : null}
+              {/* D86: the lead paragraph is the WEEKLY decision only, so it
+                  renders the base interpretation. The photo sentence that
+                  applyProgressScanCoachContext folds in (wiring unchanged, see
+                  progressScanCoachIsolation.guard) now surfaces once, in the
+                  compact Progress photos card low on the page, instead of
+                  dominating the top of the screen. */}
+              {baseCoachResponse.interpretation ? (
+                <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{baseCoachResponse.interpretation}</Text>
+              ) : null}
+            </Card>
           </Reanimated.View>
         ) : null}
 
@@ -2911,7 +2904,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             (on-target/holding), no hero shows. */}
         {heroCardEl ? (
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             {/* D93 (Campaign 2, Phase 12 / review A finding 5): Manual mode
                 strips the Apply pills, which left a proposal row identical
                 to an informational one. One line above the cards makes the
@@ -2936,7 +2929,7 @@ export default function CoachOutputScreen({ navigation, route }) {
              When safety holds are active the copy defers to them rather than
              claiming the plan is simply working. */
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             {/* D-2 (final certification 2026-09-05): the Manual-mode
                 ownership note used to render only in the hero-card branch
                 above, so on a hold-everything week a Manual user saw rows
@@ -2947,7 +2940,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
               </Text>
             ) : null}
-            <View style={[styles.holdHeroCard, live.holdHeroCard]}>
+            <Card elevated style={styles.holdHeroCard}>
               <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady this week.'
@@ -2958,7 +2951,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
               ) : null}
-            </View>
+            </Card>
           </Reanimated.View>
         )}
 
@@ -2966,14 +2959,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         <Reanimated.View entering={stage(3)} style={styles.chipsRow}>
           <StatChip
             icon={trendIcon}
-            iconColor={trendColor}
             value={weightChipValue}
             // NU-5: the number is a 7-day smoothed trend, the same vocabulary
             // the check-in uses. Never labelled as a plain weekly change.
             // T15: the science opt-in brackets the technical name after it.
             label={trend.delta !== null ? withScience('7-day trend', 'EWMA', !!userProfile?.showScience) : null}
-            // Class B: no colour on a body-weight numeral, ever.
-            valueColor={t.colors.textPrimary}
             // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
             // reused here so the "7-day trend" number is explained the same
             // way everywhere it appears. Only shown once there is a trend to explain.
@@ -2995,26 +2985,20 @@ export default function CoachOutputScreen({ navigation, route }) {
           {trend.coachingRateLabel ? (
             <StatChip
               icon="analytics-outline"
-              iconColor={trendColor}
               value={trend.coachingRateLabel}
               label="Coaching trend"
-              valueColor={t.colors.textPrimary}
               tooltip={'The rate this week\'s decision was made from. It smooths out one-off spikes and measures across the time that actually passed since your last regular weigh-ins, so it can differ a little from the raw scale reading.'}
             />
           ) : null}
           <StatChip
             icon="barbell-outline"
-            iconColor={t.colors.primary}
             value={`${sessionsCompleted}/${sessionsPlanned}`}
             label="sessions"
-            valueColor={t.colors.textPrimary}
           />
           {prsThisWeek > 0 && (
             <StatChip
               icon="flash-outline"
-              iconColor={t.colors.warning}
               value={`${prsThisWeek} PR${prsThisWeek !== 1 ? 's' : ''}`}
-              valueColor={t.colors.warning}
             />
           )}
         </Reanimated.View>
@@ -3031,20 +3015,24 @@ export default function CoachOutputScreen({ navigation, route }) {
           /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
              of the loop; it no longer renders at footnote weight. Success
              tint, never amber (one-amber rule). */
-          <TouchableOpacity
-            style={[styles.shareWeekBtn, live.shareWeekBtn]}
+          // R9/M9 (share-card audit 2026-07-27): entry points into the share
+          // flow standardise on "Create share image" across the app. Lead
+          // review 2026-09-26 (founder order, one visual system): the
+          // hand-rolled success-tint pill is the shared Button now, the
+          // standard primary (raised surface, amber glyph) so a great week's
+          // share still carries more weight than the quiet actions around
+          // it without a bespoke chrome; it only renders under the
+          // `greatWeek` gate above.
+          <Button
+            title="Create share image"
+            variant="primary"
+            size="sm"
+            icon="share-outline"
+            fullWidth={false}
+            style={styles.shareWeekBtn}
             onPress={handleShareWeek}
-            accessibilityRole="button"
-            // R9/M9 (share-card audit 2026-07-27): entry points into the share
-            // flow standardise on "Create share image" across the app; the
-            // success-tint chrome + share-outline icon still carry the
-            // "genuinely great week" framing (the button only renders under
-            // the `greatWeek` gate above).
             accessibilityLabel="Create share image"
-          >
-            <Ionicons name="share-outline" size={15} color={t.colors.success} />
-            <Text style={[styles.shareWeekText, live.shareWeekText]}>Create share image</Text>
-          </TouchableOpacity>
+          />
         )}
 
         {/* 4. The working/off ledger (A1 03 gap #1): the old What's-working
@@ -3070,17 +3058,21 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Food-level receipt: when the calorie change edited an active
             meal plan, the coach says what moved, at the gram of rice. */}
         {planEditNote ? (
-          <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
-            <Text style={[styles.planEditHead, live.planEditHead]}>{planEditNote.headline}</Text>
+          <Card style={styles.planEditCard} accessibilityRole="summary">
+            {/* Lead review 2026-09-26: the headline is a full sentence from
+                planExplain.js, so it reads as text under the card's label,
+                never as an uppercase overline. */}
+            <SectionLabel>Your meal plan</SectionLabel>
+            <Text style={[styles.planEditHeadline, live.planEditHeadline]}>{planEditNote.headline}</Text>
             <Text style={[styles.planEditBody, live.planEditBody]}>{planEditNote.body}</Text>
-          </View>
+          </Card>
         ) : null}
 
         {/* Seamless next-week meal setup (founder 2026-06-15): build or repeat
             next week's meals straight from the check-in, then land on the plan
             to swap and get the shopping list. */}
-        <View style={[styles.planEditCard, live.planEditCard]}>
-          <Text style={[styles.planEditHead, live.planEditHead]}>Plan next week&apos;s meals</Text>
+        <Card style={styles.planEditCard}>
+          <SectionLabel>Plan next week&apos;s meals</SectionLabel>
           <Text style={[styles.planEditBody, live.planEditBody]}>
             A full week built to next week&apos;s targets, with a shopping list.
             Review it, swap meals if needed, then add it to your diary.
@@ -3088,7 +3080,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.nextWeekRow}>
             <Button
               title={planningWeek ? 'Building' : 'Fresh week'}
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon="calendar-outline"
               fullWidth={false}
@@ -3098,7 +3090,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             />
             <Button
               title="Repeat last week"
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon="repeat-outline"
               fullWidth={false}
@@ -3110,7 +3102,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           {planEditNote?.deepLink ? (
             <Button
               title={planEditNote.deepLink.label}
-              variant="outline"
+              variant="secondary"
               size="sm"
               icon="restaurant-outline"
               fullWidth={false}
@@ -3119,7 +3111,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityLabel={planEditNote.deepLink.label}
             />
           ) : null}
-        </View>
+        </Card>
 
         {/* U4: cycle-phase reassurance for a small period-week water rise
             (advisory, no Apply; only present for a female user who flagged
@@ -3137,7 +3129,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             behind it is simply not written. */}
         {weeklyStory ? (
           <Card style={styles.storyCard}>
-            <SectionLabel tone="primary">Your week</SectionLabel>
+            <SectionLabel>Your week</SectionLabel>
             {weeklyStory.outcome ? (
               <Text style={[styles.storyLine, live.storyLine]}>{weeklyStory.outcome.text}</Text>
             ) : null}
@@ -3149,7 +3141,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             ))}
             {weeklyStory.changing.length ? (
               <View style={styles.storyBlock}>
-                <Text style={[styles.storyHeading, live.storyHeading]}>What is changing</Text>
+                <SectionLabel>What is changing</SectionLabel>
                 {weeklyStory.changing.map((c) => (
                   <View key={c.text} style={styles.storyChange}>
                     <Text style={[styles.storyLine, live.storyLine]}>{c.text}</Text>
@@ -3160,7 +3152,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             ) : null}
             {weeklyStory.staying.length ? (
               <View style={styles.storyBlock}>
-                <Text style={[styles.storyHeading, live.storyHeading]}>What stays the same</Text>
+                <SectionLabel>What stays the same</SectionLabel>
                 {weeklyStory.staying.map((l) => (
                   <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
                 ))}
@@ -3211,25 +3203,29 @@ export default function CoachOutputScreen({ navigation, route }) {
             packet composition, ED/calm suppression and engine isolation are
             untouched (progressScanCoachIsolation.guard.test.js). */}
         {canShowProgressScanCoachContext ? (
+          // R2 cohesion (2026-09-26): Card has no `accessible` prop to take,
+          // so the accessible grouping stays on this plain outer View exactly
+          // as before, wrapping the Card that now draws the box.
           <View
-            style={[styles.planEditCard, live.planEditCard]}
-            accessibilityRole="summary"
             accessible
+            accessibilityRole="summary"
             accessibilityLabel={scanAssessmentPacket ? scanAssessmentAccessibilityLabel(scanAssessmentPacket) : progressScanCoachContext.body}
           >
-            <Text style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
-            {scanAssessmentPacket ? (
-              <>
-                <Text style={[styles.planEditBody, live.planEditBody]}>{scanAssessmentPacket.receipt.headline}</Text>
-                {(scanAssessmentPacket.receipt.detail || scanAssessmentUsedSentence) ? (
-                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>
-                    {scanAssessmentPacket.receipt.detail ?? scanAssessmentUsedSentence}
-                  </Text>
-                ) : null}
-              </>
-            ) : (
-              <Text style={[styles.planEditBody, live.planEditBody]}>{progressScanCoachContext.body}</Text>
-            )}
+            <Card style={styles.planEditCard}>
+              <SectionLabel>{progressScanCoachContext.title}</SectionLabel>
+              {scanAssessmentPacket ? (
+                <>
+                  <Text style={[styles.planEditBody, live.planEditBody]}>{scanAssessmentPacket.receipt.headline}</Text>
+                  {(scanAssessmentPacket.receipt.detail || scanAssessmentUsedSentence) ? (
+                    <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>
+                      {scanAssessmentPacket.receipt.detail ?? scanAssessmentUsedSentence}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={[styles.planEditBody, live.planEditBody]}>{progressScanCoachContext.body}</Text>
+              )}
+            </Card>
           </View>
         ) : null}
 
@@ -3240,10 +3236,10 @@ export default function CoachOutputScreen({ navigation, route }) {
           const focus = coachResponse.cue ?? buildFocus(output, checkin);
           if (!focus) return null;
           return (
-            <View style={[styles.focusCard, live.focusCard]}>
-              <Text style={[styles.focusLabel, live.focusLabel]}>Focus this week</Text>
+            <Card style={styles.focusCard}>
+              <SectionLabel>Focus this week</SectionLabel>
               <Text style={[styles.focusText, live.focusText]}>{focus}</Text>
-            </View>
+            </Card>
           );
         })()}
 
@@ -3270,15 +3266,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             position, now inside the screen's quiet card idiom with a label
             so it reads as designed. */}
         {(coachResponse.preCommitment || coachResponse.forward) ? (
-          <View style={[styles.nextReadCard, live.nextReadCard]}>
-            <SectionLabel tone="muted">Next check-in</SectionLabel>
+          <Card style={styles.nextReadCard}>
+            <SectionLabel>Next check-in</SectionLabel>
             {coachResponse.preCommitment ? (
               <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
             ) : null}
             {coachResponse.forward ? (
               <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
             ) : null}
-          </View>
+          </Card>
         ) : null}
 
         {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
@@ -3288,7 +3284,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             Process checkpoints only; peak week adds the standard medical
             line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
         {countdown ? (
-          <View style={[styles.countdownCard, live.countdownCard]} accessibilityRole="summary">
+          <Card style={styles.countdownCard} accessibilityRole="summary">
             <Text style={[styles.countdownLine, live.countdownLine]}>{countdown.line}</Text>
             {countdown.checkpoint ? (
               <>
@@ -3301,7 +3297,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
               </Text>
             ) : null}
-          </View>
+          </Card>
         ) : null}
 
         {/* NAV-4 (founder decision): the Move #4 differential paywall used to
@@ -3311,26 +3307,29 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Wave A B6: the coaching history was only reachable through the
             held-decisions card, so a consistently on-target user never saw a
             route to it. One permanent quiet link. */}
-        <Button
-          title="Coaching history"
-          variant="outline"
-          size="sm"
-          icon="time-outline"
-          fullWidth={false}
-          style={styles.quietActionCentred}
-          onPress={() => navigation.navigate('CoachHeldHistory')}
-          accessibilityLabel="Coaching history"
-        />
-
         {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
-            the screen's only amber fill. */}
-        <Button
-          title="Done"
-          variant="outline"
-          style={styles.quietActionSpace}
-          onPress={handleClose}
-          accessibilityLabel="Done"
-        />
+            the screen's only amber fill.
+            R2 cohesion (2026-09-26, founder order): Coaching history and
+            Done now share one footer row, gapped so they never touch. */}
+        <View style={styles.footerActions}>
+          <Button
+            title="Coaching history"
+            variant="secondary"
+            size="md"
+            icon="time-outline"
+            fullWidth
+            onPress={() => navigation.navigate('CoachHeldHistory')}
+            accessibilityLabel="Coaching history"
+          />
+          <Button
+            title="Done"
+            variant="primary"
+            size="md"
+            fullWidth
+            onPress={handleClose}
+            accessibilityLabel="Done"
+          />
+        </View>
 
         {/* D86 (founder 2026-07-23): the credential jargon row (volume
             landmarks / autoregulation / RED-S with inline tooltips) is gone.
@@ -3353,15 +3352,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   coachNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
-  // A1 one-amber rule (03 gap #1 named this card): a static utility card no
-  // longer wears the hero's amber border; plain outline, quiet contained actions.
+  // R2 cohesion (2026-09-26, founder order): this card renders through the
+  // <Card> primitive now (box + radius + padding come from there); only the
+  // internal gap remains local. planEditHead is gone with it -- the title on
+  // all three uses is a SectionLabel, default tone.
   planEditCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
-    padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
+    gap: spacing.xs,
   },
-  planEditHead: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planEditHeadline: { ...type.bodyStrong, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
   // D86: scanAssessmentBlock/scanAssessmentHeadline deleted with the receipt
   // sub-block; the compact card renders headline via planEditBody and one
@@ -3369,10 +3367,13 @@ const styles = StyleSheet.create({
   scanAssessmentDetail: { ...type.caption, color: colors.textSecondary },
   // Founder device report 2026-08-06: the screen's quiet actions (formerly a
   // mix of hand-rolled pills and bare text links) all render the shared
-  // Button outline variant now; only these layout crumbs remain local.
+  // Button secondary variant now; only these layout crumbs remain local.
+  // quietActionCentred retired (R2 cohesion): Coaching history moved into
+  // footerActions below, full width, no longer centred.
   quietActionSpace: { marginTop: spacing.xs },
   quietActionSpaceMd: { marginTop: spacing.md },
-  quietActionCentred: { marginTop: spacing.sm, alignSelf: 'center' },
+  // R2 cohesion: Coaching history and Done now sit in one footer row.
+  footerActions: { gap: spacing.sm },
   nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   safe: {
     flex: 1,
@@ -3391,27 +3392,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  // Wave A B6: success tint on a genuinely great week (never amber; the
-  // hero Apply keeps the one-amber rule).
-  shareWeekBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    minHeight: touchTarget.minimum, // U-B-1 §5: WCAG/iOS touch target
-    marginBottom: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: withAlpha(colors.success, alpha.tint),
-  },
-  shareWeekText: {
-    ...type.label,
-    color: colors.textPrimary,
-  },
+  // Lead review 2026-09-26: the great-week share is the shared Button now;
+  // only its placement stays local (the scroll content's gap spaces it).
+  shareWeekBtn: { alignSelf: 'flex-start' },
+  // R2 cohesion (2026-09-26): role-based type (rule 3); only this screen's
+  // own layout (centring, the gap below it) stays local.
   insufficientTitle: {
-    fontSize: fontSize.xl,
-    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
@@ -3450,13 +3437,15 @@ const styles = StyleSheet.create({
   weekHeader: {
     gap: spacing.xs,
   },
+  // R2 cohesion (2026-09-26): role-based type, and the week label is
+  // textPrimary now, not amber -- amber is reserved for the one committing
+  // action, never static heading decoration (rule 3).
   weekLabel: {
-    fontSize: fontSize.xxl,
-    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.primary,
+    ...type.h2,
+    color: colors.textPrimary,
   },
   weekRange: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
   },
 
@@ -3479,8 +3468,9 @@ const styles = StyleSheet.create({
   heroZone: {
     gap: spacing.xs,
   },
-  // B-5: typography now comes from SectionLabel (tone="primary"); only the
-  // structural padding remains local.
+  // B-5: typography now comes from SectionLabel (default tone, R2 cohesion
+  // 2026-09-26 -- was tone="primary"); only the structural padding remains
+  // local.
   heroLabel: {
     paddingHorizontal: spacing.xs,
   },
@@ -3493,13 +3483,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   // Wave A B6: the hold-week hero, a verdict card with no Apply and no
-  // amber; the same elevated surface the applyable hero uses.
+  // amber; the same elevated surface the applyable hero uses. R2 cohesion
+  // (2026-09-26): renders through <Card elevated> now; only the gap remains.
   holdHeroCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.lg,
     gap: spacing.xs,
   },
   holdHeroText: {
@@ -3507,13 +3493,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   // Five-part coach response: parts 1+2 lead card and the part 5
-  // forward-pull line. Same tokens as the surrounding cards.
+  // forward-pull line. Same tokens as the surrounding cards. R2 cohesion
+  // (2026-09-26): renders through <Card> now; only the gap remains.
   coachLeadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   coachLeadAck: {
@@ -3537,14 +3519,10 @@ const styles = StyleSheet.create({
   // it (textPrimary vs the forward line's textSecondary), never amber.
   // 2026-08-06: the edge padding came off when these moved inside the
   // padded nextReadCard (it existed to keep the old floating lines off the
-  // screen edge).
+  // screen edge). R2 cohesion (2026-09-26): renders through <Card> now;
+  // marginTop is gone too (the scroll content's own gap already separates
+  // it from the block above -- it was doubling up).
   nextReadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.lg,
-    marginTop: spacing.md,
     gap: spacing.xs,
   },
   preCommitmentLine: {
@@ -3555,17 +3533,10 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textSecondary,
   },
+  // R2 cohesion (2026-09-26): loses its amber tint and edge -- a plain
+  // <Card> now, heading is a default-tone SectionLabel (focusLabel is gone).
   focusCard: {
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    padding: spacing.lg,
     gap: spacing.xs,
-  },
-  focusLabel: {
-    ...type.overline,
-    color: colors.primary,
   },
   focusText: {
     ...type.bodyStrong,
@@ -3663,10 +3634,14 @@ const styles = StyleSheet.create({
   storyLine: { ...type.body, color: colors.textPrimary },
   storyMeans: { ...type.bodySm, color: colors.textSecondary },
   storyBlock: { marginTop: spacing.sm, gap: spacing.xxs },
-  storyHeading: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase' },
+  // storyHeading retired (R2 cohesion, 2026-09-26): "What is changing" /
+  // "What stays the same" are SectionLabel, default tone, now.
   storyChange: { marginBottom: spacing.xs },
-  storyWhy: { ...type.bodySm, color: colors.textMuted },
-  storyWatch: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.sm },
+  // R2 cohesion (2026-09-26, rule 3): every secondary line in this card is
+  // exactly bodySm/textSecondary now -- storyWhy/storyWatch included (were
+  // textMuted, a third drifted tier alongside storyLine/storyMeans).
+  storyWhy: { ...type.bodySm, color: colors.textSecondary },
+  storyWatch: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
 
   confidenceCaption: {
     ...type.caption,
@@ -3680,9 +3655,9 @@ const styles = StyleSheet.create({
   dietBreakCard: {
     gap: spacing.sm,
   },
+  // R2 cohesion (2026-09-26): role-based type (rule 3).
   dietBreakTitle: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
+    ...type.title,
     color: colors.textPrimary,
   },
   // A1 verdict: heading-size title when the diet break IS the decision.
@@ -3691,9 +3666,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   dietBreakBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 21,
   },
   dietBreakFootnote: {
     ...type.caption,
@@ -3714,20 +3688,13 @@ const styles = StyleSheet.create({
   // #1). The solid doneBtn above stays for the insufficient-data and error
   // views, where it is the only action on screen.
   // Wave A B6: the permanent quiet route to the coaching history.
-  // B4 countdown: deliberately neutral (surface + border, no amber).
-  countdownCard: {
-    backgroundColor: colors.surface,
-    // R2 (remediation 2026-07-11): a plain surface content card, so it takes
-    // the app-wide card radius (radius.lg), matching its four sibling surface
-    // cards in this file (planEditCard/holdHeroCard/coachLeadCard/focusCard).
-    // It is NOT a tinted D69/D70 banner (those keep radius.md). Box only -- the
-    // ED/calm suppression gate that hides this surface is untouched.
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.lg,
-    marginTop: spacing.md,
-  },
+  // B4 countdown: deliberately neutral (no amber). R2 cohesion (2026-09-26):
+  // renders through <Card> now, same family as its sibling surface cards
+  // (planEditCard/holdHeroCard/coachLeadCard/focusCard); marginTop is gone
+  // (the scroll content's own gap already separates it). The key stays,
+  // empty, only so the JSX below still names styles.countdownCard -- the
+  // ED/calm suppression gate that hides this surface is untouched.
+  countdownCard: {},
   countdownLine: {
     ...type.h3,
     color: colors.textPrimary,
@@ -3877,9 +3844,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   heldHistoryShelf: { marginTop: spacing.md },
+  // R2 cohesion (2026-09-26): role-based type (rule 3).
   heldHistoryTitle: {
-    fontSize: fontSize.xs,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
@@ -3922,33 +3889,30 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     coachNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    planEditCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    // R2 cohesion (2026-09-26): planEditCard/holdHeroCard/coachLeadCard/
+    // nextReadCard/focusCard/countdownCard now draw their box through
+    // <Card>, which already reads the live theme itself, so their live
+    // entries (and planEditHead/focusLabel/storyHeading, all retired in
+    // favour of SectionLabel) are gone from here too.
+    planEditHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
     safe: { backgroundColor: t.colors.background },
-    shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, alpha.tint) },
-    shareWeekText: { ...t.type.label, color: t.colors.textPrimary },
-    insufficientTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    insufficientTitle: { ...t.type.h3, color: t.colors.textPrimary },
     insufficientBody: { ...t.type.body, color: t.colors.textSecondary },
     receiptLabel: { ...t.type.caption, color: t.colors.textMuted },
     receiptRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
     receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
-    weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.primary },
-    weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    weekLabel: { ...t.type.h2, color: t.colors.textPrimary },
+    weekRange: { ...t.type.bodySm, color: t.colors.textMuted },
     manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
     heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
-    holdHeroCard: { backgroundColor: t.colors.surfaceElevated, borderColor: t.colors.border },
     holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },
-    coachLeadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     coachLeadAck: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
-    nextReadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    focusLabel: { color: t.colors.primary },
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -3965,16 +3929,14 @@ function buildLiveStyles(t) {
     planNoteText: { ...t.type.caption, color: t.colors.textMuted },
     storyLine: { ...t.type.body, color: t.colors.textPrimary },
     storyMeans: { ...t.type.bodySm, color: t.colors.textSecondary },
-    storyHeading: { ...t.type.caption, color: t.colors.textMuted },
-    storyWhy: { ...t.type.bodySm, color: t.colors.textMuted },
-    storyWatch: { ...t.type.bodySm, color: t.colors.textMuted },
+    storyWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
+    storyWatch: { ...t.type.bodySm, color: t.colors.textSecondary },
     confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
-    dietBreakTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    dietBreakTitle: { ...t.type.title, color: t.colors.textPrimary },
     dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
-    dietBreakBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    dietBreakBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     dietBreakFootnote: { ...t.type.caption, color: t.colors.textMuted },
     doneBtnText: { fontSize: t.fontSize.lg },
-    countdownCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     countdownLine: { ...t.type.h3, color: t.colors.textPrimary },
     countdownCheckpointTitle: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     countdownCheckpointDetail: { ...t.type.body, color: t.colors.textSecondary },
@@ -3996,7 +3958,7 @@ function buildLiveStyles(t) {
     edClearedTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     edClearedBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     heldText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    heldHistoryTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    heldHistoryTitle: { ...t.type.label, color: t.colors.textMuted },
     heldHistoryEntry: { borderBottomColor: t.colors.borderSubtle },
     heldHistoryDate: { ...t.type.caption, color: t.colors.textMuted },
     heldHistoryText: { ...t.type.bodySm, color: t.colors.textSecondary },

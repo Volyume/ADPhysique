@@ -61,14 +61,19 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
     // loose amber text links.
     expect(COACH).toMatch(/icon="calendar-outline"[\s\S]{0,300}accessibilityLabel="Plan a fresh week of meals"/);
     expect(COACH).toMatch(/icon="repeat-outline"[\s\S]{0,300}accessibilityLabel="Repeat last week's meals"/);
-    expect(COACH).toMatch(/variant="outline"[\s\S]{0,300}icon="restaurant-outline"/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision
+    // screen, register D206): every quiet action on the screen spells the
+    // same Button treatment "secondary" now (outline is its alias); the
+    // contract, a contained neutral button, is unchanged.
+    expect(COACH).toMatch(/variant="secondary"[\s\S]{0,300}icon="restaurant-outline"/);
     // The hand-rolled pill styles must not return.
     expect(COACH).not.toMatch(/planEditLink: \{/);
   });
 
   test('held-decision explainer renders as a contained neutral control', () => {
     // Same 2026-08-06 Button-outline re-anchor as the meal-planning test.
-    expect(COACH).toMatch(/variant="outline"[\s\S]{0,300}icon="information-circle-outline"/);
+    // RE-ANCHORED 2026-09-26 (D206): "outline" is spelt "secondary" now.
+    expect(COACH).toMatch(/variant="secondary"[\s\S]{0,300}icon="information-circle-outline"/);
     expect(COACH).toMatch(/accessibilityLabel="See how Precision Coaching decides"/);
     expect(COACH).not.toMatch(/heldLearnMore: \{/);
     expect(COACH).not.toMatch(/textDecorationLine: 'underline'/);

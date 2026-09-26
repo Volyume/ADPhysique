@@ -18,6 +18,16 @@
  * existing mock scaffold — see CoachOutputScreen.profileMerge.guard.test.js
  * and progressScanCoachIsolation.guard.test.js). Source-guard style,
  * following the same house convention.
+ *
+ * RE-ANCHORED (2026-09-26, founder order on the "Coaching decision" screen,
+ * verbatim: "Coaching Decisions looks shit too it doesn't appear to be
+ * following the style of the app at all and is a mismatch of texts styles
+ * and formats. Sort it."). Every quiet outline action on this screen was
+ * renamed from `variant="outline"` to `variant="secondary"` (same Button
+ * treatment, one name instead of two for it) -- the CO-2 contract this
+ * suite pins is unchanged: the link exists, is gated, and uses the same
+ * treatment as its nutrition-side sibling, so the two pins below move to
+ * the new literal with it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -65,11 +75,11 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
       /\{applied && output\.appliedAdjustments\?\.training\?\.musclesChanged && navigation \? \(/,
     );
     // Founder device report 2026-08-06 ("text only links", random look):
-    // the hand-rolled planEditLink pill became the shared Button outline
-    // variant. The CO-2 contract this suite pins is unchanged: the link
-    // exists, is gated, and uses the SAME treatment as the nutrition
-    // sibling (asserted below).
-    expect(cardBody).toMatch(/<Button\n\s+title="See your updated plan"\n\s+variant="outline"/);
+    // the hand-rolled planEditLink pill became the shared Button secondary
+    // variant (RE-ANCHORED 2026-09-26, was "outline"). The CO-2 contract
+    // this suite pins is unchanged: the link exists, is gated, and uses the
+    // SAME treatment as the nutrition sibling (asserted below).
+    expect(cardBody).toMatch(/<Button\n\s+title="See your updated plan"\n\s+variant="secondary"/);
     expect(cardBody).toMatch(/accessibilityLabel="See your updated plan"/);
   });
 
@@ -85,11 +95,12 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
 
   test('reuses the exact same link component/style as the nutrition-side food-level-receipt deep link', () => {
     // The nutrition sibling (planEditNote.deepLink) uses the same shared
-    // Button outline treatment as the training card's link above.
+    // Button secondary treatment as the training card's link above
+    // (RE-ANCHORED 2026-09-26, was "outline").
     const siblingStart = SCREEN.indexOf('planEditNote?.deepLink ? (');
     expect(siblingStart).toBeGreaterThan(-1);
     const siblingBlock = SCREEN.slice(siblingStart, siblingStart + 600);
-    expect(siblingBlock).toMatch(/<Button\n\s+title=\{planEditNote\.deepLink\.label\}\n\s+variant="outline"/);
+    expect(siblingBlock).toMatch(/<Button\n\s+title=\{planEditNote\.deepLink\.label\}\n\s+variant="secondary"/);
     expect(siblingBlock).toMatch(/accessibilityLabel=\{planEditNote\.deepLink\.label\}/);
   });
 });
