@@ -261,9 +261,12 @@ function MealPreferencesControls({
               disabled={busy}
               accessibilityLabel={`Build future meal plans with ${mealCountAsk.observedCount} meals a day`}
             />
+            {/* Founder order 2026-09-26 (D206): "ghost" is not a Button
+                variant, so this decline rendered as a second primary beside
+                the action it declines. It is the quieter sibling. */}
             <Button
               title="No, keep mine"
-              variant="ghost"
+              variant="secondary"
               size="sm"
               fullWidth={false}
               onPress={() => onDismissMealCount(mealCountAsk.observedCount)}

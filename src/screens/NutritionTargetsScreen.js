@@ -1819,9 +1819,12 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 ? 'Build a new meal plan around your new target'
                 : 'Update your meals to match your new target'}
             />
+            {/* Founder order 2026-09-26 (D206): "ghost" is not a Button
+                variant, so "Not now" rendered as a second primary beside
+                the action it declines. It is the quieter sibling. */}
             <Button
               title="Not now"
-              variant="ghost"
+              variant="secondary"
               onPress={() => setPlanReview(null)}
               disabled={planUpdating}
               accessibilityLabel="Leave your meals as they are for now"
