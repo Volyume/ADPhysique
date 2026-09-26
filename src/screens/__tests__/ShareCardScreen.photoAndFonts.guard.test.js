@@ -104,10 +104,12 @@ describe('the workout summary hand-off', () => {
     expect(share).toContain('date: startedAt ?? endedAt ?? null,');
   });
 
-  test('it hands over the optional highlight lines, and none from a history open', () => {
-    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{\s*comparison, milestone, weekProgress, calmSuppressed,\s*\}\),/);
-    // Founder, 2026-09-26: no training-block position on the image.
+  test('it hands over the optional highlight, only the workout comparison, and none from a history open', () => {
+    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{ comparison \}\),/);
+    // Founder, 2026-09-26: nothing about the training block, the week or a
+    // workout count on a single workout's image.
     expect(share).not.toMatch(/mesoWeek/);
+    expect(share).not.toMatch(/shareHighlightOptions\(\{[^}]*(milestone|weekProgress)/);
   });
 
   test('no exercise names travel to the share image, not even in the title', () => {

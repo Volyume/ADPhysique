@@ -185,8 +185,14 @@ describe('shareCardTitle', () => {
 
 // Founder, 2026-09-26: "Are there any stats that could be included, like x%
 // more volume than last time, heaviest session in x weeks and so on? They
-// display elsewhere? ... We don't want to force them on but optional?"
-describe('shareHighlightOptions: only facts the summary already shows, only the ones worth showing', () => {
+// display elsewhere? ... We don't want to force them on but optional?", then
+// "Get rid of the block 3 of week 5 thing. What benefit is there at all if
+// having that in the share card", then, of the lines kept after that: "Why
+// the fuck do we need 'all 4 workouts done this week' on a single workout
+// share. What value does that give at all!?" The rule these pin: the image
+// is one workout, and a line says something about THAT workout or it is not
+// offered.
+describe('shareHighlightOptions: only a fact about the workout being shared', () => {
   const texts = (facts) => shareHighlightOptions(facts).map((o) => o.text);
 
   test('nothing to say: nothing offered', () => {
@@ -194,7 +200,7 @@ describe('shareHighlightOptions: only facts the summary already shows, only the 
     expect(shareHighlightOptions({})).toEqual([]);
   });
 
-  test('the 4-week comparison, in everyday words, and never a negative one', () => {
+  test('how this workout compares with its last 4 weeks, in everyday words, and never a negative one', () => {
     expect(texts({ comparison: { verdict: 'best', priorCount: 3 } })).toEqual(['Strongest workout in 4 weeks']);
     expect(texts({ comparison: { verdict: 'up', pct: 14, priorCount: 3 } })).toEqual(['Lifted 14% more than usual']);
     expect(texts({ comparison: { verdict: 'down', pct: -12, priorCount: 3 } })).toEqual([]);
@@ -204,40 +210,37 @@ describe('shareHighlightOptions: only facts the summary already shows, only the 
     expect(texts({ comparison: { verdict: 'best', priorCount: 0 } })).toEqual([]);
   });
 
-  test('the milestone the session earned, and none under calm mode or an open ED flag', () => {
-    expect(texts({ milestone: { kind: 'sessions', threshold: 50 } })).toEqual(['50 workouts logged']);
-    expect(texts({ milestone: { kind: 'first_week' } })).toEqual(['First full week of training']);
-    expect(texts({ milestone: { kind: 'sessions', threshold: 50 }, calmSuppressed: true })).toEqual([]);
-  });
-
-  test('a finished week of the plan, and nothing for a week still in progress', () => {
-    expect(texts({ weekProgress: { logged: 4, planned: 4 } })).toEqual(['All 4 workouts done this week']);
-    expect(texts({ weekProgress: { logged: 2, planned: 4 } })).toEqual([]);
-    expect(texts({ weekProgress: { logged: 3, planned: null } })).toEqual([]);
-  });
-
-  // Founder, 2026-09-26: "Get rid of the block 3 of week 5 thing. What
-  // benefit is there at all if having that in the share card."
-  test('never where the session sits in a training block', () => {
-    const all = shareHighlightOptions({
+  test('never the week, the training block, a count of workouts or a first, whatever else the summary knows', () => {
+    const facts = {
       comparison: { verdict: 'up', pct: 12, priorCount: 4 },
-      milestone: { kind: 'sessions', threshold: 10 },
+      milestone: { kind: 'sessions', threshold: 50 },
       weekProgress: { logged: 4, planned: 4 },
       mesoWeek: { weekIndex: 3, plannedWeeks: 5 },
-    });
-    expect(all.map((o) => o.text).join(' ')).not.toMatch(/block|week \d+ of \d+/i);
+    };
+    expect(texts(facts)).toEqual(['Lifted 12% more than usual']);
+    for (const milestone of [{ kind: 'sessions', threshold: 50 }, { kind: 'first_week' }, { kind: 'first_pr' }]) {
+      expect(texts({ milestone })).toEqual([]);
+    }
+    expect(texts({ weekProgress: { logged: 4, planned: 4 } })).toEqual([]);
+    const said = texts(facts).join(' ');
+    expect(said).not.toMatch(/this week|block|week \d+ of \d+|workouts (logged|done)|\bfirst\b/i);
   });
 
-  test('every option has a stable key, and none uses app words or addresses the viewer', () => {
-    const all = shareHighlightOptions({
-      comparison: { verdict: 'up', pct: 12, priorCount: 4 },
-      milestone: { kind: 'sessions', threshold: 10 },
-      weekProgress: { logged: 4, planned: 4 },
-    });
-    expect(all.map((o) => o.key)).toEqual(['more_than_usual', 'milestone', 'week_done']);
-    for (const o of all) {
-      expect(o.text).not.toMatch(/\byou(r)?\b/i);
-      expect(o.text).not.toMatch(/\b(session|tonnage|volume|average|block|mesocycle)s?\b/i);
+  test('one comparison verdict, so at most one line, with a stable key and no app words or "you"', () => {
+    for (const comparison of [
+      { verdict: 'best', priorCount: 4 },
+      { verdict: 'up', pct: 9, priorCount: 4 },
+    ]) {
+      const all = shareHighlightOptions({ comparison });
+      expect(all).toHaveLength(1);
+      expect(['best_4_weeks', 'more_than_usual']).toContain(all[0].key);
+      expect(all[0].text).not.toMatch(/\byou(r)?\b/i);
+      expect(all[0].text).not.toMatch(/\b(session|tonnage|volume|average|block|mesocycle)s?\b/i);
     }
+  });
+
+  test('source guard: the builder reads the comparison and nothing else', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'sessionShareData.js'), 'utf8');
+    expect(src).toMatch(/export function shareHighlightOptions\(\{ comparison = null \} = \{\}\)/);
   });
 });

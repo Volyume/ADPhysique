@@ -10712,3 +10712,26 @@ workout in 4 weeks", "Lifted 12% more than usual", a milestone ("50
 workouts logged", "First full week of training", "First personal best") and
 a finished week ("All 4 workouts done this week"). No app words (session,
 average, block) and no "you". Pinned in `sessionShareData.test.js`.
+
+**D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
+that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
+absolutely no relevance or requirement for share cards why did you ignore
+that / Why the fuck do we need 'all 4 workouts done this week' on a single
+workout share. What value does that give at all!?" The block-week line had
+gone at `e1e09bc9` (on main since `d42a6318`; no build yet carries any of
+the day's share changes: the newest, iOS run 166, was built at 03:08 UTC
+from `85e5582e`). But the lead applied the first correction to the one line
+named and kept three that fail the same test: "All 4 workouts done this
+week", "First full week of training" and the workout-count milestone ("50
+workouts logged"), none of them about the workout on the image; and "First
+personal best" repeated what the image's own hero already shows. That was
+the error: the founder's point was a principle, not a line. Now the image
+offers only how THIS workout compares with the same workout over the last 4
+weeks, the two stats the founder named when asking for highlights:
+"Strongest workout in 4 weeks" or "Lifted 12% more than usual". The
+comparison has one verdict, so there is at most one line, off unless
+switched on; the chooser says "Highlight" when there is one.
+`shareHighlightOptions` takes the comparison and nothing else (a source
+guard pins it), the summary hands over only that, and the tests forbid any
+week, block, count or first. Pinned in `sessionShareData.test.js` and
+`ShareCardScreen.photoAndFonts.guard.test.js`.
