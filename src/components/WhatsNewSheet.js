@@ -69,6 +69,7 @@ export const WHATS_NEW = {
     { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
     { icon: 'battery-charging-outline', text: 'Recovery has its own place. Tap Recovery at the top of Progress to see how each muscle is recovering.' },
     { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
+    { icon: 'share-social-outline', text: 'Share images look like the app now. Choose which lift to show, and move or zoom your photo so it sits right.' },
   ],
 };
 
