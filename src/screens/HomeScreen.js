@@ -1600,7 +1600,7 @@ export default function HomeScreen({ navigation, route }) {
     const key = `@volyume_reentry_answered_${user.id}`;
     const prompt = reEntryPrompt(check);
     const record = async (answer) => {
-      const outcome = reEntryOutcome(answer);
+      const outcome = reEntryOutcome(answer, { sessionBound: !!(boundWeekId && boundRoutineId) });
       try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
       // C18 re-entry amendment: persist the actionable ease decision, not
       // just the "asked" marker. Only when there IS an outstanding

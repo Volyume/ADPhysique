@@ -107,6 +107,23 @@ describe('CASES 13 and 14: what each answer does, and what it never does', () =>
     expect(out.note).toBe('Your coach will start you back a little easier for this session. Your programme is unchanged.');
   });
 
+  test('no session to ease (nothing outstanding): the note never names a session that does not exist', () => {
+    // D204 addendum 3 (2026-09-26): HomeScreen records the ease only when a
+    // session is bound; without one, the old note still promised "a little
+    // easier for this session".
+    const out = reEntryOutcome(RE_ENTRY_ANSWER.DID_NOT_TRAIN, { sessionBound: false });
+    expect(out.note).toBe('Thanks for letting your coach know. Your programme is unchanged.');
+    expect(out.note).not.toMatch(/easier|this session/);
+    expect(reEntryOutcome(RE_ENTRY_ANSWER.DID_NOT_TRAIN, { sessionBound: true }).note)
+      .toBe('Your coach will start you back a little easier for this session. Your programme is unchanged.');
+  });
+
+  test('HomeScreen tells the outcome whether a session is bound (source guard)', () => {
+    // eslint-disable-next-line global-require
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
+    expect(src).toMatch(/reEntryOutcome\(answer, \{ sessionBound: !!\(boundWeekId && boundRoutineId\) \}\)/);
+  });
+
   test('CONTINUE is respected, and an unknown answer falls to it rather than guessing', () => {
     expect(reEntryOutcome(RE_ENTRY_ANSWER.CONTINUE).easeReturn).toBe(false);
     expect(reEntryOutcome(undefined).answer).toBe(RE_ENTRY_ANSWER.CONTINUE);

@@ -135,8 +135,14 @@ export function reEntryPrompt(check) {
  * it through the existing deload/re-entry tooling; nothing here computes a
  * load, a set count or a percentage, because inventing a second training
  * engine for one question is exactly what this amendment forbids.
+ *
+ * `sessionBound` (D204 addendum 3, 2026-09-26): whether there is an
+ * outstanding session for the easier return to apply to. The caller only
+ * records the ease when there is one; without one, "start you back a little
+ * easier for this session" names a session that does not exist, so the note
+ * says only what is true.
  */
-export function reEntryOutcome(answer) {
+export function reEntryOutcome(answer, { sessionBound = true } = {}) {
   switch (answer) {
     case RE_ENTRY_ANSWER.TRAINED_ELSEWHERE:
       return {
@@ -148,7 +154,9 @@ export function reEntryOutcome(answer) {
       return {
         answer, easeReturn: true, changesQueue: false,
         because: 'athlete_reports_no_training',
-        note: 'Your coach will start you back a little easier for this session. Your programme is unchanged.',
+        note: sessionBound
+          ? 'Your coach will start you back a little easier for this session. Your programme is unchanged.'
+          : 'Thanks for letting your coach know. Your programme is unchanged.',
       };
     case RE_ENTRY_ANSWER.CONTINUE:
     default:

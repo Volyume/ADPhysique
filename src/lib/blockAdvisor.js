@@ -132,7 +132,9 @@ function detectSignals(checkins) {
   // ── Low sleep ─────────────────────────────────────────────────────────────
   const sleep = latest.sleepHours ?? 7;
   if (sleep < 5.5) {
-    signals.push({ type: 'sleep', severity: 'high', label: `Sleep averaging ${sleep.toFixed(1)}h. Recovery is compromised.`, data: sleep });
+    // D204 addendum 3: one check-in's hours, not an average, so the label
+    // says which reading it is.
+    signals.push({ type: 'sleep', severity: 'high', label: `Sleep ${sleep.toFixed(1)}h in your latest check-in, low for recovery`, data: sleep });
   } else if (sleep < 6.5) {
     signals.push({ type: 'sleep', severity: 'medium', label: 'Sleep below recommended for training recovery', data: sleep });
   }
