@@ -520,12 +520,20 @@ describe('WORK 7: product-critical helpers have live consumers', () => {
 });
 
 describe('WORK 8: migration claims stay inside available evidence', () => {
-  const taskboard = source('docs/TASKBOARD.md');
   const readme = source('supabase/README.md');
 
-  test('137 and 138 are UNKNOWN here, never inferred from file comments', () => {
-    expect(taskboard).toMatch(/MIGRATIONS 137 \/ 138 - STATUS UNKNOWN/);
-    expect(taskboard).toMatch(/production state is \*\*UNKNOWN\*\*/);
+  // Written when 137 and 138 were authorised but their production state was
+  // unknown; the board then carried "STATUS UNKNOWN, never inferred from
+  // file comments". Both were verified LIVE directly against production on
+  // 2026-08-18 (the 142/143 batch) and the README ledger, the live record
+  // (CLAUDE.md status), says so with that date; the stale board section
+  // moved verbatim to the handover archive on the founder's order
+  // (2026-09-25). The law is unchanged: the claim is pinned to the ledger's
+  // verified row and its date, never to a file header's own "Applied
+  // remotely" line.
+  test('137 and 138 read LIVE, with the verification date, from the README ledger', () => {
+    expect(readme).toMatch(/\| 137 \| `migrate_137_exercise_swap_scope\.sql` \|[^\n]*\*\*YES - LIVE, verified 2026-08-18\*\*/);
+    expect(readme).toMatch(/\| 138 \| `migrate_138_food_swaps\.sql` \|[^\n]*\*\*YES - LIVE, verified 2026-08-18\*\*/);
   });
 
   test('049 remains held', () => {
