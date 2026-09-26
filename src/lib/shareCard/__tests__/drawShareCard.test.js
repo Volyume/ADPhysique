@@ -12,7 +12,7 @@
  *   transparent-background non-blank check for the new sticker export.
  */
 import {
-  drawShareCard, cardHeight, drawSticker, stickerHeight, photoCoverRect, photoCropFromRect, photoZoomRange, MAX_PHOTO_ZOOM,
+  drawShareCard, cardHeight, drawSticker, stickerHeight, photoCoverRect, photoCropFromRect, photoZoomRange, MAX_PHOTO_ZOOM, highlightUnderHero,
 } from '../drawShareCard';
 import { transformFromCrop, cropFromTransform } from '../photoFraming';
 
@@ -406,3 +406,14 @@ describe('photo framing', () => {
     expect(r.x).toBeCloseTo(0, 6);
   });
 });
+
+describe('a highlight never repeats the label of the number above it', () => {
+  test('under a Total lifted hero the leading label drops; under any other hero the line is kept whole', () => {
+    expect(highlightUnderHero('Total lifted up 12% on the 4-week average', 'Total lifted')).toBe('Up 12% on the 4-week average');
+    expect(highlightUnderHero('Total lifted up 12% on the 4-week average', 'Lifts with a new best')).toBe('Total lifted up 12% on the 4-week average');
+    expect(highlightUnderHero('Strongest workout in 4 weeks', 'Total lifted')).toBe('Strongest workout in 4 weeks');
+    expect(highlightUnderHero('Total lifted', 'Total lifted')).toBe('Total lifted');
+    expect(highlightUnderHero(null, 'Total lifted')).toBeNull();
+  });
+});
+

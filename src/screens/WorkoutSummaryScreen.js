@@ -45,7 +45,7 @@ import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, 
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import {
-  topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle,
+  topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle, shareHighlightOptions,
 } from '../lib/sessionShareData';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1160,6 +1160,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       // exercise (founder order 2026-09-26: "I want the user to be able to
       // select their Top Lift rather than it just doing one").
       liftOptions: liftOptionsFromExerciseData(shareExerciseData),
+      // Optional highlight lines (founder, 2026-09-26): only facts this
+      // summary already works out, only the proud ones, none chosen by
+      // default. A history open computes none of them, so it offers none.
+      highlightOptions: readOnly ? [] : shareHighlightOptions({
+        comparison, milestone, weekProgress, mesoWeek, calmSuppressed,
+      }),
       intensityTier: tier,
       // R8/M5 (share-card audit 2026-07-27): the session card hard-coded 'kg'
       // for the tonnage hero/stat/top-lift line regardless of the user's

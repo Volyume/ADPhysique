@@ -10,6 +10,7 @@ import {
   liftOptionsFromExerciseData,
   defaultLiftIndex,
   shareCardTitle,
+  shareHighlightOptions,
 } from '../sessionShareData';
 
 describe('topSetFromExerciseData', () => {
@@ -181,3 +182,53 @@ describe('shareCardTitle', () => {
     expect(shareCardTitle(undefined, 'not a date')).toBe('Workout complete');
   });
 });
+
+// Founder, 2026-09-26: "Are there any stats that could be included, like x%
+// more volume than last time, heaviest session in x weeks and so on? They
+// display elsewhere? ... We don't want to force them on but optional?"
+describe('shareHighlightOptions: only facts the summary already shows, only the proud ones', () => {
+  const texts = (facts) => shareHighlightOptions(facts).map((o) => o.text);
+
+  test('nothing to say: nothing offered', () => {
+    expect(shareHighlightOptions()).toEqual([]);
+    expect(shareHighlightOptions({})).toEqual([]);
+  });
+
+  test('the 4-week comparison, in the summary\'s own terms, and never a negative one', () => {
+    expect(texts({ comparison: { verdict: 'best', priorCount: 3 } })).toEqual(['Strongest workout in 4 weeks']);
+    expect(texts({ comparison: { verdict: 'up', pct: 14, priorCount: 3 } })).toEqual(['Total lifted up 14% on the 4-week average']);
+    expect(texts({ comparison: { verdict: 'down', pct: -12, priorCount: 3 } })).toEqual([]);
+    expect(texts({ comparison: { verdict: 'on_pace', pct: 2, priorCount: 3 } })).toEqual([]);
+    expect(texts({ comparison: { verdict: 'first', priorCount: 0 } })).toEqual([]);
+    // No earlier session behind the verdict: nothing to compare against.
+    expect(texts({ comparison: { verdict: 'best', priorCount: 0 } })).toEqual([]);
+  });
+
+  test('the milestone the session earned, and none under calm mode or an open ED flag', () => {
+    expect(texts({ milestone: { kind: 'sessions', threshold: 50 } })).toEqual(['50 sessions logged']);
+    expect(texts({ milestone: { kind: 'first_week' } })).toEqual(['First full training week']);
+    expect(texts({ milestone: { kind: 'sessions', threshold: 50 }, calmSuppressed: true })).toEqual([]);
+  });
+
+  test('the week and the block, as the summary shows them; never a recovery week, and the block line follows the strip\'s calm rule', () => {
+    expect(texts({ weekProgress: { logged: 2, planned: 4 } })).toEqual(['Session 2 of 4 this week']);
+    expect(texts({ weekProgress: { logged: 4, planned: 4 } })).toEqual(['All 4 sessions done this week']);
+    expect(texts({ weekProgress: { logged: 3, planned: null } })).toEqual([]);
+    expect(texts({ mesoWeek: { weekIndex: 3, plannedWeeks: 5 } })).toEqual(['Block week 3 of 5']);
+    expect(texts({ mesoWeek: { weekIndex: 5, plannedWeeks: 5, isDeload: true } })).toEqual([]);
+    expect(texts({ mesoWeek: { weekIndex: 3, plannedWeeks: 5 }, calmSuppressed: true })).toEqual([]);
+    expect(texts({ mesoWeek: { weekIndex: 1, plannedWeeks: 1 } })).toEqual([]);
+  });
+
+  test('every option has a stable key, and none addresses the viewer as "you"', () => {
+    const all = shareHighlightOptions({
+      comparison: { verdict: 'up', pct: 12, priorCount: 4 },
+      milestone: { kind: 'sessions', threshold: 10 },
+      weekProgress: { logged: 3, planned: 4 },
+      mesoWeek: { weekIndex: 2, plannedWeeks: 5 },
+    });
+    expect(all.map((o) => o.key)).toEqual(['up_on_average', 'milestone', 'week_progress', 'block_week']);
+    for (const o of all) expect(o.text).not.toMatch(/\byou(r)?\b/i);
+  });
+});
+

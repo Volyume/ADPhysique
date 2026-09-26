@@ -773,6 +773,17 @@ function drawQuote(cv, Skia, x, w, y, quote, size, ovSize, s, font) {
 // over as text by the share screen only when the athlete switched it on;
 // set in white under the hero's caption, the way the workout summary puts
 // its comparison line under its hero. Two at most.
+// A highlight never repeats the label of the number right above it: under a
+// "Total lifted" hero, "Total lifted up 12% on the 4-week average" reads
+// "Up 12% on the 4-week average"; under any other hero the line keeps the
+// words that say what went up.
+export function highlightUnderHero(line, heroLabel) {
+  const prefix = heroLabel ? `${heroLabel} ` : '';
+  if (!prefix || typeof line !== 'string' || !line.startsWith(prefix)) return line;
+  const rest = line.slice(prefix.length);
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : line;
+}
+
 function drawHighlights(cv, Skia, x, w, y, lines, size, s, font) {
   const shown = (lines || []).filter((l) => typeof l === 'string' && l.trim()).slice(0, 2);
   if (!shown.length) return y;
@@ -934,7 +945,7 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   const drawBody = (cv, y, scale) => {
     const gap = Math.round(z.gap * s);
     let by = drawHero(cv, Skia, pad, cw, y, [{ t: hero.value, ratio: 1 }, { t: hero.unit, ratio: 0.3 }], hero.label, Math.round(z.hero * scale), z.heroCap, p.isSquare, s, font);
-    if (p.highlights && p.highlights.length) by = drawHighlights(cv, Skia, pad, cw, by + Math.round(gap * 0.5), p.highlights, z.heroCap, s, font);
+    if (p.highlights && p.highlights.length) by = drawHighlights(cv, Skia, pad, cw, by + Math.round(gap * 0.5), p.highlights.map((l) => highlightUnderHero(l, hero.label)), z.heroCap, s, font);
     by = drawRule(cv, Skia, pad, cw, by + gap, s) + gap;
     by = drawStatRow(cv, Skia, pad, cw, by, stats, z.statVal, z.statCap, s, font);
     if (lift) {

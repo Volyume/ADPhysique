@@ -104,6 +104,10 @@ describe('the workout summary hand-off', () => {
     expect(share).toContain('date: startedAt ?? endedAt ?? null,');
   });
 
+  test('it hands over the optional highlight lines, and none from a history open', () => {
+    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{\s*comparison, milestone, weekProgress, mesoWeek, calmSuppressed,\s*\}\),/);
+  });
+
   test('no exercise names travel to the share image, not even in the title', () => {
     expect(share).not.toMatch(/exercises: exerciseNames/);
     expect(share).toContain('const sessionName = shareCardTitle(routineName, startedAt ?? endedAt);');
