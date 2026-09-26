@@ -10052,3 +10052,26 @@ accessibility label per row keeps the full four-fact sentence unchanged.
 The recency fact, the row order, the caption and the Training-recency
 chip fold are untouched. Pinned in
 `ReadinessCards.recoveryByMuscle.test.js`.
+
+## D205 — The number under the Respect heart is the heart's own count (founder defect 2026-09-26)
+
+Founder, from the Community hub on TestFlight with a screenshot of their
+own session row (heart filled, "0" under it): "When I click the heart to
+like it doesn't add a number also." Observed: the server took the
+respect (the one post in production carries reaction_count 1 with one
+reaction row, read 2026-09-26, read-only); every screen that renders the
+row (Hub, group, profile, dimension) already moves `post.reaction_count`
+with the tap; but `ActivityItemRow` printed `post.comment_count` under
+the heart, as its own header said ("a Respect heart and the comment
+count"), so the number under the heart never moved and a "0" sat there
+reading as the like count.
+
+Ruling (lead, D33): the heart owns the number under it, which is
+`reaction_count`. Comments get their own `chatbubble-outline` glyph with
+their count, shown only when there is at least one; a bare "0" under a
+heart is what misled. The spoken label carries "Respect N" and "N
+comments". The row's three amber uses are unchanged. Pinned in
+`ActivityItemRow.test.js` (the count under the heart is the reaction
+count with the comment count present and different; a given respect
+shows its count; zero comments renders no "0"; the spoken label). Landed
+`4e9ad7e3`.
