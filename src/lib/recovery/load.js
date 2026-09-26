@@ -40,19 +40,32 @@
  *    carries no evidence about this specific session's lingering effect, so
  *    it stays null.
  *
- * The fetch window is LOOKBACK_DAYS plus 4 extra (older) days: a defensive
- * margin so a session right at the model's own 14-day contribution edge is
- * never short of the data it would need to find its pairing partner. The
- * model re-applies its own LOOKBACK_DAYS cutoff internally
+ * The fetch window is PERSONAL_HISTORY_DAYS (D210): the personal learner
+ * (personalRecovery.js) checks the estimate against the last
+ * PERSONAL_WINDOW_DAYS of sessions, each against its exercise's baseline up
+ * to PERSONAL_BASELINE_MAX_GAP_DAYS earlier, with LOOKBACK_DAYS of curve
+ * behind that. The window used to be LOOKBACK_DAYS plus 4 extra days, the
+ * margin a session at the model's own 14-day edge needs to find its
+ * soreness-pairing partner; the wider window still covers it. The model
+ * re-applies its own LOOKBACK_DAYS cutoff internally
  * (buildMuscleRecoveryMap), so handing it the wider set is always safe --
- * the extra days simply never contribute. The window is applied IN THE
- * QUERY (getCompletedWorkoutsBetween), never by reading the whole workouts
- * table and filtering in JavaScript (Opus review finding 17: Home and
- * Consistency each do this on every focus).
+ * the extra days simply never contribute to the live reading. The window
+ * is applied IN THE QUERY (getCompletedWorkoutsBetween), never by reading
+ * the whole workouts table and filtering in JavaScript (Opus review
+ * finding 17: Home and Consistency each do this on every focus).
+ *
+ * THE PERSONAL FACTORS (D210). After the sessions are built, the learner
+ * replays them and the map reads each muscle with its learned factor. A
+ * session trained under a capability episode for a muscle (an injury
+ * limit) teaches that muscle nothing, the rule every learning consumer
+ * follows (CC30, database.getAdaptiveLandmarkHistory). The learner is
+ * best-effort like every other read here: if it fails, the map reads with
+ * the recovery answer alone, exactly as before, and nothing is degraded.
  */
 import {
   getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercisesIncludingDeleted,
   getMesocycleWeeks, getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
+  getCapabilityConstraints,
 } from '../database';
 import { logError } from '../errorLog';
 import { localWeekStartMs } from '../dayKey';
@@ -61,14 +74,11 @@ import {
   deriveHabitualTrainingWeekdays, HABIT_WINDOW_WEEKS, MIN_HISTORY_WEEKS,
 } from '../notifications/trainingHabitSchedule';
 import { buildMuscleRecoveryMap } from './muscleRecoveryModel';
-import { LOOKBACK_DAYS, DEFAULT_TRAINING_START_MINUTE } from './constants';
+import { DEFAULT_TRAINING_START_MINUTE } from './constants';
+import { learnPersonalRecovery, PERSONAL_HISTORY_DAYS } from './personalRecovery';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
-// The extra fetch margin described in the header. 4 days, matching the
-// model's own 96-hour soreness-pairing window (constants.js FEEDBACK_FACTOR
-// / spec 3.1).
-const FETCH_MARGIN_DAYS = 4;
 const SORENESS_PAIR_WINDOW_MS = 96 * 60 * 60 * 1000;
 
 const isTruthyFlag = (v) => v === 1 || v === true;
@@ -124,10 +134,12 @@ function readRecoveryRating() {
 }
 
 /**
- * Groups a mesocycle's week rows into { [weekId]: { rirTarget, isFirstWeek } }.
- * isFirstWeek: week_index 1, or the week immediately after one with is_deload
- * set -- derived purely from this one block's own week rows, in week_index
- * order, no block-level plannedWeeks/deloadWeek lookup required.
+ * Groups a mesocycle's week rows into { [weekId]: { rirTarget, isFirstWeek,
+ * isDeload } }. isFirstWeek: week_index 1, or the week immediately after one
+ * with is_deload set -- derived purely from this one block's own week rows,
+ * in week_index order, no block-level plannedWeeks/deloadWeek lookup
+ * required. isDeload (D210): the week is a recovery week, whose lowered
+ * loads the personal learner never reads as a dip.
  */
 export function indexWeeks(weekRows) {
   const sorted = (Array.isArray(weekRows) ? weekRows : [])
@@ -139,8 +151,9 @@ export function indexWeeks(weekRows) {
     if (!w?.id) continue;
     const weekIndex = Number(w.week_index);
     const isFirstWeek = weekIndex === 1 || previousWasDeload;
-    out.set(w.id, { rirTarget: w.rir_target ?? null, isFirstWeek });
-    previousWasDeload = isTruthyFlag(w.is_deload);
+    const isDeload = isTruthyFlag(w.is_deload);
+    out.set(w.id, { rirTarget: w.rir_target ?? null, isFirstWeek, isDeload });
+    previousWasDeload = isDeload;
   }
   return out;
 }
@@ -155,7 +168,7 @@ export function indexWeeks(weekRows) {
  *
  * @param {object} workout
  * @param {Array} workoutSets - this workout's own workout_sets rows
- * @param {{rirTarget: number|null, isFirstWeek: boolean}|null} week
+ * @param {{rirTarget: number|null, isFirstWeek: boolean, isDeload?: boolean}|null} week
  */
 export function buildRecoverySession(workout, workoutSets, week) {
   const sets = Array.isArray(workoutSets) ? workoutSets : [];
@@ -177,6 +190,7 @@ export function buildRecoverySession(workout, workoutSets, week) {
     sets,
     weekRirTarget: week?.rirTarget ?? null,
     isFirstWeek: !!week?.isFirstWeek,
+    isDeload: !!week?.isDeload,
     ratings: {
       fatigue: workout.fatigueLevel ?? null,
       joint: workout.jointDiscomfort ?? maxJointDiscomfort,
@@ -242,7 +256,7 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   }
 
   let degraded = false;
-  const windowStartMs = nowMs - (LOOKBACK_DAYS + FETCH_MARGIN_DAYS) * DAY_MS;
+  const windowStartMs = nowMs - PERSONAL_HISTORY_DAYS * DAY_MS;
   let windowWorkouts = [];
   try {
     // Bounded in the query: completed workouts whose end (or start) falls
@@ -320,9 +334,52 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
     typicalStartMinute = DEFAULT_TRAINING_START_MINUTE;
   }
 
-  const map = buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs });
+  const personal = await learnFromSessions({
+    userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
+  });
+  const map = buildMuscleRecoveryMap({
+    sessions, exerciseById, recoveryRating, nowMs, personal,
+  });
 
   return { map, nowMs, recoveryRating, habitualWeekdays, typicalStartMinute, degraded };
+}
+
+/**
+ * The personal factors (D210), best-effort: the capability-episode read and
+ * the learner itself are each allowed to fail without taking the map down.
+ * A failed episode read teaches from every session (the same fallback the
+ * adapted-landmark history uses); a failed learner returns null, and the
+ * map reads with the recovery answer alone.
+ */
+async function learnFromSessions({
+  userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
+}) {
+  let excluded = null;
+  try {
+    const capRows = await getCapabilityConstraints(userId);
+    if (Array.isArray(capRows) && capRows.some((r) => r?.role === 'episode')) {
+      // Lazy, as database.getAdaptiveLandmarkHistory requires it.
+      // eslint-disable-next-line global-require
+      const elig = require('../capability/eligibility');
+      excluded = new Set();
+      for (const session of sessions) {
+        for (const muscle of elig.constrainedMusclesAt(capRows, exercises, Number(session.startedAt))) {
+          excluded.add(`${session.id}|${muscle}`);
+        }
+      }
+    }
+  } catch (e) {
+    logError('recovery.load.capabilityConstraints', e, { userId });
+    excluded = null;
+  }
+  try {
+    return learnPersonalRecovery({
+      sessions, exerciseById, recoveryRating, nowMs, excluded,
+    });
+  } catch (e) {
+    logError('recovery.load.learnPersonalRecovery', e, { userId });
+    return null;
+  }
 }
 
 /**

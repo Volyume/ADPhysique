@@ -1487,7 +1487,7 @@ export function sessionBestE1rm(sets = []) {
 // C12 job 1: "did this session beat the last one?" uses the app's EXISTING
 // definition of a better estimated max — detectPR's 0.1% margin — rather than
 // a new plateau-specific threshold.
-const E1RM_PROGRESS_MARGIN = 1.001;
+export const E1RM_PROGRESS_MARGIN = 1.001;
 
 // C12 job 2: a plateau claims TIME, so the evidence must span time. Three
 // sessions in one week is not a three-week plateau, and three sessions

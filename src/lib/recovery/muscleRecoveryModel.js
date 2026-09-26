@@ -185,8 +185,10 @@ function peakResidual(contributingSessions) {
   return Math.max(FATIGUE_UNIT_MIN, residualAt(contributingSessions, last.endMs));
 }
 
-/** recoveredPercent, status and readyAtMs at `atMs`, relative to the peak. */
-function readingAt(contributingSessions, atMs) {
+/** recoveredPercent, status and readyAtMs at `atMs`, relative to the peak.
+ * Exported for the personal learner (personalRecovery.js, D210), which asks
+ * what this same curve would have read at the start of a past session. */
+export function readingAt(contributingSessions, atMs) {
   const peak = peakResidual(contributingSessions);
   const residual = residualAt(contributingSessions, atMs);
   const recoveredPercent = clamp(0, 100, Math.round(100 * (1 - residual / peak)));
@@ -197,8 +199,9 @@ function readingAt(contributingSessions, atMs) {
   return { recoveredPercent, status, readyAtMs };
 }
 
-/** One muscle's output entry, from its (already time/window filtered) contributing sessions. */
-function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContributed) {
+/** One muscle's output entry, from its (already time/window filtered) contributing sessions.
+ * `personal` is the learner's reading for the muscle (D210) or null. */
+function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContributed, personal = null) {
   if (!contributingSessions.length) {
     return {
       muscle,
@@ -208,6 +211,7 @@ function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContribu
       lastSessionEndMs: null,
       lastSessionSets: null,
       basis: 'time_and_volume',
+      ...(personal ? { personal } : {}),
       contributingSessions: [],
     };
   }
@@ -221,6 +225,7 @@ function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContribu
     lastSessionEndMs: last.endMs,
     lastSessionSets: last.sets,
     basis: anyRatingsContributed ? 'time_volume_and_ratings' : 'time_and_volume',
+    ...(personal ? { personal } : {}),
     contributingSessions,
   };
 }
@@ -237,16 +242,22 @@ function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContribu
  *   answer; unknown reads as average (constants.ratingFactor).
  * @param {number} params.nowMs - the caller's "now"; never read from a clock
  *   here.
+ * @param {object} [params.personal] - D210: personalRecovery.js's
+ *   { [muscle]: { factor, prior, checked } }. A muscle's learned factor
+ *   takes the place of the recovery answer's in every session's length,
+ *   and the reading rides on the entry as `personal`. Absent: the model
+ *   reads exactly as before.
  * @returns {object} { [muscle]: { muscle, recoveredPercent, status,
- *   readyAtMs, lastSessionEndMs, lastSessionSets, basis,
+ *   readyAtMs, lastSessionEndMs, lastSessionSets, basis, personal?,
  *   contributingSessions } }
  */
-export function buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs } = {}) {
+export function buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs, personal = null } = {}) {
   const sessionList = Array.isArray(sessions) ? sessions : [];
   const loads = sessionMuscleLoads(sessionList, exerciseById);
 
   const map = {};
   for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
+    const learned = personal?.[muscle] ?? null;
     const contributing = [];
     let anyRatingsContributed = false;
     for (let i = 0; i < loads.length; i += 1) {
@@ -262,12 +273,13 @@ export function buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating,
         rirTarget: session.weekRirTarget,
         firstWeek: session.isFirstWeek,
         ratings: session.ratings,
+        personalFactor: learned?.factor ?? null,
       });
       if (feedbackFactor(session.ratings ?? {}) > 1) anyRatingsContributed = true;
       contributing.push({ workoutId: load.workoutId, endMs: load.endMs, sets: rawSets, hoursT });
     }
     contributing.sort((a, b) => a.endMs - b.endMs);
-    map[muscle] = buildMuscleEntry(muscle, contributing, nowMs, anyRatingsContributed);
+    map[muscle] = buildMuscleEntry(muscle, contributing, nowMs, anyRatingsContributed, learned);
   }
   return map;
 }

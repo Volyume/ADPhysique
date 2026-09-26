@@ -20,8 +20,9 @@
  *    trained-ago facts;
  *  - tapping a row (or its muscle on the figure) opens the breakdown
  *    behind the estimate: the last session's counted sets and date, the
- *    sessions and sets inside the 14-day window, and what the estimate
- *    is based on. One row is open at a time; the parent holds which.
+ *    sessions and sets inside the 14-day window, what the estimate is
+ *    based on, and how it has been adjusted to this person from their own
+ *    lifts (D210). One row is open at a time; the parent holds which.
  *
  * The recency FACT on the meta line is the same reading the Training
  * recency chip has always shown (getLastTrainedPerMuscle's latest start
@@ -56,6 +57,7 @@ import { trainingRecency } from '../lib/trainingRecency';
 import { safeFormatDate } from '../lib/safeFormat';
 import { RECOVERY_ESTIMATE_LABEL } from '../lib/recovery/constants';
 import { readyClause } from '../lib/recovery/nextWorkoutRecommendation';
+import { personalDirection } from '../lib/recovery/personalRecovery';
 
 /** Group order and labels: the figure legend's own three words, in the
  * spec's row order (recovering first, then nearly, then recovered). */
@@ -106,6 +108,22 @@ export function muscleRecoveryBasisText(basis) {
   return basis === 'time_volume_and_ratings' ? 'Time, sets and your ratings' : 'Time and sets';
 }
 
+/**
+ * D210: how the estimate has been adjusted to this person, in plain words,
+ * or null when the loader carried no personal reading. The count is the
+ * sessions the estimate was checked against (personalRecovery.js).
+ */
+export function muscleRecoveryPersonalText(personal) {
+  if (!personal) return null;
+  const compared = `${plural(personal.checked, 'session')} compared`;
+  switch (personalDirection(personal)) {
+    case 'sooner': return `Recovers faster than first estimated · ${compared}`;
+    case 'later': return `Recovers more slowly than first estimated · ${compared}`;
+    case 'same': return `No change so far · ${compared}`;
+    default: return 'Not yet, too few sessions to compare';
+  }
+}
+
 /** Rows bucketed under RECOVERY_GROUPS, keeping the caller's order inside
  * each group; empty groups are left out. */
 export function groupMuscleRecoveryRows(rows) {
@@ -132,6 +150,8 @@ export function muscleRecoveryDetailLines(entry) {
     lines.push({ label: 'Last 14 days', value: `${plural(sessions.length, 'session')} · ${plural(totalSets, 'set')}` });
   }
   lines.push({ label: 'Based on', value: muscleRecoveryBasisText(entry.basis) });
+  const personal = muscleRecoveryPersonalText(entry.personal);
+  if (personal) lines.push({ label: 'Adjusted to you', value: personal });
   return lines;
 }
 

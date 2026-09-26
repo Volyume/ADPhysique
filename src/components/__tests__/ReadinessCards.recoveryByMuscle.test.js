@@ -269,8 +269,10 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
   test('the caption is exact', async () => {
     const tree = await render();
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    // RE-ANCHORED 2026-09-26 (D210: the estimate now learns from the
+    // athlete's own lifts, so the caption names that input too).
     expect(texts(tree)).toContain(
-      "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer and your ratings. Not a measurement.",
+      "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer, your ratings and how your lifts went when you trained each muscle again. Not a measurement.",
     );
   });
 });

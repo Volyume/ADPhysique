@@ -670,7 +670,7 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
               onSelect={setSelectedMuscle}
             />
             <Text style={[styles.rbmCaption, live.rbmCaption]}>
-              Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer and your ratings. Not a measurement.
+              Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer, your ratings and how your lifts went when you trained each muscle again. Not a measurement.
             </Text>
             {nextWorkoutText && (
               <>

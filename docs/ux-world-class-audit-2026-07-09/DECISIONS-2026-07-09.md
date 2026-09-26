@@ -10484,3 +10484,94 @@ Landed `28ae0332`. Guards: `sessionCardLayout.test.js`,
 `drawShareCard.test.js` (photo framing), `sessionShareData.test.js`,
 `ShareCardScreen.shareTargets.test.js` (the picker end to end),
 `ShareCardScreen.photoAndFonts.guard.test.js`.
+
+## D210 — The recovery estimate learns each person's recovery from their own lifts (founder question 2026-09-26, lead ruling)
+
+Founder, verbatim: "We had recovery intelligence that learns people's
+recovery and adjusts as it goes along based on performance from a start. Is
+that what you've used for the recovery section or have you used rudimentary
+numbers?"
+
+**Observed before the ruling.** The Recovery section (D201, D208) read fixed
+research baselines per muscle (`src/lib/recovery/constants.js`
+`BASE_RECOVERY_HOURS`: quads, hamstrings, glutes 72 h; chest, back 60 h; arms,
+delts, traps 48 h; calves, abs 36 h), scaled by the session's sets, the
+onboarding recovery answer, the week's RIR target, a block's first week and
+that session's ratings. Nothing in it changed when an estimate proved right
+or wrong. The learning the founder remembered exists and is live, but it
+learns SET COUNTS, not recovery time: `computeAdaptiveLandmarks`
+(`src/lib/algorithms.js`) moves each muscle's MEV/MAV/MRV from session
+feedback after three sessions, and the block ledger (`src/lib/learnedRange.js`)
+moves each muscle's working range per block. Nothing under
+`src/lib/recovery/` read either. The deleted `muscleRecovery.js` (removed
+2026-08-16) was fixed day windows, not a learner either.
+
+**Ruling (D33; the founder's delegation of 2026-09-26: "Make the decisions
+that bring the absolute best product for end users ... I do not need to make
+these decisions").** The recovery estimate learns, per muscle and per person,
+from the athlete's own lifts, starting from the research figure. Mechanism
+(source: `docs/recovery-programme-2026-09-25/00-SPEC.md` section 14, and the
+module header of `src/lib/recovery/personalRecovery.js`):
+
+1. A learned factor per muscle takes the place of the recovery answer's
+   factor in `recoveryHours`. It STARTS at that answer's factor (poor 1.15,
+   average 1.0, good 0.9): "from a start".
+2. The evidence is performance when a muscle is trained again: the
+   session's best estimated max on each primary lift (`sessionBestE1rm`,
+   the app's one trend representative) against the same lift's most recent
+   comparable session within 28 days. A dip is 3% or more below it, or more
+   missed sets with no gain; anything else held.
+3. The estimate is checked on the CHANGE it predicts between the two
+   sessions, never on one reading: it expects a drop when it reads this
+   session less recovered than the baseline, and no drop otherwise. The fit
+   picks the factor (0.75 to 1.40, 5% steps) with the fewest disagreements,
+   plus a cost of one disagreement per 10% moved from the start; ties go to
+   the start, then to the longer. Three checks minimum; the last 84 days
+   only.
+4. Never evidence: recovery weeks; a baseline trained to a different RIR
+   target; circuit and ballistic sets; a session under an injury limit for
+   the muscle (CC30); a session with no recent session on the muscle; two
+   lifts that disagree in one session.
+5. Pure and replayed on every read (`load.js` reads 126 days), so nothing is
+   stored and the same history gives the same answer. Home's next-workout
+   recommendation reads the same learned map. Each muscle's breakdown says
+   "Adjusted to you" with the direction and how many sessions were compared,
+   or "Not yet, too few sessions to compare"; the card's caption names the
+   new input.
+
+**Rejected, with reasons.**
+- Checking one reading against performance (held while "Recovering" counts
+  against the estimate): a lifter on a steady schedule lifts at the same
+  level each time whether they recover fast or steadily partially, so it
+  would shorten everyone who trains a muscle often and stretch anyone with
+  ordinary dips. Worked through on paper before the tests; the tests pin
+  both cases.
+- Stepping the factor up or down after each session: ordinary day-to-day
+  dips would drift everyone's estimate longer.
+- Adjusting for effort with the week's RIR target, or counting only the
+  outcome a target mismatch cannot fake: the first assumes an effort nobody
+  recorded (per-set RIR is not captured, D96/FQ-3: effort is never made up),
+  the second biases the fit by keeping one kind of outcome. Only sessions
+  trained to the same target (or both outside a plan) are compared.
+- Learning from ratings alone: ratings keep their D201 role (they can only
+  lengthen a session; Ferreira 2017: combine, never swap).
+- Personalising plan sequencing (`sequenceSessions.js`): a plan is built
+  before any evidence exists; it stays on the population prior.
+
+**Honest limits.** A lifter who trains each lift once a week while the RIR
+target steps every week produces no comparable pairs, and a steady schedule
+teaches nothing; both keep the starting estimate and the screen says so. The
+estimate remains an estimate: every figure still carries "estimated" and the
+caption still says "Not a measurement".
+
+Files: `src/lib/recovery/personalRecovery.js` (new), `constants.js` (the
+learning constants, `recoveryHours` `personalFactor`), `muscleRecoveryModel.js`
+(`readingAt` exported, `buildMuscleRecoveryMap` `personal`), `load.js` (the
+126-day read, `isDeload` per week, injury-limit exclusions, the learner,
+best-effort), `src/lib/algorithms.js` (`E1RM_PROGRESS_MARGIN` exported),
+`src/components/MuscleRecoveryList.js` (the "Adjusted to you" line),
+`src/components/ReadinessCards.js` (the caption). Guards:
+`src/lib/recovery/__tests__/personalRecovery.test.js` (20 cases, real engine),
+`load.test.js` (the window, the deload flag, the learned factor end to end,
+a failed injury-limit read never degrades), `MuscleRecoveryList.test.js`,
+`ReadinessCards.recoveryByMuscle.test.js`.

@@ -25,7 +25,7 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 
 import MuscleRecoveryList, {
-  groupMuscleRecoveryRows, muscleRecoveryDetailLines, muscleRecoveryBandColour,
+  groupMuscleRecoveryRows, muscleRecoveryDetailLines, muscleRecoveryBandColour, muscleRecoveryPersonalText,
   muscleRecoveryRowMeta, muscleRecoveryRowA11yLabel, RECOVERY_GROUPS,
 } from '../MuscleRecoveryList';
 import { resolveTheme } from '../../styles/theme';
@@ -213,6 +213,19 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
       contributingSessions: [{ endMs: NOW - 9 * DAY_MS, sets: 8, hoursT: 72 }, { endMs: NOW - 2 * DAY_MS, sets: 6, hoursT: 72 }],
     }));
     expect(two[1]).toEqual({ label: 'Last 14 days', value: '2 sessions · 14 sets' });
+  });
+
+  test('D210: the breakdown says how the estimate has been adjusted to this person, in plain words', () => {
+    // No personal reading on the entry: no line (the map without the learner).
+    expect(muscleRecoveryDetailLines(entry({})).map((l) => l.label)).not.toContain('Adjusted to you');
+    const line = (personal) => muscleRecoveryDetailLines(entry({ personal })).find((l) => l.label === 'Adjusted to you')?.value;
+    expect(line({ factor: 0.75, prior: 1, checked: 5 })).toBe('Recovers faster than first estimated · 5 sessions compared');
+    expect(line({ factor: 1.1, prior: 1, checked: 4 })).toBe('Recovers more slowly than first estimated · 4 sessions compared');
+    expect(line({ factor: 1, prior: 1, checked: 6 })).toBe('No change so far · 6 sessions compared');
+    // Too few checks: never a direction, whatever the factor says.
+    expect(line({ factor: 1, prior: 1, checked: 2 })).toBe('Not yet, too few sessions to compare');
+    expect(line({ factor: 1.15, prior: 1.15, checked: 0 })).toBe('Not yet, too few sessions to compare');
+    expect(muscleRecoveryPersonalText(null)).toBeNull();
   });
 });
 

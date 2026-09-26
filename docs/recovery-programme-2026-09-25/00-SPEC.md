@@ -353,7 +353,9 @@ is a follow-on decision, not in this build.
   chips fold into these rows (the factual part stays verbatim). One
   caption: "Estimated from the time since each muscle's last session and
   how much it did, adjusted by your recovery answer and your ratings.
-  Not a measurement." A "Next workout" row per Section 4.
+  Not a measurement." (Superseded 2026-09-26 by section 14: the caption
+  now also names "how your lifts went when you trained each muscle
+  again".) A "Next workout" row per Section 4.
 - **Home**: the one-line readiness under the next session, and the
   change-workout sheet's verdicts.
 - **Plan detail**: the `whyThis` sentence from Section 5.
@@ -496,3 +498,89 @@ existing plans; ties keep the original order.
   (PR1). A separate, small fix; not part of this programme.
 - `weeklyCoach.js` was not read in depth by PR1; this programme does not
   touch it.
+
+---
+
+## 14. Personal recovery learning (register D210, added 2026-09-26)
+
+Founder, 2026-09-26: "We had recovery intelligence that learns people's
+recovery and adjusts as it goes along based on performance from a start. Is
+that what you've used for the recovery section or have you used rudimentary
+numbers?" Sections 2 and 3 built an estimate that never learns. This section
+adds the learning; D210 records the ruling and the rejected alternatives.
+
+**14.1 What is learned.** One factor per muscle, `factor`, that takes the
+place of `ratingFactor(recoveryRating)` in `recoveryHours` (the
+`personalFactor` option). It starts at the recovery answer's factor (poor
+1.15, average 1.0, good 0.9) and is bounded to `[PERSONAL_FACTOR_MIN,
+PERSONAL_FACTOR_MAX]` = [0.75, 1.40]. Every session length stays clamped to
+[24, 168] h.
+
+**14.2 The evidence (`src/lib/recovery/personalRecovery.js`).** For every
+completed session B in the last `PERSONAL_WINDOW_DAYS` (84), for each lift
+whose PRIMARY muscle is m: its baseline is the most recent earlier session
+of the same exercise within `PERSONAL_BASELINE_MAX_GAP_DAYS` (28) that is not
+a recovery week, not under an injury limit for m, and trained to the same
+RIR target as B (or both outside any plan). The lift DIPPED if B's best
+estimated max (`sessionBestE1rm`, trend-eligible sets only) is below
+`PERFORMANCE_DIP_RATIO` (0.97) of the baseline's, or B missed more working
+sets (failed, or reps below the target's bottom) with no gain past
+`E1RM_PROGRESS_MARGIN`; otherwise it HELD. m's outcome in B is DIP when all
+its lifts dipped, HELD when none did, none when they disagree; its baseline
+is the latest of its lifts' baselines. Skipped: B in a recovery week, B
+under an injury limit for m, and B with no session on m in the
+`LOOKBACK_DAYS` before it.
+
+**14.3 The check.** The curve of section 3.2 is re-read at the start of B
+and of its baseline, every earlier session's length computed with a
+candidate factor. Readings rank Recovering < Nearly recovered < Recovered
+(a baseline with no recent session on m ranks Recovered). Cost per
+exposure (`DISAGREEMENT_COST`): HELD with B two bands below the baseline 1,
+one band below 0.5; DIP with B no lower than the baseline 1; else 0. The
+estimate is checked on the change it predicts, never on one reading, because
+a steady schedule gives the same lifts whether recovery is fast or steadily
+partial.
+
+**14.4 The fit.** Candidates: `PERSONAL_FACTOR_GRID` (0.75 to 1.40 in 0.05
+steps) plus the start. Total = the exposures' costs +
+`PERSONAL_MOVE_COST_PER_TENTH` (1) x |ln(k / start)| / ln(1.1). Lowest total
+wins; ties to the candidate nearest the start, then to the longer. Fewer
+than `PERSONAL_MIN_EXPOSURES` (3) exposures: the start. Consequences, each
+pinned by a test: a steady schedule never moves it; a single session moves
+it one step at most; it shortens when lifts hold after gaps it calls too
+short, and lengthens when lifts dip after gaps it calls long enough.
+
+**14.5 Wiring.** `load.js` reads `PERSONAL_HISTORY_DAYS` (126: the window,
+the baseline gap and the lookback), marks each session's recovery week
+(`indexWeeks` `isDeload`), builds the injury-limit exclusions from
+`getCapabilityConstraints` through `capability/eligibility.constrainedMusclesAt`
+(as `getAdaptiveLandmarkHistory` does), runs the learner and passes its
+result to `buildMuscleRecoveryMap` (`personal`), which carries each muscle's
+`{ factor, prior, checked }` on its entry. Best-effort: a failed injury read
+teaches from every session; a failed learner leaves the map on the recovery
+answer alone; neither degrades the map. Home's recommendation reads the same
+map. Plan sequencing (section 5) stays on the population prior.
+
+**14.6 On screen.** Each muscle's breakdown (MuscleRecoveryList) adds
+"Adjusted to you": "Recovers faster than first estimated · N sessions
+compared", "Recovers more slowly than first estimated · N sessions
+compared", "No change so far · N sessions compared", or "Not yet, too few
+sessions to compare". The caption: "Estimated from the time since each
+muscle's last session and how many sets it did, adjusted by your recovery
+answer, your ratings and how your lifts went when you trained each muscle
+again. Not a measurement."
+
+**14.7 Device checklist additions.**
+1. A new account with fewer than three comparable chest sessions: open
+   Progress, Recovery, tap Chest: "Adjusted to you: Not yet, too few
+   sessions to compare"; every percent reads exactly as before.
+2. Over three to four weeks, outside a plan (or inside one plan week),
+   alternate: bench, five or six working sets at the same weights, four
+   days after the last chest session, then again about 40 hours later.
+   Once three or more of the 40-hour sessions have held their lifts,
+   Chest's breakdown reads "Recovers faster than first estimated", and 40
+   hours after a chest session Chest reads a higher percent than it did
+   before. (Fewer pairs, or lifts that dipped, leave "No change so far".)
+3. A recovery (deload) week never changes any "Adjusted to you" line.
+4. Calm mode on: unchanged (no bodyweight or food is involved).
+
