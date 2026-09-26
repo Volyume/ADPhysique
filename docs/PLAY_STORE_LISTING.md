@@ -331,8 +331,9 @@ sold or shared for third-party use.
 | Other info: date of birth, sex (Personal info) | Yes | No | Required (age and sex drive the calorie maths, the under-18 rules) | No | App functionality |
 | Approximate location: the town and gym a person adds to their Community profile; "Use my location" in the gym finder (Location) | Yes | No | Optional | The device reading only (one search, never stored); the chosen town and gym are stored | App functionality |
 | Fitness info: workouts, sets, reps, weights, plans (Health and fitness) | Yes | No | Required | No | App functionality |
-| Health info: body weight, measurements, body fat, steps, cardio, check-ins, progress-photo metadata and analysis outputs (Health and fitness) | Yes | No | Optional | No | App functionality |
-| Food and nutrition logs (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Health info: body weight, measurements, body fat, steps, cardio, check-ins (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Health info: Progress photo metadata and Volyume Score analysis outputs (Health and fitness) | Yes | No | Optional | No | App functionality |
+| Nutrition / food logs (Health and fitness) | Yes | No | Optional | No | App functionality |
 | Other in-app messages: Community messages (Messages) | Yes | No | Optional | No | App functionality |
 | Other user-generated content: Community posts, comments, notes (App activity) | Yes | No | Optional | No | App functionality |
 | Other actions: follows, Respect, group membership (App activity) | Yes | No | Optional | No | App functionality |

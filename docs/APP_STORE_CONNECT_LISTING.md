@@ -316,11 +316,13 @@ for tracking.
 | Identifiers | User ID | App Functionality | Community handle |
 | Location | Coarse Location | App Functionality | The town and gym a person adds to their Community profile. The gym finder's "Use my location" reading is used for one search and never kept, which Apple's definition does not count as collected |
 | Health & Fitness | Fitness | App Functionality | Workouts, sets, weights, plans |
-| Health & Fitness | Health | App Functionality | Body weight, measurements, body fat, steps, cardio, check-ins, food and nutrition logs, progress-photo metadata and analysis outputs |
+| Health & Fitness | Health | App Functionality | Body weight, measurements, body fat, steps, cardio, check-ins |
+| Health & Fitness | Health | App Functionality | Nutrition / food logs |
+| Health & Fitness | Health | App Functionality | Progress photo metadata and Volyume Score analysis outputs (image files stay on the device unless shared or exported) |
 | User Content | Emails or Text Messages | App Functionality | Community messages |
 | User Content | Other User Content | App Functionality | Community posts, comments and notes |
 | Usage Data | Product Interaction | Analytics | First-party telemetry, off in Settings |
-| Diagnostics | Crash Data, Performance Data | App Functionality | Scrubbed Sentry events |
+| Diagnostics | Crash Data and Performance Data | App Functionality | Scrubbed Sentry events |
 | Other Data | Other Data Types | App Functionality | Date of birth and sex (the calorie maths, the under-18 rules) |
 
 ---
