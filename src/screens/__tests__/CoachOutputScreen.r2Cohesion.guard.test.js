@@ -63,13 +63,17 @@ function rendersThroughCard(styleName) {
 }
 
 describe('CoachOutputScreen R2 radius cohesion', () => {
-  test('the five former hand-rolled cards carry no borderRadius of their own and render through <Card> (radius.lg is the primitive\'s default)', () => {
+  test('the six former hand-rolled cards carry no borderRadius of their own and render through <Card> (radius.lg is the primitive\'s default)', () => {
+    // nextReadCard joined the census 2026-09-26 (fresh-eyes review of the
+    // D206 restyle): it was converted exactly like its five siblings but
+    // had never been pinned.
     for (const card of [
       'planEditCard',
       'holdHeroCard',
       'coachLeadCard',
       'focusCard',
       'countdownCard',
+      'nextReadCard',
     ]) {
       const body = styleBodyOf(card);
       expect(body).not.toBeNull();

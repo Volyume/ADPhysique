@@ -230,8 +230,11 @@ function AdjustmentRow({
   const showApply = (!!onApply && !applied && !holdNote) || settling;
   return (
     <View style={styles.adjustmentRow}>
+      {/* Lead review 2026-09-26 (D206, one amber): the row's glyph and its
+          backing are neutral now; amber on this screen is the committing
+          action alone, never a static icon on every adjustment row. */}
       <View style={[styles.adjustmentIconWrap, live.adjustmentIconWrap]}>
-        <Ionicons name={iconName} size={18} color={t.colors.primary} />
+        <Ionicons name={iconName} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
@@ -3556,7 +3559,7 @@ const styles = StyleSheet.create({
     // R2 (2026-07-11): icon-backing family -> radius.md (control/input/
     // icon-backing class, FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
     borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -3914,7 +3917,7 @@ function buildLiveStyles(t) {
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
+    adjustmentIconWrap: { backgroundColor: t.colors.surface2 },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
     appliedChip: {
