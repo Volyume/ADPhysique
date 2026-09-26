@@ -10384,6 +10384,23 @@ now reads "and your coach uses it to plan your next week", with dated
 amendments in `NOTIFICATIONS_LOCKED.md` and `COACHING_VOICE_SYNTHESIS_LOCKED.md`
 (Surface 6).
 
+**Addendum (2026-09-26, the lanes landed).** A `838ffb5a` (about 180
+lines; the lead fixed four untrue lines it found), B `75cfaee1`, C
+`373e7006` (the Body-row pins `8e89f918`), D `9011b6ef` (63 files; the lead
+fixed an outcome line that, for a change judged on two measures, could claim
+neither had moved), E `aa00fe41` (the lead fixed the three coaching-mode
+lines its pinned test kept from it). Lines that were untrue before the sweep
+and are now true: the confidence captions, the on-target reason on
+off-target weeks, "your last increase" on a cut, the block ledger's
+"recovery ran high" where recovery was poor, and a clash marker that read
+"sits outside" a temporary change it clashes with. A dormant pre-account
+screen's "Nothing charged unless you choose" is gone (D137, `a4546d7b`).
+Lane D listed the D204 breaches still on plan and Today surfaces and the
+last collaborative "we" lines; Lane F fixes those, describe-only, with any
+line tied to what a button does stopped for the lead. ED-safety, legal,
+consent and locked lines the lanes flagged are listed for the founder,
+never edited.
+
 ## D208 — Recovery gets its own place in Progress (founder question 2026-09-26, lead ruling)
 
 Founder, verbatim: "Should we have a place in Progress exclusively for
