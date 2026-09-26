@@ -170,7 +170,7 @@ export default function SettingsCoachingScreen() {
             // consequence but not the behavioural one - turning this off
             // removes the input used to EASE a session after poor
             // recovery. Both consequences are now named.
-            : 'Off. Sessions start straight away. When coaching is active that also means no readiness answers to ease a session after poor recovery, and your next block\'s set targets stay where they are rather than moving on what the block showed.'}
+            : 'Off. Sessions start straight away. When coaching is active that also means no readiness answers to ease a session after poor recovery, and your next block\'s set targets stay where they are rather than moving based on what the block showed.'}
           showArrow={false}
           rightElement={
             <Switch

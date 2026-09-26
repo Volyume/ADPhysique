@@ -2155,8 +2155,11 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
   });
 
   test('RC-4: both readiness opt-out surfaces name the block-ledger consequence', () => {
-    expect(read('screens/HomeScreen.js')).toMatch(/next block's set targets stay where they are rather than moving on what this block showed/);
-    expect(read('screens/SettingsCoachingScreen.js')).toMatch(/set targets stay where they are rather than moving on what the block showed/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    // -- "moving on" read as the idiom "move on" (proceed), not "moving,
+    // dependent on", so both surfaces now say "moving based on".
+    expect(read('screens/HomeScreen.js')).toMatch(/next block's set targets stay where they are rather than moving based on what this block showed/);
+    expect(read('screens/SettingsCoachingScreen.js')).toMatch(/set targets stay where they are rather than moving based on what the block showed/);
   });
 
   test('RC-5: "Show the science" describes exactly what it does', () => {

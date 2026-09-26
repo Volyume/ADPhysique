@@ -54,7 +54,7 @@ function finiteNumber(value) {
 // the exact number sits behind the affordance.
 export function scanRangeLabel(scan, { hideExact = false, revealed = false } = {}) {
   const assessment = progressScanAssessmentForDisplay(scan);
-  if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
+  if (hideExact) return assessment?.progressSignalLabel || 'Progress update';
   const tierContract = buildScoreTierContract(scan, { revealed });
   if (tierContract.hasNumericScore) {
     const band = tierContract.bandLabel || 'Scored';

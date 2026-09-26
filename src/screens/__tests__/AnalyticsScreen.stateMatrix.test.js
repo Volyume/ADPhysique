@@ -679,7 +679,8 @@ describe('State matrix — C: weight moving, training stalled', () => {
     const training = pillarRow(tree, 'Training');
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
-    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your evidence trail.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your training history.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/kg\/week/);
   });
@@ -741,7 +742,8 @@ describe('State matrix — E: neither training nor weight moving clearly', () =>
     const training = pillarRow(tree, 'Training');
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
-    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your evidence trail.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your training history.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toContain('Log your weight for 7 days and your trend appears here.');
     expect(flattenText(tree)).not.toMatch(/add (a |two )?(sets?|weight)/i);
@@ -757,7 +759,8 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training history.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
     const visual = pillarRow(tree, 'Progress photos');
@@ -775,7 +778,8 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training history.');
     expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);

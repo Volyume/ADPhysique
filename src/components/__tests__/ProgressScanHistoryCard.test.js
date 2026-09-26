@@ -51,12 +51,14 @@ describe('ProgressScanHistoryCard', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Photo results');
-    expect(text).toContain('Like-for-like');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('Comparable');
     expect(text).not.toContain('Score for this set');
     expect(text).not.toContain('Result note');
     expect(text).not.toContain('Basis: front/back outline signals plus scan quality.');
     expect(text).not.toContain('Why this result');
-    expect(text).toContain('Read quality: Moderate');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('Scan status: Moderate');
     expect(text).toContain('Leanness');
     expect(text).toContain('Volyume Score');
     expect(text).toContain('Slight positive trend');
@@ -121,9 +123,10 @@ describe('ProgressScanHistoryCard', () => {
       tree = create(<ProgressScanHistoryCard scans={[unscored]} />);
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Read quality: Analysis unavailable');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('Scan status: Analysis unavailable');
     expect(text).toContain('ScoreNot scored');
-    expect(text).not.toContain('Read quality: Low');
+    expect(text).not.toContain('Scan status: Low');
   });
 
   test('measured-only scans are not displayed as baseline scored results', async () => {
@@ -146,7 +149,8 @@ describe('ProgressScanHistoryCard', () => {
       tree = create(<ProgressScanHistoryCard scans={[measuredOnly]} />);
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Read quality: Measured only');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('Scan status: Measured only');
     expect(text).toContain('LeannessMeasured only');
     expect(text).toContain('ChangeMeasured only');
     expect(text).toContain('ScoreNot scored');

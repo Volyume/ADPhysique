@@ -29,7 +29,8 @@ describe('TRAINING comprehension', () => {
   test('the block sheet teaches the mental model: definition, climb why, next-block learning', () => {
     const src = read('components/HomeBlockShapeSheet.js');
     expect(src).toContain('GLOSSARY.mesocycle');
-    expect(src).toMatch(/Each week the effort target moves a step closer to failure/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/Each week the effort target moves a step closer to your limit/);
     expect(src).toMatch(/How each muscle goes this block shapes where its sets start in the next one/);
   });
 

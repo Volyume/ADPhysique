@@ -86,7 +86,7 @@ export function recapBannerText(monthLabel) {
 // two get confused for each other.
 function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, unitsLabel, now = Date.now() }) {
   if (completedWorkoutCount === 0) {
-    return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training evidence.' };
+    return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training history.' };
   }
   if (summary.trainedCount === 0) {
     // S6-6 (progress-tab audit 2026-09-24): `days` used to be measured from
@@ -109,7 +109,7 @@ function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, uni
   const best = summary.namedBests[0];
   const evidence = best
     ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
-    : 'Keep training to build your evidence trail.';
+    : 'Keep training to build your training history.';
   return { state, evidence };
 }
 

@@ -41,7 +41,7 @@ export const WHATS_NEW = {
   // since, on one rule: a user would notice it without being told where to
   // look. Everything else stays unannounced rather than padding the list.
   '1.2.1': [
-    { icon: 'barbell-outline', text: 'Updating your plan now respects the equipment you have. Change it to machines and cables and barbell work is replaced, not carried over.' },
+    { icon: 'barbell-outline', text: 'Updating your plan now respects the equipment you have. Change it to machines and cables, and barbell work is replaced, not carried over.' },
     { icon: 'volume-medium-outline', text: 'Rest countdown cues now sound with the app minimised, on any rest length.' },
     { icon: 'create-outline', text: 'Tap any logged set to edit or delete it, so a mistyped number is never stuck.' },
     { icon: 'medkit-outline', text: 'Movements you need to avoid can be set for a few days, the rest of the block, or indefinitely.' },
@@ -54,7 +54,7 @@ export const WHATS_NEW = {
   // where to look. The plain-English copy pass and the record-detection fixes
   // are felt rather than announced, so only the record one earns a line.
   '1.3.0': [
-    { icon: 'medkit-outline', text: 'You can tell Volyume about injuries, pain, conditions or disabilities, and which side they affect. Coach tab or Settings, then Injuries & limitations.' },
+    { icon: 'medkit-outline', text: 'You can tell Volyume about injuries, pain, conditions or disabilities, and which side they affect. Find it under the Coach tab or Settings, then Injuries & limitations.' },
     { icon: 'search-outline', text: 'Looking for a specific condition or injury finds better questions to ask you. You never need a name to get the same support.' },
     { icon: 'body-outline', text: 'Where an exercise is set up differently for you, the setup notes now say how instead of assuming one way of doing it.' },
     { icon: 'trophy-outline', text: 'Personal records show every time you beat your best, including the first time you meet an exercise.' },

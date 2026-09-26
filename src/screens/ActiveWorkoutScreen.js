@@ -219,9 +219,9 @@ const BARBELL_EQUIPMENT = /barbell/i;
 const SET_TYPE_OPTIONS = [
   { value: 'straight', label: 'Working', description: 'Counts towards your weekly volume and progress tracking.' },
   { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly volume.' },
-  { value: 'dropset', label: 'Drop set', description: 'Reduce the weight at failure and keep going. Counts towards weekly volume, not the set-target counter.' },
+  { value: 'dropset', label: 'Drop set', description: "Reduce the weight once you can't do any more reps, then keep going. Counts towards weekly volume, but not towards your planned number of sets." },
   { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts towards volume and progress.' },
-  { value: 'rest_pause', label: 'Rest-pause', description: 'Hit failure, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress.' },
+  { value: 'rest_pause', label: 'Rest-pause', description: "Go until you can't do any more reps, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress." },
   { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts towards volume and progress.' },
 ];
 
@@ -5204,7 +5204,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
                 <Text style={[styles.supTip, live.supTip]}>
                   {headsUpIsCircuit
-                    ? 'Tip: if a station is taken, carry on with the next one and come back to it. The circuit itself is changed in your plan.'
+                    ? 'Tip: if a station is taken, carry on with the next one and come back to it. To change the circuit, edit it in your plan.'
                     : "Tip: if you can't grab every station right now, unlink and do them as normal sets."}
                 </Text>
 

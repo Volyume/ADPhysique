@@ -57,7 +57,7 @@ function unscoredState(scan) {
 }
 
 function comparisonLabel(scan) {
-  if (scan?.deltaExplanation?.comparisonStatus === 'comparable') return 'Like-for-like';
+  if (scan?.deltaExplanation?.comparisonStatus === 'comparable') return 'Comparable';
   if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Setup changed';
   return scan?.qualityLabel || 'Saved';
 }
@@ -112,7 +112,7 @@ function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
     return scan?.copySummary || 'Saved, but Volyume needs front and back photos to score the set.';
   }
   if (state === 'retake_needed') {
-    return scan?.copySummary || 'Saved, but the read was not clear enough to score. Retake with your whole body visible, even lighting and a plain background.';
+    return scan?.copySummary || "Saved, but the photos weren't clear enough to score. Retake with your whole body visible, even lighting and a plain background.";
   }
   if (state === 'not_enough' || state === 'not_scored') {
     return scan?.copySummary || 'Saved, but Volyume could not create a score from this set.';
@@ -124,7 +124,7 @@ function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
   if (scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.copySummary) return scan.copySummary;
-  return 'Use the same pose, lighting and framing next time for the cleanest read.';
+  return 'Use the same pose, lighting and framing next time for the clearest result.';
 }
 
 export default function ProgressScanHistoryCard({
@@ -159,7 +159,7 @@ export default function ProgressScanHistoryCard({
               <View style={styles.scanEntryActions}>
                 <View style={[styles.confidencePill, live.confidencePill]}>
                   <Text style={[styles.confidencePillText, live.confidencePillText]} numberOfLines={1}>
-                    Read quality: {confidenceLabel(scan)}
+                    Scan status: {confidenceLabel(scan)}
                   </Text>
                 </View>
                 {!readOnly ? (

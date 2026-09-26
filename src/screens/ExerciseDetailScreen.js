@@ -749,7 +749,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
                 <Text style={[styles.sfrLabel, live.sfrLabel]}>Quality</Text>
-                <InfoTooltip text="Quality: how much growth this exercise produces relative to how tiring it is overall. 5/5 = great return for the fatigue cost. 3/5 = moderate. 1/5 = very demanding for what you get back." size={11} />
+                <InfoTooltip text="Quality: how much growth this exercise produces relative to how tiring it is overall. 5/5 means you get a lot of growth for how tiring it is. 3/5 is moderate. 1/5 means it's very demanding for what you get back." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
@@ -757,7 +757,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.fatigueCost || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
                 <Text style={[styles.sfrLabel, live.sfrLabel]}>Fatigue</Text>
-                <InfoTooltip text="How much systemic fatigue this exercise creates. 5/5 = very demanding (deadlift). 1/5 = minimal fatigue. High-fatigue exercises need more recovery between sessions." size={11} />
+                <InfoTooltip text="How much fatigue this exercise creates on your whole body, not just the muscle it works. 5/5 = very demanding (deadlift). 1/5 = minimal fatigue. High-fatigue exercises need more recovery between sessions." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
