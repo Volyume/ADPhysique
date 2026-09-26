@@ -291,15 +291,32 @@ describe('THE USER ACTUALLY SEES IT', () => {
     expect(SCREEN).toMatch(/calorieKcal: adjustments\?\.calories\?\.change \?\? 0/);
   });
 
-  test('all five parts are rendered', () => {
-    expect(SCREEN).toMatch(/weeklyStory\.happened\.map/);
-    expect(SCREEN).toMatch(/weeklyStory\.means\.map/);
-    expect(SCREEN).toMatch(/weeklyStory\.changing\.map/);
-    expect(SCREEN).toMatch(/weeklyStory\.staying\.map/);
-    expect(SCREEN).toMatch(/\{weeklyStory\.watching\.text\}/);
+  test('every part of the account reaches the user, each fact once', () => {
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). The screen
+    // printed each fact three to five times (chips, the coach's
+    // acknowledgement, the ledger, this story, the focus card). Each part
+    // of the story now has ONE home: what happened is the "Your week" rows
+    // (the same context facts, as values); what it means and what stays
+    // the same are the engine's held decisions ("What we held", which also
+    // carry the safety holds); what is changing is the adjustment cards
+    // plus the reintroduction ramp's own lines; what we watch is the
+    // coach's forward line. The outcome of the last change leads the
+    // decision card.
+    expect(SCREEN).toMatch(/weeklyStory\?\.outcome \? \(/);
+    expect(SCREEN).toMatch(/\{weeklyStory\.outcome\.text\}/);
+    expect(SCREEN).toMatch(/const rampChanges = \(weeklyStory\?\.changing \?\? \[\]\)\.filter\(\(c\) => c\.from === 'plan\.reintroduction'\)/);
+    expect(SCREEN).toMatch(/const weekRows = buildWeekRows\(\{/);
+    expect(SCREEN).toMatch(/context: coachCtx,\s*\n\s*checkin,/);
   });
 
   test('each change renders its own why beside it', () => {
-    expect(SCREEN).toMatch(/\{c\.text\}<\/Text>\s*\n\s*<Text style=\{\[styles\.storyWhy/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). A
+    // stepping change is one row: the change as its title, its own why as
+    // the line under it.
+    expect(SCREEN).toMatch(/icon="trending-up-outline" title=\{c\.text\} sub=\{c\.why\}/);
   });
 });

@@ -129,8 +129,13 @@ describe('the rate shown as evidence is the rate the decision used', () => {
 
   test('the Coach Output surface shows it, labelled and distinguished from the scale chip', () => {
     const screen = read('screens/CoachOutputScreen.js');
-    expect(screen).toMatch(/label="Coaching trend"/);
-    expect(screen).toMatch(/value=\{trend\.coachingRateLabel\}/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision
+    // screen, register D206: "Redesign it in line with the rest of the
+    // app ... Cut the duplicate."). The chips became the "Your week" rows;
+    // the decision rate is its own labelled row, signed from the engine's
+    // coachingRatePct and falling back to the stored label.
+    expect(screen).toMatch(/label: 'Coaching trend'/);
+    expect(screen).toMatch(/value: formatCoachingRate\(trend\.coachingRatePct\) \?\? trend\.coachingRateLabel/);
     // The scale chip keeps its own identity and says which is which.
     expect(screen).toMatch(/'7-day trend'/);
     expect(screen).toMatch(/This is the scale reading\./);

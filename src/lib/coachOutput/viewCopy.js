@@ -107,3 +107,128 @@ export const CONFIDENCE_CAPTIONS = {
   medium: 'Confidence: medium. Some data was thin this week, so changes are sized cautiously.',
   low: 'Confidence: low. The trend is still building, so this week stays conservative.',
 };
+
+// ─── The "Your week" rows (D206, founder order 2026-09-26) ─────────────────
+//
+// "Cut the duplicate": the Coaching decision screen printed the same few
+// facts three to five times over (stat chips, the coach's acknowledgement,
+// the working/off ledger, the story's "what happened", the focus card). The
+// week's facts now appear ONCE, as rows: a fact's name, its value, and at
+// most one status mark. Pure: every value is read from facts the screen
+// already holds; nothing here computes a new judgement.
+//
+// Marks are deliberately sparse. Training effort may be marked done
+// ('good') or short ('attention'); a wellbeing answer that is worth a look
+// is marked 'attention'. A body-weight row and a food row NEVER carry a
+// mark: colour is never a verdict on body weight (styling HARD RULES) and,
+// conservatively, never on food either.
+
+/** The Weekly check-in's own scale words, 1 to 5 (WeeklyCheckInScreen). */
+export const ENERGY_LABELS = Object.freeze({ 1: 'Low', 2: 'Below normal', 3: 'Normal', 4: 'Good', 5: 'High' });
+export const SORENESS_LABELS = Object.freeze({ 1: 'None', 2: 'Mild', 3: 'Moderate', 4: 'High', 5: 'Very high' });
+
+/** The check-in's calorie answer, as a value (never a mark). */
+const CALORIE_VALUES = Object.freeze({
+  yes: 'Hit your target',
+  no: 'Off target',
+  under: 'Under target',
+  over: 'Over target',
+  untracked: 'Not tracked',
+});
+
+const finite = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+/**
+ * @param {object} input
+ * @param {number} [input.sessionsCompleted]
+ * @param {number} [input.sessionsPlanned]
+ * @param {number} [input.prsThisWeek]
+ * @param {{value: string, icon: string, label: string, tooltip?: string}|null} [input.weight]
+ *   the screen's already-formatted 7-day trend (units honoured there)
+ * @param {{value: string, label: string, tooltip?: string}|null} [input.rate]
+ *   the decision's coaching rate, as the engine labelled it
+ * @param {object|null} [input.context] the coach context the run decided from
+ * @param {object|null} [input.checkin] this week's check-in answers
+ * @returns {Array<{key: string, icon: string, label: string, value: string,
+ *   mark: ('good'|'attention'|null), tooltip: (string|null)}>}
+ */
+export function buildWeekRows({
+  sessionsCompleted = null, sessionsPlanned = null, prsThisWeek = null,
+  weight = null, rate = null, context = null, checkin = null,
+} = {}) {
+  const rows = [];
+  const push = (key, icon, label, value, mark = null, tooltip = null) => {
+    rows.push({ key, icon, label, value, mark, tooltip });
+  };
+
+  // Training.
+  const done = finite(sessionsCompleted);
+  const planned = finite(sessionsPlanned);
+  if (planned != null && planned > 0 && done != null) {
+    const mark = done >= planned ? 'good' : done < planned * 0.75 ? 'attention' : null;
+    push('sessions', 'barbell-outline', 'Sessions', `${done} of ${planned}`, mark);
+  } else if (done != null && done > 0) {
+    push('sessions', 'barbell-outline', 'Sessions', String(done));
+  }
+  const progress = context?.training?.progress?.signal ?? null;
+  if (progress === 'good') push('lifts', 'trending-up-outline', 'Main lifts', 'Moving up', 'good');
+  else if (progress === 'poor') push('lifts', 'trending-up-outline', 'Main lifts', 'Not moving', 'attention');
+  const prs = finite(prsThisWeek);
+  if (prs != null && prs > 0) push('prs', 'flash-outline', 'PRs', String(prs), 'good');
+
+  // Body weight: never marked.
+  if (weight?.value) push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
+  if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
+
+  // Food: never marked.
+  const coverage = context?.nutrition?.coverage ?? null;
+  const days = finite(coverage?.value);
+  if (days != null) push('food', 'restaurant-outline', 'Food logged', `${days} of 7 days`);
+  const cals = checkin?.calsAdherence ?? null;
+  if (cals && CALORIE_VALUES[cals]) push('calories', 'flame-outline', 'Calories', CALORIE_VALUES[cals]);
+
+  // Recovery: an answer worth a look is marked; a fine one is simply stated.
+  const energy = finite(checkin?.energyScore);
+  if (energy != null && ENERGY_LABELS[energy]) {
+    push('energy', 'battery-half-outline', 'Energy', ENERGY_LABELS[energy], energy <= 2 ? 'attention' : null);
+  }
+  const soreness = finite(checkin?.sorenessScore);
+  if (soreness != null && SORENESS_LABELS[soreness]) {
+    push('soreness', 'body-outline', 'Soreness', SORENESS_LABELS[soreness], soreness >= 4 ? 'attention' : null);
+  }
+  const sleep = finite(checkin?.sleepHours);
+  if (sleep != null) {
+    push('sleep', 'moon-outline', 'Sleep', `${sleep.toFixed(1)} h a night`, sleep < 6.5 ? 'attention' : null);
+  }
+  if (checkin?.jointPain) push('joints', 'medkit-outline', 'Joints', 'Flagged', 'attention');
+  if (context?.recovery?.systemic?.signal === 'poor') {
+    push('recovery', 'pulse-outline', 'Recovery', 'Harder than usual', 'attention');
+  }
+  return rows;
+}
+
+/**
+ * Split an engine sentence into a row's title and its reason at the first
+ * full stop ("Calories held. Trend is on target." -> title + sub). The
+ * words are untouched; only where the line breaks changes. A sentence
+ * with no second part is all title.
+ */
+export function splitLead(text) {
+  if (typeof text !== 'string' || !text.trim()) return { title: '', sub: null };
+  const at = text.indexOf('. ');
+  if (at < 0) return { title: text.trim(), sub: null };
+  return { title: text.slice(0, at + 1).trim(), sub: text.slice(at + 2).trim() || null };
+}
+
+/**
+ * The coaching rate as a row value: signed like the 7-day trend row beside
+ * it ("+0.28%/wk", "-0.4%/wk"), "Steady" inside the engine's own 0.01 band.
+ * The number is the engine's coachingRatePct (C10F), already rounded for
+ * display; nothing is recalculated. Non-finite input returns null.
+ */
+export function formatCoachingRate(pct) {
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return null;
+  if (Math.abs(pct) <= 0.01) return 'Steady';
+  return `${pct > 0 ? '+' : '-'}${Math.abs(pct)}%/wk`;
+}

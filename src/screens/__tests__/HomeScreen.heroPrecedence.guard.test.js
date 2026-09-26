@@ -154,9 +154,19 @@ describe('Train mirrors the week-complete state (B-1)', () => {
 
 describe('D-2 — the Manual-mode ownership note renders on hold weeks too', () => {
   test('the same one line stands in both hero branches', () => {
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). The
+    // note lives ONCE, in the decision footer, and that footer renders in
+    // both branches: inside the hold card, and inside whichever
+    // adjustment card is the hero on a change week.
     const note = 'Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.';
-    expect((coachOutput.split(note).length - 1)).toBe(2);
-    // Both occurrences are gated on the same fact, in the same place.
-    expect((coachOutput.match(/\{applyDisabled \? \(\n\s*<Text style=\{\[styles\.manualModeNote, live\.manualModeNote\]\}>/g) || []).length).toBe(2);
+    expect((coachOutput.split(note).length - 1)).toBe(1);
+    const footerAt = coachOutput.indexOf('const decisionFooter = (');
+    expect(footerAt).toBeGreaterThan(-1);
+    expect(coachOutput.slice(footerAt, footerAt + 800)).toMatch(/\{applyDisabled \? \(\s*\n\s*<Text[^>]*>\s*\n\s*Manual mode:/);
+    // The hold card draws the footer; each hero-capable card receives it.
+    expect(coachOutput).toMatch(/\{decisionEyebrow\}[\s\S]{0,400}\{decisionFooter\}\s*\n\s*<\/Card>/);
+    expect((coachOutput.match(/footer=\{zones\.heroKind === '(training|nutrition|dietBreak)' \? decisionFooter : null\}/g) || []).length).toBe(3);
   });
 });

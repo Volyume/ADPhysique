@@ -126,6 +126,7 @@ import { GLOSSARY } from '../lib/coachGlossary';
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import { appAlert } from '../components/AppAlert';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
@@ -148,18 +149,20 @@ import {
 import {
   DAY_NAMES_FULL,
   CONFIDENCE_CAPTIONS,
-  buildFocus,
-  buildOffItems,
+  buildWeekRows,
+  formatCoachingRate,
+  splitLead,
   weekRangeLabel,
   decisionAgeNote,
 } from '../lib/coachOutput/viewCopy';
 import {
-  LedgerCard,
+  CardTitle,
+  LinkRow,
   RapidLossAlert,
-  SectionHeader,
-  StatChip,
-  WhyBlock,
+  TextRow,
+  WeekRowsCard,
 } from '../components/coachOutput/CoachOutputCards';
+import { SettingRow } from '../components/SettingsPrimitives';
 
 // D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3 "both" placement):
 // the adherence-why line's one-time seen-flag, same '@volyume_seen_*'
@@ -230,11 +233,11 @@ function AdjustmentRow({
   const showApply = (!!onApply && !applied && !holdNote) || settling;
   return (
     <View style={styles.adjustmentRow}>
-      {/* Lead review 2026-09-26 (D206, one amber): the row's glyph and its
-          backing are neutral now; amber on this screen is the committing
-          action alone, never a static icon on every adjustment row. */}
+      {/* D206 redesign: an actionable row wears the app's row idiom, the
+          amber glyph on its tinted box (SettingRow, the Coach tab's NavRow);
+          rows you cannot act on use a small grey glyph instead. */}
       <View style={[styles.adjustmentIconWrap, live.adjustmentIconWrap]}>
-        <Ionicons name={iconName} size={18} color={t.colors.textSecondary} />
+        <Ionicons name={iconName} size={18} color={t.colors.primary} />
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
@@ -302,6 +305,9 @@ function NextWeekCard({
   onDeclineCalories, declined = false,
   applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
+  // D206: as the hero, the card carries the decision's eyebrow (the week)
+  // and footer (the reason, the last change, confidence, the link).
+  eyebrow = null, footer = null,
 }) {
   const { calories } = adjustments;
 
@@ -331,7 +337,8 @@ function NextWeekCard({
 
   return (
     <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
-      <SectionHeader title="Nutrition" />
+      {eyebrow}
+      <CardTitle title="Nutrition" />
       {calories !== null ? (
         <AdjustmentRow
           iconName="flame-outline"
@@ -357,6 +364,7 @@ function NextWeekCard({
           note="No change needed this week."
         />
       )}
+      {footer}
     </Card>
   );
 }
@@ -378,6 +386,7 @@ function TrainingNextWeekCard({
   // block's own recovery week instead of calling both "your recovery week".
   currentRecoveryState = null,
   rampLine = null,
+  eyebrow = null, footer = null,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
@@ -412,7 +421,8 @@ function TrainingNextWeekCard({
 
   return (
     <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
-      <SectionHeader title="Training next week" tooltip={GLOSSARY.volume} />
+      {eyebrow}
+      <CardTitle title="Training next week" tooltip={GLOSSARY.volume} />
       {deloadSuggested ? (
         <>
           <AdjustmentRow
@@ -508,6 +518,7 @@ function TrainingNextWeekCard({
           ) : null}
         </>
       )}
+      {footer}
     </Card>
   );
 }
@@ -515,7 +526,7 @@ function TrainingNextWeekCard({
 // NU-4: the button drops the old "week" claim (the write has no expiry) and
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
-function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, allowApplyWithNotice = false, hero }) {
+function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, allowApplyWithNotice = false, hero, eyebrow = null, footer = null }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -524,6 +535,7 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
   const settling = applyState === 'success';
   return (
     <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
+      {eyebrow}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <Text style={hero ? [styles.dietBreakTitleHero, live.dietBreakTitleHero] : [styles.dietBreakTitle, live.dietBreakTitle]}>Diet break worth considering</Text>
         <InfoTooltip text={GLOSSARY.maintenanceCalories} size={13} />
@@ -570,6 +582,7 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
           />
         </ApplyExit>
       )}
+      {footer}
     </Card>
   );
 }
@@ -581,97 +594,54 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
 // trains whenever life allows, so a target that depends on knowing which
 // calendar day they train is a guess. There is ONE base daily target.
 
-function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUnit }) {
+function HeldDecisionsCard({ decisions, energyUnit }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
-  // See buildLiveStyles' header comment (defined below the frozen `styles`
-  // block) for why. No haptics in this card: it is a held-decision surface
-  // (hard exclusion, campaign item 1 authority doc).
-  const t = useTheme();
-  const live = buildLiveStyles(t);
+  // No haptics in this card: it is a held-decision surface (hard exclusion,
+  // campaign item 1 authority doc).
+  //
+  // D206 redesign (founder order 2026-09-26): the card sits under the
+  // screen's "What we held" section label, so it carries no title of its
+  // own. The structured safety blocks (ED pattern, rapid-loss compression)
+  // render first, exactly as before, inside the card's own padding. Each
+  // standard hold is one row: what was held, then why, split at the
+  // engine sentence's first full stop (the words are untouched). The
+  // previous-weeks shelf and its "See all weeks" button duplicated the
+  // Coaching history screen, and the "See how Precision Coaching decides"
+  // button duplicated the decision card's own link, so both now live once:
+  // Coaching history under "Plan ahead", the method link on the decision.
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
   const rapidLossCorrected = decisions.find(d => d.type === 'rapid_loss_corrected');
-  // Filter history entries that have held decisions
-  const historyWithHeld = (history ?? []).filter(
-    h => h.heldDecisions && h.heldDecisions.length > 0
-  );
-  // Other decisions render in the standard plain-reason rows; the
-  // structured variants (ED-pattern, rapid-loss compression) render
-  // in their own rich blocks above.
+  const hasSafetyBlocks = !!(edLockout || edCleared || rapidLossCorrected);
+  // Other decisions render as plain-reason rows; the structured variants
+  // (ED-pattern, rapid-loss compression) render in their own rich blocks.
   const standardDecisions = decisions.filter(
     d => d.type !== 'ed_pattern_lockout' &&
          d.type !== 'ed_pattern_cleared' &&
          d.type !== 'rapid_loss_corrected',
   );
   return (
-    <Card style={styles.heldCard}>
-      {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
-      {edCleared ? <EdPatternClearedBlock /> : null}
-      {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} energyUnit={energyUnit} /> : null}
-      {standardDecisions.length > 0 ? (
-        <>
-          <SectionHeader title="What we held this week" />
-          {standardDecisions.map((d, i) => (
-            <View key={i} style={styles.heldRow}>
-              <Ionicons name="pause-circle-outline" size={16} color={t.colors.textMuted} style={{ marginTop: spacing.xxs }} />
-              <Text style={[styles.heldText, live.heldText]}>{d.reason}</Text>
-            </View>
-          ))}
-          {/* COMP-006: only on standard holds, never alongside the ED-pattern
-              or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
-          {onLearnMore ? (
-            <Button
-              title="See how Precision Coaching decides"
-              variant="secondary"
-              size="sm"
-              icon="information-circle-outline"
-              fullWidth={false}
-              style={styles.quietActionSpace}
-              onPress={onLearnMore}
-              accessibilityLabel="See how Precision Coaching decides"
-            />
-          ) : null}
-        </>
-      ) : null}
-      {historyWithHeld.length > 0 ? (
-        <View style={styles.heldHistoryShelf}>
-          <Text style={[styles.heldHistoryTitle, live.heldHistoryTitle]}>PREVIOUS WEEKS</Text>
-          {historyWithHeld.map((entry, i) => (
-            <View
-              key={i}
-              style={[
-                styles.heldHistoryEntry,
-                live.heldHistoryEntry,
-                i === historyWithHeld.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <Text style={[styles.heldHistoryDate, live.heldHistoryDate]}>{weekRangeLabel(entry.weekStart)}</Text>
-              {entry.heldDecisions.map((d, j) => (
-                <Text key={j} style={[styles.heldHistoryText, live.heldHistoryText]}>{d.reason}</Text>
-              ))}
-            </View>
-          ))}
+    <Card padding="none" style={styles.heldCard}>
+      {hasSafetyBlocks ? (
+        <View style={styles.heldSafety}>
+          {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
+          {edCleared ? <EdPatternClearedBlock /> : null}
+          {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} energyUnit={energyUnit} /> : null}
         </View>
-      ) : (
-        <View style={styles.heldHistoryShelf}>
-          <Text style={[styles.heldHistoryEmptyText, live.heldHistoryEmptyText]}>
-            Your held-decision history will appear here as weeks pass.
-          </Text>
-        </View>
-      )}
-      {onSeeAll ? (
-        <Button
-          title="See all weeks"
-          variant="secondary"
-          size="sm"
-          trailingIcon="chevron-forward"
-          fullWidth={false}
-          style={styles.quietActionSpaceMd}
-          onPress={onSeeAll}
-          accessibilityLabel="See all coaching decisions"
-        />
       ) : null}
+      {standardDecisions.map((d, i) => {
+        const { title, sub } = splitLead(d.reason);
+        return (
+          <TextRow
+            key={i}
+            first={i === 0 && !hasSafetyBlocks}
+            icon="pause-circle-outline"
+            title={title}
+            sub={sub}
+          />
+        );
+      })}
     </Card>
   );
 }
@@ -2542,7 +2512,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   const {
     weekLabel,
     trend,
-    whatWorking,
     adjustments,
     cyclePhaseNote,
     whyThisWeek,
@@ -2735,6 +2704,61 @@ export default function CoachOutputScreen({ navigation, route }) {
       liveMaintenanceAuthority?.effectiveMaintenanceKcal ?? null,
     )?.newKcal ?? null)
     : null;
+  // ── D206 redesign (founder order 2026-09-26) ──────────────────────────────
+  // "Redesign it in line with the rest of the app ... Cut the duplicate."
+  // The decision leads the screen as ONE elevated card in Today's hero
+  // shape: the week as its muted eyebrow, the decision, then its reason,
+  // what came of the last change, how solid this week's read was, and one
+  // quiet link to how the coach decides. On a hold week it is its own card;
+  // on a change week the hero adjustment card carries the same eyebrow and
+  // footer, so both kinds of week read the same way.
+  const decisionAge = decisionAgeNote(weekStart, localWeekStartMs());
+  const decisionEyebrow = (
+    <View style={styles.decisionEyebrow}>
+      <SectionLabel tone="muted" numberOfLines={2}>{`${weekLabel} · ${weekRangeLabel(weekStart)}`}</SectionLabel>
+      {/* C6 RB6-9 (D97-25): a decision older than its own week says so.
+          The Apply buttons stay live - resuming is the user's tap. */}
+      {decisionAge ? <Text style={[styles.decisionMeta, live.decisionMeta]}>{decisionAge}</Text> : null}
+    </View>
+  );
+  // NU-8: the engine grades every weekly decision's data confidence
+  // (assessDataConfidence) and persists it; one calm line says how solid
+  // this week's read was. Campaign 23 R2 (D99): the weigh-in clause is keyed
+  // off the OBSERVABLE weigh-in count alone, never the caption, so a
+  // photo-corroborated caption can never hide genuine data thinness.
+  const confidenceLine = CONFIDENCE_CAPTIONS[displayConfidence]
+    ? `${CONFIDENCE_CAPTIONS[displayConfidence]}${weighInsThisWeek != null && weighInsThisWeek < 4
+      ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
+      : ''}`
+    : null;
+  const decisionFooter = (
+    <View style={styles.decisionFooter}>
+      {/* D93 / D-2: Manual mode strips the Apply pills; one line says who
+          owns the change, on a hold week as on a change week. */}
+      {applyDisabled ? (
+        <Text style={[styles.decisionMeta, live.decisionMeta]}>
+          Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
+        </Text>
+      ) : null}
+      {whyThisWeek ? <Text style={[styles.decisionWhy, live.decisionWhy]}>{whyThisWeek}</Text> : null}
+      {/* CAMPAIGN 18 outcome follow-up: what came of the LAST accepted
+          change, the thing the athlete has been waiting to hear. */}
+      {weeklyStory?.outcome ? (
+        <View style={styles.decisionOutcome}>
+          <Ionicons name="refresh-outline" size={16} color={t.colors.textSecondary} style={styles.decisionOutcomeGlyph} />
+          <Text style={[styles.decisionWhy, live.decisionWhy, styles.decisionOutcomeText]}>{weeklyStory.outcome.text}</Text>
+        </View>
+      ) : null}
+      {confidenceLine ? <Text style={[styles.decisionMeta, live.decisionMeta]}>{confidenceLine}</Text> : null}
+      <View style={[styles.decisionRule, live.decisionRule]} />
+      <LinkRow
+        icon="information-circle-outline"
+        label="How this decision was made"
+        onPress={() => navigation.navigate('Methodology', { source: 'why_block' })}
+      />
+    </View>
+  );
+
   const trainingCardEl = (
     <TrainingNextWeekCard
       output={output}
@@ -2761,6 +2785,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       deloadNote={deloadNote}
       onApplyDeload={applyDisabled ? undefined : handleApplyDeload}
       hero={zones.heroKind === 'training'}
+      eyebrow={zones.heroKind === 'training' ? decisionEyebrow : null}
+      footer={zones.heroKind === 'training' ? decisionFooter : null}
       navigation={navigation}
     />
   );
@@ -2777,6 +2803,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       calorieNotice={applyNotice.calories ?? null}
       hero={zones.heroKind === 'nutrition'}
       heroRow="calories"
+      eyebrow={zones.heroKind === 'nutrition' ? decisionEyebrow : null}
+      footer={zones.heroKind === 'nutrition' ? decisionFooter : null}
     />
   );
   const dietBreakCardEl = dietBreakSuggested ? (
@@ -2792,6 +2820,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       notice={applyNotice.dietBreak ?? null}
       allowApplyWithNotice={dietBreakPreviewChanged}
       hero={zones.heroKind === 'dietBreak'}
+      eyebrow={zones.heroKind === 'dietBreak' ? decisionEyebrow : null}
+      footer={zones.heroKind === 'dietBreak' ? decisionFooter : null}
     />
   ) : null;
   const CARD_BY_KIND = {
@@ -2820,6 +2850,55 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   };
 
+  // "Plan next week's meals" is one row under Plan ahead; its two ways in
+  // (a fresh week, or last week again) are the house alert's choices.
+  const openMealPlanChoice = () => {
+    if (planningWeek) return;
+    appAlert(
+      "Plan next week's meals",
+      "A full week built to next week's targets, with a shopping list. Start a fresh week, or repeat last week's meals.",
+      [
+        { text: 'Fresh week', onPress: () => handlePlanNextWeek(false) },
+        { text: 'Repeat last week', onPress: () => handlePlanNextWeek(true) },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  };
+
+  // D206: the week's facts, once. The 7-day trend keeps its NU-5 label, its
+  // T15 science bracket and its D93 disclosure gloss (ON THIS SURFACE ONLY
+  // the gloss says the decision reads the coaching trend, not this number);
+  // the coaching trend is the rate the decision was made from (C10F).
+  const weekRows = buildWeekRows({
+    sessionsCompleted,
+    sessionsPlanned,
+    prsThisWeek,
+    weight: {
+      value: weightChipValue,
+      icon: trendIcon,
+      label: withScience('7-day trend', 'EWMA', !!userProfile?.showScience),
+      tooltip: trend.delta !== null
+        ? `${GLOSSARY.ewma} This is the scale reading. The weekly decision is made from the coaching trend shown beside it, which ignores one-off spikes and accounts for how long ago you last logged.`
+        : null,
+    },
+    // The rate's value is signed like the 7-day row above it, from the
+    // engine's own number; a stored output from before C10F carried only
+    // the label, which reads as it always did.
+    rate: (trend.coachingRateLabel || Number.isFinite(trend.coachingRatePct)) ? {
+      value: formatCoachingRate(trend.coachingRatePct) ?? trend.coachingRateLabel,
+      label: 'Coaching trend',
+      tooltip: 'The rate this week\'s decision was made from. It smooths out one-off spikes and measures across the time that actually passed since your last regular weigh-ins, so it can differ a little from the raw scale reading.',
+    } : null,
+    context: coachCtx,
+    checkin,
+  });
+  // What comes next: the reintroduction ramp's own line when it is
+  // stepping (T2-25; the other story changes are the adjustment cards
+  // above), then the coach's forward line in the user's register, split
+  // into its day and its tail.
+  const rampChanges = (weeklyStory?.changing ?? []).filter((c) => c.from === 'plan.reintroduction');
+  const forwardLead = coachResponse.forward ? splitLead(coachResponse.forward) : null;
+
   // E9: the weekly reveal is a staged disclosure. Four beats land in
   // sequence on the UI thread: header, the coach's read, the verdict (the
   // hero gets the long beat so the main move lands with weight), then the
@@ -2835,23 +2914,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Week header */}
-        <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
-          <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
-          <Text style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
-          {/* C6 RB6-9 (D97-25): a decision older than its own week says so.
-              The Apply buttons stay live - resuming is the user's tap. */}
-          {decisionAgeNote(weekStart, localWeekStartMs()) ? (
-            <Text style={[styles.weekRange, live.weekRange]}>
-              {decisionAgeNote(weekStart, localWeekStartMs())}
-            </Text>
-          ) : null}
-        </Reanimated.View>
-
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once
             ever, on the first real weekly output (showAdherenceWhy is set at
-            load time from the '@volyume_seen_*' flag and never re-shown).
-            The other placement is ProSetupCompleteScreen, at Pro setup. */}
+            load time from the '@volyume_seen_*' flag and never re-shown). */}
         {showAdherenceWhy ? (
           <View style={styles.coachNoteRow}>
             <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
@@ -2861,193 +2926,27 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* U-B-3 §4: the local headline duplicate was dropped, the engine
-            coachResponse lead below is the single narration source. */}
-
-        {/* Coach response parts 1 and 2: the specific, data-referenced
-            acknowledgement and the plain-language trend read lead the
-            card before any decision detail. */}
-        {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || baseCoachResponse.interpretation) ? (
-          // R2 cohesion (2026-09-26): the card box now renders through the
-          // shared Card primitive; the staged entrance and the accessible
-          // grouping (Card has no `accessible` prop to take it) stay on this
-          // outer animated wrapper exactly as before.
-          <Reanimated.View
-            entering={stage(1)}
-            accessible
-            accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, baseCoachResponse.interpretation].filter(Boolean).join(' ')}
-          >
-            <Card style={styles.coachLeadCard}>
-              {/* S1c: last week's pre-commitment, answered. Leads the card, it is
-                  the "did the coach get it right" payoff that pulls users back. */}
-              {coachResponse.commitmentAnswer ? (
-                <Text style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
-              ) : null}
-              {coachResponse.acknowledgement ? (
-                <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
-              ) : null}
-              {/* D86: the lead paragraph is the WEEKLY decision only, so it
-                  renders the base interpretation. The photo sentence that
-                  applyProgressScanCoachContext folds in (wiring unchanged, see
-                  progressScanCoachIsolation.guard) now surfaces once, in the
-                  compact Progress photos card low on the page, instead of
-                  dominating the top of the screen. */}
-              {baseCoachResponse.interpretation ? (
-                <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{baseCoachResponse.interpretation}</Text>
-              ) : null}
-            </Card>
-          </Reanimated.View>
-        ) : null}
-
-        {/* 2. The VERDICT, hero zone (U-B-1 §3 / A1 03 gap #1): the engine's
-            single top move (output.primary via the zones), promoted to the top
-            of the screen directly after the coach lead. The card renders on
-            surfaceElevated with the decision statement at verdict size and the
-            screen's ONE amber-filled Apply. When primary.domain is null
-            (on-target/holding), no hero shows. */}
-        {heroCardEl ? (
-          <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
-            {/* D93 (Campaign 2, Phase 12 / review A finding 5): Manual mode
-                strips the Apply pills, which left a proposal row identical
-                to an informational one. One line above the cards makes the
-                ownership unmistakable without re-threading three cards. */}
-            {applyDisabled ? (
-              <Text style={[styles.manualModeNote, live.manualModeNote]}>
-                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
-              </Text>
-            ) : null}
-            {heroCardEl}
-            {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
-                line here; the full WhyBlock further down keeps the detail. */}
-            {whyThisWeek ? (
-              <Text style={[styles.heroWhy, live.heroWhy]}>
-                {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
-              </Text>
-            ) : null}
-          </Reanimated.View>
-        ) : (
-          /* Wave A B6: "hold everything" is a decision too, on a good week
-             the strongest one. Non-applyable, never amber (one-amber rule).
-             When safety holds are active the copy defers to them rather than
-             claiming the plan is simply working. */
-          <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
-            {/* D-2 (final certification 2026-09-05): the Manual-mode
-                ownership note used to render only in the hero-card branch
-                above, so on a hold-everything week a Manual user saw rows
-                with no Apply pills and no line saying why. Same line, same
-                place, same style. */}
-            {applyDisabled ? (
-              <Text style={[styles.manualModeNote, live.manualModeNote]}>
-                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
-              </Text>
-            ) : null}
-            <Card elevated style={styles.holdHeroCard}>
-              <Text style={[styles.holdHeroText, live.holdHeroText]}>
+        {/* 1. THE DECISION. One elevated card, Today's hero shape. A change
+            week's hero adjustment card carries the same eyebrow and footer;
+            a hold week draws it here. "Hold everything" is a decision too,
+            never amber (Wave A B6); with safety holds active the copy
+            defers to them rather than claiming the plan is simply working. */}
+        <Reanimated.View entering={stage(0, motion.hero)}>
+          {heroCardEl ?? (
+            <Card elevated style={styles.decisionCard}>
+              {decisionEyebrow}
+              <Text style={[styles.decisionTitle, live.decisionTitle]} accessibilityRole="header">
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady this week.'
                   : 'Nothing to change. The plan is working.'}
               </Text>
-              {whyThisWeek ? (
-                <Text style={[styles.heroWhy, live.heroWhy]}>
-                  {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
-                </Text>
-              ) : null}
+              {decisionFooter}
             </Card>
-          </Reanimated.View>
-        )}
-
-        {/* 3. Trend chips */}
-        <Reanimated.View entering={stage(3)} style={styles.chipsRow}>
-          <StatChip
-            icon={trendIcon}
-            value={weightChipValue}
-            // NU-5: the number is a 7-day smoothed trend, the same vocabulary
-            // the check-in uses. Never labelled as a plain weekly change.
-            // T15: the science opt-in brackets the technical name after it.
-            label={trend.delta !== null ? withScience('7-day trend', 'EWMA', !!userProfile?.showScience) : null}
-            // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
-            // reused here so the "7-day trend" number is explained the same
-            // way everywhere it appears. Only shown once there is a trend to explain.
-            // D93 (Campaign 2, Phase 10): ON THIS SURFACE ONLY, the gloss
-            // carries the decision-trend disclosure - the weekly verdict
-            // reads direction from robust tracking, not this exact number,
-            // and beside the decision the bare gloss would imply otherwise.
-            // The free-tier trend surfaces keep the plain gloss (no coach
-            // claim belongs there), and no smoother is named.
-            tooltip={trend.delta !== null
-              ? `${GLOSSARY.ewma} This is the scale reading. The weekly decision is made from the coaching trend shown beside it, which ignores one-off spikes and accounts for how long ago you last logged.`
-              : undefined}
-          />
-          {/* C10F: the rate the DECISION was actually made from. The chip
-              above is the scale reading; this is the evidence behind the
-              on-target verdict, so the number and the verdict a user reads
-              together now come from the same place. Shown only when there
-              is a decision rate to show. */}
-          {trend.coachingRateLabel ? (
-            <StatChip
-              icon="analytics-outline"
-              value={trend.coachingRateLabel}
-              label="Coaching trend"
-              tooltip={'The rate this week\'s decision was made from. It smooths out one-off spikes and measures across the time that actually passed since your last regular weigh-ins, so it can differ a little from the raw scale reading.'}
-            />
-          ) : null}
-          <StatChip
-            icon="barbell-outline"
-            value={`${sessionsCompleted}/${sessionsPlanned}`}
-            label="sessions"
-          />
-          {prsThisWeek > 0 && (
-            <StatChip
-              icon="flash-outline"
-              value={`${prsThisWeek} PR${prsThisWeek !== 1 ? 's' : ''}`}
-            />
           )}
         </Reanimated.View>
 
-        {/* (D86: the Progress photos card moved LOW on the page, beside the
-            confidence caption, and compacted. Photos are an optional add-on
-            to check-ins, never the story of the week.) */}
-
-        {/* Opt-in "share your week", only on a genuinely great, ED-safe week
-            (blueprint §5/§7). Routes through the qualitative, ED-safe recap card.
-            No haptic here (campaign item 1 hard exclusion: wellbeing-adjacent
-            surface -- this button routes to the weight/PR-bearing recap share). */}
-        {greatWeek && (
-          /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
-             of the loop; it no longer renders at footnote weight. Success
-             tint, never amber (one-amber rule). */
-          // R9/M9 (share-card audit 2026-07-27): entry points into the share
-          // flow standardise on "Create share image" across the app. Lead
-          // review 2026-09-26 (founder order, one visual system): the
-          // hand-rolled success-tint pill is the shared Button now, the
-          // standard primary (raised surface, amber glyph) so a great week's
-          // share still carries more weight than the quiet actions around
-          // it without a bespoke chrome; it only renders under the
-          // `greatWeek` gate above.
-          <Button
-            title="Create share image"
-            variant="primary"
-            size="sm"
-            icon="share-outline"
-            fullWidth={false}
-            style={styles.shareWeekBtn}
-            onPress={handleShareWeek}
-            accessibilityLabel="Create share image"
-          />
-        )}
-
-        {/* 4. The working/off ledger (A1 03 gap #1): the old What's-working
-            card and What-was-off block merged into one two-group object.
-            Same bullets, same builders, one card. */}
-        <Reanimated.View entering={stage(4)}>
-          <LedgerCard working={whatWorking} off={buildOffItems(output, checkin)} />
-        </Reanimated.View>
-
-        {/* SECONDARY zone (U-B-1 §3): the remaining adjustments, collapsed under
-            a "More adjustments (N)" expander. Each card keeps its own Apply +
-            "Applied" chip exactly. Hidden entirely when there is nothing here. */}
+        {/* The remaining adjustments, collapsed under one expander. Each card
+            keeps its own Apply and "Applied" chip exactly. */}
         {secondaryEls.length > 0 ? (
           <CollapsibleSection
             title={`More adjustments (${secondaryEls.length})`}
@@ -3058,164 +2957,74 @@ export default function CoachOutputScreen({ navigation, route }) {
           </CollapsibleSection>
         ) : null}
 
-        {/* Food-level receipt: when the calorie change edited an active
-            meal plan, the coach says what moved, at the gram of rice. */}
+        {/* Food-level receipt: when the calorie change edited an active meal
+            plan, the coach says what moved. The deep link to the plan lives
+            here, beside the receipt it belongs to. */}
         {planEditNote ? (
           <Card style={styles.planEditCard} accessibilityRole="summary">
-            {/* Lead review 2026-09-26: the headline is a full sentence from
-                planExplain.js, so it reads as text under the card's label,
-                never as an uppercase overline. */}
-            <SectionLabel>Your meal plan</SectionLabel>
+            <CardTitle title="Your meal plan" />
             <Text style={[styles.planEditHeadline, live.planEditHeadline]}>{planEditNote.headline}</Text>
             <Text style={[styles.planEditBody, live.planEditBody]}>{planEditNote.body}</Text>
-          </Card>
-        ) : null}
-
-        {/* Seamless next-week meal setup (founder 2026-06-15): build or repeat
-            next week's meals straight from the check-in, then land on the plan
-            to swap and get the shopping list. */}
-        <Card style={styles.planEditCard}>
-          <SectionLabel>Plan next week&apos;s meals</SectionLabel>
-          <Text style={[styles.planEditBody, live.planEditBody]}>
-            A full week built to next week&apos;s targets, with a shopping list.
-            Review it, swap meals if needed, then add it to your diary.
-          </Text>
-          <View style={styles.nextWeekRow}>
-            <Button
-              title={planningWeek ? 'Building' : 'Fresh week'}
-              variant="secondary"
-              size="sm"
-              icon="calendar-outline"
-              fullWidth={false}
-              onPress={() => handlePlanNextWeek(false)}
-              disabled={planningWeek}
-              accessibilityLabel="Plan a fresh week of meals"
-            />
-            <Button
-              title="Repeat last week"
-              variant="secondary"
-              size="sm"
-              icon="repeat-outline"
-              fullWidth={false}
-              onPress={() => handlePlanNextWeek(true)}
-              disabled={planningWeek}
-              accessibilityLabel="Repeat last week's meals"
-            />
-          </View>
-          {planEditNote?.deepLink ? (
-            <Button
-              title={planEditNote.deepLink.label}
-              variant="secondary"
-              size="sm"
-              icon="restaurant-outline"
-              fullWidth={false}
-              style={styles.quietActionSpace}
-              onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
-              accessibilityLabel={planEditNote.deepLink.label}
-            />
-          ) : null}
-        </Card>
-
-        {/* U4: cycle-phase reassurance for a small period-week water rise
-            (advisory, no Apply; only present for a female user who flagged
-            their period and shows a water-plausible rise). */}
-        {cyclePhaseNote?.note ? (
-          <View style={styles.coachNoteRow}>
-            <Ionicons name="water-outline" size={14} color={t.colors.primary} />
-            <Text style={[styles.coachNoteText, live.coachNoteText]}>{cyclePhaseNote.note}</Text>
-          </View>
-        ) : null}
-
-        {/* CAMPAIGN 18 JOB 10: your week, as one account rather than as five
-            engines each having a say. Every line is traceable to a fact in
-            the context the decision was made from; a line with no evidence
-            behind it is simply not written. */}
-        {weeklyStory ? (
-          <Card style={styles.storyCard}>
-            <SectionLabel>Your week</SectionLabel>
-            {weeklyStory.outcome ? (
-              <Text style={[styles.storyLine, live.storyLine]}>{weeklyStory.outcome.text}</Text>
-            ) : null}
-            {weeklyStory.happened.map((l) => (
-              <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
-            ))}
-            {weeklyStory.means.map((l) => (
-              <Text key={l.text} style={[styles.storyMeans, live.storyMeans]}>{l.text}</Text>
-            ))}
-            {weeklyStory.changing.length ? (
-              <View style={styles.storyBlock}>
-                <SectionLabel>What is changing</SectionLabel>
-                {weeklyStory.changing.map((c) => (
-                  <View key={c.text} style={styles.storyChange}>
-                    <Text style={[styles.storyLine, live.storyLine]}>{c.text}</Text>
-                    <Text style={[styles.storyWhy, live.storyWhy]}>{c.why}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            {weeklyStory.staying.length ? (
-              <View style={styles.storyBlock}>
-                <SectionLabel>What stays the same</SectionLabel>
-                {weeklyStory.staying.map((l) => (
-                  <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
-                ))}
-              </View>
-            ) : null}
-            {weeklyStory.watching ? (
-              <Text style={[styles.storyWatch, live.storyWatch]}>{weeklyStory.watching.text}</Text>
+            {planEditNote?.deepLink ? (
+              <Button
+                title={planEditNote.deepLink.label}
+                variant="secondary"
+                size="sm"
+                icon="restaurant-outline"
+                fullWidth={false}
+                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
+                accessibilityLabel={planEditNote.deepLink.label}
+              />
             ) : null}
           </Card>
         ) : null}
 
-        {/* 6. Why */}
-        {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
-        {/* NU-8: the engine grades every weekly decision's data confidence
-            (assessDataConfidence) and persists it, but it was never surfaced.
-            One calm line so the user knows how solid this week's read was. */}
-        {CONFIDENCE_CAPTIONS[displayConfidence] ? (
-          <Text style={[styles.confidenceCaption, live.confidenceCaption]}>
-            {CONFIDENCE_CAPTIONS[displayConfidence]}
-            {/* Wave A B6: name WHICH data was thin when it was the weigh-ins.
-                No threshold claim here, so this line can never disagree with
-                the coachLedger's own gate numbers. This stays keyed off the
-                real logged-data `confidence` (never `displayConfidence`): a
-                photo-corroborated caption word must never hide or reframe a
-                genuine thin-weigh-in disclosure, per D18's "only the caption
-                moves" bound. */}
-            {/* Campaign 23 R2 (D99): keyed off the OBSERVABLE weigh-in count
-                alone, not the confidence caption. Raw 'high' already requires
-                5+ distinct weigh-in days (assessDataConfidence), so this is
-                behaviour-identical for every un-corroborated output — and on
-                a week where scan corroboration raised the emitted confidence,
-                the thinness disclosure now correctly STAYS visible (the D18
-                honesty rule "a raised caption must never hide genuine data
-                thinness", preserved under the unified confidence field). */}
-            {weighInsThisWeek != null && weighInsThisWeek < 4
-              ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
-              : ''}
-          </Text>
+        {/* SAFETY zone (U-B-1 §3): always visible, NEVER collapsed, directly
+            under the decision it qualifies. Rapid-loss alert, the diet break
+            when it is a safety block (not the hero), and the held decisions
+            (with their ED-pattern and rapid-loss blocks, untouched). */}
+        {rapidWeightLossFlag && <RapidLossAlert />}
+        {zones.dietBreakInSafety ? dietBreakCardEl : null}
+        {heldDecisions && heldDecisions.length > 0 ? (
+          <View style={styles.section}>
+            <SectionLabel heading>What we held</SectionLabel>
+            <HeldDecisionsCard decisions={heldDecisions} energyUnit={energyUnit} />
+          </View>
+        ) : null}
+
+        {/* 2. YOUR WEEK: every fact once, as rows (D206, "cut the
+            duplicate"). */}
+        {weekRows.length > 0 ? (
+          <Reanimated.View entering={stage(1)} style={styles.section}>
+            <SectionLabel heading>Your week</SectionLabel>
+            <WeekRowsCard rows={weekRows} />
+            {/* U4: cycle-phase reassurance for a small period-week water rise
+                (advisory; only for a female user who flagged her period). */}
+            {cyclePhaseNote?.note ? (
+              <View style={styles.coachNoteRow}>
+                <Ionicons name="water-outline" size={14} color={t.colors.primary} />
+                <Text style={[styles.coachNoteText, live.coachNoteText]}>{cyclePhaseNote.note}</Text>
+              </View>
+            ) : null}
+          </Reanimated.View>
         ) : null}
 
         {/* D86 (founder 2026-07-23): progress photos are an optional add-on to
-            check-ins, so their note lives LOW on the page as one compact card:
-            the receipt headline plus a single muted line. That muted line is
-            the receipt's detail when present, else the shared non-authority
-            sentence, and every branch of both states that targets come from
-            logged data (progressScanCheckInEvidence.js), so the invariant
-            "photos never set targets" stays visibly true on every path. The
-            packet composition, ED/calm suppression and engine isolation are
-            untouched (progressScanCoachIsolation.guard.test.js). */}
+            check-ins, so their note is one compact card: the receipt headline
+            plus a single muted line (the receipt's detail when present, else
+            the shared non-authority sentence), every branch stating that
+            targets come from logged data. Packet composition, ED/calm
+            suppression and engine isolation are untouched
+            (progressScanCoachIsolation.guard.test.js). Card has no
+            `accessible` prop, so the accessible grouping stays on this View. */}
         {canShowProgressScanCoachContext ? (
-          // R2 cohesion (2026-09-26): Card has no `accessible` prop to take,
-          // so the accessible grouping stays on this plain outer View exactly
-          // as before, wrapping the Card that now draws the box.
           <View
             accessible
             accessibilityRole="summary"
             accessibilityLabel={scanAssessmentPacket ? scanAssessmentAccessibilityLabel(scanAssessmentPacket) : progressScanCoachContext.body}
           >
             <Card style={styles.planEditCard}>
-              <SectionLabel>{progressScanCoachContext.title}</SectionLabel>
+              <CardTitle title={progressScanCoachContext.title} />
               {scanAssessmentPacket ? (
                 <>
                   <Text style={[styles.planEditBody, live.planEditBody]}>{scanAssessmentPacket.receipt.headline}</Text>
@@ -3232,60 +3041,32 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* 7. One focus for next week. Coach response part 4 (the single
-            tactical cue, deterministic priority, ED/calm aware) feeds this
-            card; buildFocus stays as the fallback when no cue is built. */}
-        {(() => {
-          const focus = coachResponse.cue ?? buildFocus(output, checkin);
-          if (!focus) return null;
-          return (
-            <Card style={styles.focusCard}>
-              <SectionLabel>Focus this week</SectionLabel>
-              <Text style={[styles.focusText, live.focusText]}>{focus}</Text>
+        {/* 3. NEXT: the reintroduction ramp while it steps, then the coach's
+            forward line (its register, its day). */}
+        {(rampChanges.length > 0 || forwardLead) ? (
+          <View style={styles.section}>
+            <SectionLabel heading>Next</SectionLabel>
+            <Card padding="none">
+              {rampChanges.map((c, i) => (
+                <TextRow key={c.text} first={i === 0} icon="trending-up-outline" title={c.text} sub={c.why} />
+              ))}
+              {forwardLead ? (
+                <TextRow
+                  first={rampChanges.length === 0}
+                  icon="calendar-outline"
+                  title={forwardLead.title}
+                  sub={forwardLead.sub}
+                />
+              ) : null}
             </Card>
-          );
-        })()}
-
-        {/* SAFETY zone (U-B-1 §3): always visible, NEVER collapsed. Rapid-loss
-            alert, the diet break when it is a safety block (not the hero), and
-            the held-decisions shelf (with its ED/rapid-loss sub-blocks). */}
-        {rapidWeightLossFlag && <RapidLossAlert />}
-        {zones.dietBreakInSafety ? dietBreakCardEl : null}
-        {heldDecisions && heldDecisions.length > 0 && (
-          <HeldDecisionsCard
-            decisions={heldDecisions}
-            history={coachHistory}
-            energyUnit={energyUnit}
-            onSeeAll={() => navigation.navigate('CoachHeldHistory')}
-            onLearnMore={() => navigation.navigate('Methodology', { source: 'held_decisions' })}
-          />
-        )}
-
-        {/* S1c pre-commitment + coach response part 5 (the forward-pull).
-            Founder device report 2026-08-06: these rendered as two bare
-            floating Text lines between the safety shelf and the footer
-            links, reading as debris rather than the close of the coach's
-            response. Same content, same deliberate below-the-safety-shelf
-            position, now inside the screen's quiet card idiom with a label
-            so it reads as designed. */}
-        {(coachResponse.preCommitment || coachResponse.forward) ? (
-          <Card style={styles.nextReadCard}>
-            <SectionLabel>Next check-in</SectionLabel>
-            {coachResponse.preCommitment ? (
-              <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
-            ) : null}
-            {coachResponse.forward ? (
-              <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
-            ) : null}
-          </Card>
+          </View>
         ) : null}
 
         {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
             holds outrank the countdown, unchanged) and null under any open
             wellbeing flag (rule 2/5, enforced in the pure lib). Neutral
-            styling: never amber (the hero Apply keeps the one-amber rule).
-            Process checkpoints only; peak week adds the standard medical
-            line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
+            styling, never amber. Process checkpoints only; peak week adds the
+            standard medical line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
         {countdown ? (
           <Card style={styles.countdownCard} accessibilityRole="summary">
             <Text style={[styles.countdownLine, live.countdownLine]}>{countdown.line}</Text>
@@ -3303,42 +3084,52 @@ export default function CoachOutputScreen({ navigation, route }) {
           </Card>
         ) : null}
 
-        {/* NAV-4 (founder decision): the Move #4 differential paywall used to
-            render here, unreachable by its free-tier audience behind
-            withProGuard. It now lives in HomeScreen's banner stack. */}
-
-        {/* Wave A B6: the coaching history was only reachable through the
-            held-decisions card, so a consistently on-target user never saw a
-            route to it. One permanent quiet link. */}
-        {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
-            the screen's only amber fill.
-            R2 cohesion (2026-09-26, founder order): Coaching history and
-            Done now share one footer row, gapped so they never touch. */}
-        <View style={styles.footerActions}>
-          <Button
-            title="Coaching history"
-            variant="secondary"
-            size="md"
-            icon="time-outline"
-            fullWidth
-            onPress={() => navigation.navigate('CoachHeldHistory')}
-            accessibilityLabel="Coaching history"
-          />
-          <Button
-            title="Done"
-            variant="primary"
-            size="md"
-            fullWidth
-            onPress={handleClose}
-            accessibilityLabel="Done"
-          />
+        {/* 4. PLAN AHEAD: rows that take you somewhere, in the app's own row
+            idiom (SettingRow, the Coach tab's NavRow): the amber glyph box
+            means "this goes somewhere". Coaching history is always here, so
+            a consistently on-target user has a route to it (Wave A B6). The
+            great-week share appears only on a genuinely great, ED-safe week
+            (blueprint §5/§7); no haptic on either (wellbeing-adjacent). */}
+        <View style={styles.section}>
+          <SectionLabel heading>Plan ahead</SectionLabel>
+          <Card padding="none" style={styles.navGroup}>
+            <SettingRow
+              icon="restaurant-outline"
+              label="Plan next week's meals"
+              sub={planningWeek ? 'Building your week' : "Built to next week's targets, with a shopping list."}
+              onPress={openMealPlanChoice}
+              accessibilityLabel="Plan next week's meals"
+            />
+            {greatWeek ? (
+              <SettingRow
+                icon="share-outline"
+                label="Create share image"
+                sub="This week, as an image to share."
+                onPress={handleShareWeek}
+                accessibilityLabel="Create share image"
+              />
+            ) : null}
+            <SettingRow
+              icon="time-outline"
+              label="Coaching history"
+              sub="Every week's decision and what was held."
+              onPress={() => navigation.navigate('CoachHeldHistory')}
+              accessibilityLabel="Coaching history"
+            />
+          </Card>
         </View>
 
-        {/* D86 (founder 2026-07-23): the credential jargon row (volume
-            landmarks / autoregulation / RED-S with inline tooltips) is gone.
-            It read as misaligned technical filler to end users; the science
-            grounding lives on the Methodology screen, one tap from the Why
-            block above. The medical-guidance line stays. */}
+        <Button
+          title="Done"
+          variant="primary"
+          fullWidth
+          onPress={handleClose}
+          accessibilityLabel="Done"
+        />
+
+        {/* D86 (founder 2026-07-23): the medical-guidance line stays; the
+            science grounding lives on the Methodology screen, one tap from
+            the decision card's link. */}
         <Text style={[styles.credentialNote, live.credentialNote]}>
           Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
         </Text>
@@ -3350,6 +3141,26 @@ export default function CoachOutputScreen({ navigation, route }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // ── D206 redesign (founder order 2026-09-26) ───────────────────────────────
+  // A section is the Coach tab's own: a label, then its group, 12 apart
+  // (YouScreen `section`); the page spaces sections by its content gap.
+  section: { gap: spacing.md },
+  // The decision card, Today's hero shape: the week eyebrow, the decision
+  // at h2 (the one loud line on the screen), then the footer.
+  decisionCard: { gap: spacing.sm },
+  decisionEyebrow: { gap: spacing.xxs },
+  decisionTitle: { ...type.h2, color: colors.textPrimary },
+  decisionFooter: { gap: spacing.sm },
+  decisionWhy: { ...type.bodySm, color: colors.textSecondary },
+  decisionMeta: { ...type.captionTight, color: colors.textMuted },
+  decisionOutcome: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  decisionOutcomeGlyph: { marginTop: spacing.xxs },
+  decisionOutcomeText: { flex: 1 },
+  decisionRule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle, marginTop: spacing.xs },
+  // Plan ahead's rows run edge to edge inside their card, as in Settings.
+  navGroup: { overflow: 'hidden' },
+  // The held card's structured safety blocks keep the padding they had.
+  heldSafety: { padding: spacing.lg, gap: spacing.md },
   coachNoteRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
@@ -3362,7 +3173,7 @@ const styles = StyleSheet.create({
   planEditCard: {
     gap: spacing.xs,
   },
-  planEditHeadline: { ...type.bodyStrong, color: colors.textPrimary },
+  planEditHeadline: { ...type.body, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
   // D86: scanAssessmentBlock/scanAssessmentHeadline deleted with the receipt
   // sub-block; the compact card renders headline via planEditBody and one
@@ -3374,10 +3185,6 @@ const styles = StyleSheet.create({
   // quietActionCentred retired (R2 cohesion): Coaching history moved into
   // footerActions below, full width, no longer centred.
   quietActionSpace: { marginTop: spacing.xs },
-  quietActionSpaceMd: { marginTop: spacing.md },
-  // R2 cohesion: Coaching history and Done now sit in one footer row.
-  footerActions: { gap: spacing.sm },
-  nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -3395,9 +3202,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  // Lead review 2026-09-26: the great-week share is the shared Button now;
-  // only its placement stays local (the scroll content's gap spaces it).
-  shareWeekBtn: { alignSelf: 'flex-start' },
   // R2 cohesion (2026-09-26): role-based type (rule 3); only this screen's
   // own layout (centring, the gap below it) stays local.
   insufficientTitle: {
@@ -3436,27 +3240,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  // Week header
-  weekHeader: {
-    gap: spacing.xs,
-  },
-  // R2 cohesion (2026-09-26): role-based type, and the week label is
-  // textPrimary now, not amber -- amber is reserved for the one committing
-  // action, never static heading decoration (rule 3).
-  weekLabel: {
-    ...type.h2,
-    color: colors.textPrimary,
-  },
-  weekRange: {
-    ...type.bodySm,
-    color: colors.textMuted,
-  },
 
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
 
   // Generic card: box (surface, radius, border, padding) now comes from
   // the <Card> primitive; only the non-box gap remains as a local extra.
@@ -3464,88 +3248,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 
-  // A1 verdict (U-B-1 §3 / 03 gap #1): the hero zone is a plain wrapper; the
-  // verdict card itself is the elevated object (Card elevated + primary
-  // outline). The zone no longer carries an amber tint of its own, so the
-  // hero Apply stays the screen's only amber fill.
-  heroZone: {
-    gap: spacing.xs,
-  },
-  // B-5: typography now comes from SectionLabel (default tone, R2 cohesion
-  // 2026-09-26 -- was tone="primary"); only the structural padding remains
-  // local.
-  heroLabel: {
-    paddingHorizontal: spacing.xs,
-  },
-  // Wave A B6: the one-line why beneath the hero decision.
-  manualModeNote: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
-  heroWhy: {
-    ...type.bodySm,
-    color: colors.textSecondary,
-    paddingHorizontal: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  // Wave A B6: the hold-week hero, a verdict card with no Apply and no
-  // amber; the same elevated surface the applyable hero uses. R2 cohesion
-  // (2026-09-26): renders through <Card elevated> now; only the gap remains.
-  holdHeroCard: {
-    gap: spacing.xs,
-  },
-  holdHeroText: {
-    ...type.h3,
-    color: colors.textPrimary,
-  },
-  // Five-part coach response: parts 1+2 lead card and the part 5
-  // forward-pull line. Same tokens as the surrounding cards. R2 cohesion
-  // (2026-09-26): renders through <Card> now; only the gap remains.
-  coachLeadCard: {
-    gap: spacing.sm,
-  },
-  coachLeadAck: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  // S1c: the answered pre-commitment, leading the card. Emphasised but never
-  // verdict-coloured (no green/red reward or shame; the one-amber rule holds).
-  coachLeadCommitment: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  coachLeadInterpretation: {
-    ...type.body,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  // S1c: the forward pre-commitment. A touch stronger than the sign-off below
-  // it (textPrimary vs the forward line's textSecondary), never amber.
-  // 2026-08-06: the edge padding came off when these moved inside the
-  // padded nextReadCard (it existed to keep the old floating lines off the
-  // screen edge). R2 cohesion (2026-09-26): renders through <Card> now;
-  // marginTop is gone too (the scroll content's own gap already separates
-  // it from the block above -- it was doubling up).
-  nextReadCard: {
-    gap: spacing.xs,
-  },
-  preCommitmentLine: {
-    ...type.bodySm,
-    color: colors.textPrimary,
-  },
-  forwardLine: {
-    ...type.bodySm,
-    color: colors.textSecondary,
-  },
-  // R2 cohesion (2026-09-26): loses its amber tint and edge -- a plain
-  // <Card> now, heading is a default-tone SectionLabel (focusLabel is gone).
-  focusCard: {
-    gap: spacing.xs,
-  },
-  focusText: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
   // Next week adjustments
   adjustmentRow: {
     flexDirection: 'row',
@@ -3559,7 +3261,7 @@ const styles = StyleSheet.create({
     // R2 (2026-07-11): icon-backing family -> radius.md (control/input/
     // icon-backing class, FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
     borderRadius: radius.md,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -3630,27 +3332,7 @@ const styles = StyleSheet.create({
   planNoteText: {
     ...type.caption, flex: 1, color: colors.textMuted, lineHeight: 17,
   },
-  // NU-8: quiet data-confidence line under the Why block.
-  // Campaign 18 job 10: the weekly story. Quiet by design - it is an account,
-  // not a banner.
-  storyCard: { gap: spacing.xs },
-  storyLine: { ...type.body, color: colors.textPrimary },
-  storyMeans: { ...type.bodySm, color: colors.textSecondary },
-  storyBlock: { marginTop: spacing.sm, gap: spacing.xxs },
-  // storyHeading retired (R2 cohesion, 2026-09-26): "What is changing" /
-  // "What stays the same" are SectionLabel, default tone, now.
-  storyChange: { marginBottom: spacing.xs },
-  // R2 cohesion (2026-09-26, rule 3): every secondary line in this card is
-  // exactly bodySm/textSecondary now -- storyWhy/storyWatch included (were
-  // textMuted, a third drifted tier alongside storyLine/storyMeans).
-  storyWhy: { ...type.bodySm, color: colors.textSecondary },
-  storyWatch: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
 
-  confidenceCaption: {
-    ...type.caption,
-    color: colors.textMuted,
-    paddingHorizontal: spacing.xs,
-  },
   // U-B-1 §5: ≥44px tap target for the quiet held-decision link.
 
 
@@ -3835,38 +3517,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 21,
   },
-  heldRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  heldText: {
-    ...type.bodySm,
-    flex: 1,
-    color: colors.textSecondary,
-  },
-  heldHistoryShelf: { marginTop: spacing.md },
-  // R2 cohesion (2026-09-26): role-based type (rule 3).
-  heldHistoryTitle: {
-    ...type.label,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  heldHistoryEntry: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-    gap: spacing.xs,
-  },
-  heldHistoryDate: { ...type.caption, color: colors.textMuted },
-  heldHistoryText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
-  heldHistoryEmptyText: {
-    ...type.caption,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
 });
 
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the shared
@@ -3891,13 +3541,17 @@ const styles = StyleSheet.create({
 // these style-array appends.
 function buildLiveStyles(t) {
   return {
+    decisionTitle: { ...t.type.h2, color: t.colors.textPrimary },
+    decisionWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
+    decisionMeta: { ...t.type.captionTight, color: t.colors.textMuted },
+    decisionRule: { backgroundColor: t.colors.borderSubtle },
     coachNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
     // R2 cohesion (2026-09-26): planEditCard/holdHeroCard/coachLeadCard/
     // nextReadCard/focusCard/countdownCard now draw their box through
     // <Card>, which already reads the live theme itself, so their live
     // entries (and planEditHead/focusLabel/storyHeading, all retired in
     // favour of SectionLabel) are gone from here too.
-    planEditHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    planEditHeadline: { ...t.type.body, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
     safe: { backgroundColor: t.colors.background },
@@ -3906,18 +3560,7 @@ function buildLiveStyles(t) {
     receiptLabel: { ...t.type.caption, color: t.colors.textMuted },
     receiptRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
     receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
-    weekLabel: { ...t.type.h2, color: t.colors.textPrimary },
-    weekRange: { ...t.type.bodySm, color: t.colors.textMuted },
-    manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
-    heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
-    holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },
-    coachLeadAck: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
-    preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
-    forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    adjustmentIconWrap: { backgroundColor: t.colors.surface2 },
+    adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
     appliedChip: {
@@ -3930,11 +3573,6 @@ function buildLiveStyles(t) {
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
     planNote: { borderTopColor: t.colors.border },
     planNoteText: { ...t.type.caption, color: t.colors.textMuted },
-    storyLine: { ...t.type.body, color: t.colors.textPrimary },
-    storyMeans: { ...t.type.bodySm, color: t.colors.textSecondary },
-    storyWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
-    storyWatch: { ...t.type.bodySm, color: t.colors.textSecondary },
-    confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
     dietBreakTitle: { ...t.type.title, color: t.colors.textPrimary },
     dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
     dietBreakBody: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -3960,11 +3598,5 @@ function buildLiveStyles(t) {
     edClearedHeader: { fontSize: t.fontSize.xs, color: t.colors.success },
     edClearedTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     edClearedBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    heldText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    heldHistoryTitle: { ...t.type.label, color: t.colors.textMuted },
-    heldHistoryEntry: { borderBottomColor: t.colors.borderSubtle },
-    heldHistoryDate: { ...t.type.caption, color: t.colors.textMuted },
-    heldHistoryText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    heldHistoryEmptyText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

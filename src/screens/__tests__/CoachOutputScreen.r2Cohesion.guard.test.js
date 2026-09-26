@@ -63,17 +63,17 @@ function rendersThroughCard(styleName) {
 }
 
 describe('CoachOutputScreen R2 radius cohesion', () => {
-  test('the six former hand-rolled cards carry no borderRadius of their own and render through <Card> (radius.lg is the primitive\'s default)', () => {
-    // nextReadCard joined the census 2026-09-26 (fresh-eyes review of the
-    // D206 restyle): it was converted exactly like its five siblings but
-    // had never been pinned.
+  test('the surface cards carry no borderRadius of their own and render through <Card> (radius.lg is the primitive\'s default)', () => {
+    // RE-ANCHORED 2026-09-26 (the D206 redesign, founder order "Redesign
+    // it in line with the rest of the app"): the lead card, the separate
+    // hold hero, the focus card and the next-read card are gone (their
+    // content is the decision card, the "Your week" rows and the "Next"
+    // rows now); the census is the cards that remain, plus the decision
+    // card that replaced the hold hero.
     for (const card of [
       'planEditCard',
-      'holdHeroCard',
-      'coachLeadCard',
-      'focusCard',
+      'decisionCard',
       'countdownCard',
-      'nextReadCard',
     ]) {
       const body = styleBodyOf(card);
       expect(body).not.toBeNull();

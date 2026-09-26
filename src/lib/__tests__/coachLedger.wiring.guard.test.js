@@ -59,8 +59,16 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
     // treatment, same re-anchor precedent as the AttentionCard test above.
     // The pinned RULE is unchanged: contained neutral controls, never
     // loose amber text links.
-    expect(COACH).toMatch(/icon="calendar-outline"[\s\S]{0,300}accessibilityLabel="Plan a fresh week of meals"/);
-    expect(COACH).toMatch(/icon="repeat-outline"[\s\S]{0,300}accessibilityLabel="Repeat last week's meals"/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). The
+    // two meal-planning buttons became ONE "Plan next week's meals" row in
+    // the Plan ahead group (the shared SettingRow), whose two ways in are
+    // the house alert's choices. Still contained controls, never loose
+    // amber text links.
+    expect(COACH).toMatch(/<SettingRow\s*\n\s*icon="restaurant-outline"\s*\n\s*label="Plan next week's meals"[\s\S]{0,300}onPress=\{openMealPlanChoice\}/);
+    expect(COACH).toMatch(/\{ text: 'Fresh week', onPress: \(\) => handlePlanNextWeek\(false\) \}/);
+    expect(COACH).toMatch(/\{ text: 'Repeat last week', onPress: \(\) => handlePlanNextWeek\(true\) \}/);
     // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision
     // screen, register D206): every quiet action on the screen spells the
     // same Button treatment "secondary" now (outline is its alias); the
@@ -72,9 +80,14 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
 
   test('held-decision explainer renders as a contained neutral control', () => {
     // Same 2026-08-06 Button-outline re-anchor as the meal-planning test.
-    // RE-ANCHORED 2026-09-26 (D206): "outline" is spelt "secondary" now.
-    expect(COACH).toMatch(/variant="secondary"[\s\S]{0,300}icon="information-circle-outline"/);
-    expect(COACH).toMatch(/accessibilityLabel="See how Precision Coaching decides"/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). The
+    // held card's "See how Precision Coaching decides" button and the why
+    // block's "Understand how this decision was made" both opened the
+    // Methodology screen; one contained link row now sits on the decision
+    // card itself.
+    expect(COACH).toMatch(/<LinkRow\s*\n\s*icon="information-circle-outline"\s*\n\s*label="How this decision was made"\s*\n\s*onPress=\{\(\) => navigation\.navigate\('Methodology'/);
     expect(COACH).not.toMatch(/heldLearnMore: \{/);
     expect(COACH).not.toMatch(/textDecorationLine: 'underline'/);
   });

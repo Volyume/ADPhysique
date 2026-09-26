@@ -188,8 +188,13 @@ describe('NUTRITION comprehension', () => {
     // scale chip says what it is, and the decision rate is on screen.
     const src = read('screens/CoachOutputScreen.js');
     expect(src).toMatch(/This is the scale reading\./);
-    expect(src).toMatch(/label="Coaching trend"/);
-    expect(src).toMatch(/value=\{trend\.coachingRateLabel\}/);
+    // RE-ANCHORED 2026-09-26 (founder order on the Coaching decision screen,
+    // register D206: "Redesign it in line with the rest of the app ... Cut
+    // the duplicate."). The
+    // chips became the "Your week" rows; the decision rate is its own
+    // labelled row, built from the same value.
+    expect(src).toMatch(/label: 'Coaching trend'/);
+    expect(src).toMatch(/value: formatCoachingRate\(trend\.coachingRatePct\) \?\? trend\.coachingRateLabel/);
   });
 
   test('Methodology never publishes the absolute calorie floors', () => {
