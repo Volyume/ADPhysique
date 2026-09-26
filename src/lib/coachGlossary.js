@@ -11,11 +11,11 @@ export const GLOSSARY = {
   precisionCoaching:
     'Every week it reads your weight trend, check-in and training, compares what happened to what was expected, and explains the decision. Nothing is random.',
   volume:
-    'The total work for a muscle: the working sets you do for it in a week.',
+    'The total work for a muscle: the number of sets you do for it in a week, not counting warm-ups.',
   deload:
-    'Recovery week: a planned lighter week at the end of the block. Fewer sets, lighter loads and easier effort targets so fatigue clears. Not a week for chasing PRs, and any set here does not count towards the block\'s progress.',
+    'Recovery week: a planned lighter week at the end of the block. It has fewer sets, lighter weights and easier effort targets, so fatigue clears. It is not a week for trying to set new personal records (PRs), and sets done in it do not count towards the block\'s progress.',
   maintenanceCalories:
-    'The daily calories that keep your weight steady: the starting point a change is measured from.',
+    'The daily calories that keep your weight steady. Any change to your calorie target is measured from this starting point.',
   // C5-P14-03 (D96): the basis clause used to read "worked out from your
   // recent sets", which overstates it on the surface where the term is first
   // met. SetEntry renders Est. max live from the single set currently dialled
@@ -31,15 +31,15 @@ export const GLOSSARY = {
   pr:
     'A personal record: a new best for you on an exercise. It can be your heaviest weight, your most reps at a weight, or a new estimated max. Any of the three counts, and it never needs a one-rep max attempt. PRs are the clearest sign your training is working.',
   effort:
-    'How close to failure the set should feel: 5 = leave nothing, 0 = very easy.',
+    'How close to your limit the set should feel: 5 means you could not do another rep, 0 means very easy.',
   volumeBands:
-    "How much you've trained a muscle this week vs the helpful range. “Too much” = past the point of extra benefit, not dangerous.",
+    "How much you've trained a muscle this week, compared with the helpful range. “Too much” means past the point of extra benefit, not dangerous.",
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:
-    'The logged daily intake associated with roughly stable weight in your own history. It is an estimate from food and weight logs, not a direct measurement of metabolism.',
+    'The daily calories you logged at times when your weight stayed roughly steady. It is an estimate from your food and weight logs, not a direct measurement of your metabolism.',
   ewma:
-    'A smoothed version of your weight that ignores day-to-day noise.',
+    'A smoothed version of your weight that evens out the day-to-day ups and downs.',
   mesocycle:
     'A training block: a few weeks that ease in, build, push, then recover.',
   // D93 (Campaign 2, Phase 5): the why is the block's effort ladder - a
@@ -105,7 +105,7 @@ export const GLOSSARY = {
   // for high/moderate confidence, hollow for low, dashed when there was not
   // enough to score.
   volyumeScore:
-    'The Volyume Score is a progress read from your own photos, controlled for pose and lighting so scores can be compared set to set. The band shows your current range and the confidence tag shows how reliable this particular read is; on the trend view that becomes the marker shape, filled for high or moderate confidence, hollow for low confidence, dashed when there was not enough to score. It is not a body fat measurement, a medical assessment, or a comparison with anyone else.',
+    'The Volyume Score is worked out from your own photos to show your progress. It allows for pose and lighting, so scores from different photo sets can be compared. The band shows your current range and the confidence tag shows how reliable this particular score is; on the trend view that becomes the marker shape, filled for high or moderate confidence, hollow for low confidence, dashed when there was not enough to score. It is not a body fat measurement, a medical assessment, or a comparison with anyone else.',
   // O22 (comprehension-and-trust audit 2026-08-06): BlockReflectionScreen's
   // stat row has zero tooltips on the one screen meant to summarise a block
   // in plain language. workingSets is deliberately NOT the "effort checked"

@@ -250,7 +250,7 @@ export default function TrainingConsiderationsScreen() {
               icon={profileIcon(p)}
               label={p.canonicalName}
               sub={p.id === OTHER_PROFILE.id ? p.routeNote : kindChip(p)}
-              accessibilityLabel={p.id === OTHER_PROFILE.id ? `${p.canonicalName}. Opens the ordinary flow` : `${p.canonicalName}, ${kindChip(p)}`}
+              accessibilityLabel={p.id === OTHER_PROFILE.id ? `${p.canonicalName}. Opens Injuries & limitations` : `${p.canonicalName}, ${kindChip(p)}`}
               onPress={() => openProfile(p)}
             />
           ))}

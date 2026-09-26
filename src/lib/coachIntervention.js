@@ -594,6 +594,15 @@ export function holdReinforcement({
  * States the observation and stops. Never says the change CAUSED the result:
  * the app sees a sequence, not a mechanism.
  */
+// Plain names for what a change is judged on (the record's own observed
+// signals), so the outcome line says WHAT moved rather than "things"
+// (founder order 2026-09-26, docs/rules/plain-english.md).
+const MEASURE_NAME = Object.freeze({
+  'weight.trend': 'your weight trend',
+  'training.progress': 'your training progress',
+  'recovery.systemic': 'your recovery',
+});
+
 export function outcomeCopy(record, outcome) {
   if (!record || !outcome) return null;
   const what = record.kind === INTERVENTION_KIND.CALORIE_TARGET
@@ -601,15 +610,26 @@ export function outcomeCopy(record, outcome) {
     : record.kind === INTERVENTION_KIND.VOLUME_START
       ? (record.direction > 0 ? 'added training volume' : 'eased your training volume')
       : 'changed your programme';
+  const names = observedSignals(record.observe).map((key) => MEASURE_NAME[key]).filter(Boolean);
+  const measure = names.length ? names.join(' and ') : 'the results';
+  // WORSENED needs only ONE observed signal to have moved the wrong way, so
+  // a two-signal record says "or", never claiming both moved.
+  const eitherMeasure = names.length ? names.join(' or ') : 'the results';
+  const has = names.length === 1 ? 'has' : 'have';
   switch (outcome) {
     case OUTCOME.IMPROVED:
-      return `Since we ${what}, things have moved into the range we were aiming for.`;
+      return `Since your coach ${what}, ${measure} ${has}${names.length > 1 ? ' both' : ''} moved into the range your coach was aiming for.`;
     case OUTCOME.UNCHANGED:
-      return `Since we ${what}, things have not moved much yet.`;
+      // UNCHANGED means "not every measure is where it was aimed, and none
+      // measurably went the wrong way". With two measures one of them may
+      // already be there, so the line never claims neither moved.
+      return names.length > 1
+        ? `Since your coach ${what}, ${names.join(' and ')} are not both where your coach was aiming yet.`
+        : `Since your coach ${what}, ${measure} ${has} not moved much yet.`;
     case OUTCOME.WORSENED:
-      return `Since we ${what}, things have moved further from where we were aiming.`;
+      return `Since your coach ${what}, ${eitherMeasure} ${names.length ? 'has' : 'have'} moved further from where your coach was aiming.`;
     case OUTCOME.CONFOUNDED:
-      return `We cannot tell what came of the last change, so we are not counting it either way.`;
+      return `Your coach cannot tell what came of the last change, so it will not count as a success or a failure.`;
     case OUTCOME.INSUFFICIENT_EVIDENCE:
       return `The last change has not had long enough to show yet.`;
     default:

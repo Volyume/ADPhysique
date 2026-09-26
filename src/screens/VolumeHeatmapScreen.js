@@ -557,7 +557,7 @@ export default function VolumeHeatmapScreen() {
     : 'Volume appears after your first workout';
   const noVolumeText = hasAnyCompletedSets
     ? 'Your training history is still saved. Switch to a wider window if you want to see older volume.'
-    : 'Finish a workout and this screen will show weekly set volume, recovery freshness and target ranges by muscle.';
+    : 'Finish a workout and this screen will show, for each muscle, your weekly sets, how recovered it is and its target range.';
 
   const handleMuscleTap = useCallback((muscleKey) => {
     const offset = rowOffsets.current[muscleKey];
@@ -677,7 +677,7 @@ export default function VolumeHeatmapScreen() {
           <View style={styles.windowNote}>
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
             <Text style={[styles.windowNoteText, live.windowNoteText]}>
-              Explosive lifts like swings, cleans, snatches and jumps are not counted here. Volyume does not judge those for weekly volume.
+              Explosive lifts like swings, cleans, snatches and jumps are not counted here or used to judge your weekly volume.
             </Text>
           </View>
         )}
@@ -900,7 +900,7 @@ export default function VolumeHeatmapScreen() {
                 skipped by the learned-range replay (learnedRange.js min
                 evidence, D91-12), so hand-set targets pause learning too. */}
             <Text style={[styles.editSubtitle, live.editSubtitle]}>
-              Your numbers set the targets from here; a block already underway keeps its written plan. While your own settings are in place, finished blocks don't teach the ranges the app learns for you.
+              Your numbers set the targets from here; a block already underway keeps its written plan. While your own settings are in place, the app stops adjusting these ranges from your finished blocks.
             </Text>
             {muscles.map(muscle => (
               <View key={muscle} style={[styles.editRow, live.editRow]}>

@@ -662,7 +662,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     }
     if (anyImpractical) {
       toast.show(
-        'Supersets work best when the exercises share a station or target opposing muscles.',
+        'Supersets work best when the exercises use the same equipment or work opposing muscles.',
         { variant: 'info' },
       );
     }

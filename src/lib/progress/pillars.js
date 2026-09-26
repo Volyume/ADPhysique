@@ -113,7 +113,7 @@ export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _c
     return { state: 'No photos yet', evidence: 'Take your first progress photos to start tracking visible change.' };
   }
   if (!hasNote) {
-    return { state: 'Latest scan needs a clearer read', evidence: 'Retake for a comparable read.' };
+    return { state: 'Latest scan was not clear enough', evidence: 'Retake your photos so they can be compared.' };
   }
   const status = packet?.status ?? null;
   const trendWindow = packet?.trendWindow ?? { count: 0, direction: 'uncertain', comparableOnly: false };

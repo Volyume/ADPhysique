@@ -169,7 +169,8 @@ describe('buildWeeklyStory', () => {
     const output = { ...COACH_OUTPUT_BASE, whyThisWeek: null, heldDecisions: [] };
     const { chapters } = buildWeeklyStory({ coachOutput: output, isCurrentWeek: true });
     const decision = chapters.find(c => c.key === 'decision');
-    expect(decision.body).toBe('The coach held everything the same this week.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(decision.body).toBe('Your coach kept everything the same this week.');
   });
 
   test('deterministic: identical inputs produce an identical result', () => {

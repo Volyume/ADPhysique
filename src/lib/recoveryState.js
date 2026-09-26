@@ -242,7 +242,7 @@ export function describePrescriptionDifferences(baselineSets = [], prescribedSet
   const out = [];
 
   const workingBase = base.filter((s) => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
-  if (workingBase.length && now.length < workingBase.length) out.push('fewer working sets');
+  if (workingBase.length && now.length < workingBase.length) out.push('fewer sets');
 
   const avg = (rows, pick) => {
     const vals = rows.map(pick).map(Number).filter((n) => Number.isFinite(n));
@@ -254,7 +254,7 @@ export function describePrescriptionDifferences(baselineSets = [], prescribedSet
 
   const baseWeight = avg(workingBase, (s) => s.weight);
   const nowWeight = avg(now, (s) => s.weight);
-  if (baseWeight != null && nowWeight != null && nowWeight < baseWeight) out.push('lighter loads');
+  if (baseWeight != null && nowWeight != null && nowWeight < baseWeight) out.push('lighter weights');
 
   const baseRir = avg(workingBase, (s) => s.rir);
   const nowRir = avg(now, (s) => s.rir);

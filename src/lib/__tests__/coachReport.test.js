@@ -111,7 +111,8 @@ describe('full variant: every decision and its written why', () => {
   });
 
   test('held decisions are labelled as held with the reason', () => {
-    expect(html).toContain('Held back this week');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(html).toContain('Changes held back this week, with the reason for each:');
   });
 
   test('the weekly-rate row needs a fortnight of data behind it', () => {

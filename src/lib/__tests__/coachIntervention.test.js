@@ -191,6 +191,26 @@ describe('THE FIVE OUTCOMES', () => {
   });
 });
 
+// Plain-English sweep (register D207, 2026-09-26): the outcome line names
+// what the change was judged on instead of "things", and stays TRUE for a
+// change judged on two measures: IMPROVED needs both, WORSENED needs only one,
+// and UNCHANGED may have one already there, so it never claims neither moved.
+describe('THE OUTCOME LINE NAMES WHAT MOVED, TRUTHFULLY', () => {
+  const volume = { kind: INTERVENTION_KIND.VOLUME_START, direction: 1, observe: { signals: ['training.progress', 'recovery.systemic'] } };
+  test('both measures good: both moved into range', () => {
+    expect(outcomeCopy(volume, OUTCOME.IMPROVED)).toBe('Since your coach added training volume, your training progress and your recovery have both moved into the range your coach was aiming for.');
+  });
+  test('one measure worse: "or", never both', () => {
+    expect(outcomeCopy(volume, OUTCOME.WORSENED)).toBe('Since your coach added training volume, your training progress or your recovery has moved further from where your coach was aiming.');
+  });
+  test('not both there yet: never claims neither moved', () => {
+    expect(outcomeCopy(volume, OUTCOME.UNCHANGED)).toBe('Since your coach added training volume, your training progress and your recovery are not both where your coach was aiming yet.');
+  });
+  test('a single measure reads as one', () => {
+    expect(outcomeCopy(calorieRecord(), OUTCOME.UNCHANGED)).toMatch(/^Since your coach .+, your weight trend has not moved much yet\.$/);
+  });
+});
+
 describe('THE OBSERVATION WINDOW', () => {
   test('two weeks is not yet; three weeks is', () => {
     const r = calorieRecord({ appliedAtMs: NOW - 10 * DAY });

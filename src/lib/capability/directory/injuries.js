@@ -52,7 +52,7 @@ export const INJURY_PROFILES = Object.freeze([
     aliases: ['rotator cuff', 'shoulder pain lifting', 'subacromial', 'painful arc', 'shoulder tendon', 'cuff tear'],
     movementQuestions: [
       dq('rc_q1', 'overhead_position', 'Overhead positions are what I have been told to avoid, or what plays up', 'Overhead work is the most commonly modified movement with this kind of shoulder trouble; people differ, so you set it.'),
-      fq('rc_q2', PRESS_FAMILIES, 'Any pressing movements you’re keeping out for now?', 'Pressing plane matters here and differs person to person; excluding a plane keeps the rest available.'),
+      fq('rc_q2', PRESS_FAMILIES, 'Any pressing movements you’re keeping out for now?', 'The angle you press at matters here and differs person to person; leaving out one angle keeps the rest available.'),
       fq('rc_q3', ['lateral_raise', 'overhead_press'], 'Is shoulder-raise work something you are keeping out for now?', 'Raise work asks the shoulder directly; some people keep it, some park it for a while.'),
     ],
     education: [
@@ -81,8 +81,8 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Shoulder instability and dislocation history',
     aliases: ['dislocated shoulder', 'shoulder comes out', 'subluxation', 'loose shoulder', 'shoulder instability'],
     movementQuestions: [
-      dq('si_q1', 'overhead_position', 'End-range overhead positions are what I avoid', 'Reaching fully overhead is the classic position people with an unstable shoulder set aside first.'),
-      fq('si_q2', ['vertical_pull'], 'Is hanging and pulldown work something you are keeping out for now?', 'Hanging work takes the shoulder to its end range under load; a personal call after a dislocation.'),
+      dq('si_q1', 'overhead_position', 'Reaching fully overhead is what I avoid', 'Reaching fully overhead is the classic position people with an unstable shoulder set aside first.'),
+      fq('si_q2', ['vertical_pull'], 'Is hanging and pulldown work something you are keeping out for now?', 'Hanging work takes the shoulder as far as it goes, under load; a personal call after a dislocation.'),
       fq('si_q3', PRESS_FAMILIES, 'Any pressing movements you’re keeping out for now?', 'Wide, deep pressing asks more of an unstable shoulder than close, controlled pressing; the choice is per movement.'),
     ],
     education: [
@@ -110,7 +110,7 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'AC joint trouble',
     aliases: ['AC joint', 'acromioclavicular', 'collarbone end pain', 'shoulder separation', 'top of shoulder'],
     movementQuestions: [
-      fq('ac_q1', PRESS_FAMILIES, 'Any pressing movements you’re keeping out for now?', 'Cross-body pressing loads this joint most directly; excluding a plane keeps the rest.'),
+      fq('ac_q1', PRESS_FAMILIES, 'Any pressing movements you’re keeping out for now?', 'Cross-body pressing loads this joint most directly; leaving out one pressing angle keeps the rest.'),
       dq('ac_q2', 'overhead_position', 'Overhead positions are out for now', 'Overhead work compresses the joint for some people; entirely your call.'),
       dq('ac_q3', 'weight_bearing_hands', 'Taking weight through my hands, push-up style, is out for now', 'Push-up positions drive load through the joint; a common early exclusion, easily reversed later.'),
     ],
@@ -136,8 +136,8 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Biceps and labral shoulder trouble',
     aliases: ['SLAP tear', 'labrum', 'labral tear', 'biceps tendon shoulder', 'long head of biceps'],
     movementQuestions: [
-      fq('bl_q1', CURL_FAMILIES, 'Have you been told to leave curls alone for a while?', 'Curls load the biceps anchor point at the shoulder directly; people are often asked to pause them first.'),
-      fq('bl_q2', ['vertical_pull'], 'Are you keeping chin-ups and pulldowns out for now?', 'Vertical pulling works the same anchor hard; a per-movement call.'),
+      fq('bl_q1', CURL_FAMILIES, 'Have you been told to leave curls alone for a while?', 'Curls load the point where the biceps attaches at the shoulder directly; people are often asked to pause them first.'),
+      fq('bl_q2', ['vertical_pull'], 'Are you keeping chin-ups and pulldowns out for now?', 'Pulling down from overhead works the same attachment point hard; you decide movement by movement.'),
       dq('bl_q3', 'overhead_position', 'Overhead positions are out for now', 'The overhead position is a common trigger with this kind of trouble.'),
     ],
     education: [
@@ -164,7 +164,7 @@ export const INJURY_PROFILES = Object.freeze([
     movementQuestions: [
       dq('fs_q1', 'overhead_position', 'Overhead positions are not available to me right now', 'A frozen shoulder usually rules overhead out for a while; everything else keeps going.'),
       fq('fs_q2', ['lateral_raise', 'overhead_press'], 'Is shoulder-raise work out for now too?', 'Raises may sit inside or outside your current range; you know which.'),
-      dq('fs_q3', 'weight_bearing_hands', 'Weight through my hands, push-up style, is out for now', 'Floor pressing positions ask range this shoulder may not have yet.'),
+      dq('fs_q3', 'weight_bearing_hands', 'Weight through my hands, push-up style, is out for now', 'Pressing from the floor needs a range of movement this shoulder may not have yet.'),
     ],
     education: [
       { text: 'UK guidance is clear that the stiffness usually eases in time, and that the rest of training can carry on.', evidenceIndex: 0 },
@@ -216,9 +216,9 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Golfer’s elbow',
     aliases: ['medial elbow', 'inside elbow pain', 'medial epicondylitis', 'curls hurt elbow'],
     movementQuestions: [
-      fq('me_q1', CURL_FAMILIES, 'Are you leaving curls out for now?', 'Wrist-flexion load in curls is the classic trigger on the inside of the elbow.'),
-      dq('me_q2', 'grip_bar', 'Firm gripping sets it off, so I am limiting it', 'Grip drives the same muscle group; grip-light routes keep training available.'),
-      fq('me_q3', PULL_FAMILIES, 'Any pulling movements you’re keeping out for now?', 'Underhand pulling combines the triggers for some people; a per-movement call.'),
+      fq('me_q1', CURL_FAMILIES, 'Are you leaving curls out for now?', 'Bending the wrist under load during curls is the classic trigger on the inside of the elbow.'),
+      dq('me_q2', 'grip_bar', 'Firm gripping sets it off, so I am limiting it', 'Gripping uses the same muscle group; equipment that needs little grip keeps training available.'),
+      fq('me_q3', PULL_FAMILIES, 'Any pulling movements you’re keeping out for now?', 'Underhand pulling combines the triggers for some people; you decide movement by movement.'),
     ],
     education: [
       { text: 'The same guidance that covers tennis elbow applies here: it usually settles, and the rest of training carries on.', evidenceIndex: 0 },
@@ -244,7 +244,7 @@ export const INJURY_PROFILES = Object.freeze([
     movementQuestions: [
       fq('bt_q1', CURL_FAMILIES, 'I’ve been told to leave curl work alone for now', 'Loaded elbow bending is the biceps-side trigger; excluding it keeps everything else going.'),
       fq('bt_q2', TRICEPS_FAMILIES, 'I’ve been told to leave triceps extension work alone for now', 'Loaded straightening is the triceps-side trigger; same idea, other side.'),
-      fq('bt_q3', PRESS_FAMILIES, 'Any pressing you’re keeping out for now?', 'Heavy pressing finishes through the triceps; some people trim it while things settle.'),
+      fq('bt_q3', PRESS_FAMILIES, 'Any pressing you’re keeping out for now?', 'Heavy pressing leans on the triceps to finish each rep; some people trim it while things settle.'),
     ],
     education: [
       { text: 'UK guidance on tendon trouble describes milder cases settling over a few weeks.', evidenceIndex: 0 },
@@ -305,14 +305,14 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Low back trouble',
     aliases: ['back pain', 'lower back', 'lumbar', 'bad back', 'back spasm', 'sciatica'],
     movementQuestions: [
-      dq('lb_q1', 'axial_load', 'I am keeping compressive load off my spine for now', 'Loaded squats and deadlifts compress the spine; leaving those out keeps supported alternatives available.'),
-      fq('lb_q2', ['spinal_erector'], 'I’m keeping deadlifts and back-extension work out for now', 'Hinging works the lower back directly; some people keep it, some park it for a while.'),
-      fq('lb_q3', ['squat_press'], 'I’m keeping squatting movements out for now', 'Squat-pattern work is a separate call from hinging; you can exclude one and keep the other.'),
+      dq('lb_q1', 'axial_load', 'I am keeping load off my spine for now', 'Loaded squats and deadlifts compress the spine; leaving those out keeps supported alternatives available.'),
+      fq('lb_q2', ['spinal_erector'], 'I’m keeping deadlifts and back-extension work out for now', 'Bending-at-the-hips work, like deadlifts, uses the lower back directly; some people keep it, some park it for a while.'),
+      fq('lb_q3', ['squat_press'], 'I’m keeping squatting movements out for now', 'Squats are a separate choice from bending-at-the-hips work; you can leave one out and keep the other.'),
       fq('lb_q4', ['flexion', 'rotation'], 'I’m keeping weighted sit-up and twisting work out for now', 'Bending and twisting under load is its own thing; core work that holds you steady usually stays available.'),
     ],
     education: [
       { text: 'UK guidance describes back trouble as usually improving within a few weeks, and staying active as part of the picture.', evidenceIndex: 0 },
-      { text: 'Supported machine work and unaffected training carry on; nothing else is judged by a careful patch.', evidenceIndex: 0 },
+      { text: 'Supported machine work and unaffected training carry on; a careful spell like this is not used to judge the rest of your training.', evidenceIndex: 0 },
     ],
     professionalNote: PRO_NOTE,
     clinicianBoundary: null,
@@ -337,7 +337,7 @@ export const INJURY_PROFILES = Object.freeze([
     aliases: ['neck pain', 'stiff neck', 'trapped nerve neck', 'upper back pain', 'thoracic'],
     movementQuestions: [
       dq('nb_q1', 'overhead_position', 'Overhead positions are out while my neck settles', 'Looking up and pressing up both involve the neck; the most common exclusion here.'),
-      dq('nb_q2', 'axial_load', 'I am keeping loaded bars off my back and shoulders for now', 'Bar-on-back positions load through the neck and upper spine; supported alternatives cover the same muscles.'),
+      dq('nb_q2', 'axial_load', 'I am keeping loaded bars off my back and shoulders for now', 'A bar across your back loads the neck and upper spine; supported alternatives cover the same muscles.'),
       fq('nb_q3', ['overhead_press'], 'It’s overhead pressing specifically I’m keeping out', 'You can keep general overhead reach and still park loaded pressing; this separates them.'),
     ],
     education: [
@@ -368,12 +368,12 @@ export const INJURY_PROFILES = Object.freeze([
     aliases: ['hip pain', 'hip impingement', 'FAI', 'hip flexor', 'front of hip pain', 'deep squat hip pain'],
     movementQuestions: [
       fq('hip_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the usual trigger at the hip; leaving deep work out now and bringing back specific movements later works well.'),
-      fq('hip_q2', ['flexion'], 'I’m keeping weighted leg raises and sit-up work out for now', 'Lifting the leg against load works the same hip corner; a separate call from squatting.'),
+      fq('hip_q2', ['flexion'], 'I’m keeping weighted leg raises and sit-up work out for now', 'Lifting the leg against load works the same part of the hip; a separate choice from squatting.'),
       dq('hip_q3', 'impact', 'Impact work is out while the hip settles', 'Jumping loads the hip fast; most people park it first and bring it back last.'),
     ],
     education: [
       { text: 'Research around hip-related pain supports staying active and strong around the hip, with the details personal.', evidenceIndex: 0 },
-      { text: 'Hinge-pattern work stays available for most people even when squat depth is parked.', evidenceIndex: 0 },
+      { text: 'Bending-at-the-hips work, like deadlifts, stays available for most people even when deep squats are parked.', evidenceIndex: 0 },
     ],
     professionalNote: PRO_NOTE,
     clinicianBoundary: null,
@@ -426,12 +426,12 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Kneecap-area trouble',
     aliases: ['patellofemoral', 'kneecap pain', 'runner’s knee', 'knee pain squatting', 'front of knee'],
     movementQuestions: [
-      fq('pf_q1', ['squat_press', 'knee_extension'], 'Which knee movements are you keeping out for now?', 'Deep squatting and leg-extension work load the kneecap most; leaving those out keeps hinging and the rest available.'),
+      fq('pf_q1', ['squat_press', 'knee_extension'], 'Which knee movements are you keeping out for now?', 'Deep squatting and leg-extension work load the kneecap most; leaving those out keeps bending-at-the-hips work and the rest available.'),
       dq('pf_q2', 'impact', 'Impact work is out while the knee settles', 'Jumping asks the most of the kneecap; usually first out, last back.'),
     ],
     education: [
-      { text: 'Guidance around kneecap trouble consistently supports strong hips and legs, with depth and load as your dials.', evidenceIndex: 0 },
-      { text: 'Hinge-pattern and hip work usually stays fully available.', evidenceIndex: 0 },
+      { text: 'Guidance around kneecap trouble consistently supports strong hips and legs, with depth and weight as the things you adjust.', evidenceIndex: 0 },
+      { text: 'Bending-at-the-hips work and other hip work usually stays fully available.', evidenceIndex: 0 },
     ],
     professionalNote: PRO_NOTE,
     clinicianBoundary: null,
@@ -452,7 +452,7 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Knee tendon trouble',
     aliases: ['patellar tendon', 'jumper’s knee', 'quad tendon', 'below kneecap pain'],
     movementQuestions: [
-      fq('kt_q1', ['knee_extension'], 'I’m keeping leg-extension work out for now', 'Isolated knee extension loads this tendon hardest; a common first exclusion.'),
+      fq('kt_q1', ['knee_extension'], 'I’m keeping leg-extension work out for now', 'Leg extensions load this tendon hardest; a common first exclusion.'),
       dq('kt_q2', 'impact', 'Jumping and impact work is out for now', 'This is the classic jumping-related tendon; impact usually goes first.'),
       fq('kt_q3', ['squat_press'], 'I’m keeping squats out too', 'Some people keep controlled squatting and park only extensions and jumps; your call.'),
     ],
@@ -478,12 +478,12 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Deep knee bend restrictions',
     aliases: ['meniscus', 'cartilage knee', 'cannot squat deep', 'knee locks', 'deep bend hurts'],
     movementQuestions: [
-      fq('kd_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the story here; deep work goes out, and you can bring back specific shallower movements that are fine.'),
+      fq('kd_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is what matters here; deep work goes out, and you can bring back specific shallower movements that are fine.'),
       fq('kd_q2', ['knee_flexion'], 'I’m keeping leg curls out for now', 'Fully bending the knee under load is a separate call from squatting depth.'),
       dq('kd_q3', 'impact', 'Impact and twisting work is out for now', 'Loaded twisting on a bent knee is the classic aggravator with cartilage trouble.'),
     ],
     education: [
-      { text: 'Depth is adjustable per movement: excluding the deep class and allowing back specific movements that suit you is the intended pattern.', evidenceIndex: 0 },
+      { text: 'Depth can be set movement by movement: leaving out the deep movements and allowing back the specific ones that suit you is how this is meant to work.', evidenceIndex: 0 },
     ],
     professionalNote: PRO_NOTE,
     clinicianBoundary: null,
@@ -533,8 +533,8 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Achilles and calf loading trouble',
     aliases: ['achilles', 'heel cord', 'calf pain training', 'heel pain', 'plantar'],
     movementQuestions: [
-      fq('ac2_q1', ['gastro', 'soleus'], 'I’m keeping calf raises out for now', 'Calf raises load this tendon most directly; both straight-knee and bent-knee classes are your call.'),
-      dq('ac2_q2', 'impact', 'Jumping and running-type work is out while it settles', 'Fast loading is the classic trigger here.'),
+      fq('ac2_q1', ['gastro', 'soleus'], 'I’m keeping calf raises out for now', 'Calf raises load this tendon most directly; straight-knee and bent-knee raises are both your call.'),
+      dq('ac2_q2', 'impact', 'Jumping and running-type work is out while it settles', 'Quick, bouncing movements like jumping and running are the classic trigger here.'),
     ],
     education: [
       { text: 'UK guidance on tendon and heel trouble describes gradual return over weeks as the usual course.', evidenceIndex: 0 },
@@ -561,15 +561,15 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Muscle strain',
     aliases: ['pulled muscle', 'muscle tear', 'hamstring strain', 'quad strain', 'calf strain', 'pec strain', 'pulled hamstring'],
     movementQuestions: [
-      fq('ms_q1', ['hip_extension', 'knee_flexion', 'spinal_erector'], 'I’m resting my hamstrings and glutes', 'A pulled hamstring or glute rests through its own movements while everything else continues.'),
+      fq('ms_q1', ['hip_extension', 'knee_flexion', 'spinal_erector'], 'I’m resting my hamstrings and glutes', 'A pulled hamstring or glute is rested by leaving out its own movements, while everything else continues.'),
       fq('ms_q2', ['squat_press', 'knee_extension'], 'I’m resting my quads', 'Same idea for the front of the thigh.'),
       fq('ms_q3', ['gastro', 'soleus'], 'I’m resting my calves', 'And for the calf.'),
-      fq('ms_q4', PRESS_FAMILIES, 'I’m resting my chest', 'A chest strain rests through the pressing classes.'),
-      fq('ms_q5', [...CURL_FAMILIES, ...TRICEPS_FAMILIES], 'I’m resting my arms', 'Biceps or triceps strains rest through their own classes.'),
+      fq('ms_q4', PRESS_FAMILIES, 'I’m resting my chest', 'A chest strain is rested by leaving out pressing exercises.'),
+      fq('ms_q5', [...CURL_FAMILIES, ...TRICEPS_FAMILIES], 'I’m resting my arms', 'A biceps or triceps strain is rested by leaving out that muscle’s own exercises.'),
     ],
     education: [
       { text: 'UK guidance describes most strains as settling with home care over days to weeks.', evidenceIndex: 0 },
-      { text: 'Only the strained area rests; the rest of the plan carries on and nothing is judged by the gap.', evidenceIndex: 0 },
+      { text: 'Only the strained area rests; the rest of the plan carries on, and the break is not used to judge your training.', evidenceIndex: 0 },
     ],
     professionalNote: PRO_NOTE,
     clinicianBoundary: null,

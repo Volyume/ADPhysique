@@ -122,7 +122,7 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
     sections.push(
       `<h2>Training</h2><table>${lines}</table>`
       + (top ? `<h3>Most trained</h3><ul>${top}</ul>` : '')
-      + (prs ? `<h3>Best lifts (estimated max basis)</h3><ul>${prs}</ul>` : '')
+      + (prs ? `<h3>Best lifts (ranked by estimated max)</h3><ul>${prs}</ul>` : '')
     );
   } else {
     sections.push('<h2>Training</h2><p>No completed sessions in this period.</p>');
@@ -213,7 +213,7 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
       `<h3>Week commencing ${htmlEscape(fmtDate(w.weekStart))}${!neutral && w.goalPhase ? ` · ${htmlEscape(w.goalPhase)}` : ''}</h3>`
       + (rows.length ? `<table>${rows.join('')}</table>` : '')
       + why
-      + (held ? `<p class="heldLabel">Held back this week (with the coach's reason):</p><ul>${held}</ul>` : '')
+      + (held ? `<p class="heldLabel">Changes held back this week, with the reason for each:</p><ul>${held}</ul>` : '')
     );
   }).filter(Boolean).join('');
   if (weekBlocks) {

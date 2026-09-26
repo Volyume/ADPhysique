@@ -492,7 +492,7 @@ function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
                 with ReadinessCards.js's own corrected tooltip (T21/O9 fix). */}
             <InfoTooltip
               size={13}
-              text="Scored 1-5, where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore or tired). Joints is the same scale, where 1 = comfortable. It is a running average weighted so your most recent week counts most, older sessions fade out."
+              text="Scored 1-5, where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore or tired). Joints is the same scale, where 1 = comfortable. It is an average in which your most recent week counts most and older sessions count less and less."
             />
           </View>
           <View style={styles.recovRow}>

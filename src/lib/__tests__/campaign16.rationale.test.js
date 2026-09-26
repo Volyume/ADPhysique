@@ -160,7 +160,8 @@ describe('C16-11 the change receipt', () => {
 
   test('an unchanged plan says staying put is the finding', () => {
     expect(receiptHeadline(6, 0)).toMatch(/nothing is changing/i);
-    expect(receiptHeadline(6, 0)).toMatch(/still producing good evidence/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(receiptHeadline(6, 0)).toMatch(/your plan is still working/i);
   });
 
   test('one change is singular, several are plural', () => {

@@ -85,9 +85,9 @@ function StatTile({ label, value, sub, tooltip = null }) {
 }
 
 function scanConfidenceLabel(confidence) {
-  if (confidence === 'high') return 'High read quality';
-  if (confidence === 'moderate') return 'Moderate read quality';
-  if (confidence === 'low') return 'Low read quality';
+  if (confidence === 'high') return 'High confidence';
+  if (confidence === 'moderate') return 'Moderate confidence';
+  if (confidence === 'low') return 'Low confidence';
   return 'Photo score saved';
 }
 
@@ -525,7 +525,7 @@ export default function AthleteProfileScreen({ navigation }) {
           <View style={styles.grid}>
             <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
             <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} tooltip={showPhysiqueScore ? GLOSSARY.volyumeScore : null} />
-            <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
+            <StatTile label="Strength" value={summary.strength?.overallLabel || 'No level yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
             <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
           </View>
         )}
@@ -559,7 +559,7 @@ export default function AthleteProfileScreen({ navigation }) {
             <EmptyState
               icon="barbell-outline"
               title="Add lifts for strength standards"
-              text="Log body weight and your main lifts to compare against baseline standards."
+              text="Log body weight and your main lifts to see how they compare with typical strength levels."
               compact
             />
           )}
@@ -621,7 +621,7 @@ export default function AthleteProfileScreen({ navigation }) {
             live={live}
             icon="cloud-download-outline"
             label="Your data"
-            sub="Workout CSV export and app-data JSON backup."
+            sub="Export your workouts as a spreadsheet file, and back up your app data."
             onPress={() => navigation.navigate('SettingsData')}
           />
           <Row

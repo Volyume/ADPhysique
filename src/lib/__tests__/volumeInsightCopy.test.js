@@ -21,7 +21,9 @@ describe('getVolumeInsight', () => {
     const { mev, mrv } = VOLUME_LANDMARKS[KNOWN_MUSCLE];
     const line = getVolumeInsight(KNOWN_MUSCLE, 12.4, 'optimal');
     expect(line).toContain('12 sets');
-    expect(line).toContain(`${mev}–${mrv} sets/week`);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    // -- and the house dash rule: ranges read "X to Y", never an en dash.
+    expect(line).toContain(`${mev} to ${mrv} sets/week`);
   });
 
   test('each status produces a distinct phrase', () => {
@@ -83,7 +85,8 @@ describe('C6 RD6-1 (D97-25): the copy quotes the band the verdict used', () => {
 
   test('the insight line quotes the resolved range, not frozen research', () => {
     const line = getVolumeInsight('chest', 18, 'over_mrv', resolved);
-    expect(line).toContain('6–16 sets/week');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(line).toContain('6 to 16 sets/week');
     expect(line).not.toContain('22');
   });
 

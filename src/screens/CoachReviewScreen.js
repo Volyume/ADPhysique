@@ -152,7 +152,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   if (recs.length < 3 && laggingMuscles.length > 0) {
     const top = laggingMuscles[0];
     recs.push(
-      `Your ${top.displayName} has been below effective training volume for ${top.weeksBelow} weeks. Consider adding one extra working set there each session next week to start making progress.`,
+      `Your ${top.displayName} has had fewer sets than it needs to make progress for ${top.weeksBelow} weeks. Consider adding one extra set there each session next week to start making progress.`,
     );
   }
 
@@ -162,7 +162,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
     const avgSleep = checkins.reduce((s, c) => s + (c.sleepQuality || 3), 0) / checkins.length;
     if (avgEnergy < 2.5 || avgSleep < 2.5) {
       recs.push(
-        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests. Recovery is where the adaptation happens.',
+        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests. Your body gets stronger while it recovers.',
       );
     }
   }
@@ -640,7 +640,7 @@ export default function CoachReviewScreen() {
                       ? 'Reducing volume slightly next week will let your body recover and come back stronger.'
                       : isNear
                       ? 'You can keep the same volume next week, but avoid adding more sets for this muscle.'
-                      : 'One extra session or a couple of additional sets would put this in a more productive range.';
+                      : 'One extra session or a couple of additional sets would put this in a more helpful range.';
                     return (
                       <InsightRow
                         key={muscle}
@@ -666,7 +666,7 @@ export default function CoachReviewScreen() {
                       icon="medkit-outline"
                       iconColor={t.colors.error}
                       text="Joint discomfort noted during sessions this week"
-                      subtext="Keep an eye on this. Prioritise movement quality over load, and consider swapping to a less demanding variation if it persists."
+                      subtext="Keep an eye on this. Prioritise good technique over heavier weights, and consider swapping to a less demanding variation if it persists."
                     />
                   )}
                 </Card>

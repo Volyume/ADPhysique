@@ -17,8 +17,9 @@ describe('ProgressScanMeaningMoment', () => {
     let tree;
     await act(async () => { tree = create(<ProgressScanMeaningMoment onDismiss={jest.fn()} />); });
     const text = flattenText(tree.toJSON());
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(text).toContain(
-      'The Volyume Score is a progress read from your own photos. It is not a body fat measurement, '
+      'The Volyume Score is worked out from your own photos to show your progress. It is not a body fat measurement, '
       + 'a medical assessment, or a comparison with anyone else.',
     );
     expect(text).toContain('Understood');

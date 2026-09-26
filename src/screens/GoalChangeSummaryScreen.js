@@ -27,16 +27,16 @@ function buildPhaseReason(prevPhase, nextPhase) {
     return `You're entering a controlled calorie deficit. Protein stays high to protect the muscle you've built while fat comes off.`;
   }
   if ((prevPhase === 'bulk' || prevPhase === 'lean_gain') && nextPhase === 'maintain') {
-    return `You're moving to maintenance. Calories settle and the focus shifts to consistency and performance rather than weight change.`;
+    return `You're moving to maintenance, eating the calories that keep your weight steady. The focus shifts to consistency and performance rather than weight change.`;
   }
   if (prevPhase === 'lean_gain' && nextPhase === 'bulk') {
     return `Bigger surplus for faster gains. Expect some fat to come with the muscle. That's the trade-off.`;
   }
   if (prevPhase === 'bulk' && nextPhase === 'lean_gain') {
-    return `Pulling the surplus back so gains come on cleaner. Slower, but you stay in shape throughout.`;
+    return `Pulling the calorie surplus back so you gain less fat along with the muscle. Slower, but you stay in shape throughout.`;
   }
   if (nextPhase === 'recomp') {
-    return `Eating around maintenance with a small protein lead. A slow process, but works well for beginners and people returning after a break.`;
+    return `Eating around the calories that keep your weight steady, with a little more protein. A slow process, but it works well for beginners and people returning after a break.`;
   }
   return `Your nutrition targets adjust to match the new phase.`;
 }
@@ -46,7 +46,7 @@ function buildGoalReason(prevGoal, nextGoal) {
   // The legacy general_hypertrophy / strength_hypertrophy / weak_point_spec
   // values are migrated away (coachingGoals.migrateProfileGoals) before they
   // reach this screen, so only physique categories land here.
-  return `Your plan re-weights weekly volume towards the muscles judged in this category.`;
+  return `Your plan shifts more of its weekly sets to the muscles judged in this category.`;
 }
 
 function buildKcalReason(prevKcal, nextKcal, nextPhase) {

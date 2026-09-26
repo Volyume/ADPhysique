@@ -129,11 +129,11 @@ export function buildScoreTierContract(scan, { suppressed = false, revealed = fa
       requiresRevealAffordance: true,
       revealed: show,
       caveatText: show
-        ? 'This score has low confidence. The band and reasons above are the steadier read.'
+        ? 'This score has low confidence. The band and reasons above are a more reliable guide.'
         : null,
       accessibilityLabel: show
         ? `Volyume Score ${scoreText}, ${chipLabel}.`
-        : `${bandLabel ? `${bandLabel} band. ` : ''}${chipLabel}. Score available behind a show-anyway control.`,
+        : `${bandLabel ? `${bandLabel} band. ` : ''}${chipLabel}. Score hidden until you choose Show anyway.`,
     };
   }
 
@@ -162,7 +162,7 @@ export function buildScoreTierContract(scan, { suppressed = false, revealed = fa
 const REASON_LINES = {
   missing_required_pose: 'Front and back photos are both needed to score a set.',
   model_unavailable: 'The photo reader was not available for these photos.',
-  measured_signals_incomplete: 'The measured signals were not complete enough for a useful score.',
+  measured_signals_incomplete: 'The measurements from the photos were not complete enough for a useful score.',
   no_person_detected: 'A person could not be detected clearly enough in one of the photos.',
   native_preprocess_unavailable: 'The photo outline could not be read on this device.',
   native_preprocess_shape_unusable: 'The photo outline could not be read reliably.',
@@ -172,7 +172,7 @@ const REASON_LINES = {
   whole_body_not_visible: 'The whole body was not visible in one of the photos.',
   multiple_people: 'More than one person was visible in one of the photos.',
   pose_not_clear: 'The pose was not clear enough in one of the photos.',
-  estimate_out_of_range: 'The photo read fell outside a usable range.',
+  estimate_out_of_range: 'The result from the photos fell outside a usable range.',
   duplicate_pose_content: 'Two poses used the same photo, so this set was not scored. Retake each pose separately and the set will score.',
   segmentation_low_confidence: 'The outline was less clear than usual in one of the photos.',
   clothing_or_background_uncertain: 'Clothing or background made the outline less certain.',
@@ -248,7 +248,7 @@ export function buildScanReceipt(scan, { previousScan = null } = {}) {
     return {
       outcome: 'withheld',
       sentence: scan?.copySummary
-        || 'Progress photos saved. Volyume could not create a useful score from it yet.',
+        || 'Progress photos saved. Volyume could not create a useful score from them yet.',
       whyLines: reasonCodesToLines(abstentionReasons.length ? abstentionReasons : qualityWarnings),
     };
   }
@@ -302,6 +302,6 @@ export const RECALIBRATION_NOTE_TEXT = 'Scores were recalibrated in an update. Y
 
 // ── Meaning moment (results-ui-and-copy-blueprint.md §1, exact copy) ───────
 export const MEANING_MOMENT_TITLE = 'Before your first score';
-export const MEANING_MOMENT_BODY = 'The Volyume Score is a progress read from your own photos. '
+export const MEANING_MOMENT_BODY = 'The Volyume Score is worked out from your own photos to show your progress. '
   + 'It is not a body fat measurement, a medical assessment, or a comparison with anyone else.';
 export const MEANING_MOMENT_BUTTON = 'Understood';

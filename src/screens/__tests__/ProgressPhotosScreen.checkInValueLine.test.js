@@ -126,7 +126,8 @@ const mk = (y, m, d) => {
 const OLD = mk(2026, 1, 5);
 const NEW = mk(2026, 6, 20);
 const nav = { goBack: jest.fn(), navigate: jest.fn() };
-const VALUE_LINE = 'If you check in this week, the coach can use this as context.';
+// RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+const VALUE_LINE = 'If you check in this week, your coach can use this as context.';
 
 function eligibleScan(id, photo, overrides = {}) {
   return {

@@ -76,14 +76,16 @@ describe('TRAINING comprehension', () => {
 
   test('a retained dose never reads as an increase; an increase names its evidence', () => {
     const src = read('lib/interBlock.js');
-    expect(src).toMatch(/responded well at this dose/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/responded well to this number of sets/);
     expect(src).toMatch(/carries over unchanged/);
     expect(src).toMatch(/kept progressing in the higher-volume weeks with recovery to spare/);
   });
 
   test('insufficient data never claims learning; the research start claims research-based guidance only', () => {
     const src = read('lib/interBlock.js');
-    expect(src).toMatch(/too little to judge the response/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/too little to judge how it responded/);
     expect(src).toMatch(/too rarely this block to judge/);
     const [line] = buildBlockStartLines({
       summary: { chest: { week1: 10, peak: 14, peakWeek: 4, deload: 6, source: 'template' } },
@@ -95,7 +97,8 @@ describe('TRAINING comprehension', () => {
   test('a manual setting is identified as the user\'s own', () => {
     const src = read('lib/blockExplain.js');
     expect(src).toContain("seed_manual: 'your own setting'");
-    expect(read('lib/interBlock.js')).toMatch(/Your manual volume settings stay as they are; this is a note, not a change/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(read('lib/interBlock.js')).toMatch(/The weekly sets you chose yourself stay as they are; this is a note, not a change/);
   });
 
   test('every glossary entry passes the jargon blocklist (deload and tonnage included)', () => {

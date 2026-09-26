@@ -85,6 +85,6 @@ export function trendLadderLabel(comparableCount, totalCount) {
   if (!totalCount) return null;
   const chainLength = 1 + Math.max(0, comparableCount); // the baseline point plus each comparable one
   if (chainLength >= 3) return 'A trend';
-  if (chainLength === 2) return 'An early read';
+  if (chainLength === 2) return 'An early indication';
   return 'Your starting point';
 }

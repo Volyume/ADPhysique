@@ -176,7 +176,8 @@ describe('VolumeHeatmapScreen states', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Volume appears after your first workout');
-    expect(text).toContain('Finish a workout and this screen will show weekly set volume');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('Finish a workout and this screen will show, for each muscle, your weekly sets');
     expect(text).toContain('Below target');
   });
 
@@ -355,8 +356,9 @@ describe('A7 (final certification 2026-09-05): the heatmap says what it does not
     }));
   }
 
-  const NOTE = 'Explosive lifts like swings, cleans, snatches and jumps are not counted here. '
-    + 'Volyume does not judge those for weekly volume.';
+  // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+  const NOTE = 'Explosive lifts like swings, cleans, snatches and jumps are not counted here '
+    + 'or used to judge your weekly volume.';
 
   test('names the excluded work when the window contains ballistic sets', async () => {
     getAllExercises.mockResolvedValue([

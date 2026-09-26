@@ -245,8 +245,9 @@ describe('Tier rendered contract on the score row (scoring blueprint §5 table)'
     expect(cardText).not.toContain('61/100');
     expect(cardText).toContain('Show anyway');
 
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     const revealButton = findElement(checkInFor(tree, TS), (n) => typeof n.props?.accessibilityLabel === 'string'
-      && n.props.accessibilityLabel.includes('show-anyway control'));
+      && n.props.accessibilityLabel.includes('Score hidden until you choose Show anyway'));
     expect(revealButton).toBeTruthy();
     await act(async () => { revealButton.props.onPress(); });
     cardText = flattenElementText(checkInFor(tree, TS));

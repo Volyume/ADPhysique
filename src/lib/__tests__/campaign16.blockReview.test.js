@@ -191,7 +191,8 @@ describe('C16-C the copy proposes, it never announces', () => {
 
   test('an unchanged structure explains that it is deliberate', () => {
     const c = verdictCopy(PROGRAMME_VERDICT.CONTINUE_STRUCTURE);
-    expect(c.body).toMatch(/still producing good evidence/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(c.body).toMatch(/staying the same because it is still working/i);
   });
 
   test('the recovery heads-up informs and promises nothing', () => {
@@ -199,9 +200,10 @@ describe('C16-C the copy proposes, it never announces', () => {
     expect(early.body).toMatch(/next block review is coming up/i);
     expect(early.body).not.toMatch(/will change|we will replace|new exercises/i);
     // Only once the epoch is old enough does it mention structure.
-    expect(early.body).not.toMatch(/exercise structure/i);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(early.body).not.toMatch(/review the exercises in it/i);
     const mature = recoveryHeadsUp({ epochBlocks: 3 });
-    expect(mature.body).toMatch(/exercise structure/i);
+    expect(mature.body).toMatch(/review the exercises in it as well/i);
   });
 
   test('the push says review, never "changed", and only claims changes when there are some', () => {

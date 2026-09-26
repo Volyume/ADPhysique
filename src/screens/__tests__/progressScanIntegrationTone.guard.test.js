@@ -40,7 +40,8 @@ const NEW_STRINGS = {
   'WeeklyCheckInScreen.js (scan prompt CTA)': 'Do a scan',
   'WeeklyCheckInScreen.js (scan prompt dismiss)': 'Not now',
   'WeeklyCheckInScreen.js (no-scan-this-period line)': 'No photo set this period.',
-  'ProgressPhotosScreen.js (post-scan check-in value line)': 'If you check in this week, the coach can use this as context.',
+  // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+  'ProgressPhotosScreen.js (post-scan check-in value line)': 'If you check in this week, your coach can use this as context.',
 };
 
 describe('progress-scan integration wave: new user-facing strings are clean', () => {
@@ -61,7 +62,8 @@ describe('progress-scan integration wave: new user-facing strings are clean', ()
     // The Home check-in nudge's scan subline is retired (see the NEW_STRINGS
     // comment above); pin its absence instead of its presence.
     expect(files.HomeScreen).not.toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
-    expect(files.ProgressPhotosScreen).toMatch(/If you check in this week, the coach can use this as context\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(files.ProgressPhotosScreen).toMatch(/If you check in this week, your coach can use this as context\./);
   });
 
   test('CoachOutputScreen: the accessibility-label template and dedupe helper introduce no new literal copy beyond the receipt/resolver strings already tone-guarded elsewhere', () => {

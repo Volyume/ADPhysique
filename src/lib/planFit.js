@@ -246,7 +246,7 @@ export function coverageCopy(fit) {
   const list = muscles.length === 1
     ? muscles[0]
     : `${muscles.slice(0, -1).join(', ')} and ${muscles[muscles.length - 1]}`;
-  return `At this schedule your ${list} work is thinner than your category usually wants. A little more time per session would let us shape it properly.`;
+  return `With this schedule, your ${list} work is less than your category usually needs. A little more time per session would give your coach room to plan it properly.`;
 }
 
 /** Plain-English label for one calculated alternative. */

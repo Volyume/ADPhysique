@@ -162,8 +162,9 @@ describe('C14-7 manual intent still does not teach the engine (35)', () => {
   });
 
   test('the editor still discloses that manual pauses learning', () => {
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(HEATMAP).toContain(
-      "While your own settings are in place, finished blocks don't teach the ranges the app learns for you.",
+      'While your own settings are in place, the app stops adjusting these ranges from your finished blocks.',
     );
   });
 });

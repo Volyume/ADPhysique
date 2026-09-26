@@ -19,7 +19,8 @@ const stripComments = (src) => src
 describe('PHASE 7: stale history is never called recent (D97)', () => {
   test('the readiness baseline label does not claim recency the row-limited query cannot promise', () => {
     const src = stripComments(read('lib/blockAdvisor.js'));
-    expect(src).toContain('Readiness a bit below your personal baseline');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toContain('Readiness a bit below your usual level');
     expect(src).not.toContain('below your recent average');
   });
 
@@ -201,7 +202,8 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
   test('P9-07: recovery-week and open-decision switches get their own honest dialogue', () => {
     const src = read('lib/planSwitch.js');
     expect(src).toMatch(/Switch during your recovery week\?/);
-    expect(src).toMatch(/Skip the open block decision\?/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/Skip choosing your next block\?/);
     expect(stripComments(src)).not.toMatch(/about to roll over anyway/);
   });
 

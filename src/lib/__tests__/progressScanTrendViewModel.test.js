@@ -128,8 +128,9 @@ describe('trendLadderLabel: the fixed language ladder', () => {
     expect(trendLadderLabel(0, 1)).toBe('Your starting point');
   });
 
-  test('2 comparable scans: An early read', () => {
-    expect(trendLadderLabel(1, 2)).toBe('An early read');
+  // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+  test('2 comparable scans: An early indication', () => {
+    expect(trendLadderLabel(1, 2)).toBe('An early indication');
   });
 
   test('3+ comparable scans: A trend', () => {

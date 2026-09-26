@@ -92,10 +92,10 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
   if (status.status === 'recovery' || status.status === 'completed_awaiting_decision') {
     const stateBody = status.status === 'recovery'
       ? `You're in your recovery week. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''}, and this block's results will still appear under Past blocks. Your workout history and PRs are kept.`
-      : `Your finished block's decision is still open. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''} instead; what this block showed stays available under Past blocks. Your workout history and PRs are kept.`;
+      : `You haven't chosen what comes after your finished block yet. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''} instead; what this block showed stays available under Past blocks. Your workout history and PRs are kept.`;
     return new Promise(resolve => {
       appAlert(
-        status.status === 'recovery' ? 'Switch during your recovery week?' : 'Skip the open block decision?',
+        status.status === 'recovery' ? 'Switch during your recovery week?' : 'Skip choosing your next block?',
         stateBody,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
@@ -110,7 +110,7 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
   const body =
     `You're in week ${status.currentWeek} of ${status.totalWeeks} of your current block. ` +
     (mode === 'rebuild'
-      ? 'Re-running the wizard creates a new plan and starts a fresh block from week 1.'
+      ? 'Going through plan setup again creates a new plan and starts a fresh block from week 1.'
       : `Activating ${newPlanName ? `"${newPlanName}"` : 'this plan'} starts a fresh block from week 1.`) +
     ' Your workout history and PRs are kept.';
 

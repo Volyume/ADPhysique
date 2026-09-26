@@ -121,7 +121,7 @@ export function resolveEvidencePanel({
         done: sessionsSinceCheckin >= 1,
         label: sessionsSinceCheckin >= 1
           ? `${plural(sessionsSinceCheckin, 'training session')} logged`
-          : 'No training sessions yet this cycle',
+          : 'No training sessions since your check-in',
       });
     }
   } else {

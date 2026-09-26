@@ -181,8 +181,9 @@ describe('ProgressScanCompare component', () => {
     expect(text).not.toContain('66/100');
     expect(text).not.toContain('54/100');
 
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     const revealButtons = tree.root.findAllByType(TouchableOpacity).filter(
-      (node) => /Score available behind a show-anyway control\./.test(node.props.accessibilityLabel || ''),
+      (node) => /Score hidden until you choose Show anyway\./.test(node.props.accessibilityLabel || ''),
     );
     expect(revealButtons).toHaveLength(2);
     await act(async () => { revealButtons[0].props.onPress(); });

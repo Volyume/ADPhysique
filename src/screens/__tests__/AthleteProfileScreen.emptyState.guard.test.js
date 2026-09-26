@@ -11,7 +11,8 @@ describe('AthleteProfileScreen shared empty state', () => {
   test('uses EmptyState for the strength baselines no-data state', () => {
     expect(source).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
     expect(source).toMatch(
-      /<EmptyState[\s\S]*icon="barbell-outline"[\s\S]*title="Add lifts for strength standards"[\s\S]*text="Log body weight and your main lifts to compare against baseline standards\."[\s\S]*compact/,
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      /<EmptyState[\s\S]*icon="barbell-outline"[\s\S]*title="Add lifts for strength standards"[\s\S]*text="Log body weight and your main lifts to see how they compare with typical strength levels\."[\s\S]*compact/,
     );
     expect(source).not.toMatch(/styles\.empty(?:Card|Title|Text)/);
   });

@@ -848,7 +848,7 @@ export default function HowYouTrainScreen() {
       }
     });
     if (hasRewrite) {
-      buttons.push({ text: 'How your plan matches your permanent rules', onPress: openRewrite });
+      buttons.push({ text: 'How your plan fits your long-term limitations', onPress: openRewrite });
     }
     // Round 6 (C1): the F-1 no-op wording, not "Not now" - on this same
     // screen "Not now" is the apply proposal's DECLINE, which writes a
@@ -1247,7 +1247,7 @@ export default function HowYouTrainScreen() {
       {state.unavailable ? (
         <Text style={[styles.hint, { color: t.colors.textSecondary, margin: spacing.lg }]}
           accessibilityLiveRegion="polite">
-          Volyume could not read this right now. Nothing has changed; pull back in a moment.
+          Volyume could not read this right now. Nothing has changed; try again in a moment.
         </Text>
       ) : null}
 
@@ -1378,7 +1378,7 @@ export default function HowYouTrainScreen() {
                 under its chip rather than fused into the caption. */}
             {held ? (
               <Text style={[styles.hint, { color: t.colors.textSecondary, paddingHorizontal: spacing.lg }]}>
-                Holding your plan as-is; adaptation is paused, not your training.
+                Keeping your plan as it is. Changes for this are paused; your training is not.
               </Text>
             ) : null}
             {/* D133 slice C (HYT-09): the card asks ONE question, as a heading,
@@ -1401,7 +1401,7 @@ export default function HowYouTrainScreen() {
               <SettingRow
                 icon="ellipsis-horizontal-circle-outline"
                 label={ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? 'More options' : 'Options'}
-                sub="End it, extend it, hold your plan as it is, or make it long-term."
+                sub="End it, extend it, keep your plan as it is, or make it long-term."
                 onPress={() => { haptics.selection(); setOptionsFor(ep.groupId); }}
               />
             </View>
@@ -1417,8 +1417,8 @@ export default function HowYouTrainScreen() {
         <SettingRow
           icon="search-outline"
           label="Looking for a specific condition or injury?"
-          sub="Optional. Finding it selects better questions; you never need a name to get the same support."
-          accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
+          sub="Optional. Finding it brings up the questions that matter for it; you never need a name to get the same support."
+          accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it brings up the questions that matter for it; you never need a name to get the same support."
           onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
         />
         {/* CC28 (section 33.12): energy-limited training's honest v1 home.
@@ -1433,8 +1433,8 @@ export default function HowYouTrainScreen() {
         <SettingRow
           icon="battery-half-outline"
           label="My energy varies, or I keep sessions short"
-          sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
-          accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
+          sub="Two things help here: set a session length under Workout and units, which shapes the next time your plan is built, and add a temporary change here for a rough patch."
+          accessibilityLabel="My energy varies, or I keep sessions short. Two things help here: set a session length under Workout and units, which shapes the next time your plan is built, and add a temporary change here for a rough patch. Opens Workout and units."
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
 
@@ -1484,7 +1484,7 @@ export default function HowYouTrainScreen() {
           <SectionHeader title="Your data" />
           <View style={[settingsStyles.section, live.section]}>
             <SettingRow icon="download" label="Export this information"
-              sub="A readable file of everything you have added here"
+              sub="A file you can open and read, with everything you have added here"
               onPress={exportCapabilityData} showArrow={false} />
             <SettingRow icon="trash" label="Delete this information" destructive
               sub="Removes everything here on all devices and turns the feature off"
@@ -1549,9 +1549,9 @@ export default function HowYouTrainScreen() {
                     sub="Volyume works around this again from your next session."
                     onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); })} />
                 ) : (
-                  <SettingRow icon="pause-outline" label="Hold my plan as-is"
+                  <SettingRow icon="pause-outline" label="Keep my plan as it is"
                     sub="Volyume changes nothing for this until you say so. Your plan runs exactly as it is."
-                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); })} />
+                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is keeping your plan as it is for this. Changes for it are paused; your training is not.'); refresh(); })} />
                 )}
                 <SettingRow icon="body-outline" label="Make it long-term"
                   sub="Becomes part of your normal setup, with full progression and coaching."

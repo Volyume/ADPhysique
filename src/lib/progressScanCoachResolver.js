@@ -86,7 +86,7 @@ function decisionLine(output) {
   const hasWeeklyOutput = !!output;
   const primary = output?.primary?.domain ?? null;
   if (!hasWeeklyOutput) {
-    return 'They stay as context until the weekly read has enough logged data beside it.';
+    return 'Your photos are context only until your weekly check-in has enough logged data beside them.';
   }
   if (primary === 'calories' || output?.adjustments?.calories) {
     return 'Your weekly targets still come from your logs, weight trend, training and recovery, not from your photos.';
@@ -112,7 +112,7 @@ export function resolveProgressScanCoachNote({
     // preference has no UI writer and defaults on for everyone, so no
     // user ever chose it. State the fact, claim no choice. Whether a
     // control should exist is a recorded founder ruling (CONTROL-GAPS).
-    trendOnly && label ? 'Detailed scores stay hidden here; the trend is the steadier read.' : null,
+    trendOnly && label ? 'Detailed scores stay hidden here; the trend is a more reliable guide.' : null,
     decisionLine(output),
   ].filter(Boolean).join(' '));
 

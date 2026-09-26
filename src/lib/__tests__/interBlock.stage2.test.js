@@ -452,7 +452,8 @@ describe('rationale always matches the final clamped numbers (review #1)', () =>
       performance: { e1rmSlopePct: -3, doseResponse: null },
       recovery: { sorenessLateAvg: 4.5, readinessSlope: -0.5 },
     }), CTX);
-    expect(e.rationale).toContain('manual volume settings');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(e.rationale).toContain('The weekly sets you chose yourself');
     expect(e.rationale).not.toMatch(/starts \d+ set/);
   });
 
@@ -737,7 +738,8 @@ describe('C6 RA6-2 (D97-25): OVERREACHED names the block-level cause when no per
       },
     }), CTX);
     expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
-    expect(entry.rationale).toMatch(/recovery ran high across the block as a whole/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(entry.rationale).toMatch(/your overall recovery was poor across the block/);
     expect(entry.rationale).not.toMatch(/ran high late in the block/);
   });
 
@@ -746,7 +748,8 @@ describe('C6 RA6-2 (D97-25): OVERREACHED names the block-level cause when no per
       recovery: { sorenessLateAvg: 4, jointDiscomfortAvg: 3 },
     }), CTX);
     expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
-    expect(entry.rationale).toMatch(/the recovery cost ran high late in the block/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(entry.rationale).toMatch(/soreness or joint discomfort ran high late in the block/);
   });
 
   test('the mid-block deload-flag wording is untouched', () => {
@@ -754,7 +757,8 @@ describe('C6 RA6-2 (D97-25): OVERREACHED names the block-level cause when no per
       recovery: { readinessSlope: -0.4, deloadFlagFired: true, deloadFlagMidBlock: true },
     }), CTX);
     expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
-    expect(entry.rationale).toMatch(/the recovery flag fired early in the block/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(entry.rationale).toMatch(/signs of poor recovery showed up early in the block/);
   });
 });
 
@@ -766,8 +770,9 @@ describe('C6 RA6-5 (D97-25): the non-earned RESPONSIVE rationale is direction-aw
     }), CTX);
     expect(entry.classification).toBe(BLOCK_CLASS.RESPONSIVE);
     expect(entry.proposal.startSets).toBe(8); // clamped below the retained dose
-    expect(entry.rationale).toMatch(/learned volume ceiling sets where the next block can safely sit/);
-    expect(entry.rationale).not.toMatch(/at this dose/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(entry.rationale).toMatch(/the most weekly sets it has recovered from so far sets a safe limit for the next block/);
+    expect(entry.rationale).not.toMatch(/to this number of sets/);
     // Cause and consequence agree: the sentence carries the downward clause.
     expect(entry.rationale).toMatch(/starts 2 sets lower/);
   });
@@ -779,7 +784,8 @@ describe('C6 RA6-5 (D97-25): the non-earned RESPONSIVE rationale is direction-aw
     }), CTX);
     expect(entry.classification).toBe(BLOCK_CLASS.RESPONSIVE);
     expect(entry.proposal.startSets).toBe(10);
-    expect(entry.rationale).toMatch(/responded well at this dose, so the starting volume carries over unchanged\./);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(entry.rationale).toMatch(/responded well to this number of sets, so the starting volume carries over unchanged\./);
   });
 });
 

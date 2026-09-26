@@ -145,7 +145,7 @@ function detectSignals(checkins) {
   if (latestR !== null && baselineR.length >= 2) {
     const z = zScore(latestR, baselineR);
     if (z <= -1.5) {
-      signals.push({ type: 'readiness_drop', severity: 'high', label: 'Readiness well below your personal baseline', data: Math.round(z * 10) / 10 });
+      signals.push({ type: 'readiness_drop', severity: 'high', label: 'Readiness well below your usual level', data: Math.round(z * 10) / 10 });
     } else if (z <= -1.0) {
       // C6 Phase 7 (D97): the baseline is the last 8 check-in ROWS
       // (getRecentCheckins), not a dated window - for a returning user
@@ -153,7 +153,7 @@ function detectSignals(checkins) {
       // "recent". "Personal baseline" is what the maths actually is (the
       // high-severity sibling already says so). Copy only; the z-score
       // and thresholds are untouched.
-      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your personal baseline', data: Math.round(z * 10) / 10 });
+      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your usual level', data: Math.round(z * 10) / 10 });
     }
   }
 
@@ -329,8 +329,8 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       // with adjustments" returns together with the behaviour Stage 1
       // stripped it of.
       body: finished
-        ? "The structure is working. Your next block starts from what this block showed, muscle by muscle."
-        : "The structure is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
+        ? "Your plan is working. Your next block starts from what this block showed, muscle by muscle."
+        : "Your plan is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
       secondaryLabel: 'Change my training setup',
     };
   }
@@ -341,8 +341,8 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     coached: true,
     headline: 'Might be worth a fresh look',
     body: finished
-      ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it."
-      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it.",
+      ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it."
+      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or choice of exercises still fits where you are. Your coach can help rebuild it.",
     // D93 (Campaign 2, Phase 12) required this card's primary button not to
     // share 'Continue this plan' with the card that recommends continuing,
     // and settled on 'Repeat this plan anyway'. FQ-2 (D96) supersedes the
@@ -403,7 +403,7 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
     return {
       ...nextBlock,
       recommendation: 'adjust',
-      headline: 'Same plan, adjusted where the evidence moved',
+      headline: 'Same plan, adjusted where your results changed',
       body: finished
         ? `${dir}, based on how this block actually went. The changes are listed below; everything else stays where it is.`
         : `After your recovery week, ${dir.charAt(0).toLowerCase()}${dir.slice(1)}, based on how this block actually went. The changes are listed below; everything else stays where it is.`,
@@ -416,15 +416,15 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
   // the actual difference is named instead. It does not flip the
   // recommendation: the training weeks themselves are identical.
   const sameWeek = preview.recoveryWeekDiffers
-    ? 'The training weeks are the same either way; continuing with adjustments would size your recovery week to the work you actually did.'
+    ? 'The training weeks are the same either way; continuing with adjustments would set your recovery week to match the work you actually did.'
     : 'Either option gives you the same training week.';
   return {
     ...nextBlock,
     recommendation: 'repeat',
     headline: 'Go again: the same targets still fit',
     body: finished
-      ? `Your current set targets are still supported by the evidence, so there are no meaningful training changes to apply. ${sameWeek}`
-      : `Your recovery week does its job, then the same set targets still fit: the evidence supports them, so there are no meaningful training changes to apply. ${sameWeek}`,
+      ? `Your current set targets still fit how this block went, so there are no meaningful training changes to apply. ${sameWeek}`
+      : `Your recovery week does its job, then the same set targets still fit: they match how this block went, so there are no meaningful training changes to apply. ${sameWeek}`,
   };
 }
 
@@ -1014,7 +1014,7 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
   if (energySig?.severity === 'high') parts.push('energy is very low');
   if (sorenessSig?.severity === 'high') parts.push('soreness is carrying over into sessions');
   if (sleepSig) parts.push(`sleep is below ${sleepSig.data?.toFixed(1) ?? '6'}h`);
-  if (zSig?.severity === 'high') parts.push('your overall readiness is well below your normal baseline');
+  if (zSig?.severity === 'high') parts.push('your overall readiness is well below your usual level');
 
   const signalText = parts.length > 0
     ? `Your check-in shows ${parts.join(' and ')}. `
@@ -1025,7 +1025,7 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
     ? `You're in week ${weeksIn}. `
     : '';
 
-  return `${signalText}${timing}dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as loading the spring for the next push.`;
+  return `${signalText}${timing}Dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as loading the spring for the next push.`;
 }
 
 function buildHeadsUpBody(signals, blockStatus) {
@@ -1042,7 +1042,8 @@ function buildHeadsUpBody(signals, blockStatus) {
   if (sorenessSig) obs.push('soreness is higher than normal');
   if (recovDrop) obs.push('your overall readiness has dipped');
 
-  const obsText = obs.length ? `${obs.join(' and ')}. ` : '';
+  const obsJoined = obs.join(' and ');
+  const obsText = obs.length ? `${obsJoined.charAt(0).toUpperCase()}${obsJoined.slice(1)}. ` : '';
 
   const timing = weeksToRecovery !== null
     ? `Your recovery week is ${weeksToRecovery === 1 ? 'next week' : `${weeksToRecovery} weeks away`}. `

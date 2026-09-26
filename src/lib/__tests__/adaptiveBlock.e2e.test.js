@@ -131,7 +131,8 @@ describe('the synthetic athlete: one block, six muscles, six outcomes', () => {
     const e = entryFor(ledger, 'quads');
     expect(e.classification).toBe(BLOCK_CLASS.STRAINED);
     expect(e.proposal.startSets).toBe(14); // 16 - 2
-    expect(e.rationale).toContain('lost ground while recovery ran poor');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(e.rationale).toContain('lost ground while recovery was poor');
     expect(e.rationale).toContain('2 sets lower');
   });
 

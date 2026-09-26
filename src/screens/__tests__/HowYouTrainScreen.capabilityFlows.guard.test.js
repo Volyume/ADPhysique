@@ -469,7 +469,8 @@ describe('T1-04/T1-26 - the clinician decline confirm', () => {
 
 describe('T2-27 - the session-length row stops over-claiming', () => {
   test('exact copy, no em dash, names the next-plan-build truth', () => {
-    expect(screen).toContain('sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(screen).toContain('sub="Two things help here: set a session length under Workout and units, which shapes the next time your plan is built, and add a temporary change here for a rough patch."');
     expect(screen).not.toContain('that actually fits under Workout');
   });
 });

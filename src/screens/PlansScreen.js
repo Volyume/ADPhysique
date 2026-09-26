@@ -87,7 +87,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'manual',
     icon: 'create-outline',
     title: 'Create your own',
-    description: 'Create your own plan and choose every exercise. Your coach keeps reading your training the same way.',
+    description: 'Create your own plan and choose every exercise. Your coach still reviews your training the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -1751,7 +1751,7 @@ export default function PlansScreen({ navigation }) {
                 <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>
                   Avoided movements · {avoidedMovementsCount}
                 </Text>
-                <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Movement patterns Volyume is leaving out of suggestions</Text>
+                <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Types of movement Volyume is leaving out of suggestions</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </Card>

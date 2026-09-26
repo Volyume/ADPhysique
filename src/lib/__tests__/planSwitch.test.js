@@ -92,7 +92,8 @@ describe('the other branches keep their own honest message', () => {
     const [title, body] = appAlert.mock.calls[0];
     expect(title).toBe('Restart your training block?');
     expect(body).toContain('week 3 of 6');
-    expect(body).toContain('Re-running the wizard creates a new plan and starts a fresh block from week 1.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(body).toContain('Going through plan setup again creates a new plan and starts a fresh block from week 1.');
     expect(body).toContain('Your workout history and PRs are kept.');
   });
 
@@ -107,7 +108,8 @@ describe('the other branches keep their own honest message', () => {
     getActiveBlock.mockResolvedValue({ startDate: weeksAgo(7), plannedWeeks: 6 });
     answerWith('Cancel');
     await expect(confirmPlanSwitchMidBlock('u1', {})).resolves.toBe(false);
-    expect(appAlert.mock.calls[0][0]).toBe('Skip the open block decision?');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(appAlert.mock.calls[0][0]).toBe('Skip choosing your next block?');
   });
 });
 
@@ -154,7 +156,8 @@ describe('D140: a rebuild that keeps every exercise keeps the block, and asks no
     getActiveBlock.mockResolvedValue({ startDate: weeksAgo(7), plannedWeeks: 6 });
     answerWith('Cancel');
     await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: true })).resolves.toBe(false);
-    expect(appAlert.mock.calls[0][0]).toBe('Skip the open block decision?');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(appAlert.mock.calls[0][0]).toBe('Skip choosing your next block?');
   });
 
   test('without keepBlock the mid-block restart dialogue is unchanged', async () => {

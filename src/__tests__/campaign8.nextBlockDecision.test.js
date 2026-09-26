@@ -49,7 +49,8 @@ describe('the preview measures the REAL Repeat vs Adjust difference', () => {
     const p = buildAdjustPreview({ ranges, ledger });
     expect(p.meaningful).toBe(false);
     const lines = adjustPreviewLines(p);
-    expect(lines[0]).toMatch(/still supported by the evidence, so there are no meaningful training changes to apply/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(lines[0]).toMatch(/still fit how this block went, so there are no meaningful training changes to apply/);
     // It must NOT imply adaptation happened.
     expect(lines.join(' ')).not.toMatch(/adjusted|higher|lower/i);
   });
@@ -97,11 +98,13 @@ describe('the preview measures the REAL Repeat vs Adjust difference', () => {
     const p = buildAdjustPreview({ ranges, ledger });
     expect(p.meaningful).toBe(false); // the training weeks really are the same
     expect(p.recoveryWeekDiffers).toBe(true);
-    expect(adjustPreviewLines(p).join(' ')).toMatch(/recovery week would be sized to the work you actually did/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(adjustPreviewLines(p).join(' ')).toMatch(/recovery week would be set to match the work you actually did/);
     const out = applyAdjustEvidence(PRO_BASE, p);
     expect(out.recommendation).toBe('repeat');
     expect(out.body).not.toMatch(/same training week/);
-    expect(out.body).toMatch(/size your recovery week/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(out.body).toMatch(/set your recovery week to match/);
   });
 
   // Review D7: "starts higher" is a claim about week 1, so a ceiling-only

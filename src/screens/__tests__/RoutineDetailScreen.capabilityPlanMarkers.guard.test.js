@@ -77,7 +77,8 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     // helper's drivingEpisode, so the two surfaces cannot diverge on
     // what counts as actionable.
     expect(FN).toContain("const allApplied = drivingEpisode.every((c) => c.row?.effectiveChoice === 'applied');");
-    expect(FN).toContain("if (!allApplied) return 'Sits outside your temporary change.';");
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(FN).toContain("if (!allApplied) return 'Clashes with your temporary change.';");
   });
 
   test('R5-7: the applied caption speaks SERVE\'s answer - swapped, left out, or the no-promise line - never a blanket promise', () => {
@@ -89,7 +90,8 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     // than a promise.
     expect(FN).toContain("if (serveOutcome === 'substituted') return 'Swapped in sessions while your change lasts.';");
     expect(FN).toContain("if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';");
-    expect(FN).toContain("return 'Sits outside your temporary change.';");
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(FN).toContain("return 'Clashes with your temporary change.';");
     // The promise is never unconditional: no bare ternary hands
     // "Swapped" to every applied row any more.
     expect(FN).not.toMatch(/allApplied\s*\?\s*'Swapped in sessions/);

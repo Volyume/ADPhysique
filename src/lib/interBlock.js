@@ -216,7 +216,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       observed: null, // no landmark frame: the raw numbers cannot be trusted either
       upwardCarryPrevented: false,
       proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual },
-      rationale: `No volume landmarks are available for ${lower}, so no volume proposal is made for it.`,
+      rationale: `There is no standard set range on record for ${lower}, so no change to its weekly sets is proposed.`,
     };
   }
   // Inverted bands (an adapted table can drift) are re-ordered rather than
@@ -245,7 +245,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     const dp = peak - plannedPeak;
     const cause = typeof why === 'function' ? why(ds) : why;
     if (deferredToManual) {
-      return `${cause}. Your manual volume settings stay as they are; this is a note, not a change.`;
+      return `${cause}. The weekly sets you chose yourself stay as they are; this is a note, not a change.`;
     }
     let clause;
     if (ds > 0) clause = `the next block starts ${ds} set${ds === 1 ? '' : 's'} higher`;
@@ -344,12 +344,12 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   if (adherenceRatio < ADHERENCE_FLOOR) {
     evidence.push({ signal: 'insufficient', value: 'adherence' });
     return finish(BLOCK_CLASS.INSUFFICIENT_DATA, mev, mav, null,
-      `${name} was logged for about ${Math.round(adherenceRatio * 100)}% of its planned sets this block, too little to judge the response`);
+      `${name} was logged for about ${Math.round(adherenceRatio * 100)}% of its planned sets this block, too little to judge how it responded`);
   }
   if (num(performance.eligibleExposures, 0) < MIN_EXPOSURES) {
     evidence.push({ signal: 'insufficient', value: 'exposure' });
     return finish(BLOCK_CLASS.INSUFFICIENT_DATA, mev, mav, null,
-      `${name} was trained too rarely this block to judge the response`);
+      `${name} was trained too rarely this block to judge how it responded`);
   }
   if (dataPoints < MIN_RECOVERY_POINTS) {
     evidence.push({ signal: 'insufficient', value: 'recovery_data' });
@@ -364,7 +364,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   if (num(performance.confidence, 0) < CONFIDENCE_FLOOR) {
     evidence.push({ signal: 'insufficient', value: 'confidence' });
     return finish(BLOCK_CLASS.INSUFFICIENT_DATA, previousStart, plannedPeak, null,
-      `The strength picture for ${lower} was too unsettled this block to judge`);
+      `Strength results for ${lower} were too mixed this block to judge`);
   }
 
   // ── Quadrants ───────────────────────────────────────────────────────────
@@ -375,8 +375,8 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     return finish(BLOCK_CLASS.STRAINED,
       Math.min(previousStart - 2, mav), Math.min(mav, plannedPeak), null,
       perfDown
-        ? `${name} lost ground while recovery ran poor`
-        : `${name} made no progress while recovery ran poor`);
+        ? `${name} lost ground while recovery was poor`
+        : `${name} made no progress while recovery was poor`);
   }
 
   if (recoveryPoor && perfUp) {
@@ -398,10 +398,10 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     return finish(BLOCK_CLASS.OVERREACHED, start,
       Math.min(achievedPeak, plannedPeak) - 2, null,
       recovery.deloadFlagMidBlock
-        ? `${name} progressed, but the recovery flag fired early in the block`
+        ? `${name} progressed, but signs of poor recovery showed up early in the block`
         : muscleVoicedCost
-          ? `${name} progressed, but the recovery cost ran high late in the block`
-          : `${name} progressed, but recovery ran high across the block as a whole`);
+          ? `${name} progressed, but soreness or joint discomfort ran high late in the block`
+          : `${name} progressed, but your overall recovery was poor across the block`);
   }
 
   if (perfUp) {
@@ -430,7 +430,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       earned
         ? (ds) => (ds > 0
           ? `${name} responded well and kept progressing in the higher-volume weeks with recovery to spare`
-          : `${name} responded well, and its learned volume ceiling sets where the next block can safely sit`)
+          : `${name} responded well, and the most weekly sets it has recovered from so far sets a safe limit for the next block`)
         // C6 RA6-5 (D97-25): the non-earned branch can also be pulled
         // DOWN by the learned-ceiling/MAV clamps (previousStart above
         // learnedCeiling - 2), and the bare retention string then read
@@ -439,8 +439,8 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
         // sentence. Same function form as the earned branch: a downward
         // final delta gets the ceiling clause; retention keeps its line.
         : (ds) => (ds < 0
-          ? `${name} responded well, and its learned volume ceiling sets where the next block can safely sit`
-          : `${name} responded well at this dose`),
+          ? `${name} responded well, and the most weekly sets it has recovered from so far sets a safe limit for the next block`
+          : `${name} responded well to this number of sets`),
       // The evidence earned a climb but suppression/staleness vetoed it:
       // that IS an upward carry prevented, reported truthfully (M-6).
       pairEarned && !earned);
@@ -453,9 +453,9 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   const stimulusChange = entrenched ? { primary: 'variant_swap', alternative: 'rep_range' } : null;
   return finish(BLOCK_CLASS.STALE, previousStart, plannedPeak, stimulusChange,
     perfDown
-      ? `${name} slipped despite good recovery, and a change of stimulus is proposed rather than more volume`
+      ? `${name} slipped despite good recovery, and a different exercise or rep range is proposed rather than more sets`
       : entrenched
-        ? `${name} has not moved for two blocks running with recovery fine, and a change of stimulus is proposed rather than more volume`
+        ? `${name} has not moved for two blocks running with recovery fine, and a different exercise or rep range is proposed rather than more sets`
         : `${name} held steady this block with recovery fine`);
 }
 

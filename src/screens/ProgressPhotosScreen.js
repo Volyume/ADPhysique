@@ -600,7 +600,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Best about a week apart', 'Volyume reads change best when photo sets are about a week apart. You can still save photos today, and retake sooner if you are fixing photo quality, but the score may be less useful.', [
+      appAlert('Best about a week apart', 'Volyume spots change best when photo sets are about a week apart. You can still save photos today, and retake sooner if you are fixing photo quality, but the score may be less useful.', [
         { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -1340,7 +1340,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   surface simply no longer renders them. */}
               {showCheckInValueLine ? (
                 <Text style={[styles.scanCheckInValueLine, live.scanCheckInValueLine]}>
-                  If you check in this week, the coach can use this as context.
+                  If you check in this week, your coach can use this as context.
                 </Text>
               ) : null}
             </View>

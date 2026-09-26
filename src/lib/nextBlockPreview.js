@@ -162,9 +162,9 @@ export function buildAdjustPreview({ ranges = null, ledger = null, limit = 3 } =
 export function adjustPreviewLines(preview) {
   if (!preview) return [];
   if (!preview.meaningful) {
-    const lines = ['Your current set targets are still supported by the evidence, so there are no meaningful training changes to apply.'];
+    const lines = ['Your current set targets still fit how this block went, so there are no meaningful training changes to apply.'];
     if (preview.recoveryWeekDiffers) {
-      lines.push('Your recovery week would be sized to the work you actually did, rather than a flat default.');
+      lines.push('Your recovery week would be set to match the work you actually did, rather than a standard amount.');
     }
     if (preview.heldUnjudged > 0) {
       lines.push(`${preview.heldUnjudged} muscle group${preview.heldUnjudged === 1 ? '' : 's'} could not be judged clearly this block, so nothing was moved on a guess.`);
@@ -186,13 +186,13 @@ export function adjustPreviewLines(preview) {
     lines.push(`${heldJudged} other muscle group${heldJudged === 1 ? '' : 's'} stay${heldJudged === 1 ? 's' : ''} where ${heldJudged === 1 ? 'it is' : 'they are'}, because that workload keeps working.`);
   }
   if (preview.heldUnjudged > 0) {
-    lines.push(`${preview.heldUnjudged} stay${preview.heldUnjudged === 1 ? 's' : ''} conservative: there wasn't enough clear evidence this block.`);
+    lines.push(`${preview.heldUnjudged} stay${preview.heldUnjudged === 1 ? 's where it is' : ' where they are'}: there wasn't enough clear information this block to judge ${preview.heldUnjudged === 1 ? 'it' : 'them'}.`);
   }
   if (preview.heldManual > 0) {
     lines.push(`${preview.heldManual} ${preview.heldManual === 1 ? 'is' : 'are'} on your own settings and stay${preview.heldManual === 1 ? 's' : ''} exactly there.`);
   }
   if (preview.recoveryWeekDiffers) {
-    lines.push('Your recovery week is sized to the work you actually did, rather than a flat default.');
+    lines.push('Your recovery week is set to match the work you actually did, rather than a standard amount.');
   }
   return lines;
 }

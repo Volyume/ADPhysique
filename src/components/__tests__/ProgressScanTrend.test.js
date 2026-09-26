@@ -84,8 +84,9 @@ describe('ProgressScanTrend', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('66/100');
     // 3 total scans, but only the a-b pair is comparable (b-c broke on lighting):
-    // chain length is 1 (baseline) + 1 comparable = 2 => "An early read", not "A trend".
-    expect(text).toContain('An early read');
+    // chain length is 1 (baseline) + 1 comparable = 2 => "An early indication", not "A trend".
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(text).toContain('An early indication');
 
     // Tap the third (non-comparable) point open and check the gap reason renders.
     const buttons = tree.root.findAllByType(TouchableOpacity);

@@ -217,7 +217,7 @@ export const READINESS_RULES = Object.freeze({
       energy: 'Low energy today: one set fewer on each lift keeps quality up.',
       default: 'Feeling below par: one set fewer on each lift today keeps quality up.',
     }),
-    whyLoad: 'Suggested loads are trimmed a touch so every rep stays crisp.',
+    whyLoad: 'Suggested loads are a little lighter so every rep stays controlled.',
   }),
   average: Object.freeze({ setDelta: 0, loadFactor: 1 }),
   sharp: Object.freeze({

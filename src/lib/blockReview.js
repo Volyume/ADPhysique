@@ -155,20 +155,20 @@ export function verdictCopy(verdict, { changedCount = 0 } = {}) {
     case PROGRAMME_VERDICT.REBUILD_PROGRAMME:
       return {
         title: 'Worth rebuilding',
-        body: 'What you are training for, or what you have to train with, has moved far enough that the structure itself is worth rebuilding rather than adjusted.',
+        body: 'What you are training for, or what you have to train with, has changed enough that your plan is worth rebuilding rather than adjusting.',
       };
     case PROGRAMME_VERDICT.REFINE_PROGRAMME:
       return {
         title: changedCount === 1 ? 'One change recommended' : `${changedCount} changes recommended`,
-        body: 'Most of your programme stays. A few slots have a reason to change, and each one is listed with why.',
+        body: 'Most of your programme stays. A few exercises have a reason to change, and each one is listed with its reason.',
       };
     case PROGRAMME_VERDICT.CONTINUE_STRUCTURE:
     default:
       return {
-        title: 'Your structure stays',
+        title: 'Your exercises stay the same',
         // The amendment is explicit that this must be stated as a
         // deliberate outcome, not left as silence.
-        body: 'Most of your programme is staying the same because it is still producing good evidence. Your set targets still move with what this block showed.',
+        body: 'Most of your programme is staying the same because it is still working. Your set targets still change based on what this block showed.',
       };
   }
 }
@@ -181,10 +181,10 @@ export function verdictCopy(verdict, { changedCount = 0 } = {}) {
  * commits to nothing.
  */
 export function recoveryHeadsUp({ epochBlocks = 0 } = {}) {
-  const base = 'Your next block review is coming up. After this recovery week, Volyume will use what this block showed to decide what should stay, what should change and where your training volume should start.';
+  const base = 'Your next block review is coming up. After this recovery week, your coach will use what this block showed to decide what should stay, what should change and where your training volume should start.';
   if (!epochReviewDue(epochBlocks)) return { body: base };
   return {
-    body: `${base} You have now built enough history on this programme for Volyume to review the exercise structure as well.`,
+    body: `${base} You have now built enough history on this programme for your coach to review the exercises in it as well.`,
   };
 }
 

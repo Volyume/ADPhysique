@@ -119,7 +119,7 @@ function formatLoadValue(value, units = 'kg') {
 export function formatHistoryExerciseSummary(sets = [], exerciseType = 'weight_reps', units = 'kg') {
   const workingSets = sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
   if (workingSets.length === 0) {
-    return `${sets.length} set${sets.length !== 1 ? 's' : ''} (warmup only)`;
+    return `${sets.length} set${sets.length !== 1 ? 's' : ''} (warm-ups only)`;
   }
   if (exerciseType === 'duration' || exerciseType === 'distance' || exerciseType === 'reps_only') {
     const details = workingSets

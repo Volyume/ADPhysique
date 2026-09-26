@@ -40,7 +40,7 @@ export const PHYSIQUE_GOALS = [
     label: "Men's Physique",
     group: 'Male',
     icon: 'body-outline',
-    subtitle: "Upper-body width and a sharp V-shape. Shoulder and lat development are the priority.",
+    subtitle: "Upper-body width and a sharp V-shape. Shoulder and upper-back (lat) development are the priority.",
     weakPointsEnabled: true,
     coachingNote: "This category is judged on upper body shape and conditioning. Shoulder width and back development drive the look.",
   },
@@ -49,7 +49,7 @@ export const PHYSIQUE_GOALS = [
     label: 'Classic Physique',
     group: 'Male',
     icon: 'star-outline',
-    subtitle: 'Proportional symmetry and balanced mass. Calves, shoulders and waist definition are all judged.',
+    subtitle: 'Symmetry, good proportions and balanced muscle size. Calves, shoulders and waist definition are all judged.',
     weakPointsEnabled: true,
     coachingNote: "Judged on proportion, symmetry and conditioning. Calves are specifically highlighted and waist control matters.",
   },
@@ -58,7 +58,7 @@ export const PHYSIQUE_GOALS = [
     label: 'Bodybuilding',
     group: 'Male',
     icon: 'barbell-outline',
-    subtitle: 'Maximum muscle development across every group. High volume, full body emphasis.',
+    subtitle: 'Maximum muscle development across every muscle group, with high training volume for the whole body.',
     weakPointsEnabled: true,
     coachingNote: "Everything is judged. Volume is pushed across all muscle groups with nothing de-prioritised.",
   },
@@ -87,7 +87,7 @@ export const PHYSIQUE_GOALS = [
     label: 'Figure',
     group: 'Female',
     icon: 'diamond-outline',
-    subtitle: 'Athletic symmetry across the whole body. Capped shoulders, developed back and glutes.',
+    subtitle: 'Athletic symmetry across the whole body. Well-developed shoulders, back and glutes.',
     weakPointsEnabled: true,
     coachingNote: "Judged on symmetry, conditioning and athletic lines. Shoulder width, back detail and glute development all matter.",
   },
@@ -96,7 +96,7 @@ export const PHYSIQUE_GOALS = [
     label: "Women's Physique",
     group: 'Female',
     icon: 'ribbon-outline',
-    subtitle: 'Balanced muscle development with feminine lines. More muscular than figure.',
+    subtitle: 'Balanced muscle development with feminine lines. More muscular than Figure.',
     weakPointsEnabled: true,
     coachingNote: "Judged on muscle balance, conditioning and overall presentation. Full body development with all groups on show.",
   },
@@ -105,7 +105,7 @@ export const PHYSIQUE_GOALS = [
     label: "Women's Bodybuilding",
     group: 'Female',
     icon: 'barbell-outline',
-    subtitle: 'Maximum muscular development and conditioning. The most muscular female category.',
+    subtitle: 'Maximum muscle size and definition. The most muscular female category.',
     weakPointsEnabled: true,
     coachingNote: "Everything is judged. Volume is pushed across all muscle groups for full development and conditioning, the female analogue of open bodybuilding.",
   },
@@ -234,7 +234,7 @@ export const TRAINING_PHASES = [
     label: 'Build muscle (lean gain)',
     icon: 'arrow-up-circle-outline',
     subtitle: 'Building muscle slowly with minimal fat gain.',
-    detail: 'A small calorie surplus. Steady, clean gains. Takes patience but keeps you lean throughout.',
+    detail: 'A small calorie surplus. Steady muscle gains with little fat gain. Takes patience but keeps you lean throughout.',
   },
   {
     value: 'bulk',
@@ -243,7 +243,7 @@ export const TRAINING_PHASES = [
     label: 'Build muscle (bulk)',
     icon: 'rocket-outline',
     subtitle: 'Pushing muscle growth with a bigger calorie surplus.',
-    detail: 'A moderate surplus. Faster muscle gains with some expected fat gain alongside.',
+    detail: 'A moderate calorie surplus. Faster muscle gains, with some fat gain expected alongside.',
   },
   {
     // Previously a "PHYSIQUE_GOAL" called strength_hypertrophy.
@@ -254,7 +254,7 @@ export const TRAINING_PHASES = [
     label: 'Strength + size',
     icon: 'flash-outline',
     subtitle: 'Compound-focused training with heavier loads. Build strength and muscle together.',
-    detail: 'Eating in a surplus to support strength gains. Compound lifts take priority, isolation work pared back.',
+    detail: 'Eating in a calorie surplus to support strength gains. Big lifts that work several muscles at once take priority, and single-muscle exercises are cut back.',
   },
   {
     // Previously a "PHYSIQUE_GOAL" called weak_point_spec.
@@ -265,7 +265,7 @@ export const TRAINING_PHASES = [
     label: 'Bring up a weak point',
     icon: 'git-branch-outline',
     subtitle: 'Target specific muscles you want to bring up while maintaining everything else.',
-    detail: 'Your priority muscles get the most work your body can recover from; everything else holds at a maintenance level. Pair with a small surplus.',
+    detail: 'Your priority muscles get the most work your body can recover from; everything else gets just enough work to keep what you have. It comes with a small calorie surplus.',
   },
   {
     value: 'cut',
@@ -285,7 +285,7 @@ export const TRAINING_PHASES = [
     label: 'Recomp',
     icon: 'swap-horizontal-outline',
     subtitle: 'Improving your shape without a big change in weight.',
-    detail: 'Eating around maintenance. A slow process, but works well for beginners and people returning after a break.',
+    detail: 'Eating around the calories that keep your weight steady. A slow process, but it works well for beginners and people returning after a break.',
   },
   {
     value: 'maintain',
@@ -294,7 +294,7 @@ export const TRAINING_PHASES = [
     label: 'Maintain',
     icon: 'pause-circle-outline',
     subtitle: 'Holding your current weight and focusing on performance.',
-    detail: 'Eating at maintenance. Keep what you have, get stronger, and stay consistent.',
+    detail: 'Eating the calories that keep your weight steady. Keep what you have, get stronger, and stay consistent.',
   },
 ];
 
@@ -646,12 +646,12 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
       general:          'Performance and recovery need to stabilise. Hold your current plan before adding anything more.',
       mens_physique:    'Keep shoulder and back sessions steady. Performance is stable and consistent sessions build the look.',
       classic_physique: 'Hold everything steady. Consistent sessions across all groups build proportion over time.',
-      bodybuilding:     'Stay with your current volume across all groups. Holding a dose is a decision, not a default.',
+      bodybuilding:     'Stay with your current volume across all muscle groups. Keeping it the same is a deliberate decision, not a default.',
       bikini:           'Hold your current sessions. Glute and hamstring work is tracking well.',
       wellness:         'Keep lower body volume steady. Recovery needs more time before adding.',
       figure:           'Hold current plan. Keep shoulder and back sessions consistent.',
       womens_physique:  'Maintain current volume. Performance is stable across all groups.',
-      womens_bodybuilding: 'Hold your current volume across every group. Holding a dose is a decision, not a default.',
+      womens_bodybuilding: 'Hold your current volume across every muscle group. Keeping it the same is a deliberate decision, not a default.',
     };
     return holdNotes[trainingGoal] ?? holdNotes.general;
   }
@@ -677,10 +677,10 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
     mens_physique:    'Recovery is solid. Keep shoulder and back sessions consistent and focus on quality.',
     classic_physique: 'Recovery is solid. Keep the pace consistent across all groups.',
     bodybuilding:     'Recovery is solid. Consistent effort across all groups this week.',
-    bikini:           'Recovery is solid. Keep glute and hamstring sessions consistent with quality execution.',
+    bikini:           'Recovery is solid. Keep glute and hamstring sessions consistent, with good technique.',
     wellness:         'Recovery is solid. Keep lower body sessions consistent and precise.',
     figure:           'Recovery is solid. Keep shoulder, back and glute sessions on track.',
-    womens_physique:  'Recovery is solid. Keep all groups consistent with quality focus.',
+    womens_physique:  'Recovery is solid. Keep all muscle groups consistent, with the focus on quality.',
     womens_bodybuilding: 'Recovery is solid. Consistent effort across every group this week.',
   };
   return pushNotes[trainingGoal] ?? pushNotes.general;

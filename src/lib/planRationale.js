@@ -220,13 +220,13 @@ export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0, n
     if (prescriptionCount > 0) {
       return `${prescriptionCount} rep target${prescriptionCount === 1 ? '' : 's'} would change. Your exercises stay.`;
     }
-    return 'Nothing is changing. Your plan is still producing good evidence.';
+    return 'Nothing is changing. Your plan is still working.';
   }
   const joined = bits.length > 1
     ? `${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}`
     : bits[0];
   const totalMoved = changeCount + addedCount + noLongerInCount;
-  const listedTail = totalMoved === 1 ? 'listed below with why' : 'each listed with why';
+  const listedTail = totalMoved === 1 ? 'listed below with the reason' : 'each listed below with its reason';
   if (stayCount === 0) return `${joined}.${repTail}`;
   return `Most of your plan stays. ${joined}, ${listedTail}.${repTail}`;
 }

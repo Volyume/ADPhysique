@@ -96,7 +96,8 @@ describe('Progress Scan out-of-engine coach resolver', () => {
   const DECISION_LINE_STRINGS = [
     // D86 plain-voice copy. Same invariant: every branch states that targets
     // come from logged data, never from photos.
-    'They stay as context until the weekly read has enough logged data beside it.',
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    'Your photos are context only until your weekly check-in has enough logged data beside them.',
     'Your weekly targets still come from your logs, weight trend, training and recovery, not from your photos.',
     'Photos never set your targets. Those come from your logged training, food and weight trend.',
   ];

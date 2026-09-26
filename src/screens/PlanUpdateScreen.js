@@ -77,7 +77,7 @@ const SESSION_LENGTH_OPTIONS = [
 const RECOVERY_OPTIONS = [
   { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
   { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
-  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
+  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, eating well' },
 ];
 
 // C1 (pre-release sweep 2026-07-27, LANE C): one calm, fixed message for
@@ -504,7 +504,7 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
+          Only matters if you're training for a physique competition. It shifts more of your plan's work to the muscles that category is judged on.
         </Text>
 
         <Dropdown
@@ -589,7 +589,7 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          How well you're recovering between sessions. This sets how cautious Volyume should be with training volume.
+          How well you're recovering between sessions. This sets how cautious your coach is with your training volume.
         </Text>
         <Dropdown
           value={recoveryRating}

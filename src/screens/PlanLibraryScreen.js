@@ -68,17 +68,17 @@ const DIVISIONS_MEN = [
   {
     key: 'mens_physique',
     label: "Men's Physique",
-    desc: "Wide shoulders, lean midsection, board shorts. Upper-body biased.",
+    desc: "Wide shoulders, lean midsection, board shorts. Upper-body focused.",
   },
   {
     key: 'classic_physique',
     label: 'Classic Physique',
-    desc: "Balanced golden-era build: capped shoulders, full chest, and legs.",
+    desc: "Balanced, old-school build: well-developed shoulders, full chest, and legs.",
   },
   {
     key: 'mens_bodybuilding',
     label: "Men's Bodybuilding",
-    desc: "Maximum muscular development across every group. High set count per week.",
+    desc: "Maximum muscular development across every muscle group. Lots of sets each week.",
   },
 ];
 
@@ -86,7 +86,7 @@ const DIVISIONS_WOMEN = [
   {
     key: 'bikini',
     label: 'Bikini',
-    desc: "Lean and athletic with rounded glutes. The most glute-forward division.",
+    desc: "Lean and athletic with rounded glutes. The division that focuses most on the glutes.",
   },
   {
     key: 'wellness',
@@ -101,12 +101,12 @@ const DIVISIONS_WOMEN = [
   {
     key: 'womens_physique',
     label: "Women's Physique",
-    desc: "More muscle across every group. Visible arms, back, and full legs.",
+    desc: "More muscle across every muscle group. Visible arms, back, and full legs.",
   },
   {
     key: 'womens_bodybuilding',
     label: "Women's Bodybuilding",
-    desc: "Maximum female muscular development across every group.",
+    desc: "Maximum female muscular development across every muscle group.",
   },
 ];
 

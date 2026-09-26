@@ -215,7 +215,7 @@ export const CONDITION_PROFILES = Object.freeze([
       qImpact('pd_q3', 'Impact work is a personal choice; many people keep training low-impact.'),
     ],
     setupConsiderations: [
-      'Seated and supported positions remove the balance cost from heavy work.',
+      'Seated and supported positions take balancing out of heavy work.',
       'Many people time training for when they feel at their best in the day; Volyume never schedules your sessions, so when you train is entirely your call.',
     ],
     accessibilityConsiderations: [
@@ -312,7 +312,7 @@ export const CONDITION_PROFILES = Object.freeze([
     functionalQuestions: [
       qOneArm('abi_q1', 'One-sided difference after stroke or brain injury is common; one-arm training keeps the whole upper body trainable.'),
       qOneLeg('abi_q2', 'Same for the lower body; one-side work is complete training.'),
-      qBalance('abi_q3', 'Supported training removes the balance cost while strength does its work.'),
+      qBalance('abi_q3', 'Supported training takes balancing out of the effort, so your strength does the work.'),
       qGrip('abi_q4', 'If the affected hand grips less, cuffs, straps and grip-light machines keep pulling available.'),
     ],
     setupConsiderations: [
@@ -414,8 +414,8 @@ export const CONDITION_PROFILES = Object.freeze([
       qImpact('lld_q4', 'Jumping and impact work depends on you and on your prosthesis; Volyume leaves it out until you say otherwise.'),
     ],
     setupConsiderations: [
-      'Machines with independent leg action and single-leg stations do the honest work here.',
-      'Seated and lying lower-body work keeps volume available without balance cost.',
+      'Machines where each leg works on its own, and single-leg stations, do the real work here.',
+      'Seated and lying lower-body work keeps your training volume available without needing to balance.',
     ],
     accessibilityConsiderations: [],
     fatigueNote: null,
@@ -621,7 +621,7 @@ export const CONDITION_PROFILES = Object.freeze([
       qImpact('ra_q3', 'Low-impact is the common preference; yours to set.'),
     ],
     setupConsiderations: [
-      'Machines and cables allow small load steps, which matter when joints have opinions.',
+      'Machines and cables allow small steps in weight, which matter when joints are sensitive.',
       'On rough weeks, a temporary change under Injuries & limitations keeps the plan honest without rewriting your normal.',
     ],
     accessibilityConsiderations: [],
@@ -669,7 +669,7 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     setupConsiderations: [
       'Controlled machine work and bands give feedback that free weights do not, which suits hypermobile joints.',
-      'Stopping movements short of end range is a performance note worth making your habit; equipment choice can help it.',
+      'Stopping each movement a little short of as far as the joint will go is a habit worth building; equipment choice can help with it.',
     ],
     accessibilityConsiderations: [],
     fatigueNote: 'Building up gradually is the usual approach with hypermobile joints. If you hit a rough patch, a temporary change under Injuries & limitations covers it without changing your normal setup.',
@@ -723,7 +723,7 @@ export const CONDITION_PROFILES = Object.freeze([
     fatigueNote: null,
     lateralityNote: null,
     generalisable: [
-      'Strength work from supported positions carries on regardless of balance; support level is the only variable.',
+      'Strength work from supported positions carries on regardless of balance; how much support you use is the only thing that changes.',
     ],
     individual: [],
     neverInfer: [
@@ -756,7 +756,7 @@ export const CONDITION_PROFILES = Object.freeze([
     affects: { programming: true, appAccessibility: true },
     variability: 'Grip and hand differences come from many places and affect movements unevenly: a firm bar hold, a light touch and taking weight through the palm are three different questions.',
     functionalQuestions: [
-      qGrip('grip_q1', 'The central question: excluding firm-grip work keeps every muscle trainable through grip-light routes.'),
+      qGrip('grip_q1', 'The central question: leaving out firm-grip work still lets every muscle be trained, using equipment that needs little grip.'),
       qWrists('grip_q2', 'Push-up style positions load the wrist without needing grip; a separate answer.'),
       qOneArm('grip_q3', 'If one hand does most of the work, one-side training keeps everything available.'),
     ],
@@ -771,7 +771,7 @@ export const CONDITION_PROFILES = Object.freeze([
     fatigueNote: null,
     lateralityNote: `If one hand works differently from the other, ${SIDED}`,
     generalisable: [
-      'Grip-light equipment and adapted holds keep the training effect while changing only the interface.',
+      'Grip-light equipment and adapted holds keep the training effect while changing only how you hold on.',
     ],
     individual: [],
     neverInfer: [
@@ -801,10 +801,10 @@ export const CONDITION_PROFILES = Object.freeze([
     aliases: ['essential tremor', 'shaky hands', 'dystonia', 'writer’s cramp', 'movement disorder'],
     category: C.NEUROLOGICAL,
     affects: { programming: true, appAccessibility: true },
-    variability: 'Tremor and dystonia vary in which tasks they touch and how much; many strength movements are barely affected while fine positioning ones are. Your per-movement choices carry it.',
+    variability: 'Tremor and dystonia vary in which tasks they touch and how much; many strength movements are barely affected while fine positioning ones are. Your choices for each movement cover it.',
     functionalQuestions: [
       qGrip('td_q1', 'If steady gripping is the affected task, grip-light equipment keeps everything trainable.'),
-      qBalance('td_q2', 'Supported positions remove precision demands from heavy work.'),
+      qBalance('td_q2', 'Supported positions mean heavy work needs less fine control.'),
       qOverhead('td_q3', 'Overhead positions ask the most steadiness; leave them out if that is you, and you can bring back any that are fine.'),
     ],
     setupConsiderations: [
@@ -818,7 +818,7 @@ export const CONDITION_PROFILES = Object.freeze([
     fatigueNote: 'Steadiness often drops as a session goes on. You can finish a session whenever you want to, and everything you logged up to that point still counts.',
     lateralityNote: `Tremor is often one-sided or specific to certain tasks. Where that is true, ${SIDED}`,
     generalisable: [
-      'Research suggests strength work itself remains fully available, with equipment choice absorbing steadiness demands.',
+      'Research suggests strength work itself remains fully available, with the right equipment taking care of the need for steadiness.',
     ],
     individual: [],
     neverInfer: [
@@ -1032,7 +1032,7 @@ export const CONDITION_PROFILES = Object.freeze([
       qOneLeg('wc_q4', 'If your legs are not part of training, Volyume plans and judges only what is.'),
     ],
     setupConsiderations: [
-      'Balanced pulling work alongside pressing looks after shoulders that also do daily propulsion.',
+      'Balanced pulling work alongside pressing looks after shoulders that also push your chair every day.',
       'Cable stations and accessible machines with removable seats cover most of the work.',
     ],
     accessibilityConsiderations: [

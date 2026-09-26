@@ -139,7 +139,7 @@ function buildDecisionChapter({ coachOutput, isCurrentWeek }) {
   for (const h of held) {
     if (h?.reason) sentences.push(h.reason);
   }
-  let body = sentences.length ? sentences.join(' ') : 'The coach held everything the same this week.';
+  let body = sentences.length ? sentences.join(' ') : 'Your coach kept everything the same this week.';
   if (!isCurrentWeek) {
     body = `From your last coaching decision: ${body}`;
   }

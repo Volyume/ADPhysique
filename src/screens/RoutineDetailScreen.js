@@ -84,13 +84,13 @@ function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
       // D112 R8: a PURE held state holds - the marker reflects the
       // user's own instruction (the helper guarantees no definite
       // baseline conflict is being silenced beneath it).
-      return "Held as-is at your request.";
+      return "Kept as it is at your request.";
     }
     if (kind === 'episode') {
       // Round 4 (F-3) via the helper: drivingEpisode IS the actionable
       // list (held rules excluded), serve's own gate.
       const allApplied = drivingEpisode.every((c) => c.row?.effectiveChoice === 'applied');
-      if (!allApplied) return 'Sits outside your temporary change.';
+      if (!allApplied) return 'Clashes with your temporary change.';
       // Round 5 (R5-7): the applied caption speaks serve's own answer,
       // never a promise the applied test alone cannot back. serveOutcome
       // comes from the screen's capabilityServeOutcomes memo - the same
@@ -98,7 +98,7 @@ function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
       // never-served-empty fail-safe included.
       if (serveOutcome === 'substituted') return 'Swapped in sessions while your change lasts.';
       if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';
-      return 'Sits outside your temporary change.';
+      return 'Clashes with your temporary change.';
     }
     if (kind === 'baseline') return "Clashes with an injury or limitation you've set.";
     if (kind === 'unknown') return "Volyume couldn't check this against your limitations yet.";
@@ -143,7 +143,7 @@ function MuscleTagRow({ exercises }) {
 
   return (
     <Card style={tagStyles.section}>
-      <SectionLabel tone="muted">Muscle coverage</SectionLabel>
+      <SectionLabel tone="muted">Muscles worked</SectionLabel>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

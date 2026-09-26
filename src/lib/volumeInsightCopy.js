@@ -30,7 +30,7 @@ export function getVolumeInsight(muscle, sets, status, table = null) {
   if (!landmarks) return null;
   const { mev, mrv } = landmarks;
   const n = Math.round(sets);
-  const range = `${mev}–${mrv} sets/week`;
+  const range = `${mev} to ${mrv} sets/week`;
   if (status === 'optimal') return `${n} sets · on track for muscle growth (target: ${range})`;
   if (status === 'minimum') return `${n} sets · at the minimum for growth (target: ${range})`;
   if (status === 'below') return `${n} sets · below the minimum for growth (target: ${range})`;
@@ -68,19 +68,19 @@ export function getVolumeWhy(muscle, sets, status, table = null, source = null) 
           ? ' These targets are matched to your training experience, recovery, phase and age.'
           : ' These targets are research-based starting points.';
   if (status === 'optimal') {
-    return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
+    return `${name}'s helpful range is ${mev} to ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
   }
   if (status === 'minimum') {
-    return `You're right at the floor for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower lowering phase on one exercise, moves you into a stronger range.${closing}`;
+    return `You're right at the minimum for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower lowering phase on one exercise, moves you into a stronger range.${closing}`;
   }
   if (status === 'below') {
-    return `Below the ${mev}-set floor where reliable growth signals start to appear in research. Two routes next week: add a couple of sets to an existing exercise, or sneak in one extra movement that hits ${name}.${closing}`;
+    return `Below ${mev} sets, the point where research starts to show reliable growth. Two routes next week: add a couple of sets to an existing exercise, or sneak in one extra movement that hits ${name}.${closing}`;
   }
   if (status === 'near_mrv') {
-    return `Close to the recovery ceiling for ${name} (${mrv} sets per week). One more session and recovery costs start to outweigh the gains. Hold here next week. If your reps are still climbing session to session, you're managing the load well.${closing}`;
+    return `Close to the most weekly sets ${name} can recover from (${mrv} sets per week). One more session and recovery costs start to outweigh the gains. Hold here next week. If your reps are still climbing session to session, you're managing the load well.${closing}`;
   }
   if (status === 'over_mrv') {
-    return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint aches usually follow. Drop a few sets next week to land back in the helpful range. Backing off here is how you come back stronger.${closing}`;
+    return `Past the most weekly sets ${name} can recover from (${mrv} sets per week). Soreness, performance drops and joint aches usually follow. Drop a few sets next week to land back in the helpful range. Backing off here is how you come back stronger.${closing}`;
   }
   return null;
 }

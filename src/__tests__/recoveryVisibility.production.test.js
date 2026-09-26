@@ -147,8 +147,9 @@ describe('CHAIN A + B: TRAIN, now a detail surface rather than the only one', ()
     const prescribed = generateDeloadPrescription(week1, true);
     const differences = describePrescriptionDifferences(week1, prescribed);
     expect(differences).toEqual(['fewer reps per set', 'easier effort targets']);
-    expect(differences).not.toContain('lighter loads');
-    expect(differences).not.toContain('fewer working sets');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(differences).not.toContain('lighter weights');
+    expect(differences).not.toContain('fewer sets');
     expect(train).toMatch(/describePrescriptionDifferences\(week1Sets, deloadTargets\)/);
   });
 
