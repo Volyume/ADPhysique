@@ -2499,7 +2499,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Add your starting body composition"
-              sub="An honest estimate sharpens your first plan. Skip this if you are not sure."
+              sub="An honest estimate makes your first plan more accurate. Skip this if you are not sure."
               onBack={goBack}
             />
 

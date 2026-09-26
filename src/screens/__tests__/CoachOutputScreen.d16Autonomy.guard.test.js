@@ -158,9 +158,11 @@ describe('D16: SettingsCoachingScreen carries the mode selector (sibling-file ch
     expect(SETTINGS).toContain("{ key: 'coached', label: 'Coached' }");
     expect(SETTINGS).toContain("{ key: 'collaborative', label: 'Collaborative' }");
     expect(SETTINGS).toContain("{ key: 'manual', label: 'Manual' }");
-    expect(SETTINGS).toContain("The coach applies each week's changes for you.");
-    expect(SETTINGS).toContain('The coach suggests each change. You tap to apply it.');
-    expect(SETTINGS).toContain('The coach shows each change and the reason. You make the change yourself.');
+    // RE-ANCHORED 2026-09-26 (plain-English sweep, actor rule: "your coach",
+    // docs/rules/plain-english.md): same three sentences, same meaning.
+    expect(SETTINGS).toContain("Your coach applies each week's changes for you.");
+    expect(SETTINGS).toContain('Your coach suggests each change. You tap to apply it.');
+    expect(SETTINGS).toContain('Your coach shows each change and the reason. You make the change yourself.');
   });
 
   test('no em dash in the new copy (British English, no em/en dashes)', () => {

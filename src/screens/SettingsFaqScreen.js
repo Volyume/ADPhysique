@@ -39,7 +39,7 @@ export const FAQS = [
   {
     key: 'weekly-coach',
     q: 'How does Precision Coaching decide what changes each week?',
-    a: 'Precision Coaching follows clear, fixed rules, never a guess. Each week it reads your logged training, your weight trend, your food data if you use the food diary, and your weekly check-in answers, then decides what should change, what should hold, and explains why. A held week is Precision Coaching working, not doing nothing. "How Precision Coaching works" has the full explanation, reachable from any coaching decision.',
+    a: 'Precision Coaching follows clear, fixed rules, never a guess. Each week it reads your logged training, your weight trend, your food data if you use the food diary, and your weekly check-in answers, then decides what should change and what should stay the same, and explains why. A week with no change is still Precision Coaching working, not doing nothing. "How Precision Coaching works" has the full explanation, reachable from any coaching decision.',
   },
   {
     key: 'food-diary',

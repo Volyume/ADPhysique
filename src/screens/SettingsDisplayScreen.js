@@ -187,7 +187,7 @@ export default function SettingsDisplayScreen() {
         <SettingRow
           icon="text-outline"
           label="Larger text"
-          sub="Increases font size across the app. For more granular control, use your phone's system text size. Volyume respects it too."
+          sub="Increases font size across the app. For finer control, use your phone's system text size. Volyume respects it too."
           showArrow={false}
           rightElement={
             <Switch

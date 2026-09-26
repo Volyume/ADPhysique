@@ -546,7 +546,7 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
                     gets the three coaching capabilities (weights, rep-slip
                     detection, lighter-week timing), so this is the one
                     sentence for everyone. */}
-                <InfoTooltip size={11} text={'Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on.'} />
+                <InfoTooltip size={11} text={'Consistency is the biggest predictor of long-term progress. The more sessions you log, the better your coach understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on.'} />
               </View>
             )}
           </View>

@@ -1224,7 +1224,8 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     // Every header sub, and therefore every step's purpose, is still stated.
     for (const sub of [
       'These details let the app set a safe starting baseline without guessing.',
-      'An honest estimate sharpens your first plan. Skip this if you are not sure.',
+      // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+      'An honest estimate makes your first plan more accurate. Skip this if you are not sure.',
       'The plan should fit your real week, not the week you wish you had.',
       'Your goal sets the calorie direction, training bias and nutrition target.',
     ]) {
@@ -2173,7 +2174,8 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
 
   test('RC-5: "Show the science" describes exactly what it does', () => {
     const src = read('screens/SettingsCoachingScreen.js');
-    expect(src).toMatch(/where the coach reports your weight trend/);
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(src).toMatch(/where your coach reports your weight trend/);
     expect(src).not.toContain('Technical terms appear in brackets after the plain ones on coaching explanations.');
   });
 

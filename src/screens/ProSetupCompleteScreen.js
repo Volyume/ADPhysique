@@ -519,7 +519,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 These start from your profile and the research, then adjust as your logs and weight trend come in.
               </Text>
               <Text style={[styles.targetsNote, live.targetsNote]}>
-                Hit these most days. What you log tells the coach what you're eating, and your weight over the weeks tells it how that's going.
+                Hit these most days. What you log tells your coach what you're eating, and your weight over the weeks tells it how that's going.
               </Text>
               {/* Optional head start: a full week of meals built to these
                   targets, with a shopping list, waiting in Meal planning. */}
@@ -580,7 +580,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     other placement is CoachOutputScreen's first real weekly
                     output. */}
                 <Text style={[styles.routineBody, live.routineBody]}>
-                  The more sessions you log, the better the coach can work out how much training you need, and when to give you an easier week.
+                  The more sessions you log, the better your coach can work out how much training you need, and when to give you an easier week.
                 </Text>
               </View>
             </View>

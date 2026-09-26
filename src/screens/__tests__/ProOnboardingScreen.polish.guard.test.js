@@ -28,7 +28,8 @@ describe('ProOnboardingScreen premium polish guards', () => {
     // those surfaces carry). The honest-about-certainty promise this test
     // exists to pin now rests on the header sub and the field hint, both of
     // which are stronger carriers of it.
-    expect(SOURCE).toContain('An honest estimate sharpens your first plan. Skip this if you are not sure.');
+    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
+    expect(SOURCE).toContain('An honest estimate makes your first plan more accurate. Skip this if you are not sure.');
     expect(SOURCE).not.toContain('Progress Photos can refine physique change later');
     expect(SOURCE).toContain('Enter your best current estimate or a measured value.');
     expect(SOURCE).toContain('const BODY_FAT_SOURCE_OPTIONS = [');

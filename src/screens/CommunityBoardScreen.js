@@ -93,7 +93,7 @@ export default function CommunityBoardScreen({ navigation, route }) {
     return {
       scope: initialScope,
       scopeKey: route?.params?.scopeKey ?? null,
-      label: route?.params?.label || BOARD_SCOPES[initialScope] || 'This cohort',
+      label: route?.params?.label || BOARD_SCOPES[initialScope] || 'This board',
     };
   });
   const [rows, setRows] = useState([]);

@@ -889,7 +889,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
-          How well you're recovering between sessions. This sets how hard the coach pushes your progress.
+          How well you're recovering between sessions. This sets how much volume your plan includes, so it can protect your recovery.
         </Text>
         <Dropdown
           value={recoveryRating}

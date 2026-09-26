@@ -191,7 +191,7 @@ export default function SettingsCoachingScreen() {
               ? 'Plainer wording with a little more explanation.'
               : coachTone === 'precise'
                 ? 'Terser. Numbers first, no padding.'
-                : 'The coach matches its wording to your training experience.'}
+                : 'Your coach matches its wording to your training experience.'}
           </Text>
           <View style={styles.toneChips}>
             {[
@@ -228,10 +228,10 @@ export default function SettingsCoachingScreen() {
               // D93 (Campaign 2, Phase 12): the D16 rule was a source
               // comment only - a Coached user whose week reverted to
               // confirm-first was told nothing. One honest sentence.
-              ? "The coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
+              ? "Your coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
               : coachAutonomy === 'manual'
-                ? 'The coach shows each change and the reason. You make the change yourself.'
-                : 'The coach suggests each change. You tap to apply it.'}
+                ? 'Your coach shows each change and the reason. You make the change yourself.'
+                : 'Your coach suggests each change. You tap to apply it.'}
           </Text>
           <View style={styles.toneChips}>
             {[
@@ -268,7 +268,7 @@ export default function SettingsCoachingScreen() {
           // doc-example MEV/MRV pair has nothing to attach to; wiring
           // it stays recorded in the register for the day one does.)
           sub={showScience
-            ? 'On. The technical name appears in brackets where the coach reports your weight trend.'
+            ? 'On. The technical name appears in brackets where your coach reports your weight trend.'
             : 'Off. Everything stays in plain English.'}
           showArrow={false}
           rightElement={
@@ -287,7 +287,7 @@ export default function SettingsCoachingScreen() {
           <SettingRow
             icon="calendar-outline"
             label="Cycle tracking"
-            sub="Adds an optional weekly check-in question so the coach can steady targets around your period."
+            sub="Adds an optional weekly check-in question so your coach can steady targets around your period."
             showArrow={false}
             rightElement={
               <Switch

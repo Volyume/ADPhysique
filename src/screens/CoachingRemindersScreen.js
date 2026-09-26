@@ -381,7 +381,7 @@ export default function CoachingRemindersScreen({ navigation }) {
       <BackHeader title="Coaching reminders" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={[styles.intro, live.intro]}>
-          These reminders keep the weekly coaching loop accurate. Pick times that fit your normal routine.
+          These reminders help your coach make accurate decisions each week. Pick times that fit your normal routine.
         </Text>
 
         {/* C5-P27-04 (D96): the Campaign 3 Open Settings pattern. This banner
@@ -522,7 +522,7 @@ export default function CoachingRemindersScreen({ navigation }) {
               <Text style={[styles.scheduleText, live.scheduleText]}>Reminder every {formatDayHour(checkinDay, checkinHour)}</Text>
               {lastCheckinMs > 0 && (
                 <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
-                  Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
+                  Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so your coach has a full week of fresh information to work from' : ''}.
                 </Text>
               )}
             </>
