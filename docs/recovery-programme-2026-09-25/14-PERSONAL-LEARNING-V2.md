@@ -37,14 +37,18 @@ followed with these changes, each decided by the calibration simulation:
   between the two sessions is not read as recovery and the pair is left
   out: a typing slip, a changed set-up or an unlogged injury would
   otherwise outweigh a dozen honest pairs.
-- **The gate** `PERSONAL_LR_MIN` = 10 is the smallest whole number meeting
-  BOTH promises of section 7 on every schedule (section 7 named only the
-  first; the wrong-direction promise also binds). Results at 10, 60
-  athletes a cell: at a true factor equal to the start, a direction shown
-  for 0 to 2 of 60; at 0.75 or 1.40, the wrong direction for at most 1; a
-  slow recoverer (1.40) found for 34 of 60 on three full-body days a week
-  without a plan and 30 of 60 on a varied schedule; a fast one (0.75) for
-  at most 4 of 60; plan users on fixed days see "Not learning yet".
+- **The gate** `PERSONAL_LR_MIN` = 12, set from the FULL calibration (600
+  athletes a cell, `PERSONAL_CALIBRATION=full`), not from 60 a cell, which
+  is too few to set a gate on. Both promises of section 7 bind (section 7
+  named only the first). Results at 12: at a true factor equal to the start,
+  a direction shown for at most 15 of 600 (2.5%); at 0.75 or 1.40, the
+  wrong direction for at most 7 of 600 (1.2%); the smallest gate meeting
+  both was 11. A slow recoverer (1.40) found for 182 of 600 on three
+  full-body days a week without a plan and 166 of 600 on a varied schedule;
+  a fast one (0.75) for 31 of 600 on a varied schedule; plan users on fixed
+  days see "Not learning yet". The everyday run (60 a cell) is a regression
+  guard at the pinned gate: at most 5 of 60 shown any direction, 3 of 60
+  the wrong one.
 - **On screen** (replaces section 6): the "Your recovery speed" card under
   Recovery by muscle. A faster-to-slower scale with "First estimate" marked
   and, when adjusted, "You"; a headline ("Faster than first estimated",

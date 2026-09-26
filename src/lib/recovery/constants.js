@@ -212,14 +212,14 @@ export const PERSONAL_MIN_SPREAD = 0.1;
 
 /** How clearly the best factor must beat the start before it is used:
  * pairs x ln(SSE at the start / SSE at the best). Set by the calibration
- * simulation (personalRecovery.simulation.test.js), run in full
+ * simulation (personalRecovery.simulation.test.js) run in full
  * (PERSONAL_CALIBRATION=full, 600 simulated athletes a cell, 2026-09-26):
  * at 12, on the worst schedule, a person whose true recovery equals the
- * start is shown a direction 17 times in 600 (2.8%) and one who truly
- * recovers faster or slower is shown the wrong one 3 times in 600 (0.5%);
- * at 10 the first was 4.5%, too near the 5% the spec promises to hold on a
- * 60-athlete run. The everyday run of the suite checks both promises at
- * this gate. */
+ * start is shown a direction 15 times in 600 (2.5%; the spec promises at
+ * most 5%) and one who truly recovers faster or slower is shown the wrong
+ * one 7 times in 600 (1.2%; the promise is at most 1 in 60). The smallest
+ * gate meeting both on that run was 11; 12 keeps a margin. The everyday
+ * run of the suite (60 a cell) is a regression guard at this gate. */
 export const PERSONAL_LR_MIN = 12;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));

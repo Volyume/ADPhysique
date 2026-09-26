@@ -10794,17 +10794,22 @@ at the same effort is not read as recovery (a typing slip like 1000 for
 is fitted per day between them, not as a constant, because a lifter who is
 still gaining gains more over a longer break and that gain must not read as
 recovery; and a muscle's comparisons count only from five (its offset, its
-per-day gain and its sensitivity are fitted). The gate (`PERSONAL_LR_MIN`) is 10: the smallest
-whole number that keeps, on every simulated schedule, a person whose true
-recovery equals the start from being shown any direction for more than 3 of
-60, and one who truly recovers faster or slower from being shown the wrong
-direction for more than 1 of 60; the simulation pins it. What it can and
-cannot do, stated rather than hidden: on a varied schedule or three
-full-body days a week without a plan it finds about half of slow
-recoverers within twelve weeks; a faster recoverer differs from the start
-only after short breaks, so it is found rarely; a plan's effort target
-changes every week and its days repeat, so plan users on fixed days mostly
-see "Not learning yet", with the reason. Cost: about 3 ms per person in
+per-day gain and its sensitivity are fitted). The gate (`PERSONAL_LR_MIN`) is 12, set from the
+FULL calibration (the suite run with `PERSONAL_CALIBRATION=full`, 600
+simulated athletes a cell): on the worst schedule a person whose true
+recovery equals the start is shown a direction 15 times in 600 (2.5%, the
+promise is at most 5%) and one who truly recovers faster or slower is shown
+the wrong direction 7 times in 600 (1.2%, the promise is at most 1 in 60);
+the smallest gate meeting both on that run is 11, and 12 keeps a margin.
+Sixty a cell, the everyday run, is too few to set a gate on (a single
+athlete moved it between 9 and 13 across seeds), so it is a regression
+guard at the pinned gate. What it can and cannot do, stated rather than
+hidden: on three full-body days a week or a varied schedule without a plan
+it finds about 3 in 10 slow recoverers within twelve weeks (182 and 166 of
+600); a faster recoverer differs from the start only after short breaks,
+so it is found rarely (31 of 600 on a varied schedule); a plan's effort
+target changes every week and its days repeat, so plan users on fixed days
+mostly see "Not learning yet", with the reason. Cost: about 3 ms per person in
 node for three sessions a week, 7 ms for seven, once per day (a memo in
 `load.js`).
 
