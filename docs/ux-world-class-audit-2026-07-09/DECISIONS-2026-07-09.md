@@ -10712,3 +10712,110 @@ workout in 4 weeks", "Lifted 12% more than usual", a milestone ("50
 workouts logged", "First full week of training", "First personal best") and
 a finished week ("All 4 workouts done this week"). No app words (session,
 average, block) and no "you". Pinned in `sessionShareData.test.js`.
+
+**D204 addendum 3 (2026-09-26, lead, under the founder's delegation):
+Lane F landed, and its three stopped items ruled.** Lane F (Opus) turned
+every remaining instruction the D204 audit listed into a description,
+strings only: the weekly training notes (`coachingGoals.js`; "roughly in
+half this week" also went because it was untrue, the card's Apply pulls
+back two sets a group), the block advisor's cards, the readiness chip, the
+Today line ("Signs of building fatigue. See why."), the Training review's
+advice subtexts, the "aim to" lines, the re-entry notes, and the
+collaborative "we" in coaching decisions ("your coach"). Its lead review
+read every string against D204, D207 and the voice doc; all stand. Three
+items needed more than a string, and the lead ruled each on what is best
+for the person using the app:
+
+1. The early-deload card's two buttons ("Got it, ease off this week" /
+   "Keep going") both only snoozed the card, and the first told the athlete
+   to ease off beside a body that says it is not an instruction. Now one
+   button, "Got it" (`PlansScreen.js`).
+2. The Training review's "What to focus on next week" section existed to
+   prescribe next week (reduce sets, add a session, make it a recovery
+   week) and sat under a row saying the review is "not an instruction".
+   Retired, with the lagging-muscle read and the check-in read that only
+   fed it; what it drew on is described in "What stood out", and the plan
+   and the weekly check-in carry any change (`CoachReviewScreen.js`). The
+   same edit fixed a row Lane F found untrue: a muscle AT the minimum read
+   "below the minimum"; it now reads "at the minimum".
+3. The volume "Why?" panels (`volumeInsightCopy.getVolumeWhy`) carried
+   next-week advice ("Drop a few sets next week", "Hold here", "add a
+   couple of sets") and tests REQUIRED those words. The panels now say what
+   each band means and nothing more; the tests are re-pinned to forbid
+   advice words and require each band's own fact.
+
+Kept, ruled: the heads-up card's "Focus on sleep and eating enough." is not
+a training instruction, was already there, and is food-adjacent wording the
+lead does not rewrite in a copy lane. Left for the founder (ED-safety or
+billing copy, never edited under delegation): the "we" lines in
+`whyThisTemplates.js` (hold and rapid-loss), `NutritionTargetsScreen.js`
+1624, `CalorieBankSheet.js` 29, and `SubscriptionPolicyScreen.js` 89
+(dormant billing); and `weeklyCoach.js` 1932 ("fewer sets this week" while
+its Apply sets next week's recovery week), because `weeklyCoach.js` is on
+the do-not-touch list. Found and scheduled as Lane G (not parked): the
+non-ED nutrition "we" lines (`NutritionTargetsScreen.js` 65, 852, 1516,
+1530, 1541; `food/mealRationale.js`; `food/intent.js` 335, 350;
+`PlanLibraryScreen.js` 738, 946), the "I haven't trained" toast that shows
+when no session is bound (`HomeScreen.js` 1609), the Plans sleep chip that
+says "averaging" over one value (`blockAdvisor.js` 135), and the D204
+breaches outside Lane F's list (`algorithms.js` 959, `insightsEngine.js`
+189 and 217, `EngineLog.js` 53).
+
+**D210 addendum 2 (2026-09-26, lead): the rebuild, as built, and why it
+departs from its spec in two places.** Built to
+`docs/recovery-programme-2026-09-25/14-PERSONAL-LEARNING-V2.md` in
+`src/lib/recovery/personalRecovery.js`: effort-matched pairs of the same
+lift (same RIR target, or both outside a plan; no recovery week; no
+unresolved plan week; no injury limit or its 14-day return; baseline within
+28 days; something to recover from), a continuous outcome (the log ratio of
+the mean estimated max of the first matched sets), a bounded fit of
+performance on the change in predicted recovery, and a gate calibrated by
+simulation. The calibration simulation
+(`personalRecovery.simulation.test.js`: five schedules, with and without a
+plan, 60 simulated athletes a cell, realistic loads, whole reps, effort
+that wanders a rep, day, exercise and set noise) decided two changes:
+
+1. ONE recovery factor per PERSON, not per muscle. Learned muscle by
+   muscle, twelve weeks of training found a slow recoverer for at most 14
+   of 60 athletes per muscle and a fast one almost never: what lifts show
+   about recovery time is small against day-to-day noise. The factor the
+   learning starts from (the "How's your recovery?" answer) is one per
+   person anyway, so the learned figure is the person's recovery speed:
+   each muscle keeps its own drift and sensitivity, the error is summed,
+   and pooling carries several times the evidence.
+2. The spread gate reads the LARGEST pooled spread across the candidate
+   speeds, not the spread at the start: a schedule the start calls fully
+   recovered at every session could otherwise never learn that someone
+   recovers more slowly, however clearly their lifts showed it.
+
+Also added: a change past about 22% between two sessions of the same lift
+at the same effort is not read as recovery (a typing slip like 1000 for
+100, a changed set-up, an unlogged injury); the drift between two sessions
+is fitted per day between them, not as a constant, because a lifter who is
+still gaining gains more over a longer break and that gain must not read as
+recovery; and a muscle's comparisons count only from five (its offset, its
+per-day gain and its sensitivity are fitted). The gate (`PERSONAL_LR_MIN`) is 10: the smallest
+whole number that keeps, on every simulated schedule, a person whose true
+recovery equals the start from being shown any direction for more than 3 of
+60, and one who truly recovers faster or slower from being shown the wrong
+direction for more than 1 of 60; the simulation pins it. What it can and
+cannot do, stated rather than hidden: on a varied schedule or three
+full-body days a week without a plan it finds about half of slow
+recoverers within twelve weeks; a faster recoverer differs from the start
+only after short breaks, so it is found rarely; a plan's effort target
+changes every week and its days repeat, so plan users on fixed days mostly
+see "Not learning yet", with the reason. Cost: about 3 ms per person in
+node for three sessions a week, 7 ms for seven, once per day (a memo in
+`load.js`).
+
+On screen (founder: "we need an elegant way to show and demonstrate this
+intelligence too"): a "Your recovery speed" card under Recovery by muscle
+(`RecoveryLearningCard.js`): a faster-to-slower scale with the first
+estimate marked and, once the lifts show a clear difference, where the
+person is; one plain sentence on what changed and by how much; the muscle
+the learning rests on most, after a 6-set session, as two tiles ("First
+estimate 2½ days", "You 2 days"); how many comparisons it rests on; and,
+before it can say anything, why not and how far along it is ("5 of 8
+comparisons so far"). The Recovery by muscle caption and each muscle's
+breakdown name the learned speed once it is in use. Plan sequencing stays
+on the population start (spec section 9).

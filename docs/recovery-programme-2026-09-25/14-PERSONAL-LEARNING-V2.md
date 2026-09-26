@@ -10,6 +10,57 @@ counts only. The first build of a recovery learner (`04c92d66`) was withdrawn
 after its adversarial review (D210 addendum). This spec is the rebuild. It
 replaces `00-SPEC.md` section 14 when it lands.
 
+## 0. As built (2026-09-26, D210 addendum 2)
+
+Built in `src/lib/recovery/personalRecovery.js`, wired in `load.js`, shown
+by `src/components/RecoveryLearningCard.js`. Sections 2 to 9 below are
+followed with these changes, each decided by the calibration simulation:
+
+- **One factor per PERSON, not per muscle** (replaces "for each muscle m"
+  in section 2 and the per-muscle output in section 5). Learned muscle by
+  muscle, twelve weeks found at most 14 of 60 slow recoverers per muscle
+  and almost no fast ones. The start is one factor per person (the
+  recovery answer), so the learned figure is too: pairs from every muscle
+  are pooled, each muscle keeps its own fitted drift and bounded
+  sensitivity `s`, and a candidate's error is the sum over muscles. A
+  muscle's pairs count only from `PERSONAL_MIN_MUSCLE_PAIRS` (5). Output:
+  `{ factor, prior, pairs, reason, pairsByMuscle }`.
+- **Drift per day between the two sessions** (replaces the constant `a` of
+  section 4): performance is modelled as `y = a + g * days + s * x`, with
+  `a` and `g` fitted per muscle (`residualOnDays`, then the bounded fit on
+  the residuals). A lifter who is still gaining gains more over a longer
+  break, and a constant drift let that gain read as recovery.
+- **The spread gate reads the largest pooled spread across candidates**
+  (replaces "SD of x(start)" in section 5): a schedule the start calls
+  fully recovered at every session could otherwise never learn "slower".
+- **A change past `PERSONAL_MAX_CHANGE`** (0.2 as a log ratio, about 22%)
+  between the two sessions is not read as recovery and the pair is left
+  out: a typing slip, a changed set-up or an unlogged injury would
+  otherwise outweigh a dozen honest pairs.
+- **The gate** `PERSONAL_LR_MIN` = 10 is the smallest whole number meeting
+  BOTH promises of section 7 on every schedule (section 7 named only the
+  first; the wrong-direction promise also binds). Results at 10, 60
+  athletes a cell: at a true factor equal to the start, a direction shown
+  for 0 to 2 of 60; at 0.75 or 1.40, the wrong direction for at most 1; a
+  slow recoverer (1.40) found for 34 of 60 on three full-body days a week
+  without a plan and 30 of 60 on a varied schedule; a fast one (0.75) for
+  at most 4 of 60; plan users on fixed days see "Not learning yet".
+- **On screen** (replaces section 6): the "Your recovery speed" card under
+  Recovery by muscle. A faster-to-slower scale with "First estimate" marked
+  and, when adjusted, "You"; a headline ("Faster than first estimated",
+  "Slower than first estimated", "In line with the first estimate", "Not
+  learning yet", "Still learning"); one sentence on what changed and by
+  about what percent; for an adjusted reading, the muscle the learning
+  rests on most after a 6-set session as two tiles (first estimate, you);
+  "From N comparisons of the same lift at the same effort."; while too few,
+  "N of 8 comparisons so far" with a bar. The Recovery by muscle caption
+  and each muscle's "Based on" line name the learned speed once it is in
+  use. Pinned in `RecoveryLearningCard.test.js` and
+  `ReadinessCards.recoveryByMuscle.test.js`.
+- **Cost**: about 3 ms per person in node at three sessions a week and 7
+  ms at seven over 126 days, once per user, day, answer and history (the
+  memo in `load.js`).
+
 ## 1. What the first build got wrong, and the rule each failure sets
 
 | Failure (review, file:line in `04c92d66`) | Rule for v2 |
