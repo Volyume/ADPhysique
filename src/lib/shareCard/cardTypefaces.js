@@ -32,42 +32,51 @@ const FACES = {
   displayHeavy: require('../../../assets/fonts/InterDisplay-ExtraBold.ttf'),
 };
 
-async function resolveUri(source) {
+// Every form this build can serve the file under: expo-asset's cached local
+// copy, and the bundled form React Native resolves (the one react-native-
+// skia's own useFont reads). Tried in that order.
+async function candidateUris(source) {
+  const out = [];
   try {
     if (Asset) {
       const asset = Asset.fromModule(source);
       await asset.downloadAsync();
-      const uri = asset.localUri || asset.uri || null;
-      if (uri) return uri;
+      if (asset.localUri) out.push(asset.localUri);
+      if (asset.uri) out.push(asset.uri);
     }
   } catch (_) { /* fall through to the RN resolver below */ }
-  try { return Image.resolveAssetSource(source)?.uri || null; } catch (_) { return null; }
+  try {
+    const uri = Image.resolveAssetSource(source)?.uri;
+    if (uri) out.push(uri);
+  } catch (_) { /* no uri */ }
+  return [...new Set(out)];
 }
 
 async function loadFace(Skia, role, source) {
-  const uri = await resolveUri(source);
-  if (!uri) return null;
+  const uris = await candidateUris(source);
   const make = (data) => {
     try { return data ? Skia.Typeface.MakeFreeTypeFaceFromData(data) : null; } catch (_) { return null; }
   };
-  try {
-    if (typeof Skia.Data?.fromURI === 'function') {
-      const face = make(await Skia.Data.fromURI(uri));
-      if (face) return face;
-    }
-  } catch (e) {
-    logError('cardTypefaces.fromURI', e, { role });
+  for (const uri of uris) {
+    try {
+      if (typeof Skia.Data?.fromURI === 'function') {
+        // eslint-disable-next-line no-await-in-loop
+        const face = make(await Skia.Data.fromURI(uri));
+        if (face) return face;
+      }
+    } catch (_) { /* try the next form */ }
+    try {
+      if (/^https?:/i.test(uri)) {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await fetch(uri);
+        // eslint-disable-next-line no-await-in-loop
+        const buf = await res.arrayBuffer();
+        const face = make(Skia.Data.fromBytes(new Uint8Array(buf)));
+        if (face) return face;
+      }
+    } catch (_) { /* try the next form */ }
   }
-  try {
-    if (/^https?:/i.test(uri)) {
-      const res = await fetch(uri);
-      const buf = await res.arrayBuffer();
-      const face = make(Skia.Data.fromBytes(new Uint8Array(buf)));
-      if (face) return face;
-    }
-  } catch (e) {
-    logError('cardTypefaces.fetch', e, { role });
-  }
+  logError('cardTypefaces.face', new Error('typeface could not be loaded'), { role, tried: uris.length });
   return null;
 }
 
