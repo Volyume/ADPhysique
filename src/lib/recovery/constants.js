@@ -219,17 +219,16 @@ export const PERSONAL_MIN_MUSCLE_PAIRS = 5;
 export const PERSONAL_MIN_SPREAD = 0.1;
 
 /** How clearly the best factor must beat the start before it is used:
- * pairs x ln(SSE at the start / SSE at the best). Set from the full
- * calibration (the suite run with PERSONAL_CALIBRATION=full, 600 simulated
- * athletes a case, 2026-09-26, after the review's redesign: same-weekday
- * pairs, lifts with fixed reps left out, weekday strength effects, breaks
- * and prescribed-reps logging in the simulation): at 10, on the worst case,
- * a person whose true recovery equals the start is shown a direction 13
- * times in 600 (2.2%; the spec promises at most 5%) and one who truly
- * recovers faster or slower the wrong one 4 times in 600 (0.7%; the promise
- * is at most 1 in 60). 8 was the smallest gate meeting both on that run (a
- * separate 600-a-case run on other seeds agreed); 10 keeps a margin. The
- * suite's everyday run (60 a case) is a regression guard at this gate. */
+ * workout days x ln(SSE at the start / SSE at the best), counting the days
+ * the later sessions fell on, not the comparisons (comparisons from one day
+ * share that day's form; D210 addendum 5). The full calibration on that
+ * statistic (600 simulated athletes a case, 22 cases including two
+ * exercises a muscle, eight sets, pre-filled reps and tiring through the
+ * sets): at 10, a direction shown to at most 2 in 600 whose recovery equals
+ * the start (the spec allows 5%) and the wrong one to at most 1 in 600
+ * (1 in 60 allowed); the smallest gate meeting both was 4. Kept at 10: the
+ * stricter choice. The cost is reach: in twelve weeks it almost never moves
+ * anyone, and the card says why. */
 export const PERSONAL_LR_MIN = 10;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));

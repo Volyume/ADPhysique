@@ -10955,6 +10955,28 @@ untrue for everyone it has not found anything for yet). Each claim was
 checked against the code that produces it. Builds: CLAUDE.md's build rule
 now bars every build, Android included, without the founder's go.
 
+**D210 addendum 5 (2026-09-26, lead): the second review, and what the
+learner can do now.** A second fresh-eyes Opus review said do not land:
+comparisons from one day share that day's form, so with two exercises a
+muscle, or pre-filled reps, the learner showed a direction to up to 1 in 5
+people whose recovery equals the start (reproduced by the lead: 47 and 90
+of 600). Fixed: the clarity test counts the days the later sessions fell
+on, not the comparisons; a baseline must be in an earlier week; "reps
+repeat" is the reason only when those lifts would have made enough; the
+injury scan runs only when its inputs change (it had run on every screen
+visit, up to 190 ms without a JIT). The calibration suite now includes the
+review's cases (two exercises a muscle, eight sets, tiring through the
+sets, the last set taken further). Full run, 600 a case, 22 cases, at the
+unchanged gate of 10: at most 2 in 600 shown a direction when their
+recovery equals the start, at most 1 in 600 the wrong one. Lowering the
+gate to recover reach was refused by the session's safety check and is not
+pursued. The honest result: in twelve weeks it almost never moves anyone;
+the card shows "Still learning" or "Not learning yet" with the reason.
+Open, minor: the "Still learning" line does not say a muscle needs 5
+comparisons before they count, and six memo-key fields have no test of
+their own (the review's N3 and N4; their test edits were refused by the
+same check).
+
 **D209 addendum 2 (2026-09-26, founder): one workout, so only facts about
 that workout.** Founder, verbatim: "I told you 'Block week 3 of 5' has
 absolutely no relevance or requirement for share cards why did you ignore
