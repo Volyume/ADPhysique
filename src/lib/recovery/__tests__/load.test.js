@@ -77,15 +77,9 @@ describe('buildRecoverySession', () => {
     const session = buildRecoverySession(workout, [], { rirTarget: 2, isFirstWeek: true });
     expect(session).toEqual({
       id: 'w1', startedAt: 1000, endedAt: 2000, durationMinutes: 60, sets: [],
-      weekRirTarget: 2, isFirstWeek: true, isDeload: false,
+      weekRirTarget: 2, isFirstWeek: true,
       ratings: { fatigue: 4, joint: 2, sorenessNext: null },
     });
-  });
-
-  test('D210: a recovery (deload) week rides on the session, so the personal learner never reads its lowered loads as a dip', () => {
-    const workout = { id: 'w1', startedAt: 1000, endedAt: 2000 };
-    expect(buildRecoverySession(workout, [], { rirTarget: 3, isFirstWeek: false, isDeload: true }).isDeload).toBe(true);
-    expect(buildRecoverySession(workout, [], null).isDeload).toBe(false);
   });
 
   test('joint discomfort falls back to the MAX across this session\'s own sets when the workout-level answer is absent', () => {
@@ -149,7 +143,7 @@ describe('pairSorenessNext', () => {
 describe('indexWeeks', () => {
   test('week_index 1 is always the first week', () => {
     const weeks = indexWeeks([{ id: 'wk1', week_index: 1, is_deload: 0, rir_target: 2 }]);
-    expect(weeks.get('wk1')).toEqual({ rirTarget: 2, isFirstWeek: true, isDeload: false });
+    expect(weeks.get('wk1')).toEqual({ rirTarget: 2, isFirstWeek: true });
   });
 
   test('a middle week (no preceding deload) is not a first week', () => {
@@ -157,16 +151,7 @@ describe('indexWeeks', () => {
       { id: 'wk1', week_index: 1, is_deload: 0, rir_target: 2 },
       { id: 'wk2', week_index: 2, is_deload: 0, rir_target: 1 },
     ]);
-    expect(weeks.get('wk2')).toEqual({ rirTarget: 1, isFirstWeek: false, isDeload: false });
-  });
-
-  test('D210: the recovery week itself is marked, and only it', () => {
-    const weeks = indexWeeks([
-      { id: 'wk1', week_index: 1, is_deload: 0, rir_target: 2 },
-      { id: 'wk2', week_index: 2, is_deload: 1, rir_target: 3 },
-      { id: 'wk3', week_index: 3, is_deload: 0, rir_target: 2 },
-    ]);
-    expect([weeks.get('wk1').isDeload, weeks.get('wk2').isDeload, weeks.get('wk3').isDeload]).toEqual([false, true, false]);
+    expect(weeks.get('wk2')).toEqual({ rirTarget: 1, isFirstWeek: false });
   });
 
   test('the week immediately after a deload/recovery week IS a first week', () => {
@@ -369,11 +354,7 @@ describe('loadMuscleRecovery', () => {
     await loadMuscleRecovery('u1', NOW);
     const [userId, startMs, endMs] = mockDb.getCompletedWorkoutsBetween.mock.calls[0];
     expect(userId).toBe('u1');
-    // D210: the personal learner's window (84 days), an exposure's baseline
-    // before it (28) and the curve's lookback before that (14): 126 days,
-    // which still covers the live map's own 14 days plus the 4-day
-    // soreness-pairing margin the window used to be.
-    expect(startMs).toBe(NOW - 126 * DAY_MS);
+    expect(startMs).toBe(NOW - 18 * DAY_MS);
     expect(endMs).toBe(NOW + 1);
   });
 
@@ -469,72 +450,5 @@ describe('loadPlannedSetsByRoutine', () => {
     // legitimate fact), which is a different claim from "unknown".
     expect(result.bad).toBeNull();
     expect(result.good.back).toBe(4);
-  });
-});
-
-// ─── D210: the personal factors ───────────────────────────────────────────
-
-describe('loadMuscleRecovery: the personal factors (D210)', () => {
-  const NOW = new Date(2026, 2, 16, 12, 0, 0).getTime();
-  const BENCH = { id: 'bench', primaryMuscle: 'chest', secondaryMuscles: [] };
-
-  // Chest held at 100 x 8 after gaps of 96 h and then 41 h, six times over:
-  // the fast-recoverer history personalRecovery.test.js pins at 0.75.
-  function fastRecovererRows() {
-    const gaps = [0];
-    for (let c = 0; c < 6; c += 1) gaps.push(96, 41);
-    const totalSpan = gaps.reduce((sum, g, i) => sum + 1 + (i === 0 ? 0 : g), 0);
-    let start = NOW - 24 * HOUR_MS - totalSpan * HOUR_MS;
-    const workouts = [];
-    const sets = [];
-    gaps.forEach((gap, i) => {
-      if (i > 0) start += (1 + gap) * HOUR_MS;
-      const id = `w${i}`;
-      workouts.push({
-        id, startedAt: start, endedAt: start + HOUR_MS, durationMinutes: 60, isCompleted: 1, deletedAt: null,
-      });
-      for (let k = 0; k < 6; k += 1) {
-        sets.push({ id: `${id}-${k}`, workoutId: id, exerciseId: 'bench', setType: 'straight', weight: 100, actualReps: 8 });
-      }
-    });
-    return { workouts, sets };
-  }
-
-  test('the map carries each muscle\'s learned factor, learned from the sessions it read', async () => {
-    const { workouts, sets } = fastRecovererRows();
-    mockDb.getCompletedWorkoutsBetween.mockResolvedValue(workouts);
-    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(sets);
-    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([BENCH]);
-    const result = await loadMuscleRecovery('u1', NOW);
-    expect(result.degraded).toBe(false);
-    expect(result.map.chest.personal).toEqual(expect.objectContaining({ factor: 0.75, prior: 1 }));
-    expect(result.map.chest.personal.checked).toBeGreaterThanOrEqual(3);
-  });
-
-  test('a failed injury-limit read still learns, and never degrades the map', async () => {
-    const { workouts, sets } = fastRecovererRows();
-    mockDb.getCompletedWorkoutsBetween.mockResolvedValue(workouts);
-    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(sets);
-    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([BENCH]);
-    mockDb.getCapabilityConstraints = jest.fn(async () => { throw new Error('read failed'); });
-    try {
-      const result = await loadMuscleRecovery('u1', NOW);
-      expect(result.degraded).toBe(false);
-      expect(result.map.chest.personal.factor).toBe(0.75);
-    } finally {
-      delete mockDb.getCapabilityConstraints;
-    }
-  });
-
-  test('the learner starts from the profile\'s recovery answer', async () => {
-    mockStoreProfile = { recoveryRating: 'poor' };
-    const { workouts, sets } = fastRecovererRows();
-    mockDb.getCompletedWorkoutsBetween.mockResolvedValue(workouts.slice(0, 2));
-    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(sets.filter((s) => ['w0', 'w1'].includes(s.workoutId)));
-    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([BENCH]);
-    const result = await loadMuscleRecovery('u1', NOW);
-    // One check (the second session against the first): below the minimum,
-    // so the factor stays at the poor answer's start.
-    expect(result.map.chest.personal).toEqual({ factor: 1.15, prior: 1.15, checked: 1 });
   });
 });

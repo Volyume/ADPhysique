@@ -10666,3 +10666,37 @@ founder's phrase.
 
 **Founder-side, still open:** the Play and App Store data-safety answers
 (console forms; the drafts predate Community and need its data types added).
+
+**D210 addendum (2026-09-26, lead): the first build WITHDRAWN after its
+adversarial review; rebuilding.** The Opus fresh-eyes review of `04c92d66`
+returned DO NOT LAND, with evidence the lead checked and accepts: the
+missed-set clause turned ordinary rep variation into dips (a top set of 9
+then 8 at a target of 8 read as a dip), so in simulation athletes whose true
+recovery equalled the start were told "more slowly" for chest or back in up
+to about half of runs on a Mon/Wed/Fri routine; two stated guarantees were
+false (one added session moved the factor two steps; schedules whose gaps
+alternate, like Mon/Wed/Fri, do move it); assisted and timed exercises were
+read as strength; the copy could say "No change so far · 24 sessions
+compared" where no comparison could have changed anything, and plan users
+(RIR stepping weekly, no exercise repeated in a week) rarely get a
+comparable pair; the injury-limit success path was untested; and the fit
+cost 90 to 390 ms on every Home, Progress and Recovery focus. The code came
+off the branch the same hour (`src/lib/recovery/` and the two components
+restored, `personalRecovery.js` and its suite removed); nothing had reached
+main or any build. The Recovery section stays as D201 built it: research
+baselines, no learning, as the founder was told.
+
+The rebuild must meet, before it lands: a continuous outcome (the change in
+an effort-matched performance index, never a thresholded dip, never a
+missed-set count), fitted against the change in predicted recovery between
+the two sessions, so a schedule with no gap variation carries no
+information by construction; a significance gate calibrated by simulation
+(synthetic athletes with a known true factor, realistic noise and
+progression, the common schedules) so an athlete whose true recovery equals
+the start is shown a direction in at most one run in twenty, with the
+simulation pinned as a deterministic test; assisted and duration or distance
+exercises excluded (the `liftProgress.js` precedent); the injury-limit
+return period applied; an unresolved plan week treated as not comparable;
+copy that says only what the evidence supports, including why a person's
+sessions cannot tell yet; and a cost small enough for every focus (computed
+once per day and history, not per render).

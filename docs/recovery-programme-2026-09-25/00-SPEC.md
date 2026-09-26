@@ -503,6 +503,8 @@ existing plans; ties keep the original order.
 
 ## 14. Personal recovery learning (register D210, added 2026-09-26)
 
+**STATUS 2026-09-26: the build described below was WITHDRAWN after its adversarial review (D210 addendum: noisy dips from missed-set counts, false guarantees, misread assisted and timed exercises, untrue copy, cost). Nothing reached main. The rebuild's requirements are in the D210 addendum; this section is rewritten when the rebuild lands.**
+
 Founder, 2026-09-26: "We had recovery intelligence that learns people's
 recovery and adjusts as it goes along based on performance from a start. Is
 that what you've used for the recovery section or have you used rudimentary

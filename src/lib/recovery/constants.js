@@ -146,71 +146,6 @@ export const DEFAULT_SESSION_MINUTES = 60;
 /** Used to project "your next session" when the habit gives a day but no time. */
 export const DEFAULT_TRAINING_START_MINUTE = 18 * 60;
 
-/*
- * PERSONAL RECOVERY LEARNING (register D210, founder question 2026-09-26:
- * "We had recovery intelligence that learns people's recovery and adjusts
- * as it goes along based on performance from a start"). The learner itself
- * is src/lib/recovery/personalRecovery.js; its numbers live here with the
- * rest of the model's.
- *
- * The learned figure is a per-muscle factor that takes the place of the
- * recovery answer's factor in recoveryHours. It STARTS at that answer's
- * factor (poor 1.15, average 1.0, good 0.9) and moves only when the
- * athlete's own lifts clearly disagree with the estimate.
- */
-
-/** Sessions older than this teach nothing (about three blocks), so the
- * figure follows the athlete as their recovery changes. */
-export const PERSONAL_WINDOW_DAYS = 84;
-
-/** An exercise's earlier session counts as its baseline only inside this
- * gap; a longer break is detraining, not recovery (the same 28 days the
- * block ledger treats as the edge of a fair comparison). */
-export const PERSONAL_BASELINE_MAX_GAP_DAYS = 28;
-
-/** A session's best estimated max this far below the exercise's baseline
- * reads as a dip: 3%, just past the day-to-day spread of an estimated max
- * from ordinary working sets, so an average day never reads as one. */
-export const PERFORMANCE_DIP_RATIO = 0.97;
-
-/** Fewer exposures than this leave the starting factor in place. */
-export const PERSONAL_MIN_EXPOSURES = 3;
-
-/** The factors the fit may choose from, 5% apart. Every recovery answer's
- * factor is on the grid, so "no change" is always a candidate. */
-export const PERSONAL_FACTOR_MIN = 0.75;
-export const PERSONAL_FACTOR_MAX = 1.4;
-export const PERSONAL_FACTOR_GRID = Object.freeze(
-  Array.from({ length: 14 }, (_, i) => Math.round((PERSONAL_FACTOR_MIN + i * 0.05) * 100) / 100),
-);
-
-/**
- * What a disagreement between the estimate and a session costs the fit.
- * The estimate is checked on the CHANGE it predicts between a session and
- * the exercise's previous one (its baseline), never on one reading alone:
- * a lifter who always trains a muscle at the same gap lifts at the same
- * level each time whether they recover fast or slowly, so a steady
- * schedule can confirm nothing either way, and the fit must not pretend it
- * can. Readings rank Recovering < Nearly recovered < Recovered.
- *  - Lifts held, but the estimate read this session two bands below the
- *    baseline (Recovering against Recovered): it expected a clear drop. 1.
- *  - Lifts held, one band below: it expected a smaller drop. 0.5.
- *  - Lifts dipped, but the estimate read this session no lower than the
- *    baseline: it expected no drop. 1.
- * Anything else is what the estimate expected and costs nothing.
- */
-export const DISAGREEMENT_COST = Object.freeze({
-  heldWhenClearDropExpected: 1,
-  heldWhenSmallDropExpected: 0.5,
-  dipWhenNoDropExpected: 1,
-});
-
-/** Moving the factor 10% away from where it started costs as much as one
- * full disagreement, so a single session can move it one 5% step at most,
- * and the research figure stands until the athlete's own sessions clearly
- * beat it. */
-export const PERSONAL_MOVE_COST_PER_TENTH = 1;
-
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 
 /**
@@ -275,25 +210,15 @@ export function feedbackFactor({ sorenessNext = null, fatigue = null, joint = nu
  * @param {number|null} [opts.rirTarget] - the block week's RIR target
  * @param {boolean} [opts.firstWeek] - week 1 of a block, or the first after a recovery week
  * @param {object} [opts.ratings] - see feedbackFactor
- * @param {number|null} [opts.personalFactor] - D210: the factor learned for
- *   this muscle from the athlete's own sessions (personalRecovery.js). When
- *   given it takes the place of the recovery answer's factor (it started
- *   there), clamped to [PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX].
  * @returns {number} hours, clamped to [RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX]
  */
 export function recoveryHours(muscle, {
   sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
-  personalFactor = null,
 } = {}) {
   const base = BASE_RECOVERY_HOURS[muscle] ?? Math.max(...Object.values(BASE_RECOVERY_HOURS));
-  // The same absent-value trap intensityFactor guards: Number(null) is 0.
-  const learned = personalFactor === null || personalFactor === undefined ? NaN : Number(personalFactor);
-  const personal = Number.isFinite(learned) && learned > 0
-    ? clamp(PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, learned)
-    : ratingFactor(recoveryRating);
   const hours = base
     * doseFactor(sets)
-    * personal
+    * ratingFactor(recoveryRating)
     * intensityFactor(rirTarget)
     * (firstWeek ? FIRST_WEEK_FACTOR : 1.0)
     * feedbackFactor(ratings ?? {});
