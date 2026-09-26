@@ -10117,3 +10117,58 @@ comments". The row's three amber uses are unchanged. Pinned in
 count with the comment count present and different; a given respect
 shows its count; zero comments renders no "0"; the spoken label). Landed
 `4e9ad7e3`.
+
+## D206 — The Coaching decision screen is one visual system (founder order 2026-09-26)
+
+Founder, with four screenshots of the Coaching decision screen: "Coaching
+Decisions looks shit too it doesn't appear to be following the style of
+the app at all and is a mismatch of texts styles and formats. Sort it."
+
+**What the inventory found (read lane, Sonnet, file:line in its report).**
+Three overline colours doing the same job (neutral on the ledger and the
+held card, amber on "This week's main move" and "Your week", muted on
+"Next check-in"); five hand-rolled card look-alikes (the coach's lead
+card, the hold-everything hero, the three plan-edit cards, the
+next-check-in and countdown cards) beside real `Card`s, plus one
+amber-tinted "Focus this week" card; the screen's largest text, "Week 1 ·
+Lean bulk", a raw size in amber; 18 raw font-size keys, 16 of them on the
+loaded screen; a `Button variant="ghost"` that does not exist and so
+silently renders as `primary`; the hero Apply described in the file's own
+comments as "the one amber-filled Apply" but rendered as `primary`, which
+since D148 is a raised charcoal surface with an amber glyph, so nothing on
+the screen is amber-filled; two tappables built by hand (the great-week
+share pill, "Understand how this decision was made"); and the same facts
+printed twice or three times (sessions in the chip, the lead card and the
+focus card; PRs, the weight trend and the calorie change twice each).
+
+**The live style.** The 18 September redesign was reverted (D193, commit
+`35fbdfeb`), so the style of the app is the shipped primitives (`Card`,
+`Button`, `Chip`, `SectionLabel`, `InfoTooltip`, the header trio), the
+current type roles and the frozen-plus-live pattern; the styling rules'
+"seven laws" section is marked history the same day.
+
+**Ruling (lead, D33), the design the build lane implements.** One
+heading treatment: every card or section heading is `SectionLabel` in
+its default tone, including the story card's sub-headings, the plan-edit
+titles and "Why this week". One card: every hand-rolled card renders
+through `Card`; the hold hero is `Card elevated`; "Focus this week" loses
+its amber tint; the hero verdict card keeps the accent border it had. One
+amber: the committing action (the hero Apply, or a hero diet-break's "Set
+maintenance calories") is `emphatic`, the one amber fill on the screen;
+"Keep as is" and every quiet action are `secondary`; the footer is two
+full-width buttons, "Coaching history" secondary and "Done" primary, with
+air between them; the share pill and "Understand how this decision was
+made" become `Button`s. Type from roles: the week title is `h2` in the
+text colour, not amber; the date range `bodySm`; the diet-break, held
+history and insufficient-data titles take roles; the stat chips read
+`label` and `caption` and all four look the same; the story card's lines
+are `body` and `bodySm` only. Blocks sit on one section gap. Engine copy
+is untouched, word for word. The ED-safety blocks (lockout, cleared,
+rapid-loss corrected) and their chrome are untouched by law. The radius
+guard is re-anchored to the primitive rather than to per-key literals.
+
+**Noted, not done (a founder call).** The duplicated facts above are a
+product decision about which of the coach's sentences to keep; the
+restyle keeps every sentence. Question delivered in chat 2026-09-26.
+
+In flight 2026-09-26 (Sonnet build lane against this ruling); the landing hash and the gate figures are recorded here at landing.
