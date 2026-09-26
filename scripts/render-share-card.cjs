@@ -73,7 +73,7 @@ async function main() {
   const sessionExtras = {
     ...session,
     quote: { text: 'Stimulate, don\u2019t annihilate.', by: 'Lee Haney' },
-    highlights: ['Lifted 12% more than usual', 'All 4 workouts done this week'],
+    highlights: ['Lifted 12% more than usual'],
   };
   const sessionCaption = { ...session, quote: { text: 'Back day done before work \u{1F4AA}', by: null }, highlights: ['Strongest workout in 4 weeks'] };
   const sessionLongQuote = { ...session, quote: { text: 'It\u2019s about how hard you can get hit and keep moving forward.', by: 'Rocky Balboa' }, highlights: ['Strongest workout in 4 weeks'] };

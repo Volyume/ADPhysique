@@ -999,11 +999,12 @@ export default function ShareCardScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* Highlights (founder, 2026-09-26): optional lines the workout
-            summary already worked out, off until switched on, two at most. */}
+        {/* Highlight (founder, 2026-09-26): how this workout compares with
+            its last 4 weeks, when the summary found it stronger; off until
+            switched on. Nothing about the week, the block or a count. */}
         {isSession && highlightOptions.length > 0 ? (
           <View style={styles.section}>
-            <SectionLabel>Highlights</SectionLabel>
+            <SectionLabel>{highlightOptions.length === 1 ? 'Highlight' : 'Highlights'}</SectionLabel>
             <View style={[styles.togglesCard, live.togglesCard]}>
               {highlightOptions.map((o, i) => {
                 const on = highlightKeys.includes(o.key);
@@ -1019,7 +1020,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 );
               })}
             </View>
-            <Text style={[styles.privacyNote, live.privacyNote]}>Optional. Up to two, from your workout summary.</Text>
+            <Text style={[styles.privacyNote, live.privacyNote]}>Optional. From your workout summary.</Text>
           </View>
         ) : null}
 
