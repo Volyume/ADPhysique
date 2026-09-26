@@ -966,9 +966,14 @@ describe('State matrix — S1: cold-launch skeleton (source guard, see header ra
   });
 });
 
-// ─── Presentation guard: strip-below-hero order (real render-order proof) ─
-describe('Presentation guard — strip renders below the hero, above the footer (real DOM order)', () => {
-  test('hero text precedes TodayStrip text precedes last-session text', async () => {
+// ─── Presentation guard: the weigh-in strip's place (real render-order proof) ─
+// RE-ANCHORED 2026-09-26 (founder device order: "Can we have the logging of
+// weight box ... just under the community 'nobody you follow....' box? ...
+// Keep the other things where they are"): the strip now renders ABOVE the
+// hero, straight after the Community row; the hero and the footer keep their
+// order.
+describe('Presentation guard — strip renders above the hero, footer below it (real DOM order)', () => {
+  test('TodayStrip text precedes hero text precedes last-session text', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
@@ -980,9 +985,9 @@ describe('Presentation guard — strip renders below the hero, above the footer 
     const heroIdx = txt.indexOf('Push Day');
     const stripIdx = txt.indexOf('Morning weight');
     const footerIdx = txt.indexOf('Repeat');
-    expect(heroIdx).toBeGreaterThan(-1);
-    expect(stripIdx).toBeGreaterThan(heroIdx);
-    expect(footerIdx).toBeGreaterThan(stripIdx);
+    expect(stripIdx).toBeGreaterThan(-1);
+    expect(heroIdx).toBeGreaterThan(stripIdx);
+    expect(footerIdx).toBeGreaterThan(heroIdx);
   });
 });
 

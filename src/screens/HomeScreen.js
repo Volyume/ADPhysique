@@ -2569,6 +2569,35 @@ export default function HomeScreen({ navigation, route }) {
           />
         )}
 
+        {/* ── The weigh-in strip. Founder device order 2026-09-26, with a
+            Today screenshot: "Can we have the logging of weight box that
+            disappears after you enter it, just under the community 'nobody
+            you follow....' box? At the moment it's further down and looks
+            out of place. Keep the other things where they are (the since
+            you last checked in bit etc)". It moved here from below the hero
+            and nothing else moved. It still renders ONLY while today's
+            weight is an ACTION (not yet logged); once logged it is gone and
+            the weight is one quiet line in the since-check-in pane below.
+            Held until the first load settles: at the top of the screen a
+            strip drawn before today's weight is read would flash up and
+            vanish for someone who has already weighed in. The check-in's
+            "Log my weight first" link still opens its input, because
+            TodayStrip reads that signal when it mounts. ── */}
+        {!initialLoading && user?.id && todayWeight == null && (
+          <TodayStrip
+            bwu={bwu}
+            todayWeight={todayWeight}
+            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            savingWeight={savingWeight}
+            onLogWeight={handleLogWeight}
+            // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
+            // here with a fresh timestamp; the strip opens its weight input.
+            openWeightSignal={route?.params?.openWeightLog ?? null}
+            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            everLogged={hasEverLoggedWeight}
+          />
+        )}
+
         {/* ── Campaign 22 Phase 2 Stage 1: the unified Today line (P1 slot,
             HOME-TODAY-UX-SPEC.md §17 region R2). One quiet row, one occupant,
             chosen by todayLineArbiter from the facts above. Absorbs: the
@@ -2620,10 +2649,11 @@ export default function HomeScreen({ navigation, route }) {
             SQLite reads to complete on a fresh app start. */}
         {initialLoading && (
           <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
-            {/* COMP-027 Part B: the skeleton teaches the new hierarchy,
-                hero-shaped first, the Today strip second. */}
-            <SkeletonCard height={160} />
+            {/* COMP-027 Part B: the skeleton teaches the hierarchy. Founder
+                order 2026-09-26: the weigh-in strip sits above the hero now,
+                so its shape comes first. */}
             <SkeletonCard height={64} />
+            <SkeletonCard height={160} />
           </View>
         )}
 
@@ -2995,29 +3025,14 @@ export default function HomeScreen({ navigation, route }) {
         )}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
-            evidence region. The weigh-in strip renders ONLY while today's
-            weight is an ACTION (not yet logged) - once logged, the big
-            bordered card and its green "Logged" pill are gone and the
-            weight becomes one quiet line inside the evidence pane below.
-            The pane itself restores the since-check-in runway the C22
-            FirstReviewLine link had flattened: title, days to the next
+            evidence region. The pane restores the since-check-in runway the
+            C22 FirstReviewLine link had flattened: title, days to the next
             check-in, weigh-in and session evidence - honouring the Today
             truth-repair ruling with real counts (progress "N of 3" only
-            while short, the ACTUAL count once met, never a clamp). ── */}
-        {user?.id && todayWeight == null && (
-          <TodayStrip
-            bwu={bwu}
-            todayWeight={todayWeight}
-            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
-            savingWeight={savingWeight}
-            onLogWeight={handleLogWeight}
-            // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
-            // here with a fresh timestamp; the strip opens its weight input.
-            openWeightSignal={route?.params?.openWeightLog ?? null}
-            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
-            everLogged={hasEverLoggedWeight}
-          />
-        )}
+            while short, the ACTUAL count once met, never a clamp). Once
+            today's weight is logged it is one quiet line in this pane. The
+            weigh-in strip itself moved up under the Community row (founder
+            order 2026-09-26, see there). ── */}
         {user?.id && evidencePanelItem && (
           <EvidencePanel
             panel={evidencePanelItem}
