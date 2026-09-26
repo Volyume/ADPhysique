@@ -334,14 +334,15 @@ main CONTINUALLY as each change goes green -- see the merge rule in Section 2
 (founder order 2026-07-30). Never leave a finished change sitting on a branch.
 CI (`release:check`) is the final arbiter.
 
-**Builds cost money (founder rule 2026-09-04, INVIOLABLE).** Never
-trigger an iOS (EAS) build, or any other paid build or submission, without
-the founder's explicit go for that specific build. The Android workflow
-is manual dispatch too (order 2026-08-28) and runs on GitHub Actions from
-main: dispatch it only when a landed fix actually needs a build, and say
-which run number it produced. An iOS build started
-without permission during the 2026-09-04 fresh-install incident (D143) is
-the failure this rule records.
+**Builds cost money (founder rule 2026-09-04, INVIOLABLE; tightened
+2026-09-26).** Never trigger ANY build or submission, iOS (EAS) or Android
+(the GitHub Actions workflow, manual dispatch since 2026-08-28) or any
+other, without the founder's explicit go for that specific build. Founder,
+2026-09-26, verbatim: "I'll do a build when I am ready you do not have
+permission to push builds". The founder runs builds; Claude lands work on
+main and says what a build would carry. An iOS build started without
+permission during the 2026-09-04 fresh-install incident (D143) is the
+failure this rule records.
 
 **Testing on device (no simulator).** The founder works from a phone and
 cannot run a local simulator. EVERY shipped change includes a short manual
