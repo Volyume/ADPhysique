@@ -62,21 +62,28 @@ export default function ConsistencyScreen({ navigation }) {
             screen exists for (training block, recovery signals, workload,
             session length, frequency, the 12-week training calendar) is
             untouched. */}
-        {/* ── Lighter week banner ── */}
+        {/* ── Fatigue signs banner ──
+            D204 (founder rule 2026-09-26: "We don't want to be telling
+            people to consider an easier session ... They don't choose
+            sessions!"): this card said "Lighter week recommended" and its
+            tooltip told the athlete how to run their own deload. It now
+            DESCRIBES what the four-week check found, in the app's neutral
+            card (no warning tone, the same call as the Weekly load card),
+            and says plainly that the plan sets the sessions. Found by the
+            plain-English sweep, 2026-09-26. */}
         {deloadAlert && (
-          <Card tone="warning" style={styles.deloadBanner}>
-            <Ionicons name="moon-outline" size={18} color={t.colors.warning} />
+          <Card style={styles.deloadBanner}>
+            <Ionicons name="moon-outline" size={18} color={t.colors.textSecondary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.deloadTitle, live.deloadTitle]}>Lighter week recommended</Text>
+              <Text style={[styles.deloadTitle, live.deloadTitle]}>Signs of building fatigue</Text>
               <Text style={[styles.deloadSub, live.deloadSub]}>
-                {deloadAlert.reasons?.[0] ?? 'Your body is signalling it needs a recovery week.'}
+                {deloadAlert.reasons?.[0] ?? 'Your recent sessions show signs that fatigue is building up.'}
               </Text>
             </View>
             <InfoTooltip text={
-              'A lighter recovery week means keeping the same exercises but dropping the weights by around 10 to 20%. ' +
-              'Stop well before failure. Sessions should feel almost too easy.\n\n' +
-              'This gives your body a chance to recover and absorb all the work you have been putting in.\n\n' +
-              'Most people feel noticeably stronger in the first session back after a proper recovery week.'
+              'This looks back over your last four weeks for signs that fatigue is building up, such as your reps dropping, ' +
+              'or soreness or joint discomfort that keeps coming back.\n\n' +
+              "It's a picture of how you've been recovering, not an instruction. Your plan sets your sessions."
             } size={13} />
           </Card>
         )}

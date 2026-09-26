@@ -646,7 +646,9 @@ export function shouldDeload(last4WeeksData) {
   const earlierReps = last4WeeksData[0]?.avgReps || 0;
   if (earlierReps > 0 && recentReps < earlierReps - 2) {
     score += 50;
-    reasons.push('Rep performance has dropped significantly over the last 4 weeks');
+    // Plain-English sweep 2026-09-26 (founder order): 'rep performance' was
+    // coach shorthand; the check compares average reps per set.
+    reasons.push('Your average reps per set have dropped over the last 4 weeks');
   }
 
   // Wellness composite (30% weight, split across joint + volume signals).
@@ -668,7 +670,9 @@ export function shouldDeload(last4WeeksData) {
   const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
   if (overMRVWeeks >= 2) {
     score += 12;
-    reasons.push('Exceeded your productive volume range for 2 or more weeks');
+    // Plain-English sweep 2026-09-26: 'productive volume range' was jargon;
+    // hasOverMRV means a muscle got more sets than it can usually recover from.
+    reasons.push('More sets on a muscle than it can usually recover from, in 2 or more weeks');
   }
 
   // Soreness (20% weight, down-weighted; unreliable in trained populations).

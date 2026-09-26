@@ -30,14 +30,19 @@ function buildFatigueBarColor(c) {
   };
 }
 
+// D204 (founder rule 2026-09-26, "They don't choose sessions!"): the plan
+// sets each session, so this line DESCRIBES what the athlete reported and
+// never tells them to push, hold their weights or take a lighter day. Found
+// by the plain-English sweep, 2026-09-26. The bands follow the rating
+// scale's own words (Fresh, Mild, Moderate, High, Exhausted).
 function coachingLine(sessions) {
   if (!sessions || sessions.length < 2) return '';
   const last2 = sessions.slice(0, 2).map(s => s.fatigueLevel ?? s.fatigue_level ?? 0);
   const avg = (last2[0] + last2[1]) / 2;
-  if (avg <= 1.5) return "You're fresh, so push your next session.";
-  if (avg <= 2.5) return 'Fatigue is moderate, so train as normal.';
-  if (avg <= 3.5) return 'Fatigue is building, so hold your weights and focus on form.';
-  return 'Fatigue is high, so consider a lighter day.';
+  if (avg <= 1.5) return 'You rated your last two sessions as fresh.';
+  if (avg <= 2.5) return 'You rated your last two sessions as mildly tiring.';
+  if (avg <= 3.5) return 'You rated your last two sessions as moderately tiring.';
+  return 'You rated your last two sessions as very tiring.';
 }
 
 /**
