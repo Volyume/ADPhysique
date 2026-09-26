@@ -62,6 +62,32 @@ Skia drawing (the calorie ring) renders for real: the Skia mock in
 `treeToHtml.js` draws a `Canvas`'s `Path`s as SVG from those commands, so
 the ring is the app's own geometry, not an unknown-type box.
 
+## The store listing screenshots
+
+D211's own "Open, founder-side" note: the Play and App Store listing pages
+are separate uploads in the consoles and still show old screens; this
+harness renders a full store set the same way it renders the Welcome
+captures. `run.sh` makes them on every run, after the Welcome captures:
+`paper-render.test.js`'s store pass mounts nine captures for the same
+"Alex" persona in dark theme, on the same clean account (the same two
+offer-dismissal keys the Welcome pass uses, set before and removed after)
+-- Today, Train, a set being logged, the workout summary, Progress,
+Recovery, Nutrition, the weekly coaching decision and Community -- each as
+one phone screen (`treeToHtml` `opts.phone`, with the real `VolyumeTabBar`
+at the foot for every capture that is a tab root). Each capture is
+rendered TWICE, once per store platform's own aspect ratio at 412 CSS
+pixels wide: Play (1080 x 1920, CSS height 732) and the App Store (1290 x
+2796, CSS height 893). `store.js` shoots each at the device scale that
+puts that platform's target width in physical pixels, crops Chromium's
+unpainted window tail the same way `welcome.js` does, and scales the
+result onto a CanvasKit surface sized to the exact target so the file
+written is always precisely 1080x1920 or 1290x2796, into
+`<out>/store/play/NN-name.png` and `<out>/store/appstore/NN-name.png` as
+PNG (store listings are lossless uploads, not in-app assets, so no JPEG
+step here). The entries live in `REPORT.store`, never `REPORT.screens`, so
+the existing per-pass screen counts and their pinned assertions are
+unaffected. It never writes into the repo.
+
 ## How it works
 
 Two stages, run in sequence by `run.sh`:

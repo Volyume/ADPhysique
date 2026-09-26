@@ -514,6 +514,99 @@ test('paper-render the Welcome captures (Today, a set being logged, Nutrition)',
   expect(REPORT.welcome.every((e) => e.mounted)).toBe(true);
 });
 
+// ── Test 1d: the store listing screenshots (Play + App Store) ────────────
+// D211's own "Open, founder-side" note: "The Play and App Store listing
+// screenshots are separate uploads in the consoles and still show the July
+// screens; the same harness can render a full store set on request." This
+// test is that request. Same persona and dark theme as the Welcome pass
+// above, on the same clean account (the same two offer-dismissal keys, set
+// before and removed after); one phone screen per capture (treeToHtml
+// opts.phone), with the real tab bar at the foot for every capture that is
+// a tab root. Unlike the Welcome pass's single 480x940 asset size, a store
+// listing needs two different phone aspect ratios -- Play (1080x1920,
+// 9:16) and the App Store (1290x2796) -- so EACH capture is rendered
+// TWICE, once per platform's own CSS height at the same 412 CSS px width
+// (a taller/shorter phone shows a different amount of scrollable content,
+// not a scaled photo of the same one). store.js shoots each HTML file at
+// the device scale that gives that platform's target pixel width and
+// crops/scales to the exact target size with CanvasKit. Entries go to
+// REPORT.store, never REPORT.screens, so every existing pass's screen
+// count and its hardcoded assertion (test 1's 16, test 1b's 16+4, test
+// 2's 16+4+3 below) stay exactly as they were.
+const STORE_PLATFORMS = [
+  { key: 'play', targetWidth: 1080, targetHeight: 1920 },
+  { key: 'appstore', targetWidth: 1290, targetHeight: 2796 },
+].map((p) => ({ ...p, cssHeight: Math.round(412 * (p.targetHeight / p.targetWidth)) }));
+
+// Recovery (register D208): not in screenConfigs() -- reached from
+// Progress (tab index 3), nested route "Recovery"
+// (src/navigation/RootNavigator.js's ProgressStack: `<Stack.Screen
+// name="Recovery" component={RecoveryScreen} .../>`). Same config shape as
+// every tab-hosted entry in screenConfigs() above (n/name/tabBarIndex/
+// tabBarNested); kept OUT of screenConfigs() itself so test 1's
+// unconditional dark-pass loop never mounts it too -- adding it there
+// would silently grow REPORT.screens past the 16 test 1 pins.
+const RECOVERY_STORE_CONFIG = { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' };
+
+const STORE_CAPTURES = [
+  { n: '01', file: 'today', configN: '01' }, // HomeScreen, Today (tab 0)
+  { n: '02', file: 'train', configN: '07' }, // PlansScreen, Train (tab 1)
+  { n: '03', file: 'set-logged', configN: '02' }, // ActiveWorkoutScreen, no tab bar
+  { n: '04', file: 'workout-summary', configN: '03' }, // WorkoutSummaryScreen, no tab bar
+  { n: '05', file: 'progress', configN: '04' }, // AnalyticsScreen, Progress (tab 3)
+  { n: '06', file: 'recovery', config: RECOVERY_STORE_CONFIG }, // RecoveryScreen, from Progress (tab 3)
+  { n: '07', file: 'nutrition', configN: '06' }, // DiaryScreen, Nutrition (tab 2)
+  { n: '08', file: 'weekly-coaching', configN: '05' }, // CoachOutputScreen, no tab bar
+  { n: '09', file: 'community', configN: '13' }, // CommunityHubScreen, from Today (tab 0)
+];
+
+test('paper-render the store listing screenshots (Play + App Store)', async () => {
+  const seed = global.__PAPER_RENDER_SEED__;
+  expect(seed).toBeTruthy();
+
+  jest.useFakeTimers({
+    now: NOW_MS,
+    doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'hrtime', 'performance'],
+  });
+
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  const { MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } = require('../../src/lib/food/mealReminderOffer');
+  const dismissed = [`@volyume_hyt_offer_${seed.userId}`, MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(seed.userId)];
+  for (const key of dismissed) {
+    // eslint-disable-next-line no-await-in-loop
+    await AsyncStorage.setItem(key, 'true');
+  }
+
+  REPORT.store = [];
+  try {
+    const configs = screenConfigs(seed);
+    for (const capture of STORE_CAPTURES) {
+      const config = capture.config || configs.find((c) => c.n === capture.configN);
+      for (const platform of STORE_PLATFORMS) {
+        const suffix = `-store-${platform.key}-${capture.n}`;
+        // eslint-disable-next-line no-await-in-loop
+        const entry = await processScreen(config, seed, 'dark', { suffix, phone: { height: platform.cssHeight } });
+        REPORT.store.push({
+          ...entry,
+          n: capture.n,
+          file: capture.file,
+          platform: platform.key,
+          cssHeight: platform.cssHeight,
+          targetWidth: platform.targetWidth,
+          targetHeight: platform.targetHeight,
+        });
+      }
+    }
+  } finally {
+    for (const key of dismissed) {
+      // eslint-disable-next-line no-await-in-loop
+      await AsyncStorage.removeItem(key);
+    }
+    jest.useRealTimers();
+  }
+  expect(REPORT.store.every((e) => e.mounted)).toBe(true);
+});
+
 // ── Test 2: light theme (01/04/06), with the resetModules reload ─────────
 test('paper-render the light theme variant for Home, Analytics and Diary', async () => {
   const seed = global.__PAPER_RENDER_SEED__;

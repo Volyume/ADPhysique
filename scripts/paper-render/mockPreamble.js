@@ -29,6 +29,17 @@
  *      Community's own sign-in gate (assertCommunityGates) does not turn
  *      every CommunityHubScreen render into "Could not load Community"
  *      regardless of what the seeded data would otherwise show.
+ *   6. BodyDiagramHeatmap renders for REAL (screen-mount's own mock stubs
+ *      it to a bare string type -- fine for "does not throw", but a paper
+ *      render has to show the muscle diagram, not a debug label, on the
+ *      store pass's Recovery capture). It needs nothing screen-mount's own
+ *      react-native-svg mock doesn't already provide except the one
+ *      react-native-svg export that mock never added (Ellipse, the body
+ *      silhouette's head/joints) -- added below at that mock's own site.
+ *      Same idea as the Skia Canvas paths already drawn for real (see
+ *      treeToHtml.js): a paper-render harness draws a component's actual
+ *      SVG rather than leaving an unknown-type box where a design reviewer
+ *      would look.
  * Every mock NOT called out above is the same module, same factory, as
  * screen-mount's own preamble.
  *
@@ -287,6 +298,12 @@ jest.mock('react-native-svg', () => {
     Svg: mk('Svg'), Path: mk('Path'), G: mk('G'), Circle: mk('Circle'),
     Rect: mk('Rect'), Line: mk('Line'), Text: mk('Text'), Defs: mk('Defs'),
     LinearGradient: mk('LinearGradient'), Stop: mk('Stop'), ClipPath: mk('ClipPath'),
+    // Ellipse: screen-mount's own mock never needed it (no screen-mount
+    // render reaches it); BodyDiagramHeatmap's head/joint shapes do, once
+    // that component renders for real below (departure 6 in this file's
+    // header) instead of screen-mount's bare-string stub. treeToHtml.js's
+    // SVG_TAGS carries the matching draw rule.
+    Ellipse: mk('Ellipse'),
     default: mk('Svg'),
   };
 });
@@ -392,13 +409,19 @@ jest.mock('../../src/components/FeedbackSheet', () => {
   };
 });
 
+// BodyDiagramHeatmap: NOT stubbed here (departure 6, this file's header) --
+// screen-mount.test.js stubs it to a bare string type ("does not throw" is
+// all a crash sweep needs), but this harness needs the real muscle diagram
+// on the page, the same way the Skia calorie-ring paths draw for real
+// rather than showing an unknown-type box. It is a plain View/Svg/Text
+// composite (no native module, confirmed by reading its source) that needs
+// nothing beyond react-native-svg's own mock above (plus its one missing
+// export, Ellipse, added there) and InfoTooltip, which other already-
+// rendering screens already exercise successfully through this same mock
+// wall.
+
 // Components that wrap react-native-svg or Skia: stubbed so we don't
 // need every drawing primitive to be mocked deeply.
-jest.mock('../../src/components/BodyDiagramHeatmap', () => {
-  const React = require('react');
-  return { __esModule: true, default: props => React.createElement('BodyDiagramHeatmap', props) };
-});
-
 jest.mock('../../src/components/GradientCard', () => {
   const React = require('react');
   return { __esModule: true, default: props => React.createElement('GradientCard', props, props.children) };

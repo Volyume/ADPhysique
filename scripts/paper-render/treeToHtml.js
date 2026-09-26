@@ -263,7 +263,7 @@ const CONTAINER_TYPES = new Set([
   // resolves this to a plain string host component, same passthrough shape.
   'KeyboardGestureArea',
 ]);
-const SVG_TAGS = new Set(['Svg', 'Path', 'Rect', 'Circle', 'Line', 'G', 'Polyline', 'Defs', 'LinearGradient', 'Stop', 'ClipPath']);
+const SVG_TAGS = new Set(['Svg', 'Path', 'Rect', 'Circle', 'Ellipse', 'Line', 'G', 'Polyline', 'Defs', 'LinearGradient', 'Stop', 'ClipPath']);
 // react-native-svg's own Text (inside an Svg tree) vs RN's host Text -- both
 // arrive here typed 'Text'; disambiguated by an svgDepth counter in ctx.
 
