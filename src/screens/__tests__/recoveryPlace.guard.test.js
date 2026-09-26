@@ -11,6 +11,11 @@
  * or lead with anything"). Consistency keeps the sessions milestone. The
  * section moved; it was not copied. Each case is written to fail if a link
  * is cut or the order changes.
+ *
+ * Later the same day the founder changed the order on the Recovery screen:
+ * "Move the ratings thing down below the recovery by muscle to the bottom".
+ * That replaces the standing order above for this screen; the old single
+ * block keeps the ratings first.
  */
 const fs = require('fs');
 const path = require('path');
@@ -55,13 +60,23 @@ describe('the Recovery screen', () => {
     expect(RECOVERY).toMatch(/<ReadinessCards[\s\S]*sections="recovery"/);
   });
 
-  test('the section keeps its order: your ratings, then recovery by muscle, then the next workout', () => {
-    const ratings = CARDS.indexOf("<SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>");
+  test('the Recovery screen: recovery by muscle, the next workout, the recovery speed, then your ratings at the bottom', () => {
     const byMuscle = CARDS.indexOf('Recovery by muscle</Text>');
     const next = CARDS.indexOf('>Next workout</Text>');
-    expect(ratings).toBeGreaterThan(-1);
-    expect(byMuscle).toBeGreaterThan(ratings);
+    const speed = CARDS.indexOf('<RecoveryLearningCard personal=');
+    const ratingsLast = CARDS.indexOf("{sections === 'recovery' && ratingsBlock}");
+    const ratingsFirst = CARDS.indexOf("{sections !== 'recovery' && ratingsBlock}");
+    const trend = CARDS.indexOf('{recoveryTrendInsight && (');
+    expect(byMuscle).toBeGreaterThan(-1);
     expect(next).toBeGreaterThan(byMuscle);
+    expect(speed).toBeGreaterThan(next);
+    expect(ratingsLast).toBeGreaterThan(speed);
+    // The weekly check-in's trend line stays with the ratings, under them.
+    expect(trend).toBeGreaterThan(ratingsLast);
+    // Only the old single block draws the ratings first.
+    expect(ratingsFirst).toBeGreaterThan(-1);
+    expect(ratingsFirst).toBeLessThan(byMuscle);
+    expect(CARDS).toContain("<SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>");
   });
 });
 

@@ -540,6 +540,95 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
     ].filter(Boolean).join(' · ')
     : '';
 
+  // The ratings: the three gauges, the weekly check-in and training
+  // recency, under their own heading. On the Recovery screen they sit at
+  // the bottom, below Recovery by muscle (founder, 2026-09-26: "Move the
+  // ratings thing down below the recovery by muscle to the bottom"); the
+  // old single block ('all') keeps them first, where they always were.
+  const ratingsBlock = (
+    <>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        <SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>
+        <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable." />
+      </View>
+      <View style={[styles.recoveryCard, live.recoveryCard]}>
+        <View style={styles.recoveryGrid}>
+          <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
+          <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
+          <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
+        </View>
+        {/* P3(a) (F3, D200-2): present only while at least one gauge is
+            still short of MIN_RATED_SESSIONS -- names the two inputs and
+            when they start counting, so an N/A gauge is never unexplained. */}
+        {gaugesIncomplete && (
+          <Text style={[styles.recoveryWaitingCaption, live.recoveryWaitingCaption]}>
+            These read the soreness you report before a session and the fatigue and joint comfort you rate after it. They appear after two rated sessions in the last two weeks.
+          </Text>
+        )}
+
+        {/* P3(a): a one-tap path to the latest completed session's
+            summary, rating mode. Absent once that session carries both
+            post-session ratings (rateSessionParams is then null),
+            independent of gaugesIncomplete above (T2's own test (b)). */}
+        {rateSessionParams && (
+          <Button
+            title="Rate your last session"
+            variant="secondary"
+            size="sm"
+            onPress={() => onRateLastSession?.(rateSessionParams)}
+            accessibilityLabel="Rate your last session"
+          />
+        )}
+
+        <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+
+        {/* P3(b): the latest weekly check-in's own signals, read
+            independently of the trend-insight sentence below. */}
+        {latestCheckin && (
+          <>
+            <View style={[styles.recoveryDivider, live.recoveryDivider]} />
+            <View>
+              <Text style={[styles.checkinTitle, live.checkinTitle]}>From your weekly check-in</Text>
+              {checkinValuesLine ? (
+                <Text style={[styles.checkinValues, live.checkinValues]}>{checkinValuesLine}</Text>
+              ) : null}
+            </View>
+          </>
+        )}
+
+        {/* D201: narrowed to muscles with NO row in the "Recovery by
+            muscle" section below (spec section 6, "the chips themselves
+            fold into the rows") -- see noRecentSessionEntries above. */}
+        {noRecentSessionEntries.length > 0 && (
+          <>
+            <View style={[styles.recoveryDivider, live.recoveryDivider]} />
+            <View style={styles.mfHeaderRow}>
+              <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
+                <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
+                {/* Task 2: this is elapsed time since the last logged set,
+                    nothing more - it never reads this user's soreness or
+                    recovery data, so the title and gloss say only that. */}
+                <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained.</Text>
+              </View>
+            </View>
+            <View style={styles.mfChipGrid}>
+              {noRecentSessionEntries.map(({ key, displayName, label, color, dot }) => (
+                <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
+                  <View style={[styles.mfDot, { backgroundColor: dot }]} />
+                  <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
+                  <Text style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+    </>
+  );
+
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
       {/* Milestone progress */}
@@ -575,85 +664,7 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
       {/* Recovery: the signals and muscle readiness folded into one block. */}
       {sections !== 'milestone' && (
       <View style={styles.section}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>
-          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable." />
-        </View>
-        <View style={[styles.recoveryCard, live.recoveryCard]}>
-          <View style={styles.recoveryGrid}>
-            <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
-            <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
-            <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
-          </View>
-          {/* P3(a) (F3, D200-2): present only while at least one gauge is
-              still short of MIN_RATED_SESSIONS -- names the two inputs and
-              when they start counting, so an N/A gauge is never unexplained. */}
-          {gaugesIncomplete && (
-            <Text style={[styles.recoveryWaitingCaption, live.recoveryWaitingCaption]}>
-              These read the soreness you report before a session and the fatigue and joint comfort you rate after it. They appear after two rated sessions in the last two weeks.
-            </Text>
-          )}
-
-          {/* P3(a): a one-tap path to the latest completed session's
-              summary, rating mode. Absent once that session carries both
-              post-session ratings (rateSessionParams is then null),
-              independent of gaugesIncomplete above (T2's own test (b)). */}
-          {rateSessionParams && (
-            <Button
-              title="Rate your last session"
-              variant="secondary"
-              size="sm"
-              onPress={() => onRateLastSession?.(rateSessionParams)}
-              accessibilityLabel="Rate your last session"
-            />
-          )}
-
-          <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
-
-          {/* P3(b): the latest weekly check-in's own signals, read
-              independently of the trend-insight sentence below. */}
-          {latestCheckin && (
-            <>
-              <View style={[styles.recoveryDivider, live.recoveryDivider]} />
-              <View>
-                <Text style={[styles.checkinTitle, live.checkinTitle]}>From your weekly check-in</Text>
-                {checkinValuesLine ? (
-                  <Text style={[styles.checkinValues, live.checkinValues]}>{checkinValuesLine}</Text>
-                ) : null}
-              </View>
-            </>
-          )}
-
-          {/* D201: narrowed to muscles with NO row in the "Recovery by
-              muscle" section below (spec section 6, "the chips themselves
-              fold into the rows") -- see noRecentSessionEntries above. */}
-          {noRecentSessionEntries.length > 0 && (
-            <>
-              <View style={[styles.recoveryDivider, live.recoveryDivider]} />
-              <View style={styles.mfHeaderRow}>
-                <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
-                  <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
-                  {/* Task 2: this is elapsed time since the last logged set,
-                      nothing more - it never reads this user's soreness or
-                      recovery data, so the title and gloss say only that. */}
-                  <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained.</Text>
-                </View>
-              </View>
-              <View style={styles.mfChipGrid}>
-                {noRecentSessionEntries.map(({ key, displayName, label, color, dot }) => (
-                  <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
-                    <View style={[styles.mfDot, { backgroundColor: dot }]} />
-                    <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
-                    <Text style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-        </View>
+        {sections !== 'recovery' && ratingsBlock}
 
         {/* D201 (per-muscle recovery, spec section 6): estimated recovery
             per muscle -- the body figure (recovery palette), one row per
@@ -704,6 +715,8 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
             returned a reading, including the "still learning" states, and
             absent with the section above when the read failed. */}
         {muscleRecovery?.personal ? <RecoveryLearningCard personal={muscleRecovery.personal} /> : null}
+
+        {sections === 'recovery' && ratingsBlock}
 
         {recoveryTrendInsight && (
           <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
