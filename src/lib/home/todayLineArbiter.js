@@ -146,10 +146,10 @@ function resolveRecovery(facts) {
   if (f.deloadEligible) {
     return {
       key: 'deload_suggestion',
-      text: 'Recovery week suggested. See why.',
+      text: 'Signs of building fatigue. See why.',
       onPress: f.onDeloadPress,
       onDismiss: f.onDeloadDismiss,
-      accessibilityLabel: 'Recovery week suggested. Tap to review.',
+      accessibilityLabel: 'Signs of building fatigue. Tap to review.',
     };
   }
   return null;

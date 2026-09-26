@@ -61,7 +61,8 @@ describe('THE QUESTION CLAIMS NOTHING THE APP CANNOT KNOW', () => {
   const prompt = reEntryPrompt(due(20));
 
   test('it states uncertainty about the LOG, never a physiological fact', () => {
-    expect(prompt.body).toBe("It's been a while since your last logged workout, so we want to check before using the same training targets.");
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
+    expect(prompt.body).toBe("It's been a while since your last logged workout, so your coach wants to check before using the same training targets.");
     expect(prompt.body).not.toMatch(/detrain|lost|nervous system|\bCNS\b|tolerance|adaptation|%/i);
   });
 
@@ -102,7 +103,8 @@ describe('CASES 13 and 14: what each answer does, and what it never does', () =>
     const out = reEntryOutcome(RE_ENTRY_ANSWER.DID_NOT_TRAIN);
     expect(out.easeReturn).toBe(true);
     expect(out.changesQueue).toBe(false);
-    expect(out.note).toBe('We will start you back a little easier for this session. Your programme is unchanged.');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
+    expect(out.note).toBe('Your coach will start you back a little easier for this session. Your programme is unchanged.');
   });
 
   test('CONTINUE is respected, and an unknown answer falls to it rather than guessing', () => {

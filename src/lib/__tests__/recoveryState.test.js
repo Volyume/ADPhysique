@@ -94,7 +94,8 @@ describe('THE TWO STATES ARE DISTINGUISHABLE', () => {
     const card = recoveryStateCard(r);
     expect(card.title).toBe('Training is lighter for now');
     expect(card.title).not.toMatch(/recovery week/i);
-    expect(card.body).toBe('Your recent recovery has been harder, so we are holding back some of the workload for now.');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
+    expect(card.body).toBe('Your recent recovery has been harder, so your coach is holding back some of the workload for now.');
     expect(nextWorkoutRecoveryLabel(r)).toBe('Recovery-adjusted');
     expect(nextWorkoutRecoveryLabel(r)).not.toMatch(/week/i);
   });

@@ -3122,7 +3122,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Plan fit"
-              sub="Here is how your week looks against the plan we would build for you."
+              sub="Here is how your week looks against the plan your coach would build for you."
               onBack={() => setFitReview(null)}
             />
 

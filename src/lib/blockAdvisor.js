@@ -863,7 +863,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
         action: 'in_recovery',
         reviewHeadsUp,
         headline: 'Recovery week on the calendar',
-        body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up wherever suits you: ease back in with lighter sessions, and the next-block choice opens when this week ends.`,
+        body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up whenever suits you, and the next-block choice opens when this week ends.`,
         signals,
         nextBlock,
         blockStatus,
@@ -873,7 +873,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       action: 'in_recovery',
       reviewHeadsUp,
       headline: 'Recovery week is active',
-      body: `Keep sessions lighter this week. Roughly half the sets, same exercises, easy effort. This is not a step backwards. Your body rebuilds when the hard work eases off, so this is the week the last few weeks turn into progress. Full training again next week.`,
+      body: `Your recovery week's sessions are lighter: roughly half the sets, the same exercises and easy effort. This is not a step backwards. Your body rebuilds when the hard work eases off, so this is the week the last few weeks turn into progress. Full training again next week.`,
       signals,
       nextBlock,
       blockStatus,
@@ -954,7 +954,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
     return {
       action: 'early_deload',
-      headline: 'Your body is asking for a lighter week',
+      headline: 'Signs of building fatigue',
       body: buildEarlyDeloadBody(signals, checkins[0], blockStatus),
       signals,
       nextBlock,
@@ -970,7 +970,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
   if (hasEnoughHistory && (highSignals.length >= 1 || mediumSignals.length >= headsUpMediumThreshold)) {
     return {
       action: 'heads_up',
-      headline: 'Keep an eye on recovery',
+      headline: 'Signs your recovery is dipping',
       body: buildHeadsUpBody(signals, blockStatus),
       signals,
       nextBlock: null,
@@ -989,9 +989,9 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       ? `Week ${blockStatus.currentWeek} of ${blockStatus.totalWeeks}`
       : 'On track',
     body: weeksLeft === 1
-      ? `One more week before your recovery week. Push hard this week. It's your peak.`
+      ? `One more week before your recovery week. This week is the peak of your block, its hardest week.`
       : weeksLeft === 0
-        ? `This is your recovery week. Back off and let everything settle.`
+        ? `This is your recovery week. Sessions are lighter so everything can settle.`
         : `Training is going well. Stay on plan.`,
     signals,
     nextBlock: null,
@@ -1025,7 +1025,7 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
     ? `You're in week ${weeksIn}. `
     : '';
 
-  return `${signalText}${timing}Dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as loading the spring for the next push.`;
+  return `${signalText}${timing}This is a picture of how you've been recovering, not an instruction. Your plan sets your sessions.`;
 }
 
 function buildHeadsUpBody(signals, blockStatus) {
@@ -1049,5 +1049,5 @@ function buildHeadsUpBody(signals, blockStatus) {
     ? `Your recovery week is ${weeksToRecovery === 1 ? 'next week' : `${weeksToRecovery} weeks away`}. `
     : '';
 
-  return `${obsText}${timing}Keep training as planned, focus on sleep and eating enough, and flag it next check-in if nothing has improved.`;
+  return `${obsText}${timing}Your plan sets your sessions, and your next check-in will show whether this has changed. Focus on sleep and eating enough.`;
 }

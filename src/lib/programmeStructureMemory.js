@@ -245,5 +245,5 @@ export function demonstratedStructure(evidence, { daysPerWeek = null } = {}) {
 export function structureMemoryCopy(demonstrated, splitLabel) {
   if (!demonstrated) return null;
   const label = splitLabel ?? demonstrated.splitType;
-  return `You have trained well with ${label} across ${demonstrated.blocks} blocks, so we have started from that rather than from a default.`;
+  return `You have trained well with ${label} across ${demonstrated.blocks} blocks, so your coach has started from that rather than from a default.`;
 }

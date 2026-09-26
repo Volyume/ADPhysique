@@ -44,7 +44,8 @@ describe('THE FOUNDER\'S FIRST EXAMPLE', () => {
 
   test('it says the weight is moving as intended and the lifts are progressing', () => {
     const text = storyLines(story).join(' ');
-    expect(text).toMatch(/weight is moving the way we intended/i);
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
+    expect(text).toMatch(/weight is moving the way your coach intended/i);
     expect(text).toMatch(/main lifts are still moving up/i);
   });
 

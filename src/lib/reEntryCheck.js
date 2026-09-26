@@ -109,7 +109,7 @@ export function reEntryPrompt(check) {
   if (!check) return null;
   return {
     title: 'Welcome back',
-    body: "It's been a while since your last logged workout, so we want to check before using the same training targets.",
+    body: "It's been a while since your last logged workout, so your coach wants to check before using the same training targets.",
     options: [
       { answer: RE_ENTRY_ANSWER.TRAINED_ELSEWHERE, label: "I've still been training" },
       { answer: RE_ENTRY_ANSWER.DID_NOT_TRAIN, label: "I haven't trained" },
@@ -142,13 +142,13 @@ export function reEntryOutcome(answer) {
       return {
         answer, easeReturn: false, changesQueue: false,
         because: 'athlete_reports_training_elsewhere',
-        note: 'Keeping your targets as they are. Ease into the first session and let us know how it goes.',
+        note: 'Your training targets stay as they are.',
       };
     case RE_ENTRY_ANSWER.DID_NOT_TRAIN:
       return {
         answer, easeReturn: true, changesQueue: false,
         because: 'athlete_reports_no_training',
-        note: 'We will start you back a little easier for this session. Your programme is unchanged.',
+        note: 'Your coach will start you back a little easier for this session. Your programme is unchanged.',
       };
     case RE_ENTRY_ANSWER.CONTINUE:
     default:

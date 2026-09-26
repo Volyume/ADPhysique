@@ -212,20 +212,20 @@ export function fitCopy(state, ctx = {}) {
     case PLAN_FIT.FULL_TARGET_FIT:
       return {
         title: 'Great fit',
-        body: `${sessions} of around ${sessionLengthMinutes} minutes gives us enough room for the training we would normally recommend for you.`,
+        body: `${sessions} of around ${sessionLengthMinutes} minutes gives enough room for the training your coach would normally recommend for you.`,
       };
     case PLAN_FIT.VALID_TIME_CONSTRAINED:
       return {
         title: 'Tighter fit',
-        body: 'This works. We will keep your workouts focused and start some of the less important work a little lighter so your sessions actually fit.',
+        body: 'This works. Your coach will keep your workouts focused and start some of the less important work a little lighter so your sessions actually fit.',
       };
     case PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN:
     default:
       return {
         title: 'Needs a choice',
         body: alternatives.length
-          ? `We cannot fit everything we would normally include into ${sessions} of ${sessionLengthMinutes} minutes without your workouts running longer. Here are your options.`
-          : `We cannot fit everything we would normally include into ${sessions} of ${sessionLengthMinutes} minutes. You can still start here, and your workouts will run a little longer than that.`,
+          ? `Not everything your coach would normally include fits into ${sessions} of ${sessionLengthMinutes} minutes without your workouts running longer. Here are your options.`
+          : `Not everything your coach would normally include fits into ${sessions} of ${sessionLengthMinutes} minutes. You can still start here, and your workouts will run a little longer than that.`,
       };
   }
 }
@@ -255,7 +255,7 @@ export function alternativeCopy(alt) {
   if (alt.kind === 'longer_sessions') {
     return {
       label: `${alt.daysPerWeek} x ${alt.sessionLengthMinutes} min`,
-      detail: 'Gives us room for the full plan we would normally start you on.',
+      detail: 'Gives your coach room for the full plan you would normally start on.',
     };
   }
   return {
@@ -279,7 +279,7 @@ export function keepChoiceCopy({
     label: `${daysPerWeek} x ${sessionLengthMinutes} min`,
     detail: overruns
       ? `Keep this. Your longest workout should take around ${roundToFive(longestSessionMinutes)} minutes.`
-      : 'The best plan we can build around the time you have.',
+      : 'The best plan your coach can build around the time you have.',
   };
 }
 

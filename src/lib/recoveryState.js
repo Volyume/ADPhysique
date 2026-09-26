@@ -186,7 +186,7 @@ export function recoveryStateCard(resolved) {
     state: resolved.state,
     title: 'Training is lighter for now',
     compactTitle: 'Training adjusted for recovery',
-    body: 'Your recent recovery has been harder, so we are holding back some of the workload for now.',
+    body: 'Your recent recovery has been harder, so your coach is holding back some of the workload for now.',
     next: 'Normal progression picks up again when your recovery supports it. The rest of the block is unchanged.',
     action: 'Why?',
   };

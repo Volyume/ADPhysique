@@ -574,7 +574,7 @@ export function holdReinforcement({
     if (outcome !== OUTCOME.IMPROVED) return null;
     return {
       because: 'previous_change_worked_and_still_is',
-      text: 'The last change to your calorie target did what we wanted, and it is still working. We are leaving it alone.',
+      text: 'The last change to your calorie target did what your coach wanted, and it is still working. Your coach is leaving it alone.',
     };
   }
   return null;

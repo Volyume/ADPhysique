@@ -173,7 +173,7 @@ export function returningCopy(decline, because) {
   if (!decline) return null;
   const reasons = {
     goal_changed: 'your goal has changed',
-    weight_worsened: 'your weight has moved further from where we want it',
+    weight_worsened: 'your weight has moved further from where your coach is aiming',
     intake_worsened: 'your logged intake has moved away from your target',
     coverage_worsened: 'there is less to go on than there was',
     training_worsened: 'your training has dropped off',
@@ -181,15 +181,15 @@ export function returningCopy(decline, because) {
     weight_now_known: 'your weight trend has become clear',
     intake_now_known: 'your food log now shows what you are eating',
     coverage_now_known: 'you have logged food on enough days to go on',
-    training_now_known: 'we can see your training',
-    recovery_now_known: 'we can see your recovery',
+    training_now_known: 'your coach can see your training',
+    recovery_now_known: 'your coach can see your recovery',
     rate_moved_materially: 'the rate your weight is changing has shifted noticeably',
   };
   // Each clause slots into "Since then ..." below, so none of them may carry
   // its own "since then" - which is how the sentence came out saying it twice.
   const why = reasons[because];
   if (!why) return null;
-  return `You chose to keep this as it was last time. Since then ${why}, so we are suggesting it again.`;
+  return `You chose to keep this as it was last time. Since then ${why}, so your coach is suggesting it again.`;
 }
 
 /** What the user reads when a declined recommendation is deliberately NOT repeated. */
@@ -198,5 +198,5 @@ export function heldByDeclineCopy(decline) {
   const what = decline.domain === 'nutrition'
     ? 'your calorie target'
     : 'your training';
-  return `You chose to keep ${what} as it was. Nothing important has changed since, so we are leaving it with you.`;
+  return `You chose to keep ${what} as it was. Nothing important has changed since, so your coach is leaving it with you.`;
 }

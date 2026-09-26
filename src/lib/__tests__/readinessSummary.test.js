@@ -63,7 +63,8 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
-    expect(result).toEqual({ tone: 'recover', line: 'Recovery week, pull effort back.' });
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip describes the plan's lighter week, it no longer tells you to pull effort back)
+    expect(result).toEqual({ tone: 'recover', line: 'Recovery week, lighter sessions.' });
   });
 
   test('the shouldDeload training signal wins over readiness facts and fatigue', () => {
@@ -73,9 +74,11 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
-    expect(result).toEqual({ tone: 'recover', line: 'Your recent sessions point to a recovery week soon.' });
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip describes the signs, it no longer points to a recovery week)
+    expect(result).toEqual({ tone: 'recover', line: 'Your recent sessions show signs of fatigue building up.' });
     // Worded distinctly from the top banner's own copy.
-    expect(result.line).not.toMatch(/Recovery week suggested/i);
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the Today line now reads "Signs of building fatigue"; the chip stays worded distinctly from it)
+    expect(result.line).not.toMatch(/Signs of building fatigue/i);
   });
 
   test('high soreness from the last session surfaces on its own', () => {
@@ -86,7 +89,8 @@ describe('buildReadinessSummary', () => {
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: null, energyScore: null },
       nowMs: NOW,
     });
-    expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore. Worth listening to that today.' });
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip states what you reported; "Worth listening to that today" told you to monitor yourself)
+    expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore.' });
   });
 
   test('low sleep and low energy combine with natural joining', () => {
@@ -99,7 +103,8 @@ describe('buildReadinessSummary', () => {
     });
     expect(result).toEqual({
       tone: 'caution',
-      line: 'Last time out you were short on sleep and low on energy. Worth listening to that today.',
+      // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip states what you reported; "Worth listening to that today" told you to monitor yourself)
+      line: 'Last time out you were short on sleep and low on energy.',
     });
   });
 
@@ -111,7 +116,8 @@ describe('buildReadinessSummary', () => {
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
       nowMs: NOW,
     });
-    expect(result.line).toBe('Last time out you were sore, short on sleep and low on energy. Worth listening to that today.');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip states what you reported; "Worth listening to that today" told you to monitor yourself)
+    expect(result.line).toBe('Last time out you were sore, short on sleep and low on energy.');
   });
 
   test('mid-scale readiness values (OK / Mild) do not trigger the caution read', () => {
@@ -274,7 +280,8 @@ describe('C6 R-6 (D97-22): the caution is bounded to a recent session', () => {
       lastSession: { startedAt: nowMs - 3 * 86400000, soreness24hBefore: 3, sleepQuality: null, energyScore: null },
       nowMs,
     });
-    expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore. Worth listening to that today.' });
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the chip states what you reported; "Worth listening to that today" told you to monitor yourself)
+    expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore.' });
   });
 });
 

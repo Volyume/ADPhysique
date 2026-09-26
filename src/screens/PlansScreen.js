@@ -602,7 +602,7 @@ export default function PlansScreen({ navigation }) {
     // through a button whose alert promises the opposite.
     appAlert(
       'Run this plan again?',
-      "A new training block starts today with the same workouts and the same set targets as last time. Aim to match or improve on last time's weights.",
+      "A new training block starts today with the same workouts and the same set targets as last time.",
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { restartingRef.current = false; } },
         {
@@ -1634,25 +1634,18 @@ export default function PlansScreen({ navigation }) {
             {/* Early deload dismiss options */}
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
-                {/* R9 (D70): blockRestartBtn -> Button primary. handleSnoozeBlock
-                    is shared with the plain snooze text-links below, which get
-                    a manual selection() tick; this one doesn't, since the
-                    primary variant already fires one on press (never double-fire). */}
+                {/* D204 addendum 3 (lead ruling, 2026-09-26): one honest action.
+                    The card describes signs of fatigue and says the plan sets
+                    the sessions; the old pair ("Got it, ease off this week" and
+                    "Keep going") both only snoozed it, and the first told the
+                    athlete to ease off beside a body saying it is not an
+                    instruction. R9 (D70): Button primary fires its own
+                    selection() tick, so handleSnoozeBlock gets no manual one. */}
                 <Button
                   variant="primary"
-                  title="Got it, ease off this week"
+                  title="Got it"
                   onPress={handleSnoozeBlock}
-                  accessibilityLabel="Got it, ease off this week"
-                  style={styles.blockCtaButton}
-                />
-                {/* blockNewBtn -> Button secondary. Secondary stays silent by
-                    itself, so the snooze tap gets its manual selection() tick
-                    here (R9 (D70) haptics vocabulary sweep). */}
-                <Button
-                  variant="secondary"
-                  title="Keep going"
-                  onPress={() => { haptics.selection(); handleSnoozeBlock(); }}
-                  accessibilityLabel="Keep going"
+                  accessibilityLabel="Got it"
                   style={styles.blockCtaButton}
                 />
               </View>

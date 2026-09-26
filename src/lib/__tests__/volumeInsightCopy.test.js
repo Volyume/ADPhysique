@@ -46,34 +46,42 @@ describe('getVolumeWhy', () => {
     expect(getVolumeWhy(KNOWN_MUSCLE, 10, 'mystery')).toBeNull();
   });
 
-  test('over-ceiling guidance tells the lifter to back off, never to add', () => {
-    const why = getVolumeWhy(KNOWN_MUSCLE, 30, 'over_mrv').toLowerCase();
-    expect(why).toContain('drop');
-    expect(why).not.toMatch(/add a couple of sets|sneak in one extra|one or two more sets/);
+  // RE-ANCHORED 2026-09-26 (D204 addendum 3: the "Why?" panels describe,
+  // never instruct). These used to REQUIRE the advice words ('drop', 'hold',
+  // 'add', 'more sets', 'extra rep'); they now require each band's own fact
+  // and forbid any next-week instruction.
+  const ADVICE = /\b(drop|hold here|add a|sneak in|next week|try to|aim for|you should|piling on)\b/i;
+
+  test('over the ceiling: says it is past the most sets the muscle can recover from, and what usually follows', () => {
+    const why = getVolumeWhy(KNOWN_MUSCLE, 30, 'over_mrv');
+    expect(why).toMatch(/Past the most weekly sets .* can recover from/);
+    expect(why).toMatch(/usually follow/);
+    expect(why).not.toMatch(ADVICE);
   });
 
-  test('near-ceiling guidance holds volume, never adds', () => {
-    const why = getVolumeWhy(KNOWN_MUSCLE, 20, 'near_mrv').toLowerCase();
-    expect(why).toContain('hold');
-    expect(why).not.toMatch(/add a couple of sets|sneak in one extra/);
+  test('near the ceiling: says how close it is, and what climbing reps mean', () => {
+    const why = getVolumeWhy(KNOWN_MUSCLE, 20, 'near_mrv');
+    expect(why).toMatch(/Close to the most weekly sets/);
+    expect(why).not.toMatch(ADVICE);
   });
 
-  test('below-floor guidance tells the lifter to add, never to drop', () => {
-    const why = getVolumeWhy(KNOWN_MUSCLE, 2, 'below').toLowerCase();
-    expect(why).toContain('add');
-    expect(why).not.toContain('drop');
+  test('below the floor: names the point where growth becomes reliable', () => {
+    const why = getVolumeWhy(KNOWN_MUSCLE, 2, 'below');
+    expect(why).toMatch(/Below \d+ sets a week, the point where research starts to show reliable growth/);
+    expect(why).not.toMatch(ADVICE);
   });
 
-  test('at-minimum guidance nudges volume up, never down', () => {
-    const why = getVolumeWhy(KNOWN_MUSCLE, 6, 'minimum').toLowerCase();
-    expect(why).toMatch(/more sets/);
-    expect(why).not.toContain('drop');
+  test('at the minimum: enough to grow, and where the helpful range runs', () => {
+    const why = getVolumeWhy(KNOWN_MUSCLE, 6, 'minimum');
+    expect(why).toMatch(/enough to grow, but only just: the helpful range runs from here up to \d+/);
+    expect(why).not.toMatch(ADVICE);
   });
 
-  test('optimal guidance favours an extra rep over more sets', () => {
-    const why = getVolumeWhy(KNOWN_MUSCLE, 14, 'optimal').toLowerCase();
-    expect(why).toContain('extra rep');
-    expect(why).not.toContain('drop');
+  test('inside the range: says so, and where progress comes from there', () => {
+    const why = getVolumeWhy(KNOWN_MUSCLE, 14, 'optimal');
+    expect(why).toMatch(/you landed inside it/);
+    expect(why).toMatch(/progress comes mostly from reps and weight going up/);
+    expect(why).not.toMatch(ADVICE);
   });
 });
 

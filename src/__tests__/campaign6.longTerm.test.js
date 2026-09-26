@@ -538,7 +538,8 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
 
   test('RB6-3: the Home chip states the calendar fact for an unearned recovery week', () => {
     const src = read('lib/readinessSummary.js');
-    expect(src).toMatch(/Recovery week on the calendar\. Ease back in whenever suits you\./);
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the calendar fact stays; "ease back in" told the athlete to train lighter)
+    expect(src).toMatch(/Recovery week on the calendar\. Pick up whenever suits you\./);
   });
 
   test('RB6-4: both fatigue composers bound their claims to recent sessions', () => {

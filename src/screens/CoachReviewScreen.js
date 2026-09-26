@@ -9,8 +9,8 @@ import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins, getCurrentMesocycleWeek } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, detectLaggingMuscles, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getCurrentMesocycleWeek } from '../lib/database';
+import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -97,95 +97,12 @@ function detectProgressionWins(thisWeekSets, allSets, exerciseMap) {
   return wins;
 }
 
-// Build up to 3 plain-English recommendations for next week
 // D90 #3 (2026-08-06): the screen-resolved landmark table (manual >
 // adapted(Pro) > research, effectiveLandmarks.js). Module-scoped so the
-// leaf VolumeRow and the pure recommendation builder read the same table
-// the screen resolved; loadData writes it before any row renders.
+// leaf VolumeRow reads the same table the screen resolved; loadData writes
+// it before any row renders. (The next-week recommendations that also read
+// it were retired under D204 addendum 3, 2026-09-26: see the render below.)
 let _resolvedLandmarks = null;
-
-function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingMuscles = [], inScheduledRecovery = false }) {
-  const recs = [];
-
-  // 1. Recovery week signal. Wave C item 1 (lead ruling, 2026-08-17) / FB-02:
-  // suppressed inside a week already scheduled as recovery (or a finished
-  // block awaiting its decision) so this screen cannot contradict the
-  // structural block state the same day, mirroring HomeScreen.js's
-  // inScheduledRecovery gate exactly (see the shared derivation above).
-  if (deloadResult?.deload && deloadResult.reasons.length > 0 && !inScheduledRecovery) {
-    recs.push(
-      'Consider making next week a lighter recovery week. Reduce your sets by around a third and keep the weights comfortable. Your body will come back stronger afterwards.',
-    );
-  }
-
-  // 2. Muscles that are over volume
-  const overMuscles = Object.entries(volumeByMuscle)
-    .filter(([muscle, data]) => {
-      const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-      return status === 'over_mrv';
-    })
-    .map(([muscle]) => MUSCLE_DISPLAY_NAMES[muscle] || muscle);
-
-  if (overMuscles.length > 0) {
-    const list = overMuscles.slice(0, 2).join(' and ');
-    recs.push(
-      `${list} received more training than your body can easily recover from this week. Drop a set or two there next week to let them rebuild properly.`,
-    );
-  }
-
-  // 3. Muscles that are under minimum
-  const underMuscles = Object.entries(volumeByMuscle)
-    .filter(([muscle, data]) => {
-      const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-      return status === 'below';
-    })
-    .map(([muscle]) => MUSCLE_DISPLAY_NAMES[muscle] || muscle);
-
-  if (underMuscles.length > 0 && recs.length < 3) {
-    const list = underMuscles.slice(0, 2).join(' and ');
-    recs.push(
-      `${list} had fewer sets than the minimum needed to make progress. Try to fit in one more session for ${underMuscles.length === 1 ? 'it' : 'them'} next week.`,
-    );
-  }
-
-  // 4. Persistently lagging muscle groups (below MEV for 3+ consecutive weeks)
-  if (recs.length < 3 && laggingMuscles.length > 0) {
-    const top = laggingMuscles[0];
-    recs.push(
-      `Your ${top.displayName} has had fewer sets than it needs to make progress for ${top.weeksBelow} weeks. Consider adding one extra set there each session next week to start making progress.`,
-    );
-  }
-
-  // 5. Low energy or sleep from post-session check-ins
-  if (recs.length < 3 && checkins.length >= 2) {
-    const avgEnergy = checkins.reduce((s, c) => s + (c.energyScore || 3), 0) / checkins.length;
-    const avgSleep = checkins.reduce((s, c) => s + (c.sleepQuality || 3), 0) / checkins.length;
-    if (avgEnergy < 2.5 || avgSleep < 2.5) {
-      recs.push(
-        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests. Your body gets stronger while it recovers.',
-      );
-    }
-  }
-
-  // 6. Joint flag from checkins (joint_pain column stored via saveWeeklyCheckin)
-  if (recs.length < 3 && checkins.length > 0) {
-    const recentJoint = checkins.find(c => (c.jointPain || c.jointDiscomfort || 0) >= 1);
-    if (recentJoint) {
-      recs.push(
-        'Recent sessions flagged some joint discomfort. Next week, use weights that feel comfortable rather than pushing for new bests. Your joints will thank you.',
-      );
-    }
-  }
-
-  // 7. Generic positive nudge when everything looks fine
-  if (recs.length === 0) {
-    recs.push(
-      'Your training looks balanced this week. Keep the same structure next week and look for small improvements: an extra rep or a slightly heavier weight on one exercise.',
-    );
-  }
-
-  return recs.slice(0, 3);
-}
 
 // --- Sub-components -----------------------------------------------------------
 
@@ -232,20 +149,6 @@ function InsightRow({ icon, iconColor, text, subtext }) {
   );
 }
 
-function RecommendationRow({ index, text }) {
-  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  return (
-    <View style={styles.recRow}>
-      <View style={[styles.recIndex, live.recIndex]}>
-        <Text style={[styles.recIndexText, live.recIndexText]}>{index + 1}</Text>
-      </View>
-      <Text style={[styles.recText, live.recText]}>{text}</Text>
-    </View>
-  );
-}
-
 // --- Main screen --------------------------------------------------------------
 
 export default function CoachReviewScreen() {
@@ -272,9 +175,7 @@ export default function CoachReviewScreen() {
   const [weeklySetCount, setWeeklySetCount] = useState(0);
   const [progressionWins, setProgressionWins] = useState([]);
   const [deloadResult, setDeloadResult] = useState(null);
-  const [checkins, setCheckins] = useState([]);
   const [weekRange, setWeekRange] = useState({ start: null, end: null });
-  const [laggingMuscles, setLaggingMuscles] = useState([]);
   const [loadError, setLoadError] = useState(false);
   // Wave C item 1 (lead ruling, 2026-08-17): the same block-week fact
   // HomeScreen reads to gate its recovery banner (getCurrentMesocycleWeek).
@@ -296,8 +197,6 @@ export default function CoachReviewScreen() {
       setVolumeByMuscle({});
       setProgressionWins([]);
       setDeloadResult(null);
-      setCheckins([]);
-      setLaggingMuscles([]);
       setCurrentMesoWeek(null);
       setLoadError(false);
       setLoading(false);
@@ -314,11 +213,10 @@ export default function CoachReviewScreen() {
       const weekStartMs = weekStart.getTime();
       const weekEndMs = weekEnd.getTime();
 
-      const [allWorkouts, allSets, allExercises, recentCheckins, mesoWeek] = await Promise.all([
+      const [allWorkouts, allSets, allExercises, mesoWeek] = await Promise.all([
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
-        getRecentCheckins(user.id, 4),
         // Wave C item 1: getCurrentMesocycleWeek already fails closed (returns
         // null on any read error), so no separate try/catch is needed here.
         getCurrentMesocycleWeek(user.id),
@@ -353,22 +251,6 @@ export default function CoachReviewScreen() {
       const wins = detectProgressionWins(thisWeekSets, allSets, exerciseMap);
       setProgressionWins(wins);
 
-      // Per-muscle working sets for each of the last 4 weekly (Monday-
-      // anchored) buckets, for lagging-muscle detection only -- unrelated
-      // to the shouldDeload signal built below.
-      const weeklyVolumeHistory = [0, 1, 2, 3].map(offset => {
-        const bucketStart = weekStartMs - (3 - offset) * 7 * 24 * 60 * 60 * 1000;
-        const bucketEnd = bucketStart + 7 * 24 * 60 * 60 * 1000;
-        const setsInWeek = allSets.filter(
-          s => (s.createdAt || 0) >= bucketStart && (s.createdAt || 0) < bucketEnd,
-        );
-        const weekVolume = calculateWeeklyVolume(setsInWeek, exerciseMap);
-        const muscleSets = {};
-        for (const [muscle, data] of Object.entries(weekVolume)) {
-          muscleSets[muscle] = data.workingSets || 0;
-        }
-        return muscleSets;
-      });
 
       // Campaign 24 §2 (D33 ruling): bucket-building for shouldDeload moved
       // to the shared buildLast4WeekDeloadBuckets (src/lib/algorithms.js),
@@ -392,11 +274,6 @@ export default function CoachReviewScreen() {
       const deload = shouldDeload(patchedBuckets);
       setDeloadResult(deload);
 
-      // Detect persistently under-trained muscle groups (3+ weeks below MEV)
-      const lagging = detectLaggingMuscles(weeklyVolumeHistory, 3);
-      setLaggingMuscles(lagging);
-
-      setCheckins(recentCheckins);
     } catch (_e) {
       // U-B-6: distinguish a genuine read failure from an empty week. Show a
       // retryable error state instead of the false "no sessions" card (parity
@@ -441,14 +318,6 @@ export default function CoachReviewScreen() {
   // same getCurrentMesocycleWeek fact Home reads, not a re-derivation.
   const inScheduledRecovery = !!currentMesoWeek?.isDeload || !!currentMesoWeek?.awaitingDecision;
   const deloadSuggestionEligible = !!deloadResult?.deload && !inScheduledRecovery;
-
-  const recommendations = buildRecommendations({
-    volumeByMuscle,
-    deloadResult,
-    checkins,
-    laggingMuscles,
-    inScheduledRecovery,
-  });
 
   // Joint discomfort flag from recent workouts
   const jointFlag = weeklyWorkouts.some(w => (w.jointDiscomfort || 0) >= 2);
@@ -608,7 +477,7 @@ export default function CoachReviewScreen() {
 
             {/* -- What to watch -- */}
             <View style={styles.section}>
-              <SectionHeading title="What to watch" />
+              <SectionHeading title="What stood out" />
               {watchMuscles.length === 0 && !deloadSuggestionEligible && !jointFlag ? (
                 <Card>
                   <Text style={[styles.emptySubText, live.emptySubText]}>
@@ -621,6 +490,7 @@ export default function CoachReviewScreen() {
                     const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
                     const isOver = status === 'over_mrv';
                     const isNear = status === 'near_mrv';
+                    const isAtMinimum = status === 'minimum';
                     const icon = isOver
                       ? 'arrow-up-circle-outline'
                       : isNear
@@ -635,12 +505,14 @@ export default function CoachReviewScreen() {
                       ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - more sets than you can comfortably recover from`
                       : isNear
                       ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - approaching the upper limit`
+                      : isAtMinimum
+                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - at the minimum for meaningful progress`
                       : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - below the minimum for meaningful progress`;
                     const subtext = isOver
-                      ? 'Reducing volume slightly next week will let your body recover and come back stronger.'
+                      ? 'That is past the upper limit, the most sets a muscle can usually recover from in a week.'
                       : isNear
-                      ? 'You can keep the same volume next week, but avoid adding more sets for this muscle.'
-                      : 'One extra session or a couple of additional sets would put this in a more helpful range.';
+                      ? 'The upper limit is the most sets a muscle can usually recover from in a week.'
+                      : 'The minimum is the fewest sets a week a muscle needs to make progress.';
                     return (
                       <InsightRow
                         key={muscle}
@@ -656,8 +528,8 @@ export default function CoachReviewScreen() {
                     <InsightRow
                       icon="battery-half-outline"
                       iconColor={t.colors.warning}
-                      text="Your recent training suggests a recovery week might help"
-                      subtext="A lighter week every few weeks allows your nervous system and joints to reset, often leading to better performance afterwards."
+                      text="Your recent sessions show signs of building fatigue"
+                      subtext="This looks back over your last four weeks. It's a picture of how you've been recovering, not an instruction. Your plan sets your sessions."
                     />
                   )}
 
@@ -666,22 +538,21 @@ export default function CoachReviewScreen() {
                       icon="medkit-outline"
                       iconColor={t.colors.error}
                       text="Joint discomfort noted during sessions this week"
-                      subtext="Keep an eye on this. Prioritise good technique over heavier weights, and consider swapping to a less demanding variation if it persists."
+                      subtext="If a movement hurts, swap it for a pain-free one, or add the pain under Injuries & limitations so your plan works around it."
                     />
                   )}
                 </Card>
               )}
             </View>
 
-            {/* -- What to focus on next week -- */}
-            <View style={styles.section}>
-              <SectionHeading title="What to focus on next week" />
-              <Card style={styles.insightCard}>
-                {recommendations.map((rec, i) => (
-                  <RecommendationRow key={i} index={i} text={rec} />
-                ))}
-              </Card>
-            </View>
+            {/* D204 addendum 3 (lead ruling, 2026-09-26): the "What to focus
+                on next week" section is retired. Every line in it told the
+                athlete how to train next week (reduce sets, add a session,
+                make it a recovery week), the one thing D204 rules no surface
+                does ("the plan prescribes the sessions"), and it sat under a
+                row saying the review is "not an instruction". What it drew
+                on is described above in "What stood out"; the plan and the
+                weekly check-in carry any change. */}
           </>
         )}
 
@@ -827,35 +698,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Recommendations
-  recRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  recIndex: {
-    width: 22,
-    height: 22,
-    borderRadius: circle(22),
-    backgroundColor: colors.primaryBg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.mid),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.hair,
-    flexShrink: 0,
-  },
-  recIndexText: {
-    fontSize: fontSize.xs,
-    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  recText: {
-    ...type.bodySm,
-    flex: 1,
-    color: colors.textSecondary,
-  },
-
   emptySubText: {
     ...type.bodySm,
     color: colors.textMuted,
@@ -881,9 +723,6 @@ function buildLiveStyles(t) {
     volumeSetCount: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     insightText: { ...t.type.bodySm, color: t.colors.textPrimary },
     insightSubtext: { ...t.type.captionTight, color: t.colors.textSecondary },
-    recIndex: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    recIndexText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    recText: { ...t.type.bodySm, color: t.colors.textSecondary },
     emptySubText: { ...t.type.bodySm, color: t.colors.textMuted },
   };
 }

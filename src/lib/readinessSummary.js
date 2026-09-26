@@ -107,8 +107,8 @@ export function buildReadinessSummary({
       const trainedRecently = Number.isFinite(Number(lastSession?.startedAt))
         && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
       return trainedRecently
-        ? { tone: 'recover', line: 'Recovery week, pull effort back.' }
-        : { tone: 'recover', line: 'Recovery week on the calendar. Ease back in whenever suits you.' };
+        ? { tone: 'recover', line: 'Recovery week, lighter sessions.' }
+        : { tone: 'recover', line: 'Recovery week on the calendar. Pick up whenever suits you.' };
     }
     // ADAPTIVE_RECOVERY_ADJUSTMENT: still inside accumulation, so this must
     // never be worded as "recovery week" (that would claim the hard part of
@@ -120,7 +120,7 @@ export function buildReadinessSummary({
   // distinctly from the dismissible "Recovery week suggested" banner above
   // so the two never read as the exact same sentence twice.
   if (deloadSuggestion) {
-    return { tone: 'recover', line: 'Your recent sessions point to a recovery week soon.' };
+    return { tone: 'recover', line: 'Your recent sessions show signs of fatigue building up.' };
   }
 
   // Priority 3: the soreness/sleep/energy facts captured on the pre-workout
@@ -140,7 +140,7 @@ export function buildReadinessSummary({
   if (lastSession?.sleepQuality != null && lastSession.sleepQuality <= LOW_SLEEP_OR_ENERGY) bits.push('short on sleep');
   if (lastSession?.energyScore != null && lastSession.energyScore <= LOW_SLEEP_OR_ENERGY) bits.push('low on energy');
   if (bits.length > 0 && lastSessionRecent) {
-    return { tone: 'caution', line: `Last time out you were ${joinNatural(bits)}. Worth listening to that today.` };
+    return { tone: 'caution', line: `Last time out you were ${joinNatural(bits)}.` };
   }
 
   // Priority 4: fatigue trending up over the last couple of sessions (the

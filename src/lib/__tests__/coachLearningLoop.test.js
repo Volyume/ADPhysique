@@ -204,7 +204,8 @@ describe('JOB A: a previous response can resize the next dose', () => {
     const improved = week({ kgPerWeek: 0.25, offTarget: 0, prior: [oldUnchangedIncrease()] });
     expect(improved.adjustments.calories).toBeNull();
     expect(improved.holdReinforcement).toBeTruthy();
-    expect(improved.holdReinforcement.text).toMatch(/did what we wanted, and it is still working/);
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the hold line names your coach, not a collaborative "we")
+    expect(improved.holdReinforcement.text).toMatch(/did what your coach wanted, and it is still working/);
   });
 
   test('A3: and it is never used as pressure to make another change', () => {

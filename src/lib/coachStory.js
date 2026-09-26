@@ -67,8 +67,8 @@ export function whatHappened(context) {
   if (p?.signal === SIGNAL.GOOD) out.push(line('Your main lifts are still moving up.', 'training.progress'));
   else if (p?.signal === SIGNAL.POOR) out.push(line('Your main lifts have stopped going up.', 'training.progress'));
 
-  if (w?.signal === SIGNAL.GOOD) out.push(line('Your weight is moving the way we intended.', 'weight.trend'));
-  else if (w?.signal === SIGNAL.POOR) out.push(line('Your weight is not moving the way we intended.', 'weight.trend'));
+  if (w?.signal === SIGNAL.GOOD) out.push(line('Your weight is moving the way your coach intended.', 'weight.trend'));
+  else if (w?.signal === SIGNAL.POOR) out.push(line('Your weight is not moving the way your coach intended.', 'weight.trend'));
   else if (w?.signal === SIGNAL.UNKNOWN) out.push(line('There are not enough weigh-ins yet to see how your weight is moving.', 'weight.trend'));
 
   // The coverage fact's own detail already reads "6 of 7 days logged", so the
@@ -100,8 +100,8 @@ export function whatItMeans(context, limiters) {
   } else if (nut?.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
     out.push(line(
       nut.because === 'weight_trend_unknown'
-        ? 'We cannot judge your food target without a clearer weight trend.'
-        : 'We cannot judge your food target without more logged days.',
+        ? 'Your coach cannot judge your food target without a clearer weight trend.'
+        : 'Your coach cannot judge your food target without more logged days.',
       nut.because === 'weight_trend_unknown' ? 'weight.trend' : 'nutrition.coverage',
     ));
   } else if (nut?.onTarget === true) {
@@ -179,7 +179,7 @@ export function whatIsChanging(context, limiters, changes = {}) {
       domain: 'nutrition',
       text: `Your daily calorie target ${kcal > 0 ? 'goes up' : 'comes down'} by ${Math.abs(kcal)}.`,
       // Its own reason, never borrowed from the training side.
-      why: 'Your weight is not moving at the rate we planned, and your logged intake shows you have been eating the target.',
+      why: 'Your weight is not moving at the rate your coach planned, and your logged intake shows you have been eating the target.',
       from: 'weight.trend',
     });
   }
@@ -262,14 +262,14 @@ const HOLD_COPY = Object.freeze({
   // D112 R7 (audit T2-14): chooseInterventions pushes exactly this
   // reason for every CONSTRAINED week; without the key the hold
   // rendered nothing.
-  constraint_active: 'We are leaving your programme alone while training works around your temporary change.',
-  target_not_eaten: 'We are leaving your target where it is until it has had a fair run.',
-  sessions_missed: 'We are leaving your programme alone until there are enough sessions to judge it.',
+  constraint_active: 'Your coach is leaving your programme alone while training works around your temporary change.',
+  target_not_eaten: 'Your coach is leaving your target where it is until it has had a fair run.',
+  sessions_missed: 'Your coach is leaving your programme alone until there are enough sessions to judge it.',
   intake_coverage_unknown: 'Your coach is leaving your target where it is until there is enough food logged to judge it.',
   intake_unknown: 'Your coach is leaving your target where it is until there is enough information to judge it.',
-  weight_trend_unknown: 'We are leaving your target where it is until the weight trend is clearer.',
-  execution_unknown: 'We are leaving your programme alone until there is a full week to judge.',
-  progress_unknown: 'We are leaving your programme alone until there is more to go on.',
+  weight_trend_unknown: 'Your coach is leaving your target where it is until the weight trend is clearer.',
+  execution_unknown: 'Your coach is leaving your programme alone until there is a full week to judge.',
+  progress_unknown: 'Your coach is leaving your programme alone until there is more to go on.',
 });
 
 /**
@@ -282,9 +282,9 @@ const HOLD_COPY = Object.freeze({
  */
 export function whatWeWatchNext(context, limiters, changes = {}) {
   const kcal = Number(changes.calorieKcal) || 0;
-  if (kcal !== 0) return line('We will see how your weight responds over the next couple of weeks before changing it again.', 'weight.trend');
+  if (kcal !== 0) return line('Your coach will see how your weight responds over the next couple of weeks before changing it again.', 'weight.trend');
   if (limiters?.nutrition?.limiter === LIMITER.EXECUTION) {
-    return line('Give the current target a fair run and we will judge it on that.', 'nutrition.intake');
+    return line('Give the current target a fair run and your coach will judge it on that.', 'nutrition.intake');
   }
   if (limiters?.nutrition?.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
     return line('A few more logged days would let your coach judge your food target properly.', 'nutrition.coverage');
@@ -298,7 +298,7 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
     return line('Once you\'re doing all your planned sessions again, your coach can see whether the rest of your plan is working.', 'training.execution');
   }
   if (limiters?.training?.limiter === LIMITER.RECOVERY) {
-    return line('We will look at recovery again next week before adding anything.', 'recovery.systemic');
+    return line('Your coach will look at recovery again next week before adding anything.', 'recovery.systemic');
   }
   // A thin diary is worth naming even on a week where nothing is wrong: it is
   // the thing that would let the next decision be made properly. Stated as

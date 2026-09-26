@@ -722,7 +722,8 @@ describe('State matrix — S8: deload suggested, data-driven only', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('Recovery week suggested. See why.');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the Today line describes the signs, it no longer suggests a recovery week)
+    expect(REGION.todayLineText(tree)).toBe('Signs of building fatigue. See why.');
   });
 });
 

@@ -127,8 +127,12 @@ describe('CoachReviewScreen — recovery-week suggestion respects the scheduled-
     }));
     const tree = await mount();
     const text = textOf(tree);
-    expect(text).toContain('Your recent training suggests a recovery week might help');
-    expect(text).toContain('Consider making next week a lighter recovery week');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the deload row describes the signs, it no longer suggests a recovery week)
+    expect(text).toContain('Your recent sessions show signs of building fatigue');
+    // D204 addendum 3 (2026-09-26): the "What to focus on next week"
+    // instructions are retired; the review describes, the plan prescribes.
+    expect(text).not.toContain('What to focus on next week');
+    expect(text).not.toContain('Consider making next week a lighter recovery week');
   });
 
   test('inside a scheduled recovery week (isDeload), the suggestion is suppressed', async () => {
@@ -137,7 +141,8 @@ describe('CoachReviewScreen — recovery-week suggestion respects the scheduled-
     }));
     const tree = await mount();
     const text = textOf(tree);
-    expect(text).not.toContain('Your recent training suggests a recovery week might help');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the deload row describes the signs, it no longer suggests a recovery week)
+    expect(text).not.toContain('Your recent sessions show signs of building fatigue');
     expect(text).not.toContain('Consider making next week a lighter recovery week');
     // The rest of the review still renders (non-deload alternative state,
     // not a screen-wide suppression).
@@ -150,7 +155,8 @@ describe('CoachReviewScreen — recovery-week suggestion respects the scheduled-
     }));
     const tree = await mount();
     const text = textOf(tree);
-    expect(text).not.toContain('Your recent training suggests a recovery week might help');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the deload row describes the signs, it no longer suggests a recovery week)
+    expect(text).not.toContain('Your recent sessions show signs of building fatigue');
     expect(text).not.toContain('Consider making next week a lighter recovery week');
   });
 
@@ -161,6 +167,7 @@ describe('CoachReviewScreen — recovery-week suggestion respects the scheduled-
     mockDatabase.getCurrentMesocycleWeek.mockImplementation(() => Promise.resolve(null));
     const tree = await mount();
     const text = textOf(tree);
-    expect(text).toContain('Your recent training suggests a recovery week might help');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the deload row describes the signs, it no longer suggests a recovery week)
+    expect(text).toContain('Your recent sessions show signs of building fatigue');
   });
 });

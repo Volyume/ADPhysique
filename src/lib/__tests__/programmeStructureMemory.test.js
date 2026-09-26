@@ -248,7 +248,8 @@ describe('THE PRODUCTION PATH', () => {
 
   test('and the copy names the evidence, not the algorithm', () => {
     const copy = structureMemoryCopy({ blocks: 4, splitType: 'upper_lower' }, 'Upper / Lower');
-    expect(copy).toBe('You have trained well with Upper / Lower across 4 blocks, so we have started from that rather than from a default.');
+    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the plan-building actor is your coach, not a collaborative "we")
+    expect(copy).toBe('You have trained well with Upper / Lower across 4 blocks, so your coach has started from that rather than from a default.');
     expect(copy).not.toMatch(/signature|epoch|algorithm|score/i);
     expect(copy).not.toContain('—');
   });

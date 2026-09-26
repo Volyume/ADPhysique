@@ -703,7 +703,7 @@ export default function VolumeHeatmapScreen() {
             '  First tick: the least amount needed to maintain or grow\n' +
             '  Second tick: what your plan aims at, or the sweet spot for growth if your plan does not train that muscle\n' +
             '  End of bar: beyond this, recovery suffers\n\n' +
-            'The caption under each muscle name says where its numbers come from. Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit volume targets" button below.'
+            'The caption under each muscle name says where its numbers come from. You can customise these targets using the "Edit volume targets" button below.'
           } />
         </Card>
 
