@@ -58,7 +58,10 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training block'}</Text>
+          {/* Founder, 2026-09-26 TestFlight screenshot: the generated name
+              ("Men's Physique · Bulk · V-Taper 4×/week, 6-week block") was
+              cut to "6..." on one line; two lines carry the whole name. */}
+          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={2}>{meso.name ?? 'Training block'}</Text>
           <Text style={[styles.mesoWeek, live.mesoWeek]}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')
@@ -287,24 +290,25 @@ export function WorkloadCard({ data }) {
 
   const { acute, chronic, ratio, weeksOfData } = data;
 
-  let statusColor = t.colors.textMuted;
   // C6 RD6-14 (D97-25): the chronic mean can rest on as few as 2
   // populated weeks (zero weeks are dropped), and the takeaway line
-  // already names the real count - the status text and tooltip must not
-  // contradict it by implying a fuller baseline.
+  // already names the real count - the status text must not contradict it
+  // by implying a fuller baseline.
   const baselineNoun = Number.isFinite(weeksOfData) && weeksOfData < 4
     ? `your ${weeksOfData}-week average`
     : 'your recent average';
-  let statusText = `Below ${baselineNoun} (under 0.8). Room for more work if you feel fresh.`;
-  if (ratio >= 1.5) {
-    statusColor = t.colors.error;
-    statusText = 'High load this week so far (above 1.5). Consider an easier session.';
-  } else if (ratio >= 1.3) {
-    statusColor = t.colors.warning;
-    statusText = 'Load is elevated (above 1.3). Monitor how you feel.';
+  // Founder rule 2026-09-26 (register D204): the plan sets the sessions;
+  // this card DESCRIBES how the week's load sits against the recent
+  // average and never tells anyone to train easier or harder. No traffic
+  // light either: a building week above its average is the plan working,
+  // not an alarm, so the bar and the line stay in the app's own accent and
+  // text colours.
+  const statusColor = t.colors.textSecondary;
+  let statusText = `Below ${baselineNoun} so far.`;
+  if (ratio >= 1.3) {
+    statusText = `Well above ${baselineNoun} so far.`;
   } else if (ratio >= 0.8) {
-    statusColor = t.colors.success;
-    statusText = 'In your helpful range (0.8 to 1.3).';
+    statusText = `In line with ${baselineNoun} so far.`;
   }
 
   // Simple visual bar: fill proportional to ratio, capped at 2.0
@@ -321,12 +325,12 @@ export function WorkloadCard({ data }) {
     <View style={[styles.workloadCard, live.workloadCard]}>
       <View style={styles.rowBetween}>
         <Text style={[styles.workloadTitle, live.workloadTitle]}>Weekly load</Text>
-        <InfoTooltip text={`Compares this week so far (Monday to today) with your average over the previous ${weeksN} full week${weeksN === 1 ? '' : 's'}. 0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.`} />
+        <InfoTooltip text={`Compares this week so far (Monday to today) with your average over the previous ${weeksN} full week${weeksN === 1 ? '' : 's'}. Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.`} />
       </View>
       <Text style={[styles.workloadSubtitle, live.workloadSubtitle]}>This week so far against your recent full weeks</Text>
 
       <View style={[styles.workloadBarBg, live.workloadBarBg]}>
-        <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: statusColor }]} />
+        <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: t.colors.primary }]} />
       </View>
 
       <View style={styles.workloadStats}>

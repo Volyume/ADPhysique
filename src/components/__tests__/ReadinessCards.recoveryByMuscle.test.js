@@ -184,33 +184,44 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
   test('lists only muscles with a session in the last 14 days, recovering first then nearly then recovered', async () => {
     const tree = await render();
     const all = texts(tree);
-    const quadsIdx = all.findIndex((t) => t.startsWith('Quads,'));
-    const chestIdx = all.findIndex((t) => t.startsWith('Chest,'));
-    const bicepsIdx = all.findIndex((t) => t.startsWith('Biceps,'));
+    const quadsIdx = all.indexOf('Quads');
+    const chestIdx = all.indexOf('Chest');
+    const bicepsIdx = all.indexOf('Biceps');
     expect(quadsIdx).toBeGreaterThan(-1);
     expect(chestIdx).toBeGreaterThan(-1);
     expect(bicepsIdx).toBeGreaterThan(-1);
     expect(quadsIdx).toBeLessThan(chestIdx);
     expect(chestIdx).toBeLessThan(bicepsIdx);
     // triceps (no_recent_session) never gets its own row.
-    expect(all.some((t) => t.startsWith('Triceps,'))).toBe(false);
+    expect(all).not.toContain('Triceps');
   });
 
-  test('a recovering row: percent, "ready by" weekday wording, and the recency fact', async () => {
+  // Founder, 2026-09-26 TestFlight walk: the sentence per muscle read as a
+  // wall of text. Each row is now the name, a bar, the percent and one muted
+  // meta line ("Ready by Thursday · Trained 2 days ago"); the column header
+  // "Estimated recovery" covers every percent in the list.
+  test('a recovering row: name, percent and the ready-by plus trained-ago meta line', async () => {
     const tree = await render();
-    const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64% recovered, ${readyClause(QUADS_READY_AT, NOW)}. Trained 2 days ago.`;
-    expect(texts(tree)).toContain(expected);
+    const all = texts(tree);
+    expect(all).toContain('Estimated recovery');
+    expect(all).toContain('64%');
+    const ready = readyClause(QUADS_READY_AT, NOW);
+    expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 2 days ago`);
   });
 
-  test('a nearly row: percent, "ready by" weekday wording, and the recency fact', async () => {
+  test('a nearly row: percent and meta line', async () => {
     const tree = await render();
-    const expected = `Chest, ${RECOVERY_ESTIMATE_LABEL} 80% recovered, ${readyClause(CHEST_READY_AT, NOW)}. Trained 1 day ago.`;
-    expect(texts(tree)).toContain(expected);
+    const all = texts(tree);
+    expect(all).toContain('80%');
+    const ready = readyClause(CHEST_READY_AT, NOW);
+    expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 1 day ago`);
   });
 
-  test('a recovered row reads "ready now" rather than a weekday', async () => {
+  test('a recovered row reads "Ready now" rather than a weekday, and its bar is full-strength success', async () => {
     const tree = await render();
-    expect(texts(tree)).toContain(`Biceps, ${RECOVERY_ESTIMATE_LABEL} 96% recovered, ready now. Trained 3 days ago.`);
+    const all = texts(tree);
+    expect(all).toContain('96%');
+    expect(all).toContain('Ready now · Trained 3 days ago');
   });
 
   test('accessibility label carries the muscle, "estimated N percent recovered", the ready-by phrase and the trained-ago fact', async () => {
@@ -266,8 +277,17 @@ describe('the Training-recency chip fold (spec section 6)', () => {
     expect(all).toContain('Hamstrings');
     expect(all).toContain('Calves');
     // quads/chest/biceps have a row now, so their chip must not also render.
-    expect(all).not.toContain('Quads');
-    expect(all).not.toContain('Chest');
+    // The row names each muscle once (its own name Text); a chip would name
+    // it a second time, beside a chip label ("Trained 2 days ago") that a
+    // folded muscle only ever shows inside its row's meta line.
+    for (const name of ['Quads', 'Chest', 'Biceps']) {
+      expect(all.filter((t) => t === name)).toHaveLength(1);
+    }
+    expect(all).not.toContain('Trained 2 days ago');
+    expect(all).not.toContain('Trained 1 day ago');
+    expect(all).not.toContain('Trained 3 days ago');
+    // The un-folded chips still carry their own label Text.
+    expect(all).toContain('Trained 20 days ago');
   });
 
   test('is absent when every ever-trained muscle already has a row', async () => {
@@ -379,7 +399,7 @@ describe('loader failure: the section hides, the gauges stay intact', () => {
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain('Recovery by muscle');
-    expect(all.some((t) => t.startsWith('Quads,'))).toBe(true);
+    expect(all).toContain('Quads');
     expect(all).not.toContain('Next workout');
     expect(logError).toHaveBeenCalledWith('ReadinessCards.loadRecoveryRecommendation', expect.any(Error), { userId: 'u1' });
   });

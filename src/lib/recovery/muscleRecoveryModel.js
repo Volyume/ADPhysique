@@ -21,12 +21,21 @@
  * contributes nothing; two sessions whose windows overlap COMPOUND, which is
  * the honest reading of training a muscle again before it recovered.
  *
- * recoveredPercent = clamp(0, 100, round(100 * (1 - residual))). "Ready by"
- * (readyAtMs) is the earliest instant at which that percent would reach
- * READY_PERCENT. Because the residual is piecewise LINEAR with breakpoints
- * exactly at each contributing session's own zero point (end + T), the
- * crossing is found by walking those breakpoints and solving the linear
- * segment it falls in -- never a numeric search.
+ * recoveredPercent = clamp(0, 100, round(100 * (1 - residual / peak)))
+ * where peak is the residual the instant the LAST contributing session
+ * ended: the fatigue this muscle is recovering from. So a session reads 0%
+ * as it ends and climbs to 100% as its residual clears, whatever its dose
+ * (the dose still sets how LONG that takes, through T, and how sessions
+ * compound). D201 addendum 7 (2026-09-26): the first build read the
+ * percent against a fixed reference unit, so a 26-set back session (F
+ * capped at 2.0) sat at "0% recovered" for the first half of its
+ * recovery, which told the athlete nothing. "Ready by" (readyAtMs) is the
+ * earliest instant at which the percent reaches READY_PERCENT, that is the
+ * residual falls to READY_FRACTION x peak. Because the residual is
+ * piecewise LINEAR with breakpoints exactly at each contributing session's
+ * own zero point (end + T), the crossing is found by walking those
+ * breakpoints and solving the linear segment it falls in -- never a
+ * numeric search.
  *
  * PURE. No I/O, no clock: every function takes its "now" as an argument.
  * The caller (a later lane's src/lib/recovery/load.js) does all the
@@ -44,11 +53,11 @@ const MS_PER_HOUR = 60 * MS_PER_MINUTE;
 const LOOKBACK_MS = LOOKBACK_DAYS * 24 * MS_PER_HOUR;
 // recoveredPercent >= READY_PERCENT reads as recovered. recoveredPercent is
 // ROUNDED, so the status flips the moment the raw percent reaches
-// READY_PERCENT - 0.5; the ready-by walk aims at exactly that residual, so
-// "ready by" and "recovered" name the same instant (Opus review finding 23:
-// aiming at the unrounded 0.100 put ready-by about 20 minutes after the
-// status had already turned recovered).
-const READY_RESIDUAL = 1 - (READY_PERCENT - 0.5) / 100;
+// READY_PERCENT - 0.5; the ready-by walk aims at exactly that fraction of
+// the peak residual, so "ready by" and "recovered" name the same instant
+// (Opus review finding 23: aiming at the unrounded 0.100 put ready-by about
+// 20 minutes after the status had already turned recovered).
+const READY_FRACTION = 1 - (READY_PERCENT - 0.5) / 100;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 
@@ -130,14 +139,14 @@ function statusForPercent(percent) {
 
 /**
  * The earliest t >= fromMs at which the residual first falls to
- * READY_RESIDUAL (recoveredPercent === READY_PERCENT), given the residual is
+ * targetResidual (recoveredPercent === READY_PERCENT), given the residual is
  * piecewise linear with a breakpoint at each contributing session's own zero
  * point (endMs + hoursT). Walks those breakpoints in order and solves the
  * (constant-slope) segment the crossing falls in directly - no numeric
  * search. Assumes the caller already checked the residual at fromMs is
- * still above READY_RESIDUAL (otherwise it is already recovered).
+ * still above targetResidual (otherwise it is already recovered).
  */
-function computeReadyAtMs(contributingSessions, fromMs) {
+function computeReadyAtMs(contributingSessions, fromMs, targetResidual) {
   // Lead review: each session's END is a breakpoint too (its contribution
   // is flat at F before it and decays after), so the walk stays exact even
   // for an end stamped after fromMs; for completed sessions those ends are
@@ -150,11 +159,11 @@ function computeReadyAtMs(contributingSessions, fromMs) {
   let prevResidual = residualAt(contributingSessions, fromMs);
   for (const bp of zeroPoints) {
     const residual = residualAt(contributingSessions, bp);
-    if (residual <= READY_RESIDUAL) {
+    if (residual <= targetResidual) {
       if (residual === prevResidual) return bp;
       // Linear between (prevT, prevResidual) and (bp, residual): solve for
-      // the t where the line crosses READY_RESIDUAL.
-      const t = prevT + ((READY_RESIDUAL - prevResidual) * (bp - prevT)) / (residual - prevResidual);
+      // the t where the line crosses targetResidual.
+      const t = prevT + ((targetResidual - prevResidual) * (bp - prevT)) / (residual - prevResidual);
       return t;
     }
     prevT = bp;
@@ -162,10 +171,30 @@ function computeReadyAtMs(contributingSessions, fromMs) {
   }
   // Unreachable in practice: every contributing session's term is exactly 0
   // from its own zero point onward, so the residual at the LAST zero point
-  // is always 0 <= READY_RESIDUAL and the loop above always returns first.
+  // is always 0 <= targetResidual and the loop above always returns first.
   // Kept only so this never returns undefined if that invariant is ever
   // violated by a malformed input.
   return zeroPoints.length ? zeroPoints[zeroPoints.length - 1] : fromMs;
+}
+
+/** The residual the instant the LAST contributing session ended: the
+ * peak this muscle is recovering from (never below one session's minimum
+ * fatigue unit, so the division is always defined). */
+function peakResidual(contributingSessions) {
+  const last = contributingSessions[contributingSessions.length - 1];
+  return Math.max(FATIGUE_UNIT_MIN, residualAt(contributingSessions, last.endMs));
+}
+
+/** recoveredPercent, status and readyAtMs at `atMs`, relative to the peak. */
+function readingAt(contributingSessions, atMs) {
+  const peak = peakResidual(contributingSessions);
+  const residual = residualAt(contributingSessions, atMs);
+  const recoveredPercent = clamp(0, 100, Math.round(100 * (1 - residual / peak)));
+  const status = statusForPercent(recoveredPercent);
+  const readyAtMs = recoveredPercent >= READY_PERCENT
+    ? null
+    : computeReadyAtMs(contributingSessions, atMs, READY_FRACTION * peak);
+  return { recoveredPercent, status, readyAtMs };
 }
 
 /** One muscle's output entry, from its (already time/window filtered) contributing sessions. */
@@ -182,12 +211,7 @@ function buildMuscleEntry(muscle, contributingSessions, atMs, anyRatingsContribu
       contributingSessions: [],
     };
   }
-  const residual = residualAt(contributingSessions, atMs);
-  const recoveredPercent = clamp(0, 100, Math.round(100 * (1 - residual)));
-  const status = statusForPercent(recoveredPercent);
-  const readyAtMs = recoveredPercent >= READY_PERCENT
-    ? null
-    : computeReadyAtMs(contributingSessions, atMs);
+  const { recoveredPercent, status, readyAtMs } = readingAt(contributingSessions, atMs);
   const last = contributingSessions[contributingSessions.length - 1];
   return {
     muscle,
@@ -268,13 +292,7 @@ export function projectRecovery(map, atMs) {
       out[muscle] = { ...entry };
       continue;
     }
-    const residual = residualAt(contributingSessions, atMs);
-    const recoveredPercent = clamp(0, 100, Math.round(100 * (1 - residual)));
-    const status = statusForPercent(recoveredPercent);
-    const readyAtMs = recoveredPercent >= READY_PERCENT
-      ? null
-      : computeReadyAtMs(contributingSessions, atMs);
-    out[muscle] = { ...entry, recoveredPercent, status, readyAtMs };
+    out[muscle] = { ...entry, ...readingAt(contributingSessions, atMs) };
   }
   return out;
 }

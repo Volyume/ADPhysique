@@ -188,10 +188,16 @@ startedAt + 60 min`) to zero at `T` hours later. Residual at time `t`:
 
 `R(muscle, t) = sum over sessions in the last 14 days of max(0, F_i x (1 - (t - end_i) / T_i))`
 
-`recoveredPercent = clamp(0, 100, round(100 x (1 - R / 1.0)))` where 1.0 is
-one standard-dose session's fatigue. Two hard sessions inside one
-recovery window compound (R > 1 -> 0%), which is the honest reading of
-training a muscle again before it recovered.
+`recoveredPercent = clamp(0, 100, round(100 x (1 - R / peak)))` where peak
+is the residual the instant the last contributing session ended, so every
+session reads 0% as it ends and 100% once its residual clears; the dose
+sets how long that takes (T), never the scale of the percent (D201
+addendum 7, 2026-09-26: the first build divided by a fixed 1.0, which
+showed a 26-set session at 0% for the first half of its recovery). Two
+hard sessions inside one recovery window compound: the peak includes the
+older session's remaining residual, so the second starts from a deeper
+hole and takes longer to clear, which is the honest reading of training a
+muscle again before it recovered.
 
 `readyAtMs` = the earliest `t` at which `recoveredPercent >= 90` (the
 piecewise-linear residual makes this a closed-form walk over the
@@ -325,11 +331,18 @@ is a follow-on decision, not in this build.
 
 ## 6. Surfaces and copy
 
-- **Recovery block** (`ReadinessCards.js`, under the gauges and their
-  caption): the body figure (`BodyDiagramHeatmap` with a recovery palette:
-  recovered / nearly / recovering / no recent session) and one row per
-  muscle with a logged session in 14 days: "Quads, estimated 64%
-  recovered, ready by Thu. Trained 2 days ago." The existing recency
+- **Recovery block** (`ReadinessCards.js`, first in the Recovery section;
+  the rated-session dials sit below it and render only once a gauge has
+  its two rated sessions, D200-2 addendum 2026-09-26): the body figure
+  (`BodyDiagramHeatmap` with a recovery palette: recovered / nearly /
+  recovering / no recent session) and one compact row per muscle with a
+  logged session in 14 days, under a "Muscle / Estimated recovery"
+  header: the name, a thin bar in the band colour filled to the estimated
+  percent, the percent, and one muted meta line "Ready by Thu · Trained 2
+  days ago" (D201 addendum 8, 2026-09-26, on the founder's walk; the
+  first build showed one sentence per row, "Quads, estimated 64%
+  recovered, ready by Thu. Trained 2 days ago."). The header carries
+  "Estimated" for every percent in the list. The existing recency
   chips fold into these rows (the factual part stays verbatim). One
   caption: "Estimated from the time since each muscle's last session and
   how much it did, adjusted by your recovery answer and your ratings.

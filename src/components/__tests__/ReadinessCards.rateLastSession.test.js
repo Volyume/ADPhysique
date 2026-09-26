@@ -136,22 +136,38 @@ describe('ReadinessCards waiting-state caption and per-gauge notes (F3, P3(a))',
     database.getRecentCompletedWorkouts.mockResolvedValue([]);
   });
 
-  test('0 rated sessions: the caption renders and every gauge reads "Not rated yet"', async () => {
+  // D200-2 addendum (founder walk 2026-09-26): with no gauge at its two
+  // rated sessions the dials do not render at all; the card is the one
+  // caption naming what fills them plus the rating path. Three "Not rated
+  // yet" dials at the top of the block read as "nothing for recovery".
+  test('0 rated sessions: the caption renders and no gauge dial renders', async () => {
     database.getAllWorkouts.mockResolvedValue([]);
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain(WAITING_CAPTION);
-    expect(all.filter((t) => t === 'Not rated yet')).toHaveLength(3);
+    expect(all.filter((t) => t === 'Not rated yet')).toHaveLength(0);
+    expect(all).not.toContain('Soreness');
     expect(all).not.toContain('After a couple of sessions');
   });
 
-  test('1 rated session: the caption renders and every gauge reads "One rated session so far"', async () => {
+  test('1 rated session: the caption renders and still no gauge dial', async () => {
     database.getAllWorkouts.mockResolvedValue(ratedWorkouts(1));
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain(WAITING_CAPTION);
-    expect(all.filter((t) => t === 'One rated session so far')).toHaveLength(3);
+    expect(all.filter((t) => t === 'One rated session so far')).toHaveLength(0);
     expect(all).not.toContain('Not rated yet');
+    expect(all).not.toContain('Soreness');
+  });
+
+  test('2 rated sessions: the three dials render, with the caption gone', async () => {
+    database.getAllWorkouts.mockResolvedValue(ratedWorkouts(2));
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('Soreness');
+    expect(all).toContain('Fatigue');
+    expect(all).toContain('Joint comfort');
+    expect(all).not.toContain(WAITING_CAPTION);
   });
 
   test('2 rated sessions: neither the caption nor a waiting note renders', async () => {

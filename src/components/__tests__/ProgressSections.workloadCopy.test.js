@@ -71,7 +71,7 @@ describe('WorkloadCard: retitled "Weekly load", explaining the sparkline\'s own 
     const tree = create(<WorkloadCard data={data} />);
     expect(texts(tree)).toContain(
       'Compares this week so far (Monday to today) with your average over the previous 4 full weeks. '
-      + '0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.',
+      + 'Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.',
     );
   });
 
@@ -79,15 +79,23 @@ describe('WorkloadCard: retitled "Weekly load", explaining the sparkline\'s own 
     const tree = create(<WorkloadCard data={{ acute: 5000, chronic: 4000, ratio: 1.25, weeksOfData: 2 }} />);
     expect(texts(tree)).toContain(
       'Compares this week so far (Monday to today) with your average over the previous 2 full weeks. '
-      + '0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.',
+      + 'Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.',
     );
   });
 
-  test('the high-load status line says "this week so far", not "this week"', () => {
-    const tree = create(<WorkloadCard data={{ acute: 20000, chronic: 10000, ratio: 2.0, weeksOfData: 4 }} />);
-    const all = texts(tree);
-    expect(all).toContain('High load this week so far (above 1.5). Consider an easier session.');
-    expect(all.some((t) => t.includes('High load this week ('))).toBe(false);
+  test('the status line describes the load and never tells the athlete to change a session (D204)', () => {
+    // Founder, 2026-09-26: "We don't want to be telling people to consider
+    // an easier session ... they are in a plan for a reason ... They don't
+    // choose sessions!" The plan prescribes; this card only describes.
+    const high = texts(create(<WorkloadCard data={{ acute: 20000, chronic: 10000, ratio: 2.0, weeksOfData: 4 }} />));
+    expect(high).toContain('Well above your recent average so far.');
+    const inLine = texts(create(<WorkloadCard data={{ acute: 11000, chronic: 10000, ratio: 1.1, weeksOfData: 4 }} />));
+    expect(inLine).toContain('In line with your recent average so far.');
+    const low = texts(create(<WorkloadCard data={{ acute: 5000, chronic: 10000, ratio: 0.5, weeksOfData: 2 }} />));
+    expect(low).toContain('Below your 2-week average so far.');
+    for (const all of [high, inLine, low]) {
+      expect(all.join(' ')).not.toMatch(/easier session|Consider|Monitor how you feel|Room for more work|fatigue risk|helpful range/i);
+    }
   });
 
   test('the takeaway line reads "This week so far", matching chartWindows.workloadTakeaway', () => {

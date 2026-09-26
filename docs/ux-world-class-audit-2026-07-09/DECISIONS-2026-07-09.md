@@ -9973,3 +9973,57 @@ left them alone). 2.1.0 is closed in App Store Connect; 2.2.0 was set
 2026-09-25 in `app.json`, `package.json` and `package-lock.json`. The
 earlier wording of this entry, which read the first message as "never
 bump", was wrong and is replaced by this one.
+
+## D204 — The app never tells an athlete to change a session (founder rule 2026-09-26)
+
+Founder, from a TestFlight walk of Consistency, verbatim: "We don't want
+to be telling people to consider an easier session that is nonsense they
+are in a plan for a reason and have had a really progressive week. They
+don't choose sessions!" Standing rule: the plan prescribes the sessions;
+no card, caption or tooltip tells the athlete to train easier or harder,
+monitor themselves, or take a lighter week. Surfaces DESCRIBE.
+
+Applied: the Weekly load card's status line now reads "Well above / In
+line with / Below your recent average so far" in the app's own text
+colour, with the bar in the accent colour (no red, amber or green traffic
+light); its tooltip says the plan sets each session and this is a picture
+of how the load is moving across the block, not an instruction; the
+Recovery tooltip's "consider a lighter week" sentence is removed. Pinned
+in `ProgressSections.workloadCopy.test.js`.
+
+**D201 addendum 7 (2026-09-26, lead, from the same walk).** The recovery
+percent is now RELATIVE to the peak the muscle is recovering from: 0% as
+the last session ends, climbing to 100% as its residual clears, with
+"recovered" at 90% and ready-by at exactly that instant. The first build
+read the percent against a fixed reference unit, so a 26-set back session
+(fatigue unit capped at 2.0) showed "0% recovered" for the first half of
+its recovery, which told the athlete nothing. Dose still sets how long
+recovery takes (T) and how sessions compound; only the scale of the
+percent changed. Spec section 3.1 amended.
+
+**D200-2 addendum (2026-09-26, lead, from the same walk).** The Recovery
+section leads with the per-muscle estimate (the reading every trained
+athlete has) and shows the soreness, fatigue and joint dials only once a
+gauge has its two rated sessions; until then the card carries the one
+caption naming what fills them and the one-tap "Rate your last session"
+path. Three "Not rated yet" dials at the top of the block read as
+"nothing for recovery" (founder). The generated plan name on the block
+card wraps to two lines instead of cutting to "6...".
+
+**D201 addendum 8 (2026-09-26, founder, third screenshot of the same
+walk).** Verbatim: "This wall of text for muscle looks shit as well. Look
+how JeFit does this and displays it as this looks very amateur." The
+"Recovery by muscle" rows were one full sentence per muscle ("Quads,
+estimated 64% recovered, ready by Thursday. Trained 2 days ago."). Each
+row is now compact, read at a glance the way a body-recovery list is: the
+muscle name in a fixed column, a thin bar in the band colour (the same
+three tokens the body figure uses) filled to the estimated percent, the
+percent right-aligned in tabular figures, and one muted meta line under
+the bar ("Ready by Thursday · Trained 2 days ago"). A "Muscle / Estimated
+recovery" column header carries "Estimated" for every percent in the
+list, so the spec's percent law (section 6, never a bare percent) holds
+by the header rather than by repeating the word in every row; the spoken
+accessibility label per row keeps the full four-fact sentence unchanged.
+The recency fact, the row order, the caption and the Training-recency
+chip fold are untouched. Pinned in
+`ReadinessCards.recoveryByMuscle.test.js`.

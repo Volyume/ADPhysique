@@ -221,21 +221,29 @@ function muscleReadyClause(entry, nowMs) {
   return readyClause(entry.readyAtMs, nowMs);
 }
 
-// The row's visible text (spec section 6): "Quads, estimated 64% recovered,
-// ready by Thursday. Trained 2 days ago." The recency FACT is the SAME
-// reading the Training recency chip it replaces has always shown:
-// getLastTrainedPerMuscle's latest start for that muscle as a primary
-// mover, through trainingRecency's own unchanged label (Opus review finding
-// 13: the model's own lastSessionEndMs counts secondary credit and session
-// ends, so it could disagree with the chip by a day). The model's instant
-// is only the fallback when the chip source has no reading for the muscle.
-// This row only appends the closing full stop the spec's own example
-// carries; trainingRecency.js itself, and its label string, are untouched.
-function muscleRecoveryRowText(entry, nowMs, lastTrainedAt) {
-  const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
-  const percent = entry.recoveredPercent;
+// The row's one muted meta line under its bar: "Ready by Thursday · Trained
+// 2 days ago" (founder, 2026-09-26 TestFlight walk: the full sentence per
+// muscle read as a wall of text; the row is now name, bar, percent and this
+// line, the way a body-recovery list is read at a glance). The recency FACT
+// is the SAME reading the Training recency chip it replaces has always
+// shown: getLastTrainedPerMuscle's latest start for that muscle as a
+// primary mover, through trainingRecency's own unchanged label (Opus review
+// finding 13: the model's own lastSessionEndMs counts secondary credit and
+// session ends, so it could disagree with the chip by a day). The model's
+// instant is only the fallback when the chip source has no reading.
+// trainingRecency.js itself, and its label string, are untouched.
+function muscleRecoveryRowMeta(entry, nowMs, lastTrainedAt) {
   const recency = trainingRecency(lastTrainedAt ?? entry.lastSessionEndMs, nowMs);
-  return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent}% recovered, ${muscleReadyClause(entry, nowMs)}. ${recency.label}.`;
+  const ready = muscleReadyClause(entry, nowMs);
+  return `${ready.charAt(0).toUpperCase()}${ready.slice(1)} · ${recency.label}`;
+}
+
+/** The band colour for a row's bar: the same three tokens the body figure
+ * uses (D201 addendum 5, ruling 8). */
+function muscleRecoveryBandColour(status, c) {
+  if (status === 'recovered') return c.success;
+  if (status === 'nearly') return c.warning;
+  return c.error;
 }
 
 // The row's spoken form: the same four facts (muscle, estimated N PERCENT
@@ -522,6 +530,11 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
   const gaugesIncomplete = sampleCounts.soreness < MIN_RATED_SESSIONS
     || sampleCounts.fatigue < MIN_RATED_SESSIONS
     || sampleCounts.joint < MIN_RATED_SESSIONS;
+  // At least one gauge has its two rated sessions: the dials render. With
+  // none, the card carries only the waiting caption and the rating path.
+  const gaugesHaveData = sampleCounts.soreness >= MIN_RATED_SESSIONS
+    || sampleCounts.fatigue >= MIN_RATED_SESSIONS
+    || sampleCounts.joint >= MIN_RATED_SESSIONS;
 
   // P3(b): "Week of 21 Sep" from the check-in's weekStart, and the four
   // check-in values on the exact scales WeeklyCheckInScreen.js uses
@@ -575,14 +588,88 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <SectionLabel>Recovery</SectionLabel>
-          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable." />
         </View>
-        <View style={[styles.recoveryCard, live.recoveryCard]}>
-          <View style={styles.recoveryGrid}>
-            <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
-            <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
-            <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
+        {/* D201 (per-muscle recovery, spec section 6): estimated recovery
+            per muscle -- the body figure (recovery palette), one row per
+            recently-trained muscle, the caption, and the next-workout row. Best-effort off
+            loadMuscleRecovery (see load()): absent entirely, not even the
+            heading, whenever that read hasn't resolved or failed, so a
+            broken estimate never sits here looking like it succeeded. */}
+        {muscleRecovery && (
+          <View style={[styles.mfCard, live.mfCard]}>
+            <Text style={[styles.mfTitle, live.mfTitle]} accessibilityRole="header">Recovery by muscle</Text>
+            <BodyDiagramHeatmap recoveryByMuscle={muscleRecovery.map} />
+            {muscleRecoveryRows.length > 0 && (
+              <View style={styles.rbmRowsList}>
+                {/* One compact row per muscle: name, a bar in the band colour,
+                    the percent, and a muted line with the ready-by and
+                    trained-ago facts. The column header carries "Estimated"
+                    for every percent below it (spec section 6's percent law);
+                    the spoken label per row stays the full sentence. */}
+                <View style={styles.rbmHeaderRow}>
+                  <Text style={[styles.rbmHeaderText, live.rbmHeaderText]}>Muscle</Text>
+                  <Text style={[styles.rbmHeaderText, live.rbmHeaderText]}>Estimated recovery</Text>
+                </View>
+                {muscleRecoveryRows.map((entry) => {
+                  const percent = Math.max(0, Math.min(100, Math.round(entry.recoveredPercent)));
+                  // Bar width and figure are the same estimated percent the
+                  // "Estimated recovery" column header covers.
+                  const estimatedFillWidth = `${percent}%`; // estimated recovery, the column header names it
+                  return (
+                    <View
+                      key={entry.muscle}
+                      style={styles.rbmRow}
+                      accessibilityRole="text"
+                      accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
+                    >
+                      <View style={styles.rbmRowTop}>
+                        <Text style={[styles.rbmName, live.rbmName]} numberOfLines={1}>
+                          {MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle}
+                        </Text>
+                        <View style={[styles.rbmTrack, live.rbmTrack]}>
+                          <View style={[styles.rbmFill, { width: estimatedFillWidth, backgroundColor: muscleRecoveryBandColour(entry.status, t.colors) }]} />
+                        </View>
+                        <Text style={[styles.rbmPercent, live.rbmPercent]}>{percent}%</Text>
+                      </View>
+                      <Text style={[styles.rbmMeta, live.rbmMeta]} numberOfLines={1}>
+                        {muscleRecoveryRowMeta(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            <Text style={[styles.rbmCaption, live.rbmCaption]}>
+              Estimated from the time since each muscle's last session and how much it did, adjusted by your recovery answer and your ratings. Not a measurement.
+            </Text>
+            {nextWorkoutText && (
+              <>
+                <View style={[styles.recoveryDivider, live.recoveryDivider]} />
+                <View>
+                  <Text style={[styles.rbmNextWorkoutTitle, live.rbmNextWorkoutTitle]}>Next workout</Text>
+                  <Text style={[styles.rbmNextWorkoutText, live.rbmNextWorkoutText]}>{nextWorkoutText}</Text>
+                </View>
+              </>
+            )}
           </View>
+        )}
+
+        {/* The rated-session averages. Founder, 2026-09-26 TestFlight walk
+            ("I am not seeing anything for recovery"): three "Not rated yet"
+            dials at the top of the block read as nothing. The per-muscle
+            estimate above is the recovery reading every trained athlete has;
+            the dials render only once a gauge has its two rated sessions,
+            and until then this card is the one caption naming what fills
+            them plus the one-tap rating path. */}
+        <View style={[styles.recoveryCard, live.recoveryCard]}>
+          {gaugesHaveData && (
+            <View style={styles.recoveryGrid}>
+              <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
+              <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
+              <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
+            </View>
+          )}
           {/* P3(a) (F3, D200-2): present only while at least one gauge is
               still short of MIN_RATED_SESSIONS -- names the two inputs and
               when they start counting, so an N/A gauge is never unexplained. */}
@@ -653,46 +740,6 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
           )}
         </View>
 
-        {/* D201 (per-muscle recovery, spec section 6): estimated recovery
-            per muscle -- the body figure (recovery palette), one row per
-            recently-trained muscle, the caption, and the next-workout row. Best-effort off
-            loadMuscleRecovery (see load()): absent entirely, not even the
-            heading, whenever that read hasn't resolved or failed, so a
-            broken estimate never sits here looking like it succeeded. */}
-        {muscleRecovery && (
-          <View style={[styles.mfCard, live.mfCard]}>
-            <Text style={[styles.mfTitle, live.mfTitle]} accessibilityRole="header">Recovery by muscle</Text>
-            <BodyDiagramHeatmap recoveryByMuscle={muscleRecovery.map} />
-            {muscleRecoveryRows.length > 0 && (
-              <View style={styles.rbmRowsList}>
-                {muscleRecoveryRows.map((entry) => (
-                  <View
-                    key={entry.muscle}
-                    accessibilityRole="text"
-                    accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
-                  >
-                    <Text style={[styles.rbmRowText, live.rbmRowText]}>
-                      {muscleRecoveryRowText(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            <Text style={[styles.rbmCaption, live.rbmCaption]}>
-              Estimated from the time since each muscle's last session and how much it did, adjusted by your recovery answer and your ratings. Not a measurement.
-            </Text>
-            {nextWorkoutText && (
-              <>
-                <View style={[styles.recoveryDivider, live.recoveryDivider]} />
-                <View>
-                  <Text style={[styles.rbmNextWorkoutTitle, live.rbmNextWorkoutTitle]}>Next workout</Text>
-                  <Text style={[styles.rbmNextWorkoutText, live.rbmNextWorkoutText]}>{nextWorkoutText}</Text>
-                </View>
-              </>
-            )}
-          </View>
-        )}
-
         {recoveryTrendInsight && (
           <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
             <Ionicons
@@ -753,6 +800,12 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
     </View>
   );
 }
+
+// "Recovery by muscle" row columns: the name column fits the longest
+// display name ("Front delts") at captionStrong; the percent column fits
+// "100%" right-aligned in tabular figures.
+const RBM_NAME_WIDTH = 88;
+const RBM_PERCENT_WIDTH = 44;
 
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
@@ -815,7 +868,16 @@ const styles = StyleSheet.create({
   // card reuses mfCard above (pre-existing, previously unused in this
   // file's own JSX); its heading reuses mfTitle.
   rbmRowsList: { gap: spacing.sm },
-  rbmRowText: { ...type.bodySm, color: colors.textSecondary },
+  rbmHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xxs },
+  rbmHeaderText: { ...type.captionTight, color: colors.textMuted },
+  rbmRow: { gap: spacing.xxs },
+  rbmRowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rbmName: { width: RBM_NAME_WIDTH, ...type.captionStrong, color: colors.textPrimary },
+  rbmTrack: { flex: 1, height: spacing.xs2, borderRadius: radius.xs, backgroundColor: colors.surface2, overflow: 'hidden' },
+  rbmFill: { height: '100%', borderRadius: radius.xs },
+  rbmPercent: { width: RBM_PERCENT_WIDTH, fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  // The meta line starts where the bar starts: under the name column.
+  rbmMeta: { ...type.captionTight, color: colors.textMuted, marginLeft: RBM_NAME_WIDTH + spacing.sm },
   rbmCaption: { ...type.caption, color: colors.textMuted },
   rbmNextWorkoutTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   rbmNextWorkoutText: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -857,7 +919,11 @@ function buildLiveStyles(t) {
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },
     mfChipLabel: { ...t.type.captionStrong },
-    rbmRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    rbmHeaderText: { ...t.type.captionTight, color: t.colors.textMuted },
+    rbmName: { ...t.type.captionStrong, color: t.colors.textPrimary },
+    rbmTrack: { backgroundColor: t.colors.surface2 },
+    rbmPercent: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    rbmMeta: { ...t.type.captionTight, color: t.colors.textMuted },
     rbmCaption: { ...t.type.caption, color: t.colors.textMuted },
     rbmNextWorkoutTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     rbmNextWorkoutText: { ...t.type.bodySm, color: t.colors.textSecondary },
