@@ -21,9 +21,11 @@ jest.mock('../../store/useAppStore', () => ({
 
 import RecoveryLearningCard, {
   recoveryLearningCopy, spokenDuration, learningExampleMuscle, learningExample, scalePosition,
-  recoveryLearningA11yLabel, pointLabelPlacement, RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER,
+  recoveryLearningSubtitle, pointLabelPlacement, RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER,
 } from '../RecoveryLearningCard';
-import { recoveryHours, REFERENCE_SETS, PERSONAL_MIN_PAIRS } from '../../lib/recovery/constants';
+import {
+  recoveryHours, REFERENCE_SETS, PERSONAL_MIN_PAIRS, RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX,
+} from '../../lib/recovery/constants';
 import { muscleRecoveryBasisText } from '../MuscleRecoveryList';
 
 const reading = (over = {}) => ({
@@ -80,9 +82,9 @@ describe('what the card says, state by state', () => {
     }));
     expect(copy.state).toBe('faster');
     expect(copy.headline).toBe('Faster than first estimated');
-    expect(copy.body).toBe('Your lifts hold up after short breaks better than the first estimate expected, so each muscle is now estimated to recover about 15% sooner.');
+    expect(copy.body).toBe('Your lifts hold up after short breaks better than the first estimate expected, so it now estimates your recovery takes about 15% less time, and never less than a day.');
     expect(copy.example.sentence).toMatch(/^Quads after a 6-set session: about .*, down from .*\.$/);
-    expect(copy.evidence).toBe('From 42 comparisons of the same lift at the same effort.');
+    expect(copy.evidence).toBe('From 42 comparisons of the same lift on the same day of the week.');
     expect(copy.progress).toBeNull();
   });
 
@@ -92,22 +94,43 @@ describe('what the card says, state by state', () => {
     }));
     expect(copy.state).toBe('slower');
     expect(copy.headline).toBe('Slower than first estimated');
-    expect(copy.body).toBe('Your lifts drop after short breaks more than the first estimate expected, so each muscle is now estimated to recover about 22% later.');
+    expect(copy.body).toBe('Your lifts drop after short breaks more than the first estimate expected, so it now estimates your recovery takes about 22% longer, and never more than a week.');
+  });
+
+  test('"a day" and "a week" are the estimate\'s own bounds (a session at either cannot move, review of 2026-09-26)', () => {
+    expect(RECOVERY_HOURS_MIN).toBe(24);
+    expect(RECOVERY_HOURS_MAX).toBe(7 * 24);
+    // Calves after two sets sit at the minimum at the start: a faster
+    // reading moves them less than the headline percent, which is why the
+    // sentence names the minimum.
+    expect(recoveryHours('calves', { sets: 2, personalFactor: 0.85 })).toBe(RECOVERY_HOURS_MIN);
   });
 
   test('not clear: in line with the first estimate, with what it is based on', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 25, reason: 'not_clear', pairsByMuscle: { chest: 25 } }));
     expect(copy.state).toBe('steady');
     expect(copy.headline).toBe('In line with the first estimate');
-    expect(copy.evidence).toBe('From 25 comparisons of the same lift at the same effort.');
+    expect(copy.evidence).toBe('From 25 comparisons of the same lift on the same day of the week.');
     expect(copy.example).toBeNull();
   });
 
-  test('no spread: says why it cannot learn yet, without telling anyone to change anything', () => {
+  test('no spread: says why it cannot learn yet, true of a fixed weekly schedule and of long breaks alike, and instructs nothing', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread' }));
     expect(copy.state).toBe('waiting');
     expect(copy.headline).toBe('Not learning yet');
-    expect(copy.body).toMatch(/breaks between your sessions have been much the same length/);
+    expect(copy.body).toBe('It learns by comparing the same lift on the same day of the week after breaks of different lengths, short enough to leave some tiredness. Your training so far does not give it that.');
+    // D210 addendum 3: the old line said the breaks "have been much the same
+    // length", false for a schedule that alternates three and four days.
+    expect(copy.body).not.toMatch(/much the same length/);
+    expect(copy.evidence).toBeNull();
+  });
+
+  test('reps that repeat: says which lifts are left out, and that too few comparisons remain', () => {
+    const copy = recoveryLearningCopy(reading({ pairs: 2, reason: 'fixed_reps' }));
+    expect(copy.state).toBe('waiting');
+    expect(copy.headline).toBe('Not learning yet');
+    expect(copy.body).toBe('Where a lift is logged with the same reps from one session to the next, it shows what was planned rather than how each day went, so it is left out. That leaves too few comparisons to learn from yet.');
+    expect(copy.progress).toBeNull();
   });
 
   test('too few: how far along it is', () => {
@@ -128,6 +151,7 @@ describe('what the card says, state by state', () => {
       reading({ factor: 1.3, prior: 1, pairs: 40, reason: 'adjusted', pairsByMuscle: { chest: 40 } }),
       reading({ pairs: 30, reason: 'not_clear' }),
       reading({ pairs: 30, reason: 'no_spread' }),
+      reading({ pairs: 4, reason: 'fixed_reps' }),
       reading({ pairs: 2, reason: 'too_few' }),
     ].map(recoveryLearningCopy);
     const words = [RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER, ...all.flatMap((c) => [c.headline, c.body, c.example?.sentence, c.evidence])]
@@ -137,6 +161,18 @@ describe('what the card says, state by state', () => {
     // D204: no instruction to train, rest, vary or change anything.
     expect(words).not.toMatch(/\b(you should|try to|make sure|train (more|less)|rest more|take (a|more) rest|vary your|change your)\b/i);
     expect(RECOVERY_SPEED_FOOTER).toMatch(/An estimate, not a measurement\./);
+    // Effort is matched only inside a plan, so no line claims it (D210 addendum 3).
+    expect(words).not.toMatch(/same effort/);
+    // The change is the estimate's, not "each muscle's" (a muscle at the 24-hour floor cannot move).
+    expect(words).not.toMatch(/each muscle/);
+  });
+
+  test('the subtitle says "learned" only once something has been learned', () => {
+    expect(recoveryLearningSubtitle(recoveryLearningCopy(reading({ factor: 0.85, prior: 1, pairs: 30, reason: 'adjusted' })))).toBe('Learned from your lifts · estimated');
+    expect(recoveryLearningSubtitle(recoveryLearningCopy(reading({ pairs: 30, reason: 'not_clear' })))).toBe('Learned from your lifts · estimated');
+    for (const reason of ['no_spread', 'fixed_reps', 'too_few']) {
+      expect(recoveryLearningSubtitle(recoveryLearningCopy(reading({ pairs: 3, reason })))).toBe('Learns from your lifts · estimated');
+    }
   });
 });
 
@@ -189,13 +225,19 @@ describe('rendering', () => {
     expect(shown).toEqual(expect.arrayContaining([
       RECOVERY_SPEED_TITLE, 'Faster', 'Slower', 'You', 'First estimate', 'Faster than first estimated',
       'Quads after a 6-set session, estimated',
-      'From 42 comparisons of the same lift at the same effort.', RECOVERY_SPEED_FOOTER,
+      'From 42 comparisons of the same lift on the same day of the week.', RECOVERY_SPEED_FOOTER,
     ]));
     // The two tiles mirror the two markers.
     expect(shown.filter((x) => x === 'First estimate')).toHaveLength(2);
     expect(shown.filter((x) => x === 'You')).toHaveLength(2);
-    const card = tree.root.findAll((n) => n.props.accessibilityLabel && String(n.props.accessibilityLabel).startsWith(RECOVERY_SPEED_TITLE))[0];
-    expect(card.props.accessibilityLabel).toMatch(/Faster than first estimated/);
+    // Not one grouped node: the title keeps its heading role and every line,
+    // the footer included, is read (D210 addendum 3).
+    expect(tree.root.findAll((n) => n.props.accessible === true && n.props.accessibilityLabel
+      && String(n.props.accessibilityLabel).startsWith(RECOVERY_SPEED_TITLE))).toHaveLength(0);
+    expect(tree.root.findByProps({ accessibilityRole: 'header', children: RECOVERY_SPEED_TITLE })).toBeTruthy();
+    // Quads after 6 sets: 72 hours at the first estimate, 61 hours at 0.85.
+    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'First estimate, 3 days')).not.toHaveLength(0);
+    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'You, 2½ days')).not.toHaveLength(0);
   });
 
   test('a still-learning reading shows the progress, and no "You" marker label', () => {
@@ -214,12 +256,7 @@ describe('rendering', () => {
     expect(tree.toJSON()).toBeNull();
   });
 
-  test('the spoken summary reads the headline and the evidence as sentences', () => {
-    const copy = recoveryLearningCopy(reading({ pairs: 25, reason: 'not_clear' }));
-    expect(recoveryLearningA11yLabel(copy)).toBe(
-      'Your recovery speed. In line with the first estimate. Your lifts after shorter and longer breaks do not show a clear difference from it yet, so it stays as it is. From 25 comparisons of the same lift at the same effort.',
-    );
-  });
+
 });
 
 // The Recovery by muscle caption's own pin lives with ReadinessCards'

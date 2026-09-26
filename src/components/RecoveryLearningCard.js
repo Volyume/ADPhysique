@@ -99,6 +99,15 @@ export function learningExample(personal) {
  * Everything the card says, for a reading. `state` is 'faster' | 'slower' |
  * 'steady' | 'waiting' | 'learning'. Null when there is no reading.
  *
+ * Every sentence is only as strong as the learner's evidence (D210 addendum
+ * 3, from its review): the comparisons are of the same lift on the same day
+ * of the week, which is what the evidence line says (effort is matched only
+ * inside a plan, so it does not claim "the same effort"); the change is
+ * stated for the estimate, not for "each muscle", with the estimate's own
+ * bounds (a session already at the 24-hour minimum cannot get shorter, nor
+ * one at the week's maximum longer: RECOVERY_HOURS_MIN and _MAX); and each
+ * "not yet" names its own reason, true of the schedules that produce it.
+ *
  * @returns {{ state:string, headline:string, body:string, example:(object|null),
  *   evidence:(string|null), progress:({ done:number, needed:number }|null) }|null}
  */
@@ -106,15 +115,15 @@ export function recoveryLearningCopy(personal) {
   const direction = personalDirection(personal);
   if (!direction) return null;
   const pairs = Math.max(0, Number(personal.pairs) || 0);
-  const evidence = `From ${plural(pairs, 'comparison')} of the same lift at the same effort.`;
+  const evidence = `From ${plural(pairs, 'comparison')} of the same lift on the same day of the week.`;
   if (direction === 'faster' || direction === 'slower') {
     const pct = Math.round(Math.abs(personal.factor / personal.prior - 1) * 100);
     return {
       state: direction,
       headline: direction === 'faster' ? 'Faster than first estimated' : 'Slower than first estimated',
       body: direction === 'faster'
-        ? `Your lifts hold up after short breaks better than the first estimate expected, so each muscle is now estimated to recover about ${pct}% sooner.`
-        : `Your lifts drop after short breaks more than the first estimate expected, so each muscle is now estimated to recover about ${pct}% later.`,
+        ? `Your lifts hold up after short breaks better than the first estimate expected, so it now estimates your recovery takes about ${pct}% less time, and never less than a day.`
+        : `Your lifts drop after short breaks more than the first estimate expected, so it now estimates your recovery takes about ${pct}% longer, and never more than a week.`,
       example: learningExample(personal),
       evidence,
       progress: null,
@@ -134,20 +143,37 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      body: 'It learns by comparing the same lift after shorter and longer breaks. The breaks between your sessions have been much the same length, so there is no difference to learn from yet.',
+      body: 'It learns by comparing the same lift on the same day of the week after breaks of different lengths, short enough to leave some tiredness. Your training so far does not give it that.',
       example: null,
-      evidence,
+      evidence: null,
+      progress: null,
+    };
+  }
+  if (direction === 'fixed_reps') {
+    return {
+      state: 'waiting',
+      headline: 'Not learning yet',
+      body: 'Where a lift is logged with the same reps from one session to the next, it shows what was planned rather than how each day went, so it is left out. That leaves too few comparisons to learn from yet.',
+      example: null,
+      evidence: null,
       progress: null,
     };
   }
   return {
     state: 'learning',
     headline: 'Still learning',
-    body: `It compares each lift with the last time you did it at the same effort, and starts once it has ${PERSONAL_MIN_PAIRS} of those comparisons.`,
+    body: `It compares each lift with the same lift on the same day of the week, and starts once it has ${PERSONAL_MIN_PAIRS} of those comparisons.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },
   };
+}
+
+/** The card's subtitle: "learned" only once something has been learned. */
+export function recoveryLearningSubtitle(copy) {
+  return copy && (copy.state === 'faster' || copy.state === 'slower' || copy.state === 'steady')
+    ? 'Learned from your lifts · estimated'
+    : 'Learns from your lifts · estimated';
 }
 
 /** Where a factor sits on the scale, 0 (fastest) to 1 (slowest). */
@@ -156,16 +182,6 @@ export function scalePosition(factor) {
   if (!Number.isFinite(f)) return null;
   const p = (f - PERSONAL_FACTOR_MIN) / (PERSONAL_FACTOR_MAX - PERSONAL_FACTOR_MIN);
   return Math.min(1, Math.max(0, p));
-}
-
-/** The card's spoken summary: the headline, then the evidence or progress. */
-export function recoveryLearningA11yLabel(copy) {
-  if (!copy) return '';
-  const tail = copy.progress
-    ? `${copy.progress.done} of ${copy.progress.needed} comparisons so far`
-    : copy.evidence;
-  return [RECOVERY_SPEED_TITLE, copy.headline, copy.body, copy.example?.sentence, tail]
-    .filter(Boolean).join('. ').replace(/\.\./g, '.');
 }
 
 const MARKER = spacing.md;
@@ -228,11 +244,11 @@ function ExampleTiles({ example, live }) {
         {`${example.name} after a ${example.sets}-set session, estimated`}
       </Text>
       <View style={styles.tiles}>
-        <View style={[styles.tile, live.tileFirst]}>
+        <View style={[styles.tile, live.tileFirst]} accessible accessibilityLabel={`First estimate, ${example.before}`}>
           <Text style={[styles.tileLabel, live.tileLabelFirst]}>First estimate</Text>
           <Text style={[styles.tileValue, live.tileValueFirst]}>{example.before}</Text>
         </View>
-        <View style={[styles.tile, live.tileYou]}>
+        <View style={[styles.tile, live.tileYou]} accessible accessibilityLabel={`You, ${example.now}`}>
           <Text style={[styles.tileLabel, live.tileLabelYou]}>You</Text>
           <Text style={[styles.tileValue, live.tileValueYou]}>{example.now}</Text>
         </View>
@@ -248,10 +264,14 @@ export default function RecoveryLearningCard({ personal = null }) {
   if (!copy) return null;
   const progressPct = copy.progress ? `${Math.round((copy.progress.done / copy.progress.needed) * 100)}%` : null;
   return (
-    <View style={[styles.card, live.card]} accessible accessibilityLabel={recoveryLearningA11yLabel(copy)}>
+    // Not one grouped node (D210 addendum 3): a screen reader reads the
+    // title as a heading and every line after it, the footer's "An estimate,
+    // not a measurement" included. The drawn scale is hidden from it; its
+    // meaning is in the headline and the tiles.
+    <View style={[styles.card, live.card]}>
       <View>
         <Text style={[styles.title, live.title]} accessibilityRole="header">{RECOVERY_SPEED_TITLE}</Text>
-        <Text style={[styles.sub, live.sub]}>Learned from your lifts · estimated</Text>
+        <Text style={[styles.sub, live.sub]}>{recoveryLearningSubtitle(copy)}</Text>
       </View>
       <SpeedScale copy={copy} personal={personal} live={live} />
       <View style={styles.words}>
