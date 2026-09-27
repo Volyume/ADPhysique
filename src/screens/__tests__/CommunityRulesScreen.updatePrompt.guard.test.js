@@ -97,3 +97,15 @@ describe('the rules screen asks for an app update when the server is ahead of th
     }
   });
 });
+
+// Founder report 2026-09-27: the weekly training update the old rules version
+// blocked is sent as soon as the rules are accepted, not a week later.
+describe('accepting sends the blocked weekly training update at once', () => {
+  test('publishConsistency runs after a real acceptance, best effort', () => {
+    const accept = SRC.slice(SRC.indexOf('async function accept()'), SRC.indexOf('return (', SRC.indexOf('async function accept()')));
+    const accepted = accept.indexOf('setAccepted(true);');
+    const publish = accept.indexOf('publishConsistency(null).catch(() => {});');
+    expect(accepted).toBeGreaterThan(-1);
+    expect(publish).toBeGreaterThan(accepted);
+  });
+});

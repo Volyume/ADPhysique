@@ -799,3 +799,35 @@ describe('F5: reload quietly on focus, after the same initial mount load', () =>
     );
   });
 });
+
+// Founder report 2026-09-27: the rules moved to version 3 on 2026-09-10 and a
+// member who had accepted version 2 was never asked again, so the server
+// refused their weekly training update ('rules_outdated') in the background
+// and their gym showed none of their training. The screen now says so.
+describe('the Community rules moved on since they were accepted', () => {
+  test('a card says so, and opens the rules to accept them', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME_WITH_PROFILE, rules_version: 3, accepted_rules_version: 2 }, loading: false, error: null, refresh: jest.fn(),
+    });
+    const { text, tree, partTrees, navigation } = await render();
+    expect(text).toContain('The Community rules have changed. Your training at your gym stops updating until you read and accept them.');
+    const btn = [tree, ...partTrees]
+      .flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityLabel === 'Read and accept the updated Community rules'
+        && typeof n.props.onPress === 'function'))[0];
+    expect(btn).toBeTruthy();
+    await act(async () => { btn.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+  });
+
+  test('no card when the accepted version is current, when the server does not say, or before joining', async () => {
+    for (const me of [
+      { ...ME_WITH_PROFILE, rules_version: 3, accepted_rules_version: 3 },
+      ME_WITH_PROFILE,
+      { profile: null, rules_version: 3, accepted_rules_version: null },
+    ]) {
+      useCommunityMe.mockReturnValue({ me, loading: false, error: null, refresh: jest.fn() });
+      const { text } = await render();
+      expect(text).not.toContain('The Community rules have changed');
+    }
+  });
+});

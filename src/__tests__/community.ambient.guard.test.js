@@ -114,10 +114,26 @@ describe('publishAmbientItems: minors never get more than followers', () => {
     expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'followers' }));
   });
 
-  test('an adult with "everyone" gets the audience they chose', async () => {
+  // A post says 'public' where the setting says 'everyone':
+  // community_create_post accepts only 'public', 'followers' or 'groups' and
+  // refused 'everyone' as invalid_input, so no automatic post went out for
+  // anyone sharing with everyone (founder report 2026-09-27).
+  test('an adult with "everyone" gets the audience they chose, as a public post', async () => {
     readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'everyone' });
     await publishAmbientItems({ userId: 'u1', workoutId: 'w1' });
-    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'everyone' }));
+    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'public' }));
+    expect(createPost).not.toHaveBeenCalledWith(expect.objectContaining({ visibility: 'everyone' }));
+  });
+
+  test('every automatic post carries a visibility the server accepts', async () => {
+    for (const sessions_audience of ['followers', 'groups', 'everyone', 'nonsense', undefined]) {
+      createPost.mockClear();
+      readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience });
+      await publishAmbientItems({ userId: 'u1', workoutId: 'w1' });
+      createPost.mock.calls.forEach(([arg]) => {
+        expect(['public', 'followers', 'groups']).toContain(arg.visibility);
+      });
+    }
   });
 });
 

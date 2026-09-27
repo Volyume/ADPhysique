@@ -141,6 +141,14 @@ export default function CommunityHubScreen({ navigation, route }) {
   const t = useTheme();
   const { me, loading: meLoading, refresh: refreshMe } = useCommunityMe();
   const joined = hasProfile(me);
+  // The Community rules moved on since this person accepted them (founder
+  // report 2026-09-27). The server then refuses the weekly training update
+  // ('rules_outdated') in the background, so their training stops showing at
+  // their gym, and until now nothing on screen said so: only connecting or
+  // messaging asked for the rules again. Absent fields (an older server)
+  // compare as not behind.
+  const rulesBehind = joined
+    && Number(me?.accepted_rules_version) < Number(me?.rules_version);
   const legacyPartnerCode = route?.params?.legacyPartnerCode ?? null;
 
   const [hub, setHub] = useState(null);
@@ -568,6 +576,23 @@ export default function CommunityHubScreen({ navigation, route }) {
             accessibilityLabel="Read Community rules"
           >
             <Text style={[styles.statusNoticeLink, { color: t.colors.primary }]}>Community rules</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {/* The same account notice as a restriction above: a status line
+          about this person's own Community standing, not a card. */}
+      {rulesBehind ? (
+        <View style={[styles.statusNotice, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
+          <Text style={[styles.statusNoticeLine, { color: t.colors.textPrimary }]}>
+            The Community rules have changed. Your training at your gym stops updating until you read and accept them.
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CommunityRules', { mustAccept: true })}
+            accessibilityRole="button"
+            accessibilityLabel="Read and accept the updated Community rules"
+          >
+            <Text style={[styles.statusNoticeLink, { color: t.colors.primary }]}>Read the rules</Text>
           </TouchableOpacity>
         </View>
       ) : null}

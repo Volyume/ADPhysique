@@ -33,6 +33,7 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import { COMMUNITY_RULES_VERSION, acceptRules, loadMe, rulesTextBehindServer } from '../lib/community';
+import { publishConsistency } from '../lib/community/trainingConsistency';
 
 // Community Rules v3, from docs/community-safety/COMMUNITY-RULES.md.
 // Keep this block in step with that document.
@@ -200,6 +201,10 @@ export default function CommunityRulesScreen({ navigation, route }) {
         return;
       }
       setAccepted(true);
+      // The weekly training update the old version was blocking goes now,
+      // not a week later (founder report 2026-09-27). Best effort: accepting
+      // never fails on it.
+      publishConsistency(null).catch(() => {});
       toast.show('Rules accepted');
       navigation?.goBack?.();
     } catch (_e) {

@@ -70,9 +70,19 @@ async function queueItem(item) {
 /** A minor never gets an audience beyond followers, whatever
  * `sessions_audience` says (mirrors the server's own force-to-followers
  * rule for a minor; belt and braces, never the only guard). */
+// A post's visibility is 'public', 'followers' or 'groups'; the sharing
+// setting says 'everyone' where a post says 'public'. community_create_post
+// refuses any other visibility as invalid_input, and itself reads the setting
+// 'everyone' as 'public' (founder report 2026-09-27: no workout had been
+// shared automatically since the setting became 'everyone'; the server log
+// showed every automatic post refused as invalid_input).
+function postVisibility(visibility) {
+  return visibility === 'everyone' ? 'public' : visibility;
+}
+
 function audienceFor(sessionsAudience, isMinor) {
   if (isMinor) return 'followers';
-  return ['followers', 'groups', 'everyone'].includes(sessionsAudience) ? sessionsAudience : 'followers';
+  return ['followers', 'groups', 'everyone'].includes(sessionsAudience) ? postVisibility(sessionsAudience) : 'followers';
 }
 
 /** One `createPost` call for a queued or freshly-built auto item. Never
@@ -83,7 +93,7 @@ async function sendAutoItem(item) {
     const created = await createPost({
       kind: item.kind,
       payload: item.payload,
-      visibility: item.visibility,
+      visibility: postVisibility(item.visibility),
       auto: true,
       clientRef: item.clientRef,
       groupIds: item.groupIds ?? null,
