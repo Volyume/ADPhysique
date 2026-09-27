@@ -1245,7 +1245,7 @@ export default function ShareCardScreen({ navigation, route }) {
               key={`${o.exerciseName}-${i}`}
               title={o.exerciseName}
               meta={setLabel(o, liftUnit)}
-              note={[newBestNames.has(o.exerciseName) ? 'New best today' : '', room ? '' : 'No room on this image'].filter(Boolean).join(' · ')}
+              note={[newBestNames.has(o.exerciseName) ? 'New best' : '', room ? '' : 'No room on this image'].filter(Boolean).join(' · ')}
               selected={on}
               disabled={!room}
               multi

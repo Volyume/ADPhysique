@@ -265,7 +265,7 @@ describe('ShareCardScreen — top lifts (founder orders 2026-09-26)', () => {
   test('any number can be ticked, in the list order, and the heading follows: Top lift, Top lifts, none', async () => {
     const tree = await mount(LIFTS);
     await press(findByA11yLabel(tree, 'Top lift: Bench Press, 100 kg × 5. Change')[0]);
-    expect(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best today').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best').length).toBeGreaterThan(0);
     expect(findByA11yLabel(tree, 'Leg Press, 120 kg × 5').length).toBeGreaterThan(0);
     expect(findByA11yLabel(tree, 'Cable Fly, 30 kg × 12').length).toBeGreaterThan(0);
     // Ticking adds to the choice rather than replacing it.
@@ -278,7 +278,7 @@ describe('ShareCardScreen — top lifts (founder orders 2026-09-26)', () => {
     expect(heading(tree, 'Top lifts')).toBe(1);
     // Unticking takes one off; one left is "Top lift" again.
     await press(findByA11yLabel(tree, 'Top lifts: Bench Press, 100 kg × 5; Leg Press, 120 kg × 5; Cable Fly, 30 kg × 12. Change')[0]);
-    await press(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best today')[0]);
+    await press(findByA11yLabel(tree, 'Bench Press, 100 kg × 5, New best')[0]);
     await press(findByA11yLabel(tree, 'Leg Press, 120 kg × 5')[0]);
     await waitFor(() => liftNames() === 'Cable Fly');
     await press(findByA11yLabel(tree, 'Done')[0]);

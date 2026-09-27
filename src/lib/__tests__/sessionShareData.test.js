@@ -10,7 +10,7 @@ import {
   liftOptionsFromExerciseData,
   defaultLiftIndex,
   shareCardTitle,
-  shareHighlightOptions,
+  shareHighlightOptions, compareWithPriorSessions,
 } from '../sessionShareData';
 
 describe('topSetFromExerciseData', () => {
@@ -239,8 +239,54 @@ describe('shareHighlightOptions: only a fact about the workout being shared', ()
     }
   });
 
-  test('source guard: the builder reads the comparison and nothing else', () => {
+  test('source guard: the builder reads the comparison, and the unit it is written in, and nothing else', () => {
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'sessionShareData.js'), 'utf8');
-    expect(src).toMatch(/export function shareHighlightOptions\(\{ comparison = null \} = \{\}\)/);
+    expect(src).toMatch(/export function shareHighlightOptions\(\{ comparison = null, units = 'kg' \} = \{\}\)/);
+  });
+});
+
+// Founder, 2026-09-27: "I'm also not seeing the option of the comparison to
+// last session, ie heavier than last session". How this workout compares
+// with the last time the same workout was done: offered only when it is
+// more, with the amount, alongside the 4-week line.
+describe('the comparison with the last session', () => {
+  const texts = (facts) => shareHighlightOptions(facts).map((o) => o.text);
+
+  test('more than last time: the amount, in the athlete\'s unit, kept on one line', () => {
+    expect(texts({ comparison: { verdict: 'on_pace', pct: 3, priorCount: 3, moreThanLast: 1240 } }))
+      .toEqual(['Lifted 1,240\u00A0kg more than last session']);
+    expect(texts({ comparison: { verdict: 'on_pace', pct: 3, priorCount: 3, moreThanLast: 800 }, units: 'lbs' }))
+      .toEqual(['Lifted 800\u00A0lbs more than last session']);
+  });
+
+  test('it sits after the 4-week line, each with its own key', () => {
+    const all = shareHighlightOptions({ comparison: { verdict: 'best', priorCount: 3, moreThanLast: 500 } });
+    expect(all.map((o) => o.key)).toEqual(['best_4_weeks', 'more_than_last']);
+  });
+
+  test('never offered when it is the same or less, or with nothing before it', () => {
+    for (const moreThanLast of [0, -300, 0.4, null, undefined, NaN]) {
+      expect(texts({ comparison: { verdict: 'on_pace', pct: 0, priorCount: 3, moreThanLast } })).toEqual([]);
+    }
+    expect(texts({ comparison: { verdict: 'first', priorCount: 0, moreThanLast: 900 } })).toEqual([]);
+  });
+});
+
+describe('compareWithPriorSessions: the summary\'s verdict and the last session', () => {
+  test('nothing before it: a first', () => {
+    expect(compareWithPriorSessions([], 5000)).toEqual({ verdict: 'first', priorCount: 0 });
+    expect(compareWithPriorSessions([{ tonnage: 0 }], 5000)).toEqual({ verdict: 'first', priorCount: 0 });
+  });
+
+  test('the verdicts, as the summary has always worked them out', () => {
+    expect(compareWithPriorSessions([{ tonnage: 4000 }, { tonnage: 4500 }], 5000)).toMatchObject({ verdict: 'best', position: 1, total: 3, priorCount: 2, avgTonnage: 4250 });
+    expect(compareWithPriorSessions([{ tonnage: 6000 }, { tonnage: 3000 }, { tonnage: 3000 }], 4500)).toMatchObject({ verdict: 'up', pct: 13 });
+    expect(compareWithPriorSessions([{ tonnage: 6000 }, { tonnage: 6000 }], 5000)).toMatchObject({ verdict: 'down', pct: -17 });
+    expect(compareWithPriorSessions([{ tonnage: 5200 }, { tonnage: 4900 }], 5000)).toMatchObject({ verdict: 'on_pace' });
+  });
+
+  test('the last session is the newest before it that has a total', () => {
+    expect(compareWithPriorSessions([{ tonnage: 0 }, { tonnage: 4200 }, { tonnage: 3000 }], 5000).moreThanLast).toBe(800);
+    expect(compareWithPriorSessions([{ tonnage: 5600 }, { tonnage: 3000 }], 5000).moreThanLast).toBe(-600);
   });
 });

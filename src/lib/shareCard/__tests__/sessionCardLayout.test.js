@@ -55,8 +55,10 @@ function record(params, width = 1080, bgPhoto = null) {
   const texts = [];
   const rrects = [];
   const rects = [];
+  const clips = [];
   const canvas = new Proxy({}, {
     get: (_t, key) => {
+      if (key === 'clipRRect') return (r, op) => clips.push({ rect: r.rect || {}, op });
       if (key === 'drawText') return (str, x, y) => texts.push({ str, x, y });
       if (key === 'drawRRect') return (r) => rrects.push(r.rect || {});
       if (key === 'drawRect') return (r) => rects.push(r);
@@ -76,7 +78,7 @@ function record(params, width = 1080, bgPhoto = null) {
   // Letter-spaced labels are drawn one character at a time (Skia has no
   // tracking), so a tracked caption is many drawText calls, not one. Assert
   // against the run as well as the individual strings.
-  return { texts, rrects, rects, strings, run: strings.join('') };
+  return { texts, rrects, rects, clips, strings, run: strings.join('') };
 }
 
 // The footer's hairline: the lowest rule on the card. The footer draws its
@@ -242,6 +244,20 @@ describe('the app\'s style, not a poster template (2026-09-26 restyle)', () => {
           expect(o.y + o.h).toBeLessThanOrEqual(H - Math.round(H * 0.2));
         }
       }
+    }
+  });
+
+  // Founder, 2026-09-27: "fix it so that the image only goes within the
+  // outline". The photo and its shading are clipped to the outline's shape,
+  // and the plain ground is drawn outside it.
+  test('a photo is drawn only inside the outline, with the plain ground outside it', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const { clips, rrects } = record(SESSION({ aspect }), 1080, { width: () => 1000, height: () => 1500 });
+      const [o] = rrects;
+      // 0: everything but the outline's shape (the ground); 1: inside it (the photo).
+      expect(clips.map((c) => c.op)).toEqual([0, 1]);
+      clips.forEach((c) => { expect(c.rect).toEqual(o); });
+      expect(record(SESSION({ aspect })).clips).toEqual([]);
     }
   });
 

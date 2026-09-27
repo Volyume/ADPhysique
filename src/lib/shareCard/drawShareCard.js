@@ -438,20 +438,47 @@ function drawCraftedBackground(canvas, Skia, W, H) {
   fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
 }
 
-function drawBackground(canvas, Skia, W, H, bands) {
+// Skia ClipOp, as numbers like FILL and STROKE above. On device JsiSkCanvas
+// takes the numeric ClipOp directly; the CanvasKit/Node path maps it through
+// PathOp, whose Difference (0) and Intersect (1) share the same values, so
+// these are correct on both runtimes.
+const CLIP_DIFFERENCE = 0;
+const CLIP_INTERSECT = 1;
+
+// `frame`: the outline's rectangle (layoutCard, bandFrame). With a photo, the
+// photo and its scrim are drawn only inside the outline's rounded shape, and
+// the plain ground outside it (founder, 2026-09-27: "fix it so that the
+// image only goes within the outline"). Positioning the photo shows the
+// same: that render leaves the inside clear for the photo underneath and
+// paints the ground outside.
+function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
   if (hasPhoto()) {
     // The athlete's photo, framed where they put it, under a tone-sampled
     // scrim drawn from the measured text bands. A failure in either half
     // falls back to the plain ground rather than leaving the card groundless
     // (2026-08-18 law: nothing decorative may block a render).
     try {
-      if (!OMIT_PHOTO) {
-        // The ground under the photo: seen only where a zoomed-out photo
-        // leaves the canvas uncovered.
-        fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
-        drawImageCover(canvas, Skia, BG, W, H, BG_CROP);
+      const r = Math.round(FRAME_RADIUS * s);
+      const clip = frame ? Skia.RRectXY(Skia.XYWHRect(frame.x, frame.y, frame.w, frame.h), r, r) : null;
+      if (clip) {
+        canvas.save();
+        canvas.clipRRect(clip, CLIP_DIFFERENCE, true);
+        drawCraftedBackground(canvas, Skia, W, H);
+        canvas.restore();
+        canvas.save();
+        canvas.clipRRect(clip, CLIP_INTERSECT, true);
       }
-      drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG, W, H, BG_CROP), bands);
+      try {
+        if (!OMIT_PHOTO) {
+          // The ground under the photo: seen only where a zoomed-out photo
+          // leaves the canvas uncovered.
+          fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
+          drawImageCover(canvas, Skia, BG, W, H, BG_CROP);
+        }
+        drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG, W, H, BG_CROP), bands);
+      } finally {
+        if (clip) canvas.restore();
+      }
       return;
     } catch (_e) { /* fall through to the plain ground */ }
   }
@@ -957,7 +984,7 @@ function layoutCard(W, H, s, p, drawHead, drawBody, wordmark) {
 // Draws the laid-out card and returns where its outline goes.
 function composeCard(canvas, Skia, W, H, s, p, drawHead, drawBody, font, wordmark) {
   const L = layoutCard(W, H, s, p, drawHead, drawBody, wordmark);
-  drawBackground(canvas, Skia, W, H, { headBottom: L.headY + L.headH, bodyTop: L.bodyY });
+  drawBackground(canvas, Skia, W, H, { headBottom: L.headY + L.headH, bodyTop: L.bodyY }, L.frame, s);
   drawHead(canvas, L.headY, L.compact);
   drawBody(canvas, L.bodyY, L.scale);
   drawFooter(canvas, Skia, W, H, L.pad, p.isSquare, s, font, wordmark, L.footerY);
@@ -1182,10 +1209,7 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
 
 // ── before/after progress card (progress-photos §3.8; S1/S2) ──────────────────
 //
-// Skia ClipOp.Intersect. On device JsiSkCanvas takes the numeric ClipOp
-// directly; the CanvasKit/Node path maps it through PathOp, whose Intersect
-// shares the same value (1) — so this one constant is correct on both runtimes.
-const CLIP_INTERSECT = 1;
+// The cells clip with CLIP_INTERSECT (defined with drawBackground above).
 
 // Draw an SkImage COVER-cropped (object-fit: cover) into a rounded cell rect,
 // clipped so the crop never bleeds past the cell corners. Like drawImageCover
@@ -1260,7 +1284,7 @@ function drawElapsedLabel(canvas, Skia, W, y, label, s, font) {
 //     + the screen's privacy line.
 function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H, null);
+  drawBackground(canvas, Skia, W, H, null, bandFrame(W, H, p.isSquare, pad), s);
 
   const before = p.before || {};
   const after = p.after || {};

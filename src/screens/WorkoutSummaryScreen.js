@@ -46,7 +46,9 @@ import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import {
   topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle, shareHighlightOptions,
+  compareWithPriorSessions,
 } from '../lib/sessionShareData';
+import { pastWorkoutPRs } from '../lib/pastWorkoutPRs';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -292,6 +294,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // routine / no prior history to compare to (a one-off session is also
   // an "n/a" case).
   const [comparison, setComparison] = useState(null);
+  // A workout opened from history: its own records and comparison, worked
+  // out again for its share image only (founder, 2026-09-27, of a workout
+  // shared from history: "add back in PRs", and the comparison was missing
+  // too). The finish flow supplies both on the live path; the history
+  // summary itself shows neither, as before.
+  const [historyPRs, setHistoryPRs] = useState([]);
+  const [shareComparison, setShareComparison] = useState(null);
   // C5-P16-02 (D96): the next planned session in the plan's rotation.
   const [nextSessionName, setNextSessionName] = useState('');
 
@@ -580,41 +589,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     return () => clearTimeout(t);
   }, [readOnly, completedWorkoutCount, feedbackSheet]);
 
-  // 4-week comparison against prior sessions of the SAME routine. Skipped
-  // for one-off sessions (no routineId) and for read-only history views
-  // where the "current" workout already lives in the dataset and the
-  // ranking would double-count.
+  // 4-week comparison against prior sessions of the SAME routine, and the
+  // last of them (compareWithPriorSessions). Skipped for one-off sessions
+  // (no routineId). A workout opened from history is compared with the
+  // sessions in the 4 weeks before it, never the ones since, and only for its
+  // share image (shareComparison): the query leaves the workout itself out,
+  // so nothing is counted twice.
   useEffect(() => {
-    if (readOnly || !routineId || !user?.id) return;
-    const since = Date.now() - 28 * 24 * 60 * 60 * 1000; // 4 weeks
+    if (!routineId || !user?.id) return;
+    const refMs = readOnly ? (Number(startedAt) || Date.parse(startedAt) || 0) : Date.now();
+    if (!(refMs > 0)) return;
+    const since = refMs - 28 * 24 * 60 * 60 * 1000; // 4 weeks
+    const store = readOnly ? setShareComparison : setComparison;
     getRoutineWorkoutTonnages(user.id, routineId, since, workoutId)
-      .then(prior => {
-        if (!prior.length) {
-          setComparison({ verdict: 'first', priorCount: 0 });
-          return;
-        }
-        const tonnages = prior.map(p => p.tonnage || 0).filter(t => t > 0);
-        if (!tonnages.length) {
-          setComparison({ verdict: 'first', priorCount: 0 });
-          return;
-        }
-        const avg = tonnages.reduce((a, b) => a + b, 0) / tonnages.length;
-        const current = tonnage || 0;
-        const pct = avg > 0 ? Math.round(((current - avg) / avg) * 100) : 0;
-        // Rank: position of `current` if inserted into sorted list (desc).
-        // 1 = top of the window. of = total sessions inc. current.
-        const allSorted = [...tonnages, current].sort((a, b) => b - a);
-        const position = allSorted.indexOf(current) + 1;
-        const total = allSorted.length;
-        let verdict;
-        if (position === 1) verdict = 'best';
-        else if (pct >= 10) verdict = 'up';
-        else if (pct <= -10) verdict = 'down';
-        else verdict = 'on_pace';
-        setComparison({ verdict, pct, position, total, priorCount: tonnages.length, avgTonnage: Math.round(avg) });
+      .then((rows) => {
+        const prior = readOnly ? rows.filter((r) => Number(r.startedAt) < refMs) : rows;
+        store(compareWithPriorSessions(prior, tonnage || 0));
       })
-      .catch(() => setComparison(null));
-  }, [readOnly, routineId, user?.id, workoutId, tonnage]);
+      .catch(() => store(null));
+  }, [readOnly, routineId, user?.id, workoutId, tonnage, startedAt]);
 
   // COMP-008: pull the pre-workout soreness + sleep off the workout row so the
   // engine and the weekly sleep write read the concurrent capture rather than a
@@ -935,6 +928,30 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           });
         }
         setReadOnlyExerciseData(grouped);
+
+        // The workout's own records, for its share image (historyPRs above):
+        // each exercise's sets from before this workout, the bar the logger
+        // judged against. Anything logged from this workout's first set on
+        // belongs to it or to a later workout. Best effort: a failed read
+        // means no records on the image, never a broken summary.
+        try {
+          const { getAllCompletedSetsForExercise } = await import('../lib/database');
+          const firstLogged = Math.min(...wSets.map((s) => Number(s.createdAt ?? s.created_at)).filter((n) => n > 0));
+          const cutoff = Number.isFinite(firstLogged) ? firstLogged : (Number(startedAt) || 0);
+          const priorSetsByExercise = {};
+          for (const exId of seen) {
+            // eslint-disable-next-line no-await-in-loop
+            const rows = await getAllCompletedSetsForExercise(exId, workoutId);
+            priorSetsByExercise[exId] = cutoff > 0
+              ? (rows || []).filter((r) => Number(r.createdAt ?? r.created_at) < cutoff)
+              : [];
+          }
+          setHistoryPRs(pastWorkoutPRs({
+            sets: wSets, priorSetsByExercise, exerciseById: exerciseMap, units: units === 'lbs' ? 'lbs' : 'kg', date: startedAt ?? endedAt ?? null,
+          }));
+        } catch (e) {
+          logError('WorkoutSummary.historyPRs', e);
+        }
       } catch (_e) {}
     }
   }
@@ -1124,11 +1141,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // `readOnlyExerciseData` (loaded separately, above), which is the SAME
     // shape topSetFromExerciseData expects ([{ name, loggedSets }]), so it
     // is the correct read here rather than a second data load. `detectedPRs`
-    // stays at its route-params default ([]) in readOnly, which degrades
-    // gracefully (no PR badge on a shared historical session), never a
-    // crash -- confirmed in the findings' own analysis of this path. Same
+    // stays at its route-params default ([]) in readOnly; the share takes the
+    // workout's own records worked out again (historyPRs) instead. Same
     // fallback pattern already used for the on-screen exercise list (:1369).
     const shareExerciseData = readOnly ? readOnlyExerciseData : exerciseData;
+    // A history open's own records and comparison (historyPRs,
+    // shareComparison), so a workout shared later shows what it would have
+    // shown at the finish (founder, 2026-09-27).
+    const sharePRs = readOnly ? historyPRs : detectedPRs;
+    const shareComp = readOnly ? shareComparison : comparison;
     // Top set across the whole session, heaviest non-warmup set drives the
     // "best lift" highlight on the share card.
     const topSet = topSetFromExerciseData(shareExerciseData);
@@ -1137,7 +1158,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // gives a "great workout" flavour without needing a full grading system.
     const sets = workingSetCount ?? setCount ?? 0;
     const ton = tonnage || 0;
-    const tier = intensityTier(detectedPRs.length, ton, sets);
+    const tier = intensityTier(sharePRs.length, ton, sets);
 
     // Title with the real day name (e.g. "Back + Delts (Width)") when we have
     // it, otherwise the time of day the session started ("Morning workout").
@@ -1154,30 +1175,30 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       workingSets: sets,
       exerciseCount: exerciseCount || 0,
       tonnage: ton,
-      prCount: detectedPRs.length,
+      prCount: sharePRs.length,
       topSet,
       // Every lift the athlete can choose as the image's top lift, one per
       // exercise (founder order 2026-09-26: "I want the user to be able to
       // select their Top Lift rather than it just doing one").
       liftOptions: liftOptionsFromExerciseData(shareExerciseData),
-      // The optional highlight line (founder, 2026-09-26): only how this
-      // workout compares with its last 4 weeks, never the week, the block,
-      // a workout count or a first; off unless switched on. A history open
-      // computes no comparison, so it offers none.
-      highlightOptions: readOnly ? [] : shareHighlightOptions({ comparison }),
+      // The optional highlight lines (founder, 2026-09-26 and 2026-09-27):
+      // only how this workout compares with its last 4 weeks and with the
+      // last session, never the week, the block, a workout count or a
+      // first; off unless switched on.
+      highlightOptions: shareHighlightOptions({ comparison: shareComp, units: units === 'lbs' ? 'lbs' : 'kg' }),
       intensityTier: tier,
       // R8/M5 (share-card audit 2026-07-27): the session card hard-coded 'kg'
       // for the tonnage hero/stat/top-lift line regardless of the user's
       // chosen gym unit.
       units: units === 'lbs' ? 'lbs' : 'kg',
     };
-    const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
+    const prData = sharePRs.length > 0 ? sharePRs[0] : null;
     // Pass every PR from the session so the share card can let the user choose
     // which one to feature (a session can set several); prData stays as the
     // first for back-compat.
     // `workoutId` rides along for Community entry point 7 only: ShareCard's
     // own card build never reads it (social-discovery blueprint section 1).
-    navigation.navigate('ShareCard', { sessionData, workoutId, prData, prList: detectedPRs });
+    navigation.navigate('ShareCard', { sessionData, workoutId, prData, prList: sharePRs });
   }
 
   // CO-3: destination for the quiet "See your progress" link. A PR routes

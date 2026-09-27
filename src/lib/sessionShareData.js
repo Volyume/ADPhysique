@@ -133,22 +133,66 @@ export function shareCardTitle(routineName, startedAt) {
  * bests). What is left is how this workout compares with the same workout
  * over the last 4 weeks, the two stats the founder named: "Strongest workout
  * in 4 weeks" (the summary's own headline) or "Lifted 12% more than usual"
- * (its total against the 4-week average). The comparison has one verdict, so
- * there is at most one line; a 'down', 'on pace' or first-time verdict offers
- * nothing. Everyday words for the people who see the image: no "you", no app
+ * (its total against the 4-week average). The 4-week verdict is one line at
+ * most; a 'down', 'on pace' or first-time verdict offers nothing. Then how it
+ * compares with the last time the same workout was done (founder,
+ * 2026-09-27: "the comparison to last session, ie heavier than last
+ * session"): "Lifted 1,240 kg more than last session", offered only when it
+ * is more. Everyday words for the people who see the image: no "you", no app
  * terms. Off unless the athlete switches it on.
  *
  * @param {object} facts
- * @param {{verdict:string, pct?:number, priorCount?:number}|null} [facts.comparison]
+ * @param {{verdict:string, pct?:number, priorCount?:number, moreThanLast?:number}|null} [facts.comparison]
+ * @param {'kg'|'lbs'} [facts.units]
  * @returns {Array<{key:string, text:string}>}
  */
-export function shareHighlightOptions({ comparison = null } = {}) {
+export function shareHighlightOptions({ comparison = null, units = 'kg' } = {}) {
   if (!comparison || !(comparison.priorCount > 0)) return [];
-  if (comparison.verdict === 'best') return [{ key: 'best_4_weeks', text: 'Strongest workout in 4 weeks' }];
-  if (comparison.verdict === 'up' && Number.isFinite(comparison.pct) && comparison.pct > 0) {
-    return [{ key: 'more_than_usual', text: `Lifted ${comparison.pct}% more than usual` }];
+  const out = [];
+  if (comparison.verdict === 'best') {
+    out.push({ key: 'best_4_weeks', text: 'Strongest workout in 4 weeks' });
+  } else if (comparison.verdict === 'up' && Number.isFinite(comparison.pct) && comparison.pct > 0) {
+    out.push({ key: 'more_than_usual', text: `Lifted ${comparison.pct}% more than usual` });
   }
-  return [];
+  const more = Math.round(Number(comparison.moreThanLast));
+  if (Number.isFinite(more) && more > 0) {
+    // A no-break space keeps the number and its unit on one line.
+    out.push({ key: 'more_than_last', text: `Lifted ${more.toLocaleString('en-GB')}\u00A0${units === 'lbs' ? 'lbs' : 'kg'} more than last session` });
+  }
+  return out;
+}
+
+/**
+ * How a workout's total lifted compares with the same workout over the 4
+ * weeks before it (the workout summary's verdict), and with the last of
+ * those sessions. `prior` is those sessions, newest first, each with its
+ * `tonnage`; sessions with no total are left out, as they always were.
+ *
+ * @param {Array<{tonnage?:number}>} prior
+ * @param {number} current  this workout's total lifted
+ * @returns {{verdict:string, priorCount:number, pct?:number, position?:number, total?:number, avgTonnage?:number, moreThanLast?:number}}
+ */
+export function compareWithPriorSessions(prior, current) {
+  const tonnages = (Array.isArray(prior) ? prior : []).map((p) => (p && p.tonnage) || 0).filter((t) => t > 0);
+  if (!tonnages.length) return { verdict: 'first', priorCount: 0 };
+  const avg = tonnages.reduce((a, b) => a + b, 0) / tonnages.length;
+  const cur = current || 0;
+  const pct = avg > 0 ? Math.round(((cur - avg) / avg) * 100) : 0;
+  // Rank: position of `cur` if inserted into the sorted list (desc).
+  // 1 = top of the window. total = sessions including this one.
+  const allSorted = [...tonnages, cur].sort((a, b) => b - a);
+  const position = allSorted.indexOf(cur) + 1;
+  const total = allSorted.length;
+  let verdict;
+  if (position === 1) verdict = 'best';
+  else if (pct >= 10) verdict = 'up';
+  else if (pct <= -10) verdict = 'down';
+  else verdict = 'on_pace';
+  return {
+    verdict, pct, position, total, priorCount: tonnages.length, avgTonnage: Math.round(avg),
+    // The last session: the newest of them.
+    moreThanLast: Math.round(cur - tonnages[0]),
+  };
 }
 
 /**

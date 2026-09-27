@@ -104,8 +104,11 @@ describe('the workout summary hand-off', () => {
     expect(share).toContain('date: startedAt ?? endedAt ?? null,');
   });
 
-  test('it hands over the optional highlight, only the workout comparison, and none from a history open', () => {
-    expect(share).toMatch(/highlightOptions: readOnly \? \[\] : shareHighlightOptions\(\{ comparison \}\),/);
+  // Founder, 2026-09-27: a workout shared from history now offers its
+  // comparison too, worked out against the sessions before it.
+  test('it hands over the optional highlights, only the workout comparisons, from a history open too', () => {
+    expect(share).toMatch(/highlightOptions: shareHighlightOptions\(\{ comparison: shareComp, units: units === 'lbs' \? 'lbs' : 'kg' \}\),/);
+    expect(share).not.toMatch(/highlightOptions: readOnly \? \[\]/);
     // Founder, 2026-09-26: nothing about the training block, the week or a
     // workout count on a single workout's image.
     expect(share).not.toMatch(/mesoWeek/);
