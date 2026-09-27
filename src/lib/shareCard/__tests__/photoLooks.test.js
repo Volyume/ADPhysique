@@ -9,6 +9,7 @@
  */
 import {
   PHOTO_LOOKS, DEFAULT_LOOK_STRENGTH, lookByKey, lookMatrix, lookVignette, lookPaint, clampStrength,
+  startStrengthFor,
 } from '../photoLooks';
 
 const IDENTITY = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
@@ -60,6 +61,23 @@ describe('strength', () => {
     expect(clampStrength('x')).toBe(0.8);
     expect(clampStrength(-1)).toBe(0);
     expect(clampStrength(3)).toBe(1);
+  });
+
+  // Founder, 2026-09-27: "Ok what about a B&w one?" A black and white look
+  // is fully black and white the moment it is chosen; the rest start at 80%.
+  test('the black and white looks start at full strength, the rest at 80%', () => {
+    expect(startStrengthFor('iron')).toBe(1);
+    expect(startStrengthFor('chalk')).toBe(1);
+    PHOTO_LOOKS.filter((l) => !/black and white/i.test(l.description)).forEach((l) => {
+      expect(startStrengthFor(l.key)).toBe(0.8);
+    });
+    // At its start strength a black and white look is the whole look, with
+    // none of the photo's colour left in it.
+    ['iron', 'chalk'].forEach((key) => {
+      lookMatrix(key, startStrengthFor(key)).forEach((v, i) => {
+        expect(v).toBeCloseTo(lookByKey(key).matrix[i], 10);
+      });
+    });
   });
 
   test('an unknown look is None', () => {

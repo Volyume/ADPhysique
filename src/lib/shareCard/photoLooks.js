@@ -17,7 +17,10 @@
  * colour matrix can only remap colour, never change a body's shape, and
  * nothing here smooths skin. No name judges a body.
  *
- * Strength runs from 0 to 1 (default 0.8). Every look is one colour matrix, so
+ * Strength runs from 0 to 1: 0.8 to start with, except the two black and white
+ * looks, which start at 1 so they are fully black and white from the first
+ * tap (founder, 2026-09-27: "Ok what about a B&w one?"; at 0.8 a mono look
+ * still shows a fifth of the colour). Every look is one colour matrix, so
  * a look at strength t is exactly the identity matrix moved t of the way to the
  * full look, and its vignette is t of the full vignette. The translation column
  * (indices 4, 9, 14, 19) is in 0..1, verified in CanvasKit and in the React
@@ -37,6 +40,7 @@ export const PHOTO_LOOKS = [
     description: 'Black and white with strong contrast',
     matrix: [0.2599, 0.8723, 0.0878, 0, -0.06, 0.2599, 0.8723, 0.0878, 0, -0.06, 0.2599, 0.8723, 0.0878, 0, -0.06, 0, 0, 0, 1, 0],
     vignette: 0.22,
+    startStrength: 1,
   },
   {
     key: 'chalk',
@@ -44,6 +48,7 @@ export const PHOTO_LOOKS = [
     description: 'Soft, warm black and white',
     matrix: [0.281, 0.7259, 0.0731, 0, -0.005, 0.2162, 0.7907, 0.0731, 0, -0.022, 0.2162, 0.7259, 0.1379, 0, -0.05, 0, 0, 0, 1, 0],
     vignette: 0.14,
+    startStrength: 1,
   },
   {
     key: 'stage',
@@ -86,6 +91,12 @@ const BY_KEY = Object.fromEntries(PHOTO_LOOKS.map((l) => [l.key, l]));
 
 export function lookByKey(key) {
   return BY_KEY[key] || BY_KEY.none;
+}
+
+/** The strength a look starts at when it is chosen. */
+export function startStrengthFor(key) {
+  const look = lookByKey(key);
+  return look.startStrength != null ? look.startStrength : DEFAULT_LOOK_STRENGTH;
 }
 
 // 0 to 1; anything else (missing, not a number) is the default.
