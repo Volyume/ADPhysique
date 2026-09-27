@@ -147,6 +147,17 @@ async function main() {
       { exerciseName: 'Dumbbell Lateral Raise', weight: 14, reps: 15 },
     ],
   };
+  // Long exercise names (founder, 2026-09-27: "longer exercises don't fit
+  // in"): each steps down before it wraps.
+  const sessionLongLifts = {
+    ...session,
+    topSet: null,
+    topLifts: [
+      { exerciseName: 'Plate-Loaded High Row', weight: 140, reps: 12 },
+      { exerciseName: 'Chest-Supported T-Bar Row', weight: 120, reps: 8 },
+      { exerciseName: 'Single-Arm Cable Lateral Raise (Behind Back)', weight: 12.5, reps: 15 },
+    ],
+  };
   // The optional extras (founder, 2026-09-26): a quote with its source, the
   // athlete's own caption, and highlight lines the app already showed them.
   const sessionExtras = {
@@ -203,7 +214,7 @@ async function main() {
   // Campaign 30 (ELITE-SHARE-SPEC pillar 3/#4): every non-beforeAfter card
   // type now renders all THREE aspect presets, not just square/story --
   // portrait 4:5 was previously only wired for beforeAfter.
-  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['sessionLifts', sessionLifts], ['sessionExtras', sessionExtras], ['sessionCaption', sessionCaption], ['sessionLongQuote', sessionLongQuote], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
+  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['sessionLifts', sessionLifts], ['sessionLongLifts', sessionLongLifts], ['sessionExtras', sessionExtras], ['sessionCaption', sessionCaption], ['sessionLongQuote', sessionLongQuote], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, aspect: 'square' }, 1080, `card_${n}_square`);
     render({ ...p, aspect: 'portrait' }, 1080, `card_${n}_portrait`);
     render({ ...p, aspect: 'story' }, 1080, `card_${n}_story`);

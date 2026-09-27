@@ -908,9 +908,17 @@ function drawLiftRow(cv, Skia, x, w, y, label, marker, name, value, ovSize, name
   const valFont = font(valSize, 'display');
   const nameFont = font(nameSize, 'semibold');
   const nameMax = w - measure(valFont, value) - Math.round(32 * s);
-  if (measure(nameFont, name) <= nameMax) {
+  // A longer name steps down, to four fifths of its size at most, to stay on
+  // one line beside its weight (founder, 2026-09-27: "longer exercises don't
+  // fit in"); only a name that still does not fit wraps.
+  const minNamePx = Math.round(nameSize * 0.8);
+  let lineFont = nameFont;
+  for (let px = nameSize - 1; measure(lineFont, name) > nameMax && px >= minNamePx; px -= 1) {
+    lineFont = font(px, 'semibold');
+  }
+  if (measure(lineFont, name) <= nameMax) {
     const baseline = by + Math.round(valSize * 0.76 * s);
-    text(cv, Skia, name, x, baseline, nameFont, PALETTE.text, 'left');
+    text(cv, Skia, name, x, baseline, lineFont, PALETTE.text, 'left');
     text(cv, Skia, value, x + w, baseline, valFont, PALETTE.text, 'right');
     return baseline + Math.round(valSize * 0.26 * s);
   }
@@ -1017,13 +1025,15 @@ function drawHighlights(cv, Skia, x, w, y, lines, size, s, font) {
 // The workout name and the hero number were stepped down on 2026-09-26
 // (founder: "the weight lifted is too large aka as is the workout name. Make
 // them a bit more fitting and elegant in size"): the name about a fifth, the
-// hero about three tenths, so the hero is still the one amber number.
+// hero about three tenths, so the hero is still the one amber number. The
+// top lifts were stepped down about a sixth on 2026-09-27 (founder: "can we
+// make the top lifts smaller text longer exercises don't fit in").
 function cardSizes(fmt, photo) {
   const base = fmt === 'square'
-    ? { overline: 22, title: 50, quote: 28, hero: 108, heroCap: 30, statVal: 52, statCap: 25, liftName: 34, liftVal: 38, gap: 30, headGap: 40 }
+    ? { overline: 22, title: 50, quote: 28, hero: 108, heroCap: 30, statVal: 52, statCap: 25, liftName: 29, liftVal: 32, gap: 30, headGap: 40 }
     : fmt === 'portrait'
-      ? { overline: 24, title: 58, quote: 32, hero: 138, heroCap: 32, statVal: 60, statCap: 27, liftName: 38, liftVal: 42, gap: 38, headGap: 60 }
-      : { overline: 26, title: 64, quote: 34, hero: 160, heroCap: 34, statVal: 64, statCap: 28, liftName: 40, liftVal: 46, gap: 44, headGap: 76 };
+      ? { overline: 24, title: 58, quote: 32, hero: 138, heroCap: 32, statVal: 60, statCap: 27, liftName: 32, liftVal: 36, gap: 38, headGap: 60 }
+      : { overline: 26, title: 64, quote: 34, hero: 160, heroCap: 34, statVal: 64, statCap: 28, liftName: 34, liftVal: 39, gap: 44, headGap: 76 };
   if (!photo) return base;
   return {
     ...base,

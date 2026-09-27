@@ -178,14 +178,32 @@ describe('the top lift', () => {
     expect(strings).not.toContain('Lat Pulldown…');
   });
 
-  test('a name too long to sit beside the set takes its own line, uncut', () => {
+  // Founder, 2026-09-27: "can we make the top lifts smaller text longer
+  // exercises don't fit in". A long name steps down (to four fifths of its
+  // size at most) and stays on one line beside its set; only a name too long
+  // even then takes its own line, never cut.
+  test('a long name steps down and stays on one line beside its set', () => {
     const name = 'Single Arm Chest-Supported Dumbbell Row';
-    const { texts } = record(SESSION({ topSet: { weight: 40, reps: 10, exerciseName: name } }));
-    const nameAt = texts.find((t) => t.str === name);
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const { texts } = record(SESSION({ aspect, topSet: { weight: 40, reps: 10, exerciseName: name } }));
+      const nameAt = texts.find((t) => t.str === name);
+      const setAt = texts.find((t) => /40\skg × 10/.test(t.str));
+      expect(nameAt).toBeTruthy();
+      expect(setAt).toBeTruthy();
+      expect(setAt.y).toBe(nameAt.y);
+    }
+  });
+
+  test('a name too long to sit beside the set even stepped down takes its own line, uncut', () => {
+    const name = 'Single Arm Chest-Supported Incline Dumbbell Row with a Pause at the Top';
+    const { texts, strings } = record(SESSION({ topSet: { weight: 40, reps: 10, exerciseName: name } }));
     const setAt = texts.find((t) => /40\skg × 10/.test(t.str));
-    expect(nameAt).toBeTruthy();
     expect(setAt).toBeTruthy();
-    expect(setAt.y).toBeGreaterThan(nameAt.y);
+    // Wrapped over two lines, every word still there.
+    const nameLines = texts.filter((t) => name.includes(t.str) && t.str.length > 3);
+    expect(nameLines.map((t) => t.str).join(' ')).toBe(name);
+    nameLines.forEach((t) => { expect(setAt.y).toBeGreaterThan(t.y); });
+    expect(strings.some((t) => /\u2026/.test(t))).toBe(false);
   });
 
   test('nothing is drawn over the footer on any format', () => {
@@ -401,7 +419,7 @@ describe('top lifts', () => {
     { exerciseName: 'Seated Cable Row', weight: 75, reps: 10 },
     { exerciseName: 'Dumbbell Lateral Raise', weight: 14, reps: 15 },
   ];
-  const MANY = Array.from({ length: 12 }, (_, i) => ({ exerciseName: `Lift ${i + 1}`, weight: 50 + i, reps: 8 }));
+  const MANY = Array.from({ length: 30 }, (_, i) => ({ exerciseName: `Lift ${i + 1}`, weight: 50 + i, reps: 8 }));
   const PHOTO = { width: () => 1000, height: () => 1500 };
   const fit = (params, lifts, bgPhoto = null) => sessionLiftsThatFit({
     Skia: makeStubSkia(), params, typefaces: { regular: {}, bold: {} }, wordmark: null, bgPhoto, lifts,
