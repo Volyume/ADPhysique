@@ -35,9 +35,23 @@
  * of the photo stays clear, and the photo is framed where the athlete moved
  * and zoomed it (`photoCrop`), never only a centre crop.
  *
- * The module stays pure and import-free (no ESM imports) so it keeps running
- * unmodified under both Jest and the manual eval-based render harness.
+ * PHOTO LOOKS AND THEME (founder order 2026-09-27: "a tint or filter to the
+ * images ... Almost like Instagram filters", "different share themes (light
+ * and dark)"). params.photoLook/photoLookStrength pick one of photoLooks.js's
+ * looks, applied to the athlete's photo alone via its lookPaint helper, with
+ * a matching vignette drawn inside the outline and a scrim that answers to
+ * the FILTERED photo, not the untouched one. params.theme picks 'dark' (the
+ * default, unchanged) or 'light', which swaps the text palette, the ground,
+ * the outline colour and the wordmark asset -- never the photo look's own
+ * colours, and never the sticker, which stays dark regardless of theme.
+ *
+ * The module has one internal import, from the sibling photoLooks module
+ * (the looks' colour matrices and vignette maths); otherwise it stays free of
+ * imports so it keeps running unmodified under Jest. The manual eval-based
+ * render harness (scripts/render-share-card.cjs) loads photoLooks.js the same
+ * way it loads this file and supplies its exports in place of the import.
  */
+import { clampStrength, lookVignette, lookPaint, lookMatrix } from './photoLooks';
 
 // react-native-skia PaintStyle / TileMode are plain numeric enums; hardcoded
 // here so the module needs no RN-only imports (keeps it Node-runnable).
@@ -50,7 +64,7 @@ const CLAMP = 0;
 // hex rule); every value tracks src/styles/theme.js: the near-black background,
 // the surface ladder, amber for the one key number, and textPrimary/secondary/
 // muted for everything else.
-const PALETTE = {
+export const DARK_PALETTE = {
   bg0: '#0D0D0D', bg1: '#141413', bg2: '#191917',
   surface: '#222220', surface2: '#2A2A27',
   // `border` tracks theme.js `border` (#6E6E6E), chosen for 3:1 WCAG 1.4.11.
@@ -65,10 +79,51 @@ const PALETTE = {
   text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9C9C9C',
 };
 
+// The light share theme (founder, 2026-09-27: "different share themes (light
+// and dark)"), mapped from src/styles/theme.js lightColors: the warm
+// near-white background, near-black text, the light theme's own secondary
+// text token, dark ink at a low alpha for dividers/rules (DARK's white-at-
+// low-alpha twin) and the light chart amber for the one amber TEXT role (the
+// hero numeral, its unit, "NEW PR"), which clears 4.8:1 on this ground. The
+// outline's amber is a separate, theme-only choice (see outlineColour) and is
+// deliberately NOT this value.
+export const LIGHT_PALETTE = {
+  bg0: '#FAFAF7', bg1: '#F6F6F1', bg2: '#EFEFEA',
+  surface: '#FFFFFF', surface2: '#E7E7E1',
+  border: '#8F8F8B', divider: 'rgba(0,0,0,0.08)',
+  rule: 'rgba(0,0,0,0.14)',
+  accent: '#B45309',
+  text: '#1A1A18', textSecondary: '#555553', textMuted: '#5C5C5A',
+};
+
+// The active TEXT palette, chosen per render at the top of drawShareCard:
+// light theme with no photo draws LIGHT_PALETTE; every other combination
+// (dark theme, or any theme over a photo, where the text stays light on the
+// dark scrim) draws DARK_PALETTE. drawSticker never reads this binding -- the
+// sticker stays dark regardless of theme.
+let PALETTE = DARK_PALETTE;
+
 // The card's ground, shown wherever a zoomed-out photo leaves the canvas
 // uncovered. Exported so the screen's positioning view paints the same
-// colour behind the photo it moves.
-export const CARD_GROUND = PALETTE.bg0;
+// colour behind the photo it moves. A fixed, module-init-time value (never
+// the mutable PALETTE above) -- always the dark ground; the light theme's
+// own ground is groundColour() below, for this file's own drawing.
+export const CARD_GROUND = DARK_PALETTE.bg0;
+
+// The ground and the outline follow the THEME alone, never the text palette
+// above: a light card keeps its light ground and its bright amber outline
+// even where a photo pushes the text to the dark palette.
+function groundColour() {
+  return THEME === 'light' ? LIGHT_PALETTE.bg0 : DARK_PALETTE.bg0;
+}
+// theme.js lightColors.primaryFill: the bright brand amber the app uses as a
+// fill on light. Coincides with DARK_PALETTE.accent's value today, but is
+// pinned here as its own constant rather than derived from it, since the two
+// are chosen for different reasons (today's dark accent vs. the light fill).
+const LIGHT_OUTLINE = '#F5A623';
+function outlineColour() {
+  return THEME === 'light' ? LIGHT_OUTLINE : DARK_PALETTE.accent;
+}
 
 // Central number+unit join (P-15, ux-copy-polish audit 2026-07-12 / format.js).
 // This file is deliberately import-free (see header), so `format.js`'s single
@@ -105,6 +160,14 @@ export const MAX_PHOTO_ZOOM = 4;
 let BG = null;
 let BG_CROP = null;
 let OMIT_PHOTO = false;
+
+// The chosen photo look and its strength (photoLooks.js), and the share
+// theme ('dark' or 'light') with the dark-lettered wordmark for a light
+// card. Set per render, the same way, at the top of drawShareCard.
+let PHOTO_LOOK = 'none';
+let PHOTO_LOOK_STRENGTH = clampStrength(undefined);
+let THEME = 'dark';
+let WORDMARK_DARK = null;
 
 function hasPhoto() {
   return !!(BG && BG.width && BG.height && BG.width() && BG.height());
@@ -330,11 +393,15 @@ export function photoCropFromRect(iw, ih, W, H, rect) {
 
 // Draw an image on W x H, framed by `crop` (see photoCoverRect). Where a
 // zoomed-out photo leaves the canvas uncovered, the caller's ground shows.
-function drawImageCover(canvas, Skia, img, W, H, crop) {
+function drawImageCover(canvas, Skia, img, W, H, crop, paint = null) {
   const iw = img.width(); const ih = img.height();
   if (!iw || !ih) return;
   const r = photoCoverRect(iw, ih, W, H, crop);
-  const p = Skia.Paint(); p.setAntiAlias(true);
+  // `paint` carries the chosen photo look's colour filter (photoLooks.js
+  // lookPaint); every other caller (the tone sampler) leaves it null and
+  // gets the same plain, antialiased paint as before.
+  let p = paint;
+  if (!p) { p = Skia.Paint(); p.setAntiAlias(true); }
   canvas.drawImageRect(img, Skia.XYWHRect(0, 0, iw, ih), Skia.XYWHRect(r.x, r.y, r.w, r.h), p);
 }
 
@@ -355,7 +422,8 @@ function sampleAverageTone(Skia, img, W, H, crop) {
     const surf = Skia.Surface.MakeOffscreen(NW, NH);
     if (!surf) return null;
     // The ground first, as on the card, so a zoomed-out photo is sampled
-    // with the dark around it rather than with transparent pixels.
+    // with the same ground colour around it rather than with transparent
+    // pixels.
     fillRect(surf.getCanvas(), Skia, 0, 0, NW, NH, PALETTE.bg0);
     drawImageCover(surf.getCanvas(), Skia, img, NW, NH, crop);
     surf.flush();
@@ -387,6 +455,34 @@ function sampleAverageTone(Skia, img, W, H, crop) {
   } catch (_e) {
     return null; // never let a sampling failure break the export
   }
+}
+
+// Colour-matrix maths, mirrored from photoLooks.js's own convention: the
+// look's matrix is affine on unpremultiplied 0..1 RGBA with alpha untouched
+// (its last row is always [0,0,0,1,0]), so it commutes with averaging -- the
+// average of the FILTERED pixels is, up to the 0..1 clamp, the matrix applied
+// to the average of the source pixels. Applied here to the sampled tone
+// (sampleAverageTone itself is never touched) so the scrim answers to what
+// the look actually draws: a look that brightens the photo (Gold, Pump,
+// Stage) must not get a scrim sized for a darker photo. None, or strength 0,
+// returns `tone` UNCHANGED (the same reference), so the no-look path stays
+// byte-identical to before.
+export function applyLookToTone(tone, look, strength) {
+  const m = lookMatrix(look, strength);
+  if (!m || !tone) return tone;
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const r0 = tone.r / 255; const g0 = tone.g / 255; const b0 = tone.b / 255;
+  const r = clamp01(m[0] * r0 + m[1] * g0 + m[2] * b0 + m[3] + m[4]);
+  const g = clamp01(m[5] * r0 + m[6] * g0 + m[7] * b0 + m[8] + m[9]);
+  const b = clamp01(m[10] * r0 + m[11] * g0 + m[12] * b0 + m[13] + m[14]);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) * 255;
+  // No separate top-band colour is sampled, only its luminance: scaled by
+  // the same before/after ratio as the whole-photo average, so a brightening
+  // look still lifts the top band's judged brightness and a darkening one
+  // still lowers it.
+  const ratio = tone.luminance > 0 ? luminance / tone.luminance : 1;
+  const topLuminance = tone.topLuminance != null ? clamp01((tone.topLuminance * ratio) / 255) * 255 : tone.topLuminance;
+  return { r: r * 255, g: g * 255, b: b * 255, luminance, topLuminance };
 }
 
 // A UI-safe minimum: above this sampled luminance, a tone-tinted scrim alone
@@ -430,12 +526,36 @@ function drawPhotoScrim(canvas, Skia, W, H, tone, bands) {
   canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
 }
 
+// The chosen look's vignette (photoLooks.js lookVignette): a radial gradient
+// centred on the outline rectangle, fully transparent over the middle and
+// reaching black at alpha = the vignette value by the rectangle's corners.
+// Drawn inside drawBackground's OWN outline clip (already active when this
+// is called), the same shader pattern drawPhotoScrim uses above: colour
+// stops over the full W x H rect, left to the active clip to keep it inside
+// the outline. No frame (a legacy caller with no outline) skips it.
+function drawVignette(canvas, Skia, W, H, frame, look, strength) {
+  if (!frame) return;
+  const v = lookVignette(look, strength);
+  if (v <= 0) return;
+  const cx = frame.x + frame.w / 2;
+  const cy = frame.y + frame.h / 2;
+  const radius = Math.sqrt((frame.w / 2) ** 2 + (frame.h / 2) ** 2);
+  if (!(radius > 0)) return;
+  const shader = Skia.Shader.MakeRadialGradient(
+    { x: cx, y: cy }, radius,
+    [Skia.Color('rgba(0,0,0,0)'), Skia.Color('rgba(0,0,0,0)'), Skia.Color(rgba('#000000', v))],
+    [0, 0.5, 1], CLAMP,
+  );
+  const p = Skia.Paint(); p.setShader(shader);
+  canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+}
+
 // The ground when there is no photo: the app's own background, flat. The
 // per-type gradients, corner glows, rings and ticks of the previous design
 // are gone with the restyle (theme.js materials policy: no glow, gradient orb
 // or bloom outside the one sanctioned surface).
 function drawCraftedBackground(canvas, Skia, W, H) {
-  fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
+  fillRect(canvas, Skia, 0, 0, W, H, groundColour());
 }
 
 // Skia ClipOp, as numbers like FILL and STROKE above. On device JsiSkCanvas
@@ -472,10 +592,23 @@ function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
         if (!OMIT_PHOTO) {
           // The ground under the photo: seen only where a zoomed-out photo
           // leaves the canvas uncovered.
+          // Under the photo, inside the outline: the text palette's own
+          // ground (always the dark one with a photo), so a zoomed-out photo
+          // never leaves a light gap under light text on the light theme.
           fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
-          drawImageCover(canvas, Skia, BG, W, H, BG_CROP);
+          drawImageCover(canvas, Skia, BG, W, H, BG_CROP, lookPaint(Skia, PHOTO_LOOK, PHOTO_LOOK_STRENGTH));
         }
-        drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG, W, H, BG_CROP), bands);
+        // The look's vignette, drawn over the photo whether it is drawn
+        // here or (OMIT_PHOTO) shown underneath by the screen's own
+        // positioning view: either way this render owns the darkening at
+        // the outline's corners, so it must still be drawn.
+        drawVignette(canvas, Skia, W, H, frame, PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
+        // The scrim answers to what the look actually draws, not the
+        // untouched photo (a look that brightens must not get a scrim sized
+        // for a darker photo): the sampled tone is carried through the SAME
+        // colour matrix before the scrim uses it.
+        const tone = applyLookToTone(sampleAverageTone(Skia, BG, W, H, BG_CROP), PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
+        drawPhotoScrim(canvas, Skia, W, H, tone, bands);
       } finally {
         if (clip) canvas.restore();
       }
@@ -580,15 +713,19 @@ function bandFrame(W, H, isSquare, pad) {
 
 function drawOutline(canvas, Skia, frame, s) {
   const lw = Math.max(2, Math.round(FRAME_STROKE * s));
-  strokeRRect(canvas, Skia, frame.x, frame.y, frame.w, frame.h, Math.round(FRAME_RADIUS * s), PALETTE.accent, lw);
+  strokeRRect(canvas, Skia, frame.x, frame.y, frame.w, frame.h, Math.round(FRAME_RADIUS * s), outlineColour(), lw);
 }
 
 // `fy` is the footer's hairline: the card's layout places it (composeCard,
 // or the band's foot on the cards that fill the band).
 function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark, fy) {
+  // A light card with no photo draws the dark-lettered mark (readable on the
+  // light ground); every other combination keeps the ordinary light-on-dark
+  // mark exactly as before.
+  const mark = (PALETTE === LIGHT_PALETTE && WORDMARK_DARK) ? WORDMARK_DARK : wordmark;
   const footerH = footerHeight(isSquare, s);
   fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
-  const { markW, markH, hasMark } = markSize(W, isSquare, s, wordmark);
+  const { markW, markH, hasMark } = markSize(W, isSquare, s, mark);
   // No fake wordmark. This used to draw the plain system-font word "Volyume"
   // when the asset was missing, which shipped an off-brand card that LOOKED
   // deliberate -- the reported "some don't have the logo". The screen refuses
@@ -608,8 +745,8 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark, fy) {
   if (hasMark) {
     const p = Skia.Paint(); p.setAntiAlias(true);
     canvas.drawImageRect(
-      wordmark,
-      Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()),
+      mark,
+      Skia.XYWHRect(0, 0, mark.width(), mark.height()),
       Skia.XYWHRect(pad, lineY - markH / 2, markW, markH),
       p,
     );
@@ -1356,10 +1493,13 @@ export function cardHeight(width, isSquare, aspect) {
  * @param canvas    SkCanvas (from an offscreen Surface or an on-screen Canvas)
  * @param deps.Skia the react-native-skia Skia API (or JsiSkApi(CanvasKit) in Node)
  * @param deps.width pixel width (export 1080, preview smaller)
- * @param deps.params buildParams() output (cardType, isSquare, toggles, data)
+ * @param deps.params buildParams() output (cardType, isSquare, toggles, data,
+ *   plus the optional photoLook/photoLookStrength and theme)
  * @param deps.typefaces { regular, bold } SkTypeface, plus optionally
  *   { medium, semibold, display, displayHeavy } (the app's Inter faces)
  * @param deps.wordmark SkImage logo, or null
+ * @param deps.wordmarkDark SkImage dark-lettered logo for a light card with
+ *   no photo, or null (falls back to deps.wordmark)
  * @param deps.bgPhoto SkImage for the card background, or null
  * @param deps.photoCrop the athlete's framing of bgPhoto ({ zoom, cx, cy },
  *   see photoCoverRect), or null for the centre crop
@@ -1369,11 +1509,23 @@ export function cardHeight(width, isSquare, aspect) {
  * @param deps.photos { before, after } SkImages for the beforeAfter card, or null
  */
 export function drawShareCard(canvas, {
-  Skia, width, params, typefaces, wordmark, bgPhoto = null, photoCrop = null, omitPhoto = false, photos = null,
+  Skia, width, params, typefaces, wordmark, wordmarkDark = null, bgPhoto = null, photoCrop = null, omitPhoto = false, photos = null,
 }) {
   BG = bgPhoto || null; // optional photo background (all card types)
   BG_CROP = photoCrop || null;
   OMIT_PHOTO = !!omitPhoto;
+  // The photo look and its strength (photoLooks.js): 'none'/undefined draws
+  // exactly as before.
+  PHOTO_LOOK = params.photoLook || 'none';
+  PHOTO_LOOK_STRENGTH = clampStrength(params.photoLookStrength);
+  // The share theme and its dark-lettered wordmark. The text palette depends
+  // on BG (just set above) via hasPhoto(), so it is chosen once hasPhoto()
+  // is known: light theme with NO photo draws LIGHT_PALETTE; every other
+  // combination draws DARK_PALETTE (over a photo the text stays light on
+  // the dark scrim).
+  THEME = params.theme === 'light' ? 'light' : 'dark';
+  WORDMARK_DARK = wordmarkDark || null;
+  PALETTE = (THEME === 'light' && !hasPhoto()) ? LIGHT_PALETTE : DARK_PALETTE;
   // Every card type drives its own three aspect presets ('square' |
   // 'portrait' | 'story') via params.aspect (ELITE-SHARE-SPEC pillar 3/#4);
   // callers that pass no aspect keep the legacy isSquare boolean untouched.
@@ -1556,7 +1708,9 @@ function drawStickerMark(canvas, Skia, width, panelH, pad, s, font, wordmark) {
     );
   }
   const urlX = x0 + (hasMark ? markW + gap : 0);
-  text(canvas, Skia, urlStr, urlX, y0 + markH * 0.82, urlFont, PALETTE.textMuted, 'left');
+  // The sticker stays dark regardless of theme, so it reads DARK_PALETTE
+  // directly rather than the mutable, theme-aware PALETTE binding.
+  text(canvas, Skia, urlStr, urlX, y0 + markH * 0.82, urlFont, DARK_PALETTE.textMuted, 'left');
 }
 
 /** The sticker panel's pixel height for a given width (fixed compact ratio). */
@@ -1588,8 +1742,12 @@ export function drawSticker(canvas, {
   // transparent on both the device and CanvasKit-in-Node runtimes, and the
   // rounded panel below is the ONLY opaque content, so the sticker can sit
   // directly on the user's own photo.
-  fillRRect(canvas, Skia, 0, 0, width, H, r, rgba(PALETTE.bg0, 0.84));
-  strokeRRect(canvas, Skia, 0, 0, width, H, r, PALETTE.rule, Math.max(1, 1.5 * s));
+  // The sticker stays dark regardless of theme (it is pasted onto the
+  // athlete's own photo/story, not a card the theme picker touches), so
+  // every colour below reads DARK_PALETTE directly, never the mutable,
+  // theme-aware PALETTE binding.
+  fillRRect(canvas, Skia, 0, 0, width, H, r, rgba(DARK_PALETTE.bg0, 0.84));
+  strokeRRect(canvas, Skia, 0, 0, width, H, r, DARK_PALETTE.rule, Math.max(1, 1.5 * s));
 
   const content = stickerContentFor(params.cardType, params);
   const textX = pad;
@@ -1598,18 +1756,18 @@ export function drawSticker(canvas, {
     const labelY = Math.round(H * 0.3);
     if (content.label) {
       const lf = fitOverline(font, content.label, maxW, 17, s);
-      textTracked(canvas, Skia, lf.label, textX, labelY, lf.font, PALETTE.textSecondary, 'left', lf.tracking);
+      textTracked(canvas, Skia, lf.label, textX, labelY, lf.font, DARK_PALETTE.textSecondary, 'left', lf.tracking);
     }
     const runs = [{ t: String(content.value), ratio: 1 }, { t: content.unit || '', ratio: 0.34 }];
     let sz = 84;
     const weight = content.plain ? 'display' : 'displayHeavy';
     while (valueRunsWidth(font, runs, sz, weight) > maxW && sz > 34) sz -= 4;
     const valY = labelY + Math.round(sz * 0.9 * s);
-    drawValueRuns(canvas, Skia, textX, valY, runs, sz, weight, content.plain ? PALETTE.text : PALETTE.accent, font);
+    drawValueRuns(canvas, Skia, textX, valY, runs, sz, weight, content.plain ? DARK_PALETTE.text : DARK_PALETTE.accent, font);
     if (content.sub) {
       const subFont = font(19, 'medium');
       const subLine = wrapTextCapped(subFont, content.sub, maxW * 0.62, 1)[0];
-      text(canvas, Skia, subLine, textX, valY + Math.round(40 * s), subFont, PALETTE.textSecondary, 'left');
+      text(canvas, Skia, subLine, textX, valY + Math.round(40 * s), subFont, DARK_PALETTE.textSecondary, 'left');
     }
   }
   drawStickerMark(canvas, Skia, width, H, pad, s, font, wordmark);

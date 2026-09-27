@@ -28,19 +28,83 @@ const INTER = {
   displayHeavy: 'InterDisplay-ExtraBold.ttf',
 };
 
-function loadDrawModule() {
-  const src = fs.readFileSync(path.join(__dirname, '../src/lib/shareCard/drawShareCard.js'), 'utf8')
+// photoLooks.js has no imports of its own, so it loads the same way
+// drawShareCard.js does below: strip its `export` keywords, eval as a plain
+// script.
+function loadPhotoLooksModule() {
+  const src = fs.readFileSync(path.join(__dirname, '../src/lib/shareCard/photoLooks.js'), 'utf8')
     .replace(/export\s+(function|const|let|class)/g, '$1');
   const m = { exports: {} };
   // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight,drawSticker,stickerHeight,photoCoverRect};`)(m, m.exports);
+  new Function('module', 'exports', `${src}\nmodule.exports={PHOTO_LOOKS,DEFAULT_LOOK_STRENGTH,lookByKey,startStrengthFor,clampStrength,lookMatrix,lookVignette,lookPaint};`)(m, m.exports);
   return m.exports;
 }
 
+// drawShareCard.js now has ONE real import, from the sibling photoLooks
+// module (see its own header comment): the looks' colour matrices and
+// vignette maths. This loader strips that import line the same way it
+// strips `export` keywords, and supplies the names it imports as extra
+// Function parameters bound to the SAME photoLooks module this script uses
+// below, so the harness exercises the identical look/vignette maths the
+// device and Jest do, never a re-implementation.
+function loadDrawModule(photoLooks) {
+  const src = fs.readFileSync(path.join(__dirname, '../src/lib/shareCard/drawShareCard.js'), 'utf8')
+    .replace(/^import\s*\{[^}]*\}\s*from\s*'\.\/photoLooks';\s*$/m, '')
+    .replace(/export\s+(function|const|let|class)/g, '$1');
+  const m = { exports: {} };
+  // eslint-disable-next-line no-new-func
+  new Function(
+    'module', 'exports', 'clampStrength', 'lookVignette', 'lookPaint', 'lookMatrix',
+    `${src}\nmodule.exports={drawShareCard,cardHeight,drawSticker,stickerHeight,photoCoverRect,applyLookToTone};`,
+  )(m, m.exports, photoLooks.clampStrength, photoLooks.lookVignette, photoLooks.lookPaint, photoLooks.lookMatrix);
+  return m.exports;
+}
+
+// Tiles every listed PNG into one labelled contact sheet, for a fast visual
+// check of a batch of renders. A review aid only, never shipped.
+function composeContactSheet(Skia, typefaces, tiles, outPath) {
+  if (!tiles.length) return;
+  const TILE_W = 260;
+  const LABEL_H = 26;
+  const PAD = 12;
+  const COLS = 5;
+  const labelFont = Skia.Font(typefaces.regular, 15);
+  const loaded = tiles.map(({ path: p, label }) => {
+    const bytes = fs.readFileSync(p);
+    const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(new Uint8Array(bytes)));
+    const h = Math.round(TILE_W * (img.height() / img.width()));
+    return { img, h, label };
+  });
+  const maxH = Math.max(...loaded.map((t) => t.h));
+  const cellW = TILE_W + PAD;
+  const cellH = maxH + LABEL_H + PAD;
+  const cols = Math.min(COLS, loaded.length);
+  const rows = Math.ceil(loaded.length / cols);
+  const sheetW = cellW * cols + PAD;
+  const sheetH = cellH * rows + PAD;
+  const surf = Skia.Surface.MakeOffscreen(sheetW, sheetH);
+  const cv = surf.getCanvas();
+  const bgPaint = Skia.Paint(); bgPaint.setColor(Skia.Color('#1A1A18'));
+  cv.drawRect(Skia.XYWHRect(0, 0, sheetW, sheetH), bgPaint);
+  const textPaint = Skia.Paint(); textPaint.setAntiAlias(true); textPaint.setColor(Skia.Color('#FFFFFF'));
+  const imgPaint = Skia.Paint(); imgPaint.setAntiAlias(true);
+  loaded.forEach((t, i) => {
+    const col = i % cols; const row = Math.floor(i / cols);
+    const x = PAD + col * cellW;
+    const y = PAD + row * cellH;
+    cv.drawImageRect(t.img, Skia.XYWHRect(0, 0, t.img.width(), t.img.height()), Skia.XYWHRect(x, y, TILE_W, t.h), imgPaint);
+    cv.drawText(t.label, x, y + t.h + 18, textPaint, labelFont);
+  });
+  surf.flush();
+  fs.writeFileSync(outPath, Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
+  console.log(`Wrote contact sheet: ${outPath} (${loaded.length} tiles)`);
+}
+
 async function main() {
+  const photoLooks = loadPhotoLooksModule();
   const {
     drawShareCard, cardHeight, drawSticker, stickerHeight,
-  } = loadDrawModule();
+  } = loadDrawModule(photoLooks);
   const ckDir = path.dirname(require.resolve('canvaskit-wasm/package.json'));
   // eslint-disable-next-line global-require, import/no-dynamic-require
   const CK = await require(path.join(ckDir, 'bin/full/canvaskit.js'))({ locateFile: (f) => path.join(ckDir, 'bin/full', f) });
@@ -54,6 +118,10 @@ async function main() {
     if (fs.existsSync(p)) typefaces[role] = tf(p);
   });
   const wordmark = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(path.join(__dirname, '../assets/volyume-wordmark.png')))));
+  // The dark-lettered wordmark for a light card with no photo (drawFooter
+  // picks this over `wordmark` itself). Harmless on every other render: it
+  // is only read when the light theme's text palette is in use.
+  const wordmarkDark = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(path.join(__dirname, '../assets/volyume-wordmark-dark.png')))));
 
   // The session card carries no exercise-name line (founder order
   // 2026-09-26); `topSet` is the lift the athlete chose on the share screen.
@@ -110,7 +178,7 @@ async function main() {
   const render = (params, width, name) => {
     const H = cardHeight(width, params.isSquare, params.aspect);
     const surf = Skia.Surface.MakeOffscreen(width, H);
-    drawShareCard(surf.getCanvas(), { Skia, width, params, typefaces, wordmark });
+    drawShareCard(surf.getCanvas(), { Skia, width, params, typefaces, wordmark, wordmarkDark });
     surf.flush();
     fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
     console.log(`${name}  ${width}x${H}`);
@@ -191,7 +259,7 @@ async function main() {
     const H = cardHeight(1080, aspect !== 'story', aspect);
     const surf = Skia.Surface.MakeOffscreen(1080, H);
     drawShareCard(surf.getCanvas(), {
-      Skia, width: 1080, params: { ...params, aspect }, typefaces, wordmark, bgPhoto: image, photoCrop: crop,
+      Skia, width: 1080, params: { ...params, aspect }, typefaces, wordmark, wordmarkDark, bgPhoto: image, photoCrop: crop,
     });
     surf.flush();
     fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
@@ -231,6 +299,56 @@ async function main() {
   renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_fitted', landscape, { zoom: 0.01, cx: 0.5, cy: 0.5 });
   renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_cover', landscape);
   renderPhoto({ ...sessionExtras, aspect: 'story' }, 'gym_session_story_extras', gymPhoto, { zoom: 1.2, cx: 0.5, cy: 0.42 });
+
+  // ── Photo looks (founder, 2026-09-27: "a tint or filter ... Almost like
+  // Instagram filters") -- every look, at its default strength, on the
+  // existing gym-photo fixture, as a session story.
+  const sheetTiles = [];
+  photoLooks.PHOTO_LOOKS.forEach((look) => {
+    const name = `look_${look.key}_gym_story`;
+    renderPhoto({ ...session, aspect: 'story', photoLook: look.key, photoLookStrength: photoLooks.DEFAULT_LOOK_STRENGTH }, name, gymPhoto);
+    sheetTiles.push({ path: path.join(OUT, `${name}.png`), label: `${look.key} gym` });
+  });
+
+  // ── Legibility (lead update, 2026-09-27, relaying the founder: "make sure
+  // ... the text ... still looks good and stands out") -- a deliberately
+  // bright, near-white photo with a light warm cast, every look at its OWN
+  // start strength (photoLooks.js startStrengthFor), same session story.
+  // Paired with the pinned CanvasKit contrast test in
+  // photoLookLegibility.test.js; these are for eyeballing only.
+  const bp = Skia.Surface.MakeOffscreen(900, 1200);
+  const brightPaint = Skia.Paint(); brightPaint.setColor(Skia.Color('#F2EAD8'));
+  bp.getCanvas().drawRect(Skia.XYWHRect(0, 0, 900, 1200), brightPaint);
+  bp.flush();
+  const brightPhoto = bp.makeImageSnapshot();
+  photoLooks.PHOTO_LOOKS.forEach((look) => {
+    const name = `look_${look.key}_bright_story`;
+    const strength = photoLooks.startStrengthFor(look.key);
+    renderPhoto({ ...session, aspect: 'story', photoLook: look.key, photoLookStrength: strength }, name, brightPhoto);
+    sheetTiles.push({ path: path.join(OUT, `${name}.png`), label: `${look.key} bright ${strength}` });
+  });
+
+  // ── Light theme (founder, 2026-09-27: "different share themes (light and
+  // dark)") -- the session card in every format, the PR/milestone/weekly
+  // cards with no photo, and a session story WITH a photo.
+  ['square', 'portrait', 'story'].forEach((aspect) => {
+    const name = `light_session_${aspect}`;
+    render({ ...session, aspect, theme: 'light' }, 1080, name);
+    sheetTiles.push({ path: path.join(OUT, `${name}.png`), label: name });
+  });
+  [['pr', pr], ['milestone', milestone], ['weekly', weekly]].forEach(([n, prm]) => {
+    const name = `light_${n}_square`;
+    render({ ...prm, aspect: 'square', theme: 'light' }, 1080, name);
+    sheetTiles.push({ path: path.join(OUT, `${name}.png`), label: name });
+  });
+  {
+    const name = 'light_session_story_photo';
+    renderPhoto({ ...session, aspect: 'story', theme: 'light' }, name, gymPhoto);
+    sheetTiles.push({ path: path.join(OUT, `${name}.png`), label: name });
+  }
+
+  composeContactSheet(Skia, typefaces, sheetTiles, path.join(OUT, 'sheet.png'));
+
   console.log(`\nWrote PNGs to ${OUT}`);
 }
 
