@@ -10,8 +10,10 @@
  * (CommunityJoin.test.js pins it); this file protects the builds already
  * installed.
  *
- * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file is
- * WRITTEN, NOT APPLIED until the founder's phrase, so only source can check it.
+ * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file was
+ * written before the founder's phrase, so only source could check it; it was
+ * APPLIED 2026-09-26 18:44 UTC (apply record in the supabase/README status
+ * block), and the suite keeps pinning the source that ran.
  *   - It re-issues community_upsert_profile IN FULL from migrate_184, and a
  *     re-issue that drifts from its source silently changes behaviour nobody
  *     asked to change, so the body is diffed against 184's line by line: the
@@ -19,8 +21,8 @@
  *     the OFF fallback and its marked comment.
  *   - The audience fallback (everyone for an adult, followers for a minor),
  *     the minor refusal of everyone and the grants are untouched.
- *   - The house header, the acceptance block, and a ledger row marked
- *     pending until an apply record exists.
+ *   - The house header (recording the apply), the acceptance block, and a
+ *     ledger row marked applied, with the apply record in the status block.
  */
 
 const fs = require('fs');
@@ -61,8 +63,9 @@ describe('migrate_186: house shape', () => {
     for (const field of ['Purpose:', 'Applied locally:', 'Applied remotely:', 'Safe to re-run:', 'Rollback:', 'Transaction:', 'Depends on:']) {
       expect(HEADER).toContain(field);
     }
-    expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/Applied remotely:\s+NO/);
+    // The phrase as the founder gave it for this file: "Run all against production".
+    expect(HEADER).toContain('"Run all against production"');
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-26 18:44 UTC/);
     expect(HEADER).toContain('D212');
   });
 
@@ -120,12 +123,18 @@ describe('migrate_186: the acceptance block', () => {
   });
 });
 
-describe('migrate_186 is in the ledger as pending, never as applied', () => {
-  test('its ledger row is marked PENDING', () => {
-    const README = read('supabase/README.md');
+describe('migrate_186 is in the ledger as applied, with the apply record', () => {
+  const README = read('supabase/README.md');
+
+  test('its ledger row is marked applied', () => {
     const row = README.split('\n').find((l) => l.startsWith('| 186 | `migrate_186_community_sharing_never_on_unasked.sql` |'));
     expect(row).toBeDefined();
-    expect(row).toContain('**PENDING');
-    expect(row).not.toMatch(/\*\*APPLIED/);
+    expect(row).toContain('**APPLIED 2026-09-26 18:44 UTC**');
+    expect(row).not.toContain('**PENDING');
+  });
+
+  test('the status block records the apply and the checksum that ran', () => {
+    expect(README).toContain('- **186 APPLIED 2026-09-26 18:44:15 UTC');
+    expect(README).toContain('`3557de002033efb8add321bbe3db1267` / 20,743 bytes');
   });
 });

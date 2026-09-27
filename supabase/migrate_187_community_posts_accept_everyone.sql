@@ -32,11 +32,15 @@
 -- Applied locally:   N/A - no local SQLite table; nothing in
 --                    `src/lib/database.js` changes, `PRAGMA user_version`
 --                    is untouched.
--- Applied remotely:  NO - written 2026-09-27. Waits for the founder's exact
---                    phrase "run against production" naming this file, then
---                    Claude-run through the Supabase connector under the
---                    checksum protocol (supabase/README status block is the
---                    live record).
+-- Applied remotely:  YES - 2026-09-27 15:59 UTC (written 2026-09-27), under
+--                    the founder's exact phrase "run against production:
+--                    187" given 2026-09-27; Claude-run through the Supabase
+--                    connector under the checksum protocol: three chunks
+--                    verified, whole file md5
+--                    `1c411bfc117a7d7f3cf1f885a6300342` / 17,475 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record).
 -- Safe to re-run:    YES. CREATE OR REPLACE FUNCTION replaces the body with
 --                    the same text; the REVOKE/GRANT pair is idempotent; the
 --                    acceptance block is read-only.

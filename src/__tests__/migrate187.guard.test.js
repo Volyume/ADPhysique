@@ -8,8 +8,10 @@
  * 'groups'. The app now sends 'public'; this file protects the builds that
  * cannot be replaced now.
  *
- * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file is
- * WRITTEN, NOT APPLIED until the founder's phrase, so only source can check it.
+ * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file was
+ * written before the founder's phrase, so only source could check it; it was
+ * APPLIED 2026-09-27 15:59 UTC (apply record in the supabase/README status
+ * block), and the suite keeps pinning the source that ran.
  *   - It re-issues community_create_post IN FULL from migrate_178, and a
  *     re-issue that drifts from its source silently changes behaviour nobody
  *     asked to change, so the body is diffed against 178's line by line:
@@ -17,7 +19,8 @@
  *     and its marked comment, placed before the visibility check.
  *   - The automatic-post rule (the person's own setting, minors held to
  *     followers) and the grants are untouched.
- *   - The house header, the acceptance block, and a ledger row.
+ *   - The house header (recording the apply), the acceptance block, and a
+ *     ledger row marked applied, with the apply record in the status block.
  */
 
 const fs = require('fs');
@@ -61,6 +64,7 @@ describe('migrate_187: house shape', () => {
     expect(HEADER).toContain('run against production');
     expect(HEADER).toContain('2026-09-27');
     expect(HEADER).toContain('invalid_input');
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-27 15:59 UTC/);
   });
 
   test('outside the one function it only re-grants: no table, column or data change', () => {
@@ -117,7 +121,16 @@ describe('migrate_187: acceptance and ledger', () => {
     expect(acceptance).not.toMatch(/\b(INSERT|UPDATE|DELETE|ALTER|DROP)\b/);
   });
 
-  test('the README ledger carries a row for 187', () => {
-    expect(README).toMatch(/\| 187 \| `migrate_187_community_posts_accept_everyone\.sql` \|/);
+  test('the README ledger marks 187 applied', () => {
+    const row = README.split('\n').find((l) => l.startsWith('| 187 | `migrate_187_community_posts_accept_everyone.sql` |'));
+    expect(row).toBeDefined();
+    expect(row).toContain('**APPLIED 2026-09-27 15:59 UTC**');
+    expect(row).not.toContain('**PENDING');
+  });
+
+  test('the status block records the apply, the checksum that ran and the live body', () => {
+    expect(README).toContain('- **187 APPLIED 2026-09-27 15:59:47 UTC');
+    expect(README).toContain('`1c411bfc117a7d7f3cf1f885a6300342` / 17,475 bytes');
+    expect(README).toContain('`2f575d71774655d4675a5f4521f6e5fb` / 12,167 characters');
   });
 });
