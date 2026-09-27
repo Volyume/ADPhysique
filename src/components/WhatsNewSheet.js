@@ -74,6 +74,19 @@ export const WHATS_NEW = {
     { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
     { icon: 'share-social-outline', text: 'Share images look like the app now. Choose which lifts to show, and move or zoom your photo so it sits right.' },
   ],
+
+  // 2.5.0 (founder's word, 2026-09-27: "Bump the version also again"). The
+  // sheet shows the notes for the exact running version, and whether 2.4.0
+  // reached anyone is not known here, so its notes carry over, the promised
+  // privacy notice first; the share line adds the photo looks and the light
+  // or dark image (D213).
+  '2.5.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'battery-charging-outline', text: 'Recovery has its own place. Tap Recovery at the top of Progress to see how each muscle is recovering.' },
+    { icon: 'trending-up-outline', text: 'Recovery can now learn how quickly you recover, from how your workouts go. ‘Your recovery speed’, under Recovery by muscle, shows how far it has got.' },
+    { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
+    { icon: 'share-social-outline', text: 'Share images look like the app now. Choose which lifts to show, move and zoom your photo, give it a look such as black and white, and choose light or dark.' },
+  ],
 };
 
 export default function WhatsNewSheet() {

@@ -10055,6 +10055,13 @@ untouched. The What's New sheet shows the notes for the exact running
 version, so the 2.3.0 notes, whose first line is the privacy policy's
 promised in-app notice, carry over to 2.4.0 whole.
 
+Addendum 2 (2026-09-27): the founder, "Bump the version also again please",
+without a number; 2.5.0 is set as the next minor step, as the two bumps
+before it (2.3.0 to 2.4.0). The What's New notes carry over again, since
+the sheet shows only the running version's notes and whether 2.4.0 reached
+anyone is the founder's fact; the share line now names the photo looks and
+the light or dark image.
+
 ## D204 — The app never tells an athlete to change a session (founder rule 2026-09-26)
 
 Founder, from a TestFlight walk of Consistency, verbatim: "We don't want
