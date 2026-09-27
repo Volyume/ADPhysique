@@ -50,9 +50,14 @@ describe('the share card', () => {
     expect(SRC).not.toMatch(/new personal records?'/i);
   });
 
+  // 2026-09-27: a workout shared from history works its records out again
+  // (pastWorkoutPRs, the same one-per-lift collapse), so the share takes the
+  // summary's list on the live path and that list on a history open.
   test('the summary is the source of that number, so the two move together', () => {
-    expect(stripComments(read('screens/WorkoutSummaryScreen.js')))
-      .toMatch(/prCount: detectedPRs\.length/);
+    const summary = stripComments(read('screens/WorkoutSummaryScreen.js'));
+    expect(summary).toMatch(/prCount: sharePRs\.length/);
+    expect(summary).toMatch(/const sharePRs = readOnly \? historyPRs : detectedPRs;/);
+    expect(stripComments(read('lib/pastWorkoutPRs.js'))).toMatch(/return bestPRPerExercise\(found\);/);
   });
 });
 
