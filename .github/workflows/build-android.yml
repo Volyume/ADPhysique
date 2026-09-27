@@ -505,15 +505,29 @@ jobs:
           # hit "Cannot run afterEvaluate when the project is already evaluated"
           # because Expo/RN autolinking evaluates subprojects eagerly). -x matches
           # the unqualified task name across every module.
-          cd android && ./gradlew assembleRelease bundleRelease \
-            --no-daemon --no-configuration-cache \
-            --init-script ../scripts/android-sqlcipher-diagnostic.init.gradle \
-            -Pexpo.sqlite.useSQLCipher=true \
-            -PreactNativeArchitectures="$REACT_NATIVE_ARCHITECTURES" \
-            -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease \
-            -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
-            -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+          #
+          # The APK and the AAB are built by two Gradle runs, one after the
+          # other, not one run with both tasks. Run 3585 (2026-09-26) died
+          # at the very end with "Java heap space" in :app:packageRelease and
+          # :app:packageReleaseBundle at once: packaging both in one JVM,
+          # together, needed more than the 5 GB heap, with nothing else in
+          # the build changed since the last green run. Each run below starts
+          # a fresh JVM (--no-daemon) with the whole heap; the second finds
+          # the compiled code, native libraries and JS bundle up to date and
+          # does little more than package the AAB.
+          GRADLE_ARGS=(
+            --no-daemon --no-configuration-cache
+            --init-script ../scripts/android-sqlcipher-diagnostic.init.gradle
+            -Pexpo.sqlite.useSQLCipher=true
+            -PreactNativeArchitectures="$REACT_NATIVE_ARCHITECTURES"
+            -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+            -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"
+            -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS"
             -PVOLYUME_UPLOAD_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+          )
+          cd android
+          ./gradlew assembleRelease "${GRADLE_ARGS[@]}"
+          ./gradlew bundleRelease "${GRADLE_ARGS[@]}"
 
       # Verify the AAB is signed with the upload keystore, NOT the debug
       # keystore. Play Store rejects debug-signed bundles with a generic
