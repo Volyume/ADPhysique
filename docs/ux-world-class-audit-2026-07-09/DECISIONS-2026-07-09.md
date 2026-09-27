@@ -11027,3 +11027,44 @@ switched on; the chooser says "Highlight" when there is one.
 guard pins it), the summary hands over only that, and the tests forbid any
 week, block, count or first. Pinned in `sessionShareData.test.js` and
 `ShareCardScreen.photoAndFonts.guard.test.js`.
+
+## D213 — Share image photo looks and a light theme (founder orders 2026-09-27; lead rulings under D33)
+
+Founder, verbatim: "Can we add an option of a tint or filter to the images
+added as well with options that fit in well to enhance bodybuilding gym
+pictures and look well with our theme? And maybe different share themes
+(light and dark)? Research these. So the photos can look better without
+messing about", "Almost like Instagram filters but a select group of them
+that enhance the look ... Maybe even the option to up and down the
+filter", "label them gym like ones, muscle enhance or something (don't use
+that wording) black and white and such ones as well", "Ok what about a B&w
+one?", "we need to make sure with each the text and so on still looks good
+and stands out", "Make sure the screen continues the look and feel of the
+rest of the app".
+
+Rulings, from a Sonnet research lane tuned on a real gym photo:
+1. Seven looks and None (`src/lib/shareCard/photoLooks.js`): Iron and Chalk
+   (black and white), Stage (neutral competition-style contrast, the
+   definition look; local contrast was ruled out because the arithmetic image
+   filter is a stub on the Node renderer, so device and harness would differ),
+   Forge, Steel, Gold and Pump. Colour, tone and contrast only (one colour
+   matrix each, so nothing can change a body's shape; no skin smoothing);
+   no name judges a body.
+2. One strength slider per look, 0 to 100%; the black and white looks start at
+   100% so they are fully black and white, the rest at 80%. No separate
+   brightness or warmth sliders: the looks are those adjustments, and the
+   research found look plus strength is the primary pattern elsewhere.
+3. The look is drawn on the photo only; the scrim is worked out from the photo
+   as the look draws it, and a test pins text contrast (4.5:1 text, 3:1 hero)
+   for every look on a bright and a darker photo.
+4. Light theme as an option, Dark the default (Hevy offers the same): light
+   ground, dark text, the app's light chart amber #B45309 for the numbers, the
+   bright brand amber #F5A623 (the app's light fill) for the outline, and a
+   dark-lettered wordmark generated from the original
+   (`scripts/make-dark-wordmark.cjs`). Over a photo the text stays light on
+   the dark panel; only the ground outside the outline is light. The sticker
+   is unchanged.
+5. The screen keeps the app's patterns: the looks strip matches the template
+   strip, the strength control sits in the screen's card with the app's
+   compare-slider styling, Theme uses the segmented control, and the old
+   "Dark" background option reads "No photo".
