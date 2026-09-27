@@ -58,16 +58,24 @@ describe('moving and resizing the photo, right on the preview', () => {
 
   test('the preview, the export and the thumbnails draw the same framing', () => {
     expect(SCREEN.match(/bgPhoto, photoCrop,\n/g)).toHaveLength(2);
-    expect(SCREEN).toContain('}, [typefaces, wordmark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);');
+    // RE-ANCHORED 2026-09-27 (photo looks + share themes): the renderer now
+    // also takes `wordmarkDark` (the light-theme wordmark), so it joined this
+    // same dependency list alongside the wordmark it mirrors -- the array
+    // grew, the LAW (every real input drives a recompute) did not.
+    expect(SCREEN).toContain('}, [typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);');
   });
 
-  test('Reset appears once the photo has moved, and Dark clears the photo with its framing', () => {
+  test('Reset appears once the photo has moved, and "No photo" clears the photo with its framing', () => {
     expect(SCREEN).toMatch(/!isCentreCrop\(photoCrop\) \? \([\s\S]{0,120}onPress=\{\(\) => setPhotoCrop\(null\)\}/);
     expect(SCREEN).toContain('Drag to move your photo. Pinch to resize it.');
     const clear = SCREEN.slice(SCREEN.indexOf('const clearPhoto = useCallback('), SCREEN.indexOf('}, []);', SCREEN.indexOf('const clearPhoto = useCallback(')));
     expect(clear).toContain('setBgPhoto(null);');
     expect(clear).toContain('setPhotoCrop(null);');
-    expect(SCREEN).toMatch(/label="Dark"[\s\S]{0,80}onPress=\{clearPhoto\}/);
+    // RE-ANCHORED 2026-09-27: renamed from "Dark" now that Dark names a share
+    // THEME (the new Theme section) rather than a background choice; the
+    // control still just clears the photo, onPress={clearPhoto} unchanged.
+    expect(SCREEN).toMatch(/label="No photo"[\s\S]{0,80}onPress=\{clearPhoto\}/);
+    expect(SCREEN).not.toMatch(/label="Dark"[\s\S]{0,80}onPress=\{clearPhoto\}/);
   });
 
   test('the photo moves and resizes on the UI thread, down to where it fits, with a screen-reader route', () => {

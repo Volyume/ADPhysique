@@ -36,11 +36,15 @@ import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
 import { isCentreCrop } from '../lib/shareCard/photoFraming';
 import {
+  PHOTO_LOOKS, DEFAULT_LOOK_STRENGTH, startStrengthFor, lookPaint, clampStrength,
+} from '../lib/shareCard/photoLooks';
+import {
   SHARE_LINES, SHARE_QUOTES, MAX_CAPTION_LENGTH, cleanCaption,
 } from '../lib/shareCard/shareQuotes';
 import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import LookStrengthSlider from '../components/share/LookStrengthSlider';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -60,6 +64,10 @@ try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont 
 // the PNG to Instagram (or any target the user picks), which is what we want.
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
+// The dark-lettered mark for the light share theme (founder, 2026-09-27:
+// "different share themes (light and dark)"), loaded the same way as WORDMARK
+// below -- an ornament, never a gate (VOLYUME-2V).
+const WORDMARK_DARK = require('../../assets/volyume-wordmark-dark.png');
 // System typeface family per platform: the fallback the card draws with until
 // the app's own Inter faces have loaded (lib/shareCard/cardTypefaces.js). The
 // card measures text with the active font, so layout is correct either way.
@@ -174,6 +182,18 @@ export default function ShareCardScreen({ navigation, route }) {
   // render and final share in the most elegant way").
   const [photoCrop, setPhotoCrop] = useState(null);
   const [framerPhoto, setFramerPhoto] = useState(null);
+  // Photo look (founder, 2026-09-27: "a tint or filter to the images ...
+  // Almost like Instagram filters but a select group ... label them gym like
+  // ones"). `photoLookStrength` is the COMMITTED value the photo is actually
+  // redrawn at; `strengthDisplayPct` is the live 0-100 number the "Strength"
+  // row shows while the slider is being dragged, updated every frame with no
+  // photo re-render behind it. A new photo starts with no look (acceptPhoto).
+  const [photoLook, setPhotoLook] = useState('none');
+  const [photoLookStrength, setPhotoLookStrength] = useState(DEFAULT_LOOK_STRENGTH);
+  const [strengthDisplayPct, setStrengthDisplayPct] = useState(Math.round(DEFAULT_LOOK_STRENGTH * 100));
+  // Share theme (founder, 2026-09-27: "different share themes (light and
+  // dark)"). Dark is the card's long-standing look, so it stays the default.
+  const [shareTheme, setShareTheme] = useState('dark');
 
   // The PRs available to feature on a PR card. A caller can pass a whole
   // session's PRs (prList) so the user picks which one; otherwise it is just the
@@ -334,6 +354,18 @@ export default function ShareCardScreen({ navigation, route }) {
     })();
     return () => { cancelled = true; };
   }, []);
+  // The dark-lettered mark for the light share theme (founder, 2026-09-27),
+  // loaded the same way and just as much an ornament: a card with no dark
+  // mark still draws and still says volyume.app.
+  const [wordmarkDark, setWordmarkDark] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const img = await loadWordmarkImage(Skia, WORDMARK_DARK);
+      if (!cancelled && img) setWordmarkDark(img);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function formatLongDate(ts) {
     const d = ts ? new Date(ts) : new Date();
@@ -367,12 +399,17 @@ export default function ShareCardScreen({ navigation, route }) {
         bestLift: showBestLift ? bestLift : null,
       });
       // `date` mirrors dateFormatted so the PDF summary (which reads p.date) works.
-      return { ...recap, showDate, date: recap.dateFormatted };
+      // Photo look/strength and the share theme (founder, 2026-09-27) travel
+      // on every card type alike, so the preview, the export, the overlay and
+      // the template thumbnails can never disagree on them.
+      return {
+        ...recap, showDate, date: recap.dateFormatted, photoLook, photoLookStrength, theme: shareTheme,
+      };
     }
     if (isMilestone) {
       const m = milestoneData || {};
       return {
-        cardType: 'milestone', isSquare, showDate,
+        cardType: 'milestone', isSquare, showDate, photoLook, photoLookStrength, theme: shareTheme,
         // R11/M4 (share-card audit 2026-07-27): the extra `&& m.date` check
         // made the Date toggle dead on any milestone whose caller doesn't
         // carry its own timestamp (the streak/perfect-month/tonnage/training-
@@ -392,7 +429,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (isSession) {
       const s = sessionData || {};
       return {
-        cardType: 'session', isSquare, showVolume, showDate, showPlanName,
+        cardType: 'session', isSquare, showVolume, showDate, showPlanName, photoLook, photoLookStrength, theme: shareTheme,
         date: showDate ? formatLongDate(s.date) : '',
         planName: showPlanName ? (s.planName || '') : '',
         sessionName: s.sessionName || 'Workout complete',
@@ -417,7 +454,7 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     const p = prs[Math.min(selectedPrIndex, Math.max(0, prs.length - 1))] || prData || {};
     return {
-      cardType: 'pr', isSquare, showDate, showPRWeight, showPrevBest,
+      cardType: 'pr', isSquare, showDate, showPRWeight, showPrevBest, photoLook, photoLookStrength, theme: shareTheme,
       date: showDate ? formatLongDate(p.date) : '',
       exerciseName: p.exerciseName || 'Exercise',
       weight: p.weight || '',
@@ -426,7 +463,7 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
 
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect).
@@ -516,7 +553,7 @@ export default function ShareCardScreen({ navigation, route }) {
         drawSticker(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
       } else {
         drawShareCard(surface.getCanvas(), {
-          Skia, width, params, typefaces, wordmark, bgPhoto, photoCrop,
+          Skia, width, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop,
         });
       }
       surface.flush();
@@ -532,7 +569,7 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.renderCard', e, { cardType, format, hasPhoto: !!bgPhoto });
       return null;
     }
-  }, [typefaces, wordmark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);
+  }, [typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);
 
   // Template-strip thumbnails (pillar 5, the Hevy pattern): one LIVE render
   // per card type this moment offers, drawn by the same renderer at a small
@@ -555,7 +592,7 @@ export default function ShareCardScreen({ navigation, route }) {
         const surface = Skia.Surface.MakeOffscreen(w, cardHeight(w, true, 'square'));
         if (!surface) continue;
         drawShareCard(surface.getCanvas(), {
-          Skia, width: w, params, typefaces, wordmark, bgPhoto, photoCrop,
+          Skia, width: w, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop,
         });
         surface.flush();
         const image = surface.makeImageSnapshot();
@@ -563,7 +600,7 @@ export default function ShareCardScreen({ navigation, route }) {
       } catch (_) { /* a failed thumb falls back to the labelled tile */ }
     }
     return out;
-  }, [typefaces, wordmark, buildParamsFor, bgPhoto, photoCrop, availableTypes]);
+  }, [typefaces, wordmark, wordmarkDark, buildParamsFor, bgPhoto, photoCrop, availableTypes]);
 
   // VOLYUME-2T (founder device SIGSEGV, 2026-08-18): a modern phone's
   // gallery photo can be 50MP - decoded that is a ~200MB native bitmap,
@@ -609,18 +646,25 @@ export default function ShareCardScreen({ navigation, route }) {
   // draws, scaled down once and encoded, so the view can never show a
   // different orientation or crop from the card. Null on failure, which
   // simply leaves the photo centred with no Move option.
+  //
+  // Draws through the chosen photo look (founder, 2026-09-27): whenever a
+  // look applies, the offscreen redraw happens EVEN IF the photo needs no
+  // downscaling, because that redraw is the only place the look's colour
+  // matrix gets painted in. The returned width/height stay the ORIGINAL
+  // image's either way, so the crop maths (photoFraming.js) never changes.
   const makeFramerPhoto = useCallback((img) => {
     try {
       const w = img.width();
       const h = img.height();
       const scale = Math.min(1, FRAMER_PHOTO_EDGE / Math.max(w, h));
+      const paint = lookPaint(Skia, photoLook, photoLookStrength);
       let src = img;
-      if (scale < 1) {
-        const dw = Math.max(1, Math.round(w * scale));
-        const dh = Math.max(1, Math.round(h * scale));
+      if (scale < 1 || paint) {
+        const dw = scale < 1 ? Math.max(1, Math.round(w * scale)) : w;
+        const dh = scale < 1 ? Math.max(1, Math.round(h * scale)) : h;
         const surf = Skia.Surface.MakeOffscreen(dw, dh);
         if (surf) {
-          surf.getCanvas().drawImageRect(img, Skia.XYWHRect(0, 0, w, h), Skia.XYWHRect(0, 0, dw, dh), Skia.Paint());
+          surf.getCanvas().drawImageRect(img, Skia.XYWHRect(0, 0, w, h), Skia.XYWHRect(0, 0, dw, dh), paint || Skia.Paint());
           surf.flush();
           src = surf.makeImageSnapshot() || img;
         }
@@ -633,6 +677,30 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.framerPhoto', e);
       return null;
     }
+  }, [photoLook, photoLookStrength]);
+
+  // Choosing a look (founder, 2026-09-27) resets the strength to that look's
+  // own starting point: 100% for the two black-and-white looks (Iron, Chalk
+  // -- a mono look at the usual 80% still showed a fifth of the photo's
+  // colour), 80% for the rest (photoLooks.js startStrengthFor).
+  const chooseLook = useCallback((key) => {
+    const start = startStrengthFor(key);
+    setPhotoLook(key);
+    setPhotoLookStrength(start);
+    setStrengthDisplayPct(Math.round(start * 100));
+  }, []);
+  // The slider's live callback while dragging: cheap, display only, no photo
+  // re-render behind it.
+  const previewStrength = useCallback((pct) => {
+    setStrengthDisplayPct(Math.min(100, Math.max(0, Math.round(pct))));
+  }, []);
+  // The slider's commit callback (release, a tap, or a discrete a11y
+  // action): the one point the committed strength -- and so the photo -- is
+  // re-processed.
+  const commitStrength = useCallback((pct) => {
+    const clampedPct = Math.min(100, Math.max(0, Math.round(pct)));
+    setStrengthDisplayPct(clampedPct);
+    setPhotoLookStrength(clampStrength(clampedPct / 100));
   }, []);
 
   // A new photo, from the camera or the gallery alike, starts centred, and
@@ -643,13 +711,58 @@ export default function ShareCardScreen({ navigation, route }) {
     setBgPhoto(bounded);
     setPhotoCrop(null);
     setFramerPhoto(makeFramerPhoto(bounded));
-  }, [boundPhotoForCanvas, makeFramerPhoto]);
+    chooseLook('none');
+  }, [boundPhotoForCanvas, makeFramerPhoto, chooseLook]);
 
   const clearPhoto = useCallback(() => {
     setBgPhoto(null);
     setPhotoCrop(null);
     setFramerPhoto(null);
   }, []);
+
+  // Recompute the live framer photo when the look or its committed strength
+  // changes on an EXISTING photo (a fresh photo is handled by acceptPhoto
+  // itself, above, which already has the bounded image to hand).
+  useEffect(() => {
+    if (!bgPhoto) return;
+    setFramerPhoto(makeFramerPhoto(bgPhoto));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoLook, photoLookStrength]);
+
+  // The look strip's thumbnails: one small offscreen render per look, at
+  // that look's own starting strength (None = the plain photo), made once
+  // per photo and reused while it stays selected. Best effort throughout --
+  // a failed thumbnail simply falls back to the look's name (below), never a
+  // crash.
+  const LOOK_THUMB_SIZE = 144;
+  const lookThumbs = useMemo(() => {
+    if (!Skia || !bgPhoto) return {};
+    const out = {};
+    try {
+      const w = bgPhoto.width();
+      const h = bgPhoto.height();
+      const side = Math.min(w, h);
+      const sx = (w - side) / 2;
+      const sy = (h - side) / 2;
+      for (const look of PHOTO_LOOKS) {
+        try {
+          const surface = Skia.Surface.MakeOffscreen(LOOK_THUMB_SIZE, LOOK_THUMB_SIZE);
+          if (!surface) continue;
+          const paint = lookPaint(Skia, look.key, startStrengthFor(look.key)) || Skia.Paint();
+          surface.getCanvas().drawImageRect(
+            bgPhoto,
+            Skia.XYWHRect(sx, sy, side, side),
+            Skia.XYWHRect(0, 0, LOOK_THUMB_SIZE, LOOK_THUMB_SIZE),
+            paint,
+          );
+          surface.flush();
+          const image = surface.makeImageSnapshot();
+          if (image) out[look.key] = image.encodeToBase64();
+        } catch (_) { /* this one tile falls back to its name */ }
+      }
+    } catch (_) { /* every tile falls back to its name */ }
+    return out;
+  }, [bgPhoto]);
 
   // Take a gym photo with the camera to use as the card background (all cards).
   // Camera capture only: uses the CAMERA permission (same as barcode scanning),
@@ -739,7 +852,7 @@ export default function ShareCardScreen({ navigation, route }) {
       const surface = Skia.Surface.MakeOffscreen(PREVIEW_RENDER_W, H);
       if (!surface) return null;
       drawShareCard(surface.getCanvas(), {
-        Skia, width: PREVIEW_RENDER_W, params, typefaces, wordmark, bgPhoto, photoCrop, omitPhoto: true,
+        Skia, width: PREVIEW_RENDER_W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
       });
       surface.flush();
       const image = surface.makeImageSnapshot();
@@ -749,7 +862,7 @@ export default function ShareCardScreen({ navigation, route }) {
       logError('ShareCardScreen.framerOverlay', e);
       return null;
     }
-  }, [livePhoto, typefaces, wordmark, buildParams, bgPhoto, photoCrop]);
+  }, [livePhoto, typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop]);
 
   // The page's own scroll, made known to the gesture system so a drag that
   // starts on the photo moves the photo and never the page (the photo's
@@ -932,10 +1045,35 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : null}
         </View>
 
+        {/* Theme (founder, 2026-09-27: "different share themes (light and
+            dark)"). A card-wide choice like Format, so it sits alongside it.
+            Hidden for the sticker, which draws no card ground of its own. */}
+        {!isSticker ? (
+        <View style={styles.section}>
+          <SectionLabel>Theme</SectionLabel>
+          <View style={[styles.segmentRow, live.segmentRow]}>
+            <SegmentBtn
+              label="Dark"
+              active={shareTheme === 'dark'}
+              onPress={() => setShareTheme('dark')}
+              icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="Light"
+              active={shareTheme === 'light'}
+              onPress={() => setShareTheme('light')}
+              icon={<Ionicons name="sunny-outline" size={15} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
+            />
+          </View>
+        </View>
+        ) : null}
+
         {/* Background: the user's own photo as the canvas (gallery pick OR
             camera capture; tone-sampled scrim keeps it legible in the
-            renderer), or the per-type crafted dark background. Hidden for the
-            sticker, which is transparent by design. Only shown when the
+            renderer), or the per-type crafted dark background ("No photo" --
+            renamed from "Dark" now that Dark names a share THEME above, not
+            a background choice; it still just clears the photo). Hidden for
+            the sticker, which is transparent by design. Only shown when the
             native image picker is available in the build. */}
         {ImagePicker && !isSticker ? (
         <View style={styles.section}>
@@ -954,12 +1092,71 @@ export default function ShareCardScreen({ navigation, route }) {
               icon={<Ionicons name="camera-outline" size={15} color={t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="Dark"
+              label="No photo"
               active={!bgPhoto}
               onPress={clearPhoto}
-              icon={<Ionicons name="moon-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
+        </View>
+        ) : null}
+
+        {/* Photo look (founder, 2026-09-27: "a tint or filter to the images
+            ... Almost like Instagram filters but a select group of them that
+            enhance the look ... label them gym like ones"). Only once there
+            is a photo to apply it to, and never on the transparent sticker. */}
+        {bgPhoto && !isSticker ? (
+        <View style={styles.section}>
+          <SectionLabel>Photo look</SectionLabel>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.lookStrip}
+          >
+            {PHOTO_LOOKS.map((look) => {
+              const active = photoLook === look.key;
+              return (
+                <TouchableOpacity
+                  key={look.key}
+                  style={[styles.lookTile, live.lookTile, active && [styles.lookTileActive, live.lookTileActive]]}
+                  onPress={() => chooseLook(look.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${look.name}: ${look.description}`}
+                >
+                  {lookThumbs[look.key] ? (
+                    <Image
+                      source={{ uri: `data:image/png;base64,${lookThumbs[look.key]}` }}
+                      style={styles.lookThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.lookThumb, styles.lookThumbEmpty, live.lookThumbEmpty]} />
+                  )}
+                  <Text
+                    style={[styles.lookName, live.lookName, active && [styles.lookNameActive, live.lookNameActive]]}
+                    numberOfLines={1}
+                  >
+                    {look.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {photoLook !== 'none' ? (
+            <>
+              <View style={styles.strengthRow}>
+                <Text style={[styles.strengthLabel, live.strengthLabel]}>Strength</Text>
+                <Text style={[styles.strengthValue, live.strengthValue]}>{strengthDisplayPct}%</Text>
+              </View>
+              <LookStrengthSlider
+                value={strengthDisplayPct}
+                onValueChange={previewStrength}
+                onSlidingComplete={commitStrength}
+                accessibilityLabel="Look strength"
+              />
+            </>
+          ) : null}
         </View>
         ) : null}
 
@@ -1439,6 +1636,25 @@ const styles = StyleSheet.create({
   templateLabel: { ...type.caption, color: colors.textMuted },
   templateLabelActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   formatHint: { ...type.captionTight, color: colors.textMuted },
+  // Photo look strip: the same quiet-card-plus-accent-border language as the
+  // template strip above, at a smaller tile size for eight looks in a row.
+  lookStrip: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  lookTile: {
+    width: 72, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.xs, gap: spacing.xs,
+    alignItems: 'center',
+  },
+  lookTileActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  lookThumb: { width: 56, height: 56, borderRadius: radius.sm },
+  lookThumbEmpty: { backgroundColor: colors.surface2 },
+  lookName: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  lookNameActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  strengthRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  strengthLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
+  strengthValue: { ...type.label, color: colors.primary },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs,
@@ -1530,6 +1746,13 @@ function buildLiveStyles(t) {
     templateLabel: { ...t.type.caption, color: t.colors.textMuted },
     templateLabelActive: { color: t.colors.primary },
     formatHint: { ...t.type.captionTight, color: t.colors.textMuted },
+    lookTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    lookTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    lookThumbEmpty: { backgroundColor: t.colors.surface2 },
+    lookName: { ...t.type.caption, color: t.colors.textMuted },
+    lookNameActive: { color: t.colors.primary },
+    strengthLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    strengthValue: { ...t.type.label, color: t.colors.primary },
     segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     segmentActive: { backgroundColor: t.colors.surface3 },
     segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
