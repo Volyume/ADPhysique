@@ -125,13 +125,16 @@ const styles = StyleSheet.create({
   wrap: { paddingVertical: spacing.xs },
   hit: { height: 28, justifyContent: 'center' },
   base: { height: 4, borderRadius: radius.hair, backgroundColor: colors.surface3 },
+  // The same track, fill and handle as the app's photo compare slider
+  // (ProgressPhotoCompare): the bright brand amber is the fill on both
+  // themes, and the handle is the same size.
   fill: {
     position: 'absolute', left: 0, height: 4, borderRadius: radius.hair,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   thumb: {
-    position: 'absolute', width: 18, height: 18, marginLeft: -9,
-    borderRadius: radius.full, backgroundColor: colors.primary,
+    position: 'absolute', width: 17, height: 17, marginLeft: -8.5,
+    borderRadius: radius.full, backgroundColor: colors.primaryFill,
   },
 });
 
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     base: { backgroundColor: t.colors.surface3 },
-    fill: { backgroundColor: t.colors.primary },
-    thumb: { backgroundColor: t.colors.primary },
+    fill: { backgroundColor: t.colors.primaryFill },
+    thumb: { backgroundColor: t.colors.primaryFill },
   };
 }

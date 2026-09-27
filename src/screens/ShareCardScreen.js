@@ -1145,16 +1145,18 @@ export default function ShareCardScreen({ navigation, route }) {
           </ScrollView>
           {photoLook !== 'none' ? (
             <>
-              <View style={styles.strengthRow}>
-                <Text style={[styles.strengthLabel, live.strengthLabel]}>Strength</Text>
-                <Text style={[styles.strengthValue, live.strengthValue]}>{strengthDisplayPct}%</Text>
+              <View style={[styles.togglesCard, live.togglesCard, styles.strengthCard]}>
+                <View style={styles.strengthRow}>
+                  <Text style={[styles.toggleLabel, live.toggleLabel]}>Strength</Text>
+                  <Text style={[styles.strengthValue, live.strengthValue]}>{strengthDisplayPct}%</Text>
+                </View>
+                <LookStrengthSlider
+                  value={strengthDisplayPct}
+                  onValueChange={previewStrength}
+                  onSlidingComplete={commitStrength}
+                  accessibilityLabel="Look strength"
+                />
               </View>
-              <LookStrengthSlider
-                value={strengthDisplayPct}
-                onValueChange={previewStrength}
-                onSlidingComplete={commitStrength}
-                accessibilityLabel="Look strength"
-              />
             </>
           ) : null}
         </View>
@@ -1649,11 +1651,11 @@ const styles = StyleSheet.create({
   lookThumbEmpty: { backgroundColor: colors.surface2 },
   lookName: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   lookNameActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  // The strength control in the screen's card, padded like its rows.
+  strengthCard: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs },
   strengthRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginTop: spacing.sm,
   },
-  strengthLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   strengthValue: { ...type.label, color: colors.primary },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
@@ -1751,7 +1753,6 @@ function buildLiveStyles(t) {
     lookThumbEmpty: { backgroundColor: t.colors.surface2 },
     lookName: { ...t.type.caption, color: t.colors.textMuted },
     lookNameActive: { color: t.colors.primary },
-    strengthLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     strengthValue: { ...t.type.label, color: t.colors.primary },
     segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     segmentActive: { backgroundColor: t.colors.surface3 },
