@@ -1287,7 +1287,11 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
    counts secondary credit and untyped sets (VH-18); no provenance caption.
    One line under the list: "Targets start from research figures and
    adjust to your plan and your logged sessions; Chest and Back use your
-   own targets." with the per-muscle source in the row's tap (VH-4).
+   own targets." with the per-muscle source in the row's tap (VH-4). The
+   (i) carries the one arithmetic a reader could trip on: "A set counts
+   once for the muscle it works most and half for each muscle that helps,
+   so the rows add up to more than the sets you logged." The same sentence
+   sits behind the strip's (i) on the Progress root.
 6. **Sets a week, last 4 weeks** (the trend card): the chips name the
    window; each row's figure is labelled "this week so far: 5 sets", in
    ink, not coloured by a full-week band (VH-19); the takeaway reads "This
