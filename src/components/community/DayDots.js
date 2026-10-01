@@ -26,6 +26,14 @@
  *             already use), any order/subset
  *   todayKey  today's day key in the same vocabulary, or omitted when
  *             there is no "today" to ring (a past week's board)
+ *   tone      'accent' (the default, Community's own look, exactly as
+ *             above) or 'ink' (D214, Q5 = A: the Progress root and
+ *             Consistency draw their seven-day cells through this
+ *             component): a trained dot is `textSecondary`, today's ring
+ *             `textPrimary`, and there is no amber anywhere, because on a
+ *             progress surface a trained day is a fact, never the thing to
+ *             do (the plan's rule 3). Nothing else differs between tones:
+ *             same dots, same ring rule, same spoken label.
  */
 
 import { View, StyleSheet } from 'react-native';
@@ -51,8 +59,11 @@ export function currentDayKey(now = new Date()) {
   return WEEKDAY_KEYS[now.getDay()];
 }
 
-export default function DayDots({ days, todayKey }) {
+export default function DayDots({ days, todayKey, tone = 'accent' }) {
   const t = useTheme();
+  const ink = tone === 'ink';
+  const trainedFill = ink ? t.colors.textSecondary : t.colors.primary;
+  const ringColour = ink ? t.colors.textPrimary : t.colors.primary;
   const trained = new Set(Array.isArray(days) ? days : []);
   const label = trained.size
     ? `Trained ${daysLabel(DAY_ORDER.filter((k) => trained.has(k)))}`
@@ -74,8 +85,8 @@ export default function DayDots({ days, todayKey }) {
             style={[
               styles.dot,
               {
-                backgroundColor: isTrained ? t.colors.primary : t.colors.border,
-                borderColor: ringToday ? t.colors.primary : 'transparent',
+                backgroundColor: isTrained ? trainedFill : t.colors.border,
+                borderColor: ringToday ? ringColour : 'transparent',
                 borderWidth: ringToday ? 1 : 0,
               },
             ]}
