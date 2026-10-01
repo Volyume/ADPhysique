@@ -1133,6 +1133,59 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
 - **`TrainingDaysGrid`**: the labelled twelve-week grid.
 - The `recovery` colour token with four palette values and contrast tests.
 
+### 7.6 What the reference products do, and what this design takes from them
+
+The Sonnet research lane's cited report is `01-REFERENCE-RESEARCH.md` in
+this folder (vendor pages first, reviews second, every claim with its URL,
+the unverifiable marked). The patterns that recur across three or more
+products, and how each lands here:
+
+- **A number with a plain word beside it, three to five bands, colour as a
+  third channel** (Whoop, Oura, Garmin, Apple, Strava, GitHub, Strava's
+  muscle map). Here: every recovery percent keeps its group word; the
+  volume rows keep five named bands; the strip has three named tones.
+- **Compared with your own baseline, both directions named** (Oura,
+  Garmin, Apple, Strava, Gentler Streak). Here: the load card against the
+  person's own four-week average (kept), the Body row against the plan's
+  own rate (new), the recovery speed against the person's first estimate
+  (kept).
+- **An explicit learning state with a stated duration, no verdict before
+  enough data** (Whoop, Oura, Garmin, Apple, Strava). Here: the ratings
+  wait for two rated sessions (kept), the speed card's "N of 8 counted"
+  (kept, made one line), the heatmap's "your log covers 2 of those weeks"
+  (kept).
+- **A range band rather than a single target line** (Strava, Garmin,
+  Gentler, Apple). Here: the `RangeBar` with the good range shaded on
+  every volume row, in place of "5 /22".
+- **Tap the picture to reach the cause** (Fitbod, JeFit, Hevy, GitHub,
+  Strava, Apple, Oura). Here: the figure and the rows open the breakdown
+  (kept); the grid cells gain their own spoken labels.
+- **Colour never carries meaning alone; name every swatch** (Garmin, Whoop,
+  Oura, GitHub, Strava's map, WCAG 1.4.1, Okabe and Ito). Here: one legend
+  style, every colour named, the blue band named at last.
+- **Planned rest must not read as loss** (the Strava and Garmin
+  complaints; Gentler's statuses; Apple's ring pause). Here: no streak,
+  the block-aware "so far" framing, and the recovery-week flag on the
+  Progress strip (PR-14) in a later lane.
+- **Weekly consistency over daily streaks** (the streak-guilt sources,
+  Apple's Monday review). Here: "2 of 4 sessions this week" and the
+  twelve-week grid, never a run that can break.
+- **Sequential single hue for an ordered quantity, categorical hues for
+  states; vary lightness, not only hue; include the colour bar**
+  (ColorBrewer, Datawrapper, Crameri 2020, Okabe and Ito, WCAG 1.4.11).
+  This is the basis of Q1's option A: recovery remaining is ordered, so one
+  hue at graded intensity with a named ramp; volume status is a set of
+  verdicts, so it keeps categorical hues. GitHub's own dark-mode complaint
+  ("the mid-level shades blend in with the lightest") is why the lightest
+  recovery stop carries a solid outline rather than a tint alone.
+- Where the field is thin: no vendor documents its body map's region
+  count or its colour thresholds (Fitbod, JeFit, Hevy); Strava's map names
+  fifteen groups and shades relative to the most-worked muscle with half
+  credit for secondaries, which is also Volyume's allocation. The one app
+  that documents a separate "untrained" state (Arvo) and GitHub's distinct
+  "No contributions" swatch support the figure's empty state for "no
+  session in 14 days".
+
 ---
 
 ## 8. The build plan
