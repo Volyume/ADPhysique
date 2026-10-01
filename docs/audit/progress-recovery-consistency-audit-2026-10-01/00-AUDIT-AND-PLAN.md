@@ -22,7 +22,12 @@ model), each with eleven and ten pointed questions from the lead's own read
 of the renders; both were stopped by a chat interrupt at 10:44 UTC before
 reporting and relaunched with the same briefs (read-only lanes, nothing to
 recover). A Sonnet research lane read the published surfaces of the
-reference apps. Every finding below was then read by the lead in the code
+reference apps (`01-REFERENCE-RESEARCH.md`); a Sonnet mockup lane drew the
+four proposed screens from section 7 as phone mockups, reviewed and corrected
+by the lead and published for the founder's phone at
+https://claude.ai/artifact/QNdFaAWBta6abvGMmQhkvY (its figure geometry is
+`02-FIGURE-PATHS.json`); an Opus lane reviewed the whole document
+adversarially before delivery. Every finding below was then read by the lead in the code
 before it was written down; nothing is taken from a lane's summary alone.
 Evidence rule (CLAUDE.md, absolute): OBSERVED is what the code or the render
 says, cited; SUGGESTS is the lead's inference, labelled.
