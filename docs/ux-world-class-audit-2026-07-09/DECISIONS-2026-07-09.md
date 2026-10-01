@@ -11075,3 +11075,75 @@ Rulings, from a Sonnet research lane tuned on a real gym photo:
    strip, the strength control sits in the screen's card with the app's
    compare-slider styling, Theme uses the segmented control, and the old
    "Dark" background option reads "No photo".
+
+## D214 — Progress, the recovery heatmap and Consistency: the audit and elevation plan (founder order 2026-10-01; lead rulings under D33)
+
+Founder, verbatim: "I want you to utilise the lowest level agent for each
+task that gives the best result. I want an extensive audit and improvement
+plan for the progress, recovery heatmap and consistency. I don't think it's
+easily understandable for normal humans, gives details that will benefit the
+user or offers much value nor looks great. Extensively audit and propose as
+many improvements as necessary to elevate this to a world class facility."
+
+Source: `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+00-AUDIT-AND-PLAN.md` (88 findings, the design, the build plan), with
+`01-REFERENCE-RESEARCH.md` and `02-FIGURE-PATHS.json`; mockups at
+https://claude.ai/artifact/QNdFaAWBta6abvGMmQhkvY. Status: plan delivered; nothing built; seven founder
+questions open (Q1 to Q7 in the document's section 9, delivered in chat).
+
+Rulings made under D33 (the best product for the person, never effort),
+each with its rationale in the document:
+1. The yardstick (section 1): four questions every number must answer; "so
+   far" on every open week; a denominator wherever a plan exists; one
+   legend style and every colour named; facts in ink and amber only on an
+   action; describe never instruct (D204); plain English (D207); estimates
+   say so (D201); "N sets" totals count logged working sets, never
+   allocation credits; no streak and no countdown; every ED and calm
+   withhold unchanged.
+2. The Progress root keeps its four-row card with every headline a verdict
+   in words; a plan-week object comes first (sessions of planned, named as
+   the plan week, the next session) with the Monday volume line in logged
+   sets, three named tones and a recovery-week line; the Body verdict comes
+   from `deriveWeightTrend` once its two rate inputs are supplied (today's
+   three verdict sentences are unreachable), with the weight at its current
+   prominence (D166 stands); the Recovery row counts recovering muscles
+   only; the icon tiles become rows with a permanent Volume heatmap door;
+   session titles follow Home's order; the difficulty chip prints the
+   person's own word.
+3. Recovery: a redrawn anatomical figure for all seventeen keys; the
+   percent's referent and thresholds in the (i); the recovered group as a
+   line of names with "Show details"; the speed card as one sentence with a
+   static scale; the ratings on their true scales (soreness 1-3, fatigue
+   1-5, joint discomfort 0-3) in the scale's own words; the trend sentences
+   keep the fact and lose "worth paying attention to" (D204) in the neutral
+   card; the recency read fixed for untyped sets and named for its 90-day
+   window; a failed read logged and said. The figure's colour is Q1 and the
+   screen's lead is Q7 (the founder's standing order on the section's
+   order).
+4. Consistency: the plan week first, the twelve-week grid as a labelled
+   Monday calendar in ink with "No session" (never "Rest", D166), one block
+   card without a percent, plan rows "so far", one load card in the
+   person's units compared like for like (Monday to today against the same
+   days of earlier weeks), one sessions line; the fatigue trend to Recovery
+   and the frequency table removed (Q3).
+5. The Volume heatmap: the window control above the figure, "This week"
+   Monday-anchored to agree with the strip (one definition per meaning;
+   this amends D200 ruling 1's "1-week view unchanged" and says so), one
+   legend naming the blue band with a colour-blind-safe value of its own,
+   grouped rows printing the helpful range MEV to MRV (the one definition
+   of "range", shared with the Workout Summary) with no "N more" instruction
+   (D204 addendum 3), the recency read counting secondary credit, the
+   trend's totals in logged sets and its query excluding explosive rows,
+   the targets editor saving only touched muscles against its seeded values
+   (the Stage 6 blocker stays closed).
+6. Not ruled, asked: OPEN-1 (Q2, ED-safety: the weight figure under an open
+   ED flag), the seven-day cells (Q5: the reverted week ribbon, D193), the
+   plan's rate on the Body evidence line (Q6, D166 adjacent), the Recovery
+   screen's lead (Q7).
+7. Records corrected by this entry: D208's stated order (ratings first) was
+   superseded on the founder's word of 2026-09-26 (by muscle, speed,
+   ratings; `recoveryPlace.guard.test.js`); `docs/rules/styling.md`'s claim
+   that the reward tokens were deleted is history since the D193 revert;
+   the handover's dead-code note on `buildWeeklySessionCounts` is stale
+   (already retired); the paper-render harness's store pass asserts a
+   learned speed the persona no longer produces on 2026-10-01.
