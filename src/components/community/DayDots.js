@@ -34,15 +34,26 @@
  *             progress surface a trained day is a fact, never the thing to
  *             do (the plan's rule 3). Nothing else differs between tones:
  *             same dots, same ring rule, same spoken label.
+ *   size      'dot' (the default, 6 dp, Community's row line) or 'cell'
+ *             (12 dp with `spacing.sm` gaps: the plan-week card on the
+ *             Progress root and Consistency, D214 Q5 = A, where the seven
+ *             days are the card's object rather than a row's second line)
+ *   initials  false (the default) or true: the weekday initial M T W T F S S
+ *             under each dot in `captionTight` (today's in `textPrimary`,
+ *             the rest `textMuted`), so a row of cells reads as a week at a
+ *             glance. The initials are decoration for sighted readers: the
+ *             group's one spoken label is unchanged and they are hidden from
+ *             assistive tech.
  */
 
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { spacing, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { daysLabel } from '../../lib/community';
 
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const DAY_INITIALS = { mon: 'M', tue: 'T', wed: 'W', thu: 'T', fri: 'F', sat: 'S', sun: 'S' };
 
 /**
  * Today's short day key ('mon'..'sun'), the local-device weekday in
@@ -59,9 +70,11 @@ export function currentDayKey(now = new Date()) {
   return WEEKDAY_KEYS[now.getDay()];
 }
 
-export default function DayDots({ days, todayKey, tone = 'accent' }) {
+export default function DayDots({ days, todayKey, tone = 'accent', size = 'dot', initials = false }) {
   const t = useTheme();
   const ink = tone === 'ink';
+  const cell = size === 'cell';
+  const dotStyle = cell ? styles.cellDot : styles.dot;
   const trainedFill = ink ? t.colors.textSecondary : t.colors.primary;
   const ringColour = ink ? t.colors.textPrimary : t.colors.primary;
   const trained = new Set(Array.isArray(days) ? days : []);
@@ -71,7 +84,7 @@ export default function DayDots({ days, todayKey, tone = 'accent' }) {
 
   return (
     <View
-      style={styles.row}
+      style={cell ? styles.cellRow : styles.row}
       accessible
       accessibilityRole="image"
       accessibilityLabel={label}
@@ -79,11 +92,12 @@ export default function DayDots({ days, todayKey, tone = 'accent' }) {
       {DAY_ORDER.map((key) => {
         const isTrained = trained.has(key);
         const ringToday = key === todayKey && !isTrained;
-        return (
+        const dot = (
           <View
-            key={key}
+            key={initials ? undefined : key}
+            testID={`day-dot-${key}`}
             style={[
-              styles.dot,
+              dotStyle,
               {
                 backgroundColor: isTrained ? trainedFill : t.colors.border,
                 borderColor: ringToday ? ringColour : 'transparent',
@@ -92,6 +106,18 @@ export default function DayDots({ days, todayKey, tone = 'accent' }) {
             ]}
           />
         );
+        if (!initials) return dot;
+        return (
+          <View key={key} style={styles.column} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+            {dot}
+            <Text
+              style={[t.type.captionTight, { color: key === todayKey ? t.colors.textPrimary : t.colors.textMuted }]}
+              testID={`day-initial-${key}`}
+            >
+              {DAY_INITIALS[key]}
+            </Text>
+          </View>
+        );
       })}
     </View>
   );
@@ -99,5 +125,8 @@ export default function DayDots({ days, todayKey, tone = 'accent' }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  cellRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  column: { alignItems: 'center', gap: spacing.xxs },
   dot: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.border },
+  cellDot: { width: 12, height: 12, borderRadius: circle(12), backgroundColor: colors.border },
 });
