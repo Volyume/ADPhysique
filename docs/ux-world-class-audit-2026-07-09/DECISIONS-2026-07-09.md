@@ -11230,6 +11230,32 @@ landing, under D33:
   Monday calendar week's seven cells, "every session done" for a complete
   week, the planned recovery week named, and the calendar count ("2
   sessions this week") without a plan.
+- The fresh-eyes review of lane 1 (Sonnet) found one blocker and five
+  should-fixes, all verified in the code and fixed by the lead before the
+  merge: the range bar's full-height value fill hid the shaded range and
+  the band once the value passed them (now a bullet at half the track's
+  height, centred); the ink `DayDots` told trained from untrained by
+  lightness alone at 1.9:1 (an untrained day is now a hollow ring, the
+  fact by shape) and ringed today only while untrained against plan 7.1
+  (today is now always ringed, a trained today keeping its fill inside
+  the ring behind a gap); the grid's today ring sat directly on a trained
+  cell's fill at 2.7:1 (now a ring, a gap of card ground, the fill); the
+  spoken summary counted an unknown recovery status as a recent session
+  while the paint drew it as no session (the count now follows the paint);
+  the "14 days" literal is the model's `LOOKBACK_DAYS`; and the
+  legend-to-resolver seam (the five volume swatches against
+  `buildVolumeStatusColor`) is pinned in every palette. Recorded, not
+  changed: `BodyFigure` as section 7.5 names it stays ONE
+  `BodyDiagramHeatmap` with both palettes inside (a fill alone cannot
+  carry the dashed hairline or the nearly-recovered outline, so a
+  `fillFor` prop would not have met Q1 = A); named dp constants for a
+  component's own geometry (a 12 dp swatch, an 8 dp track, a 1.5 dp
+  outline) are allowed where no spacing token fits, the styling rule
+  governing spacing, colour and type; two palette pairs are weak under a
+  deuteranopia simulation (dark colour-blind-safe "Under the range" grey
+  against "Too much", ΔE 6.3) and go to the programme's closing review
+  with the rest of the theme tables, the legend words carrying the
+  meaning meanwhile.
 - Process finding, corrected: the founder's edit-gate hook
   (`.claude/hooks/edit-gate.sh`, rule 2026-06-13) reads the git-ignored
   `.claude/edit-gate`, which a fresh container never carries. Lane 1 was
