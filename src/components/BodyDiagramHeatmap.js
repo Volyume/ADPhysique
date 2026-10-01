@@ -5,6 +5,7 @@ import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import LegendRow from './LegendRow';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { LOOKBACK_DAYS } from '../lib/recovery/constants';
 
 // The body figure (register D214, build lane 1 of the Progress elevation;
 // plan docs/audit/progress-recovery-consistency-audit-2026-10-01/
@@ -298,7 +299,7 @@ function recoveryLegendItems(c) {
       },
     },
     { key: 'recovered', label: 'Recovered', swatch: { fill: c.surface3, outline: 'solid' } },
-    { key: 'none', label: 'No session in 14 days', swatch: { outline: 'dashed' } },
+    { key: 'none', label: `No session in ${LOOKBACK_DAYS} days`, swatch: { outline: 'dashed' } },
   ];
 }
 
@@ -315,13 +316,16 @@ function recoveryLegendItems(c) {
 function diagramSummaryLabel(volumeByMuscle, recoveryByMuscle) {
   const total = FIGURE_MUSCLE_KEYS.length;
   if (recoveryByMuscle) {
+    // The count follows the paint: a muscle counts as having a recent
+    // session exactly when it is drawn with one (an unknown status is drawn
+    // as no session and is spoken as no session, review S6).
     const withRecentSession = FIGURE_MUSCLE_KEYS.filter(
-      m => recoveryByMuscle?.[m]?.status && recoveryByMuscle[m].status !== 'no_recent_session',
+      m => recoveryBand(recoveryByMuscle?.[m]) !== 'none',
     ).length;
     const noSession = total - withRecentSession;
     return 'Body diagram, front and back views, colour-coded by estimated muscle recovery: '
       + `${withRecentSession} of ${total} muscles ${withRecentSession === 1 ? 'has' : 'have'} a recent session `
-      + `and ${noSession} ${noSession === 1 ? 'has' : 'have'} no session in the last 14 days; `
+      + `and ${noSession} ${noSession === 1 ? 'has' : 'have'} no session in the last ${LOOKBACK_DAYS} days; `
       + 'the muscle list below has the full detail for each one.';
   }
   const withVolume = FIGURE_MUSCLE_KEYS.filter(

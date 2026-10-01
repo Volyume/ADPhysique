@@ -193,12 +193,17 @@ describe('colours: ink for a fact, today outlined in ink, no amber', () => {
     expect(outlined).toHaveLength(1);
   });
 
-  test('a trained today keeps the outline on its ink fill', () => {
+  test('today is a ring around a gap of card ground with the day\'s fill inside, trained or not (review S3)', () => {
     const t = resolveTheme({});
-    const tree = create(<TrainingDaysGrid trainedDayKeys={[THURSDAY_TODAY]} dayKeys={THURSDAY_KEYS} todayKey={THURSDAY_TODAY} />);
-    const today = flat(cellFor(tree, THURSDAY_TODAY).props.style);
-    expect(today.backgroundColor).toBe(t.colors.textSecondary);
-    expect(today.borderColor).toBe(t.colors.textPrimary);
+    const trained = create(<TrainingDaysGrid trainedDayKeys={[THURSDAY_TODAY]} dayKeys={THURSDAY_KEYS} todayKey={THURSDAY_TODAY} />);
+    const ring = flat(cellFor(trained, THURSDAY_TODAY).props.style);
+    expect(ring).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1.5, padding: 1.5, backgroundColor: 'transparent' });
+    const fill = trained.root.findAll((n) => typeof n.type === 'string' && n.props?.testID === `today-fill-${THURSDAY_TODAY}`);
+    expect(fill).toHaveLength(1);
+    expect(flat(fill[0].props.style).backgroundColor).toBe(t.colors.textSecondary);
+    const untrained = create(<TrainingDaysGrid trainedDayKeys={[]} dayKeys={THURSDAY_KEYS} todayKey={THURSDAY_TODAY} />);
+    const fill2 = untrained.root.findAll((n) => typeof n.type === 'string' && n.props?.testID === `today-fill-${THURSDAY_TODAY}`);
+    expect(flat(fill2[0].props.style).backgroundColor).toBe(t.colors.surface2);
   });
 
   test('the amber token appears on no cell and no swatch, in dark and in light', () => {

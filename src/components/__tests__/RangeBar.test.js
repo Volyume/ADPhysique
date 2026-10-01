@@ -57,7 +57,17 @@ describe('the drawing', () => {
     expect(styleOf(tree, 'tick')).toMatchObject({ backgroundColor: t.colors.border, width: 2 });
   });
 
-  test('the fill is above the range and the band, and the tick is above all of them', () => {
+  test('the fill sits at half the track height, centred, so the range and band stay visible past the value (review B1)', () => {
+    const t = resolveTheme({});
+    const tree = create(<RangeBar value={17} max={22} rangeStart={6} rangeEnd={22} bandStart={8} bandEnd={14} fillColor={t.colors.success} />);
+    expect(styleOf(tree, 'fill')).toMatchObject({ top: 2, height: 4, left: 0 });
+    expect(styleOf(tree, 'range')).toMatchObject({ top: 0, bottom: 0 });
+    expect(styleOf(tree, 'band')).toMatchObject({ top: 0, bottom: 0 });
+    const slim = create(<RangeBar slim value={17} max={22} rangeStart={6} rangeEnd={22} bandStart={8} bandEnd={14} />);
+    expect(styleOf(slim, 'fill')).toMatchObject({ top: 1.5, height: 3 });
+  });
+
+  test('the fill is drawn after the range and the band, and the tick after all of them', () => {
     const tree = create(<RangeBar {...FULL} />);
     const track = part(tree, 'track');
     const order = track.children.map((c) => c.props.testID);

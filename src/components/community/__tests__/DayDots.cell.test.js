@@ -49,8 +49,13 @@ describe('size="cell"', () => {
     const t = resolveTheme({});
     const tree = create(<DayDots days={['mon', 'wed']} todayKey="thu" tone="ink" size="cell" />);
     expect(dotStyle(tree, 'mon').backgroundColor).toBe(t.colors.textSecondary);
-    expect(dotStyle(tree, 'tue')).toMatchObject({ backgroundColor: t.colors.border, borderWidth: 0 });
-    expect(dotStyle(tree, 'thu')).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1 });
+    expect(dotStyle(tree, 'tue')).toMatchObject({ backgroundColor: 'transparent', borderColor: t.colors.border, borderWidth: 1 });
+    expect(dotStyle(tree, 'thu')).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1, backgroundColor: 'transparent' });
+    // A trained today at the cell size: the ring, a gap, an 8 dp fill inside.
+    const trainedToday = create(<DayDots days={['thu']} todayKey="thu" tone="ink" size="cell" />);
+    expect(dotStyle(trainedToday, 'thu')).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1, backgroundColor: 'transparent' });
+    const inner = trainedToday.root.findAll((n) => typeof n.type === 'string' && n.props?.testID === 'day-dot-fill-thu');
+    expect(flat(inner[0].props.style)).toMatchObject({ width: 8, height: 8, backgroundColor: t.colors.textSecondary });
   });
 });
 

@@ -21,9 +21,11 @@
  * `new Date(isoString)`, so a key stays on the person's own calendar.
  *
  * Colours: a trained day is `textSecondary` (ink, a fact), any other day
- * `surface2`, today a 1.5 dp `textPrimary` outline (never amber). Cells are
- * sized from the window width (`useWindowDimensions`) with `spacing.xs`
- * gaps and `radius.xs`.
+ * `surface2`, today a 1.5 dp `textPrimary` outline (never amber) drawn as a
+ * ring around a gap of card ground with the day's own fill inside, so a
+ * trained today still reads as today (ring on fill alone was 2.7:1 or
+ * worse, lane 1 review S3). Cells are sized from the window width
+ * (`useWindowDimensions`) with `spacing.xs` gaps and `radius.xs`.
  *
  * Accessibility (CS-13: one label for 84 cells was the old way): the grid is
  * ONE accessible group labelled "Training days over the last 12 weeks, Monday
@@ -181,16 +183,30 @@ export default function TrainingDaysGrid({ trainedDayKeys, dayKeys, todayKey, st
                   }
                   const isTrained = trained.has(day.key);
                   const isToday = day.key === todayKey;
+                  const fill = isTrained ? t.colors.textSecondary : t.colors.surface2;
+                  if (isToday) {
+                    // The ring, a gap of card ground, then the fill inside.
+                    return (
+                      <View
+                        key={day.key}
+                        testID={`day-${day.key}`}
+                        accessibilityLabel={cellLabel(day, isTrained, isToday)}
+                        style={[
+                          styles.cell,
+                          styles.todayRing,
+                          { width: cell, height: cell, borderWidth: TODAY_OUTLINE, padding: TODAY_OUTLINE, borderColor: t.colors.textPrimary },
+                        ]}
+                      >
+                        <View testID={`today-fill-${day.key}`} style={[styles.todayFill, { backgroundColor: fill }]} />
+                      </View>
+                    );
+                  }
                   return (
                     <View
                       key={day.key}
                       testID={`day-${day.key}`}
                       accessibilityLabel={cellLabel(day, isTrained, isToday)}
-                      style={[
-                        styles.cell,
-                        { width: cell, height: cell, backgroundColor: isTrained ? t.colors.textSecondary : t.colors.surface2 },
-                        isToday ? { borderWidth: TODAY_OUTLINE, borderColor: t.colors.textPrimary } : null,
-                      ]}
+                      style={[styles.cell, { width: cell, height: cell, backgroundColor: fill }]}
                     />
                   );
                 })}
@@ -238,6 +254,13 @@ const styles = StyleSheet.create({
   },
   cell: {
     borderRadius: radius.xs,
+  },
+  todayRing: {
+    backgroundColor: 'transparent',
+  },
+  todayFill: {
+    flex: 1,
+    borderRadius: radius.hair,
   },
   legend: {
     marginTop: spacing.sm,

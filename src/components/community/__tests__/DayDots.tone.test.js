@@ -15,9 +15,10 @@
  *      The amber budget is pinned by `rows.amber.guard.test.js` (DayDots
  *      reads the amber token exactly twice); this file asserts the same count
  *      from the source so the ink branch can never add a third use.
- *   3. Nothing else differs between tones: the same seven dots, the same ring
- *      rule (today, not yet trained), the same spoken label, the same single
- *      image-role node.
+ *   3. The same seven dots, the same spoken label and one image-role node in
+ *      both tones. In ink an untrained day is a hollow `border` ring and
+ *      today is always ringed in `textPrimary` (lane 1 review S1 and S2,
+ *      register D214 addendum 2); the accent tone keeps its own ring rule.
  *   4. An unknown tone falls back to the default look rather than drawing
  *      nothing.
  *
@@ -54,8 +55,8 @@ describe('tone="ink": a fact, never amber', () => {
     const d = dots(create(<DayDots days={['mon', 'wed']} todayKey="thu" tone="ink" />));
     expect(d[0].backgroundColor).toBe(t.colors.textSecondary); // Monday, trained
     expect(d[2].backgroundColor).toBe(t.colors.textSecondary); // Wednesday, trained
-    expect(d[1].backgroundColor).toBe(t.colors.border); // Tuesday, not trained
-    expect(d[3]).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1, backgroundColor: t.colors.border }); // Thursday: today
+    expect(d[1]).toMatchObject({ backgroundColor: 'transparent', borderColor: t.colors.border, borderWidth: 1 }); // Tuesday, not trained: hollow
+    expect(d[3]).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1, backgroundColor: 'transparent' }); // Thursday: today, not trained
   });
 
   test('no dot, ring or fill is amber, in dark, light and colour-blind-safe', () => {
@@ -69,20 +70,26 @@ describe('tone="ink": a fact, never amber', () => {
     });
   });
 
-  test('every other dot is untouched: not-trained dots stay `border`, no ring away from today', () => {
+  test('an untrained day is a hollow ring in `border`: the fact by shape, not by lightness alone (review S1)', () => {
     const t = resolveTheme({});
     const d = dots(create(<DayDots days={['mon']} todayKey="thu" tone="ink" />));
     [1, 2, 4, 5, 6].forEach((i) => {
-      expect(d[i].backgroundColor).toBe(t.colors.border);
-      expect(d[i].borderWidth).toBe(0);
+      expect(d[i]).toMatchObject({ backgroundColor: 'transparent', borderColor: t.colors.border, borderWidth: 1 });
     });
+    expect(d[0]).toMatchObject({ backgroundColor: t.colors.textSecondary, borderWidth: 0 });
   });
 
-  test('a trained today keeps its fill and gets no ring (the ring rule is unchanged)', () => {
+  test('today is always ringed in textPrimary: a trained today keeps its fill inside the ring (plan 7.1, review S2)', () => {
     const t = resolveTheme({});
-    const d = dots(create(<DayDots days={['thu']} todayKey="thu" tone="ink" />));
-    expect(d[3].backgroundColor).toBe(t.colors.textSecondary);
-    expect(d[3].borderWidth).toBe(0);
+    const tree = create(<DayDots days={['thu']} todayKey="thu" tone="ink" />);
+    const d = dots(tree);
+    expect(d[3]).toMatchObject({ borderColor: t.colors.textPrimary, borderWidth: 1, backgroundColor: 'transparent' });
+    const inner = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.testID === 'day-dot-fill-thu');
+    expect(inner).toHaveLength(1);
+    expect(StyleSheet.flatten(inner[0].props.style)).toMatchObject({ backgroundColor: t.colors.textSecondary, width: 2, height: 2 });
+    // The accent tone is untouched: a trained today is a plain primary dot, no ring.
+    const accent = dots(create(<DayDots days={['thu']} todayKey="thu" />));
+    expect(accent[3]).toMatchObject({ backgroundColor: t.colors.primary, borderWidth: 0 });
   });
 
   test('the colours are live: a light theme changes them', () => {

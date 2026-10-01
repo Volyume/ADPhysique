@@ -29,11 +29,17 @@
  *   tone      'accent' (the default, Community's own look, exactly as
  *             above) or 'ink' (D214, Q5 = A: the Progress root and
  *             Consistency draw their seven-day cells through this
- *             component): a trained dot is `textSecondary`, today's ring
- *             `textPrimary`, and there is no amber anywhere, because on a
- *             progress surface a trained day is a fact, never the thing to
- *             do (the plan's rule 3). Nothing else differs between tones:
- *             same dots, same ring rule, same spoken label.
+ *             component): a trained day is a filled `textSecondary` dot, an
+ *             untrained day a HOLLOW ring in `border` (the fact is carried
+ *             by shape, not by lightness alone: the two fills were 1.9:1
+ *             apart in the dark palette, lane 1 review S1), and today is
+ *             ALWAYS marked by a `textPrimary` ring, trained or not (plan
+ *             7.1, "today outlined in ink"; the training-days grid marks
+ *             today the same way, review S2); a trained today keeps its
+ *             fill inside the ring behind a gap of card ground. No amber
+ *             anywhere, because on a progress surface a trained day is a
+ *             fact, never the thing to do (the plan's rule 3). The dots,
+ *             the gaps and the spoken label are the same in both tones.
  *   size      'dot' (the default, 6 dp, Community's row line) or 'cell'
  *             (12 dp with `spacing.sm` gaps: the plan-week card on the
  *             Progress root and Consistency, D214 Q5 = A, where the seven
@@ -91,20 +97,34 @@ export default function DayDots({ days, todayKey, tone = 'accent', size = 'dot',
     >
       {DAY_ORDER.map((key) => {
         const isTrained = trained.has(key);
-        const ringToday = key === todayKey && !isTrained;
+        const isToday = key === todayKey;
+        // Accent: Community's look, byte for byte (a filled dot, the ring
+        // only on a not-yet-trained today). Ink: filled when trained, hollow
+        // when not, today always ringed; a trained today is the ring, a gap
+        // and the fill inside.
+        const ringToday = ink ? isToday : (isToday && !isTrained);
+        const inkInnerFill = ink && isToday && isTrained;
         const dot = (
           <View
             key={initials ? undefined : key}
             testID={`day-dot-${key}`}
             style={[
               dotStyle,
+              inkInnerFill ? styles.ringWithFill : null,
               {
-                backgroundColor: isTrained ? trainedFill : t.colors.border,
-                borderColor: ringToday ? ringColour : 'transparent',
-                borderWidth: ringToday ? 1 : 0,
+                backgroundColor: isTrained && !inkInnerFill ? trainedFill : (ink ? 'transparent' : t.colors.border),
+                borderColor: ringToday ? ringColour : (ink && !isTrained ? t.colors.border : 'transparent'),
+                borderWidth: ringToday || (ink && !isTrained) ? 1 : 0,
               },
             ]}
-          />
+          >
+            {inkInnerFill ? (
+              <View
+                testID={`day-dot-fill-${key}`}
+                style={[cell ? styles.cellInner : styles.dotInner, { backgroundColor: trainedFill }]}
+              />
+            ) : null}
+          </View>
         );
         if (!initials) return dot;
         return (
@@ -129,4 +149,8 @@ const styles = StyleSheet.create({
   column: { alignItems: 'center', gap: spacing.xxs },
   dot: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.border },
   cellDot: { width: 12, height: 12, borderRadius: circle(12), backgroundColor: colors.border },
+  // A trained today in the ink tone: the ring, a 1 dp gap of card ground, the fill.
+  ringWithFill: { alignItems: 'center', justifyContent: 'center' },
+  dotInner: { width: 2, height: 2, borderRadius: circle(2) },
+  cellInner: { width: 8, height: 8, borderRadius: circle(8) },
 });

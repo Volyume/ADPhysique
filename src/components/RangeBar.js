@@ -11,7 +11,12 @@
  *     surface, section 7.4),
  *   - an optional stronger band inside it (`bandStart` to `bandEnd`),
  *   - a tick at the end of the track (`max`),
- *   - and the fill from 0 to `value`, in the colour the caller supplies.
+ *   - and the fill from 0 to `value`, in the colour the caller supplies,
+ *     drawn at HALF the track's height and centred (a bullet chart), so the
+ *     shaded range and the band stay visible above and below it however far
+ *     the value runs. A full-height fill hid them the moment the value
+ *     passed them, leaving a plain progress bar that claimed nothing about
+ *     the range (lane 1 fresh-eyes review, blocker B1).
  * Every number is a count in the same unit; the bar draws positions, it never
  * judges them (the caller picks `fillColor`, the band words live in the row's
  * own text).
@@ -121,9 +126,14 @@ export default function RangeBar({
           <View
             testID="rangebar-fill"
             style={[
-              styles.layer,
               styles.fill,
-              { left: 0, width: pct(fillShare), backgroundColor: fillColor || t.colors.textSecondary },
+              {
+                left: 0,
+                width: pct(fillShare),
+                top: trackHeight / 4,
+                height: trackHeight / 2,
+                backgroundColor: fillColor || t.colors.textSecondary,
+              },
             ]}
           />
         ) : null}
@@ -156,7 +166,10 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
+  // The bullet: half the track's height, centred, so the range and band
+  // behind it stay readable past the value.
   fill: {
+    position: 'absolute',
     borderRadius: radius.full,
   },
   tick: {
