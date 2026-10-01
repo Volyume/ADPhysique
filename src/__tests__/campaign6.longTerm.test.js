@@ -320,7 +320,10 @@ describe('R-15 (D97-22): the year recap cannot headline an inflated cluster-row 
     const src = read('lib/database.js');
     const fn = src.slice(src.indexOf('const bestByExercise = new Map();'));
     expect(fn.slice(0, 700)).toMatch(/if \(!isE1rmEligibleRow\(s\)\) continue;/);
-    expect(src).toMatch(/import \{ calculate1RM, allocateExerciseVolume, isE1rmEligibleRow \} from '\.\/algorithms';/);
+    // D214 lane 0 (2026-10-01) added isBallisticEvidenceRow to the same
+    // import for the weekly volume trend's explosive-set exclusion; the pin
+    // is that the e1RM rule is imported from algorithms, not the exact list.
+    expect(src).toMatch(/import \{ calculate1RM, allocateExerciseVolume, isE1rmEligibleRow(?:, \w+)* \} from '\.\/algorithms';/);
   });
 });
 
