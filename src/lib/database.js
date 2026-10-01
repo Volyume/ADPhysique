@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
-import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow } from './algorithms';
+import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow, isBallisticEvidenceRow } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
@@ -4049,7 +4049,7 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
   // empty), which no caller passes.
   const windowStart = weekBoundaries[0]?.weekStart ?? (now - weeksBack * WEEK_MS);
   const rows = await d.getAllAsync(
-    `SELECT ws.created_at, ws.exercise_id
+    `SELECT ws.created_at, ws.exercise_id, ws.evidence_class
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      WHERE ws.user_id = ? AND w.is_completed = 1
@@ -4079,6 +4079,11 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
   }));
 
   for (const row of rows) {
+    // D214 (VH-3): explosive lifts (evidence_class 'ballistic' or
+    // 'circuit_ballistic') are excluded here as calculateWeeklyVolume
+    // excludes them from the heatmap rows, so the trend and the rows count
+    // the same sets and the screen's "not counted here" note is true of both.
+    if (isBallisticEvidenceRow(row)) continue;
     const ts = row.created_at;
     const weekIdx = result.findIndex(w => ts >= w.weekStart && ts < w.weekEnd);
     if (weekIdx === -1) continue;
@@ -4109,7 +4114,7 @@ export async function getLastTrainedByMuscle(userId) {
     JOIN exercises e ON e.id = s.exercise_id
     WHERE w.user_id = ?
       AND w.is_completed = 1
-      AND s.set_type != 'warmup'
+      AND (s.set_type IS NULL OR s.set_type != 'warmup')
       AND e.primary_muscle IS NOT NULL
     GROUP BY e.primary_muscle
   `, [userId]);
@@ -11990,7 +11995,7 @@ export async function getLastTrainedPerMuscle(userId) {
      JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.user_id = ?
        AND w.is_completed = 1
-       AND ws.set_type != 'warmup'
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
        AND e.primary_muscle IS NOT NULL
        AND w.started_at >= ?
      GROUP BY e.primary_muscle`,

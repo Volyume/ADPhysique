@@ -26,11 +26,10 @@ import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import useVisualPillar from '../hooks/useVisualPillar';
 import { formatNumber } from '../lib/format';
-import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { localWeekStartMs } from '../lib/dayKey';
-import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
+import { bodyPillarCopy, computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -120,22 +119,10 @@ function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, uni
 // -- no new derivation, only a compact two-line read of fields that already
 // exist. The full chart/maintenance detail stays one tap away in BodyMetrics
 // (WeightTrendCard renders there unchanged).
-function bodyPillarCopy(weightTrend, bodyWeightUnits) {
-  if (!weightTrend?.render) {
-    return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
-  }
-  const parts = [];
-  if (weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
-    parts.push(formatBodyWeight(weightTrend.ewmaNow, bodyWeightUnits));
-    if (weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)) {
-      // Lead fix (Stage 3 review, state O): the rate follows the user's
-      // display units (§15 single-system rule) — never a kg rate beside an
-      // lbs/stone weight on the same evidence row.
-      parts.push(formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits));
-    }
-  }
-  return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
-}
+// D214: the copy builder lives in src/lib/progress/pillars.js (pure, tested
+// without mounting the screen) and honours the derivation's `pillarFigure`
+// flag, so the weight figure is withheld here under calm mode AND an open ED
+// flag by the shared derivation's own word, never by a screen-local gate.
 
 export default function AnalyticsScreen({ navigation, route }) {
   const toast = useToast();

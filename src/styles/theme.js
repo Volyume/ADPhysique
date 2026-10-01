@@ -187,6 +187,27 @@ const baseColors = {
   // backdrop darkness is consistent app-wide. Replaces the ad-hoc
   // rgba(0,0,0,x) and '#000' literals that drifted between 0.4 and 0.65.
   scrim: 'rgba(0, 0, 0, 0.55)',
+
+  // D214 (progress, recovery heatmap and consistency audit, 2026-10-01): the
+  // recovery figure's one hue. A muscle still recovering fills with this at
+  // graded intensity (solid under 50% recovered, alpha.half to 74%,
+  // alpha.edge with a solid outline to 89%); recovered muscles take the
+  // quiet surface3 fill and untrained ones no fill with a dashed hairline.
+  // A warm terracotta, deliberately neither the amber (an action) nor the
+  // error red (something to act on): a recovering muscle is the ordinary
+  // state after good training, never a warning. Intensity, not hue, carries
+  // the reading, so the colour-blind-safe tables keep this token. 5.9:1 on
+  // surface in dark; the light value is 5.4:1 on white (theme.test.js).
+  recovery: '#E8735A',
+  // D214: the volume heatmap's "Just enough" band (status 'minimum') gets its
+  // own token. It used to resolve through stateColors.info, which is
+  // macroCarb, and macroCarb is kept OUT of the colour-blind-safe tables by
+  // design (a nutrition category hue), so under that palette "Just enough"
+  // and "In range" (CVD success, the same sky blue) drew identically. Same
+  // hex as before in the default and light palettes (no visual change for
+  // anyone else); the CVD tables below give it a distinct, darker Okabe-Ito
+  // blue so lightness tells the two bands apart.
+  volumeMinimum: '#56B4E9',
 };
 
 export const colors = { ...baseColors };
@@ -247,6 +268,11 @@ const lightColors = {
   macroFat:     '#8E5BC7', // deeper violet
   macroFibre:   '#6E6E6E', // neutral grey
   scrim: 'rgba(0, 0, 0, 0.45)',
+  // D214: the recovery hue darkened for the light surface (5.4:1 on white,
+  // 5.2:1 on the background) and the "Just enough" blue matched to the light
+  // macroCarb value it replaced (4.8:1 on white).
+  recovery: '#B5472F',
+  volumeMinimum: '#1E78B4',
 };
 
 // Higher-contrast and colour-blind-safe modifier tables, now theme-keyed
@@ -283,6 +309,10 @@ const darkCVD = {
   // fail. Same >=4.5:1-at-every-elevation method as the base tokens.
   onSuccessBg: '#6ABDEC',
   onErrorBg:   '#DA9FC0',
+  // D214: "Just enough" must not share CVD success's sky blue. Okabe-Ito
+  // blue, 3.4:1 on surface and 2.3:1 darker than the swapped success, so the
+  // two bands differ by lightness, which colour-blind readers keep.
+  volumeMinimum: '#0072B2',
 };
 const lightCVD = {
   success:   '#0072B2',
@@ -293,6 +323,9 @@ const lightCVD = {
   errorFill: '#9C4D76',
   onSuccessBg: '#006096',
   onErrorBg:   '#854164',
+  // D214: light CVD success is the Okabe-Ito blue, so "Just enough" takes
+  // the Okabe-Ito bluish green (3.4:1 on white, 1.5:1 lighter than success).
+  volumeMinimum: '#009E73',
 };
 
 // Light shadows are the PRIMARY elevation cue (dark carries it via the surface
@@ -826,10 +859,13 @@ export const volumeColors = {
 // more") and 'near_mrv' (near the ceiling, "ease off") used to share the
 // same warning yellow -- one colour, two opposite instructions. 'minimum'
 // now gets its own tone (stateColors.info); 'near_mrv' keeps 'watch'.
+// D214: 'minimum' reads its own token (see volumeMinimum in baseColors) so
+// the colour-blind-safe palette can tell "Just enough" from "In range";
+// stateColors.info itself is unchanged for its other consumers.
 const volumeStatusColors = {
   get unknown()  { return stateColors.neutral; },
   get below()    { return stateColors.neutral; },
-  get minimum()  { return stateColors.info; },
+  get minimum()  { return colors.volumeMinimum; },
   get optimal()  { return stateColors.onTrack; },
   get near_mrv() { return stateColors.watch; },
   get over_mrv() { return stateColors.act; },
@@ -858,12 +894,12 @@ export function buildVolumeStatusColor(c) {
   const watch = c.warning;
   const onTrack = c.success;
   const act = c.error;
-  // O1: distinct tone for 'minimum', see volumeStatusColors above.
-  const info = c.macroCarb;
+  // O1 / D214: distinct tone for 'minimum', its own token (volumeStatusColors above).
+  const minimum = c.volumeMinimum;
   const map = {
     unknown: neutral,
     below: neutral,
-    minimum: info,
+    minimum,
     optimal: onTrack,
     near_mrv: watch,
     over_mrv: act,

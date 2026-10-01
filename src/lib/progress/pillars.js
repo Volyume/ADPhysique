@@ -7,6 +7,7 @@
  * This mirrors progressSeries.js's own "re-presentation only" contract.
  */
 import { calculate1RM } from '../algorithms';
+import { formatBodyWeight, formatBodyWeightRate } from '../units';
 import { localDayKey } from '../dayKey';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -144,4 +145,30 @@ export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _c
       ? `${remaining} more comparable scan${remaining === 1 ? '' : 's'} until your first assessment.`
       : 'Your next comparable scan will complete your first assessment.',
   };
+}
+
+
+// ─── D214: the Body pillar's two lines ──────────────────────────────────────
+// Moved here from AnalyticsScreen.js so it can be tested without mounting the
+// screen. The headline is the derivation's insight (the weekly coach's own
+// verdict when fresh); the evidence line is the smoothed weight and its rate
+// in the person's units, and it is withheld whenever the shared derivation
+// says so (`pillarFigure: false`: calm mode, or an open ED flag under the
+// D214 Q2 ruling, a withhold strengthened, never weakened). No screen-local
+// gate decides this.
+export function bodyPillarCopy(weightTrend, bodyWeightUnits) {
+  if (!weightTrend?.render) {
+    return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
+  }
+  const parts = [];
+  if (weightTrend.pillarFigure !== false && weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
+    parts.push(formatBodyWeight(weightTrend.ewmaNow, bodyWeightUnits));
+    if (weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)) {
+      // Lead fix (Stage 3 review, state O): the rate follows the user's
+      // display units (section 15 single-system rule), never a kg rate beside
+      // an lbs/stone weight on the same evidence row.
+      parts.push(formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits));
+    }
+  }
+  return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
 }

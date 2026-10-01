@@ -110,10 +110,27 @@ export default function useWeightTrend(userId) {
         ? { applied: true, direction: lastCoach?.stepModifier?.direction ?? 0 }
         : null;
 
+      // D214 (PR-4): the stored coaching output's own verdict on the weight
+      // trend. `shortfall` is the negated sign of actual minus goal (see
+      // weeklyCoach.js), so the direction here is sign(actual - goal).
+      const weekStartRaw = lastCoach?.weekStart ?? lastCoach?.week_start ?? null;
+      const weekStartMs = typeof weekStartRaw === 'number'
+        ? weekStartRaw
+        : (typeof weekStartRaw === 'string' ? Date.parse(weekStartRaw) : NaN);
+      const coachVerdict = lastCoach?.weight
+        ? {
+          onTarget: typeof lastCoach.weight.onTarget === 'boolean' ? lastCoach.weight.onTarget : null,
+          direction: Number.isFinite(Number(lastCoach.weight.shortfall)) ? -Number(lastCoach.weight.shortfall) : 0,
+          goalPhase: lastCoach.weight.goalPhase ?? null,
+          at: Number.isFinite(weekStartMs) ? weekStartMs : null,
+        }
+        : null;
+
       const vm = deriveWeightTrend({
         ewmaData,
         weeklyChange,
         adaptiveBurn,
+        coachVerdict,
         edFlagOpen: !!edFlag,
         // S6-1: calm mode withholds every figure in the shared derivation.
         calm,

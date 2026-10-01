@@ -11147,3 +11147,60 @@ each with its rationale in the document:
    the handover's dead-code note on `buildWeeklySessionCounts` is stale
    (already retired); the paper-render harness's store pass asserts a
    learned speed the persona no longer produces on 2026-10-01.
+
+**D214 addendum 1 (2026-10-01, the founder's delegation and the seven
+rulings).** Founder, verbatim: "I want you to make the decisions for me.
+What fits in best with the app at the moment, which brings the best
+application for the end users. No matter what the work, I'm happy to put
+more work into it ... make all the choices." The lead rules the seven
+questions under D33 (the best product for the person, never effort):
+
+- **Q1 = A.** The recovery figure fills one hue, the `recovery` token, at
+  graded intensity by how much is left to recover; recovered muscles take
+  the quiet surface fill with a solid hairline, untrained ones no fill with
+  a dashed hairline. A heatmap reads as a heatmap; no red for the ordinary
+  state after good training; no clash with the volume figure's red; the
+  two quiet states differ in shape as well as tone, and the hairline (the
+  border token) clears 3:1 on every palette (theme.test.js). D201 ruling 8
+  (the three solid traffic-light bands) is superseded for the recovery
+  figure.
+- **Q2 = A, a withhold STRENGTHENED, never weakened.** Under an open ED
+  flag the Progress root's Body row prints no weight figure, as it already
+  does under calm mode (the S7-1 precedent: gating more under calm or ED
+  only strengthens the law). The withhold lives in the shared derivation
+  (`deriveWeightTrend` returns `pillarFigure: false` from its ED and calm
+  branches) and the pillar copy honours it, never a screen-local gate. Body
+  metrics keeps the person's own number on their own screen. The ED
+  modules are untouched.
+- **Q3 = A.** The fatigue trend moves to Recovery's ratings; the training
+  frequency table goes (the Volume heatmap owns per-muscle work).
+- **Q4 = A.** The six lanes in section 8's order and pairs.
+- **Q5 = A.** The seven-day cells, drawn through the live Community
+  `DayDots` component with a new ink tone (trained in `textSecondary`,
+  today ringed in `textPrimary`, no amber), under the plan-week count on
+  Progress and Consistency. Rationale: the reverted redesign's fault was its
+  visual language, not this information device; the cells answer "which
+  days this week" at a glance; the component is live and already carries
+  D166's ED-safety reading (a record of what happened beside a
+  denominator, never a streak that breaks, no rest-day concept).
+- **Q6 = B.** The Body row's evidence line stays "82.4 kg, +0.1 kg a week";
+  the plan's rate is not added. One figure fewer on an ED-adjacent row,
+  and a naive reader cannot pit the two numbers against the verdict's
+  tolerance band; the plan's target lives on the Coach tab. The headline is
+  the weekly coach's own verdict (PR-4 fixed: the derivation now receives
+  the stored verdict, with maintenance wording), so the row and the
+  coaching decision never disagree.
+- **Q7 = A.** The answer line ("4 muscles still recovering, 8 recovered.
+  Upper A is next: ...") and the still-to-do rows sit at the top of the
+  Recovery by muscle card, above the figure; the Recovered group collapses
+  to a line of names with "Show details". The founder's ordered sequence
+  of the screen's sections (by muscle, then speed, then ratings) is kept;
+  this changes what leads inside the first card, which is the question the
+  founder delegated.
+
+Also ruled with lane 0: the "Just enough" volume band reads its own token
+(`volumeMinimum`, the macroCarb hex in the ordinary palettes, a distinct
+darker Okabe-Ito blue under the colour-blind-safe tables) so it never draws
+as "In range"; the three set-type query fixes (the two recency reads count
+sets with no `set_type`; the weekly volume trend excludes explosive sets as
+the rows do) land in lane 0 so no two lanes share `database.js`.

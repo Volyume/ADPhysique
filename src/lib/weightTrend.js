@@ -55,6 +55,42 @@ function isDiverging(actual, expected) {
 // metrics' own re-confirmation.
 export const CALM_INSIGHT = 'Your weigh-ins are kept in Body metrics, ready when you want them.';
 
+// D214 (progress audit 2026-10-01, PR-4): the Progress root's Body row prints
+// the weekly coach's OWN verdict on the weight trend, so the row and the
+// coaching decision never disagree about whether the weight is doing what
+// the plan asks. The verdict arrives as the stored coaching output's
+// `weight.onTarget` (null when the coach had too little data) and the sign of
+// actual minus goal rate (`direction`), with the goal phase's sign supplying
+// the words. The sign per phase mirrors weeklyCoach.js's PHASE_CONFIG and is
+// pinned against that source by weightTrend.test.js, so the two cannot drift.
+// A verdict older than a fortnight is not printed (a stale week's verdict
+// beside a live figure would be its own untruth); the derivation then falls
+// back to the sentences below exactly as before.
+export const GOAL_SIGN_BY_PHASE = Object.freeze({
+  mild_cut: -1, recomp: -1, maint: 0, mild_bulk: 1, mod_bulk: 1,
+});
+export const COACH_VERDICT_FRESH_MS = 14 * 86400000;
+
+export function coachVerdictInsight(coachVerdict, nowMs = Date.now()) {
+  if (!coachVerdict || typeof coachVerdict.onTarget !== 'boolean') return null;
+  const at = Number(coachVerdict.at);
+  if (Number.isFinite(at) && at > 0 && nowMs - at > COACH_VERDICT_FRESH_MS) return null;
+  const sign = GOAL_SIGN_BY_PHASE[coachVerdict.goalPhase];
+  if (sign === undefined) return null;
+  const dir = Math.sign(Number(coachVerdict.direction) || 0);
+  if (coachVerdict.onTarget) return sign === 0 ? 'Holding steady, as planned.' : 'Moving at the planned rate.';
+  if (sign === 0) {
+    if (dir > 0) return 'Drifting up a little.';
+    if (dir < 0) return 'Drifting down a little.';
+    return 'Holding steady, as planned.';
+  }
+  if (dir === 0) return 'Moving at the planned rate.';
+  // dir is sign(actual - goal). On a cut (goal below zero) a rate above the
+  // goal is slower; on a bulk (goal above zero) a rate above the goal is faster.
+  const faster = sign > 0 ? dir > 0 : dir < 0;
+  return faster ? 'Moving faster than planned.' : 'Moving slower than planned.';
+}
+
 /**
  * @param {object} input
  * @param {Array}  input.ewmaData     computeEWMA output, oldest-first ({ ewma, weightKg, date })
@@ -85,6 +121,7 @@ function stepTrendLineFor(stepTrend) {
 
 export function deriveWeightTrend({
   ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null, intakeDaysLogged = 0, calm = false,
+  coachVerdict = null, nowMs = Date.now(),
 } = {}) {
   const data = Array.isArray(ewmaData) ? ewmaData : [];
   const n = data.length;
@@ -114,6 +151,7 @@ export function deriveWeightTrend({
       maintenance: null,
       edFlagOpen: !!edFlagOpen,
       calm: true,
+      pillarFigure: false,
     };
   }
 
@@ -157,6 +195,12 @@ export function deriveWeightTrend({
       insight,
       maintenance: null,
       edFlagOpen: true,
+      // D214 (Q2, lead ruling under the founder's delegation, a withhold
+      // STRENGTHENED, never weakened): the Progress root's Body row prints
+      // no weight figure under an open flag, as it already does under calm
+      // mode. Body metrics keeps the person's own number on their own
+      // screen (ewmaNow above is unchanged for it).
+      pillarFigure: false,
     };
   }
 
@@ -190,8 +234,14 @@ export function deriveWeightTrend({
   const diverging = isDiverging(actual, expected);
   const above = Number.isFinite(actual) && Number.isFinite(expected) && actual > expected;
 
+  // D214 (PR-4): the coach's own verdict leads when it is fresh; the
+  // actual-against-expected comparison and the "updated" sentence remain the
+  // fallbacks for a week with no verdict.
+  const coachLine = coachVerdictInsight(coachVerdict, nowMs);
   let insight;
-  if (!hasComparison) {
+  if (coachLine) {
+    insight = coachLine;
+  } else if (!hasComparison) {
     insight = 'Your weight trend is updated. Your maintenance calories are worked out from your own food and weight logs.';
   } else if (!diverging) {
     insight = 'Trending inside your target range. Your calorie target stays the same.';
@@ -208,8 +258,9 @@ export function deriveWeightTrend({
     hasSparkline: true,
     showRate: true,
     weeklyChange: Number.isFinite(weeklyChange) ? weeklyChange : null,
-    dot: diverging ? 'watch' : 'onTrack',
+    dot: coachLine ? (coachVerdict.onTarget ? 'onTrack' : 'watch') : (diverging ? 'watch' : 'onTrack'),
     insight,
+    pillarFigure: true,
     maintenance: hasMaintenance
       ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
       : { building: true },

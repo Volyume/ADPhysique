@@ -446,3 +446,74 @@ describe('COMP-029 light theme', () => {
     expect(colors.error).toBe('#CC79A7');
   });
 });
+
+// ─── D214: the recovery hue and the "Just enough" band token ───────────────
+// Progress, recovery heatmap and Consistency audit (2026-10-01). Both tokens
+// are graphical fills (WCAG 1.4.11, 3:1 against the surface they sit on); the
+// recovery hue must be neither the amber nor the error red; the "Just
+// enough" band must differ from success under every palette, by lightness
+// as well as hue, because the colour-blind-safe tables used to make them one
+// hex (VH-1). The recovered and no-session states of the recovery figure are
+// quiet by design (surface3 fill with a solid hairline; no fill with a dashed
+// hairline), so their boundary, the border token, is what clears 3:1.
+describe('D214 recovery and volume-minimum tokens', () => {
+  function relLum(hex) {
+    const h = String(hex).replace('#', '');
+    const ch = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  }
+  function ratio(a, b) {
+    const la = relLum(a);
+    const lb = relLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  afterEach(() => applyAccessibility({}));
+
+  const palettes = [
+    { name: 'dark', prefs: { theme: 'dark' } },
+    { name: 'dark colour-blind-safe', prefs: { theme: 'dark', colorBlindSafe: true } },
+    { name: 'dark higher-contrast', prefs: { theme: 'dark', higherContrast: true } },
+    { name: 'light', prefs: { theme: 'light' } },
+    { name: 'light colour-blind-safe', prefs: { theme: 'light', colorBlindSafe: true } },
+    { name: 'light higher-contrast', prefs: { theme: 'light', higherContrast: true } },
+  ];
+
+  test.each(palettes)('$name: the recovery fill clears 3:1 on the card surface and the ground, and is its own hue', ({ prefs }) => {
+    applyAccessibility(prefs);
+    expect(ratio(colors.recovery, colors.surface)).toBeGreaterThanOrEqual(3);
+    expect(ratio(colors.recovery, colors.background)).toBeGreaterThanOrEqual(3);
+    expect(colors.recovery).not.toBe(colors.primary);
+    expect(colors.recovery).not.toBe(colors.primaryFill);
+    expect(colors.recovery).not.toBe(colors.error);
+    expect(colors.recovery).not.toBe(colors.success);
+  });
+
+  test.each(palettes)('$name: the figure hairline (border) clears 3:1 on the card surface', ({ prefs }) => {
+    applyAccessibility(prefs);
+    expect(ratio(colors.border, colors.surface)).toBeGreaterThanOrEqual(3);
+  });
+
+  test.each(palettes)('$name: "Just enough" clears 3:1 on the card surface and is never the success hex', ({ prefs }) => {
+    applyAccessibility(prefs);
+    expect(ratio(colors.volumeMinimum, colors.surface)).toBeGreaterThanOrEqual(3);
+    expect(colors.volumeMinimum).not.toBe(colors.success);
+  });
+
+  // In the ordinary palettes blue and green differ by hue, which sighted
+  // readers keep. Under the colour-blind-safe tables hue is what is lost, so
+  // there the two bands must also differ by lightness.
+  test.each(palettes.filter((p) => p.prefs.colorBlindSafe))('$name: "Just enough" differs from success by lightness', ({ prefs }) => {
+    applyAccessibility(prefs);
+    expect(ratio(colors.volumeMinimum, colors.success)).toBeGreaterThanOrEqual(1.5);
+  });
+
+  test('the default and light palettes keep the hex "Just enough" always had (no visual change outside colour-blind-safe)', () => {
+    applyAccessibility({ theme: 'dark' });
+    expect(colors.volumeMinimum).toBe(colors.macroCarb);
+    applyAccessibility({ theme: 'light' });
+    expect(colors.volumeMinimum).toBe(colors.macroCarb);
+  });
+});

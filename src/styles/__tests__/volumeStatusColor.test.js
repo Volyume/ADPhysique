@@ -40,7 +40,9 @@ describe('volumeStatusColor', () => {
     // colors.warning with 'near_mrv' -- one yellow, two opposite
     // instructions ("add more" vs "ease off"). 'minimum' now gets its own
     // distinct token; 'near_mrv' keeps the warning yellow.
-    expect(volumeStatusColor('minimum')).toBe(colors.macroCarb);
+    // D214: 'minimum' now reads its own token, volumeMinimum (the same hex
+    // as macroCarb in the default palette, distinct under colour-blind-safe).
+    expect(volumeStatusColor('minimum')).toBe(colors.volumeMinimum);
     expect(volumeStatusColor('near_mrv')).toBe(colors.warning);
     expect(volumeStatusColor('minimum')).not.toBe(volumeStatusColor('near_mrv'));
     expect(volumeStatusColor('below')).toBe(colors.textMuted);
@@ -76,8 +78,8 @@ describe('stateColors grammar (COMP-027)', () => {
 
   test('volumeStatusColor resolves through the grammar (one system, no drift)', () => {
     expect(volumeStatusColor('optimal')).toBe(stateColors.onTrack);
-    // O1: 'minimum' resolves through the new `info` tone, not `watch`.
-    expect(volumeStatusColor('minimum')).toBe(stateColors.info);
+    // O1 / D214: 'minimum' resolves through its own token, not `watch`.
+    expect(volumeStatusColor('minimum')).toBe(colors.volumeMinimum);
     expect(volumeStatusColor('near_mrv')).toBe(stateColors.watch);
     expect(volumeStatusColor('over_mrv')).toBe(stateColors.act);
     expect(volumeStatusColor('below')).toBe(stateColors.neutral);
