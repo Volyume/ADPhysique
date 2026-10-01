@@ -342,10 +342,15 @@ function screenConfigs(seed) {
     { n: '14', name: 'YouScreen' },
     { n: '15', name: 'SettingsScreen' },
     { n: '16', name: 'WorkoutHistoryScreen' },
+    // Audit 2026-10-01 (progress, recovery heatmap, consistency): the three
+    // Progress-stack screens under review, rendered full height.
+    { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' },
+    { n: '18', name: 'ConsistencyScreen', tabBarIndex: 3, tabBarNested: 'Consistency' },
+    { n: '19', name: 'VolumeHeatmapScreen', tabBarIndex: 3, tabBarNested: 'VolumeHeatmap' },
   ];
 }
-const LIGHT_SCREENS = new Set(['01', '04', '06']);
-const DAY_ZERO_SCREENS = new Set(['01', '04', '06', '07']);
+const LIGHT_SCREENS = new Set(['01', '04', '06', '17', '18', '19']);
+const DAY_ZERO_SCREENS = new Set(['01', '04', '06', '07', '17', '18', '19']);
 
 // ── Per-screen processing ────────────────────────────────────────────────
 // `variant` (optional) lets a caller other than the two main passes pick its
@@ -417,7 +422,7 @@ test('seed the persona and paper-render every screen in dark theme', async () =>
 
   global.__PAPER_RENDER_SEED__ = seed;
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(16);
+  expect(REPORT.screens.length).toBe(19);
 });
 
 // ── Test 1b: day-zero pass (01/04/06/07, fresh account, dark theme) ──────
@@ -454,7 +459,7 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
   }
 
   jest.useRealTimers();
-  expect(REPORT.screens.length).toBe(16 + configs.length);
+  expect(REPORT.screens.length).toBe(19 + configs.length);
 });
 
 // ── Test 1c: the Welcome screen's product captures (01/02/06) ───────────
@@ -663,7 +668,7 @@ test('paper-render the light theme variant for Home, Analytics and Diary', async
   jest.useRealTimers();
   // 16 dark + DAY_ZERO_SCREENS.size day-zero (test 1b, already pushed) + this
   // pass's own light screens.
-  expect(REPORT.screens.length).toBe(16 + DAY_ZERO_SCREENS.size + configs.length);
+  expect(REPORT.screens.length).toBe(19 + DAY_ZERO_SCREENS.size + configs.length);
 });
 
 afterAll(async () => {
