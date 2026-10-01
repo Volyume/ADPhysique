@@ -912,7 +912,10 @@ The screen's question: "Is this working?" Order, top to bottom:
    - Line 3: "Volume so far: 57 sets across 12 muscles · 9 still under
      their weekly range" over the segmented bar, now in THREE tones with a
      three-chip legend under it: Under range (`textMuted`) · In range
-     (`success`) · Over the limit (`error`). "Just enough" and "Getting
+     (`success`) · Over the limit (`error`). "Still under" counts every
+     muscle with a weekly range that is under it, trained or not (a muscle
+     the plan trains with no sets yet is under its range, with sessions
+     left); "muscles" counts the ones with sets. "Just enough" and "Getting
      close" fold into "In range" on this glance surface (both are inside
      the recoverable range); the heatmap keeps all five. Tap opens the
      Volume heatmap on "This week".
@@ -991,15 +994,19 @@ what does that mean for my next session?" Order as the founder set it on
       a warm terracotta distinct from amber (action) and from the error
       red (act). Intensity, not hue, carries the reading, so the
       colour-blind palette keeps the same token. Legend, one row: a
-      four-swatch ramp labelled "More to recover ... less" · Recovered ·
-      No session in 14 days.
-   d. **The list**: "Still recovering (4)" and "Nearly recovered (2)" keep
-      the compact row (name, estimated percent, a bar in the row's own
-      intensity, "Ready by tomorrow · Trained 1 day ago"); tap opens the
-      breakdown as now. "Recovered (8)" collapses to one line of names
-      (each tappable to its breakdown), no bars (RC-19). Under the list,
-      "No session in the last 14 days: Forearms (16 days ago), Abs (not
-      logged)" replaces the chips in the ratings card (RC-17). The
+      three-swatch ramp (the three recovering stops) labelled "More to
+      recover ... less" · Recovered · No session in 14 days, so every fill
+      on the figure has a named swatch.
+   d. **The list**: "Still recovering · 4" and "Nearly recovered · 2"
+      (one header style, label, middle dot, count, shared with the volume
+      groups) keep the compact row (name, the percent with the word
+      "recovered" after it, a bar in the row's own intensity, "Ready by
+      tomorrow · Trained 1 day ago"); tap opens the breakdown as now.
+      "Recovered · 8" collapses to one line of names (each tappable to its
+      breakdown), no bars (RC-19). Under the list, "No session in the last
+      14 days: Forearms (16 days ago), Abs, Adductors, Neck and Tibialis
+      (not logged)" names EVERY empty muscle on the figure and replaces
+      the chips in the ratings card (RC-17). The
       breakdown gains the muscle's plain word ("Adductors, inner thigh")
       and, when a set count is fractional, "Half a set is counted when a
       muscle helps but is not the main mover." (RC-10, RC-11).
@@ -1100,9 +1107,12 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
 5. **The rows**, grouped with counts like the recovery list ("Under their
    range · 9", "In range · 3", ...) so the strip's "9" lands on a list
    (VH-13). A row: name (plain word on tap), a range bar with the good
-   range (MEV + 2 to MAV) shaded and the limit at the end, "5 of 10 to 16
-   sets this week" and, under range, "5 more to reach your range" (VH-6,
-   VH-14); the number shown and the number judged are the same (VH-2);
+   range shaded and the limit at the end, "5 of 10 to 16 sets this week"
+   and, under range, "5 more to reach your range" (VH-6, VH-14). The
+   printed range is the engine's in-range band, MEV + 2 to MAV (the "just
+   enough" band, MEV to MEV + 2, sits under it, so a Just enough row reads
+   "6 of 8 to 16 · 2 more to reach your range" and never both under and in
+   range at once); the number shown and the number judged are the same (VH-2);
    "Trained 3 days ago" in `textMuted` (VH-11); no provenance caption.
    One line under the list: "Targets start from research figures and
    adjust to your plan and your logged sessions; Chest and Back use your
