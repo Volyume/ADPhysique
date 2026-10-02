@@ -1141,7 +1141,10 @@ describe('D214 (7.4 item 7): Volume targets, one door to a touched-only editor',
   const editorOpen = (tree) => tree.root.findAllByType(Modal)[0].props.visible === true;
   const field = (tree, label) => tree.root.findAll((n) => n.type === 'TextField' && n.props.accessibilityLabel === label)[0];
   const press = (tree, label) => tree.root.findAll(
-    (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+    // The door's spoken label carries its sub line too (NavRow, the lead's D214
+    // rule 3 landing fix), so the press matches the label or its first sentence.
+    (n) => (n.props.accessibilityLabel === label || (typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith(`${label}. `)))
+      && typeof n.props.onPress === 'function',
   )[0];
   const savedBlob = () => {
     const call = AsyncStorage.setItem.mock.calls.find(([k]) => k === KEY);

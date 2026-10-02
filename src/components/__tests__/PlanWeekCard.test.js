@@ -91,9 +91,13 @@ describe('PlanWeekCard prints the shared view-model', () => {
   test('the card is one accessible group carrying the summary sentence', () => {
     const summary = buildPlanWeekSummary({ position, sets, now: NOW });
     const tree = create(<PlanWeekCard summary={summary} />);
-    const card = tree.root.findByProps({ testID: 'plan-week-card' });
-    expect(card.props.accessible).toBe(true);
-    expect(card.props.accessibilityLabel).toBe('2 of 4 sessions in week 2 of your plan. Upper B is next.');
+    // RE-ANCHORED (the lead's landing fix for lane 3): the accessible group is
+    // the inner summary view, so children rendered under it keep their own
+    // controls reachable.
+    const group = tree.root.findByProps({ testID: 'plan-week-summary' });
+    expect(group.props.accessible).toBe(true);
+    expect(group.props.accessibilityLabel).toBe('2 of 4 sessions in week 2 of your plan. Upper B is next.');
+    expect(tree.root.findByProps({ testID: 'plan-week-card' }).props.accessible).toBeUndefined();
     // The visible headline and subline are hidden from assistive tech (read once, through the group).
     const hidden = find(tree, (n) => n.props?.accessibilityElementsHidden === true);
     expect(hidden.length).toBeGreaterThanOrEqual(2);
@@ -115,5 +119,30 @@ describe('PlanWeekCard prints the shared view-model', () => {
   test('the type roles the card uses exist on the resolved theme', () => {
     const t = resolveTheme({});
     ['h2', 'bodyStrong', 'bodySm'].forEach((role) => expect(t.type[role]).toBeTruthy());
+  });
+});
+
+// The lead's landing fix for lane 3 (plan 7.1 item 2, "one Card"): children
+// render inside the card under a hairline and outside the accessible group.
+describe('PlanWeekCard children', () => {
+  const { Text, View } = require('react-native');
+  test('no children: no under-section is drawn', () => {
+    const summary = buildPlanWeekSummary({ position, sets, now: NOW });
+    const tree = create(<PlanWeekCard summary={summary} />);
+    expect(tree.root.findAllByProps({ testID: 'plan-week-under' }).filter((n) => typeof n.type === 'string')).toHaveLength(0);
+  });
+  test('children sit under a hairline, outside the accessible summary group', () => {
+    const summary = buildPlanWeekSummary({ position, sets, now: NOW });
+    const tree = create(
+      <PlanWeekCard summary={summary}>
+        <View testID="child-strip"><Text>strip</Text></View>
+      </PlanWeekCard>,
+    );
+    const under = tree.root.findAllByProps({ testID: 'plan-week-under' }).filter((n) => typeof n.type === 'string')[0];
+    expect(under).toBeTruthy();
+    expect([].concat(under.props.style).some((s) => s && s.borderTopWidth === 1)).toBe(true);
+    const group = tree.root.findAllByProps({ testID: 'plan-week-summary' }).filter((n) => typeof n.type === 'string')[0];
+    expect(group.findAllByProps({ testID: 'child-strip' })).toHaveLength(0);
+    expect(under.findAllByProps({ testID: 'child-strip' }).length).toBeGreaterThan(0);
   });
 });

@@ -43,7 +43,9 @@ describe('NavRow (shared from YouScreen, D214 lane 5)', () => {
       </NavGroup>,
     );
     const card = tree.root.findByType('PressableCard');
-    expect(card.props.accessibilityLabel).toBe('Volume targets');
+    // RE-ANCHORED (lead, D214 rule 3 landing fix): the spoken label carries the
+    // sub line too, so a gate such as "N sessions to go" is read aloud.
+    expect(card.props.accessibilityLabel).toBe('Volume targets. How many sets each muscle gets each week.');
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Volume targets');
     expect(text).toContain('How many sets each muscle gets each week.');

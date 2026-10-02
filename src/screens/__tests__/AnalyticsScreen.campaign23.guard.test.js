@@ -73,8 +73,17 @@ describe('Week-boundary unification (§6/§28 IA-2)', () => {
     expect(SRC).not.toMatch(/buildWeeklySessionCounts/);
   });
 
-  test('the volume strip is the one surviving "this week" construct, still Monday-anchored', () => {
-    expect(SRC).toContain("This week's volume");
+  // RE-ANCHORED under D214 lane 3 (plan 7.1 item 2): the strip's old section
+  // title "This week's volume" is gone with the old strip; the one surviving
+  // "this week" construct is the strip under the plan-week card, built from the
+  // Monday-anchored window of the shared volumeLogged module and printing "This
+  // week so far" (the plan's rule 2: every open-week figure says "so far").
+  test('the volume strip is the one surviving "this week" construct, still Monday-anchored, now "so far"', () => {
+    expect(SRC).not.toContain("This week's volume");
+    expect(SRC).toContain('buildVolumeStrip(');
+    const STRIP = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'progress', 'volumeStrip.js'), 'utf8');
+    expect(STRIP).toContain('This week so far');
+    expect(STRIP).toMatch(/buildWindowView\(ds, 1\)/);
   });
 });
 

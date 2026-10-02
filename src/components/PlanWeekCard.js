@@ -25,6 +25,13 @@
  * Accessibility: the card is one group whose label is the view-model's own
  * sentence; the dots carry DayDots' spoken "Trained Mon, Wed" inside it.
  *
+ * `children` (the lead's landing fix for lane 3, plan 7.1 item 2 "one
+ * Card"): the Progress root renders this week's volume line and bar inside
+ * the same card, under a hairline, so the week is one object as the mockup
+ * draws it. The children sit OUTSIDE the accessible group (the group is the
+ * inner summary view), so their own controls stay reachable by a screen
+ * reader; Consistency passes no children and the card is unchanged there.
+ *
  * Live theme (`useTheme`): the frozen block holds layout only.
  */
 import { View, Text, StyleSheet } from 'react-native';
@@ -36,11 +43,12 @@ import useTheme from '../hooks/useTheme';
 /**
  * @param {{ summary: import('../lib/progress/planWeek').PlanWeekSummary, testID?: string }} props
  */
-export default function PlanWeekCard({ summary, testID = 'plan-week-card' }) {
+export default function PlanWeekCard({ summary, testID = 'plan-week-card', children = null }) {
   const t = useTheme();
   if (!summary) return null;
   return (
-    <Card testID={testID} accessible accessibilityLabel={summary.accessibilityLabel}>
+    <Card testID={testID}>
+      <View accessible accessibilityLabel={summary.accessibilityLabel} testID="plan-week-summary">
       <View style={styles.headline} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Text style={[t.type.h2, { color: t.colors.textPrimary }]} testID="plan-week-number">
           {summary.headlineNumber}
@@ -62,6 +70,12 @@ export default function PlanWeekCard({ summary, testID = 'plan-week-card' }) {
       <View style={styles.cells}>
         <DayDots days={summary.trainedDays} todayKey={summary.todayKey} tone="ink" size="cell" initials />
       </View>
+      </View>
+      {children ? (
+        <View style={[styles.under, { borderTopColor: t.colors.borderSubtle }]} testID="plan-week-under">
+          {children}
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -70,4 +84,5 @@ const styles = StyleSheet.create({
   headline: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   subline: { marginTop: spacing.xxs },
   cells: { marginTop: spacing.md },
+  under: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1 },
 });

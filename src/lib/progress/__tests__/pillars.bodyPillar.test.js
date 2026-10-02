@@ -42,3 +42,22 @@ describe('bodyPillarCopy', () => {
     expect(bodyPillarCopy(vm, 'kg').evidence).toMatch(/82\.4 kg/);
   });
 });
+
+// D214 addendum 4 (Body metrics, section 3 item 9): the evidence line names
+// its referent and window; a lapsed trend says so with no figure; a reading
+// without enough weigh-ins prints the trend weight alone.
+describe('bodyPillarCopy, D214 addendum 4', () => {
+  test('the evidence names the referent and the two-week window, in the person\'s units', () => {
+    const vm = { render: true, state: 3, ewmaNow: 82.4, showRate: true, weeklyChange: 0.3, insight: 'Trending up over the last 2 weeks.', pillarFigure: true, twoWeek: { enough: true, ratePerWeek: 0.1, deltaKg: 0.2, spanDays: 14, count: 15 } };
+    expect(bodyPillarCopy(vm, 'kg').evidence).toBe('Trend 82.4 kg, +0.1 kg/week over the last 2 weeks');
+    expect(bodyPillarCopy(vm, 'lbs').evidence).toMatch(/^Trend 182 lbs, \+0\.2 lbs\/week over the last 2 weeks$/);
+  });
+  test('too few weigh-ins in the window: the trend weight alone, never the engine\'s bare weekly rate', () => {
+    const vm = { render: true, state: 3, ewmaNow: 82.4, showRate: true, weeklyChange: 0.3, insight: 'Not enough weigh-ins in the last 2 weeks for a direction: 5 of 7.', pillarFigure: true, twoWeek: { enough: false, count: 5 } };
+    expect(bodyPillarCopy(vm, 'kg').evidence).toBe('Trend 82.4 kg');
+  });
+  test('a lapsed trend: the lapsed line as the headline, no evidence', () => {
+    const vm = { render: true, state: 0, lapsed: true, lastWeighInMs: 1, ewmaNow: null, showRate: false, insight: 'No weigh-in in the last 14 days; the last was 3 weeks ago.', pillarFigure: false };
+    expect(bodyPillarCopy(vm, 'kg')).toEqual({ state: 'No weigh-in in the last 14 days; the last was 3 weeks ago.', evidence: null });
+  });
+});

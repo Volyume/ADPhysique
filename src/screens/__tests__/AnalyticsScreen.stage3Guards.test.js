@@ -126,20 +126,26 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
 
 // ─── §24 density budget: primary evidence containers, source-counted ──────
 //
-// Per the recorded interpretation ("primary evidence cards, utilities grid
+// Per the recorded interpretation ("primary evidence cards, the doors list
 // counts as one"): the landing's bordered-container SLOTS are counted at
 // the source level (not per-render, since several are mutually exclusive
 // or count-capped by construction) —
-//   1 Answer Block (always)
+//   1 plan-week card (PlanWeekCard, always once loaded)
+//     (the volume strip, D214 lane 3's line 3 and bar, sits INSIDE the
+//     plan-week card under a hairline, as the plan's mockup draws it:
+//     PlanWeekCard takes children since the lead's landing fix, so the strip
+//     is no container of its own)
+// + 1 Answer Block (always)
 // + 3 SessionCard slots MAX (R3, capped by useProgressData's own
 //     `.slice(0, 3)` on recentSessions — verified below, not assumed)
-// + 1 VolumeSummaryStrip Card (R4, conditional)
 // + 1 Moment card MAX (R5: recap only since 2026-08-17; a single
 //     conditional — verified below)
-// + 1 utilities grid (R6, one NavTile grid = one container per the
-//     recorded interpretation, regardless of how many tiles it holds)
-// = 7, exactly the spec's stated ceiling ("Max bordered containers on the
-// whole landing: 7").
+// + 1 doors list (R6, one NavGroup = one container, regardless of how many
+//     NavRows it holds)
+// = 7. RE-ANCHORED under D214 lane 3 (plan 7.1) and the lead's landing fix:
+// the plan-week object is new and comes first with the strip inside it, the
+// old conditional VolumeSummaryStrip card is gone, and the NavTile grid is now
+// one NavGroup, so the ceiling the spec's §24 stated (7) holds.
 describe('§24 density budget: primary evidence container ceiling, source-counted', () => {
   test('recentSessions is capped at 3 by useProgressData (the R3 evidence-trail ceiling)', () => {
     expect(USE_PROGRESS_DATA_SRC).toMatch(/\.slice\(0, 3\)/);
@@ -162,21 +168,51 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     expect((momentsBlock.match(/\{!recapCardHidden \?/g) || []).length).toBe(1);
   });
 
-  test('the utilities grid is one container (one NavTile-grid View, arbitrarily many tiles inside it)', () => {
-    expect(ANALYTICS_SRC).toMatch(/<View style=\{styles\.navGrid\}>/);
-    expect((ANALYTICS_SRC.match(/<View style=\{styles\.navGrid\}>/g) || []).length).toBe(1);
+  // RE-ANCHORED under D214 lane 3 (plan 7.1 item 6): the NavTile grid is
+  // replaced by NavRows inside one NavGroup (the shared grouped list), still
+  // one container however many rows it holds.
+  test('the doors are one container (one NavGroup, arbitrarily many NavRows inside it); no NavTile grid remains', () => {
+    expect(ANALYTICS_SRC).toMatch(/<NavGroup>/);
+    expect((ANALYTICS_SRC.match(/<NavGroup>/g) || []).length).toBe(1);
+    expect(ANALYTICS_SRC).not.toMatch(/NavTile|navGrid/);
   });
 
-  test('the ceiling arithmetic matches the spec exactly: 1 + 3 + 1 + 1 + 1 = 7', () => {
+  test('the ceiling arithmetic: 1 + 0 + 1 + 3 + 1 + 1 = 7 (the strip inside the plan-week card, D214)', () => {
+    const planWeekCard = 1;
+    const volumeStrip = 0; // inside the plan-week card: PlanWeekCard takes children
     const answerBlock = 1;
     const sessionCardsMax = 3;
-    const volumeStripMax = 1;
     const momentMax = 1; // recap only (milestone retired 2026-08-17)
-    const utilitiesGrid = 1; // counts as one, per the recorded interpretation
-    expect(answerBlock + sessionCardsMax + volumeStripMax + momentMax + utilitiesGrid).toBe(7);
+    const doorsList = 1; // counts as one, per the recorded interpretation
+    expect(planWeekCard + volumeStrip + answerBlock + sessionCardsMax + momentMax + doorsList).toBe(7);
   });
 
-  test('above-the-fold ceiling: the Answer Block is the first bordered container, immediately after the header, before any other container', () => {
+  test('the strip is a plain View inside the plan-week card; the screen draws exactly two card-shaped containers of its own besides the sessions', () => {
+    // The plan-week card is PlanWeekCard's own Card; this file's own: the
+    // Answer Block and (per session) the SessionCard. The strip is a View the
+    // PlanWeekCard renders as its child.
+    expect((ANALYTICS_SRC.match(/<Card\b/g) || []).length).toBe(2);
+    expect(ANALYTICS_SRC).toMatch(/<View testID="volume-strip"/);
+    expect(ANALYTICS_SRC).not.toMatch(/<Card testID="volume-strip"/);
+    expect(ANALYTICS_SRC).toMatch(/<PlanWeekCard summary=\{planWeekSummary\}>\s*\{hasData \? \(\s*<VolumeStrip/);
+    expect(ANALYTICS_SRC).toMatch(/<Card padding="none" surface="surfaceElevated"/);
+  });
+
+  // RE-ANCHORED under D214 lane 3 (plan 7.1): "Your plan week" is now the first
+  // object, so the pair above the fold is the plan-week card (with its strip)
+  // and then the Answer Block; the Answer Block is no longer first.
+  test('above-the-fold ceiling: the plan-week card is the first container, immediately after the header; the Answer Block is the next object', () => {
+    const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
+    const planWeekIdx = ANALYTICS_SRC.indexOf('<PlanWeekCard summary={planWeekSummary}>');
+    expect(planWeekIdx).toBeGreaterThan(headerIdx);
+    // No Card-shaped container between the header and the plan-week card.
+    expect(ANALYTICS_SRC.slice(headerIdx, planWeekIdx)).not.toMatch(/<Card\b/);
+    // The Answer Block follows it (the strip sits between, under the card).
+    const answerAfterPlan = ANALYTICS_SRC.search(/<Card [^>]*style=\{styles\.answerBlock\}>/);
+    expect(answerAfterPlan).toBeGreaterThan(planWeekIdx);
+  });
+
+  test('above-the-fold ceiling: after the plan-week object the Answer Block is the first container before the evidence trail', () => {
     const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
     // Anchored on styles.answerBlock, the stable identifier, rather than on
     // the full opening tag: the tag gained surface="surfaceElevated" (D3, the

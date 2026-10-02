@@ -1100,9 +1100,16 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // FOUNDER DECISION (fully free, no tier split): every destination is
   // genuinely open to every account now, so there is one sentence, not a
   // tier fork -- the old Free-only "consistency, lifts" sentence is retired.
+  // RE-ANCHORED under D214 (PR-11, progress audit 2026-10-01, plan 7.1 item 7):
+  // the sentence said body metrics, progress photos and scans were "still
+  // available below" while those destinations are the rows ABOVE the empty state
+  // (the Your progress card), so it pointed the wrong way. It now names the
+  // weigh-ins, photos and scans as the rows above; the promise to every account
+  // is unchanged.
   test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
     const src = read('screens/AnalyticsScreen.js');
-    expect(src).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
+    expect(src).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
+    expect(src).not.toContain('still available below');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
   });
 

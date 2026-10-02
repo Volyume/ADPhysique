@@ -4,9 +4,13 @@ import path from 'path';
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
 
 describe('AnalyticsScreen Progress empty state', () => {
+  // RE-ANCHORED under D214 (PR-11, plan 7.1 item 7): the second sentence used to
+  // say body metrics, progress photos and scans were "still available below"
+  // while those rows are the card ABOVE the empty state.
   test('does not send users from Progress to the Train entry point', () => {
     expect(SRC).toMatch(/title="No training trends yet"/);
-    expect(SRC).toMatch(/Training charts appear here once sessions are logged\. Body metrics, progress photos and scans are still available below\./);
+    expect(SRC).toMatch(/Training charts appear here once sessions are logged\. Weigh-ins, photos and scans are in the rows above\./);
+    expect(SRC).not.toMatch(/still available below/);
     expect(SRC).not.toMatch(/title="Your progress starts here"/);
     expect(SRC).not.toMatch(/actionLabel="Start a workout"/);
     expect(SRC).not.toMatch(/navigateCrossTab\(navigation, 'HomeTab', 'BuildWorkout'\)/);

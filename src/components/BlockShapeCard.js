@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 /**
@@ -15,6 +15,13 @@ import useTheme from '../hooks/useTheme';
  *
  * Copy is house voice (no em dashes); the five effort words are
  * founder-approved in principle (Push chosen over Peak per the blueprint).
+ *
+ * D214 (plan 7.0 rule 3, "amber only on an action, at most one per screen,
+ * never on a fact"; CS-19): the dots are ink. Past weeks filled in
+ * `textMuted`, future weeks outlined, the current week ringed in
+ * `textPrimary` (the DayDots "today" idiom), the recovery week a DASHED
+ * outline so it differs by shape, not by an amber tint; the current week's
+ * word is `textPrimary`. Where you are in the block is a fact.
  */
 const PHASE_WORD = (i, n) => {
   if (i === 0) return 'Ease in';
@@ -95,17 +102,17 @@ const styles = StyleSheet.create({
     width: 14, height: 14, borderRadius: circle(14),
     backgroundColor: colors.surface3, borderWidth: 1, borderColor: colors.border,
   },
-  // Past weeks: quietly done. Future: outlined. Current: filled amber with a
-  // ring. Recovery: a soft restful tint, a destination not a dip.
+  // Past weeks: quietly done. Future: outlined. Current: ringed in ink.
+  // Recovery: a dashed outline, a destination that differs by shape.
   dotPast: { backgroundColor: colors.textMuted, borderColor: colors.textMuted },
   dotFuture: { backgroundColor: 'transparent', borderColor: colors.border },
   dotCurrent: {
-    backgroundColor: colors.primaryFill, borderColor: colors.primary,
+    backgroundColor: colors.surface3, borderColor: colors.textPrimary, borderWidth: 1.5, borderStyle: 'solid',
     width: 16, height: 16, borderRadius: circle(16),
   },
-  dotRecovery: { backgroundColor: withAlpha(colors.primary, 0.22), borderColor: withAlpha(colors.primary, 0.45) },
+  dotRecovery: { backgroundColor: 'transparent', borderColor: colors.textSecondary, borderStyle: 'dashed' },
   dotLabel: { fontSize: fontSize.micro, color: colors.textMuted },
-  dotLabelCurrent: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  dotLabelCurrent: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   line: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 });
 
@@ -118,10 +125,10 @@ function buildLiveStyles(t) {
     dot: { backgroundColor: t.colors.surface3, borderColor: t.colors.border },
     dotPast: { backgroundColor: t.colors.textMuted, borderColor: t.colors.textMuted },
     dotFuture: { borderColor: t.colors.border },
-    dotCurrent: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
-    dotRecovery: { backgroundColor: withAlpha(t.colors.primary, 0.22), borderColor: withAlpha(t.colors.primary, 0.45) },
+    dotCurrent: { backgroundColor: t.colors.surface3, borderColor: t.colors.textPrimary },
+    dotRecovery: { borderColor: t.colors.textSecondary },
     dotLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    dotLabelCurrent: { color: t.colors.primary },
+    dotLabelCurrent: { color: t.colors.textPrimary },
     line: { ...t.type.body, fontSize: t.fontSize.sm, color: t.colors.textSecondary },
   };
 }

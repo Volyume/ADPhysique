@@ -3,8 +3,14 @@
  * has always used, extracted so the Volume heatmap's "Volume targets" door
  * (D214 lane 5) and the Progress doors (lane 3) read the same component.
  *
- * Moved verbatim from YouScreen.js: same look, same selection haptic, same
- * accessibility label (the row's label). The frozen `styles` block carries
+ * Moved from YouScreen.js: same selection haptic, same layout. D214 (plan
+ * 7.0 rule 3, "amber only on an action, at most one per screen, never on a
+ * fact"; D174's "accent as decoration" ruling): the icon tile is INK now
+ * (`surface2` behind a `textSecondary` glyph) rather than amber on
+ * `primaryBg`, so a list of five doors no longer carries five accents and
+ * the one amber on a screen stays its one action. The spoken label carries
+ * the `sub` line too, so a gate such as "N sessions to go" is read aloud.
+ * The frozen `styles` block carries
  * layout and tokens at rest; `buildLiveStyles` mirrors only its colour- and
  * type-bearing keys so the row follows a theme change with no restart (the
  * tree's frozen-plus-live pattern).
@@ -37,10 +43,10 @@ export function NavRow({ icon, label, sub, onPress }) {
     <PressableCard
       style={[styles.navRow, live.navRow]}
       onPress={handlePress}
-      accessibilityLabel={label}
+      accessibilityLabel={sub ? `${label}. ${sub}` : label}
     >
       <View style={[styles.navRowIcon, live.navRowIcon]}>
-        <Ionicons name={icon} size={18} color={t.colors.primary} />
+        <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
@@ -97,7 +103,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -114,7 +120,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     navRow: { borderBottomColor: t.colors.borderSubtle },
-    navRowIcon: { backgroundColor: t.colors.primaryBg },
+    navRowIcon: { backgroundColor: t.colors.surface2 },
     navRowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     navRowSub: { ...t.type.caption, color: t.colors.textSecondary },
   };
