@@ -9,7 +9,7 @@ import {
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getEffectiveLandmarks, isManualEdit } from '../lib/effectiveLandmarks';
+import { getEffectiveLandmarks, getPlanLandmarks, isManualEdit } from '../lib/effectiveLandmarks';
 import BackHeader from '../components/BackHeader';
 import ModalHeader from '../components/ModalHeader';
 import InfoTooltip from '../components/InfoTooltip';
@@ -31,21 +31,24 @@ import { buildPlanInputs } from '../lib/planAutoGen';
 import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
 import { syncUserPref, notePrefWrite } from '../lib/sync';
-import {
-  calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS,
-  MUSCLE_DISPLAY_NAMES, getVolumeStatus, allocateExerciseVolume, isBallisticEvidenceRow,
-} from '../lib/algorithms';
+import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus } from '../lib/algorithms';
 // D200-1 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
 // the 2/4-week windows read the AVERAGE working sets per week against the
 // unchanged weekly bands, instead of the window's raw total. D214 amends
 // ruling 1's "1-week view unchanged": "This week" is now the Monday-anchored
 // week so far (volumeWindow.js volumeWindowBounds), so the heatmap agrees
 // with the Progress strip and the plan. See volumeWindow.js's header.
+import { normaliseWindowWeeks } from '../lib/volumeWindow';
+// D214 (lane 5 review S5): the ONE definition of a logged set, of the window
+// readings built on it and of the row-group rule lives in volumeLogged.js, so
+// the Progress strip reads the same functions as this screen and the two
+// cannot disagree.
 import {
-  weeksCounted, perWeekVolume, volumeWindowBounds, normaliseWindowWeeks,
-} from '../lib/volumeWindow';
+  LISTED_MUSCLES, NO_SETS_GROUP, buildDataset, loggedRowsBetween, buildWindowView,
+  planTrainedMuscles, bandGroupFor,
+} from '../lib/volumeLogged';
 import { resolveProgrammePosition } from '../lib/programmePosition';
-import { isLighterTrainingState } from '../lib/recoveryState';
+import { RECOVERY_STATE } from '../lib/recoveryState';
 import { SESSION_STATE } from '../lib/blockProgression';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
@@ -83,6 +86,11 @@ import { localWeekEndMs } from '../lib/dayKey';
  *  - A recovery week (the block's planned light week) is planned lower, so no
  *    verdict colour or band word is drawn: the figure uses one neutral shade
  *    and the rows print their figures alone (PR-14, VH-10).
+ *  - The rows read Under the range, Just enough, In range, Near the limit, Too
+ *    much, then No sets (plan 7.4 item 5). The Under group's population is the
+ *    Progress strip's: with a plan, the muscles it programmes; without one, the
+ *    muscles with logged sets. A muscle outside it with no sets is "No sets"
+ *    and carries no verdict (volumeLogged.js bandGroupFor).
  *  - Targets are described, and edited, as the bands in force: the editor
  *    seeds from them and saves ONLY the muscles the person touched.
  */
@@ -93,14 +101,18 @@ const WINDOW_OPTIONS = [
   { key: '4', label: '4 weeks', weeks: 4 },
 ];
 
-// The row groups, in the order the screen reads them, named in the words of
-// the figure's own legend (BodyDiagramHeatmap.js), the screen's one legend.
+// The row groups, in the order the screen reads them (plan 7.4 item 5): the
+// verdict words from the lowest band up, then "No sets" for a muscle outside
+// the verdict population with no sets (volumeLogged.js bandGroupFor). Named in
+// the words of the figure's own legend (BodyDiagramHeatmap.js), the screen's
+// one legend.
 const BAND_GROUPS = [
-  { status: 'over_mrv', label: 'Too much' },
-  { status: 'near_mrv', label: 'Near the limit' },
-  { status: 'optimal', label: 'In range' },
-  { status: 'minimum', label: 'Just enough' },
   { status: 'below', label: 'Under the range' },
+  { status: 'minimum', label: 'Just enough' },
+  { status: 'optimal', label: 'In range' },
+  { status: 'near_mrv', label: 'Near the limit' },
+  { status: 'over_mrv', label: 'Too much' },
+  { status: NO_SETS_GROUP, label: 'No sets' },
 ];
 const BAND_LABEL = Object.fromEntries(BAND_GROUPS.map(g => [g.status, g.label]));
 
@@ -119,9 +131,12 @@ const SUMMARY_TOOLTIP = 'A set counts once for the muscle it works most and half
 
 const RECOVERY_WEEK_LINE = 'Recovery week: sets are planned lower this week';
 
-const NO_MUSCLES = Object.freeze([]);
-const LISTED_MUSCLES = Object.keys(VOLUME_LANDMARKS);
-const LISTED_SET = new Set(LISTED_MUSCLES);
+// The plan context a screen without a plan (or before it has read one) holds:
+// no recovery week, no sessions-left clause, no plan-trained muscle.
+const NO_PLAN_MUSCLES = new Set();
+const EMPTY_PLAN_CONTEXT = Object.freeze({
+  recoveryWeek: false, hasPlan: false, sessionsLeft: null, planTrained: NO_PLAN_MUSCLES,
+});
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -131,105 +146,26 @@ function joinNames(names) {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-function setAt(set) {
-  const at = Number(set?.createdAt ?? set?.created_at);
-  return Number.isFinite(at) ? at : null;
-}
-
-// The listed muscles one logged row credits, or none when the row does not
-// count: a warm-up never counts and an explosive set never counts (the same two
-// exclusions calculateWeeklyVolume makes), and a row whose exercise is unknown
-// credits nothing. `cache` holds the per-exercise allocation so a long
-// history is not re-allocated for every row.
-function creditedMuscles(set, exerciseMap, cache) {
-  if ((set.setType || set.set_type || 'straight') === 'warmup') return NO_MUSCLES;
-  if (isBallisticEvidenceRow(set)) return NO_MUSCLES;
-  const id = set.exerciseId || set.exercise_id;
-  let list = cache.get(id);
-  if (!list) {
-    const exercise = exerciseMap[id];
-    list = exercise
-      ? allocateExerciseVolume(exercise).map(a => a.muscle).filter(m => LISTED_SET.has(m))
-      : NO_MUSCLES;
-    cache.set(id, list);
-  }
-  return list;
-}
-
-// One pass over the whole history: the account's earliest set (the divisor's
-// anchor, D200-1) and, per muscle, the latest row that credits it. The
-// recency read counts secondary credit and untyped sets, so "Trained 3 days
-// ago" agrees with the row's own sets (VH-18).
-function buildDataset(sets, exerciseMap, nowMs) {
-  const cache = new Map();
-  const lastTrained = {};
-  let earliestSetMs = null;
-  for (const s of sets) {
-    const at = setAt(s);
-    if (at === null) continue;
-    if (earliestSetMs === null || at < earliestSetMs) earliestSetMs = at;
-    for (const m of creditedMuscles(s, exerciseMap, cache)) {
-      if (!(lastTrained[m] >= at)) lastTrained[m] = at;
-    }
-  }
-  return { sets, exerciseMap, cache, earliestSetMs, lastTrained, loadedAtMs: nowMs };
-}
-
-// Logged working-set ROWS inside [startMs, endMs): what "N sets logged" means
-// everywhere on this screen (never the credits summed, VH-16).
-function loggedRowsBetween(ds, startMs, endMs) {
-  let n = 0;
-  for (const s of ds.sets) {
-    const at = setAt(s);
-    if (at === null || at < startMs || at >= endMs) continue;
-    if (creditedMuscles(s, ds.exerciseMap, ds.cache).length > 0) n += 1;
-  }
-  return n;
-}
-
-// Everything one window chip reads, from the loaded history alone (no I/O), so
-// switching the window never re-reads the database.
-function buildWindowView(ds, windowWeeks) {
-  const { weeks, startMs, endMs } = volumeWindowBounds({ windowWeeks, nowMs: ds.loadedAtMs });
-  const windowSets = ds.sets.filter((s) => {
-    const at = setAt(s);
-    return at !== null && at >= startMs;
-  });
-  // D200-1: the divisor is the weeks of the window the account has data for.
-  // "This week" is one Monday-anchored week, so it always divides by 1.
-  const divisor = weeks === 1
-    ? 1
-    : weeksCounted({ windowStartMs: startMs, windowEndMs: endMs, earliestSetMs: ds.earliestSetMs });
-  const raw = calculateWeeklyVolume(windowSets, ds.exerciseMap);
-  const excluded = calculateExcludedWeeklyVolume(windowSets, ds.exerciseMap);
-  let loggedRows = 0;
-  for (const s of windowSets) {
-    if (creditedMuscles(s, ds.exerciseMap, ds.cache).length > 0) loggedRows += 1;
-  }
-  return {
-    weeks,
-    divisor,
-    raw,
-    perWeek: perWeekVolume(raw, divisor),
-    loggedRows,
-    musclesWorked: LISTED_MUSCLES.filter(m => (raw[m]?.workingSets || 0) > 0).length,
-    hasExcludedWork: Object.keys(excluded).length > 0,
-  };
-}
-
-// The programme position behind "N sessions left" and the recovery-week
-// framing. Best effort: an unreadable block is not evidence of anything, so a
-// failure reads as "no plan" and never blocks the screen. The recovery-week
-// flag is the programme position's GATED recovery state (programmePosition.js:
-// the planned recovery week cannot be the live phase while a required
-// accumulation session is outstanding, and an adaptive adjustment is lighter
-// training too), read through recoveryState.js's isLighterTrainingState, the
-// same reading the plan-week card and the Progress strip make; the calendar
-// flag (currentMesoWeek.isDeload) is only the fallback when the position
-// cannot be read. "Sessions left" is the required sessions of the plan week
-// the programme is on that are still outstanding.
-async function readPlanContext(userId) {
-  const out = { recoveryWeek: false, hasPlan: false, sessionsLeft: null };
+// The plan context behind "N sessions left", the recovery-week framing and the
+// plan-trained muscle set. Best effort: an unreadable block is not evidence of
+// anything, so a failure reads as "no plan" and never blocks the screen.
+//
+// The recovery week is the programme position's GATED state, read exactly as
+// the plan-week card reads it (progress/planWeek.js):
+// `position.recoveryState.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY`,
+// the block's own planned recovery week, held back while a required
+// accumulation session is outstanding (programmePosition.js). It is not
+// `isLighterTrainingState`: recoveryState.js's own rule is that an adaptive
+// recovery adjustment (recovery evidence easing one accumulation week) is never
+// called a recovery week, so the screen keeps judging every muscle in it. The
+// calendar flag (`getCurrentMesocycleWeek().isDeload`, which is also true on an
+// adaptive week) is read only when the position cannot be read at all.
+// "Sessions left" is the required sessions of the plan week the programme is
+// on that are still outstanding. The plan-trained set is the plan layer's own
+// (the plan's weekly sets per muscle, effectiveLandmarks.getPlanLandmarks),
+// never the merged source map, so a manual edit cannot drop a muscle from it.
+async function readPlanContext(userId, userProfile) {
+  const out = { ...EMPTY_PLAN_CONTEXT };
   let position = null;
   try {
     position = await resolveProgrammePosition(userId);
@@ -240,16 +176,23 @@ async function readPlanContext(userId) {
     }
   } catch (_) { /* best effort: no sessions-left clause */ }
   if (position) {
-    out.recoveryWeek = isLighterTrainingState(position.recoveryState);
-    return out;
+    out.recoveryWeek = position.recoveryState?.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
+  } else {
+    try {
+      const week = await getCurrentMesocycleWeek(userId);
+      // A finished block clamps to its final (recovery) row while it awaits the
+      // athlete's decision (database.js getCurrentMesocycleWeek): that is no live
+      // recovery week, so it is never framed as one.
+      out.recoveryWeek = week?.isDeload === true && week?.awaitingDecision !== true;
+    } catch (_) { /* best effort: no recovery-week framing */ }
   }
   try {
-    const week = await getCurrentMesocycleWeek(userId);
-    // A finished block clamps to its final (recovery) row while it awaits the
-    // athlete's decision (database.js getCurrentMesocycleWeek): that is no live
-    // recovery week, so it is never framed as one.
-    out.recoveryWeek = week?.isDeload === true && week?.awaitingDecision !== true;
-  } catch (_) { /* best effort: no recovery-week framing */ }
+    out.planTrained = planTrainedMuscles(await getPlanLandmarks(userId, { userProfile }));
+  } catch (e) {
+    // Without the plan's set, a muscle with no sets reads "No sets": the
+    // no-plan grouping, never a crash.
+    logError('VolumeHeatmapScreen.readPlanTrained', e, { userId });
+  }
   return out;
 }
 
@@ -315,9 +258,10 @@ export default function VolumeHeatmapScreen({ route }) {
   // at 4W by default to preserve the section's current shape; chips widen it.
   const [trendWindowKey, setTrendWindowKey] = useState('4W');
   const trendKeyRef = useRef('4W');
-  // D214: the plan context behind the summary's "N sessions left" and the
-  // recovery-week framing.
-  const [planContext, setPlanContext] = useState({ recoveryWeek: false, hasPlan: false, sessionsLeft: null });
+  // D214: the plan context behind the summary's "N sessions left", the
+  // recovery-week framing and the plan-trained set that decides which rows are
+  // judged (readPlanContext).
+  const [planContext, setPlanContext] = useState(EMPTY_PLAN_CONTEXT);
   // A4: division fingerprint markers ({ muscle: 'elevated'|'capped' }) + the
   // division's display label. Set only when the ACTIVE plan is the generated
   // division plan for the profile's goal; null for everyone else, so no
@@ -409,7 +353,7 @@ export default function VolumeHeatmapScreen({ route }) {
       setHasAnyCompletedSets(false);
       setDivisionMarkers(null);
       setDivisionLabel(null);
-      setPlanContext({ recoveryWeek: false, hasPlan: false, sessionsLeft: null });
+      setPlanContext(EMPTY_PLAN_CONTEXT);
       setLoadError(false);
       setLoading(false);
       return;
@@ -430,7 +374,7 @@ export default function VolumeHeatmapScreen({ route }) {
       datasetRef.current = ds;
       setDataset(ds);
 
-      const plan = await readPlanContext(user.id);
+      const plan = await readPlanContext(user.id, userProfile);
       if (!isCurrentRequest()) return;
       setPlanContext(plan);
 
@@ -522,7 +466,10 @@ export default function VolumeHeatmapScreen({ route }) {
         if (!isCurrentRequest()) return;
         setResolvedLandmarks(r?.table ?? null);
         setResolvedSource(r?.source ?? null);
-      } catch (_) {
+      } catch (e) {
+        // The rows then judge by the research table, and the editor seeds from
+        // it, so the failure is logged rather than left silent (review N3).
+        logError('VolumeHeatmapScreen.resolveLandmarks', e, { userId: user?.id });
         if (!isCurrentRequest()) return;
         setResolvedLandmarks(null);
         setResolvedSource(null);
@@ -639,7 +586,7 @@ export default function VolumeHeatmapScreen({ route }) {
       setCustomLandmarks(map);
       setEditing(false);
       toast.show('Volume targets saved', { variant: 'success' });
-      resolveLandmarksNow().catch(() => {});
+      resolveLandmarksNow().catch((e) => logError('VolumeHeatmapScreen.resolveLandmarksNow', e, { userId: user?.id }));
     } catch (e) {
       logError('VolumeHeatmapScreen.saveLandmarks', e, { muscle: 'all' });
       setEditNotice("Couldn't save your volume targets. Try again.");
@@ -724,7 +671,7 @@ export default function VolumeHeatmapScreen({ route }) {
     setCustomLandmarks(null);
     setConfirmingReset(false);
     setEditing(false);
-    resolveLandmarksNow().catch(() => {});
+    resolveLandmarksNow().catch((e) => logError('VolumeHeatmapScreen.resolveLandmarksNow', e, { userId: user?.id }));
     toast.show("Volume targets back to Volyume's targets", { variant: 'success' });
   }
 
@@ -757,6 +704,11 @@ export default function VolumeHeatmapScreen({ route }) {
       const total = Math.round(credit);
       const band = bandFor(muscle);
       const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+      const hasCredit = credit > 0;
+      // The Under group's population is the plan's (volumeLogged.js): a muscle
+      // outside it with no sets is "No sets" and carries no verdict.
+      const group = bandGroupFor({ muscle, status, hasCredit, planTrained: planContext.planTrained });
+      const judged = !recoveryWeek && group !== NO_SETS_GROUP;
       // "6 to 22" when the helpful range starts above zero; a range that starts
       // at 0 (Front delts) reads "up to 14", never "0 to 14".
       const range = (Number(band.mev) || 0) > 0 ? `${band.mev} to ${band.mrv}` : `up to ${band.mrv}`;
@@ -773,7 +725,7 @@ export default function VolumeHeatmapScreen({ route }) {
         : `an average of ${sets} of ${range} sets a week over the last ${windowWeeks} weeks, ${total} in total`;
       const a11yLabel = [
         `${MUSCLE_DISPLAY_NAMES[muscle]}: ${spokenFigure}`,
-        recoveryWeek ? null : BAND_LABEL[status],
+        judged ? BAND_LABEL[status] : null,
         recency.known ? recency.label : null,
         source ? `source: ${SOURCE_WORDS[source]}` : null,
       ].filter(Boolean).join(', ');
@@ -782,9 +734,10 @@ export default function VolumeHeatmapScreen({ route }) {
         name: MUSCLE_DISPLAY_NAMES[muscle],
         sets,
         total,
-        hasCredit: credit > 0,
+        hasCredit,
         status,
-        color: recoveryWeek ? undefined : resolveColor(status),
+        group,
+        color: judged ? resolveColor(status) : undefined,
         band,
         // The bar's track runs to the limit, or to the value when it is past it.
         max: Math.max(Number(band.mrv) || 0, sets),
@@ -794,7 +747,8 @@ export default function VolumeHeatmapScreen({ route }) {
         a11yLabel,
       };
     });
-  }, [view, dataset, windowWeeks, recoveryWeek, resolvedSource, effectiveLandmarks, bandFor, muscles, t]);
+  }, [view, dataset, windowWeeks, recoveryWeek, resolvedSource, effectiveLandmarks, bandFor, muscles, t,
+    planContext.planTrained]);
 
   // The figure's input. An entry with no colour draws as "No sets", so a muscle
   // with no sets in the window carries none; in a recovery week every trained
@@ -819,7 +773,7 @@ export default function VolumeHeatmapScreen({ route }) {
   const groups = useMemo(() => {
     if (recoveryWeek) return [{ key: 'flat', label: null, status: null, rows: rowModels }];
     return BAND_GROUPS
-      .map(g => ({ key: g.status, label: g.label, status: g.status, rows: rowModels.filter(r => r.status === g.status) }))
+      .map(g => ({ key: g.status, label: g.label, status: g.status, rows: rowModels.filter(r => r.group === g.status) }))
       .filter(g => g.rows.length > 0);
   }, [rowModels, recoveryWeek]);
 
@@ -1024,7 +978,11 @@ export default function VolumeHeatmapScreen({ route }) {
                   accessibilityRole="header"
                   accessibilityLabel={`${group.label}, ${plural(group.rows.length, 'muscle', 'muscles')}`}
                 >
-                  <View style={[styles.groupDot, { backgroundColor: resolveBandColor(group.status) }]} />
+                  <View
+                    style={group.status === NO_SETS_GROUP
+                      ? [styles.groupDot, styles.groupDotNone, live.groupDotNone]
+                      : [styles.groupDot, { backgroundColor: resolveBandColor(group.status) }]}
+                  />
                   <Text style={[styles.groupLabel, live.groupLabel]}>{`${group.label} · ${group.rows.length}`}</Text>
                 </View>
               ) : null}
@@ -1413,6 +1371,8 @@ const styles = StyleSheet.create({
     height: spacing.sm,
     borderRadius: circle(spacing.sm),
   },
+  // "No sets" is the legend's own hollow swatch: no fill, a 1 dp border hairline.
+  groupDotNone: { borderWidth: 1, borderColor: colors.border },
   groupLabel: { ...type.overline, color: colors.textSecondary },
   row: {
     gap: spacing.xs,
@@ -1493,6 +1453,7 @@ function buildLiveStyles(t) {
     recoveryLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     recoveryNote: { ...t.type.bodySm, color: t.colors.textMuted },
     listCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    groupDotNone: { borderColor: t.colors.border },
     groupLabel: { ...t.type.overline, color: t.colors.textSecondary },
     muscleName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     recency: { ...t.type.caption, color: t.colors.textMuted },

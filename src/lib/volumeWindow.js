@@ -60,18 +60,25 @@ export function normaliseWindowWeeks(value) {
  * (D214, section 7.4 item 2); 2 and 4 weeks are the rolling spans D200-1
  * built (now minus N x 7 days).
  *
+ * Finite or nothing (lane 5 review N4): a "now" that is not a finite number
+ * has no window, so this returns null rather than bounds with a NaN in them
+ * (localWeekStartMs would quietly fall back to the wall clock for the start
+ * while the end stayed NaN, a window that disagrees with itself). A caller
+ * reads null as "no data".
+ *
  * @param {object} args
  * @param {number} args.windowWeeks - 1, 2 or 4 (anything else reads as 1)
  * @param {number} args.nowMs - the caller's "now"
- * @returns {{ weeks: 1|2|4, startMs: number, endMs: number, mondayAnchored: boolean }}
- *   startMs inclusive, endMs exclusive (now)
+ * @returns {null | { weeks: 1|2|4, startMs: number, endMs: number, mondayAnchored: boolean }}
+ *   startMs inclusive, endMs exclusive (now); both always finite
  */
-export function volumeWindowBounds({ windowWeeks, nowMs }) {
+export function volumeWindowBounds({ windowWeeks, nowMs } = {}) {
   const weeks = normaliseWindowWeeks(windowWeeks);
-  if (weeks === 1) {
-    return { weeks, startMs: localWeekStartMs(nowMs), endMs: nowMs, mondayAnchored: true };
-  }
-  return { weeks, startMs: nowMs - weeks * WEEK_MS, endMs: nowMs, mondayAnchored: false };
+  if (!Number.isFinite(nowMs)) return null;
+  const mondayAnchored = weeks === 1;
+  const startMs = mondayAnchored ? localWeekStartMs(nowMs) : nowMs - weeks * WEEK_MS;
+  if (!Number.isFinite(startMs)) return null;
+  return { weeks, startMs, endMs: nowMs, mondayAnchored };
 }
 
 /**

@@ -247,9 +247,13 @@ function volumePaint(c, entry) {
 
 // Neutral volume (a recovery week): any logged work is one quiet shade; no
 // colour on the figure claims a verdict.
+// A trained muscle is the quiet fill with a solid hairline and an untrained
+// one no fill with a DASHED hairline, so the two differ by shape as well as
+// tone (surface3 against the card ground is 1.4:1 in the dark palette, lane
+// 5 review S3), the same rule the recovery palette's quiet states follow.
 function neutralVolumePaint(c, entry) {
   const trained = !!entry && (!!entry.color || (Number(entry.workingSets) || 0) > 0);
-  if (!trained) return { fill: NO_FILL, stroke: c.border, strokeWidth: HAIRLINE };
+  if (!trained) return { fill: NO_FILL, stroke: c.border, strokeWidth: HAIRLINE, strokeDasharray: DASH };
   return { fill: c.surface3, stroke: c.border, strokeWidth: HAIRLINE };
 }
 
@@ -299,7 +303,7 @@ function volumeLegendItems(c) {
 function neutralVolumeLegendItems(c) {
   return [
     { key: 'trained', label: 'Trained', swatch: { fill: c.surface3, outline: 'solid' } },
-    { key: 'none', label: 'No sets', swatch: { outline: 'solid' } },
+    { key: 'none', label: 'No sets', swatch: { outline: 'dashed' } },
   ];
 }
 
@@ -333,7 +337,7 @@ function recoveryLegendItems(c) {
 // path. D201: when `recoveryByMuscle` is supplied the colouring swaps to
 // recovery, so the one spoken summary swaps with it. D214: it is still one
 // sentence, and now says how many muscles have no session.
-function diagramSummaryLabel(volumeByMuscle, recoveryByMuscle) {
+function diagramSummaryLabel(volumeByMuscle, recoveryByMuscle, neutralVolume = false) {
   const total = FIGURE_MUSCLE_KEYS.length;
   if (recoveryByMuscle) {
     // The count follows the paint: a muscle counts as having a recent
@@ -351,7 +355,12 @@ function diagramSummaryLabel(volumeByMuscle, recoveryByMuscle) {
   const withVolume = FIGURE_MUSCLE_KEYS.filter(
     m => (volumeByMuscle?.[m]?.workingSets || 0) > 0,
   ).length;
-  return 'Body diagram, front and back views, colour-coded by weekly training volume. '
+  // Neutral mode (a recovery week) draws no verdict, so the summary claims
+  // none (lane 5 review N5).
+  const lead = neutralVolume
+    ? 'Body diagram, front and back views, showing which muscles have logged sets this window, with no verdict this recovery week. '
+    : 'Body diagram, front and back views, colour-coded by weekly training volume. ';
+  return lead
     + `${withVolume} of ${total} muscles have logged sets this window. `
     + 'The muscle list below has the full detail for each one.';
 }
@@ -504,7 +513,7 @@ export default function BodyDiagramHeatmap({
           style={styles.imageBox}
           accessible
           accessibilityRole="image"
-          accessibilityLabel={diagramSummaryLabel(volumeByMuscle, recoveryByMuscle)}
+          accessibilityLabel={diagramSummaryLabel(volumeByMuscle, recoveryByMuscle, neutralVolume)}
         >
           <Svg
             viewBox={`0 0 ${TOTAL_WIDTH} ${FIGURE_HEIGHT}`}

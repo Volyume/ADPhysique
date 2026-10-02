@@ -110,7 +110,9 @@ describe('neutralVolume (D214 addendum 2, a recovery week on the Volume heatmap)
     const back = pathsOf(tree).find((n) => n.props.testID === 'muscle-back');
     expect(quad.props).toMatchObject({ fill: t.colors.surface3, stroke: t.colors.border });
     expect(chest.props).toMatchObject({ fill: t.colors.surface3, stroke: t.colors.border });
-    expect(back.props).toMatchObject({ fill: 'transparent', stroke: t.colors.border });
+    // Review S3: the untrained look differs by SHAPE (a dashed hairline), not by tone alone.
+    expect(back.props).toMatchObject({ fill: 'transparent', stroke: t.colors.border, strokeDasharray: '3 2' });
+    expect(quad.props.strokeDasharray).toBeUndefined();
     // No band colour anywhere on the figure.
     const fills = pathsOf(tree).map((n) => n.props.fill);
     [t.colors.success, t.colors.warning, t.colors.error, t.colors.volumeMinimum, t.colors.textMuted].forEach((c) => expect(fills).not.toContain(c));
@@ -120,6 +122,13 @@ describe('neutralVolume (D214 addendum 2, a recovery week on the Volume heatmap)
     const tree = create(<BodyDiagramHeatmap volumeByMuscle={{ quads: { workingSets: 6 } }} neutralVolume onMuscleTap={() => {}} />);
     const fills = legendFills(tree);
     expect(Object.keys(fills)).toEqual(['Trained', 'No sets']);
+    // The "No sets" swatch is the dashed outline, as drawn on the figure.
+    const items = tree.root.findAll((n) => typeof n.type === 'string' && typeof n.props?.testID === 'string' && n.props.testID.startsWith('legend-item-'));
+    const noSets = items[items.length - 1].findAll((n) => typeof n.type === 'string' && n.props?.testID === 'legend-swatch')[0];
+    expect(flat(noSets.props.style).borderStyle).toBe('dashed');
+    // The spoken summary claims no verdict in this mode (review N5).
+    expect(summaryOf(tree)).toMatch(/no verdict this recovery week/);
+    expect(summaryOf(tree)).not.toMatch(/colour-coded by weekly training volume/);
     const texts = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Text').map((n) => [].concat(n.props.children ?? []).join(''));
     ['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much'].forEach((w) => expect(texts).not.toContain(w));
   });

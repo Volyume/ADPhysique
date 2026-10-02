@@ -242,3 +242,72 @@ describe('D214: normaliseWindowWeeks reads a route param as 1, 2 or 4', () => {
     expect(volumeWindowBounds({ windowWeeks: 'x', nowMs: NOW }).mondayAnchored).toBe(true);
   });
 });
+
+// Lane 5 review S6 and N4 (register D214): "This week" across a UK clock change,
+// and a window is finite or it is null.
+describe('D214 review S6: "This week" across a clock change stays the Monday-anchored local week', () => {
+  const HOUR = 60 * 60 * 1000;
+  // Local-time fixtures (new Date(y, m, d, h)), so every pin holds in any zone.
+  // In Europe/London, the project's test zone, the spring week is 167 h long and
+  // the autumn week 169 h, which is exactly what a fixed 7 x 24 h window gets wrong.
+  const CHANGES = [
+    { name: 'spring, UK clocks forward (Sunday 29 March 2026)', monday: [2, 23], sunday: [2, 29], nextMonday: [2, 30] },
+    { name: 'autumn, UK clocks back (Sunday 25 October 2026)', monday: [9, 19], sunday: [9, 25], nextMonday: [9, 26] },
+  ];
+  const at = ([m, d], h = 0, min = 0) => new Date(2026, m, d, h, min, 0).getTime();
+  const offset = ([m, d], h) => new Date(2026, m, d, h, 0, 0).getTimezoneOffset();
+
+  for (const c of CHANGES) {
+    test(`${c.name}: the Sunday after the change still reads from that week's Monday 00:00 local, not a rolling 7 x 24 h`, () => {
+      const nowMs = at(c.sunday, 12);
+      const { startMs, endMs } = volumeWindowBounds({ windowWeeks: 1, nowMs });
+      expect(startMs).toBe(at(c.monday));
+      expect(endMs).toBe(nowMs);
+      expect(startMs).not.toBe(nowMs - 7 * DAY);
+      // Wall clock says 6 days 12 hours; the real span is that less the hour a
+      // zone gained or lost in between (nothing in a zone with no change).
+      const shiftMinutes = offset(c.monday, 0) - offset(c.sunday, 12);
+      expect(endMs - startMs).toBe(6 * DAY + 12 * HOUR - shiftMinutes * 60 * 1000);
+    });
+
+    test(`${c.name}: the Monday after reads from its own midnight, so the Sunday evening before it is last week`, () => {
+      const nowMs = at(c.nextMonday, 0, 30);
+      const { startMs } = volumeWindowBounds({ windowWeeks: 1, nowMs });
+      expect(startMs).toBe(at(c.nextMonday));
+      expect(at(c.sunday, 23)).toBeLessThan(startMs);
+      expect(nowMs - startMs).toBe(30 * 60 * 1000);
+    });
+
+    test(`${c.name}: the 2- and 4-week windows stay exact rolling spans of N x 7 x 24 h (D200-1, unchanged)`, () => {
+      const nowMs = at(c.sunday, 12);
+      for (const weeks of [2, 4]) {
+        const bounds = volumeWindowBounds({ windowWeeks: weeks, nowMs });
+        expect(bounds.endMs - bounds.startMs).toBe(weeks * WEEK);
+        expect(bounds.mondayAnchored).toBe(false);
+      }
+    });
+  }
+});
+
+describe('D214 review N4: a window is finite or it is null, never a NaN', () => {
+  test('a "now" that is not a finite number has no window', () => {
+    for (const nowMs of [NaN, Infinity, -Infinity, undefined, null, 'x']) {
+      for (const windowWeeks of [1, 2, 4, 3, 'x']) {
+        expect(volumeWindowBounds({ windowWeeks, nowMs })).toBeNull();
+      }
+    }
+    expect(volumeWindowBounds()).toBeNull();
+    expect(volumeWindowBounds({})).toBeNull();
+  });
+
+  test('every bound it does return is finite', () => {
+    for (const windowWeeks of [1, 2, 4, 3, undefined]) {
+      for (const nowMs of [NOW, 0, Date.UTC(2026, 2, 29, 0, 59, 0)]) {
+        const bounds = volumeWindowBounds({ windowWeeks, nowMs });
+        expect(Number.isFinite(bounds.startMs)).toBe(true);
+        expect(Number.isFinite(bounds.endMs)).toBe(true);
+        expect(bounds.startMs).toBeLessThanOrEqual(bounds.endMs);
+      }
+    }
+  });
+});
