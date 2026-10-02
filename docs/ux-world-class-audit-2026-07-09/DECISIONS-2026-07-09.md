@@ -11268,3 +11268,71 @@ landing, under D33:
   1; every later lane edits through it, and every brief tells the lane to
   STOP if the hook blocks rather than touch `.claude/`. Standing note for
   any fresh container: rewrite the gate from the plan before a lane runs.
+
+**D214 addendum 3 (2026-10-02, lanes 2 and 5 landed).** The Recovery
+screen (lane 2, Sonnet, `17b672e`) and the Volume heatmap (lane 5, Sonnet,
+`5efff25`) are on main, each fresh-eyes reviewed (Sonnet) with the findings
+verified and fixed by the lead before the merge. Rulings made while
+landing, under D33:
+- The Recovery by muscle block is a flat section (heading, sub-line, the
+  answer line, the still-to-do rows, the figure in its own card, the
+  grouped list, the names line, the caption), not a second card around
+  the figure's card: lane 1 measured the nested figure at 0.87 scale on a
+  412 dp phone, and the section reads as one object from its heading.
+  Section 7.2's "`Card`" is read as the figure's own card.
+- The still-to-do row is two lines at phone width (the session and its
+  ready clause, then the limiting-muscle clause in muted ink), the whole
+  row spoken as one label; in the RC-5 mixed case the row names the
+  muscles with no recent session, as the sentence above it does.
+- The first-estimate note names the screen as the app titles it ("change
+  it under Adjust training"); the plan's "Plan update" was the route's
+  name, which no one sees. The plan's rating example reads "fresh (1.4 of
+  3)", the band rule's own word (fresh under 1.5), not "mild".
+- The rating rows are body size and wrap; the check-in title under them
+  is a label. The fatigue-trend list keeps the Consistency semantics it
+  moved with (the last rated sessions, unbounded by 14 days): it is a
+  trend, not a current state, and the row above it is the bounded fact.
+- The Volume heatmap's recovery week is the programme position's GATED
+  recovery state (`isLighterTrainingState`, the plan-week card's reading),
+  the calendar row only the fallback when the position cannot be read, so
+  the three surfaces that name the week cannot disagree while a required
+  accumulation session is outstanding. In that week the figure draws no
+  verdict (`neutralVolume`): any logged work takes the quiet surface fill
+  and the legend names only "Trained" and "No sets".
+- A muscle whose MEV is 0 reads "6 of up to 14 sets this week"; the row
+  total of D200 ruling 1 ("39 sets in 4 weeks") leaves the visible row
+  (the spoken label keeps it), the 7.4 wording replacing it. The empty
+  title names the window in the chip's words ("No sets since Monday"),
+  never a "1-week view". The trend card keeps its own window chips
+  (COMP-019's 4W/8W/3M/6M, the pattern every chart carries), the second
+  control on the screen; the census (lane 6) and the closing review judge
+  whether two window controls on one screen read clearly.
+- Group headers render through the overline role (upper case) on both
+  screens, the text node holding the spec's "In range · 1".
+- A muscle the recency read dates inside the 14-day window but which has
+  no model row (a set-type or exercise-resolution difference, rare) is
+  left off the names line rather than named falsely under "No session in
+  the last 14 days".
+- `getVolumeStatus` judges one set as In range for an MEV-0 muscle while
+  the drawn band starts at MEV + 2: an engine seam outside this
+  programme, recorded, not changed. `database.getLastTrainedByMuscle` has
+  no screen consumer now; left in place, unrelated dead code to mention.
+- Founder defect, same landing (`fccfd87`): the morning-weight keyboard on
+  Today dropped after every digit. `TodayStrip.js` declared its weight row
+  as a component inside its own render and rendered it as a tag, so each
+  keystroke remounted the TextInput and the IME closed; the rows are
+  render helpers now. The suite that pins it instruments the field and
+  counts mounts (four failures on the old strip, none on the new), and a
+  repo-wide guard fails any file that declares a component inside another
+  function and renders it as a tag, so the pattern cannot return in a
+  later campaign (the founder: "this seems to happen repeatedly after
+  work"). The earlier incident of 2026-07-10 was a different cause (a
+  plain TextInput inside a bottom sheet) and its fix stands.
+- Process: lane 5's first run built the screen and completed a full test
+  run, then died at the reporting step on an API session rate limit (the
+  lane 2 fresh-eyes reviewer died the same way); the lead relaunched a
+  verifying second run and the review after the limit reset, the
+  recovery path the board records. Both second-run agents made their
+  edits through Bash, which the edit-gate hook does not intercept; the
+  gate file was present throughout and every edit traces to the brief.
+

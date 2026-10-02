@@ -1181,7 +1181,7 @@ muscle, speed, ratings) and whether the answer line leads is Q7.
    out" opens the method paragraphs (RC-21).
 4. **Your ratings** (`SectionLabel`): each rating on its own true scale,
    unshifted, the word first and the number second (RC-1 to RC-3): "Soreness
-   before sessions · mild (1.4 of 3)", "Fatigue after sessions · moderate
+   before sessions · fresh (1.4 of 3)", "Fatigue after sessions · moderate
    (3.0 of 5)", "Joint discomfort after sessions · none (0.2 of 3)", where
    the word is the scale's own word nearest the average ("mostly" is not
    claimed of an average). The display shim that shifts soreness to 2-4
