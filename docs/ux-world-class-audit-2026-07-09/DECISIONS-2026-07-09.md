@@ -11628,6 +11628,73 @@ lines and fixed, with the pins the reviews asked for:
   Home weight-cell door's scroll anchor landing lower now that the plan
   card leads.
 
+**D214 addendum 7 (2026-10-02, lane 7 landed: Body metrics and the weight
+trend; the lead's rulings on the build's twenty open questions).** The
+Sonnet build rebuilt `BodyMetricsScreen.js` to section 3 of the spec on the
+lead's policy module and shared derivation, with `bodyMetricsDisplay.js`,
+`bodyMetricValidate.js`, `bodyMetricsHistoryMerge.js`, the repository's
+date-range read, `chartWindows.js`'s weight takeaway, `recompReframe.js` on
+the one steady rule, `VolyumeChart.js`'s trend-over-dots props, the quick
+entry's floor and plausibility prompt, and deleted `WeightTrendCard.js`
+(nothing rendered it). Its gate: eslint clean over the repo, tsc clean, 138
+suites with 2918 tests, the whole suite 1422 suites and 22923 tests, none
+failed. The lead read the withhold wiring (every withhold is
+`policy.show.<section>`, no screen-local gate), the edit and delete paths,
+the maintenance read and the repository diff, and ruled on the questions:
+- FOUNDER-GATED, built on the safe side meanwhile (question 1): the form
+  asked the body-fat METHOD (DEXA, caliper, BIA, best estimate) and stored
+  it, as the setup wizard does; the old form stored 'manual'. A measured
+  method moves the FFM energy floor to the typed figure through
+  `nutritionEngine.computeFFMFloor` (lower than the sex-based fallback above
+  about 22% body fat for men and 28% for women), so a new route into that
+  branch is the founder's call under CLAUDE.md section 2. Until the founder
+  rules, `BODY_FAT_METHOD_CHOICE` is off: the form asks no method and stores
+  'manual', exactly today's engine behaviour. Put to the founder in chat.
+- FOUNDER-CONFIRM (question 2): a delete removes the day's weigh-in from
+  the history AND the morning series the rapid-loss gate reads (BM-2; the
+  old delete tombstoned only the log row and the weigh-in came back). Ruled
+  as built: a weigh-in is the person's own record (the right to erase one
+  entry is theirs), the edit path already lets them change any figure, the
+  gate's own rules are untouched and it reads whatever is present; nothing
+  else in the app could retract a morning weigh-in before. Flagged to the
+  founder as the one place the build removes evidence the gate reads.
+- The "weighed N of M mornings" count is WITHHELD under an open flag and
+  under calm mode with the verdicts (question 12): a denominator over daily
+  weighing reads as a compliance count to someone with an eating disorder;
+  the trend weight stands alone there. A withhold strengthened.
+- The quick entry's plausibility prompt (question 14) keeps guarding the
+  series against a typo under Home's own withhold (an open flag, a SCOFF
+  score of 2 or more, a failed read, calm mode) but names no figure and no
+  direction there ("That is a long way from your last weigh-in. Save it
+  anyway?"); Body metrics' form does the same under the policy's withhold.
+- One spelling, the app's "lbs" (question 4): the lane's rates and amounts
+  said "lb" where `units.js` has always said "lbs"; the strings, the share
+  line and the spec now read "lbs".
+- "Held steady" needs a small total as well as a small rate (question 6):
+  a year that drifted 2 kg is 0.04 kg a week and "held steady" would be
+  untrue of it; the takeaway reads "moved down 2 kg, about 0.04 kg a week"
+  once the total reaches half a kilo (`STEADY_AMOUNT_KG`). The spec's
+  "typical swing" dead-band is replaced by this one rule.
+- Spec examples corrected to the rules the spec itself set (questions 5, 7
+  and 8): the verdict example sat inside the steady rule; the maintenance
+  sentences name the memo contract's real windows (the weeks the weigh-ins
+  span, a seven-day food window) and a fourth "held" state; "so far" rides in
+  the open week's comparison sentence.
+- Kept as built, each a ruling: the edit form inline in the history row
+  rather than a sheet over the keyboard (question 10); the old body-fat and
+  per-site charts not rebuilt, the Trend card being weight only (9); the
+  shared chip's own selected style (11); the share card's hero in the
+  person's units (13); the headline trend weight kept equal to the Progress
+  root's reading even where a legacy log-only day makes the chart's last
+  point differ (15); "Dated after today" legacy rows kept editable (16); a
+  seed-only account read as day zero here while the hook counts the seed as
+  a point (17, recorded for the census); both recomposition figures dated
+  (18); the calm interstitial's old imperative untouched as the existing
+  ED-adjacent mechanism (19, for the census); the shared Button's selection
+  tick on Save (20, the app's idiom); the facade passing the repository's
+  range options through rather than a new `database.js` export (3).
+- The reviewer's findings: the fresh-eyes review (Sonnet, read-only at `0ad5ddf`, mounted evidence: 181 strings listed under each of an open flag, calm mode and both; delete, edit, day-zero and date-range paths probed; the must-never-move suites green and untouched) found NO blocker and ten should-fix items, every one fixed by the lead's hand in `d297fde` with a pin: a form weigh-in on the setup day is never the seed (S1); a window crossing a year names the year (S2); the verdict names the window the weigh-ins cover (S3, `twoWeekWindowPhrase`, shared with the Progress root's evidence and headline); the maintenance card prints true counts and says what is outstanding when both thresholds are met with no memo (S4: the coaching run learns it, `CoachOutputScreen` is the one caller of `learnEffectiveMaintenanceForUser`); no span claimed for the memo's rows (S5); the week comparison judges what it prints (S6, `roundToDisplay` on `toFixed`); the Trend (i) carries the half-kilo floor (S7); the withhold scan covers the mornings count and the weekly averages (S8); Home's prompt fails closed with no facts (S9, `!== false`); the quick entry says why a weight is refused, in the form's own words (S10). Of the fourteen notes: history headers keep the count only under a withhold (N1, a withhold strengthened); the delete's reach into the morning series stands in the founder-facing ED summary (N2); the takeaway's ED branch restored in the pure function (N3, defence in depth); an edit that leaves body fat as it was keeps its stored method, and the flag-on branch's default-method mapping is recorded for the Q1 answer (N4); the headline kept equal to the Progress root's reading where a legacy log-only day makes the chart's last point differ (N5, question 15 stands); the recomposition's steady test reads the one 90-day-seeded trend (N6); a save or delete re-reads the safety state, and a focus re-read keeps the last frame rather than flashing header-only on every return, one frame of two local reads being the recorded trade-off (N7); secondary reads log their failures (N8); no raw dp (N9); "1 lb", "13 lbs", the stone form's "lbs" label (N10); one weigh-in is labelled "first weigh-in" and the (i) says what few weigh-ins make of the trend (N11); the selected chip's amber beside Log weight is within the amber rule (N12, addendum 9); `trendWindowRows` keeps its pinned mirror of the hook (N13); the renders are refreshed at the programme close (N14).
+
 ### D214 addendum 8 (2026-10-02, founder order): plain English on Body metrics, the maintenance card
 
 **Founder, 2026-10-02, verbatim:** "What is this nonsense 'calories that hold your weight'. That is absolutely nonsensical English and not at all understandable for end users. Do we have other nonsense like this added now? We had a sweep before for shit like this. The app needs to be in plain British English that is understandable and makes sense to humans. [...] Is calories that hold your weight not known as maintenance calories?"
@@ -11643,3 +11710,19 @@ lines and fixed, with the pins the reviews asked for:
 6. The lane 6 census (running at the time) was given the founder's test as a hard criterion for every string on the five screens: where a common British English term exists for the thing, the string uses it, never an invented paraphrase; its findings are ruled in a later addendum when the census lands.
 
 **Files:** `src/lib/bodyMetricsDisplay.js`, `src/lib/recompReframe.js`, `src/screens/BodyMetricsScreen.js` (header comment), tests `bodyMetricsDisplay.test.js`, `recompReframe.test.js`, `BodyMetricsScreen.d214.test.js`, `p15UnitDisplayCopy.guard.test.js` (comment); spec `04-BODY-METRICS-AUDIT-AND-SPEC.md` section 3 items 5 to 7; the mockup page's Body metrics stage.
+
+### D214 addendum 9 (2026-10-02): the plain-English census, ruled
+
+**Founder order (2026-10-02, after "Calories that hold your weight"):** "Do we have other nonsense like this added now? We had a sweep before for shit like this. The app needs to be in plain British English that is understandable and makes sense to humans." The lane 6 census (Sonnet, read-only at `8a2d203`, re-briefed the same hour with the founder's test as a hard criterion: where a common British English term exists for the thing, the string uses it, never an invented paraphrase; any sentence a lay reader stumbles on is flagged with its replacement) is the record `06-LANE6-CENSUS-REPORT.md`: 27 ranked plain-English items (section 0), per-screen findings (section 1), fourteen hand-offs (section 6), the legend census (section 7). The lead's rulings, built word for word (the Body metrics and Body row items by the lead's hand in `d297fde`; the four training screens and the Workout Summary through fix lanes C1 and C2, briefs in `03-BUILD-BRIEFS.md`):
+
+- **The common term wins** (section 0, every item accepted): maintenance calories (0.1, addendum 8); the (i) opens "Maintenance calories are the calories you eat in a day to stay the same weight" (0.1b); "Over the last 7 days" (0.2); "to show which way your weight is going" for "for a direction" everywhere, the Progress root included (0.3); "5 sets so far this week, range 6 to 22" for "5 of 6 to 22 sets this week" (0.4, H3; spec 7.4 item 5 amended); "weigh-ins" and "food logged on N of the last 7 days" (0.5); "You have been recovering more slowly lately" (0.6); "Faster than your first estimate" (0.7); "6 sets as the main muscle worked", "2 sets as a helper", "a helper set counts as half" (0.8); "rest" for "breaks" (0.9); the Body row's fallback headlines in the coach verdict's own sign-aware words, "Moving at the planned rate. Your calorie target stays the same." / "Moving faster (slower) than planned. Nothing to change yet." / "Drifting up (down). Nothing to change yet." on a maintain goal (0.10); photos, never "scan", "set" or "visual trend" on the Progress photos row (0.11); "Starting point set on 3 exercises" (0.12); "Barbell Bench Press 95 kg for 7 reps, a new personal best." and "No new personal bests in the last 30 days" (0.13, 6.12: the lead's shorter form; the estimated one-rep max basis stays on the lift screens); "kg added to your estimated one-rep max" on the share card (0.14); "(you logged in 2 of those weeks)" (0.15); "Every muscle you trained is shown in one colour on the figure." (0.16); "Future dates" (0.17); "Trained in the last 24 hours" (0.18); "Weight lifted" for "Load" (0.19); "Sets stay as light as a recovery week" (0.20); the volume (i) rewritten to define the range and name the three inside bands (0.21); "about 4 days a week", "16,406 kg a week", "about 60 sets a week" (0.22); "not sore" for "fresh" as a soreness answer (0.23); one band vocabulary on the Workout Summary through a display map over `getVolumeStatus()`'s status values, never its labels (0.24, W4, W8); no gloss on "Chest", "the sides of the back" for "lats" (0.25); "Tue 16 Sep · 45 min" (0.26); "kept changing" for "kept improving" on the recomposition (i), direction carries no valence (0.27).
+- **Day zero and early days describe, with a denominator** (R2, R4): "Your training history starts with your first session." (P1), "Your photo comparison starts with your first set of progress photos." (P2), "They could not be compared with your earlier photos." (P3), "Your trend starts with your first morning weigh-in." (P4), "Your trend appears after 7 weigh-ins: 3 of 7 so far." (P5), "Your trend is still taking shape. It becomes clearer with each weigh-in." (P6), "2 sessions so far this week" (P13), "Trained so far this week: Mon, Wed" (P14), "No weighted exercises logged in the last 30 days" (P9), "Strength up on 9 of 9 exercises done more than once in the last 30 days" (6.6), "No plan is running yet. Your progress appears here once one starts, from the plan library or the plan builder." (K1), the heatmap's "The 2 weeks and 4 weeks views reach further back." (H1) and "once you have finished a workout" (H2), "...; it can be changed under Adjust training." (V1).
+- **No size word, no valence clause** (R7): "Drifting up." (P11, with the coach verdict pin), "Energy has been high for 3 weekly check-ins in a row." (V4), both fatigue ratings printed instead of one word for their average (V5), "Estimated ready now." (V6, D201), "usable comparisons" (V7), "Still to do this plan week" (V3), "is planned to feel" in the RIR gloss (K2), "Week 2 of 6 · Build · recovery week in 4 weeks" and "Week 5 of 6 · Push · recovery week next" with the "hardest week" inference dropped (K3, K4, 6.14), "Training builds across the block" (K8), "during this plan week" (K9), "The typical length" (K7), one unit line under the load bars (K5), "Below" and "Above" defined beside "In line" (K6, 6.9), full stops on the deload reasons at render (K13).
+- **The strip and the heatmap agree** (6.7, P7, P8): the strip's legend reads "Under the range · Inside the range · Too much" (the lead's word, not the census's "Reached"), its (i) carries the credit sentence and names the three heatmap bands the middle tone folds; one credit sentence at every site (V2); "minimum, target and maximum" (H7); "Last 3 full weeks (2 with sets logged): about 60 sets a week." when a full week has no sets (H5).
+- **Nothing is judged until a set is logged** (6.4, H6; rule 7.0.2): a window with no logged rows renders the flat unjudged list the recovery week uses, rows "0 sets so far this week, range 6 to 22", one line "Nothing is judged until a set is logged."; lane 5's population rule stays for a window that has sets.
+- **The adaptive recovery adjustment on the heatmap** (6.5): one line under the summary, worded by whether the judged bands already drop under the adjustment (the lane verifies in `getPlanLandmarks` / `effectiveLandmarks.js` and reports which); never the words "recovery week".
+- **Amber** (6.2, 6.3): amber never on a fact; one amber per screen on the thing to do; a selected chip is a control state, and the ONE control that changes what the screen shows keeps the Chip's own amber. So the heatmap's trend-card chips read in words ("4 weeks", "8 weeks", "3 months", "6 months") and take an ink-selected variant through one prop on `WindowChips`; the top window control stays amber; Body metrics' Log weight plus its window chip is within the rule; `EmptyState`'s glyph stays the recorded idiom (addendum 6).
+- **One definition behind each count** (6.11, 6.13): one session-count helper (the milestone's rule: a completed workout with a cached set count above zero or with set rows) read by the Recaps count, the Consistency milestone and the Training row's gate; the plan-week dots drawn from completed workouts' start day, the grid's definition, so "a day with a completed session" is the one meaning on the card, the grid and the caption.
+- **Workout Summary** (1.4b, 6.1): the tooltip lines describe ("Red = Too much: past the most sets the muscle can recover from in a week"; "Blue = Just enough: at the bottom of the range, enough to grow but only just"); the history reopen reads "How many sets you did for each muscle group."; the four "Edit volume targets" sentences say where the control now is ("Volume targets, the last row of the Volume heatmap") in the census's words; "programmes"; the over-limit band reads "Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth." (the glossary's "not dangerous" reading is the one the app makes; the soreness-and-joint-aches claim goes, W7); "In range: 6 to 22 sets a week" (W8).
+- **Not changed, and why:** "No session" stays (D166 forbids a rest-day concept; a day without a session is not a rest day); "Recovery week" is the plain word for "deload"; "Recomposition" is the common gym term and keeps its (i); "7 sessions to go" counts to a feature, not a day (P15, outside D166); the recap banner's hyphen is not an em dash; "Moving faster than planned." keeps its verb (spec 7.1's shorter form amended to it).
+- **Guard:** `src/lib/__tests__/bodyMetrics.plainTerms.guard.test.js` bans the rejected phrasings on the Body metrics sources ("hold your weight", "N points", "In the 7 days to today", "for a direction", "weigh-in days", "logged food days"); the training screens' new sentences are pinned in their own suites by the lanes.
