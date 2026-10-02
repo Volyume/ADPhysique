@@ -55,14 +55,15 @@ export const BODY_FAT_METHODS = Object.freeze([
   { value: 'dexa', label: 'DEXA' },
 ]);
 export const DEFAULT_BODY_FAT_METHOD = 'visual';
-// FOUNDER-GATED (D214 addendum 7, lane 7 open question 1; CLAUDE.md section 2,
-// the FFM energy floor): storing a measured method (DEXA, caliper, BIA) from
-// this form moves the person's FFM floor to their typed figure through
-// nutritionEngine.computeFFMFloor, exactly as the setup wizard's choice does,
-// where the old form always stored 'manual' (the sex-based fallback floor).
-// The method row is asked, and stored, only once the founder confirms; until
-// then the form keeps today's engine behaviour and stores 'manual'.
-export const BODY_FAT_METHOD_CHOICE = false;
+// FOUNDER-DECIDED 2026-10-02 (D214 addendum 11; the question was addendum 7,
+// lane 7 question 1; CLAUDE.md section 2, the FFM energy floor): the form asks
+// how a body-fat figure was measured (DEXA, caliper, smart scale, best
+// estimate) and stores it, as the setup wizard does. A measured method moves
+// the person's FFM floor to their typed figure through
+// nutritionEngine.computeFFMFloor, exactly as it does from the wizard; the old
+// form always stored 'manual' (the sex-based fallback floor). The engine is
+// untouched: this is the wizard's own route, now open from the form too.
+export const BODY_FAT_METHOD_CHOICE = true;
 
 // The plausibility rule (spec section 3 item 3): a typed weigh-in more than 5%
 // or 5 kg from the last one is asked about before it is saved. Whichever

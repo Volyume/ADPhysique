@@ -749,10 +749,18 @@ export default function BodyMetricsScreen() {
   async function saveEdit(data, entry, newDayKey) {
     const dateChanged = newDayKey !== entry.metric_date;
     if (entry.source === 'body_metric_log') {
-      // A body-fat figure left as it was keeps the method it was stored with: a
-      // setup-wizard 'dexa' is never overwritten by 'manual' on a note edit (N4).
+      // A body-fat figure left as it was, with the method control untouched,
+      // keeps the method it was stored with: a setup-wizard 'dexa' is never
+      // overwritten on a note edit, and a 'typed in' row never becomes 'best
+      // estimate' because that is the control's seed (N4; D214 addendum 11). A
+      // method the person changed on purpose is stored as chosen.
       const sameBodyFat = data.bodyFatPercent != null && Number(data.bodyFatPercent) === Number(entry.body_fat);
-      const payload = sameBodyFat && entry.body_fat_source ? { ...data, bodyFatSource: entry.body_fat_source } : data;
+      const seededSource = BODY_FAT_METHODS.some((m) => m.value === entry.body_fat_source)
+        ? entry.body_fat_source : DEFAULT_BODY_FAT_METHOD;
+      const methodUntouched = !BODY_FAT_METHOD_CHOICE || data.bodyFatSource === seededSource;
+      const payload = sameBodyFat && methodUntouched
+        ? { ...data, bodyFatSource: entry.body_fat_source ?? 'manual' }
+        : data;
       const ok = await updateBodyMetric(user.id, entry.id, payload);
       if (!ok) throw new Error('updateBodyMetric: no live row matched');
       if (dateChanged) {
@@ -1164,7 +1172,7 @@ export default function BodyMetricsScreen() {
                 maxLength: 4,
               })}
             </View>
-            {/* The method row waits on the founder (BODY_FAT_METHOD_CHOICE). */}
+            {/* The method row, as the setup wizard asks it (BODY_FAT_METHOD_CHOICE, founder 2026-10-02). */}
             {form.body_fat && BODY_FAT_METHOD_CHOICE ? (
               <View style={styles.methodBlock}>
                 <View style={styles.titleRow}>

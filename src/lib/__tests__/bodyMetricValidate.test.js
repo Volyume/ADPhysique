@@ -297,7 +297,7 @@ describe('validateBodyMetricForm: the body-fat method (BM-33)', () => {
     expect(r.data.bodyFatSource).toBe(BODY_FAT_METHOD_CHOICE ? method : 'manual');
   });
   test('the method choice is founder-gated and off', () => {
-    expect(BODY_FAT_METHOD_CHOICE).toBe(false);
+    expect(BODY_FAT_METHOD_CHOICE).toBe(true); // founder, 2026-10-02 (D214 addendum 11): the form asks the method as the wizard does
   });
 
   test('a caller that names no method (or an unknown one) keeps the old "manual", as before', () => {

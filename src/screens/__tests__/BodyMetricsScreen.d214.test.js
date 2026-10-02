@@ -841,15 +841,25 @@ describe('logging a weigh-in', () => {
     // the method is asked once a body-fat figure is typed, and glossed behind an (i)
     expect(all).not.toContain('How it was measured');
     await typeInto(tree, 'Body fat percentage', '17.5');
-    // RE-ANCHORED D214 addendum 7 (lead; lane 7 open question 1, founder-gated):
-    // the method row waits on the founder (bodyMetricValidate.BODY_FAT_METHOD_CHOICE),
-    // since storing a measured method moves the FFM floor; until then the
-    // form stores 'manual' as the old form did and asks no method.
-    expect(visible(tree)).not.toContain('How it was measured');
-    // The method glossary (i) waits on the founder with the method row (D214 addendum 7, question 1).
-    expect(info(tree).some((t) => /DEXA|caliper|BIA/i.test(t))).toBe(false);
+    // RE-ANCHORED 2026-10-02 (founder's answer to lane 7 question 1, D214 addendum
+    // 11): the method row is asked once a figure is typed, as the setup wizard
+    // asks it, and its (i) glosses the methods.
+    expect(visible(tree)).toContain('How it was measured');
+    expect(info(tree).some((t) => /DEXA|caliper|BIA/i.test(t))).toBe(true);
     // how to measure sits behind one (i)
     expect(info(tree).some((t) => /Waist: around the narrowest part/.test(t))).toBe(true);
+  });
+
+  // Founder, 2026-10-02 (D214 addendum 11): the method chosen on the form is
+  // stored, as the setup wizard stores it; the engine reads it from there.
+  test('the method chosen on the form is stored with the figure', async () => {
+    const { tree } = await mount();
+    await press(tree, 'Add measurements');
+    await typeInto(tree, 'Body fat percentage', '17.5');
+    await press(tree, 'method DEXA');
+    await press(tree, 'Save entry');
+    expect(db.logBodyMetric).toHaveBeenCalledTimes(1);
+    expect(db.logBodyMetric.mock.calls[0][1]).toEqual(expect.objectContaining({ bodyFatPercent: 17.5, bodyFatSource: 'dexa' }));
   });
 });
 
@@ -873,6 +883,17 @@ describe('editing and deleting a weigh-in', () => {
     await typeInto(tree, 'Note', 'After a long run');
     await press(tree, 'Save changes');
     expect(db.updateMorningWeightById).toHaveBeenCalledWith('u1', 'm1', { weightKg: 82.4, notes: 'After a long run' });
+  });
+
+  // Lane 7 review N4, D214 addendum 11: a note edit on a row whose body fat was
+  // measured keeps the stored method; the control's seed never overwrites it.
+  test('a note edit keeps a measured body-fat method', async () => {
+    const { tree } = await mount();
+    await press(tree, 'Edit weigh-in. Mon 7 Sep, 82.1 kg');
+    await typeInto(tree, 'Note', 'Caliper day');
+    await press(tree, 'Save changes');
+    expect(db.updateBodyMetric).toHaveBeenCalledTimes(1);
+    expect(db.updateBodyMetric.mock.calls[0][2]).toEqual(expect.objectContaining({ bodyFatPercent: 18, bodyFatSource: 'caliper' }));
   });
 
   test('BM-2: a delete asks, says what it removes, and retracts the log row AND the day\'s trend row', async () => {
