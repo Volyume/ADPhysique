@@ -11541,3 +11541,89 @@ outcome is recorded at the merge, and main waits for it.
   outside the section changed) and accepted it, and its reviewer checks that
   lane 2's sections render as before. Both lanes finished inside their
   windows (38 and 45 minutes) with no edit-gate block.
+
+**D214 addendum 6 (2026-10-02, the fresh-eyes reviews of lanes 3 and 4;
+the lead's rulings and fixes before the merge; the fixes committed as `undefined`).** Both reviews (Sonnet,
+relaunched after the API limit reset) found no blocker and verified the
+counts against the real functions: the strip's "under their range" equals
+the heatmap's first group on twelve fixtures, the first-day baseline holds
+on the audit's probe, and `likeForLikeLoad` is exact to the unit through
+both clock changes. Every should-fix was verified by the lead at the cited
+lines and fixed, with the pins the reviews asked for:
+- Lane 3 review 1 (the lead's own hunk): the plan-week card's seven cells
+  sat inside the accessible summary group the lead had just created, so a
+  screen reader would read the count and never the days (the old card
+  never had a group at all, since `Card` does not forward `accessible`, so
+  the old pin passed vacuously). The group now wraps the count and the
+  subline only; the cells and the strip are siblings; pinned by an
+  ancestor scan.
+- Review 2: the Recaps door printed "10 sessions to go" from a count of
+  zero before the read settled and after a failed load (beside the one
+  error state). The gate text waits for the read and is withheld on
+  failure; the toast then says only when recaps open.
+- Review 3: the Training evidence rounded the weight lifted ("83 kg" for
+  82.5), a half-kilo lie on every 2.5 kg plate; it prints the weight as
+  lifted, pin re-anchored.
+- Review 4: the rule-3 hunks (NavRow's ink tile, BlockShapeCard's ink
+  dots, the plan-week card's under-section) survived 9 of 47 mutations
+  with every suite green; a source guard (`rule3Ink.guard.test.js`) now
+  pins each, and the dashed recovery dot.
+- Review 5: pins that could not fail. Added: the rolling 30-day window at
+  the source, the resolved landmark table flowing into the strip (PR-16),
+  the heaviest-exercise tie-break (lower id, order independent).
+- Review notes taken: "holding steady" dropped from "No new bests in the
+  last 30 days" (a steadiness no new best proves); "Last session today"
+  counted 24-hour blocks and now counts local days (a 22:00 session read
+  at 08:00 is "yesterday"); the Body row's headline drops its full stop so
+  it reads as a fragment like the other three (the spoken label keeps its
+  own stops); "Your plan week" labels the root's first card as Consistency
+  labels the same card; the Body row's glyph is the scales, since the
+  Volume heatmap's door already carried the body outline; the root's error
+  copy no longer blames a connection for a local read ("Your training
+  history is safe. This is a loading problem, not lost data."); the strip's
+  (i) says a plan-trained muscle counts as under the range "even before its
+  first set" (it still counts with one set below MEV).
+- Lane 4 review S1 (the deepest finding): the block card named the
+  programme's week in its sentence and bar while the effort line and the
+  plan rows still read the calendar's row, so in a held-back recovery week
+  one card could print "Week 5 of 6 · Push" over "This week's effort: 1 of
+  5" (the recovery week's target), and rows planned for a week the person
+  was not on. Fork offered: read everything from the programme's week, or
+  withhold the two lines when the weeks differ. Ruled: ONE week. The hook
+  reads the position first and takes the planned volume, the counting span
+  and the rep target from the programme's week row (`blockWeek`, source
+  'programme'), the calendar row only when no position exists; pinned in
+  the hook and on the mounted screen.
+- S2: a finished block awaiting the athlete's decision still read "in week
+  6 of your plan · Upper B is next" on the plan-week card over a block card
+  saying "Block finished". `buildPlanWeekSummary` takes `finished`; the
+  card then prints the calendar count with "Block finished" and names no
+  week or next session, on both screens.
+- S3: day zero without a plan drew two ambers (the no-plan card's icon and
+  the shared empty state's medallion). The no-plan icon is ink; the
+  EmptyState's amber glyph and medallion are the app's shared empty-state
+  idiom on every screen and are recorded for the closing review as a
+  system question, not changed inside this programme.
+- S4 and S5: the plan rows' (i) read as cumulative since the block began
+  and said nothing about credits; it now says the rows count the sets
+  logged since this plan week began, with the one credit sentence the
+  heatmap carries. The header and its (i) render OUTSIDE the pressable
+  card (a child of an accessible control is unreachable, the D201 addendum
+  9 precedent), and the control is named by the header's sentence.
+- S6: the load card's (i) names its window ("up to your last four full
+  weeks; this week so far is not in it") and the Sessions (i) says "this
+  week and the five weeks before it" instead of "the last six weeks".
+- Notes taken: the hook's silent catches now log through `logError`; the
+  stale comments naming the retired calendar are gone.
+- Recorded, not changed: two programme-position reads per Progress load
+  (the root's own and the hook's; folding them is a follow-up); the
+  recovery-week line in two-line form on the strip, matching the heatmap;
+  "new best" judged by estimated one-rep max without saying so (for the
+  census, with the three definitions of "trained" on Consistency and the
+  two session counts); the plan rows' tap opening the heatmap on its
+  Monday week while the rows count the block week; `BlockShapeCard`'s
+  sentence keeping its full form ("Week 2 of 6 · Build. Recovery week in 4
+  weeks.") against the spec's sketch; the harness drawing every dashed
+  border solid, so the dashed recovery dot is a device-check item; the
+  Home weight-cell door's scroll anchor landing lower now that the plan
+  card leads.
