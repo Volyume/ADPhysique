@@ -32,6 +32,11 @@ import { LOOKBACK_DAYS } from '../lib/recovery/constants';
 //     hairline, no session in 14 days = no fill with a DASHED hairline, so the
 //     two quiet states differ in shape as well as tone. Legend: a three-step
 //     ramp "More to recover ... less", Recovered, No session in 14 days.
+//   - NEUTRAL VOLUME (`neutralVolume`, a recovery week on the Volume heatmap,
+//     plan 7.4 item 2): no verdict is drawn, so a muscle with any logged sets
+//     takes the quiet `surface3` fill with the `border` hairline and the
+//     legend names just that ("Trained") beside "No sets"; the band words and
+//     their (i) are withheld, since nothing on the figure is judged.
 //   Both legends are `LegendRow`, so every colour on the figure has one named
 //   swatch in one style. A status surface carries no amber: the division
 //   markers below are ink.
@@ -240,6 +245,14 @@ function volumePaint(c, entry) {
   return { fill, stroke: c.surface, strokeWidth: HAIRLINE };
 }
 
+// Neutral volume (a recovery week): any logged work is one quiet shade; no
+// colour on the figure claims a verdict.
+function neutralVolumePaint(c, entry) {
+  const trained = !!entry && (!!entry.color || (Number(entry.workingSets) || 0) > 0);
+  if (!trained) return { fill: NO_FILL, stroke: c.border, strokeWidth: HAIRLINE };
+  return { fill: c.surface3, stroke: c.border, strokeWidth: HAIRLINE };
+}
+
 // Recovery: which of the five looks a muscle takes. `status` decides first
 // ('no_recent_session' carries recoveredPercent 100, so the percent alone
 // would misread it as recovered); inside 'recovering' the percent picks the
@@ -279,6 +292,13 @@ function volumeLegendItems(c) {
     { key: 'in', label: 'In range', swatch: { fill: c.success } },
     { key: 'near', label: 'Near the limit', swatch: { fill: c.warning } },
     { key: 'over', label: 'Too much', swatch: { fill: c.error } },
+    { key: 'none', label: 'No sets', swatch: { outline: 'solid' } },
+  ];
+}
+
+function neutralVolumeLegendItems(c) {
+  return [
+    { key: 'trained', label: 'Trained', swatch: { fill: c.surface3, outline: 'solid' } },
     { key: 'none', label: 'No sets', swatch: { outline: 'solid' } },
   ];
 }
@@ -412,6 +432,9 @@ export default function BodyDiagramHeatmap({
   // outline on all of its shapes, drawn last so no neighbour overpaints it).
   // The caller owns the selection; the figure only draws it.
   selectedMuscle = null,
+  // D214 (plan 7.4 item 2): a recovery week on the Volume heatmap draws no
+  // verdict. Ignored when `recoveryByMuscle` is supplied.
+  neutralVolume = false,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -425,10 +448,11 @@ export default function BodyDiagramHeatmap({
   // accessibilityLabel trio is gone. The wrapping View below carries the
   // diagram's ONE accessible node. `testID` names the muscle for tests and
   // tooling; it is not an accessibility prop.
+  const paintVolume = neutralVolume ? neutralVolumePaint : volumePaint;
   const region = muscleKey => ({
     ...(recoveryByMuscle
       ? recoveryPaint(t.colors, recoveryByMuscle?.[muscleKey])
-      : volumePaint(t.colors, volumeByMuscle?.[muscleKey])),
+      : paintVolume(t.colors, volumeByMuscle?.[muscleKey])),
     ...(muscleKey === selectedMuscle
       ? { stroke: t.colors.textPrimary, strokeWidth: SELECTED_STROKE, strokeDasharray: undefined }
       : null),
@@ -511,6 +535,8 @@ export default function BodyDiagramHeatmap({
       <View style={[styles.legendWrap, live.legendWrap]}>
         {recoveryByMuscle ? (
           <LegendRow items={recoveryLegendItems(t.colors)} />
+        ) : neutralVolume ? (
+          <LegendRow items={neutralVolumeLegendItems(t.colors)} />
         ) : (
           <LegendRow
             items={volumeLegendItems(t.colors)}

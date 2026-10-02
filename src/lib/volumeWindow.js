@@ -21,11 +21,58 @@
  * by a window that always counts as exactly one week returns the same
  * total, so it stays visibly identical.
  *
+ * D214 AMENDMENT (Progress, recovery heatmap and Consistency elevation,
+ * `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.4 item 2): ruling 1's "the 1-week view is
+ * unchanged" kept a rolling 7 x 24 h window, so the heatmap's "this week"
+ * disagreed with the Progress strip and the plan, which read the
+ * Monday-anchored local week. On ruling 3's own principle (one definition
+ * per meaning) "This week" is now the Monday-anchored week SO FAR
+ * (volumeWindowBounds below); the 2- and 4-week windows stay the rolling
+ * weekly averages with the partial-history divisor exactly as built here.
+ * The cost, accepted in the plan: every Monday the "This week" view starts
+ * empty, which the "so far" line and "N sessions left" carry.
+ *
  * Pure. No I/O, no randomness, no theme/React import -- the caller passes
  * every timestamp in.
  */
 
+import { localWeekStartMs } from './dayKey';
+
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The window length the heatmap reads, in weeks: 1 ("This week"), 2 or 4.
+ * Anything else (undefined, a string, 3, 0, a negative, NaN) reads as 1, so a
+ * stale or hand-built navigation param can never open an unsupported window.
+ *
+ * @param {*} value - a route param or a chip's weeks
+ * @returns {1|2|4}
+ */
+export function normaliseWindowWeeks(value) {
+  const n = Number(value);
+  return n === 2 || n === 4 ? n : 1;
+}
+
+/**
+ * The span of sets a window reads. "This week" (1) runs from the local Monday
+ * 00:00 to now, so it agrees with the Progress strip and the plan week
+ * (D214, section 7.4 item 2); 2 and 4 weeks are the rolling spans D200-1
+ * built (now minus N x 7 days).
+ *
+ * @param {object} args
+ * @param {number} args.windowWeeks - 1, 2 or 4 (anything else reads as 1)
+ * @param {number} args.nowMs - the caller's "now"
+ * @returns {{ weeks: 1|2|4, startMs: number, endMs: number, mondayAnchored: boolean }}
+ *   startMs inclusive, endMs exclusive (now)
+ */
+export function volumeWindowBounds({ windowWeeks, nowMs }) {
+  const weeks = normaliseWindowWeeks(windowWeeks);
+  if (weeks === 1) {
+    return { weeks, startMs: localWeekStartMs(nowMs), endMs: nowMs, mondayAnchored: true };
+  }
+  return { weeks, startMs: nowMs - weeks * WEEK_MS, endMs: nowMs, mondayAnchored: false };
+}
 
 /**
  * How many of a window's weeks the account actually has data for, counted

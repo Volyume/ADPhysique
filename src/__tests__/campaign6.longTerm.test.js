@@ -564,11 +564,15 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
 describe('C6 closeout B1/B4 (founder-approved visibility pass)', () => {
   test('B1: the volume screen names each muscle band\'s provenance, in the three-state vocabulary', () => {
     const src = read('screens/VolumeHeatmapScreen.js');
-    expect(src).toMatch(/Your own targets/);
-    expect(src).toMatch(/Adjusted from your logged training/);
-    expect(src).toMatch(/Research starting point/);
+    // RE-ANCHORED D214 (plan section 7.4 item 5, VH-4): provenance is one line in
+    // the row's tap ("Source: your own targets") instead of a caption on every
+    // row, so the same three-state vocabulary now reads in lower case after the
+    // label (the five words the plan names, in VolumeHeatmapScreen.js SOURCE_WORDS).
+    expect(src).toMatch(/your own targets/);
+    expect(src).toMatch(/adjusted from your logged training/);
+    expect(src).toMatch(/research starting point/);
     // The research caption stays free-safe: no learning promise on it.
-    expect(src).not.toMatch(/Research starting point until/);
+    expect(src).not.toMatch(/research starting point until/);
   });
 
   test('B4: the calorie hero provenance forks on a REAL applied change; day-0 wording unchanged', () => {

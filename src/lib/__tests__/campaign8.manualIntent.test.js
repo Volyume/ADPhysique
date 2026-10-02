@@ -46,27 +46,41 @@ describe('explicit manual intent (RA6-6)', () => {
 
 describe('the editor records intent only for muscles it actually touched', () => {
   const SRC = require('fs').readFileSync(require('path').resolve(__dirname, '../../screens/VolumeHeatmapScreen.js'), 'utf8');
+  const between = (from, to) => SRC.slice(SRC.indexOf(from), SRC.indexOf(to, SRC.indexOf(from)));
 
+  // RE-ANCHORED D214 (Progress elevation, plan section 7.4 item 7; register
+  // D214 ruling 5): the editor now seeds each field with the band IN FORCE
+  // (plan, adjusted, profile or research), so a muscle that differs from the
+  // RESEARCH table is no longer evidence of an edit, and the old "differs from
+  // research" clause would have written every plan-banded muscle as manual
+  // (the Stage 6 blocker). The save compares against the SEEDED value, and an
+  // untouched muscle is never written.
   test('opening the editor and saving does not mark every muscle manual', () => {
-    // The save keeps a muscle only when it differs, was touched, or was
-    // already explicit - never the whole table.
-    expect(SRC).toMatch(/if \(differs \|\| touched \|\| wasExplicit\)/);
+    const save = between('async function saveLandmarks', '// C14 job 7 (RA6-6): a muscle is Volyume-managed');
+    expect(save).toMatch(/const changedFromSeed = !!seeded/);
+    expect(save).toMatch(/if \(touched \|\| changedFromSeed\)/);
     expect(SRC).toMatch(/touchedMusclesRef\.current\.add\(muscle\)/);
+    // The research table is never the comparison any more.
+    expect(save).not.toMatch(/entry\.mev !== research|research\.mev|const differs/);
   });
 
   test('reset clears recorded intent', () => {
-    expect(SRC).toMatch(/touchedMusclesRef\.current = new Set\(\); \/\/ C8 RA6-6: reset clears intent/);
+    const reset = between('function resetToVolyumeTargets', '// ScrollView + per-row offsets');
+    expect(reset).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
   });
 
   // Review D4: an abandoned edit is not intent. Without this, typing into
   // a muscle then cancelling, then saving a DIFFERENT muscle later in the
   // same visit, stamped the abandoned one as an explicit manual override -
   // permanent, suppression-proof, and it disables adaptive learning for
-  // that muscle.
+  // that muscle. (RE-ANCHORED D214: cancel is cancelEditing(); the typed
+  // values are discarded by re-seeding on the next open, not by a rebuild.)
   test('cancel discards both the typed values and the recorded intent', () => {
-    const cancel = SRC.slice(SRC.indexOf("title=\"Cancel\""), SRC.indexOf("title=\"Save\""));
+    const cancel = between('function cancelEditing', 'async function saveLandmarks');
     expect(cancel).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
-    expect(cancel).toMatch(/setEditValues\(buildEditValues\(customLandmarks\)\)/);
     expect(cancel).toMatch(/setEditing\(false\)/);
+    const open = between('function openEditor', 'function cancelEditing');
+    expect(open).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
+    expect(open).toMatch(/editSeedRef\.current = seed;/);
   });
 });

@@ -154,39 +154,45 @@ export function e1rmTakeaway({ windowKey, coversAll, points, dateOf, values, uni
 }
 
 /**
- * Weekly-volume takeaway: average weekly sets + first-to-last delta in sets.
+ * Weekly-volume takeaway: this week so far, then the average of the full
+ * weeks before it, in LOGGED sets.
  *
  * D200-3 last clause (progress-tab audit 2026-09-24, lane E): the volume
- * heatmap's trend now anchors its window on the Monday-ending local week
+ * heatmap's trend anchors its window on the Monday-ending local week
  * (VolumeHeatmapScreen.js), so its last bucket is a PARTIAL current week.
  * `weeklySets` must already exclude that bucket (the caller passes only the
- * full weeks) so the average/delta here is never diluted by a partial week;
+ * full weeks) so the average here is never diluted by a partial week;
  * `phraseOverride` lets the caller say "Last N full weeks" instead of the
  * window's generic label, and `currentWeekTotal` (optional) prepends a
  * separate "This week so far" sentence for the excluded bucket's own total.
- * Both are optional and additive -- a caller that omits them (every
- * existing caller) is byte-identical to before. `phraseOverride` is used
- * verbatim (this function does not itself capitalise it) -- the caller
- * decides the exact wording, matching how it opens a sentence.
+ * `phraseOverride` is used verbatim (this function does not itself
+ * capitalise it) -- the caller decides the exact wording.
  *
- * @returns {string} e.g. "8 weeks: average 14 sets a week, up 3." or, with
- *   `currentWeekTotal` and `phraseOverride: 'Last 3 full weeks'`:
- *   "This week so far: 9 sets. Last 3 full weeks: average 14 sets a week, up 3."
+ * D214 (register; `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.4 item 6, VH-9 and VH-16): the old line
+ * ended "average 111 sets a week, down 57" -- a delta with no unit, over
+ * totals that summed per-muscle credits, so eight logged sets printed as 16.
+ * The caller now passes LOGGED working-set rows per Monday week (never the
+ * credits), the sentence says "logged", and the first-to-last delta is gone:
+ * "This week so far: 42 sets logged. Last 3 full weeks: about 60 a week."
+ * The second sentence leans on the first for its unit; on its own (no
+ * `currentWeekTotal`) it names "sets" so the number always states what it is.
+ *
+ * @returns {string} e.g. "This week so far: 42 sets logged. Last 3 full
+ *   weeks: about 60 a week." or, standing alone, "8 weeks: about 13 sets a
+ *   week."
  */
 export function volumeTakeaway({
   windowKey, coversAll, spanDays, weeklySets, phraseOverride, currentWeekTotal,
 }) {
   const hasCurrent = Number.isFinite(currentWeekTotal);
   const currentR = hasCurrent ? Math.round(currentWeekTotal) : 0;
-  const currentText = hasCurrent ? `This week so far: ${currentR} set${currentR === 1 ? '' : 's'}.` : '';
+  const currentText = hasCurrent ? `This week so far: ${currentR} set${currentR === 1 ? '' : 's'} logged.` : '';
   if (!weeklySets || weeklySets.length < 2) return currentText;
   const phrase = phraseOverride ?? windowPhrase(windowKey, coversAll, spanDays);
   const avg = weeklySets.reduce((t, v) => t + v, 0) / weeklySets.length;
   const avgR = Math.round(avg);
-  const delta = Math.round(weeklySets[weeklySets.length - 1] - weeklySets[0]);
-  const dir = directionWord(delta, 0);
-  const base = `${phrase}: average ${avgR} set${avgR === 1 ? '' : 's'} a week`;
-  const tail = dir === 'level' ? `${base}, holding steady.` : `${base}, ${dir} ${Math.abs(delta)}.`;
+  const tail = `${phrase}: about ${avgR}${currentText ? '' : ` set${avgR === 1 ? '' : 's'}`} a week.`;
   return currentText ? `${currentText} ${tail}` : tail;
 }
 

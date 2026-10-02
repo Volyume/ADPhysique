@@ -154,43 +154,67 @@ describe('chartWindows: e1rmTakeaway', () => {
 });
 
 describe('chartWindows: volumeTakeaway', () => {
-  test('average weekly sets + delta in sets', () => {
+  // RE-ANCHORED D214 (Progress, recovery heatmap and Consistency elevation,
+  // docs/audit/progress-recovery-consistency-audit-2026-10-01/
+  // 00-AUDIT-AND-PLAN.md section 7.4 item 6, VH-9 and VH-16): the takeaway is
+  // in LOGGED sets (the caller passes logged working-set rows per Monday week,
+  // never per-muscle credits), the first-to-last delta ("up 3") is gone, and
+  // the sentence says "about N a week". On its own it names "sets" so the
+  // number states what it is; after the "This week so far" sentence the unit
+  // is carried by that sentence.
+  test('standing alone: the average of the full weeks, naming the unit, with no delta', () => {
     expect(volumeTakeaway({ windowKey: '8W', coversAll: false, spanDays: 56, weeklySets: [11, 12, 13, 14] }))
-      .toBe('8 weeks: average 13 sets a week, up 3.');
+      .toBe('8 weeks: about 13 sets a week.');
   });
-  test('singular set reads correctly and a flat line holds steady', () => {
+  test('a singular average reads "1 set", and a flat run says no "holding steady" or direction', () => {
     expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 28, weeklySets: [1, 1, 1] }))
-      .toBe('4 weeks: average 1 set a week, holding steady.');
+      .toBe('4 weeks: about 1 set a week.');
+    expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 28, weeklySets: [5, 20, 9] }))
+      .not.toMatch(/up|down|holding steady/);
   });
 
   // D200-3 last clause (progress-tab audit 2026-09-24, lane E, VolumeHeatmapScreen
-  // trend): phraseOverride and currentWeekTotal are additive -- omitted by
-  // both tests above, which stay byte-identical.
-  describe('phraseOverride and currentWeekTotal (additive, heatmap trend)', () => {
+  // trend): phraseOverride and currentWeekTotal are optional.
+  describe('phraseOverride and currentWeekTotal (heatmap trend)', () => {
     test('phraseOverride replaces the windowKey-derived phrase, used verbatim (not capitalised by this function)', () => {
       expect(volumeTakeaway({
         windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [11, 12, 13],
         phraseOverride: 'Last 3 full weeks',
-      })).toBe('Last 3 full weeks: average 12 sets a week, up 2.');
+      })).toBe('Last 3 full weeks: about 12 sets a week.');
     });
 
     test('currentWeekTotal prepends a "This week so far" sentence ahead of the full-weeks average', () => {
       expect(volumeTakeaway({
         windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [11, 12, 13],
         phraseOverride: 'Last 3 full weeks', currentWeekTotal: 9,
-      })).toBe('This week so far: 9 sets. Last 3 full weeks: average 12 sets a week, up 2.');
+      })).toBe('This week so far: 9 sets logged. Last 3 full weeks: about 12 a week.');
+    });
+
+    test('the plan\'s own example reads exactly', () => {
+      expect(volumeTakeaway({
+        windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [58, 60, 62],
+        phraseOverride: 'Last 3 full weeks', currentWeekTotal: 42,
+      })).toBe('This week so far: 42 sets logged. Last 3 full weeks: about 60 a week.');
     });
 
     test('currentWeekTotal alone (fewer than 2 full weeks) still reads, not empty', () => {
       expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [], currentWeekTotal: 5 }))
-        .toBe('This week so far: 5 sets.');
+        .toBe('This week so far: 5 sets logged.');
       expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [7], currentWeekTotal: 0 }))
-        .toBe('This week so far: 0 sets.');
+        .toBe('This week so far: 0 sets logged.');
     });
 
     test('a singular current-week total reads "1 set", not "1 sets"', () => {
       expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [], currentWeekTotal: 1 }))
-        .toBe('This week so far: 1 set.');
+        .toBe('This week so far: 1 set logged.');
+    });
+
+    test('no instruction and no credit language in any branch (D204, VH-16)', () => {
+      const out = [
+        volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [3, 9, 12], currentWeekTotal: 4, phraseOverride: 'Last 3 full weeks' }),
+        volumeTakeaway({ windowKey: '8W', coversAll: false, spanDays: 56, weeklySets: [3, 9, 12] }),
+      ].join(' ');
+      expect(out).not.toMatch(/credit|add |more|should|consider|average/i);
     });
   });
 });

@@ -64,18 +64,22 @@ describe('C14-7 an explicit save at research values IS manual intent (29)', () =
 });
 
 describe('C14-7 only a real save records intent (30)', () => {
+  // RE-ANCHORED D214 (plan section 7.4 item 7): the editor seeds the band in
+  // force and saves only touched muscles, so the stamp is written for a
+  // touched (or changed-from-seed) muscle unconditionally, and an earlier
+  // saved edit is kept as stored instead of being re-derived.
   test('the marker is stamped from a touched field, at save time', () => {
     // Typing records that the muscle was touched; the SAVE turns that into
     // stored intent. Opening or scrolling the editor writes nothing.
     expect(HEATMAP).toMatch(/touchedMusclesRef\.current\.add\(muscle\); \/\/ C8 RA6-6/);
-    expect(HEATMAP).toMatch(/map\[muscle\] = \(touched \|\| wasExplicit\) \? \{ \.\.\.entry, explicit: true \} : entry;/);
+    expect(HEATMAP).toMatch(/map\[muscle\] = \{ \.\.\.entry, explicit: true \};/);
   });
 
   test('an abandoned edit is not intent', () => {
     // Cancel discards the typed values AND the record of what was touched,
     // so a later save in the same visit cannot stamp them.
-    const start = HEATMAP.indexOf('title="Cancel"');
-    const body = HEATMAP.slice(start, start + 900);
+    const start = HEATMAP.indexOf('function cancelEditing');
+    const body = HEATMAP.slice(start, HEATMAP.indexOf('async function saveLandmarks', start));
     expect(body).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
   });
 });
@@ -83,8 +87,10 @@ describe('C14-7 only a real save records intent (30)', () => {
 describe('C14-7 a distinct action returns a muscle to Volyume (32)', () => {
   test('the per-muscle release exists and is reachable', () => {
     expect(HEATMAP).toMatch(/async function clearMuscleOverride\(muscle\)/);
-    expect(HEATMAP).toContain('Let Volyume manage this');
-    expect(HEATMAP).toMatch(/accessibilityLabel=\{`Let Volyume manage \$\{MUSCLE_DISPLAY_NAMES\[muscle\]\}`\}/);
+    // RE-ANCHORED D214: the control is named for what it does, "Back to
+    // Volyume's targets" (the bands the app would use without the edits).
+    expect(HEATMAP).toContain("Back to Volyume's targets</Text>");
+    expect(HEATMAP).toMatch(/accessibilityLabel=\{`\$\{MUSCLE_DISPLAY_NAMES\[muscle\]\} back to Volyume's targets`\}/);
   });
 
   test('releasing clears BOTH the stored entry and the session marker', () => {
@@ -101,9 +107,12 @@ describe('C14-7 a distinct action returns a muscle to Volyume (32)', () => {
     expect(HEATMAP).toMatch(/\{isMuscleManaged\(muscle\) \? null : \(/);
   });
 
-  test('the whole-table reset still clears everything (unchanged)', () => {
-    const start = HEATMAP.indexOf('async function resetToDefaults');
-    const body = HEATMAP.slice(start, start + 1200);
+  test('the whole-table reset still clears everything', () => {
+    // RE-ANCHORED D214: it lives inside the editor, is named "Back to
+    // Volyume's targets" and re-resolves the bands the app would use without
+    // the edits (it no longer restores the research table).
+    const start = HEATMAP.indexOf('function resetToVolyumeTargets');
+    const body = HEATMAP.slice(start, start + 2400);
     expect(body).toMatch(/AsyncStorage\.removeItem\(key\)/);
     expect(body).toMatch(/syncUserPref\(user\.id, key, ''\)/);
   });

@@ -98,3 +98,36 @@ describe('N7: the lookback window is the recovery model\'s own', () => {
     expect(LOOKBACK_DAYS).toBe(14);
   });
 });
+
+describe('neutralVolume (D214 addendum 2, a recovery week on the Volume heatmap): no verdict on the figure', () => {
+  const pathsOf = (tree) => tree.root.findAll((n) => n.type === 'Path' && /^muscle-(?!hit-)/.test(n.props.testID || ''));
+  test('a trained muscle takes the quiet surface3 fill with the border hairline; an untrained one no fill', () => {
+    const t = resolveTheme({});
+    const map = { quads: { workingSets: 6, color: t.colors.success }, chest: { workingSets: 2 }, back: { workingSets: 0 } };
+    const tree = create(<BodyDiagramHeatmap volumeByMuscle={map} neutralVolume onMuscleTap={() => {}} />);
+    const quad = pathsOf(tree).find((n) => n.props.testID === 'muscle-quads');
+    const chest = pathsOf(tree).find((n) => n.props.testID === 'muscle-chest');
+    const back = pathsOf(tree).find((n) => n.props.testID === 'muscle-back');
+    expect(quad.props).toMatchObject({ fill: t.colors.surface3, stroke: t.colors.border });
+    expect(chest.props).toMatchObject({ fill: t.colors.surface3, stroke: t.colors.border });
+    expect(back.props).toMatchObject({ fill: 'transparent', stroke: t.colors.border });
+    // No band colour anywhere on the figure.
+    const fills = pathsOf(tree).map((n) => n.props.fill);
+    [t.colors.success, t.colors.warning, t.colors.error, t.colors.volumeMinimum, t.colors.textMuted].forEach((c) => expect(fills).not.toContain(c));
+  });
+
+  test('the legend names only Trained and No sets, with no band words and no (i)', () => {
+    const tree = create(<BodyDiagramHeatmap volumeByMuscle={{ quads: { workingSets: 6 } }} neutralVolume onMuscleTap={() => {}} />);
+    const fills = legendFills(tree);
+    expect(Object.keys(fills)).toEqual(['Trained', 'No sets']);
+    const texts = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Text').map((n) => [].concat(n.props.children ?? []).join(''));
+    ['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much'].forEach((w) => expect(texts).not.toContain(w));
+  });
+
+  test('neutralVolume is ignored when the recovery palette is in use', () => {
+    const t = resolveTheme({});
+    const tree = create(<BodyDiagramHeatmap recoveryByMuscle={{ quads: { status: 'recovering', recoveredPercent: 40 } }} neutralVolume onMuscleTap={() => {}} />);
+    const quad = pathsOf(tree).find((n) => n.props.testID === 'muscle-quads');
+    expect(quad.props.fill).toBe(t.colors.recovery);
+  });
+});

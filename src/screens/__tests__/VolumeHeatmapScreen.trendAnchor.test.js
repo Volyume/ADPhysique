@@ -6,7 +6,15 @@
  * Monday-anchored local week end (matching the weekly check-in's own call
  * to getWeeklyVolumeByMuscle), not a rolling window off the wall clock, and
  * its takeaway is computed over the full weeks only -- the current
- * (partial) week is never mixed into an average or a first-to-last delta.
+ * (partial) week is never mixed into an average.
+ *
+ * RE-ANCHORED under D214 (Progress, recovery heatmap and Consistency
+ * elevation, `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.4 item 6): the takeaway is in LOGGED sets
+ * per Monday week, computed from the set rows the screen loads (the trend query
+ * counts per-muscle credits, so eight logged sets used to print as 16), and
+ * its wording is "This week so far: 42 sets logged. Last 3 full weeks: about 60
+ * a week." with no first-to-last delta. The anchoring pins below are unchanged.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -41,13 +49,13 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getAllExercises: jest.fn(),
   getWeeklyVolumeByMuscle: jest.fn(),
-  getLastTrainedByMuscle: jest.fn(),
   getActivePlan: jest.fn(),
+  getCurrentMesocycleWeek: jest.fn(),
 }));
 
 import useAppStore from '../../store/useAppStore';
 import {
-  getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan,
+  getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getActivePlan, getCurrentMesocycleWeek,
 } from '../../lib/database';
 import VolumeHeatmapScreen from '../VolumeHeatmapScreen';
 import { localWeekEndMs } from '../../lib/dayKey';
@@ -58,12 +66,18 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
 }
 
-function chestSets(count) {
+function chestSets(count, at = Date.now()) {
   return Array.from({ length: count }, (_, i) => ({
-    id: `set-${count}-${i}`, exerciseId: 'bench', createdAt: Date.now(),
+    id: `set-${count}-${at}-${i}`, exerciseId: 'bench', createdAt: at,
     set_type: 'straight', actualReps: 10, weight: 100,
   }));
 }
+
+// The Monday 00:00 (local) k weeks from the Monday of the week of Wed 10 Jun 2026.
+const monday = (k) => new Date(2026, 5, 8 + 7 * k).getTime();
+const bucket = (k, volumeByMuscle) => ({
+  weekLabel: `W${k + 4}`, weekStart: monday(k), weekEnd: monday(k + 1), volumeByMuscle,
+});
 
 function flattenText(node) {
   if (node == null) return '';
@@ -78,8 +92,8 @@ beforeEach(() => {
   getCompletedWorkoutSets.mockResolvedValue(chestSets(3));
   getAllExercises.mockResolvedValue([{ id: 'bench', primary_muscle: 'chest', secondary_muscles: '[]' }]);
   getWeeklyVolumeByMuscle.mockResolvedValue([]);
-  getLastTrainedByMuscle.mockResolvedValue({});
   getActivePlan.mockResolvedValue(null);
+  getCurrentMesocycleWeek.mockResolvedValue(null);
 });
 
 afterEach(() => { jest.useRealTimers(); });
@@ -116,17 +130,22 @@ describe('VolumeHeatmapScreen: the volume trend anchors on the Monday week end',
   });
 });
 
-describe('VolumeHeatmapScreen: the trend takeaway uses the full weeks only', () => {
-  test('the current (partial) week never enters the average or the first-to-last delta', async () => {
-    // Oldest -> newest: three full weeks (10, 12, 14 sets) then a partial
-    // current week (2 sets, "so far"). Mixing the partial week in would
-    // read "average 9 or 10 sets a week, down 8" -- a false decline against
-    // a week that has barely started.
+describe('VolumeHeatmapScreen: the trend takeaway uses the full weeks only, in logged sets', () => {
+  test('the current (partial) week never enters the average', async () => {
+    // Oldest -> newest: three full weeks (10, 12, 14 logged sets) then a
+    // partial current week (2 sets, "so far"). Mixing the partial week in
+    // would read "about 9 or 10 a week" -- a false drop against a week that
+    // has barely started.
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 5, 10, 12, 0, 0).getTime()); // Wednesday
+    getCompletedWorkoutSets.mockResolvedValue([
+      ...chestSets(10, monday(-3) + 3600000),
+      ...chestSets(12, monday(-2) + 3600000),
+      ...chestSets(14, monday(-1) + 3600000),
+      ...chestSets(2, new Date(2026, 5, 8, 9, 0, 0).getTime()),
+    ]);
     getWeeklyVolumeByMuscle.mockResolvedValue([
-      { weekLabel: 'W1', weekStart: 1, weekEnd: 2, volumeByMuscle: { chest: 10 } },
-      { weekLabel: 'W2', weekStart: 2, weekEnd: 3, volumeByMuscle: { chest: 12 } },
-      { weekLabel: 'W3', weekStart: 3, weekEnd: 4, volumeByMuscle: { chest: 14 } },
-      { weekLabel: 'W4', weekStart: 4, weekEnd: 5, volumeByMuscle: { chest: 2 } },
+      bucket(-3, { chest: 10 }), bucket(-2, { chest: 12 }), bucket(-1, { chest: 14 }), bucket(0, { chest: 2 }),
     ]);
 
     let tree;
@@ -134,9 +153,37 @@ describe('VolumeHeatmapScreen: the trend takeaway uses the full weeks only', () 
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('This week so far: 2 sets. Last 3 full weeks: average 12 sets a week, up 4.');
-    expect(text).not.toMatch(/down 8/);
-    expect(text).not.toMatch(/average (9|10) sets a week/);
+    expect(text).toContain('This week so far: 2 sets logged. Last 3 full weeks: about 12 a week.');
+    expect(text).not.toMatch(/down 8|up 4/); // no first-to-last delta any more
+    expect(text).not.toMatch(/about (9|10) a week/);
+  });
+
+  test('the totals are logged rows, not the per-muscle credits the trend query returns', async () => {
+    // A full week of eight logged presses credits chest 8, triceps 4 and front
+    // delts 4 (16 credits). The takeaway must print the eight logged sets.
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 5, 10, 12, 0, 0).getTime());
+    getAllExercises.mockResolvedValue([
+      { id: 'bench', primary_muscle: 'chest', secondary_muscles: JSON.stringify(['triceps', 'front_delts']) },
+    ]);
+    getCompletedWorkoutSets.mockResolvedValue([
+      ...chestSets(8, monday(-2) + 3600000),
+      ...chestSets(8, monday(-1) + 3600000),
+      ...chestSets(4, new Date(2026, 5, 8, 9, 0, 0).getTime()),
+    ]);
+    getWeeklyVolumeByMuscle.mockResolvedValue([
+      bucket(-2, { chest: 8, triceps: 4, front_delts: 4 }),
+      bucket(-1, { chest: 8, triceps: 4, front_delts: 4 }),
+      bucket(0, { chest: 4, triceps: 2, front_delts: 2 }),
+    ]);
+
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('This week so far: 4 sets logged. Last 2 full weeks: about 8 a week.');
+    expect(text).not.toMatch(/about 16|\b8 sets logged|\b10 sets logged/);
   });
 
   test('the takeaway is absent (not a stray sentence) once loading fails to find any trend data', async () => {
