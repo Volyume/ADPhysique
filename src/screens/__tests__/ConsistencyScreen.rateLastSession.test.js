@@ -9,6 +9,13 @@
  * contract, pinned separately in ReadinessCards.rateLastSession.test.js).
  * ReadinessCards itself is mocked to a stub that invokes the callback, in
  * the same style as ConsistencyScreen.loadState.test.js.
+ *
+ * RE-ANCHORED under D214 (Consistency elevation, lane 4): the children are
+ * stubbed to the screen's new names (BlockCard, LoadCard, TrainingDaysSection,
+ * PlanWeekCard) and the hook state to the new fields. The pinned behaviour is
+ * unchanged: Consistency mounts ReadinessCards for the sessions milestone only
+ * (now one plain sentence under the grid, CS-2), with no rate-last-session
+ * callback, and only once there is data.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -44,15 +51,14 @@ jest.mock('../../components/SectionLabel', () => {
   return ({ children }) => <Text>{children}</Text>;
 });
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
-jest.mock('../../components/FatigueTrendCard', () => () => null);
 jest.mock('../../components/BlockProgressCard', () => () => null);
 jest.mock('../../components/BlockShapeCard', () => () => null);
+jest.mock('../../components/PlanWeekCard', () => () => null);
 jest.mock('../../components/ProgressSections', () => ({
-  MesocyclePulseCard: () => null,
-  WorkloadCard: () => null,
-  SessionDurationChart: () => null,
-  MuscleFrequencyTable: () => null,
-  TrainingCalendar: () => null,
+  BlockCard: () => null,
+  LoadCard: () => null,
+  TrainingDaysSection: () => null,
+  typicalSessionsLine: () => null,
 }));
 // Deliberately a stub, not `() => null`: it must expose the
 // onRateLastSession callback ConsistencyScreen passes it, so this suite
@@ -77,19 +83,16 @@ import ConsistencyScreen from '../ConsistencyScreen';
 const baseProgress = {
   activeMeso: null,
   mesoTonnage: [],
-  mesoProgress: () => 0,
-  mesoCurrentWeek: () => 1,
-  fatigueSessions: [],
+  workloadData: null,
+  loadComparison: null,
+  position: null,
   blockProgress: [],
   currentMesoWeek: null,
   deloadAlert: null,
-  workloadData: null,
-  durationBars: [],
-  muscleFreq: [],
-  showAllMuscles: false,
-  setShowAllMuscles: jest.fn(),
   calValues: [],
-  enoughForTrends: false,
+  earliestWorkoutAt: null,
+  typicalSessionMinutes: null,
+  allSets: [],
   refreshing: false,
   loading: false,
   loadError: false,

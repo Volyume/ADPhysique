@@ -1,18 +1,17 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActivePlan,
-  getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
+  getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
 import {
   calculateWeeklyVolume,
   calculate1RM, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
-import { localDayKey, localDayKeysEndingAt, localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
+import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 // Progress-tab audit 2026-09-24 (F4/F5, D200 item 3, S6-5), lane E: the ONE
 // Monday-anchored weekly tonnage series shared by the plan card's sparkline
@@ -20,10 +19,18 @@ import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress'
 // (mesoTonnage) and the since-retired database read getAcuteChronicWorkload
 // (rolling, no exercise-type map). See trainingLoad.js's header for the
 // full defect history.
-import { mondayWeekLoadSeries, acuteChronicFromSeries } from '../lib/trainingLoad';
+import { mondayWeekLoadSeries, acuteChronicFromSeries, likeForLikeLoad } from '../lib/trainingLoad';
+// D214 (Consistency elevation, lane 4): the programme position is read here,
+// with the other loaders, so the plan-week card never paints its no-plan
+// reading and then flips: `loading` covers the read, and a refresh re-reads it.
+import { resolveProgrammePosition } from '../lib/programmePosition';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// "Sessions usually last about N minutes" reads the sessions of the last six
+// Monday weeks (five full weeks and this week so far), the window the session
+// length chart it replaces used, and waits for at least three of them.
+const TYPICAL_SESSION_WEEKS = 6;
+const TYPICAL_SESSION_MIN_COUNT = 3;
 
 // Computes how many novel per-exercise 1RM bests occurred within each
 // calendar week that falls inside [windowStart, now].
@@ -98,11 +105,16 @@ export default function useProgressData() {
   const [allSets, setAllSets]               = useState([]);
   const [exerciseMap, setExerciseMap]       = useState({});
   const [deloadAlert, setDeloadAlert]       = useState(null);
-  const [durationBars, setDurationBars]     = useState([]);   // [{avgMin, weekLabel}] for session length trend
-  const [muscleFreq, setMuscleFreq]         = useState([]);   // [{muscle, thisWeek, lastWeek}]
-  const [showAllMuscles, setShowAllMuscles] = useState(false);
+  // D214 (CS-11): the session length chart and its fatigue inference are gone;
+  // the screen prints one line, so the hook keeps one number (minutes, or null).
+  const [typicalSessionMinutes, setTypicalSessionMinutes] = useState(null);
   const [workloadData, setWorkloadData]     = useState(null);
-  const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
+  // D214 (CS-6): the like-for-like comparison, Monday to now against the same
+  // span of the previous weeks (trainingLoad.likeForLikeLoad), or null.
+  const [loadComparison, setLoadComparison] = useState(null);
+  // D214: resolveProgrammePosition's result (the gated recovery state, the plan
+  // week's sessions and what is next), or null with no block or on a failed read.
+  const [position, setPosition]             = useState(null);
   const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(0);
@@ -121,11 +133,10 @@ export default function useProgressData() {
     setAllSets([]);
     setExerciseMap({});
     setDeloadAlert(null);
-    setDurationBars([]);
-    setMuscleFreq([]);
-    setShowAllMuscles(false);
+    setTypicalSessionMinutes(null);
     setWorkloadData(null);
-    setFatigueSessions([]);
+    setLoadComparison(null);
+    setPosition(null);
     setBlockProgress([]);
     setEarliestWorkoutAt(null);
     setCompletedWorkoutCount(0);
@@ -172,15 +183,25 @@ export default function useProgressData() {
       // metres/seconds from the kg sum. exerciseTypeById is built from exMap
       // the same way WorkoutHistoryScreen.buildHistoryRows builds it.
       let loadSeries = [];
+      let comparison = null;
       try {
         const exerciseTypeById = Object.fromEntries(
           Object.values(exMap).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
         );
         const loadSemanticsById = buildLoadSemanticsById(Object.values(exMap));
-        loadSeries = mondayWeekLoadSeries(sets, { weeks: 5, exerciseTypeById, loadSemanticsById });
-      } catch (_) { loadSeries = []; }
+        // ONE instant for both reads, so the bar, the headline figure and the
+        // comparison can never differ by the seconds between two clock reads.
+        const loadNow = Date.now();
+        loadSeries = mondayWeekLoadSeries(sets, { weeks: 5, now: loadNow, exerciseTypeById, loadSemanticsById });
+        // D214 (CS-6, B10): the comparison the screen prints is like for like,
+        // Monday to now against the same span of each of the previous three
+        // weeks; the ratio of a part week to full ones (workloadData.ratio) is
+        // no longer printed anywhere.
+        comparison = likeForLikeLoad(sets, { weeks: 3, now: loadNow, exerciseTypeById, loadSemanticsById });
+      } catch (_) { loadSeries = []; comparison = null; }
       if (!isCurrentRequest()) return;
       setWorkloadData(acuteChronicFromSeries(loadSeries));
+      setLoadComparison(comparison);
 
       await Promise.all([
         loadMesocycle(workouts, loadSeries, isCurrentRequest),
@@ -188,9 +209,8 @@ export default function useProgressData() {
         loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
         loadCalendar(workouts, isCurrentRequest),
         loadRecentSessions(workouts, isCurrentRequest),
-        loadSessionDurationTrend(workouts, isCurrentRequest),
-        loadMuscleFrequency(sets, exMap, isCurrentRequest),
-        loadFatigueTrend(isCurrentRequest),
+        loadTypicalSessionMinutes(workouts, isCurrentRequest),
+        loadPosition(isCurrentRequest),
         loadBlockState(sets, exMap, isCurrentRequest),
       ]);
     } catch (e) {
@@ -214,39 +234,41 @@ export default function useProgressData() {
       if (!isCurrentRequest()) return;
       setActiveMeso(active);
 
-      // F4 (D200 item 3): the sparkline is the last four entries of the
+      // F4 (D200 item 3): the load bars are the last four entries of the
       // shared Monday-anchored `loadSeries` (three full weeks and the
-      // current week so far) -- byte-identical bar shape and colour rule to
-      // before (SvgBarSparkline's {value, label, color}), just Monday-
-      // anchored instead of rolling, and reading the same series the
-      // workload card's acute:chronic figures come from (F5).
+      // current week so far), reading the same series the workload figures
+      // come from (F5), so the "this week so far" bar and the headline figure
+      // are the identical number.
+      //
+      // D214: the bars carry no colour of their own any more. This used to
+      // paint the current bar amber (an accent on a fact, CS-19); the load
+      // card on Consistency reads its tones from the live theme.
       const bars = loadSeries.slice(-4).map((week, idx, arr) => {
         const isNow = idx === arr.length - 1;
         const weeksAgo = arr.length - 1 - idx;
         return {
           value: Math.round(week.tonnage),
           label: isNow ? 'Now' : `-${weeksAgo}w`,
-          // D174: this painted ALL FOUR bars amber or dim-amber, which is the
-          // accent as decoration -- three of them are history. Only the
-          // current-week bar is "Now", which is the one thing discipline 1
-          // lets amber mark. The rest take `borderLight`, the token the week
-          // ribbon fills a trained day with, so "a past filled thing" reads
-          // the same across unrelated surfaces (D172's reasoning for the
-          // macro arc).
-          color: isNow ? colors.primary : colors.borderLight,
         };
       });
       setMesoTonnage(bars);
     } catch (_) {}
   }
 
-  async function loadFatigueTrend(isCurrentRequest = () => true) {
+  // D214 (plan-week card, plan section 7.3 item 2): the programme position,
+  // read on every load (so on focus and on refresh). It never throws:
+  // `resolveProgrammePosition` logs its own failure and answers null, which the
+  // plan-week card reads as "no plan" ("2 sessions this week"), so an unreadable
+  // block is never claimed as anything.
+  async function loadPosition(isCurrentRequest = () => true) {
+    let resolved = null;
     try {
-      const rows = await getRecentWorkoutFeedback(user.id, 6);
-      if (isCurrentRequest()) setFatigueSessions(rows);
-    } catch (_) {
-      if (isCurrentRequest()) setFatigueSessions([]);
+      resolved = await resolveProgrammePosition(user.id);
+    } catch (e) {
+      logError('useProgressData.loadPosition', e, { userId: user?.id });
+      resolved = null;
     }
+    if (isCurrentRequest()) setPosition(resolved ?? null);
   }
 
   async function loadBlockState(sets, exMap, isCurrentRequest = () => true) {
@@ -356,106 +378,39 @@ export default function useProgressData() {
     setRecentSessions(completed);
   }
 
-  function loadSessionDurationTrend(workouts, isCurrentRequest = () => true) {
+  // D214 (CS-11): "Sessions usually last about N minutes". The middle length
+  // (median, so one session left running for hours does not drag it) of the
+  // completed sessions with a recorded duration in the last six Monday weeks,
+  // from at least three sessions; null otherwise, and the screen prints nothing.
+  // Each week start steps back with Date#setDate (calendar-aware, never a fixed
+  // 7 * 24 h step), the technique the load series uses, so a clock-change week
+  // is still a real week. This replaces the six-bar chart and its "your
+  // sessions are getting shorter, which might mean fatigue" line, which
+  // inferred a state the person had not reported (voice doc, pattern 3).
+  function loadTypicalSessionMinutes(workouts, isCurrentRequest = () => true) {
     if (!isCurrentRequest()) return;
     try {
       const now = Date.now();
+      const windowStart = new Date(localWeekStartMs(now));
+      windowStart.setDate(windowStart.getDate() - 7 * (TYPICAL_SESSION_WEEKS - 1));
+      const startMs = windowStart.getTime();
 
-      // Q3/D200-3: six Monday-anchored local weeks -- five full weeks plus
-      // the current week so far -- replacing the old rolling-7-day-from-now
-      // buckets (F4). Each start steps back one calendar week via
-      // Date#setDate (the same technique trainingLoad.js's
-      // mondayWeekLoadSeries uses), never a fixed 7*24h subtraction, so a
-      // week either side of a UK clock change still measures a real
-      // calendar week.
-      const starts = [localWeekStartMs(now)];
-      for (let i = 1; i < 6; i++) {
-        const d = new Date(starts[0]);
-        d.setDate(d.getDate() - 7);
-        starts.unshift(d.getTime());
-      }
-
-      // Bucket completed workouts with a duration into the 6 weekly slots
-      // (0 = oldest full week, 5 = the current week so far).
-      const buckets = Array.from({ length: 6 }, () => []);
+      const minutes = [];
       for (const w of workouts) {
         if (!(w.isCompleted ?? w.is_completed)) continue;
         const dur = w.durationMinutes ?? w.duration_minutes ?? 0;
         if (!dur || dur <= 0) continue;
         const at = w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
-        const idx = starts.findIndex((weekStart, i) => {
-          const weekEnd = i === starts.length - 1 ? now : localWeekEndMs(weekStart);
-          return at >= weekStart && at < weekEnd;
-        });
-        if (idx === -1) continue;
-        buckets[idx].push(dur);
+        if (at >= startMs && at <= now) minutes.push(dur);
       }
-
-      // Require at least 3 sessions across the window with a recorded duration
-      const totalSessions = buckets.reduce((sum, b) => sum + b.length, 0);
-      if (totalSessions < 3) {
-        setDurationBars([]);
+      if (minutes.length < TYPICAL_SESSION_MIN_COUNT) {
+        setTypicalSessionMinutes(null);
         return;
       }
-
-      const bars = buckets.map((sessions, idx) => {
-        const avgMin = sessions.length > 0
-          ? Math.round(sessions.reduce((s, v) => s + v, 0) / sessions.length)
-          : 0;
-        // Week label: W1 (oldest full week) to W5, then the current week so far.
-        const weekLabel = idx === 5 ? 'Now' : `W${idx + 1}`;
-        return { avgMin, weekLabel, sessionCount: sessions.length };
-      });
-
-      setDurationBars(bars);
-    } catch (_) {}
-  }
-
-  function loadMuscleFrequency(sets, exMap, isCurrentRequest = () => true) {
-    if (!isCurrentRequest()) return;
-    try {
-      // T7: calendar weeks (Monday-anchored), matching every other "this
-      // week vs last" surface; was a rolling now-minus-7-days pair.
-      const thisWeekStart = localWeekStartMs(Date.now());
-      const lastWeekStart = thisWeekStart - WEEK_MS;
-
-      // Count distinct workout_ids per muscle per week-window
-      // "session count" = number of unique workouts that included that muscle
-      const thisWeekWorkouts = {};  // muscle → Set of workoutIds
-      const lastWeekWorkouts = {};  // muscle → Set of workoutIds
-
-      for (const s of sets) {
-        const at = s.createdAt ?? s.created_at ?? 0;
-        const exId = s.exerciseId ?? s.exercise_id;
-        const ex = exMap[exId];
-        if (!ex) continue;
-        let muscle = (ex.primaryMuscle || ex.primary_muscle || '').toLowerCase();
-        if (muscle === 'shoulders') muscle = 'side_delts';
-        if (!muscle) continue;
-        const workoutId = s.workoutId ?? s.workout_id;
-
-        if (at >= thisWeekStart) {
-          (thisWeekWorkouts[muscle] ??= new Set()).add(workoutId);
-        } else if (at >= lastWeekStart) {
-          (lastWeekWorkouts[muscle] ??= new Set()).add(workoutId);
-        }
-      }
-
-      // Merge all muscles that appeared in either week
-      const allMuscles = new Set([
-        ...Object.keys(thisWeekWorkouts),
-        ...Object.keys(lastWeekWorkouts),
-      ]);
-
-      const rows = Array.from(allMuscles)
-        .map(muscle => ({
-          muscle,
-          thisWeek: thisWeekWorkouts[muscle]?.size ?? 0,
-          lastWeek: lastWeekWorkouts[muscle]?.size ?? 0,
-        }))
-        .sort((a, b) => b.thisWeek - a.thisWeek || b.lastWeek - a.lastWeek);
-
-      setMuscleFreq(rows);
+      minutes.sort((x, y) => x - y);
+      const mid = Math.floor(minutes.length / 2);
+      const median = minutes.length % 2 === 1 ? minutes[mid] : (minutes[mid - 1] + minutes[mid]) / 2;
+      setTypicalSessionMinutes(Math.round(median));
     } catch (_) {}
   }
 
@@ -463,24 +418,6 @@ export default function useProgressData() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
-  }
-
-  // Mesocycle progress (0–1) and current week -- both derived from
-  // currentMesoWeek (Wave 2, cross-surface-consistency-audit-2026-07-30):
-  // the SAME date-based resolver (getCurrentMesocycleWeek) every other
-  // block/week surface reads, not an independent date calculation. This
-  // used to floor/ceil raw ms against durationWeeks, its own competing
-  // answer for "which week" (X8: ConsistencyScreen rendered this alongside
-  // the resolver's own BlockShapeCard and showed two different weeks for
-  // the same block on the same screen).
-  function mesoProgress() {
-    if (!currentMesoWeek?.plannedWeeks) return 0;
-    const total = currentMesoWeek.plannedWeeks;
-    return Math.min(1, Math.max(0, (currentMesoWeek.weekIndex - 1) / Math.max(total - 1, 1)));
-  }
-
-  function mesoCurrentWeek() {
-    return currentMesoWeek?.weekIndex ?? 1;
   }
 
   // Has the user logged anything yet? Used to hide the always-on chart
@@ -499,12 +436,11 @@ export default function useProgressData() {
     loading, refreshing, loadError,
     activeMeso, mesoTonnage, weeklyVolume,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
-    durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,
-    workloadData, fatigueSessions, blockProgress, earliestWorkoutAt,
+    typicalSessionMinutes,
+    workloadData, loadComparison, position, blockProgress, earliestWorkoutAt,
     completedWorkoutCount,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,
     handleRefresh,
-    mesoProgress, mesoCurrentWeek,
   };
 }

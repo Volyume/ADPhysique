@@ -219,46 +219,32 @@ describe('chartWindows: volumeTakeaway', () => {
   });
 });
 
-describe('chartWindows: workloadTakeaway', () => {
-  test('this week so far vs the 4-week average, formatted with thousands separators', () => {
-    expect(workloadTakeaway(1.22, 12450, 10200))
-      .toBe('This week so far: 12,450 kg against a 4-week average of 10,200 kg.');
+// RE-ANCHORED under D214 (Consistency elevation, lane 4; plan section 7.3 item
+// 6, CS-1, CS-6, B10). The takeaway used to print "This week so far: 12,450 kg
+// against a 4-week average of 10,200 kg." under the ratio card: a hard-coded
+// "kg" for a pounds user (CS-1) and two figures the card already showed
+// (CS-6). It is now the one D204 sentence for the like-for-like comparison
+// (trainingLoad.likeForLikeLoad), carrying no number and so no unit; the
+// figures (this week so far, the N-week average) are the load card's own and
+// are pinned in ProgressSections.workloadCopy.test.js.
+describe('chartWindows: workloadTakeaway (like-for-like words, D204)', () => {
+  test('the three readings, worded exactly', () => {
+    expect(workloadTakeaway('in_line')).toBe('In line with recent weeks at this point');
+    expect(workloadTakeaway('above')).toBe('Above recent weeks at this point');
+    expect(workloadTakeaway('below')).toBe('Below recent weeks at this point');
   });
-  test('rounds fractional tonnage', () => {
-    expect(workloadTakeaway(0.95, 999.6, 1052.4))
-      .toBe('This week so far: 1,000 kg against a 4-week average of 1,052 kg.');
+  test('no comparison (null, undefined, anything else) returns empty, not a guess', () => {
+    expect(workloadTakeaway(null)).toBe('');
+    expect(workloadTakeaway(undefined)).toBe('');
+    expect(workloadTakeaway('well_above')).toBe('');
+    expect(workloadTakeaway(1.22)).toBe('');
   });
-  test('a quiet week (zero acute tonnage) still reads, not nonsense', () => {
-    expect(workloadTakeaway(0, 0, 8000))
-      .toBe('This week so far: 0 kg against a 4-week average of 8,000 kg.');
-  });
-  test('null ratio (insufficient weeks of data) returns empty, not a guess', () => {
-    expect(workloadTakeaway(null, 5000, 0)).toBe('');
-    expect(workloadTakeaway(undefined, 5000, 4000)).toBe('');
-  });
-  test('zero chronic average returns empty rather than dividing by zero', () => {
-    expect(workloadTakeaway(1, 5000, 0)).toBe('');
-  });
-  test('missing acute/chronic returns empty', () => {
-    expect(workloadTakeaway(1.1, undefined, 4000)).toBe('');
-    expect(workloadTakeaway(1.1, 4000, undefined)).toBe('');
-    expect(workloadTakeaway(1.1, NaN, 4000)).toBe('');
-  });
-
-  // T22 (comprehension-trust-audit-2026-08-06): acuteChronicFromSeries
-  // (trainingLoad.js) can average as few as 2 past weeks (it drops
-  // zero-tonnage weeks); the label must say the real count, not always
-  // claim 4.
-  test('a 2-week average reads "2-week", not a hardcoded 4', () => {
-    expect(workloadTakeaway(1.22, 12450, 10200, 2))
-      .toBe('This week so far: 12,450 kg against a 2-week average of 10,200 kg.');
-  });
-  test('a 3-week average reads "3-week"', () => {
-    expect(workloadTakeaway(0.9, 9000, 10000, 3))
-      .toBe('This week so far: 9,000 kg against a 3-week average of 10,000 kg.');
-  });
-  test('weeksOfData omitted defaults to 4 (back-compat for older callers)', () => {
-    expect(workloadTakeaway(1.22, 12450, 10200))
-      .toBe('This week so far: 12,450 kg against a 4-week average of 10,200 kg.');
+  test('it carries no number, no unit and no instruction', () => {
+    for (const key of ['above', 'in_line', 'below']) {
+      const line = workloadTakeaway(key);
+      expect(line).not.toMatch(/\d/);
+      expect(line).not.toMatch(/\b(kg|lbs?|lb)\b/i);
+      expect(line).not.toMatch(/easier|harder|consider|should|try|aim|monitor|rest/i);
+    }
   });
 });

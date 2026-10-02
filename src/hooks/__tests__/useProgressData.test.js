@@ -3,6 +3,7 @@ import useProgressData, { computePRsPerWeek } from '../useProgressData';
 import useAppStore from '../../store/useAppStore';
 import * as database from '../../lib/database';
 import { localWeekStartMs } from '../../lib/dayKey';
+import { resolveProgrammePosition } from '../../lib/programmePosition';
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn((callback) => {
@@ -24,6 +25,9 @@ jest.mock('../../lib/database', () => ({
   getPlannedMuscleVolume: jest.fn(),
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+// D214 (lane 4): the hook now reads the programme position with the other
+// loaders; its own tests live in programmePosition's suites, so it is stubbed.
+jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
@@ -70,6 +74,7 @@ beforeEach(() => {
   database.getRecentWorkoutFeedback.mockResolvedValue([]);
   database.getCurrentMesocycleWeek.mockResolvedValue(null);
   database.getPlannedMuscleVolume.mockResolvedValue([]);
+  resolveProgrammePosition.mockResolvedValue(null);
 });
 
 // computePRsPerWeek bins "new running-max estimated 1RM" events into weekly
@@ -316,25 +321,192 @@ describe('useProgressData: shared Monday-anchored load series (F4/F5/S6-5)', () 
     act(() => { tree.unmount(); });
   });
 
-  test('the session length trend buckets on six Monday-anchored weeks (W1..W5, Now)', async () => {
+  // RE-ANCHORED under D214 (Consistency elevation, lane 4; plan section 7.3
+  // item 7, CS-11): the six-bar session length chart and its "getting shorter,
+  // which might mean fatigue" line are gone (a state the person had not
+  // reported was inferred from minutes), so the hook keeps ONE number, the
+  // middle session length of the last six Monday weeks, which the screen prints
+  // as "Sessions usually last about 57 minutes." The window is the chart's own
+  // (five full weeks and this week so far), still on calendar weeks.
+  test('typicalSessionMinutes is the median of the last six Monday weeks\' sessions (CS-11)', async () => {
     const weekStart = localWeekStartMs(NOW);
     useAppStore.setState({ user: { id: 'u1' } });
     database.getAllWorkouts.mockResolvedValue([
       { id: 'w1', isCompleted: true, startedAt: weekStart + DAY, durationMinutes: 40 },
       { id: 'w2', isCompleted: true, startedAt: weekStart - WEEK + DAY, durationMinutes: 50 },
       { id: 'w3', isCompleted: true, startedAt: weekStart - 4 * WEEK + DAY, durationMinutes: 60 },
+      // Outside the window (six weeks back is the seventh Monday week): ignored.
+      { id: 'w4', isCompleted: true, startedAt: weekStart - 6 * WEEK + DAY, durationMinutes: 240 },
+      // Not completed, or no recorded duration: ignored.
+      { id: 'w5', isCompleted: false, startedAt: weekStart + DAY, durationMinutes: 300 },
+      { id: 'w6', isCompleted: true, startedAt: weekStart - WEEK + 2 * DAY, durationMinutes: 0 },
     ]);
     database.getCompletedWorkoutSets.mockResolvedValue([]);
     database.getAllExercises.mockResolvedValue([]);
 
     const { ref, tree } = await renderProgressHook();
 
-    expect(ref.current.durationBars).toHaveLength(6);
-    expect(ref.current.durationBars.map((b) => b.weekLabel)).toEqual(['W1', 'W2', 'W3', 'W4', 'W5', 'Now']);
-    expect(ref.current.durationBars[5]).toMatchObject({ avgMin: 40, sessionCount: 1 }); // Now
-    expect(ref.current.durationBars[4]).toMatchObject({ avgMin: 50, sessionCount: 1 }); // W5, 1 week ago
-    expect(ref.current.durationBars[1]).toMatchObject({ avgMin: 60, sessionCount: 1 }); // W2, 4 weeks ago
+    expect(ref.current.typicalSessionMinutes).toBe(50); // median of 40, 50, 60
+    expect(ref.current.durationBars).toBeUndefined();
+    expect(ref.current.muscleFreq).toBeUndefined();
+    expect(ref.current.fatigueSessions).toBeUndefined();
 
+    act(() => { tree.unmount(); });
+  });
+
+  test('one session left running for hours does not drag the typical length (median, not mean)', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([
+      { id: 'a', isCompleted: true, startedAt: weekStart + DAY, durationMinutes: 55 },
+      { id: 'b', isCompleted: true, startedAt: weekStart - WEEK + DAY, durationMinutes: 57 },
+      { id: 'c', isCompleted: true, startedAt: weekStart - 2 * WEEK + DAY, durationMinutes: 58 },
+      { id: 'd', isCompleted: true, startedAt: weekStart - 3 * WEEK + DAY, durationMinutes: 59 },
+      { id: 'e', isCompleted: true, startedAt: weekStart - 4 * WEEK + DAY, durationMinutes: 600 },
+    ]);
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getAllExercises.mockResolvedValue([]);
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.typicalSessionMinutes).toBe(58);
+    act(() => { tree.unmount(); });
+  });
+
+  test('fewer than three sessions with a duration states nothing', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([
+      { id: 'a', isCompleted: true, startedAt: weekStart + DAY, durationMinutes: 55 },
+      { id: 'b', isCompleted: true, startedAt: weekStart - WEEK + DAY, durationMinutes: 57 },
+    ]);
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getAllExercises.mockResolvedValue([]);
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.typicalSessionMinutes).toBeNull();
+    act(() => { tree.unmount(); });
+  });
+
+  // D214 (CS-6, B10): the load card's headline, its "this week so far" bar and
+  // its comparison read ONE instant and one set of rows, so they are the same
+  // number; the comparison is like for like, never a part week against full ones.
+  test('the headline figure, the last bar and the comparison\'s current are the identical number (CS-6)', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    setUp([
+      { id: 's0', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart + 60 * 1000 },
+      { id: 's1', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - WEEK + 60 * 1000 },
+      { id: 's2', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - 2 * WEEK + 60 * 1000 },
+      { id: 's3', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - 2 * WEEK + 5 * DAY },
+    ]);
+    const { ref, tree } = await renderProgressHook();
+    const lastBar = ref.current.mesoTonnage[3];
+    expect(lastBar.value).toBe(500);
+    expect(ref.current.workloadData.acute).toBe(500);
+    expect(ref.current.loadComparison.current).toBe(500);
+    expect(ref.current.loadComparison.weeksOfData).toBe(2);
+    // The bars carry no colour of their own any more (CS-19: amber on a fact).
+    expect(ref.current.mesoTonnage.every((b) => b.color === undefined)).toBe(true);
+    act(() => { tree.unmount(); });
+  });
+
+  test('a Wednesday-morning read compares Monday to Wednesday-morning of each previous week, never a full week (B10)', async () => {
+    // Wed 10 Jun 2026, 10:00 local.
+    const wed = new Date(2026, 5, 10, 10, 0, 0).getTime();
+    jest.setSystemTime(wed);
+    const monday = new Date(localWeekStartMs(wed));
+    const at = (weeksBack, day, hour) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() - 7 * weeksBack + day);
+      d.setHours(hour, 0, 0, 0);
+      return d.getTime();
+    };
+    const lift = (id, when, reps) => ({ id, workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: reps, createdAt: when });
+    setUp([
+      lift('c0', at(0, 0, 9), 10),                       // this week: Monday 09:00, 1,000 kg
+      ...[1, 2, 3].flatMap((w) => [
+        lift(`m${w}`, at(w, 0, 9), 10),                  // each previous week: 1,000 kg by Wednesday 10:00 ...
+        lift(`s${w}`, at(w, 5, 11), 30),                 // ... and 3,000 kg more on its Saturday
+      ]),
+    ]);
+    const { ref, tree } = await renderProgressHook();
+    // The ratio card's arithmetic would read 1,000 against a 4,000 kg average: "below", by construction.
+    expect(ref.current.workloadData.ratio).toBe(0.25);
+    // The comparison the screen prints is like for like: 1,000 against 1,000.
+    expect(ref.current.loadComparison).toMatchObject({ current: 1000, expected: 1000, ratio: 1, comparison: 'in_line', weeksOfData: 3 });
+    act(() => { tree.unmount(); });
+  });
+});
+
+// D214 (lane 4): the plan-week card and the block card read the programme
+// position, so the hook reads it with the other loaders: `loading` covers it (the
+// card never paints "no plan" and flips), a refresh reads it again, and a failed
+// read is "no plan", never a guess.
+describe('useProgressData: the programme position (D214, plan 7.3 item 2)', () => {
+  const POSITION = { activeWeekIndex: 2, sessions: [{ state: 'completed' }], recoveryState: null };
+
+  function setUpUser() {
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([]);
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getAllExercises.mockResolvedValue([]);
+  }
+
+  test('the position is read for the signed-in user and returned with the rest', async () => {
+    setUpUser();
+    resolveProgrammePosition.mockResolvedValue(POSITION);
+    const { ref, tree } = await renderProgressHook();
+    expect(resolveProgrammePosition).toHaveBeenCalledWith('u1');
+    expect(ref.current.position).toEqual(POSITION);
+    expect(ref.current.loading).toBe(false);
+    act(() => { tree.unmount(); });
+  });
+
+  test('a refresh reads it again', async () => {
+    setUpUser();
+    resolveProgrammePosition.mockResolvedValueOnce(POSITION).mockResolvedValueOnce({ ...POSITION, activeWeekIndex: 3 });
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.position.activeWeekIndex).toBe(2);
+    await act(async () => { await ref.current.handleRefresh(); });
+    await flush();
+    expect(resolveProgrammePosition).toHaveBeenCalledTimes(2);
+    expect(ref.current.position.activeWeekIndex).toBe(3);
+    act(() => { tree.unmount(); });
+  });
+
+  test('no block (null) and a thrown read both come back as null, with the screen still loaded', async () => {
+    setUpUser();
+    resolveProgrammePosition.mockResolvedValue(null);
+    let r = await renderProgressHook();
+    expect(r.ref.current.position).toBeNull();
+    act(() => { r.tree.unmount(); });
+
+    resolveProgrammePosition.mockRejectedValue(new Error('read failed'));
+    r = await renderProgressHook();
+    expect(r.ref.current.position).toBeNull();
+    expect(r.ref.current.loadError).toBe(false);
+    act(() => { r.tree.unmount(); });
+  });
+
+  test('signing out clears it', async () => {
+    setUpUser();
+    resolveProgrammePosition.mockResolvedValue(POSITION);
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.position).toEqual(POSITION);
+    await act(async () => { useAppStore.setState({ user: null }); });
+    await flush();
+    expect(ref.current.position).toBeNull();
+    act(() => { tree.unmount(); });
+  });
+
+  test('lane 3\'s fields keep their names and shapes (add, never rename or remove)', async () => {
+    setUpUser();
+    const { ref, tree } = await renderProgressHook();
+    for (const key of [
+      'loading', 'refreshing', 'loadError', 'weeklyVolume', 'recentSessions', 'allSets', 'exerciseMap',
+      'earliestWorkoutAt', 'completedWorkoutCount', 'currentMesoWeek', 'hasData', 'handleRefresh',
+    ]) {
+      expect(Object.keys(ref.current)).toContain(key);
+    }
+    expect(typeof ref.current.handleRefresh).toBe('function');
+    expect(Array.isArray(ref.current.allSets)).toBe(true);
     act(() => { tree.unmount(); });
   });
 });

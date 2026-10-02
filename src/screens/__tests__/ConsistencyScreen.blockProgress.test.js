@@ -10,8 +10,17 @@
  * `useProgressData` wholesale and never returns a planned row. This suite
  * mocks only the database layer (following that same file's mocking
  * pattern) and lets the real hook and the real card run, so the mapping
- * from RAW `planned_muscle_volume` rows to "<actual>/<planned>" is proven
+ * from RAW `planned_muscle_volume` rows to "<actual> of <planned>" is proven
  * for real, not by construction.
+ *
+ * RE-ANCHORED under D214 (Consistency elevation, lane 4; plan section 7.3 item
+ * 5, CS-8, CS-9): a row now reads "5 of 12" (one string, not three siblings
+ * around a slash), the card counts the BLOCK week and says so in its header
+ * ("Sets done so far this plan week"), and the screen's other cards are
+ * stubbed to the new names (the old MesocyclePulseCard, WorkloadCard,
+ * SessionDurationChart, MuscleFrequencyTable and TrainingCalendar are gone).
+ * The hook's programme-position read is stubbed to "no plan": it is pinned in
+ * useProgressData.test.js and ConsistencyScreen.d214.test.js.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -59,15 +68,15 @@ jest.mock('../../components/SectionLabel', () => {
   return ({ children }) => <RNText>{children}</RNText>;
 });
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
-jest.mock('../../components/FatigueTrendCard', () => () => null);
 jest.mock('../../components/BlockShapeCard', () => () => null);
 jest.mock('../../components/ReadinessCards', () => () => null);
+jest.mock('../../components/PlanWeekCard', () => () => null);
+jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../components/ProgressSections', () => ({
-  MesocyclePulseCard: () => null,
-  WorkloadCard: () => null,
-  SessionDurationChart: () => null,
-  MuscleFrequencyTable: () => null,
-  TrainingCalendar: () => null,
+  BlockCard: () => null,
+  LoadCard: () => null,
+  TrainingDaysSection: () => null,
+  typicalSessionsLine: () => null,
 }));
 // Deliberately NOT mocked: '../../components/BlockProgressCard'. It is the
 // component under test end-to-end.
@@ -141,37 +150,39 @@ describe('ConsistencyScreen "This week\'s plan" card, real hook + real card', ()
     database.getPlannedMuscleVolume.mockResolvedValue(PLANNED_ROWS);
   });
 
-  test('renders the muscle label and "<actual>/<planned>" from raw planned rows, never a bare "/"', async () => {
+  test('renders the muscle label and "<actual> of <planned>" from raw planned rows, never a bare "of"', async () => {
     const tree = await render();
     const all = texts(tree);
 
     // The label and the correctly-mapped ratio for the muscle with a
     // logged, in-window set.
     expect(all).toContain('Chest');
-    expect(all).toContain('1/12');
+    expect(all).toContain('1 of 12');
 
     // The set logged BEFORE the block started must not be counted.
-    expect(all).not.toContain('2/12');
+    expect(all).not.toContain('2 of 12');
 
     // A muscle with a planned target but nothing logged this block week
-    // still renders real numbers on both sides of the slash, not a blank.
-    expect(all).toContain('0/10');
+    // still renders real numbers on both sides of the "of", not a blank.
+    expect(all).toContain('0 of 10');
 
-    // Source-level proof the old defect (BlockProgressCard.js:79's
-    // `{p.actual}/{p.planned}` rendering `undefined` as nothing around the
-    // slash) cannot recur. That row is JSX with three sibling children
-    // (the actual value, the literal '/', the planned value), which
-    // react-test-renderer keeps as a 3-element `props.children` array --
-    // distinct from an ordinary single-string Text (e.g. the header's
-    // "Effort 3/5"). Every such row must carry a real number on both sides.
+    // Source-level proof the old defect (the row's `{p.actual}/{p.planned}`
+    // rendering `undefined` as nothing around the slash) cannot recur. A row is
+    // ONE string now ("5 of 12"), so a missing side would print the word
+    // "undefined" or "NaN" inside it. Every row must carry a real number on
+    // both sides.
     const setsRows = tree.root
       .findAllByType(Text)
-      .filter((n) => Array.isArray(n.props.children) && n.props.children[1] === '/');
+      .filter((n) => typeof n.props.children === 'string' && / of /.test(n.props.children) && !/sessions|Sets done/.test(n.props.children));
     expect(setsRows.length).toBe(2); // chest + back
     for (const row of setsRows) {
-      const [actualValue, , plannedValue] = row.props.children;
-      expect(String(actualValue)).toMatch(/^\d+$/);
-      expect(String(plannedValue)).toMatch(/^\d+$/);
+      expect(String(row.props.children)).toMatch(/^\d+ of \d+$/);
     }
+    expect(all.join(' | ')).not.toMatch(/undefined|NaN/);
+  });
+
+  test('the header says the rows count the block\'s plan week, so far (CS-8)', async () => {
+    const tree = await render();
+    expect(texts(tree)).toContain('Sets done so far this plan week');
   });
 });

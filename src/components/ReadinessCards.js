@@ -27,10 +27,9 @@ import {
   useState, useCallback, useEffect, useMemo, useRef,
 } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
@@ -70,18 +69,58 @@ import { recommendNextWorkout, readyClause, muscleVerb, muscleNameList } from '.
 
 const DAY_MS = 86400000;
 
+// D214 (Consistency elevation, lane 4; plan section 7.3 item 3, CS-2, CS-14):
+// the ladder is the same seven rungs, but a rung is a number now. The card that
+// drew a trophy, a medal and a ribbon in `gold` is gone (a progress surface
+// does not hand out medals), and so is the label that named the LAST rung
+// reached ("50 sessions" to a person with 53, CS-2): the sentence prints the
+// true count and only the next rung.
 const MILESTONES = [
-  { sessions: 1,    label: 'First session',  icon: 'star-outline' },
-  { sessions: 10,   label: '10 sessions',    icon: 'fitness-outline' },
-  { sessions: 25,   label: '25 sessions',    icon: 'flash-outline' },
-  { sessions: 50,   label: '50 sessions',    icon: 'trophy-outline' },
-  { sessions: 100,  label: '100 sessions',   icon: 'trophy' },
-  { sessions: 250,  label: '250 sessions',   icon: 'medal-outline' },
-  { sessions: 500,  label: '500 sessions',   icon: 'ribbon-outline' },
+  { sessions: 1 },
+  { sessions: 10 },
+  { sessions: 25 },
+  { sessions: 50 },
+  { sessions: 100 },
+  { sessions: 250 },
+  { sessions: 500 },
 ];
 
 function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
+}
+
+const MONTH_NAMES_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// "26 June", with the year only when it is not this year, so a date a year or
+// more back is never ambiguous. The month names are spelled out here rather than
+// asked of Intl, so the words are the same on every device.
+function sinceDateText(sinceMs, now) {
+  const d = new Date(sinceMs);
+  if (Number.isNaN(d.getTime())) return null;
+  const base = `${d.getDate()} ${MONTH_NAMES_LONG[d.getMonth()]}`;
+  return d.getFullYear() === new Date(now).getFullYear() ? base : `${base} ${d.getFullYear()}`;
+}
+
+/**
+ * The sessions milestone as one plain sentence (D214, plan 7.3 item 3):
+ * "53 sessions logged since 26 June · next milestone 100". The TRUE count of
+ * completed sessions (the ones with at least one set), the day the first of
+ * them started, and the next rung of the ladder; no trophy, no gold, no amber,
+ * no "to go" countdown. Past the last rung it names no next one. Null with no
+ * completed session (the screen then says nothing rather than "0 sessions").
+ *
+ * @param {{ count: number, sinceMs?: number|null, now?: number }} input
+ * @returns {string|null}
+ */
+export function sessionsMilestoneLine({ count, sinceMs = null, now = Date.now() } = {}) {
+  const n = Math.trunc(Number(count));
+  if (!Number.isFinite(n) || n < 1) return null;
+  const since = Number.isFinite(Number(sinceMs)) && sinceMs !== null ? sinceDateText(Number(sinceMs), now) : null;
+  const next = nextMilestone(n);
+  return `${n} ${n === 1 ? 'session' : 'sessions'} logged${since ? ` since ${since}` : ''}${next ? ` · next milestone ${next.sessions}` : ''}`;
 }
 
 /**
@@ -480,6 +519,8 @@ export default function ReadinessCards({
   // go: First session" until the read landed, and for ever if it failed.
   // The milestone now waits for a read that succeeded.
   const [workoutsRead, setWorkoutsRead] = useState(false);
+  // The day the first counted session started, for "logged since 26 June".
+  const [firstSessionAt, setFirstSessionAt] = useState(null);
   const [ratingsFailed, setRatingsFailed] = useState(false);
   // False until the first load has finished (success or failure): the card
   // slots draw skeletons until then (RC-24).
@@ -548,6 +589,8 @@ export default function ReadinessCards({
           return (cachedCount != null && cachedCount > 0) || liveCount > 0;
         });
         setTotalWorkouts(completed.length);
+        const startedAts = completed.map(w => Number(w.startedAt ?? w.started_at)).filter(Number.isFinite);
+        setFirstSessionAt(startedAts.length ? Math.min(...startedAts) : null);
         setWorkoutsRead(true);
         setRatingsFailed(false);
         // D214 (RC-1, RC-2): soreness_24h_before is written on a 1-3 domain
@@ -751,7 +794,7 @@ export default function ReadinessCards({
   const next = nextMilestone(totalWorkouts);
   const unlocked = MILESTONES.filter(m => m.sessions <= totalWorkouts);
   const lastUnlocked = unlocked[unlocked.length - 1] ?? null;
-  const progressPct = next ? `${Math.round(Math.min(1, totalWorkouts / next.sessions) * 100)}%` : '100%';
+  const milestoneLine = sessionsMilestoneLine({ count: totalWorkouts, sinceMs: firstSessionAt });
 
   // D201 (spec section 6): "now" for every recovery-row/next-workout
   // derivation below, taken from the loader's own snapshot rather than a
@@ -902,35 +945,11 @@ export default function ReadinessCards({
 
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
-      {/* Milestone progress. Waits for the workouts read (RC-33): before it
-          lands, and if it fails, there is no "1 to go" to claim. */}
+      {/* The sessions milestone, one plain sentence (D214, CS-2, CS-14). Waits
+          for the workouts read (RC-33): before it lands, and if it fails, there
+          is no "1 session logged" to claim. */}
       {sections !== 'recovery' && workoutsRead && (lastUnlocked || next) && (
-        <View style={[styles.milestoneCard, live.milestoneCard]}>
-          <View style={styles.milestoneTop}>
-            {lastUnlocked && (
-              <View style={styles.milestoneUnlocked}>
-                <Ionicons name={lastUnlocked.icon} size={16} color={t.colors.gold} />
-                <Text style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
-              </View>
-            )}
-            {next && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
-                {/* FOUNDER DECISION (fully free, no tier split): the
-                    learning promise no longer forks on tier -- every user
-                    gets the three coaching capabilities (weights, rep-slip
-                    detection, lighter-week timing), so this is the one
-                    sentence for everyone. */}
-                <InfoTooltip size={11} text={'Consistency is the biggest predictor of long-term progress. The more sessions you log, the better your coach understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on.'} />
-              </View>
-            )}
-          </View>
-          {next && (
-            <View style={[styles.milestoneBarTrack, live.milestoneBarTrack]}>
-              <View style={[styles.milestoneBarFill, live.milestoneBarFill, { width: progressPct }]} />
-            </View>
-          )}
-        </View>
+        milestoneLine ? <Text style={[styles.milestoneLine, live.milestoneLine]}>{milestoneLine}</Text> : null
       )}
 
       {/* Recovery: the signals and muscle readiness folded into one block. */}
@@ -1030,16 +1049,7 @@ export default function ReadinessCards({
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  milestoneCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
-  },
-  milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.gold },
-  milestoneNext: { ...type.caption, color: colors.textMuted },
-  milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.textSecondary },
+  milestoneLine: { ...type.bodySm, color: colors.textSecondary },
 
   recoveryCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -1068,15 +1078,11 @@ const styles = StyleSheet.create({
 // The colours and type roles of the new D214 pieces are read LIVE from the
 // theme (the frozen-plus-live `buildLiveStyles` pattern the tree carries),
 // shared by the function scope in this file; the frozen `styles` block above
-// keeps the milestone and rating card chrome it always had. The milestone
-// bar is ink now (RC-35: no amber on a status fact).
+// keeps the rating card chrome it always had. The milestone is a plain ink
+// sentence now (RC-35, CS-14: no amber, no gold on a status fact).
 function buildLiveStyles(t) {
   return {
-    milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.gold },
-    milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
-    milestoneBarTrack: { backgroundColor: t.colors.surface2 },
-    milestoneBarFill: { backgroundColor: t.colors.textSecondary },
+    milestoneLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     recoveryDivider: { backgroundColor: t.colors.border },
     // The card's primary facts at body size (they wrap under longer words);

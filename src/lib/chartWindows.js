@@ -197,36 +197,28 @@ export function volumeTakeaway({
 }
 
 /**
- * Training-load takeaway: this week's tonnage against the trailing-weeks
- * average that feeds the Acute:Chronic Workload Ratio shown on the Workload
- * card (WorkloadCard in src/components/ProgressSections.js). That card's
- * banded statusText (which names the safe ranges) stays untouched — this is
- * the one-line takeaway in the same register as the takeaways above.
+ * Training-load takeaway, rewritten under D214 (Consistency elevation, lane 4;
+ * `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.3 item 6, CS-1, CS-6, B10).
  *
- * T22 (comprehension-trust-audit-2026-08-06): acuteChronicFromSeries
- * (trainingLoad.js) drops zero-tonnage weeks from the chronic average and
- * only needs 2 populated past weeks — so the true window can be 2, 3 or 4
- * weeks. The label must say which, not always claim 4. Zero-filling instead
- * would poison the ratio after any break, so the computation itself is
- * unchanged; only the copy is made honest about the real count.
+ * It used to print "This week so far: 12,450 kg against a 4-week average of
+ * 10,200 kg." under the ratio card, which hard-coded "kg" for a pounds user
+ * (CS-1) and repeated two figures the card already showed (CS-6). The
+ * comparison now arrives already worked out, like for like (Monday to now
+ * against the same weekday-and-time span of the previous weeks,
+ * `trainingLoad.likeForLikeLoad`), so the one D204 sentence says only how the
+ * week sits at this point, with no number and so no unit to get wrong. It
+ * describes; it never tells the athlete to change a session (D204).
  *
- * @param {number|null} ratio - acute/chronic ratio, or null/undefined when
- *   there isn't enough history to compute one (acuteChronicFromSeries's
- *   own gate, trainingLoad.js: needs >=2 past weeks with tonnage > 0).
- * @param {number} acute - this week's tonnage in kg
- * @param {number} chronic - average tonnage in kg over weeksOfData past weeks
- * @param {number} [weeksOfData=4] - actual count of past weeks averaged
- *   (acuteChronicFromSeries's weeksOfData; 2-4). Defaults to 4 for callers
- *   that predate this parameter.
- * @returns {string} e.g. "This week so far: 12,450 kg against a 4-week average of 10,200 kg."
+ * @param {'above'|'in_line'|'below'|null|undefined} comparison -
+ *   `likeForLikeLoad`'s own key; null when there is nothing to compare against
+ * @returns {string} "Above recent weeks at this point", "In line with recent
+ *   weeks at this point", "Below recent weeks at this point", or '' for no
+ *   comparison
  */
-export function workloadTakeaway(ratio, acute, chronic, weeksOfData = 4) {
-  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return '';
-  if (!Number.isFinite(acute) || !Number.isFinite(chronic) || chronic <= 0) return '';
-  const acuteR = Math.round(acute).toLocaleString('en-GB');
-  const chronicR = Math.round(chronic).toLocaleString('en-GB');
-  const weeks = Number.isFinite(weeksOfData) && weeksOfData > 0 ? Math.round(weeksOfData) : 4;
-  // D200 item 3 (Q3): the acute figure is the current Monday-anchored week
-  // SO FAR, never a completed week -- the copy must say so.
-  return `This week so far: ${acuteR} kg against a ${weeks}-week average of ${chronicR} kg.`;
+export function workloadTakeaway(comparison) {
+  if (comparison === 'above') return 'Above recent weeks at this point';
+  if (comparison === 'in_line') return 'In line with recent weeks at this point';
+  if (comparison === 'below') return 'Below recent weeks at this point';
+  return '';
 }

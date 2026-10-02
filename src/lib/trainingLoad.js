@@ -33,6 +33,14 @@
  * series, transplanting that retired read's exact aggregation rule so the
  * sparkline's "Now" bar and the workload card's "this week" figure are
  * always the same number.
+ *
+ * D214 (Consistency elevation, lane 4; `docs/audit/progress-recovery-
+ * consistency-audit-2026-10-01/00-AUDIT-AND-PLAN.md` section 7.3 item 6, CS-6):
+ * `acuteChronicFromSeries` divides a PART week by FULL ones, so early in any
+ * week its ratio read "below your average" by construction. The screen no
+ * longer prints that ratio. `likeForLikeLoad` below is the comparison it
+ * prints instead: Monday to now against the same weekday-and-time span of each
+ * of the previous weeks, so a part week is never set against a full one.
  */
 import { localWeekStartMs, localWeekEndMs } from './dayKey';
 import { calculateTonnage } from './algorithms';
@@ -151,4 +159,115 @@ export function acuteChronicFromSeries(series) {
     ratio: ratio == null ? null : Math.round(ratio * 100) / 100,
     weeksOfData: pastWeeks.length,
   };
+}
+
+/**
+ * The ratio bounds the comparison words are cut at, unchanged from the ratio
+ * card they replace (D204): below LOAD_IN_LINE_MIN reads "Below", from
+ * LOAD_ABOVE_MIN reads "Above", between them "In line". Exported so the
+ * explanation behind the (i) quotes the same numbers the words are cut at.
+ */
+export const LOAD_IN_LINE_MIN = 0.8;
+export const LOAD_ABOVE_MIN = 1.3;
+
+/**
+ * The load comparison, like for like (D214, CS-6, B10).
+ *
+ * The current Monday-anchored local week so far -- `[localWeekStartMs(now),
+ * now)`, the very span `mondayWeekLoadSeries` calls current, so the figure is
+ * the identical number -- against the SAME weekday-and-time span of each of the
+ * previous `weeks` weeks. On a Wednesday at 10:23 each previous week is read
+ * from its Monday 00:00 up to its own Wednesday 10:23, never a full week: a
+ * part week is never compared against full ones.
+ *
+ * The cut-off of a previous week is `now` stepped back whole weeks with
+ * `Date#setDate` (local wall-clock arithmetic, never a fixed 7 * 24 h step),
+ * so a week either side of a UK clock change still ends at the same local
+ * time of day. Attribution is by set time (`createdAt ?? created_at`) and the
+ * kg sum goes through `calculateTonnage` with the caller's exercise-type map
+ * and load semantics, exactly as `mondayWeekLoadSeries` does.
+ *
+ * Which previous weeks count: a week with no sets at all in the FULL week was
+ * a break, not a pace, and is left out (the rule `acuteChronicFromSeries`
+ * already applies to its average); a populated week counts even when nothing
+ * was logged by this point of it, because that is the true like-for-like
+ * reading. Fewer than two such weeks is not enough to compare against
+ * (`comparison: null`), and when those weeks logged nothing by this point
+ * there is nothing to divide by, so the comparison is withheld rather than
+ * claimed ("Above" a zero is no statement).
+ *
+ * @param {Array} sets - workout_sets rows (camelCase or snake_case)
+ * @param {object} [opts]
+ * @param {number} [opts.weeks=3] - how many PREVIOUS weeks to compare against
+ * @param {number} [opts.now] - epoch ms "now" (test seam; defaults to the clock)
+ * @param {object|null} [opts.exerciseTypeById]
+ * @param {object|null} [opts.loadSemanticsById]
+ * @returns {{
+ *   current: number,
+ *   expected: number|null,
+ *   ratio: number|null,
+ *   comparison: 'above'|'in_line'|'below'|null,
+ *   weeksOfData: number,
+ *   weeks: Array<{weekStartMs:number, cutoffMs:number, isCurrent:boolean, byNowTonnage:number, fullTonnage:number}>
+ * }} `weeks` runs oldest to newest and ends with the current week (whose
+ *   `byNowTonnage` and `fullTonnage` are both the week so far).
+ */
+export function likeForLikeLoad(sets, {
+  weeks = 3,
+  now = Date.now(),
+  exerciseTypeById = null,
+  loadSemanticsById = null,
+} = {}) {
+  const nowMs = Number.isFinite(now) ? now : Date.now();
+  const n = Number.isFinite(weeks) && weeks > 0 ? Math.trunc(weeks) : 3;
+  const list = Array.isArray(sets) ? sets : [];
+
+  const tonnageBetween = (fromMs, toMs) => calculateTonnage(
+    list.filter((s) => {
+      const at = s.createdAt ?? s.created_at ?? 0;
+      return at >= fromMs && at < toMs;
+    }),
+    exerciseTypeById,
+    loadSemanticsById,
+  );
+
+  const rows = [];
+  for (let k = n; k >= 0; k--) {
+    const isCurrent = k === 0;
+    const cut = new Date(nowMs);
+    cut.setDate(cut.getDate() - 7 * k);
+    const cutoffMs = isCurrent ? nowMs : cut.getTime();
+    const weekStartMs = localWeekStartMs(cutoffMs);
+    const byNowTonnage = tonnageBetween(weekStartMs, cutoffMs);
+    rows.push({
+      weekStartMs,
+      cutoffMs,
+      isCurrent,
+      byNowTonnage,
+      fullTonnage: isCurrent ? byNowTonnage : tonnageBetween(weekStartMs, localWeekEndMs(weekStartMs)),
+    });
+  }
+
+  const current = rows[rows.length - 1].byNowTonnage;
+  const populated = rows.filter((r) => !r.isCurrent && r.fullTonnage > 0);
+  const out = {
+    current: Math.round(current),
+    expected: null,
+    ratio: null,
+    comparison: null,
+    weeksOfData: populated.length,
+    weeks: rows,
+  };
+  if (populated.length < 2) return out;
+
+  const expected = populated.reduce((sum, r) => sum + r.byNowTonnage, 0) / populated.length;
+  out.expected = Math.round(expected);
+  if (!(expected > 0)) return out;
+
+  const ratio = current / expected;
+  out.ratio = Math.round(ratio * 100) / 100;
+  if (ratio >= LOAD_ABOVE_MIN) out.comparison = 'above';
+  else if (ratio >= LOAD_IN_LINE_MIN) out.comparison = 'in_line';
+  else out.comparison = 'below';
+  return out;
 }

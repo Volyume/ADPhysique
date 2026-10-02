@@ -1,28 +1,159 @@
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
+import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import SvgBarSparkline from './SvgBarSparkline';
+import Card from './Card';
 import InfoTooltip from './InfoTooltip';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { localDayKeysEndingAt } from '../lib/dayKey';
+import { GLOSSARY } from '../lib/coachGlossary';
+import { formatNumber, formatWithUnit } from '../lib/format';
 import { workloadTakeaway } from '../lib/chartWindows';
+import { LOAD_IN_LINE_MIN, LOAD_ABOVE_MIN } from '../lib/trainingLoad';
+import { localDayKey, localDayKeysEndingAt } from '../lib/dayKey';
+import TrainingDaysGrid from './TrainingDaysGrid';
 
-// Shared section cards for the Progress tab. These render the consistency and
-// recovery views (training block, training load, session length, frequency,
-// training-day calendar). They were lifted out of AnalyticsScreen so the
-// landing and the Consistency surface draw the same cards from one place.
-const FREQ_MAX_DISPLAY = 8;
+// Shared section cards for the Consistency surface: the twelve-week grid with
+// its caption, the block card and the load card, plus the one sessions line.
+// They were lifted out of AnalyticsScreen so the landing and the Consistency
+// surface drew the same cards from one place.
+//
+// D214 (Progress, the recovery heatmap and Consistency elevation, lane 4;
+// `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+// 00-AUDIT-AND-PLAN.md` section 7.3): the plan card, the "Weekly load" ratio
+// card, the session length chart, the training frequency table and the old
+// amber calendar are gone from here.
+//   - TrainingDaysSection is the twelve-week grid (TrainingDaysGrid: Monday to
+//     Sunday columns, weekday and month labels, "Trained" and "No session", never
+//     "Rest", CS-13, CS-21, D166) with its one-line caption.
+//   - BlockCard is the ONE "Your block" card (the plan card, the block shape and
+//     the effort line collapsed): one total weeks for the line and the bar, no
+//     percent (CS-5), effort as "3 of 5" with its (i) (CS-7).
+//   - LoadCard is the ONE load card (CS-1, CS-6): the person's units, four
+//     labelled bars, a like-for-like comparison sentence (D204) and the average
+//     of the full weeks.
+//   - typicalSessionsLine is the one sessions line (CS-11); the bars and the
+//     fatigue inference went with the chart.
+// Every card sits on the shared `Card` (the live twin of the local clones CS-19
+// found), facts are ink (plan rule 3), and no card instructs (D204).
 
-export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild, finished = false }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+// The load bars' own geometry: a fixed plot height, so a bar's height is its
+// share of the biggest week and a column never jumps between renders.
+const LOAD_BAR_AREA = 56;
+const LOAD_BAR_MIN = spacing.xs;
+const BLOCK_BAR_HEIGHT = spacing.xs;
+
+// useProgressData labels its bars "-3w" ... "Now"; the card says it in words.
+const LOAD_BAR_WORDS = { '-3w': '3 weeks ago', '-2w': '2 weeks ago', '-1w': 'Last week', Now: 'This week' };
+
+/** The effort the block's rep target asks of a set, on the 0 to 5 scale ("3 of 5"). */
+export function blockEffort(rirTarget) {
+  if (rirTarget === null || rirTarget === undefined || rirTarget === '') return null;
+  const n = Number(rirTarget);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(5, Math.max(0, 5 - n));
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const GRID_DAYS = 84;
+
+/**
+ * The grid's caption: "51 days trained in the last 12 weeks · about 4 a week".
+ * The rate divides by the weeks the person actually has: a person whose first
+ * session was three weeks ago has not had twelve, so a rate over twelve weeks
+ * would understate their pace. With under four weeks of history, or under one
+ * day a week, the rate is left out; between four and twelve weeks it says
+ * "since your first session" (a number states what it is, plan rule 4).
+ *
+ * @param {{ trainedDays: number, firstSessionAt?: number|null, now?: number }} input
+ * @returns {string}
+ */
+export function trainingDaysCaption({ trainedDays, firstSessionAt = null, now = Date.now() } = {}) {
+  const n = Math.max(0, Math.trunc(Number(trainedDays) || 0));
+  const head = `${n} ${n === 1 ? 'day' : 'days'} trained in the last 12 weeks`;
+  const first = Number(firstSessionAt);
+  const known = firstSessionAt !== null && firstSessionAt !== undefined && Number.isFinite(first) && first > 0 && first <= now;
+  const spanDays = known ? Math.min(GRID_DAYS, Math.floor((now - first) / DAY_MS) + 1) : GRID_DAYS;
+  // Under one day a week there is no "about N a week" to state (0.5 a week must
+  // not round up to "about 1"); from one a week it is the nearest whole number.
+  const perWeek = n / (spanDays / 7);
+  if (spanDays < 28 || perWeek < 1) return head;
+  const rate = Math.round(perWeek);
+  return spanDays >= GRID_DAYS
+    ? `${head} · about ${rate} a week`
+    : `${head} · about ${rate} a week since your first session`;
+}
+
+/** The one sessions line, or null when there is no typical length to state. */
+export function typicalSessionsLine(minutes) {
+  const n = Math.round(Number(minutes));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `Sessions usually last about ${n} ${n === 1 ? 'minute' : 'minutes'}.`;
+}
+
+// ── Last 12 weeks ───────────────────────────────────────────────────────────
+
+/**
+ * The twelve-week training days, in one card: the labelled grid (its own legend
+ * names "Trained" and "No session") and the caption under it. The window is the
+ * calendar helper's, `localDayKeysEndingAt(84)`, which steps a local Date so a
+ * UK clock-change week keeps all seven days (the 2026-09-15 fix, dstDayRuns).
+ *
+ * Props:
+ *   trainedDayKeys  local day keys ('YYYY-MM-DD') with a completed workout
+ *                   (useProgressData.calValues' dates); any outside the window
+ *                   are ignored
+ *   firstSessionAt  epoch ms of the first completed session, for the caption's
+ *                   rate; null when unknown
+ */
+export function TrainingDaysSection({ trainedDayKeys, firstSessionAt = null }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const progWidth = `${Math.round(progress * 100)}%`;
+  const now = Date.now();
+  const dayKeys = localDayKeysEndingAt(84);
+  const inWindow = new Set(dayKeys);
+  const trained = (Array.isArray(trainedDayKeys) ? trainedDayKeys : []).filter((k) => inWindow.has(k));
+  return (
+    <Card style={styles.gridCard}>
+      <TrainingDaysGrid dayKeys={dayKeys} trainedDayKeys={trained} todayKey={localDayKey(now)} />
+      <Text style={[styles.gridCaption, live.gridCaption]}>
+        {trainingDaysCaption({ trainedDays: new Set(trained).size, firstSessionAt, now })}
+      </Text>
+    </Card>
+  );
+}
+
+// ── Your block ──────────────────────────────────────────────────────────────
+
+/**
+ * "Your block", one card: the plan's name, the block's shape (the phase dots
+ * and the week sentence, rendered by the screen and passed as `children`), a
+ * bar labelled "Week 2 of 6" (no percent, CS-5) and "This week's effort: 3 of
+ * 5" with its (i) (CS-7). The week sentence and the bar read ONE total, the
+ * block's planned weeks (`plannedWeeks`), never two (CS-5).
+ *
+ * Props:
+ *   meso          the active block row (or the active plan row, `_isPlan`),
+ *                 null when no plan runs: the card then offers the plan library
+ *   weekIndex     the week the programme is on (the screen passes the
+ *                 programme position's, the calendar's only as the fallback)
+ *   plannedWeeks  the block's own length, the one M
+ *   rirTarget     the week's rep target; the effort line is 5 minus it
+ *   finished      the block is over and awaits the athlete's decision: no live
+ *                 week is claimed
+ *   note          the adaptive adjustment's own words (recoveryState.js), or
+ *                 null; an adaptive adjustment is never called a recovery week
+ *   onPress       opens the block (the name row is the control)
+ *   onBuild       opens the plan library (the no-plan card)
+ *   children      the BlockShapeCard
+ */
+export function BlockCard({
+  meso, weekIndex, plannedWeeks, rirTarget, finished = false, note = null, onPress, onBuild, children,
+}) {
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   if (!meso) {
     return (
-      <TouchableOpacity style={[styles.card, live.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
+      <Card onPress={onBuild} accessibilityRole="button" accessibilityLabel="Browse plans" style={styles.mesoEmpty}>
         <Ionicons name="layers-outline" size={32} color={t.colors.primaryDim} />
         <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
         <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
@@ -33,339 +164,174 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
           <Ionicons name="compass-outline" size={14} color={t.colors.textSecondary} />
           <Text style={[styles.mesoEmptyBtnText, live.mesoEmptyBtnText]}>Browse plans</Text>
         </View>
-      </TouchableOpacity>
+      </Card>
     );
   }
 
-  const isPlan = meso._isPlan;
-
+  const isPlan = !!meso._isPlan;
+  const total = Number.isFinite(plannedWeeks) && plannedWeeks >= 2 ? Math.round(plannedWeeks) : null;
+  const reached = total == null ? null : Math.min(Math.max(Math.round(Number(weekIndex) || 1), 1), total);
   // Stage 1 (2026-08-09): a block past its recovery week is finished and
-  // awaiting the user's next-block decision; it never claims a live week.
-  const mesoWeekText = isPlan
-    ? (meso.splitType ? meso.splitType : 'Active plan')
-    : finished
-      ? 'Block finished'
-      : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `, ${meso.focus}` : ''}`;
+  // awaiting the athlete's next-block decision; it never claims a live week.
+  const showBar = !isPlan && total != null;
+  const weekText = !showBar ? null : (finished ? 'Block finished' : `Week ${reached} of ${total}`);
+  const planSub = meso.splitType ? meso.splitType : 'Active plan';
+  const name = meso.name ?? 'Training block';
+  const effort = finished ? null : blockEffort(rirTarget);
+  const fill = showBar ? (finished ? total : reached) / total : 0;
 
   return (
-    <TouchableOpacity
-      style={[styles.card, live.card, styles.mesoCard]}
-      onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel={`${meso.name ?? 'Training block'}, ${mesoWeekText}`}
-      accessibilityHint="Opens training block"
-    >
-      <View style={styles.mesoTop}>
-        <View style={{ flex: 1 }}>
+    <Card style={styles.blockCard}>
+      <TouchableOpacity
+        style={styles.blockTop}
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`${name}, ${weekText ?? planSub}`}
+        accessibilityHint="Opens training block"
+      >
+        <View style={styles.blockName}>
           {/* Founder, 2026-09-26 TestFlight screenshot: the generated name
               ("Men's Physique · Bulk · V-Taper 4×/week, 6-week block") was
               cut to "6..." on one line; two lines carry the whole name. */}
-          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={2}>{meso.name ?? 'Training block'}</Text>
-          <Text style={[styles.mesoWeek, live.mesoWeek]}>
-            {isPlan
-              ? (meso.splitType ? meso.splitType : 'Active plan')
-              : finished
-                ? 'Block finished'
-                : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
-            }
-          </Text>
+          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={2}>{name}</Text>
+          {isPlan ? <Text style={[styles.mesoWeek, live.mesoWeek]}>{planSub}</Text> : null}
         </View>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-      </View>
+      </TouchableOpacity>
 
-      {/* Progress bar, only for mesocycles with a known duration */}
-      {!isPlan && meso.durationWeeks > 0 && (
-        <>
-          <View style={[styles.mesoProgressTrack, live.mesoProgressTrack]}>
-            <View style={[styles.mesoProgressFill, live.mesoProgressFill, { width: progWidth }]} />
-          </View>
-          <Text style={[styles.mesoProgressLabel, live.mesoProgressLabel]}>{Math.round(progress * 100)}% complete</Text>
-        </>
-      )}
+      {children}
 
-      {/* Tonnage sparkline, shared SvgBarSparkline style across the app */}
-      {tonnageBars.some(b => b.value > 0) && (
-        <View style={styles.sparkWrap}>
-          <View style={styles.sparkLabelRow}>
-            <Text style={[styles.sparkLabel, live.sparkLabel]}>Weekly load</Text>
-            {/* F4/F5 (D200 item 3): the bar itself is the current Monday-
-                anchored week SO FAR, not a completed week -- the caption
-                under the value says so, matching WorkloadCard's explanation
-                of the same number below on Consistency. */}
-            <View style={styles.sparkValueCol}>
-              <Text style={[styles.sparkValue, live.sparkValue]}>
-                {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
-              </Text>
-              <Text style={[styles.sparkValueCaption, live.sparkValueCaption]}>this week so far</Text>
-            </View>
-          </View>
-          <View style={styles.sparkChartCentered}>
-            <SvgBarSparkline
-              data={tonnageBars}
-              width={240}
-              height={56}
-              barWidth={36}
-              barGap={12}
-            />
+      {note ? <Text style={[styles.blockNote, live.blockNote]}>{note}</Text> : null}
+
+      {showBar ? (
+        <View
+          style={styles.blockBarWrap}
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel={weekText}
+          accessibilityValue={{ min: 0, max: total, now: finished ? total : reached, text: weekText }}
+        >
+          <Text style={[styles.blockBarLabel, live.blockBarLabel]}>{weekText}</Text>
+          <View style={[styles.blockBarTrack, live.blockBarTrack]}>
+            <View style={[styles.blockBarFill, live.blockBarFill, { width: `${Math.round(fill * 100)}%` }]} />
           </View>
         </View>
-      )}
-    </TouchableOpacity>
+      ) : null}
+
+      {effort != null ? (
+        <View style={styles.blockEffortRow}>
+          <Text style={[styles.blockEffort, live.blockEffort]}>This week's effort: {effort} of 5</Text>
+          {/* O15 (CS-7): GLOSSARY.effort, the one definition of the term the
+              app's other effort chips already use. */}
+          <InfoTooltip text={GLOSSARY.effort} size={12} />
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
-export function TrainingCalendar({ values }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+// ── Load ────────────────────────────────────────────────────────────────────
+
+// The comparison sentence. It hides rather than comparing against nothing:
+// with fewer than two populated previous weeks, or nothing logged by this point
+// of them, there is no ratio and so no sentence (campaign6.longTerm pins this).
+function LoadComparison({ data }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const { width: SCREEN_W } = useWindowDimensions();
-  const trainedDates = new Set(values.map(v => v.date));
-  const trainedCount = values.length;
-  // Build 84 days oldest→newest, grouped into 12 weeks of 7 days.
-  // Finding 7 (audit 2026-08-26): this used to step by `offset * 86400000`
-  // from the current instant. A fixed 24 hours is not a calendar day across a
-  // DST change, so rendered shortly after midnight in the months following the
-  // spring transition the run slid by an hour and skipped a real day: measured
-  // for Europe/London, a grid drawn at 00:30 on 2025-04-15 had no square at all
-  // for 2025-03-30. A day the user trained was simply absent, and the count in
-  // the accessibility label below described a window the grid was not showing.
-  const dayKeys = localDayKeysEndingAt(84);
-  const SQ = Math.max(10, Math.floor((SCREEN_W - 90) / 14)); // square size
-  const weeks = Array.from({ length: 12 }, (_, wi) =>
-    Array.from({ length: 7 }, (_, di) => (
-      // Match on the LOCAL day key (loadCalendar emits the same), so the
-      // squares line up with the user's UK calendar, not UTC.
-      trainedDates.has(dayKeys[wi * 7 + di])
-    )),
-  );
-  return (
-    <View style={[styles.calWrap, live.calWrap]}>
-      <View
-        style={styles.calGrid}
-        accessible
-        accessibilityLabel={`Trained ${trainedCount} of the last 84 days`}
-      >
-        {weeks.map((week, wi) => (
-          <View key={wi} style={styles.calCol}>
-            {week.map((trained, di) => (
-              <View
-                key={di}
-                style={{
-                  width: SQ, height: SQ, borderRadius: 2,
-                  backgroundColor: trained ? t.colors.primary : t.colors.surface2,
-                }}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
-      <View style={styles.calLegend}>
-        <View style={[styles.calDot, { backgroundColor: t.colors.surface2, borderWidth: 1, borderColor: t.colors.border }]} />
-        <Text style={[styles.calLegendText, live.calLegendText]}>Rest</Text>
-        <View style={[styles.calDot, { backgroundColor: t.colors.primary }]} />
-        <Text style={[styles.calLegendText, live.calLegendText]}>Trained</Text>
-        <Text style={[styles.calLegendText, live.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
-      </View>
-    </View>
-  );
+  if (!data || data.ratio === null) return null;
+  const line = workloadTakeaway(data.comparison);
+  if (!line) return null;
+  return <Text style={[styles.loadStatus, live.loadStatus]}>{line}</Text>;
 }
 
-// CP-10 theming batch (component sweep, 2026-07-10): live colour resolver
-// replacing the frozen barColor() function -- resolves the same avgMin ->
-// colour mapping off the passed-in live t.colors instead of the frozen
-// colors singleton.
-function buildBarColor(c) {
-  return function barColor(avgMin) {
-    if (avgMin <= 0) return c.surface2;
-    if (avgMin < 45) return c.textMuted;
-    if (avgMin <= 75) return c.success;
-    return c.warning;
-  };
+function loadBarLabel(label) {
+  return LOAD_BAR_WORDS[label] ?? String(label ?? '');
 }
 
-export function SessionDurationChart({ bars }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+/**
+ * "Load", one card (D214, CS-1, CS-6): how much weight was lifted this week so
+ * far, in the person's own unit, over four labelled bars (three full Monday
+ * weeks and this week so far), a like-for-like comparison and the average of
+ * the full weeks. The old ratio (a part week divided by full ones) and the
+ * second card that repeated these figures are gone.
+ *
+ * Props:
+ *   bars        [{ value, label }] oldest to newest, the last being this week so
+ *               far (useProgressData.mesoTonnage); values are in the person's
+ *               own unit, because gym weight is stored in it and never converted
+ *   unit        'kg' | 'lbs', the person's unit, printed on every kilogram or
+ *               pound figure (CS-1)
+ *   comparison  trainingLoad.likeForLikeLoad's result, or null
+ *   average     { chronic, weeksOfData } (useProgressData.workloadData), or
+ *               null: the average of the full weeks, named with its true count
+ */
+export function LoadCard({ bars, unit = 'kg', comparison = null, average = null }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const barColor = buildBarColor(t.colors);
-  const BAR_MAX_H = 40;
-  const BAR_W = 20;
-  const durations = bars.map(b => b.avgMin).filter(v => v > 0);
-  const maxDur = durations.length > 0 ? Math.max(...durations) : 1;
+  const list = Array.isArray(bars) ? bars : [];
+  if (!list.some((b) => b?.value > 0)) return null;
 
-  // Coaching line: compare last 3 bars with a recorded avg
-  const recent = bars.filter(b => b.avgMin > 0);
-  let coachingLine = 'Your session lengths are steady.';
-  if (recent.length >= 3) {
-    const last = recent.slice(-3).map(b => b.avgMin);
-    const isDown = last[2] < last[0] - 5;
-    if (isDown) coachingLine = 'Your sessions are getting shorter, which might mean fatigue.';
-  }
+  const current = list[list.length - 1]?.value ?? 0;
+  const top = Math.max(...list.map((b) => b?.value ?? 0), 1);
+  const weeksN = Number.isFinite(average?.weeksOfData) && average.weeksOfData > 0 ? Math.round(average.weeksOfData) : null;
+  const showAverage = weeksN != null && Number.isFinite(average?.chronic) && average.chronic > 0;
+  const spoken = `Weekly load, ${list
+    .map((b, i) => `${i === list.length - 1 ? 'this week so far' : loadBarLabel(b.label).toLowerCase()} ${formatWithUnit(formatNumber(b.value), unit)}`)
+    .join(', ')}.`;
 
   return (
-    <View style={[styles.durationWrap, live.durationWrap]}>
-      <View style={styles.durationBarsRow}>
-        {bars.map((bar, i) => {
-          const barH = bar.avgMin > 0
-            ? Math.max(4, Math.round((bar.avgMin / maxDur) * BAR_MAX_H))
-            : 4;
+    <Card style={styles.loadCard}>
+      <View style={styles.rowBetween}>
+        <Text style={[styles.loadHeadline, live.loadHeadline]}>
+          {formatWithUnit(formatNumber(current), unit)} lifted so far this week
+        </Text>
+        {/* D204: the plan sets each session; this is a picture of how the load
+            is moving. The comparison's words and the average are explained here
+            in plain terms, with the real bounds the words are cut at. */}
+        <InfoTooltip
+          text={
+            'The total weight you lifted over your working sets (warm-ups are not counted), for each week from Monday to Sunday. The last bar is this week so far.\n\n'
+            + 'The comparison looks at the same days and the same time of day in each of your last three weeks, so a part week is never set against full ones. '
+            + `In line means between ${Math.round((1 - LOAD_IN_LINE_MIN) * 100)}% under and ${Math.round((LOAD_ABOVE_MIN - 1) * 100)}% over the average of those weeks at this point.\n\n`
+            + 'The average is taken over your full weeks that have at least one logged set.\n\n'
+            + 'Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.'
+          }
+        />
+      </View>
+
+      <View style={styles.loadBars} accessible accessibilityRole="image" accessibilityLabel={spoken}>
+        {list.map((b, i) => {
+          const isNow = i === list.length - 1;
+          const height = b.value > 0 ? Math.max(LOAD_BAR_MIN, Math.round((b.value / top) * LOAD_BAR_AREA)) : LOAD_BAR_MIN;
           return (
-            <View key={i} style={styles.durationBarCol}>
-              <View style={[
-                styles.durationBar,
-                { height: barH, width: BAR_W, backgroundColor: barColor(bar.avgMin) },
-              ]} />
-              {bar.avgMin > 0 && (
-                <Text style={[styles.durationBarValue, live.durationBarValue]}>{bar.avgMin}m</Text>
-              )}
-              <Text style={[styles.durationBarLabel, live.durationBarLabel]}>{bar.weekLabel}</Text>
-              {/* F4 (D200 item 3): the current bar is the Monday-anchored
-                  week SO FAR, not a completed week -- say so, the same
-                  "so far" qualifier the plan card and workload card use for
-                  the identical partial-week reading. */}
-              {bar.weekLabel === 'Now' && (
-                <Text style={[styles.durationBarLabel, live.durationBarLabel]}>so far</Text>
-              )}
+            <View key={b.label ?? i} style={styles.loadBarCol}>
+              <Text style={[styles.loadBarValue, live.loadBarValue]}>{formatNumber(b.value)}</Text>
+              <View style={styles.loadBarPlot}>
+                <View style={[styles.loadBar, live.loadBar, { height }]} />
+              </View>
+              <Text style={[styles.loadBarLabel, live.loadBarLabel]}>{loadBarLabel(b.label)}</Text>
+              {/* "So far" on every open-week figure (plan rule 2). */}
+              <Text style={[styles.loadBarLabel, live.loadBarLabel]}>{isNow ? 'so far' : ' '}</Text>
             </View>
           );
         })}
       </View>
-      <Text style={[styles.durationCoach, live.durationCoach]}>{coachingLine}</Text>
-    </View>
-  );
-}
 
-export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  const visible = showAll ? rows : rows.slice(0, FREQ_MAX_DISPLAY);
-  const hasMore = rows.length > FREQ_MAX_DISPLAY;
-
-  return (
-    <View style={[styles.freqWrap, live.freqWrap]}>
-      {visible.map(({ muscle, thisWeek, lastWeek }) => (
-        <View key={muscle} style={[styles.freqRow, live.freqRow]}>
-          <Text style={[styles.freqMuscle, live.freqMuscle]} numberOfLines={1}>
-            {MUSCLE_DISPLAY_NAMES[muscle] ?? muscle}
-          </Text>
-          <Text style={[styles.freqCounts, live.freqCounts]}>
-            <Text style={[styles.freqCountBold, live.freqCountBold, thisWeek > lastWeek && [styles.freqCountUp, live.freqCountUp]]}>
-              {thisWeek}
-            </Text>
-            <Text style={[styles.freqDivider, live.freqDivider]}> this · </Text>
-            <Text style={[styles.freqLastWeek, live.freqLastWeek]}>{lastWeek} last</Text>
-          </Text>
-        </View>
-      ))}
-      {hasMore && (
-        <TouchableOpacity
-          style={styles.freqToggle}
-          onPress={onToggle}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showAll }}
-          accessibilityLabel={showAll ? 'Show less' : `Show all ${rows.length}`}
-        >
-          <Text style={[styles.freqToggleText, live.freqToggleText]}>
-            {showAll ? 'Show less' : `Show all (${rows.length})`}
-          </Text>
-          <Ionicons
-            name={showAll ? 'chevron-up' : 'chevron-down'}
-            size={12}
-            color={t.colors.primary}
-          />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-export function WorkloadCard({ data }) {
-  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  if (!data || data.ratio === null) return null;
-
-  const { acute, chronic, ratio, weeksOfData } = data;
-
-  // C6 RD6-14 (D97-25): the chronic mean can rest on as few as 2
-  // populated weeks (zero weeks are dropped), and the takeaway line
-  // already names the real count - the status text must not contradict it
-  // by implying a fuller baseline.
-  const baselineNoun = Number.isFinite(weeksOfData) && weeksOfData < 4
-    ? `your ${weeksOfData}-week average`
-    : 'your recent average';
-  // Founder rule 2026-09-26 (register D204): the plan sets the sessions;
-  // this card DESCRIBES how the week's load sits against the recent
-  // average and never tells anyone to train easier or harder. No traffic
-  // light either: a building week above its average is the plan working,
-  // not an alarm, so the bar and the line stay in the app's own accent and
-  // text colours.
-  const statusColor = t.colors.textSecondary;
-  let statusText = `Below ${baselineNoun} so far.`;
-  if (ratio >= 1.3) {
-    statusText = `Well above ${baselineNoun} so far.`;
-  } else if (ratio >= 0.8) {
-    statusText = `In line with ${baselineNoun} so far.`;
-  }
-
-  // Simple visual bar: fill proportional to ratio, capped at 2.0
-  const fillPct = Math.min(ratio / 2.0, 1);
-
-  const takeaway = workloadTakeaway(ratio, acute, chronic, weeksOfData);
-  // P5/D200-3: this card is now the EXPLANATION of the same figure the plan
-  // card's sparkline draws (F5) -- one weeks-count, used by both the
-  // tooltip and the average stat's label, instead of the tooltip's own
-  // separately-worded baselineNoun.
-  const weeksN = Number.isFinite(weeksOfData) && weeksOfData > 0 ? weeksOfData : 4;
-
-  return (
-    <View style={[styles.workloadCard, live.workloadCard]}>
-      <View style={styles.rowBetween}>
-        <Text style={[styles.workloadTitle, live.workloadTitle]}>Weekly load</Text>
-        <InfoTooltip text={`Compares this week so far (Monday to today) with your average over the previous ${weeksN} full week${weeksN === 1 ? '' : 's'}. Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.`} />
-      </View>
-      <Text style={[styles.workloadSubtitle, live.workloadSubtitle]}>This week so far against your recent full weeks</Text>
-
-      <View style={[styles.workloadBarBg, live.workloadBarBg]}>
-        <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: t.colors.primary }]} />
-      </View>
-
-      <View style={styles.workloadStats}>
-        <View style={styles.workloadStat}>
-          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{(ratio).toFixed(2)}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>vs recent average</Text>
-        </View>
-        <View style={styles.workloadStat}>
-          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{acute.toLocaleString('en-GB')}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week so far (kg)</Text>
-        </View>
-        <View style={styles.workloadStat}>
-          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>{weeksN}-wk average (kg)</Text>
-        </View>
-      </View>
-
-      <Text style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
-      {!!takeaway && <Text style={[styles.workloadTakeaway, live.workloadTakeaway]}>{takeaway}</Text>}
-    </View>
+      <LoadComparison data={comparison} />
+      {showAverage ? (
+        <Text style={[styles.loadAverage, live.loadAverage]}>
+          {`${weeksN}-week average: ${formatWithUnit(formatNumber(average.chronic), unit)}`}
+        </Text>
+      ) : null}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
 
-  // ── Mesocycle card ──
-  mesoCard:         { gap: spacing.md },
+  // ── No-plan card ──
   mesoEmpty:        { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   mesoEmptyTitle:   { ...type.bodyStrong, color: colors.textPrimary },
   mesoEmptySub:     { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
@@ -376,212 +342,66 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, marginTop: spacing.xs,
   },
   mesoEmptyBtnText: { ...type.label, color: colors.textPrimary },
-  mesoTop:          { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  mesoName:         { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+
+  // ── Last 12 weeks ──
+  gridCard:         { gap: spacing.md },
+  gridCaption:      { ...type.bodySm, color: colors.textSecondary },
+
+  // ── Your block ──
+  blockCard:        { gap: spacing.md },
+  blockTop:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: spacing.xxxl },
+  blockName:        { flex: 1 },
+  mesoName:         { ...type.bodyStrong, color: colors.textPrimary },
   mesoWeek:         { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
-  mesoProgressTrack: {
-    height: 4, borderRadius: radius.full,
+  blockNote:        { ...type.bodySm, color: colors.textSecondary },
+  blockBarWrap:     { gap: spacing.xs },
+  blockBarLabel:    { ...type.caption, color: colors.textSecondary },
+  blockBarTrack: {
+    height: BLOCK_BAR_HEIGHT, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
-  mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
-  mesoProgressLabel: { ...type.num('caption'), color: colors.textMuted },
-  sparkWrap:           { marginTop: spacing.xs },
-  sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.xs },
-  sparkLabel:          { ...type.caption, color: colors.textMuted },
-  sparkValueCol:       { alignItems: 'flex-end' },
-  sparkValue:          { ...type.num('bodyStrong'), color: colors.textPrimary },
-  sparkValueCaption:   { ...type.caption, color: colors.textMuted },
-  sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
+  blockBarFill:     { height: '100%', borderRadius: radius.full, backgroundColor: colors.textSecondary },
+  blockEffortRow:   { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  blockEffort:      { ...type.bodySm, color: colors.textPrimary },
 
-  // ── Calendar ──
-  calWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
-    gap: spacing.md,
-  },
-  calGrid:       { flexDirection: 'row', gap: 3 },
-  calCol:        { flex: 1, gap: 3 },
-  calLegend:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  calDot:        { width: 10, height: 10, borderRadius: 2 },
-  calLegendText: { ...type.caption, color: colors.textMuted },
-
-  // ── Session Duration Trend ──
-  durationWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
-    gap: spacing.md,
-  },
-  durationBarsRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
-    height: 72,
-  },
-  durationBarCol: {
-    alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xxs,
-  },
-  durationBar: {
-    borderRadius: 3,
-  },
-  durationBarValue: {
-    // R2 (cohesion sweep, 2026-07-11): the per-bar minutes readout is a data
-    // numeral -> tabular figures, matching every other numeral in the tab.
-    // fontSize.micro + fontWeight.semibold has no exact type.* role (theme
-    // gap logged in the R2 report); the raw pair stays rather than dropping
-    // emphasis.
-    fontSize: fontSize.micro, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    fontVariant: ['tabular-nums'],
-  },
-  durationBarLabel: {
-    fontSize: fontSize.micro, color: colors.textMuted,
-  },
-  durationCoach: {
-    ...type.captionTight, color: colors.textSecondary, fontStyle: 'italic',
-  },
-
-  // ── Muscle Frequency Table ──
-  freqWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
-    gap: spacing.xxs,
-  },
-  freqRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    borderBottomWidth: 1, borderBottomColor: withAlpha(colors.border, alpha.strong),
-  },
-  freqMuscle: {
-    ...type.label, color: colors.textPrimary,
-    flex: 1,
-  },
-  freqCounts: {
-    ...type.caption, color: colors.textSecondary,
-  },
-  freqCountBold: {
-    // R2 (cohesion sweep, 2026-07-11): per-muscle session counts are data
-    // numerals -> tabular figures so the "N this / M last" columns align down
-    // the table. fontSize.sm + fontWeight.bold has no exact type.* role (theme
-    // gap logged in the R2 report); the raw pair stays rather than dropping
-    // emphasis.
-    fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  freqCountUp: {
-    color: colors.success,
-  },
-  freqDivider: {
-    color: colors.textMuted,
-  },
-  freqLastWeek: {
-    // R2: the "M last" count is also a data numeral -> tabular figures.
-    color: colors.textMuted, fontVariant: ['tabular-nums'],
-  },
-  freqToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', marginTop: spacing.xs,
-    paddingVertical: spacing.xxs,
-  },
-  freqToggleText: {
-    ...type.captionStrong, color: colors.primary,
-  },
-
-  // ── Workload Card (ACWR) ──
-  workloadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    gap: spacing.md,
-  },
-  workloadTitle: {
-    ...type.label,
-    color: colors.textMuted,
-  },
-  workloadSubtitle: {
-    ...type.captionTight,
-    color: colors.textSecondary,
-  },
-  // R2 (cohesion sweep, 2026-07-11): the training-load meter joins the
-  // pill/bar radius family (radius.full), matching the mesocycle progress
-  // meter above (mesoProgressTrack/Fill) instead of a one-off radius.sm.
-  workloadBarBg: {
-    height: 8,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  workloadBarFill: {
-    height: 8,
-    borderRadius: radius.full,
-  },
-  workloadStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  workloadStat: {
-    alignItems: 'center',
-    gap: spacing.xxs,
-  },
-  workloadStatValue: {
-    ...type.num('title'),
-    color: colors.textPrimary,
-  },
-  workloadStatLabel: {
-    ...type.caption,
-    color: colors.textMuted,
-  },
-  workloadStatus: {
-    ...type.captionTight,
-  },
-  workloadTakeaway: {
-    ...type.bodySm,
-    color: colors.textSecondary,
-  },
+  // ── Load ──
+  loadCard:         { gap: spacing.md },
+  loadHeadline:     { ...type.num('title'), color: colors.textPrimary, flex: 1 },
+  loadBars:         { flexDirection: 'row', gap: spacing.sm },
+  loadBarCol:       { flex: 1, alignItems: 'center', gap: spacing.xxs },
+  loadBarPlot:      { height: LOAD_BAR_AREA, justifyContent: 'flex-end', alignSelf: 'stretch', alignItems: 'center' },
+  loadBar:          { width: '60%', borderRadius: radius.xs, backgroundColor: colors.textSecondary },
+  loadBarValue:     { ...type.num('caption'), color: colors.textSecondary },
+  loadBarLabel:     { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  loadStatus:       { ...type.bodySm, color: colors.textSecondary },
+  loadAverage:      { ...type.bodySm, color: colors.textMuted },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
-// frozen `styles` block above, same "frozen base + live override" pattern as
-// BillingPeriodSelector.js's buildLiveStyles. rowBetween/mesoCard/mesoEmpty/
-// mesoTop/sparkWrap/sparkLabelRow/sparkValueCol/sparkChartCentered/calGrid/calCol/calLegend/
-// calDot/durationBarsRow/durationBarCol/durationBar/freqToggle/
-// workloadStats/workloadStat/workloadBarFill/workloadStatus have no colour
-// tokens baked at module scope (workloadBarFill/workloadStatus take their
-// colour from the statusColor variable computed inline against t.colors).
+// frozen `styles` block above, the "frozen base + live override" pattern the
+// tree carries. Only the colour- and type-bearing keys are mirrored; layout-only
+// keys (rowBetween, gridCard, blockCard, blockTop, blockName, blockBarWrap,
+// blockEffortRow, loadCard, loadBars, loadBarCol, loadBarPlot) have nothing to
+// unfreeze. Everything here is ink or a surface tone: no amber on a fact.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    mesoEmptyTitle: { color: t.colors.textPrimary },
-    mesoEmptySub: { color: t.colors.textSecondary },
+    gridCaption: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mesoEmptyTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    mesoEmptySub: { ...t.type.bodySm, color: t.colors.textSecondary },
     mesoEmptyBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    mesoEmptyBtnText: { color: t.colors.textPrimary },
-    mesoName: { color: t.colors.textPrimary },
-    mesoWeek: { color: t.colors.textSecondary },
-    mesoProgressTrack: { backgroundColor: t.colors.surface2 },
-    mesoProgressFill: { backgroundColor: t.colors.primary },
-    mesoProgressLabel: { color: t.colors.textMuted },
-    sparkLabel: { color: t.colors.textMuted },
-    sparkValue: { color: t.colors.textPrimary },
-    sparkValueCaption: { color: t.colors.textMuted },
-    calWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    calLegendText: { color: t.colors.textMuted },
-    durationWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    durationBarValue: { color: t.colors.textSecondary },
-    durationBarLabel: { color: t.colors.textMuted },
-    durationCoach: { color: t.colors.textSecondary },
-    freqWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    freqRow: { borderBottomColor: withAlpha(t.colors.border, alpha.strong) },
-    freqMuscle: { color: t.colors.textPrimary },
-    freqCounts: { color: t.colors.textSecondary },
-    freqCountBold: { color: t.colors.textPrimary },
-    freqCountUp: { color: t.colors.success },
-    freqDivider: { color: t.colors.textMuted },
-    freqLastWeek: { color: t.colors.textMuted },
-    freqToggleText: { color: t.colors.primary },
-    workloadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    workloadTitle: { color: t.colors.textMuted },
-    workloadSubtitle: { color: t.colors.textSecondary },
-    workloadBarBg: { backgroundColor: t.colors.surface2 },
-    workloadStatValue: { color: t.colors.textPrimary },
-    workloadStatLabel: { color: t.colors.textMuted },
-    workloadTakeaway: { color: t.colors.textSecondary },
+    mesoEmptyBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    mesoName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    mesoWeek: { ...t.type.caption, color: t.colors.textSecondary },
+    blockNote: { ...t.type.bodySm, color: t.colors.textSecondary },
+    blockBarLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    blockBarTrack: { backgroundColor: t.colors.surface2 },
+    blockBarFill: { backgroundColor: t.colors.textSecondary },
+    blockEffort: { ...t.type.bodySm, color: t.colors.textPrimary },
+    loadHeadline: { ...t.type.num('title'), color: t.colors.textPrimary },
+    loadBar: { backgroundColor: t.colors.textSecondary },
+    loadBarValue: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    loadBarLabel: { ...t.type.caption, color: t.colors.textMuted },
+    loadStatus: { ...t.type.bodySm, color: t.colors.textSecondary },
+    loadAverage: { ...t.type.bodySm, color: t.colors.textMuted },
   };
 }

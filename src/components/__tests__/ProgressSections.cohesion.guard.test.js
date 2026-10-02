@@ -3,45 +3,81 @@
  * the shared Progress section cards (ProgressSections.js) against
  * docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md.
  *
- * Pins the settled census:
- *   1. Every card-class surface sits at radius.lg + colors.surface + border.
- *   2. Both horizontal meters (mesocycle progress + training-load ACWR) share
- *      the pill/bar radius family (radius.full) -- the R2 fix unified the
- *      training-load meter, previously a one-off radius.sm.
- *   3. Every data-numeral style carries tabular figures (frequency counts and
- *      the session-duration readout, added in R2).
+ * RE-ANCHORED under D214 (Consistency elevation, lane 4; plan
+ * `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.3, CS-19): the cards the R2 census scored
+ * (the plan card, the calendar, the duration chart, the frequency table and the
+ * ratio card, each a local clone of the card surface) are gone, replaced by the
+ * block card, the load card and the grid section. The census pins the settled
+ * baseline for those:
+ *   1. Every card is the shared `Card` primitive. The local clones were the
+ *      CS-19 finding: their live twin set the bright `border` where `Card` sets
+ *      `borderSubtle`, so two adjacent cards drew different edges.
+ *   2. Both horizontal meters (the block bar) keep the pill radius family
+ *      (radius.full), the bars of the load chart the bar family (radius.xs).
+ *   3. Every data-numeral style carries tabular figures (the load headline, the
+ *      bar values).
  *   4. No raw <Modal> is hand-rolled here.
+ *   5. Facts are ink (plan rule 3): no amber, no status colour on a figure, a
+ *      bar or a line here. The one amber-family token left is `primaryDim` on
+ *      the "No plan running yet" card's icon, a card that IS an action.
  *
- * Chart plotting marks (the 84-day calendar cells, the legend swatch and the
- * duration bars at raw borderRadius 2/3) are deliberately NOT pinned to a
- * token here: they are chart geometry, a hard bound of the R2 brief
- * (CLAUDE.md Section 2 chrome-only), and mirror each other by design.
+ * Chart plotting marks (the load bars' plot height, the block bar's track) are
+ * chart geometry, a hard bound of the R2 brief (CLAUDE.md Section 2
+ * chrome-only), named once at the top of the file.
  */
 import fs from 'fs';
 import path from 'path';
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'ProgressSections.js'), 'utf8');
+// Comments out: the guards below are about what the file DOES.
+const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
-describe('ProgressSections cohesion census (R2)', () => {
-  test('card-class surfaces are radius.lg', () => {
-    for (const name of ['card', 'calWrap', 'durationWrap', 'freqWrap', 'workloadCard']) {
-      expect(SRC).toMatch(new RegExp(`${name}:\\s*\\{[\\s\\S]{0,200}?borderRadius: radius\\.lg`));
-    }
+describe('ProgressSections cohesion census (R2, re-anchored D214)', () => {
+  test('every card is the shared Card, never a local surface clone (CS-19)', () => {
+    expect(SRC).toMatch(/import Card from '\.\/Card'/);
+    expect((CODE.match(/<Card[\s>]/g) ?? []).length).toBeGreaterThanOrEqual(4);
+    // No card surface of its own: a `surface` background, a card radius or a
+    // card hairline (the "Browse plans" pill's own `border` is a button's).
+    expect(CODE).not.toMatch(/backgroundColor: (t\.)?colors\.surface[,\s]/);
+    expect(CODE).not.toMatch(/borderRadius: radius\.lg/);
+    expect(CODE).not.toMatch(/borderColor: (t\.)?colors\.borderSubtle/);
   });
 
-  test('both horizontal meters share the radius.full pill/bar family', () => {
-    expect(SRC).toMatch(/mesoProgressTrack:\s*\{[\s\S]{0,80}?borderRadius: radius\.full/);
-    expect(SRC).toMatch(/workloadBarBg:\s*\{[\s\S]{0,120}?borderRadius: radius\.full/);
-    expect(SRC).toMatch(/workloadBarFill:\s*\{[\s\S]{0,80}?borderRadius: radius\.full/);
+  test('the block bar keeps the pill/bar radius family, the load bars the bar family', () => {
+    expect(SRC).toMatch(/blockBarTrack: \{[\s\S]{0,120}?borderRadius: radius\.full/);
+    expect(SRC).toMatch(/blockBarFill:\s*\{[\s\S]{0,80}?borderRadius: radius\.full/);
+    expect(SRC).toMatch(/loadBar:\s*\{[\s\S]{0,120}?borderRadius: radius\.xs/);
   });
 
   test('data numerals carry tabular figures', () => {
-    expect(SRC).toMatch(/freqCountBold:\s*\{[\s\S]{0,500}?fontVariant: \['tabular-nums'\]/);
-    expect(SRC).toMatch(/freqLastWeek:\s*\{[\s\S]{0,200}?fontVariant: \['tabular-nums'\]/);
-    expect(SRC).toMatch(/durationBarValue:\s*\{[\s\S]{0,500}?fontVariant: \['tabular-nums'\]/);
+    expect(SRC).toMatch(/loadHeadline:\s*\{\s*\.\.\.type\.num\('title'\)/);
+    expect(SRC).toMatch(/loadBarValue:\s*\{\s*\.\.\.type\.num\('caption'\)/);
   });
 
   test('no hand-rolled raw <Modal>', () => {
     expect(SRC).not.toMatch(/<Modal[\s/>]/);
+  });
+
+  test('facts are ink: no amber, warning, success or error colour on a figure, a bar or a line (plan rule 3)', () => {
+    expect(CODE).not.toMatch(/colors\.(primary|primaryFill|warning|success|error|gold)\b/);
+    // The only amber-family token is the no-plan card's icon, and that card is an action.
+    const primaryDim = CODE.match(/colors\.primaryDim/g) ?? [];
+    expect(primaryDim).toHaveLength(1);
+    expect(CODE).toMatch(/<Ionicons name="layers-outline" size=\{32\} color=\{t\.colors\.primaryDim\}/);
+    // The fills read the ink token.
+    expect(SRC).toMatch(/blockBarFill:\s*\{[^}]*backgroundColor: colors\.textSecondary/);
+    expect(SRC).toMatch(/loadBar:\s*\{[^}]*backgroundColor: colors\.textSecondary/);
+    expect(SRC).toMatch(/blockBarFill: \{ backgroundColor: t\.colors\.textSecondary \}/);
+    expect(SRC).toMatch(/loadBar: \{ backgroundColor: t\.colors\.textSecondary \}/);
+  });
+
+  test('the old surfaces are gone: no ratio card, no duration chart, no frequency table, no amber calendar', () => {
+    for (const gone of [
+      'MesocyclePulseCard', 'WorkloadCard', 'SessionDurationChart', 'MuscleFrequencyTable', 'TrainingCalendar',
+      'SvgBarSparkline', 'workloadBarFill', 'freqWrap', 'durationWrap', 'calWrap',
+    ]) {
+      expect(CODE).not.toContain(gone);
+    }
   });
 });

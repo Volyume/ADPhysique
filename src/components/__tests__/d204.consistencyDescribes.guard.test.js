@@ -12,6 +12,16 @@
  * day") and the four-week fatigue banner ("Lighter week recommended", with
  * a tooltip on how to run your own deload). This suite fails if either
  * goes back to instructing.
+ *
+ * RE-ANCHORED under D214 (Consistency elevation, lane 4; plan section 7.3
+ * items 6 and 8, CS-6, CS-18): the screen's order changed, so the banner now
+ * sits after the sessions line rather than before the loading branch (the
+ * slice that finds it moved with it, to the empty-state marker that follows
+ * it), and it lists EVERY reason the four-week check found, not only the first
+ * (CS-18). The Weekly load card these rules first fixed is the load card now,
+ * and its comparison is worded by chartWindows.workloadTakeaway ("In line with
+ * recent weeks at this point"), which this suite also holds to the describing
+ * register. The banner's own words and its tooltip are unchanged.
  */
 const fs = require('fs');
 const path = require('path');
@@ -39,7 +49,18 @@ describe('the fatigue trend card describes what was reported', () => {
 
 describe('the four-week fatigue banner describes, in a neutral card', () => {
   const SRC = read('screens/ConsistencyScreen.js');
-  const banner = SRC.slice(SRC.indexOf('{deloadAlert && ('), SRC.indexOf('{loading ? ('));
+  const banner = SRC.slice(SRC.indexOf('hasData && deloadAlert && ('), SRC.indexOf('Empty state (CS-4)'));
+
+  test('the slice found the banner (not an empty string that every negative pin would pass)', () => {
+    expect(banner.length).toBeGreaterThan(400);
+    expect(banner).toContain('<Card style={styles.deloadBanner}>');
+  });
+
+  test('it lists every reason of the check, not only the first (CS-18)', () => {
+    expect(banner).toMatch(/deloadAlert\.reasons/);
+    expect(banner).toMatch(/\.map\(\(reason\) => \(/);
+    expect(banner).not.toMatch(/reasons\??\.?\[0\]/);
+  });
 
   test('it names what was found and says the plan sets the sessions', () => {
     expect(banner).toContain('Signs of building fatigue');
@@ -95,5 +116,25 @@ describe("Today's coach brief describes, never tells you what to lift (D204 adde
       expect({ name, text: `${brief.headline}. ${brief.body}` }).toEqual({ name, text: expect.not.stringMatching(INSTRUCTS) });
       expect(brief.body).not.toMatch(/10%|reduc|drop the weight/i);
     }
+  });
+});
+
+describe('the load comparison describes how the week sits and never tells you what to do (D204, D214 CS-6)', () => {
+  const { workloadTakeaway } = require('../../lib/chartWindows');
+
+  test('each reading is a description of the week at this point', () => {
+    const lines = ['above', 'in_line', 'below'].map(workloadTakeaway);
+    expect(lines).toEqual([
+      'Above recent weeks at this point',
+      'In line with recent weeks at this point',
+      'Below recent weeks at this point',
+    ]);
+    for (const line of lines) expect(line).not.toMatch(INSTRUCTS);
+  });
+
+  test('the load card\'s (i) says the plan sets each session and that this is not an instruction', () => {
+    const SRC = read('components/ProgressSections.js');
+    expect(SRC).toContain('Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.');
+    expect(SRC).not.toMatch(/easier session|Consider|Monitor how you feel|Room for more work|fatigue risk/i);
   });
 });

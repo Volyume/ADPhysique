@@ -1,12 +1,21 @@
 /**
  * ConsistencyScreen.workloadOrder.test.js
  *
- * Progress-tab audit 2026-09-24 (F5, D200 item 4), lane E ruling 4:
- * WorkloadCard now renders directly beneath the plan card (MesocyclePulseCard),
- * before FatigueTrendCard, so the picture (the sparkline) and its explanation
- * (this card) are adjacent. Everything else keeps its existing order --
- * ReadinessCards (Recovery signals, landed by lane D) stays where it was,
- * after the whole training-block group.
+ * Progress-tab audit 2026-09-24 (F5, D200 item 4), lane E ruling 4 put the
+ * workload card directly beneath the plan card, so the picture (the sparkline)
+ * and its explanation (the ratio card) were adjacent.
+ *
+ * RE-ANCHORED under D214 (Consistency elevation, lane 4; plan
+ * `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.3, CS-6): the sparkline, the plan card and the
+ * ratio card are collapsed into the ONE block card and the ONE load card, so
+ * "adjacent" is no longer a question. What this pins now is the plan's order,
+ * with the load once, after the plan rows and before the sessions line, and the
+ * load card withheld when there is nothing lifted to show:
+ *   plan week, last 12 weeks (grid, milestone), block, plan rows, load,
+ *   sessions line.
+ * The child cards are stubbed to markers; their words are pinned in
+ * ConsistencyScreen.d214.test.js and ProgressSections.workloadCopy.test.js.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -20,8 +29,7 @@ jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
   default: jest.fn((selector) => selector({
     user: { id: 'u1' },
-    tier: 'pro',
-    userProfile: { scoffScore: 0 },
+    units: 'kg',
     accessibility: { reduceMotion: true },
   })),
 }));
@@ -44,26 +52,25 @@ jest.mock('../../components/SectionLabel', () => {
 });
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
 jest.mock('../../components/BlockShapeCard', () => () => null);
+jest.mock('../../components/PlanWeekCard', () => {
+  const { Text: RNText } = require('react-native');
+  return () => <RNText>PLAN_WEEK_CARD</RNText>;
+});
 jest.mock('../../components/BlockProgressCard', () => {
   const { Text: RNText } = require('react-native');
   return () => <RNText>BLOCK_PROGRESS_CARD</RNText>;
 });
-jest.mock('../../components/FatigueTrendCard', () => {
-  const { Text: RNText } = require('react-native');
-  return () => <RNText>FATIGUE_CARD</RNText>;
-});
 jest.mock('../../components/ReadinessCards', () => {
   const { Text: RNText } = require('react-native');
-  return () => <RNText>READINESS_CARD</RNText>;
+  return () => <RNText>MILESTONE</RNText>;
 });
 jest.mock('../../components/ProgressSections', () => {
   const { Text: RNText } = require('react-native');
   return {
-    MesocyclePulseCard: () => <RNText>MESO_CARD</RNText>,
-    WorkloadCard: ({ data }) => (data ? <RNText>WORKLOAD_CARD</RNText> : null),
-    SessionDurationChart: () => <RNText>DURATION_CARD</RNText>,
-    MuscleFrequencyTable: () => <RNText>FREQ_TABLE</RNText>,
-    TrainingCalendar: () => <RNText>CALENDAR</RNText>,
+    BlockCard: () => <RNText>BLOCK_CARD</RNText>,
+    LoadCard: ({ bars }) => (bars && bars.length ? <RNText>LOAD_CARD</RNText> : null),
+    TrainingDaysSection: () => <RNText>GRID</RNText>,
+    typicalSessionsLine: (m) => (m ? `Sessions usually last about ${m} minutes.` : null),
   };
 });
 
@@ -71,20 +78,17 @@ import ConsistencyScreen from '../ConsistencyScreen';
 
 const baseProgress = {
   activeMeso: { name: 'Push Pull Legs', durationWeeks: 6 },
-  mesoTonnage: [{ value: 500, label: 'Now', color: '#f00' }],
-  mesoProgress: () => 0.3,
-  mesoCurrentWeek: () => 2,
-  fatigueSessions: [],
-  blockProgress: [],
+  mesoTonnage: [{ value: 500, label: 'Now' }],
+  workloadData: { acute: 500, chronic: 400, ratio: 1.25, weeksOfData: 2 },
+  loadComparison: { current: 500, expected: 400, ratio: 1.25, comparison: 'in_line', weeksOfData: 2 },
+  position: null,
+  blockProgress: [{ muscle: 'chest', label: 'Chest', actual: 1, planned: 12 }],
   currentMesoWeek: { weekIndex: 2, plannedWeeks: 6, isDeload: false },
   deloadAlert: null,
-  workloadData: { acute: 500, chronic: 400, ratio: 1.25, weeksOfData: 2 },
-  durationBars: [],
-  muscleFreq: [],
-  showAllMuscles: false,
-  setShowAllMuscles: jest.fn(),
   calValues: [],
-  enoughForTrends: false,
+  earliestWorkoutAt: null,
+  typicalSessionMinutes: 57,
+  allSets: [],
   refreshing: false,
   loading: false,
   loadError: false,
@@ -92,12 +96,16 @@ const baseProgress = {
   handleRefresh: jest.fn(),
 };
 
+const WANTED = new Set([
+  'PLAN_WEEK_CARD', 'GRID', 'MILESTONE', 'BLOCK_CARD', 'BLOCK_PROGRESS_CARD', 'LOAD_CARD',
+  'Sessions usually last about 57 minutes.',
+]);
+
 function orderedMarkers(tree) {
-  const wanted = new Set(['MESO_CARD', 'WORKLOAD_CARD', 'FATIGUE_CARD', 'BLOCK_PROGRESS_CARD', 'READINESS_CARD']);
   return tree.root
     .findAllByType(Text)
     .map((n) => [].concat(n.props.children).join(''))
-    .filter((t) => wanted.has(t));
+    .filter((t) => WANTED.has(t));
 }
 
 function render() {
@@ -108,31 +116,32 @@ function render() {
   return tree;
 }
 
-describe('ConsistencyScreen render order: WorkloadCard sits directly after MesocyclePulseCard', () => {
+describe('ConsistencyScreen render order (D214, 7.3)', () => {
   beforeEach(() => {
     mockProgressState = { ...baseProgress };
   });
 
-  test('order is MESO_CARD, WORKLOAD_CARD, FATIGUE_CARD, BLOCK_PROGRESS_CARD, then READINESS_CARD', () => {
-    const tree = render();
-    expect(orderedMarkers(tree)).toEqual([
-      'MESO_CARD', 'WORKLOAD_CARD', 'FATIGUE_CARD', 'BLOCK_PROGRESS_CARD', 'READINESS_CARD',
+  test('order is the plan week, the grid, the milestone, the block, the plan rows, the load, then the sessions line', () => {
+    expect(orderedMarkers(render())).toEqual([
+      'PLAN_WEEK_CARD', 'GRID', 'MILESTONE', 'BLOCK_CARD', 'BLOCK_PROGRESS_CARD', 'LOAD_CARD',
+      'Sessions usually last about 57 minutes.',
     ]);
   });
 
-  test('with no workload data yet, the order simply skips it (still MESO_CARD then FATIGUE_CARD)', () => {
-    mockProgressState = { ...baseProgress, workloadData: null };
-    const tree = render();
-    expect(orderedMarkers(tree)).toEqual(['MESO_CARD', 'FATIGUE_CARD', 'BLOCK_PROGRESS_CARD', 'READINESS_CARD']);
+  test('there is exactly ONE load card, and no ratio card beside it (CS-6)', () => {
+    expect(orderedMarkers(render()).filter((m) => m === 'LOAD_CARD')).toHaveLength(1);
   });
 
-  test('with a null ratio (not enough weeks of data yet), WorkloadCard is withheld the same way', () => {
-    mockProgressState = { ...baseProgress, workloadData: { acute: 0, chronic: 100, ratio: null, weeksOfData: 2 } };
-    const tree = render();
-    // WorkloadCard itself would return null for this shape too (belt and
-    // braces: the screen's own gate already excludes it before the card
-    // ever gets to decide).
-    expect(orderedMarkers(tree)).not.toContain('WORKLOAD_CARD');
-    expect(orderedMarkers(tree)).toEqual(['MESO_CARD', 'FATIGUE_CARD', 'BLOCK_PROGRESS_CARD', 'READINESS_CARD']);
+  test('with nothing lifted in the four weeks the load card is withheld and the rest keeps its order', () => {
+    mockProgressState = { ...baseProgress, mesoTonnage: [], workloadData: null, loadComparison: null };
+    expect(orderedMarkers(render())).toEqual([
+      'PLAN_WEEK_CARD', 'GRID', 'MILESTONE', 'BLOCK_CARD', 'BLOCK_PROGRESS_CARD',
+      'Sessions usually last about 57 minutes.',
+    ]);
+  });
+
+  test('with no planned rows the plan rows are withheld, with no typical session length that line is', () => {
+    mockProgressState = { ...baseProgress, blockProgress: [], typicalSessionMinutes: null };
+    expect(orderedMarkers(render())).toEqual(['PLAN_WEEK_CARD', 'GRID', 'MILESTONE', 'BLOCK_CARD', 'LOAD_CARD']);
   });
 });
