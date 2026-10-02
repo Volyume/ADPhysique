@@ -11293,12 +11293,39 @@ landing, under D33:
   moved with (the last rated sessions, unbounded by 14 days): it is a
   trend, not a current state, and the row above it is the bounded fact.
 - The Volume heatmap's recovery week is the programme position's GATED
-  recovery state (`isLighterTrainingState`, the plan-week card's reading),
-  the calendar row only the fallback when the position cannot be read, so
-  the three surfaces that name the week cannot disagree while a required
-  accumulation session is outstanding. In that week the figure draws no
-  verdict (`neutralVolume`): any logged work takes the quiet surface fill
-  and the legend names only "Trained" and "No sets".
+  planned recovery week (`recoveryState.state === PLANNED_BLOCK_RECOVERY`,
+  exactly the plan-week card's reading in `planWeek.js`), the calendar row
+  only the fallback when the position cannot be read, so the three
+  surfaces that name the week cannot disagree while a required
+  accumulation session is outstanding. The lead's first landing read
+  `isLighterTrainingState`, which also covers the adaptive recovery
+  adjustment; the fresh-eyes review caught it against the module's own
+  rule (an adaptive adjustment is never called a recovery week) and it is
+  corrected before the merge. How the heatmap frames an ADAPTIVE
+  adjustment (sets planned lower, no recovery week) is an open item for
+  the closing review. In the recovery week the figure draws no verdict
+  (`neutralVolume`): any logged work takes the quiet surface fill with a
+  solid hairline, an untrained muscle no fill with a dashed hairline (shape,
+  not tone alone), and the legend names only "Trained" and "No sets".
+- The heatmap's groups run in the plan's order (section 7.4 item 5):
+  Under the range, Just enough, In range, Near the limit, Too much, then
+  "No sets"; the lane's brief had listed Too much first, the lead's slip,
+  corrected at the review. The Under group's population is the Progress
+  strip's (7.1 item 2): every muscle with logged sets in the window plus,
+  with a plan, the muscles the active plan programmes with planned sets
+  above zero (the plan layer's own source map, `getPlanLandmarks`, never
+  the merged source, so a hand-edited band cannot drop a muscle from it);
+  a muscle outside that population (no sets, not programmed) sits in "No
+  sets" with no verdict word, so the strip's count is the heatmap's first
+  group (B17). The 7.1 sentence had counted "under" over the plan-trained
+  muscles alone; the review showed a trained muscle the plan does not
+  programme would then sit under "Under the range" on the heatmap and be
+  missing from the strip's count, so the lead ruled it counts on both
+  (hiding it would make the strip's number smaller than the list it
+  opens; the lane 3 brief carries the amended rule). The one definition
+  of a logged working-set row, of the window readings and of the group
+  rule (`bandGroupFor`) lives in `src/lib/volumeLogged.js`, which the
+  strip (lane 3) imports.
 - A muscle whose MEV is 0 reads "6 of up to 14 sets this week"; the row
   total of D200 ruling 1 ("39 sets in 4 weeks") leaves the visible row
   (the spoken label keeps it), the 7.4 wording replacing it. The empty
@@ -11335,4 +11362,33 @@ landing, under D33:
   recovery path the board records. Both second-run agents made their
   edits through Bash, which the edit-gate hook does not intercept; the
   gate file was present throughout and every edit traces to the brief.
+- Lane 5 fresh-eyes review (Sonnet), outcome: no blocker; six should-fixes
+  and notes, every one verified by the lead at the cited lines and applied
+  on the working tree before the merge: the recovery week read as
+  `PLANNED_BLOCK_RECOVERY` (S1, above); the groups in the plan's order
+  with the "No sets" group and the plan-trained population (S2, above);
+  the figure's untrained muscle dashed in neutral mode and the spoken
+  summary claiming no verdict there (S3 and N5, the lead's hunks); the
+  shared module (S5); pins that "An average of" never prints at "This
+  week" and that the clock-change Sundays and Mondays bound the week
+  correctly, passing under three other time zones too (S6); the three
+  silent landmark-read catches now log (N3); `volumeWindowBounds`
+  returns null on a non-finite "now" instead of bounds with a NaN in them,
+  which the view reads as no data (N4). Rulings on the reviewer's open
+  points: a plan-programmed muscle with no sets lists under "Under the
+  range" while the figure draws it hollow, and that stands (the figure
+  draws what is logged, the list gives the verdict, both true; a fill
+  would claim sets that do not exist); the fallback path (the position
+  unreadable) still reads the calendar `isDeload`, which is also true on
+  an adaptive week, kept as the rare path it is and recorded for the
+  closing review; the screen makes one extra plan read per load (the
+  effective-landmarks resolver reads the same layer inside itself),
+  accepted at one read, since folding the two needs the plan layer exposed
+  from `effectiveLandmarks.js`, outside the lane. The reviewer's gate:
+  eslint clean over the lane's files, tsc clean, the lane suites 15 passed
+  with 402 tests, the 34 suites referencing the touched modules 1441 tests
+  passed, the 47 source-scanning suites 2049 passed; the lead re-ran the
+  lane and figure suites over the settled tree (10 suites, 312 tests)
+  before the commit, the full gate over the tip in the worktree before the
+  merge.
 
