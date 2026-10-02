@@ -8,6 +8,17 @@
  *
  * Weight data and persistence stay owned by HomeScreen. This component owns
  * only the draft input, parsing, and the compact visual states.
+ *
+ * Founder device report (2026-10-02, the second time this symptom reached a
+ * build): typing the morning weight dropped the Android keyboard after EVERY
+ * digit. Root cause here, not in the screen: the three rows below were
+ * declared as COMPONENTS inside this function and rendered as <WeightInputRow
+ * />, so each keystroke's re-render made a new function identity, React saw
+ * a different element type, unmounted the row and remounted the TextInput,
+ * and the IME closed with it. They are plain render helpers now, called as
+ * functions, so the TextInput keeps one identity across keystrokes (pinned
+ * by TodayStrip.inputFocusStability.test.js and the repo-wide
+ * innerComponentRemount guard). Never declare a component inside a render.
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -110,7 +121,7 @@ export default function TodayStrip({
 
   const startEdit = useCallback(() => setEditing(true), []);
 
-  function WeightInputRow() {
+  function renderWeightInputRow() {
     return (
       <View style={styles.inputRow}>
         {bwu === 'st' ? (
@@ -171,7 +182,7 @@ export default function TodayStrip({
     );
   }
 
-  function WeightLogged() {
+  function renderWeightLogged() {
     const hasTrendDoor = typeof onOpenTrend === 'function';
     return (
       <TouchableOpacity
@@ -201,7 +212,7 @@ export default function TodayStrip({
     );
   }
 
-  function WeightEmpty() {
+  function renderWeightEmpty() {
     return (
       <TouchableOpacity
         style={styles.metricRow}
@@ -265,14 +276,14 @@ export default function TodayStrip({
           </View>
           <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
         </View>
-        <WeightInputRow />
+        {renderWeightInputRow()}
       </View>
     );
   }
 
   return (
     <View style={[styles.card, live.card]}>
-      {todayWeight != null ? <WeightLogged /> : <WeightEmpty />}
+      {todayWeight != null ? renderWeightLogged() : renderWeightEmpty()}
     </View>
   );
 }
