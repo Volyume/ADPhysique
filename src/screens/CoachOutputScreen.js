@@ -86,6 +86,7 @@ import {
   learnEffectiveMaintenanceForUser,
   resolveEffectiveMaintenanceForUser,
 } from '../lib/effectiveMaintenanceService';
+import { readMaintenanceInputs } from '../lib/maintenanceInputs';
 import { effectiveMaintenanceReceipt, resolveEffectiveMaintenance } from '../lib/effectiveMaintenance';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
 import { loadVolumeIncreaseHolds } from '../lib/coachApplySafety';
@@ -1470,19 +1471,11 @@ export default function CoachOutputScreen({ navigation, route }) {
       const current = await getNutritionTargets(user.id);
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
-      const latestComposition = (await getBodyMetricLog(user.id, 60).catch(() => []))
-        .find(row => row.bodyFatPercent != null) ?? null;
-      const freshAuthority = await resolveEffectiveMaintenanceForUser(user.id, {
-        sex,
-        dateOfBirth: bodyProfile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
-        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
-        heightCm: bodyProfile?.heightCm ?? userProfile?.heightCm ?? null,
-        weightKg: userProfile?.weightKg ?? null,
-        bodyFatPercent: latestComposition?.bodyFatPercent ?? null,
-        bodyFatSource: latestComposition?.bodyFatSource ?? null,
-        activityLevel: current?.activityLevel ?? userProfile?.activityLevel ?? null,
-        goalPhase: current?.goal ?? userProfile?.goalPhase ?? null,
-      });
+      // D214 addendum 4 (BM-14): the resolver's inputs through the one
+      // mapping every surface uses (maintenanceInputs.js); the weight is the
+      // latest weigh-in, as on every other surface, not the profile's.
+      const dietBreakInputs = await readMaintenanceInputs(user.id, { userProfile, targets: current, profile: bodyProfile });
+      const freshAuthority = await resolveEffectiveMaintenanceForUser(user.id, dietBreakInputs);
       const computed = computeDietBreakTargets(
         current,
         sex,
@@ -1646,20 +1639,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
         .find(m => m.bodyFatPercent != null) ?? null;
-      const latestWeight = weights
-        .filter(row => Number(row?.weightKg) > 0)
-        .slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
-      const maintenanceAuthority = await resolveEffectiveMaintenanceForUser(user.id, {
-        sex: bodyProfile?.sex ?? userProfile?.sex ?? null,
-        dateOfBirth: bodyProfile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
-        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
-        heightCm: bodyProfile?.heightCm ?? userProfile?.heightCm ?? null,
-        weightKg: latestWeight?.weightKg ?? userProfile?.weightKg ?? null,
-        bodyFatPercent: latestBf?.bodyFatPercent ?? null,
-        bodyFatSource: latestBf?.bodyFatSource ?? null,
-        activityLevel: nutrition?.activityLevel ?? userProfile?.activityLevel ?? null,
-        goalPhase: userProfile?.goalPhase ?? nutrition?.goal ?? 'maint',
-      }, { weights, intake });
+      // D214 addendum 4 (BM-14): the resolver's inputs through the one
+      // mapping every surface uses (maintenanceInputs.js): the saved targets'
+      // goal before the profile's, the latest body composition with its
+      // source. The coach's own inputs below (latestBf, the weights) are
+      // unchanged.
+      const maintenanceInputs = await readMaintenanceInputs(user.id, { userProfile, targets: nutrition, profile: bodyProfile, weights });
+      const maintenanceAuthority = await resolveEffectiveMaintenanceForUser(user.id, maintenanceInputs, { weights, intake });
 
       // A1 (NU-3/NU-4): keep the just-read targets + sex for the pre-tap
       // Apply-row classification, and clear any stale tap-time notices.

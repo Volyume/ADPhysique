@@ -114,7 +114,11 @@ describe('deriveWeightTrend', () => {
     expect(rising.dot).toBeNull();
     expect(rising.showRate).toBe(false);
     expect(rising.maintenance).toBeNull();
-    expect(rising.insight).toMatch(/rising slightly/i);
+    // RE-ANCHORED D214 addendum 4 (BM-16): no "slightly" at any size; the
+    // one steady rule (0.2 kg a week) decides "broadly stable".
+    expect(rising.insight).toMatch(/has been rising\.$/i);
+    expect(rising.insight).not.toMatch(/slightly/);
+    expect(deriveWeightTrend({ ...base, weeklyChange: 0.15 }).insight).toMatch(/broadly stable/i);
 
     const falling = deriveWeightTrend({ ...base, weeklyChange: -0.3 });
     expect(falling.insight).toMatch(/drifting down/i);
@@ -182,7 +186,7 @@ describe('C6 RD6-8 (D97-25): the maintenance label states its intake basis', () 
 // The Photos pillar beside it and Body metrics itself already withhold under
 // calm; this pins the Body pillar's view-model to the same rule.
 describe('S6-1: calm mode withholds every figure in the shared derivation', () => {
-  const { CALM_INSIGHT } = require('../weightTrend');
+  const { CALM_INSIGHT, CALM_INSIGHT_NONE } = require('../weightTrend');
   const fullBurn = { adjustedTDEE: 2400, confidence: 'high', weeks: 6, actualKgPerWeek: -0.3, expectedKgPerWeek: -0.35 };
 
   test.each([
@@ -202,13 +206,17 @@ describe('S6-1: calm mode withholds every figure in the shared derivation', () =
     expect(vm.maintenance).toBeNull();
     expect(vm.dot).toBeNull();
     expect(vm.weeklyChange).toBeUndefined();
-    expect(vm.insight).toBe(CALM_INSIGHT);
+    // RE-ANCHORED D214 addendum 4 (BM-17): with no weigh-in at all the calm
+    // line promises rather than claims.
+    expect(vm.insight).toBe(n === 0 ? CALM_INSIGHT_NONE : CALM_INSIGHT);
   });
 
-  test('the calm line carries no number and no prompt to weigh in', () => {
-    expect(CALM_INSIGHT).not.toMatch(/\d/);
-    expect(CALM_INSIGHT).not.toMatch(/log|weigh in|record/i);
-    expect(CALM_INSIGHT).not.toMatch(/\u2014/);
+  test('the calm lines carry no number and no prompt to weigh in', () => {
+    [CALM_INSIGHT, CALM_INSIGHT_NONE].forEach((line) => {
+      expect(line).not.toMatch(/\d/);
+      expect(line).not.toMatch(/log|weigh in|record/i);
+      expect(line).not.toMatch(/\u2014/);
+    });
   });
 
   test('calm wins over an open ED flag and still reports the flag', () => {

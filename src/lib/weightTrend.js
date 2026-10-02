@@ -12,6 +12,20 @@
  * at 'watch'), the weight numeral is never coloured, and under an open
  * ED/wellbeing flag the card drops to direction-only copy with no rate, no
  * maintenance number and no dot.
+ *
+ * D214 addendum 4 (Body metrics, 2026-10-02; the spec is
+ * docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 04-BODY-METRICS-AUDIT-AND-SPEC.md, section 3 items 2 and 9 and section 4):
+ * the display reading of direction is the TWO-WEEK trend (twoWeekTrend),
+ * named with its window wherever it prints; "steady" has one definition
+ * (STEADY_RATE_KG_PER_WEEK) on every display surface; a person whose last
+ * weigh-in is older than the 14-day boundary reads as lapsed, never as
+ * having no weigh-ins; the maintenance sentence never leads the Body row;
+ * the flag sentence claims no stability when the rate is unknown and
+ * carries no "slightly"; and the typical day-to-day swing
+ * (typicalDailySwingKg) is derived here for Body metrics' noise line. The
+ * engine's own smoothers, rates and gates are untouched: these are display
+ * readings of the smoothed series the engine already produced.
  */
 
 // State by number of morning-weight entries (matches the blueprint's
@@ -54,6 +68,12 @@ function isDiverging(actual, expected) {
 // number, no prompt to weigh; the figures stay one tap away behind Body
 // metrics' own re-confirmation.
 export const CALM_INSIGHT = 'Your weigh-ins are kept in Body metrics, ready when you want them.';
+// BM-17: with no weigh-in at all, the calm line promises rather than claims.
+export const CALM_INSIGHT_NONE = 'Your weigh-ins will be kept in Body metrics, ready when you want them.';
+// BM-16: under an open flag with no rate to read, the line claims nothing
+// about the trend; the same line serves a lapsed trend under the flag, where
+// "no weigh-in in the last 14 days" would be a nudge.
+export const ED_KEPT_INSIGHT = 'Your weigh-ins are kept in Body metrics.';
 
 // D214 (progress audit 2026-10-01, PR-4): the Progress root's Body row prints
 // the weekly coach's OWN verdict on the weight trend, so the row and the
@@ -91,6 +111,131 @@ export function coachVerdictInsight(coachVerdict, nowMs = Date.now()) {
   return faster ? 'Moving faster than planned.' : 'Moving slower than planned.';
 }
 
+// ─── D214 addendum 4: the display readings ──────────────────────────────────
+
+// One definition of "steady" on every display surface (the retired chip's
+// rule, now the only one): a trend moving within this rate, either way, is
+// steady. The coach's own dead band lives in the engine and is not this.
+export const STEADY_RATE_KG_PER_WEEK = 0.2;
+export const TWO_WEEK_WINDOW_DAYS = 14;
+export const DIRECTION_MIN_POINTS = 7;
+export const DIRECTION_MIN_SPAN_DAYS = 7;
+const DAY_MS = 86400000;
+
+function pointMs(p) {
+  const raw = p?.loggedAt ?? p?.date ?? p?.createdAt ?? null;
+  if (raw == null) return null;
+  const ms = typeof raw === 'number' ? raw : Date.parse(raw);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * The trend's movement over the last two weeks: the newest smoothed point
+ * against the oldest smoothed point dated inside the window. A reading needs
+ * DIRECTION_MIN_POINTS points spanning DIRECTION_MIN_SPAN_DAYS days or more,
+ * so a few days of noise never print as a direction. ratePerWeek is the
+ * movement normalised to seven days; deltaKg is the movement itself.
+ *
+ * @param {Array} ewmaData computeEWMA output, oldest-first ({ ewma, date })
+ * @param {number} [nowMs]
+ * @returns {{ enough: true, deltaKg: number, ratePerWeek: number, spanDays: number, count: number }
+ *   | { enough: false, count: number }}
+ */
+export function twoWeekTrend(ewmaData, nowMs = Date.now()) {
+  const data = Array.isArray(ewmaData) ? ewmaData : [];
+  const start = nowMs - TWO_WEEK_WINDOW_DAYS * DAY_MS;
+  const inWindow = data
+    .map(p => ({ ms: pointMs(p), ewma: Number(p?.ewma) }))
+    .filter(p => p.ms !== null && p.ms >= start && p.ms <= nowMs && Number.isFinite(p.ewma))
+    .sort((a, b) => a.ms - b.ms);
+  const count = inWindow.length;
+  if (count < DIRECTION_MIN_POINTS) return { enough: false, count };
+  const first = inWindow[0];
+  const last = inWindow[count - 1];
+  const spanDays = (last.ms - first.ms) / DAY_MS;
+  if (spanDays < DIRECTION_MIN_SPAN_DAYS) return { enough: false, count };
+  const deltaKg = last.ewma - first.ewma;
+  return {
+    enough: true,
+    deltaKg: Math.round(deltaKg * 100) / 100,
+    ratePerWeek: Math.round((deltaKg / spanDays) * 7 * 100) / 100,
+    spanDays: Math.round(spanDays),
+    count,
+  };
+}
+
+/** 'up', 'down' or 'steady' under the one steady rule; null without a reading. */
+export function trendDirection(twoWeek) {
+  if (!twoWeek?.enough) return null;
+  if (Math.abs(twoWeek.ratePerWeek) < STEADY_RATE_KG_PER_WEEK) return 'steady';
+  return twoWeek.ratePerWeek > 0 ? 'up' : 'down';
+}
+
+// The Body row's headline when the coach has no fresh verdict and the engine
+// no comparison: the direction in words with its window and no number (the
+// evidence line carries the figures), never the maintenance sentence (BM-15).
+function directionInsight(twoWeek) {
+  const dir = trendDirection(twoWeek);
+  if (dir === 'up') return 'Trending up over the last 2 weeks.';
+  if (dir === 'down') return 'Trending down over the last 2 weeks.';
+  if (dir === 'steady') return 'Holding steady over the last 2 weeks.';
+  const count = Number(twoWeek?.count) || 0;
+  if (count >= DIRECTION_MIN_POINTS) return 'Not enough weigh-ins in the last 2 weeks for a direction yet.';
+  return `Not enough weigh-ins in the last 2 weeks for a direction: ${count} of ${DIRECTION_MIN_POINTS}.`;
+}
+
+/**
+ * The typical day-to-day swing of the person's own weigh-ins: the upper
+ * quartile of the absolute change between weigh-ins on consecutive mornings
+ * (a gap of 36 hours or less) over the last days days, so "usually moves
+ * within X" holds three mornings in four. Null below minEntries weigh-ins in
+ * the window or below five such changes. A display reading only; the
+ * engine's smoothers carry their own noise handling and never read this.
+ *
+ * @param {Array} entries raw weigh-ins ({ weightKg, loggedAt | date })
+ * @param {object} [opts]
+ * @param {number} [opts.nowMs]
+ * @param {number} [opts.days]
+ * @param {number} [opts.minEntries]
+ * @returns {?number} kg, rounded to 0.1 and at least 0.1
+ */
+export function typicalDailySwingKg(entries, { nowMs = Date.now(), days = 28, minEntries = 10 } = {}) {
+  const start = nowMs - days * DAY_MS;
+  const rows = (Array.isArray(entries) ? entries : [])
+    .map(e => ({ ms: pointMs(e), kg: Number(e?.weightKg ?? e?.weight) }))
+    .filter(r => r.ms !== null && r.ms >= start && r.ms <= nowMs && Number.isFinite(r.kg) && r.kg > 0)
+    .sort((a, b) => a.ms - b.ms);
+  if (rows.length < minEntries) return null;
+  const changes = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const gap = rows[i].ms - rows[i - 1].ms;
+    if (gap > 0 && gap <= 1.5 * DAY_MS) changes.push(Math.abs(rows[i].kg - rows[i - 1].kg));
+  }
+  if (changes.length < 5) return null;
+  changes.sort((a, b) => a - b);
+  const upperQuartile = changes[Math.min(changes.length - 1, Math.ceil(changes.length * 0.75) - 1)];
+  return Math.max(0.1, Math.round(upperQuartile * 10) / 10);
+}
+
+// "3 weeks ago" for the lapsed line: whole days up to a fortnight, then
+// weeks, then months, then years; never a decimal.
+export function agoPhrase(thenMs, nowMs = Date.now()) {
+  const days = Math.max(0, Math.floor((nowMs - thenMs) / DAY_MS));
+  if (days < 1) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 61) return `${Math.round(days / 7)} weeks ago`;
+  if (days < 365) return `${Math.max(2, Math.round(days / 30.4))} months ago`;
+  const years = Math.floor(days / 365);
+  return years === 1 ? 'over a year ago' : `over ${years} years ago`;
+}
+
+// BM-3: a person whose last weigh-in is older than the 14-day boundary has a
+// trend that lapsed, not no weigh-ins; the line says so and when.
+export function lapsedInsight(lastWeighInMs, nowMs = Date.now()) {
+  return `No weigh-in in the last 14 days; the last was ${agoPhrase(lastWeighInMs, nowMs)}.`;
+}
+
 /**
  * @param {object} input
  * @param {Array}  input.ewmaData     computeEWMA output, oldest-first ({ ewma, weightKg, date })
@@ -102,7 +247,11 @@ export function coachVerdictInsight(coachVerdict, nowMs = Date.now()) {
  *                                      maintenance, one calm line (S6-1)
  * @param {?object} input.stepTrend    COMP-026 latest-run modifier state
  *                                      { applied:boolean, direction:-1|0|1 }, or null
- * @returns {object} view-model for WeightTrendCard
+ * @param {?number} input.lastWeighInMs the newest weigh-in of ANY age (BM-3):
+ *                                      with an empty series it marks a lapsed
+ *                                      trend rather than no weigh-ins
+ * @param {number} [input.nowMs]
+ * @returns {object} view-model for the Body row and Body metrics
  */
 // COMP-026 (B): the secondary line shown on the card in a week the step-trend
 // modifier sized the calorie change. British English, no numbers, no "gain",
@@ -121,8 +270,10 @@ function stepTrendLineFor(stepTrend) {
 
 export function deriveWeightTrend({
   ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null, intakeDaysLogged = 0, calm = false,
-  coachVerdict = null, nowMs = Date.now(),
+  coachVerdict = null, lastWeighInMs = null, nowMs = Date.now(),
 } = {}) {
+  const hasAnyWeighIn = (Array.isArray(ewmaData) && ewmaData.length > 0)
+    || (Number.isFinite(lastWeighInMs) && lastWeighInMs > 0);
   const data = Array.isArray(ewmaData) ? ewmaData : [];
   const n = data.length;
   const state = trendStateFor(n);
@@ -147,7 +298,7 @@ export function deriveWeightTrend({
       showRate: false,
       showRaw: false,
       dot: null,
-      insight: CALM_INSIGHT,
+      insight: hasAnyWeighIn ? CALM_INSIGHT : CALM_INSIGHT_NONE,
       maintenance: null,
       edFlagOpen: !!edFlagOpen,
       calm: true,
@@ -155,9 +306,35 @@ export function deriveWeightTrend({
     };
   }
 
-  if (state === 0) return { render: false, state };
+  if (state === 0) {
+    // BM-3: an empty series with a weigh-in of any age behind it is a trend
+    // that lapsed past the 14-day boundary (useWeightTrend.js), never "no
+    // weigh-ins logged yet". No figure, no rate, no dot; under an open flag
+    // the line claims only what is kept.
+    if (hasAnyWeighIn) {
+      return {
+        render: true,
+        state,
+        lapsed: true,
+        lastWeighInMs,
+        ewmaNow: null,
+        hasSparkline: false,
+        showRate: false,
+        showRaw: false,
+        dot: null,
+        insight: edFlagOpen ? ED_KEPT_INSIGHT : lapsedInsight(lastWeighInMs, nowMs),
+        maintenance: null,
+        edFlagOpen: !!edFlagOpen,
+        pillarFigure: false,
+      };
+    }
+    return { render: false, state };
+  }
 
   const ewmaNow = Number.isFinite(data[n - 1]?.ewma) ? data[n - 1].ewma : null;
+  // D214 addendum 4: the two-week reading every display surface prints its
+  // direction from; the calm, flag and lapsed branches never carry it.
+  const twoWeek = twoWeekTrend(data, nowMs);
 
   // State 1: too little data to interpret. Compact prompt, no number, no maths.
   if (state === 1) {
@@ -175,15 +352,22 @@ export function deriveWeightTrend({
   }
 
   // Open ED/wellbeing flag: direction-only, no rate, no maintenance, no dot.
+  // BM-16: the one steady rule decides "broadly stable"; above it the words
+  // carry no size ("slightly" claimed a size at any rate); with no rate to
+  // read the line claims nothing about the trend; "the past few weeks" only
+  // when the series spans a fortnight.
   if (edFlagOpen) {
-    const dir = !Number.isFinite(weeklyChange) || Math.abs(weeklyChange) < 0.05
-      ? 'stable'
-      : weeklyChange > 0 ? 'up' : 'down';
-    const insight = dir === 'up'
-      ? 'Your weight trend has been rising slightly.'
-      : dir === 'down'
-        ? 'Your weight trend has been drifting down.'
-        : 'Your weight has stayed broadly stable over the past few weeks.';
+    const rate = Number.isFinite(weeklyChange) ? weeklyChange : null;
+    let insight;
+    if (rate === null) {
+      insight = ED_KEPT_INSIGHT;
+    } else if (Math.abs(rate) < STEADY_RATE_KG_PER_WEEK) {
+      insight = n >= 14
+        ? 'Your weight has stayed broadly stable over the past few weeks.'
+        : 'Your weight has stayed broadly stable over the past week.';
+    } else {
+      insight = rate > 0 ? 'Your weight trend has been rising.' : 'Your weight trend has been drifting down.';
+    }
     return {
       render: true,
       state,
@@ -219,6 +403,7 @@ export function deriveWeightTrend({
       showRate: false,
       dot: 'neutral',
       insight: 'Your trend is still taking shape. Keep logging and it will become clearer.',
+      twoWeek,
       maintenance: hasMaintenance
         ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
         : { building: true },
@@ -242,7 +427,7 @@ export function deriveWeightTrend({
   if (coachLine) {
     insight = coachLine;
   } else if (!hasComparison) {
-    insight = 'Your weight trend is updated. Your maintenance calories are worked out from your own food and weight logs.';
+    insight = directionInsight(twoWeek);
   } else if (!diverging) {
     insight = 'Trending inside your target range. Your calorie target stays the same.';
   } else if (above) {
@@ -258,6 +443,7 @@ export function deriveWeightTrend({
     hasSparkline: true,
     showRate: true,
     weeklyChange: Number.isFinite(weeklyChange) ? weeklyChange : null,
+    twoWeek,
     dot: coachLine ? (coachVerdict.onTarget ? 'onTrack' : 'watch') : (diverging ? 'watch' : 'onTrack'),
     insight,
     pillarFigure: true,

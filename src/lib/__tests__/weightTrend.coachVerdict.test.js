@@ -22,8 +22,12 @@ const {
 } = require('../weightTrend');
 
 const NOW = Date.UTC(2026, 9, 1, 12);
+// Dated points ending at NOW (the two-week direction reads real dates; D214
+// addendum 4), rising 0.01 kg a day: inside the one steady rule.
 function series(n) {
-  return Array.from({ length: n }, (_, i) => ({ ewma: 80 + i * 0.01, weightKg: 80 + i * 0.01, date: `d${i}` }));
+  return Array.from({ length: n }, (_, i) => ({
+    ewma: 80 + i * 0.01, weightKg: 80 + i * 0.01, date: new Date(NOW - (n - 1 - i) * 86400000).toISOString(),
+  }));
 }
 const base = { ewmaData: series(20), weeklyChange: -0.2, adaptiveBurn: null, nowMs: NOW };
 const fresh = NOW - 2 * 86400000;
@@ -80,7 +84,9 @@ describe('deriveWeightTrend with a coach verdict', () => {
   });
   test('a stale verdict falls back to the sentence the derivation printed before', () => {
     const vm = deriveWeightTrend({ ...base, coachVerdict: { onTarget: false, direction: 1, goalPhase: 'mild_cut', at: NOW - 30 * 86400000 } });
-    expect(vm.insight).toBe('Your weight trend is updated. Your maintenance calories are worked out from your own food and weight logs.');
+    // RE-ANCHORED D214 addendum 4 (BM-15): the fallback is the direction with
+    // its window, never the maintenance sentence.
+    expect(vm.insight).toBe('Holding steady over the last 2 weeks.');
     expect(vm.dot).toBe('onTrack');
   });
   test('calm mode returns first: no figure, the calm line, pillarFigure false', () => {

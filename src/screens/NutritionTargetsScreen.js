@@ -21,6 +21,7 @@ import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
+import { readMaintenanceInputs } from '../lib/maintenanceInputs';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
 // Campaign 17A job 5: a target change has to reach the user's actual FOOD, and
@@ -477,24 +478,11 @@ export default function NutritionTargetsScreen({ navigation, route }) {
           if (!user?.id) {
             return hydrateLoadedTargetsWithAuthority(raw, userProfile?.weightKg ?? null, null);
           }
-          const [lw, profile, composition] = await Promise.all([
-            getLatestBodyWeight(user.id).catch(() => null),
-            getUserBodyProfile(user.id).catch(() => null),
-            getLatestBodyComposition(user.id).catch(() => null),
-          ]);
-          const weightKg = lw?.weightKg ?? userProfile?.weightKg ?? null;
-          const authority = await resolveEffectiveMaintenanceForUser(user.id, {
-            sex: profile?.sex ?? userProfile?.sex ?? null,
-            dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
-            ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
-            heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
-            weightKg,
-            bodyFatPercent: composition?.bodyFatPercent ?? null,
-            bodyFatSource: composition?.bodyFatSource ?? null,
-            activityLevel: raw.activityLevel ?? userProfile?.activityLevel ?? null,
-            goalPhase: raw.goal ?? userProfile?.goalPhase ?? null,
-          });
-          return hydrateLoadedTargetsWithAuthority(raw, weightKg, authority.resolved);
+          // D214 addendum 4 (BM-14): the resolver's inputs through the one
+          // mapping every surface uses (maintenanceInputs.js).
+          const inputs = await readMaintenanceInputs(user.id, { userProfile, targets: raw });
+          const authority = await resolveEffectiveMaintenanceForUser(user.id, inputs);
+          return hydrateLoadedTargetsWithAuthority(raw, inputs.weightKg, authority.resolved);
         }
 
         if (user?.id) {

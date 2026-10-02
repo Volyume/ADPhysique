@@ -24,6 +24,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import { deriveWeightTrend } from '../lib/weightTrend';
+import { buildMaintenanceInputs, latestWeighIn } from '../lib/maintenanceInputs';
 
 const EMPTY = { render: false, state: 0, ewmaData: [], rawData: [], loading: true };
 
@@ -55,6 +56,14 @@ export default function useWeightTrend(userId) {
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
       const calm = isCalm(wellbeingMode) || wellbeingMode === 'read_failed';
+      const nowMs = Date.now();
+      // D214 addendum 4 (BM-3): the newest weigh-in of ANY age, read before
+      // the windows below empty the series, so a trend that lapsed reads as
+      // lapsed ("the last was 3 weeks ago"), never as no weigh-ins.
+      const lastWeighInMs = (weights || []).reduce((m, w) => {
+        const at = Number(w?.loggedAt);
+        return Number.isFinite(at) && at > m ? at : m;
+      }, 0) || null;
 
       // C6 R-2 (D97-22): getMorningWeights(90) is ninety ROWS of any age,
       // not ninety days, so after a long absence the card rendered a
@@ -80,17 +89,18 @@ export default function useWeightTrend(userId) {
       const ewmaData = computeEWMA(windowed);
       const weeklyChange = computeWeeklyWeightChange(ewmaData);
 
-      const latestWeight = windowed.slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
-      const authority = await resolveEffectiveMaintenanceForUser(userId, {
-        sex: profile?.sex ?? null,
-        dateOfBirth: profile?.dateOfBirth ?? null,
-        heightCm: profile?.heightCm ?? null,
-        weightKg: latestWeight?.weightKg ?? null,
-        bodyFatPercent: composition?.bodyFatPercent ?? null,
-        bodyFatSource: composition?.bodyFatSource ?? null,
-        activityLevel: targets?.activityLevel ?? null,
-        goalPhase: targets?.goal ?? targets?.phase ?? null,
-      }, { weights: windowed, intake: recentIntake });
+      // D214 addendum 4 (BM-14): the resolver's inputs come from the ONE
+      // mapping every surface uses (maintenanceInputs.js), so this hook, Body
+      // metrics and the coach build the same formula context from the same
+      // reads. The in-memory profile is the fallback the other surfaces use.
+      let userProfile = null;
+      try {
+        // eslint-disable-next-line global-require
+        userProfile = require('../store/useAppStore').default.getState().userProfile ?? null;
+      } catch (_) { userProfile = null; }
+      const authority = await resolveEffectiveMaintenanceForUser(userId, buildMaintenanceInputs({
+        profile, userProfile, targets, latestWeight: latestWeighIn(windowed), composition,
+      }), { weights: windowed, intake: recentIntake });
       const resolved = authority.resolved;
       // The card consumes the canonical memo. It never recomputes a transient
       // adaptive estimate or substitutes the calorie prescription.
@@ -138,6 +148,8 @@ export default function useWeightTrend(userId) {
         // C6 RD6-8 (D97-25): the label needs to know whether logged
         // food informed the estimate or intake was assumed at target.
         intakeDaysLogged: recentIntake?.daysLogged ?? 0,
+        lastWeighInMs,
+        nowMs,
       });
 
       setResult({ ...vm, ewmaData, rawData: weights || [], loading: false });
