@@ -18,6 +18,13 @@ import {
   isValidCircumferenceCm,
   validateBodyMetricForm,
   CIRCUMFERENCE_FIELDS,
+  FUTURE_DATE_MESSAGE,
+  BODY_WEIGHT_MIN_KG,
+  BODY_FAT_METHODS,
+  BODY_FAT_METHOD_CHOICE,
+  DEFAULT_BODY_FAT_METHOD,
+  weighInPlausibility,
+  plausibilityMessage,
 } from '../bodyMetricValidate';
 
 describe('isValidBodyWeightKg', () => {
@@ -192,5 +199,123 @@ describe('validateBodyMetricForm — DATA-001 gate', () => {
       validateBodyMetricForm({ ...base }, { bwu: 'kg' }).message,
     ];
     messages.forEach((m) => expect(m).not.toMatch(/—/));
+  });
+});
+
+// ─── D214 addendum 4 (Body metrics, lane 7): no future dates, the plausibility rule, the body-fat method ─────
+// Spec docs/audit/progress-recovery-consistency-audit-2026-10-01/
+// 04-BODY-METRICS-AUDIT-AND-SPEC.md section 3 item 3 and section 6 table
+// (`bodyMetricValidate`: plausibility, no future dates). These ADD to the
+// DATA-001 gate above; nothing above was altered.
+describe('validateBodyMetricForm: no future dates (BM-40)', () => {
+  const NOW = new Date(2026, 8, 17, 9, 30).getTime(); // 17 Sep 2026, 09:30 local
+  const form = (date) => ({ metric_date: date, body_weight: '82.5', notes: '' });
+
+  test('a date after today is refused with a calm message, and nothing is stored', () => {
+    const r = validateBodyMetricForm(form('2026-09-18'), { bwu: 'kg', nowMs: NOW });
+    expect(r.ok).toBe(false);
+    expect(r.data).toBeUndefined();
+    expect(r.message).toBe(FUTURE_DATE_MESSAGE);
+    expect(validateBodyMetricForm(form('2027-03-01'), { bwu: 'kg', nowMs: NOW }).ok).toBe(false);
+  });
+
+  test('today and earlier days are accepted', () => {
+    expect(validateBodyMetricForm(form('2026-09-17'), { bwu: 'kg', nowMs: NOW }).ok).toBe(true);
+    expect(validateBodyMetricForm(form('2026-09-16'), { bwu: 'kg', nowMs: NOW }).ok).toBe(true);
+    expect(validateBodyMetricForm(form('2025-01-01'), { bwu: 'kg', nowMs: NOW }).ok).toBe(true);
+  });
+
+  test('an entry for today carries the time it was made; an earlier day keeps its local midnight', () => {
+    expect(validateBodyMetricForm(form('2026-09-17'), { bwu: 'kg', nowMs: NOW }).data.loggedAt).toBe(NOW);
+    expect(validateBodyMetricForm(form('2026-09-16'), { bwu: 'kg', nowMs: NOW }).data.loggedAt)
+      .toBe(new Date(2026, 8, 16).getTime());
+  });
+
+  test('an impossible calendar date is still refused first, with its own message', () => {
+    const r = validateBodyMetricForm(form('2026-02-30'), { bwu: 'kg', nowMs: NOW });
+    expect(r.ok).toBe(false);
+    expect(r.message).not.toBe(FUTURE_DATE_MESSAGE);
+  });
+});
+
+describe('weighInPlausibility and plausibilityMessage (BM-40; the same rule on Home\'s quick entry)', () => {
+  test('more than 5% or 5 kg from the last weigh-in is implausible (whichever bound is smaller)', () => {
+    // 82.4 kg: 5% is 4.12 kg, the smaller bound
+    expect(weighInPlausibility(78.2, 82.4).implausible).toBe(true);   // 4.2 kg below
+    expect(weighInPlausibility(78.4, 82.4).implausible).toBe(false);  // 4.0 kg below
+    expect(weighInPlausibility(86.6, 82.4).implausible).toBe(true);   // 4.2 kg above
+    // 120 kg: 5 kg is the smaller bound (5% would be 6)
+    expect(weighInPlausibility(114.9, 120).implausible).toBe(true);
+    expect(weighInPlausibility(115.1, 120).implausible).toBe(false);
+  });
+
+  test('the typo the old gates accepted is asked about', () => {
+    const r = weighInPlausibility(28.4, 82.4);
+    expect(r.implausible).toBe(true);
+    expect(r.diffKg).toBeCloseTo(-54, 5);
+  });
+
+  test('no last weigh-in, or a bad one, never asks', () => {
+    expect(weighInPlausibility(82, null).implausible).toBe(false);
+    expect(weighInPlausibility(82, 0).implausible).toBe(false);
+    expect(weighInPlausibility(NaN, 82).implausible).toBe(false);
+  });
+
+  test('the sentence, in the person\'s units', () => {
+    expect(plausibilityMessage({ kg: 28.4, lastKg: 82.4, bwu: 'kg' }))
+      .toBe('That is 54 kg below your last weigh-in of 82.4 kg. Save it anyway?');
+    expect(plausibilityMessage({ kg: 86.9, lastKg: 82.4, bwu: 'kg' }))
+      .toBe('That is 4.5 kg above your last weigh-in of 82.4 kg. Save it anyway?');
+    // a stone reader reads stones and pounds on both numbers
+    expect(plausibilityMessage({ kg: 28.4, lastKg: 82.4, bwu: 'st' }))
+      .toBe('That is 8 st 7 lbs below your last weigh-in of 12 st 13.5 lbs. Save it anyway?');
+    expect(plausibilityMessage({ kg: 72.4, lastKg: 82.4, bwu: 'lbs' }))
+      .toBe('That is 22 lbs below your last weigh-in of 182 lbs. Save it anyway?');
+  });
+
+  test('the floor Home\'s quick entry now shares with the form is 20 kg', () => {
+    expect(BODY_WEIGHT_MIN_KG).toBe(20);
+    expect(isValidBodyWeightKg(19.9)).toBe(false);
+  });
+});
+
+describe('validateBodyMetricForm: the body-fat method (BM-33)', () => {
+  const base = { metric_date: '2024-01-01', notes: '' };
+
+  test('the four methods the setup wizard offers, with the glossed labels', () => {
+    expect(BODY_FAT_METHODS.map((m) => m.value)).toEqual(['visual', 'bia', 'caliper', 'dexa']);
+    expect(BODY_FAT_METHODS.map((m) => m.label)).toEqual(['Best estimate', 'BIA', 'Caliper', 'DEXA']);
+    expect(DEFAULT_BODY_FAT_METHOD).toBe('visual');
+  });
+
+  // RE-ANCHORED D214 addendum 7 (lead; founder-gated, lane 7 open question 1):
+  // while BODY_FAT_METHOD_CHOICE is off the form stores 'manual' whatever method
+  // is named, so the FFM floor keeps today's behaviour until the founder rules.
+  test.each(['visual', 'bia', 'caliper', 'dexa'])('a typed body fat with method %s stores the method only once the founder has opened the choice', (method) => {
+    const r = validateBodyMetricForm({ ...base, body_fat: '18', body_fat_source: method }, { bwu: 'kg' });
+    expect(r.ok).toBe(true);
+    expect(r.data.bodyFatSource).toBe(BODY_FAT_METHOD_CHOICE ? method : 'manual');
+  });
+  test('the method choice is founder-gated and off', () => {
+    expect(BODY_FAT_METHOD_CHOICE).toBe(false);
+  });
+
+  test('a caller that names no method (or an unknown one) keeps the old "manual", as before', () => {
+    expect(validateBodyMetricForm({ ...base, body_fat: '18' }, { bwu: 'kg' }).data.bodyFatSource).toBe('manual');
+    expect(validateBodyMetricForm({ ...base, body_fat: '18', body_fat_source: 'tape' }, { bwu: 'kg' }).data.bodyFatSource).toBe('manual');
+  });
+});
+
+// D214 addendum 7 (lane 7 open question 14): under a withhold the plausibility
+// prompt still guards the series but names no figure and no direction.
+describe('plausibilityMessage under a withhold', () => {
+  const { plausibilityMessage: msg } = require('../bodyMetricValidate');
+  test('no digits, no above or below', () => {
+    const m = msg({ kg: 28.4, lastKg: 82.4, bwu: 'kg', withholdFigures: true });
+    expect(m).toBe('That is a long way from your last weigh-in. Save it anyway?');
+    expect(m).not.toMatch(/\d|below|above/);
+  });
+  test('the ordinary prompt names the difference and the last weigh-in', () => {
+    expect(msg({ kg: 28.4, lastKg: 82.4, bwu: 'kg' })).toBe('That is 54 kg below your last weigh-in of 82.4 kg. Save it anyway?');
   });
 });

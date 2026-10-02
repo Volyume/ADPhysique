@@ -17,7 +17,9 @@
  *    wellbeing key) nothing below the header renders: a fail-open frame is
  *    never acceptable (ED-C); a failed read counts as open, or as calm;
  *  - under an open flag, or under calm mode after the person's "Continue",
- *    every direction word, rate, weekly comparison, the typical-swing line,
+ *    every direction word, rate, weekly comparison, the "weighed N of M
+ *    mornings" count (a denominator over daily weighing, D214 addendum 7),
+ *    the typical-swing line,
  *    the chart's takeaway, the maintenance figure, the intake line (ED-E),
  *    the recomposition card and the measurement change lines are withheld;
  *  - the person's own entries stay: the trend weight, the weigh-in history,
@@ -35,7 +37,7 @@ export const BODY_METRICS_CALM_LINE = 'Your weigh-ins are kept here, ready when 
 export const BODY_METRICS_FLAG_LINE = 'Your weigh-ins are kept here.';
 
 const SECTIONS = Object.freeze([
-  'trendWeight', 'verdict', 'weekComparison', 'noiseLine', 'actions', 'chart', 'takeaway',
+  'trendWeight', 'morningsCount', 'verdict', 'weekComparison', 'noiseLine', 'actions', 'chart', 'takeaway',
   'maintenance', 'intake', 'recomposition', 'measurements', 'measurementChange', 'history',
 ]);
 /** The sections the person's own data keeps under a withhold. */

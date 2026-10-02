@@ -29,6 +29,8 @@ import TextField from './TextField';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
+import { appAlert } from './AppAlert';
+import { BODY_WEIGHT_MIN_KG, weighInPlausibility, plausibilityMessage } from '../lib/bodyMetricValidate';
 import {
   stoneLbsToKg,
   parseBodyWeightToKg,
@@ -41,6 +43,14 @@ export default function TodayStrip({
   bwu = 'st',
   todayWeight = null,
   lastWeightKg = null,
+  // D214 addendum 4 (Body metrics, lane 7): the last real weigh-in, which the
+  // plausibility prompt compares a typed weight with. Separate from
+  // lastWeightKg (the prefill, which may be the profile's setup weight) so
+  // the prompt never calls a setup figure "your last weigh-in".
+  lastWeighInKg = null,
+  // Under an open flag, calm mode or a failed read (Home's own formula) the
+  // plausibility prompt carries no figure and no direction.
+  withholdFigures = false,
   savingWeight = false,
   onLogWeight,
   onOpenTrend,
@@ -111,13 +121,31 @@ export default function TodayStrip({
     } else {
       kg = parseBodyWeightToKg(weightInput, bwu);
     }
-    if (!kg || isNaN(kg) || kg <= 0 || kg > 300) return;
-    onLogWeight?.(kg);
-    setWeightInput('');
-    setWeightInputSt('');
-    setWeightInputStLbs('');
-    setEditing(false);
-  }, [bwu, weightInput, weightInputSt, weightInputStLbs, onLogWeight]);
+    // D214 addendum 4: the form's own 20 kg floor, not just "above zero".
+    if (!kg || isNaN(kg) || kg < BODY_WEIGHT_MIN_KG || kg > 300) return;
+    const commit = () => {
+      onLogWeight?.(kg);
+      setWeightInput('');
+      setWeightInputSt('');
+      setWeightInputStLbs('');
+      setEditing(false);
+    };
+    // The same plausibility rule as the Body metrics form: more than 5% or
+    // 5 kg from the last weigh-in is asked about before it is saved. The draft
+    // stays in the field until the person confirms (or changes it).
+    if (weighInPlausibility(kg, lastWeighInKg).implausible) {
+      appAlert(
+        'Check this weigh-in',
+        plausibilityMessage({ kg, lastKg: lastWeighInKg, bwu, withholdFigures }),
+        [
+          { text: 'Change it', style: 'cancel' },
+          { text: 'Save anyway', onPress: commit },
+        ],
+      );
+      return;
+    }
+    commit();
+  }, [bwu, weightInput, weightInputSt, weightInputStLbs, onLogWeight, lastWeighInKg, withholdFigures]);
 
   const startEdit = useCallback(() => setEditing(true), []);
 

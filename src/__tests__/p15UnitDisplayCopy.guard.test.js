@@ -27,7 +27,14 @@ const ATHLETE_PROFILE = read('screens/AthleteProfileScreen.js');
 const SETTINGS_ROOT = read('screens/SettingsScreen.js');
 const SETTINGS_WORKOUT = read('screens/SettingsWorkoutScreen.js');
 const IMPORT_SCREEN = read('screens/ImportScreen.js');
-const WEIGHT_TREND_CARD = read('components/WeightTrendCard.js');
+// RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
+// `p15UnitDisplayCopy.guard`): WeightTrendCard.js, the dead COMP-004 card this
+// file pinned (no render site; only tests imported it), is DELETED. The pin's
+// intent, the maintenance estimate printed through the shared en-GB helper
+// with an NBSP-joined kcal unit, now stands on the live surface that prints
+// it: the Body metrics "Calories that hold your weight" sentence, built in
+// bodyMetricsDisplay.js.
+const BODY_METRICS_DISPLAY = read('lib/bodyMetricsDisplay.js');
 
 describe('format.js exposes the central NBSP unit-display helper', () => {
   test('formatWithUnit and NBSP are exported', () => {
@@ -130,11 +137,13 @@ describe('Import and Weight Trend numbers use en-GB, not device-locale toLocaleS
     expect(IMPORT_SCREEN).not.toMatch(/\.toLocaleString\(\)/);
   });
 
-  test('WeightTrendCard maintenance estimate formats through the shared en-GB helper with an NBSP-joined kcal unit', () => {
-    expect(WEIGHT_TREND_CARD).toMatch(/import \{ formatNumber, formatWithUnit \} from '\.\.\/lib\/format';/);
-    expect(WEIGHT_TREND_CARD).toMatch(
-      /~\{formatWithUnit\(formatNumber\(maintenance\.kcal\), 'kcal'\)\}\/day estimated maintenance/,
+  test('the Body metrics maintenance estimate formats through the shared en-GB helper with an NBSP-joined energy unit', () => {
+    expect(BODY_METRICS_DISPLAY).toMatch(
+      /import \{ formatNumber, formatWithUnit, toEnergy, energyUnitLabel \} from '\.\/format';/,
     );
-    expect(WEIGHT_TREND_CARD).not.toMatch(/maintenance\.kcal\.toLocaleString\(\)/);
+    expect(BODY_METRICS_DISPLAY).toMatch(
+      /formatWithUnit\(formatNumber\(toEnergy\(kcal, energyUnit\)\), energyUnitLabel\(energyUnit\)\)/,
+    );
+    expect(BODY_METRICS_DISPLAY).not.toMatch(/\.toLocaleString\(\)/);
   });
 });

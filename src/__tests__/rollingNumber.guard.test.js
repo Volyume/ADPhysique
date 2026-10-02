@@ -23,8 +23,11 @@ const root = path.resolve(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const relPath = (p) => path.relative(root, p).split(path.sep).join('/');
 
+// RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
+// `rollingNumber.guard`): src/components/WeightTrendCard.js, the dead card, is
+// deleted, so it leaves this list. The hard ED rule is untouched: no
+// body-weight number ticks on any weight surface.
 const WEIGHT_SURFACES = [
-  'src/components/WeightTrendCard.js',
   'src/screens/BodyMetricsScreen.js',
   'src/components/TodayStrip.js',
 ];

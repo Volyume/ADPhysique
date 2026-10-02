@@ -436,3 +436,67 @@ describe('bodyMetricsRepository', () => {
     );
   });
 });
+
+// ─── D214 addendum 4 (Body metrics, lane 7): the date-range read and the delete contract ───
+// RE-ANCHORED/ADDED for spec docs/audit/progress-recovery-consistency-audit-
+// 2026-10-01/04-BODY-METRICS-AUDIT-AND-SPEC.md section 3 items 4 and 8 and the
+// section 6 table (`bodyMetricsRepository` (the delete contract, deliberately)).
+describe('getBodyMetricLog: a DATE-RANGE read and a page offset (BM-5)', () => {
+  test('a call with none of the new options is the read it always was, byte for byte', async () => {
+    const { conn, repo } = createHarness();
+    await repo.getBodyMetricLog('u1', 50);
+    expect(conn.getAllAsync.mock.calls[0][1]).toEqual(['u1', 50]);
+    expect(conn.getAllAsync.mock.calls[0][0]).not.toMatch(/logged_at >=|logged_at </);
+    expect(conn.getAllAsync.mock.calls[0][0]).not.toMatch(/OFFSET/);
+  });
+
+  test('sinceMs is inclusive and untilMs exclusive, bounding logged_at; the limit is a cap, not the range', async () => {
+    const { conn, repo } = createHarness();
+    await repo.getBodyMetricLog('u1', 6000, { sinceMs: 1000, untilMs: 9000 });
+    const [sql, params] = conn.getAllAsync.mock.calls[0];
+    expect(sql).toMatch(/deleted_at IS NULL AND logged_at >= \? AND logged_at < \?/);
+    expect(sql).toMatch(/ORDER BY logged_at DESC LIMIT \?/);
+    expect(params).toEqual(['u1', 1000, 9000, 6000]);
+  });
+
+  test('either bound alone, and an offset pages a range newest first', async () => {
+    const { conn, repo } = createHarness();
+    await repo.getBodyMetricLog('u1', 1, { untilMs: 5000 });
+    expect(conn.getAllAsync.mock.calls[0][1]).toEqual(['u1', 5000, 1]);
+    await repo.getBodyMetricLog('u1', 20, { sinceMs: 100, offset: 40 });
+    expect(conn.getAllAsync.mock.calls[1][0]).toMatch(/LIMIT \? OFFSET \?/);
+    expect(conn.getAllAsync.mock.calls[1][1]).toEqual(['u1', 100, 20, 40]);
+    // a zero or non-numeric offset adds nothing
+    await repo.getBodyMetricLog('u1', 20, { offset: 0 });
+    expect(conn.getAllAsync.mock.calls[2][0]).not.toMatch(/OFFSET/);
+  });
+
+  test('includeDeleted still composes with a range (the sync push)', async () => {
+    const { conn, repo } = createHarness();
+    await repo.getBodyMetricLog('u1', 100, { includeDeleted: true, sinceMs: 1 });
+    expect(conn.getAllAsync.mock.calls[0][0]).not.toMatch(/deleted_at IS NULL/);
+    expect(conn.getAllAsync.mock.calls[0][1]).toEqual(['u1', 1, 100]);
+  });
+});
+
+describe('the delete contract (BM-2, deliberately re-stated)', () => {
+  test('deleteBodyMetric still tombstones ONLY its own log row and never reaches into morning_weights', async () => {
+    const logMorningWeight = jest.fn();
+    const { conn, repo } = createHarness({
+      deps: { logMorningWeight },
+      conn: { runAsync: jest.fn(async () => ({ changes: 1 })) },
+    });
+    await expect(repo.deleteBodyMetric('u1', 'bm1')).resolves.toBe(true);
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    expect(conn.runAsync.mock.calls[0][0]).not.toMatch(/morning_weights/);
+    expect(logMorningWeight).not.toHaveBeenCalled();
+  });
+
+  test('the retraction of the day\'s weigh-in is the SCREEN\'s, in the open, through the existing function', () => {
+    const repoSource = fs.readFileSync(path.join(__dirname, '../database/bodyMetrics.js'), 'utf8');
+    expect(repoSource).toMatch(/THE DELETE CONTRACT \(D214 addendum 4, BM-2; deliberately changed\)/);
+    expect(repoSource).toMatch(/no other caller of deleteBodyMetric changes behaviour/);
+    const screen = fs.readFileSync(path.join(__dirname, '../../screens/BodyMetricsScreen.js'), 'utf8');
+    expect(screen).toMatch(/await deleteMorningWeightById\(user\.id, id\)/);
+  });
+});

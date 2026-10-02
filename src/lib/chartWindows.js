@@ -11,6 +11,8 @@
  * House voice: plain, terse, no jargon, full stops, numerals the hero, BrE.
  */
 
+import { STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS } from './weightTrend';
+
 const DAY_MS = 86400000;
 
 // Line charts (weight, e1RM): month-scale windows. Volume: week-scale.
@@ -19,6 +21,17 @@ export const TREND_WINDOWS = Object.freeze([
   { key: '3M', label: '3M', days: 90 },
   { key: '6M', label: '6M', days: 180 },
   { key: 'Y',  label: 'Y',  days: 365 },
+]);
+
+// D214 addendum 4 (Body metrics, lane 7; spec section 3 item 4): the weight
+// chart's chips read in words ("1 month", "3 months", "6 months", "1 year"),
+// not "1M 3M 6M Y". Same keys and day counts as TREND_WINDOWS (which the lift
+// charts keep unchanged); only the labels differ.
+export const WEIGHT_WINDOWS = Object.freeze([
+  { key: '1M', label: '1 month', days: 30 },
+  { key: '3M', label: '3 months', days: 90 },
+  { key: '6M', label: '6 months', days: 180 },
+  { key: 'Y',  label: '1 year',  days: 365 },
 ]);
 
 export const VOLUME_WINDOWS = Object.freeze([
@@ -109,34 +122,69 @@ function spanDaysOf(points, dateOf) {
 }
 
 /**
- * Weight takeaway from EWMA endpoints (raw is faded behind the trend in the
- * house style). Under an open ED flag the rate-of-change is suppressed —
- * average only, no direction or delta (COMP-004's safety behaviour).
+ * The weight takeaway under the Trend card, rebuilt under D214 addendum 4
+ * (Body metrics, lane 7; spec `docs/audit/
+ * progress-recovery-consistency-audit-2026-10-01/04-BODY-METRICS-AUDIT-AND-SPEC.md`
+ * section 3 item 4, BM-5 to BM-8, BM-23).
  *
- * `toDisplay` (progress-tab audit 2026-09-24, second pass, A1 follow-up):
- * converts a kg number to the caller's display unit for the two numbers
- * this renders (the average and the delta magnitude) ONLY -- the
- * direction/"holding steady" decision (directionWord against the 0.1 kg
- * dead-band) is always computed on the raw kg EWMA first, so the level band
- * keeps the same real-world meaning regardless of display unit. Defaults to
- * identity, so every existing caller (kg, or a caller that never passes it)
- * is byte-identical.
+ * It used to print "3 months: average 82.4 kg, down 1.8 kg." where "average"
+ * was the mean of the SMOOTHED series (BM-7), the window label could say "3
+ * months" over two weeks of data (BM-23), a direction was read from two
+ * weigh-ins (BM-6), and a dead-band of 0.1 kg stood beside four other
+ * definitions of flat (BM-31). Now:
+ *  - the sentence names the dates it covers, and says "Everything you have
+ *    logged" when the log is shorter than the window;
+ *  - "averaged" is the plain average of the weigh-ins (the caller passes it);
+ *  - a direction is read only from DIRECTION_MIN_POINTS weigh-ins that span
+ *    DIRECTION_MIN_SPAN_DAYS days (the same 7-weigh-in rule as the This week
+ *    card), with its denominator when there is too little;
+ *  - "steady" is the ONE steady rule, weightTrend.STEADY_RATE_KG_PER_WEEK, on
+ *    the trend's rate over the window, so the word means the same here as in
+ *    the verdict line and on the Progress root.
+ * The caller holds the withhold: under calm mode or an open flag the sentence
+ * is not rendered (bodyMetricsPolicy `takeaway`), so this carries no flag.
+ * Every figure arrives formatted for the person's units by the caller's
+ * formatters, so nothing here assumes kilograms.
  *
- * @returns {string} e.g. "3 months: average 82.4 kg, down 1.8 kg."
+ * @param {object} p
+ * @param {boolean} p.coversAll   the log starts inside the window
+ * @param {string} p.from         day key of the first weigh-in shown
+ * @param {string} p.to           day key of the last weigh-in shown
+ * @param {number} p.count        weigh-ins in the window
+ * @param {number} p.averageKg    plain average of those weigh-ins
+ * @param {number} p.trendStartKg first smoothed point of the window
+ * @param {number} p.trendEndKg   last smoothed point of the window
+ * @param {number} p.spanDays     days from the first weigh-in to the last
+ * @param {(kg:number)=>string} p.formatWeight  "82.3 kg"
+ * @param {(kg:number)=>string} p.formatAmount  "0.1 kg"
+ * @param {(kgPerWeek:number)=>string} p.formatRate  "0.05 kg a week"
+ * @param {(dayKey:string)=>string} p.formatDate  "4 Sep"
+ * @returns {string} e.g. "4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; the trend held steady, about 0.05 kg a week."
  */
+// "Held steady" needs BOTH a rate inside the steady rule and a total movement
+// under this amount (D214 addendum 7, lane 7 open question 6): over a year,
+// 2 kg is 0.04 kg a week, and "held steady" would be untrue of it.
+export const STEADY_AMOUNT_KG = 0.5;
+
 export function weightTakeaway({
-  windowKey, coversAll, points, dateOf, ewma, unit = 'kg', edFlagOpen = false, toDisplay = (v) => v,
+  coversAll, from, to, count, averageKg, trendStartKg, trendEndKg, spanDays,
+  formatWeight, formatAmount, formatRate, formatDate, steadyAmountKg = STEADY_AMOUNT_KG,
 }) {
-  if (!ewma || ewma.length < 2) return '';
-  const phrase = windowPhrase(windowKey, coversAll, spanDaysOf(points, dateOf));
-  const avg = ewma.reduce((t, v) => t + v, 0) / ewma.length;
-  if (edFlagOpen) {
-    return `${phrase}: average ${num1(toDisplay(avg))} ${unit}.`;
+  if (!(count >= 2) || !Number.isFinite(averageKg)) return '';
+  const prefix = `${coversAll ? 'Everything you have logged, ' : ''}${formatDate(from)} to ${formatDate(to)}: `;
+  const head = `${prefix}your weigh-ins averaged ${formatWeight(averageKg)}`;
+  if (count < DIRECTION_MIN_POINTS) {
+    return `${head}; not enough weigh-ins yet for a direction: ${count} of ${DIRECTION_MIN_POINTS}.`;
   }
-  const delta = ewma[ewma.length - 1] - ewma[0];
-  const dir = directionWord(delta, 0.1);
-  if (dir === 'level') return `${phrase}: average ${num1(toDisplay(avg))} ${unit}, holding steady.`;
-  return `${phrase}: average ${num1(toDisplay(avg))} ${unit}, ${dir} ${num1(toDisplay(Math.abs(delta)))} ${unit}.`;
+  if (!(spanDays >= DIRECTION_MIN_SPAN_DAYS)) {
+    return `${head}; not enough time yet for a direction: your weigh-ins cover ${Math.max(0, Math.floor(spanDays))} of ${DIRECTION_MIN_SPAN_DAYS} days.`;
+  }
+  const delta = trendEndKg - trendStartKg;
+  const ratePerWeek = (delta / spanDays) * 7;
+  if (Math.abs(ratePerWeek) < STEADY_RATE_KG_PER_WEEK && Math.abs(delta) < steadyAmountKg) {
+    return `${head}; the trend held steady, about ${formatRate(Math.abs(ratePerWeek))}.`;
+  }
+  return `${head}; the trend moved ${delta < 0 ? 'down' : 'up'} ${formatAmount(Math.abs(delta))}, about ${formatRate(Math.abs(ratePerWeek))}.`;
 }
 
 /**

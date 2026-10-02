@@ -90,11 +90,16 @@ describe('readMaintenanceInputs: the canonical reads', () => {
 
 describe('source: the surfaces build their inputs through the helper and keep no inline mapping', () => {
   const read = (p) => fs.readFileSync(path.join(__dirname, '..', '..', p), 'utf8');
-  // BodyMetricsScreen.js joins this list when lane 7 rebuilds it on the helper.
+  // RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
+  // `maintenanceInputs.test.js` guard list, BM-14): BodyMetricsScreen.js joins
+  // this list now that lane 7 has rebuilt it on the helper; it resolves with
+  // the same inputs as the hook and the coach, and never persists a
+  // revalidation marker.
   test.each([
     ['hooks/useWeightTrend.js', /from '\.\.\/lib\/maintenanceInputs'/],
     ['screens/CoachOutputScreen.js', /from '\.\.\/lib\/maintenanceInputs'/],
     ['screens/NutritionTargetsScreen.js', /from '\.\.\/lib\/maintenanceInputs'/],
+    ['screens/BodyMetricsScreen.js', /from '\.\.\/lib\/maintenanceInputs'/],
   ])('%s', (file, importRe) => {
     const src = read(file);
     expect(src).toMatch(importRe);

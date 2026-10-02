@@ -1,5 +1,6 @@
 import {
   TREND_WINDOWS,
+  WEIGHT_WINDOWS,
   VOLUME_WINDOWS,
   DEFAULT_WINDOW_KEY,
   windowByKey,
@@ -12,7 +13,7 @@ import {
   workloadTakeaway,
 } from '../chartWindows';
 import { kgToLbs } from '../units';
-import { weightChartValue } from '../bodyMetricsDisplay';
+import { STEADY_RATE_KG_PER_WEEK } from '../weightTrend';
 
 const DAY = 86400000;
 const NOW = new Date(2026, 5, 10, 12).getTime(); // fixed anchor
@@ -70,77 +71,100 @@ describe('chartWindows: windowPhrase', () => {
   });
 });
 
-describe('chartWindows: weightTakeaway', () => {
-  const points = [{ t: daysAgo(80) }, { t: daysAgo(40) }, { t: daysAgo(2) }];
-  const dateOf = (p) => p.t;
-  test('average + signed first-to-last delta from EWMA endpoints', () => {
-    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: [84.2, 83.0, 82.4], unit: 'kg' }))
-      .toBe('3 months: average 83.2 kg, down 1.8 kg.');
-    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: [80, 81, 82], unit: 'kg' }))
-      .toBe('3 months: average 81 kg, up 2 kg.');
+// RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
+// `chartWindows` (weight)). The weight takeaway was rebuilt (section 3 item 4,
+// BM-5 to BM-8, BM-23, BM-31): it names the dates it covers, says "Everything
+// you have logged" when the log is shorter than the window, "averaged" is the
+// plain average of the weigh-ins (the old "average" was the mean of the
+// SMOOTHED series), a direction is read only from 7 weigh-ins spanning 7 days
+// (with its denominator when there is too little), and "steady" is the ONE
+// steady rule, weightTrend.STEADY_RATE_KG_PER_WEEK (0.2 kg a week), not a 0.1
+// kg dead-band beside four other definitions of flat. The old per-unit
+// dead-band tests (A1 follow-up) are replaced by the formatter contract: every
+// figure reaches the sentence through the caller's unit-aware formatters, so
+// nothing here assumes kilograms; the unit mapping itself is pinned in
+// bodyMetricsDisplay.test.js and the screen guards.
+describe('chartWindows: WEIGHT_WINDOWS (the chips in words)', () => {
+  test('words for the labels, the same keys and day counts as the lift charts', () => {
+    expect(WEIGHT_WINDOWS.map((w) => w.label)).toEqual(['1 month', '3 months', '6 months', '1 year']);
+    expect(WEIGHT_WINDOWS.map((w) => [w.key, w.days])).toEqual(TREND_WINDOWS.map((w) => [w.key, w.days]));
   });
-  test('open ED flag suppresses the rate-of-change — average only', () => {
-    const line = weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: [84.2, 83, 82.4], unit: 'kg', edFlagOpen: true });
-    expect(line).toBe('3 months: average 83.2 kg.');
-    expect(line).not.toMatch(/up|down/);
-  });
-  test('a flat trend reads "holding steady", not "up 0"', () => {
-    expect(weightTakeaway({ windowKey: '1M', coversAll: false, points, dateOf, ewma: [82.0, 82.02, 82.0], unit: 'kg' }))
-      .toBe('1 month: average 82 kg, holding steady.');
+  test('the lift charts keep their own labels (this change is weight only)', () => {
+    expect(TREND_WINDOWS.map((w) => w.label)).toEqual(['1M', '3M', '6M', 'Y']);
   });
 });
 
-describe('chartWindows: weightTakeaway toDisplay (progress-tab audit 2026-09-24, second pass, A1 follow-up)', () => {
-  // THE DEFECT: the takeaway banner always read in kg, unlike the chart's
-  // own axis/tooltip (already fixed to respect bodyWeightUnits). toDisplay
-  // converts the two NUMBERS this renders (average, delta magnitude) only;
-  // the direction/"holding steady" decision stays a kg-only judgement so
-  // the level band keeps one real-world meaning regardless of display unit.
-  const points = [{ t: daysAgo(80) }, { t: daysAgo(40) }, { t: daysAgo(2) }];
-  const dateOf = (p) => p.t;
-  const toLbs = (v) => weightChartValue(v, 'lbs');
+describe('chartWindows: weightTakeaway (D214 addendum 4)', () => {
+  const fmt = {
+    formatWeight: (kg) => `${Math.round(kg * 10) / 10} kg`,
+    formatAmount: (kg) => `${Math.round(kg * 10) / 10} kg`,
+    formatRate: (kg) => `${Math.round(kg * 100) / 100} kg a week`,
+    formatDate: (key) => ({ '2026-09-04': '4 Sep', '2026-09-17': '17 Sep' }[key] ?? key),
+  };
+  const base = {
+    coversAll: false, from: '2026-09-04', to: '2026-09-17', count: 14, averageKg: 82.3,
+    trendStartKg: 83.0, trendEndKg: 82.1, spanDays: 13, ...fmt,
+  };
 
-  test('lbs: the average and the delta both convert through toDisplay, matching the chart\'s own conversion', () => {
-    const ewma = [82.5, 82.5, 82.35];
-    const avgLbs = kgToLbs((82.5 + 82.5 + 82.35) / 3).toFixed(1);
-    const deltaLbs = kgToLbs(Math.abs(82.35 - 82.5)).toFixed(1);
+  test('names the dates, the plain average, and the trend\'s movement with its rate', () => {
+    // delta -0.9 over 13 days = -0.485 kg a week: past the steady rule, so "moved down"
+    expect(weightTakeaway(base))
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; the trend moved down 0.9 kg, about 0.48 kg a week.');
+    expect(weightTakeaway({ ...base, trendStartKg: 80, trendEndKg: 80.9 }))
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; the trend moved up 0.9 kg, about 0.48 kg a week.');
+  });
+
+  test('"Everything you have logged" when the log is shorter than the window', () => {
+    expect(weightTakeaway({ ...base, coversAll: true }))
+      .toMatch(/^Everything you have logged, 4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg;/);
+  });
+
+  test('steady is the ONE steady rule: under 0.2 kg a week holds steady, at 0.2 it has moved', () => {
+    // -0.1 over 13 days = -0.054 kg a week
+    expect(weightTakeaway({ ...base, trendStartKg: 82.2, trendEndKg: 82.1 }))
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; the trend held steady, about 0.05 kg a week.');
+    expect(STEADY_RATE_KG_PER_WEEK).toBe(0.2);
+    // exactly 0.2 kg a week (0.4 kg over 14 days) is NOT steady: "<" is the rule
+    expect(weightTakeaway({ ...base, spanDays: 14, trendStartKg: 82.4, trendEndKg: 82.0 }))
+      .toMatch(/the trend moved down 0\.4 kg, about 0\.2 kg a week\.$/);
+    expect(weightTakeaway({ ...base, spanDays: 14, trendStartKg: 82.4, trendEndKg: 82.01 }))
+      .toMatch(/held steady/);
+  });
+
+  test('BM-6: no direction from too few weigh-ins, and the denominator is said', () => {
+    expect(weightTakeaway({ ...base, count: 3, spanDays: 6, trendStartKg: 80, trendEndKg: 82 }))
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough weigh-ins yet for a direction: 3 of 7.');
+    // seven weigh-ins that cover under seven days are not a direction either
+    expect(weightTakeaway({ ...base, count: 7, spanDays: 6, trendStartKg: 80, trendEndKg: 82 }))
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough time yet for a direction: your weigh-ins cover 6 of 7 days.');
+  });
+
+  test('nothing to say from fewer than two weigh-ins', () => {
+    expect(weightTakeaway({ ...base, count: 1 })).toBe('');
+    expect(weightTakeaway({ ...base, count: 0 })).toBe('');
+    expect(weightTakeaway({ ...base, averageKg: NaN })).toBe('');
+  });
+
+  test('every figure arrives through the caller\'s formatters, so a pounds reader reads pounds', () => {
+    const lbs = (kg) => `${(Math.round(kgToLbs(kg) * 10) / 10)} lbs`;
     const line = weightTakeaway({
-      windowKey: '3M', coversAll: false, points, dateOf, ewma, unit: 'lbs', toDisplay: toLbs,
+      ...base,
+      formatWeight: (kg) => `${Math.round(kgToLbs(kg))} lbs`,
+      formatAmount: lbs,
+      formatRate: (kg) => `${lbs(kg)} a week`,
     });
-    expect(line).toBe(`3 months: average ${avgLbs} lbs, down ${deltaLbs} lbs.`);
+    expect(line).toBe('4 Sep to 17 Sep: your weigh-ins averaged 181 lbs; the trend moved down 2 lbs, about 1.1 lbs a week.');
+    expect(line).not.toMatch(/\bkg\b/);
   });
 
-  test('a flat kg series reads a clean converted average: 82.5 kg is 181.9 lbs', () => {
-    const line = weightTakeaway({
-      windowKey: '3M', coversAll: false, points, dateOf, ewma: [82.5, 82.5, 82.5], unit: 'lbs', toDisplay: toLbs,
-    });
-    expect(line).toBe('3 months: average 181.9 lbs, holding steady.');
-  });
-
-  test('the level dead-band (0.1 kg) is decided on the RAW kg delta, never the converted one', () => {
-    // A 0.05 kg drift is inside the dead-band in kg terms -- "holding
-    // steady" in BOTH units, even though 0.05 kg is a non-trivial ~0.1 lbs
-    // once converted, so a unit-aware dead-band would have called it "down".
-    const ewmaKg = [82.50, 82.50, 82.45];
-    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: ewmaKg, unit: 'kg' }))
-      .toMatch(/holding steady/);
-    expect(weightTakeaway({
-      windowKey: '3M', coversAll: false, points, dateOf, ewma: ewmaKg, unit: 'lbs', toDisplay: toLbs,
-    })).toMatch(/holding steady/);
-  });
-
-  test('the open-ED-flag branch (average only, no direction) also formats through toDisplay', () => {
-    const line = weightTakeaway({
-      windowKey: '3M', coversAll: false, points, dateOf, ewma: [82.5, 82.5, 82.5],
-      unit: 'lbs', edFlagOpen: true, toDisplay: toLbs,
-    });
-    expect(line).toBe('3 months: average 181.9 lbs.');
-    expect(line).not.toMatch(/up|down|steady/);
-  });
-
-  test('a caller that omits toDisplay (every existing kg caller) is byte-identical to before', () => {
-    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: [84.2, 83.0, 82.4], unit: 'kg' }))
-      .toBe('3 months: average 83.2 kg, down 1.8 kg.');
+  test('no em dash and no instruction in any variant (D204)', () => {
+    const lines = [
+      weightTakeaway(base),
+      weightTakeaway({ ...base, coversAll: true, trendStartKg: 82.2, trendEndKg: 82.1 }),
+      weightTakeaway({ ...base, count: 3 }),
+    ].join(' ');
+    expect(lines).not.toMatch(/\u2014/);
+    expect(lines).not.toMatch(/\b(should|must|try|aim|avoid)\b/i);
   });
 });
 
@@ -243,8 +267,25 @@ describe('chartWindows: workloadTakeaway (like-for-like words, D204)', () => {
     for (const key of ['above', 'in_line', 'below']) {
       const line = workloadTakeaway(key);
       expect(line).not.toMatch(/\d/);
-      expect(line).not.toMatch(/\b(kg|lbs?|lb)\b/i);
+      expect(line).not.toMatch(/\b(kg|lbs?|lbs)\b/i);
       expect(line).not.toMatch(/easier|harder|consider|should|try|aim|monitor|rest/i);
     }
   });
+});
+
+// D214 addendum 7 (lane 7 open question 6): "held steady" needs a small total as
+// well as a small rate, so a year that drifted 2 kg is never "steady".
+describe('weightTakeaway: the steady amount', () => {
+  const { weightTakeaway: take, STEADY_AMOUNT_KG } = require('../chartWindows');
+  const fmt = { formatWeight: (k) => `${k} kg`, formatAmount: (k) => `${Math.round(k * 10) / 10} kg`, formatRate: (r) => `${Math.round(r * 100) / 100} kg a week`, formatDate: (d) => d };
+  test('2 kg over a year reads as moved, not steady, though the rate is tiny', () => {
+    const s = take({ coversAll: false, from: '1 Oct', to: '1 Oct', count: 60, averageKg: 81, trendStartKg: 83, trendEndKg: 81, spanDays: 365, ...fmt });
+    expect(s).toMatch(/the trend moved down 2 kg, about 0.04 kg a week\.$/);
+    expect(s).not.toMatch(/held steady/);
+  });
+  test('a small total at a small rate reads steady', () => {
+    const s = take({ coversAll: false, from: '4 Sep', to: '17 Sep', count: 10, averageKg: 82.3, trendStartKg: 82.4, trendEndKg: 82.2, spanDays: 13, ...fmt });
+    expect(s).toMatch(/held steady/);
+  });
+  test('the amount floor is half a kilo', () => { expect(STEADY_AMOUNT_KG).toBe(0.5); });
 });

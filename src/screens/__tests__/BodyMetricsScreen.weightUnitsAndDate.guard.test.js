@@ -2,70 +2,89 @@
  * BodyMetricsScreen.weightUnitsAndDate.guard.test.js
  *
  * BUILD LANE A (progress-tab audit 2026-09-24, second pass). Source guard,
- * matching the repo convention for this screen (see
- * BodyMetricsScreen.weightTrendParity.guard.test.js): pins that the screen
- * is wired to the shared bodyMetricsDisplay.js helpers rather than a
- * hand-rolled, re-diverging label/date computation. The behavioural
- * contract for those functions themselves is pinned against the real
- * functions in src/lib/__tests__/bodyMetricsDisplay.test.js (no mount
- * needed there; this screen pulls in react-native-svg via VolyumeChart).
+ * matching the repo convention for this screen: pins that the screen is wired
+ * to the shared bodyMetricsDisplay.js helpers rather than a hand-rolled,
+ * re-diverging label/date computation. The behavioural contract for those
+ * functions is pinned against the real functions in
+ * src/lib/__tests__/bodyMetricsDisplay.test.js.
  *
- * A1: WeightTrendChart's plotted value/min/max and its axis/tooltip unit
- * label must agree. THE DEFECT: the chart always plotted canonical kg but
- * labelled the axis/tooltip straight from bodyWeightUnits -- for a pounds
- * user that put "lbs" on a true kg number (a true 82.5 kg read "82.5 lbs").
- * A1 follow-up (same pass, founder "fix it all" scope): the takeaway
- * banner above the chart (chartWindows.js weightTakeaway) had the SAME
- * defect class in miniature -- it always read in kg regardless of
- * bodyWeightUnits. Its `unit`/`toDisplay` params are now wired to the
- * SAME chartUnit/weightChartValue the chart itself uses.
- *
- * A2: the snapshot header used to default to the literal string "Today" for
- * ANY unparseable stored date.
+ * RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; section 6 table:
+ * `BodyMetricsScreen.*` guards (weightUnitsAndDate)). The screen was rebuilt
+ * on the same two laws, in their new places:
+ *   A1: the chart's plotted value, its axis and its tooltip unit label must
+ *   agree (a pounds user once read "82.5 lbs" on a true 82.5 kg). The chart
+ *   still reads kilograms for a stone user, now with its one-line note
+ *   ("The chart reads in kilograms."), and everything ELSE on the screen is
+ *   in stones and pounds (item 11, BM-28): weights through `formatBodyWeight`
+ *   (one spelling), changes and swings through `formatWeightAmount`, rates as
+ *   "lb a week" through `formatWeightRatePerWeek`.
+ *   A2: the "Weight - Today" header (which fell back to "Today" for an
+ *   unparseable date) is GONE; every date on the screen is a real day key
+ *   through the shared date helpers.
  */
 import fs from 'fs';
 import path from 'path';
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'BodyMetricsScreen.js'), 'utf8');
 
-describe('A1: WeightTrendChart is wired to the shared unit mapping, not a hand-rolled label', () => {
+describe('A1: the chart is wired to the shared unit mapping, not a hand-rolled label', () => {
   test('imports the shared helpers from the dependency-free lib module', () => {
-    expect(SOURCE).toMatch(
-      /import \{\s*weightChartUnitLabel, weightChartValue, weightChartTooltipTitle, weightSnapshotDateLabel,\s*\} from '\.\.\/lib\/bodyMetricsDisplay';/,
-    );
+    expect(SOURCE).toMatch(/weightChartUnitLabel, weightChartValue, weightChartTooltipTitle,/);
+    expect(SOURCE).toMatch(/from '\.\.\/lib\/bodyMetricsDisplay';/);
   });
 
-  test('the chart data/min/max/yAxisSuffix/formatTooltip all call the shared helpers', () => {
-    expect(SOURCE).toMatch(/value: weightChartValue\(e\.body_weight, bodyWeightUnits\)/);
-    expect(SOURCE).toMatch(/const chartUnit = weightChartUnitLabel\(bodyWeightUnits\);/);
-    expect(SOURCE).toMatch(/yAxisSuffix=\{`\s*\$\{chartUnit\}`\}/);
-    expect(SOURCE).toMatch(/min=\{Math\.floor\(Math\.min\(\.\.\.weights\.map\(w => weightChartValue\(w, bodyWeightUnits\)\)\) - 1\)\}/);
-    expect(SOURCE).toMatch(/max=\{Math\.ceil\(Math\.max\(\.\.\.weights\.map\(w => weightChartValue\(w, bodyWeightUnits\)\)\) \+ 1\)\}/);
-    expect(SOURCE).toMatch(/title: weightChartTooltipTitle\(e\.body_weight, bodyWeightUnits\)/);
-    expect(SOURCE).toMatch(/weightChartValue\(trend, bodyWeightUnits\)\.toFixed\(1\)/);
-    // The old defect class: labelling straight from bodyWeightUnits without
+  test('the chart data, axis, suffix and tooltip all call the shared helpers', () => {
+    expect(SOURCE).toMatch(/value: weightChartValue\(w\.trend, bwu\)/);
+    expect(SOURCE).toMatch(/value: weightChartValue\(w\.kg, bwu\)/);
+    expect(SOURCE).toMatch(/const axisMin = weightChartValue\(axisKg\.min, bwu\);/);
+    expect(SOURCE).toMatch(/const axisMax = weightChartValue\(axisKg\.max, bwu\);/);
+    expect(SOURCE).toMatch(/const unit = weightChartUnitLabel\(bwu\);/);
+    expect(SOURCE).toMatch(/yAxisSuffix=\{` \$\{unit\}`\}/);
+    expect(SOURCE).toMatch(/title: weightChartTooltipTitle\(w\.kg, bwu\)/);
+    expect(SOURCE).toMatch(/weightChartValue\(w\.trend, bwu\)\.toFixed\(1\)/);
+    // The old defect class: labelling straight from the display unit without
     // ever converting the plotted kg number for the 'lbs' case.
     expect(SOURCE).not.toMatch(/yAxisSuffix=\{bodyWeightUnits === 'st' \? ' kg' : `\$\{bodyWeightUnits \|\| 'kg'\}`\}/);
     expect(SOURCE).not.toMatch(/title: `\$\{e\.body_weight\} \$\{unit\}`/);
-    expect(SOURCE).not.toMatch(/min=\{Math\.floor\(Math\.min\(\.\.\.weights\) - 1\)\}/);
+  });
+
+  test('a stone user is told the chart reads in kilograms', () => {
+    expect(SOURCE).toMatch(/const note = chartUnitNote\(bwu\);/);
+    expect(SOURCE).toMatch(/\{note \? <Text style=\{live\.caption\}>\{note\}<\/Text> : null\}/);
   });
 });
 
-describe('A1 follow-up: the takeaway banner reads in the same unit as the chart', () => {
-  test('weightTakeaway is called with the chart\'s own unit and a toDisplay that converts through weightChartValue', () => {
-    expect(SOURCE).toMatch(/ewma: smoothed, unit: chartUnit, edFlagOpen,/);
-    expect(SOURCE).toMatch(/toDisplay: \(v\) => weightChartValue\(v, bodyWeightUnits\),/);
-    // The old defect: a hard-coded kg literal, unconditional on bodyWeightUnits.
-    expect(SOURCE).not.toMatch(/ewma: smoothed, unit: 'kg', edFlagOpen,/);
+describe('A1 follow-up: the takeaway and every other figure read in the person\'s units', () => {
+  test('weightTakeaway is handed formatters that carry the units; nothing is a hard-coded kg literal', () => {
+    expect(SOURCE).toMatch(/formatWeight: \(kg\) => formatBodyWeight\(kg, bwu\),/);
+    expect(SOURCE).toMatch(/formatAmount: \(kg\) => formatWeightAmount\(kg, bwu\),/);
+    expect(SOURCE).toMatch(/formatRate: \(kgPerWeek\) => formatWeightRatePerWeek\(kgPerWeek, bwu\),/);
+    expect(SOURCE).not.toMatch(/unit: 'kg'/);
+    expect(SOURCE).not.toMatch(/\} kg\b/);
+  });
+
+  test('history rows, week headers and the hero use the one spelling, formatBodyWeight', () => {
+    expect(SOURCE).toMatch(/formatBodyWeight\(weightTrendVm\.ewmaNow, bwu\)/);
+    expect(SOURCE).toMatch(/historyRowTitle\(entry, bwu\)/);
+    expect(SOURCE).toMatch(/weekGroupHeader\(\{/);
+    expect(SOURCE).not.toMatch(/formatBodyWeightShort/);
+  });
+
+  test('the person can reach the units setting from this screen (campaign3 discoverability)', () => {
+    expect(SOURCE).toMatch(/label="Weight units"/);
+    expect(SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsWorkout'\)/);
   });
 });
 
-describe('A2: the snapshot header is wired to weightSnapshotDateLabel, not a bare "|| \'Today\'" fallback', () => {
-  test('calls the shared helper with the latest entry\'s metric_date', () => {
-    expect(SOURCE).toMatch(/Weight - \{weightSnapshotDateLabel\(latest\?\.metric_date\)\}/);
-    // The old defect: ANY unparseable date (safeFormatDate returning '')
-    // fell back to the literal "Today", regardless of whether it actually
-    // was today.
+describe('A2: no header that can claim "Today" for a date it cannot read', () => {
+  test('the "Weight - Today" snapshot header is gone', () => {
+    expect(SOURCE).not.toMatch(/weightSnapshotDateLabel/);
+    expect(SOURCE).not.toMatch(/Weight - /);
+    // the old defect: ANY unparseable date fell back to the literal "Today"
     expect(SOURCE).not.toMatch(/safeFormatDate\(latest\?\.metric_date, 'd MMM yyyy'\) \|\| 'Today'/);
+  });
+
+  test('the form names today only when the day key IS today', () => {
+    expect(SOURCE).toMatch(/if \(dayKey === todayKey\) return 'Today';/);
   });
 });

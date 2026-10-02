@@ -20,7 +20,21 @@
 // scrub, haptics, a11y) is identical to the spec. Swappable to Skia later behind
 // this same API if the founder wants UI-thread scrub smoothness.
 //
-// Data shape: [{ value:number, label?:string }]; pass
+// D214 addendum 4 (Body metrics, lane 7; spec docs/audit/
+// progress-recovery-consistency-audit-2026-10-01/04-BODY-METRICS-AUDIT-AND-SPEC.md
+// section 3 item 4): ADDITIVE props, each defaulting to the behaviour
+// every other host already has. `data[i].t` (epoch ms, on every point) spaces
+// the points by TIME rather than by count, so a gap in the log reads as a
+// gap; `dots2` draws `data2` as faint dots instead of a line (the weigh-ins
+// behind a smoothed trend, no second line); `xTicks` (epoch ms) draws small
+// baseline ticks (weekly); `showViewData={false}` drops the "View data"
+// button where the host's own list is the text alternative (the chart then
+// still speaks ONE summary through `accessibilityLabel`, AX-02); `yTicks`
+// (values on the y axis) places the rules at round values inside a fitted
+// domain instead of evenly from its minimum; `yAxisWidth` widens the label
+// gutter (default 34) for labels such as "82.7 kg".
+//
+// Data shape: [{ value:number, label?:string, t?:number }]; pass
 // `data2` for a faint secondary series (e.g. raw behind a smoothed trend).
 // `interactive` enables the scrub; `formatTooltip(index) => { title, sub }` lets
 // the host phrase the tooltip from its own (dated) data. `highlightIndices`
@@ -37,7 +51,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
-  plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
+  plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex, scale,
 } from '../lib/chartGeometry';
 import * as haptics from '../lib/haptics';
 import Button from './Button';
@@ -45,6 +59,23 @@ import Button from './Button';
 function formatTick(value, span) {
   if (span <= 4) return (Math.round(value * 10) / 10).toString();
   return Math.round(value).toString();
+}
+
+// D214 addendum 4: points placed by their own time (`t`, epoch ms) between the
+// first and last of them, y by value on the same domain plotPoints uses. A
+// series whose points do not all carry a finite `t` falls back to the count
+// spacing every other host has.
+function hasTimes(items) {
+  return Array.isArray(items) && items.length >= 2 && items.every((d) => d && Number.isFinite(d.t));
+}
+function plotPointsByTime(items, box, min, max) {
+  const t0 = items[0].t;
+  const t1 = items[items.length - 1].t;
+  const r2 = (n) => Math.round(n * 100) / 100;
+  return items.map((d) => ({
+    x: r2(box.left + (t1 === t0 ? box.width / 2 : ((d.t - t0) / (t1 - t0)) * box.width)),
+    y: r2(box.top + box.height - scale(d.value, min, max, 0, box.height)),
+  }));
 }
 
 // AX-02 (launch accessibility audit): the adjustable increment/decrement
@@ -109,6 +140,13 @@ export default function VolyumeChart({
   // copy beyond that: training-performance data, not weight/body, so no
   // ED-suppression gating applies (ED-safety note, CP-5).
   highlightIndices = null,
+  // D214 addendum 4 (see the header): all four default to the old behaviour.
+  dots2 = false,
+  dotRadius2 = 2.5,
+  xTicks = null,
+  showViewData = true,
+  yTicks = null,
+  yAxisWidth = 34,
 }) {
   const t = useTheme();
   // CP-10 stage 4: an explicit prop always wins; an omitted prop falls back
@@ -146,7 +184,7 @@ export default function VolyumeChart({
 
   const hasYLabels = sections > 0;
   const hasXLabels = data.some(d => d.label);
-  const leftPad = hasYLabels ? 34 : 0;
+  const leftPad = hasYLabels ? yAxisWidth : 0;
   const bottomPad = hasXLabels ? 16 : 0;
   const topPad = 4;
   const rightPad = 6;
@@ -172,9 +210,12 @@ export default function VolyumeChart({
     return { x, y: height - h, w: barW, h, cx: x + barW / 2, color: data[i]?.color || resolvedColor };
   }) : [];
 
+  const timeSpaced = !isBar && hasTimes(data) && values.length === data.length;
   const points = isBar
     ? bars.map(b => ({ x: b.cx, y: b.y }))
-    : (values.length >= 2 ? plotPoints(values, box, min, max) : []);
+    : (values.length >= 2
+      ? (timeSpaced ? plotPointsByTime(data, box, min, max) : plotPoints(values, box, min, max))
+      : []);
 
   function scrubTo(touchX) {
     if (!points.length) return;
@@ -312,12 +353,31 @@ export default function VolyumeChart({
     return <GestureDetector gesture={pan}>{barChart}</GestureDetector>;
   }
 
-  const points2 = values2.length >= 2 ? plotPoints(values2, box, min, max) : null;
+  const points2 = values2.length >= 2
+    ? (hasTimes(data2) && values2.length === data2.length
+      ? plotPointsByTime(data2, box, min, max)
+      : plotPoints(values2, box, min, max))
+    : null;
+  // Baseline ticks (weekly), placed on the same time axis as the points.
+  const tickXs = timeSpaced && Array.isArray(xTicks)
+    ? xTicks
+      .filter((tm) => Number.isFinite(tm) && tm >= data[0].t && tm <= data[data.length - 1].t)
+      .map((tm) => box.left + (data[data.length - 1].t === data[0].t
+        ? box.width / 2
+        : ((tm - data[0].t) / (data[data.length - 1].t - data[0].t)) * box.width))
+    : [];
   const mainPath = curved ? smoothPath(points) : linePath(points);
   const fillPath = area ? areaPath(points, baselineY, curved) : '';
   const topFill = areaTopColor || withAlpha(resolvedColor, 0.188);
   const botFill = areaBottomColor || withAlpha(resolvedColor, 0.02);
   const tickVals = ticks(min, max, sections);
+  // D214 addendum 4: the rules, either the evenly spaced default or the host's
+  // own values (those inside the domain).
+  const rules = Array.isArray(yTicks)
+    ? yTicks
+      .filter((tv) => Number.isFinite(tv) && tv >= min && tv <= max)
+      .map((tv) => ({ tv, y: baselineY - scale(tv, min, max, 0, box.height) }))
+    : tickVals.map((tv, i) => ({ tv, y: baselineY - (box.height * i) / sections }));
 
   const active = activeIndex >= 0 && activeIndex < points.length ? points[activeIndex] : null;
   const tip = active && formatTooltip ? formatTooltip(activeIndex) : null;
@@ -355,8 +415,7 @@ export default function VolyumeChart({
             </Defs>
           )}
 
-          {tickVals.map((tv, i) => {
-            const y = baselineY - (box.height * i) / sections;
+          {rules.map(({ tv, y }, i) => {
             return (
               <React.Fragment key={`rule-${i}`}>
                 <Line x1={box.left} y1={y} x2={box.left + box.width} y2={y}
@@ -373,10 +432,19 @@ export default function VolyumeChart({
 
           {area && fillPath ? <Path d={fillPath} fill={`url(#${gradId})`} /> : null}
 
-          {points2 ? (
+          {points2 && !dots2 ? (
             <Path d={curved ? smoothPath(points2) : linePath(points2)}
               stroke={resolvedColor2} strokeWidth={thickness2} fill="none" />
           ) : null}
+
+          {points2 && dots2 ? points2.map((p, i) => (
+            <Circle key={`dot2-${i}`} cx={p.x} cy={p.y} r={dotRadius2} fill={resolvedColor2} />
+          )) : null}
+
+          {tickXs.map((x, i) => (
+            <Line key={`tick-${i}`} x1={x} y1={baselineY} x2={x} y2={baselineY + 3}
+              stroke={resolvedAxisColor} strokeWidth={1} />
+          ))}
 
           <Path d={mainPath} stroke={resolvedColor} strokeWidth={thickness} fill="none" />
 
@@ -439,30 +507,32 @@ export default function VolyumeChart({
   return (
     <View>
       {gestureWrapped}
-      <View style={[styles.viewDataWrap, live.viewDataWrap]}>
-        <Button
-          title={showTable ? 'Hide data' : 'View data'}
-          onPress={() => setShowTable(v => !v)}
-          variant="tertiary"
-          size="sm"
-          fullWidth={false}
-          icon={showTable ? 'chevron-up' : 'chevron-down'}
-          accessibilityLabel={showTable ? 'Hide chart data' : 'View chart data as a list'}
-        />
-        {showTable ? (
-          <View accessibilityRole="list" style={[styles.dataTable, live.dataTable]}>
-            {data.map((d, i) => (
-              <Text
-                key={i}
-                accessibilityRole="text"
-                style={[styles.dataRow, live.dataRow]}
-              >
-                {pointCore(i)}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-      </View>
+      {showViewData ? (
+        <View style={[styles.viewDataWrap, live.viewDataWrap]}>
+          <Button
+            title={showTable ? 'Hide data' : 'View data'}
+            onPress={() => setShowTable(v => !v)}
+            variant="tertiary"
+            size="sm"
+            fullWidth={false}
+            icon={showTable ? 'chevron-up' : 'chevron-down'}
+            accessibilityLabel={showTable ? 'Hide chart data' : 'View chart data as a list'}
+          />
+          {showTable ? (
+            <View accessibilityRole="list" style={[styles.dataTable, live.dataTable]}>
+              {data.map((d, i) => (
+                <Text
+                  key={i}
+                  accessibilityRole="text"
+                  style={[styles.dataRow, live.dataRow]}
+                >
+                  {pointCore(i)}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

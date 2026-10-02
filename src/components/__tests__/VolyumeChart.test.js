@@ -339,3 +339,107 @@ describe('AX-02: adjustable chart, accessibilityValue and "View data" list', () 
     expect(hidden.length).toBeGreaterThan(0);
   });
 });
+
+// ─── D214 addendum 4 (Body metrics, lane 7): the additive props ───────────────
+// Spec docs/audit/progress-recovery-consistency-audit-2026-10-01/
+// 04-BODY-METRICS-AUDIT-AND-SPEC.md section 3 item 4 (the smoothed line over the
+// weigh-ins as faint dots, points spaced by TIME, a fitted axis, weekly ticks,
+// no "View data" button, ONE spoken summary). Every prop defaults to the
+// behaviour the other hosts (the lift charts, the volume trend) already have.
+describe('D214 addendum 4: time-spaced points, a dots series, ticks, round rules', () => {
+  const DAY = 86400000;
+  const T0 = new Date(2026, 8, 1, 12).getTime();
+  // a gap in the log: day 0, day 1, day 2, then day 12
+  const DATA = [0, 1, 2, 12].map((d, i) => ({ value: 82 + i * 0.1, t: T0 + d * DAY, label: i === 0 ? '1 Sep' : '' }));
+  const DOTS = [0, 1, 2, 12].map((d, i) => ({ value: 82.2 - i * 0.05, t: T0 + d * DAY }));
+  const WIDTH = 300;
+  const HEIGHT = 160;
+
+  const pathOf = (tree) => tree.root.findAllByType('Path').filter((p) => p.props.fill === 'none');
+
+  test('points that all carry `t` are spaced by time, so a gap reads as a gap', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} curved={false} sections={3} min={81.8} max={82.6} />);
+    const d = pathOf(tree)[pathOf(tree).length - 1].props.d; // the main line is drawn last
+    const xs = [...d.matchAll(/[ML]([\d.]+) /g)].map((m) => Number(m[1]));
+    expect(xs).toHaveLength(4);
+    const span = xs[3] - xs[0];
+    // days 0,1,2 sit in the first sixth of the width (2 of 12 days), not a third each
+    expect((xs[2] - xs[0]) / span).toBeCloseTo(2 / 12, 2);
+    expect((xs[1] - xs[0]) / span).toBeCloseTo(1 / 12, 2);
+  });
+
+  test('without `t` on every point the spacing is the count spacing every other host has', () => {
+    const plain = DATA.map(({ value }) => ({ value }));
+    const tree = create(<VolyumeChart data={plain} width={WIDTH} height={HEIGHT} curved={false} sections={3} min={81.8} max={82.6} />);
+    const d = pathOf(tree)[pathOf(tree).length - 1].props.d;
+    const xs = [...d.matchAll(/[ML]([\d.]+) /g)].map((m) => Number(m[1]));
+    expect((xs[1] - xs[0]) / (xs[3] - xs[0])).toBeCloseTo(1 / 3, 2);
+    // a series where only some points carry `t` falls back too
+    const mixed = DATA.map((d2, i) => (i === 2 ? { value: d2.value } : d2));
+    const t2 = create(<VolyumeChart data={mixed} width={WIDTH} height={HEIGHT} curved={false} min={81.8} max={82.6} />);
+    const d2 = pathOf(t2)[pathOf(t2).length - 1].props.d;
+    const xs2 = [...d2.matchAll(/[ML]([\d.]+) /g)].map((m) => Number(m[1]));
+    expect((xs2[1] - xs2[0]) / (xs2[3] - xs2[0])).toBeCloseTo(1 / 3, 2);
+  });
+
+  test('`dots2` draws the second series as dots in its own colour and draws no second line', () => {
+    const tree = create(
+      <VolyumeChart data={DATA} data2={DOTS} dots2 color="#111111" color2="#999999" width={WIDTH} height={HEIGHT} curved={false} min={81.8} max={82.6} />,
+    );
+    const dots = tree.root.findAllByType('Circle').filter((c) => c.props.fill === '#999999');
+    expect(dots).toHaveLength(4);
+    expect(dots.every((c) => c.props.r === 2.5)).toBe(true);
+    // one line only (the main series): the faint line variant is not drawn
+    expect(pathOf(tree).filter((p) => p.props.stroke === '#999999')).toHaveLength(0);
+    expect(pathOf(tree).filter((p) => p.props.stroke === '#111111')).toHaveLength(1);
+    // the dots share the time axis with the line
+    const lineXs = [...pathOf(tree)[0].props.d.matchAll(/[ML]([\d.]+) /g)].map((m) => Number(m[1]));
+    expect(dots.map((c) => c.props.cx)).toEqual(lineXs);
+  });
+
+  test('without `dots2` the second series is the faint line it always was', () => {
+    const tree = create(<VolyumeChart data={DATA} data2={DOTS} color="#111111" color2="#999999" width={WIDTH} height={HEIGHT} curved={false} />);
+    expect(pathOf(tree).filter((p) => p.props.stroke === '#999999')).toHaveLength(1);
+    expect(tree.root.findAllByType('Circle').filter((c) => c.props.fill === '#999999')).toHaveLength(0);
+  });
+
+  test('`xTicks` draws small baseline ticks inside the data\'s time range only', () => {
+    const ticks = [T0 - DAY, T0 + 5 * DAY, T0 + 8 * DAY, T0 + 40 * DAY];
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} xTicks={ticks} />);
+    const lines = tree.root.findAllByType('Line').filter((l) => l.props.y2 - l.props.y1 === 3);
+    expect(lines).toHaveLength(2);
+    const none = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} />);
+    expect(none.root.findAllByType('Line').filter((l) => l.props.y2 - l.props.y1 === 3)).toHaveLength(0);
+  });
+
+  test('`yTicks` puts the rules at the host\'s round values inside the domain, labelled', () => {
+    const tree = create(
+      <VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} min={81.9} max={82.7} sections={3} yTicks={[82, 82.2, 82.4, 82.6, 99]} yAxisSuffix=" kg" />,
+    );
+    const labels = tree.root.findAllByType('Text').map((t) => t.props.children).filter((c) => typeof c === 'string' && c.endsWith(' kg'));
+    expect(labels).toEqual(['82 kg', '82.2 kg', '82.4 kg', '82.6 kg']); // 99 is outside the domain
+    // without yTicks: the evenly spaced default (sections + 1 rules)
+    const dflt = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} min={81.9} max={82.7} sections={3} yAxisSuffix=" kg" />);
+    expect(dflt.root.findAllByType('Text').map((t) => t.props.children).filter((c) => typeof c === 'string' && c.endsWith(' kg'))).toHaveLength(4);
+  });
+
+  test('`yAxisWidth` widens the label gutter; the default is the 34 every host has', () => {
+    const wide = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} min={81.9} max={82.7} sections={3} yAxisWidth={48} />);
+    const base = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} min={81.9} max={82.7} sections={3} />);
+    const firstRuleX1 = (t) => t.root.findAllByType('Line').find((l) => l.props.strokeDasharray === '3 4').props.x1;
+    expect(firstRuleX1(base)).toBe(34);
+    expect(firstRuleX1(wide)).toBe(48);
+  });
+
+  test('`showViewData={false}` drops the button; the chart still speaks ONE summary (AX-02)', () => {
+    const Button = require('../Button').default;
+    const summary = 'Trend, last 3 months. 4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg.';
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} showViewData={false} accessibilityLabel={summary} />);
+    expect(tree.root.findAllByType(Button)).toHaveLength(0);
+    const chart = tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable')[0];
+    expect(chart.props.accessibilityLabel).toBe(summary);
+    // by default the other hosts keep their button
+    const dflt = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="x" />);
+    expect(dflt.root.findAllByType(Button)).toHaveLength(1);
+  });
+});

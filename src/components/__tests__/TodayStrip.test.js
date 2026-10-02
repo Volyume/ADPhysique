@@ -10,6 +10,8 @@ import path from 'path';
 
 jest.mock('../../lib/database', () => ({}));
 jest.mock('../Sparkline', () => 'Sparkline');
+// D214 addendum 4: the quick entry's plausibility prompt goes through appAlert.
+jest.mock('../AppAlert', () => ({ appAlert: jest.fn() }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
   notificationAsync: jest.fn(() => Promise.resolve()),
@@ -19,6 +21,7 @@ jest.mock('expo-haptics', () => ({
 }));
 
 import TodayStrip from '../TodayStrip';
+import { appAlert } from '../AppAlert';
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'TodayStrip.js'), 'utf8');
 
@@ -158,5 +161,133 @@ describe('weight-only top slot', () => {
     expect(txt).not.toContain('STEPS');
     expect(findByLabel(tree, 'Log cardio')).toBeFalsy();
     expect(findByLabel(tree, 'Log food')).toBeFalsy();
+  });
+});
+
+// ─── D214 addendum 4 (Body metrics, lane 7): the quick entry's floor and plausibility prompt ──────
+// Spec docs/audit/progress-recovery-consistency-audit-2026-10-01/
+// 04-BODY-METRICS-AUDIT-AND-SPEC.md section 3 item 3: "the same check on Home's
+// quick entry, which also gains the form's 20 kg floor" (BM-40: 28.4 kg was
+// accepted, the gate was `0 < kg <= 300`). The strip owns the draft, so the
+// prompt comes BEFORE the draft is cleared: a person who cancels keeps what
+// they typed. TodayStrip.inputFocusStability.test.js still pins that no
+// component is declared inside a render.
+describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () => {
+  async function type(tree, value) {
+    act(() => findByLabel(tree, 'Log morning weight').props.onPress());
+    const input = tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
+    act(() => input.props.onChangeText(value));
+    return input;
+  }
+  const submit = (tree) => act(() => findByLabel(tree, 'Log morning weight').props.onPress());
+
+  test('the form\'s floor: under 20 kg is not logged, 20 kg is', async () => {
+    const onLogWeight = jest.fn();
+    const tree = await render({ todayWeight: null, onLogWeight });
+    await type(tree, '19.9');
+    submit(tree);
+    expect(onLogWeight).not.toHaveBeenCalled();
+    expect(appAlert).not.toHaveBeenCalled();
+    const input = tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
+    act(() => input.props.onChangeText('20'));
+    submit(tree);
+    expect(onLogWeight).toHaveBeenCalledWith(20);
+  });
+
+  test('a weight 54 kg from the last weigh-in asks first, in the spec\'s words, and logs nothing yet', async () => {
+    const onLogWeight = jest.fn();
+    const tree = await render({ todayWeight: null, onLogWeight, lastWeighInKg: 82.4 });
+    await type(tree, '28.4');
+    submit(tree);
+    expect(onLogWeight).not.toHaveBeenCalled();
+    expect(appAlert).toHaveBeenCalledTimes(1);
+    const [title, message, buttons] = appAlert.mock.calls[0];
+    expect(title).toBe('Check this weigh-in');
+    expect(message).toBe('That is 54 kg below your last weigh-in of 82.4 kg. Save it anyway?');
+    expect(buttons.map((b) => b.text)).toEqual(['Change it', 'Save anyway']);
+    expect(buttons[0].style).toBe('cancel');
+    // the draft is still in the field: the person can change it
+    const input = tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
+    expect(input.props.value).toBe('28.4');
+    // "Save anyway" logs what was typed
+    act(() => buttons[1].onPress());
+    expect(onLogWeight).toHaveBeenCalledWith(28.4);
+  });
+
+  test('"Change it" logs nothing and keeps the draft', async () => {
+    const onLogWeight = jest.fn();
+    const tree = await render({ todayWeight: null, onLogWeight, lastWeighInKg: 82.4 });
+    await type(tree, '90');
+    submit(tree);
+    const [, , buttons] = appAlert.mock.calls[0];
+    expect(appAlert.mock.calls[0][1]).toBe('That is 7.6 kg above your last weigh-in of 82.4 kg. Save it anyway?');
+    act(() => buttons[0].onPress?.());
+    expect(onLogWeight).not.toHaveBeenCalled();
+  });
+
+  test('a plausible weight, or no last weigh-in, or only a prefill, never asks', async () => {
+    const a = jest.fn();
+    let tree = await render({ todayWeight: null, onLogWeight: a, lastWeighInKg: 82.4 });
+    await type(tree, '82.9');
+    submit(tree);
+    expect(a).toHaveBeenCalledWith(82.9);
+    act(() => { tree.unmount(); lastTree = null; });
+
+    const b = jest.fn();
+    tree = await render({ todayWeight: null, onLogWeight: b, lastWeighInKg: null });
+    await type(tree, '60');
+    submit(tree);
+    expect(b).toHaveBeenCalledWith(60);
+    act(() => { tree.unmount(); lastTree = null; });
+
+    // lastWeightKg alone is the prefill (it may be the profile's setup weight): it never calls itself "your last weigh-in"
+    const c = jest.fn();
+    tree = await render({ todayWeight: null, onLogWeight: c, lastWeightKg: 82.4 });
+    await type(tree, '60');
+    submit(tree);
+    expect(c).toHaveBeenCalledWith(60);
+    expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('a stone reader reads stones and pounds in the sentence', async () => {
+    const tree = await render({ bwu: 'st', todayWeight: null, lastWeighInKg: 82.4 });
+    act(() => findByLabel(tree, 'Log morning weight').props.onPress());
+    const st = tree.root.findAll((n) => n.props.accessibilityLabel === 'Morning weight in stones' && typeof n.props.onChangeText === 'function')[0];
+    const lbs = tree.root.findAll((n) => n.props.accessibilityLabel === 'Morning weight remaining pounds' && typeof n.props.onChangeText === 'function')[0];
+    act(() => st.props.onChangeText('9'));
+    act(() => lbs.props.onChangeText('0'));
+    submit(tree);
+    expect(appAlert.mock.calls[0][1]).toBe('That is 3 st 13.5 lbs below your last weigh-in of 12 st 13.5 lbs. Save it anyway?');
+  });
+
+  test('Home\'s handler holds the same floor, and hands the strip the last REAL weigh-in only', () => {
+    const home = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
+    expect(home).toMatch(/import \{ BODY_WEIGHT_MIN_KG \} from '\.\.\/lib\/bodyMetricValidate';/);
+    expect(home).toMatch(/weightKg < BODY_WEIGHT_MIN_KG \|\| weightKg > 300\) return;/);
+    expect(home).toMatch(/lastWeighInKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : null\}/);
+    // the prefill keeps its own prop; the profile's setup weight is never "your last weigh-in"
+    expect(home).toMatch(/lastWeightKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : \(userProfile\?\.weightKg \?\? null\)\}/);
+  });
+
+  test('the strip shares the rule and the floor with the form, from the one module', () => {
+    expect(SOURCE).toMatch(/import \{ BODY_WEIGHT_MIN_KG, weighInPlausibility, plausibilityMessage \} from '\.\.\/lib\/bodyMetricValidate';/);
+    expect(SOURCE).toMatch(/kg < BODY_WEIGHT_MIN_KG \|\| kg > 300/);
+    expect(SOURCE).toMatch(/weighInPlausibility\(kg, lastWeighInKg\)\.implausible/);
+  });
+});
+
+// D214 addendum 7 (lane 7 open question 14): under Home's own withhold the
+// strip passes withholdFigures, and the shared sentence then names no figure.
+describe('TodayStrip plausibility prompt under a withhold', () => {
+  const { plausibilityMessage: msg } = require('../../lib/bodyMetricValidate');
+  test('the withheld sentence carries no digit', () => {
+    expect(msg({ kg: 28.4, lastKg: 82.4, bwu: 'st', withholdFigures: true })).not.toMatch(/\d/);
+  });
+  test('the strip forwards withholdFigures into the prompt (source)', () => {
+    const fs2 = require('fs'); const path2 = require('path');
+    const src = fs2.readFileSync(path2.join(__dirname, '..', 'TodayStrip.js'), 'utf8');
+    expect(src).toMatch(/plausibilityMessage\(\{ kg, lastKg: lastWeighInKg, bwu, withholdFigures \}\)/);
+    const home = fs2.readFileSync(path2.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
+    expect(home).toMatch(/withholdFigures=\{!!firstReviewFacts\?\.edFlagOpen\}/);
   });
 });

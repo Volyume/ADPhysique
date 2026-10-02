@@ -37,10 +37,20 @@ export function createBodyMetricsRepository({
   // the coach's weight trend and the rapid-loss safety gate see every
   // weigh-in the user makes. logMorningWeight upserts per LOCAL DAY and
   // fires its own cloud push, so same-day entries merge instead of
-  // duplicating. Deleting a body-metric entry deliberately does NOT
-  // retract the day's morning weight: the safety gate keeps its data
-  // (fail-safe direction), and the user may have logged that day on Today
-  // independently.
+  // duplicating.
+  //
+  // THE DELETE CONTRACT (D214 addendum 4, BM-2; deliberately changed):
+  // this repository's deleteBodyMetric still tombstones ONLY the
+  // body_metric_log row, and still never reaches into morning_weights. It
+  // used to be the whole of "delete an entry", and the day's morning weight
+  // stayed behind, so the screen's "Entry deleted." was followed by the same
+  // day, the same weight, back in the history (the merge re-listed it).
+  // Body metrics now retracts the day's weigh-in itself, in the open: the
+  // screen tombstones the log row here AND the day's morning_weights row
+  // through database.deleteMorningWeightById, and its confirm says exactly
+  // that ("This removes the weigh-in from your history and your trend.").
+  // The retraction is the caller's, never a side effect of this function, so
+  // no other caller of deleteBodyMetric changes behaviour.
   logMorningWeight = null,
 }) {
   async function writeThroughMorningWeight(userId, data, fallbackMs) {
@@ -84,13 +94,30 @@ export function createBodyMetricsRepository({
   // weigh-ins" as this function's output. The per-table sync push (which must
   // still see soft-deleted rows so a delete propagates as a tombstone to the
   // cloud, mirroring the recipes/food pattern) passes includeDeleted: true.
-  async function getBodyMetricLog(userId, limitRows = 90, { includeDeleted = false } = {}) {
+  //
+  // D214 addendum 4 (BM-5, lane 7): a DATE-RANGE read and a page offset. The
+  // Body metrics screen used to judge "All N weeks" and its 6-month and
+  // 1-year windows against the newest fifty rows; it now asks for the range
+  // it shows: `sinceMs` (inclusive) and `untilMs` (exclusive) bound
+  // `logged_at`, and `offset` pages through a range newest-first. A call with
+  // none of them is the read it always was, byte for byte. (database.js hands
+  // `options` through untouched, so these reach the screen by that route.)
+  async function getBodyMetricLog(userId, limitRows = 90, {
+    includeDeleted = false, sinceMs = null, untilMs = null, offset = 0,
+  } = {}) {
     const d = await db();
+    const params = [userId];
+    let range = '';
+    if (Number.isFinite(sinceMs)) { range += ' AND logged_at >= ?'; params.push(sinceMs); }
+    if (Number.isFinite(untilMs)) { range += ' AND logged_at < ?'; params.push(untilMs); }
+    params.push(limitRows);
+    let page = '';
+    if (Number.isFinite(offset) && offset > 0) { page = ' OFFSET ?'; params.push(offset); }
     const rows = await d.getAllAsync(
       `SELECT * FROM body_metric_log
-        WHERE user_id = ?${includeDeleted ? '' : ' AND deleted_at IS NULL'}
-        ORDER BY logged_at DESC LIMIT ?`,
-      [userId, limitRows],
+        WHERE user_id = ?${includeDeleted ? '' : ' AND deleted_at IS NULL'}${range}
+        ORDER BY logged_at DESC LIMIT ?${page}`,
+      params,
     );
     return rows.map(rowToCamel);
   }

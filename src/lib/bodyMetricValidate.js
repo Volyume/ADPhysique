@@ -20,7 +20,9 @@
 // Comma-decimal tolerance on typed input (pre-release sweep 2026-07-27, B1).
 import { parseDecimalInput } from './parseDecimalInput';
 
-import { stoneLbsToKg, parseBodyWeightToKg } from './units';
+import { stoneLbsToKg, parseBodyWeightToKg, formatBodyWeight } from './units';
+import { formatWeightAmount } from './bodyMetricsDisplay';
+import { localDayKey } from './dayKey';
 // A7 (pre-release sweep 2026-07-27): explicit calendar-validity check for the
 // freeform metric_date field, shared with ProGoalSetupScreen's show date.
 import { isValidCalendarDateString, parseCalendarDateString, INVALID_CALENDAR_DATE_MESSAGE } from './calendarDateValidate';
@@ -32,6 +34,69 @@ export const BODY_FAT_MIN_PCT = 1;
 export const BODY_FAT_MAX_PCT = 80;
 export const CIRCUMFERENCE_MIN_CM = 1;
 export const CIRCUMFERENCE_MAX_CM = 300;
+
+// D214 addendum 4 (Body metrics, lane 7; spec docs/audit/
+// progress-recovery-consistency-audit-2026-10-01/
+// 04-BODY-METRICS-AUDIT-AND-SPEC.md section 3 item 3): a weigh-in is for today
+// or an earlier day, never a later one (BM-40: a date in 2027 was accepted and
+// became the "newest" entry, the hero and the Progress card's 14-day test).
+export const FUTURE_DATE_MESSAGE = 'That date is in the future. A weigh-in can only be logged for today or an earlier day.';
+
+// The body-fat methods the person can name, the same four the setup wizard
+// offers (ProOnboardingScreen BODY_FAT_SOURCE_OPTIONS) and the same values the
+// engine reads (nutritionEngine isBaselineBodyFatSource /
+// isAuthoritativeBodyFatSource). `coachGlossary.bodyFatMethod` explains them.
+export const BODY_FAT_METHODS = Object.freeze([
+  { value: 'visual', label: 'Best estimate' },
+  { value: 'bia', label: 'BIA' },
+  { value: 'caliper', label: 'Caliper' },
+  { value: 'dexa', label: 'DEXA' },
+]);
+export const DEFAULT_BODY_FAT_METHOD = 'visual';
+// FOUNDER-GATED (D214 addendum 7, lane 7 open question 1; CLAUDE.md section 2,
+// the FFM energy floor): storing a measured method (DEXA, caliper, BIA) from
+// this form moves the person's FFM floor to their typed figure through
+// nutritionEngine.computeFFMFloor, exactly as the setup wizard's choice does,
+// where the old form always stored 'manual' (the sex-based fallback floor).
+// The method row is asked, and stored, only once the founder confirms; until
+// then the form keeps today's engine behaviour and stores 'manual'.
+export const BODY_FAT_METHOD_CHOICE = false;
+
+// The plausibility rule (spec section 3 item 3): a typed weigh-in more than 5%
+// or 5 kg from the last one is asked about before it is saved. Whichever
+// bound is smaller applies, so for anyone under 100 kg it is the 5% bound.
+export const PLAUSIBILITY_FRACTION = 0.05;
+export const PLAUSIBILITY_KG = 5;
+
+/**
+ * Is a typed weigh-in far enough from the last one to ask about?
+ * @param {number} kg      the typed weight in kg
+ * @param {?number} lastKg the last weigh-in in kg, or null when there is none
+ * @returns {{ implausible: boolean, diffKg: number }} diffKg = kg - lastKg
+ */
+export function weighInPlausibility(kg, lastKg) {
+  const k = Number(kg);
+  const last = Number(lastKg);
+  if (!Number.isFinite(k) || !Number.isFinite(last) || last <= 0) return { implausible: false, diffKg: 0 };
+  const diffKg = k - last;
+  const bound = Math.min(PLAUSIBILITY_KG, PLAUSIBILITY_FRACTION * last);
+  return { implausible: Math.abs(diffKg) > bound, diffKg };
+}
+
+/**
+ * The one sentence the plausibility prompt carries, in the person's units
+ * (Body metrics' form and Home's quick entry share it).
+ * @returns {string} e.g. "That is 54 kg below your last weigh-in of 82.4 kg. Save it anyway?"
+ */
+export function plausibilityMessage({ kg, lastKg, bwu, withholdFigures = false }) {
+  // Under an open flag or calm mode (D214 addendum 7, lane 7 open question
+  // 14) the prompt still guards the series against a typo, but carries no
+  // figure and no direction: a withhold strengthened, never weakened.
+  if (withholdFigures) return 'That is a long way from your last weigh-in. Save it anyway?';
+  const diff = Number(kg) - Number(lastKg);
+  const relation = diff < 0 ? 'below' : 'above';
+  return `That is ${formatWeightAmount(Math.abs(diff), bwu)} ${relation} your last weigh-in of ${formatBodyWeight(lastKg, bwu)}. Save it anyway?`;
+}
 
 // Body weight in kg: finite, positive, within a realistic human range.
 export function isValidBodyWeightKg(kg) {
@@ -77,7 +142,7 @@ export const CIRCUMFERENCE_FIELDS = [
  * non-finite, non-positive or outside a realistic range fails the whole save,
  * so an impossible figure is never stored.
  */
-export function validateBodyMetricForm(form, { bwu } = {}) {
+export function validateBodyMetricForm(form, { bwu, nowMs = Date.now() } = {}) {
   const f = form || {};
   const data = { notes: f.notes || null };
 
@@ -94,9 +159,16 @@ export function validateBodyMetricForm(form, { bwu } = {}) {
     if (!isValidCalendarDateString(trimmedDate)) {
       return { ok: false, message: INVALID_CALENDAR_DATE_MESSAGE };
     }
-    data.loggedAt = parseCalendarDateString(trimmedDate);
+    // D214 addendum 4: no future dates. 'YYYY-MM-DD' compares correctly as a
+    // string once the calendar check above has passed.
+    const todayKey = localDayKey(nowMs);
+    if (trimmedDate > todayKey) return { ok: false, message: FUTURE_DATE_MESSAGE };
+    // An entry for today carries the time it was made (the replace notice
+    // names the earlier weigh-in's time); an earlier day is dated at its
+    // local midnight, as before.
+    data.loggedAt = trimmedDate === todayKey ? nowMs : parseCalendarDateString(trimmedDate);
   } else {
-    data.loggedAt = Date.now();
+    data.loggedAt = nowMs;
   }
 
   let hasValidField = false;
@@ -122,7 +194,11 @@ export function validateBodyMetricForm(form, { bwu } = {}) {
       return { ok: false, message: 'That body fat looks off. Enter a percentage between 1 and 80.' };
     }
     data.bodyFatPercent = Math.round(bf * 10) / 10;
-    data.bodyFatSource = 'manual';
+    // D214 addendum 4: the method the person named (the form asks); 'manual'
+    // stays the value for a caller that names none.
+    data.bodyFatSource = BODY_FAT_METHOD_CHOICE && BODY_FAT_METHODS.some((m) => m.value === f.body_fat_source)
+      ? f.body_fat_source
+      : 'manual';
     hasValidField = true;
   }
 

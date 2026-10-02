@@ -14,7 +14,7 @@ const {
 } = require('../bodyMetricsPolicy');
 
 const ALL = [
-  'trendWeight', 'verdict', 'weekComparison', 'noiseLine', 'actions', 'chart', 'takeaway',
+  'trendWeight', 'morningsCount', 'verdict', 'weekComparison', 'noiseLine', 'actions', 'chart', 'takeaway',
   'maintenance', 'intake', 'recomposition', 'measurements', 'measurementChange', 'history',
 ];
 const OWN = ['trendWeight', 'actions', 'chart', 'measurements', 'history'];

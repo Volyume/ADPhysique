@@ -59,6 +59,9 @@ import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
+// D214 addendum 4 (Body metrics, lane 7): the quick weigh-in shares the Body
+// metrics form's 20 kg floor (it had none) and its plausibility rule.
+import { BODY_WEIGHT_MIN_KG } from '../lib/bodyMetricValidate';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
@@ -1019,7 +1022,8 @@ export default function HomeScreen({ navigation, route }) {
   // value here. HomeScreen stays the weight-data owner (it reloads on focus and
   // feeds the coach) and does the optimistic write.
   async function handleLogWeight(weightKg) {
-    if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
+    // D214 addendum 4: the form's own floor (BODY_WEIGHT_MIN_KG), not just "above zero".
+    if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > 300) return;
     // Optimistic: show the logged weight immediately. SQLite write happens in
     // the background. On failure, revert.
     const previousTodayWeight = todayWeight;
@@ -2588,6 +2592,12 @@ export default function HomeScreen({ navigation, route }) {
             bwu={bwu}
             todayWeight={todayWeight}
             lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            // D214 addendum 4: the plausibility prompt reads the last REAL
+            // weigh-in only, never the profile's setup weight.
+            lastWeighInKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : null}
+            // Under Home's own ED withhold (an open flag, a SCOFF score of 2
+            // or more, a failed read or calm mode) the prompt names no figure.
+            withholdFigures={!!firstReviewFacts?.edFlagOpen}
             savingWeight={savingWeight}
             onLogWeight={handleLogWeight}
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links

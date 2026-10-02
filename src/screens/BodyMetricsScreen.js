@@ -1,3 +1,30 @@
+/**
+ * BodyMetricsScreen: the weigh-ins, the trend and what changed this week.
+ *
+ * Rebuilt under D214 addendum 4 (Body metrics, lane 7; the spec is
+ * docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 04-BODY-METRICS-AUDIT-AND-SPEC.md section 3, the findings are
+ * 05-R3-BODY-METRICS-READ.md BM-1 to BM-51). The screen answers one question,
+ * "Is my weight doing what the plan wants, and what changed this week?", in
+ * this order: This week (the trend weight, the verdict, this week against
+ * last, the usual day-to-day swing), the actions, the Trend card, Calories
+ * that hold your weight, Recomposition, Body fat and measurements, History,
+ * then the doors (photos, units).
+ *
+ * Withholds. Every withhold on this screen is `policy.show.<section>`, the
+ * one pure rule in src/lib/bodyMetricsPolicy.js (ED-A, ED-B, ED-C, ED-E):
+ * nothing below the header renders until BOTH safety reads have returned,
+ * under an open flag or calm mode every direction word, rate, weekly
+ * comparison, swing line, takeaway, maintenance figure, intake line,
+ * recomposition card and measurement change line is withheld while the
+ * person's own entries stay, and `policy.line` stands in the verdict's slot.
+ * The screen never writes a gate of its own; the calm interstitial below
+ * ("A gentle pause", once a session) is the existing mechanism and stays.
+ *
+ * One trend weight: it is the Progress root's reading (the hook's own
+ * windowing, `trendWindowRows`, through the SAME deriveWeightTrend), so the
+ * two screens print the same figure for the same person.
+ */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
@@ -5,81 +32,89 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
-import { parseISO } from 'date-fns/parseISO';
-
-// date-fns format() throws "Invalid time value" if given an Invalid Date.
-// Body-metric rows pulled from older cloud snapshots occasionally have a
-// missing or malformed metric_date, which used to take the whole screen
-// down. Guard at the call site rather than letting one bad row crash a
-// histogram of 30 good ones.
-function safeFormatDate(value, fmt) {
-  try {
-    if (!value) return '';
-    const d = typeof value === 'string' ? parseISO(value) : new Date(value);
-    if (!d || isNaN(d.getTime())) return '';
-    return format(d, fmt);
-  } catch (_) {
-    return '';
-  }
-}
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useShallow } from 'zustand/react/shallow';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import VolyumeChart from '../components/VolyumeChart';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
-import { GLOSSARY } from '../lib/coachGlossary';
-import { useToast } from '../components/Toast';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
-import useTheme from '../hooks/useTheme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById, deleteMorningWeightById, getUserBodyProfile } from '../lib/database';
-import { appAlert } from '../components/AppAlert';
-import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
-import { localDayKey } from '../lib/dayKey';
-import WindowChips from '../components/WindowChips';
+import LegendRow from '../components/LegendRow';
+import { NavRow, NavGroup } from '../components/NavRow';
+import Chip from '../components/Chip';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
-import EmptyState from '../components/EmptyState';
+import SegmentedControl from '../components/SegmentedControl';
+import PhotoDatePicker from '../components/PhotoDatePicker';
 import { SkeletonCard } from '../components/Skeleton';
+import { appAlert } from '../components/AppAlert';
+import { useToast } from '../components/Toast';
+import { GLOSSARY } from '../lib/coachGlossary';
+import { spacing, radius, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
+import useTheme from '../hooks/useTheme';
+import useAppStore from '../store/useAppStore';
 import {
-  TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
-  pickInitialWindowKey, weightTakeaway,
+  logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights,
+  getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById,
+  deleteMorningWeightById, logMorningWeight, getNutritionTargets, getLatestCoachOutput,
+} from '../lib/database';
+import { logError } from '../lib/errorLog';
+import { deriveRecomp, buildRecompShareParams, recompLines } from '../lib/recompReframe';
+import { localDayKey, localWeekStartMs } from '../lib/dayKey';
+import {
+  WEIGHT_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, pickInitialWindowKey, weightTakeaway,
 } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { syncAll } from '../lib/sync';
-import { computeEWMA, ewmaValues, computeWeeklyWeightChange } from '../lib/nutritionEngine';
+import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
-import { robustValues } from '../lib/robustTrend';
-import useAppStore from '../store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
-import { toEnergy, energyUnitLabel } from '../lib/format';
-import { formatBodyWeight, formatBodyWeightShort, formatBodyWeightRate, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
-import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
-// WAVE-D-FINDINGS.md item 1 (lead ruling, D33/D98-2 precedent): the rate/
-// maintenance suppression under an open ED-pattern flag must be decided by
-// the SAME shared derivation the Progress root's "Your trend" card uses
-// (deriveWeightTrend, weightTrend.js), never a hand-rolled parallel branch.
-import { deriveWeightTrend } from '../lib/weightTrend';
-// A1/A2 (progress-tab audit 2026-09-24, second pass): dependency-free pure
-// helpers (see the module header there for the two defects each fixes).
+import { readMaintenanceInputs } from '../lib/maintenanceInputs';
+import { formatBodyWeight, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
+import { WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
+import { bodyMetricsPolicy } from '../lib/bodyMetricsPolicy';
+// The shared derivation (the Progress root's own), so the verdict, the
+// two-week reading and the steady rule are one definition on both screens.
 import {
-  weightChartUnitLabel, weightChartValue, weightChartTooltipTitle, weightSnapshotDateLabel,
+  deriveWeightTrend, twoWeekTrend, typicalDailySwingKg, coachVerdictInsight, lapsedInsight,
+} from '../lib/weightTrend';
+import {
+  weightChartUnitLabel, weightChartValue, weightChartTooltipTitle,
+  formatWeightAmount, formatWeightRatePerWeek, shortDate, weekdayDate,
+  morningsCaption, twoWeekVerdictLine, notEnoughForDirectionLine, weekComparisonLine, noiseLine,
+  TREND_WEIGHT_INFO, DAY_ZERO_LINE, startingWeightLine, lastWeighInCaption, coachVerdictFromOutput,
+  trendTitle, chartUnitNote, trendInfo, fittedAxis, weeklyTickTimes, niceAxisTicks, axisGutterWidth,
+  MAINTENANCE_TITLE, MAINTENANCE_INFO, maintenanceModel, intakeLine,
+  weekGroupHeader, noteForDisplay, historyRowTitle, historyRowDetail, replaceNotice,
+  BODY_FAT_METHOD_LABELS, readingChangeLine, MEASURE_HOW_INFO,
 } from '../lib/bodyMetricsDisplay';
-import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
-import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
+import {
+  validateBodyMetricForm, weighInPlausibility, plausibilityMessage,
+  BODY_FAT_METHODS, DEFAULT_BODY_FAT_METHOD, BODY_FAT_METHOD_CHOICE, CIRCUMFERENCE_FIELDS,
+} from '../lib/bodyMetricValidate';
+import {
+  logRowToEntry, buildDayEntries, weighInsOf, weekAverage, previousWeekStart, morningsThisWeek,
+  groupEntriesByWeek, readingsOf, hasEntryBefore, trendWindowRows, plausibilityReference,
+  noonOfDay, HISTORY_PAGE_WEEKS, CHART_RANGE_DAYS, READING_FIELDS, ENROLMENT_NOTE,
+} from '../lib/bodyMetricsHistoryMerge';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
-import { touchTarget } from '../styles/layout';
 
-const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
+const NUTRITION_KEY = '@volyume_nutrition_targets';
+// COMP-019: per-chart window persistence.
+const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
+const DAY_MS = 86400000;
+// The reads are bounded by date, with a row cap far above anything a person
+// logs (one weigh-in a day for fifteen years is under 6,000 rows).
+const LOG_CAP = 6000;
+const MORNING_CAP = 6000;
 
 // Resets when the app process restarts → "re-confirmation each session".
 let bodyMetricsSessionConfirmed = false;
 
-// form key  →  logBodyMetric() data field
+// form key  →  logBodyMetric() data field (the legacy AsyncStorage migration)
 const FIELD_MAP = {
   body_weight: 'weightKg',
   chest:       'chestCm',
@@ -93,51 +128,10 @@ const FIELD_MAP = {
   calves:      'calfCm',
 };
 
-function rowToEntry(row) {
-  return {
-    id: row.id,
-    // TZ-1: local calendar day, matching morning-weight buckets.
-    metric_date: localDayKey(new Date(row.loggedAt ?? row.createdAt ?? Date.now()).getTime()),
-    body_weight: row.weightKg ?? null,
-    body_fat:    row.bodyFatPercent ?? null,
-    chest:       row.chestCm ?? null,
-    shoulders:   row.shouldersCm ?? null,
-    arms:        row.armCm ?? null,
-    forearms:    row.forearmCm ?? null,
-    waist:       row.waistCm ?? null,
-    hips:        row.hipsCm ?? null,
-    quads:       row.thighCm ?? null,
-    hamstrings:  row.hamCm ?? null,
-    calves:      row.calfCm ?? null,
-    notes:       row.notes ?? '',
-    // BUG-WEIGHT-HISTORY (2026-07-11): tags the row's writable table so
-    // edit/delete (which only know how to reach body_metric_log via
-    // updateBodyMetric/deleteBodyMetric) never fire on a merged-in
-    // morning_weights row (see morningWeightToEntry below).
-    source: 'body_metric_log',
-  };
-}
-
-// BUG-WEIGHT-HISTORY (2026-07-11): see src/lib/bodyMetricsHistoryMerge.js for
-// the root-cause note and the merge itself, split into a dependency-free lib
-// module so it's unit-testable without mounting this screen (which pulls in
-// react-native-svg via VolyumeChart).
-
-// D16 (NAV-2): shared blank-form shape, reused for a fresh "New entry" and
-// for closing an in-progress edit (never left holding a stale entry's data).
-function blankMetricForm() {
-  return {
-    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0', body_fat: '',
-    chest: '', shoulders: '', arms: '', forearms: '',
-    waist: '', hips: '', quads: '', hamstrings: '', calves: '',
-    metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
-  };
-}
-
 const MEASUREMENTS = [
   { key: 'chest',       label: 'Chest' },
   { key: 'shoulders',   label: 'Shoulders' },
-  { key: 'arms',        label: 'Arms (flex)' },
+  { key: 'arms',        label: 'Arms (flexed)' },
   { key: 'forearms',    label: 'Forearms' },
   { key: 'waist',       label: 'Waist' },
   { key: 'hips',        label: 'Hips' },
@@ -145,900 +139,718 @@ const MEASUREMENTS = [
   { key: 'hamstrings',  label: 'Hamstrings' },
   { key: 'calves',      label: 'Calves' },
 ];
+const SITE_LABELS = Object.fromEntries(MEASUREMENTS.map((m) => [m.key, m.label]));
 
-const NUTRITION_KEY = '@volyume_nutrition_targets';
-
-// ─── Phase detection ──────────────────────────────────────────────────────────
-
-// CP-10 batch G lane 1 (2026-07-11): accepts the live theme's colour map
-// (t.colors) on the buildVolumeStatusColor(t.colors) precedent -- the
-// weight-trend -> label + tone mapping is byte-identical in meaning, only
-// the token SOURCE moved from the frozen import to the live theme.
-// T23/O8 (comprehension-and-trust audit 2026-08-06): the chip used to
-// regress over the last 8 logged ENTRIES regardless of when they were
-// logged, so a sporadic logger could see a verdict computed from months-old
-// weigh-ins presented as current. Bound the window to the last 42 days
-// (six weeks, matching the tooltip copy below) and require at least 3
-// entries inside that window; otherwise there isn't enough recent signal
-// and the chip stays hidden rather than showing a stale one. The regression
-// method itself (least-squares slope, index-based x within the window) is
-// unchanged.
-const PHASE_WINDOW_DAYS = 42;
-
-function detectPhase(entries, c = colors, now = Date.now()) {
-  // DATA-001: require a real positive weight, not just non-null. A stray 0 kg
-  // or negative row (legacy import artefact) must not skew the slope.
-  const withWeight = entries.filter(e => Number(e.body_weight) > 0);
-  if (withWeight.length < 3) return null;
-
-  const cutoff = now - PHASE_WINDOW_DAYS * 86400000;
-  const recent = withWeight.filter((e) => {
-    const t = new Date(e.metric_date).getTime();
-    return Number.isFinite(t) && t >= cutoff;
-  });
-  if (recent.length < 3) return null;
-
-  // Sorted oldest first within the recent window.
-  const sorted = [...recent]
-    .sort((a, b) => a.metric_date.localeCompare(b.metric_date));
-
-  // Lead review on T23: regress against elapsed DAYS, not entry index. The
-  // old kg-per-entry slope changed meaning with logging density (a daily
-  // logger needed over 1 kg a week of real change to move the ±0.15
-  // per-entry threshold), and bounding the window without fixing that would
-  // have made dense logs read "Maintaining" through genuine trends. kg/day
-  // against a ±0.2 kg/week band is density-independent.
-  const n = sorted.length;
-  const t0 = new Date(sorted[0].metric_date).getTime();
-  const xs = sorted.map((e) => (new Date(e.metric_date).getTime() - t0) / 86400000);
-  const xMean = xs.reduce((s, x) => s + x, 0) / n;
-  const yMean = sorted.reduce((s, e) => s + e.body_weight, 0) / n;
-
-  let num = 0, den = 0;
-  sorted.forEach((e, i) => {
-    num += (xs[i] - xMean) * (e.body_weight - yMean);
-    den += (xs[i] - xMean) ** 2;
-  });
-  const slopePerDay = den === 0 ? 0 : num / den; // kg per day
-  const perWeek = slopePerDay * 7;
-
-  // Class B (docs/rules/styling.md, ED-safety presentation): body-weight
-  // trends are NEVER valence-coloured. The old chip painted Gaining green
-  // and Losing amber; all three directions now wear the same neutral chip
-  // colour, direction is carried by the icon and the word alone.
-  if (perWeek > 0.2)  return { label: 'Gaining',       color: c.primary, icon: 'trending-up' };
-  if (perWeek < -0.2) return { label: 'Losing weight', color: c.primary, icon: 'trending-down' };
-  return { label: 'Maintaining', color: c.primary, icon: 'remove-outline' };
-}
-
-// ─── Weight Trend Chart ───────────────────────────────────────────────────────
-
-// COMP-019: per-chart window persistence.
-const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
-const weightDateOf = (e) => new Date(e.metric_date).getTime();
-
-// CP-10 batch G lane 1 (2026-07-11): WeightTrendChart is a sibling
-// function-component scope (not prop-drilled `live`/`t` from
-// BodyMetricsScreen), so its own useTheme() call is cleaner than threading
-// two extra props through. Same rationale for BodyFatTrendChart and
-// MeasurementTrendChart below; all three share buildChartLiveStyles(t) for
-// the separate chartStyles StyleSheet.
-function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
-  const t = useTheme();
-  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
-  // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
-  // up the correct chart width, matching RestTimer.js's useWindowDimensions
-  // pattern rather than a frozen module-scope Dimensions.get().
-  const { width: windowWidth } = useWindowDimensions();
-  // All weight entries with a usable date, oldest → newest (no count slicing,
-  // COMP-019 windows by date instead).
-  const allWeights = useMemo(() => entries
-    // DATA-001: > 0, not just non-null, so an impossible weight never plots.
-    .filter(e => Number(e.body_weight) > 0 && e.metric_date)
-    .sort((a, b) => a.metric_date.localeCompare(b.metric_date)), [entries]);
-
-  const [windowKey, setWindowKey] = useState(DEFAULT_WINDOW_KEY);
-
-  // On load (and when the dataset size changes), keep the persisted window if it
-  // holds enough points, otherwise widen to the narrowest one that does.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let pref = DEFAULT_WINDOW_KEY;
-      try { const v = await AsyncStorage.getItem(WEIGHT_WINDOW_STORE_KEY); if (v) pref = v; } catch (_) {}
-      if (cancelled) return;
-      setWindowKey(pickInitialWindowKey(allWeights, weightDateOf, TREND_WINDOWS, pref));
-    })();
-    return () => { cancelled = true; };
-  // Re-evaluate only when the dataset size changes (not on every array identity).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allWeights.length]);
-
-  function selectWindow(key) {
-    setWindowKey(key);
-    AsyncStorage.setItem(WEIGHT_WINDOW_STORE_KEY, key).catch(() => {});
-    try { track(userId, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) {}
-  }
-
-  if (allWeights.length < 2) {
-    return (
-      <View style={chartStyles.emptyHint}>
-        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
-          Log weight at least twice to see your trend chart.
-        </Text>
-      </View>
-    );
-  }
-
-  const win = windowByKey(TREND_WINDOWS, windowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
-  const windowed = filterByWindow(allWeights, weightDateOf, win.days);
-  const coversAll = windowed.length === allWeights.length;
-  const chartWidth = windowWidth - spacing.lg * 2 - 32;
-
-  const sparse = windowed.length < 2;
-  const weights = windowed.map(e => e.body_weight);
-  // COMP-024: the displayed weight trend uses the water-weight-robust smoother
-  // (raw dots stay visible beside it). Display-only promotion; coaching
-  // decisions + safety keep the plain EWMA (see weeklyCoach §12 note).
-  const smoothed = sparse ? [] : robustValues(weights);
-  // A1 follow-up (progress-tab audit 2026-09-24, second pass): the takeaway
-  // banner used to always read in kg, unlike the chart's own axis/tooltip
-  // fixed above -- unit and toDisplay now match the chart exactly, so a
-  // pounds user reads the SAME converted figure everywhere on this card.
-  const chartUnit = weightChartUnitLabel(bodyWeightUnits);
-  const takeaway = sparse ? '' : weightTakeaway({
-    windowKey, coversAll, points: windowed, dateOf: weightDateOf,
-    ewma: smoothed, unit: chartUnit, edFlagOpen,
-    toDisplay: (v) => weightChartValue(v, bodyWeightUnits),
-  });
-
-  return (
-    <View>
-      <WindowChips windows={TREND_WINDOWS} selectedKey={windowKey} onSelect={selectWindow}
-        accessibilityPrefix="weight trend window" />
-      {!!takeaway && <Text style={[chartStyles.takeaway, chartLive.takeaway]}>{takeaway}</Text>}
-      {sparse ? (
-        <View style={chartStyles.emptyHint}>
-          <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>Not enough data in this window yet.</Text>
-        </View>
-      ) : (
-        <View style={chartStyles.wrap}>
-          <VolyumeChart
-            data={windowed.map((e, i) => ({
-              value: weightChartValue(e.body_weight, bodyWeightUnits),
-              label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'd MMM') : '',
-            }))}
-            width={chartWidth}
-            height={120}
-            color={t.colors.primary}
-            thickness={2}
-            area
-            curved
-            showDots={windowed.length <= 6}
-            dotRadius={3}
-            yAxisSuffix={` ${chartUnit}`}
-            sections={3}
-            min={Math.floor(Math.min(...weights.map(w => weightChartValue(w, bodyWeightUnits))) - 1)}
-            max={Math.ceil(Math.max(...weights.map(w => weightChartValue(w, bodyWeightUnits))) + 1)}
-            backgroundColor={t.colors.surface}
-            interactive
-            accessibilityLabel="Weight trend chart"
-            formatTooltip={(i) => {
-              const e = windowed[i];
-              if (!e) return null;
-              const trend = smoothed[i];
-              return {
-                title: weightChartTooltipTitle(e.body_weight, bodyWeightUnits),
-                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` - trend ${weightChartValue(trend, bodyWeightUnits).toFixed(1)} ${chartUnit}` : ''}`,
-              };
-            }}
-          />
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Body Fat Trend Chart ─────────────────────────────────────────────────────
-
-function BodyFatTrendChart({ entries }) {
-  const t = useTheme();
-  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
-  const { width: windowWidth } = useWindowDimensions();
-  const withData = useMemo(() => {
-    return entries
-      // DATA-001: > 0, not just non-null (a 0 or negative body fat is corrupt).
-      .filter(e => Number(e.body_fat) > 0)
-      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
-      .slice(-12);
-  }, [entries]);
-
-  if (withData.length < 2) {
-    return (
-      <View style={chartStyles.emptyHint}>
-        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
-          Log body fat at least twice to see the trend.
-        </Text>
-      </View>
-    );
-  }
-
-  const values = withData.map(e => e.body_fat);
-  // Smooth the trend so the line follows the direction, not day-to-day
-  // noise (same EWMA the weight trend uses). The raw readings stay
-  // visible as a faint second line.
-  const smoothed = ewmaValues(values);
-  const allVals = [...values, ...smoothed];
-  const minV = Math.floor(Math.min(...allVals) - 1);
-  const maxV = Math.ceil(Math.max(...allVals) + 1);
-
-  const data = withData.map((e, i) => ({
-    value: smoothed[i],
-    // AX-02 (launch accessibility audit): every point's real date, for the
-    // adjustable accessibilityValue and the "View data" list. Kept separate
-    // from `label` below (still sparse, first/last only) so the visual
-    // x-axis is unchanged.
-    date: safeFormatDate(e.metric_date, 'd MMM'),
-    label: i === 0 || i === withData.length - 1
-      ? safeFormatDate(e.metric_date, 'd MMM')
-      : '',
-  }));
-  const rawData = values.map(v => ({ value: v }));
-
-  const chartWidth = windowWidth - spacing.lg * 2 - 32;
-
-  return (
-    <View style={chartStyles.wrap}>
-      <VolyumeChart
-        data={data}
-        data2={rawData}
-        width={chartWidth}
-        height={100}
-        color={t.colors.primary}
-        color2={withAlpha(t.colors.textMuted, alpha.strong)}
-        thickness={2}
-        thickness2={1}
-        area
-        curved
-        showDots={withData.length <= 6}
-        dotRadius={3}
-        yAxisSuffix=" %"
-        sections={3}
-        min={minV}
-        max={maxV}
-        backgroundColor={t.colors.surface}
-        accessibilitySummary="Body fat trend chart"
-      />
-      <Text style={[chartStyles.smoothedHint, chartLive.smoothedHint]}>Smoothed trend, faint line is each reading</Text>
-    </View>
-  );
-}
-
-// ─── Measurement Trend Chart ──────────────────────────────────────────────────
-
-function MeasurementTrendChart({ entries, measureKey, label }) {
-  const t = useTheme();
-  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
-  const { width: windowWidth } = useWindowDimensions();
-  const withData = useMemo(() => {
-    return entries
-      // DATA-001: > 0, not just non-null, so an impossible measurement is dropped.
-      .filter(e => Number(e[measureKey]) > 0)
-      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
-      .slice(-12);
-  }, [entries, measureKey]);
-
-  if (withData.length < 2) {
-    return (
-      <View style={chartStyles.emptyHint}>
-        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
-          Log {label.toLowerCase()} at least twice to see the trend.
-        </Text>
-      </View>
-    );
-  }
-
-  const values = withData.map(e => e[measureKey]);
-  const minV = Math.floor(Math.min(...values) - 1);
-  const maxV = Math.ceil(Math.max(...values) + 1);
-
-  const data = withData.map((e, i) => ({
-    value: e[measureKey],
-    // AX-02 (launch accessibility audit): every point's real date, for the
-    // adjustable accessibilityValue and the "View data" list; `label` below
-    // stays sparse (first/last only) so the visual x-axis is unchanged.
-    date: safeFormatDate(e.metric_date, 'd MMM'),
-    label: i === 0 || i === withData.length - 1
-      ? safeFormatDate(e.metric_date, 'd MMM')
-      : '',
-  }));
-
-  const chartWidth = windowWidth - spacing.lg * 2 - 32;
-
-  return (
-    <View style={chartStyles.wrap}>
-      <VolyumeChart
-        data={data}
-        width={chartWidth}
-        height={100}
-        color={t.colors.primary}
-        thickness={2}
-        area
-        curved
-        showDots={withData.length <= 6}
-        dotRadius={3}
-        yAxisSuffix=" cm"
-        sections={3}
-        min={minV}
-        max={maxV}
-        backgroundColor={t.colors.surface}
-        accessibilitySummary={`${label} trend chart`}
-      />
-    </View>
-  );
-}
-
-const chartStyles = StyleSheet.create({
-  wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
-  takeaway: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
-  emptyHint: { paddingTop: spacing.md },
-  emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
-});
-
-// CP-10 batch G lane 1 (2026-07-11): the frozen `chartStyles` block above
-// stays byte-identical. This mirrors ONLY the colour/type-bearing sub-
-// properties of the matching frozen style, so the chart sub-components
-// carry no static island under a live theme toggle. emptyHint/wrap (pure
-// layout, no token) are correctly omitted.
-function buildChartLiveStyles(t) {
+// D16 (NAV-2): shared blank-form shape, reused for a fresh entry and for
+// closing an in-progress edit (never left holding a stale entry's data).
+function blankMetricForm(todayKey) {
   return {
-    takeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
-    emptyHintText: { ...t.type.caption, color: t.colors.textMuted },
-    smoothedHint: { ...t.type.caption, color: t.colors.textMuted },
+    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
+    body_fat: '', body_fat_source: DEFAULT_BODY_FAT_METHOD,
+    chest: '', shoulders: '', arms: '', forearms: '',
+    waist: '', hips: '', quads: '', hamstrings: '', calves: '',
+    metric_date: todayKey, notes: '',
   };
 }
+
+// The form for an existing entry, with the weight turned back into the
+// person's own units (mirrors TodayStrip's kg -> st/lb prefill) so editing in
+// stones and pounds never shows a raw kilogram figure. The setup marker is
+// not a note the person wrote, so it is not put in the note field.
+function formFromEntry(entry, bwu, todayKey) {
+  const form = blankMetricForm(todayKey);
+  if (entry.body_weight) {
+    if (bwu === 'st') {
+      const { stoneStr, lbsStr } = kgToStoneLbsStrings(entry.body_weight);
+      form.body_weight_st = stoneStr;
+      form.body_weight_st_lbs = lbsStr;
+    } else if (bwu === 'lbs') {
+      form.body_weight = String(Math.round(kgToLbs(entry.body_weight) * 10) / 10);
+    } else {
+      form.body_weight = String(Math.round(entry.body_weight * 10) / 10);
+    }
+  }
+  if (entry.body_fat != null) {
+    form.body_fat = String(entry.body_fat);
+    form.body_fat_source = BODY_FAT_METHODS.some((m) => m.value === entry.body_fat_source)
+      ? entry.body_fat_source : DEFAULT_BODY_FAT_METHOD;
+  }
+  for (const m of MEASUREMENTS) form[m.key] = entry[m.key] != null ? String(entry[m.key]) : '';
+  form.metric_date = entry.metric_date || todayKey;
+  form.notes = String(entry.notes || '').trim() === 'enrolment' ? '' : (entry.notes || '');
+  return form;
+}
+
+// Is the weight in the form the one the entry already holds, at the
+// precision the form shows? Then the stored figure is kept (a note edit never
+// moves a weight by rounding).
+function sameTypedWeight(kg, storedKg, bwu) {
+  if (!(Number(kg) > 0) || !(Number(storedKg) > 0)) return false;
+  if (bwu === 'st') {
+    const a = kgToStoneLbsStrings(kg);
+    const b = kgToStoneLbsStrings(storedKg);
+    return a.stoneStr === b.stoneStr && a.lbsStr === b.lbsStr;
+  }
+  if (bwu === 'lbs') return Math.round(kgToLbs(kg) * 10) === Math.round(kgToLbs(storedKg) * 10);
+  return Math.round(kg * 10) === Math.round(storedKg * 10);
+}
+
+const hasMoreThanWeight = (data) => data.bodyFatPercent != null
+  || CIRCUMFERENCE_FIELDS.some((f) => data[f.dbField] != null);
+
+// The legacy AsyncStorage migration (unchanged): a person who logged before
+// the SQLite table existed has their entries moved over once.
+async function migrateFromAsyncStorage(userId) {
+  if (!userId) return;
+  const MIGRATED_KEY = `@volyume_body_metrics_migrated_${userId}`;
+  const STORAGE_KEY = `@volyume_body_metrics_${userId}`;
+  try {
+    const done = await AsyncStorage.getItem(MIGRATED_KEY);
+    if (done === 'true') return;
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const legacy = raw ? JSON.parse(raw) : [];
+    // Track per-row failures rather than letting one bad row abort the whole
+    // migration: a thrown logBodyMetric (a NaN getting through) used to trip
+    // the outer catch, MIGRATED_KEY was never written, and the loop reran the
+    // partial migration on every launch, duplicating the rows that succeeded.
+    let migrated = 0;
+    let failed = 0;
+    for (const entry of legacy) {
+      try {
+        const data = { notes: entry.notes || null };
+        const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
+        data.loggedAt = Number.isNaN(d.getTime()) ? Date.now() : d.getTime();
+        for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+          if (entry[formKey] != null && entry[formKey] !== '') {
+            const num = parseDecimalInput(entry[formKey]);
+            if (Number.isFinite(num)) data[dbField] = num;
+          }
+        }
+        await logBodyMetric(userId, data);
+        migrated++;
+      } catch (rowErr) {
+        failed++;
+        logError('BodyMetricsScreen.migrate', rowErr, { userId });
+      }
+    }
+    // Mark migrated only if we made some forward progress. If every single
+    // row failed we leave the flag unset so a later launch can retry.
+    if (migrated > 0 || failed === 0) {
+      await AsyncStorage.setItem(MIGRATED_KEY, 'true');
+    }
+  } catch (e) {
+    logError('BodyMetricsScreen.migrateFromAsyncStorage', e, { userId });
+  }
+}
+
+// The start of the range a read covers: the whole chart range (a year), or
+// further when the History has been paged back past it.
+function rangeStartFor(nowMs, weeks) {
+  const chartStart = nowMs - CHART_RANGE_DAYS * DAY_MS;
+  const d = new Date(localWeekStartMs(nowMs));
+  d.setDate(d.getDate() - 7 * Math.max(0, weeks - 1));
+  return Math.min(chartStart, d.getTime());
+}
+
+const readErrorLine = (what) => `Couldn't load your ${what} just now.`;
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen() {
   const navigation = useNavigation();
-  const { user, session, units, bodyWeightUnits, userProfile } = useAppStore(useShallow(s => ({
+  const { user, session, units, bodyWeightUnits, userProfile, profileStamps } = useAppStore(useShallow((s) => ({
     user: s.user,
     session: s.session,
     units: s.units,
     bodyWeightUnits: s.bodyWeightUnits,
     userProfile: s.userProfile,
+    profileStamps: s.userProfileFieldUpdatedAt,
   })));
-  // Energy DISPLAY unit (kcal | kj) for the average-intake readout below.
-  // Display-only: recentIntake.avgKcal stays kcal for the adherence ratio maths.
+  // Energy DISPLAY unit (kcal | kj). Display-only: stored intake stays kcal.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
-  // Onboarding weight, surfaced in the empty state so a user who just
-  // completed Pro onboarding doesn't see a misleading "No entries yet"
-  // when they did, in fact, give us a starting bodyweight.
-  const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
   const toast = useToast();
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
-  // Memoised: this screen renders a mapped measurement/history list.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
-  const [calm, setCalm] = useState(false);
-  const [edFlagOpen, setEdFlagOpen] = useState(false);
-  // Until the calm / open-ED flags have actually loaded, the recomp reframe is
-  // treated as suppressed (safe default), so it can't flash before the async
-  // safety reads resolve (NA-coaching-6).
-  const [wellbeingLoaded, setWellbeingLoaded] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  const scrollRef = useRef(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  const userProfileRef = useRef(userProfile);
+  userProfileRef.current = userProfile;
+
+  // ── The two safety reads (ED-C). Both stay `undefined` until they return,
+  // and nothing below the header renders until then; a failed read counts as
+  // an open flag, or as calm mode, never the other way. ──
+  const [edFlag, setEdFlag] = useState(undefined);
+  const [wellbeingMode, setWellbeingMode] = useState(undefined);
+  const policy = useMemo(() => bodyMetricsPolicy({ edFlag, wellbeingMode }), [edFlag, wellbeingMode]);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
-  const [history, setHistory] = useState([]);
-  // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
-  // loadHistory() attempt failed. A failure preserves whatever `history` was
-  // already on screen (see the catch branch below, which no longer blanks it
-  // to []); this flag lets the render layer show a distinct, retryable error
-  // instead of misreporting a read failure as "No body metrics yet".
-  const [historyLoadError, setHistoryLoadError] = useState(false);
-  // D1 sweep (DD26): gates the snapshot card behind a Skeleton on the
-  // screen's first load; see loadHistory()'s finally block.
-  const [historyLoading, setHistoryLoading] = useState(true);
-  // Lift data for the recomposition reframe's strength delta (ULTIMATE-RECOMP-01).
+
+  // ── The data ──
+  const [clock, setClock] = useState(() => Date.now());
+  const [entries, setEntries] = useState([]);
+  const [morningRows, setMorningRows] = useState([]);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [entriesStatus, setEntriesStatus] = useState('loading');
+  const [historyWeeks, setHistoryWeeks] = useState(HISTORY_PAGE_WEEKS);
+  const historyWeeksRef = useRef(historyWeeks);
+  historyWeeksRef.current = historyWeeks;
+  const [windowKey, setWindowKey] = useState(DEFAULT_WINDOW_KEY);
+  const windowInitRef = useRef(false);
+  const [coachVerdict, setCoachVerdict] = useState(null);
+  const [maintenance, setMaintenance] = useState({ status: 'loading', authority: null });
+  const [intake, setIntake] = useState(null);
   const [liftSets, setLiftSets] = useState([]);
   const [exercises, setExercises] = useState([]);
-  const [nutritionTargets, setNutritionTargets] = useState(null);
-  const [recentIntake, setRecentIntake] = useState(null);
-  const [maintenanceAuthority, setMaintenanceAuthority] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [showMeasurements, setShowMeasurements] = useState(false);
-  const [form, setForm] = useState(blankMetricForm());
+
+  // ── The entry form (new, measurements, or an edit in place) ──
+  const [formMode, setFormMode] = useState(null); // null | 'weight' | 'measure' | 'edit'
+  const [form, setForm] = useState(() => blankMetricForm(localDayKey()));
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [showMore, setShowMore] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
-  // D16 (NAV-2): null while logging a new entry; set to an existing entry's
-  // id while editing it, so saveMetrics() knows whether to insert or correct.
-  const [editingId, setEditingId] = useState(null);
-  // C6 R-8 (D97-22): which table owns the row under edit - a merged-in
-  // morning_weights row saves/deletes through its own functions now.
-  const [editingSource, setEditingSource] = useState(null);
-  const [selectedMeasurement, setSelectedMeasurement] = useState(null);
-  const [ewmaData, setEwmaData] = useState([]);
-  // D16 (NAV-2): scroll the "New entry"/"Edit entry" form into view when the
-  // user taps Edit on a history row further down the page.
-  const scrollRef = useRef(null);
 
-  // Estimated daily burn: Precision Coaching's reverse-engineered TDEE from
-  // the weight trend and logged intake. A point estimate with a confidence
-  // tier, not a fabricated history line. Returns insufficient_data until there
-  // are about two weeks of weigh-ins plus targets, which the card renders as an
-  // honest cold-start line.
-  const adaptiveBurn = useMemo(() => {
-    if (!maintenanceAuthority || maintenanceAuthority.source === 'formula_prior') {
-      return { confidence: 'insufficient_data' };
+  const readSafety = useCallback(() => {
+    // Fail CLOSED: the RAW wellbeing key (never getWellbeingMode(), which
+    // swallows a read error into 'unspecified' and would fail OPEN), a read
+    // error becoming the 'read_failed' sentinel that the policy counts as calm.
+    AsyncStorage.getItem(WELLBEING_KEY)
+      .then((v) => v || 'unspecified')
+      .catch(() => 'read_failed')
+      .then((mode) => { if (mountedRef.current) setWellbeingMode(mode); });
+    // The open ED-pattern flag: a read error becomes the truthy sentinel, which
+    // the policy counts as an open flag.
+    const flagRead = user?.id
+      ? getOpenEdPatternFlag(user.id).catch(() => 'read_failed')
+      : Promise.resolve(null);
+    flagRead.then((flag) => { if (mountedRef.current) setEdFlag(flag ?? null); });
+  }, [user?.id]);
+
+  const loadAll = useCallback(async (weeksArg) => {
+    const uid = user?.id;
+    if (!uid) {
+      setEntriesStatus('ready');
+      setMaintenance({ status: 'ready', authority: null });
+      return;
     }
-    return {
-      adjustedTDEE: maintenanceAuthority.effectiveMaintenanceKcal,
-      source: maintenanceAuthority.source,
-      confidence: maintenanceAuthority.status === 'current' ? 'high' : 'low',
-      weeks: Math.max(1, Math.floor((maintenanceAuthority.weightPoints ?? 14) / 7)),
-      insight: maintenanceAuthority.status === 'current'
-        ? 'Based on your logged intake and weight trend.'
-        : 'Based on earlier logged history and being revalidated with fresh data.',
-    };
-  }, [maintenanceAuthority]);
-
-  // WAVE-D-FINDINGS.md item 1 (LOGIC_DEFECT, ED-safety-adjacent) -- lead
-  // ruling: this screen's own "Weight trend" EWMA card and "Effective
-  // maintenance" card must have their rate/maintenance suppression decided
-  // by the SAME shared derivation the Progress root's "Your trend" card uses
-  // (useWeightTrend -> deriveWeightTrend, src/lib/weightTrend.js), never a
-  // hand-rolled `if (edFlagOpen)` branch re-deriving that decision. Fed with
-  // this screen's OWN already-loaded ewmaData/weeklyChange/adaptiveBurn (the
-  // underlying numbers and this card's own richer copy -- the average-intake
-  // line, the confidence-tier wording -- are unchanged; only the suppression
-  // VERDICT is now sourced from the one authoritative function). ED-flag
-  // suppression only, matching deriveWeightTrend exactly: no additional
-  // calm-mode gate is added here (deriveWeightTrend does not take calm as an
-  // input, and this screen's own top-of-render calm gate already handles
-  // calm mode via the re-confirmation screen above).
-  const weeklyChange = useMemo(() => computeWeeklyWeightChange(ewmaData), [ewmaData]);
-  const weightTrendVm = useMemo(
-    () => deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen }),
-    [ewmaData, weeklyChange, adaptiveBurn, edFlagOpen],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user?.id || !nutritionTargets) return;
-      const [weights, profile] = await Promise.all([
-        getMorningWeights(user.id, 90).catch(() => []),
-        getUserBodyProfile(user.id).catch(() => null),
+    const weeks = weeksArg ?? historyWeeksRef.current;
+    const now = Date.now();
+    const rangeStartMs = rangeStartFor(now, weeks);
+    const asRows = (rows) => (Array.isArray(rows) ? rows : []);
+    let morningAll = [];
+    try {
+      // BM-5: the data for the range the screen shows, by DATE (a year for the
+      // chart, further when the History is paged back), never the newest fifty
+      // rows. The log table is read by `sinceMs` and probed for anything older;
+      // morning_weights is one row a day, read whole and cut to the range here.
+      const [logRows, olderProbe, morning, pref] = await Promise.all([
+        getBodyMetricLog(uid, LOG_CAP, { sinceMs: rangeStartMs }),
+        getBodyMetricLog(uid, 1, { untilMs: rangeStartMs }),
+        getMorningWeights(uid, MORNING_CAP),
+        AsyncStorage.getItem(WEIGHT_WINDOW_STORE_KEY).catch(() => null),
       ]);
-      const latestWeight = weights.slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
-      const latestComposition = history.find(row => Number(row?.body_fat) > 0);
-      const authority = await resolveEffectiveMaintenanceForUser(user.id, {
-        sex: profile?.sex ?? userProfile?.sex ?? null,
-        dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
-        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
-        heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
-        weightKg: latestWeight?.weightKg ?? userProfile?.weightKg ?? null,
-        bodyFatPercent: latestComposition?.body_fat ?? null,
-        bodyFatSource: latestComposition?.body_fat_source ?? null,
-        activityLevel: nutritionTargets?.activityLevel ?? userProfile?.activityLevel ?? null,
-        goalPhase: nutritionTargets?.goal ?? nutritionTargets?.phase ?? null,
-      }, { weights, intake: recentIntake });
-      if (!cancelled) setMaintenanceAuthority({
-        ...authority.resolved,
-        weightPoints: authority.memo?.weightPoints ?? 0,
-      });
-    })().catch(() => { if (!cancelled) setMaintenanceAuthority(null); });
-    return () => { cancelled = true; };
-  }, [user?.id, nutritionTargets, recentIntake, history, userProfile]);
-
-  const measurementsWithData = useMemo(() =>
-    MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
-    [history],
-  );
-
-  // Recomposition reframe (ULTIMATE-RECOMP-01). Read-only derivation; suppressed
-  // under calm mode / open ED flag so a "weight flat, fat down" read can never
-  // reinforce restriction (NA-coaching-6). Renders nothing when not warranted.
-  const recompVm = useMemo(
-    () => deriveRecomp(history, liftSets, exercises, { suppressed: !wellbeingLoaded || calm || edFlagOpen }),
-    [history, liftSets, exercises, wellbeingLoaded, calm, edFlagOpen],
-  );
-
-  // Auto-select first measurement that has data
-  useEffect(() => {
-    if (selectedMeasurement == null && measurementsWithData.length > 0) {
-      setSelectedMeasurement(measurementsWithData[0].key);
+      morningAll = asRows(morning);
+      const inRange = morningAll.filter((r) => Number(r?.loggedAt) >= rangeStartMs);
+      const dayEntries = buildDayEntries(asRows(logRows).map(logRowToEntry), inRange);
+      const older = asRows(olderProbe).length > 0
+        || morningAll.some((r) => Number(r?.loggedAt) < rangeStartMs && Number(r?.weightKg) > 0 && r?.deletedAt == null);
+      if (!mountedRef.current) return;
+      setClock(now);
+      setEntries(dayEntries);
+      setMorningRows(morningAll);
+      setHasOlder(older);
+      if (!windowInitRef.current) {
+        // The saved window if it holds two weigh-ins, else the narrowest that
+        // does; read with the data so the chart never draws one window and
+        // then flips to another (BM-48).
+        windowInitRef.current = true;
+        setWindowKey(pickInitialWindowKey(
+          weighInsOf(dayEntries), (w) => w.ms, WEIGHT_WINDOWS, pref || DEFAULT_WINDOW_KEY, now,
+        ));
+      }
+      setEntriesStatus('ready');
+    } catch (e) {
+      logError('BodyMetricsScreen.loadEntries', e, { userId: uid });
+      if (mountedRef.current) setEntriesStatus('error');
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [measurementsWithData]);
 
-  const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
-  const MIGRATED_KEY = `@volyume_body_metrics_migrated_${user?.id}`;
+    // The rest of the page, each read on its own: a failure hides that card's
+    // content and says so, and never the weigh-ins above it.
+    try {
+      const [summary, dbTargets, mirror, lastCoach, sets, ex] = await Promise.all([
+        getRecentIntakeSummary(uid).catch(() => null),
+        getNutritionTargets(uid).catch(() => null),
+        AsyncStorage.getItem(NUTRITION_KEY).then((raw) => (raw ? JSON.parse(raw) : null)).catch(() => null),
+        getLatestCoachOutput(uid).catch(() => null),
+        // A year of sets is the most the recomposition read can use; a
+        // failure just hides the strength line, never the body history.
+        getWorkoutSetsSince(uid, now - 365 * DAY_MS).catch(() => []),
+        getAllExercises().catch(() => []),
+      ]);
+      if (mountedRef.current) {
+        setIntake(summary);
+        setCoachVerdict(coachVerdictFromOutput(lastCoach));
+        setLiftSets(asRows(sets));
+        setExercises(asRows(ex));
+      }
+      // BM-14: the resolver's inputs through the ONE mapping every surface
+      // uses (maintenanceInputs.js: stored body profile, latest body
+      // composition WITH its source, saved targets). The saved targets come
+      // from the database as on every other surface, the AsyncStorage mirror
+      // only when there is no database row. A display surface never persists a
+      // revalidation marker.
+      const weights90 = morningAll.slice(-90);
+      const inputs = await readMaintenanceInputs(uid, {
+        userProfile: userProfileRef.current, weights: weights90, targets: dbTargets ?? mirror,
+      });
+      const authority = await resolveEffectiveMaintenanceForUser(uid, inputs, {
+        weights: weights90, intake: summary ?? undefined, persistRevalidationMarker: false,
+      });
+      if (mountedRef.current) setMaintenance({ status: 'ready', authority });
+    } catch (e) {
+      logError('BodyMetricsScreen.loadMaintenance', e, { userId: uid });
+      if (mountedRef.current) setMaintenance({ status: 'error', authority: null });
+    }
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
-      // Volyume is fully free (founder decision 2026-09-03): physique
-      // tracking is force-enabled for every user, same as it always was for
-      // a Pro user before this.
-      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => {
-        if (v !== 'true') {
-          AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
-        }
-        setPhysiqueEnabled(true);
-      });
-      // COMP-019: suppress the weight takeaway's rate-of-change under an open ED
-      // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
-      // Mark the wellbeing flags loaded only once BOTH reads settle, so the
-      // recomp reframe stays suppressed until the real calm/ED state is known.
-      // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
-      // (which swallows a storage read error down to 'unspecified'). A genuine
-      // read failure on either the wellbeing flag or the ED flag must suppress.
-      Promise.allSettled([
-        AsyncStorage.getItem(WELLBEING_KEY)
-          .then(v => v || 'unspecified')
-          .catch(() => 'read_failed')
-          .then(m => setCalm(isCalm(m) || m === 'read_failed')),
-        user?.id
-          ? getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)).catch(() => setEdFlagOpen(true))
-          : Promise.resolve(),
-      ]).finally(() => setWellbeingLoaded(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+      readSafety();
+      (async () => {
+        await migrateFromAsyncStorage(user?.id);
+        await loadAll();
+      })();
+      return undefined;
+    }, [readSafety, loadAll, user?.id]),
   );
 
-  useEffect(() => {
-    // null still means "pref not read yet" and defers the load one tick.
-    if (physiqueEnabled === null) return;
-    (async () => {
-      await migrateFromAsyncStorage();
-      await loadHistory();
-      await loadNutritionTargets();
-      await loadRecentIntake();
-    })();
+  // ── Derived values ──
+  const todayKey = useMemo(() => localDayKey(clock), [clock]);
+  const thisWeekStart = useMemo(() => localWeekStartMs(clock), [clock]);
+  // Weigh-ins only up to today, oldest first, each anchored at its day's noon.
+  const weighIns = useMemo(() => weighInsOf(entries).filter((w) => w.dayKey <= todayKey), [entries, todayKey]);
+
+  // The trend weight is the Progress root's own reading: the hook's windowing
+  // (trendWindowRows: the real trailing 90 days, a weigh-in inside 14 days)
+  // through the same smoother and the same deriveWeightTrend.
+  const trendRead = useMemo(() => {
+    const weights90 = morningRows.slice(-90);
+    const windowed = trendWindowRows(weights90);
+    const ewmaData = computeEWMA(windowed);
+    const weeklyChange = computeWeeklyWeightChange(ewmaData);
+    const lastWeighInMs = weights90.reduce((m, w) => {
+      const at = Number(w?.loggedAt);
+      return Number.isFinite(at) && at > m ? at : m;
+    }, 0) || null;
+    return { ewmaData, weeklyChange, lastWeighInMs };
+  // `clock` re-reads the windows against the time of the latest load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [physiqueEnabled, user?.id]);
+  }, [morningRows, clock]);
+  const adaptiveBurn = useMemo(() => {
+    const resolved = maintenance.authority?.resolved;
+    if (!resolved || resolved.source === 'formula_prior') return null;
+    return {
+      adjustedTDEE: resolved.effectiveMaintenanceKcal,
+      confidence: resolved.status === 'current' ? 'high' : 'low',
+      source: resolved.source,
+      status: resolved.status,
+    };
+  }, [maintenance]);
+  const weightTrendVm = useMemo(() => deriveWeightTrend({
+    ewmaData: trendRead.ewmaData,
+    weeklyChange: trendRead.weeklyChange,
+    adaptiveBurn,
+    edFlagOpen: policy.edFlagOpen,
+    coachVerdict,
+    lastWeighInMs: trendRead.lastWeighInMs,
+    nowMs: clock,
+  }), [trendRead, adaptiveBurn, policy.edFlagOpen, coachVerdict, clock]);
+  const twoWeek = useMemo(() => twoWeekTrend(trendRead.ewmaData, clock), [trendRead, clock]);
 
-  async function migrateFromAsyncStorage() {
-    if (!user?.id) return;
-    try {
-      const done = await AsyncStorage.getItem(MIGRATED_KEY);
-      if (done === 'true') return;
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      const legacy = raw ? JSON.parse(raw) : [];
-      // Track per-row failures rather than letting one bad row abort
-      // the whole migration. Previously, a thrown logBodyMetric (e.g.
-      // a NaN value getting through) tripped the outer catch, MIGRATED_KEY
-      // was never written, and the loop reran the partial migration on
-      // every launch, potentially duplicating rows that did succeed.
-      let migrated = 0;
-      let failed = 0;
-      for (const entry of legacy) {
-        try {
-          const data = { notes: entry.notes || null };
-          const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
-          data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
-          for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
-            if (entry[formKey] != null && entry[formKey] !== '') {
-              const num = parseDecimalInput(entry[formKey]);
-              if (Number.isFinite(num)) data[dbField] = num;
-            }
-          }
-          await logBodyMetric(user.id, data);
-          migrated++;
-        } catch (rowErr) {
-          failed++;
-          // eslint-disable-next-line global-require
-          try { require('../lib/errorLog').logWarn('BodyMetricsScreen.migrate', 'row failed', { error: rowErr?.message }); } catch (_) {}
-        }
-      }
-      // Mark migrated only if we made some forward progress. If every
-      // single row failed we leave the flag unset so the user (or a
-      // future fix) can retry.
-      if (migrated > 0 || failed === 0) {
-        await AsyncStorage.setItem(MIGRATED_KEY, 'true');
-      }
-    } catch (e) {
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('BodyMetricsScreen.migrateFromAsyncStorage', e, { userId: user?.id }); } catch (_) {}
-    }
-  }
+  // This week against last, the mornings weighed, the usual swing: every
+  // weekly figure from the one helper over the one day-entry list.
+  const week = useMemo(() => ({
+    thisWeek: weekAverage(entries, thisWeekStart, { untilKey: todayKey }),
+    lastWeek: weekAverage(entries, previousWeekStart(thisWeekStart)),
+    mornings: morningsThisWeek(entries, clock),
+  }), [entries, thisWeekStart, todayKey, clock]);
+  const swing = useMemo(
+    () => typicalDailySwingKg(
+      weighIns.map((w) => ({ weightKg: w.kg, loggedAt: w.ms })),
+      { nowMs: noonOfDay(todayKey) },
+    ),
+    [weighIns, todayKey],
+  );
 
-  async function loadHistory() {
-    if (!user?.id) { setHistoryLoading(false); return; }
-    try {
-      let rows = await getBodyMetricLog(user.id, 50);
-
-      // Auto-seed the first entry from the onboarding bodyweight so the
-      // screen isn't a blank slate on first visit. We only do this once
-      // (gated by a per-user AsyncStorage flag) so manually deleting all
-      // entries doesn't re-create them on next visit.
-      const SEED_KEY = `@volyume_body_metric_seeded_${user.id}`;
-      const onboardingKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
-      if (rows.length === 0 && onboardingKg && onboardingKg > 0) {
-        const alreadySeeded = await AsyncStorage.getItem(SEED_KEY).catch(() => null);
-        if (!alreadySeeded) {
-          try {
-            await logBodyMetric(user.id, { weightKg: onboardingKg, notes: 'Starting weight (from onboarding)' });
-            await AsyncStorage.setItem(SEED_KEY, 'true').catch(() => {});
-            rows = await getBodyMetricLog(user.id, 50);
-            // eslint-disable-next-line global-require
-            try { require('../lib/errorLog').logInfo('BodyMetricsScreen.autoSeed', `seeded onboarding weight ${onboardingKg}kg`); } catch (_) {}
-          } catch (e) {
-            // eslint-disable-next-line global-require
-            try { require('../lib/errorLog').logWarn('BodyMetricsScreen.autoSeed', 'seed failed', { error: e?.message }); } catch (_) {}
-          }
-        }
-      }
-
-      const bodyMetricEntries = rows.map(rowToEntry);
-
-      // BUG-WEIGHT-HISTORY: fold in any calendar day that only has a
-      // morning_weights row (Home's quick weigh-in), so it appears as a
-      // dated historical record here too.
-      let morningRows = [];
-      try { morningRows = await getMorningWeights(user.id, 90); } catch (_e) { morningRows = []; }
-      const entries = mergeMorningWeightsIntoHistory(bodyMetricEntries, morningRows, 50);
-      setHistory(entries);
-      setHistoryLoadError(false);
-      const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
-      const weightPoints = sorted
-        // DATA-001: require a positive weight, not just a truthy value, so a
-        // 0 kg / negative row can't feed the EWMA smoother.
-        .filter(m => Number(m.body_weight) > 0)
-        .map(m => ({ date: m.metric_date, weightKg: m.body_weight }));
-      if (weightPoints.length >= 3) {
-        const ewma = computeEWMA(weightPoints);
-        setEwmaData(ewma);
-      } else {
-        setEwmaData([]);
-      }
-    } catch (_e) {
-      // EP-09/P-06: a rejected history read must never masquerade as a
-      // genuinely empty day. Preserve whatever `history`/`ewmaData` were
-      // already on screen (no reset to []) and flag the failure instead, so
-      // the render layer can show a retryable error rather than "No body
-      // metrics yet".
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('BodyMetricsScreen.loadHistory', _e, { userId: user?.id }); } catch (_) {}
-      setHistoryLoadError(true);
-    } finally {
-      // D1 sweep (DD26): only the FIRST load needs to gate the snapshot
-      // card behind a Skeleton; historyLoading starts true and only ever
-      // transitions to false, so later loadHistory() calls (after a save or
-      // edit) are inert no-op state updates here, never a skeleton flash.
-      setHistoryLoading(false);
-    }
-
-    // Lift data for the recomposition reframe's strength delta (read-only;
-    // a failure just hides the strength line, never the body history above).
-    // Bounded to the last year rather than all-time: deriveRecomp only inspects
-    // the recent flat-weight window, so a full set-history read would be wasted
-    // work on a long-term user's every screen focus.
-    try {
-      const RECOMP_SET_WINDOW_MS = 365 * 86400000;
-      const [ls, ex] = await Promise.all([
-        getWorkoutSetsSince(user.id, Date.now() - RECOMP_SET_WINDOW_MS),
-        getAllExercises(),
-      ]);
-      setLiftSets(ls || []);
-      setExercises(ex || []);
-    } catch (_e) { setLiftSets([]); setExercises([]); }
-  }
-
-  async function loadNutritionTargets() {
-    try {
-      const raw = await AsyncStorage.getItem(NUTRITION_KEY);
-      setNutritionTargets(raw ? JSON.parse(raw) : null);
-    } catch (_e) { setNutritionTargets(null); }
-  }
-
-  async function loadRecentIntake() {
-    if (!user?.id) { setRecentIntake(null); return; }
-    try {
-      const summary = await getRecentIntakeSummary(user.id);
-      setRecentIntake(summary);
-    } catch (_e) { setRecentIntake(null); }
-  }
-
-  // D16 (NAV-2): closes the New/Edit entry form and always drops back to a
-  // blank, non-editing state, so Cancel from an edit can never leave a stale
-  // editingId around to silently redirect the next "Log weight" tap.
-  function closeMetricForm() {
-    setShowForm(false);
-    setShowMeasurements(false);
-    setEditingId(null);
-    setEditingSource(null);
-    setForm(blankMetricForm());
-  }
-
-  // D16 (NAV-2): prefill the existing New-entry form from a history row and
-  // switch it into edit mode. Converts the entry's stored kg back into the
-  // user's display unit (mirrors TodayStrip's kg -> st/lb prefill) so editing
-  // in stone-and-pounds never shows a raw kilogram figure.
-  function startEditEntry(entry) {
-    const hasMeasurements = MEASUREMENTS.some(m => entry[m.key] != null);
-    let body_weight = '';
-    let body_weight_st = '';
-    let body_weight_st_lbs = '0';
-    if (entry.body_weight) {
-      if (bwu === 'st') {
-        const { stoneStr, lbsStr } = kgToStoneLbsStrings(entry.body_weight);
-        body_weight_st = stoneStr;
-        body_weight_st_lbs = lbsStr;
-      } else if (bwu === 'lbs') {
-        body_weight = String(Math.round(kgToLbs(entry.body_weight) * 10) / 10);
-      } else {
-        body_weight = String(Math.round(entry.body_weight * 10) / 10);
-      }
-    }
-    setForm({
-      body_weight, body_weight_st, body_weight_st_lbs,
-      body_fat: entry.body_fat != null ? String(entry.body_fat) : '',
-      chest: entry.chest != null ? String(entry.chest) : '',
-      shoulders: entry.shoulders != null ? String(entry.shoulders) : '',
-      arms: entry.arms != null ? String(entry.arms) : '',
-      forearms: entry.forearms != null ? String(entry.forearms) : '',
-      waist: entry.waist != null ? String(entry.waist) : '',
-      hips: entry.hips != null ? String(entry.hips) : '',
-      quads: entry.quads != null ? String(entry.quads) : '',
-      hamstrings: entry.hamstrings != null ? String(entry.hamstrings) : '',
-      calves: entry.calves != null ? String(entry.calves) : '',
-      metric_date: entry.metric_date || format(new Date(), 'yyyy-MM-dd'),
-      notes: entry.notes || '',
+  // The chart: the trend over the weigh-ins, for the window shown (BM-5).
+  const chart = useMemo(() => {
+    const win = windowByKey(WEIGHT_WINDOWS, windowKey) ?? windowByKey(WEIGHT_WINDOWS, DEFAULT_WINDOW_KEY);
+    const windowStartKey = localDayKey(clock - win.days * DAY_MS);
+    // The smoother is seeded from at least 90 days, so the first point of a
+    // short window is already smoothed (and the last point matches the trend
+    // weight above whenever both read the same weigh-ins).
+    const seedStartKey = localDayKey(Math.min(clock - win.days * DAY_MS, clock - 90 * DAY_MS));
+    const seedSet = weighIns.filter((w) => w.dayKey >= seedStartKey);
+    const smoothed = computeEWMA(seedSet.map((w) => ({ weightKg: w.kg, loggedAt: w.ms })));
+    const rows = seedSet.map((w, i) => ({ ...w, trend: smoothed[i]?.ewma ?? w.kg }));
+    const inWin = rows.filter((w) => w.dayKey >= windowStartKey);
+    const count = inWin.length;
+    if (count < 2) return { win, count, ready: false, rows: inWin };
+    const first = inWin[0];
+    const last = inWin[count - 1];
+    const spanDays = (last.ms - first.ms) / DAY_MS;
+    const coversAll = !(hasOlder || weighIns.some((w) => w.dayKey < windowStartKey));
+    const averageKg = inWin.reduce((s, w) => s + w.kg, 0) / count;
+    const midT = (first.ms + last.ms) / 2;
+    let midIdx = 0;
+    let best = Infinity;
+    inWin.forEach((w, i) => {
+      const d = Math.abs(w.ms - midT);
+      if (d < best) { best = d; midIdx = i; }
     });
-    setShowMeasurements(hasMeasurements);
-    setEditingId(entry.id);
-    setEditingSource(entry.source ?? null);
-    setShowForm(true);
-    // Jump the form into view: the History row that started the edit can be
-    // well below the fold.
+    const labelIdx = new Set([0, count - 1]);
+    if (count >= 3 && midIdx !== 0 && midIdx !== count - 1) labelIdx.add(midIdx);
+    // The axis fits the window's data plus the person's typical swing (never
+    // a fixed pad); it reads in kilograms for a stone user (A1, with a note).
+    const axisKg = fittedAxis([...inWin.map((w) => w.kg), ...inWin.map((w) => w.trend)], swing ?? 0);
+    const axisMin = weightChartValue(axisKg.min, bwu);
+    const axisMax = weightChartValue(axisKg.max, bwu);
+    const yTicks = niceAxisTicks(axisMin, axisMax);
+    const gutter = axisGutterWidth(yTicks.map((v) => `${v} ${weightChartUnitLabel(bwu)}`));
+    const takeaway = weightTakeaway({
+      coversAll,
+      from: first.dayKey,
+      to: last.dayKey,
+      count,
+      averageKg,
+      trendStartKg: first.trend,
+      trendEndKg: last.trend,
+      spanDays,
+      formatWeight: (kg) => formatBodyWeight(kg, bwu),
+      formatAmount: (kg) => formatWeightAmount(kg, bwu),
+      formatRate: (kgPerWeek) => formatWeightRatePerWeek(kgPerWeek, bwu),
+      formatDate: shortDate,
+    });
+    return {
+      win,
+      count,
+      ready: true,
+      rows: inWin,
+      first,
+      last,
+      takeaway,
+      axis: { min: axisMin, max: axisMax },
+      yTicks,
+      gutter,
+      data: inWin.map((w, i) => ({
+        value: weightChartValue(w.trend, bwu),
+        t: w.ms,
+        date: shortDate(w.dayKey),
+        label: labelIdx.has(i) ? shortDate(w.dayKey) : '',
+      })),
+      data2: inWin.map((w) => ({ value: weightChartValue(w.kg, bwu), t: w.ms })),
+      xTicks: weeklyTickTimes(first.ms, last.ms),
+    };
+  }, [weighIns, windowKey, clock, hasOlder, swing, bwu]);
+
+  const readings = useMemo(() => ({
+    bodyFat: readingsOf(entries, 'body_fat'),
+    sites: MEASUREMENTS
+      .map((m) => ({ ...m, ...readingsOf(entries, m.key) }))
+      .filter((r) => r.latest),
+  }), [entries]);
+
+  // Recomposition: suppressed by the policy, never by a gate of this screen's.
+  const recompVm = useMemo(
+    () => deriveRecomp(entries, liftSets, exercises, { suppressed: !policy.show.recomposition, nowMs: clock }),
+    [entries, liftSets, exercises, policy.show.recomposition, clock],
+  );
+
+  const maintenanceVm = useMemo(
+    () => (maintenance.authority ? maintenanceModel(maintenance.authority, { energyUnit, nowMs: clock }) : null),
+    [maintenance, energyUnit, clock],
+  );
+  const intakeText = useMemo(() => intakeLine(intake, energyUnit), [intake, energyUnit]);
+
+  const historyView = useMemo(
+    () => groupEntriesByWeek(entries, { nowMs: clock, weeks: historyWeeks }),
+    [entries, clock, historyWeeks],
+  );
+  const firstShownKey = useMemo(() => {
+    const d = new Date(thisWeekStart);
+    d.setDate(d.getDate() - 7 * Math.max(0, historyWeeks - 1));
+    return localDayKey(d.getTime());
+  }, [thisWeekStart, historyWeeks]);
+  const canShowEarlier = hasOlder || hasEntryBefore(entries, firstShownKey);
+
+  // The newest weigh-in of any kind, for the card when there is no trend weight.
+  const lastWeighIn = useMemo(() => {
+    const fromEntries = weighIns.length ? weighIns[weighIns.length - 1] : null;
+    const newestRow = morningRows.length ? morningRows[morningRows.length - 1] : null;
+    const rowMs = Number(newestRow?.loggedAt);
+    if (fromEntries && (!Number.isFinite(rowMs) || fromEntries.ms >= rowMs)) {
+      return { kg: fromEntries.kg, dayKey: fromEntries.dayKey, ms: fromEntries.entry.loggedAt };
+    }
+    if (newestRow && Number(newestRow.weightKg) > 0) {
+      return { kg: Number(newestRow.weightKg), dayKey: localDayKey(rowMs), ms: rowMs };
+    }
+    return null;
+  }, [weighIns, morningRows]);
+
+  // Day zero is "no weigh-in the person made": the starting weight typed at
+  // setup is a point of the series (its row keeps its real date and its note)
+  // but not a morning weighed, so on its own it does not make a trend weight.
+  // Its figure and date are what the card then shows, as what they are.
+  const dayZero = useMemo(() => {
+    const realInEntries = weighIns.some((w) => !w.entry.isEnrolmentSeed);
+    const realInRows = morningRows.some((r) => r?.deletedAt == null && Number(r?.weightKg) > 0
+      && String(r?.notes || '').trim() !== ENROLMENT_NOTE);
+    if (realInEntries || realInRows) return null;
+    const seeds = weighIns.filter((w) => w.entry.isEnrolmentSeed);
+    const seed = seeds.length ? seeds[seeds.length - 1] : null;
+    return { seed: seed ? { kg: seed.kg, ms: Number(seed.entry.loggedAt) } : null };
+  }, [weighIns, morningRows]);
+
+  // The replace notice, said BEFORE saving: a weigh-in typed for a day that
+  // already holds one.
+  const replaceText = useMemo(() => {
+    if (!formMode) return null;
+    const typed = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
+    if (!typed) return null;
+    const existing = entries.find((e) => e.metric_date === form.metric_date
+      && (!editingEntry || e.id !== editingEntry.id));
+    return replaceNotice({ existing, todayKey, bwu });
+  }, [formMode, form, bwu, entries, editingEntry, todayKey]);
+
+  const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
+
+  // ── Actions ──
+  const syncNow = useCallback(() => {
+    if (session?.user?.id && user?.id) {
+      syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
+    }
+  }, [session?.user?.id, user?.id]);
+
+  const closeForm = useCallback(() => {
+    setFormMode(null);
+    setEditingEntry(null);
+    setShowMore(false);
+    setShowDatePicker(false);
+    setForm(blankMetricForm(localDayKey()));
+  }, []);
+
+  function openNew(mode) {
+    setEditingEntry(null);
+    setForm(blankMetricForm(localDayKey()));
+    setShowMore(mode === 'measure');
+    setFormMode(mode);
     scrollRef.current?.scrollTo?.({ y: 0, animated: true });
   }
 
-  // D16 (NAV-2): calm confirm, the app's existing workout delete-confirm
-  // idiom (appAlert, neutral "Cancel"/"Delete" pair, no haptics). Plain,
-  // factual copy only, no judgement of the values being removed.
-  function confirmDeleteEntry(entry) {
-    appAlert(
-      'Delete this entry?',
-      'The weight and any measurements logged for this date are removed from your history. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMetricEntry(entry) },
-      ],
-    );
+  function openEdit(entry) {
+    setForm(formFromEntry(entry, bwu, localDayKey()));
+    setEditingEntry(entry);
+    setShowMore(entry.source === 'body_metric_log' && READING_FIELDS.some((k) => entry[k] != null));
+    setFormMode('edit');
   }
 
-  async function deleteMetricEntry(entry) {
-    const prevHistory = history;
-    // Optimistic removal; restored on failure.
-    setHistory(prev => prev.filter(h => h.id !== entry.id));
-    if (editingId === entry.id) closeMetricForm();
+  function selectWindow(key) {
+    setWindowKey(key);
+    AsyncStorage.setItem(WEIGHT_WINDOW_STORE_KEY, key).catch(() => {});
+    try { track(user?.id, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) { /* best-effort telemetry */ }
+  }
+
+  function showEarlier() {
+    const next = historyWeeks + HISTORY_PAGE_WEEKS;
+    setHistoryWeeks(next);
+    historyWeeksRef.current = next;
+    // The loaded range already covers a year; paging back past it reads more.
+    if (rangeStartFor(Date.now(), next) < rangeStartFor(Date.now(), historyWeeks)) loadAll(next);
+  }
+
+  function fireFirstWeighIn() {
+    // Activation funnel (lead activation ruling, 2026-09-03): a genuine
+    // deliberate weigh-in through this form, once per user, count only, never
+    // the value. Never fired by the legacy migration or an edit.
     try {
-      // C6 R-8 (D97-22): a merged-in Home weigh-in deletes from its own
-      // table (soft tombstone, so the deletion syncs to other devices).
-      const ok = entry.source === 'morning_weight'
-        ? await deleteMorningWeightById(user.id, entry.id)
-        : await deleteBodyMetric(user.id, entry.id);
-      if (!ok) throw new Error('delete: no live row matched');
-      if (session?.user?.id) {
-        syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
-      }
-      toast.show('Entry deleted.', { variant: 'success' });
-      await loadHistory();
-    } catch (e) {
-      setHistory(prevHistory);
       // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('BodyMetricsScreen.deleteEntry', e, { entryId: entry.id }); } catch (_) {}
-      toast.show("Couldn't delete. Try again.", { variant: 'error' });
+      const { trackFirst } = require('../lib/telemetry/firsts');
+      trackFirst(user.id, 'first_weigh_in').catch(() => {});
+    } catch (_) { /* best-effort telemetry */ }
+  }
+
+  // A new entry on a day that already holds a log row REPLACES into it (a day
+  // holds one weigh-in; the notice said so before saving). The row's other
+  // readings stay unless the new entry carries its own.
+  function replacementPayload(existing, data) {
+    const payload = {
+      loggedAt: data.loggedAt,
+      weightKg: data.weightKg,
+      bodyFatPercent: data.bodyFatPercent ?? existing.body_fat ?? null,
+      bodyFatSource: data.bodyFatPercent != null
+        ? data.bodyFatSource
+        : (existing.body_fat != null ? existing.body_fat_source ?? null : null),
+      notes: data.notes ?? (String(existing.notes || '').trim() || null),
+    };
+    for (const f of CIRCUMFERENCE_FIELDS) payload[f.dbField] = data[f.dbField] ?? existing[f.key] ?? null;
+    return payload;
+  }
+
+  async function saveNew(data, dayKey) {
+    const existing = entries.find((e) => e.metric_date === dayKey) ?? null;
+    if (existing && existing.source === 'body_metric_log' && data.weightKg != null) {
+      const ok = await updateBodyMetric(user.id, existing.id, replacementPayload(existing, data));
+      if (!ok) throw new Error('updateBodyMetric: no live row matched');
+    } else {
+      await logBodyMetric(user.id, data);
+    }
+    if (data.weightKg != null) fireFirstWeighIn();
+  }
+
+  async function saveEdit(data, entry, newDayKey) {
+    const dateChanged = newDayKey !== entry.metric_date;
+    if (entry.source === 'body_metric_log') {
+      const ok = await updateBodyMetric(user.id, entry.id, data);
+      if (!ok) throw new Error('updateBodyMetric: no live row matched');
+      if (dateChanged) {
+        // The entry moved: the old day's weigh-in and any older rows of it go too.
+        for (const id of entry.morningIds) await deleteMorningWeightById(user.id, id);
+        for (const id of entry.logIds.filter((i) => i !== entry.id)) await deleteBodyMetric(user.id, id);
+      }
+      return;
+    }
+    // A Home weigh-in: it holds a weight, a date and a note.
+    if (hasMoreThanWeight(data)) {
+      // Adding body fat or measurements makes it the day's full entry.
+      await logBodyMetric(user.id, data);
+      if (dateChanged) for (const id of entry.morningIds) await deleteMorningWeightById(user.id, id);
+      return;
+    }
+    const originalNote = String(entry.notes || '').trim() === 'enrolment' ? '' : String(entry.notes || '');
+    const noteChanged = String(data.notes || '') !== originalNote;
+    if (!dateChanged) {
+      // BM-1: the weight is `data.weightKg` (the validator's key); the note
+      // only when it was edited, so a setup marker is never cleared by a save
+      // that did not touch the note.
+      const ok = await updateMorningWeightById(user.id, entry.id, {
+        weightKg: data.weightKg,
+        ...(noteChanged ? { notes: data.notes } : {}),
+      });
+      if (!ok) throw new Error('updateMorningWeightById: no live row matched');
+      return;
+    }
+    // Moved to another day: write it there first, then retract the old row.
+    await logMorningWeight(user.id, {
+      weightKg: data.weightKg, loggedAt: data.loggedAt, notes: noteChanged ? data.notes : (entry.notes ?? null),
+    });
+    for (const id of entry.morningIds) await deleteMorningWeightById(user.id, id);
+  }
+
+  async function runSave(data, entry) {
+    setSaving(true);
+    try {
+      const dayKey = localDayKey(data.loggedAt);
+      if (entry) await saveEdit(data, entry, dayKey);
+      else await saveNew(data, dayKey);
+      syncNow();
+      closeForm();
+      await loadAll();
+    } catch (e) {
+      logError('BodyMetricsScreen.save', e, { editing: !!entry });
+      toast.show("Couldn't save. Try again.", { variant: 'error' });
+      await loadAll();
+    } finally {
+      if (mountedRef.current) setSaving(false);
     }
   }
 
-  async function saveMetrics() {
-    // DATA-001: one shared, pure save-gate. "At least one measurement" now means
-    // ANY non-empty VALID field (body weight, body fat, or any single
-    // circumference, not just chest), and any impossible value (non-finite,
-    // non-positive or outside a realistic range) is rejected here with a calm
-    // toast rather than silently stored. See src/lib/bodyMetricValidate.js.
+  function saveEntry() {
+    // DATA-001: one shared, pure save-gate; impossible values and future dates
+    // are refused with a calm toast rather than stored.
     const result = validateBodyMetricForm(form, { bwu });
     if (!result.ok) {
       toast.show(result.message, { variant: 'warning' });
       return;
     }
     const data = result.data;
-    // D16 (NAV-2): captured before the form resets under us.
-    const targetId = editingId;
-    // Captured with targetId, before the form reset (same rationale).
-    const sourceAtSave = editingSource;
-    const isEdit = !!targetId;
-    setSaving(true);
-    try {
-      if (isEdit) {
-        // Optimistic UI: replace the edited row in place, in the same
-        // rowToEntry() shape every other history entry is in, so the
-        // snapshot/trend/history all reflect the correction immediately
-        // rather than showing blank fields until the reload below lands.
-        const optimisticEntry = rowToEntry({ id: targetId, ...data });
-        setHistory(prev => prev.map(h => (h.id === targetId ? optimisticEntry : h)));
-        closeMetricForm();
-        try {
-          // C6 R-8 (D97-22): a merged-in Home weigh-in saves to its own
-          // table. Weight only - a quick weigh-in row has no measurement
-          // columns, and any typed here are stated as not saved rather
-          // than silently dropped.
-          const isMorningRow = sourceAtSave === 'morning_weight';
-          if (isMorningRow && MEASUREMENTS.some(m => data[m.key] != null)) {
-            toast.show('Measurements need a full entry; only the weight was saved to this quick weigh-in.', { variant: 'warning' });
-          }
-          const ok = isMorningRow
-            ? await updateMorningWeightById(user.id, targetId, { weightKg: data.body_weight })
-            : await updateBodyMetric(user.id, targetId, data);
-          if (!ok) throw new Error(isMorningRow ? 'updateMorningWeightById: no live row matched' : 'updateBodyMetric: no live row matched');
-          if (session?.user?.id) {
-            syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
-          }
-          // Reload so downstream reads (trend chart, EWMA, recomp reframe)
-          // recompute from the corrected series, not the optimistic guess.
-          await loadHistory();
-        } catch (_e) {
-          await loadHistory(); // revert the optimistic row to the real (unsaved) state
-          toast.show('Couldn\'t save. Try again.', { variant: 'error' });
-        }
+    const entry = formMode === 'edit' ? editingEntry : null;
+    // A save that leaves the weight as shown keeps the stored figure.
+    if (entry && data.weightKg != null && sameTypedWeight(data.weightKg, entry.body_weight, bwu)) {
+      data.weightKg = entry.body_weight;
+    }
+    const weightChanged = !entry || !(Number(entry.body_weight) > 0) || data.weightKg !== entry.body_weight;
+    const go = () => runSave(data, entry);
+    // BM-40: a typed weight far from the last weigh-in is asked about first.
+    if (data.weightKg != null && weightChanged) {
+      const ref = plausibilityReference(entries, localDayKey(data.loggedAt));
+      if (ref && weighInPlausibility(data.weightKg, ref.kg).implausible) {
+        appAlert(
+          'Check this weigh-in',
+          plausibilityMessage({ kg: data.weightKg, lastKg: ref.kg, bwu, withholdFigures: policy.withhold }),
+          [
+            { text: 'Change it', style: 'cancel' },
+            { text: 'Save anyway', onPress: go },
+          ],
+        );
         return;
       }
-
-      // Optimistic UI: insert the new entry at the top of the history
-      // list immediately so the user sees it land in real time, rather
-      // than waiting for the SQLite write + a full reload. Same pattern
-      // as set logging in ActiveWorkoutScreen.
-      const optimisticEntry = {
-        id: `tmp-${Date.now()}`, // replaced when SQLite returns
-        loggedAt: Date.now(),
-        ...data,
-      };
-      setHistory(prev => [optimisticEntry, ...prev]);
-      closeMetricForm();
-      // Background: persist to SQLite + cloud. On success, replace the
-      // optimistic entry with the real saved row. On failure, remove
-      // the optimistic entry and show a toast.
-      try {
-        await logBodyMetric(user.id, data);
-        // Activation funnel (lead activation ruling, 2026-09-03): a genuine
-        // deliberate weigh-in through this form, once per user, count only
-        // -- never the value. Deliberately excludes the onboarding auto-seed
-        // and the legacy AsyncStorage migration above (both automated writes,
-        // not a user weighing in).
-        if (data.weightKg != null) {
-          try {
-            // eslint-disable-next-line global-require
-            const { trackFirst } = require('../lib/telemetry/firsts');
-            trackFirst(user.id, 'first_weigh_in').catch(() => {});
-          } catch (_) { /* best-effort telemetry */ }
-        }
-        if (session?.user?.id) {
-          // E12 step 1: push through the registry runner (the legacy per-save
-          // syncBodyMetric dual writer is retired; the body_composition_log
-          // handler reads the row logBodyMetric just saved).
-          syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
-        }
-        // Reload to pick up the real id + any DB-computed fields (the
-        // optimistic entry was missing things like a properly formatted
-        // loggedAt). Cheap, same SQLite query as before.
-        await loadHistory();
-      } catch (_e) {
-        setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
-        // Surface the failure, body weight is important; user needs to
-        // know it didn't save so they can retry.
-        toast.show('Couldn\'t save. Try again.', { variant: 'error' });
-      }
-    } finally {
-      setSaving(false);
     }
+    go();
   }
 
-  // Loading state, return the dark background, not null, to avoid a white flash
-  if (physiqueEnabled === null) {
+  function confirmDelete(entry) {
+    const hasWeight = Number(entry.body_weight) > 0;
+    const hasMore = READING_FIELDS.some((k) => entry[k] != null);
+    let message = 'This removes the weigh-in from your history and your trend.';
+    if (hasWeight && hasMore) {
+      message = 'This removes the weigh-in and the measurements logged that day from your history, and the weigh-in from your trend.';
+    } else if (!hasWeight) {
+      message = 'This removes the measurements logged that day from your history.';
+    }
+    appAlert(
+      'Delete this entry?',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteEntry(entry) },
+      ],
+    );
+  }
+
+  async function deleteEntry(entry) {
+    try {
+      // BM-2: the day's weigh-in leaves the history AND the trend. The log rows
+      // are tombstoned (so the delete syncs) and so is the day's morning
+      // weight, through the existing deleteMorningWeightById.
+      let removed = false;
+      for (const id of entry.logIds) {
+        if (await deleteBodyMetric(user.id, id)) removed = true;
+      }
+      if (Number(entry.body_weight) > 0) {
+        for (const id of entry.morningIds) {
+          if (await deleteMorningWeightById(user.id, id)) removed = true;
+        }
+      }
+      if (!removed) throw new Error('delete: no live row matched');
+      syncNow();
+      toast.show('Entry deleted.', { variant: 'success' });
+      closeForm();
+    } catch (e) {
+      logError('BodyMetricsScreen.deleteEntry', e, { entryId: entry.id });
+      toast.show("Couldn't delete. Try again.", { variant: 'error' });
+    }
+    await loadAll();
+  }
+
+  // ── Before the safety reads have returned, nothing below the header (ED-C) ──
+  if (!policy.ready) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Body metrics" />
@@ -1046,19 +858,15 @@ export default function BodyMetricsScreen() {
     );
   }
 
-  // L04-7 (design audit 2026-07-09): the opt-in gate that used to render here
-  // was confirmed dead code -- physiqueEnabled is force-set true above
-  // before this point ever runs, so no real user could ever reach it.
-  // Removed rather than re-gated.
-
-  // Calmer experience: gentle re-confirmation once per app session.
-  if (calm && !sessionConfirmed) {
+  // Calmer experience: gentle re-confirmation once per app session. The
+  // policy's withholds apply after it.
+  if (policy.calm && !sessionConfirmed) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={[styles.confirmCard, live.confirmCard]}>
-            <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
+            <Ionicons name="leaf-outline" size={32} color={t.colors.textSecondary} />
             <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle pause</Text>
             <Text style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
@@ -1073,7 +881,6 @@ export default function BodyMetricsScreen() {
               accessibilityLabel="Continue"
               size="lg"
               style={styles.confirmBtn}
-              textStyle={styles.confirmBtnText}
             />
             <Text style={[styles.confirmHelpline, live.confirmHelpline]}>{WELLBEING_HELPLINE}</Text>
           </View>
@@ -1082,865 +889,765 @@ export default function BodyMetricsScreen() {
     );
   }
 
-  const latest = history[0];
-  const prev = history[1];
-  const phase = detectPhase(history, t.colors);
+  // ── Render helpers: plain functions, never components declared here, so a
+  // TextInput keeps one identity across keystrokes (innerComponentRemount). ──
 
-  function getDelta(key) {
-    if (!latest?.[key] || !prev?.[key]) return null;
-    return (latest[key] - prev[key]).toFixed(1);
+  function titleRow(title, info) {
+    return (
+      <View style={styles.titleRow}>
+        <SectionLabel heading>{title}</SectionLabel>
+        {info ? <InfoTooltip text={info} size={14} /> : null}
+      </View>
+    );
+  }
+
+  function errorCard(title, what) {
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow(title)}
+        <Text style={live.bodySm}>{readErrorLine(what)}</Text>
+        <Button
+          title="Try again"
+          variant="secondary"
+          size="sm"
+          fullWidth={false}
+          onPress={() => loadAll()}
+          accessibilityLabel={`Try loading your ${what} again`}
+        />
+      </Card>
+    );
+  }
+
+  function renderThisWeek() {
+    if (entriesStatus === 'loading') return <SkeletonCard height={190} />;
+    if (entriesStatus === 'error') return errorCard('This week', 'weigh-ins');
+
+    // The verdict's slot: the policy's own line when set, else the coach's
+    // fresh sentence, else the two-week direction with its rate, else the
+    // denominator that says how far from a direction the person is.
+    const coachLine = coachVerdictInsight(coachVerdict, clock);
+    let verdict = null;
+    if (policy.line) verdict = policy.line;
+    else if (policy.show.verdict) {
+      if (weightTrendVm.lapsed) verdict = weightTrendVm.insight;
+      else if (coachLine && weightTrendVm.insight === coachLine) verdict = weightTrendVm.insight;
+      else verdict = twoWeekVerdictLine(twoWeek, bwu) ?? notEnoughForDirectionLine(twoWeek);
+    }
+    const hasTrend = weightTrendVm.render && !weightTrendVm.lapsed && weightTrendVm.ewmaNow != null;
+
+    let body;
+    if (!dayZero && hasTrend) {
+      const comparison = policy.show.weekComparison
+        ? weekComparisonLine({ thisWeek: week.thisWeek, lastWeek: week.lastWeek, bwu }) : null;
+      const noise = policy.show.noiseLine ? noiseLine(swing, bwu) : null;
+      body = (
+        <>
+          {policy.show.trendWeight ? (
+            <View style={styles.hero}>
+              <Text style={live.heroNumber}>{formatBodyWeight(weightTrendVm.ewmaNow, bwu)}</Text>
+              <View style={styles.heroLabelRow}>
+                <Text style={live.heroLabel}>trend weight</Text>
+                <InfoTooltip text={TREND_WEIGHT_INFO} size={14} />
+              </View>
+              {policy.show.morningsCount ? <Text style={live.bodySm}>{morningsCaption(week.mornings)}</Text> : null}
+            </View>
+          ) : null}
+          {verdict ? <Text style={live.body}>{verdict}</Text> : null}
+          {comparison ? <Text style={live.bodySm}>{comparison}</Text> : null}
+          {noise ? <Text style={live.bodySm}>{noise}</Text> : null}
+        </>
+      );
+    } else if (!dayZero && lastWeighIn) {
+      // A trend that has lapsed has no figure; the last weigh-in is still the
+      // person's own number, named as what it is.
+      let lapsed = verdict;
+      if (!policy.line && policy.show.verdict && !weightTrendVm.lapsed) {
+        lapsed = lastWeighIn.ms < clock - 14 * DAY_MS
+          ? lapsedInsight(lastWeighIn.ms, clock)
+          : notEnoughForDirectionLine({ count: 0 });
+      }
+      body = (
+        <>
+          {policy.show.trendWeight ? (
+            <View style={styles.hero}>
+              <Text style={live.heroNumber}>{formatBodyWeight(lastWeighIn.kg, bwu)}</Text>
+              <Text style={live.heroLabel}>{lastWeighInCaption(lastWeighIn.dayKey)}</Text>
+            </View>
+          ) : null}
+          {lapsed ? <Text style={live.body}>{lapsed}</Text> : null}
+        </>
+      );
+    } else {
+      // Day zero: no weigh-in is made up. The setup weight is shown as what it
+      // is, from its own row when there is one (its real date), else from the
+      // profile it was typed into.
+      const starting = dayZero?.seed
+        ? startingWeightLine({ kg: dayZero.seed.kg, ms: dayZero.seed.ms, bwu })
+        : startingWeightLine({ kg: onboardingWeightKg, ms: Number(profileStamps?.weightKg), bwu });
+      body = policy.show.trendWeight ? (
+        <>
+          <Text style={live.heroDayZero}>{starting ?? 'No weigh-ins yet.'}</Text>
+          <Text style={live.bodySm}>{DAY_ZERO_LINE}</Text>
+        </>
+      ) : null;
+    }
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow('This week')}
+        {body}
+      </Card>
+    );
+  }
+
+  function dateLabelFor(dayKey) {
+    if (dayKey === todayKey) return 'Today';
+    const sameYear = String(dayKey).slice(0, 4) === todayKey.slice(0, 4);
+    return `${weekdayDate(dayKey)}${sameYear ? '' : ` ${String(dayKey).slice(0, 4)}`}`;
+  }
+
+  // The label column of a form row: one width, so every field starts at the same edge.
+  function rowLabel(text) {
+    return (
+      <View style={styles.rowLabel}>
+        <Text style={live.formLabel}>{text}</Text>
+      </View>
+    );
+  }
+
+  function unitField({ value, onChangeText, label, unit, keyboardType, maxLength, flex = true }) {
+    return (
+      <View style={[styles.unitField, flex ? styles.unitFieldFlex : null]}>
+        <TextField
+          containerStyle={styles.fieldContainer}
+          fieldStyle={styles.field}
+          inputStyle={styles.fieldText}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          accessibilityLabel={label}
+        />
+        <Text style={live.unitText}>{unit}</Text>
+      </View>
+    );
+  }
+
+  function renderEntryForm({ inline = false } = {}) {
+    const editing = formMode === 'edit';
+    const title = editing ? 'Edit weigh-in' : (formMode === 'measure' ? 'Add measurements' : 'Log weight');
+    const content = (
+      <View style={styles.formBody}>
+        <Text style={live.formTitle}>{title}</Text>
+
+        <View style={styles.formRow}>
+          {rowLabel('Date')}
+          <TouchableOpacity
+            style={[styles.dateField, live.dateField]}
+            onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Date, ${dateLabelFor(form.metric_date)}. Change the date.`}
+          >
+            <Text style={live.dateText}>{dateLabelFor(form.metric_date)}</Text>
+            <Ionicons name="calendar-outline" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formRow}>
+          {rowLabel('Weight')}
+          {bwu === 'st' ? (
+            <View style={styles.weightInputs}>
+              {unitField({
+                value: form.body_weight_st,
+                onChangeText: (v) => setForm((f) => ({ ...f, body_weight_st: v })),
+                label: 'Weight, stone',
+                unit: 'st',
+                keyboardType: 'number-pad',
+                maxLength: 3,
+              })}
+              {unitField({
+                value: form.body_weight_st_lbs,
+                onChangeText: (v) => setForm((f) => ({ ...f, body_weight_st_lbs: v })),
+                label: 'Weight, pounds',
+                unit: 'lb',
+                keyboardType: 'decimal-pad',
+                maxLength: 4,
+              })}
+            </View>
+          ) : (
+            unitField({
+              value: form.body_weight,
+              onChangeText: (v) => setForm((f) => ({ ...f, body_weight: v })),
+              label: `Weight in ${bwu === 'kg' ? 'kilograms' : 'pounds'}`,
+              unit: bwu,
+              keyboardType: 'decimal-pad',
+            })
+          )}
+        </View>
+
+        {replaceText ? <Text style={live.noticeText}>{replaceText}</Text> : null}
+
+        <View style={styles.noteBlock}>
+          <Text style={live.formLabel}>Note</Text>
+          <TextField
+            containerStyle={styles.noteContainer}
+            fieldStyle={styles.noteField}
+            inputStyle={styles.noteText}
+            value={form.notes}
+            onChangeText={(v) => setForm((f) => ({ ...f, notes: v }))}
+            placeholder="Shown beside this weigh-in in your history"
+            placeholderTextColor={t.colors.textMuted}
+            multiline
+            accessibilityLabel="Note"
+          />
+        </View>
+
+        {showMore ? (
+          <View style={styles.moreBlock}>
+            <View style={styles.formRow}>
+              {rowLabel('Body fat')}
+              {unitField({
+                value: form.body_fat,
+                onChangeText: (v) => setForm((f) => ({ ...f, body_fat: v })),
+                label: 'Body fat percentage',
+                unit: '%',
+                keyboardType: 'decimal-pad',
+                maxLength: 4,
+              })}
+            </View>
+            {/* The method row waits on the founder (BODY_FAT_METHOD_CHOICE). */}
+            {form.body_fat && BODY_FAT_METHOD_CHOICE ? (
+              <View style={styles.methodBlock}>
+                <View style={styles.titleRow}>
+                  <Text style={live.formLabel}>How it was measured</Text>
+                  <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
+                </View>
+                <SegmentedControl
+                  options={BODY_FAT_METHODS}
+                  value={form.body_fat_source}
+                  onChange={(v) => setForm((f) => ({ ...f, body_fat_source: v }))}
+                  accessibilityLabel="Body fat method"
+                  equalWidth={false}
+                />
+              </View>
+            ) : null}
+            <View style={styles.titleRow}>
+              <Text style={live.formLabel}>Measurements</Text>
+              <InfoTooltip text={MEASURE_HOW_INFO} size={13} />
+            </View>
+            {MEASUREMENTS.map((m) => (
+              <View key={m.key} style={styles.formRow}>
+                {rowLabel(m.label)}
+                {unitField({
+                  value: form[m.key],
+                  onChangeText: (v) => setForm((f) => ({ ...f, [m.key]: v })),
+                  label: `${m.label} in centimetres`,
+                  unit: 'cm',
+                  keyboardType: 'decimal-pad',
+                })}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.moreToggle, live.moreToggle]}
+            onPress={() => setShowMore(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add body fat and measurements"
+          >
+            <Text style={live.moreToggleText}>Add body fat and measurements</Text>
+            <Ionicons name="chevron-down" size={16} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.formButtons}>
+          <Button
+            title={editing ? 'Save changes' : 'Save'}
+            onPress={saveEntry}
+            disabled={saving}
+            loading={saving}
+            style={styles.formBtn}
+            accessibilityLabel={editing ? 'Save changes' : 'Save entry'}
+          />
+          <Button
+            title="Cancel"
+            variant="secondary"
+            onPress={closeForm}
+            disabled={saving}
+            style={styles.formBtn}
+            accessibilityLabel="Cancel"
+          />
+        </View>
+        {editing && editingEntry ? (
+          <Button
+            title="Delete this entry"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            onPress={() => confirmDelete(editingEntry)}
+            disabled={saving}
+            accessibilityLabel="Delete this entry"
+          />
+        ) : null}
+      </View>
+    );
+    return inline ? content : <Card padding="lg" style={styles.card}>{content}</Card>;
+  }
+
+  function renderActions() {
+    if (!policy.show.actions) return null;
+    if (formMode === 'weight' || formMode === 'measure') return renderEntryForm();
+    return (
+      <View style={styles.actionRow}>
+        <Button
+          title="Log weight"
+          icon="add-circle"
+          style={styles.actionBtn}
+          onPress={() => openNew('weight')}
+          accessibilityLabel="Log weight"
+        />
+        <Button
+          title="Add measurements"
+          variant="secondary"
+          style={styles.actionBtn}
+          onPress={() => openNew('measure')}
+          accessibilityLabel="Add measurements"
+        />
+      </View>
+    );
+  }
+
+  function renderTrend() {
+    if (!policy.show.chart) return null;
+    // A window is named only once there is a series to window (day zero and a
+    // single weigh-in read plain "Trend", never "last year" over nothing).
+    const heading = weighIns.length >= 2 ? trendTitle(windowKey) : 'Trend';
+    if (entriesStatus === 'loading') return <SkeletonCard height={300} />;
+    if (entriesStatus === 'error') return errorCard(heading, 'trend');
+    const unit = weightChartUnitLabel(bwu);
+    const chartWidth = windowWidth - spacing.lg * 2 - spacing.lg * 2;
+    const summary = chart.ready
+      ? (policy.show.takeaway && chart.takeaway
+        ? `${heading}. ${chart.takeaway}`
+        : `${heading}. ${chart.count} weigh-ins from ${shortDate(chart.first.dayKey)} to ${shortDate(chart.last.dayKey)}.`)
+      : heading;
+    const note = chartUnitNote(bwu);
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow(heading, trendInfo(bwu, { includeSteady: policy.show.takeaway }))}
+        {weighIns.length >= 2 ? (
+          <View style={styles.chipRow} accessibilityRole="tablist">
+            {WEIGHT_WINDOWS.map((w) => (
+              <Chip
+                key={w.key}
+                label={w.label}
+                selected={w.key === windowKey}
+                onPress={() => selectWindow(w.key)}
+                accessibilityRole="tab"
+                accessibilityLabel={`weight trend window: ${w.label}`}
+                numberOfLines={1}
+                style={styles.windowChip}
+              />
+            ))}
+          </View>
+        ) : null}
+        {chart.ready ? (
+          <>
+            <View style={styles.chartWrap}>
+              <VolyumeChart
+                data={chart.data}
+                data2={chart.data2}
+                dots2
+                width={chartWidth}
+                height={160}
+                color={t.colors.textPrimary}
+                color2={t.colors.textMuted}
+                thickness={2}
+                curved={false}
+                min={chart.axis.min}
+                max={chart.axis.max}
+                sections={3}
+                yTicks={chart.yTicks}
+                yAxisWidth={chart.gutter}
+                yAxisSuffix={` ${unit}`}
+                xTicks={chart.xTicks}
+                showViewData={false}
+                backgroundColor={t.colors.surface}
+                interactive
+                accessibilityLabel={summary}
+                formatTooltip={(i) => {
+                  const w = chart.rows[i];
+                  if (!w) return null;
+                  return {
+                    title: weightChartTooltipTitle(w.kg, bwu),
+                    sub: `${weekdayDate(w.dayKey)} · trend ${weightChartValue(w.trend, bwu).toFixed(1)} ${unit}`,
+                  };
+                }}
+              />
+            </View>
+            <LegendRow
+              items={[
+                { key: 'trend', label: 'Trend', swatch: { fill: t.colors.textPrimary } },
+                { key: 'weighins', label: 'Weigh-ins', swatch: { fill: t.colors.textMuted } },
+              ]}
+            />
+            {note ? <Text style={live.caption}>{note}</Text> : null}
+            {policy.show.takeaway && chart.takeaway ? <Text style={live.bodySm}>{chart.takeaway}</Text> : null}
+          </>
+        ) : (
+          <Text style={live.bodySm}>
+            {weighIns.length < 2
+              ? 'The chart starts once you have two weigh-ins.'
+              : 'Fewer than two weigh-ins fall in this window.'}
+          </Text>
+        )}
+      </Card>
+    );
+  }
+
+  function renderCalories() {
+    if (!policy.show.maintenance) return null;
+    if (maintenance.status === 'loading') return <SkeletonCard height={150} />;
+    if (maintenance.status === 'error') {
+      return (
+        <Card padding="lg" style={styles.card}>
+          {titleRow(MAINTENANCE_TITLE, MAINTENANCE_INFO)}
+          <Text style={live.bodySm}>{readErrorLine('maintenance estimate')}</Text>
+        </Card>
+      );
+    }
+    if (!maintenanceVm) return null;
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow(MAINTENANCE_TITLE, MAINTENANCE_INFO)}
+        {maintenanceVm.figure ? (
+          <View style={styles.hero}>
+            <View style={styles.figureRow}>
+              <Text style={live.heroNumber}>{maintenanceVm.figure.number}</Text>
+              <Text style={live.figureUnit}>{maintenanceVm.figure.unit}</Text>
+            </View>
+            <Text style={live.bodySm}>{maintenanceVm.figure.estimated}</Text>
+          </View>
+        ) : null}
+        <Text style={live.body}>{maintenanceVm.line}</Text>
+        {policy.show.intake && intakeText ? <Text style={live.bodySm}>{intakeText}</Text> : null}
+      </Card>
+    );
+  }
+
+  function renderRecomposition() {
+    if (!policy.show.recomposition || !recompVm.render) return null;
+    const lines = recompLines(recompVm, units);
+    const shareParams = buildRecompShareParams(recompVm, units);
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow('Recomposition', GLOSSARY.recomposition)}
+        {lines.map((line, i) => (
+          <Text key={line} style={i === 0 ? live.bodyStrong : live.body}>{line}</Text>
+        ))}
+        {shareParams ? (
+          <TouchableOpacity
+            style={[styles.shareRow, live.shareRow]}
+            onPress={() => navigation.navigate('ShareCard', { milestoneData: shareParams })}
+            accessibilityRole="button"
+            accessibilityLabel="Create share image"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
+            <Text style={live.shareText}>Create share image</Text>
+          </TouchableOpacity>
+        ) : null}
+      </Card>
+    );
+  }
+
+  function readingRow({ key, label, value, unit, latest, previous, detail, changeUnit }) {
+    const change = policy.show.measurementChange ? readingChangeLine(latest, previous, changeUnit) : null;
+    return (
+      <View key={key} style={styles.readingRow}>
+        <View style={styles.readingHead}>
+          <Text style={live.readingLabel}>{label}</Text>
+          <Text style={live.readingValue}>{`${value}${unit}`}</Text>
+        </View>
+        <Text style={live.caption}>{detail}</Text>
+        {change ? <Text style={live.bodySm}>{change}</Text> : null}
+      </View>
+    );
+  }
+
+  function renderReadings() {
+    if (!policy.show.measurements || entriesStatus !== 'ready') return null;
+    const { bodyFat, sites } = readings;
+    if (!bodyFat.latest && !sites.length) return null;
+    return (
+      <Card padding="lg" style={styles.card}>
+        {titleRow('Body fat and measurements')}
+        {bodyFat.latest ? readingRow({
+          key: 'body_fat',
+          label: 'Body fat',
+          value: String(Math.round(bodyFat.latest.value * 10) / 10),
+          unit: '%',
+          latest: bodyFat.latest,
+          previous: bodyFat.previous,
+          changeUnit: '%',
+          detail: [
+            shortDate(bodyFat.latest.metric_date),
+            BODY_FAT_METHOD_LABELS[bodyFat.latest.entry.body_fat_source] ?? null,
+          ].filter(Boolean).join(' · '),
+        }) : null}
+        {sites.map((s) => readingRow({
+          key: s.key,
+          label: s.label,
+          value: String(Math.round(s.latest.value * 10) / 10),
+          unit: ' cm',
+          latest: s.latest,
+          previous: s.previous,
+          changeUnit: 'cm',
+          detail: shortDate(s.latest.metric_date),
+        }))}
+      </Card>
+    );
+  }
+
+  function renderHistoryRow(entry) {
+    if (formMode === 'edit' && editingEntry?.id === entry.id) {
+      return <View key={entry.id} style={styles.inlineForm}>{renderEntryForm({ inline: true })}</View>;
+    }
+    const title = historyRowTitle(entry, bwu);
+    const detail = historyRowDetail(entry, SITE_LABELS);
+    const note = noteForDisplay(entry);
+    return (
+      <TouchableOpacity
+        key={entry.id}
+        style={[styles.historyRow, live.historyRow]}
+        onPress={() => openEdit(entry)}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit weigh-in. ${title.replace(' · ', ', ')}${note ? `. ${note}` : ''}`}
+      >
+        <View style={styles.historyText}>
+          <Text style={live.historyTitle}>{title}</Text>
+          {detail ? <Text style={live.caption}>{detail}</Text> : null}
+          {note ? <Text style={live.bodySm}>{note}</Text> : null}
+        </View>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+      </TouchableOpacity>
+    );
+  }
+
+  function renderHistory() {
+    if (!policy.show.history) return null;
+    if (entriesStatus === 'loading') return <SkeletonCard height={220} />;
+    if (entriesStatus === 'error') return errorCard('History', 'history');
+    const { groups, future } = historyView;
+    if (!groups.length && !future.length && !canShowEarlier) return null;
+    return (
+      <View style={styles.section}>
+        <SectionLabel heading>History</SectionLabel>
+        {future.length ? (
+          <Card padding="md" style={styles.card}>
+            <Text style={live.groupHeader}>Dated after today</Text>
+            {future.map(renderHistoryRow)}
+          </Card>
+        ) : null}
+        {groups.map((g) => (
+          <Card key={g.key} padding="md" style={styles.card}>
+            <Text style={live.groupHeader}>
+              {weekGroupHeader({
+                weekStartMs: g.weekStartMs, count: g.count, averageKg: g.averageKg, open: g.open, bwu,
+              })}
+            </Text>
+            {g.entries.map(renderHistoryRow)}
+          </Card>
+        ))}
+        {!groups.length && !future.length ? (
+          <Text style={live.bodySm}>No entries in these weeks.</Text>
+        ) : null}
+        {canShowEarlier ? (
+          <Button
+            title="Show earlier weeks"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            onPress={showEarlier}
+            accessibilityLabel="Show earlier weeks"
+          />
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderDoors() {
+    return (
+      <NavGroup>
+        <NavRow
+          icon="camera-outline"
+          label="Progress photos"
+          sub="Private to this device"
+          onPress={() => navigation.navigate('ProgressPhotos')}
+        />
+        <NavRow
+          icon="scale-outline"
+          label="Weight units"
+          sub={`Shown in ${bwu === 'st' ? 'stones and pounds' : (bwu === 'lbs' ? 'pounds' : 'kilograms')}`}
+          // SettingsWorkout lives in ProfileTab; a bare navigate from the
+          // Progress stack is the F4 dead-tap class.
+          onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'SettingsWorkout')}
+        />
+      </NavGroup>
+    );
   }
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Body metrics" />
-      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
-          KeyboardAvoidingView pattern (same behavior prop as PlansScreen /
-          ManualBuilderScreen) so the "New entry" form's fields stay
-          reachable above the keyboard, for consistency, no fixed footer
-          was found below this scroll. */}
+      {/* L03-C5 (2026-07-09 design audit): the app's KeyboardAvoidingView
+          pattern, so the entry form's fields stay reachable above the keyboard. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.content}
-        // A2 (pre-release sweep 2026-07-27, LANE A): without this, a tap on
-        // a button while a new-entry field is focused only dismisses the
-        // keyboard -- the user has to tap twice.
-        keyboardShouldPersistTaps="handled"
-      >
-
-        {/* Progress photos (gap #9): private, device-local only. */}
-        <TouchableOpacity
-          style={[styles.photosRow, live.photosRow]}
-          onPress={() => navigation.navigate('ProgressPhotos')}
-          accessibilityRole="button"
-          accessibilityLabel="Progress photos, private to this device"
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          // A2 (pre-release sweep 2026-07-27): without this, a tap on a button
+          // while a field is focused only dismisses the keyboard.
+          keyboardShouldPersistTaps="handled"
         >
-          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
-          <Text style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-
-        {/* Body Metrics is for body weight + measurements only. Nutrition
-            Targets have their own dedicated screen reachable from
-            Athlete Hub → Nutrition targets and Settings → Nutrition. */}
-
-        {/* Weight trend + snapshot */}
-        {historyLoading ? (
-          // D1 sweep (DD26): the screen's first load of its known-shape
-          // snapshot card, gated behind a Skeleton so it never flashes "No
-          // body metrics yet" before the real history has had a chance to
-          // load, matching ConsistencyScreen/VolumeHeatmapScreen.
-          <SkeletonCard height={220} />
-        ) : history.length > 0 ? (
-          <Card style={styles.snapshotCard}>
-            {/* Header row with phase chip */}
-            <View style={styles.snapshotHeader}>
-              <SectionLabel>
-                Weight - {weightSnapshotDateLabel(latest?.metric_date)}
-              </SectionLabel>
-              {phase && (
-                <View style={[styles.phaseChip, { borderColor: phase.color }]}>
-                  <Ionicons name={phase.icon} size={12} color={phase.color} />
-                  <Text style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
-                  {/* T23/O8: the chip's basis is invisible without this -- and it is a
-                      DIFFERENT calculation from the EWMA "Weekly change" figure below,
-                      so the copy names its own window rather than reusing GLOSSARY.ewma. */}
-                  <InfoTooltip text="Based on the direction of your weigh-ins over the last six weeks." size={12} />
-                </View>
-              )}
-            </View>
-
-            {latest.body_weight && (
-              <View style={styles.weightRow}>
-                <Text style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
-                {/* WAVE-D-FINDINGS.md UNIT_DEFECT (:1156-1159, minor, same
-                    family as the mandatory WeightTrendCard item): getDelta
-                    always returns a raw-KG difference (body_weight is stored
-                    in kg per rowToEntry), so it must convert -- not just
-                    relabel -- for an st/lbs display unit, mirroring
-                    formatBodyWeightRate's own inLbs branch logic exactly. */}
-                {getDelta('body_weight') && (
-                  <DeltaBadge
-                    delta={(bwu === 'st' || bwu === 'lbs')
-                      ? parseFloat(kgToLbs(parseFloat(getDelta('body_weight'))).toFixed(1))
-                      : parseFloat(getDelta('body_weight'))}
-                    units={(bwu === 'st' || bwu === 'lbs') ? 'lbs' : 'kg'}
-                  />
-                )}
-              </View>
-            )}
-            {/* D94 (Campaign 3, F4): the display unit shown above is set on
-                a screen no weight surface linked to. One quiet visible row
-                to the canonical editor; neutral wording, no weight
-                commentary (calm-safe). */}
-            <TouchableOpacity
-              style={styles.unitLinkRow}
-              // Review A finding 2: SettingsWorkout lives in ProfileTab; bare
-              // navigate from ProgressTab is the F4 dead-tap class.
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'SettingsWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Change display units in workout and units settings"
-            >
-              <Text style={[styles.unitLinkText, live.unitLinkText]}>{`Shown in ${bwu === 'st' ? 'stones and pounds' : bwu}. Change units`}</Text>
-            </TouchableOpacity>
-
-            {/* Weight trend chart */}
-            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
-
-            {history.length < 3 && (
-              <Text style={[styles.trendHint, live.trendHint]}>
-                Log weight 3 or more times to reveal a clearer trend.
-              </Text>
-            )}
-
-            {/* EWMA smoothed weight trend card */}
-            <Card radius="md" padding="md" style={styles.ewmaCard}>
-              {ewmaData.length >= 7 ? (
-                <>
-                  <View style={styles.labelTipRow}>
-                    <Text style={[styles.ewmaLabel, live.ewmaLabel]}>Weight trend</Text>
-                    {/* U-D-3: one-tap gloss for the smoothed-weight (EWMA) concept. */}
-                    <InfoTooltip text={GLOSSARY.ewma} size={13} />
-                  </View>
-                  <Text style={[styles.ewmaValue, live.ewmaValue]}>
-                    {formatBodyWeight(ewmaData[ewmaData.length - 1]?.ewma, bwu)}
-                  </Text>
-                  {/* WAVE-D-FINDINGS.md item 1: the weekly-rate line is
-                      suppressed under an open ED-pattern flag by the SAME
-                      shared derivation the Progress root's card uses
-                      (weightTrendVm, deriveWeightTrend) -- not a hand-rolled
-                      `if (edFlagOpen)` branch. The underlying number and this
-                      card's own copy are unchanged; only the ED-safety
-                      verdict is sourced from the shared function. */}
-                  {!weightTrendVm.edFlagOpen && weeklyChange != null && (
-                    <Text style={[styles.ewmaWeekly, live.ewmaWeekly]}>
-                      Weekly change: {formatBodyWeightRate(weeklyChange, bwu)}
-                    </Text>
-                  )}
-                  <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
-                    Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
-                  </Text>
-                  {recentIntake?.daysLogged > 0 && (
-                    <Text style={[styles.ewmaIntake, live.ewmaIntake]}>
-                      Average intake {toEnergy(recentIntake.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
-                  Log your weight for 7 days to see your smoothed trend.
-                </Text>
-              )}
-            </Card>
-
-            {/* WAVE-D-FINDINGS.md item 1: withheld entirely under an open
-                ED-pattern flag, matching deriveWeightTrend's edFlagOpen
-                branch (`maintenance: null`) exactly -- the same shared
-                derivation the Progress root's card already obeys. */}
-            {ewmaData.length >= 7 && !weightTrendVm.edFlagOpen ? (
-              <Card radius="md" padding="md" style={styles.burnCard}>
-                <View style={styles.labelTipRow}>
-                  <Text style={[styles.burnLabel, live.burnLabel]}>Effective maintenance</Text>
-                  {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
-                  <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
-                </View>
-                {adaptiveBurn.confidence === 'insufficient_data' ? (
-                  <Text style={[styles.burnMuted, live.burnMuted]}>
-                    This is the logged intake associated with roughly stable weight in your own history, not a direct measurement of metabolism. Keep logging morning weight and meals to build it.
-                  </Text>
-                ) : (
-                  <>
-                    <View style={styles.burnRow}>
-                      <Text style={[styles.burnValue, live.burnValue]}>{toEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
-                      <Text style={[styles.burnUnit, live.burnUnit]}>{energyUnitLabel(energyUnit)}/day</Text>
-                    </View>
-                    {adaptiveBurn.insight ? (
-                      <Text style={[styles.burnMuted, live.burnMuted]}>{adaptiveBurn.insight}</Text>
-                    ) : null}
-                    <View style={styles.burnConfidenceRow}>
-                      <Text style={[styles.burnConfidence, live.burnConfidence]}>
-                        {/* C6 RD6-8 (D97-25): the label names both inputs -
-                            weigh-in weeks, and whether logged food informed
-                            it or intake was assumed at target (the coach's
-                            own 5-day evidence bar decides which is true). */}
-                        {adaptiveBurn.confidence === 'high'
-                          ? 'High confidence'
-                          : adaptiveBurn.confidence === 'medium'
-                            ? 'Firming up'
-                            : 'Earlier estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of weigh-ins and your logged food
-                      </Text>
-                      <InfoTooltip text="More weeks of consistent weight and food logging tighten this estimate. It settles on its own; nothing to do." />
-                    </View>
-                  </>
-                )}
-              </Card>
-            ) : null}
-
-            {/* Recomposition reframe (ULTIMATE-RECOMP-01): when weight has held
-                steady but shape and/or strength kept moving, say so in numbers.
-                Renders nothing when not warranted or under calm/ED suppression. */}
-            <RecompCard
-              vm={recompVm}
-              weightUnits={units}
-              onMakeCard={(milestoneData) => navigation.navigate('ShareCard', { milestoneData })}
-            />
-
-            {/* Body composition: body fat % + its own trend, shown once
-                the user has logged it. The delta is rendered neutrally
-                (no good/bad colour) given the sensitivity of this screen. */}
-            {latest?.body_fat != null && (
-              <View style={[styles.bodyFatBlock, live.bodyFatBlock]}>
-                <View style={styles.bodyFatRow}>
-                  <SectionLabel>Body fat</SectionLabel>
-                  <View style={styles.bodyFatValueRow}>
-                    <Text style={[styles.bodyFatValue, live.bodyFatValue]}>{latest.body_fat}%</Text>
-                    {getDelta('body_fat') && (
-                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small />
-                    )}
-                  </View>
-                </View>
-                <BodyFatTrendChart entries={history} />
-              </View>
-            )}
-          </Card>
-        ) : historyLoadError ? (
-          // EP-09/P-06: a FAILED history read renders its own retryable
-          // error, never the "No body metrics yet" copy (which implies a
-          // genuinely empty history, not a read that never completed).
-          <EmptyState
-            icon="cloud-offline-outline"
-            title="Couldn't load body metrics"
-            text="Check your connection and try again. Nothing you've logged has been lost."
-            actionLabel="Retry"
-            onAction={loadHistory}
-            actionAccessibilityLabel="Retry loading body metrics"
-          />
-        ) : (
-          <EmptyState
-            icon="body-outline"
-            title="No body metrics yet"
-            text={onboardingWeightKg
-              ? `We have your onboarding body weight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Log a fresh weight to start the trend.`
-              : 'Log body weight or measurements when you want this trend to start.'}
-          />
-        )}
-
-        <Button
-          title={showForm ? 'Cancel' : 'Log weight'}
-          icon={showForm ? 'chevron-up' : 'add-circle'}
-          style={styles.logBtn}
-          onPress={() => {
-            // D16 (NAV-2): opening fresh always starts a new entry, even if
-            // the form was last left mid-edit; closing always clears edit
-            // state too, so a stray editingId can never redirect a later
-            // "Log weight" tap into silently overwriting a past entry.
-            if (showForm) closeMetricForm();
-            else { setEditingId(null); setShowForm(true); setShowMeasurements(false); }
-          }}
-          accessibilityState={{ expanded: showForm }}
-          accessibilityLabel={showForm ? 'Cancel' : 'Log weight'}
-          size="lg"
-          textStyle={styles.logBtnText}
-        />
-
-        {/* Log / Edit Form */}
-        {showForm && (
-          <View style={[styles.formCard, live.formCard]}>
-            <Text style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
-            <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]}>Date</Text>
-              <TextField
-                containerStyle={styles.formFieldContainer}
-                fieldStyle={styles.formField}
-                inputStyle={styles.formInputText}
-                value={form.metric_date}
-                onChangeText={v => setForm(f => ({ ...f, metric_date: v }))}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={t.colors.textMuted}
-                accessibilityLabel="Date, year month day"
-                // A7 (pre-release sweep 2026-07-27): this field had no
-                // keyboardType, so it opened the full default keyboard
-                // (autocorrect/autocapitalise included) for a fixed
-                // YYYY-MM-DD shape. numbers-and-punctuation matches the
-                // equivalent prep-countdown date field in
-                // ProGoalSetupScreen.js; validateBodyMetricForm now also
-                // rejects a syntactically-shaped but impossible date
-                // (bodyMetricValidate.js, calendarDateValidate.js).
-                keyboardType="numbers-and-punctuation"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={10}
-              />
-            </View>
-            {bwu === 'st' ? (
-              <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>Body weight</Text>
-                <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
-                  <TextField
-                    containerStyle={styles.formSplitFieldContainer}
-                    fieldStyle={styles.formField}
-                    inputStyle={styles.formInputText}
-                    value={form.body_weight_st}
-                    onChangeText={v => setForm(f => ({ ...f, body_weight_st: v }))}
-                    keyboardType="number-pad"
-                    placeholder="12 st"
-                    placeholderTextColor={t.colors.textMuted}
-                    maxLength={3}
-                    accessibilityLabel="Body weight, stone"
-                  />
-                  <TextField
-                    containerStyle={styles.formSplitFieldContainer}
-                    fieldStyle={styles.formField}
-                    inputStyle={styles.formInputText}
-                    value={form.body_weight_st_lbs}
-                    onChangeText={v => setForm(f => ({ ...f, body_weight_st_lbs: v }))}
-                    keyboardType="decimal-pad"
-                    placeholder="0 lbs"
-                    placeholderTextColor={t.colors.textMuted}
-                    maxLength={4}
-                    accessibilityLabel="Body weight, pounds"
-                  />
-                </View>
-              </View>
-            ) : (
-              <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
-                <TextField
-                  containerStyle={styles.formFieldContainer}
-                  fieldStyle={styles.formField}
-                  inputStyle={styles.formInputText}
-                  value={form.body_weight}
-                  onChangeText={v => setForm(f => ({ ...f, body_weight: v }))}
-                  keyboardType="decimal-pad"
-                  placeholder={bwu === 'lbs' ? '176' : '82.5'}
-                  placeholderTextColor={t.colors.textMuted}
-                  accessibilityLabel={`Body weight in ${bwu}`}
-                />
-              </View>
-            )}
-
-            <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
-              <TextField
-                containerStyle={styles.formFieldContainer}
-                fieldStyle={styles.formField}
-                inputStyle={styles.formInputText}
-                value={form.body_fat}
-                onChangeText={v => setForm(f => ({ ...f, body_fat: v }))}
-                keyboardType="decimal-pad"
-                placeholder="optional"
-                placeholderTextColor={t.colors.textMuted}
-                maxLength={4}
-                accessibilityLabel="Body fat percentage"
-              />
-            </View>
-
-            {/* Measurements section, collapsed by default */}
-            <TouchableOpacity
-              style={[styles.measureToggle, live.measureToggle]}
-              onPress={() => setShowMeasurements(v => !v)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: showMeasurements }}
-              accessibilityLabel={showMeasurements ? 'Hide measurements' : 'Add measurements'}
-            >
-              <Text style={[styles.measureToggleText, live.measureToggleText]}>
-                {showMeasurements ? 'Hide measurements' : 'Add measurements (optional)'}
-              </Text>
-              <Ionicons
-                name={showMeasurements ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={t.colors.textMuted}
-              />
-            </TouchableOpacity>
-
-            {showMeasurements && MEASUREMENTS.map(m => (
-              <View key={m.key} style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
-                <TextField
-                  containerStyle={styles.formFieldContainer}
-                  fieldStyle={styles.formField}
-                  inputStyle={styles.formInputText}
-                  value={form[m.key]}
-                  onChangeText={v => setForm(f => ({ ...f, [m.key]: v }))}
-                  keyboardType="decimal-pad"
-                  placeholder=""
-                  placeholderTextColor={t.colors.textMuted}
-                  accessibilityLabel={`${m.label} in centimetres`}
-                />
-              </View>
-            ))}
-
-            <TextField
-              containerStyle={styles.notesInputContainer}
-              fieldStyle={styles.notesField}
-              inputStyle={styles.notesInputText}
-              value={form.notes}
-              onChangeText={v => setForm(f => ({ ...f, notes: v }))}
-              placeholder="Notes (optional)"
-              placeholderTextColor={t.colors.textMuted}
-              multiline
-              accessibilityLabel="Notes"
-            />
-            <Button
-              title={editingId ? 'Save changes' : 'Save entry'}
-              onPress={saveMetrics}
-              disabled={saving}
-              loading={saving}
-              style={styles.saveBtn}
-              textStyle={styles.saveBtnText}
-              accessibilityLabel={editingId ? 'Save changes' : 'Save entry'}
-            />
-          </View>
-        )}
-
-        {/* Measurements snapshot + trend charts */}
-        {latest && MEASUREMENTS.some(m => latest[m.key]) && (
-          <Card style={styles.snapshotCard}>
-            <SectionLabel>Measurements</SectionLabel>
-            <View style={styles.measureGrid}>
-              {MEASUREMENTS.map(m => latest[m.key] ? (
-                <TouchableOpacity
-                  key={m.key}
-                  style={[styles.measureCell, live.measureCell, selectedMeasurement === m.key && [styles.measureCellActive, live.measureCellActive]]}
-                  onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: selectedMeasurement === m.key }}
-                  accessibilityLabel={`${m.label} ${latest[m.key]} centimetres`}
-                >
-                  <Text style={[styles.measureValue, live.measureValue, selectedMeasurement === m.key && [styles.measureValueActive, live.measureValueActive]]}>
-                    {latest[m.key]} cm
-                  </Text>
-                  <Text style={[styles.measureLabel, live.measureLabel, selectedMeasurement === m.key && [styles.measureLabelActive, live.measureLabelActive]]}>
-                    {m.label}
-                  </Text>
-                  {getDelta(m.key) && (
-                    <DeltaBadge delta={parseFloat(getDelta(m.key))} units="cm" small />
-                  )}
-                </TouchableOpacity>
-              ) : null)}
-            </View>
-
-            {/* Measurement trend chart */}
-            {measurementsWithData.length > 0 && (
-              <>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.measureTabRow}
-                >
-                  {measurementsWithData.map(m => (
-                    <TouchableOpacity
-                      key={m.key}
-                      style={[styles.measureTab, live.measureTab, selectedMeasurement === m.key && [styles.measureTabActive, live.measureTabActive]]}
-                      onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: selectedMeasurement === m.key }}
-                      accessibilityLabel={m.label}
-                    >
-                      <Text style={[styles.measureTabText, live.measureTabText, selectedMeasurement === m.key && [styles.measureTabTextActive, live.measureTabTextActive]]}>
-                        {m.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                {selectedMeasurement && (
-                  <MeasurementTrendChart
-                    entries={history}
-                    measureKey={selectedMeasurement}
-                    label={MEASUREMENTS.find(m => m.key === selectedMeasurement)?.label ?? ''}
-                  />
-                )}
-              </>
-            )}
-          </Card>
-        )}
-
-        {/* History. D16 (NAV-2): full weigh-in management, edit any entry,
-            delete entries, visible history list, so this now shows from a
-            single logged entry (not only once there are 2+), and every row
-            carries a calm edit/delete pair. */}
-        {history.length > 0 && (
-          <View style={styles.section}>
-            <SectionLabel>History</SectionLabel>
-            {history.slice(0, 12).map(entry => {
-              const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
-              const entryLabel = safeFormatDate(entry.metric_date, 'd MMM yyyy') || 'this date';
-              return (
-                <Card key={entry.id} radius="md" padding="md" style={styles.historyRow}>
-                  <View style={styles.historyMain}>
-                    <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
-                    <View style={styles.historyValues}>
-                      {entry.body_weight ? (
-                        <Text style={[styles.historyWeight, live.historyWeight]}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
-                      ) : null}
-                      {measuredKeys.slice(0, 2).map(m => (
-                        <Text key={m.key} style={[styles.historyMeasure, live.historyMeasure]}>
-                          {m.label.split(' ')[0]} {entry[m.key]}cm
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
-                  {/* C6 R-8 (D97-22): morning_weights rows now have their own
-                      update/soft-delete pair, so the actions render for them
-                      too and route to the owning table (see saveMetrics /
-                      deleteMetricEntry). The old silent no-op is gone. */}
-                  <View style={styles.historyActions}>
-                    <TouchableOpacity
-                      style={[styles.historyActionBtn, live.historyActionBtn]}
-                      onPress={() => startEditEntry(entry)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Edit entry from ${entryLabel}`}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="pencil-outline" size={16} color={t.colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.historyActionBtn, live.historyActionBtn]}
-                      onPress={() => confirmDeleteEntry(entry)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Delete entry from ${entryLabel}`}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+          {renderThisWeek()}
+          {renderActions()}
+          {renderTrend()}
+          {renderCalories()}
+          {renderRecomposition()}
+          {renderReadings()}
+          {renderHistory()}
+          {renderDoors()}
+        </ScrollView>
       </KeyboardAvoidingView>
+      <PhotoDatePicker
+        visible={showDatePicker}
+        valueMs={noonOfDay(form.metric_date)}
+        onChange={(ms) => setForm((f) => ({ ...f, metric_date: localDayKey(ms) }))}
+        onClose={() => setShowDatePicker(false)}
+      />
     </SafeAreaView>
   );
 }
 
-// Recomposition reframe card (ULTIMATE-RECOMP-01). Presentation-only: every fact
-// is pre-derived by deriveRecomp; this renders the numbers-first read plus one
-// plain sentence. Class-B body data, no valence colour (COMP-027). Returns null
-// when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
-// CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
-// as the chart components above.
-function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLiveStyles(t), [t]);
-  if (!vm || !vm.render) return null;
-
-  const parts = ['Weight steady.'];
-  if (vm.bodyFat) {
-    const d = vm.bodyFat.deltaPP;
-    parts.push(`Body fat ${d < 0 ? 'down' : 'up'} ${Math.abs(d)}%.`);
-  }
-  if (vm.measurement) {
-    const d = vm.measurement.deltaCm;
-    parts.push(`${vm.measurement.label} ${d < 0 ? 'down' : 'up'} ${Math.abs(d)} cm.`);
-  }
-  if (vm.lift) {
-    parts.push(`${vm.lift.name} up ${vm.lift.deltaKg} ${weightUnits}.`);
-  }
-
-  // One plain, honesty-test-passing sentence (true if the user only logged).
-  const shapeMoved = !!(vm.bodyFat || vm.measurement);
-  const moved = shapeMoved && vm.lift ? 'shape and strength'
-    : vm.lift ? 'strength' : 'shape';
-  const sentence = `Your weight has held while your ${moved} kept moving.`;
-
-  // S4 (world-class audit 04a): share image extended to this insight, the
-  // most only-Volyume read in the app, previously unshareable. Privacy gate
-  // lives in buildRecompShareParams: it returns null unless the strength
-  // signal fired, so a share card NEVER carries a body fat or measurement
-  // delta, only ever the lift gain (pure training data).
-  const shareParams = onMakeCard ? buildRecompShareParams(vm, weightUnits) : null;
-
-  return (
-    <View style={[styles.recompBlock, live.recompBlock]}>
-      <View style={styles.recompHeaderRow}>
-        <Ionicons name="sync-outline" size={14} color={t.colors.textMuted} />
-        <SectionLabel>Recomposition</SectionLabel>
-        <InfoTooltip text={GLOSSARY.recomposition} />
-      </View>
-      <Text style={[styles.recompRead, live.recompRead]}>{parts.join(' ')}</Text>
-      <Text style={[styles.recompNote, live.recompNote]}>{sentence}</Text>
-      {shareParams ? (
-        <TouchableOpacity
-          style={[styles.recompCtaRow, live.recompCtaRow]}
-          onPress={() => onMakeCard(shareParams)}
-          accessibilityRole="button"
-          accessibilityLabel="Create share image"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
-          <Text style={[styles.recompCta, live.recompCta]}>Create share image</Text>
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
-}
-
-// Class B body-data surface (COMP-027): on a body metric, direction is not
-// valence. Losing or gaining weight / fat / a measurement is neither "good"
-// (green) nor "bad" (red), so the badge carries no state colour: the arrow
-// and sign show direction, the figure stays textPrimary, the arrow textMuted.
-// (The `neutral` prop is retained for call-site compatibility; every delta is
-// neutral now.)
-// CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
-// as the chart components above.
-function DeltaBadge({ delta, units, small }) {
-  const t = useTheme();
-  const isUp = delta > 0;
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={t.colors.textMuted} />
-      <Text style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold }}>
-        {isUp ? '+' : ''}{delta} {units}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1 },
   keyboardAvoid: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  photosRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  optInContent: { padding: spacing.lg },
   confirmCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
-    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md, alignItems: 'flex-start',
+    borderRadius: radius.lg, padding: spacing.xl,
+    borderWidth: 1, gap: spacing.md, alignItems: 'flex-start',
   },
-  confirmTitle: { ...type.h3, color: colors.textPrimary },
-  confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
-  // Button adoption: box/fill/radius/padding now come from <Button size="lg">
-  // (primary variant, fullWidth default matches the original alignSelf:
-  // 'stretch'); only the top margin survives as a local override.
-  confirmBtn: {
-    marginTop: spacing.sm,
-  },
-  confirmBtnText: {},
-  confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
+  confirmTitle: {},
+  confirmBody: {},
+  confirmBtn: { marginTop: spacing.sm },
+  confirmHelpline: { marginTop: spacing.sm },
 
-  snapshotCard: {
-    gap: spacing.md,
-  },
-  snapshotHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  phaseChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-  },
-  phaseLabel: { ...type.captionStrong },
-  weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  unitLinkRow: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
-  unitLinkText: { ...type.caption, color: colors.textMuted },
-  weightValue: { fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
-  trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.md },
-  recompBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.md },
-  recompHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  recompRead: { ...type.bodyStrong, color: colors.textPrimary },
-  recompNote: { ...type.bodySm, color: colors.textMuted },
-  recompCtaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 40,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  recompCta: { ...type.label, color: colors.textPrimary },
-  bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },
-  measureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  measureCell: {
-    minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
-    padding: spacing.md, gap: spacing.xxs, borderWidth: 1, borderColor: 'transparent',
-  },
-  measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  measureValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
-  measureValueActive: { color: colors.primary },
-  measureLabel: { ...type.caption, color: colors.textMuted },
-  measureLabelActive: { color: colors.primaryDim },
-  measureTabRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.sm },
-  measureTab: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    borderRadius: radius.full, backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  measureTabText: { ...type.captionStrong, color: colors.textSecondary },
-  measureTabTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  card: { gap: spacing.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  hero: { gap: spacing.xxs },
+  heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  figureRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
 
-  logBtn: {
-    paddingVertical: spacing.lg,
-  },
-  logBtnText: { ...type.title, color: colors.textPrimary },
-  formCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
-  },
-  formTitle: { ...type.title, color: colors.textPrimary },
+  actionRow: { flexDirection: 'row', gap: spacing.sm },
+  actionBtn: { flex: 1 },
+
+  formBody: { gap: spacing.md },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  // D5 (pre-release sweep 2026-07-27, LANE D): was a fixed `width: 140` with
-  // numberOfLines={1} on the label Text below, so measurement labels like
-  // "Left forearm" truncated to "Left forea..." at large OS text sizes,
-  // right next to the field the user is about to type a measurement into.
-  // Legibility of the label beats the form's visual rhythm here, so the
-  // fixed width is gone and the label is free to wrap onto a second line.
-  // flexShrink is REQUIRED here: React Native defaults it to 0 (unlike the
-  // web), so a label with no width in a row would refuse to shrink and would
-  // squeeze the flex:1 input field towards zero instead of wrapping. maxWidth
-  // keeps the field usable when a label is unusually long.
-  formLabel: { flexShrink: 1, maxWidth: '45%', fontSize: fontSize.sm, color: colors.textSecondary },
-  formFieldContainer: { flex: 1 },
-  formSplitFieldContainer: { flex: 1 },
-  formField: {
-    borderRadius: radius.sm,
-    minHeight: touchTarget.minimum,
+  // One label column, so every field of the form starts at the same edge.
+  rowLabel: { width: 96 },
+  dateField: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    minHeight: touchTarget.minimum, paddingHorizontal: spacing.md,
+    borderRadius: radius.sm, borderWidth: 1,
   },
-  formInputText: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  weightInputs: { flex: 1, flexDirection: 'row', gap: spacing.sm },
+  unitField: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  unitFieldFlex: { flex: 1 },
+  fieldContainer: { flex: 1 },
+  field: { borderRadius: radius.sm, minHeight: touchTarget.minimum },
+  fieldText: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  noteBlock: { gap: spacing.xs },
+  noteContainer: { gap: 0 },
+  noteField: { minHeight: 72 },
+  noteText: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 72, textAlignVertical: 'top',
   },
-  notesInputContainer: { gap: 0 },
-  notesField: {
-    minHeight: 80,
-  },
-  notesInputText: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  measureToggle: {
+  moreBlock: { gap: spacing.md },
+  methodBlock: { gap: spacing.xs },
+  moreToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingVertical: spacing.sm, borderTopWidth: 1,
   },
-  measureToggleText: { fontSize: fontSize.sm, color: colors.textMuted },
-  saveBtn: {
-    marginTop: spacing.sm,
+  formButtons: { flexDirection: 'row', gap: spacing.sm },
+  formBtn: { flex: 1 },
+  inlineForm: { paddingVertical: spacing.sm },
+
+  chipRow: { flexDirection: 'row', gap: spacing.xs },
+  windowChip: {
+    flex: 1, alignSelf: 'stretch', justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
-  saveBtnText: { ...type.bodyStrong, color: colors.textPrimary },
+  chartWrap: { marginHorizontal: -spacing.xs },
+
+  shareRow: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs,
+    minHeight: 40, borderRadius: radius.full, borderWidth: 1,
+    paddingHorizontal: spacing.sm, marginTop: spacing.xs,
+  },
+
+  readingRow: { gap: spacing.xxs, paddingVertical: spacing.xs },
+  readingHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+
   section: { gap: spacing.sm },
   historyRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    minHeight: touchTarget.minimum, paddingVertical: spacing.sm, gap: spacing.sm,
+    borderTopWidth: 1,
   },
-  // D16 (NAV-2): date + values sit in their own flexible row so the
-  // edit/delete pair (historyActions) can sit alongside without the two
-  // competing for the same justify-content: space-between.
-  historyMain: {
-    flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  historyDate: { fontSize: fontSize.sm, color: colors.textSecondary },
-  historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  historyWeight: { ...type.num('bodyStrong'), color: colors.textPrimary },
-  historyMeasure: { ...type.num('caption'), color: colors.textMuted },
-  historyActions: { flexDirection: 'row', gap: spacing.xs, marginLeft: spacing.sm },
-  // Quiet destructive affordance, same neutral-until-confirm treatment as
-  // WorkoutHistoryScreen's deleteBtn (no shouting red, no haptics).
-  historyActionBtn: {
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-  },
-
-  ewmaCard: {
-    gap: spacing.xs,
-  },
-  labelTipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  ewmaLabel: { ...type.caption, color: colors.textSecondary },
-  ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
-  ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
-  ewmaMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  ewmaIntake: { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xs },
-  burnCard: {
-    gap: spacing.xs, marginTop: spacing.md,
-  },
-  burnLabel: { ...type.caption, color: colors.textSecondary },
-  burnRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
-  burnValue: { ...type.num('h2'), color: colors.textPrimary },
-  burnUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
-  burnMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  burnConfidence: { ...type.caption, color: colors.textSecondary },
-  burnConfidenceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  historyText: { flex: 1, gap: spacing.xxs },
 });
 
-// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
-// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
-// properties of the matching frozen style, at identical rest values, so the
-// screen carries no static island under a live theme toggle. Pure layout
-// keys (flex/padding/gap/margin/borderRadius/borderWidth/minWidth, no
-// token) and fontWeight (not part of useTheme()'s shape) are correctly
-// omitted. measureCell's `transparent` borderColor and phaseChip's fully
-// inline borderColor (phase.color, already resolved from the live theme by
-// detectPhase(history, t.colors)) need no live entry -- there is nothing
-// frozen to unfreeze for them. The weight-logging form, ED-safety calm-mode
-// gate and every safety threshold are untouched -- colours only.
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above carries
+// layout and spacing at rest; every colour and type role is read from the live
+// theme here, so the screen follows dark, light, higher-contrast and
+// colour-blind-safe without a restart. Amber appears once on this screen, on
+// the "Log weight" action (Button's own primary treatment); facts are ink.
 function buildLiveStyles(t) {
+  const c = t.colors;
+  const ty = t.type;
   return {
-    unitLinkText: { ...t.type.caption, color: t.colors.textMuted },
-    safe: { backgroundColor: t.colors.background },
-    photosRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    photosRowText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
-    confirmCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    confirmTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    confirmBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    confirmHelpline: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    phaseLabel: { ...t.type.captionStrong },
-    weightValue: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
-    trendHint: { ...t.type.caption, color: t.colors.textMuted },
-    bodyFatBlock: { borderTopColor: t.colors.borderSubtle },
-    recompBlock: { borderTopColor: t.colors.borderSubtle },
-    recompRead: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    recompNote: { ...t.type.bodySm, color: t.colors.textMuted },
-    recompCtaRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    recompCta: { ...t.type.label, color: t.colors.textPrimary },
-    bodyFatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
-    measureCell: { backgroundColor: t.colors.surface2 },
-    measureCellActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
-    measureValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
-    measureValueActive: { color: t.colors.primary },
-    measureLabel: { ...t.type.caption, color: t.colors.textMuted },
-    measureLabelActive: { color: t.colors.primaryDim },
-    measureTab: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    measureTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-    measureTabText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    measureTabTextActive: { color: t.colors.primary },
-    logBtnText: { ...t.type.title, color: t.colors.textPrimary },
-    formCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    formTitle: { ...t.type.title, color: t.colors.textPrimary },
-    formLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    measureToggle: { borderTopColor: t.colors.border },
-    measureToggleText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    saveBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    historyDate: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    historyWeight: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
-    historyMeasure: { ...t.type.num('caption'), color: t.colors.textMuted },
-    historyActionBtn: { borderColor: t.colors.border },
-    ewmaLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    ewmaValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
-    ewmaWeekly: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    ewmaMuted: { ...t.type.caption, color: t.colors.textMuted },
-    ewmaIntake: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    burnLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    burnValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
-    burnUnit: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    burnMuted: { ...t.type.caption, color: t.colors.textMuted },
-    burnConfidence: { ...t.type.caption, color: t.colors.textSecondary },
+    safe: { backgroundColor: c.background },
+    confirmCard: { backgroundColor: c.surface, borderColor: c.border },
+    confirmTitle: { ...ty.h3, color: c.textPrimary },
+    confirmBody: { ...ty.bodySm, color: c.textSecondary },
+    confirmHelpline: { ...ty.caption, color: c.textMuted },
+
+    heroNumber: { ...ty.num('h2'), color: c.textPrimary },
+    heroLabel: { ...ty.bodyStrong, color: c.textPrimary },
+    heroDayZero: { ...ty.bodyStrong, color: c.textPrimary },
+    figureUnit: { ...ty.bodyStrong, color: c.textPrimary },
+    body: { ...ty.body, color: c.textPrimary },
+    bodyStrong: { ...ty.bodyStrong, color: c.textPrimary },
+    bodySm: { ...ty.bodySm, color: c.textSecondary },
+    caption: { ...ty.caption, color: c.textMuted },
+
+    formTitle: { ...ty.title, color: c.textPrimary },
+    formLabel: { ...ty.bodySm, color: c.textSecondary },
+    unitText: { ...ty.bodySm, color: c.textSecondary },
+    noticeText: { ...ty.bodySm, color: c.textPrimary },
+    dateField: { backgroundColor: c.surface2, borderColor: c.border },
+    dateText: { ...ty.bodyStrong, color: c.textPrimary },
+    moreToggle: { borderTopColor: c.border },
+    moreToggleText: { ...ty.bodySm, color: c.textSecondary },
+
+    shareRow: { borderColor: c.border, backgroundColor: c.surface2 },
+    shareText: { ...ty.label, color: c.textPrimary },
+
+    readingLabel: { ...ty.bodyStrong, color: c.textPrimary },
+    readingValue: { ...ty.num('bodyStrong'), color: c.textPrimary },
+
+    groupHeader: { ...ty.label, color: c.textSecondary },
+    historyRow: { borderTopColor: c.borderSubtle },
+    historyTitle: { ...ty.num('bodyStrong'), color: c.textPrimary },
   };
 }

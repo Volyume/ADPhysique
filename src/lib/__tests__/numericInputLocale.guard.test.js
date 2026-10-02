@@ -45,7 +45,11 @@ const USER_INPUT_SURFACES = [
  */
 const MACHINE_STRING_EXCEPTIONS = {
   'screens/NutritionTargetsScreen.js': ['(results.proteinG / formWeightKg).toFixed(2)'],
-  'screens/BodyMetricsScreen.js': ["getDelta('body_weight')", "getDelta('body_fat')", 'getDelta(m.key)', 'kgToLbs('],
+  // RE-ANCHORED D214 addendum 4 (Body metrics, lane 7; spec section 6 table:
+  // `numericInputLocale.guard:48`): the delta badge and its getDelta(...)
+  // strings are gone (BM-9, no arrow and no delta badge), and the screen holds
+  // NO raw parseFloat at all, so it has no machine-string exception left.
+  'screens/BodyMetricsScreen.js': [],
 };
 
 describe('every user-typed number goes through the locale parser', () => {
