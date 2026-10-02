@@ -11543,7 +11543,7 @@ outcome is recorded at the merge, and main waits for it.
   windows (38 and 45 minutes) with no edit-gate block.
 
 **D214 addendum 6 (2026-10-02, the fresh-eyes reviews of lanes 3 and 4;
-the lead's rulings and fixes before the merge; the fixes committed as `undefined`).** Both reviews (Sonnet,
+the lead's rulings and fixes before the merge; the fixes committed as `918a70f`).** Both reviews (Sonnet,
 relaunched after the API limit reset) found no blocker and verified the
 counts against the real functions: the strip's "under their range" equals
 the heatmap's first group on twelve fixtures, the first-day baseline holds
