@@ -1817,10 +1817,11 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
 
   test('the weigh-in strip says why, on the empty state only, with no count', () => {
     const src = stripComments(read('components/TodayStrip.js'));
-    const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
+    // Keyboard fix 2026-10-02 (register D214 addendum 3): the rows are render helpers now, so the anchors are their new names.
+    const empty = src.slice(src.indexOf('function renderWeightEmpty'), src.indexOf('if (editing)'));
     expect(empty).toMatch(/each reading is comparable/);
     expect(empty).not.toMatch(/streak|days in a row|of 3/i);
-    const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
+    const logged = src.slice(src.indexOf('function renderWeightLogged'), src.indexOf('function renderWeightEmpty'));
     expect(logged).not.toMatch(/several mornings/);
   });
 });

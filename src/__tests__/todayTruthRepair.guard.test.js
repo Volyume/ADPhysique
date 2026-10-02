@@ -293,7 +293,8 @@ describe('Task 3: the morning-weight Log button shares the row alignment', () =>
     expect(STRIP).toContain('disabled={!hasDraft || savingWeight}');
     expect(STRIP).toContain('accessibilityState={{ disabled: !hasDraft || savingWeight }}');
     // Logged-today and not-logged states both survive.
-    expect(STRIP).toContain('todayWeight != null ? <WeightLogged /> : <WeightEmpty />');
+    // Keyboard fix 2026-10-02 (register D214 addendum 3): the two states are render helpers called as functions, never components declared inside the strip (each keystroke remounted the input).
+    expect(STRIP).toContain('todayWeight != null ? renderWeightLogged() : renderWeightEmpty()');
     expect(STRIP).toContain('Not logged yet');
     expect(STRIP).toContain('minHeight: 30');
     expect(STRIP).toContain('minWidth: 76');
