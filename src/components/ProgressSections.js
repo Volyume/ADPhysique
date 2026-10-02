@@ -154,7 +154,10 @@ export function BlockCard({
   if (!meso) {
     return (
       <Card onPress={onBuild} accessibilityRole="button" accessibilityLabel="Browse plans" style={styles.mesoEmpty}>
-        <Ionicons name="layers-outline" size={32} color={t.colors.primaryDim} />
+        {/* Ink (D214 addendum 6, lane 4 review S3): the card is the control and
+            its pill already reads as one; a second amber beside the empty
+            state broke rule 3 on day zero. */}
+        <Ionicons name="layers-outline" size={32} color={t.colors.textSecondary} />
         <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
         <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={[styles.mesoEmptyBtn, live.mesoEmptyBtn]}>
@@ -294,7 +297,7 @@ export function LoadCard({ bars, unit = 'kg', comparison = null, average = null 
             'The total weight you lifted over your working sets (warm-ups are not counted), for each week from Monday to Sunday. The last bar is this week so far.\n\n'
             + 'The comparison looks at the same days and the same time of day in each of your last three weeks, so a part week is never set against full ones. '
             + `In line means between ${Math.round((1 - LOAD_IN_LINE_MIN) * 100)}% under and ${Math.round((LOAD_ABOVE_MIN - 1) * 100)}% over the average of those weeks at this point.\n\n`
-            + 'The average is taken over your full weeks that have at least one logged set.\n\n'
+            + 'The average is taken over up to your last four full weeks that have at least one logged set; this week so far is not in it.\n\n'
             + 'Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.'
           }
         />

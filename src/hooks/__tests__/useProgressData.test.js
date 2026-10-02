@@ -23,6 +23,7 @@ jest.mock('../../lib/database', () => ({
   getRecentWorkoutFeedback: jest.fn(),
   getCurrentMesocycleWeek: jest.fn(),
   getPlannedMuscleVolume: jest.fn(),
+  getMesocycleWeekById: jest.fn(),
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 // D214 (lane 4): the hook now reads the programme position with the other
@@ -74,6 +75,7 @@ beforeEach(() => {
   database.getRecentWorkoutFeedback.mockResolvedValue([]);
   database.getCurrentMesocycleWeek.mockResolvedValue(null);
   database.getPlannedMuscleVolume.mockResolvedValue([]);
+  database.getMesocycleWeekById.mockResolvedValue(null);
   resolveProgrammePosition.mockResolvedValue(null);
 });
 
@@ -507,6 +509,57 @@ describe('useProgressData: the programme position (D214, plan 7.3 item 2)', () =
     }
     expect(typeof ref.current.handleRefresh).toBe('function');
     expect(Array.isArray(ref.current.allSets)).toBe(true);
+    act(() => { tree.unmount(); });
+  });
+});
+
+// D214 addendum 6 (lane 4 review S1): the block week the screen prints its
+// effort and plan rows for is the PROGRAMME's week when the position names
+// one (the week the plan-week card and the block card name), with that
+// week's own rep target and planned volume; the calendar row is the fallback.
+describe('blockWeek: one week for the whole block card', () => {
+  const calendarWeek = {
+    id: 'cal6', weekRowId: 'cal6', weekIndex: 6, plannedWeeks: 6, isDeload: true, awaitingDecision: false,
+    rirTarget: 4, blockStartMs: Date.now() - 36 * 86400000, deloadWeek: 6,
+  };
+  beforeEach(() => {
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([{ id: 'w1', isCompleted: true, startedAt: Date.now() }]);
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getAllExercises.mockResolvedValue([]);
+    database.getCurrentMesocycleWeek.mockResolvedValue(calendarWeek);
+    database.getPlannedMuscleVolume.mockResolvedValue([{ muscle: 'chest', planned_sets: 12 }]);
+  });
+  test('the programme holds week 5 while the calendar says the recovery week 6: the rows and the rep target are week 5\'s', async () => {
+    resolveProgrammePosition.mockResolvedValue({
+      activeWeekIndex: 5, activeWeekId: 'wk5', plannedWeeks: 6, sessions: [], nextSession: null, weekResolved: false,
+      recoveryState: { state: 'normal_accumulation' },
+    });
+    database.getMesocycleWeekById.mockResolvedValue({ id: 'wk5', week_index: 5, rir_target: 1 });
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.blockWeek).toEqual({ weekIndex: 5, weekId: 'wk5', rirTarget: 1, source: 'programme' });
+    expect(database.getPlannedMuscleVolume).toHaveBeenCalledWith('wk5');
+    expect(database.getPlannedMuscleVolume).not.toHaveBeenCalledWith('cal6');
+    expect(database.getMesocycleWeekById).toHaveBeenCalledWith('wk5');
+    // The calendar row still reaches the screen for what it owns (the finished state).
+    expect(ref.current.currentMesoWeek.weekIndex).toBe(6);
+    act(() => { tree.unmount(); });
+  });
+  test('the programme and the calendar agree: no second week-row read', async () => {
+    resolveProgrammePosition.mockResolvedValue({
+      activeWeekIndex: 6, activeWeekId: 'cal6', plannedWeeks: 6, sessions: [], nextSession: null, weekResolved: false,
+      recoveryState: { state: 'planned_block_recovery' },
+    });
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.blockWeek).toEqual({ weekIndex: 6, weekId: 'cal6', rirTarget: 4, source: 'programme' });
+    expect(database.getMesocycleWeekById).not.toHaveBeenCalled();
+    act(() => { tree.unmount(); });
+  });
+  test('no position: the calendar row stands, named as such', async () => {
+    resolveProgrammePosition.mockResolvedValue(null);
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.blockWeek).toEqual({ weekIndex: 6, weekId: 'cal6', rirTarget: 4, source: 'calendar' });
+    expect(database.getPlannedMuscleVolume).toHaveBeenCalledWith('cal6');
     act(() => { tree.unmount(); });
   });
 });

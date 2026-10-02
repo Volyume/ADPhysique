@@ -66,7 +66,11 @@ describe('the header names what the rows count and when (CS-8)', () => {
   test('the (i) says a plan week starts on the day the block started (CS-8)', () => {
     const tree = render({ planWeek: { done: 2, required: 4 } });
     const tip = tree.root.findAll((n) => typeof n.props.text === 'string')[0];
-    expect(tip.props.text).toContain('A plan week starts on the day your block started and runs for seven days');
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S4): the (i) says the rows count
+    // this plan week (not since the block began) and carries the credit rule.
+    expect(tip.props.text).toContain('Plan weeks run for seven days from the day your block started');
+    expect(tip.props.text).toContain('since this plan week began');
+    expect(tip.props.text).toContain('A set counts once for the muscle it works most and half for each muscle that helps');
     expect(tip.props.text).not.toMatch(/Monday to Sunday only|easier|consider|should/i);
   });
 
@@ -135,8 +139,18 @@ describe('BlockProgressCard onPress (pressable when supplied, plain otherwise)',
   test('with onPress: renders a pressable button that calls onPress when pressed', () => {
     const onPress = jest.fn();
     const tree = render({ currentMesoWeek: { weekIndex: 2, plannedWeeks: 5, rirTarget: 2 }, onPress });
-    const button = tree.root.findByProps({ accessibilityRole: 'button' });
-    expect(button.props.accessibilityHint).toBe('Opens weekly volume by muscle');
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S5): the header and its (i)
+    // render OUTSIDE the pressable card, so the (i) is its own button; the
+    // card is the button carrying the hint, named by the header's sentence.
+    const button = tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityHint === 'Opens weekly volume by muscle')[0];
+    expect(button).toBeTruthy();
+    expect(button.props.accessibilityLabel).toMatch(/^Sets done so far this plan week/);
+    const tip = tree.root.findAll((n) => n.type === 'InfoTooltip' || n.type?.name === 'InfoTooltip')[0];
+    if (tip) {
+      let p = tip.parent; let insidePressable = false;
+      while (p) { if (p.props?.accessibilityHint === 'Opens weekly volume by muscle') insidePressable = true; p = p.parent; }
+      expect(insidePressable).toBe(false);
+    }
     act(() => { button.props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
   });

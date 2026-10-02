@@ -61,10 +61,11 @@ describe('ProgressSections cohesion census (R2, re-anchored D214)', () => {
 
   test('facts are ink: no amber, warning, success or error colour on a figure, a bar or a line (plan rule 3)', () => {
     expect(CODE).not.toMatch(/colors\.(primary|primaryFill|warning|success|error|gold)\b/);
-    // The only amber-family token is the no-plan card's icon, and that card is an action.
-    const primaryDim = CODE.match(/colors\.primaryDim/g) ?? [];
-    expect(primaryDim).toHaveLength(1);
-    expect(CODE).toMatch(/<Ionicons name="layers-outline" size=\{32\} color=\{t\.colors\.primaryDim\}/);
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S3): the no-plan card's icon is
+    // ink too; day zero without a plan drew it amber beside the empty state's
+    // amber, two accents on one screen. No amber-family token remains here.
+    expect(CODE).not.toMatch(/colors\.primaryDim/);
+    expect(CODE).toMatch(/<Ionicons name="layers-outline" size=\{32\} color=\{t\.colors\.textSecondary\}/);
     // The fills read the ink token.
     expect(SRC).toMatch(/blockBarFill:\s*\{[^}]*backgroundColor: colors\.textSecondary/);
     expect(SRC).toMatch(/loadBar:\s*\{[^}]*backgroundColor: colors\.textSecondary/);

@@ -91,9 +91,9 @@ describe('PlanWeekCard prints the shared view-model', () => {
   test('the card is one accessible group carrying the summary sentence', () => {
     const summary = buildPlanWeekSummary({ position, sets, now: NOW });
     const tree = create(<PlanWeekCard summary={summary} />);
-    // RE-ANCHORED (the lead's landing fix for lane 3): the accessible group is
-    // the inner summary view, so children rendered under it keep their own
-    // controls reachable.
+    // RE-ANCHORED D214 addendum 5 (the lead's landing fix for lane 3): the
+    // accessible group is the inner summary view, so children rendered under
+    // it keep their own controls reachable.
     const group = tree.root.findByProps({ testID: 'plan-week-summary' });
     expect(group.props.accessible).toBe(true);
     expect(group.props.accessibilityLabel).toBe('2 of 4 sessions in week 2 of your plan. Upper B is next.');
@@ -144,5 +144,31 @@ describe('PlanWeekCard children', () => {
     const group = tree.root.findAllByProps({ testID: 'plan-week-summary' }).filter((n) => typeof n.type === 'string')[0];
     expect(group.findAllByProps({ testID: 'child-strip' })).toHaveLength(0);
     expect(under.findAllByProps({ testID: 'child-strip' }).length).toBeGreaterThan(0);
+  });
+});
+
+// D214 addendum 6 (lane 3 review 1): the seven cells are no descendant of the
+// accessible summary group, so their own spoken days are reachable.
+describe('PlanWeekCard: the cells are reachable', () => {
+  test('the DayDots node has no accessible ancestor', () => {
+    const summary = buildPlanWeekSummary({ position, sets, now: NOW });
+    const tree = create(<PlanWeekCard summary={summary} />);
+    const dots = tree.root.findAll((n) => typeof n.type === 'string' && typeof n.props?.accessibilityLabel === 'string' && /^Trained/.test(n.props.accessibilityLabel));
+    expect(dots.length).toBeGreaterThan(0);
+    for (const d of dots) {
+      // DayDots may group its own cells; nothing ABOVE that group may be an
+      // accessible group (that would swallow the days), and the summary group
+      // and the card never are.
+      const accessibleAncestors = [];
+      let p = d.parent;
+      while (p) {
+        if (p.props?.accessible === true) accessibleAncestors.push(p);
+        p = p.parent;
+      }
+      expect(accessibleAncestors.some((a) => a.props?.testID === 'plan-week-summary' || a.props?.testID === 'plan-week-card')).toBe(false);
+      expect(accessibleAncestors.length).toBeLessThanOrEqual(1);
+    }
+    const group = tree.root.findAllByProps({ testID: 'plan-week-summary' }).filter((n) => typeof n.type === 'string')[0];
+    expect(group.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && /^Trained/.test(n.props.accessibilityLabel))).toHaveLength(0);
   });
 });

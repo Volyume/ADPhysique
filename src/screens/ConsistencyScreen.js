@@ -83,7 +83,7 @@ export default function ConsistencyScreen({ navigation }) {
   })));
   const {
     activeMeso, mesoTonnage, workloadData, loadComparison, position,
-    blockProgress, currentMesoWeek, deloadAlert, calValues, earliestWorkoutAt,
+    blockProgress, blockWeek, currentMesoWeek, deloadAlert, calValues, earliestWorkoutAt,
     typicalSessionMinutes,
     refreshing, loading, loadError, hasData, allSets, handleRefresh,
   } = useProgressData();
@@ -99,9 +99,11 @@ export default function ConsistencyScreen({ navigation }) {
   // week's trained days from the sets the hook already loaded. An unreadable
   // position reads as "no plan" ("2 sessions this week"), never as anything
   // claimed.
+  // A finished block (awaiting the athlete's decision) claims no live plan
+  // week on this card either (D214 addendum 6, lane 4 review S2).
   const planWeek = useMemo(
-    () => buildPlanWeekSummary({ position, sets: allSets }),
-    [position, allSets],
+    () => buildPlanWeekSummary({ position, sets: allSets, finished: !!currentMesoWeek?.awaitingDecision }),
+    [position, allSets, currentMesoWeek],
   );
   const block = blockReading({ position, currentMesoWeek });
   const sessionsLine = typicalSessionsLine(typicalSessionMinutes);
@@ -115,7 +117,10 @@ export default function ConsistencyScreen({ navigation }) {
       meso={activeMeso}
       weekIndex={block.weekIndex}
       plannedWeeks={block.plannedWeeks}
-      rirTarget={currentMesoWeek?.rirTarget}
+      // The effort reads the PROGRAMME's week, the week the card names (D214
+      // addendum 6, lane 4 review S1); the calendar row only when the hook
+      // could not name one.
+      rirTarget={blockWeek?.rirTarget ?? currentMesoWeek?.rirTarget}
       finished={!!currentMesoWeek?.awaitingDecision}
       note={block.note}
       onPress={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
@@ -260,7 +265,7 @@ export default function ConsistencyScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.labelRow}>
                 <SectionLabel heading>Sessions</SectionLabel>
-                <InfoTooltip text="The middle length of the sessions you finished in the last six weeks, as your workout timer recorded them." />
+                <InfoTooltip text="The middle length of the sessions you finished this week and in the five weeks before it, as your workout timer recorded them." />
               </View>
               <Text style={[styles.sessionsLine, live.sessionsLine]}>{sessionsLine}</Text>
             </View>

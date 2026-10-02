@@ -49,7 +49,8 @@ describe('1. Your plan week: the shared card, first, from the one view-model', (
   test('PlanWeekCard is imported and consumed with the view-model; the strip sits under it', () => {
     expect(SCREEN).toContain("import PlanWeekCard from '../components/PlanWeekCard';");
     expect(SCREEN).toContain("import { buildPlanWeekSummary } from '../lib/progress/planWeek';");
-    expect(SCREEN).toContain('buildPlanWeekSummary({ position: planContext.position, sets: allSets })');
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the finished flag rides along.
+    expect(SCREEN).toMatch(/buildPlanWeekSummary\(\{ position: planContext\.position, sets: allSets, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
     // RE-ANCHORED (the lead's landing fix, plan 7.1 item 2 "one Card"): the
     // strip is the card's child, so the tag opens rather than self-closes.
     const card = SCREEN.indexOf('<PlanWeekCard summary={planWeekSummary}>');
@@ -199,7 +200,7 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
   // The words an instruction to change a session, a week or a habit would use.
   const INSTRUCTION = /\b(add|aim|try|consider|keep|should|must|need to|push|reduce|increase|decrease|rest|deload|skip|avoid|focus|make sure|remember|don't)\b/i;
   // The one recovery instruction on this screen is about a connection, not training.
-  const EXEMPT = ['Check your connection and try again. Your data is safe on this device.'];
+  const EXEMPT = ['Your training history is safe. This is a loading problem, not lost data.', 'Check your connection and try again. Your data is safe on this device.'];
 
   function printedStrings(src) {
     const code = stripComments(src);
@@ -230,5 +231,26 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
     expect(printedStrings("const a = 'Add a set to reach your range';").filter((s) => INSTRUCTION.test(s))).toHaveLength(1);
     expect(printedStrings("const a = 'Keep going this week';").filter((s) => INSTRUCTION.test(s))).toHaveLength(1);
     expect(printedStrings("const a = 'This week so far: 3 sets logged';").filter((s) => INSTRUCTION.test(s))).toHaveLength(0);
+  });
+});
+
+// D214 addendum 6 (lane 3 review 2 and 5): wiring that no mounted pin could
+// fail is pinned at the source.
+describe('D214 addendum 6: wiring pins', () => {
+  const SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+  test('the Training window is a rolling 30 days, as the row says', () => {
+    expect(SRC).toMatch(/windowDays: 30/);
+    expect(SRC).not.toMatch(/windowDays: (?!30)\d+/);
+  });
+  test('the resolved landmark table flows into the strip (PR-16)', () => {
+    expect(SRC).toMatch(/landmarks: planContext\?\.landmarks/);
+  });
+  test('the Recaps gate text waits for the session read and is withheld on a failed load', () => {
+    expect(SRC).toMatch(/const sessionsRead = !loading && !loadError;/);
+    expect(SRC).toMatch(/const recapUnlocked = sessionsRead && loggedSessionCount >= RECAP_GATE;/);
+    expect(SRC).toMatch(/sub=\{recapUnlocked \|\| !sessionsRead \? null/);
+  });
+  test('a finished block claims no live plan week on the first card', () => {
+    expect(SRC).toMatch(/finished: !!currentMesoWeek\?\.awaitingDecision/);
   });
 });

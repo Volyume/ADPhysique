@@ -107,20 +107,25 @@ export function sessionsThisWeek(sets, now = Date.now()) {
 /**
  * Build the plan-week view-model both screens render.
  *
- * @param {{position?: object|null, sets?: Array<object>, now?: number}} [input]
+ * @param {{position?: object|null, sets?: Array<object>, now?: number, finished?: boolean}} [input]
  *   position: resolveProgrammePosition's result (null on a read failure or
  *   with no block); sets: the set rows the screen already loaded (any span;
- *   only this week's are read).
+ *   only this week's are read); finished: the block is over and awaits the
+ *   athlete's decision (the calendar row's awaitingDecision), so no live
+ *   plan week is claimed (D214 addendum 6, lane 4 review S2: the card used
+ *   to read "in week 6 of your plan · Upper B is next" over a block card
+ *   that said "Block finished").
  * @returns {PlanWeekSummary}
  */
-export function buildPlanWeekSummary({ position = null, sets = [], now = Date.now() } = {}) {
+export function buildPlanWeekSummary({ position = null, sets = [], now = Date.now(), finished = false } = {}) {
   const trainedDays = trainedDayKeys(sets, now);
   const todayKey = weekdayKey(now);
   const sessions = Array.isArray(position?.sessions) ? position.sessions : [];
 
-  if (!position || sessions.length === 0) {
+  if (!position || sessions.length === 0 || finished) {
     const n = sessionsThisWeek(sets, now);
     const words = n === 1 ? 'session this week' : 'sessions this week';
+    const subline = finished ? 'Block finished' : null;
     return {
       hasPlan: false,
       done: n,
@@ -132,10 +137,11 @@ export function buildPlanWeekSummary({ position = null, sets = [], now = Date.no
       recoveryWeek: false,
       trainedDays,
       todayKey,
+      finished: !!finished,
       headlineNumber: String(n),
       headlineWords: words,
-      subline: null,
-      accessibilityLabel: `${n} ${words}.`,
+      subline,
+      accessibilityLabel: subline ? `${n} ${words}. ${subline}.` : `${n} ${words}.`,
     };
   }
 

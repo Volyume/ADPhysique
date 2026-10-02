@@ -327,7 +327,7 @@ describe('trainingPillarCopy: the ladder', () => {
   test('a new best on a compared exercise: "Strength up on N of M exercises", the evidence the featured best', () => {
     const out = copy({ summary: summary({ improvedCount: 9, comparedCount: 9, trainedCount: 9, featuredBest: best }) });
     expect(out.state).toBe('Strength up on 9 of 9 exercises in the last 30 days');
-    expect(out.evidence).toBe('Bench press 83 kg x 5, new best');
+    expect(out.evidence).toBe('Bench press 82.5 kg x 5, new best');
   });
 
   test('the denominator is the compared exercises, and one exercise is singular', () => {
@@ -350,7 +350,8 @@ describe('trainingPillarCopy: the ladder', () => {
 
   test('compared but none up: "holding steady" with the last session as a fact, no instruction', () => {
     const out = copy({ summary: summary({ improvedCount: 0 }), lastSessionAt: NOW - 2 * DAY_MS });
-    expect(out.state).toBe('No new bests in the last 30 days, holding steady');
+    // RE-ANCHORED D214 addendum 6 (lane 3 review N3): no "holding steady" claim.
+    expect(out.state).toBe('No new bests in the last 30 days');
     expect(out.evidence).toBe('Last session 2 days ago');
     expect(`${out.state} ${out.evidence}`).not.toMatch(/keep|build|should|try|aim|consider/i);
   });
@@ -446,5 +447,26 @@ describe('buildVisualPillarCopy', () => {
     });
     expect(copy.state).toBe('Building your visual trend');
     expect(copy.evidence).toMatch(/2 more comparable scans/);
+  });
+});
+
+// D214 addendum 6 (lane 3 review 5): a tie on the heaviest exercise goes to the
+// lower exercise id whatever the input order, so the pick never depends on data
+// order.
+describe('featuredBest tie-break', () => {
+  const DAY = 86400000;
+  const NOW = Date.UTC(2026, 9, 1, 12);
+  const map = { b: { id: 'b', name: 'Bench', type: 'weight_reps' }, a: { id: 'a', name: 'Squat', type: 'weight_reps' } };
+  const rows = [
+    { exerciseId: 'b', weight: 100, actualReps: 5, createdAt: NOW - 20 * DAY },
+    { exerciseId: 'b', weight: 105, actualReps: 5, createdAt: NOW - 2 * DAY },
+    { exerciseId: 'a', weight: 100, actualReps: 5, createdAt: NOW - 19 * DAY },
+    { exerciseId: 'a', weight: 105, actualReps: 5, createdAt: NOW - 3 * DAY },
+  ];
+  test('equal heaviest estimates: the lower id is featured in every input order', () => {
+    const a = computeTrainingPillarSummary(rows, map, { now: NOW });
+    const b = computeTrainingPillarSummary(rows.slice().reverse(), map, { now: NOW });
+    expect(a.featuredBest.exerciseId).toBe('a');
+    expect(b.featuredBest.exerciseId).toBe('a');
   });
 });

@@ -779,7 +779,9 @@ describe('State matrix — E: neither training nor weight moving clearly', () =>
     // baseline, not "holding steady"; no instruction (D204).
     expect(training[0].props.accessibilityLabel).toBe('Training. Baseline set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toContain('Log your weight for 7 days and your trend appears here.');
+    // RE-ANCHORED D214 addendum 6 (lane 3 review N11): the row's headline is a
+    // fragment like the other rows', so the derivation's full stop is dropped.
+    expect(body[0].props.accessibilityLabel).toContain('Log your weight for 7 days and your trend appears here');
     expect(flattenText(tree)).not.toMatch(/add (a |two )?(sets?|weight)/i);
   });
 });
@@ -904,7 +906,12 @@ describe('State matrix — J: recent programme adjustment (source guard — see 
     expect(src).not.toMatch(/getLatestCoachOutput/);
     expect(src).not.toMatch(/coachDecision/i);
     expect(src).not.toMatch(/adjustments\./);
-    expect(src).not.toMatch(/awaitingDecision/);
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the one read of
+    // `currentMesoWeek.awaitingDecision` is the BLOCK's finished state (the
+    // athlete's pending choice of the next block), passed to the plan-week
+    // card so it claims no live week; it is not coach-decision or adjustment
+    // data, which this screen still never reads.
+    expect(src.replace(/finished: !!currentMesoWeek\?\.awaitingDecision/g, '')).not.toMatch(/awaitingDecision/);
   });
 });
 

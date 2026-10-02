@@ -124,6 +124,7 @@ function baseProgress(over = {}) {
       { muscle: 'quads', label: 'Quads', actual: 6, planned: 10 },
     ],
     currentMesoWeek: WEEK,
+    blockWeek: { weekIndex: 2, weekId: 'wk2', rirTarget: 2, source: 'programme' },
     deloadAlert: null,
     calValues: [{ date: localDayKey(now), count: 1 }, { date: localDayKey(now - 3 * DAY), count: 1 }],
     earliestWorkoutAt: now - 200 * DAY,
@@ -202,7 +203,8 @@ describe('Your plan week: first, from the one shared card (item 2)', () => {
     const SRC = code(read('screens/ConsistencyScreen.js'));
     expect(SRC).toMatch(/import PlanWeekCard from '\.\.\/components\/PlanWeekCard'/);
     expect(SRC).toMatch(/import \{ buildPlanWeekSummary \} from '\.\.\/lib\/progress\/planWeek'/);
-    expect(SRC).toMatch(/buildPlanWeekSummary\(\{ position, sets: allSets \}\)/);
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the finished flag rides along.
+    expect(SRC).toMatch(/buildPlanWeekSummary\(\{ position, sets: allSets, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
     expect(SRC).toMatch(/<PlanWeekCard summary=\{planWeek\} \/>/);
     expect(SRC).not.toMatch(/sessions this week|in week \d|DayDots/);
     // The position is read once, by the hook that loads everything else on
@@ -347,7 +349,9 @@ describe('This week\'s plan: "so far" and the plan week\'s sessions (item 5)', (
     expect(all).toContain('Sets done so far this plan week · 2 of 4 sessions done');
     expect(all).toContain('5 of 12');
     expect(all).toContain('6 of 10');
-    expect(all.some((t) => t.startsWith('A plan week starts on the day your block started'))).toBe(true);
+    // RE-ANCHORED D214 addendum 6 (lane 4 review S4): the (i) names this plan week and the credit rule.
+    expect(all.some((t) => t.startsWith('Plan weeks run for seven days from the day your block started'))).toBe(true);
+    expect(all.some((t) => /A set counts once for the muscle it works most and half for each muscle that helps/.test(t))).toBe(true);
   });
 
   test('with no readable plan there is no sessions clause', () => {
@@ -537,5 +541,35 @@ describe('the Load section goes with its card when nothing was lifted', () => {
     const all = texts(tree);
     expect(all).toContain('Load');
     expect(all).toContain('420 kg lifted so far this week');
+  });
+});
+
+// D214 addendum 6 (lane 4 review S1 and S2): one card, one week; a finished
+// block claims no live plan week.
+describe('the block card reads one week', () => {
+  test('the effort line reads the programme week\'s rep target, not the calendar row\'s', () => {
+    const tree = render({
+      currentMesoWeek: { ...WEEK, weekIndex: 6, isDeload: true, rirTarget: 4 },
+      blockWeek: { weekIndex: 5, weekId: 'wk5', rirTarget: 1, source: 'programme' },
+      position: { ...POSITION, activeWeekIndex: 5, recoveryState: { state: RECOVERY_STATE.NORMAL_ACCUMULATION, awaitingDecision: false } },
+    });
+    const all = texts(tree);
+    expect(all).toContain('Week 5 of 6');
+    expect(all.some((t) => /This week's effort: 4 of 5/.test(t))).toBe(true);
+    expect(all.some((t) => /This week's effort: 1 of 5/.test(t))).toBe(false);
+  });
+  test('without a programme reading the calendar row\'s rep target stands', () => {
+    const tree = render({ blockWeek: null, currentMesoWeek: { ...WEEK, rirTarget: 3 }, position: null });
+    expect(texts(tree).some((t) => /This week's effort: 2 of 5/.test(t))).toBe(true);
+  });
+  test('a finished block: the plan-week card says "Block finished" and names no week or next session', () => {
+    const tree = render({
+      currentMesoWeek: { ...WEEK, weekIndex: 6, isDeload: true, awaitingDecision: true },
+      position: { ...POSITION, activeWeekIndex: 6 },
+    });
+    const all = texts(tree);
+    expect(all).toContain('Block finished');
+    expect(all.some((t) => /is next/.test(t))).toBe(false);
+    expect(all.some((t) => /in week 6 of your plan/.test(t))).toBe(false);
   });
 });

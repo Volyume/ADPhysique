@@ -147,7 +147,10 @@ export function computeTrainingPillarSummary(allSets, exerciseMap, { windowDays 
 // name. A fact, never an instruction (D204).
 function lastSessionFact(lastSessionAt, now) {
   if (!Number.isFinite(lastSessionAt)) return null;
-  const days = Math.max(0, Math.floor((now - lastSessionAt) / DAY_MS));
+  // Local calendar days, the repo's convention (dayKey.js), never 24-hour
+  // blocks: a session at 22:00 yesterday read at 08:00 is "yesterday".
+  const startOfDay = (ms) => new Date(ms).setHours(0, 0, 0, 0);
+  const days = Math.max(0, Math.round((startOfDay(now) - startOfDay(lastSessionAt)) / DAY_MS));
   if (days === 0) return 'Last session today';
   if (days === 1) return 'Last session yesterday';
   return `Last session ${days} days ago`;
@@ -201,10 +204,13 @@ export function trainingPillarCopy({ completedWorkoutCount, summary, lastSession
   }
   const state = summary.improvedCount > 0
     ? `Strength up on ${summary.improvedCount} of ${summary.comparedCount} exercise${summary.comparedCount === 1 ? '' : 's'} in the last 30 days`
-    : 'No new bests in the last 30 days, holding steady';
+    // "holding steady" claimed a steadiness no new best does not prove (lane
+    // 3 review N3); the fact alone, with the last session beside it.
+    : 'No new bests in the last 30 days';
   const best = summary.featuredBest;
   const evidence = best
-    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
+    // The weight lifted, never rounded (82.5 kg is what the plates said).
+    ? `${best.exerciseName} ${formatNumber(best.weight)} ${unitsLabel} x ${best.reps}, new best`
     : lastSession;
   return { state, evidence };
 }
@@ -290,8 +296,12 @@ export function bodyPillarCopy(weightTrend, bodyWeightUnits) {
   if (!weightTrend?.render) {
     return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
   }
+  // The row's headline is a fragment like the other three rows', so the
+  // derivation's sentence drops its full stop here (the spoken label joins
+  // the parts with its own stops).
+  const headline = String(weightTrend.insight ?? '').replace(/\.$/, '');
   if (weightTrend.lapsed) {
-    return { state: weightTrend.insight, evidence: null };
+    return { state: headline, evidence: null };
   }
   const parts = [];
   if (weightTrend.pillarFigure !== false && weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
@@ -307,5 +317,5 @@ export function bodyPillarCopy(weightTrend, bodyWeightUnits) {
       parts.push(formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits));
     }
   }
-  return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
+  return { state: headline, evidence: parts.length ? parts.join(', ') : null };
 }

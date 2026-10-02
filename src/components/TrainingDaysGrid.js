@@ -53,7 +53,7 @@ const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const LABEL_COLUMN = spacing.lg;
 const GRID_GAP = spacing.xs;
 // The window width minus the gutter and the card padding paid on each side
-// (16 + 16), the same assumption TrainingCalendar made with its fixed 90.
+// (16 + 16), the same assumption the retired calendar made with its fixed 90.
 const HORIZONTAL_CHROME = spacing.lg * 4;
 const MIN_CELL = 10;
 const MAX_CELL = 24;

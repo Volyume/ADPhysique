@@ -28,9 +28,11 @@
  * `children` (the lead's landing fix for lane 3, plan 7.1 item 2 "one
  * Card"): the Progress root renders this week's volume line and bar inside
  * the same card, under a hairline, so the week is one object as the mockup
- * draws it. The children sit OUTSIDE the accessible group (the group is the
- * inner summary view), so their own controls stay reachable by a screen
- * reader; Consistency passes no children and the card is unchanged there.
+ * draws it. The children and the seven cells sit OUTSIDE the accessible
+ * group (the group is the inner summary view: the count and the subline),
+ * so the cells' own spoken days and the children's controls stay reachable
+ * by a screen reader; Consistency passes no children and the card is
+ * unchanged there.
  *
  * Live theme (`useTheme`): the frozen block holds layout only.
  */
@@ -67,9 +69,13 @@ export default function PlanWeekCard({ summary, testID = 'plan-week-card', child
           {summary.subline}
         </Text>
       ) : null}
+      </View>
+      {/* The cells are a SIBLING of the summary group, so DayDots' own spoken
+          "Trained Mon, Wed" stays reachable (an accessible ancestor would
+          swallow it, D214 addendum 6, lane 3 review 1); VoiceOver reads the
+          sentence, then the days. */}
       <View style={styles.cells}>
         <DayDots days={summary.trainedDays} todayKey={summary.todayKey} tone="ink" size="cell" initials />
-      </View>
       </View>
       {children ? (
         <View style={[styles.under, { borderTopColor: t.colors.borderSubtle }]} testID="plan-week-under">

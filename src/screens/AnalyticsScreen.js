@@ -71,7 +71,7 @@ const DIFFICULTY_WORDS = ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal']
 // muscle with no sets yet (rule 5: explain on tap). It describes, never advises.
 const STRIP_TOOLTIP = 'This week so far counts the sets you have logged since Monday.\n\n'
   + "A muscle's range runs from the fewest weekly sets that still help it grow to the most it can recover from. "
-  + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range until its first set. '
+  + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range even before its first set. '
   + 'Too much means more than the top of the range.';
 // The same (i) in the planned recovery week: sets are planned lower, so no muscle
 // is judged and the bar's one shade says only which were trained.
@@ -339,8 +339,10 @@ export default function AnalyticsScreen({ navigation, route }) {
   // count named as the plan week, the Monday-anchored seven cells and the next
   // session, or the calendar count ("2 sessions this week") with no plan.
   const planWeekSummary = useMemo(
-    () => (planContext ? buildPlanWeekSummary({ position: planContext.position, sets: allSets }) : null),
-    [planContext, allSets],
+    () => (planContext
+      ? buildPlanWeekSummary({ position: planContext.position, sets: allSets, finished: !!currentMesoWeek?.awaitingDecision })
+      : null),
+    [planContext, allSets, currentMesoWeek],
   );
   // The strip under it: this Monday week so far, in logged sets (never the
   // credits summed), judged against the same resolved landmark table and the
@@ -370,7 +372,12 @@ export default function AnalyticsScreen({ navigation, route }) {
   // (D214, PR-12), where the door used to count completed workouts with a start
   // time. The recap banner and the Recaps row read the same number.
   const loggedSessionCount = sessionCount;
-  const recapUnlocked = loggedSessionCount >= RECAP_GATE;
+  // D214 addendum 6 (lane 3 review 2): the count is 0 until the read settles
+  // and after a failed load, so the gate text ("10 sessions to go") prints
+  // only once the read has landed; until then, and on a failed load, the
+  // door carries no claim and the toast says only when recaps open.
+  const sessionsRead = !loading && !loadError;
+  const recapUnlocked = sessionsRead && loggedSessionCount >= RECAP_GATE;
   const recapToGo = Math.max(0, RECAP_GATE - loggedSessionCount);
   const yearOfLiftsUnlocked = !!earliestWorkoutAt && (Date.now() - earliestWorkoutAt) >= YEAR_MS;
 
@@ -421,6 +428,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             one view-model. Inside the same card, under a hairline (the spec's
             "one Card"), the week's volume line and strip, in logged sets, so
             far. ── */}
+        {!loadError ? <SectionLabel>Your plan week</SectionLabel> : null}
         {planSlotLoading ? (
           <SkeletonCard height={PLAN_WEEK_SKELETON_HEIGHT} />
         ) : null}
@@ -470,7 +478,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               <View style={[styles.answerDivider, live.answerDivider]} />
               <View onLayout={(e) => { trendSectionY.current = e.nativeEvent.layout.y; }}>
                 <PillarRow
-                  icon="body-outline"
+                  icon="scale-outline"
                   label="Body"
                   stateText={bodyCopy.state}
                   evidenceText={bodyCopy.evidence}
@@ -523,7 +531,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           <EmptyState
             icon="cloud-offline-outline"
             title="Couldn't load your training trends"
-            text="Check your connection and try again. Your data is safe on this device."
+            text="Your training history is safe. This is a loading problem, not lost data."
             actionLabel="Retry"
             onAction={handleRefresh}
             actionAccessibilityLabel="Retry loading training trends"
@@ -653,14 +661,16 @@ export default function AnalyticsScreen({ navigation, route }) {
             <NavRow
               icon="newspaper-outline"
               label="Recaps"
-              sub={recapUnlocked ? null : `${recapToGo} session${recapToGo === 1 ? '' : 's'} to go`}
+              sub={recapUnlocked || !sessionsRead ? null : `${recapToGo} session${recapToGo === 1 ? '' : 's'} to go`}
               onPress={() => {
                 if (!recapUnlocked) {
                   // R9 (D70): a blocking alert for purely informational
                   // copy diverged from the house rule (toast for
                   // non-destructive feedback; alerts for destructive
                   // confirms only).
-                  toast.show(`Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${recapToGo} to go.`, { variant: 'info' });
+                  toast.show(sessionsRead
+                    ? `Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${recapToGo} to go.`
+                    : `Your first monthly recap is ready after ${RECAP_GATE} logged sessions.`, { variant: 'info' });
                   return;
                 }
                 navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));

@@ -18,7 +18,9 @@ describe('bodyPillarCopy', () => {
   test('an ordinary state prints the headline and the figure with its rate in the person\'s units', () => {
     const vm = { render: true, state: 3, ewmaNow: 82.4, showRate: true, weeklyChange: 0.1, insight: 'Moving at the planned rate.', pillarFigure: true };
     const kg = bodyPillarCopy(vm, 'kg');
-    expect(kg.state).toBe('Moving at the planned rate.');
+    // RE-ANCHORED D214 addendum 6 (lane 3 review N11): the headline is a fragment
+    // like the other rows', the derivation's full stop dropped.
+    expect(kg.state).toBe('Moving at the planned rate');
     expect(kg.evidence).toMatch(/82\.4 kg/);
     expect(kg.evidence).toMatch(/kg\/week|kg a week/);
     const lbs = bodyPillarCopy(vm, 'lbs');
@@ -58,6 +60,6 @@ describe('bodyPillarCopy, D214 addendum 4', () => {
   });
   test('a lapsed trend: the lapsed line as the headline, no evidence', () => {
     const vm = { render: true, state: 0, lapsed: true, lastWeighInMs: 1, ewmaNow: null, showRate: false, insight: 'No weigh-in in the last 14 days; the last was 3 weeks ago.', pillarFigure: false };
-    expect(bodyPillarCopy(vm, 'kg')).toEqual({ state: 'No weigh-in in the last 14 days; the last was 3 weeks ago.', evidence: null });
+    expect(bodyPillarCopy(vm, 'kg')).toEqual({ state: 'No weigh-in in the last 14 days; the last was 3 weeks ago', evidence: null });
   });
 });

@@ -52,16 +52,18 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, plan
     ? `Sets done so far this plan week · ${sessionsText}`
     : 'Sets done so far this plan week';
 
-  const cardContent = (
-    <>
+  const header = (
       <View style={styles.header}>
         <Text style={[styles.title, live.title]}>{headerText}</Text>
         {/* CS-8: the plan week is the BLOCK's, not Monday to Sunday. */}
         <InfoTooltip
           size={12}
-          text={'A plan week starts on the day your block started and runs for seven days, so it can begin on any day of the week. These rows count the sets you have logged since that day, against the sets planned for each muscle this week.'}
+          text={'Plan weeks run for seven days from the day your block started, so a plan week can begin on any day of the week. These rows count the sets logged since this plan week began, against the sets planned for each muscle. A set counts once for the muscle it works most and half for each muscle that helps.'}
         />
       </View>
+  );
+  const cardContent = (
+    <>
       {finishedText ? <Text style={[styles.finished, live.finished]}>{finishedText}</Text> : null}
       {blockProgress.map(p => {
         const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
@@ -83,27 +85,39 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, plan
     </>
   );
 
+  // D214 addendum 6 (lane 4 review S5): the header and its (i) render OUTSIDE
+  // the pressable card, since a child of an accessible control cannot be
+  // reached by a screen reader (the D201 addendum 9 precedent); the control
+  // is named by the header's own sentence.
   if (onPress) {
     return (
-      <PressableCard
-        style={[styles.card, live.card]}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityHint="Opens weekly volume by muscle"
-      >
-        {cardContent}
-      </PressableCard>
+      <View style={styles.wrap}>
+        {header}
+        <PressableCard
+          style={[styles.card, live.card]}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={headerText}
+          accessibilityHint="Opens weekly volume by muscle"
+        >
+          {cardContent}
+        </PressableCard>
+      </View>
     );
   }
 
   return (
+    <View style={styles.wrap}>
+      {header}
     <View style={[styles.card, live.card]}>
       {cardContent}
+    </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { gap: spacing.xs },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

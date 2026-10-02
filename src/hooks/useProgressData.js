@@ -4,7 +4,7 @@ import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActivePlan,
-  getCurrentMesocycleWeek, getPlannedMuscleVolume,
+  getCurrentMesocycleWeek, getPlannedMuscleVolume, getMesocycleWeekById,
 } from '../lib/database';
 import {
   calculateWeeklyVolume,
@@ -116,6 +116,11 @@ export default function useProgressData() {
   // week's sessions and what is next), or null with no block or on a failed read.
   const [position, setPosition]             = useState(null);
   const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
+  // D214 addendum 6 (lane 4 review S1): the block week the screen prints its
+  // effort and plan rows for. The PROGRAMME's week when the position names
+  // one (the same week the plan-week card and the block card name), else the
+  // calendar's; { weekIndex, weekId, rirTarget, source: 'programme'|'calendar' }.
+  const [blockWeek, setBlockWeek]             = useState(null);
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(0);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
@@ -138,6 +143,7 @@ export default function useProgressData() {
     setLoadComparison(null);
     setPosition(null);
     setBlockProgress([]);
+    setBlockWeek(null);
     setEarliestWorkoutAt(null);
     setCompletedWorkoutCount(0);
     setCurrentMesoWeek(null);
@@ -198,11 +204,16 @@ export default function useProgressData() {
         // weeks; the ratio of a part week to full ones (workloadData.ratio) is
         // no longer printed anywhere.
         comparison = likeForLikeLoad(sets, { weeks: 3, now: loadNow, exerciseTypeById, loadSemanticsById });
-      } catch (_) { loadSeries = []; comparison = null; }
+      } catch (e) {
+        logError('useProgressData.loadSeries', e, { userId: user?.id });
+        loadSeries = []; comparison = null;
+      }
       if (!isCurrentRequest()) return;
       setWorkloadData(acuteChronicFromSeries(loadSeries));
       setLoadComparison(comparison);
 
+      // The programme position first: the block state reads ITS week (S1).
+      const resolvedPosition = await loadPosition(isCurrentRequest);
       await Promise.all([
         loadMesocycle(workouts, loadSeries, isCurrentRequest),
         loadVolumeSnapshot(sets, exMap, isCurrentRequest),
@@ -210,8 +221,7 @@ export default function useProgressData() {
         loadCalendar(workouts, isCurrentRequest),
         loadRecentSessions(workouts, isCurrentRequest),
         loadTypicalSessionMinutes(workouts, isCurrentRequest),
-        loadPosition(isCurrentRequest),
-        loadBlockState(sets, exMap, isCurrentRequest),
+        loadBlockState(sets, exMap, isCurrentRequest, resolvedPosition),
       ]);
     } catch (e) {
       if (!isCurrentRequest()) return;
@@ -252,7 +262,9 @@ export default function useProgressData() {
         };
       });
       setMesoTonnage(bars);
-    } catch (_) {}
+    } catch (e) {
+      logError('useProgressData.loadMesocycle', e, { userId: user?.id });
+    }
   }
 
   // D214 (plan-week card, plan section 7.3 item 2): the programme position,
@@ -269,18 +281,38 @@ export default function useProgressData() {
       resolved = null;
     }
     if (isCurrentRequest()) setPosition(resolved ?? null);
+    return resolved ?? null;
   }
 
-  async function loadBlockState(sets, exMap, isCurrentRequest = () => true) {
+  async function loadBlockState(sets, exMap, isCurrentRequest = () => true, position = null) {
     try {
       const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
+      // D214 addendum 6 (lane 4 review S1): the week the plan rows and the
+      // effort line read is the PROGRAMME's week when the position names one
+      // (programmePosition.js: the first reached accumulation week with an
+      // unresolved required session, else the calendar's), the same week the
+      // plan-week card and the block card name, so one card never shows two
+      // weeks. The calendar row is the fallback when the position is null.
+      const programmeId = position?.activeWeekId ?? null;
+      const programmeIndex = Number(position?.activeWeekIndex);
+      const useProgramme = programmeId != null && Number.isFinite(programmeIndex) && programmeIndex >= 1;
+      const weekId = useProgramme ? programmeId : (week?.id ?? null);
+      const weekIndex = useProgramme ? programmeIndex : (week?.weekIndex ?? null);
       // X15 (cross-surface-consistency-audit-2026-07-30): this passed
       // user.id, but getPlannedMuscleVolume filters
       // `WHERE mesocycle_week_id = ?` -- so BlockProgressCard rendered null
-      // for every user, always. Pass the actual current week's row id.
-      const plannedRows = week?.id ? await getPlannedMuscleVolume(week.id).catch(() => []) : [];
+      // for every user, always. Pass the week's row id.
+      const plannedRows = weekId ? await getPlannedMuscleVolume(weekId).catch(() => []) : [];
+      let rirTarget = week?.rirTarget ?? null;
+      if (useProgramme && programmeId !== week?.id) {
+        const row = await getMesocycleWeekById(programmeId).catch(() => null);
+        if (row && row.rir_target != null) rirTarget = row.rir_target;
+      }
       if (!isCurrentRequest()) return;
       setCurrentMesoWeek(week);
+      setBlockWeek(weekId || weekIndex != null
+        ? { weekIndex, weekId, rirTarget, source: useProgramme ? 'programme' : 'calendar' }
+        : null);
       // F2 (progress-tab-audit-2026-09-24, D199): "actual" must count the
       // sets logged inside THIS BLOCK WEEK's own seven days, not a rolling
       // or Monday-anchored window -- a block that did not start on a Monday
@@ -289,7 +321,7 @@ export default function useProgressData() {
       // (no active block, or an unparseable stored start date) fall back to
       // the same Monday-anchored week loadVolumeSnapshot above already uses,
       // so the card still shows a sensible number rather than nothing.
-      const span = blockWeekSpan(week?.blockStartMs, week?.weekIndex)
+      const span = blockWeekSpan(week?.blockStartMs, weekIndex)
         ?? { startMs: localWeekStartMs(Date.now()), endMs: Infinity };
       const spanSets = (sets || []).filter((s) => {
         const at = s.createdAt ?? s.created_at ?? 0;
@@ -297,9 +329,11 @@ export default function useProgressData() {
       });
       const actual = calculateWeeklyVolume(spanSets, exMap);
       setBlockProgress(buildBlockProgressRows(plannedRows, actual));
-    } catch (_) {
+    } catch (e) {
+      logError('useProgressData.loadBlockState', e, { userId: user?.id });
       if (isCurrentRequest()) {
         setCurrentMesoWeek(null);
+        setBlockWeek(null);
         setBlockProgress([]);
       }
     }
@@ -330,7 +364,9 @@ export default function useProgressData() {
       const buckets = buildLast4WeekDeloadBuckets(sets, workouts, exMap, { now: Date.now() });
       const result = shouldDeload(buckets);
       setDeloadAlert(result.deload ? result : null);
-    } catch (_) {}
+    } catch (e) {
+      logError('useProgressData.loadDeloadCheck', e, { userId: user?.id });
+    }
   }
 
   async function loadCalendar(workouts, isCurrentRequest = () => true) {
@@ -361,8 +397,8 @@ export default function useProgressData() {
     // already in the codebase: it anchors at NOON and steps with `setDate`,
     // which is calendar-aware, so it cannot drift. Semantics are otherwise
     // identical -- still only the trained days, still `{date, count: 1}`, and
-    // `TrainingCalendar` consumes the result as a Set plus a length, so the
-    // oldest-first ordering this returns is immaterial.
+    // the twelve-week grid (TrainingDaysSection) consumes the result as a Set
+    // plus a length, so the oldest-first ordering this returns is immaterial.
     const vals = localDayKeysEndingAt(84, now)
       .filter((key) => completedDays.has(key))
       .map((key) => ({ date: key, count: 1 }));
@@ -411,7 +447,9 @@ export default function useProgressData() {
       const mid = Math.floor(minutes.length / 2);
       const median = minutes.length % 2 === 1 ? minutes[mid] : (minutes[mid - 1] + minutes[mid]) / 2;
       setTypicalSessionMinutes(Math.round(median));
-    } catch (_) {}
+    } catch (e) {
+      logError('useProgressData.loadTypicalSessionMinutes', e, { userId: user?.id });
+    }
   }
 
   async function handleRefresh() {
@@ -437,7 +475,7 @@ export default function useProgressData() {
     activeMeso, mesoTonnage, weeklyVolume,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     typicalSessionMinutes,
-    workloadData, loadComparison, position, blockProgress, earliestWorkoutAt,
+    workloadData, loadComparison, position, blockProgress, blockWeek, earliestWorkoutAt,
     completedWorkoutCount,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,

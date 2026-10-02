@@ -223,3 +223,31 @@ describe('the module stays pure', () => {
     expect(src).not.toMatch(/\b(keep going|try to|aim for|you should|don't forget)\b/i);
   });
 });
+
+// D214 addendum 6 (lane 4 review S2): a finished block awaiting the athlete's
+// decision claims no live plan week, whatever the position still says.
+describe('a finished block', () => {
+  const { SESSION_STATE } = require('../../blockProgression');
+  const NOW = Date.UTC(2026, 9, 1, 12);
+  const position = {
+    activeWeekIndex: 6, plannedWeeks: 6, weekResolved: false,
+    sessions: [{ routineId: 'a', name: 'Upper B', order: 1, state: SESSION_STATE.OUTSTANDING }],
+    nextSession: { routineId: 'a', name: 'Upper B', order: 1 },
+    recoveryState: null,
+  };
+  test('finished: the calendar count, "Block finished" as the subline, no week and no next session', () => {
+    const out = buildPlanWeekSummary({ position, sets: [], now: NOW, finished: true });
+    expect(out.hasPlan).toBe(false);
+    expect(out.finished).toBe(true);
+    expect(out.headlineNumber).toBe('0');
+    expect(out.headlineWords).toBe('sessions this week');
+    expect(out.subline).toBe('Block finished');
+    expect(out.accessibilityLabel).toBe('0 sessions this week. Block finished.');
+    expect(JSON.stringify(out)).not.toMatch(/week 6|is next/);
+  });
+  test('not finished: the plan reading as before', () => {
+    const out = buildPlanWeekSummary({ position, sets: [], now: NOW });
+    expect(out.hasPlan).toBe(true);
+    expect(out.subline).toBe('in week 6 of your plan · Upper B is next');
+  });
+});
