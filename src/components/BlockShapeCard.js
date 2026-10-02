@@ -49,16 +49,21 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
 
   let line;
   if (finished) {
-    line = 'Block finished. Sets stay at recovery-week level until you choose what comes next.';
+    line = 'Block finished. Sets stay as light as a recovery week until you choose what comes next.';
   } else if (isDeload || current === n - 1) {
     line = 'Recovery week. Lighter on purpose: fewer sets and easier effort, so fatigue clears before the next block.';
   } else if (current === n - 2) {
-    line = `Week ${current + 1} of ${n} · Push. Your hardest week of the block. Recovery week next.`;
+    // D214 addendum 9 (census K4, 6.14): the plan's own form, one line with the
+    // week, the phase and what comes next. "Your hardest week of the block" is
+    // gone: the phase word is structural (see PHASE_WORD), not read from the
+    // plan's volumes, so nothing here may claim which week is hardest.
+    line = `Week ${current + 1} of ${n} · Push · recovery week next`;
   } else {
-    // C5-P11-07 (D96): "Recovery week in 5" carried no unit noun. The dot
+    // C5-P11-07 (D96): "recovery week in 5" carried no unit noun. The dot
     // row supplies the context, but the sentence alone did not say five
-    // what.
-    line = `Week ${current + 1} of ${n} · ${word}. Recovery week in ${weeksToRecovery} ${weeksToRecovery === 1 ? 'week' : 'weeks'}.`;
+    // what. D214 addendum 9 (census K3, 6.14): the plan's form, "Week 2 of 6 ·
+    // Build · recovery week in 4 weeks".
+    line = `Week ${current + 1} of ${n} · ${word} · recovery week in ${weeksToRecovery} ${weeksToRecovery === 1 ? 'week' : 'weeks'}`;
   }
 
   return (

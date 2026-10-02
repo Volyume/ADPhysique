@@ -183,15 +183,25 @@ describe('chartWindows: e1rmTakeaway', () => {
   });
 });
 
+describe('chartWindows: the volume trend chips (D214 addendum 9, census H4)', () => {
+  test('they read in words, the way the weight chart\'s do, and the persisted keys are the old ones', () => {
+    const { VOLUME_WINDOWS } = require('../chartWindows');
+    expect(VOLUME_WINDOWS.map((w) => w.label)).toEqual(['4 weeks', '8 weeks', '3 months', '6 months']);
+    expect(VOLUME_WINDOWS.map((w) => w.key)).toEqual(['4W', '8W', '3M', '6M']);
+    expect(VOLUME_WINDOWS.map((w) => w.days)).toEqual([28, 56, 90, 180]);
+    expect(VOLUME_WINDOWS.map((w) => w.weeks)).toEqual([4, 8, 13, 26]);
+  });
+});
+
 describe('chartWindows: volumeTakeaway', () => {
   // RE-ANCHORED D214 (Progress, recovery heatmap and Consistency elevation,
   // docs/audit/progress-recovery-consistency-audit-2026-10-01/
   // 00-AUDIT-AND-PLAN.md section 7.4 item 6, VH-9 and VH-16): the takeaway is
   // in LOGGED sets (the caller passes logged working-set rows per Monday week,
   // never per-muscle credits), the first-to-last delta ("up 3") is gone, and
-  // the sentence says "about N a week". On its own it names "sets" so the
-  // number states what it is; after the "This week so far" sentence the unit
-  // is carried by that sentence.
+  // the sentence says "about N sets a week". RE-ANCHORED 2026-10-02 (D214
+  // addendum 9, census 0.22): the unit is named in EVERY form; after the "This
+  // week so far" sentence it used to lean on that sentence ("about 60 a week").
   test('standing alone: the average of the full weeks, naming the unit, with no delta', () => {
     expect(volumeTakeaway({ windowKey: '8W', coversAll: false, spanDays: 56, weeklySets: [11, 12, 13, 14] }))
       .toBe('8 weeks: about 13 sets a week.');
@@ -217,14 +227,43 @@ describe('chartWindows: volumeTakeaway', () => {
       expect(volumeTakeaway({
         windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [11, 12, 13],
         phraseOverride: 'Last 3 full weeks', currentWeekTotal: 9,
-      })).toBe('This week so far: 9 sets logged. Last 3 full weeks: about 12 a week.');
+      })).toBe('This week so far: 9 sets logged. Last 3 full weeks: about 12 sets a week.');
     });
 
     test('the plan\'s own example reads exactly', () => {
       expect(volumeTakeaway({
         windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [58, 60, 62],
         phraseOverride: 'Last 3 full weeks', currentWeekTotal: 42,
-      })).toBe('This week so far: 42 sets logged. Last 3 full weeks: about 60 a week.');
+      })).toBe('This week so far: 42 sets logged. Last 3 full weeks: about 60 sets a week.');
+    });
+
+    // D214 addendum 9 (census H5): the label counts every full week in the window but a full week with no
+    // logged set is left out of `weeklySets`, so "Last 3 full weeks" over two populated weeks was an
+    // average over two. `fullWeeks` is what the caller knows and `weeklySets` does not.
+    test('a week away is named: "Last 3 full weeks (2 with sets logged): about 60 sets a week."', () => {
+      expect(volumeTakeaway({
+        windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [58, 62],
+        phraseOverride: 'Last 3 full weeks', currentWeekTotal: 42, fullWeeks: 3,
+      })).toBe('This week so far: 42 sets logged. Last 3 full weeks (2 with sets logged): about 60 sets a week.');
+    });
+
+    test('every full week had sets: the label is the plain one, and so with no count given', () => {
+      const base = { windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [58, 60, 62], phraseOverride: 'Last 3 full weeks', currentWeekTotal: 42 };
+      expect(volumeTakeaway({ ...base, fullWeeks: 3 })).toBe('This week so far: 42 sets logged. Last 3 full weeks: about 60 sets a week.');
+      expect(volumeTakeaway(base)).toBe('This week so far: 42 sets logged. Last 3 full weeks: about 60 sets a week.');
+      // A count lower than the weeks that had sets (a caller slip) never adds a parenthesis.
+      expect(volumeTakeaway({ ...base, fullWeeks: 2 })).not.toContain('with sets logged');
+      expect(volumeTakeaway({ ...base, fullWeeks: NaN })).not.toContain('with sets logged');
+    });
+
+    test('the parenthesis follows the window\'s own phrase when no override is given, and stands alone too', () => {
+      expect(volumeTakeaway({ windowKey: '8W', coversAll: false, spanDays: 56, weeklySets: [11, 12, 13], fullWeeks: 8 }))
+        .toBe('8 weeks (3 with sets logged): about 12 sets a week.');
+    });
+
+    test('one populated week is no average: only the current week is said, whatever the count', () => {
+      expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [30], currentWeekTotal: 4, phraseOverride: 'Last 3 full weeks', fullWeeks: 3 }))
+        .toBe('This week so far: 4 sets logged.');
     });
 
     test('currentWeekTotal alone (fewer than 2 full weeks) still reads, not empty', () => {

@@ -113,7 +113,7 @@ export function buildReadinessSummary({
     // ADAPTIVE_RECOVERY_ADJUSTMENT: still inside accumulation, so this must
     // never be worded as "recovery week" (that would claim the hard part of
     // the block is over, which recoveryStateCard's own copy rule forbids).
-    return { tone: 'recover', line: 'Training is lighter for now because your recent recovery has been harder.' };
+    return { tone: 'recover', line: 'Training is lighter for now because you have been recovering more slowly lately.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded

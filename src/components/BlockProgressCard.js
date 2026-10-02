@@ -58,7 +58,7 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, plan
         {/* CS-8: the plan week is the BLOCK's, not Monday to Sunday. */}
         <InfoTooltip
           size={12}
-          text={'Plan weeks run for seven days from the day your block started, so a plan week can begin on any day of the week. These rows count the sets logged since this plan week began, against the sets planned for each muscle. A set counts once for the muscle it works most and half for each muscle that helps.'}
+          text={'Plan weeks run for seven days from the day your block started, so a plan week can begin on any day of the week. These rows count the sets logged during this plan week, against the sets planned for each muscle. A set counts once for the muscle it works most and half for each muscle that helps.'}
         />
       </View>
   );

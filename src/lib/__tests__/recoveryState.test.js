@@ -95,7 +95,10 @@ describe('THE TWO STATES ARE DISTINGUISHABLE', () => {
     expect(card.title).toBe('Training is lighter for now');
     expect(card.title).not.toMatch(/recovery week/i);
     // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
-    expect(card.body).toBe('Your recent recovery has been harder, so your coach is holding back some of the workload for now.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.6 and 6.10: "recovery has been harder"
+    // is not English a lay reader can parse and "for now" was said twice; the lead's plain words).
+    expect(card.body).toBe('You have been recovering more slowly lately, so your coach is holding back some of your training.');
+    expect(card.body).not.toMatch(/recovery has been harder|workload|for now/);
     expect(nextWorkoutRecoveryLabel(r)).toBe('Recovery-adjusted');
     expect(nextWorkoutRecoveryLabel(r)).not.toMatch(/week/i);
   });
@@ -166,7 +169,7 @@ describe('WHAT IS DIFFERENT, and WHAT HAPPENS NEXT', () => {
   test('CASE 18: the adaptive Train line does not claim the block has finished', () => {
     const adaptive = resolveRecoveryState(block(3, { isDeload: true }));
     const line = trainRecoveryDetail(adaptive, ['fewer working sets']);
-    expect(line).toBe('Recovery-adjusted session. This one is lighter because your recent recovery has been harder. Fewer working sets.');
+    expect(line).toBe('Recovery-adjusted session. This one is lighter because you have been recovering more slowly lately. Fewer working sets.');
     expect(line).not.toMatch(/recovery week|finished the hard-training part/i);
   });
 

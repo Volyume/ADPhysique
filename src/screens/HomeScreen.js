@@ -2222,7 +2222,7 @@ export default function HomeScreen({ navigation, route }) {
   // week-complete state gets its own honest line; the block-finished line
   // above is unchanged.
   const readinessSummary = currentMesoWeek?.awaitingDecision
-    ? { tone: 'go', line: 'Block finished. Sets stay at recovery-week level until you choose what comes next.' }
+    ? { tone: 'go', line: 'Block finished. Sets stay as light as a recovery week until you choose what comes next.' }
     : weekComplete
     ? { tone: 'go', line: 'Every session done for this week.' }
     : buildReadinessSummary({

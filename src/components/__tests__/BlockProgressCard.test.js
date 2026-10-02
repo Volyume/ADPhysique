@@ -69,7 +69,11 @@ describe('the header names what the rows count and when (CS-8)', () => {
     // RE-ANCHORED D214 addendum 6 (lane 4 review S4): the (i) says the rows count
     // this plan week (not since the block began) and carries the credit rule.
     expect(tip.props.text).toContain('Plan weeks run for seven days from the day your block started');
-    expect(tip.props.text).toContain('since this plan week began');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K9): the rows count the sets logged DURING this plan
+    // week (its own seven days, `blockWeekSpan`), not "since it began", which read as a running total
+    // that could reach past the week when the programme lags the calendar.
+    expect(tip.props.text).toContain('These rows count the sets logged during this plan week');
+    expect(tip.props.text).not.toContain('since this plan week began');
     expect(tip.props.text).toContain('A set counts once for the muscle it works most and half for each muscle that helps');
     expect(tip.props.text).not.toMatch(/Monday to Sunday only|easier|consider|should/i);
   });

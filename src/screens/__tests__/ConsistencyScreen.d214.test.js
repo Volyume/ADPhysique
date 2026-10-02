@@ -84,7 +84,7 @@ jest.mock('../../components/PressableCard', () => {
   );
 });
 
-import ConsistencyScreen, { blockReading } from '../ConsistencyScreen';
+import ConsistencyScreen, { blockReading, withFullStop } from '../ConsistencyScreen';
 import { SESSION_STATE } from '../../lib/blockProgression';
 import { RECOVERY_STATE } from '../../lib/recoveryState';
 import { localDayKey, localWeekStartMs } from '../../lib/dayKey';
@@ -173,7 +173,8 @@ describe('the plan\'s order (7.3)', () => {
       at('Week 2 of 6'),
       at("This week's plan"),
       at(/^Sets done so far this plan week/),
-      at('Load'),
+      // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.19): the section heading was "Load".
+      at('Weight lifted'),
       at(/lifted so far this week$/),
       at('Sessions'),
       at('Sessions usually last about 57 minutes.'),
@@ -192,10 +193,13 @@ describe('Your plan week: first, from the one shared card (item 2)', () => {
     expect(all).toContain('in week 2 of your plan · Upper B is next');
   });
 
-  test('without a readable plan it reads the calendar count, "2 sessions this week"', () => {
+  // RE-ANCHORED 2026-10-02 (D214 addendum 9, census P13, lane C1's planWeek.js): the calendar week is still
+  // open, so the count says "so far" ("2 sessions so far this week"); with a plan, "2 of 4" carries its own
+  // denominator. The shared plan-week card is the one that prints it.
+  test('without a readable plan it reads the calendar count, "2 sessions so far this week"', () => {
     const all = texts(render({ position: null }));
     expect(all).toContain('2');
-    expect(all).toContain('sessions this week');
+    expect(all).toContain('sessions so far this week');
     expect(all.join(' | ')).not.toMatch(/of your plan/);
   });
 
@@ -204,7 +208,12 @@ describe('Your plan week: first, from the one shared card (item 2)', () => {
     expect(SRC).toMatch(/import PlanWeekCard from '\.\.\/components\/PlanWeekCard'/);
     expect(SRC).toMatch(/import \{ buildPlanWeekSummary \} from '\.\.\/lib\/progress\/planWeek'/);
     // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the finished flag rides along.
-    expect(SRC).toMatch(/buildPlanWeekSummary\(\{ position, sets: allSets, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 6.13): so do the grid's own day keys, the cells' input.
+    expect(SRC).toMatch(
+      /buildPlanWeekSummary\(\{\s*position,\s*sets: allSets,\s*completedDays: calValues\.map\(\(v\) => v\.date\),\s*finished: !!currentMesoWeek\?\.awaitingDecision,\s*\}\)/,
+    );
+    // The cells and the grid are fed the SAME list: one definition of a trained day.
+    expect(SRC).toContain('trainedDayKeys={calValues.map(v => v.date)}');
     expect(SRC).toMatch(/<PlanWeekCard summary=\{planWeek\} \/>/);
     expect(SRC).not.toMatch(/sessions this week|in week \d|DayDots/);
     // The position is read once, by the hook that loads everything else on
@@ -220,6 +229,66 @@ describe('Your plan week: first, from the one shared card (item 2)', () => {
     }));
     expect(all).toContain('0 of 4');
     expect(all).toContain('Your block');
+  });
+});
+
+// D214 addendum 9 (census 6.13, lane C1's planWeek.js `completedDays`): the plan-week cells and the twelve-week
+// grid are ONE definition of a trained day, a completed workout's START day. Mounted, with the real card and
+// the real cells: only the data hook, the store, navigation and native glue are mocked.
+describe('the plan-week cells read the grid\'s own definition of a trained day (census 6.13)', () => {
+  afterEach(() => { jest.useRealTimers(); });
+
+  // The seven cells are one accessible image carrying the composed label.
+  const cellsLabel = (tree) => tree.root.findAll(
+    (n) => typeof n.type === 'string'
+      && n.props.accessibilityRole === 'image'
+      && /^(Trained so far this week|Not trained yet this week)/.test(n.props.accessibilityLabel || ''),
+  ).map((n) => n.props.accessibilityLabel);
+
+  // Wednesday 10 June 2026, noon local: its Monday is 8 June.
+  const WEDNESDAY = new Date(2026, 5, 10, 12, 0, 0).getTime();
+  const MONDAY_2330 = new Date(2026, 5, 8, 23, 30, 0).getTime();
+  const TUESDAY_0010 = new Date(2026, 5, 9, 0, 10, 0).getTime();
+
+  test('a workout started on Monday at 23:30 with every set after midnight lights Monday only, as the grid does', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(WEDNESDAY);
+    const tree = render({
+      // The grid's input: the workout's START day, Monday.
+      calValues: [{ date: localDayKey(MONDAY_2330), count: 1 }],
+      earliestWorkoutAt: MONDAY_2330,
+      // Every set was logged after midnight, on Tuesday by the clock: the old reading lit Tuesday.
+      allSets: [
+        { workoutId: 'w1', createdAt: TUESDAY_0010 },
+        { workoutId: 'w1', createdAt: TUESDAY_0010 + 60000 },
+      ],
+    });
+    expect(cellsLabel(tree)).toEqual(['Trained so far this week: Mon']);
+    // The grid below draws the same single day, and the caption counts it once.
+    const all = texts(tree);
+    expect(all.some((t) => /^1 day trained in the last 12 weeks/.test(t))).toBe(true);
+  });
+
+  test('the cells light the days the grid lights: two started days, two lit cells, whatever the sets say', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(WEDNESDAY);
+    const tuesdayNoon = new Date(2026, 5, 9, 12, 0, 0).getTime();
+    const tree = render({
+      calValues: [{ date: localDayKey(MONDAY_2330), count: 1 }, { date: localDayKey(tuesdayNoon), count: 1 }],
+      allSets: [{ workoutId: 'w1', createdAt: WEDNESDAY }],
+    });
+    expect(cellsLabel(tree)).toEqual(['Trained so far this week: Mon, Tue']);
+  });
+
+  test('no completed workout this week: no cell is lit, though a set row from last week is on the screen', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(WEDNESDAY);
+    const lastSunday = new Date(2026, 5, 7, 20, 0, 0).getTime();
+    const tree = render({
+      calValues: [{ date: localDayKey(lastSunday), count: 1 }],
+      allSets: [{ workoutId: 'w0', createdAt: lastSunday }],
+    });
+    expect(cellsLabel(tree)).toEqual(['Not trained yet this week']);
   });
 });
 
@@ -253,7 +322,8 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
   test('"Week 2 of 6" from the block\'s one total, in the sentence and the bar, no percent, no second M', () => {
     const all = texts(render());
     expect(all.filter((t) => /Week 2 of 6/.test(t)).length).toBeGreaterThanOrEqual(2);
-    expect(all).toContain('Week 2 of 6 · Build. Recovery week in 4 weeks.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K3 and 6.14): the plan's own form, one line, no full stops.
+    expect(all).toContain('Week 2 of 6 · Build · recovery week in 4 weeks');
     expect(all).toContain('Week 2 of 6');
     expect(all).toContain('Upper Lower 4-Day');
     // The block section only (the load card's (i) names its own 20% and 30%).
@@ -264,7 +334,10 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
   test('"This week\'s effort: 3 of 5" with the (i)', () => {
     const all = texts(render());
     expect(all).toContain("This week's effort: 3 of 5");
-    expect(all).toContain('How close to your limit the set should feel: 5 means you could not do another rep, 0 means very easy.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K2): "is planned to feel", not "should feel" (a surface
+    // describes; the block's effort ladder is a prescription).
+    expect(all).toContain('How close to your limit each set is planned to feel: 5 means you could not do another rep, 0 means very easy.');
+    expect(all.join(' | ')).not.toContain('should feel');
   });
 
   test('tap opens the block, as today; no plan offers the library', () => {
@@ -272,7 +345,9 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
     tree.root.findByProps({ accessibilityHint: 'Opens training block' }).props.onPress();
     expect(navigateCrossTab).toHaveBeenCalledWith(expect.anything(), 'PlansTab', 'MesocycleBuilder');
     const none = render({ activeMeso: null });
-    expect(texts(none)).toContain('No plan running yet');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K1): the lead's two sentences, title then line.
+    expect(texts(none)).toContain('No plan is running yet');
+    expect(texts(none)).toContain('Your progress appears here once one starts, from the plan library or the plan builder.');
   });
 
   test('the planned recovery week is the position\'s GATED reading, on every card that names it', () => {
@@ -303,7 +378,10 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
     expect(joined).not.toContain('a recovery week');
     expect(all).toContain('in week 5 of your plan · Lower B is next');
     expect(all).toContain('Week 5 of 6');
-    expect(all).toContain('Week 5 of 6 · Push. Your hardest week of the block. Recovery week next.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K4): "Your hardest week of the block" goes (the phase
+    // word is structural, never read from the plan's volumes), and the line takes the plan's form.
+    expect(all).toContain('Week 5 of 6 · Push · recovery week next');
+    expect(all.join(' | ')).not.toMatch(/hardest/);
   });
 
   test('an adaptive adjustment keeps the module\'s own words and is never called a recovery week', () => {
@@ -311,11 +389,12 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
       position: { ...POSITION, activeWeekIndex: 3, recoveryState: { state: RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT, because: 'recovery_evidence' } },
       currentMesoWeek: { ...WEEK, weekIndex: 3, isDeload: true, rirTarget: 4 },
     }));
-    expect(all).toContain('Training is lighter for now. Your recent recovery has been harder, so your coach is holding back some of the workload for now.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.6 and 6.10): recoveryState.js's own words, in plain English.
+    expect(all).toContain('Training is lighter for now. You have been recovering more slowly lately, so your coach is holding back some of your training.');
     const joined = all.join(' | ');
     expect(joined).not.toContain('Lighter on purpose');
     expect(joined).not.toContain('a recovery week');
-    expect(all).toContain('Week 3 of 6 · Build. Recovery week in 3 weeks.');
+    expect(all).toContain('Week 3 of 6 · Build · recovery week in 3 weeks');
   });
 
   test('the calendar flag is read only as the fallback when the position cannot be', () => {
@@ -324,7 +403,7 @@ describe('Your block: one total, no percent, a gated recovery week (item 4, CS-5
     // A finished block is never a live recovery week, on either path.
     for (const position of [null, { ...POSITION, recoveryState: null }]) {
       const done = texts(render({ position, currentMesoWeek: { ...WEEK, weekIndex: 6, isDeload: true, awaitingDecision: true, rirTarget: 4 } }));
-      expect(done).toContain('Block finished. Sets stay at recovery-week level until you choose what comes next.');
+      expect(done).toContain('Block finished. Sets stay as light as a recovery week until you choose what comes next.');
       expect(done.join(' | ')).not.toContain('Lighter on purpose');
     }
   });
@@ -376,14 +455,18 @@ describe('Load: one card, the person\'s units, like for like (item 6, CS-1, CS-6
     const all = texts(render());
     expect(all).toContain('9,598 kg lifted so far this week');
     expect(all).toContain('In line with recent weeks at this point');
-    expect(all).toContain('4-week average: 16,406 kg');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.22): "a week" names what the average is per.
+    expect(all).toContain('4-week average: 16,406 kg a week');
+    // Census K5: one unit line under the bars.
+    expect(all).toContain('Weight lifted each week, in kg');
     expect(all).toContain('so far');
   });
 
   test('a pounds user never reads "kg" in the load card', () => {
     const all = texts(render({}, { units: 'lbs' }));
     expect(all).toContain('9,598 lbs lifted so far this week');
-    expect(all).toContain('4-week average: 16,406 lbs');
+    expect(all).toContain('4-week average: 16,406 lbs a week');
+    expect(all).toContain('Weight lifted each week, in lbs');
     expect(all.join(' | ')).not.toMatch(/\bkg\b/);
   });
 
@@ -413,6 +496,20 @@ describe('Sessions: one line (item 7, CS-11)', () => {
   });
 });
 
+// D214 addendum 9 (census K7 and K8): the two (i)s that said "middle length" and "gets harder each week".
+describe('the Sessions and block (i)s say what they mean in plain words', () => {
+  test('Sessions: "typical length", over this week and the five weeks before it', () => {
+    const all = texts(render());
+    expect(all).toContain('The typical length of the sessions you finished this week and in the five weeks before it, as your workout timer recorded them.');
+    expect(all.join(' | ')).not.toContain('middle length');
+  });
+  test('Your block: training "builds" across the block; nothing claims every week is harder', () => {
+    const all = texts(render());
+    expect(all.some((t) => t.startsWith('Training builds across the block, then a planned lighter recovery week lets fatigue clear.'))).toBe(true);
+    expect(all.join(' | ')).not.toContain('gets harder each week');
+  });
+});
+
 describe('Signs of building fatigue: every reason, describing only (item 8, CS-18)', () => {
   const REASONS = [
     'Your average reps per set have dropped over the last 4 weeks',
@@ -424,7 +521,19 @@ describe('Signs of building fatigue: every reason, describing only (item 8, CS-1
   test('all four reasons are listed, not only the first', () => {
     const all = texts(render({ deloadAlert: { deload: true, reasons: REASONS } }));
     expect(all.filter((t) => t === 'Signs of building fatigue')).toHaveLength(1);
-    for (const r of REASONS) expect(all).toContain(r);
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K13): the engine's reasons carry no closing full stop
+    // (algorithms.js, never edited), so the screen adds one at render, like every other sentence on it.
+    for (const r of REASONS) expect(all).toContain(`${r}.`);
+    for (const r of REASONS) expect(all).not.toContain(r);
+  });
+
+  test('withFullStop adds a stop where there is none and never doubles one (census K13)', () => {
+    expect(withFullStop('Recurring joint discomfort across the block')).toBe('Recurring joint discomfort across the block.');
+    expect(withFullStop('Already ends well.')).toBe('Already ends well.');
+    expect(withFullStop('Is that so?')).toBe('Is that so?');
+    expect(withFullStop('  padded  ')).toBe('padded.');
+    expect(withFullStop('')).toBe('');
+    expect(withFullStop(null)).toBe('');
   });
 
   test('a check with no stated reason still says what it found, once', () => {
@@ -452,7 +561,7 @@ describe('States (item 10, CS-4, CS-15)', () => {
     expect(all).toContain('Your plan week');
     expect(all).toContain('Your block');
     expect(all).toContain('Week 2 of 6');
-    for (const gone of ['Last 12 weeks', 'MILESTONE_SENTENCE', "This week's plan", 'Load', 'Sessions']) {
+    for (const gone of ['Last 12 weeks', 'MILESTONE_SENTENCE', "This week's plan", 'Weight lifted', 'Sessions']) {
       expect(all).not.toContain(gone);
     }
     expect(all.join(' | ')).not.toMatch(/recovery signals|load trends|rhythm/);
@@ -514,9 +623,10 @@ describe('what moved away is not rendered here, and nothing instructs (item 9, D
 
 // The lead's landing review of lane 4: LoadCard withholds itself when nothing
 // has been lifted in the four weeks (bodyweight-only training), so the "Load"
-// section label must go with it rather than stand over nothing.
-describe('the Load section goes with its card when nothing was lifted', () => {
-  test('all-zero load bars: no "Load" heading, no headline, no comparison sentence', () => {
+// section label must go with it rather than stand over nothing. RE-ANCHORED 2026-10-02 (D214 addendum 9,
+// census 0.19): the heading is "Weight lifted" now (it was "Load").
+describe('the Weight lifted section goes with its card when nothing was lifted', () => {
+  test('all-zero load bars: no "Weight lifted" heading, no headline, no comparison sentence', () => {
     const tree = render({
       mesoTonnage: [
         { value: 0, label: '-3w' }, { value: 0, label: '-2w' }, { value: 0, label: '-1w' }, { value: 0, label: 'Now' },
@@ -525,8 +635,9 @@ describe('the Load section goes with its card when nothing was lifted', () => {
       loadComparison: null,
     });
     const all = texts(tree);
-    expect(all).not.toContain('Load');
+    expect(all).not.toContain('Weight lifted');
     expect(all.some((t) => /lifted so far this week/.test(t))).toBe(false);
+    expect(all.some((t) => /Weight lifted each week/.test(t))).toBe(false);
     expect(all.some((t) => /recent weeks at this point/.test(t))).toBe(false);
     // The rest of the screen is untouched by the withhold.
     expect(all).toContain('Your plan week');
@@ -539,7 +650,8 @@ describe('the Load section goes with its card when nothing was lifted', () => {
       ],
     });
     const all = texts(tree);
-    expect(all).toContain('Load');
+    expect(all).toContain('Weight lifted');
+    expect(all).not.toContain('Load');
     expect(all).toContain('420 kg lifted so far this week');
   });
 });

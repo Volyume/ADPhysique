@@ -44,6 +44,9 @@ import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
+// D214 addendum 9 (census 0.24, W4): the five band words, one map shared with the
+// Volume heatmap, so a band reads the same on both screens.
+import { volumeBandLabel } from '../lib/volumeBandLabels';
 import {
   topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle, shareHighlightOptions,
   compareWithPriorSessions,
@@ -1905,13 +1908,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   giving two opposite instructions ("add more" vs "ease
                   off"). 'minimum' now has its own line and its own colour
                   (theme.js's stateColors.info). */}
+              {/* D214 addendum 9 (census W1 to W4): the first line says what the figures
+                  are, sets, and on a history reopen the session's own week rather than
+                  "this week"; the five band names are the Volume heatmap's own, read
+                  from the one shared map (volumeBandLabels.js); and no line tells
+                  anyone to do less (D204: a surface describes). */}
               <InfoTooltip size={11} text={
-                'How much you\'ve trained each muscle group this week.\n\n' +
-                'Green = Good range: enough training to grow without overdoing it\n' +
-                'Yellow = Getting close: one more session and it may be too much\n' +
-                'Red = Too much: consider doing a little less next week\n' +
-                'Blue = Just enough: right at the floor, one or two more sets would be stronger\n' +
-                'Grey = Below target: not enough logged yet to drive growth\n\n' +
+                `${readOnly ? 'How many sets you did for each muscle group.' : 'How much you\'ve trained each muscle group this week.'}\n\n` +
+                `Green = ${volumeBandLabel('optimal')}: enough training to grow without overdoing it\n` +
+                `Yellow = ${volumeBandLabel('near_mrv')}: one more session and it may be too much\n` +
+                `Red = ${volumeBandLabel('over_mrv')}: past the most sets the muscle can recover from in a week\n` +
+                `Blue = ${volumeBandLabel('minimum')}: at the bottom of the range, enough to grow but only just\n` +
+                `Grey = ${volumeBandLabel('below')}: not enough logged yet to drive growth\n\n` +
                 // C6 RE6-4 (D97-25): the adapted branch fired on ANY single
                 // adapted muscle but claimed the plural for all of them -
                 // the sentence is now scoped to "muscles with enough
@@ -1924,15 +1932,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 (() => {
                   const sources = Object.values(landmarkResolution?.source ?? {});
                   if (sources.includes('adapted')) {
-                    return 'These ranges start from your plan and your profile and, for muscles with enough logged data, have adjusted to your own response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.';
+                    return 'These ranges start from your plan and your profile and, for muscles with enough logged data, have adjusted to your own response. You can set your own under Volume targets, the last row of the Volume heatmap; your own targets always win.';
                   }
                   if (sources.includes('plan')) {
-                    return 'These ranges come from what your plan programs each week, inside the range your experience, recovery, phase and age support. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.';
+                    return 'These ranges come from what your plan programmes each week, inside the range your experience, recovery, phase and age support. You can set your own under Volume targets, the last row of the Volume heatmap; your own targets always win.';
                   }
                   if (sources.includes('profile')) {
-                    return 'These ranges are matched to your training experience, recovery, phase and age. Once a plan programs a muscle they follow what it aims at, and you can set them by hand with Edit volume targets on the Volume screen.';
+                    return 'These ranges are matched to your training experience, recovery, phase and age. Once a plan programmes a muscle they follow what it aims at, and you can set your own under Volume targets, the last row of the Volume heatmap.';
                   }
-                  return 'These ranges are research-based starting points. Once you have finished blocks behind you they adjust from how those went, and you can set them by hand with Edit volume targets on the Volume screen.';
+                  return 'These ranges are research-based starting points. Once you have finished blocks behind you they adjust from how those went, and you can set your own under Volume targets, the last row of the Volume heatmap.';
                 })()
               } />
             </View>
@@ -1980,14 +1988,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   <View style={styles.volumeRowMain}>
                     <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
-                      <Text style={[styles.statusText, live.statusText, { color }]}>{label}</Text>
+                      <Text style={[styles.statusText, live.statusText, { color }]}>{volumeBandLabel(status, label)}</Text>
                     </View>
                   </View>
                   {insight ? (
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
                   ) : (
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
-                      {Math.round(data.workingSets)} sets {weekJudgeable ? 'this week' : 'so far this week'}{hasExcludedWork ? '. Explosive lifts like swings are not counted here.' : ''}
+                      {Math.round(data.workingSets)} {Math.round(data.workingSets) === 1 ? 'set' : 'sets'} {weekJudgeable ? 'this week' : 'so far this week'}{hasExcludedWork ? '. Explosive lifts like swings are not counted here.' : ''}
                     </Text>
                   )}
                   {why && (

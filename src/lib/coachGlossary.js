@@ -30,10 +30,21 @@ export const GLOSSARY = {
   // the three record kinds, and never requires a max-out attempt.
   pr:
     'A personal record: a new best for you on an exercise. It can be your heaviest weight, your most reps at a weight, or a new estimated max. Any of the three counts, and it never needs a one-rep max attempt. PRs are the clearest sign your training is working.',
+  // D214 addendum 9 (census K2): "is planned to feel", not "should feel". The gloss
+  // describes the block's effort ladder, which is a prescription (the D93 note on
+  // the removed `rir` entry below), and a surface describes, it never instructs.
   effort:
-    'How close to your limit the set should feel: 5 means you could not do another rep, 0 means very easy.',
+    'How close to your limit each set is planned to feel: 5 means you could not do another rep, 0 means very easy.',
+  // `volumeBands` is read by the Manual Builder's Plan balance card (a plan being
+  // built, not sets done) and stays as it was; the Volume heatmap's legend reads
+  // `volumeHeatmapBands` just below, whose words are about sets DONE in a window.
   volumeBands:
-    "How much you've trained a muscle this week, compared with the helpful range. “Too much” means past the point of extra benefit, not dangerous.",
+    'How many sets a plan gives a muscle each week, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. “Too much” means past the point of extra benefit, not dangerous.',
+  // D214 addendum 9 (census 0.21, H10): the Volume heatmap legend's (i). It says
+  // what the figure counts (sets, this week so far or a weekly average over 2 or
+  // 4 weeks), what "the range" is, and which of the legend's words sit inside it.
+  volumeHeatmapBands:
+    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. Just enough, In range and Near the limit all sit inside the range. “Too much” means past the point of extra benefit, not dangerous.',
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:

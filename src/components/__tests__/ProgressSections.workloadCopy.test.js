@@ -14,7 +14,7 @@
  *     person's own unit (the "kg" was hard-coded for a pounds user), four
  *     labelled bars, the like-for-like D204 sentence ("In line with recent
  *     weeks at this point") in place of the ratio of a part week to full ones,
- *     and "4-week average: 16,406 kg" named with its true count. The ratio,
+ *     and "4-week average: 16,406 kg a week" named with its true count. The ratio,
  *     its bar scale and the second card are gone.
  *   - BlockCard (CS-5, CS-7): the plan card, the block shape and the effort
  *     line as one card; "Week 2 of 6" for the line and the bar from ONE M, no
@@ -100,11 +100,28 @@ describe('LoadCard: one load card in the person\'s units, compared like for like
     expect(all).not.toMatch(/vs recent average|0\.59|0\.\d\d|against a|This week so far \(kg\)|Weekly load/);
   });
 
-  test('"N-week average" names the real count and the unit', () => {
+  // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.22): the average names what it is per, "a week",
+  // where it used to read as a bare total ("4-week average: 16,406 kg").
+  test('"N-week average" names the real count, the unit and the period', () => {
     expect(texts(create(<LoadCard bars={bars} unit="kg" comparison={comparison} average={average} />)))
-      .toContain('4-week average: 16,406 kg');
+      .toContain('4-week average: 16,406 kg a week');
     expect(texts(create(<LoadCard bars={bars} unit="lbs" comparison={comparison} average={{ ...average, weeksOfData: 2 }} />)))
-      .toContain('2-week average: 16,406 lbs');
+      .toContain('2-week average: 16,406 lbs a week');
+  });
+
+  // D214 addendum 9 (census K5): the four bars print bare figures ("12,430"), so ONE line under
+  // them says what they are and the person's unit, and it sits between the bars and the comparison.
+  test('one unit line under the bars names the weight lifted and the person\'s unit', () => {
+    const kg = texts(create(<LoadCard bars={bars} unit="kg" comparison={comparison} average={average} />));
+    expect(kg.filter((t) => t === 'Weight lifted each week, in kg')).toHaveLength(1);
+    const lbs = texts(create(<LoadCard bars={bars} unit="lbs" comparison={comparison} average={average} />));
+    expect(lbs.filter((t) => t === 'Weight lifted each week, in lbs')).toHaveLength(1);
+    expect(lbs.join(' | ')).not.toMatch(/\bkg\b/);
+    // After the last bar's caption and before the comparison sentence and the average.
+    const at = (needle) => kg.findIndex((t) => t === needle);
+    expect(at('Weight lifted each week, in kg')).toBeGreaterThan(at('so far'));
+    expect(at('Weight lifted each week, in kg')).toBeLessThan(at('In line with recent weeks at this point'));
+    expect(at('Weight lifted each week, in kg')).toBeLessThan(at('4-week average: 16,406 kg a week'));
   });
 
   test('it hides the comparison rather than comparing against nothing, and keeps the figure', () => {
@@ -128,6 +145,9 @@ describe('LoadCard: one load card in the person\'s units, compared like for like
       .find((t) => t.startsWith('The total weight you lifted'));
     expect(tip).toContain('the same days and the same time of day in each of your last three weeks, so a part week is never set against full ones');
     expect(tip).toContain('In line means between 20% under and 30% over the average of those weeks at this point');
+    // D214 addendum 9 (census K6 and 6.9): the (i) defines the other two words the card prints, from the
+    // same two constants as "In line" (trainingLoad.js LOAD_IN_LINE_MIN and LOAD_ABOVE_MIN).
+    expect(tip).toContain('Below means more than 20% under it, and Above means 30% or more over it.');
     expect(tip).toContain('Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.');
     expect(tip).not.toMatch(/easier session|Consider|Monitor how you feel|Room for more work|fatigue risk|helpful range/i);
   });
@@ -193,7 +213,8 @@ describe('BlockCard: one block card, one total, no percent (CS-5, CS-7)', () => 
   });
 
   test('an adaptive adjustment keeps the module\'s own words and the card never calls it a recovery week', () => {
-    const note = 'Training is lighter for now. Your recent recovery has been harder, so your coach is holding back some of the workload for now.';
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.6): the note is recoveryState.js's own words, as it now reads.
+    const note = 'Training is lighter for now. You have been recovering more slowly lately, so your coach is holding back some of your training.';
     const all = texts(create(<BlockCard meso={meso} weekIndex={3} plannedWeeks={6} rirTarget={4} note={note} />));
     expect(all).toContain(note);
     expect(all.join(' | ')).not.toMatch(/recovery week/i);
@@ -215,7 +236,14 @@ describe('BlockCard: one block card, one total, no percent (CS-5, CS-7)', () => 
 
     const onBuild = jest.fn();
     const none = create(<BlockCard meso={null} onBuild={onBuild} />);
-    expect(texts(none)).toContain('No plan running yet');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K1): the door describes and does not tell. The lead's
+    // two sentences read once, title then line: "No plan is running yet. Your progress appears here once one
+    // starts, from the plan library or the plan builder." (the title was "No plan running yet", and the
+    // line said "Browse the plan library or build your own", an instruction on a surface).
+    expect(texts(none)).toContain('No plan is running yet');
+    expect(texts(none)).toContain('Your progress appears here once one starts, from the plan library or the plan builder.');
+    expect(texts(none).filter((t) => /No plan (is )?running yet/.test(t))).toHaveLength(1);
+    expect(texts(none).join(' | ')).not.toMatch(/Browse the plan library|build your own|right here/);
     expect(texts(none)).toContain('Browse plans');
   });
 });
@@ -260,13 +288,15 @@ describe('TrainingDaysSection: the labelled grid and its caption, never "Rest" (
   });
 });
 
-describe('trainingDaysCaption: "51 days trained in the last 12 weeks · about 4 a week"', () => {
+// RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.22): the rate names its unit, "about 4 days a week",
+// and a rate of one reads "about 1 day a week".
+describe('trainingDaysCaption: "51 days trained in the last 12 weeks · about 4 days a week"', () => {
   const NOW = new Date(2026, 5, 10, 12, 0, 0).getTime();
   const DAY = 86400000;
 
   test('the plan\'s own example', () => {
     expect(trainingDaysCaption({ trainedDays: 51, firstSessionAt: NOW - 200 * DAY, now: NOW }))
-      .toBe('51 days trained in the last 12 weeks · about 4 a week');
+      .toBe('51 days trained in the last 12 weeks · about 4 days a week');
   });
 
   test('a singular day, and a rate that rounds to nothing is left out', () => {
@@ -278,13 +308,13 @@ describe('trainingDaysCaption: "51 days trained in the last 12 weeks · about 4 
     expect(trainingDaysCaption({ trainedDays: 11, firstSessionAt: NOW - 200 * DAY, now: NOW }))
       .toBe('11 days trained in the last 12 weeks');
     expect(trainingDaysCaption({ trainedDays: 12, firstSessionAt: NOW - 200 * DAY, now: NOW }))
-      .toBe('12 days trained in the last 12 weeks · about 1 a week');
+      .toBe('12 days trained in the last 12 weeks · about 1 day a week');
   });
 
   test('a person with under twelve weeks of history is not divided by twelve', () => {
-    // First session 6 weeks ago, 18 days trained: 3 a week, not "about 2".
+    // First session 6 weeks ago, 18 days trained: 3 days a week, not "about 2".
     expect(trainingDaysCaption({ trainedDays: 18, firstSessionAt: NOW - 41 * DAY, now: NOW }))
-      .toBe('18 days trained in the last 12 weeks · about 3 a week since your first session');
+      .toBe('18 days trained in the last 12 weeks · about 3 days a week since your first session');
     // Under four weeks of history: no rate at all.
     expect(trainingDaysCaption({ trainedDays: 6, firstSessionAt: NOW - 10 * DAY, now: NOW }))
       .toBe('6 days trained in the last 12 weeks');
@@ -292,7 +322,7 @@ describe('trainingDaysCaption: "51 days trained in the last 12 weeks · about 4 
 
   test('an unknown first session reads as the full window', () => {
     expect(trainingDaysCaption({ trainedDays: 51, firstSessionAt: null, now: NOW }))
-      .toBe('51 days trained in the last 12 weeks · about 4 a week');
+      .toBe('51 days trained in the last 12 weeks · about 4 days a week');
   });
 
   test('no streak, no countdown, no instruction in any variant', () => {

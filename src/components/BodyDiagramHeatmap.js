@@ -549,7 +549,7 @@ export default function BodyDiagramHeatmap({
         ) : (
           <LegendRow
             items={volumeLegendItems(t.colors)}
-            trailing={<InfoTooltip text={GLOSSARY.volumeBands} size={14} />}
+            trailing={<InfoTooltip text={GLOSSARY.volumeHeatmapBands} size={14} />}
           />
         )}
       </View>

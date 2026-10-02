@@ -153,9 +153,10 @@ describe('VolumeHeatmapScreen: the trend takeaway uses the full weeks only, in l
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('This week so far: 2 sets logged. Last 3 full weeks: about 12 a week.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.22): "about 12 sets a week", the unit named.
+    expect(text).toContain('This week so far: 2 sets logged. Last 3 full weeks: about 12 sets a week.');
     expect(text).not.toMatch(/down 8|up 4/); // no first-to-last delta any more
-    expect(text).not.toMatch(/about (9|10) a week/);
+    expect(text).not.toMatch(/about (9|10) sets a week/);
   });
 
   test('the totals are logged rows, not the per-muscle credits the trend query returns', async () => {
@@ -182,7 +183,7 @@ describe('VolumeHeatmapScreen: the trend takeaway uses the full weeks only, in l
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('This week so far: 4 sets logged. Last 2 full weeks: about 8 a week.');
+    expect(text).toContain('This week so far: 4 sets logged. Last 2 full weeks: about 8 sets a week.');
     expect(text).not.toMatch(/about 16|\b8 sets logged|\b10 sets logged/);
   });
 

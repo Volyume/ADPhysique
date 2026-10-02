@@ -41,6 +41,11 @@ const LOAD_BAR_AREA = 56;
 const LOAD_BAR_MIN = spacing.xs;
 const BLOCK_BAR_HEIGHT = spacing.xs;
 
+// The two bounds the comparison words are cut at, as the percentages the (i)
+// quotes: built from trainingLoad's own constants so the sentence cannot drift.
+const LOAD_UNDER_PCT = Math.round((1 - LOAD_IN_LINE_MIN) * 100);
+const LOAD_OVER_PCT = Math.round((LOAD_ABOVE_MIN - 1) * 100);
+
 // useProgressData labels its bars "-3w" ... "Now"; the card says it in words.
 const LOAD_BAR_WORDS = { '-3w': '3 weeks ago', '-2w': '2 weeks ago', '-1w': 'Last week', Now: 'This week' };
 
@@ -56,7 +61,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const GRID_DAYS = 84;
 
 /**
- * The grid's caption: "51 days trained in the last 12 weeks · about 4 a week".
+ * The grid's caption: "51 days trained in the last 12 weeks · about 4 days a week"
+ * (D214 addendum 9, census 0.22: the rate names its unit; a rate of 1 reads
+ * "about 1 day a week").
  * The rate divides by the weeks the person actually has: a person whose first
  * session was three weeks ago has not had twelve, so a rate over twelve weeks
  * would understate their pace. With under four weeks of history, or under one
@@ -77,9 +84,10 @@ export function trainingDaysCaption({ trainedDays, firstSessionAt = null, now = 
   const perWeek = n / (spanDays / 7);
   if (spanDays < 28 || perWeek < 1) return head;
   const rate = Math.round(perWeek);
+  const rateText = `${rate} ${rate === 1 ? 'day' : 'days'}`;
   return spanDays >= GRID_DAYS
-    ? `${head} · about ${rate} a week`
-    : `${head} · about ${rate} a week since your first session`;
+    ? `${head} · about ${rateText} a week`
+    : `${head} · about ${rateText} a week since your first session`;
 }
 
 /** The one sessions line, or null when there is no typical length to state. */
@@ -158,8 +166,12 @@ export function BlockCard({
             its pill already reads as one; a second amber beside the empty
             state broke rule 3 on day zero. */}
         <Ionicons name="layers-outline" size={32} color={t.colors.textSecondary} />
-        <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
-        <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
+        {/* D214 addendum 9 (census K1): the door describes, it does not tell. The
+            ruled text is two sentences, "No plan is running yet. Your progress
+            appears here once one starts, from the plan library or the plan
+            builder."; the title carries the first so it is read once, not twice. */}
+        <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan is running yet</Text>
+        <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Your progress appears here once one starts, from the plan library or the plan builder.</Text>
         <View style={[styles.mesoEmptyBtn, live.mesoEmptyBtn]}>
           {/* 2026-07-10 (CP-10 stage 4 batch C, theming): live-theme colour
               prop (t.colors.textSecondary); see noPlanJourneyCopy.guard.test.js
@@ -279,7 +291,7 @@ export function LoadCard({ bars, unit = 'kg', comparison = null, average = null 
   const top = Math.max(...list.map((b) => b?.value ?? 0), 1);
   const weeksN = Number.isFinite(average?.weeksOfData) && average.weeksOfData > 0 ? Math.round(average.weeksOfData) : null;
   const showAverage = weeksN != null && Number.isFinite(average?.chronic) && average.chronic > 0;
-  const spoken = `Weekly load, ${list
+  const spoken = `Weight lifted each week, ${list
     .map((b, i) => `${i === list.length - 1 ? 'this week so far' : loadBarLabel(b.label).toLowerCase()} ${formatWithUnit(formatNumber(b.value), unit)}`)
     .join(', ')}.`;
 
@@ -296,7 +308,8 @@ export function LoadCard({ bars, unit = 'kg', comparison = null, average = null 
           text={
             'The total weight you lifted over your working sets (warm-ups are not counted), for each week from Monday to Sunday. The last bar is this week so far.\n\n'
             + 'The comparison looks at the same days and the same time of day in each of your last three weeks, so a part week is never set against full ones. '
-            + `In line means between ${Math.round((1 - LOAD_IN_LINE_MIN) * 100)}% under and ${Math.round((LOAD_ABOVE_MIN - 1) * 100)}% over the average of those weeks at this point.\n\n`
+            + `In line means between ${LOAD_UNDER_PCT}% under and ${LOAD_OVER_PCT}% over the average of those weeks at this point. `
+            + `Below means more than ${LOAD_UNDER_PCT}% under it, and Above means ${LOAD_OVER_PCT}% or more over it.\n\n`
             + 'The average is taken over up to your last four full weeks that have at least one logged set; this week so far is not in it.\n\n'
             + 'Your plan sets each session; this is a picture of how the load is moving across the block, not an instruction.'
           }
@@ -321,10 +334,14 @@ export function LoadCard({ bars, unit = 'kg', comparison = null, average = null 
         })}
       </View>
 
+      {/* Census K5: the bars print bare figures ("12,430"), so one line under them
+          names what they are and the person's unit. */}
+      <Text style={[styles.loadUnitLine, live.loadUnitLine]}>{`Weight lifted each week, in ${unit}`}</Text>
+
       <LoadComparison data={comparison} />
       {showAverage ? (
         <Text style={[styles.loadAverage, live.loadAverage]}>
-          {`${weeksN}-week average: ${formatWithUnit(formatNumber(average.chronic), unit)}`}
+          {`${weeksN}-week average: ${formatWithUnit(formatNumber(average.chronic), unit)} a week`}
         </Text>
       ) : null}
     </Card>
@@ -376,6 +393,7 @@ const styles = StyleSheet.create({
   loadBar:          { width: '60%', borderRadius: radius.xs, backgroundColor: colors.textSecondary },
   loadBarValue:     { ...type.num('caption'), color: colors.textSecondary },
   loadBarLabel:     { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  loadUnitLine:     { ...type.bodySm, color: colors.textMuted },
   loadStatus:       { ...type.bodySm, color: colors.textSecondary },
   loadAverage:      { ...type.bodySm, color: colors.textMuted },
 });
@@ -404,6 +422,7 @@ function buildLiveStyles(t) {
     loadBar: { backgroundColor: t.colors.textSecondary },
     loadBarValue: { ...t.type.num('caption'), color: t.colors.textSecondary },
     loadBarLabel: { ...t.type.caption, color: t.colors.textMuted },
+    loadUnitLine: { ...t.type.bodySm, color: t.colors.textMuted },
     loadStatus: { ...t.type.bodySm, color: t.colors.textSecondary },
     loadAverage: { ...t.type.bodySm, color: t.colors.textMuted },
   };

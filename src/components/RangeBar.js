@@ -28,7 +28,7 @@
  *
  * `slim` is the 6 dp variant the plan rows use (the default is 8 dp). The
  * whole bar is hidden from assistive tech: the row's own text carries the
- * figures ("5 of 6 to 22 sets this week"), so a bar read aloud would only
+ * figures ("5 sets so far this week, range 6 to 22"), so a bar read aloud would only
  * repeat them.
  *
  * Live theme (`useTheme`): the frozen block holds only layout and radius;

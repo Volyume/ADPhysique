@@ -44,7 +44,8 @@ describe('ConsistencyScreen cohesion census (R2)', () => {
   });
 
   test('D214: headings are SectionLabels, and every section of the plan has one', () => {
-    for (const heading of ['Your plan week', 'Last 12 weeks', 'Your block', "This week's plan", 'Load', 'Sessions']) {
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.19): the load section's heading is "Weight lifted".
+    for (const heading of ['Your plan week', 'Last 12 weeks', 'Your block', "This week's plan", 'Weight lifted', 'Sessions']) {
       expect(SRC).toContain(`<SectionLabel heading>${heading}</SectionLabel>`);
     }
   });

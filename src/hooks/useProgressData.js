@@ -423,7 +423,7 @@ export default function useProgressData() {
     setRecentSessions(completed);
   }
 
-  // D214 (CS-11): "Sessions usually last about N minutes". The middle length
+  // D214 (CS-11): "Sessions usually last about N minutes". The typical length
   // (median, so one session left running for hours does not drag it) of the
   // completed sessions with a recorded duration in the last six Monday weeks,
   // from at least three sessions; null otherwise, and the screen prints nothing.

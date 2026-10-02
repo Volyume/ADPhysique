@@ -34,11 +34,15 @@ export const WEIGHT_WINDOWS = Object.freeze([
   { key: 'Y',  label: '1 year',  days: 365 },
 ]);
 
+// D214 addendum 9 (census H4, 6.3): the volume trend card's chips read in words,
+// "4 weeks" "8 weeks" "3 months" "6 months", the way the weight chart's do
+// (WEIGHT_WINDOWS above). The KEYS are unchanged: the person's chosen window is
+// persisted under them (@volyume_chart_window_volume), so only the labels moved.
 export const VOLUME_WINDOWS = Object.freeze([
-  { key: '4W', label: '4W', days: 28,  weeks: 4 },
-  { key: '8W', label: '8W', days: 56,  weeks: 8 },
-  { key: '3M', label: '3M', days: 90,  weeks: 13 },
-  { key: '6M', label: '6M', days: 180, weeks: 26 },
+  { key: '4W', label: '4 weeks',  days: 28,  weeks: 4 },
+  { key: '8W', label: '8 weeks',  days: 56,  weeks: 8 },
+  { key: '3M', label: '3 months', days: 90,  weeks: 13 },
+  { key: '6M', label: '6 months', days: 180, weeks: 26 },
 ]);
 
 export const DEFAULT_WINDOW_KEY = '3M';
@@ -225,26 +229,38 @@ export function e1rmTakeaway({ windowKey, coversAll, points, dateOf, values, uni
  * ended "average 111 sets a week, down 57" -- a delta with no unit, over
  * totals that summed per-muscle credits, so eight logged sets printed as 16.
  * The caller now passes LOGGED working-set rows per Monday week (never the
- * credits), the sentence says "logged", and the first-to-last delta is gone:
- * "This week so far: 42 sets logged. Last 3 full weeks: about 60 a week."
- * The second sentence leans on the first for its unit; on its own (no
- * `currentWeekTotal`) it names "sets" so the number always states what it is.
+ * credits), the sentence says "logged", and the first-to-last delta is gone.
  *
+ * D214 addendum 9 (census 0.22 and H5): the average always names its unit, "sets
+ * a week" (it used to lean on the first sentence and say "about 60 a week"),
+ * and it says how many weeks it rests on. A full week with no logged set is
+ * left out of `weeklySets`, so "Last 3 full weeks" over two populated weeks
+ * was an average over two; `fullWeeks` (the full weeks the window holds, which
+ * the caller knows and `weeklySets` does not) lets the label say "(2 with sets
+ * logged)" whenever the two differ.
+ *
+ * @param {number} [fullWeeks] full weeks the window holds, counting those with
+ *   no logged set; when it exceeds `weeklySets.length` the label says how many
+ *   of them had sets
  * @returns {string} e.g. "This week so far: 42 sets logged. Last 3 full
- *   weeks: about 60 a week." or, standing alone, "8 weeks: about 13 sets a
- *   week."
+ *   weeks: about 60 sets a week.", with a week away "This week so far: 42 sets
+ *   logged. Last 3 full weeks (2 with sets logged): about 60 sets a week." or,
+ *   standing alone, "8 weeks: about 13 sets a week."
  */
 export function volumeTakeaway({
-  windowKey, coversAll, spanDays, weeklySets, phraseOverride, currentWeekTotal,
+  windowKey, coversAll, spanDays, weeklySets, phraseOverride, currentWeekTotal, fullWeeks,
 }) {
   const hasCurrent = Number.isFinite(currentWeekTotal);
   const currentR = hasCurrent ? Math.round(currentWeekTotal) : 0;
   const currentText = hasCurrent ? `This week so far: ${currentR} set${currentR === 1 ? '' : 's'} logged.` : '';
   if (!weeklySets || weeklySets.length < 2) return currentText;
-  const phrase = phraseOverride ?? windowPhrase(windowKey, coversAll, spanDays);
+  const basePhrase = phraseOverride ?? windowPhrase(windowKey, coversAll, spanDays);
+  const phrase = Number.isFinite(fullWeeks) && fullWeeks > weeklySets.length
+    ? `${basePhrase} (${weeklySets.length} with sets logged)`
+    : basePhrase;
   const avg = weeklySets.reduce((t, v) => t + v, 0) / weeklySets.length;
   const avgR = Math.round(avg);
-  const tail = `${phrase}: about ${avgR}${currentText ? '' : ` set${avgR === 1 ? '' : 's'}`} a week.`;
+  const tail = `${phrase}: about ${avgR} set${avgR === 1 ? '' : 's'} a week.`;
   return currentText ? `${currentText} ${tail}` : tail;
 }
 

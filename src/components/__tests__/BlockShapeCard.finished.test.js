@@ -20,7 +20,9 @@ describe('finished rendering', () => {
   test('finished shows the honest line instead of a live-week or recovery-week claim', () => {
     const tree = create(<BlockShapeCard weekIndex={5} plannedWeeks={5} isDeload finished />);
     const all = texts(tree).join(' | ');
-    expect(all).toContain('Block finished. Sets stay at recovery-week level until you choose what comes next.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.20): "recovery-week level" was not plain
+    // English; the lead's words say what the sets stay as.
+    expect(all).toContain('Block finished. Sets stay as light as a recovery week until you choose what comes next.');
     expect(all).not.toContain('Recovery week. Lighter on purpose');
     expect(all).not.toMatch(/Week \d+ of \d+/);
   });

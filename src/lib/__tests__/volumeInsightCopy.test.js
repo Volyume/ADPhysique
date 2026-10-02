@@ -23,7 +23,36 @@ describe('getVolumeInsight', () => {
     expect(line).toContain('12 sets');
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     // -- and the house dash rule: ranges read "X to Y", never an en dash.
-    expect(line).toContain(`${mev} to ${mrv} sets/week`);
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census W8): "In range: 6 to 22 sets a week", never
+    // "target: 6 to 22 sets/week" ("target" is the heatmap's "range"; "sets/week" is not a sentence).
+    expect(line).toContain(`${mev} to ${mrv} sets a week`);
+    expect(line).toBe(`12 sets · In range: ${mev} to ${mrv} sets a week`);
+    expect(line).not.toMatch(/target|sets\/week/);
+  });
+
+  // D214 addendum 9 (census 0.24, W4, W8): the insight line says the Volume heatmap's own five words,
+  // read from the one shared map, and the range in the one form on every surface.
+  test('each band says the heatmap\'s own word, then the range, and none says "target"', () => {
+    const { mev, mrv } = VOLUME_LANDMARKS[KNOWN_MUSCLE];
+    const range = `${mev} to ${mrv} sets a week`;
+    expect(getVolumeInsight(KNOWN_MUSCLE, 3, 'below')).toBe(`3 sets · Under the range: ${range}`);
+    expect(getVolumeInsight(KNOWN_MUSCLE, 7, 'minimum')).toBe(`7 sets · Just enough: ${range}`);
+    expect(getVolumeInsight(KNOWN_MUSCLE, 12, 'optimal')).toBe(`12 sets · In range: ${range}`);
+    expect(getVolumeInsight(KNOWN_MUSCLE, 20, 'near_mrv')).toBe(`20 sets · Near the limit: ${range}`);
+    expect(getVolumeInsight(KNOWN_MUSCLE, 30, 'over_mrv')).toBe(`30 sets · Too much: ${range}`);
+    for (const s of ['below', 'minimum', 'optimal', 'near_mrv', 'over_mrv', 'mystery']) {
+      expect(getVolumeInsight(KNOWN_MUSCLE, 9, s)).not.toMatch(/target|sets\/week|on track|approaching upper limit|over your recovery limit|below the minimum for growth/);
+    }
+  });
+
+  test('a muscle with no lower bound reads "up to 14 sets a week", never "0 to 14", as the heatmap rows do', () => {
+    expect(getVolumeInsight('front_delts', 6, 'optimal')).toBe('6 sets · In range: up to 14 sets a week');
+    expect(getVolumeInsight('front_delts', 6, 'optimal')).not.toMatch(/\b0 to 14\b/);
+  });
+
+  test('one set is "1 set", never "1 sets"', () => {
+    expect(getVolumeInsight(KNOWN_MUSCLE, 1, 'below')).toMatch(/^1 set · /);
+    expect(getVolumeInsight(KNOWN_MUSCLE, 1.2, 'below')).not.toMatch(/\b1 sets\b/);
   });
 
   test('each status produces a distinct phrase', () => {
@@ -52,10 +81,15 @@ describe('getVolumeWhy', () => {
   // and forbid any next-week instruction.
   const ADVICE = /\b(drop|hold here|add a|sneak in|next week|try to|aim for|you should|piling on)\b/i;
 
-  test('over the ceiling: says it is past the most sets the muscle can recover from, and what usually follows', () => {
+  // RE-ANCHORED 2026-10-02 (D214 addendum 9, census W7, the lead's ruling): the heatmap's own legend says
+  // "Too much" means past the point of extra benefit, NOT dangerous (coachGlossary volumeHeatmapBands), and this
+  // line used to claim "Soreness, performance drops and joint aches usually follow at this level": opposite
+  // claims for one band on two screens. The glossary's reading wins, so the claim goes, and the line is the
+  // lead's own words. It names no figure, so it cannot disagree with the band beside it.
+  test('over the ceiling: says it is past the most sets the muscle can recover from, and that more sets now add fatigue, not growth', () => {
     const why = getVolumeWhy(KNOWN_MUSCLE, 30, 'over_mrv');
-    expect(why).toMatch(/Past the most weekly sets .* can recover from/);
-    expect(why).toMatch(/usually follow/);
+    expect(why).toMatch(/^Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth\./);
+    expect(why).not.toMatch(/Soreness|joint aches|performance drops|usually follow|dangerous/i);
     expect(why).not.toMatch(ADVICE);
   });
 
@@ -71,9 +105,9 @@ describe('getVolumeWhy', () => {
     expect(why).not.toMatch(ADVICE);
   });
 
-  test('at the minimum: enough to grow, and where the helpful range runs', () => {
+  test('at the minimum: enough to grow, and where the range runs', () => {
     const why = getVolumeWhy(KNOWN_MUSCLE, 6, 'minimum');
-    expect(why).toMatch(/enough to grow, but only just: the helpful range runs from here up to \d+/);
+    expect(why).toMatch(/enough to grow, but only just: the range runs from here up to \d+/);
     expect(why).not.toMatch(ADVICE);
   });
 
@@ -94,18 +128,34 @@ describe('C6 RD6-1 (D97-25): the copy quotes the band the verdict used', () => {
   test('the insight line quotes the resolved range, not frozen research', () => {
     const line = getVolumeInsight('chest', 18, 'over_mrv', resolved);
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(line).toContain('6 to 16 sets/week');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census W8): "sets a week", and the range is "the range".
+    expect(line).toContain('6 to 16 sets a week');
+    expect(line).toBe('18 sets · Too much: 6 to 16 sets a week');
     expect(line).not.toContain('22');
   });
 
   test('the why body quotes the resolved ceiling', () => {
-    const why = getVolumeWhy('chest', 18, 'over_mrv', resolved, 'adapted');
-    expect(why).toContain('(16 sets per week)');
-    expect(why).not.toContain('22');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census W7): this pinned "(16 sets per week)" in the OVER band's
+    // body so the copy could never contradict the verdict (D97-25). The lead's replacement for that band names
+    // no figure at all, so it cannot contradict anything, and the same row's insight line still quotes the
+    // resolved range (pinned above). The guarantee moves to the band that still quotes the ceiling, near it.
+    const near = getVolumeWhy('chest', 14, 'near_mrv', resolved, 'adapted');
+    expect(near).toContain('(16 sets a week)');
+    expect(near).not.toContain('22');
+    const over = getVolumeWhy('chest', 18, 'over_mrv', resolved, 'adapted');
+    expect(over).not.toContain('22');
+    expect(over).toMatch(/^Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth\./);
   });
 
   test('no table falls back to research byte-identically', () => {
     expect(getVolumeInsight('chest', 18, 'over_mrv')).toBe(getVolumeInsight('chest', 18, 'over_mrv', null));
+  });
+
+  // D214 addendum 9 (census W6): British English, "programmes" for the verb.
+  test('the plan source says "programmes", never "programs"', () => {
+    const why = getVolumeWhy('chest', 10, 'optimal', resolved, 'plan');
+    expect(why).toMatch(/This target is what your plan programmes for this muscle each week\.$/);
+    expect(why).not.toMatch(/\bprograms\b/);
   });
 
   test('the closing clause is true per provenance: adapted claims adaptation, manual claims ownership, research claims research', () => {

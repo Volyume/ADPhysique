@@ -186,7 +186,9 @@ export function recoveryStateCard(resolved) {
     state: resolved.state,
     title: 'Training is lighter for now',
     compactTitle: 'Training adjusted for recovery',
-    body: 'Your recent recovery has been harder, so your coach is holding back some of the workload for now.',
+    // D214 addendum 9 (census 0.6, 6.10): plain words; "recovery has been harder" is
+    // not English a lay reader can parse, and "for now" was said twice.
+    body: 'You have been recovering more slowly lately, so your coach is holding back some of your training.',
     next: 'Normal progression picks up again when your recovery supports it. The rest of the block is unchanged.',
     action: 'Why?',
   };
@@ -215,7 +217,7 @@ export function trainRecoveryDetail(resolved, differences = []) {
   const planned = resolved.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
   const lead = planned
     ? 'Recovery week. This session is lighter on purpose, because you have finished the hard-training part of this block.'
-    : 'Recovery-adjusted session. This one is lighter because your recent recovery has been harder.';
+    : 'Recovery-adjusted session. This one is lighter because you have been recovering more slowly lately.';
   if (!real.length) return lead;
   return `${lead} ${sentenceList(real)}`;
 }
@@ -289,7 +291,7 @@ export function reviewRecoveryLine(resolved) {
     return 'You are in your recovery week. Training is lighter before you move on from this block, and you will choose what comes next when it is done.';
   }
   if (resolved.state === RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT) {
-    return 'Training is being held back for now because your recent recovery has been harder. Your recovery week still comes at the end of the block as planned.';
+    return 'Training is being held back for now because you have been recovering more slowly lately. Your recovery week still comes at the end of the block as planned.';
   }
   if (resolved.weeksToRecovery === 1) {
     return 'Next is your recovery week. Training will be lighter before you move on from this block.';

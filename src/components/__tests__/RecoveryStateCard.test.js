@@ -73,7 +73,8 @@ describe('PATH B: the ADAPTIVE reduction is visible, and is not called a recover
     const text = renderText({ recoveryState: adaptive, expanded: true });
     expect(text).toContain('Training is lighter for now');
     // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the coaching actor is your coach, not a collaborative "we")
-    expect(text).toContain('Your recent recovery has been harder, so your coach is holding back some of the workload for now.');
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.6: the lead's plain words).
+    expect(text).toContain('You have been recovering more slowly lately, so your coach is holding back some of your training.');
     expect(text).not.toMatch(/Recovery week/);
     expect(text).not.toMatch(/finished the hard-training part/);
   });

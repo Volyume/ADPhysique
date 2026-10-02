@@ -32,6 +32,9 @@ import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
 import { syncUserPref, notePrefWrite } from '../lib/sync';
 import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus } from '../lib/algorithms';
+// D214 addendum 9 (census 0.24, W4): the five band words are written ONCE, in
+// volumeBandLabels.js, and read by this screen and the Workout Summary alike.
+import { VOLUME_BAND_LABELS, volumeRangeText } from '../lib/volumeBandLabels';
 // D200-1 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
 // the 2/4-week windows read the AVERAGE working sets per week against the
 // unchanged weekly bands, instead of the window's raw total. D214 amends
@@ -86,6 +89,13 @@ import { localWeekEndMs } from '../lib/dayKey';
  *  - A recovery week (the block's planned light week) is planned lower, so no
  *    verdict colour or band word is drawn: the figure uses one neutral shade
  *    and the rows print their figures alone (PR-14, VH-10).
+ *  - Nothing is judged until a set is logged in the window shown (D214
+ *    addendum 9, census 6.4): with no logged set the rows are the same flat
+ *    list a recovery week draws, so a plan that programmes every muscle never
+ *    reads "Under the range" on a Monday morning before the first set.
+ *  - A row says what it is: "5 sets so far this week, range 6 to 22" (an
+ *    average over 2 and 4 weeks), the range being the fewest weekly sets that
+ *    still help the muscle grow to the most it can recover from (census 0.4).
  *  - The rows read Under the range, Just enough, In range, Near the limit, Too
  *    much, then No sets (plan 7.4 item 5). The Under group's population is the
  *    Progress strip's: with a plan, the muscles it programmes; without one, the
@@ -105,13 +115,14 @@ const WINDOW_OPTIONS = [
 // verdict words from the lowest band up, then "No sets" for a muscle outside
 // the verdict population with no sets (volumeLogged.js bandGroupFor). Named in
 // the words of the figure's own legend (BodyDiagramHeatmap.js), the screen's
-// one legend.
+// one legend, read from the one shared map the Workout Summary reads too
+// (volumeBandLabels.js; a test holds the legend's words equal to it).
 const BAND_GROUPS = [
-  { status: 'below', label: 'Under the range' },
-  { status: 'minimum', label: 'Just enough' },
-  { status: 'optimal', label: 'In range' },
-  { status: 'near_mrv', label: 'Near the limit' },
-  { status: 'over_mrv', label: 'Too much' },
+  { status: 'below', label: VOLUME_BAND_LABELS.below },
+  { status: 'minimum', label: VOLUME_BAND_LABELS.minimum },
+  { status: 'optimal', label: VOLUME_BAND_LABELS.optimal },
+  { status: 'near_mrv', label: VOLUME_BAND_LABELS.near_mrv },
+  { status: 'over_mrv', label: VOLUME_BAND_LABELS.over_mrv },
   { status: NO_SETS_GROUP, label: 'No sets' },
 ];
 const BAND_LABEL = Object.fromEntries(BAND_GROUPS.map(g => [g.status, g.label]));
@@ -131,11 +142,36 @@ const SUMMARY_TOOLTIP = 'A set counts once for the muscle it works most and half
 
 const RECOVERY_WEEK_LINE = 'Recovery week: sets are planned lower this week';
 
+// D214 addendum 9 (census 6.5). An ADAPTIVE adjustment (recovery evidence easing
+// one accumulation week) is never called a recovery week, so the muscles are
+// still judged and these words never appear. The bands the rows judge against
+// do NOT drop with it: they come from the manual, adapted, plan-routine and
+// profile layers (effectiveLandmarks.js), none of which the adjustment writes
+// (it flips the week's flag and cuts planned_muscle_volume, which no band
+// reads), so a muscle can read under its range while the coach holds sets back.
+const ADAPTIVE_ADJUSTMENT_LINE = 'Training is lighter for now: your coach is holding back some of your sets, so a muscle can read under its range.';
+
+// D214 addendum 9 (census 6.4, H6): the one line under the summary when the
+// window holds no logged set and the rows are therefore not judged.
+const NOTHING_JUDGED_LINE = 'Nothing is judged until a set is logged.';
+
+// The recovery week's own explanation of the neutral figure (census 0.16).
+const RECOVERY_NOTE = 'No muscle is judged this week. Every muscle you trained is shown in one colour on the figure.';
+
+// Census H1: a window with no sets names the wider views instead of telling the
+// person to switch. Only the views that really reach further back are named: at
+// 2 weeks that is the 4 weeks view, and at 4 weeks there is none.
+const WIDER_VIEWS_LINE = {
+  1: ' The 2 weeks and 4 weeks views reach further back.',
+  2: ' The 4 weeks view reaches further back.',
+  4: '',
+};
+
 // The plan context a screen without a plan (or before it has read one) holds:
 // no recovery week, no sessions-left clause, no plan-trained muscle.
 const NO_PLAN_MUSCLES = new Set();
 const EMPTY_PLAN_CONTEXT = Object.freeze({
-  recoveryWeek: false, hasPlan: false, sessionsLeft: null, planTrained: NO_PLAN_MUSCLES,
+  recoveryWeek: false, adaptiveAdjustment: false, hasPlan: false, sessionsLeft: null, planTrained: NO_PLAN_MUSCLES,
 });
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -177,6 +213,9 @@ async function readPlanContext(userId, userProfile) {
   } catch (_) { /* best effort: no sessions-left clause */ }
   if (position) {
     out.recoveryWeek = position.recoveryState?.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
+    // Read from the position only: the calendar row's flag cannot tell the two
+    // kinds of lighter week apart, so without a position nothing is claimed.
+    out.adaptiveAdjustment = position.recoveryState?.state === RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT;
   } else {
     try {
       const week = await getCurrentMesocycleWeek(userId);
@@ -692,6 +731,13 @@ export default function VolumeHeatmapScreen({ route }) {
   // Everything the current chip reads, from the loaded history.
   const view = useMemo(() => (dataset ? buildWindowView(dataset, windowWeeks) : null), [dataset, windowWeeks]);
   const recoveryWeek = planContext.recoveryWeek === true;
+  const adaptiveAdjustment = planContext.adaptiveAdjustment === true;
+  // Nothing is judged in a recovery week (planned lower) or until a set is
+  // logged in the window shown (census 6.4): the rows are then one flat list with
+  // no band header and no verdict colour. A window that HAS sets keeps lane 5's
+  // population rule (a plan-programmed muscle with no sets lists under Under the
+  // range), so the rule below is only about a window with nothing logged.
+  const unjudged = recoveryWeek || !view || view.loggedRows === 0;
 
   // One model per muscle: the rounded figure that is both shown and judged
   // (D214, VH-2: round once), its band word, the bar's numbers and the recency.
@@ -708,21 +754,24 @@ export default function VolumeHeatmapScreen({ route }) {
       // The Under group's population is the plan's (volumeLogged.js): a muscle
       // outside it with no sets is "No sets" and carries no verdict.
       const group = bandGroupFor({ muscle, status, hasCredit, planTrained: planContext.planTrained });
-      const judged = !recoveryWeek && group !== NO_SETS_GROUP;
-      // "6 to 22" when the helpful range starts above zero; a range that starts
-      // at 0 (Front delts) reads "up to 14", never "0 to 14".
-      const range = (Number(band.mev) || 0) > 0 ? `${band.mev} to ${band.mrv}` : `up to ${band.mrv}`;
+      const judged = !unjudged && group !== NO_SETS_GROUP;
+      // "range 6 to 22" when the range starts above zero; a range that starts at 0
+      // (Front delts) reads "up to 14", never "0 to 14" (census 0.4, H3).
+      const rangeWords = volumeRangeText(band.mev, band.mrv);
+      const rangeClause = (Number(band.mev) || 0) > 0 ? `range ${rangeWords}` : rangeWords;
+      const setsWords = plural(sets, 'set', 'sets');
       const figureText = windowWeeks === 1
-        ? `${sets} of ${range} sets this week`
-        : `An average of ${sets} of ${range} sets a week`;
+        ? `${setsWords} so far this week, ${rangeClause}`
+        : `An average of ${setsWords} a week, ${rangeClause}`;
       const lastMs = dataset?.lastTrained?.[muscle] ?? null;
       const recency = trainingRecency(lastMs, dataset?.loadedAtMs ?? Date.now());
       const source = resolvedSource?.[muscle] && SOURCE_WORDS[resolvedSource[muscle]]
         ? resolvedSource[muscle]
         : null;
+      // The spoken label says the same words as the row, then names the window.
       const spokenFigure = windowWeeks === 1
-        ? `${sets} of ${range} sets this week`
-        : `an average of ${sets} of ${range} sets a week over the last ${windowWeeks} weeks, ${total} in total`;
+        ? figureText
+        : `${figureText.charAt(0).toLowerCase()}${figureText.slice(1)}, over the last ${windowWeeks} weeks, ${total} in total`;
       const a11yLabel = [
         `${MUSCLE_DISPLAY_NAMES[muscle]}: ${spokenFigure}`,
         judged ? BAND_LABEL[status] : null,
@@ -747,7 +796,7 @@ export default function VolumeHeatmapScreen({ route }) {
         a11yLabel,
       };
     });
-  }, [view, dataset, windowWeeks, recoveryWeek, resolvedSource, effectiveLandmarks, bandFor, muscles, t,
+  }, [view, dataset, windowWeeks, unjudged, resolvedSource, effectiveLandmarks, bandFor, muscles, t,
     planContext.planTrained]);
 
   // The figure's input. An entry with no colour draws as "No sets", so a muscle
@@ -768,14 +817,14 @@ export default function VolumeHeatmapScreen({ route }) {
   }, [rowModels, recoveryWeek, t]);
 
   // The rows, grouped by band with counts in the order the screen reads them
-  // (a group with no rows is omitted). A recovery week prints no band word, so
-  // its rows are one flat list.
+  // (a group with no rows is omitted). An unjudged window (a recovery week, or
+  // no logged set) prints no band word, so its rows are one flat list.
   const groups = useMemo(() => {
-    if (recoveryWeek) return [{ key: 'flat', label: null, status: null, rows: rowModels }];
+    if (unjudged) return [{ key: 'flat', label: null, status: null, rows: rowModels }];
     return BAND_GROUPS
       .map(g => ({ key: g.status, label: g.label, status: g.status, rows: rowModels.filter(r => r.group === g.status) }))
       .filter(g => g.rows.length > 0);
-  }, [rowModels, recoveryWeek]);
+  }, [rowModels, unjudged]);
 
   const manualNames = useMemo(() => muscles
     .filter(m => resolvedSource?.[m] === 'manual')
@@ -798,12 +847,15 @@ export default function VolumeHeatmapScreen({ route }) {
     .map(week => week.loggedSets || 0)
     .filter(n => n > 0), [trendData]);
   const currentWeekTotal = trendData.length ? (trendData[trendData.length - 1].loggedSets || 0) : undefined;
+  // H5: `fullWeeks` lets the takeaway say how many of those weeks had sets, since
+  // a full week with nothing logged is left out of the average.
   const volTakeaway = volumeTakeaway({
     windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
     phraseOverride: fullWeeksCount > 0
       ? (fullWeeksCount === 1 ? 'Last full week' : `Last ${fullWeeksCount} full weeks`)
       : undefined,
     currentWeekTotal,
+    fullWeeks: fullWeeksCount,
   });
   const trendWeeks = (windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W')).weeks;
 
@@ -812,8 +864,8 @@ export default function VolumeHeatmapScreen({ route }) {
     ? (windowWeeks === 1 ? 'No sets since Monday' : `No sets in the last ${windowWeeks} weeks`)
     : 'Volume appears after your first workout';
   const noVolumeText = hasAnyCompletedSets
-    ? 'Your training history is still saved. Switch to a wider window if you want to see older volume.'
-    : 'Finish a workout and this screen will show, for each muscle, your weekly sets and its target range.';
+    ? `Your training history is still saved.${WIDER_VIEWS_LINE[windowWeeks] ?? ''}`
+    : 'For each muscle, this screen shows your weekly sets and its range once you have finished a workout.';
 
   const handleMuscleTap = useCallback((muscleKey) => {
     setSelectedMuscle(muscleKey);
@@ -835,7 +887,7 @@ export default function VolumeHeatmapScreen({ route }) {
   const windowNoteText = windowWeeks === 1
     ? 'Sets logged since Monday'
     : `Average sets a week over the last ${windowWeeks} weeks`
-      + (divisor > 0 && divisor < windowWeeks ? ` (your log covers ${divisor} of them)` : '');
+      + (divisor > 0 && divisor < windowWeeks ? ` (you logged in ${divisor} of those weeks)` : '');
 
   // The summary: logged working-set rows, never the credits summed (VH-16).
   const sessionsClause = (windowWeeks === 1 && planContext.hasPlan && planContext.sessionsLeft != null)
@@ -914,10 +966,18 @@ export default function VolumeHeatmapScreen({ route }) {
           {recoveryWeek ? (
             <>
               <Text style={[styles.recoveryLine, live.recoveryLine]}>{RECOVERY_WEEK_LINE}</Text>
-              <Text style={[styles.recoveryNote, live.recoveryNote]}>
-                No muscle is judged this week. The ones you trained share one shade on the figure, and its legend says only which were trained.
-              </Text>
+              <Text style={[styles.recoveryNote, live.recoveryNote]}>{RECOVERY_NOTE}</Text>
             </>
+          ) : null}
+          {/* An adaptive adjustment: said in the coach's own plain words, never as a
+              recovery week, and the muscles stay judged (census 6.5). */}
+          {adaptiveAdjustment ? (
+            <Text style={[styles.recoveryLine, live.recoveryLine]}>{ADAPTIVE_ADJUSTMENT_LINE}</Text>
+          ) : null}
+          {/* No set logged in the window: nothing is judged (census 6.4). A recovery
+              week already says so above. */}
+          {!recoveryWeek && unjudged ? (
+            <Text style={[styles.recoveryLine, live.recoveryLine]}>{NOTHING_JUDGED_LINE}</Text>
           ) : null}
         </View>
 
@@ -1011,8 +1071,11 @@ export default function VolumeHeatmapScreen({ route }) {
         {trainedMuscles.length > 0 && (
           <Card style={styles.section}>
             <SectionLabel variant="title" heading>{`Sets a week, last ${trendWeeks} weeks`}</SectionLabel>
+            {/* The card's own window control draws its selected chip in ink, so the
+                screen carries ONE amber chip: the top window control that changes
+                what the whole screen shows (D214 addendum 9, census 6.2 and 6.3). */}
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
-              accessibilityPrefix="volume trend window" />
+              accessibilityPrefix="volume trend window" inkSelected />
             {!!volTakeaway && <Text style={[styles.trendTakeaway, live.trendTakeaway]}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
@@ -1044,7 +1107,7 @@ export default function VolumeHeatmapScreen({ route }) {
           <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
               <Text style={[styles.editSubtitle, live.editSubtitle]}>
-                Weekly sets per muscle: minimum, target and ceiling. Each box starts at the target Volyume is using for you today, and only the muscles you change are saved as your own.
+                Weekly sets per muscle: minimum, target and maximum. Each box starts at the target Volyume is using for you today, and only the muscles you change are saved as your own.
               </Text>
               {/* D93 (Campaign 2, Phase 7): the second consequence of a manual
                   override was disclosed nowhere - a manually-set block is also

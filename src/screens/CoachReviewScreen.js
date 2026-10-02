@@ -20,6 +20,7 @@ import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import { volumeBandLabel } from '../lib/volumeBandLabels';
 
 // --- Helpers -----------------------------------------------------------------
 
@@ -35,15 +36,10 @@ function statusDotColor(status, c = colors) {
   }
 }
 
+// The five band names are the Volume heatmap's own, from the one shared map
+// (D214 addendum 9, census 0.24): one vocabulary on every surface.
 function volumeStatusLabel(status) {
-  switch (status) {
-    case 'optimal': return 'Good range';
-    case 'minimum': return 'Just enough';
-    case 'near_mrv': return 'Getting close';
-    case 'over_mrv': return 'Too much';
-    case 'below': return 'Below target';
-    default: return 'No data';
-  }
+  return volumeBandLabel(status, 'No data');
 }
 
 // Build progressive overload wins by comparing this week's sets to prior sets

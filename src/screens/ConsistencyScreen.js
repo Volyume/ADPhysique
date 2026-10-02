@@ -64,6 +64,17 @@ export function blockReading({ position = null, currentMesoWeek = null } = {}) {
   return { weekIndex, plannedWeeks, recoveryWeek, note: card ? `${card.title}. ${card.body}` : null };
 }
 
+/**
+ * One reason of the four-week fatigue check, ending in a full stop (census K13).
+ * The reasons are written by the engine without one (algorithms.js, never edited
+ * here) while every other sentence on this screen has one, so the stop is added
+ * at render where it is missing.
+ */
+export function withFullStop(line) {
+  const s = String(line ?? '').trim();
+  return s && !/[.!?]$/.test(s) ? `${s}.` : s;
+}
+
 // Consistency. The one place for "am I training as planned, and where am I in
 // the block?": the plan week first, the twelve weeks of training days, the
 // block and its planned sets, the load, how long a session lasts, and the signs
@@ -95,15 +106,25 @@ export default function ConsistencyScreen({ navigation }) {
   const live = buildLiveStyles(t);
   const unit = units === 'lbs' ? 'lbs' : 'kg';
 
-  // The plan-week object: the programme's count and next session, the Monday
-  // week's trained days from the sets the hook already loaded. An unreadable
-  // position reads as "no plan" ("2 sessions this week"), never as anything
-  // claimed.
+  // The plan-week object: the programme's count and next session, and the seven
+  // cells. An unreadable position reads as "no plan" ("2 sessions so far this
+  // week"), never as anything claimed.
   // A finished block (awaiting the athlete's decision) claims no live plan
   // week on this card either (D214 addendum 6, lane 4 review S2).
+  // ONE DEFINITION OF A TRAINED DAY (addendum 9, census 6.13): the cells read
+  // the very day keys the twelve-week grid below draws from, a completed
+  // workout's START day (`calValues`), not each set's own time, so a session
+  // started at 23:30 on Monday with sets after midnight lights Monday only, on
+  // the card, the grid and the caption alike, and this screen agrees with the
+  // Progress root's card.
   const planWeek = useMemo(
-    () => buildPlanWeekSummary({ position, sets: allSets, finished: !!currentMesoWeek?.awaitingDecision }),
-    [position, allSets, currentMesoWeek],
+    () => buildPlanWeekSummary({
+      position,
+      sets: allSets,
+      completedDays: calValues.map((v) => v.date),
+      finished: !!currentMesoWeek?.awaitingDecision,
+    }),
+    [position, allSets, calValues, currentMesoWeek],
   );
   const block = blockReading({ position, currentMesoWeek });
   const sessionsLine = typicalSessionsLine(typicalSessionMinutes);
@@ -219,7 +240,7 @@ export default function ConsistencyScreen({ navigation }) {
                     created without the user choosing, and the next block's
                     starting volume is not an automatic increase. */}
                 <InfoTooltip text={
-                  'Training gets harder each week across the block, then a planned lighter recovery week lets fatigue clear.\n\n' +
+                  'Training builds across the block, then a planned lighter recovery week lets fatigue clear.\n\n' +
                   'After the recovery week you choose your next block.'
                 } />
               </View>
@@ -243,12 +264,14 @@ export default function ConsistencyScreen({ navigation }) {
           </AnimatedEntrance>
         ) : null}
 
-        {/* ── Load: one card, in the person's units, compared like for like;
-            the section goes with the card when nothing was lifted ── */}
+        {/* ── Weight lifted: one card, in the person's units, compared like for
+            like; the section goes with the card when nothing was lifted. The
+            heading was "Load" (D214 addendum 9, census 0.19): the card's own line
+            says "kg lifted so far this week". ── */}
         {!loading && !loadError && hasData && hasLoad ? (
           <AnimatedEntrance index={4}>
             <View style={styles.section}>
-              <SectionLabel heading>Load</SectionLabel>
+              <SectionLabel heading>Weight lifted</SectionLabel>
               <LoadCard
                 bars={mesoTonnage}
                 unit={unit}
@@ -265,7 +288,7 @@ export default function ConsistencyScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.labelRow}>
                 <SectionLabel heading>Sessions</SectionLabel>
-                <InfoTooltip text="The middle length of the sessions you finished this week and in the five weeks before it, as your workout timer recorded them." />
+                <InfoTooltip text="The typical length of the sessions you finished this week and in the five weeks before it, as your workout timer recorded them." />
               </View>
               <Text style={[styles.sessionsLine, live.sessionsLine]}>{sessionsLine}</Text>
             </View>
@@ -290,7 +313,7 @@ export default function ConsistencyScreen({ navigation }) {
                 ? deloadAlert.reasons
                 : ['Your recent sessions show signs that fatigue is building up.']
               ).map((reason) => (
-                <Text key={reason} style={[styles.deloadSub, live.deloadSub]}>{reason}</Text>
+                <Text key={reason} style={[styles.deloadSub, live.deloadSub]}>{withFullStop(reason)}</Text>
               ))}
             </View>
             <InfoTooltip text={

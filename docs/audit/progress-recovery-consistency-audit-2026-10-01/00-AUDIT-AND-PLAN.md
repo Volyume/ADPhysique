@@ -1032,16 +1032,20 @@ The screen's question: "Is this working?" Order, top to bottom:
      (`resolveProgrammePosition`: completed over required for the week the
      programme is on, which can lag the calendar; `programmePosition.js:
      136-173`), named as the plan week so it is never read as Monday to
-     Sunday. No "days left" (a countdown). Without a plan: "2 sessions this
-     week" (Monday-anchored, as the line reads today).
+     Sunday. No "days left" (a countdown). Without a plan: "2 sessions so far
+     this week" (amended 2026-10-02, D214 addendum 9) (Monday-anchored; the week is still open, so the count
+     says so).
    - The seven-day cells are the founder's Q5: A draws them through the
      live `DayDots` (`src/components/community/DayDots.js`, which survived
      the revert), trained days filled, today outlined in INK; B draws no
-     cells. The mockup shows A for the decision.
+     cells. The mockup shows A for the decision. A trained day is a day with
+     a completed session, a completed workout's START day, the twelve-week
+     grid's own definition, and the spoken label reads "Trained so far this
+     week: Mon, Wed" (amended 2026-10-02, D214 addendum 9).
    - Line 3, Monday-anchored and labelled so: "This week so far: 42 sets
      logged across 12 muscles · 9 under their range" over the segmented bar
      in THREE tones with a three-chip legend: Under the range (`textMuted`)
-     · In the range (`success`) · Too much (`error`). "The range" means
+     · Inside the range (`success`) (amended 2026-10-02, D214 addendum 9) · Too much (`error`). "The range" means
      one thing on every surface (7.4): the engine's helpful range, MEV to
      MRV, the words the Workout Summary already uses
      (`volumeInsightCopy.js:33-37`); Just enough, In range and Near the
@@ -1055,7 +1059,8 @@ The screen's question: "Is this working?" Order, top to bottom:
      opens the Volume heatmap on "This week".
 3. **Your progress** (the four-row card, kept; the copy rewritten so each
    headline is a verdict):
-   - TRAINING: "Strength up on 9 of 9 exercises in the last 30 days"
+   - TRAINING: "Strength up on 9 of 9 exercises done more than once in the last
+     30 days" (amended 2026-10-02, D214 addendum 9)
      (no "lift" shorthand) with the first-day baseline (PR-3); evidence:
      the new best on the person's heaviest exercise in the window, falling
      back to the most recent.
@@ -1070,7 +1075,11 @@ The screen's question: "Is this working?" Order, top to bottom:
      founder's Q6, a second figure beside the weight on an ED-adjacent row.
      With no coaching run yet: the existing state-2 copy. Calm mode: the
      existing withhold line. Open ED flag: unchanged pending Q2.
-   - PROGRESS PHOTOS: unchanged (suppressed under calm or ED as now).
+   - PROGRESS PHOTOS: the suppression is unchanged (suppressed under calm or
+     ED as now); the words are the common ones (amended 2026-10-02, D214 addendum 9): "photos", "set of
+     photos" and "comparison", never "scan", "comparable" or "assessment"
+     (for example "Looks leaner across your last 3 sets of photos (high
+     confidence).").
    - RECOVERY: "4 muscles still recovering" counts `recovering` only, with
      "and 2 nearly recovered" when any (RC-4); evidence "Glutes will be the
      last to recover, estimated ready by Saturday." (RC-15). The next-workout
@@ -1112,7 +1121,8 @@ muscle, speed, ratings) and whether the answer line leads is Q7.
       Q7 A puts this line first with the session rows under it; Q7 B keeps
       the figure first and the line where the Next workout block sits
       today.
-   b. **Still to do this week** (compact rows, only with an active plan):
+   b. **Still to do this plan week** (amended 2026-10-02, D214 addendum 9) (compact rows, only with an
+      active plan):
       "Upper A · estimated ready by tomorrow (Back 60% recovered)", "Lower
       B · estimated ready by Saturday (Glutes 37% recovered)", from
       `recommendNextWorkout().perSession`, which holds outstanding sessions
@@ -1158,8 +1168,9 @@ muscle, speed, ratings) and whether the answer line leads is Q7.
       Adductors, Neck and Tibialis (none in the last 90 days)" names every
       empty muscle, with the recency read's true window (RC-36) and its
       untyped-set fix (lane 2). The breakdown gains the muscle's plain word
-      ("Adductors, inner thigh"), names each counted session as "main mover"
-      or "helped" with the half credit explained (RC-9, RC-10), and says
+      ("Adductors, inner thigh"), names each counted session's sets "as the main
+      muscle worked" or "as a helper" (amended 2026-10-02, D214 addendum 9) with the half credit explained
+      (RC-9, RC-10), and says
       where the "How's your recovery?" answer lives (RC-23).
    e. **The caption** keeps the founder-reviewed sentence (D210 addendum 4),
       one line: "Estimated from how long ago each muscle was last trained
@@ -1181,10 +1192,12 @@ muscle, speed, ratings) and whether the answer line leads is Q7.
    out" opens the method paragraphs (RC-21).
 4. **Your ratings** (`SectionLabel`): each rating on its own true scale,
    unshifted, the word first and the number second (RC-1 to RC-3): "Soreness
-   before sessions · fresh (1.4 of 3)", "Fatigue after sessions · moderate
-   (3.0 of 5)", "Joint discomfort after sessions · none (0.2 of 3)", where
-   the word is the scale's own word nearest the average ("mostly" is not
-   claimed of an average). The display shim that shifts soreness to 2-4
+   before sessions · not sore (1.4 of 3)" (amended 2026-10-02, D214 addendum 9), "Fatigue after sessions ·
+   moderate (3.0 of 5)", "Joint discomfort after sessions · none (0.2 of
+   3)", where the word is the scale's own word nearest the average ("mostly"
+   is not claimed of an average); the one exception is the lowest soreness
+   band, which reads "not sore" because "fresh" is the rating button's word
+   and nobody answers "how sore" with "fresh" (amended 2026-10-02, D214 addendum 9). The display shim that shifts soreness to 2-4
    goes; no coloured dots. Caption: "Averages of your rated sessions in the
    last two weeks, the most recent counting most." "Rate your last session"
    stays. The weekly check-in row prints the check-in's own words with "of
@@ -1218,7 +1231,7 @@ block?" Order:
    each month, today outlined in ink; trained cells in `textSecondary`,
    other days in `surface2`, and the legend reads "Trained · No session",
    never "Rest" (CS-21, D166). Caption: "51 days trained in the last 12
-   weeks · about 4 a week". The sessions milestone becomes plain text under
+   weeks · about 4 days a week" (amended 2026-10-02, D214 addendum 9). The sessions milestone becomes plain text under
    it: "53 sessions logged since 26 June · next milestone 100", no trophy,
    no gold, the true count (CS-2, CS-14), and it waits for its read rather
    than printing "First session" (RC-33). Cells carry per-cell spoken
@@ -1226,19 +1239,19 @@ block?" Order:
 4. **Your block** (one card): the plan name, "Week 2 of 6 · Build ·
    recovery week in 4 weeks", the phase dots as now, a bar labelled "Week
    2 of 6" (no percent, CS-5), "This week's effort: 3 of 5" with the (i)
-   ("how close to your limit each set should feel", CS-7). Tap opens the
+   ("how close to your limit each set is planned to feel", CS-7) (amended 2026-10-02, D214 addendum 9). Tap opens the
    block. One M for both lines.
 5. **This week's plan**: header "Sets done so far this plan week · 2 of 4
    sessions done" with the (i) saying a plan week starts on the day the
    block started (CS-8); rows sorted by planned sets as now, "5 of 12",
    fill in `textSecondary` (no yellow, no amber, CS-10).
-6. **Load** (one card, CS-1, CS-6): "9,598 kg lifted so far this week" in
+6. **Weight lifted** (one card, CS-1, CS-6; the section heading was "Load" (amended 2026-10-02, D214 addendum 9)): "9,598 kg lifted so far this week" in
    the person's units; four bars (three full weeks and this week so far);
    the comparison is like for like, Monday to today against the same days
    of the previous weeks (every set carries its time), so the D204 line
    reads "In line with recent weeks at this point" / "Above" / "Below"
    instead of a partial week against full ones (B10); "4-week average:
-   16,406 kg". The ratio goes.
+   16,406 kg a week" (amended 2026-10-02, D214 addendum 9). The ratio goes.
 7. **Sessions**: one line, "Sessions usually last about 57 minutes."
    (CS-11; the bars and the fatigue inference go).
 8. "Signs of building fatigue" stays and lists every reason (CS-18).
@@ -1265,7 +1278,7 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
    weeks stay rolling weekly averages exactly as ruling 1 built them.
 3. **Summary line**: "42 sets logged so far this week across 12 muscles · 2
    sessions left" (logged rows, VH-16) / "Average sets a week over the last
-   4 weeks (your log covers 2 of them)". In a recovery week: "Recovery
+   4 weeks (you logged in 2 of those weeks)" (amended 2026-10-02, D214 addendum 9). In a recovery week: "Recovery
    week: sets are planned lower this week" and the rows carry no under
    verdicts (PR-14, VH-10).
 4. **The figure** (the same redrawn component, categorical palette) with
@@ -1279,7 +1292,8 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
    range · 9", "Just enough · 1", "In range · 5", ...) so the strip's count
    lands on a list (VH-13). A row: name (plain word on tap), a range bar
    with the helpful range (MEV to MRV) shaded, the in-range band marked
-   inside it and the limit at the end, "5 of 6 to 22 sets this week" with
+   inside it and the limit at the end, "5 sets so far this week, range 6 to
+   22" (amended 2026-10-02, D214 addendum 9) with
    the band word as its group header (VH-6); the number shown and the
    number judged are the same (VH-2); no "N more to reach your range" (an
    instruction, D204 addendum 3; the gap is visible from the figures, A5);
@@ -1295,7 +1309,7 @@ The screen's question: "Am I doing enough for each muscle this week?" Order:
 6. **Sets a week, last 4 weeks** (the trend card): the chips name the
    window; each row's figure is labelled "this week so far: 5 sets", in
    ink, not coloured by a full-week band (VH-19); the takeaway reads "This
-   week so far: 42 sets logged. Last 3 full weeks: about 60 a week." in
+   week so far: 42 sets logged. Last 3 full weeks: about 60 sets a week." (amended 2026-10-02, D214 addendum 9) in
    logged sets (VH-16); the trend query excludes explosive rows as the rows
    do (VH-3).
 7. **Volume targets**, one `SettingRow` at the end, opening the editor on
