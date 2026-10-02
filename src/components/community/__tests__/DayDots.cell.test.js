@@ -73,7 +73,8 @@ describe('initials', () => {
   test('the initials are hidden from assistive tech and the group label is unchanged', () => {
     const tree = create(<DayDots days={['mon', 'wed']} todayKey="thu" tone="ink" size="cell" initials />);
     const group = tree.toJSON();
-    expect(group.props.accessibilityLabel).toBe('Trained Mon, Wed');
+    // RE-ANCHORED D214 addendum 9 (P14): "so far", the week is still open.
+    expect(group.props.accessibilityLabel).toBe('Trained so far this week: Mon, Wed');
     expect(group.props.accessibilityRole).toBe('image');
     // Host nodes only: react-test-renderer's findAll also returns the composite View instance of each column.
     const columns = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityElementsHidden === true);

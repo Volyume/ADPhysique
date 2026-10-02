@@ -8,9 +8,11 @@
  * `border` for not; today gets a 1 dp `primary` ring when it has not been
  * trained yet (spec: "today ringed 1 dp primary when not yet trained").
  * Pure presentation, no text of its own; the whole group collapses to one
- * accessibility node carrying the composed label ("Trained Mon, Wed,
- * Fri"), the same wording `daysLabel` already gives `GymWeekBoard`'s
- * caption line, so the two read identically.
+ * accessibility node carrying the composed label ("Trained so far this
+ * week: Mon, Wed, Fri"). D214 addendum 9 (census P14, rule 3): the week is
+ * still open, so the label says "so far", as the "Not trained yet this week"
+ * fallback beside it already says "this week". The days themselves are still
+ * `daysLabel`'s wording, the one `GymWeekBoard`'s caption line reads.
  *
  * Rules obeyed (section 1 preamble; `docs/rules/styling.md`): function
  * component, `useTheme`, tokens only (`circle(6)` for the dots,
@@ -85,7 +87,7 @@ export default function DayDots({ days, todayKey, tone = 'accent', size = 'dot',
   const ringColour = ink ? t.colors.textPrimary : t.colors.primary;
   const trained = new Set(Array.isArray(days) ? days : []);
   const label = trained.size
-    ? `Trained ${daysLabel(DAY_ORDER.filter((k) => trained.has(k)))}`
+    ? `Trained so far this week: ${daysLabel(DAY_ORDER.filter((k) => trained.has(k)))}`
     : 'Not trained yet this week';
 
   return (

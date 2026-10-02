@@ -70,7 +70,8 @@ describe('the Recovery screen', () => {
   test('the Recovery screen: recovery by muscle (answer line first), the recovery speed, then your ratings at the bottom, with the fatigue trend under them', () => {
     const byMuscle = CARDS.indexOf('Recovery by muscle</Text>');
     const answer = CARDS.indexOf('<Text style={live.answerLine}>{answerLine}</Text>');
-    const still = CARDS.indexOf('Still to do this week</Text>');
+    // RE-ANCHORED D214 addendum 9 (V3): the heading is "Still to do this plan week".
+    const still = CARDS.indexOf('Still to do this plan week</Text>');
     const figure = CARDS.indexOf('<BodyDiagramHeatmap');
     const list = CARDS.indexOf('<MuscleRecoveryList');
     const speed = CARDS.indexOf('<RecoveryLearningCard personal=');

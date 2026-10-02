@@ -2,12 +2,17 @@
  * DayDots (communities revamp 2026-09-10:
  * `docs/communities-revamp-2026-09-10/21-PHASE1-SPEC.md` section 1).
  *
- * What this suite pins: the composed accessibility label reads "Trained
- * Mon, Wed, Fri" regardless of the input order (calendar order, Monday
- * first); an empty week reads a plain fallback, never "Trained " with
- * nothing after it; the group renders as one `image`-role node so a
+ * What this suite pins: the composed accessibility label reads "Trained so
+ * far this week: Mon, Wed, Fri" regardless of the input order (calendar
+ * order, Monday first); an empty week reads a plain fallback, never "Trained "
+ * with nothing after it; the group renders as one `image`-role node so a
  * screen reader does not stop on all seven dots individually;
  * `currentDayKey`'s weekday mapping.
+ *
+ * RE-ANCHORED D214 addendum 9 (census P14, rule 3): the label said "Trained
+ * Mon, Wed, Fri"; the week is still open, so it says "so far", as the
+ * "Not trained yet this week" fallback beside it already says "this week".
+ * The days are still `daysLabel`'s wording.
  */
 
 import { create, act } from 'react-test-renderer';
@@ -31,14 +36,14 @@ function label(tree) {
 }
 
 describe('DayDots', () => {
-  test('accessibility label reads "Trained Mon, Wed, Fri"', () => {
+  test('accessibility label reads "Trained so far this week: Mon, Wed, Fri"', () => {
     const tree = render({ days: ['mon', 'wed', 'fri'] });
-    expect(label(tree)).toBe('Trained Mon, Wed, Fri');
+    expect(label(tree)).toBe('Trained so far this week: Mon, Wed, Fri');
   });
 
   test('reads in calendar order regardless of the input order', () => {
     const tree = render({ days: ['fri', 'mon', 'wed'] });
-    expect(label(tree)).toBe('Trained Mon, Wed, Fri');
+    expect(label(tree)).toBe('Trained so far this week: Mon, Wed, Fri');
   });
 
   test('no trained days: a plain fallback, never "Trained " with nothing after it', () => {

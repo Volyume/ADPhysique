@@ -32,18 +32,34 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', '..', p), 'utf
 const INSTRUCTS = /\b(push your|push the|hold your weights|focus on form|consider a lighter|consider reducing|lighter (day|week) recommended|recommended|train as normal|drop(ping)? the weights?|stop well before|should feel|ease in|catch up|keep the movement)\b/i;
 
 describe('the fatigue trend card describes what was reported', () => {
+  const { lastTwoSessionsLine, FATIGUE_WORDS } = require('../../lib/recovery/ratingWords');
   const SRC = read('components/FatigueTrendCard.js');
-  const fn = SRC.slice(SRC.indexOf('function coachingLine('), SRC.indexOf('export default function FatigueTrendCard'));
 
-  test('every line is a description of the rating, never an instruction', () => {
-    const lines = fn.match(/return '([^']*)'/g).map((l) => l.slice(8, -1)).filter(Boolean);
-    expect(lines).toEqual([
-      'You rated your last two sessions as fresh.',
-      'You rated your last two sessions as mildly tiring.',
-      'You rated your last two sessions as moderately tiring.',
-      'You rated your last two sessions as very tiring.',
-    ]);
-    for (const line of lines) expect(line).not.toMatch(INSTRUCTS);
+  // RE-ANCHORED D214 addendum 9 (V5, rule 7): the card no longer holds four
+  // fixed sentences for the AVERAGE of two ratings ("as fresh" ... "as very
+  // tiring"); it prints BOTH ratings in the scale's own words. So the guard
+  // runs the real builder over every pair of ratings instead of slicing four
+  // `return` lines out of the source, and holds each result to the describing
+  // register.
+  test('every line is a description of the two ratings, never an instruction', () => {
+    const lines = [];
+    for (let a = 1; a <= 5; a += 1) {
+      for (let b = 1; b <= 5; b += 1) lines.push(lastTwoSessionsLine([{ fatigueLevel: a }, { fatigueLevel: b }]));
+    }
+    // Five matching pairs and ten different ones, whichever session came first.
+    expect(new Set(lines).size).toBe(15);
+    for (const line of lines) {
+      expect(line).toMatch(/^You rated your last two sessions [a-z]+( and [a-z]+)?\.$/);
+      expect(line).not.toMatch(INSTRUCTS);
+      const words = line.replace('You rated your last two sessions ', '').replace(/\.$/, '').split(' and ');
+      for (const w of words) expect(FATIGUE_WORDS).toContain(w);
+    }
+  });
+
+  test('the card prints that one line and holds no rating sentence of its own', () => {
+    expect(SRC).toContain('{lastTwoSessionsLine(sessions)}');
+    const code = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/You rated|tiring/);
   });
 });
 

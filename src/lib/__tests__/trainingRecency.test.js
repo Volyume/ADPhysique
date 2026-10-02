@@ -9,9 +9,12 @@ const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 7, 16, 12, 0, 0);
 
 describe('trainingRecency — factual bands', () => {
+  // RE-ANCHORED D214 addendum 9 (census 0.18, plain-English order 2026-10-02):
+  // "Trained within 24h" is shorthand; the label says "Trained in the last 24
+  // hours". Same fact, same band (daysAgo 0), common words.
   test('trained within the last 24h', () => {
-    expect(trainingRecency(NOW - 1000, NOW)).toEqual({ known: true, daysAgo: 0, label: 'Trained within 24h' });
-    expect(trainingRecency(NOW - 23 * 60 * 60 * 1000, NOW).label).toBe('Trained within 24h');
+    expect(trainingRecency(NOW - 1000, NOW)).toEqual({ known: true, daysAgo: 0, label: 'Trained in the last 24 hours' });
+    expect(trainingRecency(NOW - 23 * 60 * 60 * 1000, NOW).label).toBe('Trained in the last 24 hours');
   });
 
   test('trained exactly 1 day ago', () => {
@@ -24,7 +27,7 @@ describe('trainingRecency — factual bands', () => {
   });
 
   test('trained "now" exactly (0ms elapsed) counts as within 24h, not a negative day', () => {
-    expect(trainingRecency(NOW, NOW)).toEqual({ known: true, daysAgo: 0, label: 'Trained within 24h' });
+    expect(trainingRecency(NOW, NOW)).toEqual({ known: true, daysAgo: 0, label: 'Trained in the last 24 hours' });
   });
 });
 

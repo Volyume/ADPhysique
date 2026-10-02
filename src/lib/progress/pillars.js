@@ -11,6 +11,15 @@
  * from AnalyticsScreen.js so it is tested without a mount): an exercise's first
  * local day is its baseline (PR-3), the verdict reads "exercises" never
  * "lifts", and the evidence is the new best on the person's heaviest exercise.
+ *
+ * D214 addendum 9 (plain-English census, 2026-10-02: "The app needs to be in
+ * plain British English that is understandable and makes sense to humans"):
+ * the common term wins on these rows. The Training row says "starting point"
+ * (not "baseline"), "personal best" (not "best") and "weighted exercises" (the
+ * count only reads weight-and-reps exercises), the Progress photos row says
+ * "photos" and "comparison" (never "scan", "comparable" or "assessment"), and
+ * the day-zero lines DESCRIBE what starts the row instead of telling anyone to
+ * log something (D204).
  */
 import { calculate1RM } from '../algorithms';
 import { formatBodyWeight, formatBodyWeightRate } from '../units';
@@ -161,22 +170,26 @@ function lastSessionFact(lastSessionAt, now) {
  * The Training pillar's two lines (Campaign 23 §8/§21/§22 R2; D214 plan 7.1
  * item 3). Built from computeTrainingPillarSummary's pure counts, moved here
  * from AnalyticsScreen.js so the ladder is tested without mounting the screen.
- * Factual evidence statements only (D204); the one next action is the
- * zero-history state's, which §23's state F/L sanctions.
+ * Factual evidence statements only (D204), the zero-history state's included
+ * (addendum 9, P1: "Your training history starts with your first session.").
  *
  * The ladder, top rung first:
- *   - no completed session: "No sessions logged yet";
- *   - nothing strength-trained in the window: "No strength training logged in
- *     the last 30 days" with the honest last-session fact;
+ *   - no logged session (sessionCount.js's one definition): "No sessions
+ *     logged yet";
+ *   - no weighted exercise in the window: "No weighted exercises logged in the
+ *     last 30 days" with the honest last-session fact (only weight-and-reps
+ *     exercises count, so a month of bodyweight or cardio work reads this);
  *   - nothing to compare yet (PR-3: every exercise trained in the window has
- *     only its first day, the baseline): "Baseline set on N exercises", never
- *     "Strength up on 0 of 0";
+ *     only its first day, the baseline): "Starting point set on N exercises",
+ *     never "Strength up on 0 of 0";
  *   - a new best on at least one compared exercise: "Strength up on 9 of 9
- *     exercises in the last 30 days" ("exercises", never "lifts" as shorthand;
- *     the denominator is the exercises with a comparison), the evidence the new
- *     best on the person's heaviest exercise falling back to the most recent;
- *   - compared but none improved: "No new bests in the last 30 days, holding
- *     steady" with the last-session fact.
+ *     exercises done more than once in the last 30 days" ("exercises", never
+ *     "lifts" as shorthand; the denominator is the exercises with a
+ *     comparison, and the sentence says so), the evidence the personal best on
+ *     the person's heaviest exercise falling back to the most recent:
+ *     "Barbell Bench Press 95 kg for 7 reps, a new personal best.";
+ *   - compared but none improved: "No new personal bests in the last 30 days"
+ *     with the last-session fact.
  * The window is a ROLLING 30 days (S6-4, D200-3), never a calendar month: the
  * Recaps door on the same screen uses the calendar month.
  *
@@ -186,32 +199,36 @@ function lastSessionFact(lastSessionAt, now) {
  */
 export function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, unitsLabel, now = Date.now() }) {
   if (completedWorkoutCount === 0) {
-    return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training history.' };
+    return { state: 'No sessions logged yet', evidence: 'Your training history starts with your first session.' };
   }
   // S6-6 (progress-tab audit 2026-09-24): the "last session" fact rides in the
   // EVIDENCE line, never in the state, so a session of cardio only cannot read
   // the self-contradicting "No sessions in the last 0 days".
   const lastSession = lastSessionFact(lastSessionAt, now);
   if (summary.trainedCount === 0) {
-    return { state: 'No strength training logged in the last 30 days', evidence: lastSession };
+    return { state: 'No weighted exercises logged in the last 30 days', evidence: lastSession };
   }
   if (!(summary.comparedCount > 0)) {
     // Nothing trained in the window has a second day yet: all of it is baseline.
     const n = Number.isFinite(summary.baselineCount) ? summary.baselineCount : summary.trainedCount;
     return {
-      state: `Baseline set on ${n} exercise${n === 1 ? '' : 's'}`,
+      state: `Starting point set on ${n} exercise${n === 1 ? '' : 's'}`,
       evidence: 'Strength changes show once an exercise has been trained on two different days.',
     };
   }
   const state = summary.improvedCount > 0
-    ? `Strength up on ${summary.improvedCount} of ${summary.comparedCount} exercise${summary.comparedCount === 1 ? '' : 's'} in the last 30 days`
+    // The denominator is the exercises with a comparison (done on more than
+    // one day), and the sentence says so (addendum 9, census 6.6): "9 of 9"
+    // beside twelve trained exercises no longer hides the three it leaves out.
+    ? `Strength up on ${summary.improvedCount} of ${summary.comparedCount} exercise${summary.comparedCount === 1 ? '' : 's'} done more than once in the last 30 days`
     // "holding steady" claimed a steadiness no new best does not prove (lane
     // 3 review N3); the fact alone, with the last session beside it.
-    : 'No new bests in the last 30 days';
+    : 'No new personal bests in the last 30 days';
   const best = summary.featuredBest;
   const evidence = best
-    // The weight lifted, never rounded (82.5 kg is what the plates said).
-    ? `${best.exerciseName} ${formatNumber(best.weight)} ${unitsLabel} x ${best.reps}, new best`
+    // The weight lifted, never rounded (82.5 kg is what the plates said), and
+    // the reps in words: "x 7" did not say what the 7 was (addendum 9, 0.13).
+    ? `${best.exerciseName} ${formatNumber(best.weight)} ${unitsLabel} for ${best.reps} rep${best.reps === 1 ? '' : 's'}, a new personal best.`
     : lastSession;
   return { state, evidence };
 }
@@ -242,39 +259,45 @@ export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _c
     // the user's words - "scan" is capture-flow vocabulary a brand-new user
     // has not met yet, and the row label alone ("Visual" at the time) told
     // them nothing.
-    return { state: 'No photos yet', evidence: 'Take your first progress photos to start tracking visible change.' };
+    // D214 addendum 9 (P2): a description of what starts the row, not an
+    // instruction (D204).
+    return { state: 'No photos yet', evidence: 'Your photo comparison starts with your first set of progress photos.' };
   }
   if (!hasNote) {
-    return { state: 'Latest scan was not clear enough', evidence: 'Retake your photos so they can be compared.' };
+    // Addendum 9 (0.11, P3): photos, never "scan"; the line says what
+    // happened to the set instead of telling the person to retake it.
+    return { state: 'Latest photos were not clear enough', evidence: 'They could not be compared with your earlier photos.' };
   }
   const status = packet?.status ?? null;
   const trendWindow = packet?.trendWindow ?? { count: 0, direction: 'uncertain', comparableOnly: false };
   if (status === 'not_comparable') {
-    return { state: 'Latest set was not comparable', evidence: 'Kept as a record. A matching set will compare next time.' };
+    return { state: 'Latest set of photos could not be compared', evidence: 'Kept as a record. A matching set will compare next time.' };
   }
   if (packet?.eligibleForAssessment) {
-    const dirWord = trendWindow.direction === 'down' ? 'Leaner'
-      : trendWindow.direction === 'up' ? 'Fuller'
-        : 'Steady';
+    const dirWord = trendWindow.direction === 'down' ? 'leaner'
+      : trendWindow.direction === 'up' ? 'fuller'
+        : 'steady';
     const confWord = packet.confidenceTier === 'high' ? 'high confidence' : 'moderate confidence';
     // Lead amendment (Stage 2 review): the earlier draft said "Visible
     // change since <month of the LATEST scan>" — but the change is since
     // the comparison BASELINE, whose date the bounded summary does not
     // carry (evidence.baselineScanId/spanDays are null by design). Naming
     // the wrong endpoint is false precision (§25 copy law), so the claim
-    // anchors to what IS known: the comparable-scan count.
+    // anchors to what IS known: the count of comparable sets of photos.
+    // Addendum 9 (0.11): "Looks leaner across your last 3 sets of photos (high
+    // confidence).", the common words for the same facts.
     const count = Number(trendWindow.count) || 0;
     return {
       state: 'Visible change',
-      evidence: `${dirWord} across your last ${count} comparable scans, ${confWord}.`,
+      evidence: `Looks ${dirWord} across your last ${count} set${count === 1 ? '' : 's'} of photos (${confWord}).`,
     };
   }
   const remaining = Math.max(0, 3 - (trendWindow.count ?? 0));
   return {
-    state: 'Building your visual trend',
+    state: 'Building your photo comparison',
     evidence: remaining > 0
-      ? `${remaining} more comparable scan${remaining === 1 ? '' : 's'} until your first assessment.`
-      : 'Your next comparable scan will complete your first assessment.',
+      ? `${remaining} more set${remaining === 1 ? '' : 's'} of matching photos until your first comparison.`
+      : 'Your next set of matching photos will complete your first comparison.',
   };
 }
 

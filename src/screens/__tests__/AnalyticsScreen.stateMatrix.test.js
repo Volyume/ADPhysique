@@ -81,6 +81,14 @@
  *    "state J" describe block (grep-proof of the absence) rather than a
  *    second full mount, since mounting a screen with and without a coach
  *    decision fixture would produce byte-identical renders by construction.
+ *  - RE-ANCHORED D214 addendum 9 (plain-English census, founder order
+ *    2026-10-02: "The app needs to be in plain British English that is
+ *    understandable and makes sense to humans"): every Training and Progress
+ *    photos label below moved to the common words ("Starting point", "a new
+ *    personal best", "exercises done more than once", "No weighted exercises",
+ *    "Looks leaner across your last 4 sets of photos (moderate confidence)."),
+ *    the strip's middle tone to "Inside the range", and the no-plan count to
+ *    "so far this week". Counts, thresholds and withholds are unchanged.
  *  - L (new user): shares F's exact render path (the zero-data EmptyState +
  *    immature pillar lines) — the one dimension the brief calls out
  *    (§23: "F's shape with welcome-free copy") is the EmptyState's
@@ -595,7 +603,7 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     // the fallback names the most recent new best, e1 @ 85 kg x 5.
     const training = pillarRow(tree, 'Training');
     expect(training.length).toBe(1);
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 exercises in the last 30 days. Bench press 85 kg x 5, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 exercises done more than once in the last 30 days. Bench press 85 kg for 5 reps, a new personal best.');
 
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
@@ -611,16 +619,16 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     // Visual pillar: eligible, real buildVisualPillarCopy string.
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Leaner across your last 4 comparable scans, moderate confidence.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Looks leaner across your last 4 sets of photos (moderate confidence).');
 
     // R3 evidence trail
     expect(flattenText(tree)).toContain('Recent sessions');
     // RE-ANCHORED under D214 lane 3 (PR-10, plan 7.1 items 2 and 4): the one
-    // session count on the screen is the plan-week card's ("1 session this
-    // week" with no plan), not the old loose "N sessions this week" context
-    // line above Recent sessions.
-    expect(flattenText(tree)).toMatch(/\d\s+sessions?\s+this week/);
-    expect(findByLabel(tree, /^\d+ sessions? this week\./).length).toBe(1);
+    // session count on the screen is the plan-week card's ("1 session so far
+    // this week" with no plan, addendum 9), not the old loose "N sessions this
+    // week" context line above Recent sessions.
+    expect(flattenText(tree)).toMatch(/\d\s+sessions?\s+so far this week/);
+    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(1);
     // R4 plan evidence (a set landed inside the current Monday-anchored week):
     // the strip's line, in logged sets and "so far" (the old section title
     // "This week's volume" is gone with the old strip).
@@ -668,7 +676,7 @@ describe('State matrix — B: training up, weight stalled', () => {
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     // RE-ANCHORED under D214 lane 3: "exercises", never "lifts" (PR-8).
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises in the last 30 days/);
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises done more than once in the last 30 days/);
     const body = pillarRow(tree, 'Body');
     // RE-ANCHORED D214 addendum 4 (BM-15): the flat 82-to-82 fixture reads the
     // two-week direction "Holding steady over the last 2 weeks." (no longer "Your
@@ -707,7 +715,7 @@ describe('State matrix — C: weight moving, training stalled', () => {
     // with no second point behind it, and now reads the baseline sentence. The
     // old evidence "Keep training to build your training history." was an
     // instruction (D204) and is gone with the rung.
-    expect(training[0].props.accessibilityLabel).toBe('Training. Baseline set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Starting point set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/kg a week/); // census P10
   });
@@ -737,7 +745,7 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     // RE-ANCHORED under D214 lane 3: "exercises", never "lifts" (PR-8).
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises in the last 30 days/);
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises done more than once in the last 30 days/);
     const body = pillarRow(tree, 'Body');
     // RE-ANCHORED D214 addendum 4 (BM-15): the headline is the two-week direction
     // with its window ("Trending down over the last 2 weeks."), no longer the
@@ -746,7 +754,7 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Trending down over the last 2 weeks\. \S/);
     expect(body[0].props.accessibilityLabel).not.toContain('..');
     const visual = pillarRow(tree, 'Progress photos');
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your visual trend. 2 more comparable scans until your first assessment.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your photo comparison. 2 more sets of matching photos until your first comparison.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/visible change/i);
   });
 });
@@ -777,7 +785,7 @@ describe('State matrix — E: neither training nor weight moving clearly', () =>
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     // RE-ANCHORED under D214 lane 3 (PR-3): one exercise on its first day is a
     // baseline, not "holding steady"; no instruction (D204).
-    expect(training[0].props.accessibilityLabel).toBe('Training. Baseline set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Starting point set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
     const body = pillarRow(tree, 'Body');
     // RE-ANCHORED D214 addendum 6 (lane 3 review N11): the row's headline is a
     // fragment like the other rows', so the derivation's full stop is dropped.
@@ -796,11 +804,11 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training history.');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Your training history starts with your first session.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
     const visual = pillarRow(tree, 'Progress photos');
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Your photo comparison starts with your first set of progress photos.');
     // Deliberately BOTH render (lead ruling, §23 state F):
     expect(flattenText(tree)).toContain('No training trends yet');
     // RE-ANCHORED under D214 (PR-11): the destinations are the rows ABOVE, not
@@ -817,7 +825,7 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training history.');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Your training history starts with your first session.');
     expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Weigh-ins, photos and scans are in the rows above.');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);
@@ -841,7 +849,7 @@ describe('State matrix — G: Pro, training/body evidence present, no photo hist
     expect(errors).toEqual([]);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Your photo comparison starts with your first set of progress photos.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/Part of Pro/);
   });
 });
@@ -861,7 +869,7 @@ describe('State matrix — H: Visual pillar leads with a new comparison status',
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const visual = pillarRow(tree, 'Progress photos');
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Fuller across your last 5 comparable scans, high confidence.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Looks fuller across your last 5 sets of photos (high confidence).');
   });
 });
 
@@ -937,7 +945,7 @@ describe('State matrix — K: no pillar is ever shown locked, whatever the store
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
     // RE-ANCHORED under D214 lane 3: "exercises", never "lifts" (PR-8).
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises in the last 30 days/);
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d exercises done more than once in the last 30 days/);
     expect(flattenText(tree)).not.toMatch(/Part of Pro/);
     expect(flattenText(tree)).toContain('Recent sessions');
     expect(flattenText(tree)).toContain('Consistency');
@@ -1013,12 +1021,12 @@ describe('State matrix — N: multiple PR events; only the best 2-3 are named, t
     const training = pillarRow(tree, 'Training');
     // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
     // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 exercises in the last 30 days\./);
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 exercises done more than once in the last 30 days\./);
     // Exactly one named-best evidence line. RE-ANCHORED under D214 lane 3
     // (PR-8): it is the new best on the person's HEAVIEST exercise in the window
     // (the deadlift, 130 kg x 3: the highest estimated max of the four), no
     // longer simply the most recent one (the overhead press).
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 exercises in the last 30 days. Deadlift 130 kg x 3, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 exercises done more than once in the last 30 days. Deadlift 130 kg for 3 reps, a new personal best.');
   });
 });
 
@@ -1037,7 +1045,7 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs x 5/);
+    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs for 5 reps/);
     expect(training[0].props.accessibilityLabel).not.toMatch(/\bkg\b/);
     const body = pillarRow(tree, 'Body');
     // The EWMA weight figure correctly follows bodyWeightUnits (formatBodyWeight).
@@ -1081,7 +1089,7 @@ describe('State matrix — P: no recent sessions, factual gap statement, no sham
     // honest "Last session ..." fact (see the new "S6-6" describe block
     // below for the 0/1/12-day evidence variants this rewrite covers).
     // RE-ANCHORED under D214 lane 3: "strength training", never "lifts" (PR-8).
-    expect(training[0].props.accessibilityLabel).toBe('Training. No strength training logged in the last 30 days. Last session 60 days ago');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No weighted exercises logged in the last 30 days. Last session 60 days ago');
     expect(training[0].props.accessibilityLabel).not.toMatch(/shame|lazy|missed|should/i);
     // Recent sessions ARE present in useProgressData (last 3 completed
     // workouts regardless of window) -- R3 is conditioned on
@@ -1139,7 +1147,7 @@ describe('S6-6: trainedCount === 0 evidence reads the honest "Last session ..." 
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No strength training logged in the last 30 days. Last session today');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No weighted exercises logged in the last 30 days. Last session today');
     // \b0 days\b, not a bare /0 days/: the fixed window text itself
     // legitimately contains "...last 30 days", whose tail is the substring
     // "0 days" -- a plain /0 days/ regex is a false positive against that,
@@ -1163,7 +1171,7 @@ describe('S6-6: trainedCount === 0 evidence reads the honest "Last session ..." 
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No strength training logged in the last 30 days. Last session yesterday');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No weighted exercises logged in the last 30 days. Last session yesterday');
   });
 
   test('a session logged 12 days ago reads "Last session 12 days ago"', async () => {
@@ -1182,7 +1190,7 @@ describe('S6-6: trainedCount === 0 evidence reads the honest "Last session ..." 
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No strength training logged in the last 30 days. Last session 12 days ago');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No weighted exercises logged in the last 30 days. Last session 12 days ago');
   });
 
   test('no "this month" string survives anywhere on the mounted landing', async () => {
@@ -1358,7 +1366,7 @@ describe('D214 lane 3 — Your plan week (plan 7.1 item 2)', () => {
     moduleOriginals = [];
     applyFixture({ db: richDb(), scan: null });
     const second = await mountAnalytics({});
-    expect(findByLabel(second.tree, /^\d+ sessions? this week\./).length).toBe(1);
+    expect(findByLabel(second.tree, /^\d+ sessions? so far this week\./).length).toBe(1);
   });
 
   test('a position that cannot be read fails to the no-plan reading, never a crash', async () => {
@@ -1367,7 +1375,7 @@ describe('D214 lane 3 — Your plan week (plan 7.1 item 2)', () => {
     patchModule(programmePosition, 'resolveProgrammePosition', jest.fn(() => Promise.reject(new Error('read failed'))));
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
-    expect(findByLabel(tree, /^\d+ sessions? this week\./).length).toBe(1);
+    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(1);
   });
 
   test('the position is read on focus and again on pull-to-refresh', async () => {
@@ -1436,7 +1444,8 @@ describe('D214 lane 3 — the strip under it: "This week so far", logged sets, t
     const { tree } = await mountAnalytics({});
     const text = flattenText(tree);
     expect(text).toContain('Under the range');
-    expect(text).toContain('In the range');
+    // RE-ANCHORED addendum 9 (6.7): the middle tone is "Inside the range".
+    expect(text).toContain('Inside the range');
     expect(text).toContain('Too much');
     const c = resolveTheme({}).colors;
     const fills = swatchFills(tree);
@@ -1613,7 +1622,7 @@ describe('D214 lane 3 — a failed load: the Training row keeps its last copy an
     expect((text.match(/Couldn't load your training trends/g) || []).length).toBe(1);
     expect(text).not.toContain('No sessions logged yet');
     expect(text).not.toContain('No training trends yet');
-    expect(findByLabel(tree, /^\d+ sessions? this week\./).length).toBe(0);
+    expect(findByLabel(tree, /^\d+ sessions? so far this week\./).length).toBe(0);
     expect(pillarRow(tree, 'Training').length).toBe(0); // the row's label alone has no sentence after "Training"
     expect(findByLabel(tree, 'Training').length).toBe(1);
   });
@@ -1622,7 +1631,7 @@ describe('D214 lane 3 — a failed load: the Training row keeps its last copy an
     useAppStore.setState(PRO_USER);
     applyFixture({ db: richDb(), scan: null });
     const { tree } = await mountAnalytics({});
-    const good = 'Training. Strength up on 2 of 3 exercises in the last 30 days. Bench press 85 kg x 5, new best';
+    const good = 'Training. Strength up on 2 of 3 exercises done more than once in the last 30 days. Bench press 85 kg for 5 reps, a new personal best.';
     expect(pillarRow(tree, 'Training')[0].props.accessibilityLabel).toBe(good);
     database.getCompletedWorkoutSets = () => Promise.reject(new Error('db down'));
     await TestRenderer.act(async () => { pullToRefresh(tree); });
@@ -1656,10 +1665,10 @@ describe('D214 addendum 4 (BM-15): a pillar row\'s spoken label joins with a sin
   });
 
   test('the last part keeps its own punctuation; a part with none gets none', () => {
-    expect(spokenRowLabel('Progress photos', 'No photos yet', 'Take your first progress photos to start tracking visible change.'))
-      .toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
-    expect(spokenRowLabel('Training', 'Strength up on 9 of 9 exercises in the last 30 days', 'Bench press 85 kg x 5, new best'))
-      .toBe('Training. Strength up on 9 of 9 exercises in the last 30 days. Bench press 85 kg x 5, new best');
+    expect(spokenRowLabel('Progress photos', 'No photos yet', 'Your photo comparison starts with your first set of progress photos.'))
+      .toBe('Progress photos. No photos yet. Your photo comparison starts with your first set of progress photos.');
+    expect(spokenRowLabel('Training', 'Strength up on 9 of 9 exercises done more than once in the last 30 days', 'Bench press 85 kg for 5 reps, a new personal best.'))
+      .toBe('Training. Strength up on 9 of 9 exercises done more than once in the last 30 days. Bench press 85 kg for 5 reps, a new personal best.');
   });
 
   test('a label alone, a missing headline and an ellipsis all read cleanly', () => {
@@ -1688,5 +1697,106 @@ describe('D214 addendum 4 (BM-15): a pillar row\'s spoken label joins with a sin
     for (const label of labels) expect(label).not.toMatch(/\.\./);
     // The Body headline ends in a full stop of its own, and the label carries exactly one.
     expect(labels[1]).toMatch(/^Body\. Trending down over the last 2 weeks\. \S/);
+  });
+});
+
+// ─── D214 addendum 9 (plain-English census), 6.11 and 6.13 ──────────────────
+//
+// 6.11: the Training row's gate, the Recaps door and the Consistency milestone
+// count sessions through ONE rule (src/lib/progress/sessionCount.js: a completed
+// workout with a cached set count above zero or with set rows). The old counts
+// disagreed on three edge cases; each is mounted here with the count it gives
+// now, where it used to give another.
+// 6.13: the seven cells light on the days a completed workout STARTED (the
+// twelve-week grid's own days), so "a day with a completed session" is one
+// meaning on the card, the grid and the caption.
+describe('D214 addendum 9: one session count and one trained day on the Progress root', () => {
+  const EDGE_EXERCISES = () => Promise.resolve([exercise('e1', { name: 'Bench press', primaryMuscle: 'chest' })]);
+
+  test('6.11 (b): a completed workout with no sets is not a session: the Training row reads day zero and Recaps counts nothing', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 0 })]),
+        getCompletedWorkoutSets: () => Promise.resolve([]),
+        getAllExercises: EDGE_EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    // It used to read "No strength training logged in the last 30 days" here (the
+    // Training gate counted every completed workout) while Recaps counted none.
+    expect(pillarRow(tree, 'Training')[0].props.accessibilityLabel)
+      .toBe('Training. No sessions logged yet. Your training history starts with your first session.');
+    expect(flattenText(tree)).toContain('10 sessions to go');
+  });
+
+  test('6.11 (a): a completed workout with a cached set count and no set rows is a session for the Recaps door too', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([{ ...workout('w1', { daysAgoN: 0 }), setCount: 4 }]),
+        getCompletedWorkoutSets: () => Promise.resolve([]),
+        getAllExercises: EDGE_EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    // The milestone counted it already; Recaps counted none (it read set rows only).
+    expect(flattenText(tree)).toContain('9 sessions to go');
+    expect(pillarRow(tree, 'Training')[0].props.accessibilityLabel)
+      .toBe('Training. No weighted exercises logged in the last 30 days');
+  });
+
+  test('6.11 (c): set rows whose workout is not in the list are not a session (Recaps used to count their workout id)', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([]),
+        getCompletedWorkoutSets: () => Promise.resolve([
+          completedSet({ id: 's1', workoutId: 'ghost', exerciseId: 'e1', weight: 80, reps: 5, daysAgoN: 2 }),
+        ]),
+        getAllExercises: EDGE_EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    expect(flattenText(tree)).toContain('10 sessions to go');
+  });
+
+  test('0.26: a recent session reads "Tue 16 Sep · 45 min", with the unit in words and a middle dot', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: threeWorkouts,
+        getCompletedWorkoutSets: improvingTrainingSets,
+        getAllExercises: EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    const joined = (n) => [].concat(n.props.children).flat(Infinity).filter((c) => typeof c === 'string').join('');
+    const metas = tree.root.findAll((n) => n.type === 'Text' && /· 45 min$/.test(joined(n)));
+    expect(metas.length).toBeGreaterThan(0);
+    for (const m of metas) expect(joined(m)).toMatch(/^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} · 45 min$/);
+    expect(flattenText(tree)).not.toMatch(/ - \d+m\b/);
+  });
+
+  test('6.13: the seven cells light on the day a completed workout started, with or without sets', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 0 })]),
+        getCompletedWorkoutSets: () => Promise.resolve([]),
+        getAllExercises: EDGE_EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    // No set rows at all, yet today is a day with a completed session (the grid
+    // draws it): the cells' spoken label names it. By set time they would be empty.
+    const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(NOW).getDay()];
+    expect(findByLabel(tree, `Trained so far this week: ${today}`).length).toBeGreaterThan(0);
+    expect(findByLabel(tree, 'Not trained yet this week').length).toBe(0);
   });
 });

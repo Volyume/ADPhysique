@@ -563,3 +563,50 @@ describe('blockWeek: one week for the whole block card', () => {
     act(() => { tree.unmount(); });
   });
 });
+
+// D214 addendum 9 (census 6.11): the hook's two session numbers, the Recaps
+// count (`sessionCount`) and the Training row's gate (`completedWorkoutCount`),
+// read ONE rule (src/lib/progress/sessionCount.js): a completed workout with a
+// cached set count above zero or with set rows. They used to be the distinct
+// workout ids among set rows and every completed workout with a start time.
+describe('useProgressData: one session count (census 6.11)', () => {
+  const wk = (id, over = {}) => ({ id, isCompleted: true, startedAt: NOW, ...over });
+  const st = (id, workoutId) => ({ id, workoutId, exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW });
+
+  async function counts(workouts, sets) {
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue(workouts);
+    database.getCompletedWorkoutSets.mockResolvedValue(sets);
+    database.getAllExercises.mockResolvedValue([{ id: 'e1', primaryMuscle: 'chest' }]);
+    const { ref, tree } = await renderProgressHook();
+    const out = { completed: ref.current.completedWorkoutCount, sessions: ref.current.sessionCount, enough: ref.current.enoughForTrends };
+    act(() => { tree.unmount(); });
+    return out;
+  }
+
+  test('a completed workout with sets: both numbers say 1', async () => {
+    expect(await counts([wk('w1')], [st('s1', 'w1'), st('s2', 'w1')])).toMatchObject({ completed: 1, sessions: 1 });
+  });
+
+  test('(a) a cached set count with no set rows is a session in both numbers', async () => {
+    expect(await counts([wk('w1', { setCount: 4 })], [])).toMatchObject({ completed: 1, sessions: 1 });
+  });
+
+  test('(b) a completed workout with no sets is no session in either number (the Training gate used to count it)', async () => {
+    expect(await counts([wk('w1')], [])).toMatchObject({ completed: 0, sessions: 0 });
+  });
+
+  test('(c) set rows of a workout that is not in the list count for neither (the Recaps number used to count them)', async () => {
+    expect(await counts([wk('w1')], [st('s1', 'w1'), st('s2', 'ghost')])).toMatchObject({ completed: 1, sessions: 1 });
+  });
+
+  test('the two numbers are always the same number, and trends open at three', async () => {
+    const out = await counts(
+      [wk('w1'), wk('w2'), wk('w3', { setCount: 2 }), wk('w4', { isCompleted: false })],
+      [st('s1', 'w1'), st('s2', 'w2'), st('s3', 'w4')],
+    );
+    expect(out.completed).toBe(3);
+    expect(out.sessions).toBe(out.completed);
+    expect(out.enough).toBe(true);
+  });
+});

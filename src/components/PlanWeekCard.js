@@ -19,11 +19,13 @@
  * live Community `DayDots` in its ink tone (a trained day in `textSecondary`,
  * today ringed in `textPrimary`, no amber: a fact, never the thing to do),
  * with the weekday initials under them so the row reads as a week at a
- * glance. Without a plan the card reads "2 sessions this week" and keeps the
- * cells. No streak, no "days left", no instruction (D166, D204).
+ * glance. Without a plan the card reads "2 sessions so far this week" (the
+ * week is still open, D214 addendum 9, P13) and keeps the cells. No streak, no
+ * "days left", no instruction (D166, D204).
  *
  * Accessibility: the card is one group whose label is the view-model's own
- * sentence; the dots carry DayDots' spoken "Trained Mon, Wed" inside it.
+ * sentence; the dots carry DayDots' spoken "Trained so far this week: Mon, Wed"
+ * inside it.
  *
  * `children` (the lead's landing fix for lane 3, plan 7.1 item 2 "one
  * Card"): the Progress root renders this week's volume line and bar inside
@@ -71,7 +73,7 @@ export default function PlanWeekCard({ summary, testID = 'plan-week-card', child
       ) : null}
       </View>
       {/* The cells are a SIBLING of the summary group, so DayDots' own spoken
-          "Trained Mon, Wed" stays reachable (an accessible ancestor would
+          "Trained so far this week: Mon, Wed" stays reachable (an accessible ancestor would
           swallow it, D214 addendum 6, lane 3 review 1); VoiceOver reads the
           sentence, then the days. */}
       <View style={styles.cells}>

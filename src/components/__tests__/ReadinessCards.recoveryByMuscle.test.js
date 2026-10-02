@@ -404,7 +404,9 @@ describe('the personal recovery learning (register D210)', () => {
     expect(texts(tree)).toContain(
       'Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for your recovery speed (learned from your workouts) and your ratings. Not a measurement.',
     );
-    expect(texts(tree)).toContain('Slower than first estimated');
+    // RE-ANCHORED D214 addendum 9 (census 0.7): "your first estimate", the
+    // phrase the scale's own tick already uses ("First estimate").
+    expect(texts(tree)).toContain('Slower than your first estimate');
     const quadsRow = tree.root.findAll((n) => typeof n.props.accessibilityLabel === 'string'
       && n.props.accessibilityLabel.startsWith('Quads,') && typeof n.props.onPress === 'function')[0];
     await act(async () => { quadsRow.props.onPress(); });
@@ -489,13 +491,13 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
     const all = texts(tree);
     expect(all).not.toContain('Next workout');
     expect(all.some((t) => / is next/.test(t))).toBe(false);
-    expect(all).not.toContain('Still to do this week');
+    expect(all).not.toContain('Still to do this plan week');
   });
 
   test('is absent when the block has no outstanding session', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: null, sessions: SESSIONS });
     const tree = await render();
-    expect(texts(tree)).not.toContain('Still to do this week');
+    expect(texts(tree)).not.toContain('Still to do this plan week');
     expect(recommendNextWorkout).not.toHaveBeenCalled();
   });
 
@@ -568,7 +570,10 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
     expect(texts(tree).some((t) => / is next/.test(t))).toBe(false);
   });
 
-  test('"Still to do this week": one row per outstanding session, with the limiting muscle and "recovered" after its percent', async () => {
+  // RE-ANCHORED D214 addendum 9 (V3): "Still to do this plan week". The rows are
+  // the PLAN week's outstanding sessions (position.sessions), which can lag the
+  // calendar, and the card above names the same week "in week 2 of your plan".
+  test('"Still to do this plan week": one row per outstanding session, with the limiting muscle and "recovered" after its percent', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
     recommendNextWorkout.mockReturnValue(NEXT({
       programmeNextLine: 'Back is estimated 60% recovered, ready by tomorrow.',
@@ -579,7 +584,7 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
     }));
     const tree = await render();
     const all = texts(tree);
-    expect(all).toContain('Still to do this week');
+    expect(all).toContain('Still to do this plan week');
     // Lane 2 review N12: a row is two lines at phone width (the session and
     // its ready clause, then the limiting-muscle clause in muted ink); the
     // whole row is the spoken label.
@@ -590,7 +595,7 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
     const spoken = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Upper A · estimated ready by tomorrow (Back 60% recovered)');
     expect(spoken).toHaveLength(1);
     // After the answer block, before the figure's list.
-    expect(all.indexOf('Still to do this week')).toBeLessThan(all.indexOf('Still recovering · 1'));
+    expect(all.indexOf('Still to do this plan week')).toBeLessThan(all.indexOf('Still recovering · 1'));
   });
 
   test('buildStillToDoRows: no recent session is never "ready now" (D201 ruling 13); unknown and ready have their own words', () => {
@@ -725,7 +730,7 @@ describe('loader failure: the estimate says so, the ratings stay intact', () => 
     expect(all).toContain('Recovery by muscle');
     expect(all).toContain('Quads');
     expect(all.some((t) => / is next/.test(t))).toBe(false);
-    expect(all).not.toContain('Still to do this week');
+    expect(all).not.toContain('Still to do this plan week');
     expect(logError).toHaveBeenCalledWith('ReadinessCards.loadRecoveryRecommendation', expect.any(Error), { userId: 'u1' });
   });
 });

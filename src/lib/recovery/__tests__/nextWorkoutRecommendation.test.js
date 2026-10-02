@@ -208,7 +208,10 @@ describe('a recommendation is made when all three conditions hold', () => {
     });
     expect(result.programmeNext).toEqual({ routineId: 'legs' });
     expect(result.recommended).toEqual({ routineId: 'push' });
-    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push is ready now.`);
+    // RE-ANCHORED D214 addendum 9 (V6, D201): the last clause carries "estimated"
+    // like the first ("Push is estimated ready now."), so a bare "ready now" is
+    // never printed as a fact the estimate cannot prove.
+    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push is estimated ready now.`);
     expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
@@ -273,7 +276,9 @@ describe('a recommendation is made when all three conditions hold', () => {
 });
 
 describe('per-session copy (used by the change-workout sheet)', () => {
-  test('a ready session reads "Ready now."', () => {
+  // RE-ANCHORED D214 addendum 9 (V6, D201): every "ready now" header says it is
+  // an estimate; the per-session line is "Estimated ready now.".
+  test('a ready session reads "Estimated ready now."', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const recoveryMap = {
       quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs: NOW + DAY_MS }),
@@ -284,7 +289,7 @@ describe('per-session copy (used by the change-workout sheet)', () => {
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     const push = result.perSession.find((p) => p.routineId === 'push');
-    expect(push.line).toBe('Ready now.');
+    expect(push.line).toBe('Estimated ready now.');
   });
 
   test('a not-yet-ready session names its limiting muscle, percent and ready-by day', () => {
@@ -440,7 +445,7 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
     expect(push.readinessNow.verdict).toBe('not_yet');
     expect(push.readinessAtProjected.verdict).toBe('ready');
     expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(legsReadyAt, NOW)}. Push is estimated ${readyClause(chest.readyAtMs, NOW)}.`);
-    expect(result.reason).not.toMatch(/Push is ready now/);
+    expect(result.reason).not.toMatch(/Push is (estimated )?ready now/);
   });
 });
 

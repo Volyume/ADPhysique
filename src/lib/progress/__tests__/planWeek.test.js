@@ -20,14 +20,26 @@
  *    (a set last Sunday never lights a cell; a clock-change week keeps its
  *    true length through localWeekEndMs);
  *  - the module is pure (no database, store or clock import), so both
- *    screens can call it on already-loaded data.
+ *    screens can call it on already-loaded data;
+ *  - RE-ANCHORED D214 addendum 9 (plain-English census, 2026-10-02): the
+ *    no-plan count says "so far" ("2 sessions so far this week", P13: the week
+ *    is still open), and the seven cells light on the days a completed workout
+ *    STARTED (the twelve-week grid's own definition, census 6.13), not on each
+ *    set's own time. A session started at 23:30 on Monday with sets after
+ *    midnight lit Monday on the grid and Monday and Tuesday in the cells; one
+ *    started at 23:00 on Sunday lit the new week's Monday while the grid drew
+ *    it on Sunday; a completed workout with no sets lit the grid and not the
+ *    cells. "A day with a completed session" is now one meaning on the card,
+ *    the grid and the caption.
  */
 const fs = require('fs');
 const path = require('path');
-import { buildPlanWeekSummary, trainedDayKeys, sessionsThisWeek, weekdayKey } from '../planWeek';
+import {
+  buildPlanWeekSummary, trainedDayKeys, sessionsThisWeek, weekdayKey, sessionDayKeysThisWeek,
+} from '../planWeek';
 import { SESSION_STATE } from '../../blockProgression';
 import { RECOVERY_STATE } from '../../recoveryState';
-import { localWeekStartMs } from '../../dayKey';
+import { localWeekStartMs, localDayKey } from '../../dayKey';
 
 // Thursday 2026-10-01 14:00 local: the week runs Mon 28 Sep .. Sun 4 Oct.
 const NOW = new Date(2026, 9, 1, 14, 0, 0).getTime();
@@ -153,19 +165,20 @@ describe('buildPlanWeekSummary without a plan', () => {
     const vm = buildPlanWeekSummary({ position: null, sets, now: NOW });
     expect(vm.hasPlan).toBe(false);
     expect(vm.headlineNumber).toBe('2');
-    expect(vm.headlineWords).toBe('sessions this week');
+    // RE-ANCHORED addendum 9 (P13, rule 3): an open-week count says "so far".
+    expect(vm.headlineWords).toBe('sessions so far this week');
     expect(vm.subline).toBeNull();
     expect(vm.required).toBeNull();
-    expect(vm.accessibilityLabel).toBe('2 sessions this week.');
+    expect(vm.accessibilityLabel).toBe('2 sessions so far this week.');
   });
 
   test('one session takes the singular; none reads 0', () => {
     const one = buildPlanWeekSummary({ position: null, sets: [{ workoutId: 'w1', createdAt: at(1) }], now: NOW });
     expect(one.headlineNumber).toBe('1');
-    expect(one.headlineWords).toBe('session this week');
+    expect(one.headlineWords).toBe('session so far this week');
     const none = buildPlanWeekSummary({ position: null, sets: [], now: NOW });
     expect(none.headlineNumber).toBe('0');
-    expect(none.headlineWords).toBe('sessions this week');
+    expect(none.headlineWords).toBe('sessions so far this week');
     expect(none.trainedDays).toEqual([]);
   });
 
@@ -214,6 +227,80 @@ describe('the seven cells read the Monday-anchored local week only', () => {
   });
 });
 
+// D214 addendum 9 (census 6.13): the cells light on the days a completed workout
+// STARTED (the grid's days), passed in as local day keys.
+describe('the seven cells read the days a completed workout started (6.13)', () => {
+  // Thursday 2026-10-01; the week runs Mon 28 Sep .. Sun 4 Oct (local).
+  const key = (dayOffset) => localDayKey(at(dayOffset, 12));
+  const MON = key(0); // 2026-09-28
+  const TUE = key(1);
+  const THU = key(3);
+
+  test('the week\'s days come back Monday first, deduplicated; keys outside the week and non-keys are ignored', () => {
+    expect(MON).toBe('2026-09-28');
+    expect(sessionDayKeysThisWeek([key(6), THU, MON, MON, key(-1), key(7), 'nope', null, 42], NOW)).toEqual(['mon', 'thu', 'sun']);
+    expect(sessionDayKeysThisWeek([], NOW)).toEqual([]);
+    expect(sessionDayKeysThisWeek(undefined, NOW)).toEqual([]);
+  });
+
+  test('a session started at 23:30 on Monday with sets after midnight is Monday only (the grid\'s day)', () => {
+    const startedMon2330 = new Date(2026, 8, 28, 23, 30, 0).getTime();
+    const setsAfterMidnight = [
+      { workoutId: 'w1', createdAt: startedMon2330 },
+      { workoutId: 'w1', createdAt: startedMon2330 + 45 * 60 * 1000 }, // 00:15 on Tuesday
+    ];
+    const vm = buildPlanWeekSummary({ position: position(), sets: setsAfterMidnight, completedDays: [MON], now: NOW });
+    expect(vm.trainedDays).toEqual(['mon']);
+    // The old reading, still what a caller with no day list gets, lit both days.
+    const legacy = buildPlanWeekSummary({ position: position(), sets: setsAfterMidnight, now: NOW });
+    expect(legacy.trainedDays).toEqual(['mon', 'tue']);
+  });
+
+  test('a session started at 23:00 on the Sunday before is last week\'s: no dot on this Monday', () => {
+    const startedSun2300 = new Date(2026, 8, 27, 23, 0, 0).getTime();
+    const sets = [{ workoutId: 'w0', createdAt: startedSun2300 + 90 * 60 * 1000 }]; // 00:30 on Monday
+    const vm = buildPlanWeekSummary({ position: position(), sets, completedDays: [key(-1)], now: NOW });
+    expect(vm.trainedDays).toEqual([]);
+    expect(buildPlanWeekSummary({ position: position(), sets, now: NOW }).trainedDays).toEqual(['mon']);
+  });
+
+  test('a completed workout with no sets still marks its day, as it marks the grid', () => {
+    const vm = buildPlanWeekSummary({ position: position(), sets: [], completedDays: [TUE], now: NOW });
+    expect(vm.trainedDays).toEqual(['tue']);
+  });
+
+  test('an empty day list is "no completed session", never a fall back to the sets', () => {
+    const sets = [{ workoutId: 'w1', createdAt: at(0) }];
+    expect(buildPlanWeekSummary({ position: position(), sets, completedDays: [], now: NOW }).trainedDays).toEqual([]);
+  });
+
+  test('only the cells move: the count (plan and no plan) still reads the plan week and the sets', () => {
+    const sets = [{ workoutId: 'w1', createdAt: at(0) }, { workoutId: 'w2', createdAt: at(2) }];
+    const withPlan = buildPlanWeekSummary({ position: position(), sets, completedDays: [THU], now: NOW });
+    expect(withPlan.headlineNumber).toBe('2 of 4');
+    expect(withPlan.trainedDays).toEqual(['thu']);
+    const noPlan = buildPlanWeekSummary({ position: null, sets, completedDays: [THU], now: NOW });
+    expect(noPlan.headlineNumber).toBe('2');
+    expect(noPlan.trainedDays).toEqual(['thu']);
+  });
+
+  test('the clock-change week keeps its seven days (UK autumn change, Sunday 25 October 2026)', () => {
+    const autumnNow = new Date(2026, 9, 22, 12, 0, 0).getTime(); // Thursday 22 Oct
+    expect(sessionDayKeysThisWeek(['2026-10-19', '2026-10-25'], autumnNow)).toEqual(['mon', 'sun']);
+    expect(sessionDayKeysThisWeek(['2026-10-26', '2026-10-18'], autumnNow)).toEqual([]);
+    // And the spring change (Sunday 29 March 2026), seen from that week's Wednesday.
+    const springNow = new Date(2026, 2, 25, 12, 0, 0).getTime();
+    expect(sessionDayKeysThisWeek(['2026-03-23', '2026-03-29', '2026-03-30'], springNow)).toEqual(['mon', 'sun']);
+  });
+
+  test('the screens hand the grid\'s own days to the card: AnalyticsScreen passes calValues\' dates', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'screens', 'AnalyticsScreen.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).toMatch(/calValues\.map\(\(v\) => v\.date\)/);
+    expect(code).toMatch(/buildPlanWeekSummary\(\{[^}]*completedDays/);
+  });
+});
+
 describe('the module stays pure', () => {
   test('planWeek.js imports no database, store or screen (both screens call it on loaded data)', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'planWeek.js'), 'utf8');
@@ -240,9 +327,9 @@ describe('a finished block', () => {
     expect(out.hasPlan).toBe(false);
     expect(out.finished).toBe(true);
     expect(out.headlineNumber).toBe('0');
-    expect(out.headlineWords).toBe('sessions this week');
+    expect(out.headlineWords).toBe('sessions so far this week');
     expect(out.subline).toBe('Block finished');
-    expect(out.accessibilityLabel).toBe('0 sessions this week. Block finished.');
+    expect(out.accessibilityLabel).toBe('0 sessions so far this week. Block finished.');
     expect(JSON.stringify(out)).not.toMatch(/week 6|is next/);
   });
   test('not finished: the plan reading as before', () => {

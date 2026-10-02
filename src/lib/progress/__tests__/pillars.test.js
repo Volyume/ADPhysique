@@ -19,6 +19,16 @@
  *    best on the person's heaviest exercise falling back to the most recent,
  *    and trainingPillarCopy's ladder reads "exercises" (never "lifts"), a
  *    baseline sentence instead of "0 of 0", and facts only (D204).
+ *  - RE-ANCHORED D214 addendum 9 (plain-English census, founder order
+ *    2026-10-02: "The app needs to be in plain British English that is
+ *    understandable and makes sense to humans"): the common term wins on both
+ *    rows. Training says "starting point" (not "baseline"), "personal best",
+ *    "weighted exercises" (the count only reads weight-and-reps exercises) and
+ *    "done more than once" (the denominator is the compared exercises); its
+ *    day-zero line describes instead of telling. Progress photos says "photos",
+ *    "set of photos", "comparison" (never "scan", "comparable" or
+ *    "assessment") and "Looks leaner across your last 3 sets of photos (high
+ *    confidence)." Every threshold, count and withhold is unchanged.
  */
 import { computeTrainingPillarSummary, buildVisualPillarCopy, trainingPillarCopy } from '../pillars';
 import { comparableChainCount } from '../../progressScanChain';
@@ -299,15 +309,18 @@ describe('trainingPillarCopy: the ladder', () => {
     completedWorkoutCount: 6, summary: summary(), lastSessionAt: NOW - 3 * DAY_MS, unitsLabel: 'kg', now: NOW, ...over,
   });
 
-  test('no completed session: the one honest next action', () => {
+  test('no completed session: a description of what starts the row, not an instruction (P1)', () => {
     expect(copy({ completedWorkoutCount: 0 })).toEqual({
-      state: 'No sessions logged yet', evidence: 'Log your first session to start your training history.',
+      state: 'No sessions logged yet', evidence: 'Your training history starts with your first session.',
     });
+    expect(copy({ completedWorkoutCount: 0 }).evidence).not.toMatch(/\b(log|start|take|add|try|keep)\b/i);
   });
 
   test('nothing strength-trained in the window says so and states the last session as a fact', () => {
     const none = summary({ trainedCount: 0, improvedCount: 0, comparedCount: 0 });
-    expect(copy({ summary: none, lastSessionAt: NOW }).state).toBe('No strength training logged in the last 30 days');
+    // P9 (addendum 9): only weight-and-reps exercises count, so a month of
+    // bodyweight or cardio work reads "weighted exercises", not "strength training".
+    expect(copy({ summary: none, lastSessionAt: NOW }).state).toBe('No weighted exercises logged in the last 30 days');
     expect(copy({ summary: none, lastSessionAt: NOW }).evidence).toBe('Last session today');
     expect(copy({ summary: none, lastSessionAt: NOW - DAY_MS }).evidence).toBe('Last session yesterday');
     expect(copy({ summary: none, lastSessionAt: NOW - 12 * DAY_MS }).evidence).toBe('Last session 12 days ago');
@@ -317,24 +330,35 @@ describe('trainingPillarCopy: the ladder', () => {
   test('PR-3: only first days in the window reads a baseline sentence, never "0 of 0"', () => {
     const baseline = summary({ trainedCount: 4, improvedCount: 0, comparedCount: 0, baselineCount: 4 });
     const out = copy({ summary: baseline });
-    expect(out.state).toBe('Baseline set on 4 exercises');
+    expect(out.state).toBe('Starting point set on 4 exercises');
     expect(out.evidence).toBe('Strength changes show once an exercise has been trained on two different days.');
     expect(`${out.state} ${out.evidence}`).not.toMatch(/\bof 0\b|0 of/);
     expect(copy({ summary: summary({ trainedCount: 1, improvedCount: 0, comparedCount: 0, baselineCount: 1 }) }).state)
-      .toBe('Baseline set on 1 exercise');
+      .toBe('Starting point set on 1 exercise');
+    // "Baseline" is gym-science vocabulary (0.12): the row never says it.
+    expect(`${out.state} ${out.evidence}`).not.toMatch(/baseline/i);
   });
 
   test('a new best on a compared exercise: "Strength up on N of M exercises", the evidence the featured best', () => {
     const out = copy({ summary: summary({ improvedCount: 9, comparedCount: 9, trainedCount: 9, featuredBest: best }) });
-    expect(out.state).toBe('Strength up on 9 of 9 exercises in the last 30 days');
-    expect(out.evidence).toBe('Bench press 82.5 kg x 5, new best');
+    // 6.6: the denominator is the exercises done on more than one day, and the
+    // sentence says so. 0.13 / 6.12: the reps in words, "a new personal best".
+    expect(out.state).toBe('Strength up on 9 of 9 exercises done more than once in the last 30 days');
+    expect(out.evidence).toBe('Bench press 82.5 kg for 5 reps, a new personal best.');
+  });
+
+  test('one rep is singular in the evidence, and the line has no "x 5" shorthand or "best" alone', () => {
+    const one = copy({ summary: summary({ featuredBest: { ...best, reps: 1, weight: 140 } }) });
+    expect(one.evidence).toBe('Bench press 140 kg for 1 rep, a new personal best.');
+    const out = copy({ summary: summary({ featuredBest: best }) });
+    expect(out.evidence).not.toMatch(/ x \d|, new best/);
   });
 
   test('the denominator is the compared exercises, and one exercise is singular', () => {
     expect(copy({ summary: summary({ trainedCount: 7, improvedCount: 3, comparedCount: 5, baselineCount: 2, featuredBest: best }) }).state)
-      .toBe('Strength up on 3 of 5 exercises in the last 30 days');
+      .toBe('Strength up on 3 of 5 exercises done more than once in the last 30 days');
     expect(copy({ summary: summary({ trainedCount: 1, improvedCount: 1, comparedCount: 1, featuredBest: best }) }).state)
-      .toBe('Strength up on 1 of 1 exercise in the last 30 days');
+      .toBe('Strength up on 1 of 1 exercise done more than once in the last 30 days');
   });
 
   test('the word "lift" is never the shorthand, in any rung', () => {
@@ -351,14 +375,15 @@ describe('trainingPillarCopy: the ladder', () => {
   test('compared but none up: "holding steady" with the last session as a fact, no instruction', () => {
     const out = copy({ summary: summary({ improvedCount: 0 }), lastSessionAt: NOW - 2 * DAY_MS });
     // RE-ANCHORED D214 addendum 6 (lane 3 review N3): no "holding steady" claim.
-    expect(out.state).toBe('No new bests in the last 30 days');
+    // RE-ANCHORED addendum 9 (0.13): "personal bests", the common term.
+    expect(out.state).toBe('No new personal bests in the last 30 days');
     expect(out.evidence).toBe('Last session 2 days ago');
     expect(`${out.state} ${out.evidence}`).not.toMatch(/keep|build|should|try|aim|consider/i);
   });
 
   test('the evidence follows the person\'s units', () => {
     const lbs = copy({ unitsLabel: 'lbs', summary: summary({ featuredBest: { ...best, weight: 185 } }) });
-    expect(lbs.evidence).toBe('Bench press 185 lbs x 5, new best');
+    expect(lbs.evidence).toBe('Bench press 185 lbs for 5 reps, a new personal best.');
   });
 
   test('the window is a rolling 30 days, never a month (S6-4)', () => {
@@ -374,13 +399,18 @@ describe('buildVisualPillarCopy', () => {
     // capture-flow word "scan" a brand-new user has not met yet.
     const copy = buildVisualPillarCopy({ hasScan: false, hasNote: false, packet: null, capturedAt: null });
     expect(copy.state).toBe('No photos yet');
-    expect(copy.evidence).toMatch(/first progress photos/i);
+    // RE-ANCHORED addendum 9 (P2, D204): a description of what starts the row.
+    expect(copy.evidence).toBe('Your photo comparison starts with your first set of progress photos.');
+    expect(copy.evidence).not.toMatch(/\b(take|start tracking)\b/i);
   });
 
   test('scan exists but confidence too low for a note: distinct from "never scanned"', () => {
     const copy = buildVisualPillarCopy({ hasScan: true, hasNote: false, packet: null, capturedAt: NOW });
-    expect(copy.state).not.toBe('No photos yet');
-    expect(copy.evidence).toMatch(/retake/i);
+    // RE-ANCHORED addendum 9 (0.11, P3): photos, never "scan"; the line says
+    // what happened to the set and no longer tells the person to retake it.
+    expect(copy.state).toBe('Latest photos were not clear enough');
+    expect(copy.evidence).toBe('They could not be compared with your earlier photos.');
+    expect(copy.evidence).not.toMatch(/retake/i);
   });
 
   test('not_comparable status: kept as a record, not evidence', () => {
@@ -388,7 +418,9 @@ describe('buildVisualPillarCopy', () => {
       hasScan: true, hasNote: true, capturedAt: NOW,
       packet: { status: 'not_comparable', eligibleForAssessment: false, trendWindow: { count: 1 }, confidenceTier: 'high' },
     });
-    expect(copy.state).toMatch(/not comparable/i);
+    // RE-ANCHORED addendum 9 (0.11): "Latest set of photos could not be compared".
+    expect(copy.state).toBe('Latest set of photos could not be compared');
+    expect(copy.state).not.toMatch(/comparable|scan/i);
   });
 
   // RE-PINNED (lead amendment, Stage 2 review): the earlier draft anchored
@@ -406,7 +438,8 @@ describe('buildVisualPillarCopy', () => {
       },
     });
     expect(copy.state).toBe('Visible change');
-    expect(copy.evidence).toBe('Leaner across your last 4 comparable scans, moderate confidence.');
+    // RE-ANCHORED addendum 9 (0.11): "sets of photos", the confidence in brackets.
+    expect(copy.evidence).toBe('Looks leaner across your last 4 sets of photos (moderate confidence).');
     expect(copy.state).not.toMatch(/since/i);
   });
 
@@ -418,7 +451,28 @@ describe('buildVisualPillarCopy', () => {
         trendWindow: { count: 5, direction: 'up', comparableOnly: true },
       },
     });
-    expect(copy.evidence).toBe('Fuller across your last 5 comparable scans, high confidence.');
+    expect(copy.evidence).toBe('Looks fuller across your last 5 sets of photos (high confidence).');
+  });
+
+  test('any other direction reads "steady", and no wording carries "scan", "comparable" or "assessment" (0.11)', () => {
+    const steady = buildVisualPillarCopy({
+      hasScan: true, hasNote: true, capturedAt: NOW,
+      packet: {
+        status: 'valid', eligibleForAssessment: true, confidenceTier: 'high',
+        trendWindow: { count: 3, direction: 'flat', comparableOnly: true },
+      },
+    });
+    expect(steady.evidence).toBe('Looks steady across your last 3 sets of photos (high confidence).');
+    const every = [
+      buildVisualPillarCopy({ hasScan: false, hasNote: false, packet: null, capturedAt: null }),
+      buildVisualPillarCopy({ hasScan: true, hasNote: false, packet: null, capturedAt: NOW }),
+      buildVisualPillarCopy({ hasScan: true, hasNote: true, capturedAt: NOW, packet: { status: 'not_comparable' } }),
+      steady,
+      buildVisualPillarCopy({ hasScan: true, hasNote: true, capturedAt: NOW, packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 1 } } }),
+      buildVisualPillarCopy({ hasScan: true, hasNote: true, capturedAt: NOW, packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 2 } } }),
+      buildVisualPillarCopy({ hasScan: true, hasNote: true, capturedAt: NOW, packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 3 } } }),
+    ];
+    for (const r of every) expect(`${r.state} ${r.evidence}`).not.toMatch(/\bscans?\b|comparable|assessment|visual trend/i);
   });
 
   // S7-2a: the "across your last N comparable scans" line, previously
@@ -437,7 +491,7 @@ describe('buildVisualPillarCopy', () => {
       },
     });
     expect(copy.state).toBe('Visible change');
-    expect(copy.evidence).toBe('Leaner across your last 3 comparable scans, moderate confidence.');
+    expect(copy.evidence).toBe('Looks leaner across your last 3 sets of photos (moderate confidence).');
   });
 
   test('not yet eligible (baseline / thin window): honest immature state with a remaining-scan count', () => {
@@ -445,8 +499,21 @@ describe('buildVisualPillarCopy', () => {
       hasScan: true, hasNote: true, capturedAt: NOW,
       packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 1 }, confidenceTier: 'moderate' },
     });
-    expect(copy.state).toBe('Building your visual trend');
-    expect(copy.evidence).toMatch(/2 more comparable scans/);
+    // RE-ANCHORED addendum 9 (0.11): "Building your photo comparison" and a
+    // denominator in the common words. One set left takes the singular, and the
+    // mature-but-not-eligible case ends with the same words.
+    expect(copy.state).toBe('Building your photo comparison');
+    expect(copy.evidence).toBe('2 more sets of matching photos until your first comparison.');
+    const oneLeft = buildVisualPillarCopy({
+      hasScan: true, hasNote: true, capturedAt: NOW,
+      packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 2 }, confidenceTier: 'moderate' },
+    });
+    expect(oneLeft.evidence).toBe('1 more set of matching photos until your first comparison.');
+    const none = buildVisualPillarCopy({
+      hasScan: true, hasNote: true, capturedAt: NOW,
+      packet: { status: 'baseline', eligibleForAssessment: false, trendWindow: { count: 3 }, confidenceTier: 'moderate' },
+    });
+    expect(none.evidence).toBe('Your next set of matching photos will complete your first comparison.');
   });
 });
 

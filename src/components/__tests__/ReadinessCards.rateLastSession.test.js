@@ -195,13 +195,18 @@ describe('ReadinessCards waiting-state caption and per-row notes (F3, P3(a))', (
     expect(joined).not.toMatch(/joint comfort|Joint comfort/i);
   });
 
-  test('D214 RC-2: soreness is on its stored 1 to 3 scale, no display shift: a person who always answers Fresh reads fresh', async () => {
+  // RE-ANCHORED D214 addendum 9 (census 0.23, plain-English order 2026-10-02):
+  // "fresh" is the rating BUTTON's word; printed as the answer to "Soreness
+  // before sessions" it is not what anyone says, so the lowest band reads "not
+  // sore". The scale (1 to 3), the thresholds and the other two bands are
+  // unchanged, and the (i) still names the buttons' own words.
+  test('D214 RC-2: soreness is on its stored 1 to 3 scale, no display shift: a person who always answers Fresh reads not sore', async () => {
     database.getAllWorkouts.mockResolvedValue(Array.from({ length: 3 }, (_, i) => ({
       id: `w${i}`, isCompleted: true, setCount: 1, startedAt: NOW - i * 60000, endedAt: NOW - i * 60000,
       soreness24hBefore: 1, fatigueLevel: 1, jointDiscomfort: 0,
     })));
     const all = texts(await render());
-    expect(all).toContain('Soreness before sessions · fresh (1.0 of 3)');
+    expect(all).toContain('Soreness before sessions · not sore (1.0 of 3)');
     expect(all).toContain('Fatigue after sessions · fresh (1.0 of 5)');
     expect(all).toContain('Joint discomfort after sessions · none (0.0 of 3)');
   });
@@ -228,8 +233,8 @@ describe('ReadinessCards waiting-state caption and per-row notes (F3, P3(a))', (
 });
 
 describe('the rating words and numbers (D214 7.2 item 4)', () => {
-  test('soreness 1-3: fresh under 1.5, mild to 2.5, sore above', () => {
-    expect([1, 1.49].map(sorenessWord)).toEqual(['fresh', 'fresh']);
+  test('soreness 1-3: not sore under 1.5, mild to 2.5, sore above (addendum 9, 0.23)', () => {
+    expect([1, 1.49].map(sorenessWord)).toEqual(['not sore', 'not sore']);
     expect([1.5, 2, 2.5].map(sorenessWord)).toEqual(['mild', 'mild', 'mild']);
     expect([2.51, 3].map(sorenessWord)).toEqual(['sore', 'sore']);
   });
@@ -251,7 +256,7 @@ describe('the rating words and numbers (D214 7.2 item 4)', () => {
 
   test('ratingText: the spec\'s own three examples, and no verdict from a single answer', () => {
     expect(ratingText({ label: 'Soreness before sessions', value: 1.4, samples: 5, word: sorenessWord, max: 3 }))
-      .toBe('Soreness before sessions · fresh (1.4 of 3)');
+      .toBe('Soreness before sessions · not sore (1.4 of 3)');
     expect(ratingText({ label: 'Fatigue after sessions', value: 3.0, samples: 5, word: fatigueWord, max: 5 }))
       .toBe('Fatigue after sessions · moderate (3.0 of 5)');
     expect(ratingText({ label: 'Joint discomfort after sessions', value: 0.2, samples: 5, word: jointWord, max: 3 }))

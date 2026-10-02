@@ -12,7 +12,7 @@
  * 00-AUDIT-AND-PLAN.md` section 7.2, founder rulings Q1 = A, Q3 = A, Q7 =
  * A): the Recovery screen's first block now LEADS with the answer ("4
  * muscles still recovering, 8 recovered." and the next-workout sentence),
- * then the sessions still to do this week, then the figure and the list;
+ * then the sessions still to do this plan week, then the figure and the list;
  * the ratings read on their true scales in the scale's own words; the
  * fatigue trend moved in from Consistency; a failed read is said and
  * logged, never swallowed.
@@ -49,6 +49,12 @@ import {
   getWorkoutSetsForWorkout, getAllExercises,
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { fatigueWord } from '../lib/recovery/ratingWords';
+// D214 addendum 9 (census 6.11): the milestone's own rule (a completed workout
+// with a cached set count above zero or with set rows) is the ONE session
+// definition now, shared with the Progress root's Recaps count and the Training
+// row's gate (src/lib/progress/sessionCount.js).
+import { loggedSessionWorkouts } from '../lib/progress/sessionCount';
 import { safeFormatDate } from '../lib/safeFormat';
 import { logError } from '../lib/errorLog';
 // D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
@@ -191,12 +197,18 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   // Sleep quality is 1 (Poor) to 5 (Excellent); 2 or below is a short night.
   const recentSleep = sleep.slice(0, 4);
   const lowSleepWeeks = recentSleep.filter(s => s <= 2).length;
+  // The rule counts 3 or more of the latest 4, which need not be consecutive,
+  // so the sentence says exactly that and never "in a row" or "running"
+  // (lane C1 note, D214 addendum 9: the number judged is the number shown).
+  const ofLast = (count, total, noun) => (count === total
+    ? `in each of your last ${total} ${noun}`
+    : `in ${count} of your last ${total} ${noun}`);
 
   if (lowEnergyWeeks >= 3) {
-    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} weekly check-ins in a row.` };
+    return { type: 'warning', text: `Energy has been low ${ofLast(lowEnergyWeeks, recentEnergy.length, 'weekly check-ins')}.` };
   }
   if (highSorenessWeeks >= 3) {
-    return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running.` };
+    return { type: 'warning', text: `High soreness has been reported ${ofLast(highSorenessWeeks, recentSoreness.length, 'weekly check-ins')}.` };
   }
   // A run of poor nights is the clearest recovery signal there is. Surface
   // it in the same insight slot rather than on a card of its own, so the
@@ -210,10 +222,12 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
     // adjacency walk actually proves, whichever surface supplied the
     // rating. The energy/soreness sentences keep their noun: those
     // columns are only ever written by a real check-in.
-    return { type: 'warning', text: `Sleep quality has been rated low for ${lowSleepWeeks} weeks running.` };
+    return { type: 'warning', text: `Sleep quality has been rated low ${ofLast(lowSleepWeeks, recentSleep.length, 'weeks')}.` };
   }
   if (highEnergyWeeks >= 3) {
-    return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} weekly check-ins, which is a good sign.` };
+    // D214 addendum 9 (V4): the fact, with no clause that judges it ("which is a
+    // good sign"), the shape the low-energy sentence above already has.
+    return { type: 'good', text: `Energy has been high ${ofLast(highEnergyWeeks, recentEnergy.length, 'weekly check-ins')}.` };
   }
   if (energies.length >= 4) {
     const older = energies.slice(2, 4);
@@ -370,7 +384,7 @@ export function buildNextWorkoutSentence(recommendation, nowMs) {
 }
 
 /**
- * One row per OUTSTANDING session this week (D214 7.2 b), from
+ * One row per OUTSTANDING session this plan week (D214 7.2 b), from
  * recommendNextWorkout().perSession, which holds outstanding sessions only:
  * "Upper A · estimated ready by tomorrow (Back 60% recovered)". A session
  * none of whose counted muscles has a recent session reads "no recent
@@ -427,15 +441,21 @@ export function scrollToNode(scrollView, node, headroom = spacing.lg) {
  * to 3 (fresh, mild, sore), fatigue after it on 1 to 5 (fresh, mild,
  * moderate, high, exhausted, the workout summary's own buttons) and joint
  * discomfort after it on 0 to 3 (none, slight, moderate, significant).
+ *
+ * One exception (D214 addendum 9, 0.23): the lowest soreness band reads "not
+ * sore" when printed as the answer to "Soreness before sessions". "Fresh" is
+ * the rating button's word, and nobody says "soreness: fresh". The buttons and
+ * the (i) keep their own words.
  */
 export function sorenessWord(v) {
-  if (v < 1.5) return 'fresh';
+  if (v < 1.5) return 'not sore';
   return v <= 2.5 ? 'mild' : 'sore';
 }
-const FATIGUE_WORDS = ['fresh', 'mild', 'moderate', 'high', 'exhausted'];
-export function fatigueWord(v) {
-  return FATIGUE_WORDS[Math.min(5, Math.max(1, Math.round(v))) - 1];
-}
+// The fatigue words (FATIGUE_WORDS) live in lib/recovery/ratingWords.js, shared
+// with the fatigue-trend card, which prints the same words for the last two
+// sessions' own ratings (addendum 9, V5); one list, no second. Re-exported here
+// because this is where the ratings card has always read it from.
+export { fatigueWord };
 export function jointWord(v) {
   if (v < 0.5) return 'none';
   if (v <= 1.5) return 'slight';
@@ -556,7 +576,7 @@ export default function ReadinessCards({
   // block, no outstanding session to reason about, or the read failed.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
   // The counted sessions' own sets and the exercise library, for the
-  // breakdown's "main mover" / "helped" split (RC-9, RC-10).
+  // breakdown's "as the main muscle worked" / "as a helper" split (RC-9, RC-10).
   const [splitData, setSplitData] = useState({ sets: [], exercises: [] });
   // Scroll plumbing (RC-12): the rows' nodes, the names line's node, and
   // the muscle a figure tap is waiting to scroll to once its row exists.
@@ -575,19 +595,9 @@ export default function ReadinessCards({
           getCompletedWorkoutSets(userId),
         ]);
         completedSets = Array.isArray(sets) ? sets : [];
-        const setsPerWorkout = new Map();
-        for (const s of sets ?? []) {
-          const wid = s.workoutId ?? s.workout_id;
-          if (!wid) continue;
-          setsPerWorkout.set(wid, (setsPerWorkout.get(wid) ?? 0) + 1);
-        }
-        const completed = (workouts ?? []).filter(w => {
-          const isComplete = !!(w.isCompleted ?? w.is_completed);
-          if (!isComplete) return false;
-          const cachedCount = w.setCount ?? w.set_count;
-          const liveCount = setsPerWorkout.get(w.id) ?? 0;
-          return (cachedCount != null && cachedCount > 0) || liveCount > 0;
-        });
+        // The one session rule (sessionCount.js): a completed workout with a
+        // cached set count above zero or with set rows.
+        const completed = loggedSessionWorkouts(workouts, sets);
         setTotalWorkouts(completed.length);
         const startedAts = completed.map(w => Number(w.startedAt ?? w.started_at)).filter(Number.isFinite);
         setFirstSessionAt(startedAts.length ? Math.min(...startedAts) : null);
@@ -984,7 +994,7 @@ export default function ReadinessCards({
                   {nextText ? <Text style={live.nextText}>{nextText}</Text> : null}
                   {stillToDoRows.length > 0 ? (
                     <View style={styles.stillToDo}>
-                      <Text style={live.stillLabel}>Still to do this week</Text>
+                      <Text style={live.stillLabel}>Still to do this plan week</Text>
                       {stillToDoRows.map((row) => {
                         // Two lines at phone width: the session and its ready
                         // clause, then the limiting-muscle clause in muted ink

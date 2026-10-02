@@ -76,19 +76,35 @@ describe('computeRecoveryTrendInsight', () => {
     // "which is worth paying attention to" is gone (the fact stays), and the
     // sentence names its measure, the 1-5 sleep QUALITY rating, because the
     // check-in row prints sleep in hours.
-    expect(out?.text).toBe('Sleep quality has been rated low for 3 weeks running.');
+    expect(out?.text).toBe('Sleep quality has been rated low in 3 of your last 4 weeks.'); // the rule counts 3 of the latest 4, so the sentence says which (D214 addendum 9)
     expect(out?.text).not.toMatch(/weekly check-ins/);
   });
 
   test('D214 (RC-18, D204): the three sentences that told the athlete to pay attention keep their fact and lose the clause', () => {
     const energy = computeRecoveryTrendInsight(series([ck({ energyScore: 1 }), ck({ energyScore: 2 }), ck({ energyScore: 2 })]), NOW);
-    expect(energy.text).toBe('Energy has been low for 3 weekly check-ins in a row.');
+    expect(energy.text).toBe('Energy has been low in each of your last 3 weekly check-ins.');
     const sore = computeRecoveryTrendInsight(series([ck({ sorenessScore: 4 }), ck({ sorenessScore: 5 }), ck({ sorenessScore: 4 })]), NOW);
-    expect(sore.text).toBe('High soreness has been reported 3 weeks running.');
+    expect(sore.text).toBe('High soreness has been reported in each of your last 3 weekly check-ins.');
     const sleep = computeRecoveryTrendInsight(series([ck({ sleepQuality: 1 }), ck({ sleepQuality: 2 }), ck({ sleepQuality: 2 })]), NOW);
     for (const out of [energy, sore, sleep]) {
       expect(out.text).not.toMatch(/worth paying attention|more attention|pay attention|may need/i);
     }
+  });
+
+  // D214 addendum 9 (V4, rule 7): the high-energy sentence used to keep a clause
+  // that judges the fact ("consistently high across the last 3 weekly check-ins,
+  // which is a good sign"). It now keeps the fact and loses the clause, in the
+  // shape the low-energy sentence above already has.
+  test('V4: high energy is the fact alone, "high in N of your last M weekly check-ins", with no verdict clause', () => {
+    const three = computeRecoveryTrendInsight(series([ck({ energyScore: 4 }), ck({ energyScore: 5 }), ck({ energyScore: 4 })]), NOW);
+    expect(three.type).toBe('good');
+    expect(three.text).toBe('Energy has been high in each of your last 3 weekly check-ins.');
+    const four = computeRecoveryTrendInsight(series([5, 5, 4, 5].map((energyScore) => ck({ energyScore }))), NOW);
+    expect(four.text).toBe('Energy has been high in each of your last 4 weekly check-ins.');
+    // Three of the latest four, not consecutive: the sentence says "3 of your last 4", never "in a row".
+    const scattered = computeRecoveryTrendInsight(series([5, 2, 4, 5].map((energyScore) => ck({ energyScore }))), NOW);
+    expect(scattered.text).toBe('Energy has been high in 3 of your last 4 weekly check-ins.');
+    for (const out of [three, four]) expect(out.text).not.toMatch(/consistently|good sign|which is|across the last/i);
   });
 
   test('low energy outranks poor sleep (energy is the primary read)', () => {
@@ -128,6 +144,6 @@ describe('C6 RD6-7 (D97-25): runs require current, calendar-adjacent weeks', () 
 
   test('an unbroken current run still speaks exactly as before', () => {
     const rows = series([ck({ energyScore: 1 }), ck({ energyScore: 2 }), ck({ energyScore: 2 })]);
-    expect(computeRecoveryTrendInsight(rows, NOW).text).toMatch(/Energy has been low for 3 weekly check-ins in a row/);
+    expect(computeRecoveryTrendInsight(rows, NOW).text).toMatch(/Energy has been low in each of your last 3 weekly check-ins/);
   });
 });

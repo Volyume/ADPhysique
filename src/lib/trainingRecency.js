@@ -54,7 +54,8 @@ export function trainingRecency(lastTrainedAtMs, nowMs = Date.now()) {
     return { known: false, daysAgo: null, label: 'Not logged' };
   }
   const daysAgo = Math.floor((now - last) / MS_PER_DAY);
-  if (daysAgo <= 0) return { known: true, daysAgo: 0, label: 'Trained within 24h' };
+  // D214 addendum 9 (0.18): "24h" is shorthand; the label says it in words.
+  if (daysAgo <= 0) return { known: true, daysAgo: 0, label: 'Trained in the last 24 hours' };
   if (daysAgo === 1) return { known: true, daysAgo: 1, label: 'Trained 1 day ago' };
   return { known: true, daysAgo, label: `Trained ${daysAgo} days ago` };
 }

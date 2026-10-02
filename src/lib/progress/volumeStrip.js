@@ -6,7 +6,7 @@
  *
  *   This week so far: 42 sets logged across 12 muscles · 9 under their range
  *   [ a segmented bar in three tones ]
- *   Under the range · In the range · Too much
+ *   Under the range · Inside the range · Too much
  *
  * Nothing here defines a logged set, a window or a group. Those live ONCE in
  * `src/lib/volumeLogged.js` (the Volume heatmap reads the same functions), and
@@ -26,9 +26,13 @@
  *     against the same resolved landmark table.
  *
  * THE THREE TONES. The strip folds the five verdict bands into three, named in
- * its legend: Under the range (`below`, `textMuted`), In the range (Just
+ * its legend: Under the range (`below`, `textMuted`), Inside the range (Just
  * enough, In range and Near the limit, `success`: all inside the engine's
- * helpful range, MEV to MRV) and Too much (`over_mrv`, `error`). Tones come
+ * helpful range, MEV to MRV) and Too much (`over_mrv`, `error`). The middle
+ * tone is "Inside the range", not "In the range" (D214 addendum 9, 6.7): the
+ * Volume heatmap has a band called "In range", and the two differ by one
+ * article while counting different things, so the strip's word names the
+ * umbrella and the strip's (i) names the three heatmap bands it folds. Tones come
  * from the one `stripToneColors` so the legend swatches and the bar's segments
  * can never name different colours.
  *
@@ -55,10 +59,37 @@ export const STRIP_TONE = Object.freeze({ UNDER: 'under', IN: 'in', OVER: 'over'
 /** The strip's one recovery-week sentence (the heatmap prints the same words). */
 export const RECOVERY_WEEK_LINE = 'Recovery week: sets are planned lower this week';
 
+// The (i) behind the strip: what the count counts (and the credit rule behind
+// it, the sentence the Volume heatmap's (i) carries too), what "the range" is,
+// why the count can include a muscle with no sets yet, and which three heatmap
+// bands the middle tone folds (rule 5: explain on tap; D214 addendum 9, 6.7, P7,
+// P8). It describes, never advises.
+const STRIP_OPENING = 'This week so far counts the sets you have logged since Monday.\n\n';
+const STRIP_CREDIT_SENTENCE = 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. ';
+
+/** The (i) behind the strip in a normal week. */
+export const STRIP_TOOLTIP = STRIP_OPENING
+  + STRIP_CREDIT_SENTENCE
+  + "A muscle's range runs from the fewest weekly sets that still help it grow to the most it can recover from. "
+  + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range even before its first set. '
+  + 'Inside the range covers the three bands the Volume heatmap calls Just enough, In range and Near the limit. '
+  + 'Too much means more than the top of the range.';
+
+/**
+ * The same (i) in the planned recovery week: the same opening and credit
+ * sentence, then why no muscle is judged (sets are planned lower) and what the
+ * bar's one shade says, which is only which muscles were trained. The range
+ * sentences are left out because nothing is judged against a range this week.
+ */
+export const STRIP_RECOVERY_TOOLTIP = STRIP_OPENING
+  + STRIP_CREDIT_SENTENCE
+  + 'In a recovery week sets are planned lower, so no muscle is judged against its range. '
+  + 'The bar draws one shade for the muscles you trained.';
+
 /** The legend's words, in the order the bar's tones read. */
 export const STRIP_LEGEND_LABEL = Object.freeze({
   under: 'Under the range',
-  in: 'In the range',
+  in: 'Inside the range',
   over: 'Too much',
   neutral: 'Trained',
 });
@@ -67,7 +98,7 @@ export const STRIP_LEGEND_LABEL = Object.freeze({
  * The strip tone a `getVolumeStatus` status folds into: below (and an unknown
  * status, which reads as no verdict) is Under the range, over_mrv is Too much,
  * and the three bands inside the helpful range (minimum, optimal, near_mrv) are
- * In the range.
+ * Inside the range.
  * @param {string} status
  * @returns {'under'|'in'|'over'}
  */

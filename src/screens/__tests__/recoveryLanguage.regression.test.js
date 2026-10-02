@@ -28,6 +28,11 @@ const READINESS_CARDS = fs.readFileSync(
 const VOLUME_HEATMAP = fs.readFileSync(
   path.resolve(__dirname, '../VolumeHeatmapScreen.js'), 'utf8',
 );
+// RE-ANCHORED D214 addendum 9 (V5): the fatigue scale's words moved to one pure
+// module shared by the ratings card and the fatigue-trend card.
+const RATING_WORDS = fs.readFileSync(
+  path.resolve(__dirname, '../../lib/recovery/ratingWords.js'), 'utf8',
+);
 
 // The exact removed code shapes - each was a time-only readiness/freshness
 // verdict, never a legitimate athlete-reported value.
@@ -57,8 +62,11 @@ describe('ReadinessCards.js carries no biological-inference readiness verdict', 
   test('the legitimate soreness/fatigue/joint self-report scales are drawn in their own words (not what this amendment targets)', () => {
     // Confirms the guard above isn't accidentally passing because the words
     // were removed - they are real athlete-entered data and stay.
-    expect(READINESS_CARDS).toMatch(/return 'fresh'/);
-    expect(READINESS_CARDS).toMatch(/\['fresh', 'mild', 'moderate', 'high', 'exhausted'\]/);
+    // RE-ANCHORED addendum 9 (0.23): the lowest soreness band reads "not sore"
+    // (the answer to "Soreness before sessions"; "fresh" is the button's word),
+    // and the fatigue words live in ratingWords.js.
+    expect(READINESS_CARDS).toMatch(/return 'not sore'/);
+    expect(RATING_WORDS).toMatch(/\['fresh', 'mild', 'moderate', 'high', 'exhausted'\]/);
     expect(READINESS_CARDS).toMatch(/'significant'/);
     expect(READINESS_CARDS).not.toMatch(/'Low \/ Fresh'/);
   });

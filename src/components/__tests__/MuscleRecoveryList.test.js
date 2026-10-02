@@ -12,11 +12,12 @@
  * percent WITH "recovered" after it, a bar in the row's own intensity (the
  * `recovery` token, Q1 = A, no traffic light), and the ready-by plus
  * trained-ago line; a tap opens the breakdown (the muscle's plain word, each
- * counted session's sets as "main mover" or "helped", the half credit
- * explained, the basis, and where the recovery answer lives, RC-9 to RC-11
- * and RC-23); under the list one line names EVERY muscle with no row with
- * the recency read's true window (RC-17, RC-36); no amber and no
- * traffic-light status colour; D204 describes; the percent source guard.
+ * counted session's sets as "as the main muscle worked" or "as a helper", the
+ * half credit explained, the basis, and where the recovery answer lives,
+ * RC-9 to RC-11 and RC-23; the words are D214 addendum 9, census 0.8); under
+ * the list one line names EVERY muscle with no row with the recency read's
+ * true window (RC-17, RC-36); no amber and no traffic-light status colour;
+ * D204 describes; the percent source guard.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -282,7 +283,9 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     expect(open).toContain('Quads, front of the thigh');
     expect(open).toContain('Mon 21 Sep');
     // No split supplied: the model's own credit, labelled as credit (never a bare "6 sets").
-    expect(open).toContain('6 counted (a helping set counts as half)');
+    // RE-ANCHORED D214 addendum 9 (census 0.8): the unit comes first ("6 sets
+    // counted") and the half credit is a "helper set"; "helping set" is gone.
+    expect(open).toContain('6 sets counted (a helper set counts as half)');
     expect(open).toContain('Based on');
     expect(open).toContain('Time and sets');
     expect(open).toContain(HALF_CREDIT_NOTE);
@@ -292,12 +295,21 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
   });
 
   test('the half credit is one line and the recovery answer note says where the first estimate comes from (RC-10, RC-23)', () => {
-    expect(HALF_CREDIT_NOTE).toBe('A set counts as one for the muscle it mainly works, and as half for a muscle that helps.');
+    // RE-ANCHORED D214 addendum 9 (V2): one credit sentence at every site that
+    // explains the half credit (this is the Recovery screen's; the Volume
+    // heatmap's and the block card's read the same words).
+    expect(HALF_CREDIT_NOTE).toBe('A set counts once for the muscle it works most and half for each muscle that helps.');
     // Lane 2 review S1: the screen is titled "Adjust training"; nothing the person sees is called "Plan update".
-    expect(RECOVERY_ANSWER_NOTE).toBe('Your ‘How’s your recovery?’ answer sets the first estimate; change it under Adjust training.');
+    // RE-ANCHORED D214 addendum 9 (V1, D204): a description of where the answer
+    // lives, not an instruction ("change it").
+    expect(RECOVERY_ANSWER_NOTE).toBe('Your ‘How’s your recovery?’ answer sets the first estimate; it can be changed under Adjust training.');
+    expect(RECOVERY_ANSWER_NOTE).not.toMatch(/; change it/);
   });
 
-  test('with a split, each session names its sets as "main mover" and "helped", in logged sets', () => {
+  // RE-ANCHORED D214 addendum 9 (census 0.8): "6 sets as the main muscle
+  // worked" / "2 sets as a helper". "2 sets helped" read as "helped what?", and
+  // "main mover" is gym slang. The split, the credit and the order are unchanged.
+  test('with a split, each session names its sets as the main muscle worked and as a helper, in logged sets', () => {
     const lines = muscleRecoveryDetailLines(
       entry({
         muscle: 'back',
@@ -311,17 +323,26 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     );
     // Newest session first.
     expect(lines.map((l) => l.label)).toEqual(['Muscle', 'Mon 21 Sep', 'Fri 18 Sep', 'Based on']);
-    expect(lines[1].value).toBe('4 sets helped');
-    expect(lines[2].value).toBe('8 sets as main mover');
-    expect(lines[0].value).toBe('Back, upper back, lats and lower back');
+    expect(lines[1].value).toBe('4 sets as a helper');
+    expect(lines[2].value).toBe('8 sets as the main muscle worked');
+    // RE-ANCHORED addendum 9 (0.25): "lats" is gym slang, so the back reads "the
+    // sides of the back"; its gloss is a list, so a colon follows the name.
+    expect(lines[0].value).toBe('Back: upper back, the sides of the back and lower back');
     const both = muscleRecoveryDetailLines(
       entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 5, hoursT: 72 }] }),
       false,
       { w1: { main: 4, helped: 2 } },
     );
-    expect(both[1].value).toBe('4 sets as main mover, 2 sets helped');
+    expect(both[1].value).toBe('4 sets as the main muscle worked, 2 sets as a helper');
     expect(muscleRecoveryDetailLines(entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 1, hoursT: 72 }] }), false, { w1: { main: 1, helped: 0 } })[1].value)
-      .toBe('1 set as main mover');
+      .toBe('1 set as the main muscle worked');
+    // One helper set is singular too; and a credit is counted in sets.
+    expect(muscleRecoveryDetailLines(entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 0.5, hoursT: 72 }] }), false, { w1: { main: 0, helped: 1 } })[1].value)
+      .toBe('1 set as a helper');
+    expect(muscleRecoveryDetailLines(entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 4.5, hoursT: 72 }] }))[1].value)
+      .toBe('4.5 sets counted (a helper set counts as half)');
+    expect(muscleRecoveryDetailLines(entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 1, hoursT: 72 }] }))[1].value)
+      .toBe('1 set counted (a helper set counts as half)');
   });
 
   test('the basis wording, and no session lines without contributing sessions', () => {
@@ -345,12 +366,27 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
 });
 
 describe('the muscle\'s plain word (RC-11)', () => {
-  test('every one of the seventeen engine keys has one short gloss', () => {
-    expect(Object.keys(MUSCLE_PLAIN_WORDS).sort()).toEqual(Object.keys(MUSCLE_DISPLAY_NAMES).sort());
+  // RE-ANCHORED D214 addendum 9 (census 0.25): "Chest" needs no gloss, so
+  // sixteen of the seventeen engine keys have one; and the back's ruled gloss
+  // ("upper back, the sides of the back and lower back", 48 characters) is
+  // longer than the old 40-character cap allowed, so the cap is 50.
+  test('every engine key but chest has one short gloss; chest reads "Chest" alone', () => {
+    expect(Object.keys(MUSCLE_PLAIN_WORDS).sort())
+      .toEqual(Object.keys(MUSCLE_DISPLAY_NAMES).filter((k) => k !== 'chest').sort());
     for (const gloss of Object.values(MUSCLE_PLAIN_WORDS)) {
       expect(gloss.length).toBeGreaterThan(0);
-      expect(gloss.length).toBeLessThanOrEqual(40);
+      expect(gloss.length).toBeLessThanOrEqual(50);
       expect(gloss).not.toMatch(/—/);
+    }
+    expect(musclePlainWord('chest')).toBe('Chest');
+  });
+
+  test('the back: its gloss is a list, so a colon follows the name; "lats" is gone from the words', () => {
+    expect(musclePlainWord('back')).toBe('Back: upper back, the sides of the back and lower back');
+    expect(Object.values(MUSCLE_PLAIN_WORDS).join(' ')).not.toMatch(/\blats?\b/i);
+    // A gloss that is a single phrase keeps the comma.
+    for (const [key, gloss] of Object.entries(MUSCLE_PLAIN_WORDS)) {
+      if (!gloss.includes(',')) expect(musclePlainWord(key)).toBe(`${MUSCLE_DISPLAY_NAMES[key]}, ${gloss}`);
     }
   });
 

@@ -7,9 +7,14 @@
  * status colour per level (plan 7.0 rule 3, "facts are ink"); the scale
  * caption is a plain caption with no "Got it" button (the dismiss had no
  * handler, so it was a dead control); the card still hides itself under two
- * rated sessions; the read of the last two sessions is unchanged and still
- * describes (D204: the wording itself is pinned in
- * d204.consistencyDescribes.guard.test.js).
+ * rated sessions; the read of the last two sessions still describes (D204: the
+ * wording guard is in d204.consistencyDescribes.guard.test.js).
+ *
+ * RE-ANCHORED D214 addendum 9 (V5, rule 7): the read used to print ONE word for
+ * the AVERAGE of the last two ratings, so Fresh plus Mild read "fresh" and High
+ * plus Exhausted read "very tiring", words neither session was rated. It now
+ * prints BOTH ratings in the scale's own words (lib/recovery/ratingWords.js,
+ * the list the ratings card shares), lowest first, one word when they match.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -27,6 +32,7 @@ jest.mock('../SvgBarSparkline', () => {
 });
 
 import FatigueTrendCard from '../FatigueTrendCard';
+import { lastTwoSessionsLine as coachingLine } from '../../lib/recovery/ratingWords';
 import SvgBarSparkline from '../SvgBarSparkline';
 import { resolveTheme } from '../../styles/theme';
 
@@ -57,7 +63,39 @@ describe('FatigueTrendCard', () => {
     const all = texts(tree);
     expect(all).toContain('Fatigue trend');
     expect(all).toContain('Self-rated fatigue after each session, 1 (fresh) to 5 (exhausted).');
-    expect(all).toContain('You rated your last two sessions as moderately tiring.');
+    // sessions([2, 4, 5]) is newest-first: the last two are mild (2) and high (4).
+    expect(all).toContain('You rated your last two sessions mild and high.');
+    expect(all.join(' ')).not.toMatch(/tiring|moderately/);
+  });
+
+  test('both ratings in the scale\'s own words, lowest first, in whichever order the sessions came', () => {
+    const line = (levels) => coachingLine(sessions(levels));
+    expect(line([1, 2])).toBe('You rated your last two sessions fresh and mild.');
+    expect(line([2, 1])).toBe('You rated your last two sessions fresh and mild.');
+    expect(line([4, 5])).toBe('You rated your last two sessions high and exhausted.');
+    expect(line([5, 3])).toBe('You rated your last two sessions moderate and exhausted.');
+    // One word when the two ratings are the same.
+    expect(line([1, 1])).toBe('You rated your last two sessions fresh.');
+    expect(line([3, 3])).toBe('You rated your last two sessions moderate.');
+    expect(line([5, 5])).toBe('You rated your last two sessions exhausted.');
+  });
+
+  test('no average: Fresh plus Mild is never "fresh", and High plus Exhausted is never "very tiring"', () => {
+    expect(coachingLine(sessions([1, 2]))).not.toBe('You rated your last two sessions fresh.');
+    expect(coachingLine(sessions([4, 5]))).not.toMatch(/very tiring/);
+    expect(coachingLine(sessions([4, 5]))).not.toBe('You rated your last two sessions exhausted.');
+  });
+
+  test('only the last two sessions are read, and fewer than two read nothing', () => {
+    expect(coachingLine(sessions([2, 2, 5, 5]))).toBe('You rated your last two sessions mild.');
+    expect(coachingLine(sessions([3]))).toBe('');
+    expect(coachingLine([])).toBe('');
+    expect(coachingLine(null)).toBe('');
+  });
+
+  test('snake_case rows read the same, and an unreadable level reads as the first word', () => {
+    expect(coachingLine([{ fatigue_level: 2 }, { fatigue_level: 4 }])).toBe('You rated your last two sessions mild and high.');
+    expect(coachingLine([{ fatigueLevel: null }, { fatigueLevel: 2 }])).toBe('You rated your last two sessions fresh and mild.');
   });
 
   test('no "Got it" button and no dead control: the caption has nothing to dismiss (CS-10)', () => {

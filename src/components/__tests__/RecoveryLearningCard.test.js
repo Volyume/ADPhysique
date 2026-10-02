@@ -89,19 +89,25 @@ describe('the example', () => {
   });
 });
 
+// RE-ANCHORED D214 addendum 9 (plain-English census, 2026-10-02): the card's
+// words are the common ones. "Faster than your first estimate" and "than the
+// first estimate" (the phrase the scale's own tick uses) for "first
+// estimated"; "more time" beside "less time" for "longer"; "rest" for "breaks"
+// (0.9); "usable comparisons" for "comparisons count" (V7). No figure, state or
+// threshold moves.
 describe('what the card says, state by state', () => {
   test('faster: what changed, by how much, why, and from how much', () => {
     const copy = recoveryLearningCopy(reading({
       factor: 0.85, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 30, chest: 12 },
     }));
     expect(copy.state).toBe('faster');
-    expect(copy.headline).toBe('Faster than first estimated');
+    expect(copy.headline).toBe('Faster than your first estimate');
     expect(copy.body).toBe('When you train again soon after a workout, you lift more than first expected. So your recovery is now estimated to take about 15% less time, though never less than a day.');
     expect(copy.example.sentence).toMatch(/^Quads after 6 sets: about .*, down from .*\.$/);
     expect(copy.evidence).toBe('Based on 42 comparisons of the same exercise on the same day in different weeks.');
     expect(copy.progress).toBeNull();
     // D214: the ONE sentence under the headline.
-    expect(copy.summary).toBe('Your recovery is now estimated to take about 15% less time than first estimated.');
+    expect(copy.summary).toBe('Your recovery is now estimated to take about 15% less time than the first estimate.');
   });
 
   test('slower, measured against a "poor" answer\'s start', () => {
@@ -109,9 +115,9 @@ describe('what the card says, state by state', () => {
       factor: 1.4, prior: 1.15, pairs: 20, reason: 'adjusted', pairsByMuscle: { back: 20 },
     }));
     expect(copy.state).toBe('slower');
-    expect(copy.headline).toBe('Slower than first estimated');
+    expect(copy.headline).toBe('Slower than your first estimate');
     expect(copy.body).toBe('When you train again soon after a workout, you lift less than first expected. So your recovery is now estimated to take about 22% longer, though never more than a week.');
-    expect(copy.summary).toBe('Your recovery is now estimated to take about 22% longer than first estimated.');
+    expect(copy.summary).toBe('Your recovery is now estimated to take about 22% more time than the first estimate.');
   });
 
   test('"a day" and "a week" are the estimate\'s own bounds (a session at either cannot move, review of 2026-09-26)', () => {
@@ -127,7 +133,7 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 25, reason: 'not_clear', pairsByMuscle: { chest: 25 } }));
     expect(copy.state).toBe('steady');
     expect(copy.headline).toBe('In line with the first estimate');
-    expect(copy.body).toBe('So far, how much you lift after short and long breaks shows no clear difference from the first estimate, so the estimate stays the same.');
+    expect(copy.body).toBe('So far, how much you lift after short and long rests shows no clear difference from the first estimate, so the estimate stays the same.');
     expect(copy.evidence).toBe('Based on 25 comparisons of the same exercise on the same day in different weeks.');
     expect(copy.example).toBeNull();
     expect(copy.summary).toBe('Your workouts so far show no clear difference from the first estimate, so it stays the same.');
@@ -137,12 +143,14 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread' }));
     expect(copy.state).toBe('waiting');
     expect(copy.headline).toBe('Not learning yet');
-    expect(copy.body).toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after breaks of different lengths. So far, the breaks before those workouts have been too alike, or long enough to recover fully.');
+    expect(copy.body).toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
     // D210 addendum 3: the old line said the breaks "have been much the same
     // length", false for a schedule that alternates three and four days.
     expect(copy.body).not.toMatch(/much the same length/);
     expect(copy.evidence).toBeNull();
-    expect(copy.summary).toBe('The breaks before your workouts have not yet differed enough to learn from.');
+    expect(copy.summary).toBe('The rest between your workouts has not varied enough to learn from yet.');
+    // "break" is not the common word for it: "rest" is, in every sentence of the state.
+    expect(`${copy.summary} ${copy.body}`).not.toMatch(/\bbreaks?\b/i);
   });
 
   test('reps that repeat: says which lifts are left out, and that too few comparisons remain', () => {
@@ -158,10 +166,10 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few' }));
     expect(copy.state).toBe('learning');
     expect(copy.headline).toBe('Still learning');
-    expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons count once it has 5, and learning starts when 8 count.');
+    expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has 5, and learning starts after 8 usable comparisons.');
     expect(copy.progress).toEqual({ done: 5, needed: PERSONAL_MIN_PAIRS });
     expect(copy.evidence).toBeNull();
-    expect(copy.summary).toBe(`Learning starts once ${PERSONAL_MIN_PAIRS} comparisons count.`);
+    expect(copy.summary).toBe(`Learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`);
   });
 
   test('every state has exactly ONE sentence under the headline (D214)', () => {
@@ -266,8 +274,8 @@ describe('rendering', () => {
     act(() => { tree = create(<RecoveryLearningCard personal={ADJUSTED} />); });
     const shown = texts(tree);
     expect(shown).toEqual(expect.arrayContaining([
-      RECOVERY_SPEED_TITLE, 'Faster', 'Slower', 'You', 'First estimate', 'Faster than first estimated',
-      'Your recovery is now estimated to take about 15% less time than first estimated.',
+      RECOVERY_SPEED_TITLE, 'Faster', 'Slower', 'You', 'First estimate', 'Faster than your first estimate',
+      'Your recovery is now estimated to take about 15% less time than the first estimate.',
       'Based on 42 comparisons of the same exercise on the same day in different weeks.',
       'How this is worked out',
     ]));
@@ -311,7 +319,7 @@ describe('rendering', () => {
     act(() => { tree = create(<RecoveryLearningCard personal={reading({ pairs: 3, reason: 'too_few' })} />); });
     const shown = texts(tree);
     expect(shown).toContain('Still learning');
-    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} counted so far`);
+    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} usable so far`);
     // D214 RC-13: the person is ALWAYS placed on the scale; with nothing
     // learned they sit at the first estimate and the label says so.
     expect(shown).toContain('You, at the first estimate');

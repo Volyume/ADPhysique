@@ -30,10 +30,11 @@
  *    sat two cards away in the ratings card;
  *  - tapping a row (or its muscle on the figure) opens the breakdown behind
  *    the estimate: the muscle's plain word ("Adductors, inner thigh",
- *    RC-11), each counted session with its sets named as "main mover" or
- *    "helped" and the half credit explained in one line (RC-9, RC-10), what
- *    the estimate is based on, and where the "How's your recovery?" answer
- *    lives (RC-23). One row is open at a time; the parent holds which.
+ *    RC-11), each counted session with its sets named "as the main muscle
+ *    worked" or "as a helper" and the half credit explained in one line
+ *    (RC-9, RC-10; the words are D214 addendum 9, 0.8), what the estimate is
+ *    based on, and where the "How's your recovery?" answer lives (RC-23). One
+ *    row is open at a time; the parent holds which.
  *
  * The recency FACT on the meta line is the same reading the old Training
  * recency chip showed (getLastTrainedPerMuscle's latest start for the muscle
@@ -96,10 +97,13 @@ const TARGET = 48;
  * One short plain word per engine key (D214, RC-11): what the muscle is, for
  * the person who does not know the gym name. Shown at the top of a row's
  * breakdown as "Adductors, inner thigh".
+ *
+ * D214 addendum 9 (0.25): "Chest" needs no gloss (everyone knows it), so it has
+ * no entry and its line reads "Chest" alone; and "lats" is gym slang, so the
+ * back reads "the sides of the back".
  */
 export const MUSCLE_PLAIN_WORDS = Object.freeze({
-  chest: 'front of the upper body',
-  back: 'upper back, lats and lower back',
+  back: 'upper back, the sides of the back and lower back',
   front_delts: 'front of the shoulder',
   side_delts: 'side of the shoulder',
   rear_delts: 'back of the shoulder',
@@ -117,11 +121,14 @@ export const MUSCLE_PLAIN_WORDS = Object.freeze({
   tibialis: 'front of the shin',
 });
 
-/** "Adductors, inner thigh". */
+/** "Adductors, inner thigh"; "Back: upper back, the sides of the back and lower
+ * back" (a gloss that is itself a list follows a colon, so the muscle is not
+ * read as the list's first item); "Chest" alone, which has no gloss. */
 export function musclePlainWord(muscleKey) {
   const name = MUSCLE_DISPLAY_NAMES[muscleKey] || muscleKey;
   const gloss = MUSCLE_PLAIN_WORDS[muscleKey];
-  return gloss ? `${name}, ${gloss}` : name;
+  if (!gloss) return name;
+  return gloss.includes(',') ? `${name}: ${gloss}` : `${name}, ${gloss}`;
 }
 
 /**
@@ -300,25 +307,27 @@ export function buildMuscleSessionSplits(map, sets, exercises) {
   return out;
 }
 
-/** The one line explaining the half credit (RC-10). */
-export const HALF_CREDIT_NOTE = 'A set counts as one for the muscle it mainly works, and as half for a muscle that helps.';
+/** The one line explaining the half credit (RC-10). One sentence at every site
+ * that explains it (D214 addendum 9, V2). */
+export const HALF_CREDIT_NOTE = 'A set counts once for the muscle it works most and half for each muscle that helps.';
 
 /** Where the first estimate comes from and where to change it (RC-23). */
 // "Adjust training" is the screen's own title (PlanUpdateScreen.js); nothing
 // the person sees is called "Plan update" (lane 2 review S1).
-export const RECOVERY_ANSWER_NOTE = 'Your ‘How’s your recovery?’ answer sets the first estimate; change it under Adjust training.';
+// Addendum 9 (V1, D204): where the answer lives, said as a fact, not an order.
+export const RECOVERY_ANSWER_NOTE = 'Your ‘How’s your recovery?’ answer sets the first estimate; it can be changed under Adjust training.';
 
 /** One counted session's sets, in words: the split when it is known, else
  * the model's own credit, labelled as credit. */
 function sessionSetsText(cs, split) {
   if (split && (split.main > 0 || split.helped > 0)) {
     const parts = [];
-    if (split.main > 0) parts.push(`${plural(split.main, 'set')} as main mover`);
-    if (split.helped > 0) parts.push(`${plural(split.helped, 'set')} helped`);
+    if (split.main > 0) parts.push(`${plural(split.main, 'set')} as the main muscle worked`);
+    if (split.helped > 0) parts.push(`${plural(split.helped, 'set')} as a helper`);
     return parts.join(', ');
   }
   const credit = Number.isFinite(cs?.sets) ? cs.sets : 0;
-  return `${credit} counted (a helping set counts as half)`;
+  return `${plural(credit, 'set')} counted (a helper set counts as half)`;
 }
 
 /** The breakdown lines behind one row's estimate, newest session first. */

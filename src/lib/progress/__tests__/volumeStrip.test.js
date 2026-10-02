@@ -15,9 +15,15 @@
  *    programmes with no sets yet, never a muscle with no sets the plan does not
  *    programme; each muscle is judged on the heatmap's own rounded figure
  *    against the same resolved landmark table;
- *  - the strip folds five bands into three named tones (Under the range, In the
- *    range, Too much) read from one colour table, so the legend and the bar can
- *    never name different colours, in every palette;
+ *  - the strip folds five bands into three named tones (Under the range, Inside
+ *    the range, Too much) read from one colour table, so the legend and the bar
+ *    can never name different colours, in every palette;
+ *  - RE-ANCHORED D214 addendum 9 (6.7, P7, P8): the middle tone is "Inside the
+ *    range", not "In the range" (the Volume heatmap has a band called "In
+ *    range" and the two differ by one article while counting different
+ *    things), and the strip's (i) carries the credit sentence and names the
+ *    three heatmap bands the middle tone folds, in both the normal and the
+ *    recovery-week versions;
  *  - in the block's planned recovery week (the programme position's GATED
  *    state, never an adaptive adjustment) no under count is printed and no
  *    verdict is drawn (PR-14);
@@ -28,7 +34,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   STRIP_TONE, RECOVERY_WEEK_LINE, STRIP_LEGEND_LABEL, toneForStatus, stripToneColors,
-  stripLegendItems, isStripRecoveryWeek, buildVolumeStrip,
+  stripLegendItems, isStripRecoveryWeek, buildVolumeStrip, STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP,
 } from '../volumeStrip';
 import { LISTED_MUSCLES, bandGroupFor, buildDataset, buildWindowView } from '../../volumeLogged';
 import { VOLUME_LANDMARKS, getVolumeStatus } from '../../algorithms';
@@ -189,7 +195,8 @@ describe('the three tones and the bar', () => {
   test('the legend names exactly the three tones, in the strip\'s words', () => {
     const colors = resolveTheme({}).colors;
     const items = stripLegendItems({ colors });
-    expect(items.map((i) => i.label)).toEqual(['Under the range', 'In the range', 'Too much']);
+    // RE-ANCHORED addendum 9 (6.7): "Inside the range", the lead's word.
+    expect(items.map((i) => i.label)).toEqual(['Under the range', 'Inside the range', 'Too much']);
     expect(items.map((i) => i.label)).toEqual([STRIP_LEGEND_LABEL.under, STRIP_LEGEND_LABEL.in, STRIP_LEGEND_LABEL.over]);
   });
 
@@ -302,6 +309,53 @@ describe('the module is pure, shares the one definition and never instructs', ()
     // (`\.workingSets` is the per-muscle credit read the strip must not do; the
     // session list keeps its own local `workingSets` array of a workout's rows.)
     expect(SCREEN_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
+  });
+
+  test('the middle tone is named "Inside the range" everywhere the strip speaks, never "In the range"', () => {
+    const colors = resolveTheme({}).colors;
+    const spoken = [
+      strip([...rows('bench', 5), ...rows('row', 12)]).spoken,
+      strip([...rows('bench', 5), ...rows('row', 12)]).line,
+      strip([...rows('bench', 5)], { recoveryWeek: true }).spoken,
+      STRIP_TOOLTIP,
+      STRIP_RECOVERY_TOOLTIP,
+      ...stripLegendItems({ colors }).map((i) => i.label),
+    ].join(' | ');
+    // The summary line and spoken label print only the under count ("N under
+    // their range"); the word for the middle tone is the legend's and the (i)'s.
+    expect(spoken).not.toMatch(/\bIn the range\b|\bin the range\b/);
+    expect(STRIP_LEGEND_LABEL.in).toBe('Inside the range');
+    expect(STRIP_TOOLTIP).toContain('Inside the range covers');
+  });
+
+  test('the (i), normal week: the opening, the credit sentence, the range, the three bands folded, "Too much"', () => {
+    expect(STRIP_TOOLTIP).toBe(
+      'This week so far counts the sets you have logged since Monday.\n\n'
+      + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
+      + "A muscle's range runs from the fewest weekly sets that still help it grow to the most it can recover from. "
+      + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range even before its first set. '
+      + 'Inside the range covers the three bands the Volume heatmap calls Just enough, In range and Near the limit. '
+      + 'Too much means more than the top of the range.',
+    );
+    // It names every legend word, with the middle tone's three folded bands.
+    const colors = resolveTheme({}).colors;
+    for (const item of stripLegendItems({ colors })) expect(STRIP_TOOLTIP).toContain(item.label);
+    // The three bands it names are exactly the statuses toneForStatus folds into the middle tone.
+    const folded = ['below', 'minimum', 'optimal', 'near_mrv', 'over_mrv'].filter((s) => toneForStatus(s) === STRIP_TONE.IN);
+    expect(folded).toEqual(['minimum', 'optimal', 'near_mrv']);
+    expect(STRIP_TOOLTIP).toContain('Just enough, In range and Near the limit');
+  });
+
+  test('the (i), recovery week: the same opening and credit sentence, then why nothing is judged', () => {
+    expect(STRIP_RECOVERY_TOOLTIP).toBe(
+      'This week so far counts the sets you have logged since Monday.\n\n'
+      + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
+      + 'In a recovery week sets are planned lower, so no muscle is judged against its range. '
+      + 'The bar draws one shade for the muscles you trained.',
+    );
+    // Both versions open with the same two sentences (the one credit rule at every site, V2).
+    const shared = STRIP_TOOLTIP.split(' A muscle')[0];
+    expect(STRIP_RECOVERY_TOOLTIP.startsWith(shared)).toBe(true);
   });
 
   test('every string the strip can print describes: no instruction verb (D204)', () => {

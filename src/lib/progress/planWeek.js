@@ -17,13 +17,24 @@
  *     your plan" say so, so the count is never read as Monday to Sunday;
  *   - the CALENDAR week: the Monday-anchored local week (`dayKey.js`), which
  *     the seven cells read, and which the count falls back to when there is
- *     no plan ("2 sessions this week", the line the root printed before).
+ *     no plan ("2 sessions so far this week": the week is still open, so the
+ *     count says so, D214 addendum 9, P13).
+ *
+ * ONE DEFINITION OF A TRAINED DAY (addendum 9, census 6.13): a day with a
+ * COMPLETED SESSION, a completed workout's START day, the twelve-week grid's
+ * own definition and the caption's ("51 days trained in the last 12 weeks").
+ * The cells used to light by each set's own `createdAt`, so a session started
+ * at 23:30 on Monday with sets after midnight lit Monday on the grid and Monday
+ * and Tuesday in the cells. Callers pass `completedDays` (the day keys the grid
+ * reads, `useProgressData.calValues`' dates) and the cells read those. Sets are
+ * still read for the no-plan count, and for the cells only by a caller that has
+ * no day list to pass.
  *
  * D166 and D204: a record beside a denominator, never a streak, never "rest",
  * never an instruction. "Every session done" is the complete-week fact Home
  * reads through `isWeekComplete` (inlined here to keep this module pure).
  */
-import { localWeekStartMs, localWeekEndMs } from '../dayKey';
+import { localWeekStartMs, localWeekEndMs, localDayKeysEndingAt } from '../dayKey';
 import { sessionDisplayName, SESSION_STATE } from '../blockProgression';
 import { RECOVERY_STATE } from '../recoveryState';
 
@@ -68,6 +79,26 @@ export function trainedDayKeys(sets, now = Date.now()) {
 }
 
 /**
+ * The days of the current Monday-anchored local week on which a completed
+ * workout STARTED, Monday first (addendum 9, census 6.13): the cells' reading
+ * of "a day with a completed session". The input is the same local day keys
+ * the twelve-week grid draws from, so card, grid and caption cannot disagree
+ * about which days were trained. The week's seven keys come from
+ * `localDayKeysEndingAt` (noon-anchored, stepped with setDate), so a
+ * clock-change week keeps its true length; keys outside the week, and
+ * anything that is not a key, are ignored.
+ * @param {Array<string>} dayKeys - local day keys 'YYYY-MM-DD'
+ * @param {number} [now]
+ * @returns {string[]} 'mon'..'sun' keys, in week order
+ */
+export function sessionDayKeysThisWeek(dayKeys, now = Date.now()) {
+  const trained = new Set(Array.isArray(dayKeys) ? dayKeys : []);
+  // Monday first: the seven local days ending on this week's Sunday.
+  const weekKeys = localDayKeysEndingAt(7, localWeekEndMs(now) - 1);
+  return DAY_ORDER.filter((_, i) => trained.has(weekKeys[i]));
+}
+
+/**
  * Distinct sessions with a set in the current Monday-anchored local week: the
  * no-plan count, the same reading the Progress root's old context line made.
  * @param {Array<object>} sets
@@ -96,10 +127,10 @@ export function sessionsThisWeek(sets, now = Date.now()) {
  * @property {string|null} nextName - the next required session's display name
  * @property {boolean} weekComplete - every required session resolved, nothing next
  * @property {boolean} recoveryWeek - the block's own planned recovery week is active
- * @property {string[]} trainedDays - 'mon'..'sun' keys trained this calendar week
+ * @property {string[]} trainedDays - 'mon'..'sun' keys with a completed session this calendar week
  * @property {string} todayKey - today's 'mon'..'sun' key
  * @property {string} headlineNumber - "2 of 4" or "2"
- * @property {string} headlineWords - "sessions" or "sessions this week"
+ * @property {string} headlineWords - "sessions" or "sessions so far this week"
  * @property {string|null} subline - "in week 2 of your plan · Upper A is next"; null without a plan
  * @property {string} accessibilityLabel - the whole card in one sentence
  */
@@ -107,24 +138,32 @@ export function sessionsThisWeek(sets, now = Date.now()) {
 /**
  * Build the plan-week view-model both screens render.
  *
- * @param {{position?: object|null, sets?: Array<object>, now?: number, finished?: boolean}} [input]
+ * @param {{position?: object|null, sets?: Array<object>, completedDays?: Array<string>,
+ *   now?: number, finished?: boolean}} [input]
  *   position: resolveProgrammePosition's result (null on a read failure or
  *   with no block); sets: the set rows the screen already loaded (any span;
- *   only this week's are read); finished: the block is over and awaits the
+ *   only this week's are read, for the no-plan count); completedDays: the local
+ *   day keys of the completed workouts' start days (the grid's input), which
+ *   the seven cells read (a caller that passes none gets the cells from the set
+ *   rows' own times, the old reading); finished: the block is over and awaits the
  *   athlete's decision (the calendar row's awaitingDecision), so no live
  *   plan week is claimed (D214 addendum 6, lane 4 review S2: the card used
  *   to read "in week 6 of your plan · Upper B is next" over a block card
  *   that said "Block finished").
  * @returns {PlanWeekSummary}
  */
-export function buildPlanWeekSummary({ position = null, sets = [], now = Date.now(), finished = false } = {}) {
-  const trainedDays = trainedDayKeys(sets, now);
+export function buildPlanWeekSummary({
+  position = null, sets = [], completedDays, now = Date.now(), finished = false,
+} = {}) {
+  const trainedDays = Array.isArray(completedDays)
+    ? sessionDayKeysThisWeek(completedDays, now)
+    : trainedDayKeys(sets, now);
   const todayKey = weekdayKey(now);
   const sessions = Array.isArray(position?.sessions) ? position.sessions : [];
 
   if (!position || sessions.length === 0 || finished) {
     const n = sessionsThisWeek(sets, now);
-    const words = n === 1 ? 'session this week' : 'sessions this week';
+    const words = n === 1 ? 'session so far this week' : 'sessions so far this week';
     const subline = finished ? 'Block finished' : null;
     return {
       hasPlan: false,

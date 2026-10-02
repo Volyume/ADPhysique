@@ -50,7 +50,10 @@ describe('1. Your plan week: the shared card, first, from the one view-model', (
     expect(SCREEN).toContain("import PlanWeekCard from '../components/PlanWeekCard';");
     expect(SCREEN).toContain("import { buildPlanWeekSummary } from '../lib/progress/planWeek';");
     // RE-ANCHORED D214 addendum 6 (lane 4 review S2): the finished flag rides along.
-    expect(SCREEN).toMatch(/buildPlanWeekSummary\(\{ position: planContext\.position, sets: allSets, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
+    // RE-ANCHORED addendum 9 (census 6.13): so do the grid's own days
+    // (`completedDays`, calValues' dates), which the seven cells light on.
+    expect(SCREEN).toMatch(/buildPlanWeekSummary\(\{ position: planContext\.position, sets: allSets, completedDays, finished: !!currentMesoWeek\?\.awaitingDecision \}\)/);
+    expect(SCREEN).toContain('const completedDays = useMemo(() => calValues.map((v) => v.date), [calValues]);');
     // RE-ANCHORED (the lead's landing fix, plan 7.1 item 2 "one Card"): the
     // strip is the card's child, so the tag opens rather than self-closes.
     const card = SCREEN.indexOf('<PlanWeekCard summary={planWeekSummary}>');
@@ -100,7 +103,9 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
     expect(CODE).not.toMatch(/volLegendDot|volLegendItem|volSummaryFlags|below target|over max|All in range/);
     // The three tones' words live with the model, naming "the range" once.
     expect(STRIP).toContain("under: 'Under the range'");
-    expect(STRIP).toContain("in: 'In the range'");
+    // RE-ANCHORED addendum 9 (6.7): the middle tone is "Inside the range", so
+    // it is never mistaken for the heatmap's "In range" band.
+    expect(STRIP).toContain("in: 'Inside the range'");
     expect(STRIP).toContain("over: 'Too much'");
   });
 
@@ -198,7 +203,12 @@ describe('6. The empty state', () => {
 
 describe('7. D204: nothing here tells the athlete what to do', () => {
   // The words an instruction to change a session, a week or a habit would use.
-  const INSTRUCTION = /\b(add|aim|try|consider|keep|should|must|need to|push|reduce|increase|decrease|rest|deload|skip|avoid|focus|make sure|remember|don't)\b/i;
+  // RE-ANCHORED D214 addendum 9 (6.7, P7): "add up" as arithmetic ("so the muscle
+  // figures add up to more than the sets you logged", the credit sentence the
+  // strip's (i) now carries, as the Volume heatmap's does) is a description, not
+  // the instruction "add a set". The word stays banned everywhere else, and
+  // "the guard bites" below still flags "Add a set to reach your range".
+  const INSTRUCTION = /\b(add(?! up to)|aim|try|consider|keep|should|must|need to|push|reduce|increase|decrease|rest|deload|skip|avoid|focus|make sure|remember|don't)\b/i;
   // The one recovery instruction on this screen is about a connection, not training.
   const EXEMPT = ['Your training history is safe. This is a loading problem, not lost data.', 'Check your connection and try again. Your data is safe on this device.'];
 
@@ -231,6 +241,9 @@ describe('7. D204: nothing here tells the athlete what to do', () => {
     expect(printedStrings("const a = 'Add a set to reach your range';").filter((s) => INSTRUCTION.test(s))).toHaveLength(1);
     expect(printedStrings("const a = 'Keep going this week';").filter((s) => INSTRUCTION.test(s))).toHaveLength(1);
     expect(printedStrings("const a = 'This week so far: 3 sets logged';").filter((s) => INSTRUCTION.test(s))).toHaveLength(0);
+    // Arithmetic is not an instruction; an instruction that happens to follow "add" is still flagged.
+    expect(printedStrings("const a = 'so the figures add up to more than you logged';").filter((s) => INSTRUCTION.test(s))).toHaveLength(0);
+    expect(printedStrings("const a = 'Add up your sets';").filter((s) => INSTRUCTION.test(s))).toHaveLength(1);
   });
 });
 

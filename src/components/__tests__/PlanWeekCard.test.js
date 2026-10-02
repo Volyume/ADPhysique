@@ -74,6 +74,15 @@ describe('PlanWeekCard prints the shared view-model', () => {
     expect(dots[0].props).toMatchObject({ size: 'cell', initials: true, days: ['mon', 'wed'], todayKey: 'thu' });
   });
 
+  test('the cells light on the days a completed session STARTED when the screen passes them (census 6.13)', () => {
+    // Sets on Monday and Wednesday, but the completed workouts started on
+    // Monday and Thursday (the grid's own days): the cells follow the workouts.
+    const summary = buildPlanWeekSummary({ position, sets, completedDays: ['2026-09-28', '2026-10-01'], now: NOW });
+    const tree = create(<PlanWeekCard summary={summary} />);
+    const dots = find(tree, (n) => n.props?.tone === 'ink');
+    expect(dots[0].props.days).toEqual(['mon', 'thu']);
+  });
+
   test('no amber anywhere on the card: the cells are a fact, not the thing to do', () => {
     [{}, { theme: 'light' }, { colorBlindSafe: true }].forEach((prefs) => {
       mockPrefs = prefs;
@@ -107,7 +116,8 @@ describe('PlanWeekCard prints the shared view-model', () => {
     const summary = buildPlanWeekSummary({ position: null, sets, now: NOW });
     const tree = create(<PlanWeekCard summary={summary} />);
     expect(textOf(tree, 'plan-week-number')).toBe('2');
-    expect(textOf(tree, 'plan-week-words')).toBe('sessions this week');
+    // RE-ANCHORED D214 addendum 9 (P13): the open week says "so far".
+    expect(textOf(tree, 'plan-week-words')).toBe('sessions so far this week');
     expect(tree.root.findAllByProps({ testID: 'plan-week-subline' })).toHaveLength(0);
     expect(find(tree, (n) => n.props?.tone === 'ink')).toHaveLength(1);
   });

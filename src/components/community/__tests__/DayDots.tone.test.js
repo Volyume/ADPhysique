@@ -122,7 +122,8 @@ describe('nothing else differs between tones', () => {
     const ink = create(<DayDots days={['mon', 'wed', 'fri']} todayKey="sat" tone="ink" />);
     expect(ink.toJSON().children).toHaveLength(7);
     expect(label(ink)).toBe(label(accent));
-    expect(label(ink)).toBe('Trained Mon, Wed, Fri');
+    // RE-ANCHORED D214 addendum 9 (P14): one label in both tones, now with "so far".
+    expect(label(ink)).toBe('Trained so far this week: Mon, Wed, Fri');
     const images = ink.root.findAll((n) => n.props?.accessibilityRole === 'image' && typeof n.type === 'string');
     expect(images).toHaveLength(1);
   });

@@ -130,10 +130,13 @@ export function recoveryLearningCopy(personal) {
     const pct = Math.round(Math.abs(personal.factor / personal.prior - 1) * 100);
     return {
       state: direction,
-      headline: direction === 'faster' ? 'Faster than first estimated' : 'Slower than first estimated',
+      // D214 addendum 9 (0.7): "your first estimate" and "the first estimate" are
+      // the phrase the scale and the footer already use ("First estimate");
+      // "first estimated" was a verb used as a noun.
+      headline: direction === 'faster' ? 'Faster than your first estimate' : 'Slower than your first estimate',
       summary: direction === 'faster'
-        ? `Your recovery is now estimated to take about ${pct}% less time than first estimated.`
-        : `Your recovery is now estimated to take about ${pct}% longer than first estimated.`,
+        ? `Your recovery is now estimated to take about ${pct}% less time than the first estimate.`
+        : `Your recovery is now estimated to take about ${pct}% more time than the first estimate.`,
       body: direction === 'faster'
         ? `When you train again soon after a workout, you lift more than first expected. So your recovery is now estimated to take about ${pct}% less time, though never less than a day.`
         : `When you train again soon after a workout, you lift less than first expected. So your recovery is now estimated to take about ${pct}% longer, though never more than a week.`,
@@ -147,7 +150,7 @@ export function recoveryLearningCopy(personal) {
       state: 'steady',
       headline: 'In line with the first estimate',
       summary: 'Your workouts so far show no clear difference from the first estimate, so it stays the same.',
-      body: 'So far, how much you lift after short and long breaks shows no clear difference from the first estimate, so the estimate stays the same.',
+      body: 'So far, how much you lift after short and long rests shows no clear difference from the first estimate, so the estimate stays the same.',
       example: null,
       evidence,
       progress: null,
@@ -157,8 +160,9 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      summary: 'The breaks before your workouts have not yet differed enough to learn from.',
-      body: 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after breaks of different lengths. So far, the breaks before those workouts have been too alike, or long enough to recover fully.',
+      // Addendum 9 (0.9): "rest" is the common word for the time between workouts.
+      summary: 'The rest between your workouts has not varied enough to learn from yet.',
+      body: 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.',
       example: null,
       evidence: null,
       progress: null,
@@ -178,8 +182,8 @@ export function recoveryLearningCopy(personal) {
   return {
     state: 'learning',
     headline: 'Still learning',
-    summary: `Learning starts once ${PERSONAL_MIN_PAIRS} comparisons count.`,
-    body: `Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons count once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts when ${PERSONAL_MIN_PAIRS} count.`,
+    summary: `Learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
+    body: `Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },
@@ -304,7 +308,7 @@ export default function RecoveryLearningCard({ personal = null }) {
             <View style={[styles.progressFill, live.progressFill, { width: progressPct }]} />
           </View>
           <Text style={live.meta}>
-            {`${copy.progress.done} of ${copy.progress.needed} counted so far`}
+            {`${copy.progress.done} of ${copy.progress.needed} usable so far`}
           </Text>
         </View>
       ) : null}

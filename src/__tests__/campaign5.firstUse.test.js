@@ -619,7 +619,10 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     // C5-P11-06: the definition is read before the provenance lines.
     expect(sheet.indexOf('GLOSSARY.mesocycle')).toBeLessThan(sheet.indexOf('seedLines.map'));
     // C5-P11-07: the countdown carries its unit noun.
-    expect(read('components/BlockShapeCard.js')).toMatch(/Recovery week in \$\{weeksToRecovery\} \$\{weeksToRecovery === 1 \? 'week' : 'weeks'\}/);
+    // RE-ANCHORED 2026-10-02 (D214 addendum 9, census K3 and 6.14): the plan's own form, "Week 2 of 6 ·
+    // Build · recovery week in 4 weeks", so "recovery week" is lower case mid-sentence. The pinned
+    // rule (the countdown carries its unit noun) is unchanged.
+    expect(read('components/BlockShapeCard.js')).toMatch(/recovery week in \$\{weeksToRecovery\} \$\{weeksToRecovery === 1 \? 'week' : 'weeks'\}/);
   });
 
   test('nothing describes a block as an optional layer the user configures', () => {
@@ -1660,7 +1663,10 @@ describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02
     expect(src).not.toMatch(/\[2, 3, 4\]\[w\.soreness24hBefore - 1\]/);
     expect(src).toContain('setRecovery(computeRecoveryEMAs(gaugeRecent));');
     expect(src).toContain("label: 'Soreness before sessions', value: recovery.soreness, samples: sampleCounts.soreness, word: sorenessWord, max: 3");
-    expect(src).toMatch(/if \(v < 1\.5\) return 'fresh';/);
+    // RE-ANCHORED D214 addendum 9 (census 0.23): the lowest band is printed "not
+    // sore" (the answer to "Soreness before sessions"; "fresh" is the rating
+    // button's word). The thresholds and the scale are unchanged.
+    expect(src).toMatch(/if \(v < 1\.5\) return 'not sore';/);
   });
 
   test('the pure EMA helper is untouched by the display fix', () => {

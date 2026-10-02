@@ -34,8 +34,12 @@ import { resolveProgrammePosition } from '../lib/programmePosition';
 import { planTrainedMuscles } from '../lib/volumeLogged';
 import { logError } from '../lib/errorLog';
 import { buildPlanWeekSummary } from '../lib/progress/planWeek';
+// The strip's (i) text lives with its legend words in the pure model
+// (STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP), so the words the (i) names are the
+// words the legend prints.
 import {
   buildVolumeStrip, isStripRecoveryWeek, stripLegendItems, stripToneColors,
+  STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP,
 } from '../lib/progress/volumeStrip';
 import {
   bodyPillarCopy, computeTrainingPillarSummary, buildVisualPillarCopy, trainingPillarCopy,
@@ -66,18 +70,6 @@ const NO_PLAN_CONTEXT = Object.freeze({ position: null, planTrained: new Set(), 
 // The person's own word for a session's difficulty (1 to 5), the words the
 // Workout Summary rates it in; the spoken label carries "4 of 5" (D214, PR-1).
 const DIFFICULTY_WORDS = ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'];
-
-// The (i) behind the strip: what "the range" is and why the count can include a
-// muscle with no sets yet (rule 5: explain on tap). It describes, never advises.
-const STRIP_TOOLTIP = 'This week so far counts the sets you have logged since Monday.\n\n'
-  + "A muscle's range runs from the fewest weekly sets that still help it grow to the most it can recover from. "
-  + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range even before its first set. '
-  + 'Too much means more than the top of the range.';
-// The same (i) in the planned recovery week: sets are planned lower, so no muscle
-// is judged and the bar's one shade says only which were trained.
-const STRIP_RECOVERY_TOOLTIP = 'This week so far counts the sets you have logged since Monday.\n\n'
-  + 'In a recovery week sets are planned lower, so no muscle is judged against its range. '
-  + 'The bar draws one shade for the muscles you trained.';
 
 // COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
 // completed calendar month when the user was training before this month began;
@@ -278,7 +270,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   const {
     loading, refreshing, loadError,
     recentSessions, allSets, exerciseMap, earliestWorkoutAt, completedWorkoutCount,
-    sessionCount, currentMesoWeek,
+    sessionCount, currentMesoWeek, calValues,
     hasData,
     handleRefresh,
   } = useProgressData();
@@ -337,12 +329,17 @@ export default function AnalyticsScreen({ navigation, route }) {
   // The plan-week card is ONE view-model shared with Consistency
   // (src/lib/progress/planWeek.js): the plan week's completed-over-required
   // count named as the plan week, the Monday-anchored seven cells and the next
-  // session, or the calendar count ("2 sessions this week") with no plan.
+  // session, or the calendar count ("2 sessions so far this week") with no plan.
+  // D214 addendum 9 (census 6.13): the seven cells light on the days a
+  // completed workout STARTED, the twelve-week grid's own days (calValues), so
+  // "a day with a completed session" means one thing on the card, the grid and
+  // the caption.
+  const completedDays = useMemo(() => calValues.map((v) => v.date), [calValues]);
   const planWeekSummary = useMemo(
     () => (planContext
-      ? buildPlanWeekSummary({ position: planContext.position, sets: allSets, finished: !!currentMesoWeek?.awaitingDecision })
+      ? buildPlanWeekSummary({ position: planContext.position, sets: allSets, completedDays, finished: !!currentMesoWeek?.awaitingDecision })
       : null),
-    [planContext, allSets, currentMesoWeek],
+    [planContext, allSets, completedDays, currentMesoWeek],
   );
   // The strip under it: this Monday week so far, in logged sets (never the
   // credits summed), judged against the same resolved landmark table and the
@@ -819,7 +816,7 @@ function SessionCard({ workout, onPress }) {
         <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{title}</Text>
         <Text style={[styles.sessionMeta, live.sessionMeta]}>
           {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
-          {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
+          {workout.durationMinutes ? `${at && safeDate(at) ? ' · ' : ''}${workout.durationMinutes} min` : ''}
         </Text>
       </View>
       {diffWord ? (

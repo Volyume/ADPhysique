@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
+import { lastTwoSessionsLine } from '../lib/recovery/ratingWords';
 
 const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -17,20 +18,12 @@ const FATIGUE_SCALE_MAX = 5;
 // verdict painted on a self-rating. They are one ink, `textSecondary`: the
 // bar's height is the rating, the caption under the chart names the scale.
 
-// D204 (founder rule 2026-09-26, "They don't choose sessions!"): the plan
-// sets each session, so this line DESCRIBES what the athlete reported and
-// never tells them to push, hold their weights or take a lighter day. Found
-// by the plain-English sweep, 2026-09-26. The bands follow the rating
-// scale's own words (Fresh, Mild, Moderate, High, Exhausted).
-function coachingLine(sessions) {
-  if (!sessions || sessions.length < 2) return '';
-  const last2 = sessions.slice(0, 2).map(s => s.fatigueLevel ?? s.fatigue_level ?? 0);
-  const avg = (last2[0] + last2[1]) / 2;
-  if (avg <= 1.5) return 'You rated your last two sessions as fresh.';
-  if (avg <= 2.5) return 'You rated your last two sessions as mildly tiring.';
-  if (avg <= 3.5) return 'You rated your last two sessions as moderately tiring.';
-  return 'You rated your last two sessions as very tiring.';
-}
+// The one-line read under the bars is `lastTwoSessionsLine`
+// (lib/recovery/ratingWords.js: pure, so the D204 guard and the tests call it
+// directly). D204 (founder rule 2026-09-26, "They don't choose sessions!"): the
+// plan sets each session, so the line DESCRIBES what the athlete reported and
+// never tells them to push, hold their weights or take a lighter day. D214
+// addendum 9 (V5): it prints both ratings in the scale's own words.
 
 /**
  * Recent-session fatigue trend. Renders the last N sessions as a bar sparkline
@@ -80,7 +73,7 @@ export default function FatigueTrendCard({ sessions }) {
           control). O23: the scale must stay visible, not exist only in the
           screen-reader label. */}
       <Text style={live.scaleCaption}>Self-rated fatigue after each session, 1 (fresh) to 5 (exhausted).</Text>
-      <Text style={live.coachLine}>{coachingLine(sessions)}</Text>
+      <Text style={live.coachLine}>{lastTwoSessionsLine(sessions)}</Text>
     </View>
   );
 }

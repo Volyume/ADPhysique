@@ -121,7 +121,9 @@ function muscleEstimateSentence(muscle, percent, readyAtMs, nowMs) {
 function readinessLine(readinessNow, nowMs) {
   if (!readinessNow || !readinessNow.evidence) return null;
   if (readinessNow.verdict === 'ready' || !readinessNow.limitingMuscle) {
-    return 'Ready now.';
+    // D214 addendum 9 (V6, D201): every "ready now" header says it is an
+    // estimate, as the sentences beside it do ("estimated 64% recovered").
+    return 'Estimated ready now.';
   }
   return muscleEstimateSentence(
     readinessNow.limitingMuscle, readinessNow.minPercent, readinessNow.limitingReadyAtMs, nowMs,
@@ -186,8 +188,8 @@ function buildProgrammeNextLine(readinessNow, nowMs, sessionName = '') {
  * The last sentence of the reason: what is true of the recommended session
  * AT THE MOMENT OF READING (Opus review finding 5: the rule decides on the
  * projected verdict, but "is ready now" must not be printed while the
- * session is still 73% recovered). "Push is ready now." when its readiness
- * now is ready with a session behind it; "Push has had no session in the
+ * session is still 73% recovered). "Push is estimated ready now." when its
+ * readiness now is ready with a session behind it; "Push has had no session in the
  * last 14 days." when nothing it trains has been trained recently; else
  * "Push is estimated ready later today." from its own limiting muscle.
  */
@@ -195,14 +197,15 @@ function recommendedSentence(recommendedName, candidate, nowMs) {
   const rec = recommendedName || 'The other session';
   const now = candidate?.readinessNow ?? null;
   if (!now || !now.evidence) return `${rec} has had no session in the last 14 days.`;
-  if (now.verdict === 'ready' || !now.limitingMuscle) return `${rec} is ready now.`;
+  if (now.verdict === 'ready' || !now.limitingMuscle) return `${rec} is estimated ready now.`;
   return `${rec} is estimated ${readyClause(now.limitingReadyAtMs, nowMs)}.`;
 }
 
 /**
  * The reason line when a swap is recommended, in the spec's own words
  * (4.2 point 4, verbatim shape): "Legs is next in your plan. Quads are
- * estimated 64% recovered, ready by Thursday. Push is ready now." Three
+ * estimated 64% recovered, ready by Thursday. Push is estimated ready now."
+ * (addendum 9, V6: the last clause carries "estimated" like the first). Three
  * plain facts, no instruction: the card's primary action already IS the
  * recommended session (F1), so the copy never needs to tell anyone what
  * to do. "in your plan" is the one addition, because under F1 the card
@@ -282,7 +285,7 @@ export function recommendNextWorkout({
         verdict: readinessAtProjected?.verdict ?? null,
         limitingMuscle: readinessAtProjected?.limitingMuscle ?? null,
         limitingReadyAtMs: readinessAtProjected?.limitingReadyAtMs ?? null,
-        // No line at all (never a fabricated "Ready now.") when the read is
+        // No line at all (never a fabricated "Estimated ready now.") when the read is
         // unknown or nothing it trains has a recent session behind it --
         // the sheet row then simply shows no extra line, exactly as it did
         // before this feature existed for that one row.

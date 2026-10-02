@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import {
@@ -13,6 +13,10 @@ import {
 import { logError } from '../lib/errorLog';
 import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
+// D214 addendum 9 (census 6.11): the ONE definition of a logged session, read by
+// the Recaps count and the Training row's gate here and by the Consistency
+// milestone (ReadinessCards), so no two counts on the Progress surfaces disagree.
+import { countLoggedSessions } from '../lib/progress/sessionCount';
 // Progress-tab audit 2026-09-24 (F4/F5, D200 item 3, S6-5), lane E: the ONE
 // Monday-anchored weekly tonnage series shared by the plan card's sparkline
 // and the workload (ACWR) card, replacing the old rolling-7-day bucketing
@@ -179,8 +183,13 @@ export default function useProgressData() {
         ? completed.reduce((m, w) => (w.startedAt < m ? w.startedAt : m), completed[0].startedAt)
         : null;
       setEarliestWorkoutAt(earliest);
-      // COMP-005: lifetime completed-session count gates the Recaps tile (>=10).
-      setCompletedWorkoutCount(completed.length);
+      // COMP-005: the lifetime session count gates the Recaps tile (>=10), and
+      // the Training row reads day zero from it. D214 addendum 9 (6.11): it is
+      // the one session count (a completed workout with sets), not every
+      // completed workout with a start time, so the Training row cannot say
+      // "No strength training logged" beside a Recaps door that counts the same
+      // person's sessions.
+      setCompletedWorkoutCount(countLoggedSessions(workouts, sets));
 
       // F4/F5/S6-5 (D200 item 3): ONE Monday-anchored weekly tonnage series
       // feeds both the plan card's sparkline (loadMesocycle below) and the
@@ -270,7 +279,7 @@ export default function useProgressData() {
   // D214 (plan-week card, plan section 7.3 item 2): the programme position,
   // read on every load (so on focus and on refresh). It never throws:
   // `resolveProgrammePosition` logs its own failure and answers null, which the
-  // plan-week card reads as "no plan" ("2 sessions this week"), so an unreadable
+  // plan-week card reads as "no plan" ("2 sessions so far this week"), so an unreadable
   // block is never claimed as anything.
   async function loadPosition(isCurrentRequest = () => true) {
     let resolved = null;
@@ -463,11 +472,11 @@ export default function useProgressData() {
   // yet" sitting on top of a wall of zeros.
   const hasData = allSets.length > 0;
   // Trend and history charts only read once there are a few sessions to
-  // compare; hold the multi-session charts back until at least three.
-  const sessionCount = useMemo(
-    () => new Set(allSets.map((s) => s.workoutId ?? s.workout_id)).size,
-    [allSets],
-  );
+  // compare; hold the multi-session charts back until at least three. The
+  // count is the shared one (sessionCount.js: a completed workout with sets),
+  // the same number the Training row's gate reads; it used to be the distinct
+  // workout ids among the set rows, which an orphaned set row inflated.
+  const sessionCount = completedWorkoutCount;
   const enoughForTrends = sessionCount >= 3;
 
   return {
