@@ -11487,3 +11487,57 @@ were:
   ED-E are built as strengthenings and PUT TO THE FOUNDER in chat to
   confirm or override; ED-C has no alternative.
 - Lead gate over the hunks: eslint clean, tsc clean, the lead's suites (the weight-trend suites, the hook, the Body pillar, the consumer contract, the fail-closed guard, the long-term laws, the parity guard, the coach and Nutrition targets screens) 33 passed with 324 tests; the Progress root's state matrix, in lane 3's hands at the time, is re-run after lane 3 lands and before the merge.
+
+**D214 addendum 5 (2026-10-02, lanes 3 and 4 landed on the branch; the
+lead's rulings at their review).** The Progress root (lane 3, section 7.1)
+and Consistency (lane 4, section 7.3) built in parallel from the briefs in
+`03-BUILD-BRIEFS.md`; both reported green on their own suites; the lead read
+every hunk of both diffs and committed them with the fixes below as
+`e22adc3` (lane 4) and `05ea0e4` (lane 3). Their fresh-eyes reviews (Sonnet)
+died at their first step on the API session limit (the second such
+interruption of the day) and were relaunched after the 11:00 UTC reset; the
+outcome is recorded at the merge, and main waits for it.
+- The strip sits INSIDE the plan-week card, as section 7.1 item 2's "one
+  Card" and the mockup say: `PlanWeekCard` takes children, rendered under a
+  hairline and OUTSIDE its accessible group, so the strip's touch target and
+  its (i) stay reachable by a screen reader; the Progress root's container
+  ceiling returns to the spec's seven. Lane 3 had built the strip as its own
+  card because the shared component took no children, and said so.
+- `NavRow`'s icon tile is ink wherever the component is used (the Progress
+  root's doors, the heatmap's "Volume targets" door, the You screen's list):
+  rule 3 (amber only on an action, at most one per screen, never on a fact)
+  and D174 (the accent as decoration). Its spoken label carries the sub line,
+  so Recaps' "N sessions to go" is read aloud (lane 3's finding).
+- `BlockShapeCard`'s week dots are ink wherever the card renders
+  (Consistency, Home's block sheet, the block builder, the workout summary):
+  the current week ringed in `textPrimary`, the recovery week a dashed
+  outline, the current week's word in `textPrimary`. Where you are in the
+  block is a fact (CS-19; lane 4's finding, outside its files).
+- The Body row's evidence names its referent and window ("Trend 82.4 kg,
+  +0.1 kg/week over the last 2 weeks") and a lapsed trend prints the lapsed
+  line with no figure: addendum 4's derivation landed on the row. The three
+  state-matrix pins moved to the two-week direction, and the spoken pillar
+  labels carry one full stop between parts (lane 4's gate caught "weeks..
+  80.7 kg"; lane 3 fixed it as `spokenRowLabel`).
+- The Load section goes with its card when nothing was lifted in the four
+  weeks (bodyweight-only training), so no heading stands over nothing.
+- Kept as built, each a ruling: the Sessions (i) on Consistency ("The middle
+  length of the sessions you finished in the last six weeks, as your workout
+  timer recorded them"; a number says what it is, and the one line stays one
+  line); the "N-week average" over the previous full weeks beside bars that
+  draw three full weeks and this week (both true to their labels, the (i)
+  says which); the plan rows counting the calendar block week while the
+  plan-week card counts the programme's week (they differ only while a
+  required session is outstanding past the calendar week, and the header
+  names the plan week; the census checks the wording); the empty state under
+  the no-plan card for a brand-new account (the no-plan card is the useful
+  door); the Recaps gate counting completed workouts with at least one set
+  while the milestone also counts a completed workout with a cached set count
+  and no live sets (they differ on that edge alone; the census checks whether
+  a person can see two totals on one journey).
+- Process: lane 4 edited `ReadinessCards.js` (the milestone section), which
+  its brief did not list, because the milestone's count rule and the
+  `recoveryPlace` guard's pin live there; the lead read the diff (nothing
+  outside the section changed) and accepted it, and its reviewer checks that
+  lane 2's sections render as before. Both lanes finished inside their
+  windows (38 and 45 minutes) with no edit-gate block.
