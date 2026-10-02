@@ -63,7 +63,7 @@ describe('deriveRecomp: the one steady rule over the last six weeks (BM-10)', ()
     const vm = derive(history);
     expect(vm.render).toBe(true);
     expect(vm.weeks).toBe(6);
-    expect(vm.bodyFat).toEqual({ deltaPP: -1.5, fromKey: dayKeyAgo(42) });
+    expect(vm.bodyFat).toEqual({ deltaPP: -1.5, fromKey: dayKeyAgo(42), fromPct: 20, toPct: 18.5 });
     expect(vm.measurement).toEqual({ label: 'Waist', deltaCm: -2.5, fromKey: dayKeyAgo(42) });
   });
 
@@ -116,7 +116,7 @@ describe('deriveRecomp: movement thresholds (NA-coaching-3, unchanged)', () => {
   test('body fat must move >= 0.5pp', () => {
     expect(derive(flatSix({ 42: { body_fat: 20 }, 0: { body_fat: 19.6 } })).render).toBe(false); // 0.4pp
     const at = derive(flatSix({ 42: { body_fat: 20 }, 0: { body_fat: 19.5 } }));                // 0.5pp
-    expect(at.bodyFat).toEqual({ deltaPP: -0.5, fromKey: dayKeyAgo(42) });
+    expect(at.bodyFat).toEqual({ deltaPP: -0.5, fromKey: dayKeyAgo(42), fromPct: 20, toPct: 19.5 });
   });
 
   test('a site must move >= 1.0cm', () => {
@@ -188,7 +188,7 @@ describe('recompLines: the sentences, in the person\'s units (BM-11, BM-30)', ()
   const vm = (over = {}) => ({
     render: true,
     weeks: 6,
-    bodyFat: { deltaPP: -1, fromKey: '2026-08-03' },
+    bodyFat: { deltaPP: -1, fromKey: '2026-08-03', fromPct: 19, toPct: 18 },
     measurement: { label: 'Waist', deltaCm: -2, fromKey: '2026-08-03' },
     lift: { name: 'Barbell Bench Press', deltaKg: 6, deltaLb: 13 },
     ...over,
@@ -198,7 +198,7 @@ describe('recompLines: the sentences, in the person\'s units (BM-11, BM-30)', ()
     expect(recompLines(vm(), 'kg')).toEqual([
       'Weight steady over the last 6 weeks.',
       'Estimated one-rep max on Barbell Bench Press up 6 kg (13 lbs) over the same weeks.',
-      'Body fat down 1 point since 3 Aug.',
+      'Body fat down from 19% to 18% since 3 Aug.',
       'Waist down 2 cm since 3 Aug.',
     ]);
   });
@@ -208,11 +208,11 @@ describe('recompLines: the sentences, in the person\'s units (BM-11, BM-30)', ()
     expect(lines[1]).toBe('Estimated one-rep max on Barbell Bench Press up 13 lbs (6 kg) over the same weeks.');
   });
 
-  test('the lift is an estimate and says so; body fat moves in points, not percent', () => {
+  test('the lift is an estimate and says so; body fat reads from one figure to the other, never as a percent change', () => {
     const text = recompLines(vm(), 'kg').join(' ');
     expect(text).toMatch(/Estimated one-rep max/);
     expect(text).not.toMatch(/Body fat (down|up) [\d.]+%/);
-    expect(recompLines(vm({ bodyFat: { deltaPP: 1.5, fromKey: '2026-08-03' } }), 'kg')[2]).toBe('Body fat up 1.5 points since 3 Aug.');
+    expect(recompLines(vm({ bodyFat: { deltaPP: 1.5, fromKey: '2026-08-03', fromPct: 18, toPct: 19.5 } }), 'kg')[2]).toBe('Body fat up from 18% to 19.5% since 3 Aug.');
   });
 
   test('only the streams that moved are said; one week is "week"', () => {

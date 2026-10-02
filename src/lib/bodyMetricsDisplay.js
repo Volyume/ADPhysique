@@ -326,7 +326,7 @@ export function weeklyTickTimes(fromMs, toMs, maxTicks = 30) {
   return out.filter((_, i) => i % step === 0);
 }
 
-// ── Calories that hold your weight ──
+// ── Maintenance calories ──
 
 // The memo contract's own thresholds (effectiveMaintenance.js:
 // `validWeights.length < 14` and `foodDaysLogged) < 5` in deriveEffectiveMaintenanceMemo,
@@ -340,10 +340,10 @@ export const MAINTENANCE_MIN_FOOD_DAYS = 5;
 export const MAINTENANCE_FOOD_WINDOW_DAYS = 7;
 export const MAINTENANCE_WEIGH_IN_FRESH_DAYS = 14;
 
-export const MAINTENANCE_TITLE = 'Calories that hold your weight';
+export const MAINTENANCE_TITLE = 'Maintenance calories';
 
-/** The (i): the plain name's own name, what it is, and what it needs. */
-export const MAINTENANCE_INFO = `Called effective maintenance in your coaching. ${GLOSSARY.adaptiveTdee} It is worked out once you have ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days and ${MAINTENANCE_MIN_FOOD_DAYS} logged food days in the last ${MAINTENANCE_FOOD_WINDOW_DAYS}.`;
+/** The (i): what maintenance calories are, the coaching's own name for them, and what the estimate needs. */
+export const MAINTENANCE_INFO = `${GLOSSARY.adaptiveTdee} Your coaching calls it effective maintenance. It is worked out once you have ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days and ${MAINTENANCE_MIN_FOOD_DAYS} logged food days in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`;
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -392,7 +392,7 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
         state: 'current',
         kcal,
         figure,
-        line: `About ${about} a day, estimated from ${plural(w, 'weigh-in day', 'weigh-in days')}${over} and ${plural(f, 'logged food day', 'logged food days')} in the last ${MAINTENANCE_FOOD_WINDOW_DAYS}.`,
+        line: `About ${about} a day, estimated from ${plural(w, 'weigh-in day', 'weigh-in days')}${over} and ${plural(f, 'logged food day', 'logged food days')} in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`,
       };
     }
     if (resolved.status === 'revalidating') {
@@ -417,24 +417,24 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
   const newest = weights.length ? Number(weights[weights.length - 1].loggedAt) : NaN;
   const stale = Number.isFinite(newest) && newest < nowMs - MAINTENANCE_WEIGH_IN_FRESH_DAYS * DAY_MS;
   const weighClause = stale
-    ? `it needs a weigh-in from the last ${MAINTENANCE_WEIGH_IN_FRESH_DAYS} days`
-    : `${weighDays} of ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days`;
+    ? `a weigh-in from the last ${MAINTENANCE_WEIGH_IN_FRESH_DAYS} days`
+    : `${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days (you have ${weighDays})`;
   return {
     state: 'building',
     kcal: null,
     figure: null,
-    line: `Not ready yet: ${weighClause}, and ${foodDays} of ${MAINTENANCE_MIN_FOOD_DAYS} logged food days in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`,
+    line: `Not ready yet. It needs ${weighClause} and ${MAINTENANCE_MIN_FOOD_DAYS} days of logged food in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} (you have ${foodDays}).`,
   };
 }
 
 /**
- * "In the 7 days to today you logged food on 3 days, averaging 1,625 kcal."
+ * "Over the last 7 days you logged food on 3 days, averaging 1,625 kcal."
  * Null when no day was logged (nothing to average).
  */
 export function intakeLine(intake, energyUnit = 'kcal') {
   const days = Number(intake?.daysLogged) || 0;
   if (days < 1 || !Number.isFinite(Number(intake?.avgKcal))) return null;
-  return `In the ${MAINTENANCE_FOOD_WINDOW_DAYS} days to today you logged food on ${plural(days, 'day', 'days')}, averaging ${energyText(intake.avgKcal, energyUnit)}.`;
+  return `Over the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days you logged food on ${plural(days, 'day', 'days')}, averaging ${energyText(intake.avgKcal, energyUnit)}.`;
 }
 
 // ── History ──
@@ -504,7 +504,9 @@ export const BODY_FAT_METHOD_LABELS = Object.freeze({
 
 /**
  * The change against the previous reading with both dates:
- * "Down 2 cm from 86 cm on 3 Aug." Null without a previous reading.
+ * "Down 2 cm from 86 cm on 3 Aug."; body fat reads from the earlier figure
+ * ("Down from 19% on 3 Aug.", the row's own value beside it). Null without a
+ * previous reading.
  * @param {{ value: number, metric_date: string }} latest
  * @param {?{ value: number, metric_date: string }} previous
  * @param {string} unit '%' (percentage points) or 'cm'
@@ -516,7 +518,7 @@ export function readingChangeLine(latest, previous, unit) {
   if (unit === '%') {
     const pts = Math.abs(Math.round(diff * 10) / 10);
     if (pts === 0) return `Level with ${trimDecimals(previous.value, 1)}% ${when}.`;
-    return `${diff < 0 ? 'Down' : 'Up'} ${trimDecimals(pts, 1)} ${pts === 1 ? 'point' : 'points'} from ${trimDecimals(previous.value, 1)}% ${when}.`;
+    return `${diff < 0 ? 'Down' : 'Up'} from ${trimDecimals(previous.value, 1)}% ${when}.`;
   }
   const cm = Math.abs(Math.round(diff * 10) / 10);
   if (cm === 0) return `Level with ${trimDecimals(previous.value, 1)} cm ${when}.`;

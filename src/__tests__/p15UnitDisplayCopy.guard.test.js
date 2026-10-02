@@ -32,7 +32,7 @@ const IMPORT_SCREEN = read('screens/ImportScreen.js');
 // file pinned (no render site; only tests imported it), is DELETED. The pin's
 // intent, the maintenance estimate printed through the shared en-GB helper
 // with an NBSP-joined kcal unit, now stands on the live surface that prints
-// it: the Body metrics "Calories that hold your weight" sentence, built in
+// it: the Body metrics "Maintenance calories" sentence, built in
 // bodyMetricsDisplay.js.
 const BODY_METRICS_DISPLAY = read('lib/bodyMetricsDisplay.js');
 

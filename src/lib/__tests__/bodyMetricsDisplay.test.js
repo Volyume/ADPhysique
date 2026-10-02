@@ -315,7 +315,7 @@ describe('the Trend card (section 3 item 4)', () => {
   });
 });
 
-describe('Calories that hold your weight (section 3 item 5): the memo contract\'s own thresholds', () => {
+describe('Maintenance calories (section 3 item 5): the memo contract\'s own thresholds', () => {
   const root = path.join(__dirname, '..');
   const contract = fs.readFileSync(path.join(root, 'effectiveMaintenance.js'), 'utf8');
   const service = fs.readFileSync(path.join(root, 'effectiveMaintenanceService.js'), 'utf8');
@@ -346,7 +346,7 @@ describe('Calories that hold your weight (section 3 item 5): the memo contract\'
     const m = maintenanceModel(current, { energyUnit: 'kcal', nowMs: NOW });
     expect(m.state).toBe('current');
     expect(m.figure).toEqual({ number: '2,450', unit: 'kcal a day', estimated: 'estimated' });
-    expect(nbsp(m.line)).toBe('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 3 weeks and 6 logged food days in the last 7.');
+    expect(nbsp(m.line)).toBe('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 3 weeks and 6 logged food days in the last 7 days.');
   });
 
   test('being rechecked: the spec\'s words', () => {
@@ -376,7 +376,7 @@ describe('Calories that hold your weight (section 3 item 5): the memo contract\'
     expect(m.state).toBe('building');
     expect(m.kcal).toBeNull();
     expect(m.figure).toBeNull();
-    expect(m.line).toBe('Not ready yet: 9 of 14 weigh-in days, and 3 of 5 logged food days in the last 7 days.');
+    expect(m.line).toBe('Not ready yet. It needs 14 weigh-in days (you have 9) and 5 days of logged food in the last 7 (you have 3).');
     expect(m.line).not.toMatch(/keep|log your|should|try/i);
   });
 
@@ -386,14 +386,14 @@ describe('Calories that hold your weight (section 3 item 5): the memo contract\'
       weights: weights(30).map((w, i) => ({ ...w, loggedAt: NOW - (30 - i) * DAY })),
       intake: { daysLogged: 2 },
     }, { nowMs: NOW });
-    expect(met.line).toBe('Not ready yet: 14 of 14 weigh-in days, and 2 of 5 logged food days in the last 7 days.');
+    expect(met.line).toBe('Not ready yet. It needs 14 weigh-in days (you have 14) and 5 days of logged food in the last 7 (you have 2).');
     const stale = maintenanceModel({
       resolved: { source: 'formula_prior', status: 'formula_prior' },
       weights: weights(30),
       intake: { daysLogged: 5 },
     }, { nowMs: NOW });
-    expect(stale.line).toBe('Not ready yet: it needs a weigh-in from the last 14 days, and 5 of 5 logged food days in the last 7 days.');
-    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet: 0 of 14 weigh-in days, and 0 of 5 logged food days in the last 7 days.');
+    expect(stale.line).toBe('Not ready yet. It needs a weigh-in from the last 14 days and 5 days of logged food in the last 7 (you have 5).');
+    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. It needs 14 weigh-in days (you have 0) and 5 days of logged food in the last 7 (you have 0).');
   });
 
   test('a formula figure is never printed as the person\'s maintenance (BM-13, D201)', () => {
@@ -412,14 +412,14 @@ describe('Calories that hold your weight (section 3 item 5): the memo contract\'
   });
 
   test('the intake line, or nothing when no day was logged (BM-12)', () => {
-    expect(nbsp(intakeLine({ daysLogged: 3, avgKcal: 1625 }, 'kcal'))).toBe('In the 7 days to today you logged food on 3 days, averaging 1,625 kcal.');
-    expect(nbsp(intakeLine({ daysLogged: 1, avgKcal: 1625 }, 'kcal'))).toBe('In the 7 days to today you logged food on 1 day, averaging 1,625 kcal.');
+    expect(nbsp(intakeLine({ daysLogged: 3, avgKcal: 1625 }, 'kcal'))).toBe('Over the last 7 days you logged food on 3 days, averaging 1,625 kcal.');
+    expect(nbsp(intakeLine({ daysLogged: 1, avgKcal: 1625 }, 'kcal'))).toBe('Over the last 7 days you logged food on 1 day, averaging 1,625 kcal.');
     expect(intakeLine({ daysLogged: 0, avgKcal: null }, 'kcal')).toBeNull();
     expect(intakeLine(null, 'kcal')).toBeNull();
   });
 
   test('the plain name and the (i) carry "effective maintenance" and the method', () => {
-    expect(MAINTENANCE_TITLE).toBe('Calories that hold your weight');
+    expect(MAINTENANCE_TITLE).toBe('Maintenance calories');
     expect(MAINTENANCE_INFO).toMatch(/effective maintenance/);
     expect(MAINTENANCE_INFO).toMatch(/estimate from your food and weight logs/);
     expect(MAINTENANCE_INFO).toMatch(/14 weigh-in days and 5 logged food days in the last 7/);
@@ -476,8 +476,8 @@ describe('Body fat and measurements (section 3 item 7)', () => {
     expect(readingChangeLine(at(84, '2026-09-17'), at(86, '2026-08-03'), 'cm')).toBe('Down 2 cm from 86 cm on 3 Aug.');
     expect(readingChangeLine(at(88.5, '2026-09-17'), at(86, '2026-08-03'), 'cm')).toBe('Up 2.5 cm from 86 cm on 3 Aug.');
     expect(readingChangeLine(at(86, '2026-09-17'), at(86, '2026-08-03'), 'cm')).toBe('Level with 86 cm on 3 Aug.');
-    expect(readingChangeLine(at(18, '2026-09-17'), at(19, '2026-08-03'), '%')).toBe('Down 1 point from 19% on 3 Aug.');
-    expect(readingChangeLine(at(18.5, '2026-09-17'), at(18, '2026-08-03'), '%')).toBe('Up 0.5 points from 18% on 3 Aug.');
+    expect(readingChangeLine(at(18, '2026-09-17'), at(19, '2026-08-03'), '%')).toBe('Down from 19% on 3 Aug.');
+    expect(readingChangeLine(at(18.5, '2026-09-17'), at(18, '2026-08-03'), '%')).toBe('Up from 18% on 3 Aug.');
     expect(readingChangeLine(at(18, '2026-09-17'), null, '%')).toBeNull();
   });
 

@@ -11627,3 +11627,19 @@ lines and fixed, with the pins the reviews asked for:
   border solid, so the dashed recovery dot is a device-check item; the
   Home weight-cell door's scroll anchor landing lower now that the plan
   card leads.
+
+### D214 addendum 8 (2026-10-02, founder order): plain English on Body metrics, the maintenance card
+
+**Founder, 2026-10-02, verbatim:** "What is this nonsense 'calories that hold your weight'. That is absolutely nonsensical English and not at all understandable for end users. Do we have other nonsense like this added now? We had a sweep before for shit like this. The app needs to be in plain British English that is understandable and makes sense to humans. [...] Is calories that hold your weight not known as maintenance calories?"
+
+**Record corrected.** The title was the lead's own choice in the Body metrics spec (section 3, item 5: "the plain name"), not a lane's. It was wrong: the term every reader knows is "maintenance calories", and the coach's diet-break line already uses it ("A 2-week diet break at maintenance calories", `nutritionEngine.js`). D207 (plain English) was the standing rule; the spec broke it and the build followed the spec.
+
+**Ruled and built (lead, hands-on, same day):**
+1. The card is titled "Maintenance calories". The (i) opens with the glossary's own definition (`coachGlossary.adaptiveTdee`: "The daily calories you logged at times when your weight stayed roughly steady. It is an estimate from your food and weight logs, not a direct measurement of your metabolism."), then "Your coaching calls it effective maintenance.", then what the estimate needs.
+2. The not-ready line says what the estimate needs and what there is, in a sentence: "Not ready yet. It needs 14 weigh-in days (you have 9) and 5 days of logged food in the last 7 (you have 3)." (was "Not ready yet: 9 of 14 weigh-in days, and 3 of 5 logged food days in the last 7 days."). A lapsed series reads "It needs a weigh-in from the last 14 days". Still a description, never an instruction (D204).
+3. The intake line reads "Over the last 7 days you logged food on 3 days, averaging 1,625 kcal." (was "In the 7 days to today ...").
+4. The current line ends "in the last 7 days" (was "in the last 7").
+5. Body fat changes read from one figure to the other, never "1 point" (percentage points are not a lay term) and never "1%" (which the audit had already rejected as wrong): the measurements card says "Down from 19% on 26 Aug." beside the row's own 18%; the recomposition card says "Body fat down from 19% to 18% since 26 Aug." (`recompReframe` carries both readings).
+6. The lane 6 census (running at the time) was given the founder's test as a hard criterion for every string on the five screens: where a common British English term exists for the thing, the string uses it, never an invented paraphrase; its findings are ruled in a later addendum when the census lands.
+
+**Files:** `src/lib/bodyMetricsDisplay.js`, `src/lib/recompReframe.js`, `src/screens/BodyMetricsScreen.js` (header comment), tests `bodyMetricsDisplay.test.js`, `recompReframe.test.js`, `BodyMetricsScreen.d214.test.js`, `p15UnitDisplayCopy.guard.test.js` (comment); spec `04-BODY-METRICS-AUDIT-AND-SPEC.md` section 3 items 5 to 7; the mockup page's Body metrics stage.

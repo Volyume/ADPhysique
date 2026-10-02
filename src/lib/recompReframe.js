@@ -107,6 +107,8 @@ function fieldDelta(entries, field, startKey, endKey) {
   if (points.length < 2) return null;
   return {
     delta: points[points.length - 1][field] - points[0][field],
+    from: points[0][field],
+    to: points[points.length - 1][field],
     fromKey: points[0].metric_date,
   };
 }
@@ -126,7 +128,7 @@ const dayEndMs = (key) => new Date(`${key}T23:59:59.999`).getTime();
  * @returns {{ render: false } | {
  *   render: true,
  *   weeks: number,                                      // whole weeks the weigh-ins used span
- *   bodyFat: null | { deltaPP: number, fromKey: string },     // signed, 1dp
+ *   bodyFat: null | { deltaPP: number, fromKey: string, fromPct: number, toPct: number }, // signed, 1dp; both readings
  *   measurement: null | { label, deltaCm, fromKey: string },  // most-changed site, signed, 1dp
  *   lift: null | { name, deltaKg: number, deltaLb: number },  // strongest e1RM gain, rounded
  * }}
@@ -145,7 +147,7 @@ export function deriveRecomp(history, sets, exercises, opts = {}) {
   // 2. Composition deltas within the same window.
   const bfRaw = fieldDelta(history, 'body_fat', startKey, endKey);
   const bodyFat = (bfRaw != null && Math.abs(bfRaw.delta) >= BODY_FAT_MOVED_PP)
-    ? { deltaPP: Math.round(bfRaw.delta * 10) / 10, fromKey: bfRaw.fromKey }
+    ? { deltaPP: Math.round(bfRaw.delta * 10) / 10, fromKey: bfRaw.fromKey, fromPct: bfRaw.from, toPct: bfRaw.to }
     : null;
 
   let measurement = null;
@@ -193,8 +195,10 @@ export function deriveRecomp(history, sets, exercises, opts = {}) {
  * The lines the card prints, in the person's gym units for the lift (both
  * units, the person's first): "Weight steady over the last 6 weeks.
  * Estimated one-rep max on Barbell Bench Press up 6 kg (13 lbs) over the same
- * weeks. Body fat down 1 point since 3 Aug. Waist down 2 cm since 3 Aug."
- * The lift is an ESTIMATE and says so (D201); body fat moves in percentage
+ * weeks. Body fat down from 19% to 18% since 3 Aug. Waist down 2 cm since
+ * 3 Aug." The lift is an ESTIMATE and says so (D201); body fat reads from one
+ * figure to the other (founder order 2026-10-02, plain English), never as a
+ * percent change; it moves in percentage
  * POINTS, not percent (BM-30); every change names the date it is measured from.
  *
  * @param {{ render: true }} vm  a rendering deriveRecomp result
@@ -212,8 +216,7 @@ export function recompLines(vm, units = 'kg') {
   }
   if (vm.bodyFat) {
     const d = vm.bodyFat.deltaPP;
-    const mag = Math.abs(d);
-    lines.push(`Body fat ${d < 0 ? 'down' : 'up'} ${trimDecimals(mag, 1)} ${mag === 1 ? 'point' : 'points'} since ${shortDate(vm.bodyFat.fromKey)}.`);
+    lines.push(`Body fat ${d < 0 ? 'down' : 'up'} from ${trimDecimals(vm.bodyFat.fromPct, 1)}% to ${trimDecimals(vm.bodyFat.toPct, 1)}% since ${shortDate(vm.bodyFat.fromKey)}.`);
   }
   if (vm.measurement) {
     const d = vm.measurement.deltaCm;

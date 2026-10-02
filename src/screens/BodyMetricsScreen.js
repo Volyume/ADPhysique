@@ -7,8 +7,8 @@
  * 05-R3-BODY-METRICS-READ.md BM-1 to BM-51). The screen answers one question,
  * "Is my weight doing what the plan wants, and what changed this week?", in
  * this order: This week (the trend weight, the verdict, this week against
- * last, the usual day-to-day swing), the actions, the Trend card, Calories
- * that hold your weight, Recomposition, Body fat and measurements, History,
+ * last, the usual day-to-day swing), the actions, the Trend card,
+ * Maintenance calories, Recomposition, Body fat and measurements, History,
  * then the doors (photos, units).
  *
  * Withholds. Every withhold on this screen is `policy.show.<section>`, the

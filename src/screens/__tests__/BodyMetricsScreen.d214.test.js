@@ -362,8 +362,8 @@ afterEach(async () => {
 const WITHHELD = [
   /^Down /, /^Up /, /Holding steady/, /Not enough (weigh-ins|time) yet for a direction/,
   /a week\b/, /This week's average so far/, /Day to day your weight usually moves/,
-  /Everything you have logged/, /Calories that hold your weight/, /\bkcal\b/,
-  /In the 7 days to today/, /Recomposition/, /from \d+(\.\d)?% on /, /from \d+(\.\d)? cm on /,
+  /Everything you have logged/, /Maintenance calories/, /\bkcal\b/,
+  /Over the last 7 days/, /Recomposition/, /from \d+(\.\d)?% on /, /from \d+(\.\d)? cm on /,
   /Steady means/,
 ];
 
@@ -437,7 +437,7 @@ describe('calm mode (the pause is asked once an app session; these run in order)
     const all = visible(tree);
     expect(all).not.toContain('A gentle pause');
     expect(all).toContain(BODY_METRICS_CALM_LINE);
-    expect(all.filter((t) => /Calories that hold your weight|Recomposition|kcal/.test(t))).toEqual([]);
+    expect(all.filter((t) => /Maintenance calories|Recomposition|kcal/.test(t))).toEqual([]);
   });
 });
 
@@ -487,7 +487,7 @@ describe('the normal screen, in the spec\'s order', () => {
       at1('Add measurements'),
       at1('Trend, last 3 months'),
       at1('Trend · Weigh-ins'),
-      at1('Calories that hold your weight'),
+      at1('Maintenance calories'),
       at1('Recomposition'),
       at1('Body fat and measurements'),
       at1('History'),
@@ -557,14 +557,14 @@ describe('the normal screen, in the spec\'s order', () => {
     expect(mockCaptured.chart.data.length).toBeLessThanOrEqual(31);
   });
 
-  test('Calories that hold your weight: the figure and where it comes from, and the intake line', async () => {
+  test('Maintenance calories: the figure and where it comes from, and the intake line', async () => {
     const { tree } = await mount();
     const all = visible(tree);
     expect(all).toContain('2,450');
     expect(all).toContain('kcal a day');
     expect(all).toContain('estimated');
-    expect(all).toContain('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 6 weeks and 6 logged food days in the last 7.');
-    expect(all).toContain('In the 7 days to today you logged food on 6 days, averaging 2,100 kcal.');
+    expect(all).toContain('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 6 weeks and 6 logged food days in the last 7 days.');
+    expect(all).toContain('Over the last 7 days you logged food on 6 days, averaging 2,100 kcal.');
     // a display surface never persists the resolver's revalidation marker (BM-14)
     expect(resolveEffectiveMaintenanceForUser).toHaveBeenCalledWith(
       'u1', expect.any(Object), expect.objectContaining({ persistRevalidationMarker: false }),
@@ -574,8 +574,8 @@ describe('the normal screen, in the spec\'s order', () => {
   test('when the contract has not been met the card counts what is missing and shows no figure', async () => {
     const { tree } = await mount({ authority: buildingAuthority, intake: { daysLogged: 3, avgKcal: 1900 }, morning: steadyMorning({ days: 12, skip: [] }) });
     const all = visible(tree);
-    expect(all).toContain('Calories that hold your weight');
-    expect(all).toContain('Not ready yet: 12 of 14 weigh-in days, and 3 of 5 logged food days in the last 7 days.');
+    expect(all).toContain('Maintenance calories');
+    expect(all).toContain('Not ready yet. It needs 14 weigh-in days (you have 12) and 5 days of logged food in the last 7 (you have 3).');
     expect(all).not.toContain('estimated');
     expect(all.filter((t) => /kcal a day/.test(t))).toEqual([]);
   });
@@ -586,7 +586,7 @@ describe('the normal screen, in the spec\'s order', () => {
     expect(all).toContain('Body fat and measurements');
     expect(all).toContain('18%');
     expect(all).toContain('7 Sep · caliper');
-    expect(all).toContain('Down 1 point from 19% on 28 Aug.');
+    expect(all).toContain('Down from 19% on 28 Aug.');
     expect(all).toContain('86 cm');
     expect(all).toContain('Down 2 cm from 88 cm on 28 Aug.');
   });
@@ -597,7 +597,7 @@ describe('the normal screen, in the spec\'s order', () => {
     const at1 = all.indexOf('Recomposition');
     expect(at1).toBeGreaterThan(-1);
     const card = all.slice(at1 + 1, all.indexOf('Body fat and measurements')).join(' | ');
-    expect(card).toMatch(/down 1 point/);
+    expect(card).toMatch(/down from 19% to 18%/);
     expect(card).toMatch(/Waist/);
     expect(card).toMatch(/Aug/);
     // no strength line and no share row without a lift that moved (a card never carries a body figure)
