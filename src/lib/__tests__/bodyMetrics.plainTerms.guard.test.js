@@ -30,6 +30,8 @@ const BANNED = [
   { re: /hold(?:s)? your weight/i, why: 'the term is "maintenance calories"' },
   { re: /\bpoints? (?:since|from|up|down)\b/i, why: 'a body-fat change reads from one figure to the other, never "N points"' },
   { re: /In the \$\{[^}]+\} days to today|In the \d+ days to today/, why: 'plain: "Over the last 7 days"' },
+  { re: /for a direction\b/, why: 'plain: "to show which way your weight is going" (census 0.3)' },
+  { re: /weigh-in days?\b|logged food days?\b/, why: 'plain: "weigh-ins" and "food logged on N of the last 7 days" (census 0.5)' },
 ];
 
 describe('Body metrics copy uses the plain term (founder order 2026-10-02)', () => {
@@ -43,7 +45,7 @@ describe('Body metrics copy uses the plain term (founder order 2026-10-02)', () 
   test('the maintenance card is titled "Maintenance calories"', () => {
     const { MAINTENANCE_TITLE, MAINTENANCE_INFO } = require('../bodyMetricsDisplay');
     expect(MAINTENANCE_TITLE).toBe('Maintenance calories');
-    expect(MAINTENANCE_INFO).toMatch(/^The daily calories you logged at times when your weight stayed roughly steady\./);
+    expect(MAINTENANCE_INFO).toMatch(/^Maintenance calories are the calories you eat in a day to stay the same weight\./);
     expect(MAINTENANCE_INFO).toMatch(/Your coaching calls it effective maintenance\./);
   });
 });

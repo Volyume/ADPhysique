@@ -100,8 +100,9 @@ export function coachVerdictInsight(coachVerdict, nowMs = Date.now()) {
   const dir = Math.sign(Number(coachVerdict.direction) || 0);
   if (coachVerdict.onTarget) return sign === 0 ? 'Holding steady, as planned.' : 'Moving at the planned rate.';
   if (sign === 0) {
-    if (dir > 0) return 'Drifting up a little.';
-    if (dir < 0) return 'Drifting down a little.';
+    // No size word: "a little" claimed one at any distance (census P11).
+    if (dir > 0) return 'Drifting up.';
+    if (dir < 0) return 'Drifting down.';
     return 'Holding steady, as planned.';
   }
   if (dir === 0) return 'Moving at the planned rate.';
@@ -174,14 +175,26 @@ export function trendDirection(twoWeek) {
 // The Body row's headline when the coach has no fresh verdict and the engine
 // no comparison: the direction in words with its window and no number (the
 // evidence line carries the figures), never the maintenance sentence (BM-15).
+/**
+ * The window a two-week reading names: "over the last 2 weeks" once the
+ * weigh-ins span a fortnight (13 days or more, one missing morning allowed),
+ * else the days they actually cover ("over the last 9 days"), so a new daily
+ * weigher on day 8 is never told a delta "over the last 2 weeks" that the
+ * weigh-ins do not cover (lane 7 review S3).
+ */
+export function twoWeekWindowPhrase(twoWeek) {
+  const span = Math.round(Number(twoWeek?.spanDays) || 0);
+  return span >= 13 ? 'over the last 2 weeks' : `over the last ${span} days`;
+}
+
 function directionInsight(twoWeek) {
   const dir = trendDirection(twoWeek);
-  if (dir === 'up') return 'Trending up over the last 2 weeks.';
-  if (dir === 'down') return 'Trending down over the last 2 weeks.';
-  if (dir === 'steady') return 'Holding steady over the last 2 weeks.';
+  if (dir === 'up') return `Trending up ${twoWeekWindowPhrase(twoWeek)}.`;
+  if (dir === 'down') return `Trending down ${twoWeekWindowPhrase(twoWeek)}.`;
+  if (dir === 'steady') return `Holding steady ${twoWeekWindowPhrase(twoWeek)}.`;
   const count = Number(twoWeek?.count) || 0;
-  if (count >= DIRECTION_MIN_POINTS) return 'Not enough weigh-ins in the last 2 weeks for a direction yet.';
-  return `Not enough weigh-ins in the last 2 weeks for a direction: ${count} of ${DIRECTION_MIN_POINTS}.`;
+  if (count >= DIRECTION_MIN_POINTS) return 'Not enough weigh-ins in the last 2 weeks to show which way your weight is going yet.';
+  return `Not enough weigh-ins in the last 2 weeks to show which way your weight is going: ${count} of ${DIRECTION_MIN_POINTS}.`;
 }
 
 /**
@@ -345,7 +358,8 @@ export function deriveWeightTrend({
       hasSparkline: n >= 3,
       showRate: false,
       dot: null,
-      insight: 'Log your weight for 7 days and your trend appears here.',
+      // Census P5: the rung is 7 weigh-ins (trendStateFor), said with its denominator.
+      insight: `Your trend appears after ${DIRECTION_MIN_POINTS} weigh-ins: ${n} of ${DIRECTION_MIN_POINTS} so far.`,
       maintenance: null,
       edFlagOpen: !!edFlagOpen,
     };
@@ -402,7 +416,7 @@ export function deriveWeightTrend({
       hasSparkline: true,
       showRate: false,
       dot: 'neutral',
-      insight: 'Your trend is still taking shape. Keep logging and it will become clearer.',
+      insight: 'Your trend is still taking shape. It becomes clearer with each weigh-in.',
       twoWeek,
       maintenance: hasMaintenance
         ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
@@ -429,11 +443,15 @@ export function deriveWeightTrend({
   } else if (!hasComparison) {
     insight = directionInsight(twoWeek);
   } else if (!diverging) {
-    insight = 'Trending inside your target range. Your calorie target stays the same.';
-  } else if (above) {
-    insight = 'Drifting a little above your target range. Nothing to change yet.';
+    insight = 'Moving at the planned rate. Your calorie target stays the same.';
+  } else if (expected === 0) {
+    // A maintain goal: the direction is the whole story (census 0.10).
+    insight = above ? 'Drifting up. Nothing to change yet.' : 'Drifting down. Nothing to change yet.';
   } else {
-    insight = 'Trending a little under your target. Nothing to change yet.';
+    // The coach verdict's own words, sign-aware: on a cut (expected below
+    // zero) a rate above the expected one is slower, on a gain it is faster.
+    const faster = expected > 0 ? above : !above;
+    insight = faster ? 'Moving faster than planned. Nothing to change yet.' : 'Moving slower than planned. Nothing to change yet.';
   }
 
   return {

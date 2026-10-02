@@ -41,7 +41,7 @@ describe('deriveWeightTrend', () => {
     expect(vm.showRate).toBe(false);
     expect(vm.dot).toBeNull();
     expect(vm.maintenance).toBeNull();
-    expect(vm.insight).toMatch(/7 days/);
+    expect(vm.insight).toMatch(/^Your trend appears after 7 weigh-ins: \d of 7 so far\.$/); // census P5: the rung is 7 weigh-ins, with its denominator
   });
 
   test('state 2 builds the estimate when confidence is insufficient', () => {
@@ -67,7 +67,7 @@ describe('deriveWeightTrend', () => {
     });
     expect(vm.state).toBe(3);
     expect(vm.dot).toBe('onTrack');
-    expect(vm.insight).toMatch(/inside your target range/i);
+    expect(vm.insight).toBe('Moving at the planned rate. Your calorie target stays the same.'); // census 0.10: the coach verdict's own words
     expect(vm.showRate).toBe(true);
     expect(vm.weeklyChange).toBe(-0.45);
     expect(vm.maintenance.kcal).toBe(2450);
@@ -85,7 +85,7 @@ describe('deriveWeightTrend', () => {
     });
     expect(vm.dot).toBe('watch');
     expect(vm.dot).not.toBe('act');
-    expect(vm.insight).toMatch(/above your target range/i);
+    expect(vm.insight).toMatch(/^Moving (faster|slower) than planned\. Nothing to change yet\.$/); // census 0.10, sign-aware
     expect(vm.insight).toMatch(/nothing to change yet/i);
   });
 

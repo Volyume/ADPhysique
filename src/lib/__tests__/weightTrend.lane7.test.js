@@ -87,13 +87,13 @@ describe('the Body row fallback headline (no fresh verdict, no engine comparison
     const pts = [...daily(10, { endDaysAgo: 16 }), ...daily(5)];
     const vm = deriveWeightTrend({ ewmaData: pts, adaptiveBurn: burn, nowMs: NOW });
     expect(vm.state).toBe(3);
-    expect(vm.insight).toBe('Not enough weigh-ins in the last 2 weeks for a direction: 5 of 7.');
+    expect(vm.insight).toBe('Not enough weigh-ins in the last 2 weeks to show which way your weight is going: 5 of 7.');
     expect(vm.twoWeek).toEqual({ enough: false, count: 5 });
   });
   test('enough weigh-ins but over too few days: no count is claimed', () => {
     const crowded = Array.from({ length: 8 }, (_, i) => ({ ewma: 80, weightKg: 80, date: new Date(NOW - i * 8 * 3600000).toISOString() }));
     const vm = deriveWeightTrend({ ewmaData: [...daily(10, { endDaysAgo: 16 }), ...crowded.reverse()], adaptiveBurn: burn, nowMs: NOW });
-    expect(vm.insight).toBe('Not enough weigh-ins in the last 2 weeks for a direction yet.');
+    expect(vm.insight).toBe('Not enough weigh-ins in the last 2 weeks to show which way your weight is going yet.');
   });
   test('a fresh coach verdict still leads, and the two-week reading rides along for Body metrics', () => {
     const vm = deriveWeightTrend({

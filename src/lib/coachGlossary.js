@@ -66,7 +66,7 @@ export const GLOSSARY = {
   proteinTier:
     'How high your protein target is set: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors). Based on your bodyweight, or your lean mass if you have logged a measured body-fat reading.',
   recomposition:
-    'Your weight held steady while your shape or strength kept improving. A sign fat and muscle are both changing, even though the scale is not moving.',
+    'Your weight held steady while your shape or strength kept changing. A sign fat and muscle are both changing, even though the scale is not moving.',
   // Footer credential line ("volume landmarks, autoregulation, and RED-S
   // safety limits"): founder-approved copy, 2026-07-09.
   autoregulation:

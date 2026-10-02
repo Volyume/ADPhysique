@@ -187,7 +187,8 @@ describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () 
     await type(tree, '19.9');
     submit(tree);
     expect(onLogWeight).not.toHaveBeenCalled();
-    expect(appAlert).not.toHaveBeenCalled();
+    // Said, never swallowed (lane 7 review S10): the form's own words.
+    expect(appAlert).toHaveBeenCalledWith('Check that weight', expect.stringMatching(/looks off/));
     const input = tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
     act(() => input.props.onChangeText('20'));
     submit(tree);
@@ -270,7 +271,7 @@ describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () 
   });
 
   test('the strip shares the rule and the floor with the form, from the one module', () => {
-    expect(SOURCE).toMatch(/import \{ BODY_WEIGHT_MIN_KG, weighInPlausibility, plausibilityMessage \} from '\.\.\/lib\/bodyMetricValidate';/);
+    expect(SOURCE).toMatch(/import \{ BODY_WEIGHT_MIN_KG, BODY_WEIGHT_RANGE_MESSAGE, weighInPlausibility, plausibilityMessage \} from '\.\.\/lib\/bodyMetricValidate';/);
     expect(SOURCE).toMatch(/kg < BODY_WEIGHT_MIN_KG \|\| kg > 300/);
     expect(SOURCE).toMatch(/weighInPlausibility\(kg, lastWeighInKg\)\.implausible/);
   });
@@ -288,6 +289,6 @@ describe('TodayStrip plausibility prompt under a withhold', () => {
     const src = fs2.readFileSync(path2.join(__dirname, '..', 'TodayStrip.js'), 'utf8');
     expect(src).toMatch(/plausibilityMessage\(\{ kg, lastKg: lastWeighInKg, bwu, withholdFigures \}\)/);
     const home = fs2.readFileSync(path2.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
-    expect(home).toMatch(/withholdFigures=\{!!firstReviewFacts\?\.edFlagOpen\}/);
+    expect(home).toMatch(/withholdFigures=\{firstReviewFacts\?\.edFlagOpen !== false\}/);
   });
 });

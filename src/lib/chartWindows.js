@@ -169,15 +169,19 @@ export const STEADY_AMOUNT_KG = 0.5;
 export function weightTakeaway({
   coversAll, from, to, count, averageKg, trendStartKg, trendEndKg, spanDays,
   formatWeight, formatAmount, formatRate, formatDate, steadyAmountKg = STEADY_AMOUNT_KG,
+  edFlagOpen = false,
 }) {
+  // Under an open ED flag the takeaway is withheld here as well as by the
+  // screen's policy gate (defence in depth, lane 7 review N3).
+  if (edFlagOpen) return '';
   if (!(count >= 2) || !Number.isFinite(averageKg)) return '';
   const prefix = `${coversAll ? 'Everything you have logged, ' : ''}${formatDate(from)} to ${formatDate(to)}: `;
   const head = `${prefix}your weigh-ins averaged ${formatWeight(averageKg)}`;
   if (count < DIRECTION_MIN_POINTS) {
-    return `${head}; not enough weigh-ins yet for a direction: ${count} of ${DIRECTION_MIN_POINTS}.`;
+    return `${head}; not enough weigh-ins yet to show which way your weight is going: ${count} of ${DIRECTION_MIN_POINTS}.`;
   }
   if (!(spanDays >= DIRECTION_MIN_SPAN_DAYS)) {
-    return `${head}; not enough time yet for a direction: your weigh-ins cover ${Math.max(0, Math.floor(spanDays))} of ${DIRECTION_MIN_SPAN_DAYS} days.`;
+    return `${head}; not enough time yet to show which way your weight is going: your weigh-ins cover ${Math.max(0, Math.floor(spanDays))} of ${DIRECTION_MIN_SPAN_DAYS} days.`;
   }
   const delta = trendEndKg - trendStartKg;
   const ratePerWeek = (delta / spanDays) * 7;

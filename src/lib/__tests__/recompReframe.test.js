@@ -267,14 +267,14 @@ describe('buildRecompShareParams, share-card privacy gate (S4, "Make a card")', 
     const params = buildRecompShareParams(vm, 'kg');
     expect(params).not.toBeNull();
     expect(params.heroValue).toBe(String(vm.lift.deltaKg));
-    expect(params.heroUnit).toBe('kg strength gained');
+    expect(params.heroUnit).toBe('kg added to your estimated one-rep max');
     expect(params.stats).toEqual([]); // ...but no per-field stat carries a body reading.
   });
 
   test('BM-11: a pounds user\'s card carries the pounds figure under its lbs label', () => {
     const vm = derive(flatSix(), liftGainSets, EXERCISES);
     const params = buildRecompShareParams(vm, 'lbs');
-    expect(params.heroUnit).toBe('lbs strength gained');
+    expect(params.heroUnit).toBe('lbs added to your estimated one-rep max');
     expect(params.heroValue).toBe(String(vm.lift.deltaLb));
     expect(params.heroValue).not.toBe(String(vm.lift.deltaKg));
   });

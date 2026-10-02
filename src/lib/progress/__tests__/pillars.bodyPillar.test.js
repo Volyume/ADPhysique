@@ -12,7 +12,7 @@ const { bodyPillarCopy } = require('../pillars');
 describe('bodyPillarCopy', () => {
   test('no trend yet: the no-data lines', () => {
     expect(bodyPillarCopy({ render: false }, 'kg')).toEqual({
-      state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.',
+      state: 'No weigh-ins logged yet', evidence: 'Your trend starts with your first morning weigh-in.',
     });
   });
   test('an ordinary state prints the headline and the figure with its rate in the person\'s units', () => {
@@ -51,8 +51,8 @@ describe('bodyPillarCopy', () => {
 describe('bodyPillarCopy, D214 addendum 4', () => {
   test('the evidence names the referent and the two-week window, in the person\'s units', () => {
     const vm = { render: true, state: 3, ewmaNow: 82.4, showRate: true, weeklyChange: 0.3, insight: 'Trending up over the last 2 weeks.', pillarFigure: true, twoWeek: { enough: true, ratePerWeek: 0.1, deltaKg: 0.2, spanDays: 14, count: 15 } };
-    expect(bodyPillarCopy(vm, 'kg').evidence).toBe('Trend 82.4 kg, +0.1 kg/week over the last 2 weeks');
-    expect(bodyPillarCopy(vm, 'lbs').evidence).toMatch(/^Trend 182 lbs, \+0\.2 lbs\/week over the last 2 weeks$/);
+    expect(bodyPillarCopy(vm, 'kg').evidence).toBe('Trend 82.4 kg, +0.1 kg a week over the last 2 weeks');
+    expect(bodyPillarCopy(vm, 'lbs').evidence).toMatch(/^Trend 182 lbs, \+0\.2 lbs a week over the last 2 weeks$/); // one spelling of a rate (census P10)
   });
   test('too few weigh-ins in the window: the trend weight alone, never the engine\'s bare weekly rate', () => {
     const vm = { render: true, state: 3, ewmaNow: 82.4, showRate: true, weeklyChange: 0.3, insight: 'Not enough weigh-ins in the last 2 weeks for a direction: 5 of 7.', pillarFigure: true, twoWeek: { enough: false, count: 5 } };

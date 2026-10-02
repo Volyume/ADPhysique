@@ -83,7 +83,7 @@ import {
 } from '../lib/weightTrend';
 import {
   weightChartUnitLabel, weightChartValue, weightChartTooltipTitle,
-  formatWeightAmount, formatWeightRatePerWeek, shortDate, weekdayDate,
+  formatWeightAmount, formatWeightRatePerWeek, shortDate, weekdayDate, shortDateYear, weekdayDateYear,
   morningsCaption, twoWeekVerdictLine, notEnoughForDirectionLine, weekComparisonLine, noiseLine,
   TREND_WEIGHT_INFO, DAY_ZERO_LINE, startingWeightLine, lastWeighInCaption, coachVerdictFromOutput,
   trendTitle, chartUnitNote, trendInfo, fittedAxis, weeklyTickTimes, niceAxisTicks, axisGutterWidth,
@@ -256,6 +256,11 @@ const readErrorLine = (what) => `Couldn't load your ${what} just now.`;
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
+// The form's one label column and the note field's three lines, named so no
+// raw dp sits in the styles (styling rule; review N9).
+const FORM_LABEL_WIDTH = 96;
+const NOTE_FIELD_MIN_HEIGHT = 72;
+
 export default function BodyMetricsScreen() {
   const navigation = useNavigation();
   const { user, session, units, bodyWeightUnits, userProfile, profileStamps } = useAppStore(useShallow((s) => ({
@@ -384,15 +389,17 @@ export default function BodyMetricsScreen() {
     // The rest of the page, each read on its own: a failure hides that card's
     // content and says so, and never the weigh-ins above it.
     try {
+      // Each secondary read fails on its own and says so in the log (N8).
+      const quiet = (label, fallback) => (e) => { logError(`BodyMetricsScreen.loadAll.${label}`, e, { userId: uid }); return fallback; };
       const [summary, dbTargets, mirror, lastCoach, sets, ex] = await Promise.all([
-        getRecentIntakeSummary(uid).catch(() => null),
-        getNutritionTargets(uid).catch(() => null),
-        AsyncStorage.getItem(NUTRITION_KEY).then((raw) => (raw ? JSON.parse(raw) : null)).catch(() => null),
-        getLatestCoachOutput(uid).catch(() => null),
+        getRecentIntakeSummary(uid).catch(quiet('intake', null)),
+        getNutritionTargets(uid).catch(quiet('targets', null)),
+        AsyncStorage.getItem(NUTRITION_KEY).then((raw) => (raw ? JSON.parse(raw) : null)).catch(quiet('nutritionMirror', null)),
+        getLatestCoachOutput(uid).catch(quiet('coachOutput', null)),
         // A year of sets is the most the recomposition read can use; a
         // failure just hides the strength line, never the body history.
-        getWorkoutSetsSince(uid, now - 365 * DAY_MS).catch(() => []),
-        getAllExercises().catch(() => []),
+        getWorkoutSetsSince(uid, now - 365 * DAY_MS).catch(quiet('sets', [])),
+        getAllExercises().catch(quiet('exercises', [])),
       ]);
       if (mountedRef.current) {
         setIntake(summary);
@@ -505,6 +512,11 @@ export default function BodyMetricsScreen() {
     if (count < 2) return { win, count, ready: false, rows: inWin };
     const first = inWin[0];
     const last = inWin[count - 1];
+    // A window that crosses a year names the year, so "1 year" never reads
+    // "17 Sep to 17 Sep" (review S2).
+    const crossesYear = String(first.dayKey).slice(0, 4) !== String(last.dayKey).slice(0, 4);
+    const fmtDate = crossesYear ? shortDateYear : shortDate;
+    const fmtDay = crossesYear ? weekdayDateYear : weekdayDate;
     const spanDays = (last.ms - first.ms) / DAY_MS;
     const coversAll = !(hasOlder || weighIns.some((w) => w.dayKey < windowStartKey));
     const averageKg = inWin.reduce((s, w) => s + w.kg, 0) / count;
@@ -536,7 +548,8 @@ export default function BodyMetricsScreen() {
       formatWeight: (kg) => formatBodyWeight(kg, bwu),
       formatAmount: (kg) => formatWeightAmount(kg, bwu),
       formatRate: (kgPerWeek) => formatWeightRatePerWeek(kgPerWeek, bwu),
-      formatDate: shortDate,
+      formatDate: fmtDate,
+      edFlagOpen: policy.edFlagOpen,
     });
     return {
       win,
@@ -546,19 +559,20 @@ export default function BodyMetricsScreen() {
       first,
       last,
       takeaway,
+      fmtDay,
       axis: { min: axisMin, max: axisMax },
       yTicks,
       gutter,
       data: inWin.map((w, i) => ({
         value: weightChartValue(w.trend, bwu),
         t: w.ms,
-        date: shortDate(w.dayKey),
-        label: labelIdx.has(i) ? shortDate(w.dayKey) : '',
+        date: fmtDate(w.dayKey),
+        label: labelIdx.has(i) ? fmtDate(w.dayKey) : '',
       })),
       data2: inWin.map((w) => ({ value: weightChartValue(w.kg, bwu), t: w.ms })),
       xTicks: weeklyTickTimes(first.ms, last.ms),
     };
-  }, [weighIns, windowKey, clock, hasOlder, swing, bwu]);
+  }, [weighIns, windowKey, clock, hasOlder, swing, bwu, policy.edFlagOpen]);
 
   const readings = useMemo(() => ({
     bodyFat: readingsOf(entries, 'body_fat'),
@@ -717,7 +731,11 @@ export default function BodyMetricsScreen() {
   async function saveEdit(data, entry, newDayKey) {
     const dateChanged = newDayKey !== entry.metric_date;
     if (entry.source === 'body_metric_log') {
-      const ok = await updateBodyMetric(user.id, entry.id, data);
+      // A body-fat figure left as it was keeps the method it was stored with: a
+      // setup-wizard 'dexa' is never overwritten by 'manual' on a note edit (N4).
+      const sameBodyFat = data.bodyFatPercent != null && Number(data.bodyFatPercent) === Number(entry.body_fat);
+      const payload = sameBodyFat && entry.body_fat_source ? { ...data, bodyFatSource: entry.body_fat_source } : data;
+      const ok = await updateBodyMetric(user.id, entry.id, payload);
       if (!ok) throw new Error('updateBodyMetric: no live row matched');
       if (dateChanged) {
         // The entry moved: the old day's weigh-in and any older rows of it go too.
@@ -762,10 +780,14 @@ export default function BodyMetricsScreen() {
       syncNow();
       closeForm();
       await loadAll();
+      // A save or delete can raise or clear the ED flag: re-read it (N7).
+      readSafety();
     } catch (e) {
       logError('BodyMetricsScreen.save', e, { editing: !!entry });
       toast.show("Couldn't save. Try again.", { variant: 'error' });
       await loadAll();
+      // A save or delete can raise or clear the ED flag: re-read it (N7).
+      readSafety();
     } finally {
       if (mountedRef.current) setSaving(false);
     }
@@ -847,6 +869,8 @@ export default function BodyMetricsScreen() {
       toast.show("Couldn't delete. Try again.", { variant: 'error' });
     }
     await loadAll();
+    // A save or delete can raise or clear the ED flag: re-read it (N7).
+    readSafety();
   }
 
   // ── Before the safety reads have returned, nothing below the header (ED-C) ──
@@ -946,7 +970,7 @@ export default function BodyMetricsScreen() {
             <View style={styles.hero}>
               <Text style={live.heroNumber}>{formatBodyWeight(weightTrendVm.ewmaNow, bwu)}</Text>
               <View style={styles.heroLabelRow}>
-                <Text style={live.heroLabel}>trend weight</Text>
+                <Text style={live.heroLabel}>{trendRead.ewmaData.length === 1 ? 'first weigh-in' : 'trend weight'}</Text>
                 <InfoTooltip text={TREND_WEIGHT_INFO} size={14} />
               </View>
               {policy.show.morningsCount ? <Text style={live.bodySm}>{morningsCaption(week.mornings)}</Text> : null}
@@ -1068,7 +1092,7 @@ export default function BodyMetricsScreen() {
                 value: form.body_weight_st_lbs,
                 onChangeText: (v) => setForm((f) => ({ ...f, body_weight_st_lbs: v })),
                 label: 'Weight, pounds',
-                unit: 'lb',
+                unit: 'lbs',
                 keyboardType: 'decimal-pad',
                 maxLength: 4,
               })}
@@ -1279,7 +1303,7 @@ export default function BodyMetricsScreen() {
                   if (!w) return null;
                   return {
                     title: weightChartTooltipTitle(w.kg, bwu),
-                    sub: `${weekdayDate(w.dayKey)} · trend ${weightChartValue(w.trend, bwu).toFixed(1)} ${unit}`,
+                    sub: `${(chart.fmtDay ?? weekdayDate)(w.dayKey)} · trend ${weightChartValue(w.trend, bwu).toFixed(1)} ${unit}`,
                   };
                 }}
               />
@@ -1444,7 +1468,7 @@ export default function BodyMetricsScreen() {
         <SectionLabel heading>History</SectionLabel>
         {future.length ? (
           <Card padding="md" style={styles.card}>
-            <Text style={live.groupHeader}>Dated after today</Text>
+            <Text style={live.groupHeader}>Future dates</Text>
             {future.map(renderHistoryRow)}
           </Card>
         ) : null}
@@ -1453,6 +1477,7 @@ export default function BodyMetricsScreen() {
             <Text style={live.groupHeader}>
               {weekGroupHeader({
                 weekStartMs: g.weekStartMs, count: g.count, averageKg: g.averageKg, open: g.open, bwu,
+                withholdAverage: policy.withhold,
               })}
             </Text>
             {g.entries.map(renderHistoryRow)}
@@ -1555,7 +1580,7 @@ const styles = StyleSheet.create({
   formBody: { gap: spacing.md },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   // One label column, so every field of the form starts at the same edge.
-  rowLabel: { width: 96 },
+  rowLabel: { width: FORM_LABEL_WIDTH },
   dateField: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     minHeight: touchTarget.minimum, paddingHorizontal: spacing.md,
@@ -1569,9 +1594,9 @@ const styles = StyleSheet.create({
   fieldText: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   noteBlock: { gap: spacing.xs },
   noteContainer: { gap: 0 },
-  noteField: { minHeight: 72 },
+  noteField: { minHeight: NOTE_FIELD_MIN_HEIGHT },
   noteText: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 72, textAlignVertical: 'top',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: NOTE_FIELD_MIN_HEIGHT, textAlignVertical: 'top',
   },
   moreBlock: { gap: spacing.md },
   methodBlock: { gap: spacing.xs },

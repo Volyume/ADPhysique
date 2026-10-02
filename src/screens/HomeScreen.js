@@ -2596,8 +2596,9 @@ export default function HomeScreen({ navigation, route }) {
             // weigh-in only, never the profile's setup weight.
             lastWeighInKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : null}
             // Under Home's own ED withhold (an open flag, a SCOFF score of 2
-            // or more, a failed read or calm mode) the prompt names no figure.
-            withholdFigures={!!firstReviewFacts?.edFlagOpen}
+            // or more, a failed read or calm mode) the prompt names no figure;
+            // with no facts at all (the loader threw) it fails closed too.
+            withholdFigures={firstReviewFacts?.edFlagOpen !== false}
             savingWeight={savingWeight}
             onLogWeight={handleLogWeight}
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links

@@ -239,7 +239,11 @@ export function buildDayEntries(logEntries, morningRows) {
     entry.id = (logs[0] ?? mornings[0]).id;
     // A starting weight typed at setup is a point of the series, but not a
     // morning the person weighed (checkinDerive.isEnrolmentSeedWeight).
-    entry.isEnrolmentSeed = mornings.some((m) => String(m.notes || '').trim() === ENROLMENT_NOTE);
+    // A weigh-in typed through the form on the setup day keeps the marker on
+    // the morning row (the write-through preserves notes) but IS a weigh-in
+    // the person made, so the day is never the seed (review S1).
+    entry.isEnrolmentSeed = mornings.some((m) => String(m.notes || '').trim() === ENROLMENT_NOTE)
+      && !logs.some((l) => Number(l.body_weight) > 0);
     out.push(entry);
   }
   return out.sort((a, b) => b.metric_date.localeCompare(a.metric_date) || b.loggedAt - a.loggedAt);

@@ -14,9 +14,9 @@ import { kgToLbs, lbsToKg, kgToStoneLbs, formatBodyWeight } from './units';
 import { localDayKey, parseLocalDay } from './dayKey';
 import { formatNumber, formatWithUnit, toEnergy, energyUnitLabel } from './format';
 import {
-  trendDirection, STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS,
+  trendDirection, STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS, twoWeekWindowPhrase,
 } from './weightTrend';
-import { GLOSSARY } from './coachGlossary';
+import { STEADY_AMOUNT_KG } from './chartWindows';
 
 // ─── A1: WeightTrendChart's value/label unit mapping ──────────────────────────
 //
@@ -99,9 +99,10 @@ export function formatWeightAmount(kg, bwu = 'st') {
   const lbs = kgToLbs(n);
   if (bwu === 'st' && lbs >= 14) {
     const { stone, lbs: rest } = kgToStoneLbs(n);
-    return rest > 0 ? `${stone} st ${trimDecimals(rest, 1)} lbs` : `${stone} st`;
+    return rest > 0 ? `${stone} st ${trimDecimals(rest, 1)} ${rest === 1 ? 'lb' : 'lbs'}` : `${stone} st`;
   }
-  return `${trimDecimals(lbs, lbs < 10 ? 1 : 0)} lbs`;
+  const shown = trimDecimals(lbs, lbs < 10 ? 1 : 0);
+  return `${shown} ${shown === '1' ? 'lb' : 'lbs'}`;
 }
 
 /** A weekly rate in the person's units, always positive: "0.15 kg a week", "0.3 lbs a week" (the app's one spelling, units.js). */
@@ -110,7 +111,7 @@ export function formatWeightRatePerWeek(kgPerWeek, bwu = 'st') {
   if (!Number.isFinite(n)) return '';
   return bwu === 'kg'
     ? `${trimDecimals(n, 2)} kg a week`
-    : `${trimDecimals(kgToLbs(n), 1)} lbs a week`;
+    : `${trimDecimals(kgToLbs(n), 1)} ${trimDecimals(kgToLbs(n), 1) === '1' ? 'lb' : 'lbs'} a week`;
 }
 
 /** A local day key as text in a date-fns pattern; '' for an unreadable key. */
@@ -123,6 +124,9 @@ export function dayKeyLabel(dayKey, pattern = 'd MMM') {
 export const shortDate = (dayKey) => dayKeyLabel(dayKey, 'd MMM');
 /** "Tue 16 Sep" */
 export const weekdayDate = (dayKey) => dayKeyLabel(dayKey, 'EEE d MMM');
+/** "16 Sep 2025" and "Tue 16 Sep 2025": for a window that crosses a year (review S2). */
+export const shortDateYear = (dayKey) => dayKeyLabel(dayKey, 'd MMM yyyy');
+export const weekdayDateYear = (dayKey) => dayKeyLabel(dayKey, 'EEE d MMM yyyy');
 /** "16 Sep" for an epoch time, on the person's local day. */
 export const shortDateOfMs = (ms) => (Number.isFinite(ms) ? shortDate(localDayKey(ms)) : '');
 /** "7:02" for an epoch time, 24-hour, local. */
@@ -141,27 +145,30 @@ export function morningsCaption({ weighed, elapsed }) {
 /**
  * The direction over the last two weeks, in words with its rate:
  * "Down 0.3 kg over the last 2 weeks, about 0.15 kg a week." Steady under the
- * ONE steady rule (weightTrend.STEADY_RATE_KG_PER_WEEK). Null without a reading.
+ * ONE steady rule (weightTrend.STEADY_RATE_KG_PER_WEEK). The window named is
+ * the one the weigh-ins cover (twoWeekWindowPhrase: "over the last 9 days"
+ * until they span a fortnight). Null without a reading.
  */
 export function twoWeekVerdictLine(twoWeek, bwu = 'st') {
   const dir = trendDirection(twoWeek);
   if (!dir) return null;
   const rate = formatWeightRatePerWeek(twoWeek.ratePerWeek, bwu);
-  if (dir === 'steady') return `Holding steady over the last 2 weeks, about ${rate}.`;
-  return `${dir === 'up' ? 'Up' : 'Down'} ${formatWeightAmount(twoWeek.deltaKg, bwu)} over the last 2 weeks, about ${rate}.`;
+  const over = twoWeekWindowPhrase(twoWeek);
+  if (dir === 'steady') return `Holding steady ${over}, about ${rate}.`;
+  return `${dir === 'up' ? 'Up' : 'Down'} ${formatWeightAmount(twoWeek.deltaKg, bwu)} ${over}, about ${rate}.`;
 }
 
 /**
  * Said instead of a direction while there is too little to read one, with its
- * denominator: "Not enough weigh-ins yet for a direction: 3 of 7."
+ * denominator: "Not enough weigh-ins yet to show which way your weight is going: 3 of 7."
  */
 export function notEnoughForDirectionLine(twoWeek) {
   const count = Number(twoWeek?.count) || 0;
   if (count >= DIRECTION_MIN_POINTS) {
     const span = Math.max(0, Math.floor(Number(twoWeek?.spanDays) || 0));
-    return `Not enough time yet for a direction: your weigh-ins cover ${Math.min(span, DIRECTION_MIN_SPAN_DAYS)} of ${DIRECTION_MIN_SPAN_DAYS} days.`;
+    return `Not enough time yet to show which way your weight is going: your weigh-ins cover ${Math.min(span, DIRECTION_MIN_SPAN_DAYS)} of ${DIRECTION_MIN_SPAN_DAYS} days.`;
   }
-  return `Not enough weigh-ins yet for a direction: ${count} of ${DIRECTION_MIN_POINTS}.`;
+  return `Not enough weigh-ins yet to show which way your weight is going: ${count} of ${DIRECTION_MIN_POINTS}.`;
 }
 
 /**
@@ -173,7 +180,9 @@ export function notEnoughForDirectionLine(twoWeek) {
 export function roundToDisplay(kg, bwu = 'st') {
   const n = Number(kg);
   if (!Number.isFinite(n)) return NaN;
-  if (bwu === 'kg') return Math.round(n * 10) / 10;
+  // formatBodyWeight's own rounding (toFixed), so a .x5 tie never prints
+  // "0.1 kg above" beside two averages that both read the same (review S6).
+  if (bwu === 'kg') return parseFloat(n.toFixed(1));
   if (bwu === 'lbs') return lbsToKg(Math.round(kgToLbs(n)));
   const { stone, lbs } = kgToStoneLbs(n);
   return lbsToKg(stone * 14 + lbs);
@@ -200,7 +209,7 @@ export function noiseLine(swingKg, bwu = 'st') {
   return `Day to day your weight usually moves within ${formatWeightAmount(swingKg, bwu)}.`;
 }
 
-export const TREND_WEIGHT_INFO = 'A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little.';
+export const TREND_WEIGHT_INFO = 'A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.';
 export const DAY_ZERO_LINE = 'Your trend starts with your first morning weigh-in.';
 
 /** Day zero: "Starting weight from setup: 82 kg, 3 Aug" (the date only when it is known). */
@@ -260,7 +269,7 @@ export function chartUnitNote(bwu) {
 export function trendInfo(bwu = 'st', { includeSteady = true } = {}) {
   const base = 'The line is your trend, a smoothed average of your weigh-ins. The dots are the weigh-ins themselves.';
   return includeSteady
-    ? `${base} Steady means the trend moves by less than ${formatWeightRatePerWeek(STEADY_RATE_KG_PER_WEEK, bwu)}.`
+    ? `${base} Steady means the trend moves by less than ${formatWeightRatePerWeek(STEADY_RATE_KG_PER_WEEK, bwu)} and by less than ${formatWeightAmount(STEADY_AMOUNT_KG, bwu)} in all.`
     : base;
 }
 
@@ -343,7 +352,7 @@ export const MAINTENANCE_WEIGH_IN_FRESH_DAYS = 14;
 export const MAINTENANCE_TITLE = 'Maintenance calories';
 
 /** The (i): what maintenance calories are, the coaching's own name for them, and what the estimate needs. */
-export const MAINTENANCE_INFO = `${GLOSSARY.adaptiveTdee} Your coaching calls it effective maintenance. It is worked out once you have ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days and ${MAINTENANCE_MIN_FOOD_DAYS} logged food days in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`;
+export const MAINTENANCE_INFO = `Maintenance calories are the calories you eat in a day to stay the same weight. This is an estimate worked out from your weight and food logs, not a measurement. Your coaching calls it effective maintenance. It needs ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins and food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`;
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -383,16 +392,13 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
     if (resolved.status === 'current') {
       const w = Number(memo?.weightPoints) || weights.length;
       const f = Number(memo?.foodDaysLogged) || Number(intake?.daysLogged) || 0;
-      const first = weights.length ? Number(weights[0].loggedAt) : NaN;
-      const last = weights.length ? Number(weights[weights.length - 1].loggedAt) : NaN;
-      const spanWeeks = Number.isFinite(first) && Number.isFinite(last)
-        ? Math.max(1, Math.round((last - first) / DAY_MS / 7)) : null;
-      const over = spanWeeks ? ` over the last ${plural(spanWeeks, 'week', 'weeks')}` : '';
       return {
         state: 'current',
         kcal,
         figure,
-        line: `About ${about} a day, estimated from ${plural(w, 'weigh-in day', 'weigh-in days')}${over} and ${plural(f, 'logged food day', 'logged food days')} in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`,
+        // The memo's own counts (the rows it learned from), with no span claimed:
+        // the authority's current weigh-ins are not the memo's rows (review S5).
+        line: `About ${about} a day, estimated from ${plural(w, 'weigh-in', 'weigh-ins')} and food logged on ${f} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`,
       };
     }
     if (resolved.status === 'revalidating') {
@@ -412,19 +418,22 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
     };
   }
   // Not ready: the days counted against the contract's own thresholds.
-  const weighDays = Math.min(weights.length, MAINTENANCE_MIN_WEIGH_IN_DAYS);
-  const foodDays = Math.min(Number(intake?.daysLogged) || 0, MAINTENANCE_MIN_FOOD_DAYS);
+  // The true counts (rule 7.0.4: the number judged is the number shown).
+  const weighDays = weights.length;
+  const foodDays = Number(intake?.daysLogged) || 0;
   const newest = weights.length ? Number(weights[weights.length - 1].loggedAt) : NaN;
   const stale = Number.isFinite(newest) && newest < nowMs - MAINTENANCE_WEIGH_IN_FRESH_DAYS * DAY_MS;
   const weighClause = stale
     ? `a weigh-in from the last ${MAINTENANCE_WEIGH_IN_FRESH_DAYS} days`
-    : `${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-in days (you have ${weighDays})`;
-  return {
-    state: 'building',
-    kcal: null,
-    figure: null,
-    line: `Not ready yet. It needs ${weighClause} and ${MAINTENANCE_MIN_FOOD_DAYS} days of logged food in the last ${MAINTENANCE_FOOD_WINDOW_DAYS} (you have ${foodDays}).`,
-  };
+    : `${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins (you have ${weighDays})`;
+  // Both thresholds met with no memo yet: the estimate is learned by the
+  // coaching run (learnEffectiveMaintenanceForUser, CoachOutputScreen), so
+  // the line says that, never "you have 14 of 14" and "not ready" at once.
+  const met = !stale && weighDays >= MAINTENANCE_MIN_WEIGH_IN_DAYS && foodDays >= MAINTENANCE_MIN_FOOD_DAYS;
+  const line = met
+    ? `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')} and food logged on ${foodDays} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days; the first estimate is worked out the next time your coaching runs.`
+    : `Not ready yet. It needs ${weighClause} and food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days (you have ${foodDays}).`;
+  return { state: 'building', kcal: null, figure: null, line };
 }
 
 /**
@@ -440,9 +449,12 @@ export function intakeLine(intake, energyUnit = 'kcal') {
 // ── History ──
 
 /** "Week of 15 Sep · average 82.3 kg · 5 weigh-ins" ("average so far" on the open week). */
-export function weekGroupHeader({ weekStartMs, count, averageKg, open, bwu = 'st' }) {
+export function weekGroupHeader({ weekStartMs, count, averageKg, open, bwu = 'st', withholdAverage = false }) {
   const head = `Week of ${shortDate(localDayKey(weekStartMs))}`;
   if (!(count > 0)) return `${head} · no weigh-ins`;
+  // Under calm mode or an open flag a run of weekly averages is a trend to
+  // read, so the header keeps the count only (review N1, the Q2 precedent).
+  if (withholdAverage) return `${head} · ${plural(count, 'weigh-in', 'weigh-ins')}`;
   return `${head} · average${open ? ' so far' : ''} ${formatBodyWeight(averageKg, bwu)} · ${plural(count, 'weigh-in', 'weigh-ins')}`;
 }
 

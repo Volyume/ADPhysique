@@ -131,12 +131,18 @@ describe('chartWindows: weightTakeaway (D214 addendum 4)', () => {
       .toMatch(/held steady/);
   });
 
+  // Lane 7 review N3: defence in depth, the takeaway is withheld in the pure
+  // function under an open ED flag as well as by the screen's policy gate.
+  test('an open ED flag withholds the takeaway here too', () => {
+    expect(weightTakeaway({ ...base, spanDays: 14, trendStartKg: 82.4, trendEndKg: 82.0, edFlagOpen: true })).toBe('');
+  });
+
   test('BM-6: no direction from too few weigh-ins, and the denominator is said', () => {
     expect(weightTakeaway({ ...base, count: 3, spanDays: 6, trendStartKg: 80, trendEndKg: 82 }))
-      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough weigh-ins yet for a direction: 3 of 7.');
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough weigh-ins yet to show which way your weight is going: 3 of 7.');
     // seven weigh-ins that cover under seven days are not a direction either
     expect(weightTakeaway({ ...base, count: 7, spanDays: 6, trendStartKg: 80, trendEndKg: 82 }))
-      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough time yet for a direction: your weigh-ins cover 6 of 7 days.');
+      .toBe('4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; not enough time yet to show which way your weight is going: your weigh-ins cover 6 of 7 days.');
   });
 
   test('nothing to say from fewer than two weigh-ins', () => {

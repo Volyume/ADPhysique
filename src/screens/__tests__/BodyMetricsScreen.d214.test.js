@@ -360,7 +360,7 @@ afterEach(async () => {
 // word, rate, weekly comparison, swing line, takeaway, maintenance, intake,
 // recomposition or measurement change line.
 const WITHHELD = [
-  /^Down /, /^Up /, /Holding steady/, /Not enough (weigh-ins|time) yet for a direction/,
+  /^Down /, /^Up /, /Holding steady/, /Not enough (weigh-ins|time) yet to show which way/, /weighed \d+ of \d+ mornings?/, /· average/,
   /a week\b/, /This week's average so far/, /Day to day your weight usually moves/,
   /Everything you have logged/, /Maintenance calories/, /\bkcal\b/,
   /Over the last 7 days/, /Recomposition/, /from \d+(\.\d)?% on /, /from \d+(\.\d)? cm on /,
@@ -508,7 +508,7 @@ describe('the normal screen, in the spec\'s order', () => {
     expect(all.some((t) => /^Day to day your weight usually moves within [\d.]+ kg\.$/.test(t))).toBe(true);
     // no chip, no arrow, no delta badge, no "Weekly change"
     expect(all.join(' | ')).not.toMatch(/Weekly change|Losing|Gaining|▲|▼|↑|↓/);
-    expect(info(tree)).toContain('(i) A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little.');
+    expect(info(tree)).toContain('(i) A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.');
   });
 
   test('the verdict says "Down ... about ... a week" for a trend that is falling faster than the steady rule', async () => {
@@ -563,7 +563,7 @@ describe('the normal screen, in the spec\'s order', () => {
     expect(all).toContain('2,450');
     expect(all).toContain('kcal a day');
     expect(all).toContain('estimated');
-    expect(all).toContain('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 6 weeks and 6 logged food days in the last 7 days.');
+    expect(all).toContain('About 2,450 kcal a day, estimated from 23 weigh-ins and food logged on 6 of the last 7 days.');
     expect(all).toContain('Over the last 7 days you logged food on 6 days, averaging 2,100 kcal.');
     // a display surface never persists the resolver's revalidation marker (BM-14)
     expect(resolveEffectiveMaintenanceForUser).toHaveBeenCalledWith(
@@ -575,7 +575,7 @@ describe('the normal screen, in the spec\'s order', () => {
     const { tree } = await mount({ authority: buildingAuthority, intake: { daysLogged: 3, avgKcal: 1900 }, morning: steadyMorning({ days: 12, skip: [] }) });
     const all = visible(tree);
     expect(all).toContain('Maintenance calories');
-    expect(all).toContain('Not ready yet. It needs 14 weigh-in days (you have 12) and 5 days of logged food in the last 7 (you have 3).');
+    expect(all).toContain('Not ready yet. It needs 14 weigh-ins (you have 12) and food logged on 5 of the last 7 days (you have 3).');
     expect(all).not.toContain('estimated');
     expect(all.filter((t) => /kcal a day/.test(t))).toEqual([]);
   });

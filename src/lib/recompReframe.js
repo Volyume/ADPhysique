@@ -41,6 +41,11 @@ import { shortDate, trimDecimals } from './bodyMetricsDisplay';
 const DAY_MS = 86400000;
 /** The window the steady rule reads: the last six weeks. */
 export const STEADY_WINDOW_DAYS = 42;
+// The smoother is seeded from the trend weight's own 90 days, so the
+// six-week rate is read off the ONE trend the screen shows, never off a
+// fresh smoother started at the window's first (possibly heavy) morning
+// (lane 7 review N6).
+export const TREND_SEED_DAYS = 90;
 
 // NA-coaching-3 movement thresholds.
 const BODY_FAT_MOVED_PP = 0.5;     // percentage points
@@ -77,17 +82,21 @@ function noonOf(key) {
  */
 function steadyWindow(entries, nowMs) {
   const from = nowMs - STEADY_WINDOW_DAYS * DAY_MS;
-  const points = entries
+  const seedFrom = nowMs - TREND_SEED_DAYS * DAY_MS;
+  const seeded = entries
     .filter((e) => e && isNum(e.body_weight) && e.body_weight > 0 && e.metric_date)
     .map((e) => ({ weightKg: e.body_weight, loggedAt: noonOf(e.metric_date), dayKey: e.metric_date }))
-    .filter((p) => Number.isFinite(p.loggedAt) && p.loggedAt >= from && p.loggedAt <= nowMs)
+    .filter((p) => Number.isFinite(p.loggedAt) && p.loggedAt >= seedFrom && p.loggedAt <= nowMs)
     .sort((a, b) => a.loggedAt - b.loggedAt);
+  // One entry per day, in order, so the smoother's points line up by index.
+  const smoothedAll = computeEWMA(seeded);
+  const points = seeded
+    .map((p, i) => ({ ...p, ewma: Number(smoothedAll[i]?.ewma) }))
+    .filter((p) => p.loggedAt >= from && Number.isFinite(p.ewma));
   if (points.length < DIRECTION_MIN_POINTS) return null;
   const spanDays = (points[points.length - 1].loggedAt - points[0].loggedAt) / DAY_MS;
   if (spanDays < DIRECTION_MIN_SPAN_DAYS) return null;
-  const smoothed = computeEWMA(points);
-  if (smoothed.length < 2) return null;
-  const rate = ((smoothed[smoothed.length - 1].ewma - smoothed[0].ewma) / spanDays) * 7;
+  const rate = ((points[points.length - 1].ewma - points[0].ewma) / spanDays) * 7;
   return {
     rate,
     spanDays,
@@ -258,7 +267,7 @@ export function buildRecompShareParams(vm, units = 'kg') {
     // card prints the pounds figure under its "lbs" label, never kilograms
     // under it. The wording is unchanged.
     heroValue: String(units === 'lbs' ? vm.lift.deltaLb : vm.lift.deltaKg),
-    heroUnit: `${units} strength gained`,
+    heroUnit: `${units} added to your estimated one-rep max`,
     caption: 'Your weight has held while your strength kept moving.',
     stats: [],
     date: Date.now(),

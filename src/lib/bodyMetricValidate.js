@@ -28,6 +28,8 @@ import { localDayKey } from './dayKey';
 import { isValidCalendarDateString, parseCalendarDateString, INVALID_CALENDAR_DATE_MESSAGE } from './calendarDateValidate';
 
 // Realistic human ranges. Generous on purpose (see header).
+/** The form's own words when a weight is outside its range; Home's strip says the same (review S10). */
+export const BODY_WEIGHT_RANGE_MESSAGE = 'That body weight looks off. Enter a realistic figure and try again.';
 export const BODY_WEIGHT_MIN_KG = 20;
 export const BODY_WEIGHT_MAX_KG = 500;
 export const BODY_FAT_MIN_PCT = 1;
@@ -180,7 +182,7 @@ export function validateBodyMetricForm(form, { bwu, nowMs = Date.now() } = {}) {
       ? stoneLbsToKg(f.body_weight_st, f.body_weight_st_lbs || '0')
       : parseBodyWeightToKg(f.body_weight, bwu);
     if (!isValidBodyWeightKg(kg)) {
-      return { ok: false, message: 'That body weight looks off. Enter a realistic figure and try again.' };
+      return { ok: false, message: BODY_WEIGHT_RANGE_MESSAGE };
     }
     data.weightKg = kg;
     hasValidField = true;

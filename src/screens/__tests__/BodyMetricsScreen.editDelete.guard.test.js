@@ -45,7 +45,7 @@ describe('BodyMetricsScreen edit/delete (D16 NAV-2) source guard', () => {
     ]) {
       expect(importBlock).toMatch(new RegExp(`\\b${name}\\b`));
     }
-    expect(source).toMatch(/await updateBodyMetric\(user\.id, entry\.id, data\)/);
+    expect(source).toMatch(/await updateBodyMetric\(user\.id, entry\.id, payload\)/);
   });
 
   test('BM-1: a Home weigh-in saves with the validator\'s own key, never `data.body_weight`', () => {

@@ -129,7 +129,8 @@ describe('amounts and rates in the person\'s units (BM-28)', () => {
   });
 
   test('roundToDisplay differences what is printed, so two printed 82.3 kg never differ', () => {
-    expect(roundToDisplay(82.35, 'kg')).toBeCloseTo(82.4, 5);
+    // formatBodyWeight prints 82.35 as 82.3 (toFixed), so the judge agrees (review S6).
+    expect(roundToDisplay(82.35, 'kg')).toBeCloseTo(parseFloat((82.35).toFixed(1)), 5);
     expect(roundToDisplay(82.286, 'kg')).toBeCloseTo(82.3, 5);
     expect(roundToDisplay(82.4, 'lbs')).toBeCloseTo(82.553, 2); // 182 lbs
   });
@@ -153,6 +154,16 @@ describe('This week card lines (section 3 item 2)', () => {
     expect(morningsCaption({ weighed: 4, elapsed: 5 })).toBe('weighed 4 of 5 mornings so far this week');
     expect(morningsCaption({ weighed: 1, elapsed: 1 })).toBe('weighed 1 of 1 morning so far this week');
     expect(morningsCaption({ weighed: 0, elapsed: 3 })).not.toMatch(/streak|keep|miss/i);
+  });
+
+  // Lane 7 review S3 (D214 addendum 7): the window named is the one the
+  // weigh-ins cover; a new daily weigher on day 8 is never told a delta "over
+  // the last 2 weeks".
+  test('the verdict names the days the weigh-ins cover until they span a fortnight', () => {
+    const eightDays = { enough: true, deltaKg: -0.7, ratePerWeek: -0.59, spanDays: 8, count: 9 };
+    expect(twoWeekVerdictLine(eightDays, 'kg')).toBe('Down 0.7 kg over the last 8 days, about 0.59 kg a week.');
+    const thirteen = { enough: true, deltaKg: -0.6, ratePerWeek: -0.3, spanDays: 13, count: 12 };
+    expect(twoWeekVerdictLine(thirteen, 'kg')).toBe('Down 0.6 kg over the last 2 weeks, about 0.3 kg a week.');
   });
 
   test('the verdict: the direction over the last two weeks with its rate, in the person\'s units', () => {
@@ -180,11 +191,11 @@ describe('This week card lines (section 3 item 2)', () => {
     expect(twoWeekVerdictLine(specExample, 'kg')).toBe('Holding steady over the last 2 weeks, about 0.15 kg a week.');
   });
 
-  test('with too little to read: "Not enough weigh-ins yet for a direction: 3 of 7."', () => {
-    expect(notEnoughForDirectionLine({ enough: false, count: 3 })).toBe('Not enough weigh-ins yet for a direction: 3 of 7.');
-    expect(notEnoughForDirectionLine({ enough: false, count: 0 })).toBe('Not enough weigh-ins yet for a direction: 0 of 7.');
+  test('with too little to read: "Not enough weigh-ins yet to show which way your weight is going: 3 of 7."', () => {
+    expect(notEnoughForDirectionLine({ enough: false, count: 3 })).toBe('Not enough weigh-ins yet to show which way your weight is going: 3 of 7.');
+    expect(notEnoughForDirectionLine({ enough: false, count: 0 })).toBe('Not enough weigh-ins yet to show which way your weight is going: 0 of 7.');
     expect(notEnoughForDirectionLine({ enough: false, count: 7, spanDays: 5 }))
-      .toBe('Not enough time yet for a direction: your weigh-ins cover 5 of 7 days.');
+      .toBe('Not enough time yet to show which way your weight is going: your weigh-ins cover 5 of 7 days.');
   });
 
   test('this week against last, with the referent and "so far" on the open week', () => {
@@ -216,7 +227,7 @@ describe('This week card lines (section 3 item 2)', () => {
   });
 
   test('the trend weight\'s (i) and day zero\'s two lines are the spec\'s words', () => {
-    expect(TREND_WEIGHT_INFO).toBe('A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little.');
+    expect(TREND_WEIGHT_INFO).toBe('A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.');
     expect(DAY_ZERO_LINE).toBe('Your trend starts with your first morning weigh-in.');
     const ms = new Date(2026, 7, 3, 10).getTime();
     expect(startingWeightLine({ kg: 82, ms, bwu: 'kg' })).toBe('Starting weight from setup: 82 kg, 3 Aug');
@@ -270,8 +281,8 @@ describe('the Trend card (section 3 item 4)', () => {
   });
 
   test('the (i) says what the line, the dots and "steady" are, in the person\'s units; without "steady" under a withhold', () => {
-    expect(trendInfo('kg')).toBe('The line is your trend, a smoothed average of your weigh-ins. The dots are the weigh-ins themselves. Steady means the trend moves by less than 0.2 kg a week.');
-    expect(trendInfo('st')).toMatch(/less than 0\.4 lbs a week\.$/);
+    expect(trendInfo('kg')).toBe('The line is your trend, a smoothed average of your weigh-ins. The dots are the weigh-ins themselves. Steady means the trend moves by less than 0.2 kg a week and by less than 0.5 kg in all.');
+    expect(trendInfo('st')).toMatch(/less than 0\.4 lbs a week and by less than 1\.1 lbs in all\.$/); // the amount floor too (review S7)
     expect(trendInfo('kg', { includeSteady: false })).not.toMatch(/Steady|week/);
   });
 
@@ -346,7 +357,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
     const m = maintenanceModel(current, { energyUnit: 'kcal', nowMs: NOW });
     expect(m.state).toBe('current');
     expect(m.figure).toEqual({ number: '2,450', unit: 'kcal a day', estimated: 'estimated' });
-    expect(nbsp(m.line)).toBe('About 2,450 kcal a day, estimated from 23 weigh-in days over the last 3 weeks and 6 logged food days in the last 7 days.');
+    expect(nbsp(m.line)).toBe('About 2,450 kcal a day, estimated from 23 weigh-ins and food logged on 6 of the last 7 days.');
   });
 
   test('being rechecked: the spec\'s words', () => {
@@ -376,7 +387,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
     expect(m.state).toBe('building');
     expect(m.kcal).toBeNull();
     expect(m.figure).toBeNull();
-    expect(m.line).toBe('Not ready yet. It needs 14 weigh-in days (you have 9) and 5 days of logged food in the last 7 (you have 3).');
+    expect(m.line).toBe('Not ready yet. It needs 14 weigh-ins (you have 9) and food logged on 5 of the last 7 days (you have 3).');
     expect(m.line).not.toMatch(/keep|log your|should|try/i);
   });
 
@@ -386,14 +397,23 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
       weights: weights(30).map((w, i) => ({ ...w, loggedAt: NOW - (30 - i) * DAY })),
       intake: { daysLogged: 2 },
     }, { nowMs: NOW });
-    expect(met.line).toBe('Not ready yet. It needs 14 weigh-in days (you have 14) and 5 days of logged food in the last 7 (you have 2).');
+    expect(met.line).toBe('Not ready yet. It needs 14 weigh-ins (you have 30) and food logged on 5 of the last 7 days (you have 2).');
+    // Lane 7 review S4: both thresholds met with no memo yet says what is
+    // outstanding (the coaching run learns the estimate), never "not ready"
+    // beside two met counts.
+    const bothMet = maintenanceModel({
+      resolved: { source: 'formula_prior', status: 'formula_prior' },
+      weights: weights(40).map((w, i) => ({ ...w, loggedAt: NOW - (40 - i) * DAY })),
+      intake: { daysLogged: 7 },
+    }, { nowMs: NOW });
+    expect(bothMet.line).toBe('Not ready yet. It has 40 weigh-ins and food logged on 7 of the last 7 days; the first estimate is worked out the next time your coaching runs.');
     const stale = maintenanceModel({
       resolved: { source: 'formula_prior', status: 'formula_prior' },
       weights: weights(30),
       intake: { daysLogged: 5 },
     }, { nowMs: NOW });
-    expect(stale.line).toBe('Not ready yet. It needs a weigh-in from the last 14 days and 5 days of logged food in the last 7 (you have 5).');
-    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. It needs 14 weigh-in days (you have 0) and 5 days of logged food in the last 7 (you have 0).');
+    expect(stale.line).toBe('Not ready yet. It needs a weigh-in from the last 14 days and food logged on 5 of the last 7 days (you have 5).');
+    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. It needs 14 weigh-ins (you have 0) and food logged on 5 of the last 7 days (you have 0).');
   });
 
   test('a formula figure is never printed as the person\'s maintenance (BM-13, D201)', () => {
@@ -421,8 +441,9 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
   test('the plain name and the (i) carry "effective maintenance" and the method', () => {
     expect(MAINTENANCE_TITLE).toBe('Maintenance calories');
     expect(MAINTENANCE_INFO).toMatch(/effective maintenance/);
-    expect(MAINTENANCE_INFO).toMatch(/estimate from your food and weight logs/);
-    expect(MAINTENANCE_INFO).toMatch(/14 weigh-in days and 5 logged food days in the last 7/);
+    expect(MAINTENANCE_INFO).toMatch(/an estimate worked out from your weight and food logs, not a measurement/); // census 0.1b wording
+    expect(MAINTENANCE_INFO).toMatch(/^Maintenance calories are the calories you eat in a day to stay the same weight\./);
+    expect(MAINTENANCE_INFO).toMatch(/It needs 14 weigh-ins and food logged on 5 of the last 7 days\./);
   });
 });
 
@@ -433,6 +454,10 @@ describe('History (section 3 item 8)', () => {
       .toBe('Week of 14 Sep · average 82.3 kg · 5 weigh-ins');
     expect(weekGroupHeader({ weekStartMs: monday, count: 1, averageKg: 82.3, open: true, bwu: 'kg' }))
       .toBe('Week of 14 Sep · average so far 82.3 kg · 1 weigh-in');
+    // Lane 7 review N1: under calm mode or an open flag a run of weekly
+    // averages is a trend to read, so the header keeps the count only.
+    expect(weekGroupHeader({ weekStartMs: monday, count: 5, averageKg: 82.3, open: false, bwu: 'kg', withholdAverage: true }))
+      .toBe('Week of 14 Sep · 5 weigh-ins');
     expect(weekGroupHeader({ weekStartMs: monday, count: 0, averageKg: null, open: false, bwu: 'kg' }))
       .toBe('Week of 14 Sep · no weigh-ins');
   });

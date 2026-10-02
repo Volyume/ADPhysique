@@ -48,8 +48,8 @@ describe('coachVerdictInsight', () => {
     expect(coachVerdictInsight({ onTarget: false, direction: 1, goalPhase: 'mild_bulk', at: fresh }, NOW)).toBe('Moving faster than planned.');
     expect(coachVerdictInsight({ onTarget: false, direction: -1, goalPhase: 'mod_bulk', at: fresh }, NOW)).toBe('Moving slower than planned.');
     // Maintenance: a drift, named by direction.
-    expect(coachVerdictInsight({ onTarget: false, direction: 1, goalPhase: 'maint', at: fresh }, NOW)).toBe('Drifting up a little.');
-    expect(coachVerdictInsight({ onTarget: false, direction: -1, goalPhase: 'maint', at: fresh }, NOW)).toBe('Drifting down a little.');
+    expect(coachVerdictInsight({ onTarget: false, direction: 1, goalPhase: 'maint', at: fresh }, NOW)).toBe('Drifting up.'); // no size word (census P11, D214 addendum 9)
+    expect(coachVerdictInsight({ onTarget: false, direction: -1, goalPhase: 'maint', at: fresh }, NOW)).toBe('Drifting down.'); // no size word (census P11, D214 addendum 9)
   });
   test('no verdict, an unknown phase, or a stale verdict gives nothing', () => {
     expect(coachVerdictInsight(null, NOW)).toBeNull();

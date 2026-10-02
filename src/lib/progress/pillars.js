@@ -16,6 +16,7 @@ import { calculate1RM } from '../algorithms';
 import { formatBodyWeight, formatBodyWeightRate } from '../units';
 import { localDayKey } from '../dayKey';
 import { formatNumber } from '../format';
+import { twoWeekWindowPhrase } from '../weightTrend';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -294,7 +295,7 @@ export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _c
 // weightTrend.js).
 export function bodyPillarCopy(weightTrend, bodyWeightUnits) {
   if (!weightTrend?.render) {
-    return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
+    return { state: 'No weigh-ins logged yet', evidence: 'Your trend starts with your first morning weigh-in.' };
   }
   // The row's headline is a fragment like the other three rows', so the
   // derivation's sentence drops its full stop here (the spoken label joins
@@ -310,7 +311,7 @@ export function bodyPillarCopy(weightTrend, bodyWeightUnits) {
     if (twoWeek && twoWeek.enough && Number.isFinite(twoWeek.ratePerWeek)) {
       // The rate follows the user's display units (section 15 single-system
       // rule), never a kg rate beside an lbs/stone weight on the same row.
-      parts.push(`${formatBodyWeightRate(twoWeek.ratePerWeek, bodyWeightUnits)} over the last 2 weeks`);
+      parts.push(`${formatBodyWeightRate(twoWeek.ratePerWeek, bodyWeightUnits)} ${twoWeekWindowPhrase(twoWeek)}`);
     } else if (twoWeek === undefined && weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)) {
       // A derivation without the two-week reading (a caller that predates
       // it) prints the engine's own rate as before.

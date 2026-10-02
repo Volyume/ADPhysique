@@ -30,7 +30,7 @@ import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import { appAlert } from './AppAlert';
-import { BODY_WEIGHT_MIN_KG, weighInPlausibility, plausibilityMessage } from '../lib/bodyMetricValidate';
+import { BODY_WEIGHT_MIN_KG, BODY_WEIGHT_RANGE_MESSAGE, weighInPlausibility, plausibilityMessage } from '../lib/bodyMetricValidate';
 import {
   stoneLbsToKg,
   parseBodyWeightToKg,
@@ -122,7 +122,11 @@ export default function TodayStrip({
       kg = parseBodyWeightToKg(weightInput, bwu);
     }
     // D214 addendum 4: the form's own 20 kg floor, not just "above zero".
-    if (!kg || isNaN(kg) || kg < BODY_WEIGHT_MIN_KG || kg > 300) return;
+    if (!kg || isNaN(kg) || kg < BODY_WEIGHT_MIN_KG || kg > 300) {
+      // Said, never swallowed: the form's own words for its range (review S10).
+      appAlert('Check that weight', BODY_WEIGHT_RANGE_MESSAGE);
+      return;
+    }
     const commit = () => {
       onLogWeight?.(kg);
       setWeightInput('');

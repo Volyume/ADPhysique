@@ -103,14 +103,14 @@ export function formatBodyWeightShort(kg, bodyWeightUnits = 'st') {
  *
  * @param {number} kgPerWeek - signed weekly change in kg
  * @param {'st'|'lbs'|'kg'} bodyWeightUnits
- * @returns {string} e.g. "-0.4 kg/week", "+0.9 lbs/week", "" for bad input
+ * @returns {string} e.g. "-0.4 kg a week", "+0.9 lbs a week", "" for bad input (the app's one spelling of a rate, census P10)
  */
 export function formatBodyWeightRate(kgPerWeek, bodyWeightUnits = 'st') {
   if (kgPerWeek == null || isNaN(kgPerWeek)) return '';
   const inLbs = bodyWeightUnits === 'st' || bodyWeightUnits === 'lbs';
   const value = inLbs ? kgToLbs(kgPerWeek) : kgPerWeek;
   const unit = inLbs ? 'lbs' : 'kg';
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)} ${unit}/week`;
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)} ${unit} a week`;
 }
 
 /**

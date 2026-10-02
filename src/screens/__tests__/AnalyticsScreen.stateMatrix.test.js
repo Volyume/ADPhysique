@@ -709,7 +709,7 @@ describe('State matrix — C: weight moving, training stalled', () => {
     // instruction (D204) and is gone with the rung.
     expect(training[0].props.accessibilityLabel).toBe('Training. Baseline set on 1 exercise. Strength changes show once an exercise has been trained on two different days.');
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toMatch(/kg\/week/);
+    expect(body[0].props.accessibilityLabel).toMatch(/kg a week/); // census P10
   });
 });
 
@@ -781,7 +781,7 @@ describe('State matrix — E: neither training nor weight moving clearly', () =>
     const body = pillarRow(tree, 'Body');
     // RE-ANCHORED D214 addendum 6 (lane 3 review N11): the row's headline is a
     // fragment like the other rows', so the derivation's full stop is dropped.
-    expect(body[0].props.accessibilityLabel).toContain('Log your weight for 7 days and your trend appears here');
+    expect(body[0].props.accessibilityLabel).toMatch(/Your trend appears after 7 weigh-ins: \d of 7 so far/);
     expect(flattenText(tree)).not.toMatch(/add (a |two )?(sets?|weight)/i);
   });
 });
@@ -1052,7 +1052,7 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     // WeightTrendCard.js's sibling hard-coded literal (BodyMetrics detail
     // surface, off this landing) is on record in the campaign notes, not
     // fixed here (touch only what the task requires).
-    expect(body[0].props.accessibilityLabel).toMatch(/lbs\/week/);
+    expect(body[0].props.accessibilityLabel).toMatch(/lbs a week/); // census P10
     expect(body[0].props.accessibilityLabel).not.toMatch(/kg\/week/);
   });
 });
@@ -1651,8 +1651,8 @@ describe('D214 addendum 4 (BM-15): a pillar row\'s spoken label joins with a sin
   test('a headline that already ends in a full stop is not given a second', () => {
     expect(spokenRowLabel('Body', 'Trending down over the last 2 weeks.', '80.7 kg, -1.8 kg/week'))
       .toBe('Body. Trending down over the last 2 weeks. 80.7 kg, -1.8 kg/week');
-    expect(spokenRowLabel('Body', 'Not enough weigh-ins in the last 2 weeks for a direction: 5 of 7.', null))
-      .toBe('Body. Not enough weigh-ins in the last 2 weeks for a direction: 5 of 7.');
+    expect(spokenRowLabel('Body', 'Not enough weigh-ins in the last 2 weeks to show which way your weight is going: 5 of 7.', null))
+      .toBe('Body. Not enough weigh-ins in the last 2 weeks to show which way your weight is going: 5 of 7.');
   });
 
   test('the last part keeps its own punctuation; a part with none gets none', () => {

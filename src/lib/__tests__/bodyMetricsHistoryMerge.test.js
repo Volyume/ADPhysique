@@ -268,6 +268,19 @@ describe('buildDayEntries: a day holds ONE weigh-in', () => {
     expect(entries[1].isEnrolmentSeed).toBe(true);
     expect(entries[0].isEnrolmentSeed).toBe(false);
   });
+
+  // Lane 7 review S1 (D214 addendum 7): a weigh-in typed through the form on the
+  // setup day keeps the marker on the morning row (the write-through preserves
+  // notes) but IS a weigh-in the person made, so the day is never the seed.
+  test('a form weigh-in on the setup day is a weigh-in, not the seed', () => {
+    const entries = buildDayEntries(
+      [logRowToEntry(logRow({ loggedAt: D(2026, 9, 10, 8), weightKg: 81.2 }))],
+      [morning('mw0', 2026, 9, 10, 81.2, 'enrolment')],
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0].isEnrolmentSeed).toBe(false);
+    expect(entries[0].body_weight).toBe(81.2);
+  });
 });
 
 describe('weeks: one helper for the This week card and every History group', () => {
