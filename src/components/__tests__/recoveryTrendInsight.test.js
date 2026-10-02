@@ -13,6 +13,10 @@ jest.mock('../Button', () => () => null);
 // just above, for the same reason (this suite never renders JSX, so the
 // mock's own shape does not matter).
 jest.mock('../BodyDiagramHeatmap', () => () => null);
+// D214 (lane 2): ReadinessCards.js now also imports FatigueTrendCard (the
+// fatigue-trend bars moved here from Consistency), which pulls in
+// react-native-svg. Same treatment, same reason.
+jest.mock('../FatigueTrendCard', () => () => null);
 // D201: ReadinessCards.js also now imports load.js (loadMuscleRecovery),
 // which pulls in trainingHabitSchedule.js -> trainingReminders.js ->
 // expo-notifications -> expo-modules-core, which throws at require time
@@ -68,8 +72,23 @@ describe('computeRecoveryTrendInsight', () => {
     // Re-anchored under closeout P-9: sleepQuality is dual-source
     // (session answers write it too), so the sentence claims only the
     // adjacency-proven "weeks running", never a check-in event.
-    expect(out?.text).toMatch(/Sleep has been rated low for 3 weeks running/);
+    // RE-ANCHORED under D214 (lane 2, RC-18 and RC-34, D204): the clause
+    // "which is worth paying attention to" is gone (the fact stays), and the
+    // sentence names its measure, the 1-5 sleep QUALITY rating, because the
+    // check-in row prints sleep in hours.
+    expect(out?.text).toBe('Sleep quality has been rated low for 3 weeks running.');
     expect(out?.text).not.toMatch(/weekly check-ins/);
+  });
+
+  test('D214 (RC-18, D204): the three sentences that told the athlete to pay attention keep their fact and lose the clause', () => {
+    const energy = computeRecoveryTrendInsight(series([ck({ energyScore: 1 }), ck({ energyScore: 2 }), ck({ energyScore: 2 })]), NOW);
+    expect(energy.text).toBe('Energy has been low for 3 weekly check-ins in a row.');
+    const sore = computeRecoveryTrendInsight(series([ck({ sorenessScore: 4 }), ck({ sorenessScore: 5 }), ck({ sorenessScore: 4 })]), NOW);
+    expect(sore.text).toBe('High soreness has been reported 3 weeks running.');
+    const sleep = computeRecoveryTrendInsight(series([ck({ sleepQuality: 1 }), ck({ sleepQuality: 2 }), ck({ sleepQuality: 2 })]), NOW);
+    for (const out of [energy, sore, sleep]) {
+      expect(out.text).not.toMatch(/worth paying attention|more attention|pay attention|may need/i);
+    }
   });
 
   test('low energy outranks poor sleep (energy is the primary read)', () => {

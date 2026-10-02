@@ -531,6 +531,45 @@ describe('the plain line: programme next is ready or not, no recommendation', ()
   });
 });
 
+describe('the recovery line opens the Recovery screen (D214, RC-26)', () => {
+  // Home never linked to the Recovery screen: the only way in was the
+  // Progress row. The line under the next session is now a link to it; the
+  // line's own words are unchanged, and nothing else on Home moved.
+  test('tapping the line goes to the Recovery screen in the Progress tab, and the line still reads as before', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => PLAIN_RESULT,
+      },
+    });
+    const nav = makeNav();
+    const { tree, errors } = await mountHome({ navigation: nav });
+    expect(errors).toEqual([]);
+    const link = tree.root.findAll((n) => n.props?.accessibilityHint === 'Opens Recovery' && typeof n.props?.onPress === 'function')[0];
+    expect(link).toBeTruthy();
+    expect(link.props.accessibilityRole).toBe('link');
+    expect(link.props.accessibilityLabel).toBe('Quads are estimated 64% recovered, ready by Thursday.');
+    expect(flattenText(tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+    await TestRenderer.act(async () => { link.props.onPress(); });
+    expect(nav.navigate).toHaveBeenCalledWith('ProgressTab', { screen: 'Recovery', initial: false });
+  });
+
+  test('no recovery line, no link', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => ({ ...PLAIN_RESULT, programmeNextLine: null }),
+      },
+    });
+    const { tree } = await mountHome({ navigation: makeNav() });
+    expect(tree.root.findAll((n) => n.props?.accessibilityHint === 'Opens Recovery')).toHaveLength(0);
+  });
+});
+
 describe('the recommendation card: primary switches, with the reason and a "Keep" control', () => {
   test('Push becomes primary, the reason renders, "Keep Legs" is one tap away', async () => {
     useAppStore.setState(PRO_USER);

@@ -8,12 +8,22 @@
  * real reading of the model in days, and the wording rules: no engine words
  * ("factor", "pairs", "calibrat"), no instruction (D204), no em dash, and
  * every figure an estimate.
+ *
+ * RE-ANCHORED under D214 (lane 2, plan section 7.2 item 3, RC-13 and RC-21):
+ * the card says ONE sentence under the headline (`summary`); the method
+ * paragraph, the example and the footer sit behind "How this is worked
+ * out", collapsed by default; the scale is a thin track with a TICK for the
+ * first estimate and a MARKER for "You", both always drawn ("You, at the
+ * first estimate" while they coincide), never a round thumb; the "You"
+ * marker is ink, not amber. `body` still holds the method paragraph (its
+ * pins are unchanged).
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import fs from 'fs';
 import path from 'path';
 
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
   default: (sel) => sel({ user: { id: 'u1' }, accessibility: { reduceMotion: true } }),
@@ -21,12 +31,16 @@ jest.mock('../../store/useAppStore', () => ({
 
 import RecoveryLearningCard, {
   recoveryLearningCopy, spokenDuration, learningExampleMuscle, learningExample, scalePosition,
-  recoveryLearningSubtitle, pointLabelPlacement, RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER,
+  recoveryLearningSubtitle, pointLabelPlacement, speedScaleSpokenLabel, RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER,
 } from '../RecoveryLearningCard';
 import {
   recoveryHours, REFERENCE_SETS, PERSONAL_MIN_PAIRS, RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX,
 } from '../../lib/recovery/constants';
 import { muscleRecoveryBasisText } from '../MuscleRecoveryList';
+
+const THEME_COLORS = require('../../styles/theme').resolveTheme({
+  theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined,
+}).colors;
 
 const reading = (over = {}) => ({
   factor: 1, prior: 1, pairs: 0, reason: 'too_few', pairsByMuscle: {}, ...over,
@@ -86,6 +100,8 @@ describe('what the card says, state by state', () => {
     expect(copy.example.sentence).toMatch(/^Quads after 6 sets: about .*, down from .*\.$/);
     expect(copy.evidence).toBe('Based on 42 comparisons of the same exercise on the same day in different weeks.');
     expect(copy.progress).toBeNull();
+    // D214: the ONE sentence under the headline.
+    expect(copy.summary).toBe('Your recovery is now estimated to take about 15% less time than first estimated.');
   });
 
   test('slower, measured against a "poor" answer\'s start', () => {
@@ -95,6 +111,7 @@ describe('what the card says, state by state', () => {
     expect(copy.state).toBe('slower');
     expect(copy.headline).toBe('Slower than first estimated');
     expect(copy.body).toBe('When you train again soon after a workout, you lift less than first expected. So your recovery is now estimated to take about 22% longer, though never more than a week.');
+    expect(copy.summary).toBe('Your recovery is now estimated to take about 22% longer than first estimated.');
   });
 
   test('"a day" and "a week" are the estimate\'s own bounds (a session at either cannot move, review of 2026-09-26)', () => {
@@ -113,6 +130,7 @@ describe('what the card says, state by state', () => {
     expect(copy.body).toBe('So far, how much you lift after short and long breaks shows no clear difference from the first estimate, so the estimate stays the same.');
     expect(copy.evidence).toBe('Based on 25 comparisons of the same exercise on the same day in different weeks.');
     expect(copy.example).toBeNull();
+    expect(copy.summary).toBe('Your workouts so far show no clear difference from the first estimate, so it stays the same.');
   });
 
   test('no spread: says why it cannot learn yet, true of a fixed weekly schedule and of long breaks alike, and instructs nothing', () => {
@@ -124,6 +142,7 @@ describe('what the card says, state by state', () => {
     // length", false for a schedule that alternates three and four days.
     expect(copy.body).not.toMatch(/much the same length/);
     expect(copy.evidence).toBeNull();
+    expect(copy.summary).toBe('The breaks before your workouts have not yet differed enough to learn from.');
   });
 
   test('reps that repeat: says which lifts are left out, and that too few comparisons remain', () => {
@@ -132,6 +151,7 @@ describe('what the card says, state by state', () => {
     expect(copy.headline).toBe('Not learning yet');
     expect(copy.body).toBe('When an exercise is logged with exactly the same reps at least half the time, that shows the plan rather than how each workout went, so it is left out. That leaves too few comparisons so far.');
     expect(copy.progress).toBeNull();
+    expect(copy.summary).toBe('Too few comparisons are left once exercises with the same reps every time are set aside.');
   });
 
   test('too few: how far along it is', () => {
@@ -141,6 +161,21 @@ describe('what the card says, state by state', () => {
     expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons count once it has 5, and learning starts when 8 count.');
     expect(copy.progress).toEqual({ done: 5, needed: PERSONAL_MIN_PAIRS });
     expect(copy.evidence).toBeNull();
+    expect(copy.summary).toBe(`Learning starts once ${PERSONAL_MIN_PAIRS} comparisons count.`);
+  });
+
+  test('every state has exactly ONE sentence under the headline (D214)', () => {
+    for (const personal of [
+      reading({ factor: 0.8, prior: 1, pairs: 40, reason: 'adjusted', pairsByMuscle: { quads: 40 } }),
+      reading({ factor: 1.3, prior: 1, pairs: 40, reason: 'adjusted', pairsByMuscle: { chest: 40 } }),
+      reading({ pairs: 30, reason: 'not_clear' }), reading({ pairs: 30, reason: 'no_spread' }),
+      reading({ pairs: 4, reason: 'fixed_reps' }), reading({ pairs: 2, reason: 'too_few' }),
+    ]) {
+      const { summary } = recoveryLearningCopy(personal);
+      expect(summary.endsWith('.')).toBe(true);
+      // One full stop, at the end: one sentence.
+      expect(summary.slice(0, -1)).not.toMatch(/\.\s/);
+    }
   });
 
   test('no reading: nothing', () => {
@@ -156,7 +191,7 @@ describe('what the card says, state by state', () => {
       reading({ pairs: 4, reason: 'fixed_reps' }),
       reading({ pairs: 2, reason: 'too_few' }),
     ].map(recoveryLearningCopy);
-    const words = [RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER, ...all.flatMap((c) => [c.headline, c.body, c.example?.sentence, c.evidence])]
+    const words = [RECOVERY_SPEED_TITLE, RECOVERY_SPEED_FOOTER, ...all.flatMap((c) => [c.headline, c.summary, c.body, c.example?.sentence, c.evidence])]
       .filter(Boolean).join(' \n ');
     expect(words).not.toMatch(/—/);
     expect(words).not.toMatch(/factor|pairs?\b|calibrat|algorithm|regression|significan/i);
@@ -189,7 +224,7 @@ describe('the scale', () => {
     expect(pointLabelPlacement(0.385).style.left).toBe('38.5%');
   });
 
-  test('the markers sit at the start and at the learned speed, with the span between them', () => {
+  test('the tick sits at the first estimate and the marker at the learned speed, with the span between them', () => {
     let tree;
     act(() => {
       tree = create(<RecoveryLearningCard personal={reading({
@@ -201,8 +236,8 @@ describe('the scale', () => {
       .map((n) => [].concat(n.props.style).reduce((acc, st) => ({ ...acc, ...(st || {}) }), {}))
       .map((st) => st.left)
       .filter((l) => typeof l === 'string');
-    // start (1.0 -> 38.5%), you (1.4 -> 100%), the span from 38.5% wide 61.5%,
-    // and the start label centred at 38.5%.
+    // tick (1.0 -> 38.5%), you (1.4 -> 100%), the span from 38.5% wide 61.5%,
+    // and the first-estimate label centred at 38.5%.
     expect(lefts).toEqual(expect.arrayContaining(['38.5%', '100%']));
   });
 
@@ -213,46 +248,101 @@ describe('the scale', () => {
     expect(scalePosition(0.5)).toBe(0);
     expect(scalePosition('x')).toBeNull();
   });
+
+  test('the scale is ONE labelled image that says where the person sits (it is drawn, not decoration)', () => {
+    expect(speedScaleSpokenLabel({ state: 'faster' })).toBe('Recovery speed scale from faster to slower. You are faster than the first estimate.');
+    expect(speedScaleSpokenLabel({ state: 'slower' })).toBe('Recovery speed scale from faster to slower. You are slower than the first estimate.');
+    expect(speedScaleSpokenLabel({ state: 'steady' })).toBe('Recovery speed scale from faster to slower. You are at the first estimate.');
+  });
 });
 
 describe('rendering', () => {
   const texts = (tree) => tree.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+  const flat = (n) => Object.assign({}, ...[].concat(n.props.style).flat(3).filter(Boolean));
+  const ADJUSTED = reading({ factor: 0.85, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 42 } });
 
-  test('an adjusted reading shows the title, the scale ends, both markers\' labels, the words and the evidence', () => {
+  test('an adjusted reading shows the title, the scale ends, both labels, the headline, the one sentence and the evidence; the method waits behind a toggle', () => {
     let tree;
-    act(() => {
-      tree = create(<RecoveryLearningCard personal={reading({
-        factor: 0.85, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 42 },
-      })}
-      />);
-    });
+    act(() => { tree = create(<RecoveryLearningCard personal={ADJUSTED} />); });
     const shown = texts(tree);
     expect(shown).toEqual(expect.arrayContaining([
       RECOVERY_SPEED_TITLE, 'Faster', 'Slower', 'You', 'First estimate', 'Faster than first estimated',
-      'Quads after 6 sets, estimated recovery time',
-      'Based on 42 comparisons of the same exercise on the same day in different weeks.', RECOVERY_SPEED_FOOTER,
+      'Your recovery is now estimated to take about 15% less time than first estimated.',
+      'Based on 42 comparisons of the same exercise on the same day in different weeks.',
+      'How this is worked out',
     ]));
-    // The two tiles mirror the two markers.
-    expect(shown.filter((x) => x === 'First estimate')).toHaveLength(2);
-    expect(shown.filter((x) => x === 'You')).toHaveLength(2);
-    // Not one grouped node: the title keeps its heading role and every line,
-    // the footer included, is read (D210 addendum 3).
+    // Collapsed by default: no method, no example, no footer (RC-21).
+    expect(shown).not.toContain(RECOVERY_SPEED_FOOTER);
+    expect(shown.some((x) => x.startsWith('When you train again soon after a workout'))).toBe(false);
+    // The two example tiles are gone with the long card.
+    expect(shown).not.toContain('Quads after 6 sets, estimated recovery time');
+    // Not one grouped node: the title keeps its heading role.
     expect(tree.root.findAll((n) => n.props.accessible === true && n.props.accessibilityLabel
       && String(n.props.accessibilityLabel).startsWith(RECOVERY_SPEED_TITLE))).toHaveLength(0);
     expect(tree.root.findByProps({ accessibilityRole: 'header', children: RECOVERY_SPEED_TITLE })).toBeTruthy();
-    // Quads after 6 sets: 72 hours at the first estimate, 61 hours at 0.85.
-    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'First estimate, 3 days')).not.toHaveLength(0);
-    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'You, 2½ days')).not.toHaveLength(0);
   });
 
-  test('a still-learning reading shows the progress, and no "You" marker label', () => {
+  test('"How this is worked out" opens the method, the example in days and the footer, and closes again', () => {
+    let tree;
+    act(() => { tree = create(<RecoveryLearningCard personal={ADJUSTED} />); });
+    const toggle = () => tree.root.findAll((n) => n.props.accessibilityLabel === 'How this is worked out' && typeof n.props.onPress === 'function')[0];
+    expect(toggle().props.accessibilityState).toEqual({ expanded: false });
+    act(() => { toggle().props.onPress(); });
+    const open = texts(tree);
+    expect(open).toContain(recoveryLearningCopy(ADJUSTED).body);
+    expect(open.some((x) => /^For example, quads after 6 sets: about .*, down from .*\.$/.test(x))).toBe(true);
+    expect(open).toContain(RECOVERY_SPEED_FOOTER);
+    expect(toggle().props.accessibilityState).toEqual({ expanded: true });
+    act(() => { toggle().props.onPress(); });
+    expect(texts(tree)).not.toContain(RECOVERY_SPEED_FOOTER);
+  });
+
+  test('the toggle is at least 48 dp tall', () => {
+    let tree;
+    act(() => { tree = create(<RecoveryLearningCard personal={ADJUSTED} />); });
+    const nodes = tree.root.findAll((n) => n.props.accessibilityLabel === 'How this is worked out');
+    const heights = nodes.map((n) => flat(n).minHeight).filter((h) => h != null);
+    expect(heights.length).toBeGreaterThan(0);
+    for (const h of heights) expect(h).toBeGreaterThanOrEqual(48);
+  });
+
+  test('a still-learning reading shows the progress and the marker labelled "You, at the first estimate"', () => {
     let tree;
     act(() => { tree = create(<RecoveryLearningCard personal={reading({ pairs: 3, reason: 'too_few' })} />); });
     const shown = texts(tree);
-    expect(shown).toContain('First estimate');
     expect(shown).toContain('Still learning');
     expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} counted so far`);
+    // D214 RC-13: the person is ALWAYS placed on the scale; with nothing
+    // learned they sit at the first estimate and the label says so.
+    expect(shown).toContain('You, at the first estimate');
     expect(shown).not.toContain('You');
+    expect(shown).not.toContain('First estimate');
+  });
+
+  test('the tick and the marker are always drawn, in ink, and neither is a round thumb (RC-13)', () => {
+    for (const personal of [ADJUSTED, reading({ pairs: 25, reason: 'not_clear' }), reading({ pairs: 3, reason: 'too_few' })]) {
+      let tree;
+      act(() => { tree = create(<RecoveryLearningCard personal={personal} />); });
+      const views = tree.root.findAll((n) => n.type === 'View' && n.props.style).map(flat);
+      const tick = views.filter((st) => st.position === 'absolute' && st.width === 2 && st.height === 32);
+      const marker = views.filter((st) => st.position === 'absolute' && st.width === 6 && st.height === 14);
+      expect(tick).toHaveLength(1);
+      expect(marker).toHaveLength(1);
+      // Ink, never the accent.
+      expect(tick[0].backgroundColor).toBe(THEME_COLORS.textMuted);
+      expect(marker[0].backgroundColor).toBe(THEME_COLORS.textPrimary);
+      // A short block with hairline corners, not a circle.
+      expect(marker[0].borderRadius).toBeLessThan(marker[0].width / 2);
+    }
+  });
+
+  test('an unmoved reading draws the marker over the tick at the same point', () => {
+    let tree;
+    act(() => { tree = create(<RecoveryLearningCard personal={reading({ pairs: 25, reason: 'not_clear', prior: 1, factor: 1 })} />); });
+    const views = tree.root.findAll((n) => n.type === 'View' && n.props.style).map(flat);
+    const tick = views.find((st) => st.width === 2 && st.height === 32);
+    const marker = views.find((st) => st.width === 6 && st.height === 14);
+    expect(tick.left).toBe(marker.left);
   });
 
   test('no reading renders nothing', () => {
@@ -260,8 +350,6 @@ describe('rendering', () => {
     act(() => { tree = create(<RecoveryLearningCard personal={null} />); });
     expect(tree.toJSON()).toBeNull();
   });
-
-
 });
 
 // The Recovery by muscle caption's own pin lives with ReadinessCards'
@@ -279,5 +367,19 @@ describe('source guard', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'RecoveryLearningCard.js'), 'utf8');
     expect(src).not.toMatch(/from '\.\.\/lib\/database'|require\('\.\.\/lib\/database'\)/);
     expect(src).toMatch(/export default function RecoveryLearningCard/);
+  });
+
+  test('no amber and no round thumb: ink markers, no accent token, no circle helper (D214 plan 7.0 rule 3, RC-13)', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'RecoveryLearningCard.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/colors\.(primary|primaryBg|primaryFill|primaryDim|warning)\b/);
+    expect(code).not.toMatch(/\bcircle\(/);
+  });
+
+  test('describes, never instructs (D204) and carries no em dash', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'RecoveryLearningCard.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/\b(consider|should|you must|try to|make sure|take it easy)\b/i);
+    expect(code).not.toMatch(/—/);
   });
 });

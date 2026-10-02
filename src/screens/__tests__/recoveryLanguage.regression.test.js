@@ -48,16 +48,31 @@ describe('ReadinessCards.js carries no biological-inference readiness verdict', 
     });
   }
 
-  test('the legitimate 1-5 soreness/fatigue self-report scale is untouched (not what this amendment targets)', () => {
-    // Confirms the guard above isn't accidentally passing because this
-    // string was also removed - it is real athlete-entered data and must
-    // stay exactly as it was.
-    expect(READINESS_CARDS).toMatch(/'Low \/ Fresh'/);
+  // RE-ANCHORED under D214 (lane 2, RC-1 to RC-3): the self-report ratings
+  // are still athlete-entered data and still say what they said, but they are
+  // now drawn on their TRUE scales in each scale's own words: soreness 1-3
+  // (fresh, mild, sore), fatigue 1-5 (fresh, mild, moderate, high,
+  // exhausted), joint discomfort 0-3 (none, slight, moderate, significant).
+  // The "Low / Fresh" band of the old shifted 2-4 display is gone with it.
+  test('the legitimate soreness/fatigue/joint self-report scales are drawn in their own words (not what this amendment targets)', () => {
+    // Confirms the guard above isn't accidentally passing because the words
+    // were removed - they are real athlete-entered data and stay.
+    expect(READINESS_CARDS).toMatch(/return 'fresh'/);
+    expect(READINESS_CARDS).toMatch(/\['fresh', 'mild', 'moderate', 'high', 'exhausted'\]/);
+    expect(READINESS_CARDS).toMatch(/'significant'/);
+    expect(READINESS_CARDS).not.toMatch(/'Low \/ Fresh'/);
   });
 
+  // The shared trainingRecency() authority now reads in the list that names
+  // the muscle's recency (MuscleRecoveryList: the row's "Trained N days ago"
+  // meta line and the "No session in the last 14 days" line), not in
+  // ReadinessCards, whose inline Training-recency chips were replaced.
   test('reads the shared trainingRecency() authority, not an inline band', () => {
-    expect(READINESS_CARDS).toMatch(/import \{ trainingRecency \} from '\.\.\/lib\/trainingRecency';/);
-    expect(READINESS_CARDS).toMatch(/trainingRecency\(lastTrainedAt, now\)/);
+    const LIST = fs.readFileSync(path.resolve(__dirname, '../../components/MuscleRecoveryList.js'), 'utf8');
+    expect(LIST).toMatch(/import \{ trainingRecency \} from '\.\.\/lib\/trainingRecency';/);
+    expect(LIST).toMatch(/trainingRecency\(lastTrainedAt \?\? entry\.lastSessionEndMs, nowMs\)/);
+    expect(LIST).toMatch(/trainingRecency\(freshness\?\.\[key\], nowMs\)/);
+    expect(READINESS_CARDS).not.toMatch(/freshnessDisplay|buildFreshnessDisplay|Training recency/);
   });
 
   test('the missing-evidence-as-Ready defect is gone: no lastTrainedAt falsy check returns a positive verdict', () => {

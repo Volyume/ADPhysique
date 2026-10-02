@@ -1,8 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
-import HintCaption from './HintCaption';
 
 const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -13,22 +12,10 @@ const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // level-4 ("High") ones.
 const FATIGUE_SCALE_MAX = 5;
 
-// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
-// variant of the frozen fatigueBarColor(level) this file used to define
-// inline (module-scope, reading `colors.*` at call time), same "build"
-// pattern as theme.js's buildVolumeStatusColor -- resolves off a passed-in
-// colour table (t.colors) instead of the frozen module singleton. Returns a
-// resolver function so it can be called as buildFatigueBarColor(t.colors)
-// (level). No frozen twin kept: this helper was file-private and untested,
-// so there is no unmigrated caller to preserve it for.
-function buildFatigueBarColor(c) {
-  return function fatigueBarColorLive(level) {
-    if (level <= 1) return c.success;
-    if (level <= 2) return c.success;
-    if (level === 3) return c.warning;
-    return c.error;
-  };
-}
+// D214 (Progress elevation, plan section 7.0 rule 3, "facts are ink"): the
+// bars used to take a status colour per level (green, yellow, red), a
+// verdict painted on a self-rating. They are one ink, `textSecondary`: the
+// bar's height is the rating, the caption under the chart names the scale.
 
 // D204 (founder rule 2026-09-26, "They don't choose sessions!"): the plan
 // sets each session, so this line DESCRIBES what the athlete reported and
@@ -47,8 +34,10 @@ function coachingLine(sessions) {
 
 /**
  * Recent-session fatigue trend. Renders the last N sessions as a bar sparkline
- * with day-of-week labels and a one-line coaching read. Hides itself until at
- * least two sessions with feedback exist.
+ * with day-of-week labels and a one-line read of what was rated. Hides itself
+ * until at least two sessions with feedback exist. It lives on the Recovery
+ * screen under the ratings (D214 Q3 = A); the Consistency screen still draws
+ * it until its own lane removes it.
  */
 export default function FatigueTrendCard({ sessions }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -58,7 +47,6 @@ export default function FatigueTrendCard({ sessions }) {
   const live = buildLiveStyles(t);
   if (!sessions || sessions.length < 2) return null;
 
-  const resolveFatigueBarColor = buildFatigueBarColor(t.colors);
   // Reverse so the oldest session is on the left and the newest on the right.
   const ordered = [...sessions].reverse();
   const data = ordered.map(session => {
@@ -66,13 +54,13 @@ export default function FatigueTrendCard({ sessions }) {
     return {
       value: level,
       label: session.startedAt ? DAY_ABBRS[new Date(session.startedAt).getDay()] : '',
-      color: resolveFatigueBarColor(level),
+      color: t.colors.textSecondary,
     };
   });
 
   return (
     <View style={[styles.card, live.card]}>
-      <Text style={[styles.title, live.title]}>Fatigue trend</Text>
+      <Text style={live.title}>Fatigue trend</Text>
       <View style={styles.chartWrap}>
         <SvgBarSparkline
           data={data}
@@ -87,51 +75,36 @@ export default function FatigueTrendCard({ sessions }) {
             .join(', ')}`}
         />
       </View>
-      {/* Permanent scale caption, not a one-time discovery hint: the "Got
-          it" tap has no dismiss handler, so the caption never disappears
-          (O23: the scale must stay visible, not exist only in the
-          screen-reader label). */}
-      <HintCaption
-        text="Self-rated fatigue after each session, 1 (fresh) to 5 (exhausted)."
-        onDismiss={() => {}}
-      />
-      <Text style={[styles.coachLine, live.coachLine]}>{coachingLine(sessions)}</Text>
+      {/* Permanent scale caption, a plain caption and no "Got it" button
+          (D214, CS-10: the dismiss had no handler, so it was a dead
+          control). O23: the scale must stay visible, not exist only in the
+          screen-reader label. */}
+      <Text style={live.scaleCaption}>Self-rated fatigue after each session, 1 (fresh) to 5 (exhausted).</Text>
+      <Text style={live.coachLine}>{coachingLine(sessions)}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.sm,
-  },
-  title: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
   },
   chartWrap: {
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  coachLine: {
-    ...type.captionTight,
-    color: colors.textMuted,
-  },
 });
 
-// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
-// override for the frozen `styles` block above, same "frozen base + live
-// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
-// chartWrap has no colour tokens.
+// The frozen block holds layout only; every colour and type role is live
+// (the frozen-plus-live pattern the tree carries).
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    title: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    coachLine: { ...t.type.captionTight, color: t.colors.textMuted },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    title: { ...t.type.title, color: t.colors.textPrimary },
+    scaleCaption: { ...t.type.bodySm, color: t.colors.textMuted },
+    coachLine: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

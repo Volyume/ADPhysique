@@ -12,6 +12,15 @@
  * programme order; a resolved session can never be recommended or appear in
  * perSession; the exact copy strings (programmeNextLine, reason, and each
  * perSession line), including the weekday word; determinism.
+ *
+ * RE-ANCHORED under D214 (lane 2, RC-5): the programme-next line no longer
+ * prints "Every muscle it trains is estimated recovered." for muscles with
+ * nothing behind them. With NO counted muscle having a session in the last
+ * 14 days it says "No recent session on the muscles <Name> trains."; with
+ * only SOME having one it names those as recovered and the rest as having
+ * no recent session; "every muscle" stays only where every counted muscle
+ * has a session behind it (D201 ruling 13's "no evidence is never ready",
+ * in its mixed case).
  */
 import { recommendNextWorkout, readyClause } from '../nextWorkoutRecommendation';
 import { SESSION_STATE } from '../../blockProgression';
@@ -332,7 +341,7 @@ describe('readyClause', () => {
 });
 
 describe('no evidence is never "ready" in copy (spec section 1; Opus review finding 2)', () => {
-  test('a programme next none of whose muscles has a recent session: no line, no recommendation', () => {
+  test('a programme next none of whose muscles has a recent session: says so, never "every muscle", no recommendation', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     // Empty map: every muscle reads as no_recent_session.
     const result = recommendNextWorkout({
@@ -341,10 +350,56 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
       recoveryMap: {}, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     expect(result.recommended).toBeNull();
-    expect(result.programmeNextLine).toBeNull();
+    // D214 RC-5: the line is printed (it was null), and it is the fact.
+    expect(result.programmeNextLine).toBe('No recent session on the muscles Legs trains.');
+    expect(result.programmeNextLine).not.toMatch(/every muscle|ready/i);
+    // The change-workout sheet's per-session line stays silent without evidence.
     for (const p of result.perSession) expect(p.line).toBeNull();
     // The RULE still reads them as fully recovered (they are).
     expect(result.perSession.find((p) => p.routineId === 'legs').verdict).toBe('ready');
+  });
+
+  test('D214 RC-5: with an unnamed programme-next session the line still says it', () => {
+    const result = recommendNextWorkout({
+      sessions: [session('legs', 'Legs', 1)],
+      plannedSetsByRoutine: { legs: { quads: 10 } },
+      recoveryMap: {}, projectedAtMs: NOW, nowMs: NOW, routineNamesById: {},
+    });
+    expect(result.programmeNextLine).toBe('No recent session on the muscles it trains.');
+  });
+
+  test('D214 RC-5: only SOME counted muscles have a session: the line names what has evidence and what has none', () => {
+    const sessions = [session('push', 'Push', 1)];
+    const recoveryMap = { chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }) };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { push: { chest: 10, triceps: 6, front_delts: 4 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.programmeNextLine).toBe('Chest is estimated recovered; no recent session on Triceps and Front delts.');
+    expect(result.programmeNextLine).not.toMatch(/every muscle/i);
+  });
+
+  test('D214 RC-5: several muscles with a session, one without: plural verb, singular gap', () => {
+    const recoveryMap = {
+      chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }),
+      quads: staticEntry('quads', { recoveredPercent: 92, status: 'recovered' }),
+    };
+    const result = recommendNextWorkout({
+      sessions: [session('legs', 'Legs', 1)],
+      plannedSetsByRoutine: { legs: { quads: 10, chest: 4, calves: 6 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.programmeNextLine).toBe('Quads and Chest are estimated recovered; no recent session on Calves.');
+  });
+
+  test('D214 RC-5: a session that counts no muscle at all (every planned muscle under 2 sets) has no line to print', () => {
+    const result = recommendNextWorkout({
+      sessions: [session('legs', 'Legs', 1)],
+      plannedSetsByRoutine: { legs: { quads: 1 } },
+      recoveryMap: {}, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.programmeNextLine).toBeNull();
   });
 
   test('a fresh candidate is recommended over an under-recovered programme next, and the copy says why honestly', () => {

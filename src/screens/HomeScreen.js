@@ -2859,8 +2859,19 @@ export default function HomeScreen({ navigation, route }) {
                 fresh tap on "Start workout" from here now targets programmeNext,
                 unchanged, since selectedWorkoutOverride was cleared and never
                 re-applied while recoveryRecommendationKept stays true. */}
+            {/* D214 (RC-26): the recovery line is the way in to the Recovery
+                screen, which Home never linked to before; the line itself is
+                unchanged. */}
             {heroRecoveryLine ? (
-              <Text style={[styles.heroBody, live.heroBody]}>{heroRecoveryLine}</Text>
+              <TouchableOpacity
+                onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'Recovery'); }}
+                hitSlop={{ top: spacing.lg, bottom: spacing.lg }}
+                accessibilityRole="link"
+                accessibilityLabel={heroRecoveryLine}
+                accessibilityHint="Opens Recovery"
+              >
+                <Text style={[styles.heroBody, live.heroBody]}>{heroRecoveryLine}</Text>
+              </TouchableOpacity>
             ) : null}
             {recoveryPrimaryActive ? (
               <TouchableOpacity

@@ -7,25 +7,42 @@
  * SQLite given the signed-in user and tier. Coaching management (check-in,
  * nutrition, body metrics) lives in Coach and the Athlete Profile and is not duplicated here.
  *
- * Voice rules: CLAUDE.md. No em dashes.
+ * D214 (Progress, the recovery heatmap and Consistency elevation, lane 2,
+ * plan `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md` section 7.2, founder rulings Q1 = A, Q3 = A, Q7 =
+ * A): the Recovery screen's first block now LEADS with the answer ("4
+ * muscles still recovering, 8 recovered." and the next-workout sentence),
+ * then the sessions still to do this week, then the figure and the list;
+ * the ratings read on their true scales in the scale's own words; the
+ * fatigue trend moved in from Consistency; a failed read is said and
+ * logged, never swallowed.
+ *
+ * Voice rules: CLAUDE.md. No em dashes. D204: this screen describes, it
+ * never tells the athlete to train, rest or monitor themselves. Facts are
+ * ink: no amber and no status colour on a fact (plan 7.0 rule 3). Nothing
+ * on this screen reads calm mode or an ED flag, and nothing changes under
+ * either (the recovery model reads no weight or food data).
  */
-import { useState, useCallback } from 'react';
+import {
+  useState, useCallback, useEffect, useMemo, useRef,
+} from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type, alpha, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
 import Button from './Button';
 import BodyDiagramHeatmap from './BodyDiagramHeatmap';
-import MuscleRecoveryList from './MuscleRecoveryList';
+import MuscleRecoveryList, { buildMuscleSessionSplits } from './MuscleRecoveryList';
 import RecoveryLearningCard from './RecoveryLearningCard';
+import FatigueTrendCard from './FatigueTrendCard';
+import { SkeletonCard } from './Skeleton';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { MUSCLE_DISPLAY_NAMES, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
-import { trainingRecency } from '../lib/trainingRecency';
+import { MUSCLE_DISPLAY_NAMES, muscleDisplayName, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
@@ -47,8 +64,11 @@ import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/lo
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
 // The "ready now / later today / by Thursday / in N days" wording is
 // nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js
-// for the rows; this file only needs the recommendation itself.
-import { recommendNextWorkout } from '../lib/recovery/nextWorkoutRecommendation';
+// for the rows and here for the sentences; this file only needs the
+// recommendation itself besides.
+import { recommendNextWorkout, readyClause, muscleVerb, muscleNameList } from '../lib/recovery/nextWorkoutRecommendation';
+
+const DAY_MS = 86400000;
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -77,23 +97,13 @@ export function recoveryByMuscleCaption(personal) {
   return `Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for ${adjustedBy}. Not a measurement.`;
 }
 
-// Task 2 (recovery/freshness UI factual-language amendment): this used to
-// band elapsed time into a readiness verdict (Just trained/Recovering/
-// Nearly ready/Ready) via its own inline hours-since thresholds, and its
-// `!lastTrainedAt` branch turned a muscle with NO recorded training at all
-// into 'Ready' - missing evidence read as a positive readiness claim, and a
-// second, disagreeing banding system from the one VolumeHeatmapScreen used
-// (muscleRecovery.js, since deleted). Both are gone: this now reads the
-// single shared trainingRecency() authority (lib/trainingRecency.js), which
-// states only what a logged timestamp establishes and never infers
-// recovered/ready/fresh/fatigued. One neutral colour for every entry - there
-// is no verdict left to colour-code.
-function buildFreshnessDisplay(c) {
-  return function freshnessDisplay(lastTrainedAt, now) {
-    const recency = trainingRecency(lastTrainedAt, now);
-    return { label: recency.label, daysAgo: recency.daysAgo, color: c.textMuted, dot: c.textMuted };
-  };
-}
+/** The caption's (i): the percent's referent and thresholds (RC-7) and what
+ * the ratings do (RC-22). Describes; it tells nobody what to do. */
+export const RECOVERY_PERCENT_NOTE = "The percent is how much of the fatigue from a muscle's last session is estimated to have cleared; 90% counts as recovered, 75% as nearly. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.";
+
+/** The ratings card's (i): the true scales, and that soreness is asked
+ * BEFORE a session (RC-1, RC-6). */
+export const RATINGS_NOTE = 'Averages of your rated sessions in the last two weeks, with the most recent counting most. Soreness is asked before a session and is rated 1 to 3 (fresh, mild, sore). Fatigue is rated after a session, 1 to 5 (fresh, mild, moderate, high, exhausted). Joint discomfort is rated after a session, 0 to 3 (none, slight, moderate, significant). Each appears after two rated sessions.';
 
 // Checkins arrive newest-first. Surfaces a single plain-English read on
 // recovery capacity over the recent run of check-ins, or null when there
@@ -110,18 +120,24 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   // sibling), and a run only counts across ADJACENT calendar weeks -
   // the walk stops at the first gap, so a lapse can never chain an
   // ancient week onto today's. Thresholds and wording are unchanged.
+  //
+  // D214 (RC-18, D204): the three sentences that told the athlete to pay
+  // attention keep their FACT and lose the clause ("Energy has been low for
+  // 3 weekly check-ins in a row."); they render in the neutral card with no
+  // alert icon. The sleep sentence names its measure (the 1-5 sleep quality
+  // rating, not the hours the check-in prints, RC-34).
   const rows = Array.isArray(checkins) ? checkins : [];
   const latestWs = Number(rows[0]?.weekStart ?? rows[0]?.week_start);
-  if (!Number.isFinite(latestWs) || (nowMs - latestWs) > 14 * 86400000) return null;
+  if (!Number.isFinite(latestWs) || (nowMs - latestWs) > 14 * DAY_MS) return null;
   const adjacent = [];
   let expectedWs = latestWs;
   for (const c of rows) {
     const ws = Number(c?.weekStart ?? c?.week_start);
     if (!Number.isFinite(ws)) break;
     // 1.5-day tolerance on the 7-day step absorbs DST-length weeks.
-    if (Math.abs(ws - expectedWs) > 1.5 * 86400000) break;
+    if (Math.abs(ws - expectedWs) > 1.5 * DAY_MS) break;
     adjacent.push(c);
-    expectedWs = ws - 7 * 86400000;
+    expectedWs = ws - 7 * DAY_MS;
   }
   const energies = adjacent.map(c => c.energyScore ?? null).filter(v => v !== null);
   const soreness = adjacent.map(c => c.sorenessScore ?? null).filter(v => v !== null);
@@ -138,10 +154,10 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   const lowSleepWeeks = recentSleep.filter(s => s <= 2).length;
 
   if (lowEnergyWeeks >= 3) {
-    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} weekly check-ins in a row, which is worth paying attention to.` };
+    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} weekly check-ins in a row.` };
   }
   if (highSorenessWeeks >= 3) {
-    return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running, so your recovery may need more attention.` };
+    return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running.` };
   }
   // A run of poor nights is the clearest recovery signal there is. Surface
   // it in the same insight slot rather than on a card of its own, so the
@@ -155,7 +171,7 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
     // adjacency walk actually proves, whichever surface supplied the
     // rating. The energy/soreness sentences keep their noun: those
     // columns are only ever written by a real check-in.
-    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} weeks running, which is worth paying attention to.` };
+    return { type: 'warning', text: `Sleep quality has been rated low for ${lowSleepWeeks} weeks running.` };
   }
   if (highEnergyWeeks >= 3) {
     return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} weekly check-ins, which is a good sign.` };
@@ -226,9 +242,215 @@ function compareMuscleNames(a, b) {
   return nameA < nameB ? -1 : 1;
 }
 
-// The per-muscle rows (band dot, name, estimated percent, bar, the
-// ready-by and trained-ago line, and the tap-to-open breakdown) and their
-// helpers live in MuscleRecoveryList.js (D201 addendum 9).
+// The per-muscle rows (name, estimated percent with its status word, bar,
+// the ready-by and trained-ago line, and the tap-to-open breakdown) and
+// their helpers live in MuscleRecoveryList.js (D201 addendum 9).
+
+/**
+ * How many muscles sit in each of the model's three counted states
+ * (`no_recent_session` is none of them). The counts the answer line prints
+ * and the Progress row's headline are the SAME three numbers.
+ */
+export function recoveryCounts(map) {
+  const out = { recovering: 0, nearly: 0, recovered: 0 };
+  for (const entry of Object.values(map ?? {})) {
+    if (entry && Object.prototype.hasOwnProperty.call(out, entry.status)) out[entry.status] += 1;
+  }
+  return out;
+}
+
+/**
+ * The answer line (D214 Q7 = A, `t.type.h3`): "4 muscles still recovering,
+ * 2 nearly recovered, 8 recovered." Only the states with a count are named;
+ * every muscle recovered reads "All 8 muscles recovered."; null when no
+ * muscle has a session in the window.
+ */
+export function recoveryAnswerLine(counts) {
+  const { recovering, nearly, recovered } = counts;
+  if (!recovering && !nearly && !recovered) return null;
+  if (!recovering && !nearly) {
+    return recovered === 1 ? '1 muscle recovered.' : `All ${recovered} muscles recovered.`;
+  }
+  const parts = [];
+  if (recovering) parts.push(`${recovering} muscle${recovering === 1 ? '' : 's'} still recovering`);
+  if (nearly) parts.push(`${nearly} nearly recovered`);
+  if (recovered) parts.push(`${recovered} recovered`);
+  return `${parts.join(', ')}.`;
+}
+
+/** The muscle with the lowest estimate among those that have a session
+ * behind them (a muscle with no recent session counts as 100 for the
+ * RULE, and is never named as a recovery figure). */
+function leastRecoveredWithSession(readinessNow) {
+  const counted = Array.isArray(readinessNow?.muscles) ? readinessNow.muscles : [];
+  let best = null;
+  for (const m of counted) {
+    if (m.status === 'no_recent_session') continue;
+    if (!best || m.recoveredPercent < best.recoveredPercent) best = m;
+  }
+  return best;
+}
+
+/**
+ * The next-workout sentence in the answer block (D214 7.2 a). A swap's own
+ * reason is unchanged in substance (RC-20). Otherwise the programme-next
+ * session is named with its limiting muscle named AS the limiting one:
+ * "Upper A is next: Back is the least recovered of the muscles it trains,
+ * estimated 60% recovered, ready by tomorrow." When nothing it trains has a
+ * session in the window it says that ("No recent session on the muscles
+ * Upper A trains.", RC-5), and never "every muscle ... recovered" for
+ * muscles with nothing behind them. null when the session's planned sets
+ * could not be read (no estimate to state).
+ */
+export function buildNextWorkoutSentence(recommendation, nowMs) {
+  if (!recommendation) return null;
+  if (recommendation.reason) return recommendation.reason;
+  // An unnamed routine (rare) reads "Next up:" and "it trains", never "Your
+  // next session is next" (lane 2 review N7), the lib's own fallback.
+  const name = recommendation.programmeNextName || '';
+  const lead = name ? `${name} is next` : 'Next up';
+  const entry = (recommendation.perSession ?? [])
+    .find((p) => p.routineId === recommendation.programmeNext?.routineId);
+  const now = entry?.readinessNow ?? null;
+  if (now) {
+    const counted = Array.isArray(now.muscles) ? now.muscles : [];
+    if (!now.evidence) {
+      return counted.length ? `No recent session on the muscles ${name ? `${name} trains` : 'it trains'}.` : null;
+    }
+    if (now.verdict !== 'ready' && now.limitingMuscle) {
+      const verb = muscleVerb(now.limitingMuscle);
+      return `${lead}: ${muscleDisplayName(now.limitingMuscle)} ${verb} the least recovered of the muscles it trains, estimated ${Math.round(now.minPercent)}% recovered, ${readyClause(now.limitingReadyAtMs, nowMs)}.`;
+    }
+    // Every counted muscle with a session behind it is ready (or only some
+    // have one and the line says which): the shared line, after the name.
+    if (recommendation.programmeNextLine) return `${lead}. ${recommendation.programmeNextLine}`;
+    return null;
+  }
+  if (!recommendation.programmeNextLine) return null;
+  return `${lead}. ${recommendation.programmeNextLine}`;
+}
+
+/**
+ * One row per OUTSTANDING session this week (D214 7.2 b), from
+ * recommendNextWorkout().perSession, which holds outstanding sessions only:
+ * "Upper A · estimated ready by tomorrow (Back 60% recovered)". A session
+ * none of whose counted muscles has a recent session reads "no recent
+ * session on the muscles it trains", never "ready now" (D201 ruling 13);
+ * one whose planned sets could not be read says there is no estimate.
+ */
+export function buildStillToDoRows(recommendation, nowMs) {
+  const per = Array.isArray(recommendation?.perSession) ? recommendation.perSession : [];
+  const names = recommendation?.routineNamesById ?? {};
+  return per.map((p) => {
+    const name = names[p.routineId] || 'Session';
+    const now = p.readinessNow ?? null;
+    const counted = Array.isArray(now?.muscles) ? now.muscles : [];
+    let rest;
+    if (!now || !counted.length) {
+      rest = 'estimate not available';
+    } else if (!now.evidence) {
+      rest = 'no recent session on the muscles it trains';
+    } else if (now.verdict !== 'ready' && now.limitingMuscle) {
+      rest = `estimated ${readyClause(now.limitingReadyAtMs, nowMs)} (${muscleDisplayName(now.limitingMuscle)} ${Math.round(now.minPercent)}% recovered)`;
+    } else {
+      const least = leastRecoveredWithSession(now);
+      rest = least
+        ? `estimated ready now (${muscleDisplayName(least.muscle)} ${Math.round(least.recoveredPercent)}% recovered)`
+        : 'estimated ready now';
+      // The mixed case (RC-5, lane 2 review S3): the sentence above names the
+      // muscles with no recent session, so the row does too.
+      const without = counted.filter((m) => m.status === 'no_recent_session').map((m) => m.muscle);
+      if (without.length) rest += `; no recent session on ${muscleNameList(without)}`;
+    }
+    return { routineId: p.routineId, text: `${name} · ${rest}` };
+  });
+}
+
+/**
+ * Scrolls a ScrollView so a laid-out node sits near the top: the node's
+ * position inside the scroll content comes from measureLayout against the
+ * ScrollView's inner view (one measurement, no nested onLayout sums). Does
+ * nothing, and says so, when either side cannot measure (a test renderer).
+ */
+export function scrollToNode(scrollView, node, headroom = spacing.lg) {
+  if (!scrollView || !node || typeof node.measureLayout !== 'function') return false;
+  const inner = typeof scrollView.getInnerViewRef === 'function' ? scrollView.getInnerViewRef() : null;
+  if (!inner || typeof scrollView.scrollTo !== 'function') return false;
+  node.measureLayout(inner, (_x, y) => {
+    scrollView.scrollTo({ y: Math.max(y - headroom, 0), animated: true });
+  }, () => {});
+  return true;
+}
+
+/**
+ * The ratings, each on its OWN true scale and in that scale's own words
+ * (D214 7.2 item 4, RC-1 to RC-3): soreness is asked before a session on 1
+ * to 3 (fresh, mild, sore), fatigue after it on 1 to 5 (fresh, mild,
+ * moderate, high, exhausted, the workout summary's own buttons) and joint
+ * discomfort after it on 0 to 3 (none, slight, moderate, significant).
+ */
+export function sorenessWord(v) {
+  if (v < 1.5) return 'fresh';
+  return v <= 2.5 ? 'mild' : 'sore';
+}
+const FATIGUE_WORDS = ['fresh', 'mild', 'moderate', 'high', 'exhausted'];
+export function fatigueWord(v) {
+  return FATIGUE_WORDS[Math.min(5, Math.max(1, Math.round(v))) - 1];
+}
+export function jointWord(v) {
+  if (v < 0.5) return 'none';
+  if (v <= 1.5) return 'slight';
+  return v <= 2.5 ? 'moderate' : 'significant';
+}
+
+// MIN_RATED_SESSIONS: a "running average" needs at least two points to be one.
+// Below that the row shows the existing no-value state with an honest note,
+// and no word is claimed of a single answer.
+const MIN_RATED_SESSIONS = 2;
+
+/** One rating's text: "Soreness before sessions · mild (1.4 of 3)", or why
+ * there is no figure yet. */
+export function ratingText({ label, value, samples = 0, word, max }) {
+  // C5-P18-01: a single rated session is not an average, so it gets no number
+  // and no verdict word.
+  const enoughSamples = samples >= MIN_RATED_SESSIONS;
+  const hasValue = value != null && !isNaN(value) && enoughSamples;
+  if (!hasValue) {
+    // P3(a) (F3, D200-2): honest and specific per sample count -- 0 -> no
+    // session has rated anything yet; 1 -> one rated session is not enough
+    // for a running average.
+    return `${label} · ${samples > 0 && !enoughSamples ? 'one rated session so far' : 'not rated yet'}`;
+  }
+  const v = parseDecimalInput(value);
+  return `${label} · ${word(v)} (${v.toFixed(1)} of ${max})`;
+}
+
+// The weekly check-in's own words (WeeklyCheckInScreen's chips).
+const CHECKIN_ENERGY_WORDS = ['', 'low', 'below normal', 'normal', 'good', 'high'];
+const CHECKIN_STRESS_WORDS = ['', 'low', 'mild', 'moderate', 'high', 'very high'];
+const CHECKIN_SORENESS_WORDS = ['', 'none', 'mild', 'moderate', 'high', 'very high'];
+
+/**
+ * The latest weekly check-in as one line, only while it is current (within
+ * 14 days of its week, the bound the trend sentences use; RC-16): its own
+ * words with "of 5" after each score, and sleep in hours only (RC-34).
+ * Empty string when there is nothing current to say.
+ */
+export function checkinSummaryLine(checkin, nowMs = Date.now()) {
+  if (!checkin) return '';
+  const ws = Number(checkin.weekStart ?? checkin.week_start);
+  if (!Number.isFinite(ws) || (nowMs - ws) > 14 * DAY_MS) return '';
+  const word = (table, n) => (table[n] ? `${table[n]} ` : '');
+  const week = safeFormatDate(ws, 'd MMM', '');
+  const sleep = checkin.sleepHours;
+  return [
+    week ? `Week of ${week}` : null,
+    checkin.energyScore != null ? `Energy ${word(CHECKIN_ENERGY_WORDS, checkin.energyScore)}(${checkin.energyScore} of 5)` : null,
+    checkin.stressScore != null ? `Stress ${word(CHECKIN_STRESS_WORDS, checkin.stressScore)}(${checkin.stressScore} of 5)` : null,
+    checkin.sorenessScore != null ? `Soreness ${word(CHECKIN_SORENESS_WORDS, checkin.sorenessScore)}(${checkin.sorenessScore} of 5)` : null,
+    sleep != null ? `Sleep ${sleep} ${Number(sleep) === 1 ? 'hour' : 'hours'}` : null,
+  ].filter(Boolean).join(' · ');
+}
 
 // FOUNDER DECISION (fully free, no tier split): every reader below used to
 // fork on `tier` (muscle freshness, the recovery-trend insight, and the
@@ -243,17 +465,33 @@ function compareMuscleNames(a, b) {
 // 'recovery' (the Recovery screen: the section exactly as it was, same
 // order, headed "Your ratings" because the screen itself is titled
 // "Recovery"). The recovery reads are skipped when they would not be drawn.
-export default function ReadinessCards({ userId, onRateLastSession, sections = 'all' }) {
+// `scrollRef` (Recovery screen only): the screen's ScrollView, so a tap on
+// the figure can scroll the list to the muscle's row (D214, RC-12).
+export default function ReadinessCards({
+  userId, onRateLastSession, sections = 'all', scrollRef = null,
+}) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
   const t = useTheme();
   const live = buildLiveStyles(t);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
+  // RC-33 (D214): `totalWorkouts` starts at 0, so the milestone read "1 to
+  // go: First session" until the read landed, and for ever if it failed.
+  // The milestone now waits for a read that succeeded.
+  const [workoutsRead, setWorkoutsRead] = useState(false);
+  const [ratingsFailed, setRatingsFailed] = useState(false);
+  // False until the first load has finished (success or failure): the card
+  // slots draw skeletons until then (RC-24).
+  const [loaded, setLoaded] = useState(false);
   const [recovery, setRecovery] = useState({ soreness: null, fatigue: null, joint: null });
   const [sampleCounts, setSampleCounts] = useState({ soreness: 0, fatigue: 0, joint: 0 });
   const [muscleFreshness, setMuscleFreshness] = useState({});
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
+  // The last six rated sessions, newest first, for the fatigue-trend bars
+  // (D214 Q3 = A: moved here from Consistency); derived from the workouts
+  // this load already reads, so no new read.
+  const [fatigueSessions, setFatigueSessions] = useState([]);
   // P3(a): the latest completed session's WorkoutSummary route params, or
   // null when there is no completed session or it already carries both
   // post-session ratings -- either way, the "Rate your last session"
@@ -265,187 +503,246 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
   // soon as a single check-in exists.
   const [latestCheckin, setLatestCheckin] = useState(null);
   // D201: loadMuscleRecovery's own result ({ map, nowMs, ... }), or null
-  // when it hasn't resolved yet or the read failed -- null hides the whole
-  // "Recovery by muscle" section (figure, rows, caption, next-workout row)
-  // without touching anything else this component renders (see load()).
+  // when it hasn't resolved yet or the read failed. D214 (RC-24, RC-33): a
+  // failed read no longer hides the section in silence; the card stays with
+  // "Couldn't load the estimate just now." and the failure is logged.
   const [muscleRecovery, setMuscleRecovery] = useState(null);
-  // D201 addendum 9: the muscle whose breakdown is open (row tap or the
-  // figure's muscle tap); null when none.
+  const [muscleRecoveryFailed, setMuscleRecoveryFailed] = useState(false);
+  // The muscle chosen on the figure or by a row tap; its breakdown is open
+  // when it has a row (D201 addendum 9).
   const [selectedMuscle, setSelectedMuscle] = useState(null);
   // D201: recommendNextWorkout's result, or null when there is no active
   // block, no outstanding session to reason about, or the read failed.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
+  // The counted sessions' own sets and the exercise library, for the
+  // breakdown's "main mover" / "helped" split (RC-9, RC-10).
+  const [splitData, setSplitData] = useState({ sets: [], exercises: [] });
+  // Scroll plumbing (RC-12): the rows' nodes, the names line's node, and
+  // the muscle a figure tap is waiting to scroll to once its row exists.
+  const rowNodes = useRef({});
+  const namesNode = useRef(null);
+  const pendingScroll = useRef(null);
 
   const load = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) { setLoaded(true); return; }
     try {
-      const [workouts, sets] = await Promise.all([
-        getAllWorkouts(userId),
-        getCompletedWorkoutSets(userId),
-      ]);
-      const setsPerWorkout = new Map();
-      for (const s of sets ?? []) {
-        const wid = s.workoutId ?? s.workout_id;
-        if (!wid) continue;
-        setsPerWorkout.set(wid, (setsPerWorkout.get(wid) ?? 0) + 1);
-      }
-      const completed = (workouts ?? []).filter(w => {
-        const isComplete = !!(w.isCompleted ?? w.is_completed);
-        if (!isComplete) return false;
-        const cachedCount = w.setCount ?? w.set_count;
-        const liveCount = setsPerWorkout.get(w.id) ?? 0;
-        return (cachedCount != null && cachedCount > 0) || liveCount > 0;
-      });
-      setTotalWorkouts(completed.length);
-      // C5-P18-02 (D96): soreness_24h_before is written on a 1-3 domain
-      // (Fresh/Mild/Sore, the scale the adaptive engine and computeRecoveryEMAs
-      // read), but this card draws it on a gauge captioned "Scale 1-5" with
-      // 1-5 thresholds, so a user who tapped the MAXIMUM option saw a
-      // mid-scale amber "Elevated". Normalised for DISPLAY with the exact
-      // mapping WorkoutSummaryScreen already uses (1 -> 2, 2 -> 3, 3 -> 4);
-      // no stored value changes and computeRecoveryEMAs is untouched.
-      // C6 RD6-12 (D97-25): the tooltip promises older sessions "fade
-      // out", but emaValue normalises by the weight sum, so the OUTPUT
-      // is age-invariant and the gauges were fed every completed
-      // workout ever - after months away, "Fatigue - High" rendered a
-      // present-tense read of ancient sessions. The gauges now read
-      // only sessions inside the standing 14-day boundary (the same
-      // bound R-6/RB6-4 gave the sibling readiness surfaces); with
-      // nothing recent they fall to their existing waiting state. The
-      // pure EMA helper is untouched.
-      const gaugeRecent = completed.filter((w) => {
-        const at = Number(w.endedAt ?? w.startedAt ?? w.createdAt);
-        return Number.isFinite(at) && (Date.now() - at) <= 14 * 86400000;
-      });
-      const displayWorkouts = gaugeRecent.map((w) => (
-        w.soreness24hBefore == null
-          ? w
-          : { ...w, soreness24hBefore: [2, 3, 4][w.soreness24hBefore - 1] ?? w.soreness24hBefore }
-      ));
-      setRecovery(computeRecoveryEMAs(displayWorkouts));
-      // C5-P18-01 (D96): how many RATED sessions each gauge actually
-      // averaged. computeRecoveryEMAs returns a value from a single point, so
-      // one rated session produced "4.0 / Fatigue / High" beside a red dot,
-      // under a caption calling it a weighted running average and telling the
-      // user that consistently high scores mean a lighter week. Nothing had
-      // been averaged and nothing was consistent. Counted here rather than in
-      // recoveryEMA.js so the pure engine helper and its pinned shape stay
-      // exactly as they are.
-      setSampleCounts({
-        soreness: gaugeRecent.filter(w => w.soreness24hBefore != null).length,
-        fatigue: gaugeRecent.filter(w => w.fatigueLevel != null).length,
-        joint: gaugeRecent.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
-      });
-    } catch (_) {}
-
-    // Consistency draws only the milestone, which needs nothing below.
-    if (sections === 'milestone') return;
-
-    try {
-      const data = await getLastTrainedPerMuscle(userId);
-      setMuscleFreshness(data || {});
-    } catch (_) {}
-    try {
-      const checkins = await getRecentCheckins(userId, 6);
-      if (checkins.length >= 3) setRecoveryTrendInsight(computeRecoveryTrendInsight(checkins));
-    } catch (_) {}
-
-    // P3(a): the latest completed session, only when it still needs a
-    // post-session rating. getRecentCompletedWorkouts(userId, 1) (not
-    // getWorkoutById) so the row carries routineName from its routines
-    // join -- a bare `SELECT * FROM workouts` never would, and the
-    // summary's title depends on it (founder device report 2026-08-24,
-    // WorkoutHistoryScreen's own route-building comment). Same ordering
-    // WorkoutHistoryScreen's list uses, so "latest" agrees with it.
-    try {
-      const [lastWorkout] = await getRecentCompletedWorkouts(userId, 1);
-      if (lastWorkout) {
-        const [lastSets, exercisesForLast] = await Promise.all([
-          getWorkoutSetsForWorkout(lastWorkout.id),
-          getAllExercises(),
-        ]);
-        setRateSessionParams(buildRateLastSessionParams(lastWorkout, lastSets, exercisesForLast));
-      } else {
-        setRateSessionParams(null);
-      }
-    } catch (_) {}
-    // Best-effort: a failed read here only means the button doesn't show
-    // this visit, never a crash or a stale nav target.
-
-    // P3(b): the latest weekly check-in, independent of the trend
-    // insight's own >=3 gate above.
-    try {
-      const recent = await getRecentCheckins(userId, 1);
-      setLatestCheckin(recent?.[0] ?? null);
-    } catch (_) {}
-    // Best-effort: a failed read here only means the check-in row doesn't
-    // show this visit, never a crash.
-
-    // D201 (per-muscle recovery, spec section 6): the ONLY new I/O this
-    // component performs for the "Recovery by muscle" section, entirely
-    // through src/lib/recovery/load.js -- mirrors
-    // HomeScreen.loadRecoveryRecommendation's own call chain exactly, so
-    // Home and this block can never disagree about what is next. A failed
-    // read here hides the WHOLE section (never a crash, never a stale
-    // figure) and leaves every other reader in this file untouched.
-    try {
-      const recoveryLoad = await loadMuscleRecovery(userId);
-      // Opus review finding 10: a core read that failed is not an all-clear.
-      // The whole section stays hidden rather than showing every muscle as
-      // "no recent session" off a read that never happened.
-      if (recoveryLoad?.degraded) {
-        setMuscleRecovery(null);
-        setRecoveryRecommendation(null);
-        return;
-      }
-      setMuscleRecovery(recoveryLoad);
+      let completedSets = [];
+      let exercisesRead = null;
       try {
-        const position = await resolveProgrammePosition(userId);
-        const programmeNext = position?.nextSession ?? null;
-        // Opus review finding 1: a FINISHED block awaiting the athlete's
-        // decision has no "next workout" to suggest; Home's own hero says
-        // "choose what comes after this block" there, and this row must not
-        // contradict it. resolveProgrammePosition's gated recovery state is
-        // the one authority for that reading.
-        const awaitingDecision = !!position?.recoveryState?.awaitingDecision;
-        if (position && programmeNext && !awaitingDecision) {
-          const sessions = position.sessions ?? [];
-          const outstandingIds = sessions
-            .filter((s) => s.state === SESSION_STATE.OUTSTANDING)
-            .map((s) => s.routineId);
-          const plannedSetsByRoutine = await loadPlannedSetsByRoutine(outstandingIds);
-          const projectedAtMs = nextLikelyTrainingTime({
-            nowMs: recoveryLoad.nowMs,
-            habitualWeekdays: recoveryLoad.habitualWeekdays,
-            typicalStartMinute: recoveryLoad.typicalStartMinute,
-          });
-          const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
-          const result = recommendNextWorkout({
-            sessions,
-            plannedSetsByRoutine,
-            recoveryMap: recoveryLoad.map,
-            projectedAtMs,
-            nowMs: recoveryLoad.nowMs,
-            routineNamesById,
-          });
-          // Lead review: this row has no card title naming the session (Home
-          // does), so it carries the programme-next name itself, looked up
-          // from the same sessions the rule was given.
-          setRecoveryRecommendation({
-            ...result,
-            programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
-          });
+        const [workouts, sets] = await Promise.all([
+          getAllWorkouts(userId),
+          getCompletedWorkoutSets(userId),
+        ]);
+        completedSets = Array.isArray(sets) ? sets : [];
+        const setsPerWorkout = new Map();
+        for (const s of sets ?? []) {
+          const wid = s.workoutId ?? s.workout_id;
+          if (!wid) continue;
+          setsPerWorkout.set(wid, (setsPerWorkout.get(wid) ?? 0) + 1);
+        }
+        const completed = (workouts ?? []).filter(w => {
+          const isComplete = !!(w.isCompleted ?? w.is_completed);
+          if (!isComplete) return false;
+          const cachedCount = w.setCount ?? w.set_count;
+          const liveCount = setsPerWorkout.get(w.id) ?? 0;
+          return (cachedCount != null && cachedCount > 0) || liveCount > 0;
+        });
+        setTotalWorkouts(completed.length);
+        setWorkoutsRead(true);
+        setRatingsFailed(false);
+        // D214 (RC-1, RC-2): soreness_24h_before is written on a 1-3 domain
+        // (Fresh/Mild/Sore, the scale the adaptive engine and computeRecoveryEMAs
+        // read) and is now DRAWN on that same scale: the display shift to 2-4
+        // (C5-P18-02) is gone, so a person who always answers "Fresh" reads
+        // "fresh" and the average is printed "of 3". No stored value changes and
+        // computeRecoveryEMAs is untouched.
+        // C6 RD6-12 (D97-25): the tooltip promises older sessions "fade
+        // out", but emaValue normalises by the weight sum, so the OUTPUT
+        // is age-invariant and the gauges were fed every completed
+        // workout ever - after months away, "Fatigue - High" rendered a
+        // present-tense read of ancient sessions. The gauges now read
+        // only sessions inside the standing 14-day boundary (the same
+        // bound R-6/RB6-4 gave the sibling readiness surfaces); with
+        // nothing recent they fall to their existing waiting state. The
+        // pure EMA helper is untouched.
+        const gaugeRecent = completed.filter((w) => {
+          const at = Number(w.endedAt ?? w.startedAt ?? w.createdAt);
+          return Number.isFinite(at) && (Date.now() - at) <= 14 * DAY_MS;
+        });
+        setRecovery(computeRecoveryEMAs(gaugeRecent));
+        // C5-P18-01 (D96): how many RATED sessions each gauge actually
+        // averaged. computeRecoveryEMAs returns a value from a single point, so
+        // one rated session produced "4.0 / Fatigue / High" beside a red dot,
+        // under a caption calling it a weighted running average and telling the
+        // user that consistently high scores mean a lighter week. Nothing had
+        // been averaged and nothing was consistent. Counted here rather than in
+        // recoveryEMA.js so the pure engine helper and its pinned shape stay
+        // exactly as they are.
+        setSampleCounts({
+          soreness: gaugeRecent.filter(w => w.soreness24hBefore != null).length,
+          fatigue: gaugeRecent.filter(w => w.fatigueLevel != null).length,
+          joint: gaugeRecent.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
+        });
+        // The fatigue-trend bars: the last six completed sessions that carry
+        // a fatigue rating, newest first (the order getRecentWorkoutFeedback
+        // gave Consistency).
+        const rated = completed
+          .filter((w) => w.fatigueLevel != null)
+          .sort((a, b) => Number(b.startedAt ?? 0) - Number(a.startedAt ?? 0))
+          .slice(0, 6);
+        setFatigueSessions(rated);
+      } catch (e) {
+        // RC-33 (D214): this read used to close with `catch (_) {}`, so a
+        // failure left the dials at "Not rated yet" and the milestone at "1
+        // to go". Logged and said now.
+        logError('ReadinessCards.loadRatings', e, { userId });
+        setRatingsFailed(true);
+      }
+
+      // Consistency draws only the milestone, which needs nothing below.
+      if (sections === 'milestone') return;
+
+      try {
+        const data = await getLastTrainedPerMuscle(userId);
+        setMuscleFreshness(data || {});
+      } catch (e) {
+        logError('ReadinessCards.loadLastTrained', e, { userId });
+      }
+      try {
+        const checkins = await getRecentCheckins(userId, 6);
+        if (checkins.length >= 3) setRecoveryTrendInsight(computeRecoveryTrendInsight(checkins));
+      } catch (e) {
+        logError('ReadinessCards.loadCheckinTrend', e, { userId });
+      }
+
+      // P3(a): the latest completed session, only when it still needs a
+      // post-session rating. getRecentCompletedWorkouts(userId, 1) (not
+      // getWorkoutById) so the row carries routineName from its routines
+      // join -- a bare `SELECT * FROM workouts` never would, and the
+      // summary's title depends on it (founder device report 2026-08-24,
+      // WorkoutHistoryScreen's own route-building comment). Same ordering
+      // WorkoutHistoryScreen's list uses, so "latest" agrees with it.
+      try {
+        const [lastWorkout] = await getRecentCompletedWorkouts(userId, 1);
+        if (lastWorkout) {
+          const [lastSets, exercisesForLast] = await Promise.all([
+            getWorkoutSetsForWorkout(lastWorkout.id),
+            getAllExercises(),
+          ]);
+          exercisesRead = exercisesForLast ?? null;
+          setRateSessionParams(buildRateLastSessionParams(lastWorkout, lastSets, exercisesForLast));
         } else {
+          setRateSessionParams(null);
+        }
+      } catch (e) {
+        // Best-effort: a failed read here only means the button doesn't show
+        // this visit, never a crash or a stale nav target. Logged (D214).
+        logError('ReadinessCards.loadRateLastSession', e, { userId });
+      }
+
+      // P3(b): the latest weekly check-in, independent of the trend
+      // insight's own >=3 gate above.
+      try {
+        const recent = await getRecentCheckins(userId, 1);
+        setLatestCheckin(recent?.[0] ?? null);
+      } catch (e) {
+        // Best-effort: a failed read here only means the check-in row doesn't
+        // show this visit, never a crash. Logged (D214).
+        logError('ReadinessCards.loadLatestCheckin', e, { userId });
+      }
+
+      // D201 (per-muscle recovery, spec section 6): the ONLY new I/O this
+      // component performs for the "Recovery by muscle" section, entirely
+      // through src/lib/recovery/load.js -- mirrors
+      // HomeScreen.loadRecoveryRecommendation's own call chain exactly, so
+      // Home and this block can never disagree about what is next. A failed
+      // read says so (D214, RC-24) and leaves every other reader in this file
+      // untouched.
+      try {
+        const recoveryLoad = await loadMuscleRecovery(userId);
+        // Opus review finding 10: a core read that failed is not an all-clear.
+        // The section says the estimate could not load rather than showing
+        // every muscle as "no recent session" off a read that never happened.
+        if (recoveryLoad?.degraded) {
+          logError('ReadinessCards.loadMuscleRecovery', new Error('A core recovery read failed (degraded)'), { userId });
+          setMuscleRecovery(null);
+          setMuscleRecoveryFailed(true);
+          setRecoveryRecommendation(null);
+          return;
+        }
+        setMuscleRecoveryFailed(false);
+        setMuscleRecovery(recoveryLoad);
+        // The breakdown's split of each counted session into main-mover and
+        // helper sets: only the sets of the sessions the model counted, and
+        // the exercise library (read once; reused when the rate-last-session
+        // read above already had it).
+        try {
+          const exercises = exercisesRead ?? (await getAllExercises()) ?? [];
+          const wanted = new Set();
+          for (const entry of Object.values(recoveryLoad?.map ?? {})) {
+            for (const cs of entry?.contributingSessions ?? []) if (cs?.workoutId) wanted.add(cs.workoutId);
+          }
+          setSplitData({
+            sets: completedSets.filter((s) => wanted.has(s.workoutId ?? s.workout_id)),
+            exercises,
+          });
+        } catch (e) {
+          logError('ReadinessCards.loadSessionSplits', e, { userId });
+          setSplitData({ sets: [], exercises: [] });
+        }
+        try {
+          const position = await resolveProgrammePosition(userId);
+          const programmeNext = position?.nextSession ?? null;
+          // Opus review finding 1: a FINISHED block awaiting the athlete's
+          // decision has no "next workout" to suggest; Home's own hero says
+          // "choose what comes after this block" there, and this row must not
+          // contradict it. resolveProgrammePosition's gated recovery state is
+          // the one authority for that reading.
+          const awaitingDecision = !!position?.recoveryState?.awaitingDecision;
+          if (position && programmeNext && !awaitingDecision) {
+            const sessions = position.sessions ?? [];
+            const outstandingIds = sessions
+              .filter((s) => s.state === SESSION_STATE.OUTSTANDING)
+              .map((s) => s.routineId);
+            const plannedSetsByRoutine = await loadPlannedSetsByRoutine(outstandingIds);
+            const projectedAtMs = nextLikelyTrainingTime({
+              nowMs: recoveryLoad.nowMs,
+              habitualWeekdays: recoveryLoad.habitualWeekdays,
+              typicalStartMinute: recoveryLoad.typicalStartMinute,
+            });
+            const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
+            const result = recommendNextWorkout({
+              sessions,
+              plannedSetsByRoutine,
+              recoveryMap: recoveryLoad.map,
+              projectedAtMs,
+              nowMs: recoveryLoad.nowMs,
+              routineNamesById,
+            });
+            // Lead review: this block has no card title naming the session
+            // (Home does), so it carries the programme-next name itself,
+            // looked up from the same sessions the rule was given; the
+            // names also label the still-to-do rows (D214).
+            setRecoveryRecommendation({
+              ...result,
+              programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
+              routineNamesById,
+            });
+          } else {
+            setRecoveryRecommendation(null);
+          }
+        } catch (e) {
+          logError('ReadinessCards.loadRecoveryRecommendation', e, { userId });
           setRecoveryRecommendation(null);
         }
       } catch (e) {
-        logError('ReadinessCards.loadRecoveryRecommendation', e, { userId });
+        logError('ReadinessCards.loadMuscleRecovery', e, { userId });
+        setMuscleRecovery(null);
+        setMuscleRecoveryFailed(true);
         setRecoveryRecommendation(null);
       }
-    } catch (e) {
-      logError('ReadinessCards.loadMuscleRecovery', e, { userId });
-      setMuscleRecovery(null);
-      setRecoveryRecommendation(null);
+    } finally {
+      setLoaded(true);
     }
   }, [userId, sections]);
 
@@ -455,18 +752,6 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
   const unlocked = MILESTONES.filter(m => m.sessions <= totalWorkouts);
   const lastUnlocked = unlocked[unlocked.length - 1] ?? null;
   const progressPct = next ? `${Math.round(Math.min(1, totalWorkouts / next.sessions) * 100)}%` : '100%';
-
-  const resolveFreshnessDisplay = buildFreshnessDisplay(t.colors);
-  const freshnessEntries = Object.entries(MUSCLE_DISPLAY_NAMES)
-    .filter(([key]) => muscleFreshness[key] !== undefined)
-    .map(([key, displayName]) => ({ key, displayName, ...resolveFreshnessDisplay(muscleFreshness[key], Date.now()) }))
-    // Malformed/future evidence reads as daysAgo: null (trainingRecency's
-    // 'Not logged') - drop it rather than show a not-logged chip for a
-    // muscle the pre-filter above already established has SOME record.
-    .filter((e) => e.daysAgo !== null)
-    // Factual ordering only: most recently trained first. No severity or
-    // readiness implication - trainingRecency carries none to sort by.
-    .sort((a, b) => a.daysAgo - b.daysAgo);
 
   // D201 (spec section 6): "now" for every recovery-row/next-workout
   // derivation below, taken from the loader's own snapshot rather than a
@@ -485,85 +770,99 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
         RECOVERY_ROW_STATUS_RANK[a.status] - RECOVERY_ROW_STATUS_RANK[b.status]
       ) || compareMuscleNames(a.muscle, b.muscle))
     : [];
-  // "The chips themselves fold into the rows" -- a muscle with a row above
-  // no longer needs its own Training-recency chip, so that block narrows to
-  // whichever ever-trained muscles (freshnessEntries) have NO row. When
-  // muscleRecovery is null (not yet loaded, or the read failed),
-  // rowMuscleKeys is empty and every chip keeps showing exactly as it did
-  // before this feature existed. Those chips are the one place a muscle
-  // with no session in 14 days is named (lead review: a second "No recent
-  // session: <names>" line under the rows repeated them and was dropped).
   const rowMuscleKeys = new Set(muscleRecoveryRows.map((entry) => entry.muscle));
-  const noRecentSessionEntries = freshnessEntries.filter((e) => !rowMuscleKeys.has(e.key));
   // The open row, if its muscle still has one: a selection whose muscle
   // has since left the rows (aged out of the 14-day window across a
   // refocus reload) reads as nothing open, so the next tap on that muscle
   // opens it rather than closing a phantom (review finding, 2026-09-26).
   const openMuscle = selectedMuscle && rowMuscleKeys.has(selectedMuscle) ? selectedMuscle : null;
-  // Next-workout row text (spec 4.2 point 4): the swap reason when one
-  // applies ("Legs is next in your plan. Quads are estimated 64% recovered,
-  // ready by Thursday. Push is ready now."), else "<Name> is next." plus
-  // the programme-next line ("Legs is next. Quads are estimated 64%
-  // recovered, ready by Thursday." / "Legs is next. Every muscle it trains
-  // is estimated recovered."). Home's card omits the name because its title
-  // already carries it; this row has no such title, so it names the session
-  // itself. null (row hidden) when the programme-next session's planned
-  // sets could not be read: no estimate to state.
-  const nextWorkoutText = (() => {
-    if (!recoveryRecommendation) return null;
-    if (recoveryRecommendation.reason) return recoveryRecommendation.reason;
-    if (!recoveryRecommendation.programmeNextLine) return null;
-    const who = recoveryRecommendation.programmeNextName || 'Your next session';
-    return `${who} is next. ${recoveryRecommendation.programmeNextLine}`;
-  })();
+  const counts = recoveryCounts(muscleRecovery?.map);
+  const answerLine = recoveryAnswerLine(counts);
+  const hasAnyHistory = totalWorkouts > 0 || Object.keys(muscleFreshness).length > 0;
+  // Day zero (RC-25) names what fills the section; a person who has trained
+  // before but not in the window gets the plain fact instead.
+  const emptyLine = muscleRecovery && !answerLine
+    ? (hasAnyHistory
+      ? 'No session in the last 14 days, so there is no estimate to show.'
+      : "Each muscle's recovery shows here after your first session.")
+    : null;
+  const nextText = muscleRecovery ? buildNextWorkoutSentence(recoveryRecommendation, muscleRecoveryNowMs) : null;
+  const stillToDoRows = muscleRecovery ? buildStillToDoRows(recoveryRecommendation, muscleRecoveryNowMs) : [];
+  const sessionSplits = useMemo(
+    () => (muscleRecovery ? buildMuscleSessionSplits(muscleRecovery.map, splitData.sets, splitData.exercises) : null),
+    [muscleRecovery, splitData],
+  );
+
+  // A tap on the figure selects the muscle, opens its breakdown when it has
+  // a row, and scrolls to it once it is on screen (RC-12). A muscle with no
+  // row is selected too (its outline shows) and the scroll lands on the line
+  // that names it. A second tap on the same muscle clears the selection.
+  const handleFigureTap = (muscle) => {
+    if (selectedMuscle === muscle) { setSelectedMuscle(null); return; }
+    pendingScroll.current = muscle;
+    setSelectedMuscle(muscle);
+  };
+  useEffect(() => {
+    const target = pendingScroll.current;
+    if (!target || selectedMuscle !== target) return;
+    pendingScroll.current = null;
+    const node = rowMuscleKeys.has(target) ? rowNodes.current[target] : namesNode.current;
+    scrollToNode(scrollRef?.current, node);
+  });
 
   // P3(a) (D200-2): true whenever AT LEAST ONE gauge is still short of
   // MIN_RATED_SESSIONS -- the shared caption explains why that gauge (or
-  // those gauges) read N/A, and disappears once every gauge has enough.
+  // those gauges) read as not rated yet, and disappears once every gauge has
+  // enough.
   const gaugesIncomplete = sampleCounts.soreness < MIN_RATED_SESSIONS
     || sampleCounts.fatigue < MIN_RATED_SESSIONS
     || sampleCounts.joint < MIN_RATED_SESSIONS;
+  const anyRatingShown = sampleCounts.soreness >= MIN_RATED_SESSIONS
+    || sampleCounts.fatigue >= MIN_RATED_SESSIONS
+    || sampleCounts.joint >= MIN_RATED_SESSIONS;
+  const ratingRows = [
+    { key: 'soreness', label: 'Soreness before sessions', value: recovery.soreness, samples: sampleCounts.soreness, word: sorenessWord, max: 3 },
+    { key: 'fatigue', label: 'Fatigue after sessions', value: recovery.fatigue, samples: sampleCounts.fatigue, word: fatigueWord, max: 5 },
+    { key: 'joint', label: 'Joint discomfort after sessions', value: recovery.joint, samples: sampleCounts.joint, word: jointWord, max: 3 },
+  ];
 
-  // P3(b): "Week of 21 Sep" from the check-in's weekStart, and the four
-  // check-in values on the exact scales WeeklyCheckInScreen.js uses
-  // (energyScore/stressScore/sorenessScore 1-5, sleepHours in hours),
-  // omitting any value the check-in left null. Empty string/array when
-  // there is no check-in, so the row below renders nothing.
-  const checkinWeekLabel = latestCheckin ? safeFormatDate(latestCheckin.weekStart, 'd MMM', '') : '';
-  const checkinValuesLine = latestCheckin
-    ? [
-      checkinWeekLabel ? `Week of ${checkinWeekLabel}` : null,
-      latestCheckin.energyScore != null ? `Energy ${latestCheckin.energyScore}/5` : null,
-      latestCheckin.stressScore != null ? `Stress ${latestCheckin.stressScore}/5` : null,
-      latestCheckin.sleepHours != null ? `Sleep ${latestCheckin.sleepHours} h` : null,
-      latestCheckin.sorenessScore != null ? `Soreness ${latestCheckin.sorenessScore}/5` : null,
-    ].filter(Boolean).join(' · ')
-    : '';
+  // P3(b): the latest weekly check-in's own words, only while current.
+  // The loader's clock, so the 14-day bound never turns on the render's own
+  // Date.now() (lane 2 review N3).
+  const checkinValuesLine = checkinSummaryLine(latestCheckin, muscleRecoveryNowMs);
 
-  // The ratings: the three gauges, the weekly check-in and training
-  // recency, under their own heading. On the Recovery screen they sit at
-  // the bottom, below Recovery by muscle (founder, 2026-09-26: "Move the
-  // ratings thing down below the recovery by muscle to the bottom"); the
+  // The ratings: the three ratings, the weekly check-in and the fatigue
+  // trend's neighbours, under their own heading. On the Recovery screen they
+  // sit at the bottom, below Recovery by muscle (founder, 2026-09-26: "Move
+  // the ratings thing down below the recovery by muscle to the bottom"); the
   // old single block ('all') keeps them first, where they always were.
   const ratingsBlock = (
     <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <View style={styles.headingRow}>
         <SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>
-        <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable." />
+        <InfoTooltip text={RATINGS_NOTE} />
       </View>
       <View style={[styles.recoveryCard, live.recoveryCard]}>
-        <View style={styles.recoveryGrid}>
-          <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
-          <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
-          <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
-        </View>
-        {/* P3(a) (F3, D200-2): present only while at least one gauge is
+        {ratingsFailed ? (
+          <Text style={live.stateText}>Couldn't load your ratings just now.</Text>
+        ) : (
+          <View style={styles.ratingList}>
+            {ratingRows.map((r) => (
+              <Text key={r.key} style={live.ratingRow}>{ratingText(r)}</Text>
+            ))}
+          </View>
+        )}
+        {/* P3(a) (F3, D200-2): present only while at least one rating is
             still short of MIN_RATED_SESSIONS -- names the two inputs and
-            when they start counting, so an N/A gauge is never unexplained. */}
-        {gaugesIncomplete && (
-          <Text style={[styles.recoveryWaitingCaption, live.recoveryWaitingCaption]}>
-            These read the soreness you report before a session and the fatigue and joint comfort you rate after it. They appear after two rated sessions in the last two weeks.
+            when they start counting, so a missing figure is never
+            unexplained. */}
+        {!ratingsFailed && gaugesIncomplete && (
+          <Text style={live.captionText}>
+            These read the soreness you report before a session and the fatigue and joint discomfort you rate after it. They appear after two rated sessions in the last two weeks.
           </Text>
+        )}
+        {!ratingsFailed && anyRatingShown && (
+          <Text style={live.captionText}>Averages of your rated sessions in the last two weeks, the most recent counting most.</Text>
         )}
 
         {/* P3(a): a one-tap path to the latest completed session's
@@ -580,59 +879,32 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
           />
         )}
 
-        <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
-
         {/* P3(b): the latest weekly check-in's own signals, read
-            independently of the trend-insight sentence below. */}
-        {latestCheckin && (
+            independently of the trend-insight sentence below, and printed
+            only while the check-in is within 14 days (D214, RC-16). */}
+        {checkinValuesLine ? (
           <>
             <View style={[styles.recoveryDivider, live.recoveryDivider]} />
             <View>
-              <Text style={[styles.checkinTitle, live.checkinTitle]}>From your weekly check-in</Text>
-              {checkinValuesLine ? (
-                <Text style={[styles.checkinValues, live.checkinValues]}>{checkinValuesLine}</Text>
-              ) : null}
+              <Text style={live.checkinTitle}>From your weekly check-in</Text>
+              <Text style={live.checkinValues}>{checkinValuesLine}</Text>
             </View>
           </>
-        )}
-
-        {/* D201: narrowed to muscles with NO row in the "Recovery by
-            muscle" section below (spec section 6, "the chips themselves
-            fold into the rows") -- see noRecentSessionEntries above. */}
-        {noRecentSessionEntries.length > 0 && (
-          <>
-            <View style={[styles.recoveryDivider, live.recoveryDivider]} />
-            <View style={styles.mfHeaderRow}>
-              <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
-                <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
-                {/* Task 2: this is elapsed time since the last logged set,
-                    nothing more - it never reads this user's soreness or
-                    recovery data, so the title and gloss say only that. */}
-                <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained.</Text>
-              </View>
-            </View>
-            <View style={styles.mfChipGrid}>
-              {noRecentSessionEntries.map(({ key, displayName, label, color, dot }) => (
-                <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
-                  <View style={[styles.mfDot, { backgroundColor: dot }]} />
-                  <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
-                  <Text style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+        ) : null}
       </View>
+      {/* D214 Q3 = A: the fatigue-trend bars moved here from Consistency,
+          under the ratings they chart. */}
+      {sections === 'recovery' ? <FatigueTrendCard sessions={fatigueSessions} /> : null}
     </>
   );
 
+  const slots = !loaded && sections !== 'milestone';
+
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
-      {/* Milestone progress */}
-      {sections !== 'recovery' && (lastUnlocked || next) && (
+      {/* Milestone progress. Waits for the workouts read (RC-33): before it
+          lands, and if it fails, there is no "1 to go" to claim. */}
+      {sections !== 'recovery' && workoutsRead && (lastUnlocked || next) && (
         <View style={[styles.milestoneCard, live.milestoneCard]}>
           <View style={styles.milestoneTop}>
             {lastUnlocked && (
@@ -664,46 +936,72 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
       {/* Recovery: the signals and muscle readiness folded into one block. */}
       {sections !== 'milestone' && (
       <View style={styles.section}>
-        {sections !== 'recovery' && ratingsBlock}
+        {sections !== 'recovery' && (slots ? <SkeletonCard height={190} /> : ratingsBlock)}
 
-        {/* D201 (per-muscle recovery, spec section 6): estimated recovery
-            per muscle -- the body figure (recovery palette), one row per
-            recently-trained muscle, the caption, and the next-workout row. Best-effort off
-            loadMuscleRecovery (see load()): absent entirely, not even the
-            heading, whenever that read hasn't resolved or failed, so a
-            broken estimate never sits here looking like it succeeded. */}
-        {muscleRecovery && (
-          <View style={[styles.mfCard, live.mfCard]}>
-            <Text style={[styles.mfTitle, live.mfTitle]} accessibilityRole="header">Recovery by muscle</Text>
-            {/* The sub-line carries "Estimated" for every percent in the list
-                below it (spec section 6's percent law). */}
-            <Text style={[styles.mfSub, live.mfSub]}>Estimated · last 14 days</Text>
-            <BodyDiagramHeatmap
-              recoveryByMuscle={muscleRecovery.map}
-              // A muscle tap opens that muscle's row below (a muscle with no
-              // row, no session in 14 days, is left alone).
-              onMuscleTap={(muscle) => {
-                if (openMuscle === muscle) { setSelectedMuscle(null); return; }
-                if (rowMuscleKeys.has(muscle)) setSelectedMuscle(muscle);
-              }}
-            />
-            <MuscleRecoveryList
-              rows={muscleRecoveryRows}
-              nowMs={muscleRecoveryNowMs}
-              freshness={muscleFreshness}
-              selectedMuscle={openMuscle}
-              onSelect={setSelectedMuscle}
-              learnedSpeed={muscleRecovery.personal?.reason === 'adjusted'}
-            />
-            <Text style={[styles.rbmCaption, live.rbmCaption]}>
-              {recoveryByMuscleCaption(muscleRecovery.personal)}
-            </Text>
-            {nextWorkoutText && (
+        {/* D201 (per-muscle recovery, spec section 6) and D214 (7.2): the
+            estimate per muscle. It LEADS with the answer line and the
+            sessions still to do (Q7 = A), then the body figure (the
+            recovery palette, rendered directly so it keeps its full width:
+            the figure is its own card, never nested in a second one), the
+            list, and the caption with its (i). Best-effort off
+            loadMuscleRecovery (see load()): a failed read keeps the heading
+            and says so, so a broken estimate never sits here looking like it
+            succeeded. */}
+        {slots ? <SkeletonCard height={320} /> : (muscleRecovery || muscleRecoveryFailed) && (
+          <View style={styles.byMuscle}>
+            <View>
+              <Text style={live.mfTitle} accessibilityRole="header">Recovery by muscle</Text>
+              {/* The sub-line carries "Estimated" for every percent in the
+                  block below it (spec section 6's percent law). */}
+              <Text style={live.mfSub}>Estimated from your sessions · last 14 days</Text>
+            </View>
+            {muscleRecoveryFailed ? (
+              <Text style={live.stateText}>Couldn't load the estimate just now.</Text>
+            ) : (
               <>
-                <View style={[styles.recoveryDivider, live.recoveryDivider]} />
-                <View>
-                  <Text style={[styles.rbmNextWorkoutTitle, live.rbmNextWorkoutTitle]}>Next workout</Text>
-                  <Text style={[styles.rbmNextWorkoutText, live.rbmNextWorkoutText]}>{nextWorkoutText}</Text>
+                <View style={styles.answerBlock}>
+                  {answerLine ? <Text style={live.answerLine}>{answerLine}</Text> : null}
+                  {emptyLine ? <Text style={live.nextText}>{emptyLine}</Text> : null}
+                  {nextText ? <Text style={live.nextText}>{nextText}</Text> : null}
+                  {stillToDoRows.length > 0 ? (
+                    <View style={styles.stillToDo}>
+                      <Text style={live.stillLabel}>Still to do this week</Text>
+                      {stillToDoRows.map((row) => {
+                        // Two lines at phone width: the session and its ready
+                        // clause, then the limiting-muscle clause in muted ink
+                        // (lane 2 review N12); the spoken text is the whole row.
+                        const split = /^(.*?) (\(.*\))$/.exec(row.text);
+                        return (
+                          <View key={row.routineId} accessible accessibilityLabel={row.text}>
+                            <Text style={live.stillRow}>{split ? split[1] : row.text}</Text>
+                            {split ? <Text style={live.stillRowDetail}>{split[2]}</Text> : null}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+                <BodyDiagramHeatmap
+                  recoveryByMuscle={muscleRecovery.map}
+                  selectedMuscle={selectedMuscle}
+                  onMuscleTap={handleFigureTap}
+                />
+                <MuscleRecoveryList
+                  rows={muscleRecoveryRows}
+                  nowMs={muscleRecoveryNowMs}
+                  freshness={muscleFreshness}
+                  selectedMuscle={openMuscle}
+                  onSelect={setSelectedMuscle}
+                  learnedSpeed={muscleRecovery.personal?.reason === 'adjusted'}
+                  sessionSplits={sessionSplits}
+                  registerRow={(muscle, node) => { rowNodes.current[muscle] = node; }}
+                  registerNames={(node) => { namesNode.current = node; }}
+                />
+                <View style={styles.captionRow}>
+                  <Text style={[live.rbmCaption, styles.captionText]}>
+                    {recoveryByMuscleCaption(muscleRecovery.personal)}
+                  </Text>
+                  <InfoTooltip text={RECOVERY_PERCENT_NOTE} />
                 </View>
               </>
             )}
@@ -714,18 +1012,13 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
             moves (RecoveryLearningCard). Present whenever the loader
             returned a reading, including the "still learning" states, and
             absent with the section above when the read failed. */}
-        {muscleRecovery?.personal ? <RecoveryLearningCard personal={muscleRecovery.personal} /> : null}
+        {slots ? <SkeletonCard height={150} /> : muscleRecovery?.personal ? <RecoveryLearningCard personal={muscleRecovery.personal} /> : null}
 
-        {sections === 'recovery' && ratingsBlock}
+        {sections === 'recovery' && (slots ? <SkeletonCard height={190} /> : ratingsBlock)}
 
-        {recoveryTrendInsight && (
-          <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
-            <Ionicons
-              name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}
-              size={16}
-              color={recoveryTrendInsight.type === 'good' ? t.colors.success : t.colors.warning}
-            />
-            <Text style={[styles.trendInsightText, live.trendInsightText]}>{recoveryTrendInsight.text}</Text>
+        {recoveryTrendInsight && !slots && (
+          <View style={[styles.trendInsightCard, live.trendInsightCard]}>
+            <Text style={live.trendInsightText}>{recoveryTrendInsight.text}</Text>
           </View>
         )}
       </View>
@@ -734,54 +1027,9 @@ export default function ReadinessCards({ userId, onRateLastSession, sections = '
   );
 }
 
-// MIN_RATED_SESSIONS: a "running average" needs at least two points to be one.
-// Below that the gauge shows the existing no-value state with a one-line
-// caption, and no colour verdict is rendered.
-const MIN_RATED_SESSIONS = 2;
-
-function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
-  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
-  // theme (src/hooks/useTheme.js). RecoveryGauge is a separate function
-  // component from ReadinessCards above, so it calls useTheme() itself
-  // (same pattern as WorkoutSummaryScreen.js's RatingRow).
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  // C5-P18-01: a single rated session is not an average, so it gets no number
-  // and no coloured verdict.
-  const enoughSamples = samples >= MIN_RATED_SESSIONS;
-  const hasValue = value != null && !isNaN(value) && enoughSamples;
-  const display = hasValue ? value.toFixed(1) : 'N/A';
-
-  let dotColor = t.colors.textMuted;
-  // P3(a) (F3, D200-2): honest and specific per sample count -- 0 -> no
-  // session has rated anything yet; 1 -> one rated session is not enough
-  // for a running average (C5-P18-01, unchanged).
-  let scaleNote = samples > 0 && !enoughSamples
-    ? 'One rated session so far'
-    : 'Not rated yet';
-  if (hasValue) {
-    const v = parseDecimalInput(value);
-    if (invertGood) {
-      dotColor = v >= 3 ? t.colors.error : v >= 2 ? t.colors.warning : t.colors.success;
-      scaleNote = v >= 3 ? 'High discomfort' : v >= 2 ? 'Moderate' : 'Comfortable';
-    } else {
-      dotColor = v >= 4 ? t.colors.error : v >= 3 ? t.colors.warning : t.colors.success;
-      scaleNote = v >= 4 ? 'High' : v >= 3 ? 'Elevated' : v >= 2 ? 'Moderate' : 'Low / Fresh';
-    }
-  }
-
-  return (
-    <View style={styles.gaugeItem}>
-      <View style={[styles.gaugeDot, { backgroundColor: dotColor }]} />
-      <Text style={[styles.gaugeValue, live.gaugeValue]}>{display}</Text>
-      <Text style={[styles.gaugeLabel, live.gaugeLabel]}>{label}</Text>
-      <Text style={[styles.gaugeScale, live.gaugeScale]}>{scaleNote}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   milestoneCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
@@ -791,98 +1039,62 @@ const styles = StyleSheet.create({
   milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.gold },
   milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.textSecondary },
 
   recoveryCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
-  recoveryGrid: {
-    flexDirection: 'row', gap: spacing.sm,
-  },
+  ratingList: { gap: spacing.sm },
   recoveryDivider: {
     height: 1, backgroundColor: colors.border, marginVertical: spacing.xs,
   },
-  gaugeItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
-  gaugeDot: { width: 12, height: 12, borderRadius: radius.sm },
-  gaugeValue: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  gaugeLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  gaugeScale: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  recoveryNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  // P3(a): the waiting-state caption under the gauge row (F3, D200-2).
-  recoveryWaitingCaption: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  // P3(b): the "From your weekly check-in" row, same hierarchy as mfTitle/mfSub.
-  checkinTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  checkinValues: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
 
   trendInsightCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, alpha.edge) },
-  trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
-  trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  mfCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
-  },
-  mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  mfTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
-  mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  mfChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
-  mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },
-  mfChipName: { ...type.captionStrong },
-  mfChipLabel: { ...type.captionStrong },
-  // D201 (per-muscle recovery, spec section 6): the "Recovery by muscle"
-  // section's own rows/caption/next-workout styles. The section's outer
-  // card reuses mfCard above (pre-existing, previously unused in this
-  // file's own JSX); its heading reuses mfTitle.
-  rbmCaption: { ...type.caption, color: colors.textMuted },
-  rbmNextWorkoutTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  rbmNextWorkoutText: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
+  // The Recovery by muscle block: a flat column on the screen, no card of
+  // its own. The figure is its own card (BodyDiagramHeatmap's container), so
+  // nesting it in a second one cost it 13 percent of its width (lane 1
+  // measured 0.87 of full scale on a 412 dp phone).
+  byMuscle: { gap: spacing.md },
+  answerBlock: { gap: spacing.sm },
+  stillToDo: { gap: spacing.xs, marginTop: spacing.xs },
+  captionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  captionText: { flex: 1 },
 });
 
-// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
-// override for the frozen `styles` block above, shared by BOTH function-
-// component scopes in this file (ReadinessCards, RecoveryGauge) -- each
-// calls `const t = useTheme(); const live = buildLiveStyles(t);` and appends
-// `live.KEY` after `styles.KEY`, same pattern as WorkoutSummaryScreen.js's
-// buildLiveStyles. Only mirrors the colour/fontSize/type-bearing
-// sub-properties of the matching frozen style, at identical rest values;
-// pure layout keys (section/milestoneTop/milestoneUnlocked/recoveryGrid/
-// gaugeItem/gaugeDot/trendInsightCard/mfHeaderRow/mfIconWrap/mfChipGrid/
-// mfChip/mfDot) have no colour tokens, so there is nothing to unfreeze for
-// them. mfCard is unused in the current JSX (dead style, pre-existing, not
-// this batch's concern) but is mirrored here too for completeness.
+// The colours and type roles of the new D214 pieces are read LIVE from the
+// theme (the frozen-plus-live `buildLiveStyles` pattern the tree carries),
+// shared by the function scope in this file; the frozen `styles` block above
+// keeps the milestone and rating card chrome it always had. The milestone
+// bar is ink now (RC-35: no amber on a status fact).
 function buildLiveStyles(t) {
   return {
     milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.gold },
     milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
     milestoneBarTrack: { backgroundColor: t.colors.surface2 },
-    milestoneBarFill: { backgroundColor: t.colors.primary },
-    recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    milestoneBarFill: { backgroundColor: t.colors.textSecondary },
+    recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     recoveryDivider: { backgroundColor: t.colors.border },
-    gaugeValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
-    gaugeScale: { ...t.type.caption, color: t.colors.textMuted },
-    recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
-    recoveryWaitingCaption: { ...t.type.caption, color: t.colors.textMuted },
-    checkinTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    checkinValues: { ...t.type.captionTight, color: t.colors.textMuted },
-    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.primaryBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
-    trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
+    // The card's primary facts at body size (they wrap under longer words);
+    // the check-in title below them is a label, never larger (review S2).
+    ratingRow: { ...t.type.body, color: t.colors.textPrimary },
+    captionText: { ...t.type.bodySm, color: t.colors.textMuted },
+    stateText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    checkinTitle: { ...t.type.label, color: t.colors.textSecondary },
+    checkinValues: { ...t.type.bodySm, color: t.colors.textSecondary, marginTop: spacing.xxs },
+    trendInsightCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    mfCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    mfTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    mfChipName: { ...t.type.captionStrong },
-    mfChipLabel: { ...t.type.captionStrong },
-    rbmCaption: { ...t.type.caption, color: t.colors.textMuted },
-    rbmNextWorkoutTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    rbmNextWorkoutText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mfTitle: { ...t.type.title, color: t.colors.textPrimary },
+    mfSub: { ...t.type.captionTight, color: t.colors.textMuted, marginTop: spacing.xxs },
+    answerLine: { ...t.type.h3, color: t.colors.textPrimary },
+    nextText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    stillLabel: { ...t.type.overline, color: t.colors.textSecondary },
+    stillRow: { ...t.type.bodySm, color: t.colors.textSecondary },
+    stillRowDetail: { ...t.type.bodySm, color: t.colors.textMuted },
+    rbmCaption: { ...t.type.bodySm, color: t.colors.textMuted },
   };
 }

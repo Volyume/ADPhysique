@@ -15,6 +15,14 @@
  * recorded in the decisions register); that pin's real intent -- a
  * second rated session before a verdict (MIN_RATED_SESSIONS/enoughSamples/
  * hasValue) -- is untouched by the wording.
+ *
+ * RE-ANCHORED under D214 (lane 2, plan section 7.2 item 4, RC-1 to RC-3 and
+ * RC-16): the three dials are three rows on their TRUE scales, the word
+ * first and the number second ("Soreness before sessions · mild (1.4 of
+ * 3)"), no coloured dots, no "Scale 1-5" note, soreness unshifted; the
+ * waiting notes read per row; the weekly check-in row prints the check-in's
+ * own words with "of 5" after each score and only within 14 days of its
+ * week, sleep in hours only. FatigueTrendCard is stubbed (react-native-svg).
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -80,6 +88,11 @@ jest.mock('../Button', () => {
 // component); this suite's own assertions are about gating/copy elsewhere
 // in ReadinessCards and never inspect the figure itself.
 jest.mock('../BodyDiagramHeatmap', () => () => null);
+// D214 (lane 2): the fatigue-trend bars moved into ReadinessCards; the card
+// draws react-native-svg, so it is stubbed like the figure (its own
+// rendering is pinned in FatigueTrendCard's and the Recovery suites).
+jest.mock('../FatigueTrendCard', () => () => null);
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 jest.mock('../../lib/database', () => ({
   getAllWorkouts: jest.fn(),
   getCompletedWorkoutSets: jest.fn(),
@@ -90,11 +103,17 @@ jest.mock('../../lib/database', () => ({
   getAllExercises: jest.fn(),
 }));
 
-import ReadinessCards from '../ReadinessCards';
+import ReadinessCards, {
+  ratingText, sorenessWord, fatigueWord, jointWord, checkinSummaryLine, RATINGS_NOTE,
+} from '../ReadinessCards';
 import * as database from '../../lib/database';
+import { logError } from '../../lib/errorLog';
 
 const NOW = Date.now();
-const WAITING_CAPTION = 'These read the soreness you report before a session and the fatigue and joint comfort you rate after it. They appear after two rated sessions in the last two weeks.';
+// D214: "joint comfort" -> "joint discomfort", the scale's own name (0 = none).
+const WAITING_CAPTION = 'These read the soreness you report before a session and the fatigue and joint discomfort you rate after it. They appear after two rated sessions in the last two weeks.';
+const AVERAGES_CAPTION = 'Averages of your rated sessions in the last two weeks, the most recent counting most.';
+const ROW_LABELS = ['Soreness before sessions', 'Fatigue after sessions', 'Joint discomfort after sessions'];
 
 function texts(tree) {
   return tree.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
@@ -127,7 +146,7 @@ function ratedWorkouts(n) {
   }));
 }
 
-describe('ReadinessCards waiting-state caption and per-gauge notes (F3, P3(a))', () => {
+describe('ReadinessCards waiting-state caption and per-row notes (F3, P3(a))', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     database.getCompletedWorkoutSets.mockResolvedValue([]);
@@ -136,31 +155,119 @@ describe('ReadinessCards waiting-state caption and per-gauge notes (F3, P3(a))',
     database.getRecentCompletedWorkouts.mockResolvedValue([]);
   });
 
-  test('0 rated sessions: the caption renders and every gauge reads "Not rated yet"', async () => {
+  test('0 rated sessions: the caption renders and every rating row reads "not rated yet"', async () => {
     database.getAllWorkouts.mockResolvedValue([]);
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain(WAITING_CAPTION);
-    expect(all.filter((t) => t === 'Not rated yet')).toHaveLength(3);
+    for (const label of ROW_LABELS) expect(all).toContain(`${label} · not rated yet`);
+    expect(all).not.toContain(AVERAGES_CAPTION);
     expect(all).not.toContain('After a couple of sessions');
   });
 
-  test('1 rated session: the caption renders and every gauge reads "One rated session so far"', async () => {
+  test('1 rated session: the caption renders and every rating row reads "one rated session so far"', async () => {
     database.getAllWorkouts.mockResolvedValue(ratedWorkouts(1));
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain(WAITING_CAPTION);
-    expect(all.filter((t) => t === 'One rated session so far')).toHaveLength(3);
-    expect(all).not.toContain('Not rated yet');
+    for (const label of ROW_LABELS) expect(all).toContain(`${label} · one rated session so far`);
+    expect(all.some((t) => /not rated yet/.test(t))).toBe(false);
   });
 
-  test('2 rated sessions: neither the caption nor a waiting note renders', async () => {
+  test('2 rated sessions: each row reads its word first and its number second, on its own true scale; the waiting caption is gone and the averages caption shows', async () => {
     database.getAllWorkouts.mockResolvedValue(ratedWorkouts(2));
     const tree = await render();
     const all = texts(tree);
     expect(all).not.toContain(WAITING_CAPTION);
-    expect(all).not.toContain('Not rated yet');
-    expect(all).not.toContain('One rated session so far');
+    expect(all.some((t) => /not rated yet|one rated session so far/.test(t))).toBe(false);
+    // The fixtures answer soreness 2 (mild), fatigue 2 (mild), joint 1 (slight).
+    expect(all).toContain('Soreness before sessions · mild (2.0 of 3)');
+    expect(all).toContain('Fatigue after sessions · mild (2.0 of 5)');
+    expect(all).toContain('Joint discomfort after sessions · slight (1.0 of 3)');
+    expect(all).toContain(AVERAGES_CAPTION);
+  });
+
+  test('D214 RC-1: the false "Scale 1-5 · Lower is better" note is gone, and nothing says joint "comfort"', async () => {
+    database.getAllWorkouts.mockResolvedValue(ratedWorkouts(2));
+    const tree = await render();
+    const joined = texts(tree).join(' | ');
+    expect(joined).not.toMatch(/Scale 1-5|Lower is better/);
+    expect(joined).not.toMatch(/joint comfort|Joint comfort/i);
+  });
+
+  test('D214 RC-2: soreness is on its stored 1 to 3 scale, no display shift: a person who always answers Fresh reads fresh', async () => {
+    database.getAllWorkouts.mockResolvedValue(Array.from({ length: 3 }, (_, i) => ({
+      id: `w${i}`, isCompleted: true, setCount: 1, startedAt: NOW - i * 60000, endedAt: NOW - i * 60000,
+      soreness24hBefore: 1, fatigueLevel: 1, jointDiscomfort: 0,
+    })));
+    const all = texts(await render());
+    expect(all).toContain('Soreness before sessions · fresh (1.0 of 3)');
+    expect(all).toContain('Fatigue after sessions · fresh (1.0 of 5)');
+    expect(all).toContain('Joint discomfort after sessions · none (0.0 of 3)');
+  });
+
+  test('D214 RC-3: fatigue 3 is "moderate", the word the button said, and the top answers read sore, exhausted and significant', async () => {
+    database.getAllWorkouts.mockResolvedValue(Array.from({ length: 2 }, (_, i) => ({
+      id: `w${i}`, isCompleted: true, setCount: 1, startedAt: NOW - i * 60000, endedAt: NOW - i * 60000,
+      soreness24hBefore: 3, fatigueLevel: 3, jointDiscomfort: 3,
+    })));
+    const all = texts(await render());
+    expect(all).toContain('Soreness before sessions · sore (3.0 of 3)');
+    expect(all).toContain('Fatigue after sessions · moderate (3.0 of 5)');
+    expect(all).toContain('Joint discomfort after sessions · significant (3.0 of 3)');
+  });
+
+  test('no coloured dots: the ratings carry words, not a status colour', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'ReadinessCards.js'), 'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/gaugeDot|dotColor/);
+    expect(code).not.toMatch(/\[2, 3, 4\]/);
+  });
+});
+
+describe('the rating words and numbers (D214 7.2 item 4)', () => {
+  test('soreness 1-3: fresh under 1.5, mild to 2.5, sore above', () => {
+    expect([1, 1.49].map(sorenessWord)).toEqual(['fresh', 'fresh']);
+    expect([1.5, 2, 2.5].map(sorenessWord)).toEqual(['mild', 'mild', 'mild']);
+    expect([2.51, 3].map(sorenessWord)).toEqual(['sore', 'sore']);
+  });
+
+  test('fatigue 1-5: the summary\'s own words by nearest', () => {
+    expect([1, 1.4].map(fatigueWord)).toEqual(['fresh', 'fresh']);
+    expect([1.6, 2.4].map(fatigueWord)).toEqual(['mild', 'mild']);
+    expect([2.6, 3, 3.4].map(fatigueWord)).toEqual(['moderate', 'moderate', 'moderate']);
+    expect([3.6, 4.4].map(fatigueWord)).toEqual(['high', 'high']);
+    expect([4.6, 5].map(fatigueWord)).toEqual(['exhausted', 'exhausted']);
+  });
+
+  test('joint discomfort 0-3: none under 0.5, slight to 1.5, moderate to 2.5, significant above', () => {
+    expect([0, 0.49].map(jointWord)).toEqual(['none', 'none']);
+    expect([0.5, 1, 1.5].map(jointWord)).toEqual(['slight', 'slight', 'slight']);
+    expect([1.51, 2.5].map(jointWord)).toEqual(['moderate', 'moderate']);
+    expect([2.51, 3].map(jointWord)).toEqual(['significant', 'significant']);
+  });
+
+  test('ratingText: the spec\'s own three examples, and no verdict from a single answer', () => {
+    expect(ratingText({ label: 'Soreness before sessions', value: 1.4, samples: 5, word: sorenessWord, max: 3 }))
+      .toBe('Soreness before sessions · fresh (1.4 of 3)');
+    expect(ratingText({ label: 'Fatigue after sessions', value: 3.0, samples: 5, word: fatigueWord, max: 5 }))
+      .toBe('Fatigue after sessions · moderate (3.0 of 5)');
+    expect(ratingText({ label: 'Joint discomfort after sessions', value: 0.2, samples: 5, word: jointWord, max: 3 }))
+      .toBe('Joint discomfort after sessions · none (0.2 of 3)');
+    expect(ratingText({ label: 'Fatigue after sessions', value: 4, samples: 1, word: fatigueWord, max: 5 }))
+      .toBe('Fatigue after sessions · one rated session so far');
+    expect(ratingText({ label: 'Fatigue after sessions', value: null, samples: 0, word: fatigueWord, max: 5 }))
+      .toBe('Fatigue after sessions · not rated yet');
+  });
+
+  test('the (i) states the true scales and that soreness is asked BEFORE a session (RC-1, RC-6)', () => {
+    expect(RATINGS_NOTE).toContain('Soreness is asked before a session');
+    expect(RATINGS_NOTE).toContain('1 to 3 (fresh, mild, sore)');
+    expect(RATINGS_NOTE).toContain('1 to 5 (fresh, mild, moderate, high, exhausted)');
+    expect(RATINGS_NOTE).toContain('0 to 3 (none, slight, moderate, significant)');
+    expect(RATINGS_NOTE).not.toMatch(/feedback after each workout|Joint Comfort is also 1-5|lower is better/i);
   });
 });
 
@@ -222,7 +329,7 @@ describe('ReadinessCards "Rate your last session" button (F3, P3(a))', () => {
   });
 });
 
-describe('ReadinessCards "From your weekly check-in" row (P3(b))', () => {
+describe('ReadinessCards "From your weekly check-in" row (P3(b), D214 RC-16 and RC-34)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     database.getAllWorkouts.mockResolvedValue([]);
@@ -231,21 +338,23 @@ describe('ReadinessCards "From your weekly check-in" row (P3(b))', () => {
     database.getRecentCompletedWorkouts.mockResolvedValue([]);
   });
 
-  test("renders the latest check-in's week and values", async () => {
-    const weekStart = new Date(2026, 8, 21).getTime(); // 21 Sep 2026, local
-    database.getRecentCheckins.mockImplementation(async (_userId, count) => (
-      count === 1
-        ? [{ weekStart, energyScore: 4, stressScore: 2, sleepHours: 7.5, sorenessScore: 3 }]
-        : []
-    ));
+  const withCheckin = (row) => database.getRecentCheckins.mockImplementation(async (_userId, count) => (count === 1 ? [row] : []));
+
+  test("renders the latest check-in's week and its own words, with \"of 5\" after each score and sleep in hours", async () => {
+    // Within 14 days of its week: the Monday of the current week, local.
+    const weekStart = Date.now() - 4 * 86400000;
+    withCheckin({ weekStart, energyScore: 4, stressScore: 2, sleepHours: 7.5, sorenessScore: 3 });
     const tree = await render();
     const joined = texts(tree).join(' ');
     expect(joined).toContain('From your weekly check-in');
-    expect(joined).toContain('Week of 21 Sep');
-    expect(joined).toContain('Energy 4/5');
-    expect(joined).toContain('Stress 2/5');
-    expect(joined).toContain('Sleep 7.5 h');
-    expect(joined).toContain('Soreness 3/5');
+    expect(joined).toMatch(/Week of \d{1,2} [A-Z][a-z]{2}/);
+    expect(joined).toContain('Energy good (4 of 5)');
+    expect(joined).toContain('Stress mild (2 of 5)');
+    expect(joined).toContain('Soreness moderate (3 of 5)');
+    expect(joined).toContain('Sleep 7.5 hours');
+    // Never the old slash form, and sleep in ONE measure: hours only.
+    expect(joined).not.toMatch(/\d\/5/);
+    expect(joined).not.toMatch(/Sleep [\d.]+ h\b(?!ours)/);
   });
 
   test('is absent entirely when there is no check-in', async () => {
@@ -254,17 +363,45 @@ describe('ReadinessCards "From your weekly check-in" row (P3(b))', () => {
     expect(texts(tree)).not.toContain('From your weekly check-in');
   });
 
+  test('is absent when the latest check-in is more than 14 days old (RC-16: it has no age otherwise)', async () => {
+    withCheckin({ weekStart: Date.now() - 20 * 86400000, energyScore: 4, stressScore: 2, sleepHours: 7.5, sorenessScore: 3 });
+    const tree = await render();
+    expect(texts(tree)).not.toContain('From your weekly check-in');
+  });
+
   test('omits a null value from the line but keeps the ones that exist', async () => {
-    database.getRecentCheckins.mockImplementation(async (_userId, count) => (
-      count === 1
-        ? [{ weekStart: NOW, energyScore: 5, stressScore: null, sleepHours: null, sorenessScore: 1 }]
-        : []
-    ));
+    withCheckin({ weekStart: Date.now() - 2 * 86400000, energyScore: 5, stressScore: null, sleepHours: null, sorenessScore: 1 });
     const tree = await render();
     const joined = texts(tree).join(' ');
-    expect(joined).toContain('Energy 5/5');
-    expect(joined).toContain('Soreness 1/5');
-    expect(joined).not.toMatch(/Stress \d/);
-    expect(joined).not.toMatch(/Sleep [\d.]+ h/);
+    expect(joined).toContain('Energy high (5 of 5)');
+    expect(joined).toContain('Soreness none (1 of 5)');
+    expect(joined).not.toMatch(/Stress /);
+    expect(joined).not.toMatch(/Sleep /);
+  });
+
+  test('checkinSummaryLine: the 14-day bound is exact and a missing check-in is empty', () => {
+    const now = 1770000000000;
+    const row = { energyScore: 3, stressScore: 3, sleepHours: 1, sorenessScore: 2 };
+    expect(checkinSummaryLine(null, now)).toBe('');
+    expect(checkinSummaryLine({ ...row, weekStart: now - 14 * 86400000 }, now)).toContain('Energy normal (3 of 5)');
+    expect(checkinSummaryLine({ ...row, weekStart: now - 14 * 86400000 - 1 }, now)).toBe('');
+    expect(checkinSummaryLine({ ...row, weekStart: now - 86400000 }, now)).toContain('Sleep 1 hour');
+    expect(checkinSummaryLine({ ...row, weekStart: now - 86400000 }, now)).not.toContain('Sleep 1 hours');
+  });
+});
+
+describe('a failed ratings read is said and logged, never swallowed (D214 RC-33)', () => {
+  test('the ratings card says it could not load, the milestone does not claim "1 to go", and the failure is logged', async () => {
+    jest.clearAllMocks();
+    database.getAllWorkouts.mockRejectedValue(new Error('db down'));
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getLastTrainedPerMuscle.mockResolvedValue({});
+    database.getRecentCheckins.mockResolvedValue([]);
+    database.getRecentCompletedWorkouts.mockResolvedValue([]);
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain("Couldn't load your ratings just now.");
+    expect(all.some((t) => /to go: First session/.test(t))).toBe(false);
+    expect(logError).toHaveBeenCalledWith('ReadinessCards.loadRatings', expect.any(Error), { userId: 'u1' });
   });
 });

@@ -1630,20 +1630,30 @@ describe('CHECK-IN: one weigh-in cannot become a week of evidence (C5-P22-02, D9
 });
 
 describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02/03/04, D96)', () => {
-  test('a recovery gauge waits for a second rated session before it shows a verdict', () => {
+  // RE-ANCHORED under D214 (lane 2, RC-1 to RC-3): the three dials became
+  // three rating rows ("Soreness before sessions · mild (1.4 of 3)"), so the
+  // gauge component and its dot are gone; the pin's real intent -- a second
+  // rated session before any word or number (MIN_RATED_SESSIONS /
+  // enoughSamples / hasValue) -- is untouched, now in `ratingText`.
+  test('a rating row waits for a second rated session before it shows a verdict', () => {
     const src = read('components/ReadinessCards.js');
     expect(src).toContain('const MIN_RATED_SESSIONS = 2;');
     expect(src).toMatch(/const enoughSamples = samples >= MIN_RATED_SESSIONS;/);
     expect(src).toMatch(/const hasValue = value != null && !isNaN\(value\) && enoughSamples;/);
-    // The existing no-value state is reused, with an honest caption (D200-2 wording).
-    expect(src).toContain("'One rated session so far'");
+    // The existing no-value state is reused, with an honest note (D200-2 wording).
+    expect(src).toContain("'one rated session so far'");
   });
 
-  test('the 1-3 soreness answer is not drawn on a 1-5 gauge', () => {
+  // RE-ANCHORED under D214 (RC-2): the 1-3 soreness answer used to be shifted
+  // to 2-4 for a 1-5 gauge, so "Fresh" could never read fresh. It is now drawn
+  // on its OWN 1-3 scale: no shift, the average printed "of 3", the words
+  // fresh (under 1.5), mild (to 2.5), sore (above).
+  test('the 1-3 soreness answer is drawn on its own 1-3 scale, with no display shift', () => {
     const src = read('components/ReadinessCards.js');
-    // Same mapping WorkoutSummaryScreen already uses; display only.
-    expect(src).toMatch(/\[2, 3, 4\]\[w\.soreness24hBefore - 1\]/);
-    expect(src).toContain('setRecovery(computeRecoveryEMAs(displayWorkouts));');
+    expect(src).not.toMatch(/\[2, 3, 4\]\[w\.soreness24hBefore - 1\]/);
+    expect(src).toContain('setRecovery(computeRecoveryEMAs(gaugeRecent));');
+    expect(src).toContain("label: 'Soreness before sessions', value: recovery.soreness, samples: sampleCounts.soreness, word: sorenessWord, max: 3");
+    expect(src).toMatch(/if \(v < 1\.5\) return 'fresh';/);
   });
 
   test('the pure EMA helper is untouched by the display fix', () => {

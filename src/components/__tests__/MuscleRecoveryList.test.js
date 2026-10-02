@@ -3,15 +3,20 @@
  *
  * D201 addendum 9 (founder order 2026-09-26: the per-muscle list "looks
  * like raw text with no styles no interactivity no format at all.
- * Investigate how JeFit does this"). Pins the list built from that
- * research: rows grouped under the figure legend's three words in the
- * spec's order, each group headed by its label and count; one row is the
- * name, the estimated percent, the bar filled to that percent in the
- * band colour, and the ready-by plus trained-ago line; a tap opens the
- * breakdown (last session, the 14-day window, the basis) and the parent
- * is told which muscle is open; the spoken label is the spec's sentence;
- * no amber anywhere; the source guard that every rendered percent line
- * names "estimated".
+ * Investigate how JeFit does this"), RE-ANCHORED under D214 (lane 2,
+ * 2026-10-01, plan docs/audit/progress-recovery-consistency-audit-2026-10-01/
+ * 00-AUDIT-AND-PLAN.md section 7.2 d): rows grouped as "Still recovering ·
+ * 4" and "Nearly recovered · 2" (label, middle dot, count); "Recovered · 8"
+ * is one line of plain names, not tappable, with a "Show details" link that
+ * expands the compact rows (RC-19); one row is the name, the estimated
+ * percent WITH "recovered" after it, a bar in the row's own intensity (the
+ * `recovery` token, Q1 = A, no traffic light), and the ready-by plus
+ * trained-ago line; a tap opens the breakdown (the muscle's plain word, each
+ * counted session's sets as "main mover" or "helped", the half credit
+ * explained, the basis, and where the recovery answer lives, RC-9 to RC-11
+ * and RC-23); under the list one line names EVERY muscle with no row with
+ * the recency read's true window (RC-17, RC-36); no amber and no
+ * traffic-light status colour; D204 describes; the percent source guard.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -25,12 +30,15 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 
 import MuscleRecoveryList, {
-  groupMuscleRecoveryRows, muscleRecoveryDetailLines, muscleRecoveryBandColour,
+  groupMuscleRecoveryRows, muscleRecoveryDetailLines, muscleRecoveryBarFill,
   muscleRecoveryRowMeta, muscleRecoveryRowA11yLabel, RECOVERY_GROUPS,
+  MUSCLE_PLAIN_WORDS, musclePlainWord, noSessionNamesLine, buildMuscleSessionSplits,
+  HALF_CREDIT_NOTE, RECOVERY_ANSWER_NOTE, RECENCY_READ_DAYS,
 } from '../MuscleRecoveryList';
-import { resolveTheme } from '../../styles/theme';
+import { resolveTheme, withAlpha, alpha } from '../../styles/theme';
+import { MUSCLE_DISPLAY_NAMES } from '../../lib/algorithms';
 import { readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
-import { RECOVERY_ESTIMATE_LABEL } from '../../lib/recovery/constants';
+import { RECOVERY_ESTIMATE_LABEL, LOOKBACK_DAYS } from '../../lib/recovery/constants';
 
 const THEME = resolveTheme({
   theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined,
@@ -46,7 +54,7 @@ function entry(over) {
   return {
     muscle: 'quads', recoveredPercent: 64, status: 'recovering', readyAtMs: QUADS_READY_AT,
     lastSessionEndMs: NOW - 2 * DAY_MS, lastSessionSets: 6, basis: 'time_and_volume',
-    contributingSessions: [{ endMs: NOW - 2 * DAY_MS, sets: 6, hoursT: 72 }],
+    contributingSessions: [{ workoutId: 'w-q', endMs: NOW - 2 * DAY_MS, sets: 6, hoursT: 72 }],
     ...over,
   };
 }
@@ -54,7 +62,10 @@ function entry(over) {
 const ROWS = [
   entry(),
   entry({ muscle: 'chest', recoveredPercent: 80, status: 'nearly', readyAtMs: CHEST_READY_AT, lastSessionEndMs: NOW - 1 * DAY_MS }),
-  entry({ muscle: 'biceps', recoveredPercent: 96, status: 'recovered', readyAtMs: null, lastSessionEndMs: NOW - 3 * DAY_MS, basis: 'time_volume_and_ratings' }),
+  entry({
+    muscle: 'biceps', recoveredPercent: 96, status: 'recovered', readyAtMs: null, lastSessionEndMs: NOW - 3 * DAY_MS, basis: 'time_volume_and_ratings',
+    contributingSessions: [{ workoutId: 'w-b', endMs: NOW - 3 * DAY_MS, sets: 6, hoursT: 72 }],
+  }),
 ];
 const FRESHNESS = { quads: NOW - 2 * DAY_MS, chest: NOW - 1 * DAY_MS, biceps: NOW - 3 * DAY_MS };
 
@@ -74,19 +85,19 @@ function rowButtons(tree) {
   return tree.root.findAll((n) => n.props?.accessibilityRole === 'button' && typeof n.props?.accessibilityLabel === 'string');
 }
 
-describe('groups: the figure legend\'s three words, in the spec\'s order, each with its count', () => {
+describe('groups: "Label · count" headers in the spec\'s order', () => {
   test('groupMuscleRecoveryRows buckets in RECOVERY_GROUPS order and drops empty groups', () => {
     const groups = groupMuscleRecoveryRows(ROWS);
-    expect(groups.map((g) => g.label)).toEqual(['Recovering', 'Nearly recovered', 'Recovered']);
+    expect(groups.map((g) => g.label)).toEqual(['Still recovering', 'Nearly recovered', 'Recovered']);
     expect(RECOVERY_GROUPS.map((g) => g.status)).toEqual(['recovering', 'nearly', 'recovered']);
     expect(groupMuscleRecoveryRows([ROWS[2]]).map((g) => g.label)).toEqual(['Recovered']);
   });
 
-  test('renders each group header with its label and count, and the rows under it', () => {
+  test('each header is the label, a middle dot and the count, with the rows of that group under it', () => {
     const all = texts(render());
-    const iRecovering = all.indexOf('Recovering');
-    const iNearly = all.indexOf('Nearly recovered');
-    const iRecovered = all.indexOf('Recovered');
+    const iRecovering = all.indexOf('Still recovering · 1');
+    const iNearly = all.indexOf('Nearly recovered · 1');
+    const iRecovered = all.indexOf('Recovered · 1');
     expect(iRecovering).toBeGreaterThanOrEqual(0);
     expect(iNearly).toBeGreaterThan(iRecovering);
     expect(iRecovered).toBeGreaterThan(iNearly);
@@ -94,36 +105,114 @@ describe('groups: the figure legend\'s three words, in the spec\'s order, each w
     expect(all.indexOf('Quads')).toBeLessThan(iNearly);
     expect(all.indexOf('Chest')).toBeGreaterThan(iNearly);
     expect(all.indexOf('Chest')).toBeLessThan(iRecovered);
-    expect(all.indexOf('Biceps')).toBeGreaterThan(iRecovered);
-    // Counts, one per group.
-    expect(all.filter((t) => t === '1')).toHaveLength(3);
   });
 
-  test('renders nothing at all for no rows', () => {
-    const tree = render({ rows: [] });
+  test('renders nothing at all for no rows and no history (day zero)', () => {
+    const tree = render({ rows: [], freshness: {} });
     expect(tree.toJSON()).toBeNull();
+  });
+
+  test('each group header is one accessible header node naming the group and its count', () => {
+    const tree = render();
+    const header = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Still recovering, 1 muscle')[0];
+    expect(header).toBeTruthy();
+    expect(header.props.accessibilityRole).toBe('header');
+    expect(header.props.accessible).toBe(true);
   });
 });
 
-describe('one row: name, estimated percent, bar, meta line, spoken label', () => {
-  test('the percent, the meta line and the bar fill', () => {
+describe('the Recovered group is one line of names with "Show details" (RC-19)', () => {
+  const MANY = [
+    entry(),
+    entry({ muscle: 'biceps', recoveredPercent: 96, status: 'recovered', readyAtMs: null }),
+    entry({ muscle: 'abs', recoveredPercent: 99, status: 'recovered', readyAtMs: null }),
+    entry({ muscle: 'calves', recoveredPercent: 92, status: 'recovered', readyAtMs: null }),
+  ];
+
+  test('collapsed: the names in plain text, no recovered row, no bar, the link says "Show details"', () => {
+    const tree = render({ rows: MANY, freshness: {} });
+    const all = texts(tree);
+    expect(all).toContain('Recovered · 3');
+    expect(all).toContain('Biceps, Abs, Calves');
+    expect(all).toContain('Show details');
+    // Not tappable as rows: only the one recovering row is a row button (the
+    // composite and its host node carry the same label, so count labels).
+    const rowLabels = new Set(rowButtons(tree).map((n) => n.props.accessibilityLabel).filter((l) => /percent recovered/.test(l)));
+    expect(rowLabels.size).toBe(1);
+    expect(all).not.toContain('96% recovered');
+  });
+
+  test('"Show details" expands the compact rows, and "Hide details" collapses them again', () => {
+    const tree = render({ rows: MANY, freshness: {} });
+    const link = () => rowButtons(tree).find((n) => /recovered muscles$/.test(n.props.accessibilityLabel));
+    expect(link().props.accessibilityLabel).toBe('Show details for the recovered muscles');
+    act(() => { link().props.onPress(); });
+    const open = texts(tree);
+    expect(open).toContain('96% recovered');
+    expect(open).toContain('Hide details');
+    expect(open).not.toContain('Biceps, Abs, Calves');
+    expect(link().props.accessibilityLabel).toBe('Hide details for the recovered muscles');
+    expect(link().props.accessibilityState).toEqual({ expanded: true });
+    act(() => { link().props.onPress(); });
+    expect(texts(tree)).toContain('Biceps, Abs, Calves');
+  });
+
+  test('a recovered muscle chosen on the figure opens the group by itself, and hiding clears the choice', () => {
+    const onSelect = jest.fn();
+    const tree = render({ rows: MANY, freshness: {}, selectedMuscle: 'biceps', onSelect });
+    const all = texts(tree);
+    expect(all).toContain('96% recovered');
+    expect(all).toContain('Based on');
+    const link = rowButtons(tree).find((n) => /recovered muscles$/.test(n.props.accessibilityLabel));
+    act(() => { link.props.onPress(); });
+    expect(onSelect).toHaveBeenLastCalledWith(null);
+  });
+
+  test('the link is at least 48 dp tall (docs/rules/styling.md)', () => {
+    const tree = render({ rows: MANY, freshness: {} });
+    const links = tree.root.findAll((n) => /recovered muscles$/.test(n.props?.accessibilityLabel || ''));
+    const heights = links.map((n) => Object.assign({}, ...[].concat(n.props.style).flat().filter(Boolean)).minHeight).filter((h) => h != null);
+    expect(heights.length).toBeGreaterThan(0);
+    for (const h of heights) expect(h).toBeGreaterThanOrEqual(48);
+  });
+});
+
+describe('one row: name, estimated percent with its status word, bar, meta line, spoken label', () => {
+  test('the percent reads "N% recovered", the meta line is as before, and the bar fills to the percent', () => {
     const tree = render();
     const all = texts(tree);
-    expect(all).toContain('64%');
+    expect(all).toContain('64% recovered');
+    expect(all).toContain('80% recovered');
+    // A bare "64%" is never printed: a status word rides with every percent.
+    expect(all).not.toContain('64%');
     const ready = readyClause(QUADS_READY_AT, NOW);
     expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 2 days ago`);
-    expect(all).toContain('Ready now · Trained 3 days ago');
     // Host nodes only: react-test-renderer also lists the composite element that shares these props.
     const fills = tree.root.findAll((n) => n.type === 'View' && n.props?.style && [].concat(n.props.style).some((st) => st && st.width === '64%'));
     expect(fills.length).toBe(1);
-    const fillStyle = Object.assign({}, ...[].concat(fills[0].props.style).filter(Boolean));
-    expect(fillStyle.backgroundColor).toBe(THEME.colors.error);
   });
 
-  test('band colours are the figure\'s own three tokens', () => {
-    expect(muscleRecoveryBandColour('recovered', THEME.colors)).toBe(THEME.colors.success);
-    expect(muscleRecoveryBandColour('nearly', THEME.colors)).toBe(THEME.colors.warning);
-    expect(muscleRecoveryBandColour('recovering', THEME.colors)).toBe(THEME.colors.error);
+  test('the bar is in the row\'s own intensity: solid under 50, half to 74, edge from 75 (D214 Q1 = A)', () => {
+    const c = THEME.colors;
+    expect(muscleRecoveryBarFill(0, c)).toBe(c.recovery);
+    expect(muscleRecoveryBarFill(49, c)).toBe(c.recovery);
+    expect(muscleRecoveryBarFill(50, c)).toBe(withAlpha(c.recovery, alpha.half));
+    expect(muscleRecoveryBarFill(74, c)).toBe(withAlpha(c.recovery, alpha.half));
+    expect(muscleRecoveryBarFill(75, c)).toBe(withAlpha(c.recovery, alpha.edge));
+    expect(muscleRecoveryBarFill(100, c)).toBe(withAlpha(c.recovery, alpha.edge));
+    expect(muscleRecoveryBarFill(NaN, c)).toBe(c.recovery);
+
+    const tree = render({ rows: [entry({ recoveredPercent: 30 }), entry({ muscle: 'chest', recoveredPercent: 64 }), entry({ muscle: 'back', recoveredPercent: 80, status: 'nearly' })] });
+    const fillOf = (w) => {
+      const node = tree.root.findAll((n) => n.type === 'View' && n.props?.style && [].concat(n.props.style).some((st) => st && st.width === w))[0];
+      return Object.assign({}, ...[].concat(node.props.style).filter(Boolean));
+    };
+    expect(fillOf('30%').backgroundColor).toBe(c.recovery);
+    expect(fillOf('64%').backgroundColor).toBe(withAlpha(c.recovery, alpha.half));
+    const edge = fillOf('80%');
+    expect(edge.backgroundColor).toBe(withAlpha(c.recovery, alpha.edge));
+    // The faintest stop keeps a solid hairline of the token, as the figure's legend does.
+    expect(edge.borderColor).toBe(c.recovery);
   });
 
   test('the spoken label is the spec\'s four facts, "percent" spelled out, and the row is a button', () => {
@@ -139,6 +228,32 @@ describe('one row: name, estimated percent, bar, meta line, spoken label', () =>
     // Model says 2 days ago; the chip source (a primary-mover start) says 1.
     expect(muscleRecoveryRowMeta(ROWS[0], NOW, NOW - 1 * DAY_MS)).toMatch(/Trained 1 day ago$/);
     expect(muscleRecoveryRowMeta(ROWS[0], NOW, undefined)).toMatch(/Trained 2 days ago$/);
+  });
+
+  test('the name and the meta line wrap under larger text: neither is clamped to one line (RC-32)', () => {
+    const tree = render();
+    const clamped = tree.root.findAllByType(Text).filter((n) => n.props.numberOfLines != null);
+    expect(clamped).toHaveLength(0);
+  });
+
+  test('a non-finite percent renders as 0% recovered, never NaN', () => {
+    const all = texts(render({ rows: [entry({ recoveredPercent: undefined })] }));
+    expect(all).toContain('0% recovered');
+    expect(all.some((t) => /NaN/.test(t))).toBe(false);
+  });
+
+  test('a literal weekday: two days from a Wednesday noon reads "Ready by Friday"', () => {
+    const all = texts(render());
+    expect(all).toContain('Ready by Friday · Trained 2 days ago');
+    expect(all).toContain('Ready by tomorrow · Trained 1 day ago');
+  });
+
+  test('each visible row registers its node with its muscle key, so the screen can scroll to it (RC-12)', () => {
+    const registerRow = jest.fn();
+    render({ registerRow });
+    const keys = new Set(registerRow.mock.calls.map((c) => c[0]));
+    expect(keys.has('quads')).toBe(true);
+    expect(keys.has('chest')).toBe(true);
   });
 });
 
@@ -157,24 +272,67 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 
-  test('only the selected row shows its breakdown lines', () => {
+  test('only the selected row shows its breakdown: the plain word, each session, the basis, the two notes', () => {
     const closed = texts(render());
-    expect(closed).not.toContain('Last session');
     expect(closed).not.toContain('Based on');
+    expect(closed).not.toContain(HALF_CREDIT_NOTE);
 
-    const open = texts(render({ selectedMuscle: 'biceps' }));
-    expect(open).toContain('Last session');
-    expect(open).toContain('6 sets counted · Sun 20 Sep');
-    expect(open).toContain('Last 14 days');
-    expect(open).toContain('1 session · 6 sets');
+    const open = texts(render({ selectedMuscle: 'quads' }));
+    expect(open).toContain('Muscle');
+    expect(open).toContain('Quads, front of the thigh');
+    expect(open).toContain('Mon 21 Sep');
+    // No split supplied: the model's own credit, labelled as credit (never a bare "6 sets").
+    expect(open).toContain('6 counted (a helping set counts as half)');
     expect(open).toContain('Based on');
-    expect(open).toContain('Time, sets and your ratings');
+    expect(open).toContain('Time and sets');
+    expect(open).toContain(HALF_CREDIT_NOTE);
+    expect(open).toContain(RECOVERY_ANSWER_NOTE);
     // One breakdown, not three.
     expect(open.filter((t) => t === 'Based on')).toHaveLength(1);
   });
 
+  test('the half credit is one line and the recovery answer note says where the first estimate comes from (RC-10, RC-23)', () => {
+    expect(HALF_CREDIT_NOTE).toBe('A set counts as one for the muscle it mainly works, and as half for a muscle that helps.');
+    // Lane 2 review S1: the screen is titled "Adjust training"; nothing the person sees is called "Plan update".
+    expect(RECOVERY_ANSWER_NOTE).toBe('Your ‘How’s your recovery?’ answer sets the first estimate; change it under Adjust training.');
+  });
+
+  test('with a split, each session names its sets as "main mover" and "helped", in logged sets', () => {
+    const lines = muscleRecoveryDetailLines(
+      entry({
+        muscle: 'back',
+        contributingSessions: [
+          { workoutId: 'w1', endMs: NOW - 5 * DAY_MS, sets: 8, hoursT: 72 },
+          { workoutId: 'w2', endMs: NOW - 2 * DAY_MS, sets: 2, hoursT: 72 },
+        ],
+      }),
+      false,
+      { w1: { main: 8, helped: 0 }, w2: { main: 0, helped: 4 } },
+    );
+    // Newest session first.
+    expect(lines.map((l) => l.label)).toEqual(['Muscle', 'Mon 21 Sep', 'Fri 18 Sep', 'Based on']);
+    expect(lines[1].value).toBe('4 sets helped');
+    expect(lines[2].value).toBe('8 sets as main mover');
+    expect(lines[0].value).toBe('Back, upper back, lats and lower back');
+    const both = muscleRecoveryDetailLines(
+      entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 5, hoursT: 72 }] }),
+      false,
+      { w1: { main: 4, helped: 2 } },
+    );
+    expect(both[1].value).toBe('4 sets as main mover, 2 sets helped');
+    expect(muscleRecoveryDetailLines(entry({ contributingSessions: [{ workoutId: 'w1', endMs: NOW - 2 * DAY_MS, sets: 1, hoursT: 72 }] }), false, { w1: { main: 1, helped: 0 } })[1].value)
+      .toBe('1 set as main mover');
+  });
+
+  test('the basis wording, and no session lines without contributing sessions', () => {
+    const lines = muscleRecoveryDetailLines(entry({ contributingSessions: [] }));
+    expect(lines.map((l) => l.label)).toEqual(['Muscle', 'Based on']);
+    expect(lines[1].value).toBe('Time and sets');
+  });
+
   test('the breakdown is a sibling of the row button, never nested inside it (assistive tech can reach it)', () => {
-    const tree = render({ selectedMuscle: 'biceps' });
+    const tree = render({ selectedMuscle: 'biceps', rows: [...ROWS], freshness: FRESHNESS });
+    // biceps is recovered: its group opens by itself for the selected muscle.
     const button = rowButtons(tree).find((n) => n.props.accessibilityLabel.startsWith('Biceps'));
     expect(button.props.accessibilityState).toEqual({ expanded: true });
     // Nothing of the breakdown lives under the touchable's own subtree.
@@ -184,35 +342,112 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     expect(line.length).toBeGreaterThan(0);
     expect(line[0].props.accessible).toBe(true);
   });
+});
 
-  test('a literal weekday: two days from a Wednesday noon reads "Ready by Friday"', () => {
-    const all = texts(render());
-    expect(all).toContain('Ready by Friday · Trained 2 days ago');
-    expect(all).toContain('Ready by tomorrow · Trained 1 day ago');
+describe('the muscle\'s plain word (RC-11)', () => {
+  test('every one of the seventeen engine keys has one short gloss', () => {
+    expect(Object.keys(MUSCLE_PLAIN_WORDS).sort()).toEqual(Object.keys(MUSCLE_DISPLAY_NAMES).sort());
+    for (const gloss of Object.values(MUSCLE_PLAIN_WORDS)) {
+      expect(gloss.length).toBeGreaterThan(0);
+      expect(gloss.length).toBeLessThanOrEqual(40);
+      expect(gloss).not.toMatch(/—/);
+    }
   });
 
-  test('a non-finite percent renders as 0%, never NaN', () => {
-    const all = texts(render({ rows: [entry({ recoveredPercent: undefined })] }));
-    expect(all).toContain('0%');
-    expect(all.some((t) => /NaN/.test(t))).toBe(false);
+  test('"Adductors, inner thigh" is the spec\'s own example', () => {
+    expect(musclePlainWord('adductors')).toBe('Adductors, inner thigh');
+    expect(musclePlainWord('tibialis')).toBe('Tibialis, front of the shin');
+    expect(musclePlainWord('front_delts')).toBe('Front delts, front of the shoulder');
+  });
+});
+
+describe('the sets behind a muscle, from the exercises that trained it (RC-9, RC-10)', () => {
+  const EXERCISES = [
+    { id: 'rdl', primaryMuscle: 'hamstrings', secondaryMuscles: ['back', 'glutes'] },
+    { id: 'bench', primaryMuscle: 'chest', secondaryMuscles: ['triceps', 'front_delts'] },
+    { id: 'row', primaryMuscle: 'back', secondaryMuscles: [] },
+  ];
+  const set = (workoutId, exerciseId, setType = 'straight') => ({ workoutId, exerciseId, setType });
+  const SETS = [
+    set('w1', 'rdl'), set('w1', 'rdl'), set('w1', 'rdl'), set('w1', 'rdl'),
+    set('w1', 'bench'), set('w1', 'bench'), set('w1', 'bench', 'warmup'),
+    set('w2', 'row'), set('w2', 'row'), set('w2', 'rdl'),
+  ];
+  const MAP = {
+    // Back: 4 RDL sets help at half in w1 (credit 2), 2 rows are the main work in w2 and 1 RDL helps (credit 2.5).
+    back: { contributingSessions: [{ workoutId: 'w1', sets: 2 }, { workoutId: 'w2', sets: 2.5 }] },
+    hamstrings: { contributingSessions: [{ workoutId: 'w1', sets: 4 }] },
+    chest: { contributingSessions: [{ workoutId: 'w1', sets: 2 }] },
+    triceps: { contributingSessions: [{ workoutId: 'w1', sets: 1 }] },
+  };
+
+  test('main-mover sets and helper sets are counted as logged sets, warm-ups left out', () => {
+    const out = buildMuscleSessionSplits(MAP, SETS, EXERCISES);
+    expect(out.back.w1).toEqual({ main: 0, helped: 4 });
+    expect(out.back.w2).toEqual({ main: 2, helped: 1 });
+    expect(out.hamstrings.w1).toEqual({ main: 4, helped: 0 });
+    // The warm-up bench set is not counted: 2 working sets, 2 credit for chest.
+    expect(out.chest.w1).toEqual({ main: 2, helped: 0 });
+    expect(out.triceps.w1).toEqual({ main: 0, helped: 2 });
   });
 
-  test('each group header is one accessible header node naming the group and its count', () => {
-    const tree = render();
-    const header = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Recovering, 1 muscle')[0];
-    expect(header).toBeTruthy();
-    expect(header.props.accessibilityRole).toBe('header');
-    expect(header.props.accessible).toBe(true);
+  test('a session whose split does not reproduce the model\'s own credit is left out (the breakdown then reads the model\'s figure)', () => {
+    const out = buildMuscleSessionSplits(
+      { back: { contributingSessions: [{ workoutId: 'w1', sets: 3 }] } }, SETS, EXERCISES,
+    );
+    expect(out.back).toBeUndefined();
+    // An exercise that no longer resolves: no split either.
+    const gone = buildMuscleSessionSplits(MAP, SETS, []);
+    expect(gone).toEqual({});
   });
 
-  test('muscleRecoveryDetailLines: the basis wording, and no 14-day line without contributing sessions', () => {
-    const lines = muscleRecoveryDetailLines(entry({ contributingSessions: [] }));
-    expect(lines.map((l) => l.label)).toEqual(['Last session', 'Based on']);
-    expect(lines[1].value).toBe('Time and sets');
-    const two = muscleRecoveryDetailLines(entry({
-      contributingSessions: [{ endMs: NOW - 9 * DAY_MS, sets: 8, hoursT: 72 }, { endMs: NOW - 2 * DAY_MS, sets: 6, hoursT: 72 }],
-    }));
-    expect(two[1]).toEqual({ label: 'Last 14 days', value: '2 sessions · 14 sets' });
+  test('nothing to split with no sets or no map', () => {
+    expect(buildMuscleSessionSplits(MAP, [], EXERCISES)).toEqual({});
+    expect(buildMuscleSessionSplits(null, SETS, EXERCISES)).toEqual({});
+  });
+});
+
+describe('"No session in the last 14 days" names EVERY muscle with no row (RC-17, RC-36)', () => {
+  const rows = (keys) => keys.map((muscle) => entry({ muscle }));
+  const ALL = Object.keys(MUSCLE_DISPLAY_NAMES);
+
+  test('the spec\'s own sentence: dated muscles first with how long ago, the rest together with the true window', () => {
+    const have = ALL.filter((k) => !['forearms', 'abs', 'adductors', 'neck', 'tibialis'].includes(k));
+    const line = noSessionNamesLine(rows(have), { forearms: NOW - 16 * DAY_MS - 3600000 }, NOW);
+    expect(line).toBe('No session in the last 14 days: Forearms (16 days ago), Abs, Adductors, Neck and Tibialis (none in the last 90 days).');
+    expect(RECENCY_READ_DAYS).toBe(90);
+    expect(LOOKBACK_DAYS).toBe(14);
+  });
+
+  test('a single undated muscle, and a single dated one', () => {
+    const noTibialis = rows(ALL.filter((k) => k !== 'tibialis'));
+    expect(noSessionNamesLine(noTibialis, {}, NOW)).toBe('No session in the last 14 days: Tibialis (none in the last 90 days).');
+    expect(noSessionNamesLine(noTibialis, { tibialis: NOW - 30 * DAY_MS }, NOW)).toBe('No session in the last 14 days: Tibialis (30 days ago).');
+  });
+
+  test('every muscle has a row: no line', () => {
+    expect(noSessionNamesLine(rows(ALL), {}, NOW)).toBeNull();
+  });
+
+  test('day zero (no row and no history at all): no line, the screen says something else', () => {
+    expect(noSessionNamesLine([], {}, NOW)).toBeNull();
+  });
+
+  test('a long break (no row, but older sessions on record) still names them with how long ago', () => {
+    const line = noSessionNamesLine([], { chest: NOW - 40 * DAY_MS, back: NOW - 20 * DAY_MS }, NOW);
+    expect(line.startsWith('No session in the last 14 days: Back (20 days ago), Chest (40 days ago), ')).toBe(true);
+    expect(line.endsWith('(none in the last 90 days).')).toBe(true);
+  });
+
+  test('the list renders the line under the rows, and registers its node for the figure\'s scroll', () => {
+    const registerNames = jest.fn();
+    const tree = render({ registerNames });
+    const all = texts(tree);
+    const line = all.find((x) => x.startsWith('No session in the last 14 days:'));
+    expect(line).toBeTruthy();
+    expect(line).toContain('Triceps');
+    expect(all.indexOf(line)).toBeGreaterThan(all.indexOf('Recovered · 1'));
+    expect(registerNames).toHaveBeenCalled();
   });
 });
 
@@ -226,15 +461,25 @@ describe('source guards', () => {
     for (const line of percentLines) expect(line).toMatch(/RECOVERY_ESTIMATE_LABEL|estimated/i);
   });
 
-  test('no amber: a status surface never reads the accent token', () => {
-    expect(code).not.toMatch(/colors\.primary\b/);
+  test('every percent is printed with its status word: the template ends in "% recovered"', () => {
+    expect(code).toContain('const estimatedPercentText = `${percent}% recovered`;');
+  });
+
+  test('no amber and no traffic light: a status surface reads neither the accent nor the success, warning or error tokens (D214 plan 7.0 rule 3)', () => {
+    expect(code).not.toMatch(/colors\.(primary|primaryBg|primaryFill|primaryDim|warning|success|error)\b/);
+    expect(code).not.toMatch(/\bmuscleRecoveryBandColour\b/);
   });
 
   test('describes, never instructs (D204): no coaching verbs in the copy', () => {
-    expect(code).not.toMatch(/consider|should|you must|take it easy|go lighter|rest day/i);
+    // Word-bounded: "shoulder" (the plain words, RC-11) contains "should".
+    expect(code).not.toMatch(/\b(consider|should|you must|take it easy|go lighter|rest day)\b/i);
   });
 
   test('never imports the database', () => {
     expect(code).not.toMatch(/lib\/database/);
+  });
+
+  test('no em dash in the copy', () => {
+    expect(code).not.toMatch(/—/);
   });
 });

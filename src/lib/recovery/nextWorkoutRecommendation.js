@@ -60,9 +60,12 @@
  * finding 2). For the RULE a muscle with no session in the last 14 days
  * counts as fully recovered (it is), so a fresh session can be recommended
  * over an under-recovered programme next. For the COPY, a session none of
- * whose counted muscles has a recent session behind it gets no line and no
- * "ready now": readinessLine and programmeNextLine are null, and the reason's
- * last sentence says "has had no session in the last 14 days".
+ * whose counted muscles has a recent session behind it gets no "ready now":
+ * readinessLine is null, programmeNextLine says "No recent session on the
+ * muscles <Name> trains." (D214, RC-5), and the reason's last sentence says
+ * "has had no session in the last 14 days". A session where only SOME of
+ * the counted muscles have a session names those as recovered and the rest
+ * as having no recent session (allClearLine), never "every muscle".
  *
  * PURE. No I/O, no clock: `nowMs`/`projectedAtMs` are arguments.
  */
@@ -125,19 +128,54 @@ function readinessLine(readinessNow, nowMs) {
   );
 }
 
+/** "Chest", "Chest and Triceps", "Chest, Triceps and Abs" for muscle keys. */
+export function muscleNameList(keys) {
+  const names = keys.map((k) => muscleDisplayName(k));
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The all-clear sentence, claimed only for what has a session behind it
+ * (register D214, RC-5: "Every muscle it trains is estimated recovered."
+ * used to print when ONE counted muscle had a session and the rest had
+ * nothing behind them, which is the "no evidence is never ready" rule of
+ * D201 ruling 13 broken in its mixed case). Every counted muscle has a
+ * session: the plain "every muscle" line, true of all of them. Some do
+ * not: the muscles that do are named as recovered and the others are named
+ * as having no recent session.
+ */
+function allClearLine(readinessNow) {
+  const counted = Array.isArray(readinessNow.muscles) ? readinessNow.muscles : [];
+  const withSession = counted.filter((m) => m.status !== 'no_recent_session').map((m) => m.muscle);
+  const without = counted.filter((m) => m.status === 'no_recent_session').map((m) => m.muscle);
+  if (!without.length || !withSession.length) return 'Every muscle it trains is estimated recovered.';
+  const verb = withSession.length === 1 ? muscleVerb(withSession[0]) : 'are';
+  return `${muscleNameList(withSession)} ${verb} estimated recovered; no recent session on ${muscleNameList(without)}.`;
+}
+
 /**
  * The line under the programme-next session's name on the Home card (spec
  * 4.3: "one line under the session name" -- the card title already carries
- * the name, so the line never repeats it). null when that session's own
- * planned sets are unknown, or when none of the muscles it trains has a
- * session in the last 14 days behind it (lead review): with no read behind
- * it there is no estimate to state, and "estimated recovered" would be a
- * false all-clear.
+ * the name, so the line only repeats it where the sentence needs it).
+ * null when that session's own planned sets are unknown, or when it counts
+ * no muscle at all (nothing to claim either way).
+ *
+ * D214 (RC-5): when NONE of the muscles it trains has a session in the last
+ * 14 days the line says exactly that, "No recent session on the muscles
+ * Upper A trains." -- never a false all-clear, and no longer silence (the
+ * Recovery screen and Home both print it). With `sessionName` unknown it
+ * reads "... the muscles it trains.".
  */
-function buildProgrammeNextLine(readinessNow, nowMs) {
-  if (!readinessNow || !readinessNow.evidence) return null;
+function buildProgrammeNextLine(readinessNow, nowMs, sessionName = '') {
+  if (!readinessNow) return null;
+  const counted = Array.isArray(readinessNow.muscles) ? readinessNow.muscles : [];
+  if (!readinessNow.evidence) {
+    if (!counted.length) return null;
+    return `No recent session on the muscles ${sessionName ? `${sessionName} trains` : 'it trains'}.`;
+  }
   if (readinessNow.verdict === 'ready' || !readinessNow.limitingMuscle) {
-    return 'Every muscle it trains is estimated recovered.';
+    return allClearLine(readinessNow);
   }
   return muscleEstimateSentence(
     readinessNow.limitingMuscle, readinessNow.minPercent, readinessNow.limitingReadyAtMs, nowMs,
@@ -256,7 +294,7 @@ export function recommendNextWorkout({
   const byId = new Map(perSession.map((p) => [p.routineId, p]));
   const nextEntry = byId.get(programmeNext.routineId) ?? null;
   const programmeNextName = routineNamesById?.[programmeNext.routineId] ?? '';
-  const programmeNextLine = buildProgrammeNextLine(nextEntry?.readinessNow ?? null, nowMs);
+  const programmeNextLine = buildProgrammeNextLine(nextEntry?.readinessNow ?? null, nowMs, programmeNextName);
 
   let recommended = null;
   if (nextEntry?.verdict === 'not_yet') {

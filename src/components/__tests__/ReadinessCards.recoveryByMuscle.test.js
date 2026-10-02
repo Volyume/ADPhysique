@@ -89,6 +89,9 @@ jest.mock('../BodyDiagramHeatmap', () => {
   const mockFn = jest.fn(() => null);
   return { __esModule: true, default: mockFn };
 });
+// D214 (lane 2): the fatigue-trend bars moved into ReadinessCards; the card
+// draws react-native-svg, so it is stubbed like the figure.
+jest.mock('../FatigueTrendCard', () => () => null);
 jest.mock('../../lib/database', () => ({
   getAllWorkouts: jest.fn(),
   getCompletedWorkoutSets: jest.fn(),
@@ -109,7 +112,10 @@ jest.mock('../../lib/recovery/nextWorkoutRecommendation', () => ({
   recommendNextWorkout: jest.fn(),
 }));
 
-import ReadinessCards, { recoveryByMuscleCaption } from '../ReadinessCards';
+import ReadinessCards, {
+  recoveryByMuscleCaption, recoveryCounts, recoveryAnswerLine, buildNextWorkoutSentence, buildStillToDoRows,
+  scrollToNode, RECOVERY_PERCENT_NOTE,
+} from '../ReadinessCards';
 import BodyDiagramHeatmap from '../BodyDiagramHeatmap';
 import * as database from '../../lib/database';
 import { logError } from '../../lib/errorLog';
@@ -129,10 +135,10 @@ async function flush() {
     for (let i = 0; i < 20; i++) await Promise.resolve();
   });
 }
-async function render(props = {}) {
+async function render(props = {}, options = undefined) {
   let tree;
   await act(async () => {
-    tree = create(<ReadinessCards userId="u1" {...props} />);
+    tree = create(<ReadinessCards userId="u1" {...props} />, options);
   });
   await flush();
   return tree;
@@ -140,7 +146,7 @@ async function render(props = {}) {
 
 // Four muscles covering all four statuses: quads (recovering), chest
 // (nearly), biceps (recovered), triceps (no_recent_session, so it is NOT a
-// row -- it folds into the Training-recency chips instead).
+// row -- the line under the list names it, D214).
 const QUADS_READY_AT = NOW + 2 * DAY_MS;
 const CHEST_READY_AT = NOW + 1 * DAY_MS;
 const MAP_FIXTURE = {
@@ -172,11 +178,44 @@ beforeEach(() => {
   database.getLastTrainedPerMuscle.mockResolvedValue({});
   database.getRecentCheckins.mockResolvedValue([]);
   database.getRecentCompletedWorkouts.mockResolvedValue([]);
+  database.getAllExercises.mockResolvedValue([]);
   resolveProgrammePosition.mockResolvedValue(null);
   loadMuscleRecovery.mockResolvedValue(RECOVERY_RESULT);
   loadPlannedSetsByRoutine.mockResolvedValue({});
   recommendNextWorkout.mockReturnValue({
     programmeNext: null, recommended: null, reason: null, programmeNextLine: null, perSession: [],
+  });
+});
+
+describe('the answer line leads the section (D214 Q7 = A)', () => {
+  test('counts from the map: still recovering, nearly recovered when any, recovered', async () => {
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('1 muscle still recovering, 1 nearly recovered, 1 recovered.');
+    // It comes before the figure's list and the rows.
+    expect(all.indexOf('1 muscle still recovering, 1 nearly recovered, 1 recovered.')).toBeLessThan(all.indexOf('Still recovering · 1'));
+  });
+
+  test('the answer line is `h3`, the largest text in the block', async () => {
+    const { resolveTheme } = require('../../styles/theme');
+    const THEME = resolveTheme({ theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined });
+    const tree = await render();
+    const node = tree.root.findAll((n) => n.type === 'Text'
+      && [].concat(n.props.children).join('') === '1 muscle still recovering, 1 nearly recovered, 1 recovered.')[0];
+    const style = Object.assign({}, ...[].concat(node.props.style).flat(3).filter(Boolean));
+    expect(style.fontSize).toBe(THEME.type.h3.fontSize);
+  });
+
+  test('recoveryCounts and recoveryAnswerLine: every wording', () => {
+    expect(recoveryCounts(MAP_FIXTURE)).toEqual({ recovering: 1, nearly: 1, recovered: 1 });
+    expect(recoveryCounts(null)).toEqual({ recovering: 0, nearly: 0, recovered: 0 });
+    expect(recoveryAnswerLine({ recovering: 4, nearly: 0, recovered: 8 })).toBe('4 muscles still recovering, 8 recovered.');
+    expect(recoveryAnswerLine({ recovering: 4, nearly: 2, recovered: 8 })).toBe('4 muscles still recovering, 2 nearly recovered, 8 recovered.');
+    expect(recoveryAnswerLine({ recovering: 1, nearly: 0, recovered: 0 })).toBe('1 muscle still recovering.');
+    expect(recoveryAnswerLine({ recovering: 0, nearly: 2, recovered: 3 })).toBe('2 nearly recovered, 3 recovered.');
+    expect(recoveryAnswerLine({ recovering: 0, nearly: 0, recovered: 8 })).toBe('All 8 muscles recovered.');
+    expect(recoveryAnswerLine({ recovering: 0, nearly: 0, recovered: 1 })).toBe('1 muscle recovered.');
+    expect(recoveryAnswerLine({ recovering: 0, nearly: 0, recovered: 0 })).toBeNull();
   });
 });
 
@@ -202,11 +241,13 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
   // feeds it: the card's sub-line carries "Estimated" for every percent
   // below it, each row's percent and meta line render, and the figure's
   // muscle tap opens that row's breakdown.
-  test('a recovering row: name, percent and the ready-by plus trained-ago meta line', async () => {
+  test('a recovering row: name, "64% recovered" and the ready-by plus trained-ago meta line', async () => {
     const tree = await render();
     const all = texts(tree);
-    expect(all).toContain('Estimated · last 14 days');
-    expect(all).toContain('64%');
+    // D214 plan 7.2: the sub-line says what the percents are estimated from.
+    expect(all).toContain('Estimated from your sessions · last 14 days');
+    // D214 RC-7 / plan 7.0 rule 4: a status word rides with every percent.
+    expect(all).toContain('64% recovered');
     const ready = readyClause(QUADS_READY_AT, NOW);
     expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 2 days ago`);
   });
@@ -214,16 +255,22 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
   test('a nearly row: percent and meta line', async () => {
     const tree = await render();
     const all = texts(tree);
-    expect(all).toContain('80%');
+    expect(all).toContain('80% recovered');
     const ready = readyClause(CHEST_READY_AT, NOW);
     expect(all).toContain(`${ready.charAt(0).toUpperCase()}${ready.slice(1)} · Trained 1 day ago`);
   });
 
-  test('a recovered row reads "Ready now" rather than a weekday, and its bar is full-strength success', async () => {
+  test('D214 RC-19: the recovered muscles are one line of names until "Show details"; then a row reads "Ready now"', async () => {
     const tree = await render();
     const all = texts(tree);
-    expect(all).toContain('96%');
-    expect(all).toContain('Ready now · Trained 3 days ago');
+    expect(all).toContain('Recovered · 1');
+    expect(all).toContain('Show details');
+    expect(all).not.toContain('96% recovered');
+    const link = tree.root.findAll((n) => n.props.accessibilityLabel === 'Show details for the recovered muscles' && typeof n.props.onPress === 'function')[0];
+    await act(async () => { link.props.onPress(); });
+    const open = texts(tree);
+    expect(open).toContain('96% recovered');
+    expect(open).toContain('Ready now · Trained 3 days ago');
   });
 
   test('accessibility label carries the muscle, "estimated N percent recovered", the ready-by phrase and the trained-ago fact', async () => {
@@ -234,44 +281,98 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     expect(node.props.accessibilityRole).toBe('button');
   });
 
-  test('the figure\'s muscle tap opens that muscle\'s breakdown; a muscle with no row is left alone', async () => {
-    const tree = await render();
-    expect(texts(tree)).not.toContain('Based on');
-    const props = BodyDiagramHeatmap.mock.calls[0][0];
-    expect(typeof props.onMuscleTap).toBe('function');
-    await act(async () => { props.onMuscleTap('quads'); });
-    const open = texts(tree);
-    expect(open).toContain('Based on');
-    expect(open.filter((t) => t === 'Based on')).toHaveLength(1);
-    // triceps has no row (no_recent_session): the open row stays as it was.
-    const latest = BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
-    await act(async () => { latest.onMuscleTap('triceps'); });
-    expect(texts(tree).filter((t) => t === 'Based on')).toHaveLength(1);
-    // Tapping the open muscle again on the figure closes it.
-    const again = BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
-    await act(async () => { again.onMuscleTap('quads'); });
-    expect(texts(tree)).not.toContain('Based on');
-  });
-
   test('the section heading carries accessibilityRole="header"', async () => {
     const tree = await render();
     const header = tree.root.findByProps({ accessibilityRole: 'header', children: 'Recovery by muscle' });
     expect(header).toBeTruthy();
   });
 
-  test('the body figure receives the recovery map, not the volume map', async () => {
+  test('the body figure receives the recovery map, not the volume map, and the selected muscle', async () => {
     await render();
     expect(BodyDiagramHeatmap).toHaveBeenCalled();
     const props = BodyDiagramHeatmap.mock.calls[0][0];
     expect(props.recoveryByMuscle).toBe(MAP_FIXTURE);
+    expect(props.selectedMuscle).toBeNull();
   });
 
-  test('the caption is exact', async () => {
+  test('the caption is exact, and its (i) carries the percent\'s referent and thresholds (RC-7, RC-22)', async () => {
     const tree = await render();
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(texts(tree)).toContain(
       'Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for your answer to ‘How’s your recovery?’ and your ratings. Not a measurement.',
     );
+    expect(RECOVERY_PERCENT_NOTE).toBe(
+      "The percent is how much of the fatigue from a muscle's last session is estimated to have cleared; 90% counts as recovered, 75% as nearly. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.",
+    );
+  });
+});
+
+describe('the figure: a tap selects, opens the row and scrolls to it (D214 RC-12)', () => {
+  const lastFigureProps = () => BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0];
+
+  test('a tap selects the muscle on the figure and opens its breakdown; a second tap closes it', async () => {
+    const tree = await render();
+    expect(texts(tree)).not.toContain('Based on');
+    expect(typeof lastFigureProps().onMuscleTap).toBe('function');
+    await act(async () => { lastFigureProps().onMuscleTap('quads'); });
+    const open = texts(tree);
+    expect(open).toContain('Based on');
+    expect(open.filter((t) => t === 'Based on')).toHaveLength(1);
+    expect(lastFigureProps().selectedMuscle).toBe('quads');
+    await act(async () => { lastFigureProps().onMuscleTap('quads'); });
+    expect(texts(tree)).not.toContain('Based on');
+    expect(lastFigureProps().selectedMuscle).toBeNull();
+  });
+
+  test('a muscle with no row is SELECTED too (no more silence), and opens nothing', async () => {
+    const tree = await render();
+    await act(async () => { lastFigureProps().onMuscleTap('quads'); });
+    await act(async () => { lastFigureProps().onMuscleTap('triceps'); });
+    expect(lastFigureProps().selectedMuscle).toBe('triceps');
+    expect(texts(tree)).not.toContain('Based on');
+  });
+
+  test('a recovered muscle chosen on the figure opens the Recovered group by itself', async () => {
+    const tree = await render();
+    expect(texts(tree)).not.toContain('96% recovered');
+    await act(async () => { lastFigureProps().onMuscleTap('biceps'); });
+    const open = texts(tree);
+    expect(open).toContain('96% recovered');
+    expect(open).toContain('Based on');
+  });
+
+  test('the tap scrolls the screen\'s ScrollView to the muscle\'s row, with headroom', async () => {
+    const scrollTo = jest.fn();
+    const scrollRef = { current: { getInnerViewRef: () => 'inner', scrollTo } };
+    // Every host node with a ref reports a measured y of 480 inside the scroll content.
+    const createNodeMock = () => ({ measureLayout: (inner, onSuccess) => { onSuccess(0, 480); } });
+    const tree = await render({ scrollRef }, { createNodeMock });
+    expect(scrollTo).not.toHaveBeenCalled();
+    await act(async () => { lastFigureProps().onMuscleTap('quads'); });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 480 - 16, animated: true });
+    // A muscle with no row scrolls to the line that names it.
+    await act(async () => { lastFigureProps().onMuscleTap('triceps'); });
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+    expect(tree).toBeTruthy();
+  });
+
+  test('no ScrollView ref (Home\'s other uses) means no scroll and no error', async () => {
+    await render();
+    await act(async () => { lastFigureProps().onMuscleTap('quads'); });
+  });
+
+  test('scrollToNode: measures against the ScrollView\'s inner view and never goes above the top', () => {
+    const scrollTo = jest.fn();
+    const sv = { getInnerViewRef: () => 'inner', scrollTo };
+    const node = { measureLayout: jest.fn((inner, ok) => ok(0, 5)) };
+    expect(scrollToNode(sv, node, 16)).toBe(true);
+    expect(node.measureLayout.mock.calls[0][0]).toBe('inner');
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
+    expect(scrollToNode(null, node)).toBe(false);
+    expect(scrollToNode(sv, null)).toBe(false);
+    expect(scrollToNode(sv, {})).toBe(false);
+    expect(scrollToNode({ scrollTo }, node)).toBe(false);
   });
 });
 
@@ -316,12 +417,10 @@ describe('the personal recovery learning (register D210)', () => {
   });
 });
 
-describe('the Training-recency chip fold (spec section 6)', () => {
-  test('muscles that are ever-trained but have no row keep their chip; muscles with a row lose theirs', async () => {
-    // quads/chest/biceps are rows (MAP_FIXTURE); hamstrings/calves are
-    // "ever trained" per getLastTrainedPerMuscle but absent from the map
-    // entirely; triceps IS in the map but as 'no_recent_session'. All
-    // three (triceps, hamstrings, calves) must fold together.
+describe('the line under the list names EVERY muscle with no row (replaces the Training-recency chips, D214 RC-17)', () => {
+  test('muscles with no row are named, the dated ones with how long ago, the rest with the true 90-day window; no chips remain', async () => {
+    // quads/chest/biceps are rows (MAP_FIXTURE); triceps IS in the map but as
+    // 'no_recent_session'; hamstrings/calves are absent from the map entirely.
     database.getLastTrainedPerMuscle.mockResolvedValue({
       quads: NOW - 2 * DAY_MS,
       chest: NOW - 1 * DAY_MS,
@@ -332,60 +431,75 @@ describe('the Training-recency chip fold (spec section 6)', () => {
     });
     const tree = await render();
     const all = texts(tree);
-    // Lead review: the chips are the one place these are named; no second
-    // "No recent session: <names>" line repeats them under the rows.
-    expect(all.some((t) => t.startsWith('No recent session:'))).toBe(false);
-    expect(all).toContain('Training recency');
-    expect(all).toContain('Triceps');
-    expect(all).toContain('Hamstrings');
-    expect(all).toContain('Calves');
-    // quads/chest/biceps have a row now, so their chip must not also render.
-    // The row names each muscle once (its own name Text); a chip would name
-    // it a second time, beside a chip label ("Trained 2 days ago") that a
-    // folded muscle only ever shows inside its row's meta line.
-    for (const name of ['Quads', 'Chest', 'Biceps']) {
-      expect(all.filter((t) => t === name)).toHaveLength(1);
-    }
-    expect(all).not.toContain('Trained 2 days ago');
-    expect(all).not.toContain('Trained 1 day ago');
-    expect(all).not.toContain('Trained 3 days ago');
-    // The un-folded chips still carry their own label Text.
-    expect(all).toContain('Trained 20 days ago');
+    const line = all.find((t) => t.startsWith('No session in the last 14 days:'));
+    expect(line).toBeTruthy();
+    expect(line).toContain('Triceps (20 days ago), Hamstrings (25 days ago), Calves (40 days ago)');
+    expect(line).toMatch(/\(none in the last 90 days\)\.$/);
+    // Muscles with a row are not named here.
+    for (const name of ['Quads', 'Chest', 'Biceps']) expect(line).not.toContain(name);
+    // The old chips and their heading are gone, and so is their icon.
+    expect(all).not.toContain('Training recency');
+    expect(all).not.toContain('How recently each muscle was trained.');
+    expect(all).not.toContain('Trained 20 days ago');
   });
 
-  test('is absent when every ever-trained muscle already has a row', async () => {
-    database.getLastTrainedPerMuscle.mockResolvedValue({
-      quads: NOW - 2 * DAY_MS,
-      chest: NOW - 1 * DAY_MS,
-      biceps: NOW - 3 * DAY_MS,
-    });
+  test('every muscle has a row: no line', async () => {
+    const full = {};
+    for (const key of ['chest', 'back', 'front_delts', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'abs', 'traps', 'neck', 'tibialis']) {
+      full[key] = { muscle: key, recoveredPercent: 100, status: 'recovered', readyAtMs: null, lastSessionEndMs: NOW - DAY_MS, lastSessionSets: 4, basis: 'time_and_volume', contributingSessions: [] };
+    }
+    loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, map: full });
     const tree = await render();
-    const all = texts(tree);
-    expect(all.some((t) => t.startsWith('No recent session:'))).toBe(false);
-    expect(all).not.toContain('Training recency');
+    expect(texts(tree).some((t) => t.startsWith('No session in the last 14 days:'))).toBe(false);
+    expect(texts(tree)).toContain('All 17 muscles recovered.');
   });
 });
 
-describe('"Next workout" row (spec section 4.3 / 6)', () => {
+describe('the next-workout sentence and the sessions still to do (D214 7.2 a and b)', () => {
   const SESSIONS = [
     { routineId: 'r-legs', name: 'Legs', state: 'outstanding', order: 0 },
     { routineId: 'r-push', name: 'Push', state: 'outstanding', order: 1 },
   ];
+  // The names come from the programme position's own sessions (the card
+  // looks them up itself), so these two sessions carry the spec's own names.
+  const SESSIONS_AB = [
+    { routineId: 'r-legs', name: 'Upper A', state: 'outstanding', order: 0 },
+    { routineId: 'r-push', name: 'Lower B', state: 'outstanding', order: 1 },
+  ];
+  const NEXT = (over = {}) => ({
+    programmeNext: { routineId: 'r-legs' },
+    recommended: null,
+    reason: null,
+    programmeNextLine: null,
+    perSession: [],
+    ...over,
+  });
+  const limitingEntry = (routineId, over = {}) => ({
+    routineId,
+    readinessNow: {
+      verdict: 'not_yet', minPercent: 60, limitingMuscle: 'back', limitingReadyAtMs: NOW + DAY_MS, evidence: true,
+      muscles: [{ muscle: 'back', plannedSets: 8, recoveredPercent: 60, status: 'recovering' }],
+      ...over,
+    },
+  });
 
-  test('is absent when there is no active block', async () => {
+  test('is absent when there is no active block (and no "Next workout" block exists any more)', async () => {
     resolveProgrammePosition.mockResolvedValue(null);
     const tree = await render();
-    expect(texts(tree)).not.toContain('Next workout');
+    const all = texts(tree);
+    expect(all).not.toContain('Next workout');
+    expect(all.some((t) => / is next/.test(t))).toBe(false);
+    expect(all).not.toContain('Still to do this week');
   });
 
   test('is absent when the block has no outstanding session', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: null, sessions: SESSIONS });
     const tree = await render();
-    expect(texts(tree)).not.toContain('Next workout');
+    expect(texts(tree)).not.toContain('Still to do this week');
     expect(recommendNextWorkout).not.toHaveBeenCalled();
   });
 
-  test('shows the reason verbatim when a swap is recommended', async () => {
+  test('shows the swap reason verbatim when one is recommended (unchanged in substance, RC-20)', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS });
     recommendNextWorkout.mockReturnValue({
       programmeNext: { routineId: 'r-legs' },
@@ -395,12 +509,38 @@ describe('"Next workout" row (spec section 4.3 / 6)', () => {
       perSession: [],
     });
     const tree = await render();
-    const all = texts(tree);
-    expect(all).toContain('Next workout');
-    expect(all).toContain('Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.');
+    expect(texts(tree)).toContain('Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.');
   });
 
-  test('falls back to "<Name> is next." plus programmeNextLine when no swap is recommended', async () => {
+  test('names the limiting muscle AS the limiting one: "Upper A is next: Back is the least recovered of the muscles it trains, estimated 60% recovered, ready by tomorrow."', async () => {
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    recommendNextWorkout.mockReturnValue(NEXT({
+      programmeNextLine: 'Back is estimated 60% recovered, ready by tomorrow.',
+      perSession: [limitingEntry('r-legs')],
+    }));
+    const tree = await render();
+    expect(texts(tree)).toContain('Upper A is next: Back is the least recovered of the muscles it trains, estimated 60% recovered, ready by tomorrow.');
+  });
+
+  test('D214 RC-5: no recent session on any muscle it trains says exactly that, never "every muscle ... recovered"', async () => {
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    recommendNextWorkout.mockReturnValue(NEXT({
+      programmeNextLine: 'No recent session on the muscles Upper A trains.',
+      perSession: [{
+        routineId: 'r-legs',
+        readinessNow: {
+          verdict: 'ready', minPercent: 100, limitingMuscle: null, limitingReadyAtMs: null, evidence: false,
+          muscles: [{ muscle: 'quads', plannedSets: 8, recoveredPercent: 100, status: 'no_recent_session' }],
+        },
+      }],
+    }));
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('No recent session on the muscles Upper A trains.');
+    expect(all.some((t) => /Every muscle it trains/.test(t))).toBe(false);
+  });
+
+  test('falls back to "<Name> is next." plus programmeNextLine when the session\'s readiness entry is absent', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS });
     recommendNextWorkout.mockReturnValue({
       programmeNext: { routineId: 'r-legs' },
@@ -410,7 +550,7 @@ describe('"Next workout" row (spec section 4.3 / 6)', () => {
       perSession: [],
     });
     const tree = await render();
-    // Lead review: unlike Home's card, this row has no title naming the
+    // Lead review: unlike Home's card, this block has no title naming the
     // session, so it names it itself.
     expect(texts(tree)).toContain('Legs is next. Every muscle it trains is estimated recovered.');
   });
@@ -425,7 +565,69 @@ describe('"Next workout" row (spec section 4.3 / 6)', () => {
       perSession: [],
     });
     const tree = await render();
-    expect(texts(tree)).not.toContain('Next workout');
+    expect(texts(tree).some((t) => / is next/.test(t))).toBe(false);
+  });
+
+  test('"Still to do this week": one row per outstanding session, with the limiting muscle and "recovered" after its percent', async () => {
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    recommendNextWorkout.mockReturnValue(NEXT({
+      programmeNextLine: 'Back is estimated 60% recovered, ready by tomorrow.',
+      perSession: [
+        limitingEntry('r-legs'),
+        limitingEntry('r-push', { minPercent: 37, limitingMuscle: 'glutes', limitingReadyAtMs: NOW + 3 * DAY_MS, muscles: [{ muscle: 'glutes', plannedSets: 6, recoveredPercent: 37, status: 'recovering' }] }),
+      ],
+    }));
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('Still to do this week');
+    // Lane 2 review N12: a row is two lines at phone width (the session and
+    // its ready clause, then the limiting-muscle clause in muted ink); the
+    // whole row is the spoken label.
+    expect(all).toContain('Upper A · estimated ready by tomorrow');
+    expect(all).toContain('(Back 60% recovered)');
+    expect(all).toContain(`Lower B · estimated ${readyClause(NOW + 3 * DAY_MS, NOW)}`);
+    expect(all).toContain('(Glutes 37% recovered)');
+    const spoken = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Upper A · estimated ready by tomorrow (Back 60% recovered)');
+    expect(spoken).toHaveLength(1);
+    // After the answer block, before the figure's list.
+    expect(all.indexOf('Still to do this week')).toBeLessThan(all.indexOf('Still recovering · 1'));
+  });
+
+  test('buildStillToDoRows: no recent session is never "ready now" (D201 ruling 13); unknown and ready have their own words', () => {
+    const rec = {
+      routineNamesById: { a: 'Upper A', b: 'Lower B', c: 'Push', d: 'Pull' },
+      perSession: [
+        { routineId: 'a', readinessNow: { verdict: 'ready', minPercent: 100, limitingMuscle: null, evidence: false, muscles: [{ muscle: 'quads', status: 'no_recent_session', recoveredPercent: 100 }] } },
+        { routineId: 'b', readinessNow: null },
+        { routineId: 'c', readinessNow: { verdict: 'ready', minPercent: 100, limitingMuscle: null, evidence: true, muscles: [{ muscle: 'chest', status: 'recovered', recoveredPercent: 94 }, { muscle: 'triceps', status: 'no_recent_session', recoveredPercent: 100 }] } },
+        { routineId: 'd', readinessNow: { verdict: 'ready', minPercent: 100, limitingMuscle: null, evidence: false, muscles: [] } },
+      ],
+    };
+    const rows = buildStillToDoRows(rec, NOW).map((r) => r.text);
+    expect(rows[0]).toBe('Upper A · no recent session on the muscles it trains');
+    expect(rows[0]).not.toMatch(/ready/);
+    expect(rows[1]).toBe('Lower B · estimate not available');
+    // A ready session names the least recovered muscle that HAS a session, never one with none.
+    // Lane 2 review S3 (the RC-5 mixed case): the row names the muscles with no recent session, as the sentence above it does.
+    expect(rows[2]).toBe('Push · estimated ready now (Chest 94% recovered); no recent session on Triceps');
+    expect(rows[3]).toBe('Pull · estimate not available');
+    expect(buildStillToDoRows(null, NOW)).toEqual([]);
+  });
+
+  test('buildNextWorkoutSentence: the all-clear and the mixed line follow the name with a full stop', () => {
+    const rec = (readinessNow, line) => ({
+      programmeNext: { routineId: 'a' }, programmeNextName: 'Upper A', programmeNextLine: line, reason: null,
+      perSession: [{ routineId: 'a', readinessNow }],
+    });
+    expect(buildNextWorkoutSentence(rec({
+      verdict: 'ready', evidence: true, limitingMuscle: null, minPercent: 100,
+      muscles: [{ muscle: 'chest', status: 'recovered', recoveredPercent: 95 }],
+    }, 'Every muscle it trains is estimated recovered.'), NOW)).toBe('Upper A is next. Every muscle it trains is estimated recovered.');
+    expect(buildNextWorkoutSentence(rec({
+      verdict: 'ready', evidence: true, limitingMuscle: null, minPercent: 100,
+      muscles: [{ muscle: 'chest', status: 'recovered', recoveredPercent: 95 }, { muscle: 'triceps', status: 'no_recent_session', recoveredPercent: 100 }],
+    }, 'Chest is estimated recovered; no recent session on Triceps.'), NOW)).toBe('Upper A is next. Chest is estimated recovered; no recent session on Triceps.');
+    expect(buildNextWorkoutSentence(null, NOW)).toBeNull();
   });
 
   test('calls loadPlannedSetsByRoutine with only the outstanding routine ids, and recommendNextWorkout with the loaded map', async () => {
@@ -439,8 +641,69 @@ describe('"Next workout" row (spec section 4.3 / 6)', () => {
   });
 });
 
-describe('loader failure: the section hides, the gauges stay intact', () => {
-  test('loadMuscleRecovery rejecting hides the whole section and logs, without crashing', async () => {
+describe('states: first load, day zero, and a failed read (D214 RC-24, RC-25, RC-33)', () => {
+  test('first load: skeletons fill the card slots until the reads have landed, and no section is claimed yet', async () => {
+    let release;
+    loadMuscleRecovery.mockImplementation(() => new Promise((resolve) => { release = () => resolve(RECOVERY_RESULT); }));
+    let tree;
+    await act(async () => { tree = create(<ReadinessCards userId="u1" sections="recovery" />); });
+    await act(async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); });
+    const loading = tree.root.findAll((n) => n.props?.accessibilityRole === 'progressbar' && n.props?.accessibilityLabel === 'Loading');
+    expect(loading.length).toBeGreaterThan(0);
+    expect(texts(tree)).not.toContain('Recovery by muscle');
+    expect(texts(tree).some((t) => /to go: First session/.test(t))).toBe(false);
+    await act(async () => { release(); });
+    await flush();
+    expect(texts(tree)).toContain('Recovery by muscle');
+    expect(tree.root.findAll((n) => n.props?.accessibilityRole === 'progressbar' && n.props?.accessibilityLabel === 'Loading')).toHaveLength(0);
+  });
+
+  test("day zero: the figure and \"Each muscle's recovery shows here after your first session.\"", async () => {
+    const empty = {};
+    for (const key of ['chest', 'back', 'quads']) {
+      empty[key] = { muscle: key, recoveredPercent: 100, status: 'no_recent_session', readyAtMs: null, lastSessionEndMs: null, lastSessionSets: null, basis: 'time_and_volume', contributingSessions: [] };
+    }
+    loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, map: empty });
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain("Each muscle's recovery shows here after your first session.");
+    expect(BodyDiagramHeatmap).toHaveBeenCalled();
+    // No answer line to print, and no list of 17 names at day zero.
+    expect(all.some((t) => /still recovering|nearly recovered|^\d+ recovered/.test(t))).toBe(false);
+    expect(all.some((t) => t.startsWith('No session in the last 14 days:'))).toBe(false);
+  });
+
+  test('trained before, nothing in the window: says so plainly instead of "after your first session"', async () => {
+    const empty = { chest: { muscle: 'chest', recoveredPercent: 100, status: 'no_recent_session', readyAtMs: null, lastSessionEndMs: null, lastSessionSets: null, basis: 'time_and_volume', contributingSessions: [] } };
+    loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, map: empty });
+    database.getLastTrainedPerMuscle.mockResolvedValue({ chest: NOW - 40 * DAY_MS });
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('No session in the last 14 days, so there is no estimate to show.');
+    expect(all).not.toContain("Each muscle's recovery shows here after your first session.");
+  });
+
+  test("a rejected read prints \"Couldn't load the estimate just now.\" under the heading and LOGS it (no silent catch)", async () => {
+    loadMuscleRecovery.mockRejectedValue(new Error('boom'));
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('Recovery by muscle');
+    expect(all).toContain("Couldn't load the estimate just now.");
+    expect(BodyDiagramHeatmap).not.toHaveBeenCalled();
+    expect(logError).toHaveBeenCalledWith('ReadinessCards.loadMuscleRecovery', expect.any(Error), { userId: 'u1' });
+  });
+
+  test('a degraded loader (a core read failed) says the same and logs, never an all-clear', async () => {
+    loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, degraded: true });
+    const tree = await render();
+    expect(texts(tree)).toContain("Couldn't load the estimate just now.");
+    expect(texts(tree).some((t) => /still recovering|recovered\./.test(t))).toBe(false);
+    expect(logError).toHaveBeenCalledWith('ReadinessCards.loadMuscleRecovery', expect.any(Error), { userId: 'u1' });
+  });
+});
+
+describe('loader failure: the estimate says so, the ratings stay intact', () => {
+  test('loadMuscleRecovery rejecting leaves the ratings rows readable and logs, without crashing', async () => {
     loadMuscleRecovery.mockRejectedValue(new Error('boom'));
     database.getAllWorkouts.mockResolvedValue([
       { id: 'w1', isCompleted: true, setCount: 1, startedAt: NOW, endedAt: NOW, soreness24hBefore: 2, fatigueLevel: 2, jointDiscomfort: 1 },
@@ -448,41 +711,91 @@ describe('loader failure: the section hides, the gauges stay intact', () => {
     ]);
     const tree = await render();
     const all = texts(tree);
-    expect(all).not.toContain('Recovery by muscle');
-    expect(all.some((t) => t.startsWith('No recent session:'))).toBe(false);
-    // The gauges (an unrelated reader in the same load()) are unaffected:
-    // two rated sessions is enough for a real averaged value, not 'N/A'.
-    expect(all).not.toContain('N/A');
+    // The ratings (an unrelated reader in the same load()) are unaffected:
+    // two rated sessions is enough for a real averaged value.
+    expect(all.some((t) => /not rated yet/.test(t))).toBe(false);
+    expect(all).toContain('Fatigue after sessions · mild (2.0 of 5)');
     expect(logError).toHaveBeenCalledWith('ReadinessCards.loadMuscleRecovery', expect.any(Error), { userId: 'u1' });
-    expect(BodyDiagramHeatmap).not.toHaveBeenCalled();
   });
 
-  test('resolveProgrammePosition rejecting hides only the next-workout row, keeping the rows/figure', async () => {
+  test('resolveProgrammePosition rejecting drops only the next-workout parts, keeping the rows and figure', async () => {
     resolveProgrammePosition.mockRejectedValue(new Error('boom'));
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain('Recovery by muscle');
     expect(all).toContain('Quads');
-    expect(all).not.toContain('Next workout');
+    expect(all.some((t) => / is next/.test(t))).toBe(false);
+    expect(all).not.toContain('Still to do this week');
     expect(logError).toHaveBeenCalledWith('ReadinessCards.loadRecoveryRecommendation', expect.any(Error), { userId: 'u1' });
   });
 });
 
-describe('source guard: every percent rendered in this section sits beside "estimated"', () => {
-  test('every ${percent} template line in the section\'s two files also names RECOVERY_ESTIMATE_LABEL or "estimated"', () => {
+describe('source guards (D214)', () => {
+  const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const FILES = ['ReadinessCards.js', 'MuscleRecoveryList.js', 'RecoveryLearningCard.js', 'FatigueTrendCard.js'];
+
+  test('every ${percent} template line in the section\'s files also names RECOVERY_ESTIMATE_LABEL or "estimated"', () => {
     // The rows moved to MuscleRecoveryList.js (D201 addendum 9); the law
     // covers both files, and the rows file must still carry the percent.
-    const files = ['ReadinessCards.js', 'MuscleRecoveryList.js'];
     let total = 0;
-    for (const file of files) {
-      const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    for (const file of ['ReadinessCards.js', 'MuscleRecoveryList.js']) {
+      const src = read(file);
       const percentLines = src.split('\n').filter((l) => l.includes('${percent}'));
       total += percentLines.length;
       for (const line of percentLines) expect(line).toMatch(/RECOVERY_ESTIMATE_LABEL|estimated/i);
     }
     expect(total).toBeGreaterThan(0);
-    const rows = fs.readFileSync(path.join(__dirname, '..', 'MuscleRecoveryList.js'), 'utf8');
+    const rows = read('MuscleRecoveryList.js');
     expect(rows.includes('${percent}')).toBe(true);
     expect(rows).toMatch(/Estimated|estimated/);
+  });
+
+  test('"estimated" is on every recovery percent the screen prints: each sentence template with "% recovered" says estimated, and the rows sit under the "Estimated from your sessions" sub-line', () => {
+    const cards = strip(read('ReadinessCards.js'));
+    const printed = cards.split('\n').filter((l) => /% recovered/.test(l) && /`/.test(l));
+    expect(printed.length).toBeGreaterThan(0);
+    for (const line of printed) expect(line).toMatch(/estimated/i);
+    expect(cards).toContain('Estimated from your sessions · last 14 days');
+  });
+
+  test('no amber on the screen: none of the Recovery files reads the accent family or the warning token (D214 plan 7.0 rule 3)', () => {
+    for (const file of FILES) {
+      const code = strip(read(file));
+      expect(code).not.toMatch(/colors\.(primary|primaryBg|primaryFill|primaryDim|onPrimary|warning|warningBg)\b/);
+    }
+    const screen = strip(fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'RecoveryScreen.js'), 'utf8'));
+    expect(screen).not.toMatch(/colors\.(primary|primaryBg|primaryFill|primaryDim|onPrimary|warning|warningBg)\b/);
+  });
+
+  test('D204: nothing on the screen tells the athlete to train, rest, push, hold, lighten or monitor themselves', () => {
+    // Word-bounded (the plain words contain "shoulder"). The 'keep' verb is
+    // excluded from the pattern because "Keep" is Home's own control, not here.
+    const INSTRUCTS = /\b(you should|should|consider|try to|make sure|take it easy|go lighter|lighter (day|week)|rest (more|up|day)|push (your|the|through)|hold your|pay attention|worth paying|needs? more attention|keep an eye|watch (your|for)|monitor|be careful|avoid|focus on|ease (in|off|back)|train (more|less|harder|lighter)|deload)\b/i;
+    const screen = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'RecoveryScreen.js'), 'utf8');
+    for (const src of [...FILES.map(read), screen]) {
+      const code = strip(src);
+      // Strings only: the copy a person reads.
+      const strings = (code.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) || []).join('\n');
+      expect(strings).not.toMatch(INSTRUCTS);
+    }
+  });
+
+  test('no em dash anywhere in the Recovery copy', () => {
+    for (const file of FILES) expect(strip(read(file))).not.toMatch(/—/);
+  });
+
+  test('no silent catch: every catch in ReadinessCards logs through logError', () => {
+    const code = strip(read('ReadinessCards.js'));
+    expect(code).not.toMatch(/catch \(_\) \{\s*\}/);
+    const catches = code.match(/catch \((\w+)\) \{[\s\S]*?\n\s{6,}\}/g) || [];
+    expect(catches.length).toBeGreaterThan(5);
+    for (const c of catches) expect(c).toMatch(/logError\(/);
+  });
+
+  test('the figure is rendered directly in the section, never inside a second Card (it is its own card)', () => {
+    const code = strip(read('ReadinessCards.js'));
+    expect(code).not.toMatch(/<Card[\s>][\s\S]{0,400}<BodyDiagramHeatmap/);
+    expect(code).toMatch(/<BodyDiagramHeatmap/);
   });
 });

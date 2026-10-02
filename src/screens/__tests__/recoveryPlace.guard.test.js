@@ -60,23 +60,49 @@ describe('the Recovery screen', () => {
     expect(RECOVERY).toMatch(/<ReadinessCards[\s\S]*sections="recovery"/);
   });
 
-  test('the Recovery screen: recovery by muscle, the next workout, the recovery speed, then your ratings at the bottom', () => {
+  // RE-ANCHORED under D214 (lane 2, founder ruling Q7 = A): the founder's
+  // order of the screen's sections (by muscle, then speed, then ratings,
+  // 2026-09-26) is KEPT; what changed is inside the first block, which now
+  // leads with the answer line and the next-workout sentence (the separate
+  // "Next workout" block is gone, its fact IS the answer line), then the
+  // sessions still to do, the figure and the list. The fatigue-trend bars
+  // moved in from Consistency (Q3 = A) and sit under the ratings.
+  test('the Recovery screen: recovery by muscle (answer line first), the recovery speed, then your ratings at the bottom, with the fatigue trend under them', () => {
     const byMuscle = CARDS.indexOf('Recovery by muscle</Text>');
-    const next = CARDS.indexOf('>Next workout</Text>');
+    const answer = CARDS.indexOf('<Text style={live.answerLine}>{answerLine}</Text>');
+    const still = CARDS.indexOf('Still to do this week</Text>');
+    const figure = CARDS.indexOf('<BodyDiagramHeatmap');
+    const list = CARDS.indexOf('<MuscleRecoveryList');
     const speed = CARDS.indexOf('<RecoveryLearningCard personal=');
-    const ratingsLast = CARDS.indexOf("{sections === 'recovery' && ratingsBlock}");
-    const ratingsFirst = CARDS.indexOf("{sections !== 'recovery' && ratingsBlock}");
-    const trend = CARDS.indexOf('{recoveryTrendInsight && (');
+    const ratingsLast = CARDS.indexOf("{sections === 'recovery' && (slots ? <SkeletonCard height={190} /> : ratingsBlock)}");
+    const ratingsFirst = CARDS.indexOf("{sections !== 'recovery' && (slots ? <SkeletonCard height={190} /> : ratingsBlock)}");
+    const fatigue = CARDS.indexOf("{sections === 'recovery' ? <FatigueTrendCard sessions={fatigueSessions} /> : null}");
+    const trend = CARDS.indexOf('{recoveryTrendInsight && !slots && (');
     expect(byMuscle).toBeGreaterThan(-1);
-    expect(next).toBeGreaterThan(byMuscle);
-    expect(speed).toBeGreaterThan(next);
+    // D214 Q7 = A: the answer line leads the block, then the sessions still
+    // to do, then the figure, then the list.
+    expect(answer).toBeGreaterThan(byMuscle);
+    expect(still).toBeGreaterThan(answer);
+    expect(figure).toBeGreaterThan(still);
+    expect(list).toBeGreaterThan(figure);
+    // The founder's order stands: speed after by muscle, ratings last.
+    expect(speed).toBeGreaterThan(list);
     expect(ratingsLast).toBeGreaterThan(speed);
-    // The weekly check-in's trend line stays with the ratings, under them.
+    // The separate "Next workout" block is gone (its fact is the answer line).
+    expect(CARDS).not.toContain('>Next workout</Text>');
+    // The fatigue-trend bars (Q3 = A) sit with the ratings, and the trend
+    // sentence stays under them.
+    expect(fatigue).toBeGreaterThan(-1);
     expect(trend).toBeGreaterThan(ratingsLast);
     // Only the old single block draws the ratings first.
     expect(ratingsFirst).toBeGreaterThan(-1);
     expect(ratingsFirst).toBeLessThan(byMuscle);
     expect(CARDS).toContain("<SectionLabel>{sections === 'recovery' ? 'Your ratings' : 'Recovery'}</SectionLabel>");
+  });
+
+  test('the screen hands its ScrollView to the cards so a figure tap can scroll to a row (RC-12)', () => {
+    expect(RECOVERY).toContain('<ScrollView ref={scrollRef}');
+    expect(RECOVERY).toContain('scrollRef={scrollRef}');
   });
 });
 
@@ -87,7 +113,9 @@ describe('Consistency keeps the milestone, and the section moved rather than bei
   });
 
   test('the milestone and the recovery section each draw under their own mode only', () => {
-    expect(CARDS).toContain("{sections !== 'recovery' && (lastUnlocked || next) && (");
+    // D214 (RC-33): the milestone waits for a workouts read that succeeded, so
+    // it never claims "1 to go: First session" before the read lands.
+    expect(CARDS).toContain("{sections !== 'recovery' && workoutsRead && (lastUnlocked || next) && (");
     expect(CARDS).toContain("{sections !== 'milestone' && (");
     expect(CARDS).toContain("if (sections === 'milestone') return;");
   });
