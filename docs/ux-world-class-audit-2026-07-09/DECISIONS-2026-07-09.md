@@ -11392,3 +11392,98 @@ landing, under D33:
   before the commit, the full gate over the tip in the worktree before the
   merge.
 
+
+**D214 addendum 4 (2026-10-02, Body metrics and the weight trend, lane 7;
+founder order the same day: "Are you doing body metrics / weight trends as
+well in this improvement plan. If not do it the same as the others as it
+needs the same level of improvement").** The audit, the design and the
+build plan are `docs/audit/progress-recovery-consistency-audit-2026-10-01/
+04-BODY-METRICS-AUDIT-AND-SPEC.md` (the Sonnet read lane's evidence in
+`05-R3-BODY-METRICS-READ.md`, BM-1 to BM-51, the headline findings
+lead-verified at the cited lines: the Home-logged weigh-in that cannot be
+edited, the fifty-row loads judged as six months, the two flat rules, the
+lost body-fat source, the fabricated day-zero weigh-in). Rulings under the
+founder's delegation and D33, the lead's hunks landed first as lane 0's
+were:
+- One display reading of direction: the TWO-WEEK trend (`weightTrend.js`
+  `twoWeekTrend`: the newest smoothed point against the oldest inside the
+  last fourteen days, seven points over seven or more days, the movement
+  normalised to a week), named with its window wherever it prints; the
+  Body row's evidence line reads "Trend 82.4 kg, +0.1 kg/week over the
+  last 2 weeks". The engine's own weekly rate (`computeWeeklyWeightChange`,
+  the newest point against one at least six days older) stays the coach's
+  and still rides in the view-model; no display surface prints it as a
+  bare "weekly change" any more.
+- One definition of steady on every display surface,
+  `STEADY_RATE_KG_PER_WEEK` (0.2 kg a week, the retired chip's rule), read
+  by the direction words, by the flag sentence and, through lane 7, by the
+  recomposition card (the per-entry 0.15 rule goes).
+- BM-3: a person whose last weigh-in is older than the hook's 14-day
+  boundary reads as LAPSED ("No weigh-in in the last 14 days; the last was
+  3 weeks ago.", no figure), never "No weigh-ins logged yet"; the hook
+  passes the newest weigh-in of any age (`lastWeighInMs`) before its
+  windows empty the series. Under an open flag the lapsed line claims only
+  what is kept ("Your weigh-ins are kept in Body metrics."), since "no
+  weigh-in in the last 14 days" is a nudge; under calm mode the calm line.
+- BM-15: the Body row's headline never carries the maintenance sentence.
+  With no fresh coach verdict and no engine comparison it reads the
+  direction with its window and no figure ("Trending down over the last 2
+  weeks.", "Holding steady over the last 2 weeks.", or "Not enough
+  weigh-ins in the last 2 weeks for a direction: 5 of 7."); the figure
+  stays on the evidence line and the maintenance figure on Body metrics.
+- BM-16, the flag sentence, AMENDING the spec's "slightly only within 0.2
+  kg a week": "slightly" goes altogether, because it claimed a size at any
+  rate and a second threshold would be a second definition of flat. Within
+  the steady rule the sentence reads "broadly stable" ("over the past few
+  weeks" only when the series spans a fortnight, else "over the past
+  week"); past it, "has been rising." or "has been drifting down."; with no
+  rate to read, the kept line above. Fewer claims, none added.
+- BM-17: with no weigh-in at all the calm line promises ("Your weigh-ins
+  will be kept in Body metrics, ready when you want them."); with any
+  weigh-in, lapsed included, it claims.
+- The noise line's derivation (`typicalDailySwingKg`): the UPPER QUARTILE
+  of the absolute change between weigh-ins on consecutive mornings (a gap
+  of 36 hours or less) over the last 28 days, from ten weigh-ins, so "Day
+  to day your weight usually moves within 0.4 kg" holds three mornings in
+  four; a median would have been false one morning in two. Display only;
+  the engine's smoothers never read it.
+- BM-14, one mapping for the maintenance resolver's inputs
+  (`src/lib/maintenanceInputs.js`, `buildMaintenanceInputs` pure and
+  `readMaintenanceInputs` for the canonical reads): the stored body profile
+  then the in-memory one for sex, birthday and height; the latest weigh-in
+  then the profile for weight; the latest body-composition row for body
+  fat WITH its source; the saved targets then the profile for activity and
+  the goal phase; the in-memory age only without a birthday, so a stored
+  age never overrides a known birthday (the resolver's own reading of the
+  birthday is the current age). The hook, the coach screen's two resolver
+  calls and Nutrition targets' load path now build through it; Body
+  metrics joins through lane 7. Effects, stated: the coach screen's
+  diet-break preview now resolves on the latest weigh-in rather than the
+  onboarding profile weight, and its weekly resolve reads the saved
+  targets' goal before the profile's, as every other surface already did;
+  for a person whose profile goal differs from the saved targets' goal the
+  coach screen's maintenance reading therefore joins the state the other
+  surfaces already showed (the memo's evidence identity hashes the goal
+  phase), until the next learn writes the memo with the shared inputs.
+  The coach's OWN engine inputs (its body-fat row, its weights) are
+  untouched. Marker persistence: the hook keeps the resolver's default
+  (unchanged behaviour); Body metrics, a display surface, never persists a
+  revalidation marker (lane 7 passes `persistRevalidationMarker: false`).
+- The withhold policy as one pure module (`src/lib/bodyMetricsPolicy.js`):
+  nothing below the header renders until both reads have returned (ED-C,
+  fail closed: a failed flag read counts as open, a failed wellbeing read
+  as calm); under an open flag or under calm mode after "Continue", every
+  direction word, rate, weekly comparison, the swing line, the chart's
+  takeaway, the maintenance figure, the intake line (ED-E), the
+  recomposition card and the measurement change lines are withheld while
+  the person's own entries stay (the trend weight, the history, the
+  chart's line and dots, the latest measurements, the actions); calm and
+  the flag together print the flag's line, which claims the least. This
+  re-rules the WAVE-D parity ruling ("ED-flag suppression ONLY ... must not
+  invent an additional calm-mode gate"), which was a scope ruling for that
+  fix, not a verdict that calm mode must show the rate: the Q2 precedent
+  (a withhold strengthened, never weakened) governs, and the parity guard
+  is re-anchored to the policy module by lane 7. ED-A, ED-B, BM-16/17 and
+  ED-E are built as strengthenings and PUT TO THE FOUNDER in chat to
+  confirm or override; ED-C has no alternative.
+- Lead gate over the hunks: eslint clean, tsc clean, the lead's suites (the weight-trend suites, the hook, the Body pillar, the consumer contract, the fail-closed guard, the long-term laws, the parity guard, the coach and Nutrition targets screens) 33 passed with 324 tests; the Progress root's state matrix, in lane 3's hands at the time, is re-run after lane 3 lands and before the merge.
