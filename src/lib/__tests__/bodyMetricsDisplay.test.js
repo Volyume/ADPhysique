@@ -227,7 +227,7 @@ describe('This week card lines (section 3 item 2)', () => {
   });
 
   test('the trend weight\'s (i) and day zero\'s two lines are the spec\'s words', () => {
-    expect(TREND_WEIGHT_INFO).toBe('A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.');
+    expect(TREND_WEIGHT_INFO).toBe('A smoothed average of your recent weigh-ins, so one heavy or light morning moves the trend weight only a little. With only a few weigh-ins the trend weight stays close to your latest one.');
     expect(DAY_ZERO_LINE).toBe('Your trend starts with your first morning weigh-in.');
     const ms = new Date(2026, 7, 3, 10).getTime();
     expect(startingWeightLine({ kg: 82, ms, bwu: 'kg' })).toBe('Starting weight from setup: 82 kg, 3 Aug');
@@ -387,7 +387,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
     expect(m.state).toBe('building');
     expect(m.kcal).toBeNull();
     expect(m.figure).toBeNull();
-    expect(m.line).toBe('Not ready yet. It needs 14 weigh-ins (you have 9) and food logged on 5 of the last 7 days (you have 3).');
+    expect(m.line).toBe('Not ready yet. Working out your maintenance calories needs 14 weigh-ins and food logged on 5 of the last 7 days. So far you have 9 weigh-ins and 3 days of logged food.'); // the sentence names its subject (founder, 2026-10-02)
     expect(m.line).not.toMatch(/keep|log your|should|try/i);
   });
 
@@ -398,7 +398,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
       intake: { daysLogged: 2 },
     }, { nowMs: NOW });
     // Closing review S5: a met threshold is stated as met, only the outstanding one is asked for.
-    expect(met.line).toBe('Not ready yet. It has 30 weigh-ins; it needs food logged on 5 of the last 7 days (you have 2).');
+    expect(met.line).toBe('Not ready yet. Working out your maintenance calories needs food logged on 5 of the last 7 days. So far you have 2 days of logged food; your 30 weigh-ins are enough.');
     // Lane 7 review S4: both thresholds met with no memo yet says what is
     // outstanding (the coaching run learns the estimate), never "not ready"
     // beside two met counts.
@@ -407,14 +407,14 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
       weights: weights(40).map((w, i) => ({ ...w, loggedAt: NOW - (40 - i) * DAY })),
       intake: { daysLogged: 7 },
     }, { nowMs: NOW });
-    expect(bothMet.line).toBe('Not ready yet. It has 40 weigh-ins and food logged on 7 of the last 7 days; the first estimate is worked out the next time your coaching runs.');
+    expect(bothMet.line).toBe('Not ready yet. You have the 14 weigh-ins and the food logged on 5 of the last 7 days; your maintenance calories are worked out the next time your coaching runs.');
     const stale = maintenanceModel({
       resolved: { source: 'formula_prior', status: 'formula_prior' },
       weights: weights(30),
       intake: { daysLogged: 5 },
     }, { nowMs: NOW });
-    expect(stale.line).toBe('Not ready yet. It has food logged on 5 of the last 7 days; it needs a weigh-in from the last 14 days.');
-    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. It needs 14 weigh-ins (you have 0) and food logged on 5 of the last 7 days (you have 0).');
+    expect(stale.line).toBe('Not ready yet. Working out your maintenance calories needs a weigh-in from the last 14 days. Your last weigh-in is older than that; your food log is enough.');
+    expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. Working out your maintenance calories needs 14 weigh-ins and food logged on 5 of the last 7 days. So far you have 0 weigh-ins and 0 days of logged food.');
   });
 
   test('a formula figure is never printed as the person\'s maintenance (BM-13, D201)', () => {
@@ -444,7 +444,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
     expect(MAINTENANCE_INFO).toMatch(/effective maintenance/);
     expect(MAINTENANCE_INFO).toMatch(/an estimate worked out from your weight and food logs, not a measurement/); // census 0.1b wording
     expect(MAINTENANCE_INFO).toMatch(/^Maintenance calories are the calories you eat in a day to stay the same weight\./);
-    expect(MAINTENANCE_INFO).toMatch(/It needs 14 weigh-ins and food logged on 5 of the last 7 days\./);
+    expect(MAINTENANCE_INFO).toMatch(/The estimate needs 14 weigh-ins and food logged on 5 of the last 7 days\./);
   });
 });
 

@@ -302,7 +302,7 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     // Lane 2 review S1: the screen is titled "Adjust training"; nothing the person sees is called "Plan update".
     // RE-ANCHORED D214 addendum 9 (V1, D204): a description of where the answer
     // lives, not an instruction ("change it").
-    expect(RECOVERY_ANSWER_NOTE).toBe('Your ‘How’s your recovery?’ answer sets the first estimate; it can be changed under Adjust training.');
+    expect(RECOVERY_ANSWER_NOTE).toBe('Your ‘How’s your recovery?’ answer sets the first estimate; the answer can be changed under Adjust training.'); // the sentence names its subject (founder, 2026-10-02)
     expect(RECOVERY_ANSWER_NOTE).not.toMatch(/; change it/);
   });
 

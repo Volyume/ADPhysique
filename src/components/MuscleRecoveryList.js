@@ -315,7 +315,7 @@ export const HALF_CREDIT_NOTE = 'A set counts once for the muscle it works most 
 // "Adjust training" is the screen's own title (PlanUpdateScreen.js); nothing
 // the person sees is called "Plan update" (lane 2 review S1).
 // Addendum 9 (V1, D204): where the answer lives, said as a fact, not an order.
-export const RECOVERY_ANSWER_NOTE = 'Your ‘How’s your recovery?’ answer sets the first estimate; it can be changed under Adjust training.';
+export const RECOVERY_ANSWER_NOTE = 'Your ‘How’s your recovery?’ answer sets the first estimate; the answer can be changed under Adjust training.';
 
 /** One counted session's sets, in words: the split when it is known, else
  * the model's own credit, labelled as credit. */

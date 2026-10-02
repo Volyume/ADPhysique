@@ -826,7 +826,7 @@ export default function BodyMetricsScreen() {
     // the history and the trend as if nothing had happened. Removal is the
     // delete path, with its own confirm.
     if (entry && Number(entry.body_weight) > 0 && data.weightKg == null) {
-      toast.show('This entry holds a weigh-in, so it needs a weight. Delete this entry removes the weigh-in.', { variant: 'warning' });
+      toast.show('This entry holds a weigh-in, so a weight is needed. To remove the weigh-in, use Delete this entry.', { variant: 'warning' });
       return;
     }
     // A save that leaves the weight as shown keeps the stored figure.

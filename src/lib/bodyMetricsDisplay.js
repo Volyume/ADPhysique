@@ -211,7 +211,7 @@ export function noiseLine(swingKg, bwu = 'st') {
   return `Day to day your weight usually moves within ${formatWeightAmount(swingKg, bwu)}.`;
 }
 
-export const TREND_WEIGHT_INFO = 'A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.';
+export const TREND_WEIGHT_INFO = 'A smoothed average of your recent weigh-ins, so one heavy or light morning moves the trend weight only a little. With only a few weigh-ins the trend weight stays close to your latest one.';
 export const DAY_ZERO_LINE = 'Your trend starts with your first morning weigh-in.';
 
 /** Day zero: "Starting weight from setup: 82 kg, 3 Aug" (the date only when it is known). */
@@ -354,7 +354,7 @@ export const MAINTENANCE_WEIGH_IN_FRESH_DAYS = 14;
 export const MAINTENANCE_TITLE = 'Maintenance calories';
 
 /** The (i): what maintenance calories are, the coaching's own name for them, and what the estimate needs. */
-export const MAINTENANCE_INFO = `Maintenance calories are the calories you eat in a day to stay the same weight. This is an estimate worked out from your weight and food logs, not a measurement. Your coaching calls it effective maintenance. It needs ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins and food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`;
+export const MAINTENANCE_INFO = `Maintenance calories are the calories you eat in a day to stay the same weight. This is an estimate worked out from your weight and food logs, not a measurement. Your coaching calls it effective maintenance. The estimate needs ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins and food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days.`;
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -427,25 +427,32 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
   const stale = Number.isFinite(newest) && newest < nowMs - MAINTENANCE_WEIGH_IN_FRESH_DAYS * DAY_MS;
   const weighClause = stale
     ? `a weigh-in from the last ${MAINTENANCE_WEIGH_IN_FRESH_DAYS} days`
-    : `${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins (you have ${weighDays})`;
+    : `${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins`;
   // Both thresholds met with no memo yet: the estimate is learned by the
   // coaching run (learnEffectiveMaintenanceForUser, CoachOutputScreen), so
   // the line says that, never "you have 14 of 14" and "not ready" at once.
-  // Only what is outstanding is asked for (closing review S5): a met threshold
-  // is stated as met, never "it needs 14 weigh-ins (you have 14)".
+  // Only what is outstanding is asked for (closing review S5), and the
+  // sentence names its subject (founder, 2026-10-02: a bare "it" is not
+  // understandable English): "Working out your maintenance calories needs ...".
   const weighMet = !stale && weighDays >= MAINTENANCE_MIN_WEIGH_IN_DAYS;
   const foodMet = foodDays >= MAINTENANCE_MIN_FOOD_DAYS;
-  const foodHas = `food logged on ${foodDays} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days`;
-  const foodNeeds = `food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days (you have ${foodDays})`;
+  const needs = 'Working out your maintenance calories needs';
+  const foodNeeds = `food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days`;
+  const foodSoFar = `${plural(foodDays, 'day', 'days')} of logged food`;
+  const weighSoFar = plural(weighDays, 'weigh-in', 'weigh-ins');
   let line;
   if (weighMet && foodMet) {
-    line = `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')} and ${foodHas}; the first estimate is worked out the next time your coaching runs.`;
+    line = `Not ready yet. You have the ${MAINTENANCE_MIN_WEIGH_IN_DAYS} weigh-ins and the food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days; your maintenance calories are worked out the next time your coaching runs.`;
   } else if (weighMet) {
-    line = `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')}; it needs ${foodNeeds}.`;
+    line = `Not ready yet. ${needs} ${foodNeeds}. So far you have ${foodSoFar}; your ${weighSoFar} are enough.`;
   } else if (foodMet) {
-    line = `Not ready yet. It has ${foodHas}; it needs ${weighClause}.`;
+    line = stale
+      ? `Not ready yet. ${needs} ${weighClause}. Your last weigh-in is older than that; your food log is enough.`
+      : `Not ready yet. ${needs} ${weighClause}. So far you have ${weighDays}; your food log is enough.`;
   } else {
-    line = `Not ready yet. It needs ${weighClause} and ${foodNeeds}.`;
+    line = stale
+      ? `Not ready yet. ${needs} ${weighClause} and ${foodNeeds}. Your last weigh-in is older than that, and so far you have ${foodSoFar}.`
+      : `Not ready yet. ${needs} ${weighClause} and ${foodNeeds}. So far you have ${weighSoFar} and ${foodSoFar}.`;
   }
   return { state: 'building', kcal: null, figure: null, line };
 }

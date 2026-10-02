@@ -32,6 +32,7 @@ const BANNED = [
   { re: /In the \$\{[^}]+\} days to today|In the \d+ days to today/, why: 'plain: "Over the last 7 days"' },
   { re: /for a direction\b/, why: 'plain: "to show which way your weight is going" (census 0.3)' },
   { re: /weigh-in days?\b|logged food days?\b/, why: 'plain: "weigh-ins" and "food logged on N of the last 7 days" (census 0.5)' },
+  { re: /Not ready yet\. It\b|`Not ready yet\. It\b/, why: 'a sentence names its subject, never a bare "it" (founder, 2026-10-02)' },
 ];
 
 describe('Body metrics copy uses the plain term (founder order 2026-10-02)', () => {

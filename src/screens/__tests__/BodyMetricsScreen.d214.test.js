@@ -508,7 +508,7 @@ describe('the normal screen, in the spec\'s order', () => {
     expect(all.some((t) => /^Day to day your weight usually moves within [\d.]+ kg\.$/.test(t))).toBe(true);
     // no chip, no arrow, no delta badge, no "Weekly change"
     expect(all.join(' | ')).not.toMatch(/Weekly change|Losing|Gaining|▲|▼|↑|↓/);
-    expect(info(tree)).toContain('(i) A smoothed average of your recent weigh-ins, so one heavy or light morning moves it only a little. With only a few weigh-ins it stays close to your latest one.');
+    expect(info(tree)).toContain('(i) A smoothed average of your recent weigh-ins, so one heavy or light morning moves the trend weight only a little. With only a few weigh-ins the trend weight stays close to your latest one.');
   });
 
   test('the verdict says "Down ... about ... a week" for a trend that is falling faster than the steady rule', async () => {
@@ -575,7 +575,7 @@ describe('the normal screen, in the spec\'s order', () => {
     const { tree } = await mount({ authority: buildingAuthority, intake: { daysLogged: 3, avgKcal: 1900 }, morning: steadyMorning({ days: 12, skip: [] }) });
     const all = visible(tree);
     expect(all).toContain('Maintenance calories');
-    expect(all).toContain('Not ready yet. It needs 14 weigh-ins (you have 12) and food logged on 5 of the last 7 days (you have 3).');
+    expect(all).toContain('Not ready yet. Working out your maintenance calories needs 14 weigh-ins and food logged on 5 of the last 7 days. So far you have 12 weigh-ins and 3 days of logged food.');
     expect(all).not.toContain('estimated');
     expect(all.filter((t) => /kcal a day/.test(t))).toEqual([]);
   });
