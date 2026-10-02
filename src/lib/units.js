@@ -110,7 +110,10 @@ export function formatBodyWeightRate(kgPerWeek, bodyWeightUnits = 'st') {
   const inLbs = bodyWeightUnits === 'st' || bodyWeightUnits === 'lbs';
   const value = inLbs ? kgToLbs(kgPerWeek) : kgPerWeek;
   const unit = inLbs ? 'lbs' : 'kg';
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)} ${unit} a week`;
+  // Two decimals, trimmed: at one decimal a rate of 0.16 and one of 0.22 both
+  // printed "0.2", one beside "Holding steady" and one beside "Trending up"
+  // (closing review S1: the number shown must be the number judged).
+  return `${value > 0 ? '+' : ''}${parseFloat(value.toFixed(2))} ${unit} a week`;
 }
 
 /**

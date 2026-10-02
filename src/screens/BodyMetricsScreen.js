@@ -480,6 +480,12 @@ export default function BodyMetricsScreen() {
     nowMs: clock,
   }), [trendRead, adaptiveBurn, policy.edFlagOpen, coachVerdict, clock]);
   const twoWeek = useMemo(() => twoWeekTrend(trendRead.ewmaData, clock), [trendRead, clock]);
+  // The hero's name (closing review S2): "first weigh-in" only when it is the
+  // person's only weigh-in ever; "latest weigh-in" when the trend's own 90-day
+  // window holds one point but older weigh-ins exist; else the trend weight.
+  const heroLabel = trendRead.ewmaData.length === 1
+    ? (weighIns.length === 1 && !hasOlder ? 'first weigh-in' : 'latest weigh-in')
+    : 'trend weight';
 
   // This week against last, the mornings weighed, the usual swing: every
   // weekly figure from the one helper over the one day-entry list.
@@ -505,8 +511,20 @@ export default function BodyMetricsScreen() {
     // weight above whenever both read the same weigh-ins).
     const seedStartKey = localDayKey(Math.min(clock - win.days * DAY_MS, clock - 90 * DAY_MS));
     const seedSet = weighIns.filter((w) => w.dayKey >= seedStartKey);
-    const smoothed = computeEWMA(seedSet.map((w) => ({ weightKg: w.kg, loggedAt: w.ms })));
-    const rows = seedSet.map((w, i) => ({ ...w, trend: smoothed[i]?.ewma ?? w.kg }));
+    // The line's last point IS the trend weight above (closing review S2): the
+    // smoother restarts where the hero's own series starts (the trailing 90
+    // days, trendWindowRows), so older weigh-ins in a long window are smoothed
+    // as their own segment and never carry memory into the figure the Progress
+    // root prints.
+    const heroStartKey = localDayKey(clock - 90 * DAY_MS);
+    const smoothSegment = (segment) => {
+      const smoothed = computeEWMA(segment.map((w) => ({ weightKg: w.kg, loggedAt: w.ms })));
+      return segment.map((w, i) => ({ ...w, trend: smoothed[i]?.ewma ?? w.kg }));
+    };
+    const rows = [
+      ...smoothSegment(seedSet.filter((w) => w.dayKey < heroStartKey)),
+      ...smoothSegment(seedSet.filter((w) => w.dayKey >= heroStartKey)),
+    ];
     const inWin = rows.filter((w) => w.dayKey >= windowStartKey);
     const count = inWin.length;
     if (count < 2) return { win, count, ready: false, rows: inWin };
@@ -803,6 +821,14 @@ export default function BodyMetricsScreen() {
     }
     const data = result.data;
     const entry = formMode === 'edit' ? editingEntry : null;
+    // A weigh-in entry keeps its weight (closing review S3): clearing the field
+    // and saving used to leave the morning row behind, so the weigh-in stayed in
+    // the history and the trend as if nothing had happened. Removal is the
+    // delete path, with its own confirm.
+    if (entry && Number(entry.body_weight) > 0 && data.weightKg == null) {
+      toast.show('This entry holds a weigh-in, so it needs a weight. Delete this entry removes the weigh-in.', { variant: 'warning' });
+      return;
+    }
     // A save that leaves the weight as shown keeps the stored figure.
     if (entry && data.weightKg != null && sameTypedWeight(data.weightKg, entry.body_weight, bwu)) {
       data.weightKg = entry.body_weight;
@@ -970,7 +996,7 @@ export default function BodyMetricsScreen() {
             <View style={styles.hero}>
               <Text style={live.heroNumber}>{formatBodyWeight(weightTrendVm.ewmaNow, bwu)}</Text>
               <View style={styles.heroLabelRow}>
-                <Text style={live.heroLabel}>{trendRead.ewmaData.length === 1 ? 'first weigh-in' : 'trend weight'}</Text>
+                <Text style={live.heroLabel}>{heroLabel}</Text>
                 <InfoTooltip text={TREND_WEIGHT_INFO} size={14} />
               </View>
               {policy.show.morningsCount ? <Text style={live.bodySm}>{morningsCaption(week.mornings)}</Text> : null}
@@ -1269,7 +1295,11 @@ export default function BodyMetricsScreen() {
                 accessibilityRole="tab"
                 accessibilityLabel={`weight trend window: ${w.label}`}
                 numberOfLines={1}
-                style={styles.windowChip}
+                // The card's own window control is drawn in ink when selected, so
+                // Log weight is the one amber on the screen (addendum 9, the amber
+                // rule as written; the mockup follows).
+                style={[styles.windowChip, w.key === windowKey && live.chipInkSelected]}
+                selectedLabelStyle={live.chipTextInkSelected}
               />
             ))}
           </View>
@@ -1616,7 +1646,7 @@ const styles = StyleSheet.create({
 
   shareRow: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs,
-    minHeight: 40, borderRadius: radius.full, borderWidth: 1,
+    minHeight: touchTarget.minimum, borderRadius: radius.full, borderWidth: 1,
     paddingHorizontal: spacing.sm, marginTop: spacing.xs,
   },
 
@@ -1649,6 +1679,8 @@ function buildLiveStyles(t) {
 
     heroNumber: { ...ty.num('h2'), color: c.textPrimary },
     heroLabel: { ...ty.bodyStrong, color: c.textPrimary },
+    chipInkSelected: { backgroundColor: c.surface3, borderColor: c.textPrimary },
+    chipTextInkSelected: { color: c.textPrimary },
     heroDayZero: { ...ty.bodyStrong, color: c.textPrimary },
     figureUnit: { ...ty.bodyStrong, color: c.textPrimary },
     body: { ...ty.body, color: c.textPrimary },

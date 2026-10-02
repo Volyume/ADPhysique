@@ -11,7 +11,13 @@
  * House voice: plain, terse, no jargon, full stops, numerals the hero, BrE.
  */
 
-import { STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS } from './weightTrend';
+import {
+  STEADY_AMOUNT_KG, isSteadyMove, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS,
+} from './weightTrend';
+
+// The amount floor lives with the rate in weightTrend.js (the ONE steady rule);
+// re-exported here for the callers that read it from the chart module.
+export { STEADY_AMOUNT_KG };
 
 const DAY_MS = 86400000;
 
@@ -165,10 +171,6 @@ function spanDaysOf(points, dateOf) {
  * @param {(dayKey:string)=>string} p.formatDate  "4 Sep"
  * @returns {string} e.g. "4 Sep to 17 Sep: your weigh-ins averaged 82.3 kg; the trend held steady, about 0.05 kg a week."
  */
-// "Held steady" needs BOTH a rate inside the steady rule and a total movement
-// under this amount (D214 addendum 7, lane 7 open question 6): over a year,
-// 2 kg is 0.04 kg a week, and "held steady" would be untrue of it.
-export const STEADY_AMOUNT_KG = 0.5;
 
 export function weightTakeaway({
   coversAll, from, to, count, averageKg, trendStartKg, trendEndKg, spanDays,
@@ -189,7 +191,7 @@ export function weightTakeaway({
   }
   const delta = trendEndKg - trendStartKg;
   const ratePerWeek = (delta / spanDays) * 7;
-  if (Math.abs(ratePerWeek) < STEADY_RATE_KG_PER_WEEK && Math.abs(delta) < steadyAmountKg) {
+  if (isSteadyMove(ratePerWeek, delta, steadyAmountKg)) {
     return `${head}; the trend held steady, about ${formatRate(Math.abs(ratePerWeek))}.`;
   }
   return `${head}; the trend moved ${delta < 0 ? 'down' : 'up'} ${formatAmount(Math.abs(delta))}, about ${formatRate(Math.abs(ratePerWeek))}.`;

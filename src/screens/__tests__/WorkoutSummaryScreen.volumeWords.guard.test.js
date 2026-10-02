@@ -36,10 +36,13 @@ describe('the band words come from the one shared map', () => {
     expect(SECTION).toContain('const { label, status } = getVolumeStatus(data.workingSets, muscle, landmarkResolution?.table);');
   });
 
-  test('the tooltip names the five bands through the map, in the colours the badges are drawn in', () => {
-    for (const [colour, key] of [['Green', 'optimal'], ['Yellow', 'near_mrv'], ['Red', 'over_mrv'], ['Blue', 'minimum'], ['Grey', 'below']]) {
-      expect(SECTION).toContain(`\`${colour} = \${volumeBandLabel('${key}')}: `);
+  // RE-ANCHORED 2026-10-02 (closing review S4): the colour words went, because the
+  // light and colour-blind-safe themes draw other colours for the same bands.
+  test('the tooltip names the five bands through the map and never a colour', () => {
+    for (const key of ['optimal', 'near_mrv', 'over_mrv', 'minimum', 'below']) {
+      expect(SECTION).toContain(`\`\${volumeBandLabel('${key}')}: `);
     }
+    expect(SECTION).not.toMatch(/\b(Green|Yellow|Red|Blue|Grey) = /);
   });
 });
 

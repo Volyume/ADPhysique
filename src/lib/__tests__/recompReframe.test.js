@@ -72,10 +72,17 @@ describe('deriveRecomp: the one steady rule over the last six weeks (BM-10)', ()
     expect(derive(losing).render).toBe(false);
   });
 
-  test('the boundary is the shared rate: inside 0.2 kg a week renders, outside does not', () => {
+  // RE-ANCHORED 2026-10-02 (closing review B2, D214 addendum 10): "steady" is the
+  // ONE rule, a rate inside 0.2 kg a week AND a total move inside 0.5 kg over the
+  // window read (weightTrend.isSteadyMove), the same test the Trend card's
+  // takeaway makes, so one screen never says "steady" and "moved down" of the
+  // same weeks. Over six weeks 0.1 kg a week is 0.6 kg in all: not steady.
+  test('the boundary is the shared rule: a small rate AND a small total renders, either alone does not', () => {
     const withWaist = { 42: { waist: 86 }, 0: { waist: 83 } };
-    expect(derive(series(42, -0.1, withWaist)).render).toBe(true);
-    expect(derive(series(42, 0.1, withWaist)).render).toBe(true);
+    expect(derive(series(42, -0.05, withWaist)).render).toBe(true);
+    expect(derive(series(42, 0.05, withWaist)).render).toBe(true);
+    expect(derive(series(42, -0.1, withWaist)).render).toBe(false); // 0.6 kg in all
+    expect(derive(series(42, -0.19, withWaist)).render).toBe(false); // the reviewer's drift: 1.1 kg in all
     expect(derive(series(42, -0.35, withWaist)).render).toBe(false);
     expect(derive(series(42, 0.35, withWaist)).render).toBe(false);
   });

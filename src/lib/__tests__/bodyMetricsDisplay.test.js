@@ -123,8 +123,8 @@ describe('amounts and rates in the person\'s units (BM-28)', () => {
 
   test('formatWeightRatePerWeek reads "a week" and "lbs a week" for stone and pound users', () => {
     expect(formatWeightRatePerWeek(0.15, 'kg')).toBe('0.15 kg a week');
-    expect(formatWeightRatePerWeek(0.15, 'lbs')).toBe('0.3 lbs a week');
-    expect(formatWeightRatePerWeek(0.15, 'st')).toBe('0.3 lbs a week');
+    expect(formatWeightRatePerWeek(0.15, 'lbs')).toBe('0.33 lbs a week'); // two decimals: the number shown is the number judged (closing review S1)
+    expect(formatWeightRatePerWeek(0.15, 'st')).toBe('0.33 lbs a week');
     expect(formatWeightRatePerWeek(-0.6, 'kg')).toBe('0.6 kg a week');
   });
 
@@ -172,7 +172,7 @@ describe('This week card lines (section 3 item 2)', () => {
     expect(twoWeekVerdictLine({ ...down, deltaKg: 0.5, ratePerWeek: 0.25 }, 'kg'))
       .toBe('Up 0.5 kg over the last 2 weeks, about 0.25 kg a week.');
     expect(twoWeekVerdictLine({ ...down, deltaKg: -0.6, ratePerWeek: -0.6 }, 'st'))
-      .toBe('Down 1.3 lbs over the last 2 weeks, about 1.3 lbs a week.');
+      .toBe('Down 1.3 lbs over the last 2 weeks, about 1.32 lbs a week.');
   });
 
   test('steady is the ONE steady rule: a rate under 0.2 kg a week holds steady, 0.2 does not', () => {
@@ -282,7 +282,7 @@ describe('the Trend card (section 3 item 4)', () => {
 
   test('the (i) says what the line, the dots and "steady" are, in the person\'s units; without "steady" under a withhold', () => {
     expect(trendInfo('kg')).toBe('The line is your trend, a smoothed average of your weigh-ins. The dots are the weigh-ins themselves. Steady means the trend moves by less than 0.2 kg a week and by less than 0.5 kg in all.');
-    expect(trendInfo('st')).toMatch(/less than 0\.4 lbs a week and by less than 1\.1 lbs in all\.$/); // the amount floor too (review S7)
+    expect(trendInfo('st')).toMatch(/less than 0\.44 lbs a week and by less than 1\.1 lbs in all\.$/); // the amount floor too (review S7); 0.2 kg is 0.44 lbs (closing review S1)
     expect(trendInfo('kg', { includeSteady: false })).not.toMatch(/Steady|week/);
   });
 
@@ -397,7 +397,8 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
       weights: weights(30).map((w, i) => ({ ...w, loggedAt: NOW - (30 - i) * DAY })),
       intake: { daysLogged: 2 },
     }, { nowMs: NOW });
-    expect(met.line).toBe('Not ready yet. It needs 14 weigh-ins (you have 30) and food logged on 5 of the last 7 days (you have 2).');
+    // Closing review S5: a met threshold is stated as met, only the outstanding one is asked for.
+    expect(met.line).toBe('Not ready yet. It has 30 weigh-ins; it needs food logged on 5 of the last 7 days (you have 2).');
     // Lane 7 review S4: both thresholds met with no memo yet says what is
     // outstanding (the coaching run learns the estimate), never "not ready"
     // beside two met counts.
@@ -412,7 +413,7 @@ describe('Maintenance calories (section 3 item 5): the memo contract\'s own thre
       weights: weights(30),
       intake: { daysLogged: 5 },
     }, { nowMs: NOW });
-    expect(stale.line).toBe('Not ready yet. It needs a weigh-in from the last 14 days and food logged on 5 of the last 7 days (you have 5).');
+    expect(stale.line).toBe('Not ready yet. It has food logged on 5 of the last 7 days; it needs a weigh-in from the last 14 days.');
     expect(maintenanceModel(null, { nowMs: NOW }).line).toBe('Not ready yet. It needs 14 weigh-ins (you have 0) and food logged on 5 of the last 7 days (you have 0).');
   });
 

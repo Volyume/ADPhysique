@@ -263,16 +263,16 @@ describe('quick entry: the 20 kg floor and the plausibility prompt (BM-40)', () 
 
   test('Home\'s handler holds the same floor, and hands the strip the last REAL weigh-in only', () => {
     const home = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
-    expect(home).toMatch(/import \{ BODY_WEIGHT_MIN_KG \} from '\.\.\/lib\/bodyMetricValidate';/);
-    expect(home).toMatch(/weightKg < BODY_WEIGHT_MIN_KG \|\| weightKg > 300\) return;/);
+    expect(home).toMatch(/import \{ BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG \} from '\.\.\/lib\/bodyMetricValidate';/); // the form's own ceiling too (closing review)
+    expect(home).toMatch(/weightKg < BODY_WEIGHT_MIN_KG \|\| weightKg > BODY_WEIGHT_MAX_KG\) return;/);
     expect(home).toMatch(/lastWeighInKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : null\}/);
     // the prefill keeps its own prop; the profile's setup weight is never "your last weigh-in"
     expect(home).toMatch(/lastWeightKg=\{recentWeights\.length \? recentWeights\[recentWeights\.length - 1\] : \(userProfile\?\.weightKg \?\? null\)\}/);
   });
 
   test('the strip shares the rule and the floor with the form, from the one module', () => {
-    expect(SOURCE).toMatch(/import \{ BODY_WEIGHT_MIN_KG, BODY_WEIGHT_RANGE_MESSAGE, weighInPlausibility, plausibilityMessage \} from '\.\.\/lib\/bodyMetricValidate';/);
-    expect(SOURCE).toMatch(/kg < BODY_WEIGHT_MIN_KG \|\| kg > 300/);
+    expect(SOURCE).toMatch(/BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG, BODY_WEIGHT_RANGE_MESSAGE, weighInPlausibility, plausibilityMessage,\n\} from '\.\.\/lib\/bodyMetricValidate';/);
+    expect(SOURCE).toMatch(/kg < BODY_WEIGHT_MIN_KG \|\| kg > BODY_WEIGHT_MAX_KG/);
     expect(SOURCE).toMatch(/weighInPlausibility\(kg, lastWeighInKg\)\.implausible/);
   });
 });

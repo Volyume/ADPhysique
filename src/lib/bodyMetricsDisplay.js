@@ -111,7 +111,9 @@ export function formatWeightRatePerWeek(kgPerWeek, bwu = 'st') {
   if (!Number.isFinite(n)) return '';
   return bwu === 'kg'
     ? `${trimDecimals(n, 2)} kg a week`
-    : `${trimDecimals(kgToLbs(n), 1)} ${trimDecimals(kgToLbs(n), 1) === '1' ? 'lb' : 'lbs'} a week`;
+    // Two decimals in pounds too (0.2 kg is 0.44 lbs; at one decimal 0.18 and
+    // 0.2 kg both read "0.4 lbs", one steady and one not; closing review S1).
+    : `${trimDecimals(kgToLbs(n), 2)} ${trimDecimals(kgToLbs(n), 2) === '1' ? 'lb' : 'lbs'} a week`;
 }
 
 /** A local day key as text in a date-fns pattern; '' for an unreadable key. */
@@ -429,10 +431,22 @@ export function maintenanceModel(authority, { energyUnit = 'kcal', nowMs = Date.
   // Both thresholds met with no memo yet: the estimate is learned by the
   // coaching run (learnEffectiveMaintenanceForUser, CoachOutputScreen), so
   // the line says that, never "you have 14 of 14" and "not ready" at once.
-  const met = !stale && weighDays >= MAINTENANCE_MIN_WEIGH_IN_DAYS && foodDays >= MAINTENANCE_MIN_FOOD_DAYS;
-  const line = met
-    ? `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')} and food logged on ${foodDays} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days; the first estimate is worked out the next time your coaching runs.`
-    : `Not ready yet. It needs ${weighClause} and food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days (you have ${foodDays}).`;
+  // Only what is outstanding is asked for (closing review S5): a met threshold
+  // is stated as met, never "it needs 14 weigh-ins (you have 14)".
+  const weighMet = !stale && weighDays >= MAINTENANCE_MIN_WEIGH_IN_DAYS;
+  const foodMet = foodDays >= MAINTENANCE_MIN_FOOD_DAYS;
+  const foodHas = `food logged on ${foodDays} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days`;
+  const foodNeeds = `food logged on ${MAINTENANCE_MIN_FOOD_DAYS} of the last ${MAINTENANCE_FOOD_WINDOW_DAYS} days (you have ${foodDays})`;
+  let line;
+  if (weighMet && foodMet) {
+    line = `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')} and ${foodHas}; the first estimate is worked out the next time your coaching runs.`;
+  } else if (weighMet) {
+    line = `Not ready yet. It has ${plural(weighDays, 'weigh-in', 'weigh-ins')}; it needs ${foodNeeds}.`;
+  } else if (foodMet) {
+    line = `Not ready yet. It has ${foodHas}; it needs ${weighClause}.`;
+  } else {
+    line = `Not ready yet. It needs ${weighClause} and ${foodNeeds}.`;
+  }
   return { state: 'building', kcal: null, figure: null, line };
 }
 
@@ -511,7 +525,7 @@ export function replaceNotice({ existing, todayKey, bwu = 'st' }) {
 
 /** "Body fat 18%, 17 Sep, caliper" style detail pieces. */
 export const BODY_FAT_METHOD_LABELS = Object.freeze({
-  visual: 'best estimate', bia: 'BIA', caliper: 'caliper', dexa: 'DEXA', manual: 'typed in',
+  visual: 'best estimate', bia: 'smart scale (BIA)', caliper: 'caliper', dexa: 'DEXA scan', manual: 'typed in',
 });
 
 /**

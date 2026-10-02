@@ -61,7 +61,7 @@ import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 // D214 addendum 4 (Body metrics, lane 7): the quick weigh-in shares the Body
 // metrics form's 20 kg floor (it had none) and its plausibility rule.
-import { BODY_WEIGHT_MIN_KG } from '../lib/bodyMetricValidate';
+import { BODY_WEIGHT_MIN_KG, BODY_WEIGHT_MAX_KG } from '../lib/bodyMetricValidate';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
@@ -1023,7 +1023,7 @@ export default function HomeScreen({ navigation, route }) {
   // feeds the coach) and does the optimistic write.
   async function handleLogWeight(weightKg) {
     // D214 addendum 4: the form's own floor (BODY_WEIGHT_MIN_KG), not just "above zero".
-    if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > 300) return;
+    if (!weightKg || isNaN(weightKg) || weightKg < BODY_WEIGHT_MIN_KG || weightKg > BODY_WEIGHT_MAX_KG) return;
     // Optimistic: show the logged weight immediately. SQLite write happens in
     // the background. On failure, revert.
     const previousTodayWeight = todayWeight;

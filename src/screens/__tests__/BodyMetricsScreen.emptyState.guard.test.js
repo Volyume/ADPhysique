@@ -82,7 +82,7 @@ describe('BodyMetricsScreen failed reads (item 11)', () => {
 describe('BodyMetricsScreen share control', () => {
   test('the recomposition CTA is a contained control, not loose amber text', () => {
     expect(source).toContain('<Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />');
-    expect(source).toMatch(/shareRow: \{[\s\S]*?minHeight: 40,/);
+    expect(source).toMatch(/shareRow: \{[\s\S]*?minHeight: touchTarget\.minimum,/); // the touch-target token, no raw dp (closing review)
     expect(source).toMatch(/shareRow: \{ borderColor: c\.border, backgroundColor: c\.surface2 \}/);
     expect(source).toMatch(/shareText: \{ \.\.\.ty\.label, color: c\.textPrimary \}/);
     expect(source).toMatch(/Create share image/);

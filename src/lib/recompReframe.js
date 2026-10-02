@@ -33,7 +33,7 @@ import { buildLiftProgressRows } from './liftProgress';
 import { computeEWMA } from './nutritionEngine';
 import { kgToLbs } from './units';
 import {
-  STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS,
+  isSteadyMove, DIRECTION_MIN_POINTS, DIRECTION_MIN_SPAN_DAYS,
 } from './weightTrend';
 import { localDayKey } from './dayKey';
 import { shortDate, trimDecimals } from './bodyMetricsDisplay';
@@ -96,9 +96,11 @@ function steadyWindow(entries, nowMs) {
   if (points.length < DIRECTION_MIN_POINTS) return null;
   const spanDays = (points[points.length - 1].loggedAt - points[0].loggedAt) / DAY_MS;
   if (spanDays < DIRECTION_MIN_SPAN_DAYS) return null;
-  const rate = ((points[points.length - 1].ewma - points[0].ewma) / spanDays) * 7;
+  const deltaKg = points[points.length - 1].ewma - points[0].ewma;
+  const rate = (deltaKg / spanDays) * 7;
   return {
     rate,
+    deltaKg,
     spanDays,
     weeks: Math.max(1, Math.round(spanDays / 7)),
     startKey: points[0].dayKey,
@@ -147,9 +149,11 @@ export function deriveRecomp(history, sets, exercises, opts = {}) {
   if (!Array.isArray(history) || history.length === 0) return { render: false };
   const nowMs = Number.isFinite(opts.nowMs) ? opts.nowMs : Date.now();
 
-  // 1. The trend must be steady over the last six weeks: the ONE steady rule.
+  // 1. The trend must be steady over the last six weeks: the ONE steady rule
+  //    (rate AND total, weightTrend.isSteadyMove; closing review B2), so this
+  //    card never says "steady" of weeks the Trend card says moved.
   const win = steadyWindow(history, nowMs);
-  if (!win || Math.abs(win.rate) >= STEADY_RATE_KG_PER_WEEK) return { render: false };
+  if (!win || !isSteadyMove(win.rate, win.deltaKg)) return { render: false };
   const startKey = win.startKey;
   const endKey = localDayKey(nowMs);
 

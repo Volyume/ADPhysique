@@ -44,7 +44,7 @@ export const GLOSSARY = {
   // what the figure counts (sets, this week so far or a weekly average over 2 or
   // 4 weeks), what "the range" is, and which of the legend's words sit inside it.
   volumeHeatmapBands:
-    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. Just enough, In range and Near the limit all sit inside the range. “Too much” means past the point of extra benefit, not dangerous.',
+    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. Just enough, In range and Near the limit all sit inside the range. “Too much” means past the point of extra benefit, not dangerous. Each row’s bar shades the muscle’s range, marks the in-range band inside it and ends at the most it can recover from.',
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:

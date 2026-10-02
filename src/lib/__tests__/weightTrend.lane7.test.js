@@ -59,9 +59,11 @@ describe('twoWeekTrend: the direction reading over the last 14 days', () => {
   });
   test('trendDirection: one steady rule, either way', () => {
     expect(STEADY_RATE_KG_PER_WEEK).toBe(0.2);
-    expect(trendDirection({ enough: true, ratePerWeek: 0.19 })).toBe('steady');
-    expect(trendDirection({ enough: true, ratePerWeek: -0.19 })).toBe('steady');
-    expect(trendDirection({ enough: true, ratePerWeek: 0.2 })).toBe('up');
+    // The one steady rule is the rate AND the total move (closing review B2).
+    expect(trendDirection({ enough: true, ratePerWeek: 0.19, deltaKg: 0.38 })).toBe('steady');
+    expect(trendDirection({ enough: true, ratePerWeek: -0.19, deltaKg: -0.38 })).toBe('steady');
+    expect(trendDirection({ enough: true, ratePerWeek: 0.2, deltaKg: 0.4 })).toBe('up');
+    expect(trendDirection({ enough: true, ratePerWeek: 0.1, deltaKg: 0.6 })).toBe('up'); // a small rate over a long span still moved
     expect(trendDirection({ enough: true, ratePerWeek: -0.2 })).toBe('down');
     expect(trendDirection({ enough: false, count: 3 })).toBeNull();
     expect(trendDirection(null)).toBeNull();
@@ -160,7 +162,7 @@ describe('BM-16: the flag sentence on the one steady rule', () => {
   test('source: one steady threshold in the module, read by the flag branch and the direction words', () => {
     expect(SOURCE.match(/STEADY_RATE_KG_PER_WEEK = 0\.2;/g)).toHaveLength(1);
     expect(SOURCE).toMatch(/Math\.abs\(rate\) < STEADY_RATE_KG_PER_WEEK/);
-    expect(SOURCE).toMatch(/Math\.abs\(twoWeek\.ratePerWeek\) < STEADY_RATE_KG_PER_WEEK/);
+    expect(SOURCE).toMatch(/isSteadyMove\(twoWeek\.ratePerWeek, twoWeek\.deltaKg\)/); // the direction words read the one rule (closing review B2)
     expect(SOURCE).not.toMatch(/< 0\.05/);
     expect(SOURCE).not.toMatch(/rising slightly/);
   });

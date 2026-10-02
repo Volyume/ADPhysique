@@ -118,6 +118,25 @@ export function coachVerdictInsight(coachVerdict, nowMs = Date.now()) {
 // rule, now the only one): a trend moving within this rate, either way, is
 // steady. The coach's own dead band lives in the engine and is not this.
 export const STEADY_RATE_KG_PER_WEEK = 0.2;
+// "Held steady" needs a small TOTAL move as well as a small rate (D214 addendum
+// 7, lane 7 question 6): over a year, 2 kg is 0.04 kg a week, and "held steady"
+// would be untrue of it. This pair is the ONE steady rule (closing review B2):
+// the two-week verdict, the chart takeaway and the recomposition read all
+// decide through isSteadyMove, so one screen can never say "steady" and
+// "moved down" of the same weeks.
+export const STEADY_AMOUNT_KG = 0.5;
+
+/**
+ * The ONE steady rule: a rate inside STEADY_RATE_KG_PER_WEEK AND a total move
+ * inside STEADY_AMOUNT_KG over the window read.
+ * @param {number} ratePerWeek kg a week, signed
+ * @param {number} deltaKg total move over the window, signed
+ * @param {number} [amountKg] the amount floor (tests only)
+ * @returns {boolean}
+ */
+export function isSteadyMove(ratePerWeek, deltaKg, amountKg = STEADY_AMOUNT_KG) {
+  return Math.abs(Number(ratePerWeek)) < STEADY_RATE_KG_PER_WEEK && Math.abs(Number(deltaKg)) < amountKg;
+}
 export const TWO_WEEK_WINDOW_DAYS = 14;
 export const DIRECTION_MIN_POINTS = 7;
 export const DIRECTION_MIN_SPAN_DAYS = 7;
@@ -168,7 +187,7 @@ export function twoWeekTrend(ewmaData, nowMs = Date.now()) {
 /** 'up', 'down' or 'steady' under the one steady rule; null without a reading. */
 export function trendDirection(twoWeek) {
   if (!twoWeek?.enough) return null;
-  if (Math.abs(twoWeek.ratePerWeek) < STEADY_RATE_KG_PER_WEEK) return 'steady';
+  if (isSteadyMove(twoWeek.ratePerWeek, twoWeek.deltaKg)) return 'steady';
   return twoWeek.ratePerWeek > 0 ? 'up' : 'down';
 }
 
@@ -359,7 +378,11 @@ export function deriveWeightTrend({
       showRate: false,
       dot: null,
       // Census P5: the rung is 7 weigh-ins (trendStateFor), said with its denominator.
-      insight: `Your trend appears after ${DIRECTION_MIN_POINTS} weigh-ins: ${n} of ${DIRECTION_MIN_POINTS} so far.`,
+      // Closing review B1: under an open flag a count over weighing is a compliance
+      // count (D214 addendum 7, question 12), so the kept line stands here too.
+      insight: edFlagOpen
+        ? ED_KEPT_INSIGHT
+        : `Your trend appears after ${DIRECTION_MIN_POINTS} weigh-ins: ${n} of ${DIRECTION_MIN_POINTS} so far.`,
       maintenance: null,
       edFlagOpen: !!edFlagOpen,
     };

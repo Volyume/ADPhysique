@@ -971,7 +971,7 @@ export default function VolumeHeatmapScreen({ route }) {
           ) : null}
           {/* An adaptive adjustment: said in the coach's own plain words, never as a
               recovery week, and the muscles stay judged (census 6.5). */}
-          {adaptiveAdjustment ? (
+          {adaptiveAdjustment && !unjudged ? (
             <Text style={[styles.recoveryLine, live.recoveryLine]}>{ADAPTIVE_ADJUSTMENT_LINE}</Text>
           ) : null}
           {/* No set logged in the window: nothing is judged (census 6.4). A recovery

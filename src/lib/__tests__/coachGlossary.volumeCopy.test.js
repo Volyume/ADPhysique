@@ -33,7 +33,8 @@ describe('the Volume heatmap legend\'s (i): sets done, in a window, against a ra
       'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: '
       + 'from the fewest weekly sets that still help it grow to the most it can recover from. '
       + 'Just enough, In range and Near the limit all sit inside the range. '
-      + '“Too much” means past the point of extra benefit, not dangerous.',
+      + '“Too much” means past the point of extra benefit, not dangerous. '
+      + 'Each row’s bar shades the muscle’s range, marks the in-range band inside it and ends at the most it can recover from.', // the bars named (closing review S7)
     );
   });
 

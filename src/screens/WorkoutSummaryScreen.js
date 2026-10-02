@@ -1915,11 +1915,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   anyone to do less (D204: a surface describes). */}
               <InfoTooltip size={11} text={
                 `${readOnly ? 'How many sets you did for each muscle group.' : 'How much you\'ve trained each muscle group this week.'}\n\n` +
-                `Green = ${volumeBandLabel('optimal')}: enough training to grow without overdoing it\n` +
-                `Yellow = ${volumeBandLabel('near_mrv')}: one more session and it may be too much\n` +
-                `Red = ${volumeBandLabel('over_mrv')}: past the most sets the muscle can recover from in a week\n` +
-                `Blue = ${volumeBandLabel('minimum')}: at the bottom of the range, enough to grow but only just\n` +
-                `Grey = ${volumeBandLabel('below')}: not enough logged yet to drive growth\n\n` +
+                // The badges carry the band names; the colour words went because the
+                // light and colour-blind-safe themes draw other colours (closing review S4).
+                `${volumeBandLabel('optimal')}: enough training to grow without overdoing it\n` +
+                `${volumeBandLabel('near_mrv')}: one more session and it may be too much\n` +
+                `${volumeBandLabel('over_mrv')}: past the most sets the muscle can recover from in a week\n` +
+                `${volumeBandLabel('minimum')}: at the bottom of the range, enough to grow but only just\n` +
+                `${volumeBandLabel('below')}: not enough logged yet to drive growth\n\n` +
                 // C6 RE6-4 (D97-25): the adapted branch fired on ANY single
                 // adapted muscle but claimed the plural for all of them -
                 // the sentence is now scoped to "muscles with enough

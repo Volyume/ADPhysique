@@ -44,6 +44,16 @@ describe('deriveWeightTrend', () => {
     expect(vm.insight).toMatch(/^Your trend appears after 7 weigh-ins: \d of 7 so far\.$/); // census P5: the rung is 7 weigh-ins, with its denominator
   });
 
+  // Closing review B1 (D214 addendum 10): under an open ED flag a count over
+  // weighing is a compliance count (addendum 7, question 12), so the state-1
+  // line is the kept line and names no count.
+  test('state 1 under an open ED flag never prints the weigh-in count', () => {
+    const vm = deriveWeightTrend({ ewmaData: series(3), edFlagOpen: true });
+    expect(vm.state).toBe(1);
+    expect(vm.insight).toBe('Your weigh-ins are kept in Body metrics.');
+    expect(vm.insight).not.toMatch(/\d of 7|weigh-ins:/);
+  });
+
   test('state 2 builds the estimate when confidence is insufficient', () => {
     const vm = deriveWeightTrend({
       ewmaData: series(10),
