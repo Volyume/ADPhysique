@@ -3879,9 +3879,26 @@ async function _updateWorkoutOnDb(d, id, data, now = Date.now(), identity = null
   return d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE ${where}`, values);
 }
 
+// D215 (founder order 2026-10-02): a completed session stands down today's
+// training-day reminder. The day is the session's own start day, the rule the
+// foreground handler applies, so a session that ran past midnight stands down
+// the day it started. Fire-and-forget and subtractive only; a failure here can
+// never touch the write it follows.
+function _standDownTrainingOnCompletion(d, id, data) {
+  if (!(data?.isCompleted === true || data?.isCompleted === 1)) return;
+  (async () => {
+    const row = await d.getFirstAsync('SELECT started_at FROM workouts WHERE id = ?', [id]);
+    const startedAt = Number(row?.started_at);
+    // eslint-disable-next-line global-require
+    const { standDownTraining } = require('./notifications/standDown');
+    await standDownTraining(Number.isFinite(startedAt) && startedAt > 0 ? startedAt : Date.now());
+  })().catch(() => {});
+}
+
 export async function updateWorkout(id, data) {
   const d = await db();
   await _updateWorkoutOnDb(d, id, data);
+  _standDownTrainingOnCompletion(d, id, data);
 }
 
 // Hard-delete an incomplete workout and its sets. Used when the user
@@ -6166,6 +6183,7 @@ export async function finishWorkoutWithSessionResolution(
     }, now);
   });
   _scheduleSync();
+  _standDownTrainingOnCompletion(d, workoutId, workoutData); // D215
   return id;
 }
 
@@ -7999,6 +8017,15 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
     const { syncMorningWeight } = require('./sync');
     syncMorningWeight(userId, { id: savedId, weightKg, loggedAt, notes: finalNotes }).catch(() => {});
   } catch (_) { /* sync module unavailable, bulk upload will catch up later */ }
+  // D215 (founder order 2026-10-02): the weigh-in is in, so today's morning
+  // and evening prompts stand down. Best-effort and subtractive only; a
+  // weigh-in entered for a past day stands nothing down.
+  if (Number(weightKg) > 0) {
+    try {
+      // eslint-disable-next-line global-require
+      require('./notifications/standDown').standDownWeighIn(loggedAt).catch(() => {});
+    } catch (_) { /* notifications unavailable (tests): nothing to stand down */ }
+  }
   return savedId;
 }
 
@@ -8597,6 +8624,16 @@ export async function saveWeeklyCheckin(userId, data) {
     const { syncAll } = require('./sync');
     syncAll({ userId, localUserId: userId, triggeredBy: 'write' }).catch(() => {});
   } catch (_) { /* sync module unavailable, the next lifecycle sync catches up */ }
+  // D215 (founder order 2026-10-02): a real check-in (one carrying an energy
+  // score, the rule the reminder skip and the handler use; a workout's
+  // sleep-only row is not one) stands down this week's reminder and any
+  // missed-check-in follow-ups. Best-effort and subtractive only.
+  if (data?.energyScore != null) {
+    try {
+      // eslint-disable-next-line global-require
+      require('./notifications/standDown').standDownCheckin().catch(() => {});
+    } catch (_) { /* notifications unavailable (tests): nothing to stand down */ }
+  }
   return savedId;
 }
 

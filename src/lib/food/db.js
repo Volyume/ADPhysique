@@ -56,6 +56,31 @@ function _normaliseWeightState(v) {
   return VALID_WEIGHT_STATES.has(v) ? v : 'as_weighed';
 }
 
+// D215 (founder order 2026-10-02): food logged in a slot today stands down
+// that slot's reminder for today (the meal reminders are re-laid through the
+// scheduler's own gates, with the logged slot laid from tomorrow), and a
+// planned-meal confirm re-checks whether anything is still unconfirmed, so
+// the 20:00 nudge goes when the last planned meal is marked eaten. One
+// re-lay per deed whatever the number of slots (the re-lay re-reads every
+// slot; the scheduler serialises concurrent runs). Fire-and-forget and
+// subtractive only; lazy-required so this module keeps no static
+// notifications dependency.
+function _standDownMealReminders(userId, entryDate, slots, { plannedConfirm = false } = {}) {
+  try {
+    const slot = (Array.isArray(slots) ? slots : []).find((s) => s != null && s !== '');
+    if (slot != null) {
+      // eslint-disable-next-line global-require
+      const { standDownMeal } = require('../notifications/standDown');
+      standDownMeal(String(slot), entryDate).catch(() => {});
+    }
+    if (plannedConfirm) {
+      // eslint-disable-next-line global-require
+      const { schedulePlannedMealConfirm } = require('../notifications/scheduler');
+      schedulePlannedMealConfirm(userId).catch(() => {});
+    }
+  } catch (_) { /* notifications unavailable (tests): nothing to stand down */ }
+}
+
 /**
  * Log a food entry for a user on a specific date and meal slot.
  * Macros are denormalised at log time so future edits to the
@@ -162,6 +187,7 @@ export async function logFoodEntry(userId, entry) {
       trackFirst(userId, 'first_food_logged').catch(() => {});
     }
   } catch (_) { /* tolerate test env without telemetry */ }
+  if (!isPlanned) _standDownMealReminders(userId, entry.entryDate, [entry.mealSlot]); // D215
   _scheduleSync();
   return id;
 }
@@ -405,6 +431,7 @@ export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
       // eslint-disable-next-line no-await-in-loop
       await _rebuildSlotRecentFromActuals(d, userId, identity.meal_slot, identity.food_ref);
     }
+    _standDownMealReminders(userId, entryDate, (confirmedIdentities || []).map((i) => i.meal_slot), { plannedConfirm: true }); // D215
   }
   _scheduleSync();
   return res?.changes ?? 0;
@@ -436,6 +463,7 @@ export async function confirmPlannedEntry(userId, entryId) {
   await recomputeRollup(userId, existing.entry_date);
   if ((res?.changes ?? 0) > 0) {
     await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+    _standDownMealReminders(userId, existing.entry_date, [existing.meal_slot], { plannedConfirm: true }); // D215
   }
   _scheduleSync();
   return res?.changes ?? 0;

@@ -116,7 +116,9 @@ describe('scheduleMorningWeightNotification', () => {
     expect(args[0].identifier).toBe('volyume_morning_weight_1');
     expect(args[13].identifier).toBe('volyume_morning_weight_14');
     args.forEach((a) => {
-      expect(a.content.data).toEqual({ type: 'morning_weight' });
+      // D215: each prompt names the local day it fires on, so the stand-down
+      // on a logged weigh-in can match it without reading the trigger shape.
+      expect(a.content.data).toEqual({ type: 'morning_weight', dayKey: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
       expect(a.trigger.channelId).toBe('coaching-reminders');
       expect(a.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
       // Every one-shot is in the future, at the (quiet-hours-shifted) time.
@@ -205,7 +207,7 @@ describe('scheduleEveningWeightReminder', () => {
       Array.from({ length: 14 }, (_, i) => `volyume_evening_weight_${i + 1}`),
     );
     args.forEach((a) => {
-      expect(a.content.data).toEqual({ type: 'evening_weight' });
+      expect(a.content.data).toEqual({ type: 'evening_weight', dayKey: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }); // D215
       expect(a.content.sound).toBe(true);
       expect(a.trigger.channelId).toBe('coaching-reminders');
       expect(a.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);

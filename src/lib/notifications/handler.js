@@ -5,7 +5,8 @@
  * handleNotification just before showing a notification while the
  * app is alive. We use that window to suppress notifications whose
  * action has already been completed today / this week (logged
- * weight, completed check-in, trained today). The point: don't
+ * weight, completed check-in, trained today, a meal logged in the
+ * slot being prompted for). The point: don't
  * pester the user with "log your weight" 30 minutes after they
  * logged it.
  *
@@ -54,6 +55,14 @@ export function configureNotificationHandler() {
         // schedule-time gate alone is not enough. Suppression consumed
         // here, never altered.
         if (dataType === 'meal_log_reminder' && await _edFlagOpen()) {
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+        // D215 (founder order 2026-10-02): a meal reminder for a slot the
+        // person has already logged today stands down, as the weigh-in prompt
+        // does once the weight is in. The ED branch above is unchanged and
+        // still runs first.
+        if (dataType === 'meal_log_reminder'
+            && await _mealLoggedToday(notification?.request?.content?.data?.slot)) {
           return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         // S6: the activation nudge stands down if the user has progressed past
@@ -166,6 +175,16 @@ async function _alreadyTrainedToday() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     return all.some(w => w.isCompleted && w.startedAt >= todayStart.getTime());
+  } catch (_) { return false; }
+}
+
+// D215: the one "logged in this slot today" read, shared with the meal
+// scheduler's lay-time skip (standDown.js). Fails open to "not logged".
+async function _mealLoggedToday(slot) {
+  try {
+    // eslint-disable-next-line global-require
+    const { isMealSatisfiedToday } = require('./standDown');
+    return await isMealSatisfiedToday(slot);
   } catch (_) { return false; }
 }
 

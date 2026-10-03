@@ -213,7 +213,9 @@ describe('F-5: the restore goes THROUGH the authoritative scheduler, not around 
     expect(n.content.title).toBe('Breakfast');
     expect(n.content.body).toBe('A gentle reminder to log it if it helps. No pressure.');
     expect(n.content.sound).toBe(false);
-    expect(n.content.data).toEqual({ type: 'meal_log_reminder' });
+    // D215: the request names its slot so a logged meal can stand it down;
+    // the copy, the silence and the no-guilt body are unchanged.
+    expect(n.content.data).toEqual({ type: 'meal_log_reminder', slot: 'breakfast' });
   });
 
   test('web: the restore touches nothing', async () => {

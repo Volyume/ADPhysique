@@ -33,7 +33,7 @@ import {
   winbackFireDate,
   canLayWinback,
 } from '../payments/winbackState';
-import { localWeekStartMs } from '../dayKey';
+import { localWeekStartMs, localDayKey } from '../dayKey';
 import { logWarn } from '../errorLog';
 import {
   trialDay3FireDate,
@@ -47,6 +47,9 @@ import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
 import { resolveActivationNudge, activationNudgePush, NUDGE_WINDOW_GRACE_MS } from '../activationNudge';
 import { scheduleCheckedNotification } from './triggerDate';
+// D215 (founder order 2026-10-02): the "is it done today" reads behind the
+// lay-time skips below; the deed paths live in standDown.js.
+import { isWeighInSatisfiedToday, isMealSatisfiedToday } from './standDown';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_EVENING = 'volyume_evening_weight';
@@ -172,8 +175,15 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0, { 
     // C8 Work 5 (R-16): a BOUNDED run of one-shots, re-laid on every
     // launch, instead of an indefinite weekly repeat.
     const dates = weighInHorizonDates(h, m);
+    // D215 (founder order 2026-10-02): a weigh-in already logged today means
+    // today's prompt is not laid at all. A prompt laid before the weigh-in is
+    // cancelled on the deed (standDown.js, from database.logMorningWeight).
+    const weighedToday = await isWeighInSatisfiedToday();
+    const todayKey = localDayKey();
     for (let i = 0; i < dates.length; i += 1) {
       const when = dates[i];
+      const dayKey = localDayKey(when.getTime());
+      if (weighedToday && dayKey === todayKey) continue;
       const copy = pickMorningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
       await scheduleCheckedNotification({
@@ -181,7 +191,7 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0, { 
         content: {
           title: copy.title,
           body: copy.body,
-          data: { type: 'morning_weight' },
+          data: { type: 'morning_weight', dayKey },
           // Q1: sound ON so a locked-phone morning nudge is actually noticed
           // (was silent). The handler still stands this down once the weight is
           // logged, and now also under an open ED flag (louder => must go quiet
@@ -371,8 +381,13 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30, { us
     const name = greetName();
     // C8 Work 5 (R-16): same bounded horizon as the morning prompt.
     const dates = weighInHorizonDates(h, m);
+    // D215: the same lay-time skip as the morning prompt (see above).
+    const weighedToday = await isWeighInSatisfiedToday();
+    const todayKey = localDayKey();
     for (let i = 0; i < dates.length; i += 1) {
       const when = dates[i];
+      const dayKey = localDayKey(when.getTime());
+      if (weighedToday && dayKey === todayKey) continue;
       const copy = pickEveningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
       await scheduleCheckedNotification({
@@ -380,7 +395,7 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30, { us
         content: {
           title: copy.title,
           body: copy.body,
-          data: { type: 'evening_weight' },
+          data: { type: 'evening_weight', dayKey },
           sound: true,
         },
         trigger: {
@@ -492,6 +507,59 @@ export async function cancelMealReminders() {
   } catch (_) { /* tolerate */ }
 }
 
+// D215 (founder order 2026-10-02): a slot the person has already logged today
+// must not prompt them again today. A daily repeat cannot skip a day, so a
+// slot logged today with its time still ahead is laid instead as a short run
+// of dated one-shots from tomorrow (MEAL_STAND_DOWN_RUN_DAYS of them, each
+// carrying the day it fires on and its slot so standDown.js can match them).
+// Every launch re-lays the reminders, and the repeat returns as soon as the
+// slot's time today has passed or a new day has begun. The run is short on
+// purpose: iOS keeps at most 64 pending requests and the weigh-in and
+// training horizons already use most of them (see trainingReminders.js).
+export const MEAL_STAND_DOWN_RUN_DAYS = 3;
+
+async function layMealReminder(r, { quiet, now, loggedToday }) {
+  const slot = String(r.id);
+  const hr = Math.max(0, Math.min(23, r.hour | 0));
+  const mn = Math.max(0, Math.min(59, r.minute | 0));
+  const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hr, mn, quiet);
+  const label = (typeof r.label === 'string' && r.label.trim()) ? r.label.trim().slice(0, 24) : 'Meal';
+  const content = {
+    title: label,
+    body: 'A gentle reminder to log it if it helps. No pressure.',
+    sound: false,
+  };
+  const todayFire = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+  if (!(loggedToday && todayFire.getTime() > now.getTime())) {
+    // The usual shape: a daily repeat. Laid after today's time has passed it
+    // first fires tomorrow, which is already right for a slot logged today.
+    await scheduleCheckedNotification({
+      identifier: `${NOTIF_ID_MEAL_PREFIX}${slot}`,
+      content: { ...content, data: { type: CATEGORY.MEAL_LOG_REMINDER, slot } },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: h,
+        minute: m,
+      },
+    });
+    return;
+  }
+  for (let i = 1; i <= MEAL_STAND_DOWN_RUN_DAYS; i += 1) {
+    const when = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, h, m, 0, 0);
+    // eslint-disable-next-line no-await-in-loop
+    await scheduleCheckedNotification({
+      identifier: `${NOTIF_ID_MEAL_PREFIX}${slot}_d${i}`,
+      content: { ...content, data: { type: CATEGORY.MEAL_LOG_REMINDER, slot, dayKey: localDayKey(when.getTime()) } },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: when,
+      },
+    });
+  }
+}
+
 export async function scheduleMealReminders(reminders = []) {
   if (Platform.OS === 'web') return;
   try {
@@ -523,30 +591,17 @@ export async function scheduleMealReminders(reminders = []) {
       }
     } catch (_) { return; /* cannot verify the flag: stay silent */ }
     const quiet = await getQuietHours();
+    const now = new Date();
     for (const r of reminders) {
       // Campaign 1 review NIT 16: explicit-true only, matching the
       // re-lay gate's semantics (stored shapes always carry the boolean).
       if (!r || r.enabled !== true || r.id == null) continue;
-      const hr = Math.max(0, Math.min(23, r.hour | 0));
-      const mn = Math.max(0, Math.min(59, r.minute | 0));
-      const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hr, mn, quiet);
-      const label = (typeof r.label === 'string' && r.label.trim()) ? r.label.trim().slice(0, 24) : 'Meal';
+      // D215 (founder order 2026-10-02): a slot already logged today is not
+      // prompted again today. See layMealReminder for the two shapes.
       // eslint-disable-next-line no-await-in-loop
-      await scheduleCheckedNotification({
-        identifier: `${NOTIF_ID_MEAL_PREFIX}${r.id}`,
-        content: {
-          title: label,
-          body: 'A gentle reminder to log it if it helps. No pressure.',
-          data: { type: CATEGORY.MEAL_LOG_REMINDER },
-          sound: false,
-        },
-        trigger: {
-          channelId: COACHING_REMINDERS_CHANNEL,
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: h,
-          minute: m,
-        },
-      });
+      const loggedToday = await isMealSatisfiedToday(String(r.id), now.getTime());
+      // eslint-disable-next-line no-await-in-loop
+      await layMealReminder(r, { quiet, now, loggedToday });
     }
   } catch (e) {
     trackNotificationFailed({
@@ -555,6 +610,35 @@ export async function scheduleMealReminders(reminders = []) {
       payload: { message: e?.message ?? 'unknown' },
     });
   }
+}
+
+// D215: the deed path for a meal. Food logged in a slot today re-lays the
+// meal reminders from the stored preference through scheduleMealReminders,
+// which lays the logged slot as a run from tomorrow (today's prompt dropped)
+// and the other slots as they were. Every gate the launch re-lay runs (tier,
+// ED flag, quiet hours) runs here too, because it is the same function. Runs
+// are serialised and coalesced: several foods logged in quick succession
+// produce one re-lay in flight and at most one queued behind it, never
+// concurrent cancel-and-lay passes over the same identifiers. The same
+// three lines in restoreNotifications stay there deliberately (the Campaign 1
+// P0-5 guard pins them on the launch path).
+let mealRelayChain = Promise.resolve();
+let mealRelayQueued = false;
+export function relayMealRemindersFromPrefs() {
+  if (Platform.OS === 'web') return Promise.resolve();
+  if (mealRelayQueued) return mealRelayChain;
+  mealRelayQueued = true;
+  mealRelayChain = mealRelayChain.then(async () => {
+    mealRelayQueued = false;
+    try {
+      const rawMeals = await AsyncStorage.getItem(MEAL_REMINDERS_KEY);
+      const reminders = rawMeals ? JSON.parse(rawMeals) : null;
+      if (Array.isArray(reminders) && reminders.some((r) => r?.enabled === true)) {
+        await scheduleMealReminders(reminders);
+      }
+    } catch (_) { /* best-effort: the next launch re-lay covers this */ }
+  });
+  return mealRelayChain;
 }
 
 // ─── Weekly check-in reminder ─────────────────────────────────────────────────
@@ -647,7 +731,7 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
       content: {
         title: checkin.title,
         body: checkin.body,
-        data: { type: 'weekly_checkin' },
+        data: { type: 'weekly_checkin', dayKey: localDayKey(shiftedDate.getTime()) },
         sound: false,
       },
       trigger: {

@@ -522,3 +522,107 @@ path at all once billing-based win-back went dormant on the free product.
   `NotificationSettingsScreen.returnNudge.guard.test.js`,
   `notifications.trainingReminders.test.js` (horizon),
   `trainingHabitSchedule.contract.test.js`, `campaign14.routingTruth`.
+
+## ADDENDUM (SHIPPED) — no repeat prompt once the requirement is met (D215, 2026-10-02)
+
+Founder order 2026-10-02, verbatim: "Also notifications. If I've already
+entered my weight in the day we shouldn't be asking for it again as a
+notification later in the day ensure there's no repeat notifications when
+the requirement has already been satisfied".
+
+**The problem this closes.** The foreground handler stood a prompt down only
+while the app was open. A weigh-in prompt laid at launch for 19:30 fired at
+19:30 whatever happened in between, so a person who weighed in at 07:30 was
+asked again that evening. The same held for the training-day reminder after
+a finished session, the meal reminder after the meal was logged, and the
+check-in reminder after the week's check-in. Nothing in the app runs in the
+background, so the fix acts at the two moments the app IS running: when the
+thing is done, and when the prompts are laid.
+
+**Rule.** A reminder never asks for something already done. Every daily or
+weekly requirement now has three defences, all SUBTRACTIVE: each can only
+cancel or skip a prompt, never add one, so nothing here weakens an ED-safety
+suppression, quiet hours or the push budget.
+
+1. **On the deed** (`src/lib/notifications/standDown.js`). The device-truth
+   write that satisfies the requirement stands the prompt down: it reads the
+   OS's pending requests and cancels the ones that ask for that requirement
+   on that day. The hooks are fire-and-forget inside the writes, lazy-required
+   and caught, so a notifications failure can never touch the write.
+2. **At lay time.** Every scheduler that lays dated prompts asks the one
+   "is it done today" read for its requirement first and does not lay
+   today's prompt when the answer is yes.
+3. **At delivery** (the foreground handler, unchanged for weight, training
+   and check-in; the meal branch gains the logged-slot check).
+
+**Per requirement.**
+- **Weigh-in.** `database.logMorningWeight`, when a weight is written for
+  today, cancels today's morning and evening prompts. A weigh-in entered for
+  a past day changes nothing. `scheduleMorningWeightNotification` and
+  `scheduleEveningWeightReminder` skip today's one-shot when
+  `isWeighInSatisfiedToday` (the canonical morning_weights row for today
+  holds a weight, the handler's own rule). The identifiers keep their horizon
+  index (`_2` to `_14` when today's is skipped), so the cancel loops still
+  clear the run.
+- **Training day.** The two completion writes (`updateWorkout` carrying
+  `isCompleted`, and `finishWorkoutWithSessionResolution`) cancel the
+  reminder for the session's own START day: a session that ran past midnight
+  counts for the day it started, the handler's rule, so there is one
+  definition. `scheduleTrainingReminders` filters today's date out of the
+  horizon when `isTrainingSatisfiedToday` (a completed workout that started
+  today).
+- **Meal slot.** `food/db.logFoodEntry` (a real row; planned scaffolding
+  never counts) and the two planned-meal confirms re-lay the meal reminders
+  from the stored preference through `scheduleMealReminders`
+  (`relayMealRemindersFromPrefs`, serialised and coalesced so several foods
+  logged in quick succession produce one pass). `scheduleMealReminders` now
+  lays a slot already logged today, with its time still ahead, as a run of
+  `MEAL_STAND_DOWN_RUN_DAYS = 3` dated one-shots from tomorrow
+  (`volyume_meal_reminder_<slot>_d1` to `_d3`, each naming its day) instead
+  of the daily repeat, because a repeat cannot skip a day; the repeat returns
+  at the next launch once the slot's time has passed or a new day has begun.
+  A slot whose time has already passed keeps the repeat (it first fires
+  tomorrow, which is already right). The run is short on purpose: iOS keeps
+  at most 64 pending requests and the weigh-in (28) and training (up to 28)
+  horizons already use most of them; the worst case (all three slots logged
+  before their times) adds six pending requests until the next launch
+  re-lays. The foreground handler also stands a meal reminder down once its
+  slot holds a real entry today (new branch; the ED branch is unchanged and
+  still runs first). The planned-meal confirms also re-run
+  `schedulePlannedMealConfirm`, so the 20:00 confirm nudge goes when the
+  last planned meal of the day is marked eaten.
+- **Weekly check-in.** `database.saveWeeklyCheckin`, for a real check-in
+  (one carrying an energy score; a workout's sleep-only row is not one),
+  cancels THIS week's check-in reminder and every missed-check-in follow-up.
+  A reminder already laid for next week is next week's business and stays.
+  `scheduleNextCheckinReminder` already skipped the week at lay time.
+
+**Mechanics.** Every dated request now carries `data.dayKey`, the local day
+it fires on (dayKey.js), and a meal request carries `data.slot`; the
+stand-down matches on type, day and slot, never on the OS's trigger shape. A
+request laid by an older build without a dayKey is matched by its date
+trigger (the launch re-lay replaces those on the first run of this build). A
+repeating trigger carries no day and is never matched. Every "is it done"
+read fails OPEN to "not done": a read failure lets a prompt through, never
+silences one the person opted into.
+
+**Unchanged.** Copy, times, toggles, quiet hours, the push budget, the
+ED-flag and calm-mode suppressions, the tier gate (moot while the product is
+free), the 14-day weigh-in and 56-day training horizons, every identifier
+prefix.
+
+**Noted, not changed (outside the order; raised for a decision).** The meal
+reminders stay unbounded daily repeats for a person who stops opening the
+app (the C8 Work 5 restraint was never applied to them, and the iOS pending
+ceiling forbids a 14-day run for three slots); deleting today's weigh-in does
+not re-lay that day's prompts until the next launch.
+
+**Tests.** `src/lib/notifications/__tests__/standDown.test.js` (matching,
+the scoped stand-downs, the reads and their fail-open posture),
+`standDown.schedulers.test.js` (the lay-time skips through the real
+schedulers, the meal run, the coalesced re-lay, the day keys),
+`standDown.wiring.guard.test.js` (the deed hooks at source),
+`src/lib/__tests__/standDown.deedHooks.test.js` (the hooks fired by the
+real `database.js` and `food/db.js` writes on an in-memory SQLite), the meal
+cases in `notifications.handler.test.js`; re-anchored:
+`notifications.scheduler.test.js`, `campaign10h.mealReminderRestore.test.js`.

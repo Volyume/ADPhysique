@@ -9,6 +9,8 @@
  *   - weekly_checkin + no checkin -> show
  *   - training_reminder + workout already completed today -> suppress
  *   - training_reminder + nothing today -> show
+ *   - meal_log_reminder + the slot already logged today -> suppress (D215);
+ *     a planned row, another slot or no slot -> show; ED flag -> suppress
  *   - DB throw -> fall through to show (never silently swallow + suppress)
  *   - signed-out user -> show (no DB read)
  *
@@ -30,6 +32,12 @@ jest.mock('../database', () => ({
   getLatestCheckin: (...args) => mockGetLatestCheckin(...args),
   getAllWorkouts: (...args) => mockGetAllWorkouts(...args),
   getOpenEdPatternFlag: (...args) => mockGetOpenEdFlag(...args),
+}));
+
+// D215: the meal branch reads today's food entries through standDown.js.
+const mockGetFoodEntries = jest.fn(() => Promise.resolve([]));
+jest.mock('../food/db', () => ({
+  getFoodEntriesForDay: (...args) => mockGetFoodEntries(...args),
 }));
 
 const mockGetState = jest.fn();
@@ -60,6 +68,8 @@ beforeEach(() => {
   mockGetAllWorkouts.mockReset();
   mockGetOpenEdFlag.mockReset();
   mockGetOpenEdFlag.mockResolvedValue(null);
+  mockGetFoodEntries.mockReset();
+  mockGetFoodEntries.mockResolvedValue([]);
   mockGetState.mockReset();
   mockGetState.mockReturnValue({ user: { id: 'user-1' } });
 });
@@ -277,5 +287,58 @@ describe('handleNotification, activation_nudge (S6)', () => {
     mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }, { isCompleted: 1 }, { isCompleted: 1 }]);
     const h = captureHandler();
     expect(await h(activationNotif('bogus'))).toEqual(SHOW);
+  });
+});
+
+// ─── D215 (founder order 2026-10-02): a meal reminder for a slot already logged today stands down ───
+
+describe('handleNotification, meal_log_reminder: a logged slot stands down (D215)', () => {
+  const mealNotif = (slot) => ({ request: { content: { data: { type: 'meal_log_reminder', slot } } } });
+
+  test('the slot already holds a real (eaten) entry today -> suppress', async () => {
+    mockGetFoodEntries.mockResolvedValue([{ meal_slot: 'lunch', is_planned: 0 }]);
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SUPPRESS);
+    expect(mockGetFoodEntries).toHaveBeenCalledWith('user-1', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  test('only a planned (not yet eaten) row in the slot -> show', async () => {
+    mockGetFoodEntries.mockResolvedValue([{ meal_slot: 'lunch', is_planned: 1 }]);
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SHOW);
+  });
+
+  test('another slot logged -> show', async () => {
+    mockGetFoodEntries.mockResolvedValue([{ meal_slot: 'breakfast', is_planned: 0 }]);
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SHOW);
+  });
+
+  test('a request without a slot (an older build\'s repeat) -> show, no food read', async () => {
+    mockGetFoodEntries.mockResolvedValue([{ meal_slot: 'lunch', is_planned: 0 }]);
+    const h = captureHandler();
+    expect(await h(mealNotif(undefined))).toEqual(SHOW);
+    expect(mockGetFoodEntries).not.toHaveBeenCalled();
+  });
+
+  test('ED flag open -> suppress whatever the slot holds (the ED branch is unchanged and runs first)', async () => {
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1' });
+    mockGetFoodEntries.mockResolvedValue([]);
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SUPPRESS);
+    expect(mockGetFoodEntries).not.toHaveBeenCalled();
+  });
+
+  test('a food read failure fails OPEN -> show', async () => {
+    mockGetFoodEntries.mockRejectedValue(new Error('db'));
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SHOW);
+  });
+
+  test('signed out -> show, no read', async () => {
+    mockGetState.mockReturnValue({ user: null });
+    const h = captureHandler();
+    expect(await h(mealNotif('lunch'))).toEqual(SHOW);
+    expect(mockGetFoodEntries).not.toHaveBeenCalled();
   });
 });

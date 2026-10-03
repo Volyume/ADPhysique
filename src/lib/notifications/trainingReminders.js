@@ -10,6 +10,11 @@ import { Platform } from 'react-native';
 import { colors } from '../../styles/theme';
 import { getQuietHours, shiftHourMinuteOutOfQuietHours } from './quietHours';
 import { scheduleCheckedNotification } from './triggerDate';
+import { localDayKey } from '../dayKey';
+// D215 (founder order 2026-10-02): the "trained today" read behind the
+// lay-time skip in scheduleTrainingReminders; the deed path lives in
+// standDown.js.
+import { isTrainingSatisfiedToday } from './standDown';
 
 export const SCHEDULE_KEY = '@volyume_schedule_v1';
 export const REMINDER_PREF_KEY = '@volyume_reminder_enabled_v1';
@@ -251,11 +256,19 @@ export async function scheduleTrainingReminders(planNameArg) {
     // 8. Schedule one dated one-shot per habit day across the bounded
     // horizon (D142; see TRAINING_HORIZON_DAYS above). The identifier keeps
     // the group prefix so cancelTrainingReminders still clears the run.
-    const fireDates = trainingHorizonDates(days, hour, minute);
+    // D215 (founder order 2026-10-02): a session already completed today
+    // means today's reminder is not laid at all. A reminder laid before the
+    // session is cancelled on the deed (standDown.js, from the completion
+    // writes in database.js).
+    const trainedToday = await isTrainingSatisfiedToday();
+    const todayKey = localDayKey();
+    const fireDates = trainingHorizonDates(days, hour, minute)
+      .filter((fireAt) => !(trainedToday && localDayKey(fireAt.getTime()) === todayKey));
     await Promise.all(
       fireDates.map((fireAt) => {
         const ymd = `${fireAt.getFullYear()}${String(fireAt.getMonth() + 1).padStart(2, '0')}${String(fireAt.getDate()).padStart(2, '0')}`;
         const identifier = `${NOTIF_ID_PREFIX}${fireAt.getDay()}_${ymd}`;
+        const dayKey = localDayKey(fireAt.getTime());
         return scheduleCheckedNotification({
           identifier,
           content: {
@@ -266,7 +279,7 @@ export async function scheduleTrainingReminders(planNameArg) {
             title: 'One of your usual training days',
             body,
             sound: true,
-            data: { type: 'training_reminder', channelId: TRAINING_REMINDER_CHANNEL },
+            data: { type: 'training_reminder', channelId: TRAINING_REMINDER_CHANNEL, dayKey },
             android: {
               channelId: TRAINING_REMINDER_CHANNEL,
               color: colors.primary,

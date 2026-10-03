@@ -11,6 +11,9 @@
  *   quietHours.js   the 22:00 -> 07:00 default time-shift rule
  *   permissions.js  request / status helpers
  *   handler.js      foreground delivery handler with smart suppression
+ *   standDown.js    the "already done today" reads and the stand-down on
+ *                   the deed (D215): a reminder never asks for something
+ *                   already done
  *   scheduler.js    cron-like schedule + cancel helpers
  *   pushToken.js    remote-push token register / unregister (Expo Push)
  *   telemetry.js    notification_sent / _tapped / _failed firers
@@ -66,7 +69,21 @@ export {
   cancelReturnNudge,
   checkYearOfLiftsUnlock,
   checkMonthlyRecapReady,
+  relayMealRemindersFromPrefs,
+  MEAL_STAND_DOWN_RUN_DAYS,
 } from './scheduler';
+
+// D215 (founder order 2026-10-02): a reminder never asks for something
+// already done today. The reads and the deed paths (standDown.js).
+export {
+  isWeighInSatisfiedToday,
+  isTrainingSatisfiedToday,
+  isMealSatisfiedToday,
+  standDownWeighIn,
+  standDownTraining,
+  standDownMeal,
+  standDownCheckin,
+} from './standDown';
 
 export {
   CATEGORY,
