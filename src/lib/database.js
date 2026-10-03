@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow, isBallisticEvidenceRow } from './algorithms';
 import { pickBestLift } from './bestLift';
-import { logError, logWarn } from './errorLog';
+import { logError, logWarn, logInfo } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
 import { guardSqliteConnection } from './sqliteBoundary';
@@ -3382,7 +3382,15 @@ export async function getAllExercisesIncludingDeleted() {
 
 export async function getExerciseById(id) {
   const d = await db();
-  const row = await d.getFirstAsync('SELECT * FROM exercises WHERE id = ?', [id]);
+  // D217: a retired id answers with its survivor's row, so a reference not
+  // yet repaired still resolves to the exercise it became; an install that
+  // has not run the top-up (the retired row still present, no survivor yet)
+  // keeps answering with the retired row.
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId } = require('./exercise/retiredIds');
+  const survivor = survivorExerciseId(id);
+  let row = await d.getFirstAsync('SELECT * FROM exercises WHERE id = ?', [survivor]);
+  if (!row && survivor !== id) row = await d.getFirstAsync('SELECT * FROM exercises WHERE id = ?', [id]);
   return rowToCamel(row);
 }
 
@@ -4341,7 +4349,13 @@ function boundSetNumber(value, { max, field, setId = null }) {
   return n;
 }
 
-export async function createWorkoutSet(data) {
+export async function createWorkoutSet(input) {
+  // D217: a set never records a retired exercise id; a routine row that
+  // still carries one (pulled before the launch repair ran) logs against
+  // the exercise it became.
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId } = require('./exercise/retiredIds');
+  const data = input?.exerciseId ? { ...input, exerciseId: survivorExerciseId(input.exerciseId) } : input;
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -10054,16 +10068,24 @@ export async function insertRoutineExerciseFromCloud(re) {
   // local exercise of that name and rewrite the FK. This turns a
   // would-be-broken row into a fully-resolved one without any user
   // action, the cure for the 114-routines-with-zero-exercises bug.
-  let exerciseId = re.exercise_id;
+  // D217: a retired exercise id (the corpus retired the name; the id is the
+  // name's own hash, so it is the same on every device and in the cloud)
+  // resolves to its survivor BEFORE the name heal below, which cannot see
+  // through a rename. See src/lib/exercise/retiredIds.js.
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId, survivorExerciseName } = require('./exercise/retiredIds');
+  let exerciseId = survivorExerciseId(re.exercise_id);
   const exerciseName = re.exercise_name ?? null;
   if (exerciseId) {
     const local = await d.getFirstAsync(
       'SELECT 1 FROM exercises WHERE id = ?', [exerciseId],
     );
     if (!local && exerciseName) {
+      // D217: the snapshot may carry a retired name; the survivor's name is
+      // tried as well when the snapshot's own name finds nothing.
       const byName = await d.getFirstAsync(
-        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) LIMIT 1',
-        [exerciseName],
+        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1',
+        [exerciseName, survivorExerciseName(exerciseName)],
       );
       if (byName?.id) exerciseId = byName.id;
     }
@@ -10651,19 +10673,30 @@ export async function insertWorkoutSetFromCloud(userId, s) {
   // via name lookup when the original exercise_id doesn't resolve
   // locally. Crucial for restoring historical workouts cleanly across
   // devices.
-  let exerciseId = s.exercise_id;
-  const exerciseName = s.exercise_name ?? null;
+  // D217: resolve a retired id to its survivor before the name heal (as
+  // insertRoutineExerciseFromCloud does); a set pulled with no name snapshot
+  // gets the survivor's name once the id resolves, as createWorkoutSet does.
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId, survivorExerciseName } = require('./exercise/retiredIds');
+  let exerciseId = survivorExerciseId(s.exercise_id);
+  let exerciseName = s.exercise_name ?? null;
   if (exerciseId) {
     const local = await d.getFirstAsync(
       'SELECT 1 FROM exercises WHERE id = ?', [exerciseId],
     );
     if (!local && exerciseName) {
+      // D217: the snapshot may carry a retired name; the survivor's name is
+      // tried as well when the snapshot's own name finds nothing.
       const byName = await d.getFirstAsync(
-        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) LIMIT 1',
-        [exerciseName],
+        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1',
+        [exerciseName, survivorExerciseName(exerciseName)],
       );
       if (byName?.id) exerciseId = byName.id;
     }
+  }
+  if (!exerciseName && exerciseId) {
+    const named = await d.getFirstAsync('SELECT name FROM exercises WHERE id = ?', [exerciseId]).catch(() => null);
+    exerciseName = named?.name ?? null;
   }
   // Last-write-wins, same as insertWorkoutFromCloud: a stale cloud set must
   // not clobber a newer local edit (RIR, notes, post-set ratings).
@@ -10752,8 +10785,12 @@ const _tsToMs = (v) => {
 export async function mergeExerciseIdInto(fromId, toId) {
   if (!fromId || !toId || fromId === toId) return;
   const d = await db();
-  await d.runAsync('UPDATE routine_exercises SET exercise_id = ? WHERE exercise_id = ?', [toId, fromId]);
-  await d.runAsync('UPDATE workout_sets SET exercise_id = ? WHERE exercise_id = ?', [toId, fromId]);
+  // D217: stamp the rows the merge re-points, so the push carries the
+  // repaired reference to the cloud and a later pull of the stale cloud copy
+  // cannot revert it (last-write-wins compares these stamps).
+  const mergedAt = Date.now();
+  await d.runAsync('UPDATE routine_exercises SET exercise_id = ?, updated_at = ? WHERE exercise_id = ?', [toId, mergedAt, fromId]);
+  await d.runAsync('UPDATE workout_sets SET exercise_id = ?, updated_at = ? WHERE exercise_id = ?', [toId, mergedAt, fromId]);
   await d.runAsync(
     'UPDATE exercise_user_notes SET exercise_id = ? WHERE exercise_id = ?',
     [toId, fromId],
@@ -10771,6 +10808,92 @@ export async function mergeExerciseIdInto(fromId, toId) {
   // `toId`.
   await d.runAsync('DELETE FROM exercises WHERE id = ?', [fromId]);
   _invalidateExercisesCache();
+}
+
+/**
+ * D217 (founder's TestFlight report 2026-10-03): re-point every row that
+ * still references a RETIRED exercise id at the exercise it became. Runs at
+ * every launch after the seed chain's top-up (so the survivors exist), not
+ * under a version flag: a retired id keeps arriving after any one-shot pass
+ * (a routine generated on a device that had not retired it, a set logged
+ * against that routine, a cloud copy pulled later), and the pull's name heal
+ * cannot see through a rename. Cheap when there is nothing to do: one SELECT
+ * per table over the retired ids, then targeted UPDATEs only for the ids
+ * found. Stamps updated_at on the synced tables so the push carries the
+ * repair and a stale cloud copy cannot revert it. Never throws; resolves to
+ * the counts of rows re-pointed.
+ */
+export async function repairRetiredExerciseReferences() {
+  const out = { routineRows: 0, setRows: 0, noteRows: 0, goalRows: 0, intentPairs: 0 };
+  try {
+    // eslint-disable-next-line global-require
+    const { retiredIdPairs } = require('./exercise/retiredIds');
+    const pairs = retiredIdPairs();
+    if (pairs.length === 0) return out;
+    const d = await db();
+    const ids = pairs.map((p) => p.from);
+    const marks = ids.map(() => '?').join(', ');
+    const survivorOf = new Map(pairs.map((p) => [p.from, p.to]));
+    const present = async (table, column) => {
+      const rows = await d.getAllAsync(
+        `SELECT DISTINCT ${column} AS id FROM ${table} WHERE ${column} IN (${marks})`, ids,
+      ).catch(() => []);
+      return (rows || []).map((r) => r.id).filter((id) => survivorOf.has(id));
+    };
+    const now = Date.now();
+    for (const from of await present('routine_exercises', 'exercise_id')) {
+      // eslint-disable-next-line no-await-in-loop
+      const r = await d.runAsync(
+        'UPDATE routine_exercises SET exercise_id = ?, updated_at = ? WHERE exercise_id = ?',
+        [survivorOf.get(from), now, from],
+      );
+      out.routineRows += Number(r?.changes ?? 0);
+    }
+    for (const from of await present('workout_sets', 'exercise_id')) {
+      // eslint-disable-next-line no-await-in-loop
+      const r = await d.runAsync(
+        'UPDATE workout_sets SET exercise_id = ?, updated_at = ? WHERE exercise_id = ?',
+        [survivorOf.get(from), now, from],
+      );
+      out.setRows += Number(r?.changes ?? 0);
+    }
+    // Notes and goals are UNIQUE(user_id, exercise_id): a person who holds a
+    // row for both the retired and the surviving id keeps the survivor's.
+    for (const [table, key] of [['exercise_user_notes', 'noteRows'], ['exercise_goals', 'goalRows']]) {
+      // eslint-disable-next-line no-await-in-loop
+      for (const from of await present(table, 'exercise_id')) {
+        const to = survivorOf.get(from);
+        // eslint-disable-next-line no-await-in-loop
+        await d.runAsync(
+          `DELETE FROM ${table} WHERE exercise_id = ? AND EXISTS (SELECT 1 FROM ${table} b WHERE b.user_id = ${table}.user_id AND b.exercise_id = ?)`,
+          [from, to],
+        ).catch(() => {});
+        // eslint-disable-next-line no-await-in-loop
+        const r = await d.runAsync(`UPDATE ${table} SET exercise_id = ? WHERE exercise_id = ?`, [to, from]).catch(() => null);
+        out[key] += Number(r?.changes ?? 0);
+      }
+    }
+    // The intent layer's tables, through the helper the merges use.
+    const intentIds = new Set([
+      ...(await present('exercise_intent', 'exercise_id')),
+      ...(await present('exercise_swaps', 'from_exercise_id')),
+      ...(await present('exercise_swaps', 'to_exercise_id')),
+      ...(await present('exercise_slot_defaults', 'exercise_id')),
+      ...(await present('exercise_slot_defaults', 'from_exercise_id')),
+    ]);
+    for (const from of intentIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await remapExerciseIdInIntentTables(d, from, survivorOf.get(from));
+      out.intentPairs += 1;
+    }
+    const total = out.routineRows + out.setRows + out.noteRows + out.goalRows + out.intentPairs;
+    if (total > 0) {
+      logInfo('database.repairRetiredExerciseReferences', 'retired exercise ids re-pointed at their survivors', out);
+    }
+  } catch (e) {
+    logError('database.repairRetiredExerciseReferences', e, {});
+  }
+  return out;
 }
 
 export async function insertOrUpdateExerciseFromCloud(e) {

@@ -14,6 +14,8 @@ jest.mock('../database', () => ({
   insertExerciseWithId: jest.fn(async () => {}),
   updateExerciseMetadata: jest.fn(async () => {}),
   mergeExerciseIdInto: jest.fn(async () => {}),
+  // D217: the launch repair runs in the chain after the top-up.
+  repairRetiredExerciseReferences: jest.fn(async () => ({ routineRows: 0, setRows: 0, noteRows: 0, goalRows: 0, intentPairs: 0 })),
 }));
 jest.mock('../exerciseCorpus', () => ({
   CORPUS: [], CORPUS_BY_NAME: new Map(), RETIRED_ENTRIES: [], corpusEntryToSeedRow: (e) => e,

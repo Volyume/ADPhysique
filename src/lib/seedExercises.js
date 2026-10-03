@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAllExercises, insertExerciseWithId, updateExerciseMetadata, mergeExerciseIdInto,
+  repairRetiredExerciseReferences,
 } from './database';
 import { deriveExerciseMetadata } from './exerciseMetadata';
 import { logError, logInfo } from './errorLog';
@@ -297,6 +298,9 @@ export function runExerciseSeedChain() {
     try {
       await seedExercisesIfNeeded();
       await topUpNewExercisesIfNeeded();
+      // D217: every launch, once the survivors are in, re-point any row that
+      // still carries a retired exercise id (src/lib/exercise/retiredIds.js).
+      await repairRetiredExerciseReferences();
     } finally {
       markRows();
     }
