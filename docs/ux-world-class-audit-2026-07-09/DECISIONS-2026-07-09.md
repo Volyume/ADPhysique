@@ -10062,6 +10062,8 @@ the sheet shows only the running version's notes and whether 2.4.0 reached
 anyone is the founder's fact; the share line now names the photo looks and
 the light or dark image.
 
+Addendum 3 (2026-10-03): the founder, "Bump version number now also, so that I can upload to TestFlight"; 2.6.0 is set as the next minor step, as the three bumps before it. A new What's New entry for 2.6.0: the privacy notice first (whether 2.5.0 reached everyone is the founder's fact), then the Progress rebuild (D214), Body metrics, the reminders that stand down (D215) and the morning-weight keyboard fix. buildNumber and versionCode untouched: EAS manages them (`appVersionSource: remote`, `autoIncrement` on the production profile). The privacy guard (`privacyTruth.guard.test.js`) now pins the 2.6.0 entry.
+
 ## D204 — The app never tells an athlete to change a session (founder rule 2026-09-26)
 
 Founder, from a TestFlight walk of Consistency, verbatim: "We don't want

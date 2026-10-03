@@ -87,6 +87,20 @@ export const WHATS_NEW = {
     { icon: 'pulse-outline', text: 'Your weekly coaching decision is easier to read, with each fact shown once.' },
     { icon: 'share-social-outline', text: 'Share images look like the app now. Choose which lifts to show, move and zoom your photo, give it a look such as black and white, and choose light or dark.' },
   ],
+
+  // 2.6.0 (founder's word, 2026-10-03: "Bump version number now also, so that
+  // I can upload to TestFlight"). The privacy notice stays first, since whether
+  // 2.5.0 reached everyone is the founder's fact; then the changes since 2.5.0
+  // a person would notice without being told where to look: the Progress
+  // rebuild (D214), Body metrics, the reminders that stand down (D215) and the
+  // morning-weight keyboard fix.
+  '2.6.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'stats-chart-outline', text: 'Progress has been rebuilt in plain English: your plan week first, then Recovery, Consistency and the Volume heatmap, each with one clear answer before the detail.' },
+    { icon: 'body-outline', text: 'Body metrics now shows one trend weight, where your weight is heading over the last two weeks, and your maintenance calories once there is enough data.' },
+    { icon: 'notifications-off-outline', text: 'Reminders stand down once you have done what they ask. A weigh-in, a logged meal or a finished session means that reminder stays quiet for the rest of the day.' },
+    { icon: 'keypad-outline', text: 'The keyboard stays open while you type your morning weight.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
