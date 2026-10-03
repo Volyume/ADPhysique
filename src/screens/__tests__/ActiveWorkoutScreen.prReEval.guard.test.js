@@ -144,7 +144,10 @@ describe('L07-F2 contract 2: the screen wires edit/delete back into PR state', (
     // can be a record, whether that bar was set last week or an hour ago.
     expect(window).not.toContain('editHadPriorExposure');
     expect(window).toContain('const editedPrs = editPrHistory.length > 0');
-    expect(window).toContain('? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];');
+    // D218 (2026-10-03, audit F-10): the edited set is judged with its own
+    // type and evidence class, and an edited warm-up is never judged.
+    expect(window).toContain("const editedPrs = editPrHistory.length > 0 && editedType !== 'warmup'");
+    expect(window).toContain('? detectPR({ weight, actualReps, setType: editedType, evidenceClass: editedEvidenceClass }, editPrHistory, exercise, units) : [];');
   });
 
   test('editing mirrors the log-time first-lift exclusion (empty history never celebrates or joins the PR list)', () => {

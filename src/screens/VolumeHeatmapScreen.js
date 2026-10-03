@@ -24,7 +24,8 @@ import { SkeletonCard } from '../components/Skeleton';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import {
-  getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getActivePlan, getCurrentMesocycleWeek,
+  getCompletedWorkoutSets, getAllExercises, getExerciseLookup, getWeeklyVolumeByMuscle, getActivePlan,
+  getCurrentMesocycleWeek,
 } from '../lib/database';
 import { computeDivisionDiff, fingerprintMarkers, planWearsDivision } from '../lib/divisionDiff';
 import { buildPlanInputs } from '../lib/planAutoGen';
@@ -405,11 +406,23 @@ export default function VolumeHeatmapScreen({ route }) {
       if (!isCurrentRequest()) return;
       setHasAnyCompletedSets(allSets.length > 0);
 
+      // D218 (founder order 2026-10-03, audit F-3 and P14): the rows, "N sets
+      // logged", the per-week totals and "Trained N days ago" are REPORTING
+      // reads of logged sets, so they resolve each set through the shared
+      // lookup (unfiltered, survivor-aware, name-snapshot fallback). The
+      // filtered library hid a soft-deleted custom exercise (EL-18), so its
+      // sets were dropped here while the trend card under them (an unfiltered
+      // SQL read) counted them: two totals for one week on one screen. A
+      // failed read is the screen's own retry state, never a silent zero.
+      const lookup = await getExerciseLookup();
+      if (!isCurrentRequest()) return;
+      // Plan generation keeps the filtered library: the division fingerprint
+      // below must recompute exactly what generation applied, and a deleted
+      // custom exercise is never generated into a plan.
       const allExercises = await getAllExercises();
       if (!isCurrentRequest()) return;
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
 
-      const ds = buildDataset(allSets, exerciseMap, now);
+      const ds = buildDataset(allSets, lookup, now);
       datasetRef.current = ds;
       setDataset(ds);
 

@@ -73,6 +73,7 @@ import {
   getMesocycleWeeks, getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
   getCapabilityConstraints,
 } from '../database';
+import { buildExerciseLookup } from '../exercise/lookup';
 import { logError } from '../errorLog';
 import { localWeekStartMs, localDayKey } from '../dayKey';
 import { allocateExerciseVolume } from '../algorithms';
@@ -296,7 +297,14 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
     exercises = [];
     degraded = true;
   }
-  const exerciseById = Object.fromEntries((exercises ?? []).map((ex) => [ex.id, ex]));
+  // D218 (founder order 2026-10-03, register ruling S3): the estimate resolves
+  // a set exactly as the per-muscle "Trained N days ago" line beside it does
+  // (the shared exercise lookup over these same unfiltered rows: a retired id
+  // answers with its survivor, and a set whose id no row carries is read by
+  // its own name snapshot), so the line and the estimate count the same
+  // sessions. The map keeps its plain shape for the pure modules below.
+  const exerciseLookup = buildExerciseLookup(exercises ?? []);
+  const exerciseById = Object.fromEntries(exerciseLookup.byId);
 
   let sets = [];
   if (completed.length) {
@@ -308,6 +316,12 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
       degraded = true;
     }
   }
+  sets = (Array.isArray(sets) ? sets : []).map((s) => {
+    const id = s?.exerciseId ?? s?.exercise_id;
+    if (id == null || exerciseById[id]) return s;
+    const row = exerciseLookup.resolve(s);
+    return row?.id ? { ...s, exerciseId: row.id } : s;
+  });
   const setsByWorkoutId = new Map();
   for (const s of Array.isArray(sets) ? sets : []) {
     const wid = s?.workoutId;

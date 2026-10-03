@@ -15,24 +15,37 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
+import { MUSCLE_DISPLAY_NAMES, isTrendEligibleRow } from '../lib/algorithms';
+import { exerciseNameFor } from '../lib/exercise/lookup';
+import { getRecentAdaptationEvents, getCompletedWorkoutSets, getExerciseLookup } from '../lib/database';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
 // Detects exercises with 2+ consecutive weeks of declining average reps
 // (a >= 2 rep drop each week), a sign the load may be too high.
+//
+// D218 (founder order 2026-10-03, audit F-15): the average reads only sets
+// whose reps ARE a rep count: a trend-eligible row (isTrendEligibleRow: no
+// warm-up, myo-reps or rest-pause row, whose reps are the SUM of the efforts,
+// and no explosive or circuit row, the EL-7 trend rule) of an exercise that
+// is not a duration or distance type (their "reps" are seconds and metres).
+// Any of those could create or hide a regression before. The warning's name
+// is the shared lookup rule (the row's name, else a set's own snapshot, else
+// "Exercise"), never "Unknown exercise".
 function detectRepRegressions(sets, exerciseMap) {
   const now = Date.now();
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   const byExerciseWeek = {};
   for (const set of sets) {
-    if ((set.setType ?? set.set_type) === 'warmup') continue;
+    if (!isTrendEligibleRow(set)) continue;
     const ts = set.createdAt ?? set.created_at ?? 0;
     const weeksAgo = Math.floor((now - ts) / WEEK_MS);
     if (weeksAgo > 2) continue;
     const exId = set.exerciseId ?? set.exercise_id;
     if (!exId) continue;
+    const row = exerciseMap?.[exId];
+    const exType = row?.exerciseType ?? row?.exercise_type ?? 'weight_reps';
+    if (exType === 'duration' || exType === 'distance') continue;
     if (!byExerciseWeek[exId]) byExerciseWeek[exId] = {};
     if (!byExerciseWeek[exId][weeksAgo]) byExerciseWeek[exId][weeksAgo] = [];
     byExerciseWeek[exId][weeksAgo].push(set);
@@ -46,10 +59,9 @@ function detectRepRegressions(sets, exerciseMap) {
     const avg = arr => arr.reduce((s, x) => s + (x.actualReps ?? x.actual_reps ?? 0), 0) / arr.length;
     const r0 = avg(w0); const r1 = avg(w1); const r2 = avg(w2);
     if (r1 - r0 >= 2 && r2 - r1 >= 2) {
-      const ex = exerciseMap?.[exId];
       warnings.push({
         id: `reg_${exId}`,
-        exerciseName: ex?.name ?? 'Unknown exercise',
+        exerciseName: exerciseNameFor(exerciseMap, w0[0]),
         reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} -> ${Math.round(r1 * 10) / 10} -> ${Math.round(r0 * 10) / 10} over 3 weeks, a sign the load may be too high.`,
       });
     }
@@ -72,11 +84,13 @@ export default function EngineLog({ userId }) {
       setAdaptationHistory((events || []).slice(0, 12));
     } catch (_) {}
     try {
-      const [sets, exercises] = await Promise.all([
+      // D218 (audit F-15): the shared exercise lookup (unfiltered,
+      // survivor-aware); its ids, retired ones included, answer with a row.
+      const [sets, lookup] = await Promise.all([
         getCompletedWorkoutSets(userId),
-        getAllExercises(),
+        getExerciseLookup(),
       ]);
-      const exMap = Object.fromEntries((exercises || []).map(e => [e.id, e]));
+      const exMap = Object.fromEntries(lookup?.byId ?? []);
       setRepWarnings(detectRepRegressions(sets || [], exMap));
     } catch (_) {}
   }, [userId]);

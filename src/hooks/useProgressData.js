@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import {
-  getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
+  getCompletedWorkoutSets, getAllWorkouts, getExerciseLookup, getAllMesocycles,
   getActivePlan,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getMesocycleWeekById,
 } from '../lib/database';
@@ -60,7 +60,10 @@ export function computePRsPerWeek(allSets, exerciseMap, windowDays, now = Date.n
     // cluster rows, and never read its own exerciseMap - so three new
     // exercises showed "3 new PRs" and distance exercises produced
     // phantom records from their metres column.
-    const exType = exerciseMap?.[exId]?.type ?? 'weight_reps';
+    // D218 (audit F-16): exercise rows carry `exerciseType` (camelised
+    // exercise_type); `type` alone matched nothing, so a distance exercise
+    // read as weight_reps here. All three spellings, as pillars.js reads them.
+    const exType = exerciseMap?.[exId]?.exerciseType ?? exerciseMap?.[exId]?.exercise_type ?? exerciseMap?.[exId]?.type ?? 'weight_reps';
     if (exType !== 'weight_reps') continue;
     let runningMax = 0;
     for (const s of sets) {
@@ -108,6 +111,10 @@ export default function useProgressData() {
   const [recentSessions, setRecentSessions] = useState([]);
   const [allSets, setAllSets]               = useState([]);
   const [exerciseMap, setExerciseMap]       = useState({});
+  // D218: the shared exercise lookup (unfiltered, survivor-aware, with each
+  // set's own name snapshot as the fallback), for any consumer that names or
+  // credits logged sets; null until loaded.
+  const [exerciseLookup, setExerciseLookup] = useState(null);
   const [deloadAlert, setDeloadAlert]       = useState(null);
   // D214 (CS-11): the session length chart and its fatigue inference are gone;
   // the screen prints one line, so the hook keeps one number (minutes, or null).
@@ -141,6 +148,7 @@ export default function useProgressData() {
     setRecentSessions([]);
     setAllSets([]);
     setExerciseMap({});
+    setExerciseLookup(null);
     setDeloadAlert(null);
     setTypicalSessionMinutes(null);
     setWorkloadData(null);
@@ -165,16 +173,25 @@ export default function useProgressData() {
       return;
     }
     try {
-      const [workouts, sets, exercises] = await Promise.all([
+      const [workouts, sets, lookup] = await Promise.all([
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
-        getAllExercises(),
+        getExerciseLookup(),
       ]);
       if (!isCurrentRequest()) return;
       setLoadError(false);
-      const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
+      // D218 (founder order 2026-10-03, audit F-3): every figure this hook
+      // derives from logged sets reads the UNFILTERED exercise lookup, so a
+      // set on a since-deleted custom exercise or on a retired id is credited
+      // and named here exactly as the volume trend and Recovery already count
+      // it. `exMap` keeps its plain { [id]: row } shape for its consumers (a
+      // retired id answers with its survivor's row); the engines below take
+      // the lookup itself, which also resolves an unknown id by the set's
+      // own name snapshot.
+      const exMap = Object.fromEntries(lookup?.byId ?? []);
       setAllSets(sets);
       setExerciseMap(exMap);
+      setExerciseLookup(lookup ?? null);
       // Earliest completed workout, drives Year of Lifts unlock.
       // Comparing started_at across workouts is fine since values
       // are ms-epoch integers.
@@ -225,12 +242,12 @@ export default function useProgressData() {
       const resolvedPosition = await loadPosition(isCurrentRequest);
       await Promise.all([
         loadMesocycle(workouts, loadSeries, isCurrentRequest),
-        loadVolumeSnapshot(sets, exMap, isCurrentRequest),
-        loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
+        loadVolumeSnapshot(sets, lookup ?? exMap, isCurrentRequest),
+        loadDeloadCheck(sets, lookup ?? exMap, workouts, isCurrentRequest),
         loadCalendar(workouts, isCurrentRequest),
         loadRecentSessions(workouts, isCurrentRequest),
         loadTypicalSessionMinutes(workouts, isCurrentRequest),
-        loadBlockState(sets, exMap, isCurrentRequest, resolvedPosition),
+        loadBlockState(sets, lookup ?? exMap, isCurrentRequest, resolvedPosition),
       ]);
     } catch (e) {
       if (!isCurrentRequest()) return;
@@ -482,7 +499,7 @@ export default function useProgressData() {
   return {
     loading, refreshing, loadError,
     activeMeso, mesoTonnage, weeklyVolume,
-    calValues, recentSessions, allSets, exerciseMap, deloadAlert,
+    calValues, recentSessions, allSets, exerciseMap, exerciseLookup, deloadAlert,
     typicalSessionMinutes,
     workloadData, loadComparison, position, blockProgress, blockWeek, earliestWorkoutAt,
     completedWorkoutCount,

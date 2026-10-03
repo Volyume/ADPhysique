@@ -19,11 +19,13 @@
  */
 
 import {
-  getWorkoutById, getWorkoutSetsForWorkout, getWorkoutSetsForExercise,
-  getRoutineById, getProgrammeById, getAllExercises,
+  getWorkoutById, getWorkoutSetsForWorkout,
+  getRoutineById, getProgrammeById, getExerciseLookup,
   getAllMesocyclesForUser, getBlockTrainingData, getPriorCompletedSets,
 } from '../database';
-import { summariseWorkoutSets, detectPR, calculate1RM } from '../algorithms';
+import { calculate1RM, isEstimatedMaxRow } from '../algorithms';
+import { buildSessionReport } from '../sessionReport';
+import { pastWorkoutPRs } from '../pastWorkoutPRs';
 import { topSetFromExerciseData, intensityTier, shareSessionName } from '../sessionShareData';
 import { pickBestLift } from '../bestLift';
 import { logError } from '../errorLog';
@@ -89,8 +91,8 @@ export function buildPrPayload({
  * @param {{userId?: string, units?: string, prCount?: number}} [opts]
  *   `prCount` is passed by the surfaces that already detected the
  *   session's PRs (the summary screen holds them); when it is absent the
- *   count is derived here with the same `detectPR` those surfaces use,
- *   so the two can never differ.
+ *   count is derived here with the summary's own replay
+ *   (`countSessionPRs`), so the two can never differ.
  * @returns {Promise<object|null>} a `session` payload, or null when the
  *   workout is gone
  */
@@ -98,32 +100,16 @@ export async function buildSessionPayload(workoutId, { userId = null, units = nu
   const workout = await getWorkoutById(workoutId);
   if (!workout?.id) return null;
   const sets = await getWorkoutSetsForWorkout(workoutId);
-  const library = await getAllExercises().catch(() => []);
-  const byId = new Map((library ?? []).map((e) => [e.id, e]));
-
-  const exerciseTypeById = {};
-  const loadSemanticsById = {};
-  for (const ex of library ?? []) {
-    exerciseTypeById[ex.id] = ex.exerciseType ?? ex.exercise_type ?? 'weight_reps';
-    loadSemanticsById[ex.id] = ex.loadSemantics ?? ex.load_semantics ?? 'total';
-  }
-
-  const { workingSetCount, tonnage } = summariseWorkoutSets(sets, { exerciseTypeById, loadSemanticsById });
-
-  // Group the session's sets by exercise, in the order they were logged,
-  // for the share helpers.
-  const order = [];
-  const byExercise = new Map();
-  for (const s of sets ?? []) {
-    const id = s.exerciseId ?? s.exercise_id ?? null;
-    const name = byId.get(id)?.name ?? s.exerciseName ?? s.exercise_name ?? 'Exercise';
-    if (!byExercise.has(name)) { byExercise.set(name, { name, loggedSets: [] }); order.push(name); }
-    byExercise.get(name).loggedSets.push({
-      weight: s.weight, reps: s.actualReps ?? s.actual_reps,
-      setType: s.setType ?? s.set_type, evidenceClass: s.evidenceClass ?? s.evidence_class,
-    });
-  }
-  const exerciseData = order.map((n) => byExercise.get(n));
+  // D218 (founder order 2026-10-03, audit F-4, F-11): the post reports the
+  // session exactly as the workout summary does: one report over the same
+  // rows (sessionReport.js) and the shared exercise lookup (unfiltered,
+  // survivor-aware, each set's own name snapshot as the fallback), so its
+  // Working sets, total, exercise count, names and top set are the summary's.
+  const lookup = await getExerciseLookup().catch(() => null);
+  const report = buildSessionReport(sets ?? [], lookup);
+  const { workingSetCount, tonnage } = report;
+  const order = report.allExerciseNames;
+  const exerciseData = report.exercises.map((g) => ({ name: g.name, loggedSets: g.loggedSets }));
   const exerciseNames = order.slice(0, MAX_SESSION_EXERCISES);
 
   let routineName = workout.name ?? null;
@@ -136,8 +122,11 @@ export async function buildSessionPayload(workoutId, { userId = null, units = nu
     }
   } catch (e) { logError('Community.buildSessionPayload', e, { step: 'plan_name' }); }
 
-  let prs = Number.isFinite(Number(prCount)) ? Number(prCount) : null;
-  if (prs == null) prs = await countSessionPRs(workout, sets, byId, userId ?? workout.userId, units).catch(() => 0);
+  // D218 (audit F-11): an absent count used to read as 0 (Number(null) is 0),
+  // so the post never carried the session's records unless a caller passed
+  // them; now an absent count is replayed by the summary's rule.
+  let prs = (prCount != null && Number.isFinite(Number(prCount))) ? Number(prCount) : null;
+  if (prs == null) prs = await countSessionPRs(workout, sets, lookup, userId ?? workout.userId, units).catch(() => 0);
 
   const unitsOut = units === 'lbs' ? 'lbs' : (units === 'kg' ? 'kg' : unitsFromStore());
   return pick('session', {
@@ -145,7 +134,7 @@ export async function buildSessionPayload(workoutId, { userId = null, units = nu
     workingSets: workingSetCount ?? 0,
     duration: workout.durationMinutes ?? 0,
     tonnage: round(tonnage) ?? 0,
-    exerciseCount: order.length,
+    exerciseCount: report.exerciseCount,
     exercises: exerciseNames,
     prCount: prs ?? 0,
     topSet: topSetFromExerciseData(exerciseData),
@@ -157,26 +146,35 @@ export async function buildSessionPayload(workoutId, { userId = null, units = nu
 }
 
 /**
- * Count this session's PRs with the canonical detector, against the
- * exercise's history BEFORE this workout. Best effort: a read failure
- * means no badge, never a failed post.
+ * Count this session's records by the workout summary's own rule, the replay
+ * a workout opened from History uses (pastWorkoutPRs): one per lift; a lift's
+ * first-ever set is a starting point, never a record; working sets of
+ * weight-and-reps exercises only, explosive and cluster rows refused; each set
+ * judged against everything completed before this workout's first set plus
+ * the session's own earlier sets. D218 (audit F-11): this counted every SET
+ * that beat a bar (a first session on a new routine posted one record per
+ * set) against at most the latest 100 sets of the lift, in any state.
+ * Best effort: a read failure means no badge, never a failed post.
  */
-async function countSessionPRs(workout, sets, byId, userId, units) {
-  if (!userId) return 0;
-  const historyByExercise = new Map();
-  let count = 0;
-  for (const s of sets ?? []) {
-    const id = s.exerciseId ?? s.exercise_id ?? null;
-    if (!id) continue;
-    if (!historyByExercise.has(id)) {
-      // eslint-disable-next-line no-await-in-loop
-      const rows = await getWorkoutSetsForExercise(id, userId).catch(() => []);
-      historyByExercise.set(id, (rows ?? []).filter((r) => (r.workoutId ?? r.workout_id) !== workout.id));
-    }
-    const prs = detectPR(s, historyByExercise.get(id) ?? [], byId.get(id) ?? null, units === 'lbs' ? 'lbs' : 'kg');
-    if (prs?.length) count += 1;
+async function countSessionPRs(workout, sets, lookup, userId, units) {
+  if (!userId || !Array.isArray(sets) || !sets.length) return 0;
+  const times = sets.map((s) => Number(s.createdAt ?? s.created_at)).filter((n) => n > 0);
+  const cutoff = times.length ? Math.min(...times) : (Number(workout.startedAt) || 0);
+  if (!(cutoff > 0)) return 0;
+  const ids = new Set(sets.map((s) => s.exerciseId ?? s.exercise_id).filter(Boolean));
+  const prior = await getPriorCompletedSets(userId, cutoff, 0);
+  const priorSetsByExercise = {};
+  for (const r of prior ?? []) {
+    const id = r.exercise_id ?? r.exerciseId;
+    if (!ids.has(id) || (r.workout_id ?? r.workoutId) === workout.id) continue;
+    (priorSetsByExercise[id] ??= []).push(r);
   }
-  return count;
+  return pastWorkoutPRs({
+    sets,
+    priorSetsByExercise,
+    exerciseById: Object.fromEntries(lookup?.byId ?? []),
+    units: units === 'lbs' ? 'lbs' : 'kg',
+  }).length;
 }
 
 /**
@@ -210,7 +208,8 @@ export async function buildBlockPayload(mesocycleId, { userId = null, units = nu
 
   let lifts = [];
   try {
-    lifts = await bestLiftsForBlock(userId, training, startMs);
+    const lookup = await getExerciseLookup().catch(() => null);
+    lifts = await bestLiftsForBlock(userId, training, startMs, lookup);
   } catch (e) {
     logError('Community.buildBlockPayload', e, { step: 'lifts' });
     lifts = [];
@@ -227,10 +226,16 @@ export async function buildBlockPayload(mesocycleId, { userId = null, units = nu
   });
 }
 
-async function bestLiftsForBlock(userId, training, startMs) {
-  const rows = (training?.sets ?? []).map((s) => ({
+async function bestLiftsForBlock(userId, training, startMs, lookup = null) {
+  // D218 (audit F-4, F-12): a lift is named through the shared lookup (the
+  // exercise's current name, then the set's own snapshot), and only a set
+  // the live detector could call a record counts on either side
+  // (isEstimatedMaxRow: no myo-rep, rest-pause or explosive row, no distance
+  // or duration set, no assistance machine).
+  const eligible = (r) => isEstimatedMaxRow(r, lookup?.typeFor?.(r) ?? 'weight_reps', lookup?.semanticsFor?.(r) ?? 'total');
+  const rows = (training?.sets ?? []).filter(eligible).map((s) => ({
     exerciseId: s.exercise_id ?? s.exerciseId,
-    exerciseName: s.exercise_name ?? s.exerciseName ?? 'Lift',
+    exerciseName: lookup?.nameFor ? lookup.nameFor(s) : (s.exercise_name ?? s.exerciseName ?? 'Lift'),
     weight: s.weight,
     reps: s.actual_reps ?? s.actualReps,
     evidenceClass: s.evidence_class ?? s.evidenceClass ?? null,
@@ -244,6 +249,7 @@ async function bestLiftsForBlock(userId, training, startMs) {
     const id = r.exercise_id ?? r.exerciseId;
     if (!id || !(Number(r.weight) > 0)) continue;
     if ((r.set_type ?? r.setType) === 'warmup') continue;
+    if (!eligible(r)) continue;
     const e = calculate1RM(r.weight, r.actual_reps ?? r.actualReps);
     if (!(e > (priorByEx.get(id) ?? 0))) continue;
     priorByEx.set(id, e);

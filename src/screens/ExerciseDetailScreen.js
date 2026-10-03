@@ -27,13 +27,15 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
-  getExerciseById, getCompletedSetHistoryForExercise, getAllExercises,
+  getExerciseById, getCompletedSetHistoryForExercise, getAllExercises, getExerciseLookup,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
   deleteExercise, getRoutinesReferencingExercise,
 } from '../lib/database';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
-import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
+import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, loadMultiplierFor, isE1rmEligibleRow, isEstimatedMaxRow, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
+import { survivorExerciseId } from '../lib/exercise/retiredIds';
+import { exerciseNameFor, exerciseTypeOf, loadSemanticsOf } from '../lib/exercise/lookup';
 import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
@@ -101,6 +103,16 @@ const CHART_METRICS = [
   { key: 'bestSetVolume', label: 'Best-set lifted' },
 ];
 
+// D218 (founder order 2026-10-03, audit F-9): on an assistance machine the
+// number entered is the HELP (D107-2: less is stronger), so there is no
+// estimated max, and the help is not weight lifted (the load-semantics spec
+// leaves it out of every total). Its chart offers the assistance used and the
+// reps; nothing else would be true.
+const ASSISTED_CHART_METRICS = [
+  { key: 'heaviest', label: 'Assistance' },
+  { key: 'reps', label: 'Total reps' },
+];
+
 // Whether a metric's values are a weight in the display unit (so the tooltip
 // and takeaway append kg/lbs) or a bare count (reps) / derived load.
 const WEIGHT_METRICS = new Set(['e1rm', 'heaviest']);
@@ -119,10 +131,16 @@ const LOAD_TOTAL_METRICS = new Set(['volume', 'bestSetVolume']);
 // them. Pure and exported for unit testing. allSessions is the screen's
 // per-workout set groups (each an array of sets). bestSetVolume is computed
 // here from the same working-set grouping (heaviest working set's load × reps).
-export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById) {
+// D218 (audit F-13): the optional `loadSemanticsById` map is passed through, so
+// an assistance machine's e1RM lens has no points (the number entered is the
+// help); every other lens is unchanged.
+export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById, loadSemanticsById = null) {
   const flatSets = (allSessions || []).flat();
-  const series = buildExerciseMetricSeries(flatSets, exerciseTypeById)?.get(exerciseId);
+  const series = buildExerciseMetricSeries(flatSets, exerciseTypeById, loadSemanticsById)?.get(exerciseId);
   if (!series) return [];
+  const semanticsOfExercise = loadSemanticsById
+    ? (typeof loadSemanticsById.get === 'function' ? loadSemanticsById.get(exerciseId) : loadSemanticsById[exerciseId])
+    : 'total';
 
   // Session dates + best-set volume, grouped with the SAME rules
   // buildExerciseMetricSeries uses (non-warmup working sets), so the arrays
@@ -153,7 +171,8 @@ export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeByI
     heaviest: series.heaviest[i] ?? 0,
     reps: series.reps[i] ?? 0,
     volume: series.volume[i] ?? 0,
-    bestSetVolume: Math.round(sess.topWeight * sess.topReps),
+    // D218: on the summary's basis, a per-hand set twice (loadMultiplierFor).
+    bestSetVolume: Math.round(sess.topWeight * sess.topReps * loadMultiplierFor(semanticsOfExercise)),
   }));
 }
 
@@ -253,7 +272,12 @@ export function splitInstructionSteps(text) {
 }
 
 export default function ExerciseDetailScreen({ navigation, route }) {
-  const { exerciseId } = route.params || {};
+  const { exerciseId: routeExerciseId } = route.params || {};
+  // D218 (founder order 2026-10-03, audit F-6): a retired exercise id in the
+  // route (a stale link, a stored reference) is read as the exercise it
+  // became, for the exercise, its history and its goal alike; every other id
+  // is unchanged. The name `exerciseId` stays the one every read below uses.
+  const exerciseId = survivorExerciseId(routeExerciseId);
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, units } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -331,18 +355,46 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     setLoadingExercise(true);
     setLoadError(null);
     try {
-      const ex = await getExerciseById(exerciseId);
+      let ex = await getExerciseById(exerciseId);
+      let mySets = null;
       if (!ex) {
-        setExercise(null);
-        setLoadError('not_found');
-        return;
+        // D218 (founder order 2026-10-03, audit F-5): the app links here from
+        // a History row and a Lift Progress row for an exercise the library
+        // cannot resolve (an id from another device, a row that was never
+        // seeded), and this used to be a not-found card although the sets
+        // were right there. When the sets exist, render from a STAND-IN
+        // named by the shared lookup (the sets' own name snapshot, a retired
+        // name read as its survivor, else "Exercise"): the header, the
+        // history, the chart and the records, with no goal, substitutes,
+        // edit or delete (there is no row to attach them to) and one muted
+        // line saying why. A name that does resolve in the library (a
+        // snapshot match) lends its type and load semantics, so its sets are
+        // judged exactly as History and Lift Progress judge them. Only with no
+        // sets either does the not-found card show.
+        mySets = await getCompletedSetHistoryForExercise(exerciseId, user.id);
+        if (!Array.isArray(mySets) || mySets.length === 0) {
+          setExercise(null);
+          setLoadError('not_found');
+          return;
+        }
+        let lookup = null;
+        try { lookup = await getExerciseLookup(); } catch (_) { lookup = null; } // naming aid only: a failed read leaves the snapshot name
+        const byName = lookup?.resolve(mySets[0]) ?? null;
+        ex = {
+          id: exerciseId,
+          name: exerciseNameFor(lookup, mySets[0]),
+          exerciseType: exerciseTypeOf(byName),
+          loadSemantics: loadSemanticsOf(byName),
+          isCustom: 0,
+          unresolved: true,
+        };
       }
       setExercise(ex);
 
       // History, group by workout, last 8 sessions
       // C6 P10-1 (D97-18): all completed history - a records wall may
       // never derive from a rolling window.
-      const mySets = await getCompletedSetHistoryForExercise(exerciseId, user.id);
+      if (!mySets) mySets = await getCompletedSetHistoryForExercise(exerciseId, user.id);
 
       const byWorkout = {};
       for (const s of mySets) {
@@ -358,17 +410,33 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       const plateauResult = detectPlateau(sessionArrays, ex?.defaultRepMin ?? 6, ex?.defaultRepMax ?? 12);
       setPlateau(plateauResult.plateau ? plateauResult : null);
 
-      // Compute local PRs from working sets
-      // EL-7: a PR is a PR (circuit sets count) but a ballistic set is not
-      // a one-rep-max proxy, so it never produces a PR or a best e1RM.
+      // Compute local PRs from working sets.
+      // D218 (founder order 2026-10-03, audit F-14): the records read ONLY rows
+      // isEstimatedMaxRow accepts (algorithms.js, the one gate every
+      // estimated-max and record read shares with the live detector): no
+      // warm-up, myo-reps, rest-pause or explosive row (their reps are summed
+      // efforts or not maximal; EL-7 kept a PR a PR for a circuit set), no
+      // distance or duration set (metres and seconds in the weight and reps
+      // columns), no assistance machine, and a real load and real reps. Est.
+      // max, Heaviest weight and Most reps all come from those rows, so a
+      // myo-reps set can no longer inflate "Most reps" or mark the person's
+      // own goal achieved.
+      const exType = ex.exerciseType ?? ex.exercise_type ?? 'weight_reps';
+      const exSemantics = ex.loadSemantics ?? ex.load_semantics ?? 'total';
+      const repsAndWeight = exType === 'weight_reps' || exType === 'weighted_bodyweight';
+      // EL-7's own pre-filter stays as it was (pinned by
+      // el7EvidenceClasses.test.js: warm-ups and ballistic rows out, a real
+      // load and real reps); isEstimatedMaxRow then adds the e1RM-eligibility,
+      // exercise-type and load-semantics rules on top of it.
       const workingSets = mySets.filter(
         s => (s.setType ?? s.set_type) !== 'warmup' && !isBallisticEvidenceRow(s) && (s.weight || 0) > 0 && (s.actualReps || 0) > 0,
       );
+      const estimatedRows = workingSets.filter((s) => isEstimatedMaxRow(s, exType, exSemantics));
       let computedBest1RM = 0;
-      if (workingSets.length > 0) {
-        const computedPRs = [];
+      const computedPRs = [];
+      if (estimatedRows.length > 0) {
         let best1RMVal = 0, best1RMSet = null, heaviest = null, mostReps = null;
-        for (const s of workingSets) {
+        for (const s of estimatedRows) {
           const est = calculate1RM(s.weight, s.actualReps);
           if (est > best1RMVal) { best1RMVal = est; best1RMSet = s; }
           if (!heaviest || s.weight > heaviest.weight) heaviest = s;
@@ -378,12 +446,37 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         if (best1RMSet) computedPRs.push({ id: 'pr_1rm', record_type: '1rm_estimate', value: best1RMVal, reps: best1RMSet.actualReps, achieved_date: best1RMSet.createdAt });
         if (heaviest)   computedPRs.push({ id: 'pr_heavy', record_type: 'heaviest_weight', value: heaviest.weight, reps: heaviest.actualReps, achieved_date: heaviest.createdAt });
         if (mostReps && mostReps !== heaviest) computedPRs.push({ id: 'pr_reps', record_type: 'most_reps', value: mostReps.weight, reps: mostReps.actualReps, achieved_date: mostReps.createdAt });
-        setPRs(computedPRs);
+      } else if (exSemantics === 'assisted' && repsAndWeight) {
+        // An assistance machine (D107-2): the number entered is the help, so
+        // less is stronger and there is no estimated max or heaviest weight.
+        // The card shows the LEAST assistance (ties to more reps) and the most
+        // reps at any assistance, from the same e1RM-eligible rows with a real
+        // load and real reps.
+        let least = null, mostReps = null;
+        for (const s of workingSets) {
+          if (!isE1rmEligibleRow(s)) continue;
+          if (!least || s.weight < least.weight || (s.weight === least.weight && s.actualReps > least.actualReps)) least = s;
+          if (!mostReps || s.actualReps > mostReps.actualReps) mostReps = s;
+        }
+        if (least) computedPRs.push({ id: 'pr_assist', record_type: 'least_assistance', value: least.weight, reps: least.actualReps, achieved_date: least.createdAt });
+        if (mostReps) computedPRs.push({ id: 'pr_reps', record_type: 'most_reps', value: mostReps.weight, reps: mostReps.actualReps, achieved_date: mostReps.createdAt });
+      }
+      setPRs(computedPRs);
+
+      // F-5: a stand-in has no row to hang a goal or substitutes on (and keeps
+      // none from an exercise this screen showed before).
+      if (ex.unresolved) {
+        setGoal(null);
+        setSubstitutes([]);
+        return;
       }
 
       // Load goal and auto-detect achievement
       const loadedGoal = await getExerciseGoal(user.id, exerciseId);
-      if (loadedGoal && !loadedGoal.achievedAt && computedBest1RM >= loadedGoal.targetWeight) {
+      // D218 (audit F-14): auto-achievement runs only for weight-and-reps
+      // exercises that are not assistance machines, on the gated best above.
+      const goalCheckEligible = repsAndWeight && exSemantics !== 'assisted';
+      if (goalCheckEligible && loadedGoal && !loadedGoal.achievedAt && computedBest1RM >= loadedGoal.targetWeight) {
         await markGoalAchieved(loadedGoal.id);
         const updatedGoal = { ...loadedGoal, achievedAt: Date.now() };
         setGoal(updatedGoal);
@@ -604,8 +697,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   // higher figure inches away. `allSessions` is the uncapped state (COMP-019)
   // -- flattening THAT instead makes best1RM genuinely all-time, and the name
   // now says what it is.
+  //
+  // D218 (founder order 2026-10-03, audit F-14): the same estimated-max rows
+  // as the Personal records card (isEstimatedMaxRow), so the overview line,
+  // the goal card's progress and the records card can never show two
+  // different bests (the rule B5 pinned) and a myo-reps row, a distance
+  // exercise's metres or an assistance machine's assistance never reads as
+  // an estimated max here either.
+  const detailType = exercise.exerciseType ?? exercise.exercise_type ?? 'weight_reps';
+  const detailSemantics = exercise.loadSemantics ?? exercise.load_semantics ?? 'total';
   const allSets = allSessions.flat();
   const best1RM = allSets.reduce((best, s) => {
+    if (!isEstimatedMaxRow(s, detailType, detailSemantics)) return best;
     const est = calculate1RM(s.weight || 0, s.actualReps || 0);
     return est > best ? est : best;
   }, 0);
@@ -614,6 +717,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   // 0 or non-numeric after a bad restore) can turn the division below into
   // NaN/Infinity; finiteOr keeps the progress bar width and "to go" caption
   // from ever rendering "NaN%"/"NaNkg to go" (EP-23/UI-11).
+  const goalEligible = !exercise.unresolved
+    && (detailType === 'weight_reps' || detailType === 'weighted_bodyweight')
+    && detailSemantics !== 'assisted';
   const rawGoalProgress = goal && !goal.achievedAt
     ? Math.min(1, best1RM / goal.targetWeight)
     : goal && goal.achievedAt
@@ -631,14 +737,19 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   // metric switcher redraws without reloading. Built via the shared
   // buildExerciseMetricSeries, so a distance/duration exercise yields no points.
   const exerciseTypeById = new Map([[exerciseId, exercise.exerciseType ?? 'weight_reps']]);
-  const allChartPoints = buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById);
+  const loadSemanticsById = new Map([[exerciseId, detailSemantics]]);
+  const allChartPoints = buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById, loadSemanticsById);
 
   const e1rmDateOf = (p) => p.date;
   const chartWin = windowByKey(TREND_WINDOWS, chartWindowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
   const windowedPoints = filterByWindow(allChartPoints, e1rmDateOf, chartWin.days);
   const chartCoversAll = windowedPoints.length === allChartPoints.length;
-  const activeYKey = chartMetric;
-  const activeMetricIsWeight = WEIGHT_METRICS.has(chartMetric);
+  // D218 (audit F-9): the lenses this exercise can truthfully show; a stored
+  // choice of a lens it does not offer reads its first lens.
+  const chartMetrics = detailSemantics === 'assisted' ? ASSISTED_CHART_METRICS : CHART_METRICS;
+  const shownMetric = chartMetrics.some(m => m.key === chartMetric) ? chartMetric : chartMetrics[0].key;
+  const activeYKey = shownMetric;
+  const activeMetricIsWeight = WEIGHT_METRICS.has(shownMetric);
 
   // CP-5: sessions that earned a personal best, mapped onto the CURRENTLY
   // windowed points so the chart's highlightIndices always match what's on
@@ -648,7 +759,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     if (prSessionDates.has(p.date)) acc.push(i);
     return acc;
   }, []);
-  const chartTakeaway = (windowedPoints.length >= 2 && activeMetricIsWeight)
+  // An assistance machine's takeaway would call the most help its "best".
+  const chartTakeaway = (windowedPoints.length >= 2 && activeMetricIsWeight && detailSemantics !== 'assisted')
     ? e1rmTakeaway({
         windowKey: chartWindowKey, coversAll: chartCoversAll, points: windowedPoints,
         dateOf: e1rmDateOf, values: windowedPoints.map(p => p[activeYKey]), unit: units,
@@ -677,7 +789,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title={exercise.name} />
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Overview */}
+        {/* Overview. A stand-in (D218, F-5: sets logged on an exercise the
+            library cannot resolve) has no muscle, equipment or ratings to show,
+            so it carries one muted line saying why instead of invented
+            placeholders. */}
+        {exercise.unresolved ? (
+          <Text style={[styles.secMuscleLabel, live.secMuscleLabel]}>
+            This exercise is not in your library on this device. Its logged sets are shown here.
+          </Text>
+        ) : (
         <AnimatedEntrance index={0}>
         <Card style={styles.overviewCard}>
           <View style={styles.tags}>
@@ -768,13 +888,17 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         </Card>
         </AnimatedEntrance>
+        )}
 
         {/* Personal Record highlight card */}
         {prs.length > 0 && (() => {
           const pr1rm   = prs.find(p => p.record_type === '1rm_estimate');
           const prHeavy = prs.find(p => p.record_type === 'heaviest_weight');
+          // D218 (F-14): an assistance machine's headline is the LEAST
+          // assistance (D107-2: less is stronger), never an estimated max.
+          const prAssist = prs.find(p => p.record_type === 'least_assistance');
           const prReps  = prs.find(p => p.record_type === 'most_reps');
-          const displayPR = pr1rm || prHeavy;
+          const displayPR = pr1rm || prHeavy || prAssist;
           if (!displayPR) return null;
           return (
             <Card tone="primary" style={styles.prHighlightCard}>
@@ -801,7 +925,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     {safeToFixed(displayPR.value, 1)}{units}
                   </Text>
                   <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
-                    {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
+                    {displayPR.record_type === '1rm_estimate' ? 'Est. max'
+                      : displayPR.record_type === 'least_assistance' ? 'Least assistance' : 'Heaviest weight'}
                   </Text>
                 </View>
               )}
@@ -838,8 +963,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </Animated.View>
         )}
 
-        {/* Goal section */}
-        {!goal && (
+        {/* Goal section. D218 (F-5, F-14): a target is an estimated max, so it
+            is offered and shown only for an exercise that has one (weight and
+            reps, not an assistance machine) and a real exercise row: a stand-in
+            has none to hang a target on, and a distance or timed exercise or an
+            assistance machine would read "- to 100kg, 100kg to go". */}
+        {!goal && goalEligible && (
           <Button
             title="Set a target weight"
             icon="flag-outline"
@@ -852,7 +981,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           />
         )}
 
-        {goal && (
+        {goal && goalEligible && (
           <Card style={styles.goalCard}>
             <View style={styles.goalCardHeader}>
               <View style={styles.goalCardLeft}>
@@ -914,9 +1043,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               {/* T24/O20: plain-English gloss for the total-lifted lenses.
                   Not GLOSSARY.volume -- that entry describes the app's
                   OTHER "Volume" (weekly hard sets), a different concept. */}
-              {LOAD_TOTAL_METRICS.has(chartMetric) && (
+              {LOAD_TOTAL_METRICS.has(shownMetric) && (
                 <InfoTooltip
-                  text={chartMetric === 'volume'
+                  text={shownMetric === 'volume'
                     ? "Total weight moved: each set's weight times reps, added up."
                     : "Your single heaviest set that session: its weight times reps."}
                   size={11}
@@ -927,16 +1056,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               accessibilityPrefix="strength trend window" />
             {!!chartTakeaway && <Text style={[styles.chartTakeaway, live.chartTakeaway]}>{chartTakeaway}</Text>}
             <View style={styles.chartToggle}>
-              {CHART_METRICS.map(m => (
+              {chartMetrics.map(m => (
                 <TouchableOpacity
                   key={m.key}
-                  style={[styles.chartToggleBtn, live.chartToggleBtn, chartMetric === m.key && [styles.chartToggleBtnActive, live.chartToggleBtnActive]]}
+                  style={[styles.chartToggleBtn, live.chartToggleBtn, shownMetric === m.key && [styles.chartToggleBtnActive, live.chartToggleBtnActive]]}
                   onPress={() => selectChartMetric(m.key)}
                   accessibilityRole="button"
                   accessibilityLabel={m.label}
-                  accessibilityState={{ selected: chartMetric === m.key }}
+                  accessibilityState={{ selected: shownMetric === m.key }}
                 >
-                  <Text style={[styles.chartToggleBtnText, live.chartToggleBtnText, chartMetric === m.key && [styles.chartToggleBtnTextActive, live.chartToggleBtnTextActive]]}>
+                  <Text style={[styles.chartToggleBtnText, live.chartToggleBtnText, shownMetric === m.key && [styles.chartToggleBtnTextActive, live.chartToggleBtnTextActive]]}>
                     {m.label}
                   </Text>
                 </TouchableOpacity>
@@ -956,7 +1085,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   curved
                   interactive
                   highlightIndices={prHighlightIndices}
-                  accessibilityLabel={`${CHART_METRICS.find(m => m.key === chartMetric)?.label ?? 'Strength'} trend chart`}
+                  accessibilityLabel={`${chartMetrics.find(m => m.key === shownMetric)?.label ?? 'Strength'} trend chart`}
                   formatTooltip={(i) => {
                     const p = windowedPoints[i];
                     if (!p) return null;
@@ -967,7 +1096,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     const raw = p[activeYKey];
                     const title = activeMetricIsWeight
                       ? `${Math.round(raw)} ${units}`
-                      : LOAD_TOTAL_METRICS.has(chartMetric)
+                      : LOAD_TOTAL_METRICS.has(shownMetric)
                         ? `${Math.round(raw).toLocaleString('en-GB')} ${units}`
                         : `${Math.round(raw)}`;
                     return {
@@ -980,7 +1109,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             ) : (
               <Text style={[styles.chartEmptyHint, live.chartEmptyHint]}>Not enough data in this window yet.</Text>
             )}
-            {chartMetric === 'e1rm' && (
+            {shownMetric === 'e1rm' && (
               <Text style={[styles.e1rmNote, live.e1rmNote]}>
                 Estimated from your top set using standard strength formulas. Best for rep ranges 2 to 10.
               </Text>
@@ -994,9 +1123,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <SectionLabel>History (last {history.length} sessions)</SectionLabel>
             {history.map((sessionSets, i) => {
               const firstSet = sessionSets[0];
-              // EL-7: ballistic sets never estimate a one-rep max.
+              // EL-7: ballistic sets never estimate a one-rep max. D218 (F-14):
+              // nor does any row isEstimatedMaxRow refuses (warm-up, myo-reps,
+              // rest-pause, a distance or duration set, an assistance machine),
+              // the rows the records card and the overview read.
               const e1rmSets = sessionSets.filter(s => !isBallisticEvidenceRow(s));
-              const sessionEst1RM = e1rmSets.length ? Math.max(...e1rmSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0))) : 0;
+              const estSets = e1rmSets.filter(s => isEstimatedMaxRow(s, detailType, detailSemantics));
+              const sessionEst1RM = estSets.length ? Math.max(...estSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0))) : 0;
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
                   <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
@@ -1049,14 +1182,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons
                   name={pr.record_type === '1rm_estimate' ? 'trophy-outline' :
-                   pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
+                   pr.record_type === 'heaviest_weight' || pr.record_type === 'least_assistance' ? 'barbell-outline' : 'repeat-outline'}
                   size={22}
                   color={t.colors.gold}
                 />
                 <View style={styles.prInfo}>
                   <Text style={[styles.prLabel, live.prLabel]}>
                     {pr.record_type === '1rm_estimate' ? 'Est. max' :
-                     pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
+                     pr.record_type === 'heaviest_weight' ? 'Heaviest weight' :
+                     pr.record_type === 'least_assistance' ? 'Least assistance' : 'Most reps'}
                   </Text>
                   <Text style={[styles.prValue, live.prValue]}>
                     {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :

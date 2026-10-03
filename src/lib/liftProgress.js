@@ -4,10 +4,19 @@
 // sparkline draws and the headline numbers it shows.
 //
 // Pure and side-effect free so it unit-tests without a database. The
-// screen owns loading (getCompletedWorkoutSets + getAllExercises) and
+// screen owns loading (getCompletedWorkoutSets + getExerciseLookup) and
 // rendering; this owns the maths.
 
-import { calculate1RM, isE1rmEligibleRow } from './algorithms';
+import { calculate1RM, isE1rmEligibleRow, isEstimatedMaxRow, loadMultiplierFor } from './algorithms';
+import { buildExerciseLookup, exerciseTypeOf, loadSemanticsOf } from './exercise/lookup';
+
+// A Map (the screens' type maps) or a plain object (the shared lookup's
+// `exerciseTypeById` / `loadSemanticsById`), read the same way.
+function mapGet(mapOrObject, key) {
+  if (!mapOrObject) return undefined;
+  if (typeof mapOrObject.get === 'function') return mapOrObject.get(key);
+  return mapOrObject[key];
+}
 
 // A "session" is one workout. We group an exercise's sets by workout_id
 // and take the best estimated 1RM in that session as the session's point,
@@ -18,7 +27,26 @@ import { calculate1RM, isE1rmEligibleRow } from './algorithms';
 //
 //   sets       array of completed workout_sets (camelCase, newest first
 //              is fine, order is normalised here)
-//   exercises  array of exercise records (id, name, primaryMuscle)
+//   exercisesOrLookup
+//              the shared exercise lookup (src/lib/exercise/lookup.js,
+//              database.getExerciseLookup) or an array of exercise records
+//              (id, name, primaryMuscle, exerciseType, loadSemantics), the
+//              shape recompReframe.js and athleteProfileSummary.js still pass
+//
+// D218 (founder order 2026-10-03, audit F-13 and F-4):
+//  - A set contributes only through isEstimatedMaxRow (algorithms.js), the one
+//    gate every estimated-max and record READ shares with the live record
+//    detector and Exercise Detail's chart: no warm-up, myo-reps, rest-pause or
+//    explosive row (their reps are summed efforts or not maximal), no
+//    distance or duration set (metres and seconds in the weight and reps
+//    columns), no assistance machine (the number entered is the help, so
+//    more help read as a bigger lift), and a real load and real reps. The
+//    best, the latest weight, the trend and the change all come only from
+//    those sets, so an exercise with none of them has no row (it has no
+//    estimated max), and this list can no longer disagree with the chart.
+//  - Rows group by the RESOLVED exercise (a retired id and its survivor are
+//    one row), and the name is the lookup's: the row's name, else the set's
+//    own name snapshot (through the survivor name), else "Exercise".
 //
 // Returns an array of rows, most recently trained first:
 //   {
@@ -31,27 +59,32 @@ import { calculate1RM, isE1rmEligibleRow } from './algorithms';
 //     trend,               est 1RM per session, oldest -> newest (sparkline)
 //     deltaPct,            percent change from first to latest session, or null
 //   }
-export function buildLiftProgressRows(sets, exercises) {
-  const exById = new Map();
-  for (const ex of exercises || []) {
-    if (ex && ex.id != null) exById.set(ex.id, ex);
-  }
+export function buildLiftProgressRows(sets, exercisesOrLookup) {
+  const isLookup = !!exercisesOrLookup && typeof exercisesOrLookup.resolve === 'function';
+  const list = isLookup || !Array.isArray(exercisesOrLookup) ? [] : exercisesOrLookup;
+  const lookup = isLookup ? exercisesOrLookup : buildExerciseLookup(list);
+  // The array form also matches a row by its own id as given: the lookup
+  // reads string ids (every real exercise id is one), and the array's other
+  // callers and their fixtures must keep working unchanged.
+  const directById = isLookup ? null : new Map(list.filter((e) => e && e.id != null).map((e) => [e.id, e]));
+  const rowFor = (s) => lookup.resolve(s) ?? directById?.get(s.exerciseId ?? s.exercise_id) ?? null;
 
-  // Group working sets by exercise, then by session (workout_id).
+  // Group estimated-max sets by exercise, then by session (workout_id).
   const byExercise = new Map();
   for (const s of sets || []) {
     if (!s) continue;
-    if (s.setType === 'warmup') continue; // working sets only
-    const exerciseId = s.exerciseId ?? s.exercise_id;
-    if (exerciseId == null) continue;
+    const rawId = s.exerciseId ?? s.exercise_id;
+    if (rawId == null) continue;
+    const resolved = rowFor(s);
+    if (!isEstimatedMaxRow(s, exerciseTypeOf(resolved), loadSemanticsOf(resolved))) continue;
     const weight = Number(s.weight) || 0;
     const reps = Number(s.actualReps ?? s.actual_reps) || 0;
-    if (weight <= 0 || reps <= 0) continue; // unlogged / bodyweight-less rows
     const at = Number(s.createdAt ?? s.created_at) || 0;
     const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
+    const exerciseId = resolved?.id ?? rawId;
 
-    if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, new Map());
-    const sessions = byExercise.get(exerciseId);
+    if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, { firstSet: s, resolved, sessions: new Map() });
+    const { sessions } = byExercise.get(exerciseId);
     if (!sessions.has(sessionId)) {
       sessions.set(sessionId, { at: 0, bestE1rm: 0, topWeight: 0 });
     }
@@ -62,7 +95,7 @@ export function buildLiftProgressRows(sets, exercises) {
   }
 
   const rows = [];
-  for (const [exerciseId, sessionMap] of byExercise) {
+  for (const [exerciseId, { firstSet, resolved, sessions: sessionMap }] of byExercise) {
     const sessions = [...sessionMap.values()].sort((a, b) => a.at - b.at);
     if (sessions.length === 0) continue;
 
@@ -77,11 +110,10 @@ export function buildLiftProgressRows(sets, exercises) {
       ? Math.round(((latest.bestE1rm - first.bestE1rm) / first.bestE1rm) * 100)
       : null;
 
-    const ex = exById.get(exerciseId);
     rows.push({
       exerciseId,
-      name: ex?.name ?? 'Exercise',
-      primaryMuscle: ex?.primaryMuscle ?? ex?.primary_muscle ?? null,
+      name: resolved?.name || lookup.nameFor(firstSet),
+      primaryMuscle: resolved?.primaryMuscle ?? resolved?.primary_muscle ?? null,
       sessions: sessions.length,
       lastTrainedAt: latest.at,
       bestE1rm: Math.round(bestE1rm * 10) / 10,
@@ -108,16 +140,28 @@ export function buildLiftProgressRows(sets, exercises) {
 // weight*reps or MAX(weight) for them would plot nonsense ("heaviest" metres,
 // "volume" = metres*seconds). Their sets are skipped entirely. Anything not in
 // the map defaults to weight_reps and is plotted as before.
-export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
+//
+// loadSemanticsById (optional Map<exerciseId, load_semantics>, or the shared
+// lookup's plain object; D218, audit F-13): on an assistance machine
+// ('assisted') the number entered is the HELP, so an estimated max on it reads
+// more help as a bigger lift (D107-2: less assistance is stronger). Such an
+// exercise's e1RM series is empty; every other lens keeps its rows. The volume
+// lens counts load as the workout summary's Total lifted does
+// (loadMultiplierFor: a per-hand set twice, an assistance machine's help not
+// at all), so a dumbbell lift's chart total is the total the summary shows.
+export function buildExerciseMetricSeries(sets, exerciseTypeById = null, loadSemanticsById = null) {
   const NON_LOAD = new Set(['distance', 'duration']);
   const byExercise = new Map();
+  const assistedIds = new Set();
   for (const s of sets || []) {
     if (!s) continue;
     if (s.setType === 'warmup') continue;
     const exerciseId = s.exerciseId ?? s.exercise_id;
     if (exerciseId == null) continue;
-    const type = exerciseTypeById ? exerciseTypeById.get(exerciseId) : null;
+    const type = mapGet(exerciseTypeById, exerciseId);
     if (type && NON_LOAD.has(type)) continue;
+    const semantics = mapGet(loadSemanticsById, exerciseId);
+    const assisted = semantics === 'assisted';
     const weight = Number(s.weight) || 0;
     const reps = Number(s.actualReps ?? s.actual_reps) || 0;
     if (weight <= 0 || reps <= 0) continue;
@@ -138,19 +182,20 @@ export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
     // SUM of efforts) could spike the strength chart while the plateau
     // detector, which has refused those rows since C10D, saw no such jump.
     // Every other series (heaviest, reps, volume) keeps its existing rows.
-    if (isE1rmEligibleRow(s)) {
+    if (assisted) assistedIds.add(exerciseId);
+    else if (isE1rmEligibleRow(s)) {
       sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
     }
     sess.heaviest = Math.max(sess.heaviest, weight);
     sess.reps += reps;
-    sess.volume += weight * reps;
+    sess.volume += weight * reps * loadMultiplierFor(semantics);
   }
 
   const out = new Map();
   for (const [exerciseId, sessionMap] of byExercise) {
     const ordered = [...sessionMap.values()].sort((a, b) => a.at - b.at);
     out.set(exerciseId, {
-      e1rm: ordered.map(s => Math.round(s.e1rm * 10) / 10),
+      e1rm: assistedIds.has(exerciseId) ? [] : ordered.map(s => Math.round(s.e1rm * 10) / 10),
       heaviest: ordered.map(s => Math.round(s.heaviest * 10) / 10),
       reps: ordered.map(s => s.reps),
       volume: ordered.map(s => Math.round(s.volume)),

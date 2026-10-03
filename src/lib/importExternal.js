@@ -432,6 +432,20 @@ export async function runImport(userId, parsed, analysis) {
       // older exports. Strong uses Set Order which is 1-indexed.
       // Normalise to 1-indexed per-exercise.
       const perExCounter = new Map();
+      // D218 (founder order 2026-10-03, audit F-22 and P37): a set row carries
+      // its workout's OWN time, not the import's. `created_at` used to be `now`
+      // for every set, so History (keyed by the workout's date) was right while
+      // every surface keyed by set time (the volume heatmap and its strip, the
+      // weekly volume trend, the Consistency load bars, the block rows, PR
+      // timelines) put the whole imported history in the week of the import,
+      // in one identical millisecond. `created_at` is the workout's started_at
+      // plus the set's 0-based position among the rows written for THIS
+      // workout (a skipped set does not use one), so the rows keep their order
+      // and stay in the workout's own week. `updated_at` stays the import time
+      // so the sync push (last-write-wins on updated_at) still carries them.
+      // Rows imported before this change are not repaired (ruled: the cloud
+      // holds no imported sets today).
+      let writtenIndex = 0;
       for (const s of w.sets) {
         const exerciseId = analysis._mappedIndex?.get(s.exerciseName)
           ?? newExerciseIds.get(s.exerciseName);
@@ -452,9 +466,10 @@ export async function runImport(userId, parsed, analysis) {
           [
             sid, userId, wid, exerciseId, s.exerciseName, setNum, s.setType || 'straight',
             s.reps || 0, s.weightKg ?? null, s.rpe ?? null,
-            s.notes || null, now, now,
+            s.notes || null, w.startedAt + writtenIndex, now,
           ],
         );
+        writtenIndex += 1;
         sets++;
       }
     }

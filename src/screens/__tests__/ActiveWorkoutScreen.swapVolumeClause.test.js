@@ -65,7 +65,11 @@ describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () 
       /export async function getWeeklyVolumeByMuscle\([\s\S]*?\n\}/,
     )?.[0] ?? '';
     expect(fnWindow).toContain('ws.exercise_id');
-    expect(fnWindow).toContain('const ex = exerciseById[row.exercise_id];');
+    // D218 (2026-10-03): attribution is still by the logged exercise_id
+    // first; a set whose id no row carries now falls back to its own name
+    // snapshot through the shared exercise lookup (`?? lookup.resolve(row)`),
+    // so the pin reads the attribution, not the line's ending.
+    expect(fnWindow).toContain('const ex = exerciseById[row.exercise_id]');
     expect(fnWindow).toContain('allocateExerciseVolume(ex)');
   });
 

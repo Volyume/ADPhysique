@@ -28,7 +28,7 @@ import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import useVisualPillar from '../hooks/useVisualPillar';
-import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
+import { sessionSummaryParams } from '../lib/sessionReport';
 import { getEffectiveLandmarks, getPlanLandmarks } from '../lib/effectiveLandmarks';
 import { resolveProgrammePosition } from '../lib/programmePosition';
 import { planTrainedMuscles } from '../lib/volumeLogged';
@@ -269,27 +269,11 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   const {
     loading, refreshing, loadError,
-    recentSessions, allSets, exerciseMap, earliestWorkoutAt, completedWorkoutCount,
+    recentSessions, allSets, exerciseMap, exerciseLookup, earliestWorkoutAt, completedWorkoutCount,
     sessionCount, currentMesoWeek, calValues,
     hasData,
     handleRefresh,
   } = useProgressData();
-
-  // S6-2 (progress-tab audit 2026-09-24): built ONCE here, the same shape
-  // src/screens/WorkoutHistoryScreen.js's buildHistoryRows builds, and
-  // passed into every calculateTonnage call below. The SessionCard tonnage
-  // used to pass NO exercise-type map at all, so isLoadBearingSet
-  // (algorithms.js) treated every set as load-bearing and a distance/
-  // duration exercise's metres/seconds were summed as kilograms into the
-  // "Total lifted" hero of the WorkoutSummary this row opens, and from
-  // there into its share card.
-  const exerciseTypeById = useMemo(
-    () => Object.fromEntries(
-      Object.values(exerciseMap).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
-    ),
-    [exerciseMap],
-  );
-  const loadSemanticsById = useMemo(() => buildLoadSemanticsById(Object.values(exerciseMap)), [exerciseMap]);
 
   // Campaign 23 (§8/§21/§22 R2): the Training pillar's numeric summary
   // (trailing-month strength-direction count + named bests, per-exercise-
@@ -572,39 +556,34 @@ export default function AnalyticsScreen({ navigation, route }) {
               // L04-1 (design audit 2026-07-09): these cards used to render
               // with no onPress while sharing the same tappable-looking Card
               // styling as every other navigating card on this screen. Wire
-              // them to WorkoutSummary (read-only), computing the same stats
-              // WorkoutHistoryScreen derives from allSets/exerciseMap so the
-              // summary isn't just zeros.
+              // them to WorkoutSummary (read-only).
+              //
+              // D218 (founder order 2026-10-03, audit F-2): the params are the
+              // shared session report's (src/lib/sessionReport.js), the very
+              // object History's "View summary" and "Rate your last session"
+              // carry, over the unfiltered, survivor-aware exercise lookup the
+              // hook returns (null until loaded, which the helper accepts). This
+              // card used to count raw ids, name them through the filtered
+              // library and cut the id list to four BEFORE dropping the ones it
+              // could not name, so it could list fewer names than History for
+              // one workout.
               const mySets = allSets.filter(s => s.workoutId === w.id);
-              const workingSets = mySets.filter(s => s.setType !== 'warmup');
-              const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
-              const exerciseNames = exerciseIds.slice(0, 4)
-                .map(id => exerciseMap[id]?.name)
-                .filter(Boolean);
               return (
                 <SessionCard
                   key={w.id}
                   workout={w}
                   onPress={() => navigation.navigate('WorkoutSummary', {
-                    workoutId: w.id,
-                    durationMinutes: w.durationMinutes,
-                    exerciseCount: exerciseIds.length,
-                    setCount: mySets.length,
-                    workingSetCount: workingSets.length,
-                    // D107-2: per-hand sets count x2, assistance is excluded.
-                    tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
-                    exerciseNames,
-                    startedAt: w.startedAt,
-                    endedAt: w.endedAt,
+                    ...sessionSummaryParams(w, mySets, exerciseLookup),
                     // Founder device report 2026-08-24: without the routine
                     // the summary has nothing to title the session with and
                     // its share card falls back to a join of the first two
                     // exercise names, which then moves whenever an exercise
                     // is swapped. getAllWorkouts joins the routine, so both
-                    // are already on the row.
+                    // are already on the row (the report's params carry them
+                    // too; named here so every route into the summary reads
+                    // as carrying its routine).
                     routineId: w.routineId ?? null,
                     routineName: w.routineName ?? null,
-                    readOnly: true,
                   })}
                 />
               );

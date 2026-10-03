@@ -48,6 +48,13 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getAllWorkouts: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218: useProgressData reads the shared exercise lookup; built here from
+  // this test's own getAllExercises fixture.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getAllMesocycles: jest.fn(),
   getActivePlan: jest.fn(),
   getRecentWorkoutFeedback: jest.fn(),

@@ -21,11 +21,12 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import {
-  getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets, getAllExercises,
+  getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets, getExerciseLookup,
   getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
+import { calculateTonnage } from '../lib/algorithms';
+import { setMapsFor } from '../lib/sessionReport';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
@@ -113,16 +114,18 @@ export default function MesocycleBuilderScreen({ navigation }) {
   async function loadActiveStats() {
     if (!user?.id) return true;
     try {
-      const [mesoRows, workouts, sets, allExercises] = await Promise.all([
+      const [mesoRows, workouts, sets, lookup] = await Promise.all([
         getAllMesocycles(user.id),
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
-        // Best-effort: the semantics map only refines tonnage; a library
-        // read failure must not take the whole block dashboard down.
-        getAllExercises().catch(() => []),
+        // D218 (founder order 2026-10-03, audit F-8 part 2 and P34): the shared
+        // lookup (unfiltered, survivor-aware) says each logged set's exercise
+        // type and load semantics. Best-effort, as the library read was: it
+        // only refines tonnage, so a read failure must not take the whole
+        // block dashboard down. A null lookup reads every set as total weight
+        // and reps, the plain totals.
+        getExerciseLookup().catch(() => null),
       ]);
-      // D107-2: per-hand sets count x2, assistance is excluded.
-      const loadSemanticsById = buildLoadSemanticsById(allExercises);
       const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true);
       if (!active?.startDate) { setActiveStats(null); return true; }
 
@@ -138,8 +141,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
           return at >= wkStart && at < wkEnd;
         });
         const currentWeek = getCurrentWeek(active);
+        // D107-2 and D218: per-hand sets count x2, assistance is excluded, and
+        // a distance or duration set (metres or seconds in the weight column)
+        // is not kilograms, each by the set's own exercise.
+        const maps = setMapsFor(wkSets, lookup);
         return {
-          value: Math.round(calculateTonnage(wkSets, null, loadSemanticsById)),
+          value: Math.round(calculateTonnage(wkSets, maps.exerciseTypeById, maps.loadSemanticsById)),
           label: `W${wk + 1}`,
           frontColor: wk + 1 === active.deloadWeek ? colors.warning
             : wk + 1 === currentWeek ? colors.primary

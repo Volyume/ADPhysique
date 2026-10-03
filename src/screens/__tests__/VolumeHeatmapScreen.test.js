@@ -79,6 +79,13 @@ jest.mock('../../lib/effectiveLandmarks', () => {
 jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218 bridge: the reporting read (unfiltered lookup) is built from this
+  // suite's own getAllExercises fixture, so each test's fixture stays the contract.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getWeeklyVolumeByMuscle: jest.fn(),
   getActivePlan: jest.fn(),
   getCurrentMesocycleWeek: jest.fn(),
@@ -90,10 +97,13 @@ import BodyDiagramHeatmap from '../../components/BodyDiagramHeatmap';
 import {
   getCompletedWorkoutSets,
   getAllExercises,
+  getExerciseLookup,
   getWeeklyVolumeByMuscle,
   getActivePlan,
   getCurrentMesocycleWeek,
 } from '../../lib/database';
+import { buildExerciseLookup } from '../../lib/exercise/lookup';
+import { RETIRED_ID_TO_SURVIVOR_ID, survivorExerciseId } from '../../lib/exercise/retiredIds';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
 import { getEffectiveLandmarks, getPlanLandmarks, mergeLandmarkPrecedence } from '../../lib/effectiveLandmarks';
 import { logError } from '../../lib/errorLog';
@@ -1720,5 +1730,98 @@ describe('D214 addendum 9 (census H7): the editor names the three boxes the way 
     expect(VOLUME_HEATMAP_SOURCE).toContain('Weekly sets per muscle: minimum, target and maximum.');
     expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/minimum, target and ceiling|\bceiling\b/);
     for (const label of ["'Min'", "'Target'", "'Max'"]) expect(VOLUME_HEATMAP_SOURCE).toContain(label);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// D218 (founder order 2026-10-03: "I need you to check across the board and
+// ensure all exercises are logged and reported correct after the workout
+// ends"; audit docs/audit/exercise-logging-reporting-audit-2026-10-03/
+// 00-FINDINGS.md, F-3 and P14). The rows, "N sets logged", the per-week totals
+// and "Trained N days ago" read the exercise library through ONE unfiltered,
+// survivor-aware lookup (getExerciseLookup), not getAllExercises(), which hides
+// a soft-deleted custom exercise (EL-18). Deleting an exercise definition never
+// hides training that happened: before D218 this screen dropped those sets
+// while the trend chart under it (an unfiltered SQL read) counted them, so one
+// week had two totals on one screen. The plan-generation read below it (the
+// division fingerprint) keeps getAllExercises, which the source guard pins.
+// ───────────────────────────────────────────────────────────────────────────
+describe('D218 (F-3, P14): the heatmap credits every logged set through the unfiltered lookup', () => {
+  const DELETED_CUSTOM = {
+    id: 'custom-curl', name: 'Zottman Curl X', primary_muscle: 'biceps', secondary_muscles: '[]',
+    is_custom: 1, deleted_at: 1700000000000,
+  };
+
+  test('sets on a soft-deleted custom exercise count: the summary and the muscle row both include them', async () => {
+    atWednesday();
+    getCompletedWorkoutSets.mockResolvedValue([
+      ...setsOf('bench', 2, MONDAY_9AM),
+      ...setsOf('custom-curl', 3, MONDAY_9AM),
+    ]);
+    // getAllExercises FILTERS the deleted custom row (EL-18); the lookup keeps it.
+    getExerciseLookup.mockImplementationOnce(async () => buildExerciseLookup([...EXERCISES, DELETED_CUSTOM]));
+    const tree = await mount();
+
+    expect(flattenText(tree.toJSON())).toContain('5 sets logged so far this week across 2 muscles');
+    expect(findMuscleRow(tree, 'Biceps:').props.accessibilityLabel).toMatch(/^Biceps: 3 sets so far this week/);
+  });
+
+  test('the trend card\'s "This week so far: N sets logged" counts the deleted custom exercise too', async () => {
+    atWednesday();
+    const monday = (k) => new Date(2026, 5, 8 + 7 * k).getTime();
+    getCompletedWorkoutSets.mockResolvedValue([
+      ...setsOf('bench', 2, MONDAY_9AM),
+      ...setsOf('custom-curl', 3, MONDAY_9AM),
+    ]);
+    getExerciseLookup.mockImplementationOnce(async () => buildExerciseLookup([...EXERCISES, DELETED_CUSTOM]));
+    // The trend query is an unfiltered SQL read: it already credited the deleted exercise.
+    getWeeklyVolumeByMuscle.mockResolvedValue([
+      { weekLabel: 'W4', weekStart: monday(0), weekEnd: monday(1), volumeByMuscle: { chest: 2, biceps: 3 } },
+    ]);
+    const tree = await mount();
+
+    expect(flattenText(tree.toJSON())).toMatch(/This week so far: 5 sets logged/);
+  });
+
+  test('a set whose id this device does not hold is credited through its own name snapshot', async () => {
+    atWednesday();
+    const LIB = [{ id: 'bench-lib', name: 'Barbell Bench Press', primary_muscle: 'chest', secondary_muscles: '[]' }];
+    getCompletedWorkoutSets.mockResolvedValue(
+      setsOf('id-from-another-device', 4, MONDAY_9AM, { exercise_name: 'Barbell Bench Press' }),
+    );
+    getExerciseLookup.mockImplementationOnce(async () => buildExerciseLookup(LIB));
+    const tree = await mount();
+
+    expect(flattenText(tree.toJSON())).toContain('4 sets logged so far this week across 1 muscle');
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toMatch(/^Chest: 4 sets so far this week/);
+  });
+
+  test('a retired exercise id credits its survivor row (D217) through the same lookup', async () => {
+    atWednesday();
+    const retiredId = [...RETIRED_ID_TO_SURVIVOR_ID.keys()][0];
+    const survivorId = survivorExerciseId(retiredId); // the final survivor, whatever the chain
+    const LIB = [{ id: survivorId, name: 'Survivor Raise', primary_muscle: 'side_delts', secondary_muscles: '[]' }];
+    getCompletedWorkoutSets.mockResolvedValue(setsOf(retiredId, 3, MONDAY_9AM));
+    getExerciseLookup.mockImplementationOnce(async () => buildExerciseLookup(LIB));
+    const tree = await mount();
+
+    expect(flattenText(tree.toJSON())).toContain('3 sets logged so far this week across 1 muscle');
+  });
+
+  test('a failed lookup read is the screen\'s own retry state, never a heatmap that silently credits nothing', async () => {
+    getCompletedWorkoutSets.mockResolvedValue(chestSets(3));
+    getExerciseLookup.mockImplementationOnce(async () => { throw new Error('exercises unreadable'); });
+    const tree = await mount();
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain("Couldn't load volume heatmap");
+    expect(text).not.toContain('sets logged so far this week');
+  });
+
+  test('source guard: the dataset is built from the lookup; only the division fingerprint keeps getAllExercises', () => {
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/getExerciseLookup/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/buildDataset\(allSets, lookup, now\)/);
+    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/buildDataset\(allSets, exerciseMap/);
+    // Plan generation keeps the filtered library (a deleted custom exercise must not be generated into a plan).
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/filterLibraryForGeneration\(allExercises, scoped\)/);
   });
 });

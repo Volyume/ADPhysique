@@ -198,3 +198,84 @@ describe('builders over real rows', () => {
     expect(await buildBlockPayload(MESO, { userId: null })).toBeNull();
   });
 });
+
+// D218 (founder order 2026-10-03, audit F-11): the session post's record
+// count is the workout summary's own count. Before this, an absent count read
+// as 0 (Number(null) is 0), so a post never carried the session's records,
+// and the counter it skipped would have counted one per SET, a first-ever
+// set included. Now: one per lift, a lift's first-ever set never a record.
+describe('D218: the session post counts records by the summary\'s rule', () => {
+  let conn;
+  const PRIOR = 'w-d218-prior';
+  const NOW_W = 'w-d218-now';
+  const FIRST = 'w-d218-first';
+  const U2 = 'poster-d218';
+  const BENCH = canonicalExerciseId('Barbell Bench Press');
+
+  beforeAll(async () => {
+    conn = await db();
+    const t0 = Date.now() - 7 * 86400000;
+    await conn.runAsync(
+      `INSERT OR IGNORE INTO exercises (id, name, primary_muscle, equipment, compound_isolation, exercise_type, created_at, updated_at)
+       VALUES (?, 'Barbell Bench Press', 'chest', 'barbell', 'compound', 'weight_reps', 1, 1)`,
+      [BENCH],
+    );
+    _invalidateExercisesCache();
+    const insertWorkout = (id, at) => conn.runAsync(
+      `INSERT INTO workouts (id, user_id, started_at, duration_minutes, is_completed, name, created_at, updated_at)
+       VALUES (?, ?, ?, 50, 1, 'Push', ?, ?)`,
+      [id, U2, at, at, at],
+    );
+    const insertSet = (id, workoutId, exerciseId, weight, at) => conn.runAsync(
+      `INSERT INTO workout_sets (id, user_id, workout_id, exercise_id, set_number, set_type, actual_reps, weight, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1, 'straight', 5, ?, ?, ?)`,
+      [id, U2, workoutId, exerciseId, weight, at, at],
+    );
+    await insertWorkout(PRIOR, t0);
+    await insertSet('d218-p1', PRIOR, SQUAT, 100, t0 + 1000);
+    const t1 = t0 + 3 * 86400000;
+    await insertWorkout(NOW_W, t1);
+    // Four squat sets that each beat the prior 100 kg: one lift, one record.
+    for (let i = 0; i < 4; i += 1) await insertSet(`d218-n${i}`, NOW_W, SQUAT, 110 + i * 5, t1 + 1000 * (i + 1));
+    const t2 = t1 + 86400000;
+    await insertWorkout(FIRST, t2);
+    // A first-ever bench session at one weight: a starting point, never a record.
+    for (let i = 0; i < 3; i += 1) await insertSet(`d218-f${i}`, FIRST, BENCH, 60, t2 + 1000 * (i + 1));
+  });
+
+  test('four sets beating the prior best on one lift post one record', async () => {
+    const p = await buildSessionPayload(NOW_W, { userId: U2, units: 'kg' });
+    expect(p.prCount).toBe(1);
+  });
+
+  test('a first-ever session on a lift at one weight posts no record', async () => {
+    const p = await buildSessionPayload(FIRST, { userId: U2, units: 'kg' });
+    expect(p.prCount).toBe(0);
+  });
+
+  test('a heavier set later in a first session is one record, as the summary counts it (founder ruling 2026-08-23)', async () => {
+    const t3 = Date.now() - 86400000;
+    const RAMP = 'w-d218-ramp';
+    const DEADLIFT = canonicalExerciseId('Conventional Deadlift');
+    await conn.runAsync(
+      `INSERT INTO workouts (id, user_id, started_at, duration_minutes, is_completed, name, created_at, updated_at)
+       VALUES (?, ?, ?, 40, 1, 'Pull', ?, ?)`,
+      [RAMP, U2, t3, t3, t3],
+    );
+    for (let i = 0; i < 3; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await conn.runAsync(
+        `INSERT INTO workout_sets (id, user_id, workout_id, exercise_id, set_number, set_type, actual_reps, weight, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'straight', 5, ?, ?, ?)`,
+        [`d218-r${i}`, U2, RAMP, DEADLIFT, i + 1, 100 + i * 10, t3 + 1000 * (i + 1), t3 + 1000 * (i + 1)],
+      );
+    }
+    const p = await buildSessionPayload(RAMP, { userId: U2, units: 'kg' });
+    expect(p.prCount).toBe(1);
+  });
+
+  test('a caller-held count (the summary\'s list) is posted as given', async () => {
+    const p = await buildSessionPayload(NOW_W, { userId: U2, units: 'kg', prCount: 3 });
+    expect(p.prCount).toBe(3);
+  });
+});

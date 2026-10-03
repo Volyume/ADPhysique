@@ -7,6 +7,11 @@
  * back gracefully when there is no named routine. Display only — no persistence.
  */
 
+function isNonLoadSet(set) {
+  const type = set?.exerciseType ?? set?.exercise_type ?? null;
+  return type === 'distance' || type === 'duration';
+}
+
 /**
  * The heaviest working set across the session, for the "best lift" highlight.
  * Warm-ups are skipped and weights are parsed defensively. Returns null when
@@ -27,6 +32,9 @@ export function topSetFromExerciseData(exerciseData) {
       // merely directionally safe.
       const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
       if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
+      // D218 (founder order 2026-10-03, audit F-10): a distance or duration
+      // set stores metres or seconds in these columns, so it is never a lift.
+      if (isNonLoadSet(s)) continue;
       const w = parseFloat(s.weight) || 0;
       if (w > topWeight) {
         topWeight = w;
@@ -59,6 +67,9 @@ export function liftOptionsFromExerciseData(exerciseData) {
       if (s.setType === 'warmup') continue;
       const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
       if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
+      // D218 (founder order 2026-10-03, audit F-10): a distance or duration
+      // set stores metres or seconds in these columns, so it is never a lift.
+      if (isNonLoadSet(s)) continue;
       const w = parseFloat(s.weight) || 0;
       if (w <= 0) continue;
       const reps = s.reps || 0;

@@ -39,6 +39,14 @@ jest.mock('../../lib/database', () => ({
   getExerciseById: jest.fn(),
   getCompletedSetHistoryForExercise: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218 (founder order 2026-10-03, audit F-5): Exercise Detail names a
+  // stand-in through the unfiltered exercise lookup; each test's own
+  // getAllExercises fixture stays the contract by bridging the lookup to it.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getExerciseGoal: jest.fn(),
   saveExerciseGoal: jest.fn(),
   markGoalAchieved: jest.fn(),

@@ -503,6 +503,7 @@ function scanSummary({
 
 const database = require('../../lib/database');
 const progressScanStore = require('../../lib/progressScanStore');
+const { buildExerciseLookup } = require('../../lib/exercise/lookup');
 
 let dbOriginals = null;
 let scanOriginal = null;
@@ -512,6 +513,15 @@ function applyFixture({ db = {}, scan = undefined } = {}) {
   for (const key of Object.keys(db)) {
     dbOriginals[key] = database[key];
     database[key] = db[key];
+  }
+  // D218 (founder order 2026-10-03; audit F-3): useProgressData reads the
+  // UNFILTERED exercise lookup (database.getExerciseLookup) instead of the
+  // filtered getAllExercises, so each state's own `getAllExercises` fixture
+  // stays the contract by bridging the lookup to it (the same bridge the
+  // jest.mock'd screen suites carry).
+  if (db.getAllExercises && !db.getExerciseLookup) {
+    dbOriginals.getExerciseLookup = database.getExerciseLookup;
+    database.getExerciseLookup = async () => buildExerciseLookup(await database.getAllExercises());
   }
   if (scan !== undefined) {
     scanOriginal = progressScanStore.getProgressScanCoachSummary;
@@ -1230,6 +1240,69 @@ describe('S6-2: SessionCard tonnage excludes a non-load (distance/duration) exer
     expect(errors).toEqual([]);
     pressByLabel(tree, 'View summary for Session w1');
     expect(nav.navigate).toHaveBeenCalledWith('WorkoutSummary', expect.objectContaining({ tonnage: 1000 }));
+  });
+});
+
+// ─── D218 (audit F-2): Recent sessions open the SAME numbers as History ────
+//
+// The three hand-copied row builders (History, this card, "Rate your last
+// session") named exercises through the filtered library and counted raw ids;
+// the Recent sessions entry also cut the id list to four BEFORE dropping the
+// ones it could not name, so it could list fewer names than History for one
+// workout. It now navigates with the shared session report
+// (src/lib/sessionReport.js sessionSummaryParams) over the unfiltered,
+// survivor-aware exercise lookup the hook returns, so a soft-deleted custom
+// exercise, a retired id (one exercise with its survivor) and a snapshot-only
+// set are named and counted exactly as History's card and summary count them.
+describe('D218 F-2: a Recent sessions entry opens the same summary numbers as History', () => {
+  const { canonicalExerciseId } = require('../../lib/exercise/canonicalId');
+  const { sessionSummaryParams } = require('../../lib/sessionReport');
+  const RETIRED_ID = canonicalExerciseId('Lateral Raise Machine');
+  const SURVIVOR_ID = canonicalExerciseId('Machine Lateral Raise');
+
+  test('names and counts come from the lookup: deleted custom, retired id with its survivor, snapshot-only, unresolved', async () => {
+    useAppStore.setState(PRO_USER);
+    const bench = exercise('e1', { name: 'Bench press', primaryMuscle: 'chest' });
+    const survivor = exercise(SURVIVOR_ID, { name: 'Machine Lateral Raise', primaryMuscle: 'side_delts' });
+    const deletedCustom = {
+      ...exercise('ex-custom-gone', { name: 'Cable Crunch Pro', primaryMuscle: 'quads' }),
+      isCustom: 1, deletedAt: 1700000000000,
+    };
+    const lookup = buildExerciseLookup([bench, survivor, deletedCustom]);
+    // Logged order (oldest first); the database returns newest first.
+    const logged = [
+      completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'ex-ghost', hourOffset: 0 }),
+      completedSet({ id: 's2', workoutId: 'w1', exerciseId: 'ex-unknown', hourOffset: 0.1 }),
+      completedSet({ id: 's3', workoutId: 'w1', exerciseId: RETIRED_ID, hourOffset: 0.2 }),
+      completedSet({ id: 's4', workoutId: 'w1', exerciseId: SURVIVOR_ID, hourOffset: 0.3 }),
+      completedSet({ id: 's5', workoutId: 'w1', exerciseId: 'ex-custom-gone', hourOffset: 0.4 }),
+      completedSet({ id: 's6', workoutId: 'w1', exerciseId: 'e1', hourOffset: 0.5, setType: 'warmup' }),
+      completedSet({ id: 's7', workoutId: 'w1', exerciseId: 'e1', hourOffset: 0.6 }),
+    ];
+    logged[1] = { ...logged[1], exerciseName: 'Landmine Press' };
+    const dbOrder = [...logged].reverse();
+    const w1 = workout('w1', { daysAgoN: 1 });
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([w1]),
+        getCompletedWorkoutSets: () => Promise.resolve(dbOrder),
+        // The filtered library omits the deleted custom exercise; the lookup keeps it.
+        getAllExercises: () => Promise.resolve([bench, survivor]),
+        getExerciseLookup: () => Promise.resolve(lookup),
+      },
+    });
+    const nav = makeNav();
+    const { tree, errors } = await mountAnalytics({ navigation: nav });
+    expect(errors).toEqual([]);
+    pressByLabel(tree, 'View summary for Session w1');
+
+    // The very object History's "View summary" would carry for this workout.
+    const expected = sessionSummaryParams(w1, dbOrder, lookup);
+    expect(expected.exerciseCount).toBe(5);
+    expect(expected.exerciseNames).toEqual(['Exercise', 'Landmine Press', 'Machine Lateral Raise', 'Cable Crunch Pro']);
+    expect(nav.navigate).toHaveBeenCalledWith('WorkoutSummary', expected);
+    // The route still carries the routine fields the "every route carries its routine" guard pins.
+    expect(expected).toEqual(expect.objectContaining({ routineId: null, routineName: null, readOnly: true }));
   });
 });
 

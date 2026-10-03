@@ -581,10 +581,18 @@ export default function ExercisePickerModal({
       });
       const all = await getAllExercises();
       setAll(all);
+      // D218 (founder order 2026-10-03, audit F-23): re-find the row just
+      // created BY ITS ID first. The name match below could return a canonical
+      // exercise that carries exactly the typed name (the "Use it instead?"
+      // nudge is advisory, creating anyway is allowed), so the session logged
+      // against the canonical id and the custom exercise the person had just
+      // defined (its muscle, type and load meaning) was created and never used.
       // WK-6: include the id from insertExercise in the fallback so onSelect
       // never hands back an id-less exercise (which would log a set against a
-      // null exercise_id) if the name lookup misses.
-      const newEx = all.find(e => e.name === createName.trim())
+      // null exercise_id) if the name lookup misses. The name match and that
+      // fallback stay for an insert that returned no id.
+      const newEx = (created?.id && all.find(e => e.id === created.id))
+        || all.find(e => e.name === createName.trim())
         || {
           id: created?.id,
           name: createName.trim(),

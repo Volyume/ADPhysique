@@ -67,7 +67,7 @@ import {
   recordSessionResolution,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById, uid,
-  getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
+  getCurrentMesocycleWeek, getPlannedMuscleVolume, getExerciseLookup,
   getMorningWeightToday, getMorningWeights, logMorningWeight,
   getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
@@ -116,7 +116,12 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+// D218 (founder order 2026-10-03, "ensure all exercises are logged and reported
+// correct after the workout ends"): a finished session's total is read on one
+// basis everywhere, each set's own exercise type and load semantics through the
+// shared lookup (src/lib/sessionReport.js).
+import { buildSessionReport, setMapsFor } from '../lib/sessionReport';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
@@ -192,8 +197,8 @@ export default function HomeScreen({ navigation, route }) {
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
   // here -- every branch that used to fork on it now runs the single
   // full-access behaviour for everyone (see proGate.js FULL_ACCESS_FOR_ALL).
-  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, units, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, units: s.units, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -1061,16 +1066,27 @@ export default function HomeScreen({ navigation, route }) {
       // LB-7: this card needs at most the last four weeks of sets (week
       // stats + the deload window below), not every set ever logged. Load
       // that bounded slice once; the workout list is rows, not sets.
-      const [allWorkouts, recentSets] = await Promise.all([
+      const [allWorkouts, recentSets, lookup] = await Promise.all([
         getAllWorkouts(user.id),
         getWorkoutSetsSince(user.id, fourWeeksAgo),
+        // D218 (audit F-8 part 2): the shared exercise lookup (unfiltered,
+        // survivor-aware) says each logged set's exercise type and load
+        // semantics for the totals below and the deload check. Best-effort:
+        // it only refines them, so a failed read reads as null and the totals
+        // fall back to plain weight x reps, as the old library read did.
+        getExerciseLookup().catch(() => null),
       ]);
       const thisWeek = allWorkouts.filter(
         w => w.startedAt >= weekStartMs && w.startedAt < weekEndMs && w.isCompleted,
       );
       const workoutIds = new Set(thisWeek.map(w => w.id));
       const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
-      const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
+      // D218 (audit F-8, P21): the week's volume is read on the same basis as
+      // every session total: per hand x2, assistance excluded, and a distance
+      // or duration set (metres or seconds in the weight column) not counted
+      // as kilograms, each by the set's own exercise.
+      const weekMaps = setMapsFor(weekSets, lookup);
+      const totalVol = calculateTonnage(weekSets, weekMaps.exerciseTypeById, weekMaps.loadSemanticsById);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
 
 
@@ -1132,10 +1148,12 @@ export default function HomeScreen({ navigation, route }) {
         if (lastSets.length === 0) {
           lastSets = await getWorkoutSetsForWorkout(lastId);
         }
-        // D107-2: per-hand sets count x2, assistance is excluded. Cached
-        // library read; a failure falls back to unmapped totals.
-        const semantics = await getAllExercises().then(buildLoadSemanticsById).catch(() => null);
-        const tonnage = calculateTonnage(lastSets, null, semantics);
+        // D107-2 and D218 (audit F-8 part 2, P20): per-hand sets count x2,
+        // assistance is excluded, and a distance or duration set (metres or
+        // seconds in the weight column) is not kilograms, each by the set's own
+        // exercise, so this row reads the basis the Summary hero reads. The
+        // lookup was read above; a failed read falls back to unmapped totals.
+        const tonnage = buildSessionReport(lastSets, lookup).tonnage;
         setLastSessionTonnage(tonnage > 0 ? tonnage : null);
       } else {
         setLastSessionTonnage(null);
@@ -1154,11 +1172,16 @@ export default function HomeScreen({ navigation, route }) {
         // screen's exact avgReps sourcing (recentSets filtered by the
         // completed-workout roster for the week, then warm-ups excluded).
         // shouldDeload itself is untouched.
+        // D218 (audit F-25): repsTypeById hands the rep average each set's
+        // exercise type, so a plank held for 60 seconds is not averaged as 60
+        // reps. exerciseMap stays null (hasOverMRV stays false) and every
+        // other option is exactly as it was.
         const last4Weeks = buildLast4WeekDeloadBuckets(recentSets, allWorkouts, null, {
           now: Date.now(),
           excludeWarmups: true,
           repsViaWorkoutRoster: true,
           weeksSinceLastDeloadOverride: 99,
+          repsTypeById: setMapsFor(recentSets, lookup).exerciseTypeById,
         });
         const result = shouldDeload(last4Weeks);
         setDeloadSuggestion(result.deload ? result : null);
@@ -1314,15 +1337,19 @@ export default function HomeScreen({ navigation, route }) {
       // LB-7: fetch only the sets on/after the span's start rather than the
       // whole history, then bound the upper edge in JS (getWorkoutSetsSince
       // takes only a lower bound).
-      const [planned, spanSets, allExercises] = await Promise.all([
+      const [planned, spanSets, lookup] = await Promise.all([
         getPlannedMuscleVolume(week.id),
         getWorkoutSetsSince(user.id, span.startMs),
-        getAllExercises(),
+        // D218 (audit F-3, P19): the shared lookup (unfiltered, survivor-aware,
+        // name-snapshot fallback), so a soft-deleted custom exercise's sets
+        // count towards the block week as they do on Consistency and in
+        // Recovery. A failed read is this loader's own caught failure (the
+        // rows are left as they were), never a block week credited with zero.
+        getExerciseLookup(),
       ]);
       const recentSets = spanSets.filter((s) => (s.createdAt ?? s.created_at ?? 0) < span.endMs);
 
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-      const actual = calculateWeeklyVolume(recentSets, exerciseMap);
+      const actual = calculateWeeklyVolume(recentSets, lookup);
 
       // P1 (D199): Home stays the glance surface (top 8 by planned sets);
       // Consistency (useProgressData's loadBlockState) shows every planned
@@ -1860,15 +1887,56 @@ export default function HomeScreen({ navigation, route }) {
         // working-set count, so the target line stays honest) - the one
         // deliberate difference: an all-warm-up previous session falls
         // to 3 here rather than the warm-up count.
-        initialExercises = (
-          await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
-        )
-          .filter(Boolean)
-          .map(exercise => ({
-            exercise,
-            routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },
-            sets: [],
-          }));
+        //
+        // D218 (founder order 2026-10-03, audit F-2, P7): an exercise whose id
+        // getExerciseById cannot find (an id never seeded here, another
+        // device's custom exercise before its pull) is no longer dropped in
+        // silence. It is tried against the shared lookup by its own logged
+        // name snapshot first, and when one is still left out the person is
+        // told, calmly, how many. The repeat proceeds either way.
+        const foundById = await Promise.all(
+          orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)),
+        );
+        let lookup;
+        const repeatable = [];
+        const repeatedIds = new Set();
+        let leftOut = 0;
+        for (let i = 0; i < orderedExerciseIds.length; i += 1) {
+          const loggedId = orderedExerciseIds[i];
+          let exercise = foundById[i];
+          if (!exercise) {
+            if (lookup === undefined) lookup = await getExerciseLookup().catch(() => null);
+            exercise = lookup?.resolve(prevSets.find(s => s.exerciseId === loggedId)) ?? null;
+          }
+          // Two logged ids that are one exercise (a retired id and the
+          // exercise it became) are repeated once.
+          if (exercise && repeatedIds.has(exercise.id)) continue;
+          if (exercise) {
+            repeatedIds.add(exercise.id);
+            // The target count follows the exercise: one found under another
+            // id (a name match, a survivor) carries the working-set count of
+            // the id its sets were logged under.
+            if (setCounts[exercise.id] === undefined && setCounts[loggedId] !== undefined) {
+              setCounts[exercise.id] = setCounts[loggedId];
+            }
+            repeatable.push(exercise);
+          } else {
+            leftOut += 1;
+          }
+        }
+        initialExercises = repeatable.map(exercise => ({
+          exercise,
+          routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },
+          sets: [],
+        }));
+        if (leftOut > 0) {
+          toast.show(
+            leftOut === 1
+              ? 'One exercise from that session is not on this device, so it was left out.'
+              : `${leftOut} exercises from that session are not on this device, so they were left out.`,
+            { variant: 'info', duration: 5000 },
+          );
+        }
       }
 
       pendingStartRef.current = { routineId, initialExercises };
@@ -3074,6 +3142,7 @@ export default function HomeScreen({ navigation, route }) {
           <HomeLastSessionCard
             lastSession={lastSession}
             lastSessionTonnage={lastSessionTonnage}
+            units={units}
             relativeDay={lastSessionRelativeDay}
             onOpenHistory={goToWorkoutHistory}
             onRepeat={handleRepeatLastSession}

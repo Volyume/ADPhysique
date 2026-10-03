@@ -20,10 +20,10 @@ import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SearchBar from '../components/SearchBar';
-import { getRecentCompletedWorkouts, getCompletedWorkoutCount, getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
+import { getRecentCompletedWorkouts, getCompletedWorkoutCount, getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getExerciseLookup, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
-import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
+import { buildSessionReport, groupSessionExercises } from '../lib/sessionReport';
 import { formatNumber, formatWithUnit } from '../lib/format';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
 import { formatLoggedSet } from '../lib/workoutHelpers';
@@ -63,45 +63,44 @@ function classifyMuscleGroup(primaryMuscles) {
 }
 
 // A3(b)/A4 (progress-tab audit 2026-09-24, second pass): the per-workout row
-// derivation, shared by the first page (loadWorkouts) and every "Show more"
-// page (handleShowMore) so paging can never drift from the first page's
-// shape. A4: exerciseTypeById is now built from allExercises exactly as
-// LiftProgressScreen.js builds it before its buildWeeklyLoadSeries call, and
-// passed into calculateTonnage -- the tonnage call used to pass no type map
-// at all, so isLoadBearingSet counted every set as load-bearing and a
-// distance/duration exercise's metres x seconds were added as kilograms.
-function buildHistoryRows(page, pageSets, allExercises) {
-  const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-  const exerciseTypeById = Object.fromEntries(
-    allExercises.map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
-  );
-  const loadSemanticsById = buildLoadSemanticsById(allExercises);
+// derivation, shared by the first page (loadWorkouts), every "Show more" page
+// (handleShowMore) and the calendar month, so paging can never drift from the
+// first page's shape.
+//
+// D218 (founder order 2026-10-03, audit F-2): every figure on a row now comes
+// from ONE session report (src/lib/sessionReport.js, the builder the Progress
+// "Recent sessions" entries and "Rate your last session" share) over the
+// shared exercise lookup (database.getExerciseLookup: UNFILTERED, so a
+// soft-deleted custom exercise still names its sets; survivor-aware, so a
+// retired id reads as the exercise it became; a set's own name snapshot is
+// the fallback). Names and muscles used to come from the filtered library, so
+// a session whose exercises did not resolve read "27 sets" beside "No
+// exercises logged" and was missing from search and from the Upper / Lower
+// chips. The tonnage basis (A4: distance and duration sets are not load) is
+// the report's own, with per-hand counting twice and assistance counting
+// nothing (D107-2). A null lookup (a failed read) still names every set from
+// its own snapshot.
+function buildHistoryRows(page, pageSets, lookup) {
   const setsByWorkout = new Map();
   for (const s of pageSets) {
     const arr = setsByWorkout.get(s.workoutId);
     if (arr) arr.push(s); else setsByWorkout.set(s.workoutId, [s]);
   }
   return page.map(w => {
-    const mySets = setsByWorkout.get(w.id) || [];
-    const workingSets = mySets.filter(s => s.setType !== 'warmup');
-    const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
-    // allExerciseNames is the FULL list (search needs every exercise in
-    // the session); exerciseNames stays capped at 4 for the card summary
-    // line, unchanged from before.
-    const allExerciseNames = exerciseIds.map(id => exerciseMap[id]?.name).filter(Boolean);
-    const exerciseNames = allExerciseNames.slice(0, 4);
-    // O4: derived from the same exerciseMap lookup, no extra query.
-    const primaryMuscles = [...new Set(exerciseIds.map(id => exerciseMap[id]?.primaryMuscle).filter(Boolean))];
+    const report = buildSessionReport(setsByWorkout.get(w.id) || [], lookup);
     return {
       workout: w,
-      setCount: mySets.length,
-      workingSetCount: workingSets.length,
-      exerciseCount: exerciseIds.length,
-      // D107-2: per-hand sets count x2, assistance is excluded.
-      tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
-      exerciseNames,
-      allExerciseNames,
-      muscleGroup: classifyMuscleGroup(primaryMuscles),
+      setCount: report.setCount,
+      workingSetCount: report.workingSetCount,
+      exerciseCount: report.exerciseCount,
+      tonnage: report.tonnage,
+      // allExerciseNames is the FULL list (search needs every exercise in
+      // the session); exerciseNames stays capped at 4 for the card summary
+      // line, unchanged from before.
+      exerciseNames: report.exerciseNames,
+      allExerciseNames: report.allExerciseNames,
+      // O4: derived from the same lookup, no extra query.
+      muscleGroup: classifyMuscleGroup(report.primaryMuscles),
     };
   });
 }
@@ -210,12 +209,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const recentCompleted = await getRecentCompletedWorkouts(user.id, 50);
       if (!isCurrentRequest()) return;
       const page = recentCompleted.slice(0, 50);
-      const [pageSets, allExercises] = await Promise.all([
+      const [pageSets, lookup] = await Promise.all([
         getWorkoutSetsForWorkoutIds(page.map(w => w.id)),
-        getAllExercises(),
+        getExerciseLookup(),
       ]);
       if (!isCurrentRequest()) return;
-      setWorkouts(buildHistoryRows(page, pageSets, allExercises));
+      setWorkouts(buildHistoryRows(page, pageSets, lookup));
 
       // A3(a): the TRUE completed-session count, for the header and for
       // deciding whether "Show more" has anything left to load. Read
@@ -265,12 +264,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
         setCompletedCount(workouts.length);
         return;
       }
-      const [pageSets, allExercises] = await Promise.all([
+      const [pageSets, lookup] = await Promise.all([
         getWorkoutSetsForWorkoutIds(nextPage.map(w => w.id)),
-        getAllExercises(),
+        getExerciseLookup(),
       ]);
       if (loadRequestRef.current !== requestId) return;
-      const nextRows = buildHistoryRows(nextPage, pageSets, allExercises);
+      const nextRows = buildHistoryRows(nextPage, pageSets, lookup);
       setWorkouts(prev => [...prev, ...nextRows]);
     } catch (e) {
       logError('WorkoutHistoryScreen.handleShowMore', e, { userId: user?.id });
@@ -303,12 +302,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
       try {
         const rows = await getCompletedWorkoutsBetween(user.id, monthStart, monthEnd);
         if (cancelled) return;
-        const [pageSets, allExercises] = await Promise.all([
+        const [pageSets, lookup] = await Promise.all([
           getWorkoutSetsForWorkoutIds(rows.map(w => w.id)),
-          getAllExercises(),
+          getExerciseLookup(),
         ]);
         if (cancelled) return;
-        setMonthRows(buildHistoryRows(rows, pageSets, allExercises));
+        setMonthRows(buildHistoryRows(rows, pageSets, lookup));
       } catch (_e) {
         if (!cancelled) setMonthRows(null);
       }
@@ -347,36 +346,48 @@ export default function WorkoutHistoryScreen({ navigation }) {
         // ActiveWorkoutScreen's "Target: N sets" line still reflects what
         // was actually done last time, per routineExercise.recommendedSets
         // (ActiveWorkoutScreen.js targetSets chain).
-        const [originalSets, allExercises] = await Promise.all([
+        //
+        // D218 (founder order 2026-10-03, audit F-2): each exercise is
+        // resolved through the shared lookup (unfiltered and survivor-aware,
+        // with the set's own name snapshot as the fallback), the same one
+        // the card and the summary read, so a soft-deleted custom exercise,
+        // a retired id and a snapshot match all repeat, and sets on a
+        // retired id and on its survivor are one exercise. This path used
+        // to read the filtered library and drop all three without a word.
+        const [originalSets, lookup] = await Promise.all([
           getWorkoutSetsForWorkout(workout.id),
-          getAllExercises(),
+          getExerciseLookup(),
         ]);
-        const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-        const order = [];
-        const groups = {};
-        for (const s of originalSets) {
-          if (!groups[s.exerciseId]) { groups[s.exerciseId] = []; order.push(s.exerciseId); }
-          groups[s.exerciseId].push(s);
-        }
-        initialExercises = order
-          .map((exerciseId) => {
-            const exercise = exerciseMap[exerciseId];
-            // Exercise since deleted (custom exercise, hard-deleted) -
-            // nothing to open a set-logging row against, so skip it rather
-            // than open a broken entry.
-            if (!exercise) return null;
-            const exSets = groups[exerciseId];
-            const workingCount = exSets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup').length;
+        // A lookup that could not be read is a failed repeat (the catch
+        // below says so), never "every exercise is missing".
+        if (!lookup) throw new Error('exercise lookup unavailable');
+        let leftOut = 0;
+        initialExercises = groupSessionExercises(originalSets, lookup)
+          .map((g) => {
+            const exercise = lookup.resolve(g.rows[0]);
+            // Nothing resolves it (an id this device has no row for and no
+            // name snapshot to match): a set-logging row needs an exercise
+            // row to open against, so it cannot be repeated. It is counted
+            // and said below instead of being dropped without a word.
+            if (!exercise) { leftOut += 1; return null; }
             return {
               exercise,
               // Round 11 (R11-2): id minted at construction - the effects
               // record keys per slot, and this repeat-as-is literal
               // carried none, so duplicate slots collapsed in the record.
-              routineExercise: { id: uid(), recommendedSets: workingCount || exSets.length || 3 },
+              routineExercise: { id: uid(), recommendedSets: g.workingSetCount || g.rows.length || 3 },
               sets: [],
             };
           })
           .filter(Boolean);
+        if (leftOut > 0) {
+          toast.show(
+            leftOut === 1
+              ? 'One exercise from that session is not on this device, so it was left out.'
+              : `${leftOut} exercises from that session are not on this device, so they were left out.`,
+            { variant: 'info' },
+          );
+        }
       }
       startWorkout(newWorkout, initialExercises);
       navigateCrossTab(navigation, 'HomeTab', 'ActiveWorkout');
@@ -465,33 +476,25 @@ export default function WorkoutHistoryScreen({ navigation }) {
     if (expandedSets[workoutId]) return; // already loaded
 
     try {
-      const [sets, allExercises] = await Promise.all([
+      const [sets, lookup] = await Promise.all([
         getWorkoutSetsForWorkout(workoutId),
-        getAllExercises(),
+        getExerciseLookup(),
       ]);
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
 
-      // Group sets by exercise, preserving encounter order
-      const order = [];
-      const groups = {};
-      for (const s of sets) {
-        if (!groups[s.exerciseId]) {
-          groups[s.exerciseId] = {
-            name: exerciseMap[s.exerciseId]?.name || 'Unknown',
-            exerciseType: exerciseMap[s.exerciseId]?.exerciseType || exerciseMap[s.exerciseId]?.exercise_type || 'weight_reps',
-            sets: [],
-          };
-          order.push(s.exerciseId);
-        }
-        groups[s.exerciseId].sets.push(s);
-      }
-
-      const grouped = order.map(id => {
-        const g = groups[id];
-        const workingSetCount = g.sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup').length;
-        const summary = formatHistoryExerciseSummary(g.sets, g.exerciseType, units || 'kg');
-        return { exerciseId: id, name: g.name, summary, workingSetCount };
-      });
+      // D218 (founder order 2026-10-03, audit F-2): the same grouping the
+      // card, the summary and the repeat read (src/lib/sessionReport.js):
+      // exercises in the order they were first logged, named through the
+      // shared lookup, so a row is never "Unknown" (a deleted custom
+      // exercise, a retired id and a snapshot-only set all carry a name; an
+      // exercise nothing resolves is "Exercise"), and a retired id and its
+      // survivor are one row. `exerciseId` is the RESOLVED id, so the row
+      // opens an Exercise Detail that finds its sets.
+      const grouped = groupSessionExercises(sets, lookup).map(g => ({
+        exerciseId: g.exerciseId,
+        name: g.name,
+        summary: formatHistoryExerciseSummary(g.rows, g.exerciseType, units || 'kg'),
+        workingSetCount: g.workingSetCount,
+      }));
 
       setExpandedSets(prev => ({ ...prev, [workoutId]: grouped }));
     } catch (_) {

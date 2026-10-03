@@ -63,7 +63,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('stored workout name uses the same full-title rule as summary sharing', () => {
     expect(ACTIVE_WORKOUT).toContain("import { shareSessionName } from '../lib/sessionShareData';");
-    expect(ACTIVE_WORKOUT).toContain('const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);');
+    // D218 (2026-10-03, audit F-7): the free-form title's names are the
+    // exercises the workout's saved sets belong to (the finish's one report),
+    // no longer the logger's list, which kept an exercise swapped in with
+    // nothing logged and lost one swapped out after its sets were logged.
+    expect(ACTIVE_WORKOUT).toContain('const exerciseNames = report.allExerciseNames;');
     // Founder device report 2026-08-24: the routine name was never even
     // offered here - the first argument was hard-coded null, so the
     // exercise-name fallback ran on every session from a named day and

@@ -42,7 +42,8 @@ import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT, getExerciseLookup } from '../lib/database';
+import { buildSessionReport } from '../lib/sessionReport';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
   loadExerciseIntentState, rankPersonalised, movementFamilyOf, isFamilyBlocked,
@@ -57,8 +58,6 @@ import { swapAdjacentBlocks } from '../lib/reorder';
 import {
   detectPR,
   bestPRPerExercise,
-  summariseWorkoutSets,
-  buildLoadSemanticsById,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
   defaultIncrement,
@@ -2761,6 +2760,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         rpe: null,
         leftReps: null,
         rightReps: null,
+        // D218 (founder order 2026-10-03, audit F-10): the same evidence
+        // class the database row was stamped with above (EL-7), so the record
+        // judged on log, the session's record list, the share image and the
+        // live prescription's evidence read this set exactly as the stored
+        // row reads after a relaunch. Without it an explosive set (a swing, a
+        // clean) could celebrate a record live that History never shows, and
+        // a circuit set fed today's evidence that the stored history refuses.
+        evidenceClass: currentSet.setType === 'warmup' ? null : currentEvidenceClass,
       };
 
       const newLoggedSets = [...loggedSets, setData];
@@ -3268,8 +3275,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ...allTimeSets.filter(isWorkingSetRow),
           ...loggedSets.filter(s => s.id !== editingSet.id && isWorkingSetRow(s)),
         ];
-        const editedPrs = editPrHistory.length > 0
-          ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
+        // D218 (audit F-10): the edited set keeps its own type and evidence
+        // class, so an edited warm-up, myo-rep or explosive set is judged as
+        // the log path judges it (never a record), not as a plain working set.
+        const editedType = editingSet.setType ?? editingSet.set_type ?? 'straight';
+        const editedEvidenceClass = editingSet.evidenceClass !== undefined
+          ? editingSet.evidenceClass
+          : (editedType === 'warmup' ? null : currentEvidenceClass);
+        const editedPrs = editPrHistory.length > 0 && editedType !== 'warmup'
+          ? detectPR({ weight, actualReps, setType: editedType, evidenceClass: editedEvidenceClass }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
           showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
         }
@@ -3692,16 +3706,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       }
       // D107-2 load semantics: the session's stored totalVolume counts a
       // per-hand dumbbell set as weight x 2 and leaves assistance out
-      // entirely. Built from the full (cached) library so sets on an
-      // exercise later swapped out of the plan still classify correctly;
-      // a read failure falls back to no map, which reads every set as
-      // 'total' - the pre-semantics behaviour.
-      let loadSemanticsById = null;
+      // entirely. D218 (founder order 2026-10-03, audit F-7, F-8): everything
+      // the finish reports comes from ONE report over those rows
+      // (sessionReport.js) and the shared exercise lookup (unfiltered,
+      // survivor-aware, each set's own name snapshot as the fallback): the
+      // Working sets and Total lifted tiles, the stored set_count and
+      // total_volume (now with each exercise's type as well, so a distance
+      // set's metres are not kilograms), the Exercises tile, the exercise
+      // list and the share image's lifts. The list and the Exercises tile were
+      // the in-memory logger list, so an exercise swapped out after its sets
+      // were logged vanished from them while its sets still counted, and a
+      // planned exercise with nothing logged was listed with a target as if
+      // done. A failed lookup read names the sets from the logger's own
+      // exercises.
+      let exerciseLookup = null;
       try {
-        loadSemanticsById = buildLoadSemanticsById(await getAllExercises());
-      } catch (_) { /* fall back to unmapped totals */ }
-      const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets, { loadSemanticsById });
-      const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
+        exerciseLookup = await getExerciseLookup();
+      } catch (_) { /* fall back to the logger's own exercise rows below */ }
+      const loggerExercises = Object.fromEntries(
+        snapshotExercises.filter(e => e.exercise?.id).map(e => [e.exercise.id, e.exercise]),
+      );
+      const report = buildSessionReport(allSets, exerciseLookup ?? loggerExercises);
+      const { setCount: totalSets, workingSetCount, tonnage } = report;
+      const exerciseNames = report.allExerciseNames;
       // Founder device report 2026-08-24: a session done from a named
       // routine was being stored as a join of its first two exercise
       // names, so swapping an exercise in renamed the whole workout - the
@@ -3764,7 +3791,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           track(uid, 'workout_completed', {
             set_count: workingSetCount,
             duration_min: Math.round(snapshotElapsed / 60),
-            exercise_count: snapshotExercises.length,
+            exercise_count: report.exerciseCount,
           }).catch(() => {});
           // E7.2 activation funnel: first-ever completed workout. C8 phase 1
           // attaches the coarse first-touch source (sanitised slug or null,
@@ -3846,24 +3873,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         startedAt: activeWorkout.startedAt,
         endedAt: Date.now(),
         durationMinutes: Math.round(snapshotElapsed / 60),
-        exerciseCount: snapshotExercises.length,
+        exerciseCount: report.exerciseCount,
         setCount: totalSets,
         workingSetCount,
         tonnage,
         exerciseNames,
         detectedPRs: finishedPRs,
-        exerciseData: snapshotExercises.map(e => ({
-          exerciseId: e.exercise?.id,
-          name: e.exercise?.name,
-          recommendedSets: (e.sets || []).filter(s => s.setType !== 'warmup').length || 3,
-          repsMin: e.routineExercise?.recommendedRepsMin || 8,
-          repsMax: e.routineExercise?.recommendedRepsMax || 12,
-          loggedSets: (e.sets || []).map(s => ({
-            weight: s.weight,
-            reps: s.actualReps ?? s.reps,
-            setType: s.setType,
-          })),
-        })).filter(e => e.exerciseId),
+        // D218 (audit F-7): one entry per exercise with a logged set, in the
+        // order first logged, built from the same rows as the tiles; the rep
+        // range comes from the logger's entry for that exercise when there is
+        // one (it also seeds "Save as a workout").
+        exerciseData: report.exercises.map((g) => {
+          const entry = snapshotExercises.find(e => e.exercise?.id === g.exerciseId
+            || (exerciseLookup && exerciseLookup.get(e.exercise?.id)?.id === g.exerciseId));
+          return {
+            exerciseId: g.exerciseId,
+            name: g.name,
+            recommendedSets: g.workingSetCount || 3,
+            repsMin: entry?.routineExercise?.recommendedRepsMin || 8,
+            repsMax: entry?.routineExercise?.recommendedRepsMax || 12,
+            loggedSets: g.loggedSets,
+          };
+        }).filter(e => e.exerciseId),
       });
     }
 
@@ -4066,9 +4097,41 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return;
     }
 
+    // D218 (founder order 2026-10-03, audit F-7, F-19): the confirm counts
+    // what is saved, from the database (a set logged on an exercise later
+    // swapped out is still saved), across the exercises that have a set; it
+    // counted the logger's list, planned exercises with nothing logged
+    // included. A workout with nothing saved is not finished: there is
+    // nothing to record, and a completed empty workout would count as a
+    // session and complete the day's planned session. It is discarded
+    // instead, or the person keeps going.
+    let savedSets = null;
+    try { savedSets = await getWorkoutSetsForWorkout(activeWorkout.id); } catch (_) { savedSets = null; }
+    const memorySets = snapshotExercises.flatMap(e => e.sets || []);
+    const confirmSets = Array.isArray(savedSets) && savedSets.length ? savedSets : memorySets;
+    if (confirmSets.length === 0) {
+      appAlert(
+        'Nothing logged yet',
+        `This workout has no sets logged, so there is nothing to save. You can keep going, or discard it.${inProgressNote}`,
+        [
+          { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
+          {
+            text: 'Discard workout',
+            style: 'destructive',
+            onPress: () => { finishingRef.current = false; discardWorkout('ActiveWorkoutScreen.finishWithNothingLogged'); },
+          },
+        ],
+      );
+      return;
+    }
+    let confirmLookup = null;
+    try { confirmLookup = await getExerciseLookup(); } catch (_) { confirmLookup = null; }
+    const confirmReport = buildSessionReport(confirmSets, confirmLookup);
+    const setWord = confirmReport.setCount === 1 ? 'set' : 'sets';
+    const exerciseWord = confirmReport.exerciseCount === 1 ? 'exercise' : 'exercises';
     appAlert(
       'Finish workout?',
-      `You've logged ${snapshotExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${snapshotExercises.length} exercises.${inProgressNote}`,
+      `You've logged ${confirmReport.setCount} ${setWord} across ${confirmReport.exerciseCount} ${exerciseWord}.${inProgressNote}`,
       [
         { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         { text: 'Finish workout', onPress: () => runFinish() },

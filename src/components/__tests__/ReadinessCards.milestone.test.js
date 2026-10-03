@@ -75,6 +75,14 @@ jest.mock('../../lib/database', () => ({
   getRecentCompletedWorkouts: jest.fn(),
   getWorkoutSetsForWorkout: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218 (founder order 2026-10-03, audit F-2): ReadinessCards reads the
+  // unfiltered exercise lookup; each test's own getAllExercises fixture stays
+  // the contract by bridging the lookup to it.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
 }));
 
 import ReadinessCards, { sessionsMilestoneLine } from '../ReadinessCards';

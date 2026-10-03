@@ -9,7 +9,7 @@ import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getCurrentMesocycleWeek } from '../lib/database';
+import { getAllWorkouts, getCompletedWorkoutSets, getExerciseLookup, getCurrentMesocycleWeek } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
@@ -209,10 +209,16 @@ export default function CoachReviewScreen() {
       const weekStartMs = weekStart.getTime();
       const weekEndMs = weekEnd.getTime();
 
-      const [allWorkouts, allSets, allExercises, mesoWeek] = await Promise.all([
+      const [allWorkouts, allSets, lookup, mesoWeek] = await Promise.all([
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
-        getAllExercises(),
+        // D218 (founder order 2026-10-03, audit F-3): the review REPORTS logged
+        // sets, so it reads the shared lookup (unfiltered, survivor-aware,
+        // name-snapshot fallback), not the filtered library. A soft-deleted
+        // custom exercise's sets were dropped from the volume and the wins
+        // here while the "total sets" tile counted them. A failed read is the
+        // retryable error state below (U-B-6), never a silently empty review.
+        getExerciseLookup(),
         // Wave C item 1: getCurrentMesocycleWeek already fails closed (returns
         // null on any read error), so no separate try/catch is needed here.
         getCurrentMesocycleWeek(user.id),
@@ -232,19 +238,20 @@ export default function CoachReviewScreen() {
         s => (s.createdAt || 0) >= weekStartMs && (s.createdAt || 0) <= weekEndMs,
       );
 
-      // Build exercise lookup map
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-
-      // Volume by muscle
-      const volume = calculateWeeklyVolume(thisWeekSets, exerciseMap);
+      // Volume by muscle (the lookup resolves each set: a deleted custom
+      // exercise, a retired id's survivor, an unknown id by its name snapshot)
+      const volume = calculateWeeklyVolume(thisWeekSets, lookup);
       setVolumeByMuscle(volume);
       // X6: the set COUNT for the week, independent of muscle-credit volume
       // (summariseWorkoutSets excludes warm-ups only, same basis every other
       // "sets" figure in the app uses).
       setWeeklySetCount(summariseWorkoutSets(thisWeekSets).workingSetCount);
 
-      // Progressive overload wins
-      const wins = detectProgressionWins(thisWeekSets, allSets, exerciseMap);
+      // Progressive overload wins. The detector reads only each exercise's
+      // name, by the id the sets carry, from a plain { [id]: row } map: the
+      // lookup's own id map (every row incl. soft-deleted, retired ids aliased
+      // to their survivor). A lookup that resolved nothing reads as an empty map.
+      const wins = detectProgressionWins(thisWeekSets, allSets, lookup ? Object.fromEntries(lookup.byId) : {});
       setProgressionWins(wins);
 
 
@@ -263,7 +270,7 @@ export default function CoachReviewScreen() {
       // bucket grammar; the weeks-since-lighter-week scan stays now-rolling
       // (parity with useProgressData), matching this screen's prior
       // behaviour exactly.
-      const patchedBuckets = buildLast4WeekDeloadBuckets(allSets, allWorkouts, exerciseMap, {
+      const patchedBuckets = buildLast4WeekDeloadBuckets(allSets, allWorkouts, lookup, {
         weekAnchorMs: weekStartMs,
       });
 

@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
-import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow, isBallisticEvidenceRow } from './algorithms';
+import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow, isBallisticEvidenceRow, calculateTonnage, isEstimatedMaxRow } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn, logInfo } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
@@ -3347,9 +3347,11 @@ function queuedWrite(fn) {
 // the cache is never stale. Callers treat the result as read-only (every
 // current one only maps/filters it), so the shared reference is safe.
 let _allExercisesCache = null;
+let _exerciseLookupCache = null;
 
 export function _invalidateExercisesCache() {
   _allExercisesCache = null;
+  _exerciseLookupCache = null;
 }
 
 export async function getAllExercises() {
@@ -3366,6 +3368,81 @@ export async function getAllExercises() {
   );
   _allExercisesCache = rows.map(rowToCamel);
   return _allExercisesCache;
+}
+
+// D218 (founder order 2026-10-03, "ensure all exercises are logged and
+// reported correct after the workout ends"): the one exercise lookup for
+// every REPORTING read, meaning the lists, names, muscle credit and tonnage
+// basis of logged sets. UNFILTERED, so a soft-deleted custom exercise still
+// names and credits the sets logged on it (deleting a definition never hides
+// training that happened); survivor-aware for retired ids (D217); and, in
+// src/lib/exercise/lookup.js, each set's own name snapshot is the fallback.
+// Pickers, search and plan generation keep getAllExercises() and its EL-18
+// filter. Cached beside the library and cleared by the same invalidation; a
+// read that returns no row list (a test double) is answered, not cached.
+export async function getExerciseLookup() {
+  if (_exerciseLookupCache) return _exerciseLookupCache;
+  // eslint-disable-next-line global-require
+  const { buildExerciseLookup } = require('./exercise/lookup');
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM exercises ORDER BY name ASC');
+  if (!Array.isArray(rows)) return buildExerciseLookup([]);
+  _exerciseLookupCache = buildExerciseLookup(rows.map(rowToCamel));
+  return _exerciseLookupCache;
+}
+
+// D218 (audit F-6): the ids a by-exercise set read answers for: the id
+// itself and, for a retired id, the exercise it became. A stale reference (a
+// route param, a logger row not yet re-read) then still reads the sets the
+// launch repair moved to the survivor, and an install whose top-up has not
+// run still reads the retired id's own rows. One id for every other exercise,
+// so those reads are exactly what they were.
+function _exerciseIdsFor(exerciseId) {
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId } = require('./exercise/retiredIds');
+  const survivor = survivorExerciseId(exerciseId);
+  return survivor && survivor !== exerciseId ? [exerciseId, survivor] : [exerciseId];
+}
+
+function _idClause(column, ids) {
+  return ids.length === 1 ? `${column} = ?` : `${column} IN (${ids.map(() => '?').join(', ')})`;
+}
+
+// D218 (audit F-8, F-9): the total lifted by SQL rows that carry their own
+// exercise_type and load_semantics, through calculateTonnage, the one rule
+// the workout summary's total uses (warm-ups out; distance and duration store
+// metres and seconds, not load; per hand counts twice; an assistance machine
+// counts nothing). Rows from an exercise no row describes read as
+// weight-and-reps, total, as calculateTonnage defaults.
+function _rowsTonnage(rows) {
+  const exerciseTypeById = {};
+  const loadSemanticsById = {};
+  for (const r of rows ?? []) {
+    const id = r?.exercise_id ?? r?.exerciseId;
+    if (id == null || Object.prototype.hasOwnProperty.call(exerciseTypeById, id)) continue;
+    exerciseTypeById[id] = r.exercise_type ?? r.exerciseType ?? 'weight_reps';
+    loadSemanticsById[id] = r.load_semantics ?? r.loadSemantics ?? 'total';
+  }
+  return calculateTonnage(rows ?? [], exerciseTypeById, loadSemanticsById);
+}
+
+// D218 (register ruling S2): what a recap counts as its exercises. Every
+// working set names an exercise, whatever its type and whether a load was
+// entered, keyed by the exercise (a retired id with its survivor) so two ids
+// are never merged by name and one exercise is never split across a rename.
+// A set no row and no snapshot names is "Exercise", never "Unknown".
+function _recapExerciseCounts(sets) {
+  // eslint-disable-next-line global-require
+  const { survivorExerciseId } = require('./exercise/retiredIds');
+  const counts = new Map();
+  for (const row of sets ?? []) {
+    const id = row?.exercise_id ?? row?.exerciseId ?? null;
+    const key = id != null ? `id:${survivorExerciseId(id)}` : `name:${row?.exercise_name ?? ''}`;
+    const entry = counts.get(key);
+    if (entry) entry.sets += 1;
+    else counts.set(key, { name: row?.exercise_name || 'Exercise', sets: 1 });
+  }
+  return [...counts.values()];
 }
 
 // D201 (per-muscle recovery, src/lib/recovery/load.js): the exercise map
@@ -4074,7 +4151,7 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
   // empty), which no caller passes.
   const windowStart = weekBoundaries[0]?.weekStart ?? (now - weeksBack * WEEK_MS);
   const rows = await d.getAllAsync(
-    `SELECT ws.created_at, ws.exercise_id, ws.evidence_class
+    `SELECT ws.created_at, ws.exercise_id, ws.exercise_name, ws.evidence_class
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      WHERE ws.user_id = ? AND w.is_completed = 1
@@ -4088,12 +4165,12 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
   // trend path uses the SAME allocation as the heatmap tiles
   // (allocateExerciseVolume): primary 1.0 + each secondary 0.5. Previously
   // this counted the primary only, so the trend and the tile disagreed for
-  // the same week (the headline volume-audit defect, P1.1).
-  const exerciseRows = await d.getAllAsync(
-    'SELECT id, primary_muscle, secondary_muscles FROM exercises',
-  );
-  const exerciseById = {};
-  for (const ex of exerciseRows) exerciseById[ex.id] = ex;
+  // the same week (the headline volume-audit defect, P1.1). D218: the map is
+  // the shared exercise lookup's (unfiltered, as this read always was, and a
+  // retired id answers with its survivor), and a set whose id no row carries
+  // is resolved by its own name snapshot, exactly as the heatmap rows are.
+  const lookup = await getExerciseLookup();
+  const exerciseById = Object.fromEntries(lookup.byId);
 
   // Bucket each set into the correct week and credit each trained muscle.
   const result = weekBoundaries.map(({ weekStart, weekEnd }, idx) => ({
@@ -4112,7 +4189,7 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
     const ts = row.created_at;
     const weekIdx = result.findIndex(w => ts >= w.weekStart && ts < w.weekEnd);
     if (weekIdx === -1) continue;
-    const ex = exerciseById[row.exercise_id];
+    const ex = exerciseById[row.exercise_id] ?? lookup.resolve(row);
     if (!ex) continue;
     const vbm = result[weekIdx].volumeByMuscle;
     for (const { muscle, sets } of allocateExerciseVolume(ex)) {
@@ -4169,7 +4246,7 @@ export async function getRecentlyUsedExerciseIds(userId, limit = 8) {
     JOIN workouts w ON w.id = s.workout_id
     WHERE w.user_id = ?
       AND w.is_completed = 1
-      AND s.set_type != 'warmup'
+      AND (s.set_type IS NULL OR s.set_type != 'warmup')
     GROUP BY s.exercise_id
     ORDER BY last_session_ms DESC
     LIMIT ?
@@ -4200,30 +4277,52 @@ export async function getRoutineWorkoutTonnages(userId, routineId, sinceMs, excl
   if (!userId || !routineId) return [];
   const d = await db();
   const params = [userId, routineId, sinceMs];
-  let sql = `
-    SELECT
-      w.id AS workout_id,
-      w.started_at AS started_at,
-      COALESCE(SUM(
-        CASE
-          WHEN ws.set_type = 'warmup' THEN 0
-          ELSE COALESCE(ws.weight, 0) * COALESCE(ws.actual_reps, 0)
-        END
-      ), 0) AS tonnage
-    FROM workouts w
-    LEFT JOIN workout_sets ws ON ws.workout_id = w.id
+  let where = `
     WHERE w.user_id = ?
       AND w.routine_id = ?
       AND w.started_at >= ?
       AND w.is_completed = 1
   `;
   if (excludeWorkoutId) {
-    sql += ' AND w.id != ?';
+    where += ' AND w.id != ?';
     params.push(excludeWorkoutId);
   }
-  sql += ' GROUP BY w.id ORDER BY w.started_at DESC';
-  const rows = await d.getAllAsync(sql, params);
-  return rows.map(rowToCamel);
+  const workouts = await d.getAllAsync(
+    `SELECT w.id AS workout_id, w.started_at AS started_at FROM workouts w ${where} ORDER BY w.started_at DESC`,
+    params,
+  );
+  if (!Array.isArray(workouts) || !workouts.length) return [];
+  // D218 (founder order 2026-10-03, audit F-8): the prior sessions' totals are
+  // worked out on the SAME basis as the workout being compared (the summary's
+  // total and the stored total_volume): each set's exercise type and load
+  // semantics through calculateTonnage. This SQL summed a plain weight x reps,
+  // so a dumbbell (per hand) session out-ranked an identical earlier one by
+  // its per-hand share every time ("Strongest workout in 4 weeks") and a
+  // distance set's metres counted as kilograms on one side only.
+  const sets = await d.getAllAsync(
+    `SELECT ws.workout_id, ws.exercise_id, ws.exercise_name, ws.set_type, ws.weight, ws.actual_reps
+     FROM workout_sets ws
+     JOIN workouts w ON w.id = ws.workout_id
+     ${where}`,
+    params,
+  );
+  const lookup = await getExerciseLookup();
+  // eslint-disable-next-line global-require
+  const { setMapsFor } = require('./sessionReport');
+  const byWorkout = new Map();
+  for (const st of sets ?? []) {
+    const list = byWorkout.get(st.workout_id);
+    if (list) list.push(st); else byWorkout.set(st.workout_id, [st]);
+  }
+  return workouts.map((w) => {
+    const mine = byWorkout.get(w.workout_id) ?? [];
+    const { exerciseTypeById, loadSemanticsById } = setMapsFor(mine, lookup);
+    return {
+      workoutId: w.workout_id,
+      startedAt: w.started_at,
+      tonnage: calculateTonnage(mine, exerciseTypeById, loadSemanticsById),
+    };
+  });
 }
 
 // C6 P10-1 (D97-18): the records surface's fetch. A "Personal records"
@@ -4235,35 +4334,38 @@ export async function getRoutineWorkoutTonnages(userId, routineId, sinceMs, excl
 // pattern.
 export async function getCompletedSetHistoryForExercise(exerciseId, userId) {
   const d = await db();
+  const ids = _exerciseIdsFor(exerciseId);
   const rows = await d.getAllAsync(
     `SELECT ws.* FROM workout_sets ws
       JOIN workouts w ON w.id = ws.workout_id
-     WHERE ws.exercise_id = ? AND ws.user_id = ? AND w.is_completed = 1
+     WHERE ${_idClause('ws.exercise_id', ids)} AND ws.user_id = ? AND w.is_completed = 1
      ORDER BY ws.created_at DESC`,
-    [exerciseId, userId],
+    [...ids, userId],
   );
   return rows.map(rowToCamel);
 }
 
 export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100) {
   const d = await db();
+  const ids = _exerciseIdsFor(exerciseId);
   const rows = await d.getAllAsync(
     `SELECT * FROM workout_sets
-     WHERE exercise_id = ? AND user_id = ?
+     WHERE ${_idClause('exercise_id', ids)} AND user_id = ?
      ORDER BY created_at DESC LIMIT ?`,
-    [exerciseId, userId, limit],
+    [...ids, userId, limit],
   );
   return rows.map(rowToCamel);
 }
 
 export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
   const d = await db();
+  const ids = _exerciseIdsFor(exerciseId);
   const rows = await d.getAllAsync(
     `SELECT ws.* FROM workout_sets ws
      JOIN workouts w ON w.id = ws.workout_id
-     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     WHERE ${_idClause('ws.exercise_id', ids)} AND ws.workout_id != ? AND w.is_completed = 1
      ORDER BY ws.created_at DESC`,
-    [exerciseId, currentWorkoutId],
+    [...ids, currentWorkoutId],
   );
   if (rows.length === 0) return [];
   const mapped = rows.map(rowToCamel);
@@ -4275,12 +4377,13 @@ export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
 // grouped as an array of arrays: [mostRecentSets, previousSets, ...].
 export async function getLastNWorkoutSets(exerciseId, currentWorkoutId, n = 2) {
   const d = await db();
+  const ids = _exerciseIdsFor(exerciseId);
   const rows = await d.getAllAsync(
     `SELECT ws.* FROM workout_sets ws
      JOIN workouts w ON w.id = ws.workout_id
-     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     WHERE ${_idClause('ws.exercise_id', ids)} AND ws.workout_id != ? AND w.is_completed = 1
      ORDER BY w.started_at DESC, ws.set_number ASC`,
-    [exerciseId, currentWorkoutId],
+    [...ids, currentWorkoutId],
   );
   if (rows.length === 0) return [];
   const mapped = rows.map(rowToCamel);
@@ -4295,12 +4398,13 @@ export async function getLastNWorkoutSets(exerciseId, currentWorkoutId, n = 2) {
 
 export async function getAllCompletedSetsForExercise(exerciseId, currentWorkoutId) {
   const d = await db();
+  const ids = _exerciseIdsFor(exerciseId);
   const rows = await d.getAllAsync(
     `SELECT ws.* FROM workout_sets ws
      JOIN workouts w ON w.id = ws.workout_id
-     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     WHERE ${_idClause('ws.exercise_id', ids)} AND ws.workout_id != ? AND w.is_completed = 1
      ORDER BY ws.created_at DESC`,
-    [exerciseId, currentWorkoutId],
+    [...ids, currentWorkoutId],
   );
   return rows.map(rowToCamel);
 }
@@ -6350,12 +6454,13 @@ export async function getWeek1SetsForExercise(mesocycleId, exerciseId) {
       [mesocycleId],
     );
     if (!week1) return [];
+    const ids = _exerciseIdsFor(exerciseId);
     const sets = await d.getAllAsync(
       `SELECT ws.* FROM workout_sets ws
        JOIN workouts w ON w.id = ws.workout_id
-       WHERE w.mesocycle_week_id = ? AND ws.exercise_id = ? AND ws.set_type != 'warmup'
+       WHERE w.mesocycle_week_id = ? AND ${_idClause('ws.exercise_id', ids)} AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
        ORDER BY ws.set_number ASC`,
-      [week1.id, exerciseId],
+      [week1.id, ...ids],
     );
     return sets.map(s => ({
       weight: s.weight,
@@ -6707,7 +6812,7 @@ export async function buildWorkoutCSV(userId) {
        w.name               AS workout_name,
        r.name               AS routine_name,
        p.name               AS programme_name,
-       e.name               AS exercise_name,
+       COALESCE(e.name, ws.exercise_name) AS exercise_name,
        ws.set_number, ws.set_type, ws.weight, ws.actual_reps,
        ws.rir, ws.rpe, ws.failed, ws.missed_reps, ws.notes
      FROM workout_sets ws
@@ -7847,7 +7952,7 @@ export async function getAdaptiveLandmarkHistory(userId) {
            END
          ) AS avg_missed
        FROM workouts w
-       JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
+       JOIN workout_sets ws ON ws.workout_id = w.id AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
          -- EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
          -- adapted landmarks are a learning consumer; a circuit or ballistic
          -- set is confounded evidence for this muscle's ordinary training
@@ -8977,8 +9082,18 @@ export async function getPRCountInWindow(userId, sinceMs, untilMs) {
   // e1RM (weight-based) comparison or they manufacture phantom PRs. LEFT JOIN
   // keeps unknown/unmatched exercises as weight_reps (counted) on both sides.
   // Warm-up sets excluded, matching the prior implementation's scope.
+  // D218 (founder order 2026-10-03, audit F-12): set_type, evidence_class,
+  // the exercise type and its load semantics are projected so the reduction
+  // below admits only the rows the live detector would (isEstimatedMaxRow): a
+  // myo-rep or rest-pause row (reps summed) or an explosive row was counted
+  // here, and an assistance machine's help was read as load, so more help
+  // looked like a record. An assisted exercise is judged by detectPR's own
+  // rule instead (less assistance at no fewer reps), _assistedRecordCount.
   const windowRows = await d.getAllAsync(
-    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps
+    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps,
+            ws.set_type AS setType, ws.evidence_class AS evidenceClass,
+            COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') AS exerciseType,
+            COALESCE(ce.load_semantics, e.load_semantics, 'total') AS loadSemantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises e ON e.id = ws.exercise_id
@@ -8993,7 +9108,10 @@ export async function getPRCountInWindow(userId, sinceMs, untilMs) {
   if (!windowRows.length) return 0;
 
   const priorRows = await d.getAllAsync(
-    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps
+    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps,
+            ws.set_type AS setType, ws.evidence_class AS evidenceClass,
+            COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') AS exerciseType,
+            COALESCE(ce.load_semantics, e.load_semantics, 'total') AS loadSemantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises e ON e.id = ws.exercise_id
@@ -9008,11 +9126,13 @@ export async function getPRCountInWindow(userId, sinceMs, untilMs) {
 
   const bestInWindow = new Map();
   for (const r of windowRows) {
+    if (!isEstimatedMaxRow(r, r.exerciseType, r.loadSemantics)) continue;
     const e1rm = calculate1RM(r.weight, r.reps);
     if (e1rm > (bestInWindow.get(r.exerciseId) ?? 0)) bestInWindow.set(r.exerciseId, e1rm);
   }
   const bestPrior = new Map();
-  for (const r of priorRows) {
+  for (const r of priorRows ?? []) {
+    if (!isEstimatedMaxRow(r, r.exerciseType, r.loadSemantics)) continue;
     const e1rm = calculate1RM(r.weight, r.reps);
     if (e1rm > (bestPrior.get(r.exerciseId) ?? 0)) bestPrior.set(r.exerciseId, e1rm);
   }
@@ -9027,7 +9147,36 @@ export async function getPRCountInWindow(userId, sinceMs, untilMs) {
     // a PR against nothing.
     if (priorE1rm > 0 && wkE1rm > priorE1rm * 1.001) prCount += 1;
   }
-  return prCount;
+  return prCount + _assistedRecordCount(windowRows, priorRows ?? []);
+}
+
+// D218 (audit F-9, F-12): an assistance machine's record, by detectPR's own
+// rule (D107-2): less assistance than the lowest before the window, at no
+// fewer reps than were done at that lowest assistance. One record per
+// exercise; a first-ever assisted exercise has no bar and claims nothing.
+function _assistedRecordCount(windowRows, priorRows) {
+  const eligible = (r) => (r?.loadSemantics ?? r?.load_semantics) === 'assisted'
+    && isE1rmEligibleRow(r) && Number(r.weight) > 0 && Number(r.reps ?? r.actual_reps) > 0;
+  const lowest = new Map();
+  for (const r of priorRows) {
+    if (!eligible(r)) continue;
+    const w = Number(r.weight);
+    if (!(lowest.get(r.exerciseId) <= w)) lowest.set(r.exerciseId, w);
+  }
+  const repsAtLowest = new Map();
+  for (const r of priorRows) {
+    if (!eligible(r) || !lowest.has(r.exerciseId)) continue;
+    if (Math.abs(Number(r.weight) - lowest.get(r.exerciseId)) >= 0.1) continue;
+    const reps = Number(r.reps ?? r.actual_reps);
+    if (!(repsAtLowest.get(r.exerciseId) >= reps)) repsAtLowest.set(r.exerciseId, reps);
+  }
+  const beaten = new Set();
+  for (const r of windowRows) {
+    if (!eligible(r) || !lowest.has(r.exerciseId)) continue;
+    if (Number(r.weight) < lowest.get(r.exerciseId) - 0.001
+      && Number(r.reps ?? r.actual_reps) >= (repsAtLowest.get(r.exerciseId) ?? 0)) beaten.add(r.exerciseId);
+  }
+  return beaten.size;
 }
 
 // The calendar-week tally the weekly recap/check-in cards show. Delegates to
@@ -9053,9 +9202,17 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   const d = await db();
   const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
 
+  // D218 (audit F-4, F-12): the same row gate as the weekly record count
+  // (isEstimatedMaxRow, so a myo-rep, rest-pause, explosive or assisted row
+  // can never be the week's best lift; evidence_class is now projected, so
+  // pickBestLift's own explosive skip can fire), and a set whose exercise row
+  // is gone is named from its own snapshot rather than "Lift".
   const weekSets = await d.getAllAsync(
-    `SELECT ws.exercise_id AS exerciseId, ex.name AS exerciseName,
-            ws.weight AS weight, ws.actual_reps AS reps
+    `SELECT ws.exercise_id AS exerciseId, COALESCE(ex.name, ws.exercise_name) AS exerciseName,
+            ws.weight AS weight, ws.actual_reps AS reps,
+            ws.set_type AS setType, ws.evidence_class AS evidenceClass,
+            COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') AS exerciseType,
+            COALESCE(ce.load_semantics, ex.load_semantics, 'total') AS loadSemantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
@@ -9076,7 +9233,10 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   // into one SQL expression -- see getWeeklyPRCount above).
   // distance/duration excluded so a cardio set can't pose as a prior best.
   const priorRows = await d.getAllAsync(
-    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps
+    `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps,
+            ws.set_type AS setType, ws.evidence_class AS evidenceClass,
+            COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') AS exerciseType,
+            COALESCE(ce.load_semantics, e.load_semantics, 'total') AS loadSemantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises e ON e.id = ws.exercise_id
@@ -9089,7 +9249,8 @@ export async function getBestLiftThisWeek(userId, weekStart) {
     [userId, weekStartMs],
   );
   const priorByEx = new Map();
-  for (const r of priorRows) {
+  for (const r of priorRows ?? []) {
+    if (!isEstimatedMaxRow(r, r.exerciseType, r.loadSemantics)) continue;
     // calculate1RM floors reps<1 (incl. 0/null) to the raw weight itself
     // (its own reps=1 special case), the same effective floor the old
     // NULLIF(...,0)-to-1 SQL gave the plain-Epley formula, so a 0-rep row
@@ -9100,7 +9261,9 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   // pickBestLift's own per-set loop floors reps<1 to 1 before calling the
   // e1rmFn, so calculate1RM(weight, 1) (raw weight) is what actually runs
   // for those sets on the week side too -- both sides now share one formula.
-  return pickBestLift(weekSets, priorByEx, calculate1RM);
+  const eligibleWeekSets = weekSets.filter((r) => isEstimatedMaxRow(r, r.exerciseType, r.loadSemantics));
+  if (!eligibleWeekSets.length) return null;
+  return pickBestLift(eligibleWeekSets, priorByEx, calculate1RM);
 }
 
 /**
@@ -9117,8 +9280,14 @@ export async function getLifetimeTonnage(userId) {
   // (library) or `custom_exercises` (per-user, composite PK user_id+id); we LEFT
   // JOIN both so an unknown / unmatched exercise defaults to load-bearing
   // (weight_reps) and the figure is byte-identical for normal lifting sets.
-  const row = await d.getFirstAsync(
-    `SELECT COALESCE(SUM(ws.weight * ws.actual_reps), 0) AS tonnage
+  // D218 (founder order 2026-10-03, audit F-9): reduced in JS on the workout
+  // summary's own basis (per hand counts twice, an assistance machine counts
+  // nothing), so a person's session totals add up to the lifetime figure.
+  // This summed a plain weight x reps.
+  const rows = await d.getAllAsync(
+    `SELECT ws.exercise_id, ws.weight, ws.actual_reps, ws.set_type,
+            COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') AS exercise_type,
+            COALESCE(ce.load_semantics, e.load_semantics, 'total') AS load_semantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises e ON e.id = ws.exercise_id
@@ -9128,7 +9297,7 @@ export async function getLifetimeTonnage(userId) {
        AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId],
   );
-  return Math.round(row?.tonnage ?? 0);
+  return Math.round(_rowsTonnage(Array.isArray(rows) ? rows : []));
 }
 
 /**
@@ -9136,9 +9305,11 @@ export async function getLifetimeTonnage(userId) {
  * family"): the two lifetime figures the old Progress-landing panel showed
  * alongside getLifetimeTonnage's own total weight lifted -- completed
  * session count and total reps, same all-time window, same working-set
- * exclusion rule as getLifetimeTonnage (non-warmup, positive weight/reps,
+ * exclusion rule as getLifetimeTonnage (non-warmup, positive reps,
  * distance/duration excluded) so the three figures always describe the
- * same body of work.
+ * same body of work. D218 (ruling S2): total reps no longer needs a load, so
+ * a pull-up logged at bodyweight counts its reps (the tonnage of such a set
+ * is nought, so the body of work is still the same one).
  */
 export async function getLifetimeWorkoutStats(userId) {
   const d = await db();
@@ -9155,7 +9326,7 @@ export async function getLifetimeWorkoutStats(userId) {
      LEFT JOIN exercises e ON e.id = ws.exercise_id
      LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1
-       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0 AND ws.weight > 0
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0
        AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId],
   );
@@ -9179,41 +9350,42 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   );
 
   const sets = await d.getAllAsync(
-    // distance/duration reuse the weight column; exclude them so the Year of
-    // Lifts tonnage and e1RM PRs aren't polluted by metres/seconds. LEFT JOINs
-    // keep unknown/unmatched exercises as weight_reps (counted).
     // S6-3 follow-up (progress-tab audit 2026-09-24, D200 "fix it all"):
-    // ws.set_type and ws.evidence_class are now projected too -- the
-    // isE1rmEligibleRow gate below already called for them, but with
-    // neither column selected every row read as the 'straight'/null
-    // default and the gate was a no-op.
-    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name,
-            ex.primary_muscle AS muscle
+    // ws.set_type and ws.evidence_class are projected for the
+    // isE1rmEligibleRow gate below. D218 (founder order 2026-10-03, ruling
+    // S2): EVERY working set is read (an untyped set counts), whatever the
+    // exercise type and whether a load was entered, so the year's set count
+    // is the sum of its sessions' "Working sets" and a bodyweight or timed
+    // exercise is one of its exercises; the total lifted is the loaded part,
+    // on the workout summary's basis (_rowsTonnage: distance and duration
+    // out, per hand x2, assistance excluded); an estimated max reads only the
+    // rows isEstimatedMaxRow admits. The set's own name snapshot names an
+    // exercise whose row is gone.
+    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id,
+            COALESCE(ex.name, ws.exercise_name) AS exercise_name,
+            ex.primary_muscle AS muscle,
+            COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') AS exercise_type,
+            COALESCE(ce.load_semantics, ex.load_semantics, 'total') AS load_semantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
      LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ?
-       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
-       AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')`,
     [userId, yearStart],
   );
 
   const totalSessions = workouts.length;
   const totalSets = sets.length;
-  const tonnage = Math.round(sets.reduce((t, s) => t + s.weight * s.actual_reps, 0));
+  const tonnage = Math.round(_rowsTonnage(sets));
   const avgSessionsPerWeek = totalSessions > 0 ? Math.round((totalSessions / 52) * 10) / 10 : 0;
 
   // Top 3 exercises by set count
-  const exerciseCounts = {};
-  for (const s of sets) {
-    const key = s.exercise_name ?? 'Unknown';
-    exerciseCounts[key] = (exerciseCounts[key] ?? 0) + 1;
-  }
-  const topExercises = Object.entries(exerciseCounts)
-    .sort((a, b) => b[1] - a[1])
+  const exerciseCounts = _recapExerciseCounts(sets);
+  const topExercises = [...exerciseCounts]
+    .sort((a, b) => b.sets - a.sets)
     .slice(0, 3)
-    .map(([name, count]) => ({ name, sets: count }));
+    .map(({ name, sets: count }) => ({ name, sets: count }));
 
   // Most active month
   const monthCounts = {};
@@ -9232,7 +9404,7 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   }));
 
   // Unique exercise count
-  const uniqueExercises = Object.keys(exerciseCounts).length;
+  const uniqueExercises = exerciseCounts.length;
 
   // Top PRs during the year, compute best estimated 1RM per exercise
   // from logged sets (the historical personal_records table was never
@@ -9246,6 +9418,8 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
     // max the live detector would refuse. Tonnage/set counts above keep
     // every working set; only the record read is gated.
     if (!isE1rmEligibleRow(s)) continue;
+    // D218: and only a loaded weight-and-reps set that is not assistance.
+    if (!isEstimatedMaxRow(s, s.exercise_type, s.load_semantics)) continue;
     const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
     if (!e1rm) continue;
     const prev = bestByExercise.get(s.exercise_name);
@@ -9297,20 +9471,21 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
       [userId, s, e],
     );
     const sets = await d.getAllAsync(
-      // distance/duration reuse the weight column; exclude them so recap
-      // tonnage, best-session and e1RM PRs aren't polluted. LEFT JOINs keep
-      // unknown/unmatched exercises as weight_reps (counted).
       // S6-3 (progress-tab audit 2026-09-24): ws.set_type and
       // ws.evidence_class are projected so the best-1RM loop below can gate
       // on isE1rmEligibleRow, the same read getYearOfLiftsData already runs.
-      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name
+      // D218 (ruling S2): every working set, as getYearOfLiftsData reads them
+      // (its comment has the rule).
+      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id,
+              COALESCE(ex.name, ws.exercise_name) AS exercise_name,
+              COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') AS exercise_type,
+              COALESCE(ce.load_semantics, ex.load_semantics, 'total') AS load_semantics
        FROM workout_sets ws
        JOIN workouts w ON ws.workout_id = w.id
        LEFT JOIN exercises ex ON ex.id = ws.exercise_id
        LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
        WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
-         AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
-         AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
+         AND (ws.set_type IS NULL OR ws.set_type != 'warmup')`,
       [userId, s, e],
     );
     return { workouts, sets };
@@ -9319,25 +9494,26 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
   const { workouts, sets } = await aggregate(startMs, endMs);
   const totalSessions = workouts.length;
   const totalSets = sets.length;
-  const tonnage = Math.round(sets.reduce((t, x) => t + x.weight * x.actual_reps, 0));
+  const tonnage = Math.round(_rowsTonnage(sets));
   const weeks = Math.max(1, (endMs - startMs) / WEEK);
   const avgSessionsPerWeek = totalSessions > 0 ? Math.round((totalSessions / weeks) * 10) / 10 : 0;
 
-  const exerciseCounts = {};
-  for (const x of sets) {
-    const k = x.exercise_name ?? 'Unknown';
-    exerciseCounts[k] = (exerciseCounts[k] ?? 0) + 1;
-  }
-  const topExercises = Object.entries(exerciseCounts)
-    .sort((a, b) => b[1] - a[1])
+  const exerciseCounts = _recapExerciseCounts(sets);
+  const topExercises = [...exerciseCounts]
+    .sort((a, b) => b.sets - a.sets)
     .slice(0, 5)
-    .map(([name, count]) => ({ name, sets: count }));
-  const uniqueExercises = Object.keys(exerciseCounts).length;
+    .map(({ name, sets: count }) => ({ name, sets: count }));
+  const uniqueExercises = exerciseCounts.length;
 
-  // Best single session by tonnage in the window.
-  const tonnageByWorkout = {};
+  // Best single session by tonnage in the window (D218: each session on the
+  // summary's own basis).
+  const setsByWorkout = {};
   for (const x of sets) {
-    tonnageByWorkout[x.workout_id] = (tonnageByWorkout[x.workout_id] ?? 0) + x.weight * x.actual_reps;
+    (setsByWorkout[x.workout_id] ??= []).push(x);
+  }
+  const tonnageByWorkout = {};
+  for (const [workoutId, rows] of Object.entries(setsByWorkout)) {
+    tonnageByWorkout[workoutId] = _rowsTonnage(rows);
   }
   let bestSession = null;
   for (const w of workouts) {
@@ -9360,6 +9536,8 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
     // card count. Tonnage/set counts above keep every working set; only the
     // record read is gated.
     if (!isE1rmEligibleRow(x)) continue;
+    // D218: and only a loaded weight-and-reps set that is not assistance.
+    if (!isEstimatedMaxRow(x, x.exercise_type, x.load_semantics)) continue;
     const e1rm = calculate1RM(x.weight || 0, x.actual_reps || 0);
     if (!e1rm) continue;
     const prev = bestByExercise.get(x.exercise_name);
@@ -9375,7 +9553,7 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
     const { workouts: pw, sets: ps } = await aggregate(startMs - len, startMs);
     previous = {
       totalSessions: pw.length,
-      tonnage: Math.round(ps.reduce((t, x) => t + x.weight * x.actual_reps, 0)),
+      tonnage: Math.round(_rowsTonnage(ps)),
     };
   }
 
@@ -9402,25 +9580,27 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     // was undefined, both week buckets were always empty, and tonnageDelta
     // (the block story's "climb" slide + BlockReflectionScreen's progress
     // figure) always computed as null.
-    // distance/duration reuse the weight column; exclude them so the block's
-    // first/last-week tonnage and tonnageDelta aren't polluted. LEFT JOINs keep
-    // unknown/unmatched exercises as weight_reps (counted).
     // S6-3 (progress-tab audit 2026-09-24): ws.evidence_class is additionally
     // projected (ws.set_type was already selected) so the best-1RM loop below
     // can gate on isE1rmEligibleRow, the same read getYearOfLiftsData runs.
-    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name
+    // D218 (ruling S2): every working set, as getYearOfLiftsData reads them
+    // (its comment has the rule); the first/last-week tonnage and
+    // tonnageDelta are on the summary's basis.
+    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id,
+            COALESCE(ex.name, ws.exercise_name) AS exercise_name,
+            COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') AS exercise_type,
+            COALESCE(ce.load_semantics, ex.load_semantics, 'total') AS load_semantics
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
      LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1
-       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
-       AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')`,
     [userId, mesocycleId],
   );
   const totalSessions = workouts.length;
   const totalSets = sets.length;
-  const tonnage = sets.reduce((t, s) => t + (s.weight ?? 0) * (s.actual_reps ?? 0), 0);
+  const tonnage = _rowsTonnage(sets);
 
   // First vs last week tonnage delta.
   // start_date / end_date are TEXT YYYY-MM-DD; convert to ms before arithmetic
@@ -9457,17 +9637,12 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     const w = workouts.find(w2 => w2.id === s.workout_id);
     return w && w.started_at >= lastWeekStart && w.started_at < lastWeekEnd;
   });
-  const firstTonnage = firstWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
-  const lastTonnage = lastWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
+  const firstTonnage = _rowsTonnage(firstWeekSets);
+  const lastTonnage = _rowsTonnage(lastWeekSets);
   const tonnageDelta = firstTonnage > 0 ? Math.round(((lastTonnage - firstTonnage) / firstTonnage) * 100) : null;
 
-  // Most-trained muscle (by set count)
-  const muscleCounts = {};
-  for (const s of sets) {
-    const key = s.exercise_name ?? 'Unknown';
-    muscleCounts[key] = (muscleCounts[key] ?? 0) + 1;
-  }
-  const topExercise = Object.entries(muscleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  // The most-trained exercise (by set count).
+  const topExercise = [..._recapExerciseCounts(sets)].sort((a, b) => b.sets - a.sets)[0]?.name ?? null;
 
   // Average session duration
   const avgDuration = workouts.length > 0
@@ -9488,6 +9663,7 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     // S6-3: the shared e1RM eligibility gate, as in getRecapData above
     // (kept short: campaign10m's guard reads the next 600 characters).
     if (!isE1rmEligibleRow(s)) continue;
+    if (!isEstimatedMaxRow(s, s.exercise_type, s.load_semantics)) continue; // D218
     const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
     if (!e1rm) continue;
     const prev = blockBestByExercise.get(s.exercise_name);
@@ -10642,7 +10818,7 @@ export async function getProgressionTeaser(userId, lastWorkoutId, prevWorkoutId)
     `SELECT ws.exercise_id, e.name, MAX(ws.weight) as max_weight
      FROM workout_sets ws
      JOIN exercises e ON e.id = ws.exercise_id
-     WHERE ws.workout_id = ? AND ws.set_type != 'warmup' AND ws.weight > 0
+     WHERE ws.workout_id = ? AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.weight > 0
      GROUP BY ws.exercise_id`,
     [lastWorkoutId],
   );
@@ -10650,7 +10826,7 @@ export async function getProgressionTeaser(userId, lastWorkoutId, prevWorkoutId)
   const w2Rows = await d.getAllAsync(
     `SELECT ws.exercise_id, MAX(ws.weight) as max_weight
      FROM workout_sets ws
-     WHERE ws.workout_id = ? AND ws.set_type != 'warmup' AND ws.weight > 0
+     WHERE ws.workout_id = ? AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.weight > 0
      GROUP BY ws.exercise_id`,
     [prevWorkoutId],
   );
@@ -11813,7 +11989,7 @@ export async function getExerciseUsageStats(userId) {
             MAX(w.started_at) AS lastTrainedMs
        FROM workout_sets s
        JOIN workouts w ON w.id = s.workout_id
-      WHERE w.user_id = ? AND w.is_completed = 1 AND s.set_type != 'warmup'
+      WHERE w.user_id = ? AND w.is_completed = 1 AND (s.set_type IS NULL OR s.set_type != 'warmup')
       GROUP BY s.exercise_id`,
     [userId],
   ).catch(() => []);
@@ -12004,7 +12180,7 @@ export async function getSessionAdjustmentSignals(userId) {
               w.overall_pump,
               w.joint_discomfort
        FROM workouts w
-       JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
+       JOIN workout_sets ws ON ws.workout_id = w.id AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
        JOIN exercises e ON e.id = ws.exercise_id
        WHERE w.user_id = ? AND w.is_completed = 1 AND e.primary_muscle IS NOT NULL
        GROUP BY e.primary_muscle`,
@@ -12143,27 +12319,43 @@ export async function deleteExerciseGoal(userId, exerciseId) {
   _scheduleSync();
 }
 
-// Returns the most recent completed workout timestamp per primary muscle,
-// limited to the last 90 days to avoid stale data.
+// The latest completed session that trained each muscle, within the last 90
+// days: { [muscle]: startedAtMs }.
+//
+// D218 (founder order 2026-10-03, audit F-20, register ruling S3): ONE rule
+// for "Trained N days ago" across the app, the Volume heatmap's (VH-18): a
+// muscle was trained in a session when one of its working sets credited it,
+// as the main muscle or as a helper, through the shared exercise lookup;
+// warm-ups and explosive sets credit nothing (volumeLogged.creditedMuscles).
+// This read took the primary muscle only, counted explosive sets and dropped
+// any set whose exercise row was missing, so the Recovery list's recency fact
+// could disagree with the heatmap and with the sessions its own estimate
+// counts. The instant stays the session's start (the training day is the day
+// it started, D215).
 export async function getLastTrainedPerMuscle(userId) {
   const d = await db();
   const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const rows = await d.getAllAsync(
-    `SELECT e.primary_muscle, MAX(w.started_at) AS last_trained_at
+    `SELECT ws.exercise_id, ws.exercise_name, ws.set_type, ws.evidence_class, w.started_at
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
-     JOIN exercises e ON ws.exercise_id = e.id
      WHERE ws.user_id = ?
        AND w.is_completed = 1
        AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
-       AND e.primary_muscle IS NOT NULL
-       AND w.started_at >= ?
-     GROUP BY e.primary_muscle`,
+       AND w.started_at >= ?`,
     [userId, cutoff],
   );
+  const lookup = await getExerciseLookup();
+  // eslint-disable-next-line global-require
+  const { creditedMuscles } = require('./volumeLogged');
+  const cache = new Map();
   const result = {};
-  for (const row of rows) {
-    if (row.primary_muscle) result[row.primary_muscle] = row.last_trained_at;
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const at = Number(row.started_at);
+    if (!Number.isFinite(at)) continue;
+    for (const muscle of creditedMuscles(row, lookup, cache)) {
+      if (!(result[muscle] >= at)) result[muscle] = at;
+    }
   }
   return result;
 }

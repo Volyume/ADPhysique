@@ -174,7 +174,12 @@ export async function publishAmbientItems({
   // audience is narrower than this device asked for).
   let sessionRefused = null;
 
-  const sessionPayload = await buildSessionPayload(workoutId, { userId, units }).catch(() => null);
+  // D218 (founder order 2026-10-03, audit F-11): the post carries the
+  // summary's own record count (prList is the summary's list, one entry per
+  // lift), so the public figure is the one the person just saw.
+  const sessionPayload = await buildSessionPayload(workoutId, {
+    userId, units, prCount: Array.isArray(prList) ? prList.length : null,
+  }).catch(() => null);
   if (sessionPayload) {
     const item = {
       kind: 'session', payload: sessionPayload, visibility, clientRef: workoutId, groupIds,

@@ -22,13 +22,31 @@
  *     from the old coerced-to-zero reference whenever a bucket has an
  *     unrated session, and match a hand-rolled answered-only reference
  *     instead -- proving the correction is real, not accidental.
+ *  4. D218 (founder order 2026-10-03, audit F-25), a deliberate, recorded
+ *     change to ONE axis, avgReps, for all three callers: the rep average now
+ *     reads trend-eligible working sets of rep-based exercises only (no
+ *     warm-up, myo-rep, rest-pause, explosive or circuit row; no duration or
+ *     distance set, whose "reps" are seconds). The three reference oracles
+ *     below keep their old derivation VERBATIM for every other axis; their
+ *     one avgReps line applies `d218RepSet` (marked), so a mismatch on any
+ *     other axis still means the extraction drifted. Two cases pin what the
+ *     change fixes: planks logged in seconds no longer raise a deload, and
+ *     warm-ups in one week no longer split Home from Consistency.
  */
-import { buildLast4WeekDeloadBuckets, calculateWeeklyVolume, VOLUME_LANDMARKS } from '../algorithms';
+import {
+  buildLast4WeekDeloadBuckets, calculateWeeklyVolume, VOLUME_LANDMARKS, isTrendEligibleRow, shouldDeload,
+} from '../algorithms';
 import { startOfWeek } from 'date-fns/startOfWeek';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
 const NOW = new Date('2026-08-17T10:00:00.000Z').getTime();
+
+// D218: the one rep-average row rule every oracle's avgReps line applies.
+function d218RepSet(s, typeOf = () => 'weight_reps') {
+  const type = typeOf(s);
+  return isTrendEligibleRow(s) && type !== 'duration' && type !== 'distance';
+}
 
 // ---------------------------------------------------------------------
 // Reference oracles: the exact inline derivations each caller had before
@@ -67,8 +85,9 @@ function oldUseProgressDataBuckets(sets, exMap, workouts, now) {
     const avgJointDiscomfort = jointRated.length
       ? jointRated.reduce((sum, v) => sum + v, 0) / jointRated.length
       : null;
-    const avgReps = wkSets.length > 0
-      ? wkSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / wkSets.length
+    const repSets = wkSets.filter(s => d218RepSet(s, x => exMap?.[x.exerciseId]?.exerciseType ?? 'weight_reps')); // D218
+    const avgReps = repSets.length > 0
+      ? repSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / repSets.length
       : 0;
     last4.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV, weeksSinceLastDeload: 4 - wk });
   }
@@ -101,7 +120,7 @@ function oldHomeScreenBuckets(recentSets, allWorkouts, now) {
       w => w.isCompleted && w.startedAt >= weekStart && w.startedAt < weekEnd,
     );
     const wIds = new Set(weekWorkouts.map(w => w.id));
-    const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
+    const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup' && d218RepSet(s)); // D218
     const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
     const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
     const jointRated = weekWorkouts
@@ -144,8 +163,9 @@ function oldCoachReviewBuckets(allSets, allWorkouts, exerciseMap, weekStartMs, n
     const avgSoreness = workoutsInWeek.length > 0
       ? workoutsInWeek.reduce((s, w) => s + (w.soreness24hBefore || 0), 0) / workoutsInWeek.length
       : 0;
-    const avgReps = setsInWeek.length > 0
-      ? setsInWeek.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / setsInWeek.length
+    const repSets = setsInWeek.filter(set => d218RepSet(set, x => exerciseMap?.[x.exerciseId]?.exerciseType ?? 'weight_reps')); // D218
+    const avgReps = repSets.length > 0
+      ? repSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / repSets.length
       : 0;
     const avgJointDiscomfort = workoutsInWeek.length > 0
       ? workoutsInWeek.reduce((s, w) => s + (w.jointDiscomfort || 0), 0) / workoutsInWeek.length
@@ -373,5 +393,76 @@ describe('buildLast4WeekDeloadBuckets — CoachReviewScreen (D33: D6-correct, di
     // pre-fix CoachReviewScreen code would have produced.
     expect(actual[3].avgSoreness).not.toBe(oldBuckets[3].avgSoreness);
     expect(actual[3].avgJointDiscomfort).not.toBe(oldBuckets[3].avgJointDiscomfort);
+  });
+});
+
+// ---------------------------------------------------------------------
+// 5. D218 (audit F-25): what the rep-average rule fixes.
+// ---------------------------------------------------------------------
+describe('buildLast4WeekDeloadBuckets: D218, the rep average reads comparable working sets', () => {
+  const exerciseMap = {
+    bench: { primaryMuscle: 'chest', exerciseType: 'weight_reps' },
+    plank: { primaryMuscle: 'abs', exerciseType: 'duration' },
+  };
+  function week(offset, extra = []) {
+    // offset 3 = the oldest of the four rolling weeks, 0 = the most recent.
+    const at = NOW - offset * WEEK - 2 * DAY;
+    const workoutId = `w${offset}`;
+    const sets = Array.from({ length: 6 }, (_, k) => ({
+      exerciseId: 'bench', workoutId, weight: 60, actualReps: 10, setType: 'straight', createdAt: at + k * 60_000,
+    }));
+    return { workout: { id: workoutId, startedAt: at, isCompleted: true }, sets: [...sets, ...extra.map(e => ({ workoutId, createdAt: at + 3_600_000, ...e }))] };
+  }
+
+  test('two planks logged as 60 seconds in the oldest week no longer raise a deload (the audit probe)', () => {
+    const weeks = [
+      week(3, [
+        { exerciseId: 'plank', weight: 0, actualReps: 60, setType: 'straight' },
+        { exerciseId: 'plank', weight: 0, actualReps: 60, setType: 'straight' },
+      ]),
+      week(2), week(1), week(0),
+    ];
+    const sets = weeks.flatMap(w => w.sets);
+    const workouts = weeks.map(w => w.workout);
+    const consistency = buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, { now: NOW });
+    expect(consistency.map(b => b.avgReps)).toEqual([10, 10, 10, 10]);
+    expect(shouldDeload(consistency).reasons).not.toContain('Your average reps per set have dropped over the last 4 weeks');
+    // Home passes no exercise map; the type comes from repsTypeById.
+    const home = buildLast4WeekDeloadBuckets(sets, workouts, null, {
+      now: NOW, repsViaWorkoutRoster: true, weeksSinceLastDeloadOverride: 99,
+      repsTypeById: { bench: 'weight_reps', plank: 'duration' },
+    });
+    expect(home.map(b => b.avgReps)).toEqual([10, 10, 10, 10]);
+  });
+
+  test('warm-ups in one week give Home and Consistency the same rep average', () => {
+    const weeks = [
+      week(3, [
+        { exerciseId: 'bench', weight: 20, actualReps: 15, setType: 'warmup' },
+        { exerciseId: 'bench', weight: 40, actualReps: 12, setType: 'warmup' },
+      ]),
+      week(2), week(1), week(0),
+    ];
+    const sets = weeks.flatMap(w => w.sets);
+    const workouts = weeks.map(w => w.workout);
+    const consistency = buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, { now: NOW });
+    const home = buildLast4WeekDeloadBuckets(sets, workouts, null, {
+      now: NOW, excludeWarmups: true, repsViaWorkoutRoster: true, weeksSinceLastDeloadOverride: 99,
+    });
+    expect(consistency.map(b => b.avgReps)).toEqual(home.map(b => b.avgReps));
+    expect(consistency[0].avgReps).toBe(10);
+  });
+
+  test('myo-rep, explosive and circuit rows stay out of the average', () => {
+    const weeks = [
+      week(3, [
+        { exerciseId: 'bench', weight: 40, actualReps: 30, setType: 'myo_reps' },
+        { exerciseId: 'bench', weight: 16, actualReps: 25, setType: 'straight', evidenceClass: 'ballistic' },
+        { exerciseId: 'bench', weight: 30, actualReps: 20, setType: 'straight', evidenceClass: 'circuit' },
+      ]),
+      week(2), week(1), week(0),
+    ];
+    const buckets = buildLast4WeekDeloadBuckets(weeks.flatMap(w => w.sets), weeks.map(w => w.workout), exerciseMap, { now: NOW });
+    expect(buckets[0].avgReps).toBe(10);
   });
 });

@@ -47,6 +47,13 @@ jest.mock('../../lib/database', () => ({
   // for the per-exercise weight-meaning map. Empty list = every set reads
   // 'total', the pre-semantics behaviour these suites were written against.
   getAllExercises: jest.fn().mockResolvedValue([]),
+  // D218 bridge: the reporting read (unfiltered lookup) is built from this
+  // suite's own getAllExercises fixture, so each test's fixture stays the contract.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
 }));
 
 import useAppStore from '../../store/useAppStore';

@@ -14,7 +14,13 @@ import Button from './Button';
 //
 // `relativeDay` is computed by the caller (getRelativeDay(lastSession.startedAt))
 // so this component stays a pure renderer of already-derived data.
-function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onOpenHistory, onRepeat }) {
+//
+// D218 (founder order 2026-10-03, audit F-24): `units` is the person's weight
+// unit ('kg' | 'lbs'). Gym weight is stored in that display unit and never
+// converted, so the total is labelled with the same unit, as the Summary hero,
+// History, the share card and Consistency do. It defaults to 'kg' (the app
+// default) and anything that is not 'lbs' reads as kg.
+function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onOpenHistory, onRepeat, units = 'kg' }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -24,13 +30,14 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
     lastSessionMeta: { ...t.type.caption, color: t.colors.textMuted },
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
   };
+  const unitLabel = units === 'lbs' ? 'lbs' : 'kg';
   const meta = [
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
     lastSession.totalVolume
-      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg lifted`
+      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} ${unitLabel} lifted`
       : lastSessionTonnage
-        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg lifted`
+        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} ${unitLabel} lifted`
         : null,
   ].filter(Boolean).join(' - ');
 

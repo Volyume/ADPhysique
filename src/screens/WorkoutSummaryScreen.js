@@ -29,19 +29,21 @@ import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
 import {
-  getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
+  getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout, getExerciseLookup,
   getActivePlan, getRoutinesForPlan,
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById, getWorkoutById, getOpenEdPatternFlag,
   getSessionConstraintEffect,
 } from '../lib/database';
+import { groupSessionExercises } from '../lib/sessionReport';
+import { creditedMuscles } from '../lib/volumeLogged';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
 import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
 import { MilestoneBurst } from '../components/PRCelebration';
 import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
-import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
+import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, isBallisticEvidenceRow } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 // D214 addendum 9 (census 0.24, W4): the five band words, one map shared with the
@@ -232,6 +234,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [routineName, setRoutineName] = useState(passedRoutineName || '');
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [excludedVolume, setExcludedVolume] = useState({});
+  // D218 (audit F-21): this workout's working sets that credit no muscle in
+  // the volume card, so the card can say so rather than leave the tile and the
+  // card disagreeing in silence. { noMuscle, explosive } set counts.
+  const [uncreditedSets, setUncreditedSets] = useState({ noMuscle: 0, explosive: 0 });
   // C5-P16-01 (D96): how far through the session's own week this is, so the
   // volume card can state a week in progress instead of delivering a
   // finished-week verdict after session one.
@@ -781,17 +787,39 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const weekMs = 7 * 24 * 60 * 60 * 1000;
     const sessionWeekStart = localWeekStartMs(workoutDayMs({ startedAt, endedAt }));
     const sessionWeekEnd = sessionWeekStart + weekMs;
-    const [allSets, allExercises, allWorkouts] = await Promise.all([
+    // D218 (founder order 2026-10-03, audit F-1, F-3): the shared exercise
+    // lookup, unfiltered (a soft-deleted custom exercise still credits its
+    // muscles, as the volume trend and Recovery already count it),
+    // survivor-aware, and each set's own name snapshot as the fallback. The
+    // filtered library dropped such sets from this card and skipped the
+    // exercise from the history list below.
+    const [allSets, lookup, allWorkouts] = await Promise.all([
       getCompletedWorkoutSets(user.id),
-      getAllExercises(),
+      getExerciseLookup().catch(() => null),
       getAllWorkouts(user.id),
     ]);
     const resolved = await getEffectiveLandmarks(user.id).catch(() => null);
     setLandmarkResolution(resolved);
     const recentSets = allSets.filter(s => s.createdAt >= sessionWeekStart && s.createdAt < sessionWeekEnd);
-    const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+    const exerciseMap = lookup ?? {};
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
+    // D218 (audit F-21): this workout's own working sets that the card cannot
+    // credit to a muscle: an explosive set (EL-7, never per-muscle volume) or
+    // an exercise with no muscle group (a custom exercise made without one, or
+    // one this device does not have).
+    if (workoutId) {
+      const cache = new Map();
+      let noMuscle = 0;
+      let explosive = 0;
+      for (const st of allSets) {
+        if ((st.workoutId ?? st.workout_id) !== workoutId) continue;
+        if ((st.setType ?? st.set_type ?? 'straight') === 'warmup') continue;
+        if (isBallisticEvidenceRow(st)) { explosive += 1; continue; }
+        if (creditedMuscles(st, exerciseMap, cache).length === 0) noMuscle += 1;
+      }
+      setUncreditedSets({ noMuscle, explosive });
+    }
     // Final pass S4 (certification 2026-09-05, same law as F-12): the volume
     // read drops explosive (ballistic) sets, so a muscle trained partly
     // through swings must not be told to add sets for work it has done.
@@ -909,27 +937,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       try {
         const { getWorkoutSetsForWorkout } = await import('../lib/database');
         const wSets = await getWorkoutSetsForWorkout(workoutId);
-        const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-        const grouped = [];
+        // D218 (founder order 2026-10-03, audit F-1, F-10): every exercise
+        // with a logged set is listed, named through the shared lookup (row,
+        // then the set's own name snapshot, then "Exercise"), never skipped;
+        // this skipped any exercise the filtered library could not resolve
+        // while the tiles above still counted its sets. Each set carries its
+        // evidence class and exercise type, so the share image's lift options
+        // leave explosive, distance and duration sets out, as at the finish.
+        const exerciseById = Object.fromEntries(lookup?.byId ?? []);
         const seen = [];
         for (const s of wSets) {
           if (!seen.includes(s.exerciseId)) seen.push(s.exerciseId);
         }
-        for (const exId of seen) {
-          const ex = exerciseMap[exId];
-          if (!ex) continue;
-          grouped.push({
-            exerciseId: exId,
-            name: ex.name,
-            loggedSets: wSets
-              .filter(s => s.exerciseId === exId)
-              .map(s => ({
-                weight: s.weight,
-                reps: s.actualReps ?? s.actual_reps,
-                setType: s.setType ?? s.set_type ?? 'straight',
-              })),
-          });
-        }
+        const grouped = groupSessionExercises(wSets, lookup ?? exerciseById).map((g) => ({
+          exerciseId: g.exerciseId,
+          name: g.name,
+          loggedSets: g.loggedSets,
+        }));
         setReadOnlyExerciseData(grouped);
 
         // The workout's own records, for its share image (historyPRs above):
@@ -950,7 +974,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               : [];
           }
           setHistoryPRs(pastWorkoutPRs({
-            sets: wSets, priorSetsByExercise, exerciseById: exerciseMap, units: units === 'lbs' ? 'lbs' : 'kg', date: startedAt ?? endedAt ?? null,
+            sets: wSets, priorSetsByExercise, exerciseById, units: units === 'lbs' ? 'lbs' : 'kg', date: startedAt ?? endedAt ?? null,
           }));
         } catch (e) {
           logError('WorkoutSummary.historyPRs', e);
@@ -1274,10 +1298,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     }
   }
 
+  // D218 (audit F-21): every muscle the week credits is listed; the card is a
+  // list, and the cap of six hid the rest with no note.
   const musclesWorked = Object.keys(weeklyVolume)
     .filter(m => weeklyVolume[m]?.workingSets > 0)
-    .sort((a, b) => (weeklyVolume[b]?.workingSets || 0) - (weeklyVolume[a]?.workingSets || 0))
-    .slice(0, 6);
+    .sort((a, b) => (weeklyVolume[b]?.workingSets || 0) - (weeklyVolume[a]?.workingSets || 0));
+  // D218 (audit F-21): what the volume card does not count from this workout,
+  // said in the card. Explosive work on a muscle with other sets is already
+  // said on that muscle's row; this line covers explosive work on muscles with
+  // no row, and sets whose exercise has no muscle group.
+  const explosiveOnlyMuscles = Object.keys(excludedVolume || {})
+    .filter(m => (excludedVolume[m]?.excludedSets ?? 0) > 0 && !(weeklyVolume[m]?.workingSets > 0));
+  const volumeNotes = [];
+  if (uncreditedSets.noMuscle > 0) {
+    volumeNotes.push(uncreditedSets.noMuscle === 1
+      ? '1 set from this workout is not in these totals because its exercise has no muscle group set.'
+      : `${uncreditedSets.noMuscle} sets from this workout are not in these totals because their exercise has no muscle group set.`);
+  }
+  if (uncreditedSets.explosive > 0 && explosiveOnlyMuscles.length > 0) {
+    volumeNotes.push('Explosive lifts like swings are not counted here.');
+  }
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
 
@@ -1616,7 +1656,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working sets"
-            tooltip={'The sets counted in your weekly totals. Warm-ups are left out; every other logged set counts, however it felt.'}
+            // D218 (audit F-17): the rule this tile applies. It used to call
+            // itself "the sets counted in your weekly totals", but those
+            // totals leave explosive lifts out and this tile does not.
+            tooltip={'Every set you logged in this workout except warm-ups, however it felt. The weekly muscle totals leave out explosive lifts like swings.'}
             animateOrder={1}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
@@ -1757,7 +1800,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                       </View>
                     ) : (
                       <Text style={[styles.exerciseListMeta, live.exerciseListMeta]}>
-                        {ex.recommendedSets} x {ex.repsMin}-{ex.repsMax}
+                        {/* D218 (audit F-1, F-7): the list holds only exercises
+                            with a logged set, so this branch is an exercise
+                            with warm-ups only; it printed a target ("3 x 8-12",
+                            or " x -" from History) as if sets were done. */}
+                        {(ex.loggedSets ?? []).length > 0
+                          ? `${(ex.loggedSets ?? []).length} warm-up ${(ex.loggedSets ?? []).length === 1 ? 'set' : 'sets'}`
+                          : (ex.recommendedSets ? `${ex.recommendedSets} x ${ex.repsMin}-${ex.repsMax}` : '')}
                       </Text>
                     )}
                   </View>
@@ -2027,8 +2076,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               );
             })}
             </Card>
+            {volumeNotes.map((note) => (
+              <Text key={note} style={[styles.volumeInsightText, live.volumeInsightText]}>{note}</Text>
+            ))}
           </View>
           </RevealSection>
+        )}
+        {/* D218 (audit F-21): a workout whose sets credit no muscle still says
+            why the volume card has nothing to show for it. */}
+        {musclesWorked.length === 0 && volumeNotes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, live.sectionTitle]}>{readOnly ? "That week's volume" : "This week's volume"}</Text>
+            {volumeNotes.map((note) => (
+              <Text key={note} style={[styles.volumeInsightText, live.volumeInsightText]}>{note}</Text>
+            ))}
+          </View>
         )}
 
         {/* COMP-005 + D2: block-end recap. Under calm/ED this stays the quiet

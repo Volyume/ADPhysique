@@ -16,6 +16,13 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getAllWorkouts: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218: the hook reads the shared exercise lookup; built here from each
+  // test's own getAllExercises fixture, so the fixtures stay the contract.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getAllMesocycles: jest.fn(),
   dismissInsight: jest.fn(),
   runInsightsEngine: jest.fn(),

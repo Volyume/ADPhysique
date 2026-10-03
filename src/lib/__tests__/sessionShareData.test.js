@@ -290,3 +290,23 @@ describe('compareWithPriorSessions: the summary\'s verdict and the last session'
     expect(compareWithPriorSessions([{ tonnage: 5600 }, { tonnage: 3000 }], 5000).moreThanLast).toBe(-600);
   });
 });
+
+// D218 (founder order 2026-10-03, audit F-10): the summary's exercise list now
+// carries each set's exercise type, so a distance or duration set (metres or
+// seconds in the weight column) is never the share image's lift.
+describe('D218: a distance or duration set is never a lift', () => {
+  const { topSetFromExerciseData: top, liftOptionsFromExerciseData: options } = require('../sessionShareData');
+  const data = [
+    { name: 'Heel Walk', loggedSets: [{ weight: 400, reps: 90, setType: 'straight', exerciseType: 'distance' }] },
+    { name: 'Plank', loggedSets: [{ weight: 20, reps: 60, setType: 'straight', exerciseType: 'duration' }] },
+    { name: 'Bench Press', loggedSets: [{ weight: 100, reps: 5, setType: 'straight', exerciseType: 'weight_reps' }] },
+  ];
+
+  test('the top set is the heaviest loaded set', () => {
+    expect(top(data)).toEqual({ weight: 100, reps: 5, exerciseName: 'Bench Press' });
+  });
+
+  test('the lift options leave the distance and duration exercises out', () => {
+    expect(options(data).map((o) => o.exerciseName)).toEqual(['Bench Press']);
+  });
+});

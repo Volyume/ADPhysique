@@ -74,6 +74,13 @@ jest.mock('../../components/FeedbackSheet', () => ({ useFeedback: () => ({ open:
 jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getAllExercises: jest.fn(),
+  // D218: the summary reads the shared exercise lookup; built from each
+  // test's own getAllExercises fixture.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getAllWorkouts: jest.fn(),
   updateWorkout: jest.fn(),
   getActivePlan: jest.fn(),

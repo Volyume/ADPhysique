@@ -180,6 +180,46 @@ export function buildLoadSemanticsById(exercises) {
   return out;
 }
 
+/**
+ * D218 (founder order 2026-10-03, "ensure all exercises are logged and
+ * reported correct after the workout ends"): the exercise a logged set
+ * belongs to, from either a plain `{ [exerciseId]: row }` map (the historical
+ * shape) or the shared exercise lookup (src/lib/exercise/lookup.js), which
+ * also answers a soft-deleted custom exercise, a retired id (with its
+ * survivor) and an unknown id (by the set's own name snapshot). Duck-typed so
+ * this pure module never imports the corpus.
+ */
+export function exerciseForSet(mapOrLookup, set) {
+  if (!mapOrLookup || !set) return null;
+  if (typeof mapOrLookup.resolve === 'function') return mapOrLookup.resolve(set) ?? null;
+  const id = set.exerciseId || set.exercise_id;
+  return mapOrLookup[id] ?? null;
+}
+
+/**
+ * D218 (audit F-9, F-12, F-13, F-14): the one gate for every READER that turns
+ * logged sets into an estimated max or a best lift after the workout (the
+ * weekly record count, the best lift of the week, Lift Progress, Exercise
+ * Detail's records, the recaps), so none of them can credit a set the live
+ * record detector (detectPR) would refuse:
+ *  - isE1rmEligibleRow: warm-ups, myo-reps, rest-pause and explosive rows out;
+ *  - a weight-and-reps schema: distance and duration store metres and
+ *    seconds in these columns, and a reps-only set carries no load;
+ *  - not an assistance machine: the entered number is the help, so an
+ *    estimate on it reads more help as a bigger lift (D107-2; detectPR
+ *    judges assisted work in its own branch, by less assistance);
+ *  - a real load and real reps.
+ */
+export function isEstimatedMaxRow(set, exerciseType = 'weight_reps', loadSemantics = 'total') {
+  if (!set || !isE1rmEligibleRow(set)) return false;
+  const type = exerciseType ?? 'weight_reps';
+  if (type !== 'weight_reps' && type !== 'weighted_bodyweight') return false;
+  if (loadSemantics === 'assisted') return false;
+  const weight = Number(set.weight) || 0;
+  const reps = Number(set.actualReps ?? set.actual_reps ?? set.reps) || 0;
+  return weight > 0 && reps > 0;
+}
+
 export function calculateTonnage(sets, exerciseTypeById = null, loadSemanticsById = null) {
   return sets.reduce((total, s) => {
     if (isHardSet(s) && isLoadBearingSet(s, exerciseTypeById)) {
@@ -277,8 +317,7 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     // sets) still does, exactly like an ordinary set.
     if (isBallisticEvidenceRow(set)) continue;
 
-    const exerciseId = set.exerciseId || set.exercise_id;
-    const exercise = exerciseMap[exerciseId];
+    const exercise = exerciseForSet(exerciseMap, set);
     if (!exercise) continue;
 
     const reps = set.actualReps || set.actual_reps || 0;
@@ -331,8 +370,7 @@ export function calculateExcludedWeeklyVolume(sets, exerciseMap = {}) {
     if (!isHardSet(set)) continue;
     if (!isBallisticEvidenceRow(set)) continue;
 
-    const exerciseId = set.exerciseId || set.exercise_id;
-    const exercise = exerciseMap[exerciseId];
+    const exercise = exerciseForSet(exerciseMap, set);
     if (!exercise) continue;
 
     for (const { muscle, sets: contribution } of allocateExerciseVolume(exercise)) {
@@ -737,9 +775,13 @@ function deloadBucketWorkoutCompleted(w) {
  *   grammar: bucket 3, the most recent, is [weekAnchorMs, weekAnchorMs +
  *   1 week)). If null (default), buckets are 4 trailing weeks measured
  *   back from `now` (useProgressData/HomeScreen's rolling grammar).
- * @param {boolean} [opts.excludeWarmups=false] - exclude
- *   s.setType === 'warmup' sets from the avgReps calc (HomeScreen's
- *   current behaviour; useProgressData/CoachReviewScreen do not do this).
+ * @param {boolean} [opts.excludeWarmups] - retired by D218 (2026-10-03):
+ *   the avgReps calc now always reads trend-eligible working sets of
+ *   rep-based exercises, for every caller, so a warm-up never enters it.
+ *   A caller still passing it changes nothing.
+ * @param {Object<string,string>|null} [opts.repsTypeById] - exercise id to
+ *   exercise type, for the avgReps type gate when the caller passes no
+ *   exerciseMap (HomeScreen, which must keep hasOverMRV false).
  * @param {boolean} [opts.repsViaWorkoutRoster=false] - source "this
  *   week's sets" for the avgReps calc from the set of sets belonging to a
  *   completed workout whose own startedAt falls in the bucket (HomeScreen's
@@ -762,14 +804,21 @@ function deloadBucketWorkoutCompleted(w) {
  *   weeksSinceLastDeload}>} 4 entries, oldest first, ready for
  *   shouldDeload().
  */
+function deloadRepsTypeOf(set, exerciseMap, repsTypeById) {
+  const id = set?.exerciseId ?? set?.exercise_id;
+  if (repsTypeById && id != null && repsTypeById[id] != null) return repsTypeById[id];
+  const ex = exerciseForSet(exerciseMap, set);
+  return ex?.exerciseType ?? ex?.exercise_type ?? ex?.type ?? 'weight_reps';
+}
+
 export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = {}) {
   const {
     now = Date.now(),
     weekAnchorMs = null,
-    excludeWarmups = false,
     repsViaWorkoutRoster = false,
     zeroFillUnrated = false,
     weeksSinceLastDeloadOverride = null,
+    repsTypeById = null,
   } = opts;
   const WEEK_MS = DELOAD_BUCKET_WEEK_MS;
 
@@ -803,9 +852,19 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
           return sets.filter((s) => wIds.has(s.workoutId ?? s.workout_id));
         })()
       : wkSets;
-    const setsForReps = excludeWarmups
-      ? repsSets.filter((s) => (s.setType ?? s.set_type) !== 'warmup')
-      : repsSets;
+    // D218 (founder order 2026-10-03, audit F-25): the rep average reads
+    // comparable working sets only, for every caller: trend-eligible rows
+    // (warm-ups, myo-reps, rest-pause, explosive and circuit rows out, the
+    // EL-7 trend rule) of an exercise whose reps are repetitions (a duration
+    // set stores seconds and a distance set metres in these columns). Two
+    // planks logged as 60 seconds in the oldest week were enough to raise a
+    // deload suggestion, and Home, Consistency and the coach review averaged
+    // warm-ups differently for the same history. `excludeWarmups` is now
+    // always true in effect; the type comes from `repsTypeById` when the
+    // caller passes no exercise map (Home), else from the map.
+    const setsForReps = repsSets.filter((s) => (
+      isTrendEligibleRow(s) && !NON_LOAD_EXERCISE_TYPES.has(deloadRepsTypeOf(s, exerciseMap, repsTypeById))
+    ));
     const avgReps = setsForReps.length > 0
       ? setsForReps.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / setsForReps.length
       : 0;

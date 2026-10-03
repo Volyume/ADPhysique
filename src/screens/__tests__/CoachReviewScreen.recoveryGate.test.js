@@ -43,6 +43,13 @@ jest.mock('../../lib/database', () => ({
   getAllExercises: jest.fn(() => Promise.resolve([
     { id: 'ex-bench', name: 'Bench Press', primaryMuscle: 'chest', secondaryMuscles: [] },
   ])),
+  // D218 bridge: the reporting read (unfiltered lookup) is built from this
+  // suite's own getAllExercises fixture, so each test's fixture stays the contract.
+  getExerciseLookup: jest.fn(async () => {
+    const db = jest.requireMock('../../lib/database');
+    const { buildExerciseLookup } = jest.requireActual('../../lib/exercise/lookup');
+    return buildExerciseLookup(await db.getAllExercises());
+  }),
   getRecentCheckins: jest.fn(() => Promise.resolve([])),
   getCurrentMesocycleWeek: jest.fn(() => Promise.resolve(null)),
 }));

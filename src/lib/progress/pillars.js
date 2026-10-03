@@ -21,7 +21,10 @@
  * the day-zero lines DESCRIBE what starts the row instead of telling anyone to
  * log something (D204).
  */
-import { calculate1RM } from '../algorithms';
+import { calculate1RM, isEstimatedMaxRow } from '../algorithms';
+import {
+  exerciseNameFor, resolveExerciseFor, exerciseTypeOf, loadSemanticsOf,
+} from '../exercise/lookup';
 import { formatBodyWeight, formatBodyWeightRate } from '../units';
 import { localDayKey } from '../dayKey';
 import { formatNumber } from '../format';
@@ -47,10 +50,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * never in the "of M" of the verdict: `comparedCount` is the exercises with at
  * least one in-window day after their baseline day.
  *
- * `trainedCount` / `improvedCount` / `comparedCount` only consider
- * `weight_reps` exercises (matches computePRsPerWeek's own gate,
- * useProgressData.js) so distance/duration/bodyweight-reps-only exercises never
- * appear as an exercise here.
+ * `trainedCount` / `improvedCount` / `comparedCount` only consider exercises
+ * whose reps and load are an estimated max's inputs: type `weight_reps` or
+ * `weighted_bodyweight`, and not an assistance machine (load semantics
+ * `assisted`, where the number entered is the help). D218 (founder order
+ * 2026-10-03, audit F-4, F-9): a weighted_bodyweight exercise now counts here
+ * (RULED CHANGE: the live record detector counts it), an assistance machine no
+ * longer does (more help read as a bigger lift), a set counts only through
+ * isEstimatedMaxRow (the one gate every estimated-max and record read shares,
+ * which also refuses an explosive row; those were counted before), and an
+ * exercise the map cannot resolve is named from its sets' own snapshot
+ * (exerciseNameFor) instead of a bare "Exercise". Distance, duration and
+ * reps-only exercises never appear as an exercise here.
  *
  * `featuredBest` is the row's evidence (D214 plan 7.1 item 3): the new best on
  * the person's HEAVIEST exercise in the window (the exercise with the highest
@@ -59,7 +70,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * most recent new best when that exercise has none, or null with no new best.
  *
  * @param {Array<object>} allSets - completed workout sets
- * @param {object} exerciseMap - id -> exercise row (needs `.type`/`.exerciseType`, `.name`)
+ * @param {object} exerciseMap - id -> exercise row (needs `.exerciseType` or `.exercise_type` or `.type`, `.loadSemantics`, `.name`), or the shared exercise lookup
  * @param {{windowDays?: number, now?: number}} [opts]
  * @returns {{trainedCount: number, improvedCount: number, comparedCount: number, baselineCount: number, namedBests: Array<{exerciseId, exerciseName, weight, reps, at, e1rm}>, featuredBest: ?{exerciseId, exerciseName, weight, reps, at, e1rm}}}
  */
@@ -83,9 +94,12 @@ export function computeTrainingPillarSummary(allSets, exerciseMap, { windowDays 
   let heaviest = null; // { exerciseId, e1rm }: the heaviest exercise in the window
 
   for (const [exId, sets] of Object.entries(byEx)) {
-    const exType = exerciseMap?.[exId]?.type ?? exerciseMap?.[exId]?.exerciseType ?? exerciseMap?.[exId]?.exercise_type ?? 'weight_reps';
-    if (exType !== 'weight_reps') continue;
-    const exerciseName = exerciseMap?.[exId]?.name ?? 'Exercise';
+    const row = resolveExerciseFor(exerciseMap, sets[0]);
+    const exType = exerciseTypeOf(row);
+    const semantics = loadSemanticsOf(row);
+    if (exType !== 'weight_reps' && exType !== 'weighted_bodyweight') continue;
+    if (semantics === 'assisted') continue;
+    const exerciseName = exerciseNameFor(exerciseMap, sets[0]);
     let runningMax = 0;
     let baselineDayKey = null;
     let trainedInWindow = false;
@@ -94,12 +108,10 @@ export function computeTrainingPillarSummary(allSets, exerciseMap, { windowDays 
     let heaviestE1rm = 0;
     let lastBestDayKey = null;
     for (const s of sets) {
-      const st = s.setType ?? s.set_type ?? 'straight';
-      if (st === 'warmup' || st === 'myo_reps' || st === 'rest_pause') continue;
+      if (!isEstimatedMaxRow(s, exType, semantics)) continue;
       const at = s.createdAt ?? s.created_at ?? 0;
       const w = s.weight ?? 0;
       const r = s.actualReps ?? s.actual_reps ?? 0;
-      if (w <= 0 || r <= 0) continue;
       const dayKey = localDayKey(at);
       const est = calculate1RM(w, r);
       const inWindow = at >= windowStart;

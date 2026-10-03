@@ -119,7 +119,11 @@ describe('EFFORT comprehension', () => {
 
   test('the working-sets count is by set type, never by how the set felt', () => {
     const src = read('screens/WorkoutSummaryScreen.js');
-    expect(src).toMatch(/Warm-ups are left out; every other logged set counts, however it felt/);
+    // RE-ANCHORED 2026-10-03 (D218, audit F-17): the tooltip now states the
+    // rule the tile applies ("the sets counted in your weekly totals" was not
+    // it: those totals leave explosive lifts out). Intent kept: by set type,
+    // never by how the set felt.
+    expect(src).toMatch(/Every set you logged in this workout except warm-ups, however it felt/);
     expect(src).not.toMatch(/is what makes a working set effective/);
   });
 });

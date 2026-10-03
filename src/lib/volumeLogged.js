@@ -32,7 +32,7 @@
  */
 import {
   calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS,
-  allocateExerciseVolume, isBallisticEvidenceRow,
+  allocateExerciseVolume, isBallisticEvidenceRow, exerciseForSet,
 } from './algorithms';
 import { weeksCounted, perWeekVolume, volumeWindowBounds } from './volumeWindow';
 
@@ -55,24 +55,26 @@ function setAt(set) {
  * two exclusions calculateWeeklyVolume makes), and a row whose exercise is
  * unknown credits nothing. `cache` holds the per-exercise allocation so a long
  * history is not re-allocated for every row. A row is a logged working-set row
- * exactly when this returns at least one muscle.
+ * exactly when this returns at least one muscle. D218: `exerciseMap` may be
+ * the shared exercise lookup (src/lib/exercise/lookup.js), which also
+ * resolves a soft-deleted custom exercise, a retired id and an unknown id by
+ * the set's own name snapshot; the cache is keyed by the exercise resolved.
  *
  * @param {object} set - a workout_sets row (camelCase or snake_case)
- * @param {object} exerciseMap - { [exerciseId]: exercise }
+ * @param {object} exerciseMap - { [exerciseId]: exercise }, or the lookup
  * @param {Map} cache - per-exercise allocation cache, owned by the caller
  * @returns {ReadonlyArray<string>} the listed muscles credited
  */
 export function creditedMuscles(set, exerciseMap, cache) {
   if ((set.setType || set.set_type || 'straight') === 'warmup') return NO_MUSCLES;
   if (isBallisticEvidenceRow(set)) return NO_MUSCLES;
-  const id = set.exerciseId || set.exercise_id;
-  let list = cache.get(id);
+  const exercise = exerciseForSet(exerciseMap, set);
+  if (!exercise) return NO_MUSCLES;
+  const key = exercise.id ?? (set.exerciseId || set.exercise_id);
+  let list = cache.get(key);
   if (!list) {
-    const exercise = exerciseMap[id];
-    list = exercise
-      ? allocateExerciseVolume(exercise).map(a => a.muscle).filter(m => LISTED_SET.has(m))
-      : NO_MUSCLES;
-    cache.set(id, list);
+    list = allocateExerciseVolume(exercise).map(a => a.muscle).filter(m => LISTED_SET.has(m));
+    cache.set(key, list);
   }
   return list;
 }

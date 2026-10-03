@@ -41,12 +41,13 @@ import RecoveryLearningCard from './RecoveryLearningCard';
 import FatigueTrendCard from './FatigueTrendCard';
 import { SkeletonCard } from './Skeleton';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { MUSCLE_DISPLAY_NAMES, muscleDisplayName, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, muscleDisplayName } from '../lib/algorithms';
+import { sessionSummaryParams } from '../lib/sessionReport';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
   getRecentCompletedWorkouts,
-  getWorkoutSetsForWorkout, getAllExercises,
+  getWorkoutSetsForWorkout, getExerciseLookup,
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { fatigueWord } from '../lib/recovery/ratingWords';
@@ -241,41 +242,22 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
 }
 
 // P3(a) (progress-tab audit 2026-09-24, D200-2): the one-tap "Rate your
-// last session" path. Builds the WorkoutSummary route params EXACTLY the
-// way WorkoutHistoryScreen.buildHistoryRows builds them for its own "View
-// summary" button (workoutId, durationMinutes, exerciseCount, setCount,
-// workingSetCount, tonnage, exerciseNames, startedAt, endedAt, routineId,
-// routineName, readOnly: true), plus allowRating: true. Returns null when
-// there is no completed workout or the latest one already carries both
-// post-session ratings, so the caller renders no button.
-function buildRateLastSessionParams(workout, sets, allExercises) {
+// last session" path. Builds the WorkoutSummary route params, plus
+// allowRating: true. Returns null when there is no completed workout or the
+// latest one already carries both post-session ratings, so the caller renders
+// no button.
+//
+// D218 (founder order 2026-10-03, audit F-2): the params are the shared
+// session report's (src/lib/sessionReport.js sessionSummaryParams), the very
+// object History's "View summary" carries, over the shared exercise lookup
+// (unfiltered, survivor-aware, a set's own name snapshot as the fallback). This
+// used to be a hand-copied builder over the filtered library, so a session on
+// a deleted custom exercise opened a summary naming fewer exercises than
+// History's card for the same workout.
+function buildRateLastSessionParams(workout, sets, lookup) {
   if (!workout) return null;
   if (workout.fatigueLevel != null && workout.jointDiscomfort != null) return null;
-  const exercises = allExercises ?? [];
-  const exerciseMap = Object.fromEntries(exercises.map((e) => [e.id, e]));
-  const exerciseTypeById = Object.fromEntries(
-    exercises.map((e) => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
-  );
-  const loadSemanticsById = buildLoadSemanticsById(exercises);
-  const mySets = sets ?? [];
-  const workingSets = mySets.filter((s) => s.setType !== 'warmup');
-  const exerciseIds = [...new Set(mySets.map((s) => s.exerciseId))];
-  const exerciseNames = exerciseIds.map((id) => exerciseMap[id]?.name).filter(Boolean).slice(0, 4);
-  return {
-    workoutId: workout.id,
-    durationMinutes: workout.durationMinutes,
-    exerciseCount: exerciseIds.length,
-    setCount: mySets.length,
-    workingSetCount: workingSets.length,
-    tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
-    exerciseNames,
-    startedAt: workout.startedAt,
-    endedAt: workout.endedAt,
-    routineId: workout.routineId ?? null,
-    routineName: workout.routineName ?? null,
-    readOnly: true,
-    allowRating: true,
-  };
+  return { ...sessionSummaryParams(workout, sets ?? [], lookup), allowRating: true };
 }
 
 // D201 (per-muscle recovery, spec section 6): row order -- "recovering
@@ -588,7 +570,7 @@ export default function ReadinessCards({
     if (!userId) { setLoaded(true); return; }
     try {
       let completedSets = [];
-      let exercisesRead = null;
+      let lookupRead = null;
       try {
         const [workouts, sets] = await Promise.all([
           getAllWorkouts(userId),
@@ -678,12 +660,14 @@ export default function ReadinessCards({
       try {
         const [lastWorkout] = await getRecentCompletedWorkouts(userId, 1);
         if (lastWorkout) {
-          const [lastSets, exercisesForLast] = await Promise.all([
+          // D218 (audit F-2): the shared exercise lookup (unfiltered,
+          // survivor-aware), not the filtered library.
+          const [lastSets, lookupForLast] = await Promise.all([
             getWorkoutSetsForWorkout(lastWorkout.id),
-            getAllExercises(),
+            getExerciseLookup(),
           ]);
-          exercisesRead = exercisesForLast ?? null;
-          setRateSessionParams(buildRateLastSessionParams(lastWorkout, lastSets, exercisesForLast));
+          lookupRead = lookupForLast ?? null;
+          setRateSessionParams(buildRateLastSessionParams(lastWorkout, lastSets, lookupForLast));
         } else {
           setRateSessionParams(null);
         }
@@ -727,10 +711,14 @@ export default function ReadinessCards({
         setMuscleRecovery(recoveryLoad);
         // The breakdown's split of each counted session into main-mover and
         // helper sets: only the sets of the sessions the model counted, and
-        // the exercise library (read once; reused when the rate-last-session
-        // read above already had it).
+        // the exercise rows (read once; reused when the rate-last-session
+        // read above already had it). D218 (audit F-2): the rows are the
+        // lookup's UNFILTERED list, the same population the recovery model
+        // counts (it reads the table unfiltered, recovery/load.js), so a
+        // counted session on a soft-deleted custom exercise is split like any
+        // other instead of falling back to the model's own figure.
         try {
-          const exercises = exercisesRead ?? (await getAllExercises()) ?? [];
+          const exercises = (lookupRead ?? (await getExerciseLookup()))?.rows ?? [];
           const wanted = new Set();
           for (const entry of Object.values(recoveryLoad?.map ?? {})) {
             for (const cs of entry?.contributingSessions ?? []) if (cs?.workoutId) wanted.add(cs.workoutId);

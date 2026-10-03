@@ -235,9 +235,15 @@ const TRAINING_CONSISTENCY_DB_READS = [
  * already uses.
  */
 const POSTS_FILE = path.join(LIB_DIR, 'posts.js');
+// D218 (2026-10-03): the read surface NARROWED. getWorkoutSetsForExercise
+// (any workout state) is gone: the record count replays over
+// getPriorCompletedSets, already allowed. getAllExercises became
+// getExerciseLookup, the same exercise rows (the person's own definitions,
+// unfiltered so a deleted custom exercise still names its sets), so the post
+// reports the session exactly as the workout summary does. No personal data.
 const POSTS_DB_READS = [
-  'getWorkoutById', 'getWorkoutSetsForWorkout', 'getWorkoutSetsForExercise',
-  'getRoutineById', 'getProgrammeById', 'getAllExercises',
+  'getWorkoutById', 'getWorkoutSetsForWorkout',
+  'getRoutineById', 'getProgrammeById', 'getExerciseLookup',
   'getAllMesocyclesForUser', 'getBlockTrainingData', 'getPriorCompletedSets',
 ];
 

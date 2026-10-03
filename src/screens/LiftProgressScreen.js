@@ -22,7 +22,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
 import { GLOSSARY } from '../lib/coachGlossary';
-import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
+import { getCompletedWorkoutSets, getExerciseLookup, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices, seriesDeltaPct } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES, buildLoadSemanticsById } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding, matchStandardKey } from '../lib/strengthStandards';
@@ -160,22 +160,37 @@ export default function LiftProgressScreen({ navigation }) {
     }
 
     try {
-      const [sets, exercises, bw] = await Promise.all([
+      // D218 (founder order 2026-10-03, audit F-4 and F-13): the shared
+      // exercise lookup (unfiltered, survivor-aware, a set's own name snapshot
+      // as the fallback), not the filtered library. A null lookup (a test
+      // double) reads as an empty library.
+      const [sets, lookup, bw] = await Promise.all([
         getCompletedWorkoutSets(user.id),
-        getAllExercises(),
+        getExerciseLookup(),
         getLatestBodyWeight(user.id),
       ]);
       if (!isCurrentRequest()) return false;
-      const builtRows = buildLiftProgressRows(sets, exercises);
+      const exercises = lookup?.rows ?? [];
+      const builtRows = buildLiftProgressRows(sets, lookup);
       setRows(builtRows);
       // Recompute the alternate metric series from the same sets, so the
       // metric switcher has every lens ready without a reload. Pass an
       // exercise-type map so distance/duration exercises (which reuse the
-      // weight column) don't plot nonsense volume/heaviest series.
+      // weight column) don't plot nonsense volume/heaviest series, and the
+      // load-semantics map so an assistance machine's e1RM lens is empty
+      // (D218: the number entered is the help). The series is keyed by the
+      // RESOLVED exercise id, as the rows above are, so a lift logged under a
+      // retired id and its survivor draws one series on every lens.
       const typeById = new Map(
-        (exercises || []).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+        exercises.map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
       );
-      setMetricSeries(buildExerciseMetricSeries(sets, typeById));
+      const resolvedSets = lookup
+        ? (sets || []).map((s) => {
+          const id = lookup.resolve(s)?.id;
+          return id != null && id !== (s.exerciseId ?? s.exercise_id) ? { ...s, exerciseId: id } : s;
+        })
+        : sets;
+      setMetricSeries(buildExerciseMetricSeries(resolvedSets, typeById, lookup?.loadSemanticsById ?? null));
       const exerciseTypeById = Object.fromEntries(typeById);
       // D107-2: per-hand sets count x2 in weekly load, assistance excluded.
       const loadSemanticsById = buildLoadSemanticsById(exercises);
