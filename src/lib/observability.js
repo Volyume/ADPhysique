@@ -152,7 +152,23 @@ export async function detectCrashedLastSession() {
     // Now mark THIS session as in-progress. The next clean
     // shutdown will reset it; if THIS one crashes, the next
     // boot will see 'true' here and report.
-    await AsyncStorage.setItem(CRASHED_FLAG_KEY, 'true');
+    //
+    // Founder's TestFlight report 2026-10-03 ("It immediately threw an
+    // error when launching"): the "crashed last session" notice showed on
+    // the first launch of 2.6.0 although nothing had crashed. The launch
+    // before it was a BACKGROUND wake by iOS of the previous build at 01:50
+    // local on a locked phone (Sentry: in_foreground false, the database
+    // open deferred until first unlock). That wake ran this function, which
+    // wrote 'true' as it does for every launch, then never went active and
+    // never backgrounded (a headless process ends without an AppState
+    // change), so nothing cleared the flag and the next real launch read it
+    // as a crash. A headless launch is therefore not marked in progress: it
+    // leaves the flag exactly as the last foreground session left it. The
+    // shutdown handler still writes 'true' the moment the app becomes
+    // active, so a background wake that is later opened is marked then.
+    if (AppState.currentState !== 'background') {
+      await AsyncStorage.setItem(CRASHED_FLAG_KEY, 'true');
+    }
   } catch (_) {
     _wasCrashedLastSession = false;
   }
