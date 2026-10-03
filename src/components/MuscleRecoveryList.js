@@ -37,10 +37,13 @@
  *    row is open at a time; the parent holds which.
  *
  * The recency FACT on the meta line is the same reading the old Training
- * recency chip showed (getLastTrainedPerMuscle's latest start for the muscle
- * as a primary mover, through trainingRecency's unchanged label; Opus review
- * finding 13); the model's own instant is the fallback only when that source
- * has no reading. The spoken label per row is the spec's four facts as one
+ * recency chip showed (getLastTrainedPerMuscle's latest session start for the
+ * muscle, through trainingRecency's unchanged label; Opus review finding 13);
+ * since D218 a session counts when one of its working sets credited the
+ * muscle as the main muscle or as a helper, the Volume heatmap's rule, read at
+ * the same instant (the session's start, D215). The model's own instant is the
+ * fallback only when that source has no reading. The spoken label per row is
+ * the spec's four facts as one
  * sentence, with "percent" spelled out. D204: the list describes; nothing
  * here tells anyone to train or rest. Facts are ink and the bar is the
  * `recovery` token: no amber and no traffic-light status colour anywhere.

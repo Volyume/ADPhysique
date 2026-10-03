@@ -631,6 +631,22 @@ describe('D218 (F-8 part 2, P20): the computed Last session total reads each set
     expect(errors).toEqual([]);
     expect(flattenText(tree)).toContain('3,000 kg lifted');
   });
+
+  test('review of D218 (NIT 15): a stored total from before D218 (the heel walk\'s metres in it) gives way to the recomputed one', async () => {
+    useAppStore.setState(userState());
+    const storedBeforeD218 = 3000 + 900 + 400 + 400 * 90; // one hand of each pair, metres x seconds as kilograms
+    applyFixture({
+      db: {
+        getAllWorkouts: async () => [lastWorkout({ setCount: 10, totalVolume: storedBeforeD218 })],
+        getWorkoutSetsSince: async () => sessionSets('w-last'),
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const text = flattenText(tree);
+    expect(text).toContain(`${SESSION_TONNAGE.toLocaleString('en-GB')} kg lifted`);
+    expect(text).not.toContain(storedBeforeD218.toLocaleString('en-GB'));
+  });
 });
 
 // ─── F-8: the computed week stats ───────────────────────────────────────────
@@ -733,6 +749,9 @@ describe('D218 (F-25, P40): Home\'s deload check is handed each set\'s exercise 
 describe('D218 (F-2, P7): Repeat last session keeps what it can find and says what it cannot', () => {
   const ONE = 'One exercise from that session is not on this device, so it was left out.';
   const TWO = '2 exercises from that session are not on this device, so they were left out.';
+  // Review of D218, NIT 11: a read that failed is not "not on this device".
+  const ONE_UNREAD = 'One exercise from that session could not be loaded, so it was left out.';
+  const TWO_UNREAD = '2 exercises from that session could not be loaded, so they were left out.';
 
   const warmUp = (workoutId, exerciseId) => setRow(workoutId, exerciseId, 40, 10, { setType: 'warmup' });
   const named = (workoutId, exerciseId, exerciseName, weight, reps) => setRow(workoutId, exerciseId, weight, reps, { exerciseName });
@@ -818,7 +837,25 @@ describe('D218 (F-2, P7): Repeat last session keeps what it can find and says wh
     expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench', 'ex-db-curl']);
   });
 
-  test('with the lookup unreadable the repeat proceeds with the exercises found by id and says how many were left out', async () => {
+  test('a read that fails and a snapshot that still misses: "could not be loaded", never "not on this device"', async () => {
+    const sets = [
+      setRow('w-last', 'ex-bench', 100, 8),
+      named('w-last', 'id-explodes', 'Mystery Move', 30, 10),
+      named('w-last', 'id-gone', 'Another Mystery', 20, 12),
+    ];
+    const started = await pressRepeatThenSkip({
+      sets,
+      getExerciseById: async (id) => {
+        if (id === 'id-explodes') throw new Error('row unreadable');
+        return id === 'ex-bench' ? BENCH : null;
+      },
+    });
+    expect(mockToastShow).toHaveBeenCalledTimes(1);
+    expect(mockToastShow).toHaveBeenCalledWith(`${ONE} ${ONE_UNREAD}`, expect.objectContaining({ variant: 'info' }));
+    expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench']);
+  });
+
+  test('with the lookup unreadable the repeat proceeds with the exercises found by id and says how many could not be loaded', async () => {
     useAppStore.setState(userState());
     applyFixture({
       db: {
@@ -835,7 +872,10 @@ describe('D218 (F-2, P7): Repeat last session keeps what it can find and says wh
     await settle();
     const started = mockStartWorkout.mock.calls[0][1];
     expect(started.map((e) => e.exercise.id)).toEqual(['ex-bench']);
-    expect(mockToastShow).toHaveBeenCalledWith(TWO, expect.objectContaining({ variant: 'info' }));
+    // The curl is on this device (its snapshot names it); the read failed, so
+    // neither is said to be missing.
+    expect(mockToastShow).toHaveBeenCalledWith(TWO_UNREAD, expect.objectContaining({ variant: 'info' }));
+    expect(mockToastShow).not.toHaveBeenCalledWith(TWO, expect.anything());
   });
 });
 
@@ -854,5 +894,7 @@ describe('D218: HomeScreen source guards', () => {
   test('the toast copy is exactly the ruled sentences, British English, no em dash', () => {
     expect(SOURCE).toContain('One exercise from that session is not on this device, so it was left out.');
     expect(SOURCE).toContain('exercises from that session are not on this device, so they were left out.');
+    expect(SOURCE).toContain('One exercise from that session could not be loaded, so it was left out.');
+    expect(SOURCE).toContain('exercises from that session could not be loaded, so they were left out.');
   });
 });

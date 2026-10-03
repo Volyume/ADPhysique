@@ -4074,10 +4074,15 @@ export async function getAllWorkoutSets(userId) {
 }
 
 // Returns only sets from completed workouts, use for volume analytics.
+// D218 (adversarial review item 7): each row also carries its session's
+// start (`workoutStartedAt`), the instant "Trained N days ago" reads on the
+// Volume heatmap, as the Recovery list reads it (getLastTrainedPerMuscle): the
+// training day is the day a session started (D215), so a session begun at
+// 23:40 with every set logged after midnight is one day on both screens.
 export async function getCompletedWorkoutSets(userId) {
   const d = await db();
   const rows = await d.getAllAsync(
-    `SELECT ws.* FROM workout_sets ws
+    `SELECT ws.*, w.started_at AS workout_started_at FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      WHERE ws.user_id = ? AND w.is_completed = 1
      ORDER BY ws.created_at DESC`,

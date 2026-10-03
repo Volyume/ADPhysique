@@ -147,7 +147,7 @@ jest.mock('../../lib/database', () => ({
   getMorningWeights: jest.fn(),
   getOpenEdPatternFlag: jest.fn(),
   getWorkoutSetsSince: jest.fn(),
-  getAllExercises: jest.fn(),
+  getExerciseLookup: jest.fn(),
   updateMorningWeightById: jest.fn(),
   deleteMorningWeightById: jest.fn(),
   logMorningWeight: jest.fn(),
@@ -173,6 +173,7 @@ import { navigateCrossTab } from '../../navigation/navigateCrossTab';
 import { WELLBEING_KEY, WELLBEING_HELPLINE } from '../../lib/wellbeing';
 import { BODY_METRICS_CALM_LINE, BODY_METRICS_FLAG_LINE } from '../../lib/bodyMetricsPolicy';
 import { DAY_ZERO_LINE } from '../../lib/bodyMetricsDisplay';
+import { buildExerciseLookup } from '../../lib/exercise/lookup';
 import { FUTURE_DATE_MESSAGE } from '../../lib/bodyMetricValidate';
 import { localDayKey } from '../../lib/dayKey';
 import { resolveTheme } from '../../styles/theme';
@@ -276,7 +277,9 @@ function setup(over = {}) {
   db.getNutritionTargets.mockResolvedValue(null);
   db.getLatestCoachOutput.mockResolvedValue(s.coach);
   db.getWorkoutSetsSince.mockResolvedValue(s.sets);
-  db.getAllExercises.mockResolvedValue(s.exercises);
+  // D218: the screen reads the shared exercise lookup; built here from the
+  // fixture's rows with the real builder.
+  db.getExerciseLookup.mockImplementation(async () => buildExerciseLookup(s.exercises));
   db.getUserBodyProfile.mockResolvedValue(null);
   db.getLatestBodyComposition.mockResolvedValue(null);
   db.logBodyMetric.mockResolvedValue('new-id');
@@ -607,14 +610,15 @@ describe('the normal screen, in the spec\'s order', () => {
 
   test('a strength gain adds the lift, in both units on the share card, and the share row opens the card', async () => {
     const dayKeyAgo = (n) => localDayKey(NOW - n * DAY);
+    // D218: a real exercise id is a string (uid()), which the shared lookup reads.
     const liftSet = (dateKey, weight) => ({
-      exerciseId: 1, workoutId: `w-${dateKey}`, createdAt: new Date(`${dateKey}T10:00:00`).getTime(),
+      exerciseId: 'bench', workoutId: `w-${dateKey}`, createdAt: new Date(`${dateKey}T10:00:00`).getTime(),
       weight, actualReps: 5, setType: 'working',
     });
     const sets = [
       liftSet(dayKeyAgo(40), 60), liftSet(dayKeyAgo(40), 60), liftSet(dayKeyAgo(3), 70), liftSet(dayKeyAgo(3), 70),
     ];
-    const { tree } = await mount({ sets, exercises: [{ id: 1, name: 'Bench Press' }] });
+    const { tree } = await mount({ sets, exercises: [{ id: 'bench', name: 'Bench Press' }] });
     const all = visible(tree);
     const card = all.slice(all.indexOf('Recomposition') + 1, all.indexOf('Body fat and measurements')).join(' | ');
     expect(card).toMatch(/Estimated one-rep max/);

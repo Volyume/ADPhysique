@@ -4104,15 +4104,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // included. A workout with nothing saved is not finished: there is
     // nothing to record, and a completed empty workout would count as a
     // session and complete the day's planned session. It is discarded
-    // instead, or the person keeps going.
+    // instead, or the person keeps going. Only a read that succeeded can say
+    // nothing is saved: a failed read is not an empty workout (the sets of
+    // an exercise swapped out live only in the database), so it never offers
+    // the discard; it falls through to the confirm, which counts what the
+    // logger holds, or says the sets could not be counted.
     let savedSets = null;
     try { savedSets = await getWorkoutSetsForWorkout(activeWorkout.id); } catch (_) { savedSets = null; }
+    const savedSetsRead = Array.isArray(savedSets);
     const memorySets = snapshotExercises.flatMap(e => e.sets || []);
-    const confirmSets = Array.isArray(savedSets) && savedSets.length ? savedSets : memorySets;
-    if (confirmSets.length === 0) {
+    if (savedSetsRead && savedSets.length === 0 && memorySets.length === 0) {
+      const typedSetNote = hasInProgressSetEntry()
+        ? ` The set you typed in for ${exercise?.name || 'this exercise'} is not logged yet. You can keep going and log it, or discard the workout.`
+        : ' You can keep going, or discard it.';
       appAlert(
         'Nothing logged yet',
-        `This workout has no sets logged, so there is nothing to save. You can keep going, or discard it.${inProgressNote}`,
+        `This workout has no sets logged, so there is nothing to save.${typedSetNote}`,
         [
           { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
           {
@@ -4124,14 +4131,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       );
       return;
     }
+    const confirmSets = savedSetsRead && savedSets.length ? savedSets : memorySets;
     let confirmLookup = null;
     try { confirmLookup = await getExerciseLookup(); } catch (_) { confirmLookup = null; }
     const confirmReport = buildSessionReport(confirmSets, confirmLookup);
     const setWord = confirmReport.setCount === 1 ? 'set' : 'sets';
     const exerciseWord = confirmReport.exerciseCount === 1 ? 'exercise' : 'exercises';
+    const confirmCountLine = confirmReport.setCount > 0
+      ? `You've logged ${confirmReport.setCount} ${setWord} across ${confirmReport.exerciseCount} ${exerciseWord}.`
+      : 'The sets for this workout could not be counted just now.';
     appAlert(
       'Finish workout?',
-      `You've logged ${confirmReport.setCount} ${setWord} across ${confirmReport.exerciseCount} ${exerciseWord}.${inProgressNote}`,
+      `${confirmCountLine}${inProgressNote}`,
       [
         { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         { text: 'Finish workout', onPress: () => runFinish() },

@@ -21,10 +21,10 @@ import BottomSheet from '../components/BottomSheet';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
 import {
-  getAllExercises,
   getAllWorkouts,
   getBodyMetricLog,
   getCompletedWorkoutSets,
+  getExerciseLookup,
   getLatestBodyComposition,
   getLatestBodyWeight,
 } from '../lib/database';
@@ -297,10 +297,14 @@ export default function AthleteProfileScreen({ navigation }) {
       }
       setLoading(true);
       try {
+        // D218 (founder order 2026-10-03): the lift rows read the shared,
+        // unfiltered exercise lookup, as Lift Progress does, so a lift on a
+        // since-deleted custom exercise or a retired id keeps its name and its
+        // load rules here too.
         const results = await Promise.allSettled([
           getAllWorkouts(user.id),
           getCompletedWorkoutSets(user.id),
-          getAllExercises(),
+          getExerciseLookup(),
           getLatestBodyWeight(user.id),
           getLatestBodyComposition(user.id),
           getBodyMetricLog(user.id, 1),
@@ -321,7 +325,7 @@ export default function AthleteProfileScreen({ navigation }) {
         setSummary(buildAthleteProfileSummary({
           workouts: valueAt(0, []),
           sets: valueAt(1, []),
-          exercises: valueAt(2, []),
+          exercises: valueAt(2, null),
           latestWeight: valueAt(3, null),
           bodyComp: valueAt(4, null),
           metrics: valueAt(5, []),

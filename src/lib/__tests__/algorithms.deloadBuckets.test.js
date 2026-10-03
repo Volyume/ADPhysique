@@ -29,9 +29,13 @@
  *     distance set, whose "reps" are seconds). The three reference oracles
  *     below keep their old derivation VERBATIM for every other axis; their
  *     one avgReps line applies `d218RepSet` (marked), so a mismatch on any
- *     other axis still means the extraction drifted. Two cases pin what the
- *     change fixes: planks logged in seconds no longer raise a deload, and
- *     warm-ups in one week no longer split Home from Consistency.
+ *     other axis still means the extraction drifted. A week with sets but
+ *     none comparable reads null (no rep evidence), which shouldDeload skips
+ *     rather than reading as a drop to zero; a week with no sets reads 0 as
+ *     before. The cases in section 5 pin what the change fixes: planks
+ *     logged in seconds no longer raise a deload from either end of the
+ *     four weeks, and warm-ups in one week no longer split Home from
+ *     Consistency.
  */
 import {
   buildLast4WeekDeloadBuckets, calculateWeeklyVolume, VOLUME_LANDMARKS, isTrendEligibleRow, shouldDeload,
@@ -88,7 +92,7 @@ function oldUseProgressDataBuckets(sets, exMap, workouts, now) {
     const repSets = wkSets.filter(s => d218RepSet(s, x => exMap?.[x.exerciseId]?.exerciseType ?? 'weight_reps')); // D218
     const avgReps = repSets.length > 0
       ? repSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / repSets.length
-      : 0;
+      : (wkSets.length > 0 ? null : 0); // D218
     last4.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV, weeksSinceLastDeload: 4 - wk });
   }
   const weeksSinceLighter = (() => {
@@ -122,7 +126,7 @@ function oldHomeScreenBuckets(recentSets, allWorkouts, now) {
     const wIds = new Set(weekWorkouts.map(w => w.id));
     const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup' && d218RepSet(s)); // D218
     const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
-    const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
+    const avgReps = wSets.length > 0 ? totalReps / wSets.length : (recentSets.some(s => wIds.has(s.workoutId)) ? null : 0); // D218
     const jointRated = weekWorkouts
       .map(w => w.jointDiscomfort ?? w.joint_discomfort ?? null)
       .filter(v => v != null);
@@ -166,7 +170,7 @@ function oldCoachReviewBuckets(allSets, allWorkouts, exerciseMap, weekStartMs, n
     const repSets = setsInWeek.filter(set => d218RepSet(set, x => exerciseMap?.[x.exerciseId]?.exerciseType ?? 'weight_reps')); // D218
     const avgReps = repSets.length > 0
       ? repSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / repSets.length
-      : 0;
+      : (setsInWeek.length > 0 ? null : 0); // D218
     const avgJointDiscomfort = workoutsInWeek.length > 0
       ? workoutsInWeek.reduce((s, w) => s + (w.jointDiscomfort || 0), 0) / workoutsInWeek.length
       : 0;
@@ -464,5 +468,52 @@ describe('buildLast4WeekDeloadBuckets: D218, the rep average reads comparable wo
     ];
     const buckets = buildLast4WeekDeloadBuckets(weeks.flatMap(w => w.sets), weeks.map(w => w.workout), exerciseMap, { now: NOW });
     expect(buckets[0].avgReps).toBe(10);
+  });
+
+  // The adversarial review's probe (2026-10-03): the same rule at the other
+  // end of the four weeks. A latest week of only planks, only swings or one
+  // myo-reps set has sets but no rep evidence; read as 0 it was a 50-point
+  // "rep drop" and a deload suggestion the person's training never earned.
+  function latestWeekOnly(extra) {
+    const at = NOW - 2 * DAY;
+    return {
+      workout: { id: 'w0', startedAt: at, isCompleted: true },
+      sets: extra.map((e, k) => ({ workoutId: 'w0', createdAt: at + k * 60_000, weight: 0, actualReps: 10, setType: 'straight', ...e })),
+    };
+  }
+  const repDrop = 'Your average reps per set have dropped over the last 4 weeks';
+
+  test.each([
+    ['only planks', [{ exerciseId: 'plank', actualReps: 60 }, { exerciseId: 'plank', actualReps: 45 }]],
+    ['only swings', [{ exerciseId: 'bench', weight: 24, actualReps: 15, evidenceClass: 'ballistic' }]],
+    ['one myo-reps set', [{ exerciseId: 'bench', weight: 40, actualReps: 4, setType: 'myo_reps' }]],
+  ])('a latest week of %s carries no rep evidence and raises no deload', (_label, extra) => {
+    const weeks = [week(3), week(2), week(1), latestWeekOnly(extra)];
+    const sets = weeks.flatMap(w => w.sets);
+    const workouts = weeks.map(w => w.workout);
+    const consistency = buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, { now: NOW });
+    expect(consistency.map(b => b.avgReps)).toEqual([10, 10, 10, null]);
+    expect(shouldDeload(consistency)).toEqual({ deload: false, reasons: [] });
+    const home = buildLast4WeekDeloadBuckets(sets, workouts, null, {
+      now: NOW, repsViaWorkoutRoster: true, weeksSinceLastDeloadOverride: 99,
+      repsTypeById: { bench: 'weight_reps', plank: 'duration' },
+    });
+    expect(home.map(b => b.avgReps)).toEqual([10, 10, 10, null]);
+    expect(shouldDeload(home).reasons).not.toContain(repDrop);
+  });
+
+  test('a week with no sets at all still reads 0, as before D218', () => {
+    const weeks = [week(3), week(2), week(1)];
+    const buckets = buildLast4WeekDeloadBuckets(weeks.flatMap(w => w.sets), weeks.map(w => w.workout), exerciseMap, { now: NOW });
+    expect(buckets[3].avgReps).toBe(0);
+  });
+
+  test('shouldDeload: a null end skips the rep comparison; numbers and undefined read exactly as before', () => {
+    const b = (avgReps) => ({ avgReps, weeksSinceLastDeload: 1, avgJointDiscomfort: null, hasOverMRV: false, avgSoreness: null });
+    expect(shouldDeload([b(10), b(10), b(10), b(null)]).reasons).not.toContain(repDrop);
+    expect(shouldDeload([b(null), b(10), b(10), b(4)]).reasons).not.toContain(repDrop);
+    expect(shouldDeload([b(10), b(10), b(10), b(7)])).toEqual({ deload: true, reasons: [repDrop] });
+    expect(shouldDeload([b(10), b(10), b(10), b(0)])).toEqual({ deload: true, reasons: [repDrop] });
+    expect(shouldDeload([b(10), b(10), b(10), b(undefined)])).toEqual({ deload: true, reasons: [repDrop] });
   });
 });

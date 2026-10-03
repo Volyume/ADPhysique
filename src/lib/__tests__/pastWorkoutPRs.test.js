@@ -7,6 +7,7 @@
  * exercises and an exercise's first-ever set never are; one per exercise.
  */
 import { pastWorkoutPRs } from '../pastWorkoutPRs';
+import { buildExerciseLookup } from '../exercise/lookup';
 
 const EX = {
   bench: { id: 'bench', name: 'Bench Press', exerciseType: 'weight_reps' },
@@ -89,5 +90,38 @@ describe('pastWorkoutPRs', () => {
   test('no history read means no record claimed', () => {
     expect(pastWorkoutPRs({ sets: [set('bench', 105, 5, 1000)], exerciseById: EX })).toEqual([]);
     expect(pastWorkoutPRs({ sets: null })).toEqual([]);
+  });
+});
+
+describe('pastWorkoutPRs through the shared lookup (review of D218, NIT 14)', () => {
+  const lookup = buildExerciseLookup([
+    { id: 'bench', name: 'Bench Press', primaryMuscle: 'chest', exerciseType: 'weight_reps' },
+    { id: 'assist', name: 'Assisted Pull-Up', primaryMuscle: 'back', exerciseType: 'weight_reps', loadSemantics: 'assisted' },
+  ]);
+
+  test('a lift whose id this install does not hold is named from its own snapshot, as the list names it', () => {
+    const prs = pastWorkoutPRs({
+      sets: [set('ghost', 60, 10, 1000, { exerciseName: 'Cable Thing' })],
+      priorSetsByExercise: { ghost: [set('ghost', 50, 10, 10, { exerciseName: 'Cable Thing' })] },
+      exerciseById: lookup,
+    });
+    expect(prs).toHaveLength(1);
+    expect(prs[0]).toMatchObject({ exerciseId: 'ghost', exerciseName: 'Cable Thing' });
+  });
+
+  test('a snapshot that names an assistance machine is judged by less assistance, never more', () => {
+    const more = pastWorkoutPRs({
+      sets: [set('other-id', 40, 8, 1000, { exerciseName: 'Assisted Pull-Up' })],
+      priorSetsByExercise: { 'other-id': [set('other-id', 30, 8, 10, { exerciseName: 'Assisted Pull-Up' })] },
+      exerciseById: lookup,
+    });
+    expect(more).toEqual([]);
+    const less = pastWorkoutPRs({
+      sets: [set('other-id', 20, 8, 1000, { exerciseName: 'Assisted Pull-Up' })],
+      priorSetsByExercise: { 'other-id': [set('other-id', 30, 8, 10, { exerciseName: 'Assisted Pull-Up' })] },
+      exerciseById: lookup,
+    });
+    expect(less).toHaveLength(1);
+    expect(less[0].exerciseName).toBe('Assisted Pull-Up');
   });
 });

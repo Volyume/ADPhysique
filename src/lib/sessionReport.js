@@ -30,10 +30,11 @@
  * (database.getExerciseLookup, src/lib/exercise/lookup.js) or, for a caller
  * that has only one, a plain `{ [exerciseId]: row }` map.
  */
-import { summariseWorkoutSets, allocateExerciseVolume } from './algorithms';
+import { summariseWorkoutSets, allocateExerciseVolume, isBallisticEvidenceRow } from './algorithms';
 import {
   exerciseNameFor, resolveExerciseFor, exerciseTypeOf, loadSemanticsOf,
 } from './exercise/lookup';
+import { creditedMuscles } from './volumeLogged';
 
 /** How many names a History card or a route param carries. */
 export const SESSION_CARD_NAME_COUNT = 4;
@@ -197,4 +198,81 @@ export function sessionSummaryParams(workout, sets, lookup) {
     routineName: workout?.routineName ?? null,
     readOnly: true,
   };
+}
+
+/**
+ * This workout's working sets that the summary's weekly volume card cannot
+ * credit to a muscle, by reason (D218, audit F-21; adversarial review of D218,
+ * item 5), so the card can say why its totals leave them out:
+ *  - explosive: an explosive set (EL-7), never per-muscle volume;
+ *  - noMuscle: its exercise is on this device but has no muscle group chosen
+ *    (a custom exercise made without one, or one an import created);
+ *  - notOnDevice: its exercise is not on this device at all (an id this
+ *    install does not hold, whose name snapshot names no exercise here).
+ * Null with no lookup: read against nothing every set would look uncredited,
+ * which says nothing true about the sets.
+ *
+ * @param {Array<object>} sets - set rows (any workouts; only `workoutId`'s count)
+ * @param {string} workoutId
+ * @param {object|null} lookup - the shared exercise lookup, or a plain map
+ * @returns {{ explosive: number, noMuscle: number, noMuscleExercises: number,
+ *   notOnDevice: number, notOnDeviceExercises: number }|null}
+ */
+export function uncreditedSessionSets(sets, workoutId, lookup) {
+  if (!lookup || workoutId == null) return null;
+  const cache = new Map();
+  const noMuscleIds = new Set();
+  const notOnDeviceIds = new Set();
+  let explosive = 0;
+  let noMuscle = 0;
+  let notOnDevice = 0;
+  for (const s of Array.isArray(sets) ? sets : []) {
+    if (!s || (s.workoutId ?? s.workout_id) !== workoutId) continue;
+    if (setTypeOf(s) === 'warmup') continue;
+    if (isBallisticEvidenceRow(s)) { explosive += 1; continue; }
+    if (creditedMuscles(s, lookup, cache).length > 0) continue;
+    const row = resolveExerciseFor(lookup, s);
+    if (row) {
+      noMuscle += 1;
+      noMuscleIds.add(row.id);
+    } else {
+      notOnDevice += 1;
+      notOnDeviceIds.add(setExerciseId(s));
+    }
+  }
+  return {
+    explosive,
+    noMuscle,
+    noMuscleExercises: noMuscleIds.size,
+    notOnDevice,
+    notOnDeviceExercises: notOnDeviceIds.size,
+  };
+}
+
+/**
+ * The volume card's lines for the sets uncreditedSessionSets counts with no
+ * muscle to credit, one per reason ("muscle group chosen", never the old "no
+ * muscle group set", which read as a kind of set). The explosive line stays
+ * with the card, which knows which muscles have a row.
+ *
+ * @param {ReturnType<typeof uncreditedSessionSets>} counts
+ * @returns {string[]}
+ */
+export function uncreditedSetNotes(counts) {
+  if (!counts) return [];
+  const lead = (n) => (n === 1 ? '1 set from this workout is' : `${n} sets from this workout are`);
+  const owner = (n, exercises) => {
+    if (n === 1) return { noun: 'its exercise', plural: false };
+    return exercises > 1 ? { noun: 'their exercises', plural: true } : { noun: 'their exercise', plural: false };
+  };
+  const notes = [];
+  if (counts.noMuscle > 0) {
+    const o = owner(counts.noMuscle, counts.noMuscleExercises);
+    notes.push(`${lead(counts.noMuscle)} not in these totals because ${o.noun} ${o.plural ? 'have' : 'has'} no muscle group chosen.`);
+  }
+  if (counts.notOnDevice > 0) {
+    const o = owner(counts.notOnDevice, counts.notOnDeviceExercises);
+    notes.push(`${lead(counts.notOnDevice)} not in these totals because ${o.noun} ${o.plural ? 'are' : 'is'} not on this device.`);
+  }
+  return notes;
 }

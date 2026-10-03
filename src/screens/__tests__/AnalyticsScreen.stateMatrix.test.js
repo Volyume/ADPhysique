@@ -1304,6 +1304,20 @@ describe('D218 F-2: a Recent sessions entry opens the same summary numbers as Hi
     // The route still carries the routine fields the "every route carries its routine" guard pins.
     expect(expected).toEqual(expect.objectContaining({ routineId: null, routineName: null, readOnly: true }));
   });
+
+  test('the Training row and the week strip read the same lookup as the session entries (review of D218)', () => {
+    // The pillar and the strip resolve through the shared resolvers, which
+    // accept the lookup or a plain map; given the plain map they could not
+    // name or credit a set whose id this install does not hold by its own
+    // name snapshot, which the session entries above do.
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
+    expect(src).toContain('const exercisesForSets = exerciseLookup ?? exerciseMap;');
+    expect(src).toContain('computeTrainingPillarSummary(allSets, exercisesForSets, { windowDays: 30 })');
+    expect(src).toContain('exerciseMap: exercisesForSets,');
+    expect(src).not.toContain('computeTrainingPillarSummary(allSets, exerciseMap');
+  });
 });
 
 // ─── S6-7: recap banner text agrees with the deck it opens ────────────────

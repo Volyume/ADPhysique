@@ -20,6 +20,13 @@ import Button from './Button';
 // converted, so the total is labelled with the same unit, as the Summary hero,
 // History, the share card and Consistency do. It defaults to 'kg' (the app
 // default) and anything that is not 'lbs' reads as kg.
+//
+// Review of D218 (NIT 15): `lastSessionTonnage`, when the caller has it (a
+// number, 0 included), is the total recomputed from the session's sets on the
+// basis History and the summary print, and wins over the stored
+// `lastSession.totalVolume`, which a session finished before D218 counted with
+// distance metres and one hand of a per-hand pair. null falls back to the
+// stored figure.
 function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onOpenHistory, onRepeat, units = 'kg' }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -31,14 +38,13 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
   };
   const unitLabel = units === 'lbs' ? 'lbs' : 'kg';
+  const total = Number.isFinite(lastSessionTonnage) ? lastSessionTonnage : lastSession.totalVolume;
   const meta = [
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
-    lastSession.totalVolume
-      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} ${unitLabel} lifted`
-      : lastSessionTonnage
-        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} ${unitLabel} lifted`
-        : null,
+    total > 0
+      ? `${Math.round(total).toLocaleString('en-GB')} ${unitLabel} lifted`
+      : null,
   ].filter(Boolean).join(' - ');
 
   return (

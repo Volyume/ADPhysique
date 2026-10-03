@@ -216,6 +216,27 @@ describe('F-20 / S3: one recency rule', () => {
     expect(recency.side_delts).toBe(yesterday); // the retired id's survivor
     expect(recency.glutes).toBeUndefined(); // explosive swing only
   });
+
+  test('a session begun before midnight with every set after it: the heatmap and the Recovery list read one instant', async () => {
+    // Adversarial review of D218, item 7: the heatmap's lastTrained read each
+    // set's own time and the Recovery list the session's start, so on the
+    // Wednesday after a Monday 23:40 start the heatmap said one day fewer.
+    const { buildDataset } = require('../volumeLogged');
+    const u = 'u-midnight';
+    const start = Date.now() - 2 * DAY - 20 * 60 * 1000;
+    const w = insertWorkout(u, start);
+    insertSet(u, w, 'bench', { at: start + 30 * 60 * 1000 });
+    insertSet(u, w, 'bench', { at: start + 40 * 60 * 1000 });
+    const rows = await dbm.getCompletedWorkoutSets(u);
+    expect(rows.every((r) => r.workoutStartedAt === start)).toBe(true);
+    const heatmap = buildDataset(rows, await dbm.getExerciseLookup(), Date.now());
+    const recovery = await dbm.getLastTrainedPerMuscle(u);
+    expect(heatmap.lastTrained.chest).toBe(start);
+    expect(heatmap.lastTrained.chest).toBe(recovery.chest);
+    expect(heatmap.lastTrained.triceps).toBe(recovery.triceps); // helper credit, same instant
+    // The week windows still read each set's own time.
+    expect(heatmap.earliestSetMs).toBe(start + 30 * 60 * 1000);
+  });
 });
 
 describe('F-3: the weekly volume trend resolves like the heatmap rows', () => {
@@ -254,7 +275,16 @@ describe('F-18: an untyped set is a working set everywhere', () => {
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '..', 'database.js'), 'utf8');
-    const bare = src.split('\n').filter((l) => /\b(ws|s)\.set_type != 'warmup'/.test(l) && !/IS NULL OR (ws|s)\.set_type != 'warmup'/.test(l));
+    // Review of D218, NIT 9: any alias or none, `!=` or `<>`, and NOT IN, so
+    // a predicate written another way cannot slip past; comments are not SQL.
+    const dropsUntyped = /\b(?:\w+\.)?set_type\s*(?:!=|<>)\s*'warmup'|\b(?:\w+\.)?set_type\s+NOT\s+IN\s*\(/i;
+    const nullSafe = /\b(?:\w+\.)?set_type\s+IS\s+NULL\s+OR\s+(?:\w+\.)?set_type\s*(?:!=|<>)\s*'warmup'/i;
+    const bare = src.split('\n')
+      .filter((l) => !/^\s*(\/\/|\*)/.test(l))
+      .filter((l) => dropsUntyped.test(l) && !nullSafe.test(l));
     expect(bare).toEqual([]);
+    // The guard itself catches the shapes it names.
+    expect(['  AND set_type <> \'warmup\'', '  AND set_type != \'warmup\'', '  AND x.set_type NOT IN (\'warmup\')']
+      .every((l) => dropsUntyped.test(l) && !nullSafe.test(l))).toBe(true);
   });
 });

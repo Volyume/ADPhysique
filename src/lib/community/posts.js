@@ -172,7 +172,7 @@ async function countSessionPRs(workout, sets, lookup, userId, units) {
   return pastWorkoutPRs({
     sets,
     priorSetsByExercise,
-    exerciseById: Object.fromEntries(lookup?.byId ?? []),
+    exerciseById: lookup ?? {},
     units: units === 'lbs' ? 'lbs' : 'kg',
   }).length;
 }

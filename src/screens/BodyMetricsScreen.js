@@ -58,7 +58,7 @@ import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import {
   logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights,
-  getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById,
+  getOpenEdPatternFlag, getWorkoutSetsSince, getExerciseLookup, updateMorningWeightById,
   deleteMorningWeightById, logMorningWeight, getNutritionTargets, getLatestCoachOutput,
 } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -311,7 +311,7 @@ export default function BodyMetricsScreen() {
   const [maintenance, setMaintenance] = useState({ status: 'loading', authority: null });
   const [intake, setIntake] = useState(null);
   const [liftSets, setLiftSets] = useState([]);
-  const [exercises, setExercises] = useState([]);
+  const [exercises, setExercises] = useState(null);
 
   // ── The entry form (new, measurements, or an edit in place) ──
   const [formMode, setFormMode] = useState(null); // null | 'weight' | 'measure' | 'edit'
@@ -399,13 +399,16 @@ export default function BodyMetricsScreen() {
         // A year of sets is the most the recomposition read can use; a
         // failure just hides the strength line, never the body history.
         getWorkoutSetsSince(uid, now - 365 * DAY_MS).catch(quiet('sets', [])),
-        getAllExercises().catch(quiet('exercises', [])),
+        // D218: the shared, unfiltered exercise lookup, as Lift Progress
+        // reads it, so the strength line names a lift on a since-deleted
+        // custom exercise or a retired id, with its own load rules.
+        getExerciseLookup().catch(quiet('exercises', null)),
       ]);
       if (mountedRef.current) {
         setIntake(summary);
         setCoachVerdict(coachVerdictFromOutput(lastCoach));
         setLiftSets(asRows(sets));
-        setExercises(asRows(ex));
+        setExercises(ex ?? null);
       }
       // BM-14: the resolver's inputs through the ONE mapping every surface
       // uses (maintenanceInputs.js: stored body profile, latest body

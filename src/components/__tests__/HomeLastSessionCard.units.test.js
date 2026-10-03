@@ -83,3 +83,21 @@ describe('D218 (F-24, P20): the Last session row labels its total with the unit 
     expect(text).not.toMatch(/lifted/);
   });
 });
+
+describe('review of D218 (NIT 15): the recomputed total wins over the stored one', () => {
+  test('a recomputed total (History\'s basis) replaces a stored figure that counted distance metres', () => {
+    const text = metaLine({ lastSession: STORED, lastSessionTonnage: 9800.2, units: 'kg' });
+    expect(text).toContain('9,800 kg lifted');
+    expect(text).not.toContain('12,345');
+  });
+
+  test('a recomputed 0 (nothing loaded) shows no total, never the stored metres', () => {
+    const text = metaLine({ lastSession: STORED, lastSessionTonnage: 0, units: 'kg' });
+    expect(text).toContain('52m - 20 sets');
+    expect(text).not.toMatch(/lifted/);
+  });
+
+  test('with no recomputed total the stored figure stands', () => {
+    expect(metaLine({ lastSession: STORED, lastSessionTonnage: null, units: 'kg' })).toContain('12,345 kg lifted');
+  });
+});

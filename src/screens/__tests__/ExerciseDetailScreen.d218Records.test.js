@@ -297,7 +297,12 @@ describe('F-14: the Personal records card reads only estimated-max rows', () => 
     expect(text).toContain('30.0kg');
     expect(text).toContain('30kg x 10 reps');
     expect(text).toContain('Most reps');
-    expect(text).toContain('50kg x 12');
+    // Review of D218 (NIT 13): the number is the help, and says so, in the
+    // card and in the list; "50kg x 12" alone read as a load.
+    expect(text).toContain('50kg assistance x 12Most reps');
+    expect(text).toContain('Most reps50kg assistance x 12 reps');
+    expect(text).not.toContain('50kg x 12Most reps');
+    expect(text).not.toContain('Most reps50kg x 12 reps');
     // The hero and the list: no Est. max, no Heaviest weight, no overview line
     // and no per-session line (the chart's lens chips keep their own labels).
     expect(text).toContain('Personal records30.0kgLeast assistance');

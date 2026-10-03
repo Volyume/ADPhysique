@@ -49,6 +49,16 @@ function setAt(set) {
   return Number.isFinite(at) ? at : null;
 }
 
+// D218 (adversarial review item 7): the instant "Trained N days ago" reads is
+// the set's SESSION start when the row carries it (getCompletedWorkoutSets),
+// the Recovery list's instant (getLastTrainedPerMuscle): the training day is
+// the day a session started (D215). The set's own time is the fallback for a
+// row without it. Windows and the divisor's anchor still read the set's time.
+function trainedAt(set) {
+  const started = Number(set?.workoutStartedAt ?? set?.workout_started_at);
+  return Number.isFinite(started) && started > 0 ? started : setAt(set);
+}
+
 /**
  * The listed muscles one logged row credits, or none when the row does not
  * count: a warm-up never counts and an explosive set never counts (the same
@@ -99,8 +109,9 @@ export function buildDataset(sets, exerciseMap, nowMs) {
     const at = setAt(s);
     if (at === null) continue;
     if (earliestSetMs === null || at < earliestSetMs) earliestSetMs = at;
+    const trained = trainedAt(s);
     for (const m of creditedMuscles(s, exerciseMap, cache)) {
-      if (!(lastTrained[m] >= at)) lastTrained[m] = at;
+      if (!(lastTrained[m] >= trained)) lastTrained[m] = trained;
     }
   }
   return { sets, exerciseMap, cache, earliestSetMs, lastTrained, loadedAtMs: nowMs };

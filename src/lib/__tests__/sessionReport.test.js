@@ -13,10 +13,14 @@
  *     assistance excluded, distance excluded), for an unknown id too when its
  *     snapshot names a known exercise;
  *   - the counts, the names and the list can never disagree;
- *   - the read-only summary route params are the same from every caller.
+ *   - the read-only summary route params are the same from every caller;
+ *   - the weekly volume card says why a set of this workout is not in its
+ *     totals, by reason, and says nothing when it has no lookup to judge by
+ *     (adversarial review of D218, item 5).
  */
 import {
   buildSessionReport, groupSessionExercises, sessionSummaryParams, setMapsFor,
+  uncreditedSessionSets, uncreditedSetNotes,
 } from '../sessionReport';
 import { buildExerciseLookup } from '../exercise/lookup';
 import { canonicalExerciseId } from '../exercise/canonicalId';
@@ -177,5 +181,65 @@ describe('sessionSummaryParams', () => {
       routineName: 'Push A',
       readOnly: true,
     });
+  });
+});
+
+describe('uncreditedSessionSets and uncreditedSetNotes (review of D218, item 5)', () => {
+  const lib = buildExerciseLookup([
+    ...LIBRARY,
+    { id: 'no-muscle', name: 'Imported Move', primaryMuscle: null, isCustom: 1 },
+    { id: 'no-muscle-2', name: 'Other Imported Move', primaryMuscle: null, isCustom: 1 },
+  ]);
+  const inW = (exerciseId, extra = {}) => set(exerciseId, { workoutId: 'w1', ...extra });
+
+  test('counts by reason, this workout only, warm-ups out', () => {
+    const rows = [
+      inW('bench'), // credited
+      inW('bench', { setType: 'warmup' }), // a warm-up is not a working set
+      inW('bench', { evidenceClass: 'ballistic' }), // explosive
+      inW('no-muscle'), inW('no-muscle'), // on this device, no muscle chosen
+      inW('ghost', { exerciseName: 'Cable Thing' }), // not on this device
+      set('no-muscle', { workoutId: 'w2' }), // another workout
+    ];
+    expect(uncreditedSessionSets(rows, 'w1', lib)).toEqual({
+      explosive: 1, noMuscle: 2, noMuscleExercises: 1, notOnDevice: 1, notOnDeviceExercises: 1,
+    });
+  });
+
+  test('a snapshot that names an exercise here is credited, not "not on this device"', () => {
+    const rows = [inW('other-device-id', { exerciseName: 'Bench Press' })];
+    expect(uncreditedSessionSets(rows, 'w1', lib)).toEqual(expect.objectContaining({ noMuscle: 0, notOnDevice: 0 }));
+  });
+
+  test('with no lookup it says nothing, rather than calling every set uncredited', () => {
+    expect(uncreditedSessionSets([inW('bench')], 'w1', null)).toBeNull();
+    expect(uncreditedSetNotes(null)).toEqual([]);
+  });
+
+  test('one line per reason, singular and plural, "chosen" never "set"', () => {
+    expect(uncreditedSetNotes({ explosive: 0, noMuscle: 1, noMuscleExercises: 1, notOnDevice: 1, notOnDeviceExercises: 1 })).toEqual([
+      '1 set from this workout is not in these totals because its exercise has no muscle group chosen.',
+      '1 set from this workout is not in these totals because its exercise is not on this device.',
+    ]);
+    expect(uncreditedSetNotes({ explosive: 0, noMuscle: 3, noMuscleExercises: 1, notOnDevice: 0, notOnDeviceExercises: 0 })).toEqual([
+      '3 sets from this workout are not in these totals because their exercise has no muscle group chosen.',
+    ]);
+    expect(uncreditedSetNotes({ explosive: 0, noMuscle: 0, noMuscleExercises: 0, notOnDevice: 4, notOnDeviceExercises: 2 })).toEqual([
+      '4 sets from this workout are not in these totals because their exercises are not on this device.',
+    ]);
+    const two = uncreditedSessionSets([inW('no-muscle'), inW('no-muscle-2')], 'w1', lib);
+    expect(uncreditedSetNotes(two)).toEqual([
+      '2 sets from this workout are not in these totals because their exercises have no muscle group chosen.',
+    ]);
+    expect(uncreditedSetNotes({ explosive: 2, noMuscle: 0, noMuscleExercises: 0, notOnDevice: 0, notOnDeviceExercises: 0 })).toEqual([]);
+  });
+
+  test('the summary screen reads these two, against the lookup it loaded', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'WorkoutSummaryScreen.js'), 'utf8');
+    expect(src).toContain('setUncreditedSets(uncreditedSessionSets(allSets, workoutId, lookup));');
+    expect(src).toContain('const volumeNotes = uncreditedSetNotes(uncreditedSets);');
+    expect(src).not.toContain('no muscle group set');
   });
 });

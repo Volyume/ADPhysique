@@ -941,8 +941,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 )}
                 {prReps && (
                   <View style={[styles.prHighlightStat, prHeavy && displayPR !== prHeavy ? styles.prHighlightStatBordered : null, live.prHighlightStatBordered]}>
+                    {/* Review of D218 (NIT 13): on an assistance machine the
+                        number is the help, so it says so; "50kg x 12" read as
+                        a load. */}
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
+                      {finiteOr(prReps.value, '-')}{units}{detailSemantics === 'assisted' ? ' assistance' : ''} x {finiteOr(prReps.reps, '-')}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
                   </View>
@@ -1194,7 +1197,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   </Text>
                   <Text style={[styles.prValue, live.prValue]}>
                     {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :
-                     `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
+                     pr.record_type === 'most_reps' && detailSemantics === 'assisted'
+                       ? `${finiteOr(pr.value, '-')}${units} assistance x ${finiteOr(pr.reps, '-')} reps`
+                       : `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
                   </Text>
                 </View>
                 <Text style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>

@@ -1153,8 +1153,21 @@ export default function HomeScreen({ navigation, route }) {
         // seconds in the weight column) is not kilograms, each by the set's own
         // exercise, so this row reads the basis the Summary hero reads. The
         // lookup was read above; a failed read falls back to unmapped totals.
-        const tonnage = buildSessionReport(lastSets, lookup).tonnage;
-        setLastSessionTonnage(tonnage > 0 ? tonnage : null);
+        // Review of D218 (NIT 15): with the lookup and the sets read, this
+        // recomputed total is the one History and the summary print, so it
+        // wins over the stored workouts.total_volume, which a session finished
+        // before D218 counted with distance metres and one hand of a per-hand
+        // pair (0 included: a session with nothing loaded shows no total).
+        // Without the sets the stored figure stands; without the lookup the
+        // plain total is shown only when nothing is stored.
+        const report = lastSets.length > 0 ? buildSessionReport(lastSets, lookup) : null;
+        if (report && lookup) {
+          setLastSessionTonnage(report.tonnage);
+        } else if (report && !(completed[0].totalVolume > 0) && report.tonnage > 0) {
+          setLastSessionTonnage(report.tonnage);
+        } else {
+          setLastSessionTonnage(null);
+        }
       } else {
         setLastSessionTonnage(null);
       }
@@ -1893,20 +1906,27 @@ export default function HomeScreen({ navigation, route }) {
         // device's custom exercise before its pull) is no longer dropped in
         // silence. It is tried against the shared lookup by its own logged
         // name snapshot first, and when one is still left out the person is
-        // told, calmly, how many. The repeat proceeds either way.
+        // told, calmly, how many. The repeat proceeds either way. Review of
+        // D218 (NIT 11): "not on this device" is said only when both reads
+        // worked and neither found it; when a read failed, the exercise
+        // "could not be loaded", which is what happened.
+        const READ_FAILED = Symbol('readFailed');
         const foundById = await Promise.all(
-          orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)),
+          orderedExerciseIds.map(id => getExerciseById(id).catch(() => READ_FAILED)),
         );
         let lookup;
         const repeatable = [];
         const repeatedIds = new Set();
         let leftOut = 0;
+        let leftOutUnread = 0;
         for (let i = 0; i < orderedExerciseIds.length; i += 1) {
           const loggedId = orderedExerciseIds[i];
-          let exercise = foundById[i];
+          const byIdFailed = foundById[i] === READ_FAILED;
+          let exercise = byIdFailed ? null : foundById[i];
           if (!exercise) {
             if (lookup === undefined) lookup = await getExerciseLookup().catch(() => null);
             exercise = lookup?.resolve(prevSets.find(s => s.exerciseId === loggedId)) ?? null;
+            if (!exercise && (byIdFailed || lookup == null)) leftOutUnread += 1;
           }
           // Two logged ids that are one exercise (a retired id and the
           // exercise it became) are repeated once.
@@ -1929,13 +1949,20 @@ export default function HomeScreen({ navigation, route }) {
           routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },
           sets: [],
         }));
-        if (leftOut > 0) {
-          toast.show(
-            leftOut === 1
-              ? 'One exercise from that session is not on this device, so it was left out.'
-              : `${leftOut} exercises from that session are not on this device, so they were left out.`,
-            { variant: 'info', duration: 5000 },
-          );
+        const leftOutMissing = leftOut - leftOutUnread;
+        const leftOutLines = [];
+        if (leftOutMissing > 0) {
+          leftOutLines.push(leftOutMissing === 1
+            ? 'One exercise from that session is not on this device, so it was left out.'
+            : `${leftOutMissing} exercises from that session are not on this device, so they were left out.`);
+        }
+        if (leftOutUnread > 0) {
+          leftOutLines.push(leftOutUnread === 1
+            ? 'One exercise from that session could not be loaded, so it was left out.'
+            : `${leftOutUnread} exercises from that session could not be loaded, so they were left out.`);
+        }
+        if (leftOutLines.length > 0) {
+          toast.show(leftOutLines.join(' '), { variant: 'info', duration: 5000 });
         }
       }
 

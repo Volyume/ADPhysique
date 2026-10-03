@@ -278,10 +278,14 @@ export default function AnalyticsScreen({ navigation, route }) {
   // Campaign 23 (§8/§21/§22 R2): the Training pillar's numeric summary
   // (trailing-month strength-direction count + named bests, per-exercise-
   // per-day deduplicated, IA-3; D214 PR-3: an exercise's first local day is its
-  // baseline). Derived from the already-loaded data, no new query.
+  // baseline). Derived from the already-loaded data, no new query. D218: it
+  // reads the shared exercise lookup, so a set whose id this install does not
+  // hold is named and typed by its own name snapshot, as every other session
+  // reader does (the plain map is only the fallback before the lookup loads).
+  const exercisesForSets = exerciseLookup ?? exerciseMap;
   const trainingSummary = useMemo(
-    () => computeTrainingPillarSummary(allSets, exerciseMap, { windowDays: 30 }),
-    [allSets, exerciseMap],
+    () => computeTrainingPillarSummary(allSets, exercisesForSets, { windowDays: 30 }),
+    [allSets, exercisesForSets],
   );
   const lastSessionAt = useMemo(
     () => allSets.reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0) || null,
@@ -337,12 +341,12 @@ export default function AnalyticsScreen({ navigation, route }) {
   );
   const strip = useMemo(() => buildVolumeStrip({
     allSets,
-    exerciseMap,
+    exerciseMap: exercisesForSets,
     nowMs: Date.now(),
     landmarks: planContext?.landmarks ?? null,
     planTrained: planContext?.planTrained ?? null,
     recoveryWeek,
-  }), [allSets, exerciseMap, planContext, recoveryWeek]);
+  }), [allSets, exercisesForSets, planContext, recoveryWeek]);
   const legendItems = useMemo(
     () => stripLegendItems({ colors: t.colors, recoveryWeek }),
     [t, recoveryWeek],

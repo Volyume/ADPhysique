@@ -21,6 +21,7 @@
  * Pure, no I/O: the caller reads the sets.
  */
 import { detectPR, bestPRPerExercise } from './algorithms';
+import { resolveExerciseFor, exerciseNameFor } from './exercise/lookup';
 
 const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
 const idOf = (s) => s?.exerciseId ?? s?.exercise_id ?? null;
@@ -32,7 +33,11 @@ const orderOf = (s) => Number(s?.setNumber ?? s?.set_number) || 0;
  * @param {Array<object>} args.sets  the workout's logged sets
  * @param {Object<string, Array<object>>} [args.priorSetsByExercise]  each
  *   exercise's sets from workouts before this one
- * @param {Object<string, object>} [args.exerciseById]  the exercise library
+ * @param {object} [args.exerciseById]  the shared exercise lookup
+ *   (database.getExerciseLookup) or a plain `{ [id]: row }` map. Review of
+ *   D218 (NIT 14): read through the shared resolvers, so a lift whose id this
+ *   install does not hold is named from its own snapshot, as the summary's
+ *   list names it, and judged by the row its snapshot names.
  * @param {'kg'|'lbs'} [args.units]
  * @param {number|null} [args.date]  when the workout happened, carried on
  *   each record so a record image shows that day rather than today
@@ -54,7 +59,7 @@ export function pastWorkoutPRs({
   for (const set of ordered) {
     const id = idOf(set);
     if (!id) continue;
-    const exercise = exerciseById[id] || null;
+    const exercise = resolveExerciseFor(exerciseById, set);
     const type = exercise?.exerciseType || exercise?.exercise_type || 'weight_reps';
     const isWeightReps = type === 'weight_reps' || type === 'weighted_bodyweight';
     const today = earlier.get(id) || [];
@@ -65,7 +70,7 @@ export function pastWorkoutPRs({
           found.push({
             ...pr,
             exerciseId: id,
-            exerciseName: exercise?.name ?? null,
+            exerciseName: exerciseNameFor(exerciseById, set),
             units,
             setId: set.id ?? null,
             ...(date ? { date } : {}),

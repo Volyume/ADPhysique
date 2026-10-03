@@ -680,9 +680,16 @@ export function shouldDeload(last4WeeksData) {
   let score = 0; // 0–100; deload triggers at ≥ 50
 
   // Performance (50% weight).
-  const recentReps = last4WeeksData[last4WeeksData.length - 1]?.avgReps || 0;
-  const earlierReps = last4WeeksData[0]?.avgReps || 0;
-  if (earlierReps > 0 && recentReps < earlierReps - 2) {
+  // D218 (2026-10-03): an end whose avgReps is null had sets, but none that
+  // can be compared (only planks, swings or myo-reps that week), so it holds
+  // no rep evidence and there is nothing to compare; it is never read as a
+  // drop to zero. A week with no sets at all still reads 0, as before.
+  const recentBucketReps = last4WeeksData[last4WeeksData.length - 1]?.avgReps;
+  const earlierBucketReps = last4WeeksData[0]?.avgReps;
+  const recentReps = recentBucketReps || 0;
+  const earlierReps = earlierBucketReps || 0;
+  if (recentBucketReps !== null && earlierBucketReps !== null
+    && earlierReps > 0 && recentReps < earlierReps - 2) {
     score += 50;
     // Plain-English sweep 2026-09-26 (founder order): 'rep performance' was
     // coach shorthand; the check compares average reps per set.
@@ -738,6 +745,15 @@ function deloadBucketWorkoutAt(w) {
 
 function deloadBucketWorkoutCompleted(w) {
   return w.isCompleted ?? w.is_completed ?? false;
+}
+
+// D218: the exercise type the rep average reads for one set, from the
+// caller's id-to-type map when it has one (Home), else from the exercise map.
+function deloadRepsTypeOf(set, exerciseMap, repsTypeById) {
+  const id = set?.exerciseId ?? set?.exercise_id;
+  if (repsTypeById && id != null && repsTypeById[id] != null) return repsTypeById[id];
+  const ex = exerciseForSet(exerciseMap, set);
+  return ex?.exerciseType ?? ex?.exercise_type ?? ex?.type ?? 'weight_reps';
 }
 
 /**
@@ -802,15 +818,9 @@ function deloadBucketWorkoutCompleted(w) {
  *   has no exerciseMap to run the derivation's volume pass with).
  * @returns {Array<{avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV,
  *   weeksSinceLastDeload}>} 4 entries, oldest first, ready for
- *   shouldDeload().
+ *   shouldDeload(). avgReps is null for a week with sets but none that can
+ *   be compared (D218), 0 for a week with no sets.
  */
-function deloadRepsTypeOf(set, exerciseMap, repsTypeById) {
-  const id = set?.exerciseId ?? set?.exercise_id;
-  if (repsTypeById && id != null && repsTypeById[id] != null) return repsTypeById[id];
-  const ex = exerciseForSet(exerciseMap, set);
-  return ex?.exerciseType ?? ex?.exercise_type ?? ex?.type ?? 'weight_reps';
-}
-
 export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = {}) {
   const {
     now = Date.now(),
@@ -861,13 +871,16 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
     // deload suggestion, and Home, Consistency and the coach review averaged
     // warm-ups differently for the same history. `excludeWarmups` is now
     // always true in effect; the type comes from `repsTypeById` when the
-    // caller passes no exercise map (Home), else from the map.
+    // caller passes no exercise map (Home), else from the map. A week that
+    // has sets but none comparable carries null, "no rep evidence", which
+    // shouldDeload skips; reading it as 0 would turn a week of planks into
+    // a 50-point rep drop. A week with no sets keeps 0, as before.
     const setsForReps = repsSets.filter((s) => (
       isTrendEligibleRow(s) && !NON_LOAD_EXERCISE_TYPES.has(deloadRepsTypeOf(s, exerciseMap, repsTypeById))
     ));
     const avgReps = setsForReps.length > 0
       ? setsForReps.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / setsForReps.length
-      : 0;
+      : (repsSets.length > 0 ? null : 0);
 
     let avgSoreness;
     let avgJointDiscomfort;

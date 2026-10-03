@@ -61,6 +61,19 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('tap Finish again');
   });
 
+  test('D218: only a database read that succeeded can say nothing is saved; a failed read never offers the discard', () => {
+    // Adversarial review of D218 (2026-10-03): the empty-finish branch read
+    // a failed getWorkoutSetsForWorkout as "no sets", so a workout whose only
+    // sets sat on an exercise swapped out (saved, but gone from the logger's
+    // list) offered "Discard workout" under "Nothing logged yet".
+    expect(ACTIVE_WORKOUT).toContain('const savedSetsRead = Array.isArray(savedSets);');
+    expect(ACTIVE_WORKOUT).toContain('if (savedSetsRead && savedSets.length === 0 && memorySets.length === 0) {');
+    expect(ACTIVE_WORKOUT).toContain('const confirmSets = savedSetsRead && savedSets.length ? savedSets : memorySets;');
+    expect(ACTIVE_WORKOUT).not.toContain('if (confirmSets.length === 0) {');
+    // The confirm never claims "0 sets" when it could not count them.
+    expect(ACTIVE_WORKOUT).toContain("'The sets for this workout could not be counted just now.'");
+  });
+
   test('stored workout name uses the same full-title rule as summary sharing', () => {
     expect(ACTIVE_WORKOUT).toContain("import { shareSessionName } from '../lib/sessionShareData';");
     // D218 (2026-10-03, audit F-7): the free-form title's names are the
