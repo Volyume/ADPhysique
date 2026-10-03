@@ -1141,10 +1141,17 @@ export default function HomeScreen({ navigation, route }) {
 
       // Compute tonnage for last session. Usually inside the four-week
       // window already loaded; if the last session is older than that
-      // (a returning user), fetch just that one workout's sets.
+      // (a returning user), fetch just that one workout's sets. A session
+      // that started within a day of the window's edge reads its own sets
+      // too: the window is cut by each set's time, so it could hold only part
+      // of that session, and the recomputed total now wins over the stored
+      // one (verification pass on the D218 review fixes, NIT 5).
       if (completed[0]) {
         const lastId = completed[0].id;
-        let lastSets = recentSets.filter(s => s.workoutId === lastId);
+        const lastStart = Number(completed[0].startedAt) || 0;
+        let lastSets = lastStart >= fourWeeksAgo + 24 * 60 * 60 * 1000
+          ? recentSets.filter(s => s.workoutId === lastId)
+          : [];
         if (lastSets.length === 0) {
           lastSets = await getWorkoutSetsForWorkout(lastId);
         }

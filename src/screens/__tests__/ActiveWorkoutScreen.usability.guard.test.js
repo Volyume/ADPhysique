@@ -66,12 +66,20 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // a failed getWorkoutSetsForWorkout as "no sets", so a workout whose only
     // sets sat on an exercise swapped out (saved, but gone from the logger's
     // list) offered "Discard workout" under "Nothing logged yet".
+    // A failed read must stay distinguishable from an empty one: turning the
+    // catch's null into [] would bring the discard back with every other pin
+    // green (verification pass on the review fixes, NIT 4).
+    expect(ACTIVE_WORKOUT).toContain('try { savedSets = await getWorkoutSetsForWorkout(activeWorkout.id); } catch (_) { savedSets = null; }');
     expect(ACTIVE_WORKOUT).toContain('const savedSetsRead = Array.isArray(savedSets);');
     expect(ACTIVE_WORKOUT).toContain('if (savedSetsRead && savedSets.length === 0 && memorySets.length === 0) {');
     expect(ACTIVE_WORKOUT).toContain('const confirmSets = savedSetsRead && savedSets.length ? savedSets : memorySets;');
     expect(ACTIVE_WORKOUT).not.toContain('if (confirmSets.length === 0) {');
     // The confirm never claims "0 sets" when it could not count them.
     expect(ACTIVE_WORKOUT).toContain("'The sets for this workout could not be counted just now.'");
+    // The empty alert names what was typed (a number or a note), and never
+    // says it "will be lost" beside Keep going (review NIT 12).
+    expect(ACTIVE_WORKOUT).toContain(' What you typed in for ${exercise?.name || \'this exercise\'} is not logged yet. You can keep going and log it, or discard the workout.');
+    expect(ACTIVE_WORKOUT).toContain("`This workout has no sets logged, so there is nothing to save.${typedSetNote}`");
   });
 
   test('stored workout name uses the same full-title rule as summary sharing', () => {

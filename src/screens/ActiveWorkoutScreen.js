@@ -4114,8 +4114,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const savedSetsRead = Array.isArray(savedSets);
     const memorySets = snapshotExercises.flatMap(e => e.sets || []);
     if (savedSetsRead && savedSets.length === 0 && memorySets.length === 0) {
+      // hasInProgressSetEntry is also true for a typed note or a cluster
+      // entry, so the line names what was typed, not "a set".
       const typedSetNote = hasInProgressSetEntry()
-        ? ` The set you typed in for ${exercise?.name || 'this exercise'} is not logged yet. You can keep going and log it, or discard the workout.`
+        ? ` What you typed in for ${exercise?.name || 'this exercise'} is not logged yet. You can keep going and log it, or discard the workout.`
         : ' You can keep going, or discard it.';
       appAlert(
         'Nothing logged yet',

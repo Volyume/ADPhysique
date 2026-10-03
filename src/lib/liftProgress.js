@@ -29,9 +29,10 @@ function mapGet(mapOrObject, key) {
 //              is fine, order is normalised here)
 //   exercisesOrLookup
 //              the shared exercise lookup (src/lib/exercise/lookup.js,
-//              database.getExerciseLookup) or an array of exercise records
-//              (id, name, primaryMuscle, exerciseType, loadSemantics), the
-//              shape recompReframe.js and athleteProfileSummary.js still pass
+//              database.getExerciseLookup), which every screen caller passes
+//              since D218, or an array of exercise records (id, name,
+//              primaryMuscle, exerciseType, loadSemantics), the shape the pure
+//              callers' tests (recompReframe.js, athleteProfileSummary.js) use
 //
 // D218 (founder order 2026-10-03, audit F-13 and F-4):
 //  - A set contributes only through isEstimatedMaxRow (algorithms.js), the one

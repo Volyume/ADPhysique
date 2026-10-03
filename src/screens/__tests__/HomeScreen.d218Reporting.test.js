@@ -647,6 +647,42 @@ describe('D218 (F-8 part 2, P20): the computed Last session total reads each set
     expect(text).toContain(`${SESSION_TONNAGE.toLocaleString('en-GB')} kg lifted`);
     expect(text).not.toContain(storedBeforeD218.toLocaleString('en-GB'));
   });
+
+  test('with the lookup unreadable a stored total stands (the plain recompute never replaces it)', async () => {
+    useAppStore.setState(userState());
+    applyFixture({
+      db: {
+        getAllWorkouts: async () => [lastWorkout({ setCount: 3, totalVolume: 5600 })],
+        getWorkoutSetsSince: async () => sessionSets('w-last'),
+        getExerciseLookup: async () => { throw new Error('exercises unreadable'); },
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const text = flattenText(tree);
+    expect(text).toContain('5,600 kg lifted');
+    // The plain recompute would count the heel walk's metres and one hand of each pair.
+    expect(text).not.toContain(`${(3000 + 900 + 400 + 400 * 90).toLocaleString('en-GB')} kg lifted`);
+  });
+
+  test('a last session that began at the four-week window\'s edge reads its own sets, not the part inside the window', async () => {
+    useAppStore.setState(userState());
+    const edgeStart = Date.now() - 28 * DAY + 30 * 60 * 1000;
+    const inWindow = [setRow('w-last', 'ex-bench', 100, 10)];
+    const whole = repeated(3, () => setRow('w-last', 'ex-bench', 100, 10));
+    applyFixture({
+      db: {
+        getAllWorkouts: async () => [lastWorkout({ startedAt: edgeStart, endedAt: edgeStart + 3600000, totalVolume: 3000 })],
+        getWorkoutSetsSince: async () => inWindow,
+        getWorkoutSetsForWorkout: async (id) => (id === 'w-last' ? whole : []),
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const text = flattenText(tree);
+    expect(text).toContain('3,000 kg lifted');
+    expect(text).not.toContain('1,000 kg lifted');
+  });
 });
 
 // ─── F-8: the computed week stats ───────────────────────────────────────────

@@ -134,7 +134,9 @@ const dayEndMs = (key) => new Date(`${key}T23:59:59.999`).getTime();
  *
  * @param {Array} history   body-metric entries (weight, body_fat, the nine sites), one per day
  * @param {Array} sets      completed workout sets (camel or snake case)
- * @param {Array} exercises exercise records (id, name)
+ * @param {object|Array|null} exercises the shared exercise lookup
+ *   (database.getExerciseLookup, as BodyMetricsScreen passes it since D218),
+ *   or an array of exercise records (id, name); buildLiftProgressRows takes either
  * @param {{ suppressed?: boolean, nowMs?: number }} [opts] suppressed = calm mode / open ED flag
  * @returns {{ render: false } | {
  *   render: true,
