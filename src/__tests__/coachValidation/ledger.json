@@ -2522,7 +2522,7 @@
   "source_file": "src/lib/algorithms.js",
   "authority": "src/lib/algorithms.js:484 shouldDeload",
   "decision": "",
-  "thresholds": "weighted score, deload triggers at score>=50 of 100. Performance (50 pts): recentReps < earlierReps-2 (recent = last week, earlier = first of the 4). Wellness (30 pts, split): avgJointDiscomfort >=1.5 AND weeksSinceLastDeload>=3 -> +18; overMRVWeeks>=2 -> +12. Soreness (20 pts, down-weighted per Coleman 2024): highSorenessWeeks (avgSoreness>=2.5) >=3 AND weeksSinceLastDeload>=4 -> +20. Requires last4WeeksData.length>=2 to run at all.",
+  "thresholds": "weighted score, deload triggers at score>=50 of 100. Performance (50 pts): recentReps < earlierReps-2 (recent = the latest of the 4 weeks with rep evidence, earlier = the earliest; a week with no comparable sets, a week off included, has none; fewer than two such weeks: no comparison; D218 addendum 3). Wellness (30 pts, split): avgJointDiscomfort >=1.5 AND weeksSinceLastDeload>=3 -> +18; overMRVWeeks>=2 -> +12. Soreness (20 pts, down-weighted per Coleman 2024): highSorenessWeeks (avgSoreness>=2.5) >=3 AND weeksSinceLastDeload>=4 -> +20. Requires last4WeeksData.length>=2 to run at all.",
   "precedence": "additive score across 4 independent signal groups; no single signal alone reaches 50 except performance drop (50 pts exactly)",
   "direct_case": [],
   "boundary_case": [],

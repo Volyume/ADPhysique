@@ -679,17 +679,21 @@ export function shouldDeload(last4WeeksData) {
   const reasons = [];
   let score = 0; // 0–100; deload triggers at ≥ 50
 
-  // Performance (50% weight).
-  // D218 (2026-10-03): an end whose avgReps is null had sets, but none that
-  // can be compared (only planks, swings or myo-reps that week), so it holds
-  // no rep evidence and there is nothing to compare; it is never read as a
-  // drop to zero. A week with no sets at all still reads 0, as before.
-  const recentBucketReps = last4WeeksData[last4WeeksData.length - 1]?.avgReps;
-  const earlierBucketReps = last4WeeksData[0]?.avgReps;
-  const recentReps = recentBucketReps || 0;
-  const earlierReps = earlierBucketReps || 0;
-  if (recentBucketReps !== null && earlierBucketReps !== null
-    && earlierReps > 0 && recentReps < earlierReps - 2) {
+  // Performance (50% weight): the rep average of the earliest week that has
+  // rep evidence against the latest week that has it. Founder decisions
+  // 2026-10-03 (register D218, addendum 3): a week off is not a drop, so a
+  // week with no comparable sets (no training at all, or only planks, swings
+  // or myo-reps) holds no rep evidence and is never read as a drop to zero;
+  // when the first or last of the weeks has none, the nearest week that has
+  // it stands in. Evidence is a positive number of reps; with fewer than two
+  // such weeks there is nothing to compare. When both ends have evidence this
+  // is the first-against-last comparison it always was.
+  const repWeeks = last4WeeksData
+    .map((w) => w?.avgReps)
+    .filter((v) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+  const earlierReps = repWeeks.length >= 2 ? repWeeks[0] : null;
+  const recentReps = repWeeks.length >= 2 ? repWeeks[repWeeks.length - 1] : null;
+  if (earlierReps != null && recentReps < earlierReps - 2) {
     score += 50;
     // Plain-English sweep 2026-09-26 (founder order): 'rep performance' was
     // coach shorthand; the check compares average reps per set.
@@ -818,8 +822,9 @@ function deloadRepsTypeOf(set, exerciseMap, repsTypeById) {
  *   has no exerciseMap to run the derivation's volume pass with).
  * @returns {Array<{avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV,
  *   weeksSinceLastDeload}>} 4 entries, oldest first, ready for
- *   shouldDeload(). avgReps is null for a week with sets but none that can
- *   be compared (D218), 0 for a week with no sets.
+ *   shouldDeload(). avgReps is null for a week with no comparable sets, a
+ *   week with no training included (D218 and its addendum 3): no rep
+ *   evidence, which shouldDeload never reads as a drop.
  */
 export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = {}) {
   const {
@@ -871,16 +876,17 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
     // deload suggestion, and Home, Consistency and the coach review averaged
     // warm-ups differently for the same history. `excludeWarmups` is now
     // always true in effect; the type comes from `repsTypeById` when the
-    // caller passes no exercise map (Home), else from the map. A week that
-    // has sets but none comparable carries null, "no rep evidence", which
-    // shouldDeload skips; reading it as 0 would turn a week of planks into
-    // a 50-point rep drop. A week with no sets keeps 0, as before.
+    // caller passes no exercise map (Home), else from the map. A week with
+    // no comparable sets carries null, "no rep evidence", whether it held
+    // only planks or swings or no training at all (founder decision
+    // 2026-10-03, D218 addendum 3: a week off is not a drop); read as 0 it
+    // scored a 50-point rep drop and suggested a recovery week.
     const setsForReps = repsSets.filter((s) => (
       isTrendEligibleRow(s) && !NON_LOAD_EXERCISE_TYPES.has(deloadRepsTypeOf(s, exerciseMap, repsTypeById))
     ));
     const avgReps = setsForReps.length > 0
       ? setsForReps.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / setsForReps.length
-      : (repsSets.length > 0 ? null : 0);
+      : null;
 
     let avgSoreness;
     let avgJointDiscomfort;
