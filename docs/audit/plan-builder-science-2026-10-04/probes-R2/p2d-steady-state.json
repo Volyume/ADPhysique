@@ -1,0 +1,229 @@
+{
+ "UL4": [
+  {
+   "day": "Mon 09:00",
+   "done": "",
+   "programmeNext": "UA",
+   "projectedAt": "Mon Oct 05 2026 18:00",
+   "recovery_nextSentence": "Upper A is next. Every muscle it trains is estimated recovered.",
+   "recovery_stillToDo": [
+    "Upper A · estimated ready now (Chest 100% recovered)",
+    "Lower A · estimated ready later today (Hamstrings 86% recovered)",
+    "Upper B · estimated ready now (Chest 100% recovered)",
+    "Lower B · estimated ready later today (Hamstrings 86% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "ready/100%/chest",
+   "nextAtProjected": "ready/100%/chest",
+   "nextAtProjectedMuscles": "chest:100% back:100% side_delts:100% biceps:100% triceps:100%",
+   "answerLine": "3 nearly recovered, 10 recovered."
+  },
+  {
+   "day": "Tue 09:00",
+   "done": "UA",
+   "programmeNext": "LA",
+   "projectedAt": "Tue Oct 06 2026 18:00",
+   "recovery_nextSentence": "Lower A is next. Every muscle it trains is estimated recovered.",
+   "recovery_stillToDo": [
+    "Lower A · estimated ready now (Quads 100% recovered)",
+    "Upper B · estimated ready by Thursday (Back 20% recovered)",
+    "Lower B · estimated ready now (Quads 100% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "ready/100%/quads",
+   "nextAtProjected": "ready/100%/quads",
+   "nextAtProjectedMuscles": "quads:100% hamstrings:100% calves:100% abs:100% glutes:100%",
+   "answerLine": "7 muscles still recovering, 6 recovered."
+  },
+  {
+   "day": "Wed 09:00",
+   "done": "UA,LA",
+   "programmeNext": "UB",
+   "projectedAt": "Thu Oct 08 2026 18:00",
+   "recovery_nextSentence": "Upper B is next: Back is the least recovered of the muscles it trains, estimated 55% recovered, ready by tomorrow.",
+   "recovery_stillToDo": [
+    "Upper B · estimated ready by tomorrow (Back 55% recovered)",
+    "Lower B · estimated ready by Friday (Quads 17% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "not_yet/55%/back",
+   "nextAtProjected": "ready/100%/chest",
+   "nextAtProjectedMuscles": "chest:100% back:100% rear_delts:100% biceps:100% triceps:100%",
+   "answerLine": "9 muscles still recovering, 1 nearly recovered, 3 recovered."
+  },
+  {
+   "day": "Thu 09:00",
+   "done": "UA,LA",
+   "programmeNext": "UB",
+   "projectedAt": "Thu Oct 08 2026 18:00",
+   "recovery_nextSentence": "Upper B is next: Back is the least recovered of the muscles it trains, estimated 89% recovered, ready later today.",
+   "recovery_stillToDo": [
+    "Upper B · estimated ready later today (Back 89% recovered)",
+    "Lower B · estimated ready by tomorrow (Quads 46% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "nearly/89%/back",
+   "nextAtProjected": "ready/100%/chest",
+   "nextAtProjectedMuscles": "chest:100% back:100% rear_delts:100% biceps:100% triceps:100%",
+   "answerLine": "3 muscles still recovering, 2 nearly recovered, 8 recovered."
+  },
+  {
+   "day": "Fri 09:00",
+   "done": "UA,LA,UB",
+   "programmeNext": "LB",
+   "projectedAt": "Fri Oct 09 2026 18:00",
+   "recovery_nextSentence": "Lower B is next: Quads are the least recovered of the muscles it trains, estimated 75% recovered, ready later today.",
+   "recovery_stillToDo": [
+    "Lower B · estimated ready later today (Quads 75% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "nearly/75%/quads",
+   "nextAtProjected": "nearly/85%/quads",
+   "nextAtProjectedMuscles": "quads:85% hamstrings:99% glutes:91% calves:100% abs:100%",
+   "answerLine": "6 muscles still recovering, 3 nearly recovered, 4 recovered."
+  },
+  {
+   "day": "Sat 09:00",
+   "done": "UA,LA,UB,LB",
+   "programmeNext": null,
+   "projectedAt": "Mon Oct 12 2026 18:00",
+   "recovery_nextSentence": null,
+   "recovery_stillToDo": [],
+   "recommended": null,
+   "nextNow": null,
+   "nextAtProjected": null,
+   "nextAtProjectedMuscles": null,
+   "answerLine": "9 muscles still recovering, 1 nearly recovered, 3 recovered."
+  },
+  {
+   "day": "Sun 09:00",
+   "done": "UA,LA,UB,LB",
+   "programmeNext": null,
+   "projectedAt": "Mon Oct 12 2026 18:00",
+   "recovery_nextSentence": null,
+   "recovery_stillToDo": [],
+   "recommended": null,
+   "nextNow": null,
+   "nextAtProjected": null,
+   "nextAtProjectedMuscles": null,
+   "answerLine": "3 muscles still recovering, 1 nearly recovered, 9 recovered."
+  }
+ ],
+ "FB3": [
+  {
+   "day": "Mon 09:00",
+   "done": "",
+   "programmeNext": "FA",
+   "projectedAt": "Mon Oct 05 2026 18:00",
+   "recovery_nextSentence": "Full Body A is next. Every muscle it trains is estimated recovered.",
+   "recovery_stillToDo": [
+    "Full Body A · estimated ready now (Quads 90% recovered)",
+    "Full Body B · estimated ready now (Quads 90% recovered)",
+    "Full Body C · estimated ready now (Quads 90% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "ready/90%/quads",
+   "nextAtProjected": "ready/99%/quads",
+   "nextAtProjectedMuscles": "chest:100% back:100% quads:99% hamstrings:100% side_delts:100% biceps:100% triceps:100%",
+   "answerLine": "All 11 muscles recovered."
+  },
+  {
+   "day": "Tue 09:00",
+   "done": "FA",
+   "programmeNext": "FB",
+   "projectedAt": "Wed Oct 07 2026 18:00",
+   "recovery_nextSentence": "Full Body B is next: Quads are the least recovered of the muscles it trains, estimated 19% recovered, ready by Thursday.",
+   "recovery_stillToDo": [
+    "Full Body B · estimated ready by Thursday (Quads 19% recovered)",
+    "Full Body C · estimated ready by Thursday (Quads 19% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "not_yet/19%/quads",
+   "nextAtProjected": "not_yet/65%/quads",
+   "nextAtProjectedMuscles": "chest:96% back:78% quads:65% hamstrings:92% side_delts:100% biceps:98% triceps:100%",
+   "answerLine": "11 muscles still recovering."
+  },
+  {
+   "day": "Wed 09:00",
+   "done": "FA",
+   "programmeNext": "FB",
+   "projectedAt": "Wed Oct 07 2026 18:00",
+   "recovery_nextSentence": "Full Body B is next: Quads are the least recovered of the muscles it trains, estimated 53% recovered, ready by tomorrow.",
+   "recovery_stillToDo": [
+    "Full Body B · estimated ready by tomorrow (Quads 53% recovered)",
+    "Full Body C · estimated ready by tomorrow (Quads 53% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "not_yet/53%/quads",
+   "nextAtProjected": "not_yet/65%/quads",
+   "nextAtProjectedMuscles": "chest:96% back:78% quads:65% hamstrings:92% side_delts:100% biceps:98% triceps:100%",
+   "answerLine": "3 muscles still recovering, 4 nearly recovered, 4 recovered."
+  },
+  {
+   "day": "Thu 09:00",
+   "done": "FA,FB",
+   "programmeNext": "FC",
+   "projectedAt": "Fri Oct 09 2026 18:00",
+   "recovery_nextSentence": "Full Body C is next: Quads are the least recovered of the muscles it trains, estimated 29% recovered, ready by Saturday.",
+   "recovery_stillToDo": [
+    "Full Body C · estimated ready by Saturday (Quads 29% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "not_yet/29%/quads",
+   "nextAtProjected": "not_yet/74%/quads",
+   "nextAtProjectedMuscles": "chest:96% back:82% quads:74% hamstrings:93% side_delts:100% biceps:98% triceps:100%",
+   "answerLine": "11 muscles still recovering."
+  },
+  {
+   "day": "Fri 09:00",
+   "done": "FA,FB",
+   "programmeNext": "FC",
+   "projectedAt": "Fri Oct 09 2026 18:00",
+   "recovery_nextSentence": "Full Body C is next: Quads are the least recovered of the muscles it trains, estimated 65% recovered, ready by tomorrow.",
+   "recovery_stillToDo": [
+    "Full Body C · estimated ready by tomorrow (Quads 65% recovered)"
+   ],
+   "recommended": null,
+   "nextNow": "not_yet/65%/quads",
+   "nextAtProjected": "not_yet/74%/quads",
+   "nextAtProjectedMuscles": "chest:96% back:82% quads:74% hamstrings:93% side_delts:100% biceps:98% triceps:100%",
+   "answerLine": "3 muscles still recovering, 4 nearly recovered, 4 recovered."
+  },
+  {
+   "day": "Sat 09:00",
+   "done": "FA,FB,FC",
+   "programmeNext": null,
+   "projectedAt": "Mon Oct 12 2026 18:00",
+   "recovery_nextSentence": null,
+   "recovery_stillToDo": [],
+   "recommended": null,
+   "nextNow": null,
+   "nextAtProjected": null,
+   "nextAtProjectedMuscles": null,
+   "answerLine": "11 muscles still recovering."
+  },
+  {
+   "day": "Sun 09:00",
+   "done": "FA,FB,FC",
+   "programmeNext": null,
+   "projectedAt": "Mon Oct 12 2026 18:00",
+   "recovery_nextSentence": null,
+   "recovery_stillToDo": [],
+   "recommended": null,
+   "nextNow": null,
+   "nextAtProjected": null,
+   "nextAtProjectedMuscles": null,
+   "answerLine": "3 muscles still recovering, 4 nearly recovered, 4 recovered."
+  }
+ ],
+ "swapFires_outOfOrder_ThuNoon": {
+  "programmeNext": "LA",
+  "recommended": "UB",
+  "recovery_nextSentence": "Lower A is next in your plan. Quads are estimated 24% recovered, ready by Saturday. Upper B is estimated ready now.",
+  "home_reasonLine": "Lower A is next in your plan. Quads are estimated 24% recovered, ready by Saturday. Upper B is estimated ready now.",
+  "stillToDo": [
+   "Lower A · estimated ready by Saturday (Quads 24% recovered)",
+   "Upper B · estimated ready now (Back 94% recovered)"
+  ]
+ }
+}

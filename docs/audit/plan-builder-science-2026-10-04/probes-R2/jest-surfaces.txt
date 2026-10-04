@@ -1,0 +1,36 @@
+PASS src/components/__tests__/BodyDiagramHeatmap.recovery.test.js
+PASS src/components/__tests__/ReadinessCards.recoveryByMuscle.test.js
+PASS src/lib/__tests__/planEngine.recoverySequencing.test.js
+PASS src/screens/__tests__/CoachReviewScreen.recoveryGate.test.js
+PASS src/components/__tests__/ReadinessCards.rateLastSession.test.js
+PASS src/components/__tests__/MuscleRecoveryList.test.js
+PASS src/screens/__tests__/VolumeHeatmapScreen.test.js (6.724 s)
+PASS src/components/__tests__/RecoveryLearningCard.test.js
+PASS src/screens/__tests__/HomeScreen.recoveryRecommendation.test.js (7.44 s)
+PASS src/lib/__tests__/blockProgression.test.js
+PASS src/lib/progress/__tests__/volumeStrip.test.js
+PASS src/lib/__tests__/volumeLogged.test.js
+PASS src/components/__tests__/HomeChangeWorkoutSheet.recoveryVerdicts.test.js
+PASS src/lib/__tests__/effectiveLandmarksPlanLayer.test.js
+PASS src/screens/__tests__/RecoveryScreen.rateLastSession.test.js
+PASS src/lib/progress/__tests__/planWeek.test.js
+PASS src/screens/__tests__/recoveryPlace.guard.test.js
+PASS src/lib/__tests__/effectiveLandmarks.test.js
+PASS src/components/__tests__/HomeChangeWorkoutSheet.test.js
+PASS src/lib/__tests__/volumeInsightCopy.test.js
+PASS src/lib/__tests__/volumeBandLabels.test.js
+PASS src/lib/__tests__/planVolumeTargets.test.js
+PASS src/screens/__tests__/AnalyticsScreen.d214.guard.test.js
+PASS src/components/__tests__/PlanWeekCard.test.js
+PASS src/lib/__tests__/readinessSummary.test.js
+PASS src/lib/__tests__/programmePosition.weekComplete.test.js
+PASS src/components/__tests__/d204.consistencyDescribes.guard.test.js
+PASS src/screens/__tests__/HomeScreen.recoveryPercentGuard.test.js
+PASS src/screens/__tests__/WorkoutSummaryScreen.volumeWords.guard.test.js
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+
+Test Suites: 29 passed, 29 total
+Tests:       625 passed, 625 total
+Snapshots:   0 total
+Time:        10.033 s
+exit: 0

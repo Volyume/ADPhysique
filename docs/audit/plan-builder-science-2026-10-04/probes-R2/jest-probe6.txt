@@ -1,0 +1,7 @@
+PASS src/lib/__tests__/zzR2Probe6.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.882 s
+exit: 0

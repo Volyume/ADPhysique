@@ -1,0 +1,364 @@
+{
+ "sampleKeys": [
+  "name",
+  "primaryMuscle",
+  "secondaryMuscles",
+  "equipment",
+  "movementPattern",
+  "compoundIsolation",
+  "defaultRepMin",
+  "defaultRepMax",
+  "fatigueCost",
+  "stimulusToFatigueRatio",
+  "subregion",
+  "exerciseType",
+  "isCustom",
+  "equipmentCategory",
+  "machineType",
+  "force",
+  "laterality",
+  "difficulty",
+  "machineOk",
+  "homeOk",
+  "equipmentProfiles",
+  "position",
+  "floorAccess",
+  "overheadPosition",
+  "gripDemand",
+  "unilateralLoadable",
+  "bilateralUpper",
+  "bilateralLower",
+  "axialLoad",
+  "impact",
+  "balanceDemand",
+  "weightBearingHands",
+  "loadSemantics",
+  "exerciseCategory",
+  "incrementKg",
+  "aliases",
+  "loadCharacter",
+  "cue"
+ ],
+ "primaryCount": 47,
+ "primarySample": [
+  "Barbell Curl",
+  "Barbell Drag Curl",
+  "EZ Bar Curl",
+  "EZ Bar Drag Curl",
+  "EZ Bar Preacher Curl",
+  "Preacher Curl (Barbell)",
+  "Reverse Curl",
+  "Spider Curl",
+  "Cheat Curl",
+  "Close-Grip Barbell Curl",
+  "Wide-Grip Barbell Curl",
+  "Concentration Curl"
+ ],
+ "secondaryCount": 102,
+ "secondarySample": [
+  {
+   "name": "Barbell Row (Bent Over)",
+   "c": 0.5
+  },
+  {
+   "name": "Barbell Row (Supinated)",
+   "c": 0.5
+  },
+  {
+   "name": "Chest-Supported Row (Barbell)",
+   "c": 0.5
+  },
+  {
+   "name": "Chest-Supported T-Bar Row",
+   "c": 0.5
+  },
+  {
+   "name": "Fat Grip Curl",
+   "c": 0.5
+  },
+  {
+   "name": "Meadows Row",
+   "c": 0.5
+  },
+  {
+   "name": "Pendlay Row",
+   "c": 0.5
+  },
+  {
+   "name": "Seal Row",
+   "c": 0.5
+  },
+  {
+   "name": "T-Bar Row",
+   "c": 0.5
+  },
+  {
+   "name": "Thick Bar Curl",
+   "c": 0.5
+  },
+  {
+   "name": "Upright Row",
+   "c": 0.5
+  },
+  {
+   "name": "Barbell Clean High Pull",
+   "c": 0.5
+  },
+  {
+   "name": "Swiss Bar Row",
+   "c": 0.5
+  },
+  {
+   "name": "Trap Bar Row",
+   "c": 0.5
+  },
+  {
+   "name": "Batwing Row",
+   "c": 0.5
+  },
+  {
+   "name": "Chest-Supported Row (Dumbbell)",
+   "c": 0.5
+  },
+  {
+   "name": "Dumbbell Row",
+   "c": 0.5
+  },
+  {
+   "name": "Helms Row",
+   "c": 0.5
+  },
+  {
+   "name": "Kroc Row",
+   "c": 0.5
+  },
+  {
+   "name": "Plank Row",
+   "c": 0.5
+  },
+  {
+   "name": "Renegade Row",
+   "c": 0.5
+  },
+  {
+   "name": "Dumbbell Upright Row",
+   "c": 0.5
+  },
+  {
+   "name": "Seal Row (Dumbbell)",
+   "c": 0.5
+  },
+  {
+   "name": "Single-Arm Dumbbell Row (Bench-Supported)",
+   "c": 0.5
+  },
+  {
+   "name": "Cable High Row",
+   "c": 0.5
+  },
+  {
+   "name": "Cable Reverse Curl (Forearms)",
+   "c": 0.5
+  },
+  {
+   "name": "Cable Reverse-Grip Pulldown",
+   "c": 0.5
+  },
+  {
+   "name": "Cable Upright Row",
+   "c": 0.5
+  },
+  {
+   "name": "Cable Upright Row (Traps)",
+   "c": 0.5
+  },
+  {
+   "name": "Half-Kneeling Cable Row",
+   "c": 0.5
+  },
+  {
+   "name": "Lat Pulldown (Close Grip)",
+   "c": 0.5
+  },
+  {
+   "name": "Lat Pulldown (Neutral Grip)",
+   "c": 0.5
+  },
+  {
+   "name": "Lat Pulldown (Wide Grip)",
+   "c": 0.5
+  },
+  {
+   "name": "Seated Cable Row",
+   "c": 0.5
+  },
+  {
+   "name": "Single-Arm Cable Row",
+   "c": 0.5
+  },
+  {
+   "name": "Single-Arm Lat Pulldown",
+   "c": 0.5
+  },
+  {
+   "name": "V-Bar Pulldown",
+   "c": 0.5
+  },
+  {
+   "name": "Behind-the-Neck Lat Pulldown",
+   "c": 0.5
+  },
+  {
+   "name": "Rope Lat Pulldown",
+   "c": 0.5
+  },
+  {
+   "name": "Seated Cable Row (Rope)",
+   "c": 0.5
+  }
+ ],
+ "picked": {
+  "Barbell Curl": {
+   "primary": "biceps",
+   "secondary": [],
+   "alloc": [
+    {
+     "muscle": "biceps",
+     "sets": 1,
+     "role": "primary"
+    }
+   ]
+  },
+  "Barbell Row (Bent Over)": {
+   "primary": "back",
+   "secondary": [
+    "biceps",
+    "rear_delts"
+   ],
+   "alloc": [
+    {
+     "muscle": "back",
+     "sets": 1,
+     "role": "primary"
+    },
+    {
+     "muscle": "biceps",
+     "sets": 0.5,
+     "role": "secondary"
+    },
+    {
+     "muscle": "rear_delts",
+     "sets": 0.5,
+     "role": "secondary"
+    }
+   ]
+  },
+  "Lat Pulldown (Close Grip)": {
+   "primary": "back",
+   "secondary": [
+    "biceps"
+   ],
+   "alloc": [
+    {
+     "muscle": "back",
+     "sets": 1,
+     "role": "primary"
+    },
+    {
+     "muscle": "biceps",
+     "sets": 0.5,
+     "role": "secondary"
+    }
+   ]
+  },
+  "Lat Pulldown": null,
+  "Cable Row": null,
+  "Seated Cable Row": {
+   "primary": "back",
+   "secondary": [
+    "biceps"
+   ],
+   "alloc": [
+    {
+     "muscle": "back",
+     "sets": 1,
+     "role": "primary"
+    },
+    {
+     "muscle": "biceps",
+     "sets": 0.5,
+     "role": "secondary"
+    }
+   ]
+  },
+  "Pull-Up": {
+   "primary": "back",
+   "secondary": [
+    "biceps"
+   ],
+   "alloc": [
+    {
+     "muscle": "back",
+     "sets": 1,
+     "role": "primary"
+    },
+    {
+     "muscle": "biceps",
+     "sets": 0.5,
+     "role": "secondary"
+    }
+   ]
+  },
+  "Chin-Up": {
+   "primary": "back",
+   "secondary": [
+    "biceps"
+   ],
+   "alloc": [
+    {
+     "muscle": "back",
+     "sets": 1,
+     "role": "primary"
+    },
+    {
+     "muscle": "biceps",
+     "sets": 0.5,
+     "role": "secondary"
+    }
+   ]
+  },
+  "Dumbbell Curl": {
+   "primary": "biceps",
+   "secondary": [],
+   "alloc": [
+    {
+     "muscle": "biceps",
+     "sets": 1,
+     "role": "primary"
+    }
+   ]
+  },
+  "Bayesian Curl": {
+   "primary": "biceps",
+   "secondary": [],
+   "alloc": [
+    {
+     "muscle": "biceps",
+     "sets": 1,
+     "role": "primary"
+    }
+   ]
+  },
+  "Cable Curl": {
+   "primary": "biceps",
+   "secondary": [],
+   "alloc": [
+    {
+     "muscle": "biceps",
+     "sets": 1,
+     "role": "primary"
+    }
+   ]
+  }
+ }
+}

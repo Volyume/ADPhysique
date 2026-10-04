@@ -1,0 +1,1652 @@
+{
+ "d3": {
+  "sessionNames": [
+   "Full Body A",
+   "Full Body B",
+   "Full Body C"
+  ],
+  "byWeek": {
+   "wk1_RIR3": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 3,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 quads:100 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "ready",
+       "minPct": 95,
+       "limiting": "back",
+       "counted": "back:95 side_delts:100 calves:100 rear_delts:100 glutes:100"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 side_delts:100 hamstrings:100 biceps:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Thu 02:00",
+      "Sat 10:00"
+     ],
+     "ready": 3,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 quads:100 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 side_delts:100 calves:100 rear_delts:100 glutes:100"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 side_delts:100 hamstrings:100 biceps:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00"
+     ],
+     "ready": 1,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 quads:100 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 47,
+       "limiting": "back",
+       "counted": "back:47 side_delts:100 calves:96 rear_delts:100 glutes:51"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 65,
+       "limiting": "side_delts",
+       "counted": "quads:89 side_delts:65 hamstrings:66 biceps:80 abs:100"
+      }
+     ]
+    }
+   },
+   "wk3_RIR1": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 0,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "nearly",
+       "minPct": 86,
+       "limiting": "quads",
+       "counted": "back:100 quads:86 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "back",
+       "counted": "back:63 side_delts:100 calves:100 rear_delts:100 glutes:83"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 69,
+       "limiting": "hamstrings",
+       "counted": "quads:100 side_delts:85 hamstrings:69 biceps:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Thu 02:00",
+      "Sat 10:00"
+     ],
+     "ready": 0,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "not_yet",
+       "minPct": 66,
+       "limiting": "quads",
+       "counted": "back:100 quads:66 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 74,
+       "limiting": "back",
+       "counted": "back:74 side_delts:100 calves:100 rear_delts:100 glutes:96"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "nearly",
+       "minPct": 77,
+       "limiting": "hamstrings",
+       "counted": "quads:100 side_delts:100 hamstrings:77 biceps:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00"
+     ],
+     "ready": 1,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 quads:100 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 31,
+       "limiting": "back",
+       "counted": "back:31 side_delts:100 calves:68 rear_delts:100 glutes:39"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 42,
+       "limiting": "side_delts",
+       "counted": "quads:57 side_delts:42 hamstrings:42 biceps:68 abs:100"
+      }
+     ]
+    }
+   },
+   "wk5_RIR0": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 0,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "nearly",
+       "minPct": 79,
+       "limiting": "quads",
+       "counted": "back:100 quads:79 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 59,
+       "limiting": "back",
+       "counted": "back:59 side_delts:100 calves:100 rear_delts:100 glutes:83"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 60,
+       "limiting": "hamstrings",
+       "counted": "quads:100 side_delts:74 hamstrings:60 biceps:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Thu 02:00",
+      "Sat 10:00"
+     ],
+     "ready": 0,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "not_yet",
+       "minPct": 61,
+       "limiting": "quads",
+       "counted": "back:100 quads:61 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 69,
+       "limiting": "back",
+       "counted": "back:69 side_delts:100 calves:100 rear_delts:100 glutes:94"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 69,
+       "limiting": "hamstrings",
+       "counted": "quads:100 side_delts:86 hamstrings:69 biceps:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00"
+     ],
+     "ready": 1,
+     "total": 3,
+     "rows": [
+      {
+       "session": "Full Body A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 quads:100 calves:100 chest:100 triceps:100"
+      },
+      {
+       "session": "Full Body B",
+       "verdict": "not_yet",
+       "minPct": 29,
+       "limiting": "back",
+       "counted": "back:29 side_delts:100 calves:61 rear_delts:100 glutes:36"
+      },
+      {
+       "session": "Full Body C",
+       "verdict": "not_yet",
+       "minPct": 34,
+       "limiting": "hamstrings",
+       "counted": "quads:53 side_delts:36 hamstrings:34 biceps:67 abs:100"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "d4": {
+  "sessionNames": [
+   "Upper A",
+   "Lower A",
+   "Upper B",
+   "Lower B"
+  ],
+  "byWeek": {
+   "wk1_RIR3": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 4,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 12:00",
+      "Fri 06:00",
+      "Sun 00:00"
+     ],
+     "ready": 4,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00"
+     ],
+     "ready": 2,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "nearly",
+       "minPct": 84,
+       "limiting": "back",
+       "counted": "chest:100 back:84 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 70,
+       "limiting": "hamstrings",
+       "counted": "quads:89 hamstrings:70 glutes:70 calves:100 abs:100"
+      }
+     ]
+    }
+   },
+   "wk3_RIR1": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 2,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "quads",
+       "counted": "quads:92 hamstrings:98 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "nearly",
+       "minPct": 80,
+       "limiting": "back",
+       "counted": "chest:92 back:80 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 59,
+       "limiting": "glutes",
+       "counted": "quads:87 hamstrings:63 glutes:59 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 12:00",
+      "Fri 06:00",
+      "Sun 00:00"
+     ],
+     "ready": 2,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "back",
+       "counted": "chest:100 back:94 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "nearly",
+       "minPct": 80,
+       "limiting": "quads",
+       "counted": "quads:80 hamstrings:88 glutes:95 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "back",
+       "counted": "chest:100 back:94 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 70,
+       "limiting": "glutes",
+       "counted": "quads:100 hamstrings:75 glutes:70 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00"
+     ],
+     "ready": 2,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 53,
+       "limiting": "back",
+       "counted": "chest:61 back:53 side_delts:85 rear_delts:85 biceps:72 triceps:76"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 39,
+       "limiting": "glutes",
+       "counted": "quads:57 hamstrings:41 glutes:39 calves:100 abs:98"
+      }
+     ]
+    }
+   },
+   "wk5_RIR0": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 1,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 98,
+       "limiting": "back",
+       "counted": "chest:100 back:98 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "nearly",
+       "minPct": 82,
+       "limiting": "quads",
+       "counted": "quads:82 hamstrings:86 glutes:90 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 73,
+       "limiting": "back",
+       "counted": "chest:78 back:73 side_delts:100 rear_delts:100 biceps:95 triceps:97"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 62,
+       "limiting": "glutes",
+       "counted": "quads:85 hamstrings:64 glutes:62 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 12:00",
+      "Fri 06:00",
+      "Sun 00:00"
+     ],
+     "ready": 0,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "nearly",
+       "minPct": 87,
+       "limiting": "back",
+       "counted": "chest:92 back:87 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "not_yet",
+       "minPct": 70,
+       "limiting": "quads",
+       "counted": "quads:70 hamstrings:77 glutes:81 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "nearly",
+       "minPct": 87,
+       "limiting": "back",
+       "counted": "chest:92 back:87 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 73,
+       "limiting": "glutes",
+       "counted": "quads:95 hamstrings:74 glutes:73 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00"
+     ],
+     "ready": 2,
+     "total": 4,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 48,
+       "limiting": "back",
+       "counted": "chest:51 back:48 side_delts:74 rear_delts:74 biceps:63 triceps:64"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 38,
+       "limiting": "hamstrings",
+       "counted": "quads:53 hamstrings:38 glutes:38 calves:100 abs:80"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "d5": {
+  "sessionNames": [
+   "Upper A",
+   "Lower A",
+   "Upper B",
+   "Lower B",
+   "Upper C"
+  ],
+  "byWeek": {
+   "wk1_RIR3": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 4,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "nearly",
+       "minPct": 76,
+       "limiting": "quads",
+       "counted": "quads:76 hamstrings:84 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 rear_delts:100 triceps:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 04:00",
+      "Thu 13:00",
+      "Fri 23:00",
+      "Sun 08:00"
+     ],
+     "ready": 4,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "not_yet",
+       "minPct": 71,
+       "limiting": "chest",
+       "counted": "chest:71 back:71 side_delts:100 rear_delts:100 biceps:100 triceps:88"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 rear_delts:100 triceps:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 4,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "nearly",
+       "minPct": 76,
+       "limiting": "quads",
+       "counted": "quads:76 hamstrings:84 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 back:100 traps:100 side_delts:100 rear_delts:100 triceps:100"
+      }
+     ]
+    }
+   },
+   "wk3_RIR1": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 2,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "chest",
+       "counted": "chest:94 back:96 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "chest",
+       "counted": "chest:63 back:64 traps:100 side_delts:93 biceps:79 triceps:76"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 45,
+       "limiting": "quads",
+       "counted": "quads:45 hamstrings:48 glutes:53 calves:100 abs:98"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "not_yet",
+       "minPct": 72,
+       "limiting": "chest",
+       "counted": "chest:72 back:90 traps:79 side_delts:94 rear_delts:100 triceps:80"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 04:00",
+      "Thu 13:00",
+      "Fri 23:00",
+      "Sun 08:00"
+     ],
+     "ready": 1,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "not_yet",
+       "minPct": 44,
+       "limiting": "back",
+       "counted": "chest:49 back:44 side_delts:65 rear_delts:60 biceps:85 triceps:53"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "nearly",
+       "minPct": 86,
+       "limiting": "glutes",
+       "counted": "quads:100 hamstrings:90 glutes:86 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "ready",
+       "minPct": 91,
+       "limiting": "chest",
+       "counted": "chest:91 back:93 traps:100 side_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "quads",
+       "counted": "quads:63 hamstrings:72 glutes:79 calves:100 abs:100"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "nearly",
+       "minPct": 87,
+       "limiting": "chest",
+       "counted": "chest:87 back:100 traps:100 side_delts:100 rear_delts:100 triceps:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 2,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "chest",
+       "counted": "chest:94 back:96 side_delts:100 rear_delts:100 biceps:100 triceps:100"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "chest",
+       "counted": "chest:63 back:64 traps:100 side_delts:93 biceps:79 triceps:76"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 45,
+       "limiting": "quads",
+       "counted": "quads:45 hamstrings:48 glutes:53 calves:100 abs:98"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "not_yet",
+       "minPct": 72,
+       "limiting": "chest",
+       "counted": "chest:72 back:90 traps:79 side_delts:94 rear_delts:100 triceps:80"
+      }
+     ]
+    }
+   },
+   "wk5_RIR0": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 1,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "nearly",
+       "minPct": 85,
+       "limiting": "chest",
+       "counted": "chest:85 back:86 side_delts:100 rear_delts:100 biceps:100 triceps:98"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 97,
+       "limiting": "hamstrings",
+       "counted": "quads:100 hamstrings:97 glutes:97 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 60,
+       "limiting": "chest",
+       "counted": "chest:60 back:61 traps:100 side_delts:85 biceps:68 triceps:65"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 39,
+       "limiting": "quads",
+       "counted": "quads:39 hamstrings:41 glutes:44 calves:100 abs:80"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "traps",
+       "counted": "chest:67 back:86 traps:63 side_delts:87 rear_delts:100 triceps:73"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Wed 04:00",
+      "Thu 13:00",
+      "Fri 23:00",
+      "Sun 08:00"
+     ],
+     "ready": 0,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "not_yet",
+       "minPct": 39,
+       "limiting": "back",
+       "counted": "chest:50 back:39 side_delts:60 rear_delts:52 biceps:87 triceps:49"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "nearly",
+       "minPct": 86,
+       "limiting": "hamstrings",
+       "counted": "quads:100 hamstrings:86 glutes:86 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "nearly",
+       "minPct": 83,
+       "limiting": "chest",
+       "counted": "chest:83 back:86 traps:100 side_delts:100 biceps:95 triceps:94"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 55,
+       "limiting": "quads",
+       "counted": "quads:55 hamstrings:62 glutes:66 calves:100 abs:100"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "nearly",
+       "minPct": 78,
+       "limiting": "chest",
+       "counted": "chest:78 back:100 traps:88 side_delts:100 rear_delts:100 triceps:91"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00"
+     ],
+     "ready": 1,
+     "total": 5,
+     "rows": [
+      {
+       "session": "Upper A",
+       "verdict": "nearly",
+       "minPct": 85,
+       "limiting": "chest",
+       "counted": "chest:85 back:86 side_delts:100 rear_delts:100 biceps:100 triceps:98"
+      },
+      {
+       "session": "Lower A",
+       "verdict": "ready",
+       "minPct": 97,
+       "limiting": "hamstrings",
+       "counted": "quads:100 hamstrings:97 glutes:97 calves:100 abs:100"
+      },
+      {
+       "session": "Upper B",
+       "verdict": "not_yet",
+       "minPct": 60,
+       "limiting": "chest",
+       "counted": "chest:60 back:61 traps:100 side_delts:85 biceps:68 triceps:65"
+      },
+      {
+       "session": "Lower B",
+       "verdict": "not_yet",
+       "minPct": 39,
+       "limiting": "quads",
+       "counted": "quads:39 hamstrings:41 glutes:44 calves:100 abs:80"
+      },
+      {
+       "session": "Upper C",
+       "verdict": "not_yet",
+       "minPct": 63,
+       "limiting": "traps",
+       "counted": "chest:67 back:86 traps:63 side_delts:87 rear_delts:100 triceps:73"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "d6": {
+  "sessionNames": [
+   "Push A",
+   "Pull A",
+   "Legs A",
+   "Push B",
+   "Pull B",
+   "Legs B"
+  ],
+  "byWeek": {
+   "wk1_RIR3": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 6,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 22:00",
+      "Thu 02:00",
+      "Fri 06:00",
+      "Sat 10:00",
+      "Sun 14:00"
+     ],
+     "ready": 6,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 6,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "quads",
+       "counted": "quads:100 hamstrings:100 glutes:100 calves:100 abs:100"
+      }
+     ]
+    }
+   },
+   "wk3_RIR1": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 4,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "quads",
+       "counted": "quads:92 hamstrings:98 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "chest",
+       "counted": "chest:92 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "nearly",
+       "minPct": 80,
+       "limiting": "back",
+       "counted": "back:80 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 59,
+       "limiting": "glutes",
+       "counted": "quads:87 hamstrings:63 glutes:59 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 22:00",
+      "Thu 02:00",
+      "Fri 06:00",
+      "Sat 10:00",
+      "Sun 14:00"
+     ],
+     "ready": 4,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "back",
+       "counted": "back:94 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "nearly",
+       "minPct": 80,
+       "limiting": "quads",
+       "counted": "quads:80 hamstrings:88 glutes:95 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "ready",
+       "minPct": 94,
+       "limiting": "back",
+       "counted": "back:94 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 70,
+       "limiting": "glutes",
+       "counted": "quads:100 hamstrings:75 glutes:70 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 4,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "back",
+       "counted": "back:100 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "quads",
+       "counted": "quads:92 hamstrings:98 glutes:100 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "chest",
+       "counted": "chest:92 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "nearly",
+       "minPct": 80,
+       "limiting": "back",
+       "counted": "back:80 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 59,
+       "limiting": "glutes",
+       "counted": "quads:87 hamstrings:63 glutes:59 calves:100 abs:100"
+      }
+     ]
+    }
+   },
+   "wk5_RIR0": {
+    "typical": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 2,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 98,
+       "limiting": "back",
+       "counted": "back:98 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "nearly",
+       "minPct": 82,
+       "limiting": "quads",
+       "counted": "quads:82 hamstrings:86 glutes:90 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "nearly",
+       "minPct": 78,
+       "limiting": "chest",
+       "counted": "chest:78 side_delts:100 triceps:97"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "not_yet",
+       "minPct": 73,
+       "limiting": "back",
+       "counted": "back:73 rear_delts:100 biceps:95 traps:86"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 62,
+       "limiting": "glutes",
+       "counted": "quads:85 hamstrings:64 glutes:62 calves:100 abs:100"
+      }
+     ]
+    },
+    "even": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 22:00",
+      "Thu 02:00",
+      "Fri 06:00",
+      "Sat 10:00",
+      "Sun 14:00"
+     ],
+     "ready": 2,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "chest",
+       "counted": "chest:92 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "nearly",
+       "minPct": 87,
+       "limiting": "back",
+       "counted": "back:87 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "not_yet",
+       "minPct": 70,
+       "limiting": "quads",
+       "counted": "quads:70 hamstrings:77 glutes:81 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "ready",
+       "minPct": 92,
+       "limiting": "chest",
+       "counted": "chest:92 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "nearly",
+       "minPct": 87,
+       "limiting": "back",
+       "counted": "back:87 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 73,
+       "limiting": "glutes",
+       "counted": "quads:95 hamstrings:74 glutes:73 calves:100 abs:100"
+      }
+     ]
+    },
+    "consecutive": {
+     "starts": [
+      "Mon 18:00",
+      "Tue 18:00",
+      "Wed 18:00",
+      "Thu 18:00",
+      "Fri 18:00",
+      "Sat 18:00"
+     ],
+     "ready": 2,
+     "total": 6,
+     "rows": [
+      {
+       "session": "Push A",
+       "verdict": "ready",
+       "minPct": 100,
+       "limiting": "chest",
+       "counted": "chest:100 side_delts:100 triceps:100"
+      },
+      {
+       "session": "Pull A",
+       "verdict": "ready",
+       "minPct": 98,
+       "limiting": "back",
+       "counted": "back:98 rear_delts:100 biceps:100 traps:100"
+      },
+      {
+       "session": "Legs A",
+       "verdict": "nearly",
+       "minPct": 82,
+       "limiting": "quads",
+       "counted": "quads:82 hamstrings:86 glutes:90 calves:100 abs:100"
+      },
+      {
+       "session": "Push B",
+       "verdict": "nearly",
+       "minPct": 78,
+       "limiting": "chest",
+       "counted": "chest:78 side_delts:100 triceps:97"
+      },
+      {
+       "session": "Pull B",
+       "verdict": "not_yet",
+       "minPct": 73,
+       "limiting": "back",
+       "counted": "back:73 rear_delts:100 biceps:95 traps:86"
+      },
+      {
+       "session": "Legs B",
+       "verdict": "not_yet",
+       "minPct": 62,
+       "limiting": "glutes",
+       "counted": "quads:85 hamstrings:64 glutes:62 calves:100 abs:100"
+      }
+     ]
+    }
+   }
+  }
+ }
+}

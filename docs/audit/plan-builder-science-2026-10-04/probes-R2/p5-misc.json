@@ -1,0 +1,62 @@
+{
+ "readyClause_Tue0001": "ready by tomorrow",
+ "readyClause_Tue2230": "ready by tomorrow",
+ "readyClause_Mon1700": "ready later today",
+ "readyClause_Wed0600": "ready by Wednesday",
+ "learnEmpty": {
+  "factor": 1,
+  "prior": 1,
+  "pairs": 0,
+  "reason": "too_few",
+  "pairsByMuscle": {}
+ },
+ "learnEmptyPoor": {
+  "factor": 1.15,
+  "prior": 1.15,
+  "pairs": 0,
+  "reason": "too_few",
+  "pairsByMuscle": {}
+ },
+ "evidenceEmptyKeys": [
+  "prior",
+  "pairs",
+  "workoutDays",
+  "spread",
+  "best",
+  "lr",
+  "pairsByMuscle",
+  "fixedRepsPairs",
+  "fixedRepsWouldCount"
+ ],
+ "learnKeys": [
+  "factor",
+  "prior",
+  "pairs",
+  "reason",
+  "pairsByMuscle"
+ ],
+ "direction": "too_few",
+ "hours": {
+  "biceps": [
+   36,
+   43.2,
+   48,
+   55.2,
+   67.2
+  ],
+  "back": [
+   45,
+   54,
+   60,
+   69,
+   84
+  ],
+  "calves": [
+   24,
+   24,
+   25.5,
+   29.3,
+   35.6
+  ]
+ }
+}

@@ -1,0 +1,246 @@
+{
+ "focusBand": {
+  "mv": 5,
+  "mev": 6,
+  "mav": 16,
+  "mrv": 24
+ },
+ "nonFocusBand": {
+  "mv": 5,
+  "mev": 6,
+  "mav": 11,
+  "mrv": 24
+ },
+ "research": {
+  "mv": 5,
+  "mev": 6,
+  "mav": 14,
+  "mrv": 22
+ },
+ "rows": [
+  {
+   "sets": 6,
+   "research": "Just enough",
+   "nonFocusPlan": "Just enough",
+   "focusPlan": "Just enough"
+  },
+  {
+   "sets": 7,
+   "research": "Just enough",
+   "nonFocusPlan": "Just enough",
+   "focusPlan": "Just enough"
+  },
+  {
+   "sets": 8,
+   "research": "Just enough",
+   "nonFocusPlan": "Just enough",
+   "focusPlan": "Just enough"
+  },
+  {
+   "sets": 9,
+   "research": "In range",
+   "nonFocusPlan": "In range",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 10,
+   "research": "In range",
+   "nonFocusPlan": "In range",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 11,
+   "research": "In range",
+   "nonFocusPlan": "In range",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 12,
+   "research": "In range",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 13,
+   "research": "In range",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 14,
+   "research": "In range",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 15,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 16,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "In range"
+  },
+  {
+   "sets": 17,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 18,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 19,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 20,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 21,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 22,
+   "research": "Near the limit",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 23,
+   "research": "Too much",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 24,
+   "research": "Too much",
+   "nonFocusPlan": "Near the limit",
+   "focusPlan": "Near the limit"
+  },
+  {
+   "sets": 25,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 26,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 27,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 28,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 29,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 30,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 31,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 32,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 33,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 34,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 35,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  },
+  {
+   "sets": 36,
+   "research": "Too much",
+   "nonFocusPlan": "Too much",
+   "focusPlan": "Too much"
+  }
+ ],
+ "profileMrvBiceps": {
+  "beginner/poor/lean_gain": 15,
+  "beginner/poor/maintain": 13,
+  "beginner/poor/mild_cut": 12,
+  "beginner/average/lean_gain": 18,
+  "beginner/average/maintain": 17,
+  "beginner/average/mild_cut": 15,
+  "beginner/good/lean_gain": 21,
+  "beginner/good/maintain": 19,
+  "beginner/good/mild_cut": 17,
+  "intermediate/poor/lean_gain": 19,
+  "intermediate/poor/maintain": 18,
+  "intermediate/poor/mild_cut": 16,
+  "intermediate/average/lean_gain": 24,
+  "intermediate/average/maintain": 22,
+  "intermediate/average/mild_cut": 20,
+  "intermediate/good/lean_gain": 28,
+  "intermediate/good/maintain": 25,
+  "intermediate/good/mild_cut": 23,
+  "advanced/poor/lean_gain": 21,
+  "advanced/poor/maintain": 19,
+  "advanced/poor/mild_cut": 17,
+  "advanced/average/lean_gain": 27,
+  "advanced/average/maintain": 24,
+  "advanced/average/mild_cut": 22,
+  "advanced/good/lean_gain": 31,
+  "advanced/good/maintain": 28,
+  "advanced/good/mild_cut": 25,
+  "competitive/poor/lean_gain": 22,
+  "competitive/poor/maintain": 20,
+  "competitive/poor/mild_cut": 18,
+  "competitive/average/lean_gain": 28,
+  "competitive/average/maintain": 25,
+  "competitive/average/mild_cut": 23,
+  "competitive/good/lean_gain": 32,
+  "competitive/good/maintain": 29,
+  "competitive/good/mild_cut": 26
+ }
+}

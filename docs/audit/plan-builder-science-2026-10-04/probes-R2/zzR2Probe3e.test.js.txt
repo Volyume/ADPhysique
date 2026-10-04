@@ -1,0 +1,36 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { getVolumeStatus, VOLUME_LANDMARKS } from '../algorithms';
+import { buildPlanLandmarks } from '../planVolumeTargets';
+import { mergeLandmarkPrecedence } from '../effectiveLandmarks';
+import { volumeBandLabel } from '../volumeBandLabels';
+import { computeLandmarks } from '../planEngine';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+
+test('probe3e: biceps status by weekly credit, focus vs non-focus plan bands', () => {
+  const profile = { experience: 'intermediate', recoveryRating: 'average', trainingPhase: 'lean_gain' };
+  const mk = (planned) => mergeLandmarkPrecedence({ plan: buildPlanLandmarks({ plannedByMuscle: { biceps: planned }, userProfile: profile, nowMs: Date.UTC(2026, 9, 9) }) });
+  const focus = mk(16).table;
+  const nonFocus = mk(11).table;
+  const out = { focusBand: focus.biceps, nonFocusBand: nonFocus.biceps, research: VOLUME_LANDMARKS.biceps, rows: [] };
+  for (let s = 6; s <= 36; s += 1) {
+    out.rows.push({
+      sets: s,
+      research: volumeBandLabel(getVolumeStatus(s, 'biceps', null).status),
+      nonFocusPlan: volumeBandLabel(getVolumeStatus(s, 'biceps', nonFocus).status),
+      focusPlan: volumeBandLabel(getVolumeStatus(s, 'biceps', focus).status),
+    });
+  }
+  // the profile-adjusted MRV for biceps by experience, recovery and phase (what the display band's top is)
+  out.profileMrvBiceps = {};
+  for (const exp of ['beginner', 'intermediate', 'advanced', 'competitive']) {
+    for (const rec of ['poor', 'average', 'good']) {
+      for (const ph of ['lean_gain', 'maintain', 'mild_cut']) {
+        out.profileMrvBiceps[`${exp}/${rec}/${ph}`] = computeLandmarks(exp, rec, ph, null).biceps.MRV;
+      }
+    }
+  }
+  fs.writeFileSync(`${OUT}/p3e-biceps-status-sweep.json`, JSON.stringify(out, null, 1));
+  expect(out.rows.length).toBe(31);
+});

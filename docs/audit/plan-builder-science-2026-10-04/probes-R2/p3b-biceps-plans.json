@@ -1,0 +1,559 @@
+{
+ "plans": {
+  "noFocus_general": {
+   "isDivision": "general",
+   "divisionPriority": [],
+   "weakPoints": [],
+   "generatorWeeklySummaryBiceps": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "plannedStaticBiceps": 11,
+   "bicepsExercises": [
+    {
+     "session": "Upper A",
+     "name": "Barbell Curl",
+     "sets": 3
+    },
+    {
+     "session": "Upper B",
+     "name": "Bayesian Curl",
+     "sets": 3
+    }
+   ],
+   "bandResearch": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 14,
+    "mrv": 22
+   },
+   "bandProfile": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 23,
+    "mrv": 24
+   },
+   "sourceProfile": "profile",
+   "bandPlanLayer": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 11,
+    "mrv": 24
+   },
+   "sourcePlanLayer": "plan",
+   "computeLandmarksBiceps": {
+    "MV": 5,
+    "MEV": 6,
+    "MAVlow": 8,
+    "MAVhigh": 23,
+    "MRV": 24
+   },
+   "served": [
+    {
+     "week": 1,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 11,
+     "perEx": [
+      "Upper A:Barbell Curl:3->3",
+      "Upper B:Bayesian Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 2,
+     "plannedTemplateRow": 8,
+     "servedDirect": 8,
+     "servedCredit": 14,
+     "perEx": [
+      "Upper A:Barbell Curl:3->4",
+      "Upper B:Bayesian Curl:3->4"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 3,
+     "plannedTemplateRow": 10,
+     "servedDirect": 10,
+     "servedCredit": 17,
+     "perEx": [
+      "Upper A:Barbell Curl:3->5",
+      "Upper B:Bayesian Curl:3->5"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 4,
+     "plannedTemplateRow": 12,
+     "servedDirect": 12,
+     "servedCredit": 20,
+     "perEx": [
+      "Upper A:Barbell Curl:3->6",
+      "Upper B:Bayesian Curl:3->6"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 5,
+     "plannedTemplateRow": 14,
+     "servedDirect": 14,
+     "servedCredit": 22,
+     "perEx": [
+      "Upper A:Barbell Curl:3->7",
+      "Upper B:Bayesian Curl:3->7"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 6,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 11,
+     "perEx": [
+      "Upper A:Barbell Curl:3->3",
+      "Upper B:Bayesian Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    }
+   ]
+  },
+  "weakPoint_biceps": {
+   "isDivision": "general",
+   "divisionPriority": [],
+   "weakPoints": [
+    "Biceps"
+   ],
+   "generatorWeeklySummaryBiceps": {
+    "plannedSets": 12,
+    "indirectSets": 4,
+    "isWeakPoint": true
+   },
+   "plannedStaticBiceps": 16,
+   "bicepsExercises": [
+    {
+     "session": "Upper A",
+     "name": "Bayesian Curl",
+     "sets": 3
+    },
+    {
+     "session": "Upper A",
+     "name": "Barbell Curl",
+     "sets": 3
+    },
+    {
+     "session": "Upper B",
+     "name": "Incline Dumbbell Curl",
+     "sets": 3
+    },
+    {
+     "session": "Upper B",
+     "name": "Cable Curl",
+     "sets": 3
+    }
+   ],
+   "bandResearch": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 14,
+    "mrv": 22
+   },
+   "bandProfile": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 23,
+    "mrv": 24
+   },
+   "sourceProfile": "profile",
+   "bandPlanLayer": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 16,
+    "mrv": 24
+   },
+   "sourcePlanLayer": "plan",
+   "computeLandmarksBiceps": {
+    "MV": 5,
+    "MEV": 6,
+    "MAVlow": 8,
+    "MAVhigh": 23,
+    "MRV": 24
+   },
+   "served": [
+    {
+     "week": 1,
+     "plannedTemplateRow": 6,
+     "servedDirect": 12,
+     "servedCredit": 16,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->3",
+      "Upper A:Barbell Curl:3->3",
+      "Upper B:Incline Dumbbell Curl:3->3",
+      "Upper B:Cable Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 2,
+     "plannedTemplateRow": 8,
+     "servedDirect": 16,
+     "servedCredit": 21,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->4",
+      "Upper A:Barbell Curl:3->4",
+      "Upper B:Incline Dumbbell Curl:3->4",
+      "Upper B:Cable Curl:3->4"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 3,
+     "plannedTemplateRow": 10,
+     "servedDirect": 20,
+     "servedCredit": 25,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->5",
+      "Upper A:Barbell Curl:3->5",
+      "Upper B:Incline Dumbbell Curl:3->5",
+      "Upper B:Cable Curl:3->5"
+     ],
+     "statusVsResolvedPlanTable": "over_mrv",
+     "statusVsResearch": "over_mrv",
+     "statusVsProfile": "over_mrv"
+    },
+    {
+     "week": 4,
+     "plannedTemplateRow": 12,
+     "servedDirect": 24,
+     "servedCredit": 30,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->6",
+      "Upper A:Barbell Curl:3->6",
+      "Upper B:Incline Dumbbell Curl:3->6",
+      "Upper B:Cable Curl:3->6"
+     ],
+     "statusVsResolvedPlanTable": "over_mrv",
+     "statusVsResearch": "over_mrv",
+     "statusVsProfile": "over_mrv"
+    },
+    {
+     "week": 5,
+     "plannedTemplateRow": 14,
+     "servedDirect": 28,
+     "servedCredit": 34,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->7",
+      "Upper A:Barbell Curl:3->7",
+      "Upper B:Incline Dumbbell Curl:3->7",
+      "Upper B:Cable Curl:3->7"
+     ],
+     "statusVsResolvedPlanTable": "over_mrv",
+     "statusVsResearch": "over_mrv",
+     "statusVsProfile": "over_mrv"
+    },
+    {
+     "week": 6,
+     "plannedTemplateRow": 6,
+     "servedDirect": 12,
+     "servedCredit": 16,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->3",
+      "Upper A:Barbell Curl:3->3",
+      "Upper B:Incline Dumbbell Curl:3->3",
+      "Upper B:Cable Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    }
+   ]
+  },
+  "bodybuilding_division": {
+   "isDivision": "bodybuilding",
+   "divisionPriority": [
+    "chest",
+    "back",
+    "side_delts",
+    "quads",
+    "calves"
+   ],
+   "weakPoints": [],
+   "generatorWeeklySummaryBiceps": {
+    "plannedSets": 6,
+    "indirectSets": 4.5,
+    "isWeakPoint": false
+   },
+   "plannedStaticBiceps": 10.5,
+   "bicepsExercises": [
+    {
+     "session": "Upper A",
+     "name": "Bayesian Curl",
+     "sets": 3
+    },
+    {
+     "session": "Upper B",
+     "name": "Barbell Curl",
+     "sets": 3
+    }
+   ],
+   "bandResearch": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 14,
+    "mrv": 22
+   },
+   "bandProfile": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 23,
+    "mrv": 24
+   },
+   "sourceProfile": "profile",
+   "bandPlanLayer": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 11,
+    "mrv": 24
+   },
+   "sourcePlanLayer": "plan",
+   "computeLandmarksBiceps": {
+    "MV": 5,
+    "MEV": 6,
+    "MAVlow": 8,
+    "MAVhigh": 23,
+    "MRV": 24
+   },
+   "served": [
+    {
+     "week": 1,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 10.5,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->3",
+      "Upper B:Barbell Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 2,
+     "plannedTemplateRow": 8,
+     "servedDirect": 8,
+     "servedCredit": 14,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->4",
+      "Upper B:Barbell Curl:3->4"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 3,
+     "plannedTemplateRow": 10,
+     "servedDirect": 10,
+     "servedCredit": 16,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->5",
+      "Upper B:Barbell Curl:3->5"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 4,
+     "plannedTemplateRow": 12,
+     "servedDirect": 12,
+     "servedCredit": 19.5,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->6",
+      "Upper B:Barbell Curl:3->6"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 5,
+     "plannedTemplateRow": 14,
+     "servedDirect": 14,
+     "servedCredit": 21.5,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->7",
+      "Upper B:Barbell Curl:3->7"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 6,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 10.5,
+     "perEx": [
+      "Upper A:Bayesian Curl:3->3",
+      "Upper B:Barbell Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    }
+   ]
+  },
+  "mensPhysique_division": {
+   "isDivision": "mens_physique",
+   "divisionPriority": [
+    "side_delts",
+    "back",
+    "rear_delts",
+    "chest"
+   ],
+   "weakPoints": [],
+   "generatorWeeklySummaryBiceps": {
+    "plannedSets": 6,
+    "indirectSets": 7.5,
+    "isWeakPoint": false
+   },
+   "plannedStaticBiceps": 13.5,
+   "bicepsExercises": [
+    {
+     "session": "Chest + Arms",
+     "name": "Bayesian Curl",
+     "sets": 3
+    },
+    {
+     "session": "Chest + Arms",
+     "name": "Barbell Curl",
+     "sets": 3
+    }
+   ],
+   "bandResearch": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 14,
+    "mrv": 22
+   },
+   "bandProfile": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 23,
+    "mrv": 24
+   },
+   "sourceProfile": "profile",
+   "bandPlanLayer": {
+    "mv": 5,
+    "mev": 6,
+    "mav": 14,
+    "mrv": 24
+   },
+   "sourcePlanLayer": "plan",
+   "computeLandmarksBiceps": {
+    "MV": 5,
+    "MEV": 6,
+    "MAVlow": 8,
+    "MAVhigh": 23,
+    "MRV": 24
+   },
+   "served": [
+    {
+     "week": 1,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 13.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->3",
+      "Chest + Arms:Barbell Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 2,
+     "plannedTemplateRow": 8,
+     "servedDirect": 8,
+     "servedCredit": 17.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->4",
+      "Chest + Arms:Barbell Curl:3->4"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 3,
+     "plannedTemplateRow": 10,
+     "servedDirect": 10,
+     "servedCredit": 19.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->5",
+      "Chest + Arms:Barbell Curl:3->5"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "near_mrv",
+     "statusVsProfile": "optimal"
+    },
+    {
+     "week": 4,
+     "plannedTemplateRow": 12,
+     "servedDirect": 12,
+     "servedCredit": 23.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->6",
+      "Chest + Arms:Barbell Curl:3->6"
+     ],
+     "statusVsResolvedPlanTable": "near_mrv",
+     "statusVsResearch": "over_mrv",
+     "statusVsProfile": "near_mrv"
+    },
+    {
+     "week": 5,
+     "plannedTemplateRow": 14,
+     "servedDirect": 14,
+     "servedCredit": 25.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->7",
+      "Chest + Arms:Barbell Curl:3->7"
+     ],
+     "statusVsResolvedPlanTable": "over_mrv",
+     "statusVsResearch": "over_mrv",
+     "statusVsProfile": "over_mrv"
+    },
+    {
+     "week": 6,
+     "plannedTemplateRow": 6,
+     "servedDirect": 6,
+     "servedCredit": 13.5,
+     "perEx": [
+      "Chest + Arms:Bayesian Curl:3->3",
+      "Chest + Arms:Barbell Curl:3->3"
+     ],
+     "statusVsResolvedPlanTable": "optimal",
+     "statusVsResearch": "optimal",
+     "statusVsProfile": "optimal"
+    }
+   ]
+  }
+ }
+}

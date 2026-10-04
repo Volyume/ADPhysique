@@ -1,0 +1,476 @@
+{
+ "E1_followedInOrder_TueMorning_afterUpperA": {
+  "now": "Tue Oct 06 2026 09:00",
+  "projectedAt": "Tue Oct 06 2026 09:00",
+  "programmeNext": "LA",
+  "recommended": null,
+  "recoveryScreen_answerLine": "7 muscles still recovering.",
+  "recoveryScreen_nextSentence": "No recent session on the muscles Lower A trains.",
+  "recoveryScreen_stillToDo": [
+   "Lower A · no recent session on the muscles it trains",
+   "Upper B · estimated ready by Thursday (Back 20% recovered)",
+   "Lower B · no recent session on the muscles it trains"
+  ],
+  "home_heroLine_programmeNext": "No recent session on the muscles Lower A trains.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "7 muscles still recovering",
+   "evidence": "Back will be the last to recover, estimated ready by Thursday."
+  },
+  "perSession": [
+   {
+    "routine": "LA",
+    "nowVerdict": "ready",
+    "nowMinPct": 100,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session",
+     "glutes:100%:no_recent_session"
+    ],
+    "projVerdict": "ready",
+    "projMinPct": 100,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session",
+     "glutes:100%:no_recent_session"
+    ],
+    "line": null
+   },
+   {
+    "routine": "UB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 20,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:23%:recovering",
+     "back:20%:recovering",
+     "rear_delts:42%:recovering",
+     "biceps:27%:recovering",
+     "triceps:29%:recovering"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 20,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:23%:recovering",
+     "back:20%:recovering",
+     "rear_delts:42%:recovering",
+     "biceps:27%:recovering",
+     "triceps:29%:recovering"
+    ],
+    "line": "Back is estimated 20% recovered, ready by Thursday."
+   },
+   {
+    "routine": "LB",
+    "nowVerdict": "ready",
+    "nowMinPct": 100,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "glutes:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session"
+    ],
+    "projVerdict": "ready",
+    "projMinPct": 100,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "glutes:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session"
+    ],
+    "line": null
+   }
+  ]
+ },
+ "E2_followedInOrder_ThuMorning_afterUA_LA": {
+  "now": "Thu Oct 08 2026 09:00",
+  "projectedAt": "Thu Oct 08 2026 09:00",
+  "programmeNext": "UB",
+  "recommended": null,
+  "recoveryScreen_answerLine": "3 muscles still recovering, 2 nearly recovered, 8 recovered.",
+  "recoveryScreen_nextSentence": "Upper B is next: Back is the least recovered of the muscles it trains, estimated 89% recovered, ready later today.",
+  "recoveryScreen_stillToDo": [
+   "Upper B · estimated ready later today (Back 89% recovered)",
+   "Lower B · estimated ready by tomorrow (Quads 46% recovered)"
+  ],
+  "home_heroLine_programmeNext": "Back is estimated 89% recovered, ready later today.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "3 muscles still recovering and 2 nearly recovered",
+   "evidence": "Quads will be the last to recover, estimated ready by tomorrow."
+  },
+  "perSession": [
+   {
+    "routine": "UB",
+    "nowVerdict": "nearly",
+    "nowMinPct": 89,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:100%:recovered",
+     "back:89%:nearly",
+     "rear_delts:100%:recovered",
+     "biceps:100%:recovered",
+     "triceps:100%:recovered"
+    ],
+    "projVerdict": "nearly",
+    "projMinPct": 89,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:100%:recovered",
+     "back:89%:nearly",
+     "rear_delts:100%:recovered",
+     "biceps:100%:recovered",
+     "triceps:100%:recovered"
+    ],
+    "line": "Back is estimated 89% recovered, ready later today."
+   },
+   {
+    "routine": "LB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 46,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:46%:recovering",
+     "hamstrings:53%:recovering",
+     "glutes:49%:recovering",
+     "calves:100%:recovered",
+     "abs:100%:recovered"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 46,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:46%:recovering",
+     "hamstrings:53%:recovering",
+     "glutes:49%:recovering",
+     "calves:100%:recovered",
+     "abs:100%:recovered"
+    ],
+    "line": "Quads are estimated 46% recovered, ready by tomorrow."
+   }
+  ]
+ },
+ "E2b_followedInOrder_WedMorning_afterUA_LA": {
+  "now": "Wed Oct 07 2026 09:00",
+  "projectedAt": "Wed Oct 07 2026 09:00",
+  "programmeNext": "UB",
+  "recommended": null,
+  "recoveryScreen_answerLine": "9 muscles still recovering, 1 nearly recovered, 3 recovered.",
+  "recoveryScreen_nextSentence": "Upper B is next: Back is the least recovered of the muscles it trains, estimated 55% recovered, ready by tomorrow.",
+  "recoveryScreen_stillToDo": [
+   "Upper B · estimated ready by tomorrow (Back 55% recovered)",
+   "Lower B · estimated ready by Friday (Quads 17% recovered)"
+  ],
+  "home_heroLine_programmeNext": "Back is estimated 55% recovered, ready by tomorrow.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "9 muscles still recovering and 1 nearly recovered",
+   "evidence": "Quads will be the last to recover, estimated ready by Friday."
+  },
+  "perSession": [
+   {
+    "routine": "UB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 55,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:63%:recovering",
+     "back:55%:recovering",
+     "rear_delts:100%:recovered",
+     "biceps:73%:recovering",
+     "triceps:79%:nearly"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 55,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:63%:recovering",
+     "back:55%:recovering",
+     "rear_delts:100%:recovered",
+     "biceps:73%:recovering",
+     "triceps:79%:nearly"
+    ],
+    "line": "Back is estimated 55% recovered, ready by tomorrow."
+   },
+   {
+    "routine": "LB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 17,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:17%:recovering",
+     "hamstrings:19%:recovering",
+     "glutes:18%:recovering",
+     "calves:48%:recovering",
+     "abs:55%:recovering"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 17,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:17%:recovering",
+     "hamstrings:19%:recovering",
+     "glutes:18%:recovering",
+     "calves:48%:recovering",
+     "abs:55%:recovering"
+    ],
+    "line": "Quads are estimated 17% recovered, ready by Friday."
+   }
+  ]
+ },
+ "E3_outOfOrder_ThuMorning_UA_then_LB": {
+  "now": "Thu Oct 08 2026 09:00",
+  "projectedAt": "Thu Oct 08 2026 09:00",
+  "programmeNext": "LA",
+  "recommended": null,
+  "recoveryScreen_answerLine": "6 muscles still recovering, 1 nearly recovered, 6 recovered.",
+  "recoveryScreen_nextSentence": "Lower A is next: Quads are the least recovered of the muscles it trains, estimated 19% recovered, ready by Saturday.",
+  "recoveryScreen_stillToDo": [
+   "Lower A · estimated ready by Saturday (Quads 19% recovered)",
+   "Upper B · estimated ready later today (Back 89% recovered)"
+  ],
+  "home_heroLine_programmeNext": "Quads are estimated 19% recovered, ready by Saturday.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "6 muscles still recovering and 1 nearly recovered",
+   "evidence": "Glutes will be the last to recover, estimated ready by Saturday."
+  },
+  "perSession": [
+   {
+    "routine": "LA",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 19,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:19%:recovering",
+     "hamstrings:19%:recovering",
+     "calves:48%:recovering",
+     "abs:55%:recovering",
+     "glutes:19%:recovering"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 19,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:19%:recovering",
+     "hamstrings:19%:recovering",
+     "calves:48%:recovering",
+     "abs:55%:recovering",
+     "glutes:19%:recovering"
+    ],
+    "line": "Quads are estimated 19% recovered, ready by Saturday."
+   },
+   {
+    "routine": "UB",
+    "nowVerdict": "nearly",
+    "nowMinPct": 89,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:100%:recovered",
+     "back:89%:nearly",
+     "rear_delts:100%:recovered",
+     "biceps:100%:recovered",
+     "triceps:100%:recovered"
+    ],
+    "projVerdict": "nearly",
+    "projMinPct": 89,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:100%:recovered",
+     "back:89%:nearly",
+     "rear_delts:100%:recovered",
+     "biceps:100%:recovered",
+     "triceps:100%:recovered"
+    ],
+    "line": "Back is estimated 89% recovered, ready later today."
+   }
+  ]
+ },
+ "E4_weekComplete": {
+  "now": "Thu Oct 08 2026 09:00",
+  "projectedAt": "Thu Oct 08 2026 09:00",
+  "programmeNext": null,
+  "recommended": null,
+  "recoveryScreen_answerLine": "3 muscles still recovering, 2 nearly recovered, 8 recovered.",
+  "recoveryScreen_nextSentence": null,
+  "recoveryScreen_stillToDo": [],
+  "home_heroLine_programmeNext": null,
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "3 muscles still recovering and 2 nearly recovered",
+   "evidence": "Quads will be the last to recover, estimated ready by tomorrow."
+  },
+  "perSession": []
+ },
+ "E5_habitMonWedFri_TueMorning": {
+  "now": "Tue Oct 06 2026 09:00",
+  "projectedAt": "Wed Oct 07 2026 18:00",
+  "programmeNext": "LA",
+  "recommended": null,
+  "recoveryScreen_answerLine": "7 muscles still recovering.",
+  "recoveryScreen_nextSentence": "No recent session on the muscles Lower A trains.",
+  "recoveryScreen_stillToDo": [
+   "Lower A · no recent session on the muscles it trains",
+   "Upper B · estimated ready by Thursday (Back 20% recovered)",
+   "Lower B · no recent session on the muscles it trains"
+  ],
+  "home_heroLine_programmeNext": "No recent session on the muscles Lower A trains.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "7 muscles still recovering",
+   "evidence": "Back will be the last to recover, estimated ready by Thursday."
+  },
+  "perSession": [
+   {
+    "routine": "LA",
+    "nowVerdict": "ready",
+    "nowMinPct": 100,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session",
+     "glutes:100%:no_recent_session"
+    ],
+    "projVerdict": "ready",
+    "projMinPct": 100,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session",
+     "glutes:100%:no_recent_session"
+    ],
+    "line": null
+   },
+   {
+    "routine": "UB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 20,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:23%:recovering",
+     "back:20%:recovering",
+     "rear_delts:42%:recovering",
+     "biceps:27%:recovering",
+     "triceps:29%:recovering"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 68,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:78%:nearly",
+     "back:68%:recovering",
+     "rear_delts:100%:recovered",
+     "biceps:91%:recovered",
+     "triceps:98%:recovered"
+    ],
+    "line": "Back is estimated 20% recovered, ready by Thursday."
+   },
+   {
+    "routine": "LB",
+    "nowVerdict": "ready",
+    "nowMinPct": 100,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "glutes:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session"
+    ],
+    "projVerdict": "ready",
+    "projMinPct": 100,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:100%:no_recent_session",
+     "hamstrings:100%:no_recent_session",
+     "glutes:100%:no_recent_session",
+     "calves:100%:no_recent_session",
+     "abs:100%:no_recent_session"
+    ],
+    "line": null
+   }
+  ]
+ },
+ "E6_habitMonWedFri_WedMorning_UB_next": {
+  "now": "Wed Oct 07 2026 09:00",
+  "projectedAt": "Wed Oct 07 2026 18:00",
+  "programmeNext": "UB",
+  "recommended": null,
+  "recoveryScreen_answerLine": "9 muscles still recovering, 1 nearly recovered, 3 recovered.",
+  "recoveryScreen_nextSentence": "Upper B is next: Back is the least recovered of the muscles it trains, estimated 55% recovered, ready by tomorrow.",
+  "recoveryScreen_stillToDo": [
+   "Upper B · estimated ready by tomorrow (Back 55% recovered)",
+   "Lower B · estimated ready by Friday (Quads 17% recovered)"
+  ],
+  "home_heroLine_programmeNext": "Back is estimated 55% recovered, ready by tomorrow.",
+  "home_heroLine_whenRecommendedPrimary": null,
+  "progressRow": {
+   "state": "9 muscles still recovering and 1 nearly recovered",
+   "evidence": "Quads will be the last to recover, estimated ready by Friday."
+  },
+  "perSession": [
+   {
+    "routine": "UB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 55,
+    "nowLimiting": "back",
+    "nowMuscles": [
+     "chest:63%:recovering",
+     "back:55%:recovering",
+     "rear_delts:100%:recovered",
+     "biceps:73%:recovering",
+     "triceps:79%:nearly"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 68,
+    "projLimiting": "back",
+    "projMuscles": [
+     "chest:78%:nearly",
+     "back:68%:recovering",
+     "rear_delts:100%:recovered",
+     "biceps:91%:recovered",
+     "triceps:98%:recovered"
+    ],
+    "line": "Back is estimated 55% recovered, ready by tomorrow."
+   },
+   {
+    "routine": "LB",
+    "nowVerdict": "not_yet",
+    "nowMinPct": 17,
+    "nowLimiting": "quads",
+    "nowMuscles": [
+     "quads:17%:recovering",
+     "hamstrings:19%:recovering",
+     "glutes:18%:recovering",
+     "calves:48%:recovering",
+     "abs:55%:recovering"
+    ],
+    "projVerdict": "not_yet",
+    "projMinPct": 28,
+    "projLimiting": "quads",
+    "projMuscles": [
+     "quads:28%:recovering",
+     "hamstrings:32%:recovering",
+     "glutes:30%:recovering",
+     "calves:78%:nearly",
+     "abs:90%:recovered"
+    ],
+    "line": "Quads are estimated 17% recovered, ready by Friday."
+   }
+  ]
+ }
+}

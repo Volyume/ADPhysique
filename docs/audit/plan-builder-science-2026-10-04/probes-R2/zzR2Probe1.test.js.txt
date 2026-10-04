@@ -1,0 +1,57 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import {
+  BASE_RECOVERY_HOURS, REFERENCE_SETS, recoveryHours, doseFactor, ratingFactor, intensityFactor,
+  PLAN_OPENING_RIR, TYPICAL_WEEK_GAP_HOURS,
+} from '../constants';
+import { VOLUME_LANDMARKS } from '../../algorithms';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const r1 = (x) => Math.round(x * 10) / 10;
+
+test('probe1: per-muscle table, dose factor, and recoveryHours grid', () => {
+  const muscles = Object.keys(BASE_RECOVERY_HOURS);
+  const table = {};
+  for (const m of muscles) {
+    const row = { base: BASE_RECOVERY_HOURS[m], landmarks: VOLUME_LANDMARKS[m] };
+    row.byDose = {};
+    for (const s of [2, 3, 4, 6, 8, 9, 12, 16]) row.byDose[s] = r1(recoveryHours(m, { sets: s }));
+    row.ref6 = {
+      avg_RIRnull: r1(recoveryHours(m, { sets: 6 })),
+      avg_RIR3: r1(recoveryHours(m, { sets: 6, rirTarget: 3 })),
+      avg_RIR2: r1(recoveryHours(m, { sets: 6, rirTarget: 2 })),
+      avg_RIR0: r1(recoveryHours(m, { sets: 6, rirTarget: 0 })),
+      poor: r1(recoveryHours(m, { sets: 6, recoveryRating: 'poor' })),
+      good: r1(recoveryHours(m, { sets: 6, recoveryRating: 'good' })),
+      firstWeek: r1(recoveryHours(m, { sets: 6, firstWeek: true })),
+      sore: r1(recoveryHours(m, { sets: 6, ratings: { sorenessNext: 3 } })),
+    };
+    table[m] = row;
+  }
+  const dose = {};
+  for (const s of [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 14, 16, 20, 27, 60]) dose[s] = Math.round(doseFactor(s) * 1000) / 1000;
+  const bicepsBack = {};
+  for (const s of [3, 4, 6, 9, 12]) {
+    bicepsBack[s] = {
+      biceps: r1(recoveryHours('biceps', { sets: s })),
+      back: r1(recoveryHours('back', { sets: s })),
+      ratioBicepsOverBack: Math.round((recoveryHours('biceps', { sets: s }) / recoveryHours('back', { sets: s })) * 1000) / 1000,
+    };
+  }
+  // the same clamp: which doses hit the 24 h floor
+  const floors = {};
+  for (const m of muscles) {
+    const hits = [];
+    for (const s of [1, 2, 3, 4, 6]) {
+      const raw = BASE_RECOVERY_HOURS[m] * doseFactor(s);
+      if (raw < 24) hits.push({ sets: s, raw: r1(raw) });
+    }
+    floors[m] = hits;
+  }
+  fs.writeFileSync(`${OUT}/p1-per-muscle.json`, JSON.stringify({
+    table, dose, bicepsBack, floors, PLAN_OPENING_RIR, REFERENCE_SETS, TYPICAL_WEEK_GAP_HOURS,
+    ratingFactors: { poor: ratingFactor('poor'), average: ratingFactor('average'), good: ratingFactor('good') },
+    intensity: { null: intensityFactor(null), 0: intensityFactor(0), 1: intensityFactor(1), 2: intensityFactor(2), 3: intensityFactor(3), 4: intensityFactor(4) },
+  }, null, 1));
+  expect(Object.keys(table).length).toBe(17);
+});

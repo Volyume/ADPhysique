@@ -1,0 +1,29 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { readyClause } from '../nextWorkoutRecommendation';
+import { learnPersonalRecovery, personalRecoveryEvidence, personalDirection } from '../personalRecovery';
+import { recoveryHours } from '../constants';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+test('probe5: readyClause granularity; learner return shape on empty history', () => {
+  const now = new Date(2026, 9, 5, 9, 0).getTime();
+  const out = {
+    readyClause_Tue0001: readyClause(new Date(2026, 9, 6, 0, 1).getTime(), now),
+    readyClause_Tue2230: readyClause(new Date(2026, 9, 6, 22, 30).getTime(), now),
+    readyClause_Mon1700: readyClause(new Date(2026, 9, 5, 17, 0).getTime(), now),
+    readyClause_Wed0600: readyClause(new Date(2026, 9, 7, 6, 0).getTime(), now),
+    learnEmpty: learnPersonalRecovery({ sessions: [], exerciseById: {}, recoveryRating: 'average', nowMs: now }),
+    learnEmptyPoor: learnPersonalRecovery({ sessions: [], exerciseById: {}, recoveryRating: 'poor', nowMs: now }),
+    evidenceEmptyKeys: Object.keys(personalRecoveryEvidence({ sessions: [], exerciseById: {}, recoveryRating: 'average', nowMs: now })),
+    learnKeys: Object.keys(learnPersonalRecovery({ sessions: [], exerciseById: {}, recoveryRating: 'average', nowMs: now })),
+    direction: personalDirection(learnPersonalRecovery({ sessions: [], exerciseById: {}, recoveryRating: 'average', nowMs: now })),
+    // what the factor does to biceps and back at 6 sets, RIR null: prior 1.0 vs 1.4 vs 0.75
+    hours: {
+      biceps: [0.75, 0.9, 1.0, 1.15, 1.4].map((f) => Math.round(recoveryHours('biceps', { sets: 6, personalFactor: f }) * 10) / 10),
+      back: [0.75, 0.9, 1.0, 1.15, 1.4].map((f) => Math.round(recoveryHours('back', { sets: 6, personalFactor: f }) * 10) / 10),
+      calves: [0.75, 0.9, 1.0, 1.15, 1.4].map((f) => Math.round(recoveryHours('calves', { sets: 3, personalFactor: f }) * 10) / 10),
+    },
+  };
+  fs.writeFileSync(`${OUT}/p5-misc.json`, JSON.stringify(out, null, 1));
+  expect(out.learnKeys.length).toBe(5);
+});

@@ -1,0 +1,18 @@
+PASS src/lib/recovery/__tests__/personalRecovery.test.js
+PASS src/lib/recovery/__tests__/sequenceSessions.test.js
+PASS src/lib/recovery/__tests__/nextWorkoutRecommendation.test.js
+PASS src/lib/recovery/__tests__/muscleRecoveryModel.test.js
+PASS src/lib/recovery/__tests__/recoveryPillar.test.js
+PASS src/lib/recovery/__tests__/sessionReadiness.test.js
+PASS src/lib/recovery/__tests__/edIsolation.guard.test.js
+PASS src/lib/recovery/__tests__/constants.test.js
+PASS src/lib/recovery/__tests__/load.test.js
+PASS src/lib/recovery/__tests__/nextLikelyTrainingTime.test.js
+PASS src/lib/recovery/__tests__/purity.guard.test.js
+PASS src/lib/recovery/__tests__/personalRecovery.simulation.test.js (72.943 s)
+
+Test Suites: 12 passed, 12 total
+Tests:       276 passed, 276 total
+Snapshots:   0 total
+Time:        73.217 s
+exit: 0

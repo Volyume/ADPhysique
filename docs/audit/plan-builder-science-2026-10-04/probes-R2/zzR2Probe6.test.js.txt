@@ -1,0 +1,81 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { generatePlan } from '../planEngine';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
+import { VOLUME_LANDMARKS, getVolumeStatus, allocateExerciseVolume } from '../algorithms';
+import { computeWeeklySessionAllocation } from '../coachApply';
+import { plannedWeeklyVolumeByMuscle, buildPlanLandmarks } from '../planVolumeTargets';
+import { mergeLandmarkPrecedence } from '../effectiveLandmarks';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const rows = CORPUS.map(corpusEntryToSeedRow);
+rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+const byName = new Map(rows.map((r) => [r.name, r]));
+const canonicalNames = new Set(rows.filter((r) => !r.isCustom).map((r) => r.name));
+const run = (opts) => generatePlan({
+  experience: 'intermediate', sessionLengthMinutes: 60, equipment: 'full_gym', goal: 'general',
+  phase: 'lean_gain', nutritionPhase: 'lean_gain', weakPoints: [], recoveryRating: 'average', age: null,
+  exerciseLibrary: rows, canonicalNames, daysPerWeek: 4, ...opts,
+});
+
+function templateWeeks() {
+  const weeks = [];
+  for (let w = 1; w <= 6; w += 1) weeks.push({ rows: {} });
+  for (const [muscle, lm] of Object.entries(VOLUME_LANDMARKS)) {
+    for (let i = 0; i < 5; i += 1) weeks[i].rows[muscle] = Math.round(lm.mev + (lm.mav - lm.mev) * (i / 4));
+    weeks[5].rows[muscle] = lm.mev;
+  }
+  return weeks;
+}
+
+test('probe6: every muscle, served credit per week, status against the resolved plan-layer table and the research table', () => {
+  const weeks = templateWeeks();
+  const res = {};
+  const cases = {
+    d4_general: { daysPerWeek: 4 },
+    d3_general: { daysPerWeek: 3 },
+    d5_general: { daysPerWeek: 5 },
+    d6_general: { daysPerWeek: 6 },
+  };
+  for (const [label, o] of Object.entries(cases)) {
+    const plan = run(o);
+    const routinesForPlanned = plan.workouts.map((w) => ({
+      exercises: w.exercises.map((e) => ({ recommendedSets: e.sets, exercise: byName.get(e.exerciseName) })),
+    }));
+    const plannedByMuscle = plannedWeeklyVolumeByMuscle(routinesForPlanned);
+    const profile = { experience: 'intermediate', recoveryRating: 'average', trainingPhase: 'lean_gain' };
+    const planLayer = buildPlanLandmarks({ plannedByMuscle, userProfile: profile, nowMs: Date.UTC(2026, 9, 9) });
+    const resolved = mergeLandmarkPrecedence({ manual: null, adapted: null, plan: planLayer });
+    const perWeek = [];
+    for (let wi = 0; wi < 6; wi += 1) {
+      const weekMap = weeks[wi].rows;
+      const baseMap = weeks[0].rows;
+      const credit = {};
+      for (const w of plan.workouts) {
+        const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+        const alloc = computeWeeklySessionAllocation(todays, weekMap, baseMap);
+        for (const e of w.exercises) {
+          const n = alloc[`${w.name}|${e.exerciseName}`];
+          for (const a of allocateExerciseVolume(byName.get(e.exerciseName))) {
+            credit[a.muscle] = (credit[a.muscle] || 0) + n * a.sets;
+          }
+        }
+      }
+      const counts = { plan: {}, research: {} };
+      const names = { plan: {}, research: {} };
+      for (const m of Object.keys(credit)) {
+        const c = Math.round(credit[m]);
+        const sp = getVolumeStatus(c, m, resolved.table).status;
+        const sr = getVolumeStatus(c, m, VOLUME_LANDMARKS).status;
+        counts.plan[sp] = (counts.plan[sp] || 0) + 1;
+        counts.research[sr] = (counts.research[sr] || 0) + 1;
+        (names.plan[sp] = names.plan[sp] || []).push(`${m}:${c}`);
+        (names.research[sr] = names.research[sr] || []).push(`${m}:${c}`);
+      }
+      perWeek.push({ week: wi + 1, musclesWithCredit: Object.keys(credit).length, counts, near_or_over_plan: [...(names.plan.near_mrv || []), ...(names.plan.over_mrv || [])], over_plan: names.plan.over_mrv || [], near_or_over_research: [...(names.research.near_mrv || []), ...(names.research.over_mrv || [])], over_research: names.research.over_mrv || [] });
+    }
+    res[label] = { sessions: plan.workouts.map((w) => w.name), perWeek };
+  }
+  fs.writeFileSync(`${OUT}/p6-all-muscles-ramp-status.json`, JSON.stringify(res, null, 1));
+  expect(Object.keys(res).length).toBe(4);
+});

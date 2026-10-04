@@ -1,0 +1,366 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn((callback) => {
+    const React = require('react');
+    React.useEffect(callback, [callback]);
+  }),
+}));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('id')),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  SchedulableTriggerInputTypes: {
+    DAILY: 'daily', WEEKLY: 'weekly', YEARLY: 'yearly', DATE: 'date', TIME_INTERVAL: 'timeInterval', CALENDAR: 'calendar',
+  },
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1, NONE: 0 },
+  AndroidNotificationPriority: { MAX: 'max', HIGH: 'high', DEFAULT: 'default' },
+}));
+jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: jest.fn((selector) => selector({ accessibility: { reduceMotion: true } })),
+}));
+jest.mock('../AnimatedEntrance', () => ({ children }) => children);
+jest.mock('../InfoTooltip', () => () => null);
+jest.mock('../SectionLabel', () => {
+  const { Text: RNText } = require('react-native');
+  return ({ children }) => <RNText>{children}</RNText>;
+});
+jest.mock('../Button', () => () => null);
+jest.mock('../BodyDiagramHeatmap', () => ({ __esModule: true, default: jest.fn(() => null) }));
+jest.mock('../FatigueTrendCard', () => () => null);
+jest.mock('../../lib/database', () => ({
+  getAllWorkouts: jest.fn(), getCompletedWorkoutSets: jest.fn(), getLastTrainedPerMuscle: jest.fn(),
+  getRecentCheckins: jest.fn(), getRecentCompletedWorkouts: jest.fn(), getWorkoutSetsForWorkout: jest.fn(),
+  getAllExercises: jest.fn(), getExerciseLookup: jest.fn(),
+}));
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
+jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
+jest.mock('../../lib/recovery/load', () => ({ loadMuscleRecovery: jest.fn(), loadPlannedSetsByRoutine: jest.fn() }));
+
+import {
+  recoveryAnswerLine, buildNextWorkoutSentence, buildStillToDoRows, recoveryCounts,
+} from '../ReadinessCards';
+import { buildMuscleRecoveryMap, projectRecovery } from '../../lib/recovery/muscleRecoveryModel';
+import { recommendNextWorkout, readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
+import { sessionReadiness } from '../../lib/recovery/sessionReadiness';
+import { nextLikelyTrainingTime } from '../../lib/recovery/nextLikelyTrainingTime';
+import { buildRecoveryPillarCopy } from '../../lib/recovery/recoveryPillar';
+import { SESSION_STATE } from '../../lib/blockProgression';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const H = 3600 * 1000;
+const D = 24 * H;
+const r1 = (x) => Math.round(x * 10) / 10;
+const stamp = (ms) => new Date(ms).toString().slice(0, 21);
+
+const EX = {
+  bench: { id: 'bench', primaryMuscle: 'chest', secondaryMuscles: ['triceps', 'front_delts'] },
+  pushdown: { id: 'pushdown', primaryMuscle: 'triceps', secondaryMuscles: [] },
+  curl: { id: 'curl', primaryMuscle: 'biceps', secondaryMuscles: [] },
+  row: { id: 'row', primaryMuscle: 'back', secondaryMuscles: ['biceps', 'rear_delts'] },
+  pulldown: { id: 'pulldown', primaryMuscle: 'back', secondaryMuscles: ['biceps'] },
+  lateral: { id: 'lateral', primaryMuscle: 'side_delts', secondaryMuscles: [] },
+  squat: { id: 'squat', primaryMuscle: 'quads', secondaryMuscles: ['glutes', 'adductors'] },
+  rdl: { id: 'rdl', primaryMuscle: 'hamstrings', secondaryMuscles: ['glutes'] },
+  calf: { id: 'calf', primaryMuscle: 'calves', secondaryMuscles: [] },
+  crunch: { id: 'crunch', primaryMuscle: 'abs', secondaryMuscles: [] },
+};
+
+function session(id, endMs, spec, extra = {}) {
+  const sets = [];
+  for (const [exerciseId, n] of spec) for (let i = 0; i < n; i += 1) sets.push({ exerciseId, setType: 'straight', weight: 50, actualReps: 8 });
+  return {
+    id, startedAt: endMs - H, endedAt: endMs, durationMinutes: 60, sets,
+    weekRirTarget: null, isFirstWeek: false, ratings: { fatigue: null, joint: null, sorenessNext: null }, ...extra,
+  };
+}
+const mapAt = (sessions, nowMs, extra = {}) => buildMuscleRecoveryMap({
+  sessions, exerciseById: EX, recoveryRating: 'average', nowMs, ...extra,
+});
+
+// Monday 5 October 2026, 09:00 local (the jest TZ is Europe/London, BST).
+const MON9 = new Date(2026, 9, 5, 9, 0, 0).getTime();
+
+test('probe2: recovery curve, compounding, percent relative to peak', () => {
+  const res = {};
+  // (A) one chest session, 6 sets, ends at t0
+  const t0 = MON9;
+  const A = [];
+  for (const h of [0, 6, 12, 24, 36, 48, 53, 54, 60, 72]) {
+    const m = mapAt([session('a', t0, [['bench', 6]])], t0 + h * H).chest;
+    A.push({ hoursAfterEnd: h, pct: m.recoveredPercent, status: m.status, readyInH: m.readyAtMs ? r1((m.readyAtMs - (t0 + h * H)) / H) : null });
+  }
+  res.A_single_chest_6sets_T60 = A;
+  // ready-by offset for the same session read at its end
+  const m0 = mapAt([session('a', t0, [['bench', 6]])], t0).chest;
+  res.A_readyAfterEndH = r1((m0.readyAtMs - t0) / H);
+  res.A_hoursT = m0.contributingSessions[0].hoursT;
+
+  // (B) compounding: Monday 6 sets, then Wednesday 6 sets (48 h later), chest only
+  const s1 = session('b1', t0, [['bench', 6]]);
+  const s2 = session('b2', t0 + 48 * H, [['bench', 6]]);
+  const B = [];
+  for (const h of [0, 6, 12, 24, 36, 48, 60, 72, 84]) {
+    const at = t0 + 48 * H + h * H;
+    const m = mapAt([s1, s2], at).chest;
+    B.push({ hoursAfterSecondEnd: h, pct: m.recoveredPercent, status: m.status, readyInH: m.readyAtMs ? r1((m.readyAtMs - at) / H) : null });
+  }
+  res.B_compounded_chest_two_6set_sessions_48h_apart = B;
+  const mB = mapAt([s1, s2], t0 + 48 * H).chest;
+  res.B_hoursT = mB.contributingSessions.map((c) => c.hoursT);
+
+  // (C) the same single 6-set vs 12-set session: ready-by after the end
+  const c6 = mapAt([session('c6', t0, [['bench', 6]])], t0).chest;
+  const c12 = mapAt([session('c12', t0, [['bench', 12]])], t0).chest;
+  const c3 = mapAt([session('c3', t0, [['bench', 3]])], t0).chest;
+  res.C_readyAfterEndH = { sets3: r1((c3.readyAtMs - t0) / H), sets6: r1((c6.readyAtMs - t0) / H), sets12: r1((c12.readyAtMs - t0) / H) };
+  // percent at 24 h for each dose
+  res.C_pctAt24h = {
+    sets3: mapAt([session('c3', t0, [['bench', 3]])], t0 + 24 * H).chest.recoveredPercent,
+    sets6: mapAt([session('c6', t0, [['bench', 6]])], t0 + 24 * H).chest.recoveredPercent,
+    sets12: mapAt([session('c12', t0, [['bench', 12]])], t0 + 24 * H).chest.recoveredPercent,
+  };
+
+  // (D) biceps vs back after the same single session (the founder's example)
+  const sessD = session('d', t0, [['curl', 6], ['row', 6]]);
+  const mD = mapAt([sessD], t0 + 24 * H);
+  res.D_biceps_vs_back_6setsEach_at24h = {
+    biceps: { sets: mD.biceps.lastSessionSets, pct: mD.biceps.recoveredPercent, readyInH: r1((mD.biceps.readyAtMs - (t0 + 24 * H)) / H), hoursT: mD.biceps.contributingSessions[0].hoursT },
+    back: { sets: mD.back.lastSessionSets, pct: mD.back.recoveredPercent, readyInH: r1((mD.back.readyAtMs - (t0 + 24 * H)) / H), hoursT: mD.back.contributingSessions[0].hoursT },
+  };
+  // 'ready after end' for each from the end
+  const mD0 = mapAt([sessD], t0);
+  res.D_readyAfterEndH = { biceps: r1((mD0.biceps.readyAtMs - t0) / H), back: r1((mD0.back.readyAtMs - t0) / H) };
+
+  // (E) absolute residual at 'ready', in set-equivalents: single vs compounded
+  res.E_note = 'ready = residual <= 0.105 x peak; peak(single 6 sets) = 1.0 F = 6 sets; peak(compounded) = 1.2 F';
+
+  fs.writeFileSync(`${OUT}/p2-curve.json`, JSON.stringify(res, null, 1));
+  expect(res.A_single_chest_6sets_T60.length).toBe(10);
+});
+
+test('probe2b: next-session sentences on the Recovery screen, Home line, projected readiness', () => {
+  const out = {};
+  const names = { UA: 'Upper A', LA: 'Lower A', UB: 'Upper B', LB: 'Lower B' };
+  const planned = {
+    UA: { chest: 6, back: 8, side_delts: 4, biceps: 3, triceps: 3 },
+    LA: { quads: 8, hamstrings: 6, calves: 4, abs: 3, glutes: 3 },
+    UB: { chest: 6, back: 8, rear_delts: 4, biceps: 3, triceps: 3 },
+    LB: { quads: 6, hamstrings: 6, glutes: 4, calves: 4, abs: 3 },
+  };
+  const spec = {
+    UA: [['bench', 6], ['row', 4], ['pulldown', 4], ['lateral', 4], ['curl', 3], ['pushdown', 3]],
+    LA: [['squat', 8], ['rdl', 6], ['calf', 4], ['crunch', 3]],
+    UB: [['bench', 6], ['row', 4], ['pulldown', 4], ['curl', 3], ['pushdown', 3]],
+    LB: [['squat', 6], ['rdl', 6], ['calf', 4], ['crunch', 3]],
+  };
+  const mk = (stateByRoutine) => ['UA', 'LA', 'UB', 'LB'].map((rid, i) => ({
+    routineId: rid, name: names[rid], order: i + 1, state: stateByRoutine[rid] ?? SESSION_STATE.OUTSTANDING,
+  }));
+  const run = (label, sessionsDone, nowMs, stateByRoutine, habit = null) => {
+    const map = mapAt(sessionsDone, nowMs);
+    const projectedAtMs = nextLikelyTrainingTime({ nowMs, habitualWeekdays: habit?.days ?? null, typicalStartMinute: habit?.minute ?? 18 * 60 });
+    const sessions = mk(stateByRoutine);
+    const rec = recommendNextWorkout({
+      sessions, plannedSetsByRoutine: planned, recoveryMap: map, projectedAtMs, nowMs, routineNamesById: names,
+    });
+    const wrapped = { ...rec, programmeNextName: names[rec.programmeNext?.routineId] ?? '', routineNamesById: names };
+    out[label] = {
+      now: stamp(nowMs),
+      projectedAt: stamp(projectedAtMs),
+      programmeNext: rec.programmeNext?.routineId ?? null,
+      recommended: rec.recommended?.routineId ?? null,
+      recoveryScreen_answerLine: recoveryAnswerLine(recoveryCounts(map)),
+      recoveryScreen_nextSentence: buildNextWorkoutSentence(rec.programmeNext ? wrapped : null, nowMs),
+      recoveryScreen_stillToDo: buildStillToDoRows(wrapped, nowMs).map((r) => r.text),
+      home_heroLine_programmeNext: rec.programmeNextLine,
+      home_heroLine_whenRecommendedPrimary: rec.reason,
+      progressRow: buildRecoveryPillarCopy({ map, nowMs, degraded: false }),
+      perSession: rec.perSession.map((p) => ({
+        routine: p.routineId,
+        nowVerdict: p.readinessNow?.verdict, nowMinPct: p.readinessNow?.minPercent, nowLimiting: p.readinessNow?.limitingMuscle,
+        nowMuscles: p.readinessNow?.muscles?.map((m) => `${m.muscle}:${m.recoveredPercent}%:${m.status}`),
+        projVerdict: p.readinessAtProjected?.verdict, projMinPct: p.readinessAtProjected?.minPercent, projLimiting: p.readinessAtProjected?.limitingMuscle,
+        projMuscles: p.readinessAtProjected?.muscles?.map((m) => `${m.muscle}:${m.recoveredPercent}%:${m.status}`),
+        line: p.line,
+      })),
+    };
+    return { map, rec };
+  };
+
+  // E1: followed in order; Tuesday 09:00 after Upper A on Monday 18:00-19:00
+  const tue9 = MON9 + D;
+  const uaMon = session('ua', MON9 + 10 * H, spec.UA); // ends Mon 19:00
+  run('E1_followedInOrder_TueMorning_afterUpperA', [uaMon], tue9, { UA: SESSION_STATE.COMPLETED });
+
+  // E2: Thursday 09:00: Upper A Mon, Lower A Tue 18:00-19:00; next = Upper B
+  const thu9 = MON9 + 3 * D;
+  const laTue = session('la', MON9 + D + 10 * H, spec.LA);
+  run('E2_followedInOrder_ThuMorning_afterUA_LA', [uaMon, laTue], thu9, { UA: SESSION_STATE.COMPLETED, LA: SESSION_STATE.COMPLETED });
+
+  // E2b: Wednesday 09:00: Upper A Mon, Lower A Tue; next = Upper B, 38 h after UA ended
+  const wed9 = MON9 + 2 * D;
+  run('E2b_followedInOrder_WedMorning_afterUA_LA', [uaMon, laTue], wed9, { UA: SESSION_STATE.COMPLETED, LA: SESSION_STATE.COMPLETED });
+
+  // E3: out of order: Upper A Monday, Lower B Wednesday 18:00-19:00; Thursday 09:00
+  const lbWed = session('lb', MON9 + 2 * D + 10 * H, spec.LB);
+  run('E3_outOfOrder_ThuMorning_UA_then_LB', [uaMon, lbWed], thu9, { UA: SESSION_STATE.COMPLETED, LB: SESSION_STATE.COMPLETED });
+
+  // E4: week complete
+  run('E4_weekComplete', [uaMon, laTue], thu9, {
+    UA: SESSION_STATE.COMPLETED, LA: SESSION_STATE.COMPLETED, UB: SESSION_STATE.COMPLETED, LB: SESSION_STATE.COMPLETED,
+  });
+
+  // E5: with a habit (Mon/Wed/Fri 18:00): Tuesday 09:00 after UA, LA programme next; projected = Wednesday 18:00
+  run('E5_habitMonWedFri_TueMorning', [uaMon], tue9, { UA: SESSION_STATE.COMPLETED }, { days: [1, 3, 5], minute: 18 * 60 });
+
+  // E6: Upper B is next on Wednesday 09:00 with habit Mon/Wed/Fri, UA Mon, LA Tue: projected Wed 18:00
+  run('E6_habitMonWedFri_WedMorning_UB_next', [uaMon, laTue], wed9, { UA: SESSION_STATE.COMPLETED, LA: SESSION_STATE.COMPLETED }, { days: [1, 3, 5], minute: 18 * 60 });
+
+  fs.writeFileSync(`${OUT}/p2b-next-session.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(7);
+});
+
+
+test('probe2d: steady-state week, day by day, for a 4-day upper/lower and a 3-day full body', () => {
+  const out = {};
+  const mkPlan = (names, planned, spec, order, habitDays) => ({ names, planned, spec, order, habitDays });
+  const ul = mkPlan(
+    { UA: 'Upper A', LA: 'Lower A', UB: 'Upper B', LB: 'Lower B' },
+    {
+      UA: { chest: 6, back: 8, side_delts: 4, biceps: 3, triceps: 3 },
+      LA: { quads: 8, hamstrings: 6, calves: 4, abs: 3, glutes: 3 },
+      UB: { chest: 6, back: 8, rear_delts: 4, biceps: 3, triceps: 3 },
+      LB: { quads: 6, hamstrings: 6, glutes: 4, calves: 4, abs: 3 },
+    },
+    {
+      UA: [['bench', 6], ['row', 4], ['pulldown', 4], ['lateral', 4], ['curl', 3], ['pushdown', 3]],
+      LA: [['squat', 8], ['rdl', 6], ['calf', 4], ['crunch', 3]],
+      UB: [['bench', 6], ['row', 4], ['pulldown', 4], ['curl', 3], ['pushdown', 3]],
+      LB: [['squat', 6], ['rdl', 6], ['calf', 4], ['crunch', 3]],
+    },
+    ['UA', 'LA', 'UB', 'LB'],
+    // Mon, Tue, Thu, Fri at 18:00 start (ends 19:00)
+    [[0, 'UA'], [1, 'LA'], [3, 'UB'], [4, 'LB']],
+  );
+  const fb = mkPlan(
+    { FA: 'Full Body A', FB: 'Full Body B', FC: 'Full Body C' },
+    {
+      FA: { chest: 4, back: 6, quads: 6, hamstrings: 3, side_delts: 3, biceps: 3, triceps: 3 },
+      FB: { chest: 4, back: 6, quads: 6, hamstrings: 3, side_delts: 3, biceps: 3, triceps: 3 },
+      FC: { chest: 4, back: 6, quads: 6, hamstrings: 3, side_delts: 3, biceps: 3, triceps: 3 },
+    },
+    {
+      FA: [['bench', 4], ['row', 3], ['pulldown', 3], ['squat', 6], ['rdl', 3], ['lateral', 3], ['curl', 3], ['pushdown', 3]],
+      FB: [['bench', 4], ['row', 3], ['pulldown', 3], ['squat', 6], ['rdl', 3], ['lateral', 3], ['curl', 3], ['pushdown', 3]],
+      FC: [['bench', 4], ['row', 3], ['pulldown', 3], ['squat', 6], ['rdl', 3], ['lateral', 3], ['curl', 3], ['pushdown', 3]],
+    },
+    ['FA', 'FB', 'FC'],
+    [[0, 'FA'], [2, 'FB'], [4, 'FC']],
+  );
+  const WEEK0 = new Date(2026, 8, 14, 0, 0, 0).getTime(); // Monday 14 September 2026, 00:00 local
+  const evalWeek = new Date(2026, 9, 5, 0, 0, 0).getTime(); // Monday 5 October 2026, 00:00 local (3 prior weeks)
+  void WEEK0;
+
+  for (const [label, plan] of [['UL4', ul], ['FB3', fb]]) {
+    const habit = { days: plan.habitDays.map(([d]) => (d + 1) % 7), minute: 18 * 60 };
+    const hist = [];
+    for (let w = -3; w < 1; w += 1) {
+      for (const [d, rid] of plan.habitDays) {
+        hist.push({ rid, endMs: evalWeek + w * 7 * D + d * D + 19 * H, week: w });
+      }
+    }
+    const rows = [];
+    for (let day = 0; day < 7; day += 1) {
+      const nowMs = evalWeek + day * D + 9 * H; // 09:00 on that day
+      const done = hist.filter((h) => h.endMs <= nowMs);
+      const thisWeekDone = new Set(done.filter((h) => h.week === 0).map((h) => h.rid));
+      const sessionsDone = done.map((h, i) => session(`h${i}`, h.endMs, plan.spec[h.rid]));
+      const stateBy = {};
+      for (const rid of plan.order) stateBy[rid] = thisWeekDone.has(rid) ? SESSION_STATE.COMPLETED : SESSION_STATE.OUTSTANDING;
+      const map = mapAt(sessionsDone, nowMs);
+      const sessions = plan.order.map((rid, i) => ({ routineId: rid, name: plan.names[rid], order: i + 1, state: stateBy[rid] }));
+      const projectedAtMs = nextLikelyTrainingTime({ nowMs, habitualWeekdays: habit.days, typicalStartMinute: habit.minute });
+      const rec = recommendNextWorkout({
+        sessions, plannedSetsByRoutine: plan.planned, recoveryMap: map, projectedAtMs, nowMs, routineNamesById: plan.names,
+      });
+      const wrapped = { ...rec, programmeNextName: plan.names[rec.programmeNext?.routineId] ?? '', routineNamesById: plan.names };
+      const nextEntry = rec.perSession.find((p) => p.routineId === rec.programmeNext?.routineId);
+      rows.push({
+        day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][day] + ' 09:00',
+        done: [...thisWeekDone].join(','),
+        programmeNext: rec.programmeNext?.routineId ?? null,
+        projectedAt: stamp(projectedAtMs),
+        recovery_nextSentence: buildNextWorkoutSentence(rec.programmeNext ? wrapped : null, nowMs),
+        recovery_stillToDo: buildStillToDoRows(wrapped, nowMs).map((r) => r.text),
+        recommended: rec.recommended?.routineId ?? null,
+        nextNow: nextEntry ? `${nextEntry.readinessNow.verdict}/${nextEntry.readinessNow.minPercent}%/${nextEntry.readinessNow.limitingMuscle}` : null,
+        nextAtProjected: nextEntry ? `${nextEntry.readinessAtProjected.verdict}/${nextEntry.readinessAtProjected.minPercent}%/${nextEntry.readinessAtProjected.limitingMuscle}` : null,
+        nextAtProjectedMuscles: nextEntry ? nextEntry.readinessAtProjected.muscles.map((m) => `${m.muscle}:${m.recoveredPercent}%`).join(' ') : null,
+        answerLine: recoveryAnswerLine(recoveryCounts(map)),
+      });
+    }
+    out[label] = rows;
+  }
+
+  // the swap that actually fires: out-of-order training, Thursday 12:00
+  {
+    const plan = ul;
+    const nowMs = evalWeek + 3 * D + 12 * H;
+    const sessionsDone = [
+      session('p1', evalWeek - 3 * D + 19 * H, plan.spec.LB), // previous Fri
+      session('x1', evalWeek + 19 * H, plan.spec.UA), // Mon UA
+      session('x2', evalWeek + 2 * D + 19 * H, plan.spec.LB), // Wed LB (out of order)
+    ];
+    const stateBy = { UA: SESSION_STATE.COMPLETED, LB: SESSION_STATE.COMPLETED };
+    const map = mapAt(sessionsDone, nowMs);
+    const sessions = plan.order.map((rid, i) => ({ routineId: rid, name: plan.names[rid], order: i + 1, state: stateBy[rid] ?? SESSION_STATE.OUTSTANDING }));
+    const rec = recommendNextWorkout({
+      sessions, plannedSetsByRoutine: plan.planned, recoveryMap: map, projectedAtMs: nowMs, nowMs, routineNamesById: plan.names,
+    });
+    const wrapped = { ...rec, programmeNextName: plan.names[rec.programmeNext?.routineId] ?? '', routineNamesById: plan.names };
+    out.swapFires_outOfOrder_ThuNoon = {
+      programmeNext: rec.programmeNext?.routineId, recommended: rec.recommended?.routineId ?? null,
+      recovery_nextSentence: buildNextWorkoutSentence(wrapped, nowMs),
+      home_reasonLine: rec.reason,
+      stillToDo: buildStillToDoRows(wrapped, nowMs).map((r) => r.text),
+    };
+  }
+  fs.writeFileSync(`${OUT}/p2d-steady-state.json`, JSON.stringify(out, null, 1));
+  expect(out.UL4.length).toBe(7);
+});
+
+test('probe2c: limiting muscle by percent vs the muscle that is ready last', () => {
+  const nowMs = MON9;
+  // calves trained 4 h ago (6 sets, T 36 h); quads trained 30 h ago (12 sets, T ~102 h)
+  const calves = session('calves', nowMs - 4 * H, [['calf', 6]]);
+  const quads = session('quads', nowMs - 30 * H, [['squat', 12]]);
+  const map = mapAt([quads, calves], nowMs);
+  const planned = { quads: 6, calves: 4 };
+  const r = sessionReadiness(planned, map);
+  const detail = {};
+  for (const m of ['quads', 'calves', 'glutes', 'adductors']) {
+    detail[m] = map[m] ? { pct: map[m].recoveredPercent, status: map[m].status, readyInH: map[m].readyAtMs ? r1((map[m].readyAtMs - nowMs) / H) : null } : null;
+  }
+  const res = {
+    verdict: r.verdict, minPercent: r.minPercent, limitingMuscle: r.limitingMuscle,
+    limitingReadyInH: r1((r.limitingReadyAtMs - nowMs) / H),
+    wordsSessionWouldShow: `${r.limitingMuscle}: ${readyClause(r.limitingReadyAtMs, nowMs)}`,
+    lastMuscleReadyInH: r1((Math.max(...r.muscles.map((m) => map[m.muscle].readyAtMs)) - nowMs) / H),
+    lastMuscleReadyName: r.muscles.map((m) => m.muscle).sort((a, b) => map[b].readyAtMs - map[a].readyAtMs)[0],
+    detail,
+  };
+  fs.writeFileSync(`${OUT}/p2c-limiting.json`, JSON.stringify(res, null, 1));
+  expect(res.limitingMuscle).toBeTruthy();
+});

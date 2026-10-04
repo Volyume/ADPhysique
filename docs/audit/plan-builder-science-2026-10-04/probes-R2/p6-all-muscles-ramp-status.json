@@ -1,0 +1,915 @@
+{
+ "d4_general": {
+  "sessions": [
+   "Upper A",
+   "Lower A",
+   "Upper B",
+   "Lower B"
+  ],
+  "perWeek": [
+   {
+    "week": 1,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 8,
+      "minimum": 5
+     },
+     "research": {
+      "optimal": 8,
+      "minimum": 3,
+      "below": 2
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   },
+   {
+    "week": 2,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 12,
+      "minimum": 1
+     },
+     "research": {
+      "optimal": 7,
+      "near_mrv": 3,
+      "minimum": 2,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [
+     "chest:12",
+     "triceps:12",
+     "front_delts:6",
+     "back:17",
+     "biceps:14",
+     "side_delts:10",
+     "rear_delts:13",
+     "quads:13",
+     "glutes:15",
+     "hamstrings:16",
+     "calves:9",
+     "abs:10"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "back:17",
+     "glutes:15",
+     "hamstrings:16"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 3,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 12,
+      "minimum": 1
+     },
+     "research": {
+      "near_mrv": 7,
+      "optimal": 4,
+      "below": 1,
+      "minimum": 1
+     }
+    },
+    "near_or_over_plan": [
+     "chest:15",
+     "triceps:15",
+     "front_delts:8",
+     "back:20",
+     "biceps:17",
+     "side_delts:12",
+     "rear_delts:16",
+     "quads:16",
+     "glutes:20",
+     "hamstrings:20",
+     "calves:10",
+     "abs:16"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "chest:15",
+     "triceps:15",
+     "back:20",
+     "biceps:17",
+     "quads:16",
+     "glutes:20",
+     "hamstrings:20"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 4,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 11,
+      "over_mrv": 2
+     },
+     "research": {
+      "near_mrv": 8,
+      "optimal": 2,
+      "minimum": 1,
+      "over_mrv": 2
+     }
+    },
+    "near_or_over_plan": [
+     "chest:18",
+     "triceps:18",
+     "front_delts:9",
+     "back:23",
+     "biceps:20",
+     "side_delts:14",
+     "rear_delts:18",
+     "traps:4",
+     "quads:19",
+     "calves:12",
+     "abs:20",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_plan": [
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "near_or_over_research": [
+     "chest:18",
+     "triceps:18",
+     "front_delts:9",
+     "back:23",
+     "biceps:20",
+     "rear_delts:18",
+     "quads:19",
+     "abs:20",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_research": [
+     "glutes:25",
+     "hamstrings:25"
+    ]
+   },
+   {
+    "week": 5,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 11,
+      "over_mrv": 2
+     },
+     "research": {
+      "near_mrv": 8,
+      "optimal": 2,
+      "minimum": 1,
+      "over_mrv": 2
+     }
+    },
+    "near_or_over_plan": [
+     "chest:21",
+     "triceps:21",
+     "front_delts:11",
+     "back:24",
+     "biceps:22",
+     "side_delts:16",
+     "rear_delts:20",
+     "traps:4",
+     "quads:20",
+     "calves:12",
+     "abs:24",
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "over_plan": [
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "near_or_over_research": [
+     "chest:21",
+     "triceps:21",
+     "front_delts:11",
+     "back:24",
+     "biceps:22",
+     "rear_delts:20",
+     "quads:20",
+     "abs:24",
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "over_research": [
+     "glutes:29",
+     "hamstrings:29"
+    ]
+   },
+   {
+    "week": 6,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 8,
+      "minimum": 5
+     },
+     "research": {
+      "optimal": 8,
+      "minimum": 3,
+      "below": 2
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   }
+  ]
+ },
+ "d3_general": {
+  "sessions": [
+   "Full Body A",
+   "Full Body B",
+   "Full Body C"
+  ],
+  "perWeek": [
+   {
+    "week": 1,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 5,
+      "minimum": 8
+     },
+     "research": {
+      "optimal": 5,
+      "minimum": 5,
+      "below": 3
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   },
+   {
+    "week": 2,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 12,
+      "minimum": 1
+     },
+     "research": {
+      "near_mrv": 1,
+      "optimal": 6,
+      "minimum": 5,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [
+     "back:17",
+     "biceps:10",
+     "quads:10",
+     "glutes:14",
+     "hamstrings:14",
+     "calves:8",
+     "chest:10",
+     "triceps:8",
+     "front_delts:4",
+     "rear_delts:13",
+     "side_delts:10",
+     "abs:5"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "back:17"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 3,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 12,
+      "minimum": 1
+     },
+     "research": {
+      "near_mrv": 3,
+      "optimal": 8,
+      "minimum": 1,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [
+     "back:20",
+     "biceps:12",
+     "quads:12",
+     "glutes:18",
+     "hamstrings:18",
+     "calves:8",
+     "chest:13",
+     "triceps:10",
+     "front_delts:5",
+     "rear_delts:16",
+     "side_delts:12",
+     "abs:8"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "back:20",
+     "glutes:18",
+     "hamstrings:18"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 4,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 13
+     },
+     "research": {
+      "near_mrv": 4,
+      "optimal": 6,
+      "over_mrv": 1,
+      "minimum": 2
+     }
+    },
+    "near_or_over_plan": [
+     "back:23",
+     "biceps:14",
+     "quads:14",
+     "glutes:22",
+     "hamstrings:22",
+     "calves:10",
+     "chest:15",
+     "triceps:12",
+     "front_delts:6",
+     "rear_delts:18",
+     "side_delts:14",
+     "traps:4",
+     "abs:10"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "back:23",
+     "glutes:22",
+     "chest:15",
+     "rear_delts:18",
+     "hamstrings:22"
+    ],
+    "over_research": [
+     "hamstrings:22"
+    ]
+   },
+   {
+    "week": 5,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 11,
+      "over_mrv": 2
+     },
+     "research": {
+      "near_mrv": 4,
+      "optimal": 5,
+      "over_mrv": 2,
+      "minimum": 2
+     }
+    },
+    "near_or_over_plan": [
+     "back:24",
+     "biceps:15",
+     "quads:14",
+     "calves:10",
+     "chest:18",
+     "triceps:14",
+     "front_delts:7",
+     "rear_delts:20",
+     "side_delts:16",
+     "traps:4",
+     "abs:12",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_plan": [
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "near_or_over_research": [
+     "back:24",
+     "biceps:15",
+     "chest:18",
+     "rear_delts:20",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_research": [
+     "glutes:25",
+     "hamstrings:25"
+    ]
+   },
+   {
+    "week": 6,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 5,
+      "minimum": 8
+     },
+     "research": {
+      "optimal": 5,
+      "minimum": 5,
+      "below": 3
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   }
+  ]
+ },
+ "d5_general": {
+  "sessions": [
+   "Upper A",
+   "Lower A",
+   "Upper B",
+   "Lower B",
+   "Upper C"
+  ],
+  "perWeek": [
+   {
+    "week": 1,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 7,
+      "minimum": 6
+     },
+     "research": {
+      "optimal": 7,
+      "minimum": 5,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   },
+   {
+    "week": 2,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 13
+     },
+     "research": {
+      "near_mrv": 6,
+      "optimal": 6,
+      "minimum": 1
+     }
+    },
+    "near_or_over_plan": [
+     "chest:18",
+     "triceps:18",
+     "front_delts:8",
+     "back:17",
+     "biceps:14",
+     "side_delts:12",
+     "rear_delts:12",
+     "traps:15",
+     "quads:13",
+     "hamstrings:16",
+     "glutes:15",
+     "calves:9",
+     "abs:10"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "chest:18",
+     "triceps:18",
+     "back:17",
+     "traps:15",
+     "hamstrings:16",
+     "glutes:15"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 3,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 13
+     },
+     "research": {
+      "over_mrv": 2,
+      "near_mrv": 7,
+      "optimal": 3,
+      "minimum": 1
+     }
+    },
+    "near_or_over_plan": [
+     "chest:23",
+     "triceps:23",
+     "front_delts:10",
+     "back:18",
+     "biceps:16",
+     "side_delts:15",
+     "rear_delts:14",
+     "traps:20",
+     "quads:16",
+     "hamstrings:20",
+     "glutes:20",
+     "calves:10",
+     "abs:16"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "front_delts:10",
+     "back:18",
+     "biceps:16",
+     "traps:20",
+     "quads:16",
+     "hamstrings:20",
+     "glutes:20",
+     "chest:23",
+     "triceps:23"
+    ],
+    "over_research": [
+     "chest:23",
+     "triceps:23"
+    ]
+   },
+   {
+    "week": 4,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "over_mrv": 4,
+      "near_mrv": 9
+     },
+     "research": {
+      "over_mrv": 5,
+      "near_mrv": 6,
+      "optimal": 2
+     }
+    },
+    "near_or_over_plan": [
+     "front_delts:12",
+     "back:22",
+     "biceps:20",
+     "side_delts:15",
+     "rear_delts:17",
+     "traps:25",
+     "quads:19",
+     "calves:12",
+     "abs:20",
+     "chest:27",
+     "triceps:27",
+     "hamstrings:25",
+     "glutes:25"
+    ],
+    "over_plan": [
+     "chest:27",
+     "triceps:27",
+     "hamstrings:25",
+     "glutes:25"
+    ],
+    "near_or_over_research": [
+     "front_delts:12",
+     "back:22",
+     "biceps:20",
+     "rear_delts:17",
+     "quads:19",
+     "abs:20",
+     "chest:27",
+     "triceps:27",
+     "traps:25",
+     "hamstrings:25",
+     "glutes:25"
+    ],
+    "over_research": [
+     "chest:27",
+     "triceps:27",
+     "traps:25",
+     "hamstrings:25",
+     "glutes:25"
+    ]
+   },
+   {
+    "week": 5,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "over_mrv": 5,
+      "near_mrv": 8
+     },
+     "research": {
+      "over_mrv": 5,
+      "near_mrv": 7,
+      "optimal": 1
+     }
+    },
+    "near_or_over_plan": [
+     "front_delts:14",
+     "back:23",
+     "biceps:22",
+     "side_delts:18",
+     "rear_delts:19",
+     "quads:20",
+     "calves:12",
+     "abs:24",
+     "chest:32",
+     "triceps:32",
+     "traps:30",
+     "hamstrings:29",
+     "glutes:29"
+    ],
+    "over_plan": [
+     "chest:32",
+     "triceps:32",
+     "traps:30",
+     "hamstrings:29",
+     "glutes:29"
+    ],
+    "near_or_over_research": [
+     "front_delts:14",
+     "back:23",
+     "biceps:22",
+     "side_delts:18",
+     "rear_delts:19",
+     "quads:20",
+     "abs:24",
+     "chest:32",
+     "triceps:32",
+     "traps:30",
+     "hamstrings:29",
+     "glutes:29"
+    ],
+    "over_research": [
+     "chest:32",
+     "triceps:32",
+     "traps:30",
+     "hamstrings:29",
+     "glutes:29"
+    ]
+   },
+   {
+    "week": 6,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 7,
+      "minimum": 6
+     },
+     "research": {
+      "optimal": 7,
+      "minimum": 5,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   }
+  ]
+ },
+ "d6_general": {
+  "sessions": [
+   "Push A",
+   "Pull A",
+   "Legs A",
+   "Push B",
+   "Pull B",
+   "Legs B"
+  ],
+  "perWeek": [
+   {
+    "week": 1,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 9,
+      "minimum": 4
+     },
+     "research": {
+      "optimal": 9,
+      "minimum": 3,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   },
+   {
+    "week": 2,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 13
+     },
+     "research": {
+      "optimal": 8,
+      "minimum": 2,
+      "near_mrv": 3
+     }
+    },
+    "near_or_over_plan": [
+     "chest:12",
+     "triceps:12",
+     "front_delts:6",
+     "side_delts:10",
+     "back:17",
+     "biceps:14",
+     "rear_delts:13",
+     "traps:13",
+     "quads:13",
+     "glutes:15",
+     "hamstrings:16",
+     "calves:9",
+     "abs:10"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "back:17",
+     "glutes:15",
+     "hamstrings:16"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 3,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 13
+     },
+     "research": {
+      "near_mrv": 8,
+      "optimal": 4,
+      "minimum": 1
+     }
+    },
+    "near_or_over_plan": [
+     "chest:15",
+     "triceps:15",
+     "front_delts:8",
+     "side_delts:12",
+     "back:20",
+     "biceps:17",
+     "rear_delts:16",
+     "traps:17",
+     "quads:16",
+     "glutes:20",
+     "hamstrings:20",
+     "calves:10",
+     "abs:16"
+    ],
+    "over_plan": [],
+    "near_or_over_research": [
+     "chest:15",
+     "triceps:15",
+     "back:20",
+     "biceps:17",
+     "traps:17",
+     "quads:16",
+     "glutes:20",
+     "hamstrings:20"
+    ],
+    "over_research": []
+   },
+   {
+    "week": 4,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 11,
+      "over_mrv": 2
+     },
+     "research": {
+      "near_mrv": 9,
+      "optimal": 2,
+      "over_mrv": 2
+     }
+    },
+    "near_or_over_plan": [
+     "chest:18",
+     "triceps:18",
+     "front_delts:9",
+     "side_delts:14",
+     "back:23",
+     "biceps:20",
+     "rear_delts:18",
+     "traps:22",
+     "quads:19",
+     "calves:12",
+     "abs:20",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_plan": [
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "near_or_over_research": [
+     "chest:18",
+     "triceps:18",
+     "front_delts:9",
+     "back:23",
+     "biceps:20",
+     "rear_delts:18",
+     "traps:22",
+     "quads:19",
+     "abs:20",
+     "glutes:25",
+     "hamstrings:25"
+    ],
+    "over_research": [
+     "glutes:25",
+     "hamstrings:25"
+    ]
+   },
+   {
+    "week": 5,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "near_mrv": 11,
+      "over_mrv": 2
+     },
+     "research": {
+      "near_mrv": 8,
+      "optimal": 2,
+      "over_mrv": 3
+     }
+    },
+    "near_or_over_plan": [
+     "chest:21",
+     "triceps:21",
+     "front_delts:11",
+     "side_delts:16",
+     "back:24",
+     "biceps:22",
+     "rear_delts:20",
+     "traps:26",
+     "quads:20",
+     "calves:12",
+     "abs:24",
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "over_plan": [
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "near_or_over_research": [
+     "chest:21",
+     "triceps:21",
+     "front_delts:11",
+     "back:24",
+     "biceps:22",
+     "rear_delts:20",
+     "quads:20",
+     "abs:24",
+     "traps:26",
+     "glutes:29",
+     "hamstrings:29"
+    ],
+    "over_research": [
+     "traps:26",
+     "glutes:29",
+     "hamstrings:29"
+    ]
+   },
+   {
+    "week": 6,
+    "musclesWithCredit": 13,
+    "counts": {
+     "plan": {
+      "optimal": 9,
+      "minimum": 4
+     },
+     "research": {
+      "optimal": 9,
+      "minimum": 3,
+      "below": 1
+     }
+    },
+    "near_or_over_plan": [],
+    "over_plan": [],
+    "near_or_over_research": [],
+    "over_research": []
+   }
+  ]
+ }
+}

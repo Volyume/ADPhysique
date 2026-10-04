@@ -1,0 +1,158 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { generatePlan } from '../planEngine';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
+import { VOLUME_LANDMARKS, allocateExerciseVolume } from '../algorithms';
+import { computeWeeklySessionAllocation } from '../coachApply';
+import { buildMuscleRecoveryMap } from '../recovery/muscleRecoveryModel';
+import { sessionReadiness } from '../recovery/sessionReadiness';
+import { TYPICAL_WEEK_GAP_HOURS } from '../recovery/constants';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const rows = CORPUS.map(corpusEntryToSeedRow).map((r) => ({ ...r, id: r.name }));
+rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+const byName = new Map(rows.map((r) => [r.name, r]));
+const exerciseById = Object.fromEntries(rows.map((r) => [r.id, r]));
+const canonicalNames = new Set(rows.filter((r) => !r.isCustom).map((r) => r.name));
+const run = (o) => generatePlan({
+  experience: 'intermediate', sessionLengthMinutes: 60, equipment: 'full_gym', goal: 'general', phase: 'lean_gain', nutritionPhase: 'lean_gain',
+  weakPoints: [], recoveryRating: 'average', age: null, exerciseLibrary: rows, canonicalNames, daysPerWeek: 4, ...o,
+});
+const H = 3600 * 1000;
+const D = 24 * H;
+const RIR_LADDER = [3, 2, 1, 0, 0, 4];
+
+function weeksTemplate() {
+  const weeks = [];
+  for (let w = 1; w <= 6; w += 1) weeks.push({ rows: {} });
+  for (const [m, lm] of Object.entries(VOLUME_LANDMARKS)) {
+    for (let i = 0; i < 5; i += 1) weeks[i].rows[m] = Math.round(lm.mev + (lm.mav - lm.mev) * (i / 4));
+    weeks[5].rows[m] = lm.mev;
+  }
+  return weeks;
+}
+
+// session start offsets (hours from Monday 00:00) for a given layout of n sessions
+function layoutStarts(n, kind) {
+  const base = 18; // Monday 18:00 start of the first session
+  if (kind === 'typical') {
+    const gaps = TYPICAL_WEEK_GAP_HOURS[n];
+    const out = [base];
+    for (let i = 0; i < n - 1; i += 1) out.push(out[i] + gaps[i]);
+    return out;
+  }
+  if (kind === 'even') return Array.from({ length: n }, (_, i) => base + Math.round((168 / n) * i));
+  if (kind === 'consecutive') return Array.from({ length: n }, (_, i) => base + 24 * i); // back-to-back days, then the rest of the week off
+  throw new Error(kind);
+}
+
+function sessionDose(plan, wi, weeks) {
+  const weekMap = weeks[wi];
+  const baseMap = weeks[0];
+  return plan.workouts.map((w) => {
+    const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+    const alloc = computeWeeklySessionAllocation(todays, weekMap.rows, baseMap.rows);
+    return { name: w.name, ex: w.exercises.map((e) => ({ name: e.exerciseName, sets: alloc[`${w.name}|${e.exerciseName}`] })) };
+  });
+}
+
+function primarySets(dose) {
+  const out = {};
+  for (const e of dose.ex) {
+    for (const a of allocateExerciseVolume(byName.get(e.name))) {
+      if (a.role !== 'primary') continue;
+      out[a.muscle] = (out[a.muscle] || 0) + e.sets * a.sets;
+    }
+  }
+  return out;
+}
+
+function mkSession(id, startMs, dose, rir) {
+  const sets = [];
+  for (const e of dose.ex) for (let i = 0; i < e.sets; i += 1) sets.push({ exerciseId: e.name, setType: 'straight', weight: 20, actualReps: 10 });
+  return {
+    id, startedAt: startMs, endedAt: startMs + H, durationMinutes: 60, sets, weekRirTarget: rir, isFirstWeek: false,
+    ratings: { fatigue: null, joint: null, sorenessNext: null },
+  };
+}
+
+test('probe4: readiness at the start of every session of a real plan, steady state, three spacings', () => {
+  const weeks = weeksTemplate();
+  const MON0 = new Date(2026, 9, 5, 0, 0, 0).getTime(); // Monday
+  const res = {};
+  for (const days of [3, 4, 5, 6]) {
+    const plan = run({ daysPerWeek: days });
+    res[`d${days}`] = { sessionNames: plan.workouts.map((w) => w.name), byWeek: {} };
+    for (const wi of [0, 2, 4]) {
+      const rir = RIR_LADDER[wi];
+      const dose = sessionDose(plan, wi, weeks);
+      const n = dose.length;
+      const perLayout = {};
+      for (const kind of ['typical', 'even', 'consecutive']) {
+        const starts = layoutStarts(n, kind);
+        // history: three earlier weeks of the same week-type (steady state), then the evaluation week
+        const sessions = [];
+        const timeline = [];
+        for (let w = -3; w <= 0; w += 1) {
+          for (let i = 0; i < n; i += 1) {
+            const startMs = MON0 + w * 7 * D + starts[i] * H;
+            timeline.push({ w, i, startMs });
+            sessions.push({ w, i, session: mkSession(`s${w}_${i}`, startMs, dose[i], rir) });
+          }
+        }
+        const evalRows = [];
+        for (const t of timeline.filter((x) => x.w === 0)) {
+          const prior = sessions.filter((s) => s.session.endedAt <= t.startMs).map((s) => s.session);
+          const map = buildMuscleRecoveryMap({ sessions: prior, exerciseById, recoveryRating: 'average', nowMs: t.startMs });
+          const ready = sessionReadiness(primarySets(dose[t.i]), map);
+          evalRows.push({
+            session: dose[t.i].name,
+            verdict: ready.verdict, minPct: ready.minPercent, limiting: ready.limitingMuscle,
+            counted: ready.muscles.map((m) => `${m.muscle}:${m.recoveredPercent}`).join(' '),
+          });
+        }
+        perLayout[kind] = {
+          starts: starts.map((h) => `${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][Math.floor(h / 24)]} ${String(h % 24).padStart(2, '0')}:00`),
+          ready: evalRows.filter((r) => r.verdict === 'ready').length, total: evalRows.length, rows: evalRows,
+        };
+      }
+      res[`d${days}`].byWeek[`wk${wi + 1}_RIR${rir}`] = perLayout;
+    }
+  }
+  fs.writeFileSync(`${OUT}/p4-session-start-readiness.json`, JSON.stringify(res, null, 1));
+  expect(Object.keys(res).length).toBe(4);
+});
+
+test('probe4b: separate the dose (ramp) from the intensity (RIR), typical layout', () => {
+  const weeks = weeksTemplate();
+  const MON0 = new Date(2026, 9, 5, 0, 0, 0).getTime();
+  const res = {};
+  for (const days of [3, 4, 5, 6]) {
+    const plan = run({ daysPerWeek: days });
+    res[`d${days}`] = {};
+    for (const [doseWeek, rir] of [[0, 3], [0, 0], [4, 3], [4, 0]]) {
+      const dose = sessionDose(plan, doseWeek, weeks);
+      const n = dose.length;
+      const starts = layoutStarts(n, 'typical');
+      const sessions = [];
+      const timeline = [];
+      for (let w = -3; w <= 0; w += 1) {
+        for (let i = 0; i < n; i += 1) {
+          const startMs = MON0 + w * 7 * D + starts[i] * H;
+          timeline.push({ w, i, startMs });
+          sessions.push(mkSession(`s${w}_${i}`, startMs, dose[i], rir));
+        }
+      }
+      const rowsOut = [];
+      for (const t of timeline.filter((x) => x.w === 0)) {
+        const prior = sessions.filter((s) => s.endedAt <= t.startMs);
+        const map = buildMuscleRecoveryMap({ sessions: prior, exerciseById, recoveryRating: 'average', nowMs: t.startMs });
+        const ready = sessionReadiness(primarySets(dose[t.i]), map);
+        rowsOut.push(`${dose[t.i].name}:${ready.verdict}:${ready.minPercent}%:${ready.limitingMuscle}`);
+      }
+      res[`d${days}`][`doseWk${doseWeek + 1}_RIR${rir}`] = { ready: rowsOut.filter((r) => r.includes(':ready:')).length, total: n, rows: rowsOut };
+    }
+  }
+  fs.writeFileSync(`${OUT}/p4b-dose-vs-intensity.json`, JSON.stringify(res, null, 1));
+  expect(Object.keys(res).length).toBe(4);
+});

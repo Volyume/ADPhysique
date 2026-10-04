@@ -1,0 +1,110 @@
+{
+ "A_27_direct": {
+  "biceps": {
+   "pct": 31,
+   "status": "recovering",
+   "lastSessionSets": 9,
+   "readyInH": 38.9,
+   "contributing": [
+    {
+     "sets": 9,
+     "hoursT": 67.6
+    },
+    {
+     "sets": 9,
+     "hoursT": 67.6
+    },
+    {
+     "sets": 9,
+     "hoursT": 67.6
+    }
+   ],
+   "rowMeta": "Ready by Sunday · Trained in the last 24 hours",
+   "a11y": "Biceps, estimated 31 percent recovered, ready by Sunday, Trained in the last 24 hours",
+   "detailLines": [
+    {
+     "label": "Muscle",
+     "value": "Biceps, front of the upper arm"
+    },
+    {
+     "label": "Thu 8 Oct",
+     "value": "9 sets as the main muscle worked"
+    },
+    {
+     "label": "Wed 7 Oct",
+     "value": "9 sets as the main muscle worked"
+    },
+    {
+     "label": "Mon 5 Oct",
+     "value": "9 sets as the main muscle worked"
+    },
+    {
+     "label": "Based on",
+     "value": "Time and sets"
+    }
+   ],
+   "readyClause": "ready by Sunday"
+  },
+  "back": null,
+  "pillar": {
+   "state": "1 muscle still recovering",
+   "evidence": "Biceps will be the last to recover, estimated ready by Sunday."
+  },
+  "notes": {
+   "HALF_CREDIT_NOTE": "A set counts once for the muscle it works most and half for each muscle that helps.",
+   "RECOVERY_ANSWER_NOTE": "Your ‘How’s your recovery?’ answer sets the first estimate; the answer can be changed under Adjust training."
+  }
+ },
+ "B_18_direct_plus_9_indirect": {
+  "biceps": {
+   "pct": 31,
+   "status": "recovering",
+   "lastSessionSets": 12,
+   "readyInH": 51.8,
+   "contributing": [
+    {
+     "sets": 15,
+     "hoursT": 82.8
+    },
+    {
+     "sets": 12,
+     "hoursT": 78.1
+    }
+   ],
+   "rowMeta": "Ready by Sunday · Trained in the last 24 hours",
+   "a11y": "Biceps, estimated 31 percent recovered, ready by Sunday, Trained in the last 24 hours",
+   "detailLines": [
+    {
+     "label": "Muscle",
+     "value": "Biceps, front of the upper arm"
+    },
+    {
+     "label": "Thu 8 Oct",
+     "value": "9 sets as the main muscle worked, 6 sets as a helper"
+    },
+    {
+     "label": "Mon 5 Oct",
+     "value": "9 sets as the main muscle worked, 12 sets as a helper"
+    },
+    {
+     "label": "Based on",
+     "value": "Time and sets"
+    }
+   ],
+   "readyClause": "ready by Sunday"
+  },
+  "back": {
+   "pct": 39,
+   "status": "recovering",
+   "sets": 6
+  },
+  "pillar": {
+   "state": "2 muscles still recovering",
+   "evidence": "Biceps will be the last to recover, estimated ready by Sunday."
+  },
+  "notes": {
+   "HALF_CREDIT_NOTE": "A set counts once for the muscle it works most and half for each muscle that helps.",
+   "RECOVERY_ANSWER_NOTE": "Your ‘How’s your recovery?’ answer sets the first estimate; the answer can be changed under Adjust training."
+  }
+ }
+}

@@ -1,0 +1,133 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { generatePlan } from '../planEngine';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
+import {
+  VOLUME_LANDMARKS, getVolumeStatus, allocateExerciseVolume, shouldDeload, buildLast4WeekDeloadBuckets, runAdaptiveEngine,
+} from '../algorithms';
+import { plannedWeeklyVolumeByMuscle, buildPlanLandmarks } from '../planVolumeTargets';
+import { mergeLandmarkPrecedence } from '../effectiveLandmarks';
+import { volumeBandLabel, volumeRangeText } from '../volumeBandLabels';
+import { getVolumeInsight, getVolumeWhy } from '../volumeInsightCopy';
+import { buildVolumeStrip, STRIP_LEGEND_LABEL } from '../progress/volumeStrip';
+import { planTrainedMuscles, buildDataset, buildWindowView } from '../volumeLogged';
+import { computeVolumeApply, computeWeeklySessionAllocation } from '../coachApply';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const rows = CORPUS.map(corpusEntryToSeedRow).map((r) => ({ ...r, id: r.name }));
+rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+const byName = new Map(rows.map((r) => [r.name, r]));
+const exerciseMap = Object.fromEntries(rows.map((r) => [r.id, r]));
+const canonicalNames = new Set(rows.filter((r) => !r.isCustom).map((r) => r.name));
+const run = (o) => generatePlan({
+  experience: 'intermediate', sessionLengthMinutes: 60, equipment: 'full_gym', goal: 'general', phase: 'lean_gain', nutritionPhase: 'lean_gain',
+  weakPoints: [], recoveryRating: 'average', age: null, exerciseLibrary: rows, canonicalNames, daysPerWeek: 4, ...o,
+});
+const H = 3600 * 1000;
+const D = 24 * H;
+// Friday 9 October 2026 12:00 local (Monday week start 5 October)
+const NOW = new Date(2026, 9, 9, 12, 0, 0).getTime();
+const MON = new Date(2026, 9, 5, 0, 0, 0).getTime();
+
+function mkSets(spec) {
+  const sets = [];
+  let k = 0;
+  for (const [name, n, day] of spec) {
+    for (let i = 0; i < n; i += 1) {
+      sets.push({ id: `s${k}`, workoutId: `w${day}`, exerciseId: name, setType: 'straight', weight: 20, actualReps: 10, createdAt: MON + day * D + 18 * H + (k % 60) * 60000, setNumber: i + 1 });
+      k += 1;
+    }
+  }
+  return sets;
+}
+const resolvedFor = (cfg) => {
+  const plan = run(cfg);
+  const planned = plannedWeeklyVolumeByMuscle(plan.workouts.map((w) => ({ exercises: w.exercises.map((e) => ({ recommendedSets: e.sets, exercise: byName.get(e.exerciseName) })) })));
+  const profile = { experience: 'intermediate', recoveryRating: 'average', trainingPhase: cfg.phase };
+  const planLayer = buildPlanLandmarks({ plannedByMuscle: planned, userProfile: profile, nowMs: NOW });
+  return { plan, planned, planLayer, resolved: mergeLandmarkPrecedence({ plan: planLayer }) };
+};
+
+test('probe3c: every judging surface, 27 biceps sets, focus and non-focus plan', () => {
+  const out = {};
+  const SCEN = {
+    A_27_direct: [['Barbell Curl', 9, 0], ['Barbell Curl', 9, 2], ['Barbell Curl', 9, 3]],
+    B_18_direct_plus_9_indirect: [['Barbell Curl', 9, 0], ['Barbell Curl', 9, 3], ['Barbell Row (Bent Over)', 12, 0], ['Lat Pulldown (Close Grip)', 6, 3]],
+  };
+  for (const [planLabel, cfg] of Object.entries({
+    focusBiceps_weakPointPhase: { goal: 'general', phase: 'weak_point', weakPoints: ['Biceps'] },
+    notFocus_general: { goal: 'general', phase: 'lean_gain', weakPoints: [] },
+  })) {
+    const { resolved, planLayer, planned } = resolvedFor(cfg);
+    const table = resolved.table;
+    const planTrained = planTrainedMuscles(planLayer);
+    out[planLabel] = { bicepsBand: table.biceps, bicepsSource: resolved.source.biceps, plannedStaticBiceps: planned.biceps, planTrainedHasBiceps: planTrained.has('biceps'), scenarios: {} };
+    for (const [sLabel, spec] of Object.entries(SCEN)) {
+      const sets = mkSets(spec);
+      const ds = buildDataset(sets, exerciseMap, NOW);
+      const view = buildWindowView(ds, 1);
+      const credit = view.raw.biceps.workingSets;
+      const rounded = Math.round(view.perWeek.biceps.workingSets);
+      const { status } = getVolumeStatus(rounded, 'biceps', table);
+      const strip = buildVolumeStrip({ allSets: sets, exerciseMap, nowMs: NOW, landmarks: table, planTrained, recoveryWeek: false });
+      const band = table.biceps;
+      const rangeWords = volumeRangeText(band.mev, band.mrv);
+      out[planLabel].scenarios[sLabel] = {
+        creditBiceps: credit, roundedShown: rounded, status, band: volumeBandLabel(status),
+        statusAgainst: {
+          research: getVolumeStatus(rounded, 'biceps', null).status,
+          resolvedPlanTable: status,
+        },
+        heatmapRow_REPLICA: `27-sets figure: "${rounded} sets so far this week, range ${rangeWords}"`,
+        heatmapGroupHeader_REPLICA: `${volumeBandLabel(status)} · 1`,
+        workoutSummary_insight: getVolumeInsight('biceps', credit, status, table),
+        workoutSummary_why: getVolumeWhy('biceps', credit, status, table, resolved.source.biceps),
+        stripLine: strip.line, stripSegmentBiceps: strip.segments.find((s) => s.muscle === 'biceps'), stripLegend: STRIP_LEGEND_LABEL,
+        coachReview_text_REPLICA: status === 'over_mrv' ? 'Biceps - more sets than you can comfortably recover from' : null,
+        coachReview_subtext_REPLICA: status === 'over_mrv' ? 'That is past the upper limit, the most sets a muscle can usually recover from in a week.' : null,
+      };
+    }
+  }
+
+  // deload over-MRV pass: 2 weeks at 27 credit (raw research MRV 22)
+  const twoWeeks = [];
+  const WEEK = 7 * D;
+  for (const o of [2, 3]) {
+    const wk = 3 - o;
+    const end = NOW - wk * WEEK;
+    const start = end - WEEK;
+    for (const day of [1, 3, 4]) {
+      for (let i = 0; i < 9; i += 1) twoWeeks.push({ id: `d${o}${day}${i}`, workoutId: `w${o}${day}`, exerciseId: 'Barbell Curl', setType: 'straight', weight: 20, actualReps: 10, createdAt: start + day * D + i * 60000 });
+    }
+  }
+  const workouts = [];
+  const buckets = buildLast4WeekDeloadBuckets(twoWeeks, workouts, exerciseMap, { now: NOW });
+  out.deloadPass = { hasOverMRV: buckets.map((b) => b.hasOverMRV), shouldDeload: shouldDeload(buckets), rawResearchMrv: VOLUME_LANDMARKS.biceps.mrv };
+
+  // adaptive engine at the Workout Summary (mev/mrv of the resolved table), no feedback and good feedback
+  const t = resolvedFor({ goal: 'general', phase: 'lean_gain', weakPoints: [] }).resolved.table.biceps;
+  out.adaptiveEngine = {
+    noFeedback: runAdaptiveEngine({ biceps: { soreness: null, performance: null, pump: null, joint: 0, currentSets: 27, mev: t.mev, mav: t.mav, mrv: t.mrv } }).biceps,
+    goodFeedback: runAdaptiveEngine({ biceps: { soreness: 2, performance: 2, pump: 2, joint: 0, currentSets: 27, mev: t.mev, mav: t.mav, mrv: t.mrv } }).biceps,
+  };
+
+  // check-in apply path on the focus plan at week 3 (+3)
+  {
+    const { plan } = resolvedFor({ goal: 'general', phase: 'weak_point', weakPoints: ['Biceps'] });
+    const wkRows = (planned) => Object.entries(VOLUME_LANDMARKS).map(([m, lm]) => ({ muscle: m, planned_sets: planned[m], mev: lm.mev, mav: lm.mav, mrv: lm.mrv }));
+    const w1 = Object.fromEntries(Object.entries(VOLUME_LANDMARKS).map(([m, lm]) => [m, lm.mev]));
+    const w3 = Object.fromEntries(Object.entries(VOLUME_LANDMARKS).map(([m, lm]) => [m, Math.round(lm.mev + (lm.mav - lm.mev) * (2 / 4))]));
+    const changes = computeVolumeApply(wkRows(w3), 3, new Set());
+    const w3c = { ...w3 };
+    for (const c of changes) w3c[c.muscle] = c.plannedSets;
+    let direct = 0;
+    for (const w of plan.workouts) {
+      const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+      const alloc = computeWeeklySessionAllocation(todays, w3c, w1);
+      for (const e of w.exercises) if (byName.get(e.exerciseName)?.primaryMuscle === 'biceps') direct += alloc[`${w.name}|${e.exerciseName}`];
+    }
+    out.checkinPlus3_focusPlan_week3 = { bicepsRowBefore: w3.biceps, bicepsRowAfter: w3c.biceps, servedDirectBiceps: direct, change: changes.find((c) => c.muscle === 'biceps') };
+  }
+  fs.writeFileSync(`${OUT}/p3c-surfaces.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBeGreaterThan(3);
+});

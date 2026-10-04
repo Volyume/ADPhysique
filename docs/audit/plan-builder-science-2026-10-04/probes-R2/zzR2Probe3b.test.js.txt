@@ -1,0 +1,118 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { generatePlan, computeLandmarks } from '../planEngine';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
+import {
+  VOLUME_LANDMARKS, getVolumeStatus, allocateExerciseVolume, calculateWeeklyVolume,
+  shouldDeload, buildLast4WeekDeloadBuckets, runAdaptiveEngine,
+} from '../algorithms';
+import { computeWeeklySessionAllocation } from '../coachApply';
+import { plannedWeeklyVolumeByMuscle, buildPlanLandmarks } from '../planVolumeTargets';
+import { mergeLandmarkPrecedence } from '../effectiveLandmarks';
+import { volumeBandLabel, volumeRangeText, VOLUME_BAND_LABELS } from '../volumeBandLabels';
+import { getVolumeInsight, getVolumeWhy } from '../volumeInsightCopy';
+import { buildVolumeStrip, STRIP_LEGEND_LABEL, STRIP_TOOLTIP } from '../progress/volumeStrip';
+import { planTrainedMuscles } from '../volumeLogged';
+import { divisionPriorityMuscles } from '../division/profile';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const rows = CORPUS.map(corpusEntryToSeedRow);
+rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+const byName = new Map(rows.map((r) => [r.name, r]));
+const canonicalNames = new Set(rows.filter((r) => !r.isCustom).map((r) => r.name));
+
+function run(opts) {
+  return generatePlan({
+    experience: 'intermediate', sessionLengthMinutes: 60, equipment: 'full_gym', goal: 'general',
+    phase: 'lean_gain', nutritionPhase: 'lean_gain', weakPoints: [], recoveryRating: 'average', age: null,
+    exerciseLibrary: rows, canonicalNames, daysPerWeek: 4, ...opts,
+  });
+}
+const H = 3600 * 1000;
+const D = 24 * H;
+
+function templateWeeks() {
+  const weeks = [];
+  for (let w = 1; w <= 6; w += 1) weeks.push({ index: w, rows: {} });
+  for (const [muscle, lm] of Object.entries(VOLUME_LANDMARKS)) {
+    for (let i = 0; i < 5; i += 1) {
+      weeks[i].rows[muscle] = { planned: Math.round(lm.mev + (lm.mav - lm.mev) * (i / 4)), mev: lm.mev, mav: lm.mav, mrv: lm.mrv };
+    }
+    weeks[5].rows[muscle] = { planned: lm.mev, mev: lm.mev, mav: lm.mav, mrv: lm.mrv };
+  }
+  return weeks;
+}
+
+const PLANS = {
+  noFocus_general: { goal: 'general', phase: 'lean_gain', weakPoints: [] },
+  weakPoint_biceps: { goal: 'general', phase: 'weak_point', weakPoints: ['Biceps'] },
+  bodybuilding_division: { goal: 'bodybuilding', phase: 'lean_gain', weakPoints: [] },
+  mensPhysique_division: { goal: 'mens_physique', phase: 'lean_gain', weakPoints: [] },
+};
+
+test('probe3b: the 27 biceps sets, tables, verdicts, served ramp', () => {
+  const res = { plans: {} };
+  const weeks = templateWeeks();
+  const profileFor = (cfg) => ({ experience: 'intermediate', recoveryRating: 'average', trainingPhase: cfg.phase });
+  const bicepsCredit = (name, sets) => {
+    const row = byName.get(name);
+    return allocateExerciseVolume(row).filter((a) => a.muscle === 'biceps').reduce((s, a) => s + a.sets * sets, 0);
+  };
+  for (const [label, cfg] of Object.entries(PLANS)) {
+    const plan = run({
+      goal: cfg.goal, phase: cfg.phase, weakPoints: cfg.weakPoints,
+      nutritionPhase: cfg.phase === 'weak_point' ? 'lean_gain' : 'lean_gain',
+    });
+    const routinesForPlanned = plan.workouts.map((w) => ({
+      exercises: w.exercises.map((e) => ({ recommendedSets: e.sets, exercise: byName.get(e.exerciseName) })),
+    }));
+    const plannedByMuscle = plannedWeeklyVolumeByMuscle(routinesForPlanned);
+    const planLayer = buildPlanLandmarks({ plannedByMuscle, userProfile: profileFor(cfg), nowMs: Date.UTC(2026, 9, 9) });
+    const profileOnly = buildPlanLandmarks({ plannedByMuscle: null, userProfile: profileFor(cfg), nowMs: Date.UTC(2026, 9, 9) });
+    const resolved = mergeLandmarkPrecedence({ manual: null, adapted: null, plan: planLayer });
+    // direct biceps exercises in the plan
+    const bicepsExercises = [];
+    for (const w of plan.workouts) for (const e of w.exercises) {
+      const r = byName.get(e.exerciseName);
+      if (r?.primaryMuscle === 'biceps') bicepsExercises.push({ session: w.name, name: e.exerciseName, sets: e.sets });
+    }
+    // served ramp over 5 weeks, per muscle credit for biceps (direct + 0.5 per secondary set)
+    const served = [];
+    for (let wi = 0; wi < 6; wi += 1) {
+      const weekMap = Object.fromEntries(Object.entries(weeks[wi].rows).map(([m, r]) => [m, r.planned]));
+      const baseMap = Object.fromEntries(Object.entries(weeks[0].rows).map(([m, r]) => [m, r.planned]));
+      let direct = 0;
+      let credit = 0;
+      const perEx = [];
+      for (const w of plan.workouts) {
+        const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+        const alloc = computeWeeklySessionAllocation(todays, weekMap, baseMap);
+        for (const e of w.exercises) {
+          const n = alloc[`${w.name}|${e.exerciseName}`];
+          const bc = bicepsCredit(e.exerciseName, n);
+          credit += bc;
+          if (byName.get(e.exerciseName)?.primaryMuscle === 'biceps') { direct += n; perEx.push(`${w.name}:${e.exerciseName}:${e.sets}->${n}`); }
+        }
+      }
+      served.push({
+        week: wi + 1, plannedTemplateRow: weekMap.biceps, servedDirect: direct, servedCredit: Math.round(credit * 10) / 10, perEx,
+        statusVsResolvedPlanTable: getVolumeStatus(Math.round(credit), 'biceps', resolved.table).status,
+        statusVsResearch: getVolumeStatus(Math.round(credit), 'biceps', VOLUME_LANDMARKS).status,
+        statusVsProfile: getVolumeStatus(Math.round(credit), 'biceps', profileOnly.table).status,
+      });
+    }
+    res.plans[label] = {
+      isDivision: cfg.goal, divisionPriority: divisionPriorityMuscles(cfg.goal), weakPoints: cfg.weakPoints,
+      generatorWeeklySummaryBiceps: plan.weeklyVolumeSummary?.biceps ?? null,
+      plannedStaticBiceps: plannedByMuscle.biceps ?? 0,
+      bicepsExercises,
+      bandResearch: VOLUME_LANDMARKS.biceps,
+      bandProfile: profileOnly.table.biceps, sourceProfile: profileOnly.source.biceps,
+      bandPlanLayer: planLayer.table.biceps, sourcePlanLayer: planLayer.source.biceps,
+      computeLandmarksBiceps: computeLandmarks('intermediate', 'average', cfg.phase === 'weak_point' ? 'lean_gain' : cfg.phase, null).biceps,
+      served,
+    };
+  }
+  fs.writeFileSync(`${OUT}/p3b-biceps-plans.json`, JSON.stringify(res, null, 1));
+  expect(Object.keys(res.plans).length).toBe(4);
+});

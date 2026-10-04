@@ -1,0 +1,185 @@
+{
+ "focusBiceps_weakPointPhase": {
+  "bicepsBand": {
+   "mv": 5,
+   "mev": 6,
+   "mav": 16,
+   "mrv": 24
+  },
+  "bicepsSource": "plan",
+  "plannedStaticBiceps": 16,
+  "planTrainedHasBiceps": true,
+  "scenarios": {
+   "A_27_direct": {
+    "creditBiceps": 27,
+    "roundedShown": 27,
+    "status": "over_mrv",
+    "band": "Too much",
+    "statusAgainst": {
+     "research": "over_mrv",
+     "resolvedPlanTable": "over_mrv"
+    },
+    "heatmapRow_REPLICA": "27-sets figure: \"27 sets so far this week, range 6 to 24\"",
+    "heatmapGroupHeader_REPLICA": "Too much · 1",
+    "workoutSummary_insight": "27 sets · Too much: 6 to 24 sets a week",
+    "workoutSummary_why": "Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth. This target is what your plan programmes for this muscle each week.",
+    "stripLine": "This week so far: 27 sets logged across 1 muscle · 12 under their range",
+    "stripSegmentBiceps": {
+     "muscle": "biceps",
+     "sets": 27,
+     "tone": "over"
+    },
+    "stripLegend": {
+     "under": "Under the range",
+     "in": "Inside the range",
+     "over": "Too much",
+     "neutral": "Trained"
+    },
+    "coachReview_text_REPLICA": "Biceps - more sets than you can comfortably recover from",
+    "coachReview_subtext_REPLICA": "That is past the upper limit, the most sets a muscle can usually recover from in a week."
+   },
+   "B_18_direct_plus_9_indirect": {
+    "creditBiceps": 27,
+    "roundedShown": 27,
+    "status": "over_mrv",
+    "band": "Too much",
+    "statusAgainst": {
+     "research": "over_mrv",
+     "resolvedPlanTable": "over_mrv"
+    },
+    "heatmapRow_REPLICA": "27-sets figure: \"27 sets so far this week, range 6 to 24\"",
+    "heatmapGroupHeader_REPLICA": "Too much · 1",
+    "workoutSummary_insight": "27 sets · Too much: 6 to 24 sets a week",
+    "workoutSummary_why": "Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth. This target is what your plan programmes for this muscle each week.",
+    "stripLine": "This week so far: 36 sets logged across 3 muscles · 10 under their range",
+    "stripSegmentBiceps": {
+     "muscle": "biceps",
+     "sets": 27,
+     "tone": "over"
+    },
+    "stripLegend": {
+     "under": "Under the range",
+     "in": "Inside the range",
+     "over": "Too much",
+     "neutral": "Trained"
+    },
+    "coachReview_text_REPLICA": "Biceps - more sets than you can comfortably recover from",
+    "coachReview_subtext_REPLICA": "That is past the upper limit, the most sets a muscle can usually recover from in a week."
+   }
+  }
+ },
+ "notFocus_general": {
+  "bicepsBand": {
+   "mv": 5,
+   "mev": 6,
+   "mav": 11,
+   "mrv": 24
+  },
+  "bicepsSource": "plan",
+  "plannedStaticBiceps": 11,
+  "planTrainedHasBiceps": true,
+  "scenarios": {
+   "A_27_direct": {
+    "creditBiceps": 27,
+    "roundedShown": 27,
+    "status": "over_mrv",
+    "band": "Too much",
+    "statusAgainst": {
+     "research": "over_mrv",
+     "resolvedPlanTable": "over_mrv"
+    },
+    "heatmapRow_REPLICA": "27-sets figure: \"27 sets so far this week, range 6 to 24\"",
+    "heatmapGroupHeader_REPLICA": "Too much · 1",
+    "workoutSummary_insight": "27 sets · Too much: 6 to 24 sets a week",
+    "workoutSummary_why": "Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth. This target is what your plan programmes for this muscle each week.",
+    "stripLine": "This week so far: 27 sets logged across 1 muscle · 12 under their range",
+    "stripSegmentBiceps": {
+     "muscle": "biceps",
+     "sets": 27,
+     "tone": "over"
+    },
+    "stripLegend": {
+     "under": "Under the range",
+     "in": "Inside the range",
+     "over": "Too much",
+     "neutral": "Trained"
+    },
+    "coachReview_text_REPLICA": "Biceps - more sets than you can comfortably recover from",
+    "coachReview_subtext_REPLICA": "That is past the upper limit, the most sets a muscle can usually recover from in a week."
+   },
+   "B_18_direct_plus_9_indirect": {
+    "creditBiceps": 27,
+    "roundedShown": 27,
+    "status": "over_mrv",
+    "band": "Too much",
+    "statusAgainst": {
+     "research": "over_mrv",
+     "resolvedPlanTable": "over_mrv"
+    },
+    "heatmapRow_REPLICA": "27-sets figure: \"27 sets so far this week, range 6 to 24\"",
+    "heatmapGroupHeader_REPLICA": "Too much · 1",
+    "workoutSummary_insight": "27 sets · Too much: 6 to 24 sets a week",
+    "workoutSummary_why": "Past the most sets this muscle can recover from in a week: more sets now add fatigue, not growth. This target is what your plan programmes for this muscle each week.",
+    "stripLine": "This week so far: 36 sets logged across 3 muscles · 10 under their range",
+    "stripSegmentBiceps": {
+     "muscle": "biceps",
+     "sets": 27,
+     "tone": "over"
+    },
+    "stripLegend": {
+     "under": "Under the range",
+     "in": "Inside the range",
+     "over": "Too much",
+     "neutral": "Trained"
+    },
+    "coachReview_text_REPLICA": "Biceps - more sets than you can comfortably recover from",
+    "coachReview_subtext_REPLICA": "That is past the upper limit, the most sets a muscle can usually recover from in a week."
+   }
+  }
+ },
+ "deloadPass": {
+  "hasOverMRV": [
+   false,
+   false,
+   true,
+   true
+  ],
+  "shouldDeload": {
+   "deload": false,
+   "reasons": [
+    "More sets on a muscle than it can usually recover from, in 2 or more weeks"
+   ]
+  },
+  "rawResearchMrv": 22
+ },
+ "adaptiveEngine": {
+  "noFeedback": {
+   "decision": "hold",
+   "delta": 0,
+   "reasonCode": "insufficient_feedback",
+   "reasonText": "Not enough session feedback to judge. Holding your current sets.",
+   "nextWeekSets": 24,
+   "currentSets": 27
+  },
+  "goodFeedback": {
+   "decision": "add_set",
+   "delta": 1,
+   "reasonCode": "good_recovery_good_performance",
+   "reasonText": "Good recovery and performance. Add 1 set next week.",
+   "nextWeekSets": 24,
+   "currentSets": 27
+  }
+ },
+ "checkinPlus3_focusPlan_week3": {
+  "bicepsRowBefore": 10,
+  "bicepsRowAfter": 13,
+  "servedDirectBiceps": 28,
+  "change": {
+   "muscle": "biceps",
+   "plannedSets": 13,
+   "mev": 6,
+   "mav": 14,
+   "mrv": 22
+  }
+ }
+}

@@ -1,0 +1,178 @@
+{
+ "d3": {
+  "doseWk1_RIR3": {
+   "ready": 3,
+   "total": 3,
+   "rows": [
+    "Full Body A:ready:100%:back",
+    "Full Body B:ready:95%:back",
+    "Full Body C:ready:100%:quads"
+   ]
+  },
+  "doseWk1_RIR0": {
+   "ready": 1,
+   "total": 3,
+   "rows": [
+    "Full Body A:ready:100%:back",
+    "Full Body B:nearly:75%:back",
+    "Full Body C:nearly:84%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR3": {
+   "ready": 1,
+   "total": 3,
+   "rows": [
+    "Full Body A:ready:100%:back",
+    "Full Body B:nearly:75%:back",
+    "Full Body C:not_yet:68%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR0": {
+   "ready": 0,
+   "total": 3,
+   "rows": [
+    "Full Body A:nearly:79%:quads",
+    "Full Body B:not_yet:59%:back",
+    "Full Body C:not_yet:60%:hamstrings"
+   ]
+  }
+ },
+ "d4": {
+  "doseWk1_RIR3": {
+   "ready": 4,
+   "total": 4,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:ready:100%:chest",
+    "Lower B:ready:100%:quads"
+   ]
+  },
+  "doseWk1_RIR0": {
+   "ready": 3,
+   "total": 4,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:ready:99%:back",
+    "Lower B:nearly:82%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR3": {
+   "ready": 3,
+   "total": 4,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:ready:93%:back",
+    "Lower B:not_yet:73%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR0": {
+   "ready": 1,
+   "total": 4,
+   "rows": [
+    "Upper A:ready:98%:back",
+    "Lower A:nearly:82%:quads",
+    "Upper B:not_yet:73%:back",
+    "Lower B:not_yet:62%:glutes"
+   ]
+  }
+ },
+ "d5": {
+  "doseWk1_RIR3": {
+   "ready": 4,
+   "total": 5,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:ready:100%:chest",
+    "Lower B:nearly:76%:quads",
+    "Upper C:ready:100%:chest"
+   ]
+  },
+  "doseWk1_RIR0": {
+   "ready": 2,
+   "total": 5,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:nearly:79%:chest",
+    "Lower B:not_yet:59%:quads",
+    "Upper C:nearly:82%:chest"
+   ]
+  },
+  "doseWk5_RIR3": {
+   "ready": 2,
+   "total": 5,
+   "rows": [
+    "Upper A:ready:100%:chest",
+    "Lower A:ready:100%:quads",
+    "Upper B:not_yet:66%:chest",
+    "Lower B:not_yet:50%:quads",
+    "Upper C:not_yet:74%:chest"
+   ]
+  },
+  "doseWk5_RIR0": {
+   "ready": 1,
+   "total": 5,
+   "rows": [
+    "Upper A:nearly:85%:chest",
+    "Lower A:ready:97%:hamstrings",
+    "Upper B:not_yet:60%:chest",
+    "Lower B:not_yet:39%:quads",
+    "Upper C:not_yet:63%:traps"
+   ]
+  }
+ },
+ "d6": {
+  "doseWk1_RIR3": {
+   "ready": 6,
+   "total": 6,
+   "rows": [
+    "Push A:ready:100%:chest",
+    "Pull A:ready:100%:back",
+    "Legs A:ready:100%:quads",
+    "Push B:ready:100%:chest",
+    "Pull B:ready:100%:back",
+    "Legs B:ready:100%:quads"
+   ]
+  },
+  "doseWk1_RIR0": {
+   "ready": 5,
+   "total": 6,
+   "rows": [
+    "Push A:ready:100%:chest",
+    "Pull A:ready:100%:back",
+    "Legs A:ready:100%:quads",
+    "Push B:ready:100%:chest",
+    "Pull B:ready:99%:back",
+    "Legs B:nearly:82%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR3": {
+   "ready": 5,
+   "total": 6,
+   "rows": [
+    "Push A:ready:100%:chest",
+    "Pull A:ready:100%:back",
+    "Legs A:ready:100%:quads",
+    "Push B:ready:99%:chest",
+    "Pull B:ready:93%:back",
+    "Legs B:not_yet:73%:hamstrings"
+   ]
+  },
+  "doseWk5_RIR0": {
+   "ready": 2,
+   "total": 6,
+   "rows": [
+    "Push A:ready:100%:chest",
+    "Pull A:ready:98%:back",
+    "Legs A:nearly:82%:quads",
+    "Push B:nearly:78%:chest",
+    "Pull B:not_yet:73%:back",
+    "Legs B:not_yet:62%:glutes"
+   ]
+  }
+ }
+}

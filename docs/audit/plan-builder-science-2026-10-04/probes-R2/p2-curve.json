@@ -1,0 +1,155 @@
+{
+ "A_single_chest_6sets_T60": [
+  {
+   "hoursAfterEnd": 0,
+   "pct": 0,
+   "status": "recovering",
+   "readyInH": 53.7
+  },
+  {
+   "hoursAfterEnd": 6,
+   "pct": 10,
+   "status": "recovering",
+   "readyInH": 47.7
+  },
+  {
+   "hoursAfterEnd": 12,
+   "pct": 20,
+   "status": "recovering",
+   "readyInH": 41.7
+  },
+  {
+   "hoursAfterEnd": 24,
+   "pct": 40,
+   "status": "recovering",
+   "readyInH": 29.7
+  },
+  {
+   "hoursAfterEnd": 36,
+   "pct": 60,
+   "status": "recovering",
+   "readyInH": 17.7
+  },
+  {
+   "hoursAfterEnd": 48,
+   "pct": 80,
+   "status": "nearly",
+   "readyInH": 5.7
+  },
+  {
+   "hoursAfterEnd": 53,
+   "pct": 88,
+   "status": "nearly",
+   "readyInH": 0.7
+  },
+  {
+   "hoursAfterEnd": 54,
+   "pct": 90,
+   "status": "recovered",
+   "readyInH": null
+  },
+  {
+   "hoursAfterEnd": 60,
+   "pct": 100,
+   "status": "recovered",
+   "readyInH": null
+  },
+  {
+   "hoursAfterEnd": 72,
+   "pct": 100,
+   "status": "recovered",
+   "readyInH": null
+  }
+ ],
+ "A_readyAfterEndH": 53.7,
+ "A_hoursT": 60,
+ "B_compounded_chest_two_6set_sessions_48h_apart": [
+  {
+   "hoursAfterSecondEnd": 0,
+   "pct": 0,
+   "status": "recovering",
+   "readyInH": 52.4
+  },
+  {
+   "hoursAfterSecondEnd": 6,
+   "pct": 17,
+   "status": "recovering",
+   "readyInH": 46.4
+  },
+  {
+   "hoursAfterSecondEnd": 12,
+   "pct": 33,
+   "status": "recovering",
+   "readyInH": 40.4
+  },
+  {
+   "hoursAfterSecondEnd": 24,
+   "pct": 50,
+   "status": "recovering",
+   "readyInH": 28.4
+  },
+  {
+   "hoursAfterSecondEnd": 36,
+   "pct": 67,
+   "status": "recovering",
+   "readyInH": 16.4
+  },
+  {
+   "hoursAfterSecondEnd": 48,
+   "pct": 83,
+   "status": "nearly",
+   "readyInH": 4.4
+  },
+  {
+   "hoursAfterSecondEnd": 60,
+   "pct": 100,
+   "status": "recovered",
+   "readyInH": null
+  },
+  {
+   "hoursAfterSecondEnd": 72,
+   "pct": 100,
+   "status": "recovered",
+   "readyInH": null
+  },
+  {
+   "hoursAfterSecondEnd": 84,
+   "pct": 100,
+   "status": "recovered",
+   "readyInH": null
+  }
+ ],
+ "B_hoursT": [
+  60,
+  60
+ ],
+ "C_readyAfterEndH": {
+  "sets3": 38,
+  "sets6": 53.7,
+  "sets12": 75.9
+ },
+ "C_pctAt24h": {
+  "sets3": 57,
+  "sets6": 40,
+  "sets12": 28
+ },
+ "D_biceps_vs_back_6setsEach_at24h": {
+  "biceps": {
+   "sets": 9,
+   "pct": 41,
+   "readyInH": 28.6,
+   "hoursT": 58.78775382679627
+  },
+  "back": {
+   "sets": 6,
+   "pct": 40,
+   "readyInH": 29.7,
+   "hoursT": 60
+  }
+ },
+ "D_readyAfterEndH": {
+  "biceps": 52.6,
+  "back": 53.7
+ },
+ "E_note": "ready = residual <= 0.105 x peak; peak(single 6 sets) = 1.0 F = 6 sets; peak(compounded) = 1.2 F"
+}

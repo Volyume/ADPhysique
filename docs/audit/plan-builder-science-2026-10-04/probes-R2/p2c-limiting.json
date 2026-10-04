@@ -1,0 +1,31 @@
+{
+ "verdict": "not_yet",
+ "minPercent": 11,
+ "limitingMuscle": "calves",
+ "limitingReadyInH": 28.2,
+ "wordsSessionWouldShow": "calves: ready by tomorrow",
+ "lastMuscleReadyInH": 61.1,
+ "lastMuscleReadyName": "quads",
+ "detail": {
+  "quads": {
+   "pct": 29,
+   "status": "recovering",
+   "readyInH": 61.1
+  },
+  "calves": {
+   "pct": 11,
+   "status": "recovering",
+   "readyInH": 28.2
+  },
+  "glutes": {
+   "pct": 42,
+   "status": "recovering",
+   "readyInH": 34.4
+  },
+  "adductors": {
+   "pct": 50,
+   "status": "recovering",
+   "readyInH": 23.7
+  }
+ }
+}

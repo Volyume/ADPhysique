@@ -1,0 +1,64 @@
+/* TEMPORARY SCRATCH PROBE (lane R2, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: (sel) => sel({ user: { id: 'u1' }, accessibility: { reduceMotion: true } }),
+}));
+
+import {
+  muscleRecoveryRowMeta, muscleRecoveryRowA11yLabel, muscleRecoveryDetailLines, buildMuscleSessionSplits,
+  HALF_CREDIT_NOTE, RECOVERY_ANSWER_NOTE, groupMuscleRecoveryRows,
+} from '../MuscleRecoveryList';
+import { buildMuscleRecoveryMap } from '../../lib/recovery/muscleRecoveryModel';
+import { buildRecoveryPillarCopy } from '../../lib/recovery/recoveryPillar';
+import { readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
+import { CORPUS, corpusEntryToSeedRow } from '../../lib/exerciseCorpus';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R2';
+const H = 3600 * 1000;
+const D = 24 * H;
+const MON = new Date(2026, 9, 5, 0, 0, 0).getTime();
+const NOW = new Date(2026, 9, 9, 12, 0, 0).getTime(); // Friday 12:00
+const rows = CORPUS.map(corpusEntryToSeedRow).map((r) => ({ ...r, id: r.name }));
+const exerciseById = Object.fromEntries(rows.map((r) => [r.id, r]));
+
+function sess(id, day, spec) {
+  const startedAt = MON + day * D + 18 * H;
+  const sets = [];
+  for (const [name, n] of spec) for (let i = 0; i < n; i += 1) sets.push({ id: `${id}-${name}-${i}`, workoutId: id, exerciseId: name, setType: 'straight', weight: 20, actualReps: 10, setNumber: i + 1, createdAt: startedAt + i * 60000 });
+  return { id, startedAt, endedAt: startedAt + H, durationMinutes: 60, sets, weekRirTarget: 1, isFirstWeek: false, ratings: { fatigue: null, joint: null, sorenessNext: null } };
+}
+
+test('probe3d: the Recovery screen for a week with 27 biceps credit', () => {
+  const out = {};
+  const SCEN = {
+    A_27_direct: [sess('a1', 0, [['Barbell Curl', 9]]), sess('a2', 2, [['Barbell Curl', 9]]), sess('a3', 3, [['Barbell Curl', 9]])],
+    B_18_direct_plus_9_indirect: [
+      sess('b1', 0, [['Barbell Curl', 9], ['Barbell Row (Bent Over)', 12]]),
+      sess('b2', 3, [['Barbell Curl', 9], ['Lat Pulldown (Close Grip)', 6]]),
+    ],
+  };
+  for (const [label, sessions] of Object.entries(SCEN)) {
+    const map = buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating: 'average', nowMs: NOW });
+    const e = map.biceps;
+    const splits = buildMuscleSessionSplits(map, sessions.flatMap((s) => s.sets), rows);
+    const back = map.back;
+    out[label] = {
+      biceps: {
+        pct: e.recoveredPercent, status: e.status, lastSessionSets: e.lastSessionSets, readyInH: e.readyAtMs ? Math.round(((e.readyAtMs - NOW) / H) * 10) / 10 : null,
+        contributing: e.contributingSessions.map((c) => ({ sets: c.sets, hoursT: Math.round(c.hoursT * 10) / 10 })),
+        rowMeta: muscleRecoveryRowMeta(e, NOW, NOW - 20 * H),
+        a11y: muscleRecoveryRowA11yLabel(e, NOW, NOW - 20 * H),
+        detailLines: muscleRecoveryDetailLines(e, false, splits.biceps),
+        readyClause: readyClause(e.readyAtMs, NOW),
+      },
+      back: back.status !== 'no_recent_session' ? { pct: back.recoveredPercent, status: back.status, sets: back.lastSessionSets } : null,
+      pillar: buildRecoveryPillarCopy({ map, nowMs: NOW, degraded: false }),
+      notes: { HALF_CREDIT_NOTE, RECOVERY_ANSWER_NOTE },
+    };
+  }
+  fs.writeFileSync(`${OUT}/p3d-recovery-screen-biceps.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(2);
+});
