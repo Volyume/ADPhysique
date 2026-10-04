@@ -82,6 +82,7 @@ function serve(p, week) {
     id: w.sessionKey,
     slots: w.exercises.map((e) => ({
       id: e.slotKey, muscle: e.muscle, kind: e.kind, baseSets: e.sets, credits: CREDITS[e.name] || {}, thinEquipment: e.thinEquipment,
+      focus: p.v2.roles[e.muscle] === 'focus',
     })),
   }));
   const weekTargets = Object.fromEntries(Object.entries(p.v2.weeklyTargets).map(([m, list]) => [m, list[week - 1]]));
@@ -94,7 +95,7 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
   test.each(BUILT.map((b) => [label(b), b]))('%s: caps hold at the peak week', (_name, { plan: p }) => {
     for (const w of p.workouts) {
       for (const e of w.exercises) {
-        expect({ exercise: e.name, sets: e.peakSets, ok: e.peakSets <= exerciseCap(e.kind, e.thinEquipment) })
+        expect({ exercise: e.name, sets: e.peakSets, ok: e.peakSets <= exerciseCap(e.kind, e.thinEquipment, { focus: p.v2.roles[e.muscle] === 'focus' }) })
           .toEqual({ exercise: e.name, sets: e.peakSets, ok: true });
       }
       const { direct, fractional } = sessionLoads(w);
@@ -137,7 +138,7 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     for (let week = 1; week <= BLOCK.weeks; week++) {
       const { sets } = serve(p, week);
       for (const w of p.workouts) {
-        for (const e of w.exercises) expect(sets[e.slotKey]).toBeLessThanOrEqual(exerciseCap(e.kind, e.thinEquipment));
+        for (const e of w.exercises) expect(sets[e.slotKey]).toBeLessThanOrEqual(exerciseCap(e.kind, e.thinEquipment, { focus: p.v2.roles[e.muscle] === 'focus' }));
       }
     }
     const peak = serve(p, BLOCK.peakWeek).sets;
@@ -225,11 +226,10 @@ describe('determinism and the person\'s clocks', () => {
 });
 
 describe('focus muscles keep their programmed sets (founder rule 2026-10-04)', () => {
-  test('three focus muscles in four 75-minute sessions: chest and glutes reach 20, side delts the 18 two upper days hold', () => {
+  test('three focus muscles in four 75-minute sessions each reach their 20 sets a week', () => {
     const p = plan({ focusMuscles: ['glutes', 'side_delts', 'chest'] });
-    // Side delts: 3 lateral raise variants x 3 sets (D8) x 2 upper sessions = 18.
-    expect(p.weeklyVolumeSummary.side_delts.fractional).toBeGreaterThanOrEqual(18 - 1e-9);
-    for (const m of ['glutes', 'chest']) {
+    // Side delts on two upper days: a focus isolation exercise may take 4 sets (4 + 3 + 3 a session).
+    for (const m of ['glutes', 'side_delts', 'chest']) {
       expect({ muscle: m, ok: p.weeklyVolumeSummary[m].fractional >= 20 - 1e-9 }).toEqual({ muscle: m, ok: true });
     }
   });

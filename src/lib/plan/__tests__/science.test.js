@@ -72,6 +72,9 @@ describe("science.js: the founder's numbers", () => {
     expect(science.exerciseCap('heavy_compound')).toBe(4);
     expect(science.exerciseCap(undefined)).toBe(4);
     expect(science.exerciseCap('isolation', true)).toBe(5);
+    // Founder answer 2026-10-04: a focus muscle's isolation exercise may take 4.
+    expect(science.exerciseCap('isolation', false, { focus: true })).toBe(4);
+    expect(science.exerciseCap('heavy_compound', false, { focus: true })).toBe(4);
   });
 
   test('D45: 8 exercises and 25 working sets a session', () => {

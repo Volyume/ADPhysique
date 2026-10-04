@@ -45,6 +45,8 @@ import { PER_SESSION, SETS_PER_EXERCISE, exerciseCap } from './science';
  * @property {number} [baseSets]         the stored week-1 sets (recommended_sets): the slot's weight
  * @property {number|null} [typedSets]   a set count the person typed themselves, served as typed
  * @property {boolean} [thinEquipment]   the plan gave this slot the thin-equipment bonus
+ * @property {boolean} [focus]           the slot's muscle is a focus muscle of the plan: an isolation
+ *                                       exercise may take 4 sets (founder answer 2026-10-04)
  * @property {Object<string, number>} [credits]  synergist credit one set gives each other muscle, e.g. { biceps: 0.5 }
  *
  * @typedef {object} Session
@@ -66,7 +68,7 @@ function isTyped(slot) {
 }
 
 function capOf(slot) {
-  return exerciseCap(slot?.kind, slot?.thinEquipment === true);
+  return exerciseCap(slot?.kind, slot?.thinEquipment === true, { focus: slot?.focus === true });
 }
 
 function directCapFor(muscle, facts) {

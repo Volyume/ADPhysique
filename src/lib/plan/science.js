@@ -271,8 +271,10 @@ export const EVIDENCE = Object.freeze({
 });
 
 /** The per-exercise cap for a slot of this kind ('isolation' or anything else). */
-export function exerciseCap(kind, thinEquipment = false) {
-  const base = kind === 'isolation' ? SETS_PER_EXERCISE.capIsolation : SETS_PER_EXERCISE.capCompound;
+export function exerciseCap(kind, thinEquipment = false, { focus = false } = {}) {
+  // A focus muscle's isolation exercise may take the compound's 4 (founder
+  // answer 2026-10-04, inside the "3 to 4 sets an exercise" of D219).
+  const base = kind === 'isolation' && !focus ? SETS_PER_EXERCISE.capIsolation : SETS_PER_EXERCISE.capCompound;
   return thinEquipment ? base + SETS_PER_EXERCISE.thinEquipmentBonus : base;
 }
 

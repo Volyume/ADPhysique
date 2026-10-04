@@ -256,7 +256,7 @@ function evaluateFamily(family, ctx) {
     const direct = state.sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
     const list = ctx.choices[m] || [];
     const slots = Math.min(exercisesAllowed(m, { focus: state.roles[m]?.role === ROLE.FOCUS }), Number.isFinite(state.maxSlots[m]) ? state.maxSlots[m] : Infinity, list.length);
-    const room = list.slice(0, slots).reduce((a, c) => a + exerciseCap(c.kind, list.length === 1), 0);
+    const room = list.slice(0, slots).reduce((a, c) => a + exerciseCap(c.kind, list.length === 1, { focus: state.roles[m]?.role === ROLE.FOCUS }), 0);
     return Math.min(direct, room);
   };
   const sessionCapOf = (m, s) => {
@@ -741,6 +741,7 @@ function buildBlock(alloc, exposures, n, ctx, sessionCaps = {}) {
       baseSets: SETS_PER_EXERCISE.floor,
       credits: x.credits,
       thinEquipment: x.thinEquipment,
+      focus: x.focus === true,
     })),
   }));
   const peakByMuscle = {};
