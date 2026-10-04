@@ -15,6 +15,14 @@ jest.mock('../../database', () => ({
   getWeeklySessionStats: jest.fn(),
   getOpenEdPatternFlag: jest.fn(),
 }));
+// D219 lane A6: the widget names the plan's own next session, read from
+// programmePosition's resolver. It is mocked here so that every gather in
+// this suite reads the plan once (the real resolver reads it again through
+// the same mocked database, which would change the call counts the
+// serialisation test below uses as its probe) and so each case controls the
+// position it is given. A null position is the "unreadable" fallback: the
+// plan's first routine, which is what the cases below were written against.
+jest.mock('../../programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
 jest.mock('../storage', () => ({ persistWidgetSnapshot: jest.fn().mockResolvedValue(true) }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn() }));
 jest.mock('../friends', () => ({
@@ -25,6 +33,7 @@ jest.mock('../friends', () => ({
 const AsyncStorage = require('@react-native-async-storage/async-storage');
 const db = require('../../database');
 const { persistWidgetSnapshot } = require('../storage');
+const { resolveProgrammePosition } = require('../../programmePosition');
 const { readCachedFriends, fetchFriendsTrainedToday } = require('../friends');
 const { todayLocalKey } = require('../../dayKey');
 const { gatherWidgetInputs, writeWidgetSnapshot, FRIENDS_REFRESH_MIN_MS } = require('../writer');
@@ -37,6 +46,7 @@ beforeEach(() => {
   db.getCurrentMesocycleWeek.mockResolvedValue({ weekIndex: 2, plannedWeeks: 5 });
   db.getWeeklySessionStats.mockResolvedValue({ completed: 2, planned: 4 });
   db.getOpenEdPatternFlag.mockResolvedValue(null);
+  resolveProgrammePosition.mockResolvedValue(null);
   AsyncStorage.getItem.mockResolvedValue(null); // wellbeing unspecified
   // CR-14 defaults: no cached friends, no fetched friends -- existing
   // tests below (none of which care about friends) stay unaffected.
@@ -56,6 +66,59 @@ describe('gatherWidgetInputs', () => {
     expect(inputs.consistency).toEqual({ completed: 2, planned: 4 });
     // Privacy: the gathered object carries nothing weight/calorie/body-shaped.
     expect(JSON.stringify(inputs)).not.toMatch(/weight|kcal|calorie|macro|bodyfat/i);
+  });
+
+  // D219 lane A6 (founder 2026-10-04, "Next workout should be planned as the
+  // plan builds it"): the widget names the plan's own next session, the one
+  // Home's Start and Plans' "Start next workout" open, never `routines[0]`
+  // unless the plan has no next session.
+  describe('the session it names is the plan\'s own next one (D219)', () => {
+    const sessions = (states) => ['Push', 'Pull', 'Legs', 'Upper'].map((name, i) => ({
+      routineId: `r${i + 1}`, name, order: i + 1, state: states[i] ?? 'outstanding',
+    }));
+    const positionOf = (list) => ({
+      sessions: list,
+      nextSession: list.find((x) => x.state === 'outstanding') ?? null,
+    });
+
+    test('with the first session done it names the second, not the first routine', async () => {
+      resolveProgrammePosition.mockResolvedValue(positionOf(sessions(['completed'])));
+      const inputs = await gatherWidgetInputs('u1');
+      expect(inputs.nextSession.name).toBe('Pull');
+      expect(resolveProgrammePosition).toHaveBeenCalledWith('u1');
+    });
+
+    test('a repeated session name is qualified the way Home qualifies it', async () => {
+      const list = [
+        { routineId: 'a', name: 'Glutes', order: 1, state: 'completed' },
+        { routineId: 'b', name: 'Upper', order: 2, state: 'completed' },
+        { routineId: 'c', name: 'Glutes', order: 3, state: 'outstanding' },
+      ];
+      resolveProgrammePosition.mockResolvedValue(positionOf(list));
+      const inputs = await gatherWidgetInputs('u1');
+      expect(inputs.nextSession.name).toBe('Glutes \u00b7 Workout 3 of 3');
+    });
+
+    test('with every session resolved (no next session) the plan\'s first routine is named', async () => {
+      resolveProgrammePosition.mockResolvedValue(positionOf(sessions(['completed', 'completed', 'skipped_by_user', 'ended_early'])));
+      const inputs = await gatherWidgetInputs('u1');
+      expect(inputs.nextSession.name).toBe('Push');
+    });
+
+    test('an unreadable position, or a resolver that throws, names the first routine and never throws', async () => {
+      resolveProgrammePosition.mockResolvedValue(null);
+      expect((await gatherWidgetInputs('u1')).nextSession.name).toBe('Push');
+      resolveProgrammePosition.mockRejectedValue(new Error('db down'));
+      expect((await gatherWidgetInputs('u1')).nextSession.name).toBe('Push');
+    });
+
+    test('no plan: no session is named and the position is never read', async () => {
+      db.getActivePlan.mockResolvedValue(null);
+      db.getRoutinesForPlan.mockResolvedValue([]);
+      const inputs = await gatherWidgetInputs('u1');
+      expect(inputs.nextSession).toBeNull();
+      expect(resolveProgrammePosition).not.toHaveBeenCalled();
+    });
   });
 
   test('never claims a training day: dayLabel is null (founder 2026-08-03)', async () => {

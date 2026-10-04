@@ -19,12 +19,16 @@
  *   (a) no template literal in either file interpolates a value immediately
  *       followed by a literal "%" (regex /\$\{[^}]*\}%/).
  *   (b) the only recovery line HomeScreen renders is `heroRecoveryLine`,
- *       which reads only recoveryRecommendation.reason,
- *       recoveryRecommendation.programmeNextLine and a
- *       perSession[...].line -- never a fourth, ad hoc source -- and that
+ *       which reads only recoveryRecommendation.programmeNextLine and a
+ *       perSession[...].line -- never a third, ad hoc source -- and that
  *       variable, not a rebuilt string, is what the card's Text renders.
- *   (c) the only recovery line the sheet renders is recoveryLineFor(routine.
- *       id), which reads only the matching perSession entry's .line.
+ *   (c) the change-workout sheet renders no recovery line at all.
+ *
+ * RE-PINNED D219 lane A6 (founder 2026-10-04: no surface recommends another
+ * session): (b) used to include a third source, recoveryRecommendation.reason
+ * (the swap reason), and (c) used to pin the sheet's per-row line
+ * (recoveryLineFor reading perSession[...].line). Both are gone: the hero has
+ * no swap branch, and the sheet is a plain list with no readiness.
  */
 import fs from 'fs';
 import path from 'path';
@@ -62,8 +66,9 @@ describe('neither Home nor the change-workout sheet builds a recovery percent it
 describe('HomeScreen renders only heroRecoveryLine, sourced from recommendNextWorkout', () => {
   const heroBody = block(HOME_SRC, 'const heroRecoveryLine = (() => {', '})();');
 
-  test('the primary-recommendation case reads recoveryRecommendation.reason', () => {
-    expect(heroBody).toMatch(/recoveryRecommendation\.reason/);
+  test('there is no swap branch: the hero line never reads a reason or an override (D219)', () => {
+    expect(heroBody).not.toMatch(/\.reason\b/);
+    expect(heroBody).not.toMatch(/recoveryOverride|recoveryPrimaryActive|\.recommended\b/);
   });
 
   test('the programme-next case reads recoveryRecommendation.programmeNextLine', () => {
@@ -81,15 +86,17 @@ describe('HomeScreen renders only heroRecoveryLine, sourced from recommendNextWo
   });
 });
 
-describe('the change-workout sheet renders only recoveryLineFor(routine.id), sourced from .line', () => {
-  test('recoveryLineFor reads only .line off the matching recoveryPerSession entry', () => {
-    expect(SHEET_SRC).toMatch(
-      /const recoveryLineFor = \(routineId\) => \(\s*\(recoveryPerSession \?\? \[\]\)\.find\(\(p\) => p\.routineId === routineId\)\?\.line \?\? null\s*\);/,
-    );
+describe('the change-workout sheet renders no recovery line at all (D219)', () => {
+  test('it takes no per-session readiness and builds no recovery line', () => {
+    const code = SHEET_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/recoveryPerSession|recoveryLineFor|recoveryLine\b/);
+    expect(code).not.toMatch(/\.line\b/);
+    expect(code).not.toMatch(/ percent/);
   });
 
-  test('each row calls recoveryLineFor(routine.id) and renders that value verbatim', () => {
-    expect(SHEET_SRC).toMatch(/const recoveryLine = recoveryLineFor\(routine\.id\);/);
-    expect(SHEET_SRC).toMatch(/\{recoveryLine\}/);
+  test('Home hands the sheet no per-session readiness', () => {
+    const mount = HOME_SRC.slice(HOME_SRC.indexOf('<HomeChangeWorkoutSheet'));
+    const props = mount.slice(0, mount.indexOf('/>'));
+    expect(props).not.toMatch(/recoveryPerSession/);
   });
 });

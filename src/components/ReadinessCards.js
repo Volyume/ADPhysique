@@ -70,9 +70,10 @@ import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/lo
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
 // The "ready now / later today / by Thursday / in N days" wording is
 // nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js
-// for the rows and here for the sentences; this file only needs the
-// recommendation itself besides.
-import { recommendNextWorkout, readyClause, muscleVerb, muscleNameList } from '../lib/recovery/nextWorkoutRecommendation';
+// for the rows and here for the sentence; this file only needs the
+// per-session readiness itself besides (D219: it describes the plan's next
+// session, it never recommends another).
+import { recommendNextWorkout, readyClause, muscleVerb } from '../lib/recovery/nextWorkoutRecommendation';
 
 const DAY_MS = 86400000;
 
@@ -313,33 +314,21 @@ export function recoveryAnswerLine(counts) {
   return `${parts.join(', ')}.`;
 }
 
-/** The muscle with the lowest estimate among those that have a session
- * behind them (a muscle with no recent session counts as 100 for the
- * RULE, and is never named as a recovery figure). */
-function leastRecoveredWithSession(readinessNow) {
-  const counted = Array.isArray(readinessNow?.muscles) ? readinessNow.muscles : [];
-  let best = null;
-  for (const m of counted) {
-    if (m.status === 'no_recent_session') continue;
-    if (!best || m.recoveredPercent < best.recoveredPercent) best = m;
-  }
-  return best;
-}
-
 /**
- * The next-workout sentence in the answer block (D214 7.2 a). A swap's own
- * reason is unchanged in substance (RC-20). Otherwise the programme-next
- * session is named with its limiting muscle named AS the limiting one:
+ * The next-workout sentence in the answer block (D214 7.2 a). It names the
+ * plan's own next session, with its limiting muscle named AS the limiting one:
  * "Upper A is next: Back is the least recovered of the muscles it trains,
  * estimated 60% recovered, ready by tomorrow." When nothing it trains has a
  * session in the window it says that ("No recent session on the muscles
  * Upper A trains.", RC-5), and never "every muscle ... recovered" for
  * muscles with nothing behind them. null when the session's planned sets
- * could not be read (no estimate to state).
+ * could not be read (no estimate to state). D219: there is no swap reason
+ * any more (the plan's order is fixed when the plan is built, so no surface
+ * recommends another session); this sentence is the plan's next session
+ * only, until the "Next in your plan" card replaces it.
  */
 export function buildNextWorkoutSentence(recommendation, nowMs) {
   if (!recommendation) return null;
-  if (recommendation.reason) return recommendation.reason;
   // An unnamed routine (rare) reads "Next up:" and "it trains", never "Your
   // next session is next" (lane 2 review N7), the lib's own fallback.
   const name = recommendation.programmeNextName || '';
@@ -367,38 +356,19 @@ export function buildNextWorkoutSentence(recommendation, nowMs) {
 
 /**
  * One row per OUTSTANDING session this plan week (D214 7.2 b), from
- * recommendNextWorkout().perSession, which holds outstanding sessions only:
- * "Upper A · estimated ready by tomorrow (Back 60% recovered)". A session
- * none of whose counted muscles has a recent session reads "no recent
- * session on the muscles it trains", never "ready now" (D201 ruling 13);
- * one whose planned sets could not be read says there is no estimate.
+ * recommendNextWorkout().perSession, which holds outstanding sessions only,
+ * in programme order: the session's name and nothing else ("Upper B").
+ * D219 (design 5.2): the rows are the plan's list, with no readiness, no
+ * ranking and no figure. They used to carry each session's readiness
+ * ("Upper B · estimated ready by tomorrow (Back 55% recovered)"), which is
+ * the information a person would use to pick a different session; the plan's
+ * order is fixed when the plan is built, so the list only says what is still
+ * to do, in the plan's order. An unnamed routine reads "Session".
  */
-export function buildStillToDoRows(recommendation, nowMs) {
+export function buildStillToDoRows(recommendation) {
   const per = Array.isArray(recommendation?.perSession) ? recommendation.perSession : [];
   const names = recommendation?.routineNamesById ?? {};
-  return per.map((p) => {
-    const name = names[p.routineId] || 'Session';
-    const now = p.readinessNow ?? null;
-    const counted = Array.isArray(now?.muscles) ? now.muscles : [];
-    let rest;
-    if (!now || !counted.length) {
-      rest = 'estimate not available';
-    } else if (!now.evidence) {
-      rest = 'no recent session on the muscles it trains';
-    } else if (now.verdict !== 'ready' && now.limitingMuscle) {
-      rest = `estimated ${readyClause(now.limitingReadyAtMs, nowMs)} (${muscleDisplayName(now.limitingMuscle)} ${Math.round(now.minPercent)}% recovered)`;
-    } else {
-      const least = leastRecoveredWithSession(now);
-      rest = least
-        ? `estimated ready now (${muscleDisplayName(least.muscle)} ${Math.round(least.recoveredPercent)}% recovered)`
-        : 'estimated ready now';
-      // The mixed case (RC-5, lane 2 review S3): the sentence above names the
-      // muscles with no recent session, so the row does too.
-      const without = counted.filter((m) => m.status === 'no_recent_session').map((m) => m.muscle);
-      if (without.length) rest += `; no recent session on ${muscleNameList(without)}`;
-    }
-    return { routineId: p.routineId, text: `${name} · ${rest}` };
-  });
+  return per.map((p) => ({ routineId: p.routineId, text: names[p.routineId] || 'Session' }));
 }
 
 /**
@@ -554,8 +524,9 @@ export default function ReadinessCards({
   // The muscle chosen on the figure or by a row tap; its breakdown is open
   // when it has a row (D201 addendum 9).
   const [selectedMuscle, setSelectedMuscle] = useState(null);
-  // D201: recommendNextWorkout's result, or null when there is no active
-  // block, no outstanding session to reason about, or the read failed.
+  // D201: recommendNextWorkout's result (per-session readiness and the plan's
+  // next session; D219: no recommendation), or null when there is no active
+  // block, no outstanding session to describe, or the read failed.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
   // The counted sessions' own sets and the exercise library, for the
   // breakdown's "as the main muscle worked" / "as a helper" split (RC-9, RC-10).
@@ -762,8 +733,8 @@ export default function ReadinessCards({
             });
             // Lead review: this block has no card title naming the session
             // (Home does), so it carries the programme-next name itself,
-            // looked up from the same sessions the rule was given; the
-            // names also label the still-to-do rows (D214).
+            // looked up from the same sessions the readings were built from;
+            // the names also label the still-to-do rows (D214).
             setRecoveryRecommendation({
               ...result,
               programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
@@ -828,7 +799,7 @@ export default function ReadinessCards({
       : "Each muscle's recovery shows here after your first session.")
     : null;
   const nextText = muscleRecovery ? buildNextWorkoutSentence(recoveryRecommendation, muscleRecoveryNowMs) : null;
-  const stillToDoRows = muscleRecovery ? buildStillToDoRows(recoveryRecommendation, muscleRecoveryNowMs) : [];
+  const stillToDoRows = muscleRecovery ? buildStillToDoRows(recoveryRecommendation) : [];
   const sessionSplits = useMemo(
     () => (muscleRecovery ? buildMuscleSessionSplits(muscleRecovery.map, splitData.sets, splitData.exercises) : null),
     [muscleRecovery, splitData],
@@ -983,18 +954,13 @@ export default function ReadinessCards({
                   {stillToDoRows.length > 0 ? (
                     <View style={styles.stillToDo}>
                       <Text style={live.stillLabel}>Still to do this plan week</Text>
-                      {stillToDoRows.map((row) => {
-                        // Two lines at phone width: the session and its ready
-                        // clause, then the limiting-muscle clause in muted ink
-                        // (lane 2 review N12); the spoken text is the whole row.
-                        const split = /^(.*?) (\(.*\))$/.exec(row.text);
-                        return (
-                          <View key={row.routineId} accessible accessibilityLabel={row.text}>
-                            <Text style={live.stillRow}>{split ? split[1] : row.text}</Text>
-                            {split ? <Text style={live.stillRowDetail}>{split[2]}</Text> : null}
-                          </View>
-                        );
-                      })}
+                      {stillToDoRows.map((row) => (
+                        // D219: the plan's list, a session's name per row (no
+                        // readiness line any more); the spoken text is the row.
+                        <View key={row.routineId} accessible accessibilityLabel={row.text}>
+                          <Text style={live.stillRow}>{row.text}</Text>
+                        </View>
+                      ))}
                     </View>
                   ) : null}
                 </View>
@@ -1098,7 +1064,6 @@ function buildLiveStyles(t) {
     nextText: { ...t.type.bodySm, color: t.colors.textSecondary },
     stillLabel: { ...t.type.overline, color: t.colors.textSecondary },
     stillRow: { ...t.type.bodySm, color: t.colors.textSecondary },
-    stillRowDetail: { ...t.type.bodySm, color: t.colors.textMuted },
     rbmCaption: { ...t.type.bodySm, color: t.colors.textMuted },
   };
 }

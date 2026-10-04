@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform,
 } from 'react-native';
@@ -184,11 +184,6 @@ function capabilityBlockedNote(n) {
     ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
-
-// D201 lead review: the one AsyncStorage key "Keep <programme next>" writes
-// to, per user. Holds { routineId, dayKey } -- the programme-next session
-// that was kept, and the local day (dayKey.js's localDayKey) it was kept on.
-const recoveryKeptKey = (userId) => `@volyume_recovery_kept_${userId}`;
 
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
@@ -420,17 +415,13 @@ export default function HomeScreen({ navigation, route }) {
   const [recoveryRead, setRecoveryRead] = useState(false);
   // C18: the authoritative programme position, so Home never re-derives it.
   const [programmePosition, setProgrammePosition] = useState(null);
-  // D201 (per-muscle recovery, spec section 4): { programmeNext, recommended,
-  // reason, programmeNextLine, perSession } from recommendNextWorkout, or
-  // null while loading/unavailable -- the card renders exactly as it did
-  // before this feature existed whenever this is null.
+  // D201 (per-muscle recovery, spec section 4): { programmeNext,
+  // programmeNextLine, perSession } from recommendNextWorkout, or null while
+  // loading/unavailable -- the card renders exactly as it did before this
+  // feature existed whenever this is null. D219: this DESCRIBES the plan's
+  // sessions (the line under the next session's name, and under a session the
+  // person picks themselves); it never names another session to start.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
-  // D201 lead review: whether the CURRENT recommendation has already been
-  // declined via "Keep <programme next>" today, read back from
-  // RECOVERY_KEPT_KEY -- while true, the reason line stays visible but the
-  // auto-override and the "Keep" control both stay off, so a tap is
-  // remembered rather than being silently reversed on the next reload.
-  const [recoveryRecommendationKept, setRecoveryRecommendationKept] = useState(false);
   // C18 long-gap re-entry: asked once per return, never on every screen.
   const [reEntryAsked, setReEntryAsked] = useState(false);
   // Campaign 22 Phase 2 Stage 1 (spec §13 rank 6): the re-entry question's
@@ -1400,7 +1391,6 @@ export default function HomeScreen({ navigation, route }) {
         setPlanHasNoSessions(false);
         setProgrammePosition(null);
         setRecoveryRecommendation(null);
-        setRecoveryRecommendationKept(false);
         return;
       }
       const routines = await getRoutinesForPlan(plan.id);
@@ -1412,7 +1402,7 @@ export default function HomeScreen({ navigation, route }) {
       setPlanHasNoSessions(routines.length === 0);
       if (routines.length === 0) {
         setNextWorkout(null); setProgrammePosition(null);
-        setRecoveryRecommendation(null); setRecoveryRecommendationKept(false);
+        setRecoveryRecommendation(null);
         return;
       }
       // C18 BLOCK PROGRESSION. This used to read
@@ -1451,13 +1441,14 @@ export default function HomeScreen({ navigation, route }) {
       // nothing saying the week's work was done. The hero renders the
       // week-complete state instead; an extra session stays available as a
       // deliberate choice through the workout-options sheet.
-      if (!next && isWeekComplete(position)) { setNextWorkout(null); setRecoveryRecommendation(null); setRecoveryRecommendationKept(false); return; }
+      if (!next && isWeekComplete(position)) { setNextWorkout(null); setRecoveryRecommendation(null); return; }
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
         : 0;
       setNextWorkout({ routine: routines[idx], total: routines.length, idx });
-      // D201: recovery recommendation reads through the domain loader only,
-      // after the programme position is known -- see loadRecoveryRecommendation.
+      // D201: the recovery readings (D219: descriptions of sessions, never a
+      // recommendation) come through the domain loader only, after the
+      // programme position is known -- see loadRecoveryRecommendation.
       await loadRecoveryRecommendation(position);
     } catch (_e) {
       setNextWorkout(null);
@@ -1465,23 +1456,21 @@ export default function HomeScreen({ navigation, route }) {
       setSelectedWorkoutOverride(null);
       setPlanHasNoSessions(false);
       setRecoveryRecommendation(null);
-      setRecoveryRecommendationKept(false);
     }
   }
 
   // D201 (per-muscle recovery, spec section 4.2/4.3): reads the muscle
-  // recovery estimate and the next-workout recommendation, entirely through
-  // src/lib/recovery/load.js -- this function composes only. Runs after
-  // loadNextWorkout has resolved the programme position, and clears the
-  // recommendation (rather than leaving a stale one showing) whenever there
-  // is no outstanding next session to reason about, or the block-awaiting-
-  // decision hero is showing (that announcement outranks a training
-  // suggestion, and F1's easy-path override must never suppress it).
+  // recovery estimate and each outstanding session's readiness, entirely
+  // through src/lib/recovery/load.js -- this function composes only. Runs after
+  // loadNextWorkout has resolved the programme position, and clears the result
+  // (rather than leaving a stale one showing) whenever there is no outstanding
+  // next session to describe. D219: the result DESCRIBES sessions (the line
+  // under the plan's next session, and under one the person picks); it never
+  // names a different session to start and it never changes Start.
   async function loadRecoveryRecommendation(position) {
     const programmeNext = position?.nextSession ?? null;
     if (!user?.id || !position || !programmeNext) {
       setRecoveryRecommendation(null);
-      setRecoveryRecommendationKept(false);
       return;
     }
     try {
@@ -1497,7 +1486,6 @@ export default function HomeScreen({ navigation, route }) {
       // the card renders exactly as before this feature existed.
       if (recovery?.degraded) {
         setRecoveryRecommendation(null);
-        setRecoveryRecommendationKept(false);
         return;
       }
       const projectedAtMs = nextLikelyTrainingTime({
@@ -1515,37 +1503,9 @@ export default function HomeScreen({ navigation, route }) {
         routineNamesById,
       });
       setRecoveryRecommendation(result);
-
-      // D201 lead review: "Keep <programme next>" must be remembered, not
-      // silently re-applied on the very next focus. kept is true only when
-      // the stored decision names THIS SAME programmeNext AND today's local
-      // day (dayKey.js's localDayKey) -- a new day, or a different
-      // programme next, reads as not-kept and the recommendation applies
-      // fresh again.
-      let kept = false;
-      if (result.recommended) {
-        try {
-          const raw = await AsyncStorage.getItem(recoveryKeptKey(user.id));
-          const stored = raw ? JSON.parse(raw) : null;
-          kept = !!stored
-            && stored.routineId === result.programmeNext.routineId
-            && stored.dayKey === localDayKey(recovery.nowMs);
-        } catch (_e) {
-          kept = false; // unreadable/corrupt: never worse than re-recommending
-        }
-      }
-      setRecoveryRecommendationKept(kept);
-      // F1 (RULED): the recommended session becomes the card's PRIMARY
-      // action with no tap required. That override is DERIVED at render
-      // (recoveryOverride below) from this result, the live block state and
-      // the kept flag -- never written into selectedWorkoutOverride (Opus
-      // review findings 1 and 14: a state write here read a stale
-      // currentMesoWeek and hid the finished-block hero, and the reset-then-
-      // reapply on every focus flipped the card Legs to Push in view).
     } catch (e) {
       logError('HomeScreen.loadRecoveryRecommendation', e, { userId: user?.id });
       setRecoveryRecommendation(null);
-      setRecoveryRecommendationKept(false);
     }
   }
 
@@ -1742,7 +1702,10 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   async function handleStartNextWorkout(starter = false) {
-    const target = selectedWorkoutOverride || recoveryOverride || nextWorkout;
+    // D219: Start is the person's own pick from the options sheet, else the
+    // plan's own next session. Nothing recovered, ranked or suggested sits
+    // between the two.
+    const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
     // R2-1 (founder defect, build 2684): a second trigger while the routine
     // was still loading (or the sheet already up / a start committing) queued
@@ -1986,23 +1949,12 @@ export default function HomeScreen({ navigation, route }) {
   }, [lastSession, user?.id, toast]);
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
-  // D201 F1 (RULED): the recovery recommendation as the card's primary
-  // action, DERIVED here from the live state every render: it exists only
-  // while a swap is recommended, not kept today, the block is not finished
-  // and awaiting the athlete's decision (currentMesoWeek read live, never
-  // from a focus-time closure), and the recommended routine is in the plan.
-  // A manual pick from the options sheet (selectedWorkoutOverride) always
-  // outranks it; the finished-block and week-complete heroes never see it
-  // (they read selectedWorkoutOverride alone), so a suggestion can never
-  // hide a block decision. Nothing here touches storage.
-  const recoveryOverride = useMemo(() => {
-    const recommendedId = recoveryRecommendation?.recommended?.routineId ?? null;
-    if (!recommendedId || recoveryRecommendationKept || currentMesoWeek?.awaitingDecision) return null;
-    const idx = (planAllWorkouts ?? []).findIndex((r) => r?.id === recommendedId);
-    if (idx < 0) return null;
-    return { routine: planAllWorkouts[idx], total: planAllWorkouts.length, idx, source: 'recovery' };
-  }, [recoveryRecommendation, recoveryRecommendationKept, currentMesoWeek?.awaitingDecision, planAllWorkouts]);
-  const displayWorkout = selectedWorkoutOverride || recoveryOverride || nextWorkout;
+  // D219: the session the hero shows and starts is the person's own pick from
+  // the options sheet (selectedWorkoutOverride), else the plan's own next
+  // session (nextWorkout). The D201 recovery override that used to sit between
+  // the two is gone: the plan's order is fixed when the plan is built, so no
+  // surface recommends another session.
+  const displayWorkout = selectedWorkoutOverride || nextWorkout;
   // D-P2-2: the displayed session's circuit line ("Circuit · 3 stations · 3
   // rounds · 90s between rounds"), or '' when the session has no circuit.
   // Read once per displayed routine; a failed read leaves the count line.
@@ -2054,44 +2006,15 @@ export default function HomeScreen({ navigation, route }) {
   // Options sheet (HomeChangeWorkoutSheet) as one more workout option.
   const canSkipThisWorkout = !!(programmePosition?.nextSession
     && programmePosition.nextSession.routineId === displayWorkout?.routine?.id);
-  // D201 (per-muscle recovery, spec section 4.3): the programme-next
-  // session's own display name, needed only for the "Keep <name>" control's
-  // label -- looked up from programmePosition.sessions (never re-derived),
-  // so it can never disagree with the name the hero itself would show for
-  // that session.
-  const recoveryKeepSessionName = recoveryRecommendation?.recommended
-    ? ((programmePosition?.sessions ?? [])
-      .find((s) => s.routineId === recoveryRecommendation.programmeNext?.routineId)?.name ?? '')
-    : '';
-  // "Keep <programme next>": one tap back to programme order, remembered
-  // for the local day. Reached from the hero's own control and from the
-  // options sheet when the athlete taps the programme-next row while the
-  // recommendation is the primary action (choosing it there IS keeping it).
-  function keepProgrammeNext() {
-    setSelectedWorkoutOverride(null);
-    setRecoveryRecommendationKept(true);
-    const routineId = recoveryRecommendation?.programmeNext?.routineId;
-    if (user?.id && routineId) {
-      AsyncStorage.setItem(
-        recoveryKeptKey(user.id),
-        JSON.stringify({ routineId, dayKey: localDayKey(Date.now()) }),
-      ).catch(() => {});
-    }
-  }
-  // The recovery line under the card's session name (spec 4.3, D201
-  // addendum 4 ruling 6): while the recommendation is the primary action,
-  // the reason ("Legs is next in your plan. Quads are estimated 64%
-  // recovered, ready by Thursday. Push is ready now."); under the programme-
-  // next session itself (including after "Keep"), its own line without the
+  // The recovery line under the card's session name (spec 4.3, D201 addendum
+  // 4 ruling 6): under the plan's next session, its own line without the
   // name; under any other session the athlete picked from the sheet, THAT
   // session's own line, never programme-next's (Opus review findings 7 and
-  // 8). null renders nothing.
+  // 8). null renders nothing. D219: no session is recommended, so no line
+  // carries a swap reason.
   const displayedRoutineId = displayWorkout?.routine?.id ?? null;
-  const recoveryPrimaryActive = !!recoveryOverride && !selectedWorkoutOverride
-    && displayedRoutineId != null && displayedRoutineId === recoveryOverride.routine?.id;
   const heroRecoveryLine = (() => {
     if (!recoveryRecommendation || displayedRoutineId == null) return null;
-    if (recoveryPrimaryActive) return recoveryRecommendation.reason ?? null;
     if (displayedRoutineId === recoveryRecommendation.programmeNext?.routineId) {
       return recoveryRecommendation.programmeNextLine ?? null;
     }
@@ -2957,21 +2880,15 @@ export default function HomeScreen({ navigation, route }) {
               </Text>
             ) : null}
             {/* D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
-                00-SPEC.md section 4.3; F1 RULED). recommendNextWorkout already
-                composed the exact copy -- this card renders it verbatim, never
+                00-SPEC.md section 4.3). recommendNextWorkout already composed
+                the exact copy -- this card renders it verbatim, never
                 re-deriving a figure or a day word. Guarded on the loader having
                 resolved: the card renders exactly as before this feature existed
                 while recovery data is loading or unavailable (recoveryRecommendation
-                stays null). When a swap is recommended and not yet kept today, the
-                primary session above has already become the recommended one
-                (selectedWorkoutOverride, set by loadRecoveryRecommendation) --
-                "Keep <name>" is one tap back to programme order, and touches
-                nothing but that same mechanism. Lead review: once kept, the reason
-                line stays (so the alternative is still visible) but the "Keep"
-                control itself drops -- there is nothing further to keep, and a
-                fresh tap on "Start workout" from here now targets programmeNext,
-                unchanged, since selectedWorkoutOverride was cleared and never
-                re-applied while recoveryRecommendationKept stays true. */}
+                stays null). D219: the line DESCRIBES the session shown (the plan's
+                next, or one the person picked); no session is recommended, so
+                there is no reason line, no switch of the Start target and no
+                "Keep" control. */}
             {/* D214 (RC-26): the recovery line is the way in to the Recovery
                 screen, which Home never linked to before; the line itself is
                 unchanged. */}
@@ -2984,18 +2901,6 @@ export default function HomeScreen({ navigation, route }) {
                 accessibilityHint="Opens Recovery"
               >
                 <Text style={[styles.heroBody, live.heroBody]}>{heroRecoveryLine}</Text>
-              </TouchableOpacity>
-            ) : null}
-            {recoveryPrimaryActive ? (
-              <TouchableOpacity
-                onPress={() => { haptics.selection(); keepProgrammeNext(); }}
-                style={styles.skipSessionRow}
-                accessibilityRole="button"
-                accessibilityLabel={recoveryKeepSessionName ? `Keep ${recoveryKeepSessionName}` : 'Keep your planned session'}
-              >
-                <Text style={[styles.skipSessionText, live.skipSessionText]}>
-                  {recoveryKeepSessionName ? `Keep ${recoveryKeepSessionName}` : 'Keep planned session'}
-                </Text>
               </TouchableOpacity>
             ) : null}
             {/* S15#7 readiness aggregate: tells the user where they are in
@@ -3416,14 +3321,8 @@ export default function HomeScreen({ navigation, route }) {
         planAllWorkouts={planAllWorkouts}
         nextWorkout={nextWorkout}
         exerciseCounts={exerciseCounts}
-        selectedWorkoutOverride={selectedWorkoutOverride || recoveryOverride}
-        onSelectOverride={(value) => {
-          // Tapping the programme-next row while the recovery recommendation
-          // is the primary action is the same decision as "Keep <name>".
-          if (value == null && recoveryOverride && !selectedWorkoutOverride) { keepProgrammeNext(); return; }
-          setSelectedWorkoutOverride(value);
-        }}
-        recoveryPerSession={recoveryRecommendation?.perSession ?? null}
+        selectedWorkoutOverride={selectedWorkoutOverride}
+        onSelectOverride={setSelectedWorkoutOverride}
         navigation={navigation}
         onSkip={canSkipThisWorkout ? () => { haptics.selection(); handleSkipThisWorkout(); } : null}
         skipAccessibilityLabel={

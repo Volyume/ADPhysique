@@ -28,19 +28,7 @@ function HomeChangeWorkoutSheet({
   // render) when there is no outstanding required session to skip - same
   // gating HomeScreen.js applied to the old standalone link.
   onSkip, skipAccessibilityLabel,
-  // D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
-  // 00-SPEC.md section 4.3): recommendNextWorkout's perSession array, one
-  // entry per OUTSTANDING required session this week, each already
-  // carrying its own calm `line` ("Quads are estimated 64% recovered,
-  // ready by Thursday." / "Ready now."). This sheet renders that line
-  // verbatim under a matching row's exercise count; null/absent while
-  // recovery data is loading or unavailable, in which case rows render
-  // exactly as they did before this feature existed.
-  recoveryPerSession,
 }) {
-  const recoveryLineFor = (routineId) => (
-    (recoveryPerSession ?? []).find((p) => p.routineId === routineId)?.line ?? null
-  );
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -138,13 +126,13 @@ function HomeChangeWorkoutSheet({
           ) : null}
           {planAllWorkouts.map((routine, i) => {
             // "Next up" always marks PROGRAMME order (nextWorkout.idx), whatever
-            // session is currently displayed (Opus review finding 24: the badge
-            // used to vanish while a recovery recommendation was the primary
-            // action, so the sheet stopped showing where the plan actually
-            // was). The highlighted row is the displayed one.
+            // session is currently displayed (Opus review finding 24). The
+            // highlighted row is the displayed one. D219: this list is a plain
+            // choice (founder Q2): the plan's sessions in the plan's order,
+            // each with its exercise count, no readiness line, no verdict and
+            // no ranking; the plan's own next session is the default.
             const isNext = i === nextWorkout?.idx;
             const isSel = selectedWorkoutOverride ? selectedWorkoutOverride.idx === i : isNext;
-            const recoveryLine = recoveryLineFor(routine.id);
             return (
               <TouchableOpacity
                 key={routine.id ?? i}
@@ -156,12 +144,7 @@ function HomeChangeWorkoutSheet({
                   onClose();
                 }}
                 accessibilityRole="button"
-                // The row's label replaces its child text for screen readers, so
-                // the recovery line rides on it, with "percent" spelled out
-                // (spec section 6 accessibility; Opus review finding 9).
-                accessibilityLabel={recoveryLine
-                  ? `Day ${i + 1}, ${routine.name}. ${recoveryLine.replace(/%/g, ' percent')}`
-                  : `Day ${i + 1}, ${routine.name}`}
+                accessibilityLabel={`Day ${i + 1}, ${routine.name}`}
                 accessibilityState={{ selected: isSel }}
               >
                 <View style={[styles.dayBadge, live.dayBadge, isSel && [styles.dayBadgeActive, live.dayBadgeActive]]}>
@@ -173,11 +156,6 @@ function HomeChangeWorkoutSheet({
                   <Text style={[styles.pickerName, live.pickerName]} numberOfLines={1}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
                     <Text style={[styles.pickerMeta, live.pickerMeta]}>{exerciseCounts[routine.id]} exercises</Text>
-                  ) : null}
-                  {recoveryLine ? (
-                    <Text style={[styles.pickerMeta, live.pickerMeta]} numberOfLines={2}>
-                      {recoveryLine}
-                    </Text>
                   ) : null}
                 </View>
                 {isNext && (

@@ -1,19 +1,30 @@
 /**
- * HomeScreen.recoveryRecommendation.test.js -- per-muscle recovery,
- * next-workout aware (register D201, spec docs/recovery-programme-2026-09-25/
- * 00-SPEC.md sections 4.3, F1 RULED).
+ * HomeScreen.recoveryRecommendation.test.js -- what Home says about recovery
+ * under the plan's next session (register D201, spec docs/recovery-programme-
+ * 2026-09-25/00-SPEC.md section 4.3), and, since D219, the proof that Home
+ * NEVER recommends another session (founder 2026-10-04: "Next workout should
+ * be planned as the plan builds it we shouldn't be having users to view the
+ * plan and see a recommendation and change order. Built optimally from the
+ * start."; Q2 answered "Keep a plain choice").
+ *
+ * RE-PINNED under D219 lane A6 (design 00-AUDIT-AND-PLAN.md section 7). The
+ * suite used to pin the F1 recommendation card: the Start target switched to
+ * a recovered session (the recovery override), the reason line, the "Keep
+ * <programme next>" control, the per-day kept flag in AsyncStorage and its
+ * new-day reset. Those cases now pin the opposite, with the old module's swap
+ * answer still fed in as a fixture: Start stays the plan's next session,
+ * there is no reason line and no Keep control, and Home reads and writes no
+ * kept decision. Kept: the calm line under the plan's next session, the link
+ * from that line to Recovery (D214 RC-26), the block-decision hero outranking
+ * everything, the line a session the person picks from the sheet carries,
+ * and the calm degrade when the loader rejects.
  *
  * Mocks the recovery LOADER (src/lib/recovery/load.js's loadMuscleRecovery/
  * loadPlannedSetsByRoutine, and nextWorkoutRecommendation.js's
  * recommendNextWorkout) rather than the database chain underneath it --
  * those modules have their own dedicated test files
  * (src/lib/recovery/__tests__/). This suite pins HomeScreen's OWN
- * composition: the plain line under the next session's name when nothing
- * is recommended; the recommendation card (primary session switched to the
- * recommendation, its reason, and the "Keep <programme next>" control) when
- * one is; that tapping "Keep" restores programme order and its plain line;
- * and that the hero renders exactly as it did before this feature existed
- * when the loader rejects.
+ * composition.
  *
  * Mock scaffold copied verbatim from src/__tests__/screen-mount.test.js via
  * HomeScreen.stateMatrix.test.js (that file's own header explains why a real
@@ -397,7 +408,7 @@ const DEFAULT_DB = {
   getExerciseById: async () => null,
 };
 const NO_RECOMMENDATION = {
-  programmeNext: null, recommended: null, reason: null, programmeNextLine: null, perSession: [],
+  programmeNext: null, programmeNextLine: null, perSession: [],
 };
 const DEFAULT_LIB = {
   resolveProgrammePosition: async () => null,
@@ -489,15 +500,17 @@ function completedWorkout(id, daysAgo = 1) {
 
 const PLAIN_RESULT = {
   programmeNext: { routineId: 'legs' },
-  recommended: null,
-  reason: null,
   programmeNextLine: 'Quads are estimated 64% recovered, ready by Thursday.',
   perSession: [
     { routineId: 'legs', line: 'Quads are estimated 64% recovered, ready by Thursday.' },
     { routineId: 'push', line: 'Ready now.' },
   ],
 };
-const RECOMMEND_RESULT = {
+// What the pre-D219 module answered when a different session looked
+// recovered: a recommended session and the reason line that named it. The
+// module no longer produces either; Home must ignore them if it is ever
+// handed them.
+const LEGACY_SWAP_RESULT = {
   programmeNext: { routineId: 'legs' },
   recommended: { routineId: 'push' },
   reason: 'Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.',
@@ -570,148 +583,139 @@ describe('the recovery line opens the Recovery screen (D214, RC-26)', () => {
   });
 });
 
-describe('the recommendation card: primary switches, with the reason and a "Keep" control', () => {
-  test('Push becomes primary, the reason renders, "Keep Legs" is one tap away', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => RECOMMEND_RESULT,
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    const text = flattenText(tree);
-    // The primary session is now Push, with no tap required (F1: the
-    // recovered session is the easy path).
-    expect(findByLabel(tree, 'Start Push').length).toBeGreaterThan(0);
-    expect(findByLabel(tree, 'Start Legs').length).toBe(0);
-    expect(text).toContain('Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.');
-    expect(findByLabel(tree, 'Keep Legs').length).toBeGreaterThan(0);
-  });
-
-  test('tapping "Keep Legs" restores programme order immediately; the line under Legs becomes its own, the "Keep" control drops', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => RECOMMEND_RESULT,
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(findByLabel(tree, 'Start Push').length).toBeGreaterThan(0);
-
-    const keepNode = tree.root.findAll(
-      (n) => n.props.accessibilityLabel === 'Keep Legs' && typeof n.props.onPress === 'function',
+describe('Home never recommends another session: Start is the plan\'s next, with no reason line and no Keep control (D219)', () => {
+  /** The routine id Home's Start button loads, from the real handler. */
+  async function pressStart(tree, name, spy) {
+    const startNode = tree.root.findAll(
+      (n) => n.props.accessibilityLabel === `Start ${name}` && typeof n.props.onPress === 'function',
     )[0];
-    expect(keepNode).toBeTruthy();
-    await TestRenderer.act(async () => { keepNode.props.onPress(); });
+    expect(startNode).toBeTruthy();
+    spy.mockClear();
+    await TestRenderer.act(async () => { startNode.props.onPress(); });
+    return spy.mock.calls.map((c) => c[0])[0] ?? null;
+  }
 
+  test('handed the old swap answer, Legs stays the primary session: no Push, no reason, no "Keep" control', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => LEGACY_SWAP_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
     const text = flattenText(tree);
-    // Lead review: Keep restores programme order as the primary...
+    // The plan's next session, as the primary: nothing recovered is on offer.
     expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
     expect(findByLabel(tree, 'Start Push').length).toBe(0);
-    // ...the line under "Legs" is Legs's own (D201 addendum 4 ruling 6: the
-    // line never repeats the card's title; Opus review finding 8), so the
-    // reason, which names Legs, is gone with the control...
-    expect(text).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+    // No reason line, none of its wording, and no control to go back from it.
     expect(text).not.toMatch(/is next in your plan/);
-    // ...and the "Keep" control itself drops -- there is nothing further to keep.
-    expect(findByLabel(tree, 'Keep Legs').length).toBe(0);
+    expect(text).not.toMatch(/Push is ready now/);
+    expect(findByLabel(tree, /^Keep /).length).toBe(0);
+    expect(text).not.toMatch(/Keep (Legs|planned session)/);
+    // What it does say is the plan's next session's own readiness line.
+    expect(text).toContain('Quads are estimated 64% recovered, ready by Thursday.');
   });
 
-  test('Keep is remembered across a refocus: no re-switch, same day, same programme next', async () => {
+  test('Start opens the plan\'s next session, not a recovered one (the routine its action loads)', async () => {
+    useAppStore.setState(PRO_USER);
+    const loadRoutine = jest.fn(async () => []);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)], getRoutineExercisesWithDetails: loadRoutine },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => LEGACY_SWAP_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(await pressStart(tree, 'Legs', loadRoutine)).toBe('legs');
+  });
+
+  test('Home reads and writes no per-day "kept" decision: nothing in AsyncStorage can move Start', async () => {
+    useAppStore.setState(PRO_USER);
+    // A leftover from the pre-D219 build: a stored "kept" day. It is left
+    // unread (no migration), so it changes nothing and is never touched.
+    const LEFTOVER_KEY = '@volyume_recovery_kept_u-recovery';
+    const LEFTOVER = JSON.stringify({ routineId: 'legs', dayKey: '2020-01-01' });
+    await AsyncStorage.setItem(LEFTOVER_KEY, LEFTOVER);
+    // The suite's AsyncStorage is a jest.fn mock (__mocks__/@react-native-
+    // async-storage): clear what was recorded so far and read the calls Home
+    // makes from here on.
+    AsyncStorage.getItem.mockClear();
+    AsyncStorage.setItem.mockClear();
+    AsyncStorage.removeItem.mockClear();
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => LEGACY_SWAP_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const touched = [
+      ...AsyncStorage.getItem.mock.calls,
+      ...AsyncStorage.setItem.mock.calls,
+      ...AsyncStorage.removeItem.mock.calls,
+    ].map((c) => String(c[0]));
+    expect(touched.filter((k) => /recovery_kept/.test(k))).toEqual([]);
+    expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
+    // The leftover is exactly as it was.
+    expect(await AsyncStorage.getItem(LEFTOVER_KEY)).toBe(LEFTOVER);
+  });
+
+  test('a session the person picks from the options sheet is their own choice: Start then opens that session', async () => {
+    useAppStore.setState(PRO_USER);
+    const loadRoutine = jest.fn(async () => []);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)], getRoutineExercisesWithDetails: loadRoutine },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => PLAIN_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
+    const sheet = tree.root.findAll(
+      (n) => typeof n.props.onSelectOverride === 'function' && Array.isArray(n.props.planAllWorkouts),
+    )[0];
+    expect(sheet).toBeTruthy();
+    await TestRenderer.act(async () => {
+      sheet.props.onSelectOverride({ routine: ROUTINE_PUSH, total: 2, idx: 1 });
+    });
+    expect(findByLabel(tree, 'Start Push').length).toBeGreaterThan(0);
+    expect(findByLabel(tree, 'Start Legs').length).toBe(0);
+    expect(await pressStart(tree, 'Push', loadRoutine)).toBe('push');
+  });
+
+  test('the sheet is handed no readiness: it is the plain list of the plan\'s sessions', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
       lib: {
         resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => RECOMMEND_RESULT,
+        recommendNextWorkout: () => LEGACY_SWAP_RESULT,
       },
     });
-    const first = await mountHome({});
-    expect(first.errors).toEqual([]);
-    expect(findByLabel(first.tree, 'Start Push').length).toBeGreaterThan(0);
-
-    const keepNode = first.tree.root.findAll(
-      (n) => n.props.accessibilityLabel === 'Keep Legs' && typeof n.props.onPress === 'function',
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const sheet = tree.root.findAll(
+      (n) => typeof n.props.onSelectOverride === 'function' && Array.isArray(n.props.planAllWorkouts),
     )[0];
-    await TestRenderer.act(async () => { keepNode.props.onPress(); });
-    // Let the best-effort AsyncStorage.setItem settle before the refocus.
-    await TestRenderer.act(async () => { await Promise.resolve(); await Promise.resolve(); });
-
-    await TestRenderer.act(async () => { first.tree.unmount(); });
-    currentTree = null;
-
-    // Refocus: a fresh mount of the same screen, same day, same programme
-    // next -- exactly the scenario "the next Home focus recomputes the
-    // recommendation" described. The kept decision must survive it.
-    const second = await mountHome({});
-    expect(second.errors).toEqual([]);
-    expect(findByLabel(second.tree, 'Start Legs').length).toBeGreaterThan(0);
-    expect(findByLabel(second.tree, 'Start Push').length).toBe(0);
-    expect(flattenText(second.tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
-    expect(flattenText(second.tree)).not.toMatch(/is next in your plan/);
-    expect(findByLabel(second.tree, 'Keep Legs').length).toBe(0);
-  });
-
-  test('a new day clears the kept decision: the recommendation switches again', async () => {
-    useAppStore.setState(PRO_USER);
-    const day1 = new Date(2026, 2, 16, 9, 0, 0).getTime(); // Monday
-    const day2 = new Date(2026, 2, 17, 9, 0, 0).getTime(); // Tuesday
-    const dateNowSpy = jest.spyOn(Date, 'now');
-    try {
-      dateNowSpy.mockReturnValue(day1);
-      applyFixture({
-        db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-        lib: {
-          resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-          loadMuscleRecovery: async () => ({
-            map: {}, nowMs: day1, recoveryRating: 'average', habitualWeekdays: null, typicalStartMinute: 18 * 60,
-          }),
-          recommendNextWorkout: () => RECOMMEND_RESULT,
-        },
-      });
-      const first = await mountHome({});
-      expect(first.errors).toEqual([]);
-      const keepNode = first.tree.root.findAll(
-        (n) => n.props.accessibilityLabel === 'Keep Legs' && typeof n.props.onPress === 'function',
-      )[0];
-      await TestRenderer.act(async () => { keepNode.props.onPress(); });
-      await TestRenderer.act(async () => { await Promise.resolve(); await Promise.resolve(); });
-      expect(findByLabel(first.tree, 'Start Legs').length).toBeGreaterThan(0);
-      await TestRenderer.act(async () => { first.tree.unmount(); });
-      currentTree = null;
-
-      // A new day: the stored day key no longer matches, so the SAME
-      // recommendation is free to switch again, exactly as on first sight.
-      dateNowSpy.mockReturnValue(day2);
-      applyFixture({
-        db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-        lib: {
-          resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-          loadMuscleRecovery: async () => ({
-            map: {}, nowMs: day2, recoveryRating: 'average', habitualWeekdays: null, typicalStartMinute: 18 * 60,
-          }),
-          recommendNextWorkout: () => RECOMMEND_RESULT,
-        },
-      });
-      const second = await mountHome({});
-      expect(second.errors).toEqual([]);
-      expect(findByLabel(second.tree, 'Start Push').length).toBeGreaterThan(0);
-      expect(findByLabel(second.tree, 'Start Legs').length).toBe(0);
-      expect(findByLabel(second.tree, 'Keep Legs').length).toBeGreaterThan(0);
-    } finally {
-      dateNowSpy.mockRestore();
-    }
+    expect(sheet).toBeTruthy();
+    expect(sheet.props).not.toHaveProperty('recoveryPerSession');
+    // Nothing is pre-selected away from the plan's next session.
+    expect(sheet.props.selectedWorkoutOverride).toBeNull();
+    expect(sheet.props.nextWorkout.idx).toBe(0);
   });
 });
 
-describe('the recommendation never outranks the block decision, and the line follows the displayed session (Opus review findings 1 and 7)', () => {
-  test('a finished block awaiting the decision shows the block-complete hero, not the recommended session', async () => {
+describe('the block decision outranks everything, and the line follows the displayed session (Opus review findings 1 and 7)', () => {
+  test('a finished block awaiting the decision shows the block-complete hero, never a session to start', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
@@ -721,14 +725,13 @@ describe('the recommendation never outranks the block decision, and the line fol
       },
       lib: {
         resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => RECOMMEND_RESULT,
+        recommendNextWorkout: () => LEGACY_SWAP_RESULT,
       },
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    // The recovery override is derived at render from the LIVE block state,
-    // so it can never hide the finished-block hero (it used to: the focus
-    // callback read a stale currentMesoWeek and wrote the override).
+    // Nothing on offer can hide the finished-block hero (the pre-D219
+    // recovery override used to be derived against it; now there is none).
     expect(findByLabel(tree, 'Choose what comes after this block').length).toBeGreaterThan(0);
     expect(findByLabel(tree, 'Start Push').length).toBe(0);
     expect(findByLabel(tree, 'Keep Legs').length).toBe(0);

@@ -1,17 +1,28 @@
 /**
- * nextWorkoutRecommendation.test.js -- the next-workout recommendation rule
- * (register D201, spec docs/recovery-programme-2026-09-25/00-SPEC.md
- * section 4.2, F1 RULED).
+ * nextWorkoutRecommendation.test.js -- the per-session readiness the
+ * Recovery screen and Home describe (register D201, spec
+ * docs/recovery-programme-2026-09-25/00-SPEC.md section 4), and, since D219
+ * (founder 2026-10-04: "Next workout should be planned as the plan builds it
+ * we shouldn't be having users to view the plan and see a recommendation and
+ * change order"), the proof that this module NEVER recommends another
+ * session.
  *
- * Pins every branch of the rule: programme order is kept when programmeNext
- * is ready OR nothing else qualifies; a recommendation requires ALL THREE
- * conditions (programmeNext not_yet at the projected time, another
- * outstanding session ready at that time, that session not itself loading
- * programmeNext's limiting muscle with >= 2 planned sets); the highest
- * minimum readiness wins among qualifying candidates; ties resolve to
- * programme order; a resolved session can never be recommended or appear in
- * perSession; the exact copy strings (programmeNextLine, reason, and each
- * perSession line), including the weekday word; determinism.
+ * RE-PINNED under D219 lane A6 (design 00-AUDIT-AND-PLAN.md section 7: "the
+ * swap rule and its reason ... removed"). What the suite used to pin as the
+ * swap rule (a `recommended` session chosen when programme next was
+ * not_yet, another outstanding session ready and not overlapping, the
+ * highest readiness winning, ties to programme order) and its reason
+ * ("Legs is next in your plan. ... Push is estimated ready now.") is now
+ * pinned the other way round: the same scenarios produce no recommendation
+ * and no reason, the result carries no such fields, and the sessions stay in
+ * programme order, never ranked by readiness. Everything else the module
+ * computes is kept and still pinned here: the programme-next resolution
+ * (the first OUTSTANDING session in programme order), each outstanding
+ * session's readiness now and at the projected time, the programme-next
+ * line and each session's own line, "unknown is never ready", "no evidence is
+ * never ready" in copy (D214 RC-5), the readyClause wording and determinism.
+ * A later lane builds the Recovery screen's "Next in your plan" card from
+ * exactly these fields.
  *
  * RE-ANCHORED under D214 (lane 2, RC-5): the programme-next line no longer
  * prints "Every muscle it trains is estimated recovered." for muscles with
@@ -33,8 +44,8 @@ const DAY_MS = 24 * HOUR_MS;
  * it byte-identical (muscleRecoveryModel.js's own documented behaviour for
  * an entry with nothing to re-derive), so readinessNow and
  * readinessAtProjected read the SAME percent/status/readyAtMs -- exactly
- * what most of this rule's branches need to isolate, without depending on
- * the model's own decay maths.
+ * what most branches need to isolate, without depending on the model's own
+ * decay maths.
  */
 function staticEntry(muscle, { recoveredPercent, status, readyAtMs = null }) {
   return {
@@ -45,7 +56,7 @@ function staticEntry(muscle, { recoveredPercent, status, readyAtMs = null }) {
 
 /**
  * A REAL decaying entry (one contributing session), for the one test that
- * must prove the rule reads the PROJECTED verdict, not the now verdict.
+ * must prove the projected reading differs from the reading now.
  * F=1 (reference dose), residual(t) = max(0, 1 - (t - endMs) / (hoursT * 1h)).
  */
 function decayingEntry(muscle, { endMs, hoursT, sets = 6 }) {
@@ -64,8 +75,11 @@ function session(routineId, name, order, state = SESSION_STATE.OUTSTANDING) {
 const NAMES = { legs: 'Legs', push: 'Push', pull: 'Pull' };
 const NOW = 10 * DAY_MS; // arbitrary fixed epoch, well clear of 0
 
+// The only keys a result carries now. `recommended` and `reason` are gone.
+const RESULT_KEYS = ['perSession', 'programmeNext', 'programmeNextLine'];
+
 describe('programme order is kept', () => {
-  test('programmeNext is fully ready: no recommendation, "every muscle" copy', () => {
+  test('programmeNext is fully ready: "every muscle" copy, and no swap fields at all', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 95, status: 'recovered' }) };
     const result = recommendNextWorkout({
@@ -74,12 +88,12 @@ describe('programme order is kept', () => {
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     expect(result.programmeNext).toEqual({ routineId: 'legs' });
-    expect(result.recommended).toBeNull();
-    expect(result.reason).toBeNull();
+    expect(result).not.toHaveProperty('recommended');
+    expect(result).not.toHaveProperty('reason');
     expect(result.programmeNextLine).toBe('Every muscle it trains is estimated recovered.');
   });
 
-  test('programmeNext not ready, but no OTHER outstanding session exists: no recommendation', () => {
+  test('programmeNext not ready and no OTHER outstanding session exists: the line still names the limiting muscle', () => {
     const sessions = [session('legs', 'Legs', 1)];
     const readyAtMs = NOW + 2 * DAY_MS;
     const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }) };
@@ -88,12 +102,11 @@ describe('programme order is kept', () => {
       plannedSetsByRoutine: { legs: { quads: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toBeNull();
-    expect(result.reason).toBeNull();
+    expect(Object.keys(result).sort()).toEqual(RESULT_KEYS);
     expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
-  test('programmeNext is not_yet at the projected time and the ONLY other outstanding session is also not ready: no recommendation, but programmeNextLine still names the limiting muscle', () => {
+  test('programmeNext is not_yet at the projected time and the other session is too: each session reports its own verdict and the line names the limiting muscle', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const legsReadyAt = NOW + 2 * DAY_MS;
     const pushReadyAt = NOW + 3 * DAY_MS;
@@ -106,29 +119,13 @@ describe('programme order is kept', () => {
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    // Push is genuinely not a qualifying candidate: it fails the RULE's
-    // "ready at the projected time" condition too, not just the limiting-
-    // muscle-overlap one.
+    expect(result.perSession.find((p) => p.routineId === 'legs').verdict).toBe('not_yet');
     expect(result.perSession.find((p) => p.routineId === 'push').verdict).toBe('not_yet');
-    expect(result.recommended).toBeNull();
-    expect(result.reason).toBeNull();
+    expect(Object.keys(result).sort()).toEqual(RESULT_KEYS);
     expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(legsReadyAt, NOW)}.`);
   });
 
-  test('programmeNext not ready, another outstanding session IS ready, but it shares the limiting muscle with >= 2 planned sets: no recommendation', () => {
-    const sessions = [session('legs', 'Legs', 1), session('pull', 'Pull', 2)];
-    const readyAtMs = NOW + 2 * DAY_MS;
-    const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }) };
-    const result = recommendNextWorkout({
-      sessions,
-      // "pull" also loads quads with 2+ sets -- disqualified even though it is otherwise ready.
-      plannedSetsByRoutine: { legs: { quads: 10 }, pull: { back: 10, quads: 2 } },
-      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
-    });
-    expect(result.recommended).toBeNull();
-  });
-
-  test('a resolved session (completed) is never recommended and never appears in perSession', () => {
+  test('a resolved session (completed) never appears in perSession', () => {
     const sessions = [
       session('legs', 'Legs', 1),
       { ...session('push', 'Push', 2), state: SESSION_STATE.COMPLETED },
@@ -143,11 +140,30 @@ describe('programme order is kept', () => {
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toBeNull();
     expect(result.perSession.map((p) => p.routineId)).toEqual(['legs']);
   });
 
-  test('a candidate whose planned sets are UNKNOWN (null: the read failed) is never a candidate, even though it would otherwise look ready', () => {
+  test('programme next is the first OUTSTANDING session in programme order, not the most recovered one', () => {
+    // Legs (order 1) is done; Push (order 2) is the plan's next even though
+    // Pull (order 3) is the more recovered of the two.
+    const sessions = [
+      { ...session('legs', 'Legs', 1), state: SESSION_STATE.COMPLETED },
+      session('push', 'Push', 2),
+      session('pull', 'Pull', 3),
+    ];
+    const recoveryMap = {
+      chest: staticEntry('chest', { recoveredPercent: 40, status: 'recovering', readyAtMs: NOW + DAY_MS }),
+      back: staticEntry('back', { recoveredPercent: 100, status: 'recovered' }),
+    };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 }, pull: { back: 10 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.programmeNext).toEqual({ routineId: 'push' });
+  });
+
+  test('a session whose planned sets are UNKNOWN (null: the read failed) is never read as ready', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const readyAtMs = NOW + 2 * DAY_MS;
     const recoveryMap = {
@@ -162,7 +178,6 @@ describe('programme order is kept', () => {
       plannedSetsByRoutine: { legs: { quads: 10 }, push: null },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toBeNull();
     const push = result.perSession.find((p) => p.routineId === 'push');
     expect(push.verdict).toBeNull();
     expect(push.readinessNow).toBeNull();
@@ -170,21 +185,18 @@ describe('programme order is kept', () => {
     expect(push.line).toBeNull();
   });
 
-  test('programmeNext\'s OWN planned sets are unknown: no recommendation is attempted and no line claims an estimate', () => {
+  test('programmeNext\'s OWN planned sets are unknown: no line claims an estimate', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const recoveryMap = { chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }) };
     const result = recommendNextWorkout({
       sessions,
       // Legs (programmeNext) itself could not be read -- an unknown session
-      // must not silently become "not_yet" (which would trigger a
-      // recommendation off no real evidence) or "ready" (which would hide a
+      // must not silently become "not_yet" or "ready" (which would hide a
       // genuine unknown behind a false all-clear).
       plannedSetsByRoutine: { legs: null, push: { chest: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     expect(result.programmeNext).toEqual({ routineId: 'legs' });
-    expect(result.recommended).toBeNull();
-    expect(result.reason).toBeNull();
     // Lead review: with no read behind it there is no estimate to state, so
     // the line is null rather than a false "estimated recovered" all-clear.
     expect(result.programmeNextLine).toBeNull();
@@ -193,10 +205,10 @@ describe('programme order is kept', () => {
   });
 });
 
-describe('a recommendation is made when all three conditions hold', () => {
-  test('another ready, non-overlapping session becomes the recommendation, with the ruled copy', () => {
+describe('no other session is ever recommended (D219: the order is fixed when the plan is built)', () => {
+  test('the old swap scenario (programme next not ready, another session ready and not overlapping) names no other session and no reason', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
-    const readyAtMs = NOW + 2 * DAY_MS; // Thursday, if NOW is a Tuesday -- see below
+    const readyAtMs = NOW + 2 * DAY_MS;
     const recoveryMap = {
       quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }),
       chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }),
@@ -207,42 +219,34 @@ describe('a recommendation is made when all three conditions hold', () => {
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     expect(result.programmeNext).toEqual({ routineId: 'legs' });
-    expect(result.recommended).toEqual({ routineId: 'push' });
-    // RE-ANCHORED D214 addendum 9 (V6, D201): the last clause carries "estimated"
-    // like the first ("Push is estimated ready now."), so a bare "ready now" is
-    // never printed as a fact the estimate cannot prove.
-    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push is estimated ready now.`);
+    expect(Object.keys(result).sort()).toEqual(RESULT_KEYS);
+    expect(JSON.stringify(result)).not.toMatch(/is next in your plan|recommended|reason/);
+    // The plan's next session is described, as before.
     expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
+    // The other session's readiness is still reported, as a fact about it:
+    // it is not offered, ranked or swapped in.
+    const push = result.perSession.find((p) => p.routineId === 'push');
+    expect(push.verdict).toBe('ready');
+    expect(push.line).toBe('Estimated ready now.');
   });
 
-  test('the rule reads the PROJECTED verdict, not the readiness at now', () => {
-    // One real session hits quads hard 40 hours before "now": not ready yet
-    // (residual still high), but comfortably crossed 90% by the projected
-    // time 70 hours after that same session end.
-    const sessionEnd = 0;
-    const nowMs = sessionEnd + 40 * HOUR_MS;
-    const projectedAtMs = sessionEnd + 70 * HOUR_MS;
-    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
-    const recoveryMap = {
-      quads: decayingEntry('quads', { endMs: sessionEnd, hoursT: 72 }),
-      chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }),
-    };
-    // Not ready RIGHT NOW.
-    const nowResult = recommendNextWorkout({
-      sessions, plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
-      recoveryMap, projectedAtMs: nowMs, nowMs, routineNamesById: NAMES,
+  test('a session that overlaps the limiting muscle changes nothing either: the result has the same shape and the plan\'s next', () => {
+    const sessions = [session('legs', 'Legs', 1), session('pull', 'Pull', 2)];
+    const readyAtMs = NOW + 2 * DAY_MS;
+    const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }) };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, pull: { back: 10, quads: 2 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(nowResult.recommended).toEqual({ routineId: 'push' });
-    // But by the projected time it WILL be ready -- no recommendation then.
-    const projectedResult = recommendNextWorkout({
-      sessions, plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
-      recoveryMap, projectedAtMs, nowMs, routineNamesById: NAMES,
-    });
-    expect(projectedResult.recommended).toBeNull();
+    expect(result.programmeNext).toEqual({ routineId: 'legs' });
+    expect(Object.keys(result).sort()).toEqual(RESULT_KEYS);
   });
 
-  test('among several qualifying candidates, the highest minimum readiness (at the projected time) wins', () => {
-    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2), session('pull', 'Pull', 3)];
+  test('sessions stay in programme order, never ranked by readiness (the old "highest readiness wins" is gone)', () => {
+    // Given out of order on purpose; Pull (99%) and Push (91%) are both more
+    // recovered than Legs, and programme order is still all that orders them.
+    const sessions = [session('pull', 'Pull', 3), session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const readyAtMs = NOW + DAY_MS;
     const recoveryMap = {
       quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }),
@@ -254,28 +258,43 @@ describe('a recommendation is made when all three conditions hold', () => {
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 }, pull: { back: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toEqual({ routineId: 'pull' }); // 99 beats 91
+    expect(result.perSession.map((p) => p.routineId)).toEqual(['legs', 'push', 'pull']);
+    expect(result.programmeNext).toEqual({ routineId: 'legs' });
   });
 
-  test('a tie in minimum readiness resolves to programme order', () => {
-    const sessions = [session('legs', 'Legs', 1), session('pull', 'Pull', 3), session('push', 'Push', 2)];
-    const readyAtMs = NOW + DAY_MS;
+  test('the readiness at the projected time is carried beside the readiness now (a session not ready now can read ready by then)', () => {
+    // One real session hits quads hard 40 hours before "now": not ready yet
+    // (residual still high), but comfortably past 90% by the projected time
+    // 70 hours after that same session end.
+    const sessionEnd = 0;
+    const nowMs = sessionEnd + 40 * HOUR_MS;
+    const projectedAtMs = sessionEnd + 70 * HOUR_MS;
+    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const recoveryMap = {
-      quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }),
+      quads: decayingEntry('quads', { endMs: sessionEnd, hoursT: 72 }),
       chest: staticEntry('chest', { recoveredPercent: 95, status: 'recovered' }),
-      back: staticEntry('back', { recoveredPercent: 95, status: 'recovered' }),
     };
-    const result = recommendNextWorkout({
-      sessions,
-      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 }, pull: { back: 10 } },
-      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    const plannedSetsByRoutine = { legs: { quads: 10 }, push: { chest: 10 } };
+    const atProjection = recommendNextWorkout({
+      sessions, plannedSetsByRoutine, recoveryMap, projectedAtMs, nowMs, routineNamesById: NAMES,
     });
-    // Push (order 2) ties Pull (order 3) at 95% -- programme order wins.
-    expect(result.recommended).toEqual({ routineId: 'push' });
+    const legs = atProjection.perSession.find((p) => p.routineId === 'legs');
+    expect(legs.readinessNow.verdict).toBe('not_yet');
+    expect(legs.readinessAtProjected.verdict).toBe('ready');
+    // The flattened verdict is the projected one.
+    expect(legs.verdict).toBe('ready');
+    // With the projection at "now", the two readings agree.
+    const atNow = recommendNextWorkout({
+      sessions, plannedSetsByRoutine, recoveryMap, projectedAtMs: nowMs, nowMs, routineNamesById: NAMES,
+    });
+    expect(atNow.perSession.find((p) => p.routineId === 'legs').verdict).toBe('not_yet');
+    // Neither reading ever produces a recommendation.
+    expect(atProjection).not.toHaveProperty('recommended');
+    expect(atNow).not.toHaveProperty('recommended');
   });
 });
 
-describe('per-session copy (used by the change-workout sheet)', () => {
+describe('per-session copy (a session the person picks on Home carries its own line)', () => {
   // RE-ANCHORED D214 addendum 9 (V6, D201): every "ready now" header says it is
   // an estimate; the per-session line is "Estimated ready now.".
   test('a ready session reads "Estimated ready now."', () => {
@@ -346,7 +365,7 @@ describe('readyClause', () => {
 });
 
 describe('no evidence is never "ready" in copy (spec section 1; Opus review finding 2)', () => {
-  test('a programme next none of whose muscles has a recent session: says so, never "every muscle", no recommendation', () => {
+  test('a programme next none of whose muscles has a recent session: says so, never "every muscle"', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     // Empty map: every muscle reads as no_recent_session.
     const result = recommendNextWorkout({
@@ -354,13 +373,12 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
       recoveryMap: {}, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toBeNull();
     // D214 RC-5: the line is printed (it was null), and it is the fact.
     expect(result.programmeNextLine).toBe('No recent session on the muscles Legs trains.');
     expect(result.programmeNextLine).not.toMatch(/every muscle|ready/i);
-    // The change-workout sheet's per-session line stays silent without evidence.
+    // A session's own per-session line stays silent without evidence.
     for (const p of result.perSession) expect(p.line).toBeNull();
-    // The RULE still reads them as fully recovered (they are).
+    // The verdict still reads them as fully recovered (they are).
     expect(result.perSession.find((p) => p.routineId === 'legs').verdict).toBe('ready');
   });
 
@@ -407,7 +425,7 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
     expect(result.programmeNextLine).toBeNull();
   });
 
-  test('a fresh candidate is recommended over an under-recovered programme next, and the copy says why honestly', () => {
+  test('a fresh session beside an under-recovered programme next is described plainly: no line for it, the plan\'s next unchanged, nothing recommended', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const readyAtMs = NOW + 2 * DAY_MS;
     const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }) };
@@ -416,18 +434,18 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toEqual({ routineId: 'push' });
-    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push has had no session in the last 14 days.`);
+    expect(result.programmeNext).toEqual({ routineId: 'legs' });
+    expect(Object.keys(result).sort()).toEqual(RESULT_KEYS);
     expect(result.perSession.find((p) => p.routineId === 'push').line).toBeNull();
   });
 
-  test('a candidate ready at the projected time but not yet now is never called "ready now" (Opus finding 5)', () => {
+  test('a session ready at the projected time but not yet now is never called "ready now" (Opus finding 5)', () => {
     const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
     const legsReadyAt = NOW + 2 * DAY_MS;
     // Chest: one real session that ended 21.9 hours ago with a 30-hour
-    // recovery: 73% now (residual 0.27), 93% six hours from now. The rule
-    // reads the projected verdict (ready) and recommends Push; the copy
-    // must still tell the truth at the moment of reading.
+    // recovery: 73% now (residual 0.27), 93% six hours from now. The
+    // projected reading is ready; the copy must still tell the truth at the
+    // moment of reading.
     const chestEnd = NOW - 21.9 * HOUR_MS;
     const chest = decayingEntry('chest', { endMs: chestEnd, hoursT: 30 });
     const projectedAtMs = NOW + 6 * HOUR_MS;
@@ -440,19 +458,18 @@ describe('no evidence is never "ready" in copy (spec section 1; Opus review find
       plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
       recoveryMap, projectedAtMs, nowMs: NOW, routineNamesById: NAMES,
     });
-    expect(result.recommended).toEqual({ routineId: 'push' });
     const push = result.perSession.find((p) => p.routineId === 'push');
     expect(push.readinessNow.verdict).toBe('not_yet');
     expect(push.readinessAtProjected.verdict).toBe('ready');
-    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(legsReadyAt, NOW)}. Push is estimated ${readyClause(chest.readyAtMs, NOW)}.`);
-    expect(result.reason).not.toMatch(/Push is (estimated )?ready now/);
+    expect(push.line).toBe(`Chest is estimated ${Math.round(push.readinessNow.minPercent)}% recovered, ${readyClause(chest.readyAtMs, NOW)}.`);
+    expect(push.line).not.toMatch(/ready now/);
   });
 });
 
 describe('never a crash on absent input, and determinism', () => {
-  test('no sessions at all: the calm empty shape', () => {
+  test('no sessions at all: the calm empty shape, with no swap fields', () => {
     const result = recommendNextWorkout({});
-    expect(result).toEqual({ programmeNext: null, recommended: null, reason: null, programmeNextLine: null, perSession: [] });
+    expect(result).toEqual({ programmeNext: null, programmeNextLine: null, perSession: [] });
   });
 
   test('the same inputs give the same output every time', () => {

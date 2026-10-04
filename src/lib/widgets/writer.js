@@ -3,8 +3,10 @@
  * OTA-patchable writer; the pure shaping lives in snapshot.js).
  *
  * Gathers from existing local reads ONLY (offline-first, no network):
- *   - next session: active plan + getCurrentMesocycleWeek for the
- *     week-in-block chip.
+ *   - next session: the plan's own next session (resolveProgrammePosition,
+ *     the authority Home's Start and Plans' "Start next workout" read; the
+ *     plan's first routine only where the plan has no next session) +
+ *     getCurrentMesocycleWeek for the week-in-block chip.
  *   - consistency: this week's session count + the COMP-018 ED suppression rule.
  *   - friends (CR-14): the small local cache friends.js maintains, included
  *     only when it is for TODAY.
@@ -29,6 +31,10 @@ import {
   getWeeklySessionStats, getOpenEdPatternFlag,
 } from '../database';
 import { localWeekStartMs, todayLocalKey } from '../dayKey';
+// D219: the widget names the plan's own next session, from the one authority
+// Home's Start and Plans' "Start next workout" read (programmePosition.js).
+import { resolveProgrammePosition } from '../programmePosition';
+import { sessionDisplayName } from '../blockProgression';
 import { isCalm, WELLBEING_KEY } from '../wellbeing';
 import { buildWidgetSnapshot, emptyWidgetSnapshot } from './snapshot';
 import { persistWidgetSnapshot } from './storage';
@@ -44,10 +50,23 @@ export async function gatherWidgetInputs(userId) {
 
   let nextSession = null;
   if (plan?.id && Array.isArray(routines) && routines.length > 0) {
+    // D219 (founder 2026-10-04, "Next workout should be planned as the plan
+    // builds it"): the session the widget names is the plan's own next one,
+    // the SAME answer Home's Start and Plans' "Start next workout" give
+    // (resolveProgrammePosition's nextSession: the first outstanding required
+    // session in programme order). It used to name `routines[0]` whatever the
+    // position was, so after the first session of the week the widget kept
+    // naming the first routine while Home started the second. The plan's
+    // first routine is named only where the plan has no next session: a week
+    // with every session resolved (the session the plan week turns on), or an
+    // unreadable position. A read failure is not evidence of anything, so it
+    // takes the same fallback, never a throw.
+    const position = await resolveProgrammePosition(userId).catch(() => null);
+    const upNext = position?.nextSession ?? null;
+    const upNextName = upNext ? sessionDisplayName(upNext, position?.sessions ?? []) : '';
     nextSession = {
-      // A routine/plan name only — never body data. v1 names the plan; per-day
-      // routine rotation is a later refinement.
-      name: routines[0]?.name || plan.name || 'Next session',
+      // A routine/plan name only, never body data.
+      name: upNextName || routines[0]?.name || plan.name || 'Next session',
       // Never a day claim: no scheduled training days exist (see header).
       dayLabel: null,
       // X17 (cross-surface-consistency-audit-2026-07-30): weekIndex from
