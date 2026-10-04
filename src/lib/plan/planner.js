@@ -214,7 +214,11 @@ function evaluateFamily(family, ctx) {
     return out;
   };
 
-  const run = () => {
+  // `unlimited`: the session-count search below sizes each muscle's sessions
+  // for its targets inside the caps and the D45 ceilings, without the
+  // person's session length (design 4.4's formula reads the targets and the
+  // caps, never the clock); the plan itself is then built with it.
+  const run = ({ unlimited = false } = {}) => {
     // A focus muscle that cannot get another session may take 10 direct and
     // 12 fractional sets in one (design 4.3).
     const caps = { ...state.sessionCaps };
@@ -235,7 +239,7 @@ function evaluateFamily(family, ctx) {
       lightCaps: state.lightCaps,
       maxSlots: state.maxSlots,
       sessionCaps: state.sessionCaps,
-      sessionLengthMinutes: ctx.sessionLengthMinutes,
+      sessionLengthMinutes: unlimited ? Infinity : ctx.sessionLengthMinutes,
       equipment: ctx.equipment,
       gapAfter: gapAfterSessions(state.placementOrder, ctx.ownGaps || ctx.typical),
     });
@@ -256,19 +260,19 @@ function evaluateFamily(family, ctx) {
   // sessions that keep every session under its caps, never raised for its
   // own sake). One session more for a muscle below its peak whose sessions
   // are at their cap, or below its growth floor with no room left in them.
-  // One session fewer for a muscle whose peak-week direct sets fit fewer
-  // sessions (the formula's k = ceil(D_peak / cap_s)), or for a muscle that
-  // holds one of the 8 exercises (D45) of a full session where a growing
-  // muscle below its floor needs another exercise: a second session for a
-  // muscle the presses and pulls already credit (the triceps, the biceps)
-  // can cost another muscle the exercise it needs. Only the exercise
-  // ceiling, never the session's time, opens that move: comparing plans
-  // whose time is spent differently would favour cheap isolation sets over
-  // the compound ones (design 3: time is a limit, never part of the
-  // ranking). A move is kept only when every muscle still has an exercise
-  // and the plan improves: fewer sets below the floors first (the most
-  // important first, floorShortfall), then more expected growth.
-  let { exposures, alloc } = run();
+  // One session fewer for a muscle that holds one of the 8 exercises (D45)
+  // of a full session where a growing muscle below its floor needs another
+  // exercise: a second session for a muscle the presses and pulls already
+  // credit (the triceps, the biceps) can cost another muscle the exercise it
+  // needs. The search runs inside the caps and the D45 ceilings without the
+  // person's session length: with the clock in it, a structure that spends
+  // the minutes on cheap isolation sets would beat one with the compound
+  // lifts (design 3: time is a limit, never part of the ranking). A move is
+  // kept only when every muscle still has an exercise and the plan
+  // improves: fewer sets below the floors first (the most important first,
+  // floorShortfall), then more expected growth. The plan is then built with
+  // the person's session length.
+  let { exposures, alloc } = run({ unlimited: true });
   const covered = (a) => trainable.every((m) => a.sessions.some((sess) => sess.slots.some((x) => x.muscle === m)));
   const objectiveOf = (a) => trainable.reduce((sum, m) => {
     const r = state.roles[m];
@@ -292,19 +296,15 @@ function evaluateFamily(family, ctx) {
       return capped || blocked;
     }).sort((a, b) => ((floorOf(b) - W(b)) - (floorOf(a) - W(a))) || (muscleIndex(a) - muscleIndex(b)));
     const crowded = crowdedSessions(alloc, exposures, trainable, state.roles, ctx.choices, state.maxSlots);
-    const lowers = trainable.filter((m) => {
-      if (state.k[m] < 2) return false;
-      if ((exposures[m] || []).some((si) => crowded.has(si) && alloc.sessions[si].slots.some((x) => x.muscle === m))) return true;
-      const capS = Math.max(1, ...(exposures[m] || []).map((si) => sessionCapOf(m, si)));
-      return Math.ceil((alloc.weekly[m]?.direct || 0) / capS - 1e-9) < state.k[m];
-    }).sort((a, b) => ((W(b) - floorOf(b)) - (W(a) - floorOf(a))) || (muscleIndex(a) - muscleIndex(b)));
+    const lowers = trainable.filter((m) => state.k[m] >= 2
+      && (exposures[m] || []).some((si) => crowded.has(si) && alloc.sessions[si].slots.some((x) => x.muscle === m))).sort((a, b) => ((W(b) - floorOf(b)) - (W(a) - floorOf(a))) || (muscleIndex(a) - muscleIndex(b)));
     const moves = [...raises.map((m) => [m, 1]), ...lowers.map((m) => [m, -1])]
       .filter(([m, d]) => !rejected.has(`${m}:${state.k[m]}:${d}`));
     let moved = false;
     for (const [m, d] of moves) {
       const savedCaps = state.sessionCaps;
       state.k[m] += d;
-      const trial = run();
+      const trial = run({ unlimited: true });
       if (covered(trial.alloc) && improves(trial.alloc, alloc)) {
         ({ exposures, alloc } = trial);
         rejected.clear();
@@ -317,6 +317,7 @@ function evaluateFamily(family, ctx) {
     }
     if (!moved) break;
   }
+  ({ exposures, alloc } = run());
 
   const layouts = spacingLayouts(n, ctx.typical, ctx.ownGaps);
   const usual = layouts.own || layouts.typical;
@@ -481,11 +482,23 @@ function evaluateFamily(family, ctx) {
     if (r.role === ROLE.MAINTENANCE) return sum;
     return sum + (r.weight || 1) * OBJECTIVE.growthCoefficient * Math.sqrt(Math.max(0, alloc.weekly[m]?.fractional || 0));
   }, 0);
+  // The structure is judged on what its sessions can hold (the caps and the
+  // D45 ceilings), not on what the person's session length lets the clock
+  // fit: with the clock in it, a week with an arms day would beat one with
+  // the compound lifts on cheap isolation sets (design 3). The readiness
+  // and the rotation penalty are read from the plan as built.
+  const structural = run({ unlimited: true }).alloc;
+  const structuralObjective = trainable.reduce((sum, m) => {
+    const r = state.roles[m];
+    if (r.role === ROLE.MAINTENANCE) return sum;
+    return sum + (r.weight || 1) * OBJECTIVE.growthCoefficient * Math.sqrt(Math.max(0, structural.weekly[m]?.fractional || 0));
+  }, 0);
   return {
     alloc, exposures, order, block, sim, notes, state, trainable,
     penalty: finalScore.recovery,
-    objective,
-    floorShortfall: floorShortfall(ctx.roles, alloc.weekly, trainable),
+    objective: structuralObjective,
+    builtObjective: objective,
+    floorShortfall: floorShortfall(ctx.roles, structural.weekly, trainable),
     readinessPasses: sim.passes,
     readinessDeficit: readinessDeficit(sim),
   };
@@ -510,8 +523,8 @@ function gapAfterSessions(order, layout) {
 
 /**
  * How far a plan's week falls below its floors, the most important first
- * (design 4.5 steps 4 and 6): sets below maintenance (4 a week) for any
- * growing muscle; sets below a focus muscle's growth floor (20); sets below a
+ * (design 4.5 steps 4 and 6): sets below the maintenance range (under 2 a
+ * week) for any growing muscle; sets below a focus muscle's growth floor (20); sets below a
  * standard muscle's growth floor (10), weighted by its priority. Compared
  * in that order, so lower-priority muscles are held at maintenance before a
  * focus muscle is cut.
@@ -525,7 +538,7 @@ function floorShortfall(roles, weekly, muscles) {
     if (!r || r.role === ROLE.MAINTENANCE) continue;
     const W = weekly[m]?.fractional || 0;
     const floor = Math.min(r.growthFloor || 0, r.peak);
-    maintenance += Math.max(0, Math.min(ROLE_TARGETS.maintenance.target, floor) - W);
+    maintenance += Math.max(0, Math.min(ROLE_TARGETS.maintenance.low, floor) - W);
     const short = Math.max(0, floor - W);
     if (r.role === ROLE.FOCUS) focus += short;
     else standard += (r.weight || 1) * short;
