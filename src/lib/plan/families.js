@@ -27,6 +27,9 @@ const LEGS = LOWER;
 const ARMS_SHOULDERS = Object.freeze(['biceps', 'triceps', 'side_delts', 'rear_delts', 'front_delts', 'forearms', 'abs']);
 const FULL = Object.freeze([...UPPER, ...LOWER]);
 
+/** Muscles trained by isolation work: as a focus they may take a session in either half (design 4.4). */
+const ISOLATION_FOCUS = new Set(['side_delts', 'rear_delts', 'biceps', 'triceps', 'calves', 'abs']);
+
 /** The half of the body a muscle belongs to. */
 export function bodyHalf(muscle) {
   return LOWER.includes(muscle) ? 'lower' : 'upper';
@@ -139,6 +142,10 @@ export function sessionsAllowing(family, muscle, { focus = false } = {}) {
   const out = [];
   family.sessions.forEach((sess, i) => {
     if (sess.muscles.includes(muscle)) { out.push(i); return; }
+    // A focus muscle trained by isolation work gets its extra volume as
+    // extra sessions, not as more sets in one (design 4.4), so it may join
+    // any session; the others join any session of their half of the body.
+    if (focus && !family.division && ISOLATION_FOCUS.has(muscle)) { out.push(i); return; }
     if (focus && !family.division) {
       const half = bodyHalf(muscle);
       const sameHalf = sess.muscles.some((m) => bodyHalf(m) === half);

@@ -244,17 +244,35 @@ function evaluateFamily(family, ctx) {
       gapAfter: gapAfterSessions(state.placementOrder, ctx.ownGaps || ctx.typical),
     });
     balanceSlots(alloc, state.roles);
+    // An exposure that took no sets (it did not fit) is not one: the split
+    // and the order read the sessions the muscle is really trained in.
+    for (const m of Object.keys(exposures)) {
+      exposures[m] = exposures[m].filter((si) => alloc.sessions[si].slots.some((x) => x.muscle === m));
+    }
     return { exposures, alloc };
   };
 
-  const sessionCapOf = (m, s) => {
-    const light = state.lightCaps?.[m]?.[s];
+  const sessionRoom = (m) => {
     const direct = state.sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
     const list = ctx.choices[m] || [];
-    const slots = Math.min(exercisesAllowed(m), Number.isFinite(state.maxSlots[m]) ? state.maxSlots[m] : Infinity, list.length);
+    const slots = Math.min(exercisesAllowed(m, { focus: state.roles[m]?.role === ROLE.FOCUS }), Number.isFinite(state.maxSlots[m]) ? state.maxSlots[m] : Infinity, list.length);
     const room = list.slice(0, slots).reduce((a, c) => a + exerciseCap(c.kind, list.length === 1), 0);
-    return Math.min(Number.isFinite(light) ? light : Infinity, direct, room);
+    return Math.min(direct, room);
   };
+  const sessionCapOf = (m, s) => {
+    const light = state.lightCaps?.[m]?.[s];
+    return Math.min(Number.isFinite(light) ? light : Infinity, sessionRoom(m));
+  };
+  // A light session never takes a focus muscle below its programmed sets
+  // (founder rule 2026-10-04: a focus muscle's volume is never cut): where
+  // its light caps would, it keeps full sessions and the readiness check
+  // reports the tighter recovery instead.
+  const keepsFocusFloor = (m, caps) => {
+    if (state.roles[m]?.role !== ROLE.FOCUS || !caps) return true;
+    const room = (exposures[m] || []).reduce((a, si) => a + Math.min(Number.isFinite(caps[si]) ? caps[si] : Infinity, sessionRoom(m)), 0);
+    return room + 1e-9 >= (state.roles[m].growthFloor || 0);
+  };
+  const sparingFocus = (caps) => Object.fromEntries(Object.entries(caps || {}).filter(([m, c]) => keepsFocusFloor(m, c)));
 
   // Then search from that start (design 4.4: frequency is the fewest
   // sessions that keep every session under its caps, never raised for its
@@ -342,7 +360,7 @@ function evaluateFamily(family, ctx) {
     order = orderFor(alloc);
   }
   for (let pass = 0; pass < 2; pass++) {
-    const split = lightCapsFor(exposures, order, usual, hoursPeak, trainable);
+    const split = sparingFocus(lightCapsFor(exposures, order, usual, hoursPeak, trainable));
     if (sameCaps(split, state.lightCaps)) break;
     state.lightCaps = split;
     ({ exposures, alloc } = run());
@@ -364,7 +382,7 @@ function evaluateFamily(family, ctx) {
   const resplit = (m) => {
     const mine = lightCapsForMuscle(m, exposuresNow(), order, usual, hoursPeak, state.forcedSplit[m] === true);
     const next = { ...state.lightCaps };
-    if (mine) next[m] = mine; else delete next[m];
+    if (mine && keepsFocusFloor(m, mine)) next[m] = mine; else delete next[m];
     state.lightCaps = next;
   };
   const rebuild = () => {
@@ -410,7 +428,7 @@ function evaluateFamily(family, ctx) {
         if (kind === 'split') {
           tried.split[m] = true;
           const mine = lightCapsForMuscle(m, exposures, order, usual, hoursPeak, true);
-          if (mine) {
+          if (mine && keepsFocusFloor(m, mine)) {
             state.lightCaps = { ...state.lightCaps, [m]: mine };
             state.forcedSplit = { ...state.forcedSplit, [m]: true };
             acted = true;
@@ -564,7 +582,7 @@ function crowdedSessions(alloc, exposures, muscles, roles, choices, maxSlots) {
       const r = roles[m];
       if (!r || r.role === ROLE.MAINTENANCE || !(exposures[m] || []).includes(si)) return false;
       if ((alloc.weekly[m]?.fractional || 0) + 1e-9 >= Math.min(r.growthFloor || 0, r.peak)) return false;
-      const allowed = Math.min(exercisesAllowed(m), Number.isFinite(maxSlots[m]) ? maxSlots[m] : Infinity, (choices[m] || []).length);
+      const allowed = Math.min(exercisesAllowed(m, { focus: r.role === ROLE.FOCUS }), Number.isFinite(maxSlots[m]) ? maxSlots[m] : Infinity, (choices[m] || []).length);
       return sess.slots.filter((x) => x.muscle === m).length < allowed;
     });
     if (needs) out.add(si);
@@ -812,7 +830,7 @@ function toPlan(chosen, ctx, inputs, factor) {
           peakSets: x.sets,
           repMin: reps.repMin,
           repMax: reps.repMax,
-          restSec: restFor(x.kind, inputs.isStrength === true),
+          restSec: x.restTrimmed ? x.restSec : restFor(x.kind, inputs.isStrength === true),
           selectionReason: 'catalogue',
           reason: x.choice?.reason ?? null,
           thinEquipment: x.thinEquipment === true,
@@ -837,7 +855,9 @@ function toPlan(chosen, ctx, inputs, factor) {
     goal: inputs.goal,
     splitType: family.key,
     daysPerWeek: ctx.n,
-    estimatedSessionMinutes: ctx.sessionLengthMinutes,
+    // The longest session's real length: above the person's length only when
+    // focus sets took it there (they are never cut), so the plan says so.
+    estimatedSessionMinutes: Math.max(ctx.sessionLengthMinutes, Math.ceil(Math.max(0, ...alloc.sessions.map((s) => s.minutes)))),
     workouts,
     weeklyVolumeSummary: weekly,
     v2: {
@@ -859,6 +879,7 @@ function toPlan(chosen, ctx, inputs, factor) {
       notes,
       limitedBy: alloc.limitedBy,
       sessionMinutesAtPeak: alloc.sessions.map((s) => s.minutes),
+      overTime: Object.fromEntries(alloc.sessions.map((s, si) => [sessionKey(si), s.overMinutes || 0]).filter(([, v]) => v > 5)),
     },
   };
 }

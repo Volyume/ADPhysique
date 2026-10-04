@@ -116,7 +116,16 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
       expect(w.exercises.reduce((a, e) => a + e.peakSets, 0)).toBeLessThanOrEqual(SESSION_CEILINGS.workingSets);
       expect(p.v2.sessionMinutesAtPeak[i]).toBeDefined();
     });
-    for (const minutes of p.v2.sessionMinutesAtPeak) expect(minutes).toBeLessThanOrEqual(inputs.sessionLengthMinutes + 5 + 1e-9);
+    // Over the length only where focus sets took it (founder rule 2026-10-04:
+    // never cut a focus muscle's volume for time), and then the plan says so.
+    p.workouts.forEach((w) => {
+      const minutes = p.v2.sessionMinutesAtPeak[Number(w.sessionKey.slice(1))];
+      if (minutes > inputs.sessionLengthMinutes + 5 + 1e-9) {
+        expect({ session: w.name, focusInIt: w.exercises.some((e) => p.v2.roles[e.muscle] === 'focus'), reported: p.v2.overTime[w.sessionKey] > 0 })
+          .toEqual({ session: w.name, focusInIt: true, reported: true });
+        expect(p.estimatedSessionMinutes).toBeGreaterThanOrEqual(Math.ceil(minutes));
+      }
+    });
   });
 
   test.each(BUILT.map((b) => [label(b), b]))('%s: every week served inside the caps, and week 5 is the planner\'s own peak', (_name, { plan: p }) => {
@@ -206,6 +215,20 @@ describe('determinism and the person\'s clocks', () => {
     expect(plan({ learnedFactor: 1.2 }).v2.builtFactor).toBe(1.2);
     expect(plan().v2.builtFactor).toBeNull();
     expect(plan().v2.rirLadder).toEqual([3, 2, 2, 1, 1, 4]);
+  });
+});
+
+describe('focus muscles keep their programmed sets (founder rule 2026-10-04)', () => {
+  test('three focus muscles in four 75-minute sessions each reach their 20 sets a week', () => {
+    const p = plan({ focusMuscles: ['glutes', 'side_delts', 'chest'] });
+    for (const m of ['glutes', 'side_delts', 'chest']) {
+      expect({ muscle: m, ok: p.weeklyVolumeSummary[m].fractional >= 20 - 1e-9 }).toEqual({ muscle: m, ok: true });
+    }
+  });
+
+  test('a 45-minute session keeps every focus set too: the time gives, not the volume', () => {
+    const p = plan({ sessionLengthMinutes: 45, focusMuscles: ['side_delts'] });
+    expect(p.weeklyVolumeSummary.side_delts.fractional).toBeGreaterThanOrEqual(20 - 1e-9);
   });
 });
 

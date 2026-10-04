@@ -93,6 +93,9 @@ describe("science.js: the founder's numbers", () => {
     expect(science.exercisesAllowed('hamstrings')).toBe(2);
     expect(science.exercisesAllowed('traps')).toBe(1);
     expect(science.exercisesAllowed('neck')).toBe(1);
+    // A focus muscle may take one more (founder rule 2026-10-04: its sets are never cut).
+    expect(science.exercisesAllowed('glutes', { focus: true })).toBe(3);
+    expect(science.exercisesAllowed('side_delts', { focus: true })).toBe(3);
   });
 });
 

@@ -277,6 +277,11 @@ export function exerciseCap(kind, thinEquipment = false) {
 }
 
 /** At most this many exercises of a muscle in one session. */
-export function exercisesAllowed(muscle) {
-  return EXERCISES_PER_MUSCLE_PER_SESSION[muscle] ?? EXERCISES_PER_MUSCLE_DEFAULT;
+export function exercisesAllowed(muscle, { focus = false } = {}) {
+  const base = EXERCISES_PER_MUSCLE_PER_SESSION[muscle] ?? EXERCISES_PER_MUSCLE_DEFAULT;
+  // A focus muscle may take one more (lead ruling, D219 build, after the
+  // founder's rule of 2026-10-04 that a focus muscle's sets are never cut):
+  // with 4 or 3 sets an exercise, two exercises cannot hold the 10 direct
+  // sets design 4.3 allows a focus muscle in one session.
+  return focus ? base + 1 : base;
 }

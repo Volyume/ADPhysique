@@ -44,6 +44,9 @@ const TRANSITION_SECONDS = Object.freeze({
   full_gym: 120, machines_cables: 90, home_gym: 60, dumbbells_only: 45, barbell_plates: 75, bodyweight: 30,
 });
 export const TIME_TOLERANCE_MINUTES = 5;
+// The rest a smaller muscle's isolation sets drop to when a session runs over.
+export const TRIMMED_REST_SECONDS = 60;
+const SMALL_MUSCLES = new Set(['side_delts', 'rear_delts', 'front_delts', 'traps', 'biceps', 'triceps', 'forearms', 'calves', 'abs', 'neck', 'tibialis']);
 // A muscle's progress to a floor is read in tenths of it (1 set of a standard
 // muscle's 10), so the floor steps stay level to within a tenth.
 const FLOOR_BANDS = 10;
@@ -109,7 +112,7 @@ export function allocatePeakWeek({
   const choiceList = (m) => (Array.isArray(choices[m]) ? choices[m] : []);
   const thin = (m) => choiceList(m).length === 1;
   const slotsAllowed = (m) => Math.min(
-    exercisesAllowed(m),
+    exercisesAllowed(m, { focus: roles[m]?.role === ROLE.FOCUS }),
     Number.isFinite(maxSlots[m]) ? maxSlots[m] : Infinity,
     choiceList(m).length,
   );
@@ -174,7 +177,7 @@ export function allocatePeakWeek({
 
   // Would adding `delta` sets of `slot` (existing, or new when `opening`) to
   // session s break a limit?
-  const fits = (s, slot, delta, opening) => {
+  const fits = (s, slot, delta, opening, ignoreTime = false) => {
     const m = slot.muscle;
     if ((sessionDirect[s][m] || 0) + delta > directCap(m, s) + EPS) return false;
     if ((sessionFrac[s][m] || 0) + delta > fractionalCap(m) + EPS) return false;
@@ -186,7 +189,7 @@ export function allocatePeakWeek({
     const next = withStep(clock[s], slot, delta, opening);
     if (next.workingSets > SESSION_CEILINGS.workingSets) return false;
     if (next.exercises > SESSION_CEILINGS.exercises) return false;
-    if (minutesOf(next) > timeLimit + EPS) return false;
+    if (!ignoreTime && minutesOf(next) > timeLimit + EPS) return false;
     return true;
   };
 
@@ -228,12 +231,14 @@ export function allocatePeakWeek({
   // second (with 8 exercises a session, D45, the last muscles in the list
   // would otherwise be shut out by the first ones' extra sessions) ──
   // Round 0 gives each muscle its least-loaded session first; later rounds
-  // place its remaining sessions in order.
+  // place its remaining sessions in order: a focus muscle's at once, the
+  // others' only after the focus muscles have their sets (step 3), so the
+  // session's exercises go to the muscle being brought up first (design 4.5
+  // step 6; founder rule 2026-10-04).
   const queue = {};
   for (const m of muscles) queue[m] = [...(exposures[m] || [])];
-  const rounds = Math.max(0, ...muscles.map((m) => queue[m].length));
-  for (let round = 0; round < rounds; round++) {
-    for (const m of muscles) {
+  const placeRound = (list, round, ignoreTime = false) => {
+    for (const m of list) {
       if (queue[m].length === 0) continue;
       let pickIndex = 0;
       if (round === 0) {
@@ -246,13 +251,18 @@ export function allocatePeakWeek({
       const s = queue[m].splice(pickIndex, 1)[0];
       const slot = openSlot(s, m);
       if (!slot) continue;
-      if (fits(s, slot, SETS_PER_EXERCISE.floor, true)) {
+      if (fits(s, slot, SETS_PER_EXERCISE.floor, true, ignoreTime)) {
         apply({ muscle: m, session: s, slot, delta: SETS_PER_EXERCISE.floor, opening: true });
       } else {
         limitedBy[m] = limitedBy[m] || 'floor_did_not_fit';
       }
     }
-  }
+  };
+  const placeRemaining = (list, ignoreTime = false) => {
+    for (let round = 1; list.some((m) => queue[m].length > 0); round++) placeRound(list, round, ignoreTime);
+  };
+  placeRound(muscles, 0);
+  placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);
 
   // ── 2. maintenance muscles trained directly: up to their target, no further ──
   for (const m of muscles.filter((x) => roles[x].role === ROLE.MAINTENANCE)) {
@@ -303,10 +313,16 @@ export function allocatePeakWeek({
   };
   const floorSteps = [
     { members: growers, level: (m) => Math.min(ROLE_TARGETS.maintenance.target, floorOf(m)), openings: false, valued: false },
-    { members: growers.filter((m) => roles[m].role === ROLE.FOCUS), level: floorOf, openings: true, valued: true },
+    // Founder rule (2026-10-04): a focus muscle's sets are programmed in full,
+    // never cut to fit the session length; a session that runs over says so
+    // (and first shortens the smaller muscles' rest, below).
+    { members: growers.filter((m) => roles[m].role === ROLE.FOCUS), level: floorOf, openings: true, valued: true, ignoreTime: true },
     { members: growers.filter((m) => roles[m].role !== ROLE.FOCUS), level: floorOf, openings: true, valued: true },
   ];
-  for (const { members, level, openings, valued } of floorSteps) {
+  for (const [index, { members, level, openings, valued, ignoreTime = false }] of floorSteps.entries()) {
+    // The other muscles' further sessions open once the focus muscles have
+    // their sets (step 1).
+    if (index === 2) placeRemaining(muscles.filter((m) => roles[m].role !== ROLE.FOCUS));
     let floorGuard = 2000;
     while (floorGuard-- > 0) {
       let best = null;
@@ -315,7 +331,7 @@ export function allocatePeakWeek({
           const target = level(m);
           const W = weekly[m]?.fractional || 0;
           if (W + 1 > target + EPS) continue;
-          const step = bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gapAfter, allowOpening });
+          const step = bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gapAfter, allowOpening, ignoreTime });
           if (!step) continue;
           const [focus, standard] = valued ? closes(step) : [0, 0];
           const ratio = W / Math.max(target, 1);
@@ -352,12 +368,32 @@ export function allocatePeakWeek({
     if (W + 1 <= roles[m].peak + EPS && !limitedBy[m]) limitedBy[m] = 'limits';
   }
 
+  // A session the focus sets take past the person's length first shortens
+  // the rest on the smaller muscles' isolation exercises (founder rule
+  // 2026-10-04: trim rest, never volume); what is still over is reported,
+  // so the person sees the session's real length.
+  const limit = sessionLengthMinutes > 0 ? sessionLengthMinutes : 60;
+  for (const sess of sessions) {
+    if (!Number.isFinite(limit) || sessionMinutes(sess.slots, equipment) <= limit + TIME_TOLERANCE_MINUTES + EPS) continue;
+    for (const x of sess.slots) {
+      if (x.kind === 'isolation' && SMALL_MUSCLES.has(x.muscle) && roles[x.muscle]?.role !== ROLE.FOCUS
+        && (x.restSec ?? REST_BY_KIND.isolation) > TRIMMED_REST_SECONDS) {
+        x.restSec = TRIMMED_REST_SECONDS;
+        x.restTrimmed = true;
+      }
+    }
+  }
+
   return {
-    sessions: sessions.map((sess) => ({
-      slots: sess.slots.filter((x) => x.sets > 0),
-      minutes: Math.round(sessionMinutes(sess.slots, equipment) * 10) / 10,
-      workingSets: sess.slots.reduce((a, x) => a + x.sets, 0),
-    })),
+    sessions: sessions.map((sess) => {
+      const minutes = Math.round(sessionMinutes(sess.slots, equipment) * 10) / 10;
+      return {
+        slots: sess.slots.filter((x) => x.sets > 0),
+        minutes,
+        overMinutes: Number.isFinite(limit) ? Math.max(0, Math.round((minutes - limit) * 10) / 10) : 0,
+        workingSets: sess.slots.reduce((a, x) => a + x.sets, 0),
+      };
+    }),
     weekly,
     limitedBy,
   };
@@ -367,7 +403,9 @@ export function allocatePeakWeek({
  * The best single placement for muscle m: a set on an existing exercise, else
  * (when `allowOpening`) a new exercise at its floor.
  */
-function bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gapAfter = null, allowOpening = true }) {
+function bestStepFor(m, {
+  exposures, sessions, fits, openSlot, slotsAllowed, gapAfter = null, allowOpening = true, ignoreTime = false,
+}) {
   let best = null;
   for (const s of exposures[m] || []) {
     const mine = sessions[s].slots.filter((x) => x.muscle === m);
@@ -378,11 +416,11 @@ function bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gap
       if (room > 0 && (!target || room > target.cap - target.sets)) target = x;
     }
     let step = null;
-    if (target && fits(s, target, 1, false)) {
+    if (target && fits(s, target, 1, false, ignoreTime)) {
       step = { muscle: m, session: s, slot: target, delta: 1, opening: false };
     } else if (allowOpening && mine.length < slotsAllowed(m)) {
       const fresh = openSlot(s, m);
-      if (fresh && fits(s, fresh, SETS_PER_EXERCISE.floor, true)) {
+      if (fresh && fits(s, fresh, SETS_PER_EXERCISE.floor, true, ignoreTime)) {
         step = { muscle: m, session: s, slot: fresh, delta: SETS_PER_EXERCISE.floor, opening: true };
       }
     }

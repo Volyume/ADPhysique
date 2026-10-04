@@ -143,7 +143,14 @@ module.exports = {
       credits: {
         quads: 0.5
       }
-    }
+    },
+    {
+      name: 'Bulgarian Split Squat',
+      kind: 'mod_compound',
+      credits: {
+        quads: 0.5
+      }
+    },
   ],
   calves: [
     {
