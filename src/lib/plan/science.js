@@ -57,7 +57,11 @@ export const EXERCISES_PER_MUSCLE_PER_SESSION = Object.freeze({
   glutes: 2,
   calves: 2,
   abs: 2,
-  hamstrings: 1,
+  // Lead ruling (D219 build): two for hamstrings, a knee-flexion curl and a
+  // hip hinge (S F13's pair), not the design's one. With one a session a
+  // 4-day plan holds hamstrings at 7 direct sets, below the normal growth
+  // range (10, A-graded evidence), which outranks a convention.
+  hamstrings: 2,
   front_delts: 1,
   traps: 1,
 });
@@ -204,7 +208,7 @@ export const EVIDENCE = Object.freeze({
   'PER_SESSION.fractionalCap': { grade: 'A', source: 'Remmert 2025 (preprint, SportRxiv 537): no detectable extra benefit beyond about 11 fractional sets in one session, "not upper limits" [S Q2]' },
   'PER_SESSION.focusDirectCap': { grade: 'CONV', source: "Top of RP's 8 to 12; only when the rotation cannot give the focus muscle another session [S F2, F10, STOP 1]" },
   'PER_SESSION.focusFractionalCap': { grade: 'CONV', source: 'As focusDirectCap [S F10, STOP 12]' },
-  EXERCISES_PER_MUSCLE_PER_SESSION: { grade: 'CONV', source: 'Design 4.3: three for chest, back and quads; two for the arms, delts, glutes, calves and abs; one for hamstrings, front delts and traps' },
+  EXERCISES_PER_MUSCLE_PER_SESSION: { grade: 'CONV', source: 'Design 4.3: three for chest, back and quads; two for the arms, delts, glutes, calves and abs; one for front delts and traps; two for hamstrings by lead ruling (a curl and a hinge, S F13), so a 4-day plan can reach the normal growth range' },
   EXERCISES_PER_MUSCLE_DEFAULT: { grade: 'CONV', source: 'Design 4.3: muscles not listed take one exercise a session' },
   'SESSION_CEILINGS.exercises': { grade: 'CONV', source: 'Founder D45 (2026-07-11): 8 exercises a session' },
   'SESSION_CEILINGS.workingSets': { grade: 'CONV', source: 'Founder D45 (2026-07-11): 25 working sets a session' },

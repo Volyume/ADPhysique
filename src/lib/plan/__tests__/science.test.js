@@ -90,7 +90,8 @@ describe("science.js: the founder's numbers", () => {
     });
     expect(science.exercisesAllowed('chest')).toBe(3);
     expect(science.exercisesAllowed('biceps')).toBe(2);
-    expect(science.exercisesAllowed('hamstrings')).toBe(1);
+    expect(science.exercisesAllowed('hamstrings')).toBe(2);
+    expect(science.exercisesAllowed('traps')).toBe(1);
     expect(science.exercisesAllowed('neck')).toBe(1);
   });
 });
