@@ -27,8 +27,10 @@
  *    resolved against ITS OWN mesocycle_id's week rows (workouts carry both
  *    columns directly -- no active-plan lookup needed to find them).
  *    isFirstWeek is week_index === 1, or the first week immediately after a
- *    week whose is_deload is set (Damas 2016: a block's first week, or the
- *    first week back from a recovery week, carries extra fatigue).
+ *    week whose is_deload is set. D219 (design 4.13): the model no longer
+ *    reads it (novelty, a new exercise or a layoff, replaced the first-week
+ *    factor); it is still derived and carried so the session shape and the
+ *    personal learner's memo key do not change.
  *  - ratings.fatigue is the workout's own post-session fatigue_level;
  *    ratings.joint is the workout's own post-session joint_discomfort, or
  *    (when that was never answered) the MAX joint_discomfort logged on any
@@ -47,7 +49,11 @@
  * edge needs for its soreness-pairing partner; the wider window covers it.
  * The model re-applies its own LOOKBACK_DAYS cutoff internally
  * (buildMuscleRecoveryMap), so handing it the wider set is always safe --
- * the extra days simply never contribute to the live reading. The window is
+ * the extra days never contribute to the live reading's residual. They are
+ * not wasted: D219's novelty (muscleRecoveryModel.sessionMuscleTerms) reads
+ * the whole fetched history to tell a new exercise, or a layoff of 21 days
+ * or more, from a familiar one, so a session in the live window is judged
+ * against at least 112 days (16 weeks) of earlier sessions. The window is
  * applied IN THE QUERY (getCompletedWorkoutsBetween), never by reading the
  * whole workouts table and filtering in JavaScript (Opus review finding 17:
  * Home and Consistency each do this on every focus).

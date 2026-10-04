@@ -1592,8 +1592,17 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   const isStrengthGoal = goal === 'strength_hypertrophy';
 
   // Sort: required subregion first → compound before isolation → goal bias
-  // → SFR tiebreak → pool index. Each term is an order of magnitude below
-  // the previous so the established priority order is preserved.
+  // → SFR tiebreak. Each term is an order of magnitude below the previous so
+  // the established priority order is preserved.
+  //
+  // D219 (design 1.3 and 4.7): the old last term, each exercise's position in
+  // the library list (1 point a position), is gone. The library arrives as
+  // `ORDER BY name ASC`, so the alphabet used to decide between exercises the
+  // registry had ranked equal or close (R1 probe 10: 11 staples of 22 picks in
+  // the shipped order, 4 in the reverse, 21 with the tier first). Where two
+  // candidates still tie on every term, `rank` below breaks the tie by their
+  // canonicality tier and then by exercise name, a comparison of values, so a
+  // plan no longer depends on the order the library was read in.
   // The division's ordered within-muscle roles, most judged first.
   const roleSpecs = divisionRoleSpecs(divisionGoalFor(goal), muscle);
   const preferredRoles = roleSpecs.map(spec => spec.role);
@@ -1623,7 +1632,7 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     requiredSubs.some(role => familySatisfiesRole(muscle, role, e.sub));
   const roleSatisfiedBy = e =>
     requiredSubs.find(role => familySatisfiesRole(muscle, role, e.sub)) ?? null;
-  function sortScore(e, idx) {
+  function sortScore(e) {
     const reqBonus   = satisfiesAnyRequiredRole(e) ? 0 : 100;
     const paramOrder = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
     const paramBonus = (paramOrder[e.p] ?? 3) * 10;
@@ -1682,12 +1691,16 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     // fatigue (the hand-written fallback pool) is never penalised.
     const stacking = sessionFatigue && sessionFatigue.high >= HIGH_FATIGUE_STACK_LIMIT;
     const fatiguePenalty = (stacking && e.fatigue != null && e.fatigue >= HIGH_FATIGUE_COST) ? 3 : 0;
-    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + fatiguePenalty + idx;
+    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + fatiguePenalty;
   }
 
+  // D219: a tie on the score is broken by the canonicality tier, then by the
+  // exercise name, compared by value (never by position in the list, and never
+  // with localeCompare, which depends on the device's locale).
+  const compareNames = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
   const rank = list => list
-    .map((e, idx) => ({ e, score: sortScore(e, idx) }))
-    .sort((a, b) => a.score - b.score)
+    .map(e => ({ e, score: sortScore(e), tier: tierRank(e.n) }))
+    .sort((a, b) => (a.score - b.score) || (a.tier - b.tier) || compareNames(a.e.n, b.e.n))
     .map(x => x.e);
 
   const sorted = rank(available);

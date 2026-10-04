@@ -38,6 +38,16 @@ const { LIBRARY, LIBRARY_NAMES, inputs, planExerciseNames } = require('./campaig
 
 const plan = over => generatePlan({ ...inputs(over), exerciseLibrary: LIBRARY });
 
+// D219 lane B1 (design 4.7, 00-AUDIT-AND-PLAN.md; R1 STOP-2): the library the
+// app really hands the engine is `SELECT * FROM exercises ORDER BY name ASC`
+// (database.js getAllExercises, pinned by database.deleteExercise.test.js).
+// The shared rig feeds corpus order, which flattered the staple share (0.62 to
+// 0.72) because the engine added each exercise's list position to its score.
+// The staple-share pins below run on the shipped order.
+const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+const SHIPPED_LIBRARY = [...LIBRARY].sort(byName);
+const shippedPlan = over => generatePlan({ ...inputs(over), exerciseLibrary: SHIPPED_LIBRARY });
+
 // The four exercises the baseline run actually produced, named so the
 // regression is about THIS defect and not a general vibe.
 const BASELINE_OFFENDERS = [
@@ -87,6 +97,62 @@ describe('C16-2 the registry is internally sound', () => {
     expect(TIER_RANK[AUTO_TIER.COMMON]).toBeLessThan(TIER_RANK[AUTO_TIER.SPECIALIST]);
     expect(TIER_RANK[AUTO_TIER.SPECIALIST]).toBeLessThan(TIER_RANK[AUTO_TIER.NICHE]);
     expect(TIER_RANK[AUTO_TIER.NEVER_AUTO]).toBeGreaterThan(50);
+  });
+});
+
+// D219 lane B1 (design 4.7; lead ruling under D33): the standard catalogue names
+// the evidence-preferred or everyday exercise for each muscle, and every name
+// the planner picks without being asked must be a STAPLE row. Eight catalogue
+// names sat one tier too low, and the hip adduction machine (nearly every
+// commercial gym has one) sat at SPECIALIST. These nine moves are the whole
+// registry change; nothing else changes tier.
+describe('D219 B1: the nine registry tier changes (design 4.7)', () => {
+  const TO_STAPLE = [
+    // The preacher curl is the evidence-preferred first choice for the biceps
+    // (S Q12: Zabaleta-Korta 2023, Pedrosa 2023, Nunes 2020, Attarieh 2025).
+    'EZ Bar Preacher Curl', 'Preacher Curl (Dumbbell)', 'Preacher Curl (Barbell)', 'Preacher Curl Machine',
+    // The overhead extension is the evidence-preferred first choice for the
+    // triceps (S Q12: Maeo 2023).
+    'Cable Overhead Tricep Extension', 'Dumbbell Overhead Tricep Extension',
+    // Standard in nearly every commercial gym, and a catalogue choice.
+    'Machine Crunch', 'Walking Lunge',
+  ];
+
+  test.each(TO_STAPLE)('%s moved from COMMON to STAPLE', (name) => {
+    expect(LIBRARY_NAMES.has(name)).toBe(true);
+    expect(autoTier(name)).toBe(AUTO_TIER.STAPLE);
+    expect(REGISTRY_LISTS.STAPLE).toContain(name);
+    expect(REGISTRY_LISTS.COMMON).not.toContain(name);
+  });
+
+  test('Hip Adduction Machine moved from SPECIALIST to COMMON', () => {
+    expect(LIBRARY_NAMES.has('Hip Adduction Machine')).toBe(true);
+    expect(autoTier('Hip Adduction Machine')).toBe(AUTO_TIER.COMMON);
+    expect(REGISTRY_LISTS.COMMON).toContain('Hip Adduction Machine');
+    expect(REGISTRY_LISTS.SPECIALIST).not.toContain('Hip Adduction Machine');
+  });
+
+  test('wrist curl, neck machine and tibialis raise stay SPECIALIST, offered only when the person adds them', () => {
+    for (const name of ['Barbell Wrist Curl', 'Dumbbell Wrist Curl', 'Neck Flexion (Machine)', 'Neck Extension (Machine)',
+      'Tibialis Raise (Wall)', 'Seated Tibialis Raise']) {
+      expect(autoTier(name)).toBe(AUTO_TIER.SPECIALIST);
+    }
+  });
+
+  test('nothing else changes tier: 918 rows split 76 staple, 267 common, 230 specialist, 246 niche, 99 never auto', () => {
+    // Before D219: staple 68, common 274, specialist 231, niche 246, never_auto 99.
+    // Eight rows up from COMMON and one up from SPECIALIST account for every
+    // difference, and the nine are pinned by name above.
+    const counts = {};
+    for (const e of LIBRARY) counts[autoTier(e.name)] = (counts[autoTier(e.name)] ?? 0) + 1;
+    expect(counts).toEqual({
+      [AUTO_TIER.STAPLE]: 76,
+      [AUTO_TIER.COMMON]: 267,
+      [AUTO_TIER.SPECIALIST]: 230,
+      [AUTO_TIER.NICHE]: 246,
+      [AUTO_TIER.NEVER_AUTO]: 99,
+    });
+    expect(LIBRARY.length).toBe(918);
   });
 });
 
@@ -145,6 +211,30 @@ describe('C16-2 a normal full-gym plan is recognisable (5, 6)', () => {
     const names = planExerciseNames(plan());
     const staples = names.filter(n => autoTier(n) === AUTO_TIER.STAPLE);
     expect(staples.length / names.length).toBeGreaterThan(0.6);
+  });
+
+  // D219 B1 re-pin (design 4.7, 1.3): the same law on the SHIPPED library order
+  // (ORDER BY name ASC), over the four cases the audit measured at 0.50, 0.50,
+  // 0.46 and 0.41 before the list position left the score. The first case is
+  // the one this test pinned at over 0.6 on corpus order.
+  test.each([
+    ['the default plan', {}],
+    ['a 3-day plan', { daysPerWeek: 3 }],
+    ['a 5-day plan', { daysPerWeek: 5 }],
+    ['a beginner plan', { experience: 'beginner' }],
+  ])('staples dominate on the shipped library order: %s', (_label, over) => {
+    const names = planExerciseNames(shippedPlan(over));
+    const staples = names.filter(n => autoTier(n) === AUTO_TIER.STAPLE);
+    expect(staples.length / names.length).toBeGreaterThan(0.6);
+  });
+
+  test('every exercise in a shipped-order plan is STAPLE or COMMON, whatever the alphabet does', () => {
+    for (const over of [{}, { daysPerWeek: 3 }, { daysPerWeek: 5 }, { experience: 'beginner' }]) {
+      const offTier = planExerciseNames(shippedPlan(over))
+        .filter(n => tierRank(n) > TIER_RANK[AUTO_TIER.COMMON])
+        .map(n => `${n} (${autoTier(n)})`);
+      expect(offTier).toEqual([]);
+    }
   });
 
   test('a NICHE exercise never beats a valid STAPLE or COMMON for the same slot (5)', () => {

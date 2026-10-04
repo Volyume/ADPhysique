@@ -9,6 +9,12 @@
  * no_recent_session, counts as 100 (never as unready); an empty planned
  * input reads ready with no limiting muscle; the module is deterministic
  * and does no I/O.
+ *
+ * D219 (lane B3a, design 4.13 last row): the result also names the muscle
+ * that is estimated recovered LAST (`latestMuscle`, `latestReadyAtMs`), so
+ * "every muscle in this session is estimated recovered by ..." can be true;
+ * the limiting-muscle fields stay exactly as pinned above and are not read
+ * from the new ones.
  */
 import fs from 'fs';
 import path from 'path';
@@ -120,12 +126,16 @@ describe('sessionReadiness -- the weighted mean is for display, never the verdic
 describe('sessionReadiness -- empty input', () => {
   test('no planned muscles at all reads ready, minPercent 100, no limiting muscle', () => {
     const result = sessionReadiness({}, {});
+    // D219 (design 4.13 last row): the shape gained latestMuscle and
+    // latestReadyAtMs, null here like the limiting fields; nothing else moved.
     expect(result).toEqual({
       verdict: 'ready',
       minPercent: 100,
       weightedPercent: 100,
       limitingMuscle: null,
       limitingReadyAtMs: null,
+      latestMuscle: null,
+      latestReadyAtMs: null,
       evidence: false,
       muscles: [],
     });
@@ -134,6 +144,100 @@ describe('sessionReadiness -- empty input', () => {
   test('undefined/null inputs do not throw and read the same as empty', () => {
     expect(() => sessionReadiness(undefined, undefined)).not.toThrow();
     expect(sessionReadiness(null, null)).toEqual(sessionReadiness({}, {}));
+  });
+});
+
+describe('sessionReadiness -- the latest ready time among the counted muscles (D219, design 4.13 last row)', () => {
+  const H = 60 * 60 * 1000;
+
+  test('names the muscle estimated recovered last and carries ITS readyAtMs; the limiting fields stay the least-recovered muscle\'s', () => {
+    // The probe the design cites: calves 11% recovered (ready in 28 h) limit
+    // the session, but the quads a few lines down are not ready for 61 h.
+    const result = sessionReadiness(
+      { quads: 6, calves: 4 },
+      { quads: entry(29, { readyAtMs: 61 * H }), calves: entry(11, { readyAtMs: 28 * H }) },
+    );
+    expect(result.limitingMuscle).toBe('calves');
+    expect(result.limitingReadyAtMs).toBe(28 * H);
+    expect(result.latestMuscle).toBe('quads');
+    expect(result.latestReadyAtMs).toBe(61 * H);
+  });
+
+  test('every existing field and the verdict read exactly as they did without the new fields', () => {
+    const { latestMuscle, latestReadyAtMs, ...rest } = sessionReadiness(
+      { quads: 10, chest: 8, calves: 4 },
+      {
+        quads: entry(95, { readyAtMs: null }),
+        chest: entry(60, { readyAtMs: 123456, status: 'recovering' }),
+        calves: entry(99, { readyAtMs: null, status: 'recovered' }),
+      },
+    );
+    expect(latestMuscle).toBe('chest');
+    expect(latestReadyAtMs).toBe(123456);
+    expect(rest).toEqual({
+      verdict: 'not_yet',
+      minPercent: 60,
+      weightedPercent: (95 * 10 + 60 * 8 + 99 * 4) / 22,
+      limitingMuscle: 'chest',
+      limitingReadyAtMs: 123456,
+      evidence: true,
+      muscles: [
+        { muscle: 'quads', plannedSets: 10, recoveredPercent: 95, status: 'recovering' },
+        { muscle: 'chest', plannedSets: 8, recoveredPercent: 60, status: 'recovering' },
+        { muscle: 'calves', plannedSets: 4, recoveredPercent: 99, status: 'recovered' },
+      ],
+    });
+  });
+
+  test('only counted muscles count: a muscle with fewer than 2 planned sets never sets the latest time', () => {
+    const result = sessionReadiness(
+      { quads: 6, calves: 1 },
+      { quads: entry(40, { readyAtMs: 10 * H }), calves: entry(5, { readyAtMs: 99 * H }) },
+    );
+    expect(result.latestMuscle).toBe('quads');
+    expect(result.latestReadyAtMs).toBe(10 * H);
+  });
+
+  test('a muscle already recovered, or with no recent session, has no ready time and never sets the latest', () => {
+    const result = sessionReadiness(
+      { quads: 6, chest: 6, back: 6 },
+      {
+        quads: entry(95, { readyAtMs: null }),
+        chest: { recoveredPercent: 100, status: 'no_recent_session', readyAtMs: null },
+        back: entry(70, { readyAtMs: 5 * H }),
+      },
+    );
+    expect(result.latestMuscle).toBe('back');
+    expect(result.latestReadyAtMs).toBe(5 * H);
+  });
+
+  test('nothing pending (all recovered, no evidence, or no counted muscle) leaves both fields null', () => {
+    const recovered = sessionReadiness({ quads: 6, chest: 6 }, { quads: entry(95), chest: entry(100) });
+    expect(recovered.verdict).toBe('ready');
+    expect(recovered.latestMuscle).toBeNull();
+    expect(recovered.latestReadyAtMs).toBeNull();
+    const none = sessionReadiness({ calves: 1 }, { calves: entry(10, { readyAtMs: 7 * H }) });
+    expect(none.latestMuscle).toBeNull();
+    expect(none.latestReadyAtMs).toBeNull();
+    expect(sessionReadiness(undefined, undefined).latestMuscle).toBeNull();
+  });
+
+  test('a tie goes to the first muscle in the planned order, as the limiting muscle does', () => {
+    const result = sessionReadiness(
+      { back: 6, chest: 6, quads: 6 },
+      {
+        back: entry(50, { readyAtMs: 30 * H }),
+        chest: entry(50, { readyAtMs: 30 * H }),
+        quads: entry(80, { readyAtMs: 10 * H }),
+      },
+    );
+    expect(result.latestMuscle).toBe('back');
+    expect(result.latestReadyAtMs).toBe(30 * H);
+  });
+
+  test('a muscle missing from the map has no ready time and is never the latest', () => {
+    const result = sessionReadiness({ quads: 6, chest: 6 }, { quads: entry(70, { readyAtMs: 4 * H }) });
+    expect(result.latestMuscle).toBe('quads');
   });
 });
 

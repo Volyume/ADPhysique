@@ -18,14 +18,35 @@
  * separate and untouched: it states what a timestamp establishes and
  * nothing more; this module is the one sanctioned estimate layer.
  *
+ * D219 (design 4.13 of docs/audit/plan-builder-science-2026-10-04/
+ * 00-AUDIT-AND-PLAN.md, evidence 03-SCIENCE.md Q5, Q5b, Q10 and F5) corrected
+ * this table where the evidence said the D201 numbers were off: the lower
+ * body's clocks (founder answer Q3 = A), the effort ladder, the first-week
+ * factor (replaced by novelty), and three new multipliers (long length,
+ * mostly indirect work, and a display band). Grades: the factors are
+ * CONVENTION sized from B and C evidence, never measured per person.
+ *
  * EVIDENCE (peer-reviewed unless marked consensus):
  *  - Goulart et al. 2021, Eur J Sport Sci 21(7):935-943. Five sets of
- *    8-10RM squat and leg press to failure: volume load down at 24 h,
- *    first-set volume still down at 48 h, jump and isometric strength back
- *    or above baseline at 72 h. -> BASE_RECOVERY_HOURS for the lower body.
- *  - Moran-Navarro et al. 2017, Eur J Appl Physiol. Sets to failure,
- *    especially high-repetition ones, leave mechanical function reduced up
- *    to 48 h; sets short of failure recover faster. -> intensityFactor.
+ *    8-10RM squat plus five of leg press, to failure (ten failure sets, 14
+ *    trained men): volume load down at 24 h, first-set volume still down at
+ *    48 h, jump and isometric strength back or above baseline at 72 h. The
+ *    one trained-lifter anchor for the legs, and it implies 30 to 45 h for
+ *    quads at an ordinary session (S Q5b, Table 2). D201 took the 72 h of a
+ *    failure dose as the base for a six-set session and then scaled it up
+ *    again by dose and effort, which counted that dose twice (the model
+ *    predicted about 107 h for a dose measured at 48 to 72 h). ->
+ *    BASE_RECOVERY_HOURS for the lower body, re-centred (Q3 = A): quads and
+ *    glutes 54 h, hamstrings 60 h.
+ *  - Moran-Navarro et al. 2017, Eur J Appl Physiol, and Pareja-Blanco et al.
+ *    2020, J Strength Cond Res: sets to failure, especially high-repetition
+ *    ones, leave mechanical function reduced up to 48 h; sets short of
+ *    failure recover sooner (significantly, between 24 and 48 h). Vieira et
+ *    al. 2022, Sports Med (meta-analysis of 20 studies): failure against
+ *    non-failure, biomechanical drop SMD -0.96, damage SMD 0.76. Failure
+ *    adds roughly 24 to 48 h on a 48 to 72 h clock, a far wider gap than
+ *    D201's 10 to 15% spread. -> intensityFactor (RIR 0 1.25, RIR 1 1.10,
+ *    RIR 2 1.00, RIR 3 or more 0.80; direction A/B, the sizes convention).
  *  - Ferreira et al. 2017, Physiol Behav (bench press, trained men): peak
  *    torque and the ability to repeat work recover on different clocks;
  *    after high-volume work, repeated best-effort sets were not possible
@@ -34,14 +55,28 @@
  *    poorly at the individual level, so they must be combined, not
  *    swapped. -> doseFactor scales with the session's sets; the user's
  *    ratings are a modifier that can only lengthen an estimate.
- *  - Soares et al. 2015, J Strength Cond Res (highly trained men): elbow
- *    flexor torque still 8.4% down 24 h after single-joint work, back to
- *    baseline 24 h after multi-joint work. -> arms carry their own
- *    baseline; per-muscle baselines differ.
- *  - Damas et al. 2016, J Physiol: myofibrillar protein synthesis relates
- *    to hypertrophy only once muscle damage attenuates, and damage is
- *    highest in a block's first week. -> FIRST_WEEK_FACTOR; the model
- *    speaks of recovery of function, never of adaptation.
+ *  - Soares et al. 2015, J Strength Cond Res (highly trained men): eight
+ *    sets of 10RM on one arm's preacher curl and the other's seated row.
+ *    Elbow flexor torque was still 8.4% down 24 h after the curls and back
+ *    to baseline 24 h after the rows, where the elbow flexors work as
+ *    synergists. A contrast between roles on ONE muscle, so it supports an
+ *    exercise effect rather than a muscle effect: a muscle credited mostly
+ *    by synergist work recovers sooner. -> INDIRECT_FACTOR.
+ *  - Nosaka 1991, Eur J Appl Physiol; McHugh 2003; Hyldahl et al. 2017; and
+ *    Coratella et al. 2025 (hamstring strength back in about 1 day on a
+ *    repeat bout against about 3 days on the first): one bout protects
+ *    against damage in later bouts, the protection is specific to the
+ *    exercise and lasts weeks to months, and is lost for a new exercise or
+ *    after a layoff. Damas et al. 2016, J Physiol: damage is highest in the
+ *    first weeks of training and myofibrillar protein synthesis relates to
+ *    hypertrophy only once it attenuates. Damas followed novices, so "week 1
+ *    of a block" is not the supported effect: a NEW exercise or a layoff is.
+ *    -> NOVELTY_FACTOR replaces the first-week factor; the model speaks of
+ *    recovery of function, never of adaptation.
+ *  - Nosaka and Sakamoto 2001; McMahon et al. 2024, J Appl Physiol (n = 8):
+ *    work at a long muscle length is more damaging and recovers later, the
+ *    same property that makes long-length exercises grow more (S Q12), so
+ *    their recovery price is carried here. -> LONG_LENGTH_EXERCISE_NAMES.
  *  - Schoenfeld, Ogborn, Krieger 2016, Sports Med (each major muscle at
  *    least twice a week beats once) and Schoenfeld, Grgic, Krieger 2019,
  *    J Sports Sci (with weekly volume equal, frequency matters much less).
@@ -64,12 +99,27 @@ export const RECOVERY_ESTIMATE_LABEL = 'estimated';
  * Hours from the END of a standard-dose session to estimated full
  * recovery of function, per muscle key (the keys are VOLUME_LANDMARKS'
  * keys in src/lib/algorithms.js; the model must know every one of them).
+ *
+ * Every figure is an estimate with a band of plus or minus 25%
+ * (RECOVERY_BAND), never a measured time: the evidence for differences
+ * BETWEEN muscles is weak (S Q5b: three small comparisons that disagree in
+ * direction, none for the lats, upper back, delts, glutes, calves, abs or
+ * traps), so the order below is a prior, kept in its D201 order (small
+ * before large, the founder's "biceps recover quicker than back"), with the
+ * lower body re-centred by D219.
  */
 export const BASE_RECOVERY_HOURS = Object.freeze({
-  // Lower body: Goulart 2021 (to failure, back at 72 h); consensus 3-4 days.
-  quads: 72,
-  hamstrings: 72,
-  glutes: 72,
+  // Lower body, re-centred by D219 (design 4.13, founder answer Q3 = A).
+  // The one trained-lifter anchor (Goulart 2021, ten failure sets, back at
+  // 48 to 72 h) implies 30 to 45 h for quads at an ordinary six-set session,
+  // and D201's 72 h counted that failure dose twice (see the header), so
+  // quads sit at 54 h. Nothing is measured for the glutes; they travel with
+  // the quads. The hamstrings take 60 h: a little longer on the one
+  // eccentric-heavy anchor (Coratella 2025: Nordic strength down to day 3 on
+  // a first bout) and by convention, not by measurement.
+  quads: 54,
+  hamstrings: 60,
+  glutes: 54,
   // Between the glutes and the calves; consensus.
   adductors: 60,
   // Multi-joint trunk movers: 24-48 h at a moderate dose (Soares 2015),
@@ -109,8 +159,102 @@ export const DOSE_FACTOR_MAX = 1.5;
 /** The user's own "How's your recovery?" answer (poor | average | good). */
 export const RATING_FACTOR = Object.freeze({ poor: 1.15, average: 1.0, good: 0.9 });
 
-/** A block's first week, and the first week after a recovery week (Damas 2016). */
-export const FIRST_WEEK_FACTOR = 1.10;
+/**
+ * NOVELTY (D219, design 4.13): a session's recovery runs 15% longer when the
+ * muscle meets an exercise it has not been trained with before in the
+ * history the model reads, and again for the next session (NOVELTY_SESSIONS
+ * sessions in all, the one that meets it included), or when NOVELTY_LAYOFF_DAYS
+ * days or more have passed since the muscle's last session. It replaces the
+ * D201 first-week factor (1.10 for week 1 of every block, familiar
+ * exercises included): the repeated-bout effect is specific to the exercise
+ * and lasts weeks to months, so week 1 of a block is not what lengthens
+ * recovery, an unaccustomed exercise or a layoff is (S Q5, Q10 row 4, F5;
+ * grade C/D). muscleRecoveryModel.sessionMuscleTerms decides which sessions
+ * are novel; recoveryHours takes the answer as `novel`.
+ */
+export const NOVELTY_FACTOR = 1.15;
+export const NOVELTY_SESSIONS = 2;
+export const NOVELTY_LAYOFF_DAYS = 21;
+
+/**
+ * LONG LENGTH (D219, design 4.13): an exercise built around a long muscle
+ * length lengthens recovery by up to LONG_LENGTH_WEIGHT (10%), weighted by
+ * the share of the muscle's DIRECT sets in the session that come from such
+ * exercises: factor = 1 + LONG_LENGTH_WEIGHT x share (longLengthFactor).
+ * Lengthened-position work is more damaging and recovers later (Nosaka and
+ * Sakamoto 2001; McMahon 2024; S Q5, grade B/C), and the catalogue prefers
+ * these exercises for growth, so the clock carries their cost.
+ */
+export const LONG_LENGTH_WEIGHT = 0.10;
+
+/**
+ * The exercises built around a long muscle length, by exact corpus name
+ * (src/lib/exerciseCorpus; a test holds every name to a live row and every
+ * live row of a named family to this list). Families, per the design:
+ * overhead triceps extensions, the seated leg curl, Romanian deadlifts, the
+ * deep squats (barbell back squat and hack squat machine), the full-stretch
+ * standing calf raise (machine) and preacher curls. A frozen list, never a
+ * guess from a name: a family not named here is not weighted.
+ */
+export const LONG_LENGTH_EXERCISE_NAMES = Object.freeze([
+  // Overhead triceps extensions: the long head is stretched with the arm overhead.
+  'Standing Barbell Overhead Tricep Extension',
+  'Dumbbell Overhead Tricep Extension',
+  'Single-Arm Overhead Dumbbell Tricep Extension',
+  'Cable Overhead Tricep Extension',
+  'Overhead Cable Tricep Extension (Bar)',
+  'Overhead Cable Rope Extension',
+  'Single-Arm Overhead Cable Extension',
+  'Plate-Loaded Overhead Extension',
+  'Band Overhead Tricep Extension',
+  // Seated leg curl: the hips are flexed, so the hamstrings start long.
+  'Seated Leg Curl',
+  // Romanian deadlifts: the hamstrings (or glutes) are loaded at the bottom of the hinge.
+  'Romanian Deadlift',
+  'Romanian Deadlift (Barbell)',
+  'Romanian Deadlift (Dumbbell)',
+  'Romanian Deadlift (Glute)',
+  'B-Stance Romanian Deadlift',
+  'Snatch-Grip Romanian Deadlift',
+  'Single-Leg Romanian Deadlift',
+  'Single-Leg Romanian Deadlift (DB)',
+  'Cable Romanian Deadlift',
+  'Smith Machine Romanian Deadlift',
+  'Kettlebell Romanian Deadlift',
+  'Landmine Romanian Deadlift',
+  'Band Romanian Deadlift (Bilateral)',
+  'Band Romanian Deadlift (Single-Leg)',
+  // Deep squats.
+  'Barbell Back Squat',
+  'Hack Squat Machine',
+  // Full-stretch calf raise.
+  'Standing Calf Raise (Machine)',
+  // Preacher curls: the elbow flexors are loaded in the stretched position.
+  'EZ Bar Preacher Curl',
+  'Preacher Curl (Barbell)',
+  'Preacher Curl (Dumbbell)',
+  'Zottman Preacher Curl',
+  'Plate-Loaded Preacher Curl',
+  'Preacher Curl Machine',
+]);
+const LONG_LENGTH_NAME_SET = new Set(LONG_LENGTH_EXERCISE_NAMES);
+
+/**
+ * MOSTLY INDIRECT (D219, design 4.13): a muscle whose credit in a session is
+ * more than half synergist credit (the volume tracker's 0.5 per set, as
+ * rows give the elbow flexors) recovers sooner than the same credit from
+ * prime-mover work: the elbow flexors were back to baseline 24 h after rows
+ * (Soares 2015; grade C, one muscle). Exactly half does not count.
+ */
+export const INDIRECT_FACTOR = 0.85;
+
+/**
+ * The band every clock is shown with (D219, design 4.13): plus or minus 25%
+ * of the estimate, shown as a range ("about 2 to 3 days"). No study gives the
+ * spread of recovery time in trained lifters (S Q5; convention). 0.75 of the
+ * estimate is also where the model reads "nearly recovered".
+ */
+export const RECOVERY_BAND = 0.25;
 
 /**
  * The user's ratings, COMBINED with the estimate (Ferreira 2017): they can
@@ -251,9 +395,16 @@ export function ratingFactor(recoveryRating) {
 }
 
 /**
- * How close to failure the block's week trains (its rir_target): RIR 0-1
- * lengthens (1.15), RIR 2 is neutral, RIR 3 or more shortens (0.90).
- * Unknown reads as neutral.
+ * How close to failure the block's week trains (its rir_target), on the D219
+ * ladder (design 4.13, "effort factor"): RIR 0 lengthens most (1.25), RIR 1
+ * lengthens (1.10), RIR 2 is neutral, RIR 3 or more shortens (0.80). The
+ * rung edges are D201's: at most 0 is the failure rung, above 0 and at most 1
+ * the RIR 1 rung, under 3 neutral. Unknown reads as neutral.
+ *
+ * Why wider than D201's 1.15 / 1.15 / 1.0 / 0.90: failure adds roughly 24 to
+ * 48 h on a 48 to 72 h clock (Moran-Navarro 2017, Pareja-Blanco 2020, Vieira
+ * 2022 [A]), so a 10 to 15% spread was far too narrow. The direction is A/B;
+ * the sizes are convention.
  */
 export function intensityFactor(rirTarget) {
   // Number(null) is 0, not NaN (the same trap programmePosition.js's `int`
@@ -262,9 +413,48 @@ export function intensityFactor(rirTarget) {
   if (rirTarget === null || rirTarget === undefined || rirTarget === '') return 1.0;
   const r = Number(rirTarget);
   if (!Number.isFinite(r)) return 1.0;
-  if (r <= 1) return 1.15;
+  if (r <= 0) return 1.25;
+  if (r <= 1) return 1.10;
   if (r < 3) return 1.0;
-  return 0.9;
+  return 0.8;
+}
+
+/**
+ * The long-length factor for a muscle's session: 1 + LONG_LENGTH_WEIGHT x the
+ * share (0 to 1) of the muscle's direct sets that came from
+ * LONG_LENGTH_EXERCISE_NAMES. An absent or unreadable share is neutral.
+ */
+export function longLengthFactor(share) {
+  if (share === null || share === undefined || share === '') return 1.0;
+  const s = Number(share);
+  if (!Number.isFinite(s)) return 1.0;
+  return 1 + LONG_LENGTH_WEIGHT * clamp(0, 1, s);
+}
+
+/** True when the exercise is on the frozen long-length list (exact corpus name, nothing else). */
+export function isLongLengthExercise(exercise) {
+  const name = exercise?.name;
+  return typeof name === 'string' && LONG_LENGTH_NAME_SET.has(name);
+}
+
+/**
+ * The band to show beside a clock: { lowHours, highHours } at 0.75 and 1.25
+ * of the estimate (RECOVERY_BAND), each kept inside the same clamp every
+ * clock lives in, [RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX]. Null when the
+ * estimate is absent, not a number or not positive. Display only: no model
+ * decision reads it, and the estimate itself is unchanged.
+ *
+ * @param {number} hours - a clock as recoveryHours returns it
+ * @returns {{ lowHours: number, highHours: number }|null}
+ */
+export function recoveryBandHours(hours) {
+  if (hours === null || hours === undefined || hours === '') return null;
+  const h = Number(hours);
+  if (!Number.isFinite(h) || h <= 0) return null;
+  return {
+    lowHours: clamp(RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, h * (1 - RECOVERY_BAND)),
+    highHours: clamp(RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, h * (1 + RECOVERY_BAND)),
+  };
 }
 
 /**
@@ -286,14 +476,29 @@ export function feedbackFactor({ sorenessNext = null, fatigue = null, joint = nu
 /**
  * A session's estimated recovery length for one muscle, in hours from the
  * session's end. Unknown muscle keys take the most conservative baseline
- * the table holds (72 h), so a new library muscle is never under-estimated.
+ * the table holds (the longest, 60 h since D219 re-centred the legs), so a
+ * new library muscle is never under-estimated.
+ *
+ * The three D219 session terms (novel, longLengthShare, mostlyIndirect) are
+ * what a HISTORY can say about one muscle's session; muscleRecoveryModel.
+ * sessionMuscleTerms works them out. A caller with no history (the plan
+ * builder judging a session it has not been done yet) leaves them out and
+ * gets the neutral clock.
  *
  * @param {string} muscle - a VOLUME_LANDMARKS key
  * @param {object} [opts]
  * @param {number} [opts.sets] - working sets on the muscle this session
  * @param {string} [opts.recoveryRating] - poor | average | good
  * @param {number|null} [opts.rirTarget] - the block week's RIR target
- * @param {boolean} [opts.firstWeek] - week 1 of a block, or the first after a recovery week
+ * @param {boolean} [opts.novel] - D219: the muscle met a new exercise (this
+ *   session or the one before it) or came back after a layoff of 21 days or
+ *   more: NOVELTY_FACTOR. Replaces the D201 first-week flag, which is no
+ *   longer read (passing `firstWeek` changes nothing).
+ * @param {number|null} [opts.longLengthShare] - D219: the share (0 to 1) of
+ *   the muscle's direct sets in the session that come from long-length
+ *   exercises: longLengthFactor.
+ * @param {boolean} [opts.mostlyIndirect] - D219: more than half of the
+ *   muscle's credit in the session is synergist credit: INDIRECT_FACTOR.
  * @param {object} [opts.ratings] - see feedbackFactor
  * @param {number|null} [opts.personalFactor] - register D210: the factor
  *   learned from the athlete's own lifts (personalRecovery.js). When given
@@ -302,10 +507,15 @@ export function feedbackFactor({ sorenessNext = null, fatigue = null, joint = nu
  * @returns {number} hours, clamped to [RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX]
  */
 export function recoveryHours(muscle, {
-  sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
-  personalFactor = null,
+  sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, novel = false,
+  longLengthShare = null, mostlyIndirect = false, ratings = null, personalFactor = null,
 } = {}) {
-  return hoursFrom(sessionTerms(muscle, sets, rirTarget, firstWeek, ratings), speedFactor(personalFactor, recoveryRating));
+  return hoursFrom(
+    sessionTerms(muscle, {
+      sets, rirTarget, novel, longLengthShare, mostlyIndirect, ratings,
+    }),
+    speedFactor(personalFactor, recoveryRating),
+  );
 }
 
 /**
@@ -321,9 +531,12 @@ export function recoveryHours(muscle, {
  * @returns {number[]}
  */
 export function recoveryHoursAcross(muscle, {
-  sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, firstWeek = false, ratings = null,
+  sets = REFERENCE_SETS, recoveryRating = 'average', rirTarget = null, novel = false,
+  longLengthShare = null, mostlyIndirect = false, ratings = null,
 } = {}, factors = []) {
-  const terms = sessionTerms(muscle, sets, rirTarget, firstWeek, ratings);
+  const terms = sessionTerms(muscle, {
+    sets, rirTarget, novel, longLengthShare, mostlyIndirect, ratings,
+  });
   return factors.map((f) => hoursFrom(terms, speedFactor(f, recoveryRating)));
 }
 
@@ -338,12 +551,16 @@ function speedFactor(personalFactor, recoveryRating) {
 }
 
 /** Everything in a session's recovery length except the speed factor. */
-function sessionTerms(muscle, sets, rirTarget, firstWeek, ratings) {
+function sessionTerms(muscle, {
+  sets, rirTarget, novel, longLengthShare, mostlyIndirect, ratings,
+}) {
   const base = BASE_RECOVERY_HOURS[muscle] ?? Math.max(...Object.values(BASE_RECOVERY_HOURS));
   return {
     baseDose: base * doseFactor(sets),
     intensity: intensityFactor(rirTarget),
-    firstWeek: firstWeek ? FIRST_WEEK_FACTOR : 1.0,
+    novelty: novel ? NOVELTY_FACTOR : 1.0,
+    longLength: longLengthFactor(longLengthShare),
+    indirect: mostlyIndirect ? INDIRECT_FACTOR : 1.0,
     feedback: feedbackFactor(ratings ?? {}),
   };
 }
@@ -353,7 +570,9 @@ function hoursFrom(terms, speed) {
   const hours = terms.baseDose
     * speed
     * terms.intensity
-    * terms.firstWeek
+    * terms.novelty
+    * terms.longLength
+    * terms.indirect
     * terms.feedback;
   return clamp(RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, hours);
 }

@@ -20,6 +20,18 @@
  * so a caller never prints "estimated recovered" off no data at all
  * (spec section 1; Opus review finding 2).
  *
+ * D219 (design 4.13, last row, docs/audit/plan-builder-science-2026-10-04/
+ * 00-AUDIT-AND-PLAN.md): the result also names the muscle estimated
+ * recovered LAST among the counted ones (`latestMuscle`) and that muscle's own
+ * ready time (`latestReadyAtMs`). The limiting muscle is the least recovered
+ * NOW; the latest muscle is the one whose ready time is furthest away, and
+ * they are often different (calves 11% recovered, ready in 28 h, can limit a
+ * session whose quads are not ready for 61 h). "Every muscle in this session
+ * is estimated recovered by <time>" is only true at the LATEST ready time, so
+ * that is the field a sentence like it reads. Both are null when no counted
+ * muscle has a ready time pending (all recovered, no evidence, nothing
+ * counted). The limiting fields and the verdict are exactly as before.
+ *
  * PURE. No I/O, no clock.
  */
 import { READY_PERCENT, NEARLY_PERCENT } from './constants';
@@ -32,7 +44,8 @@ import { READY_PERCENT, NEARLY_PERCENT } from './constants';
  *   readyAtMs, ... } }.
  * @returns {{ verdict: 'ready'|'nearly'|'not_yet', minPercent: number,
  *   weightedPercent: number, limitingMuscle: string|null,
- *   limitingReadyAtMs: number|null, evidence: boolean,
+ *   limitingReadyAtMs: number|null, latestMuscle: string|null,
+ *   latestReadyAtMs: number|null, evidence: boolean,
  *   muscles: Array<{ muscle: string, plannedSets: number,
  *   recoveredPercent: number, status: string }> }}
  */
@@ -62,6 +75,8 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
       weightedPercent: 100,
       limitingMuscle: null,
       limitingReadyAtMs: null,
+      latestMuscle: null,
+      latestReadyAtMs: null,
       evidence: false,
       muscles: [],
     };
@@ -69,11 +84,21 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
 
   let minPercent = Infinity;
   let limitingMuscle = null;
+  let latestMuscle = null;
+  let latestReadyAtMs = null;
   let weightedSum = 0;
   let totalSets = 0;
   for (const m of muscles) {
     weightedSum += m.recoveredPercent * m.plannedSets;
     totalSets += m.plannedSets;
+    // Strict greater-than: on a tie the FIRST muscle stays named, as for the
+    // limiting muscle. A muscle with no pending ready time (already
+    // recovered, no recent session, or no entry) has nothing to wait for.
+    const readyAtMs = map[m.muscle]?.readyAtMs ?? null;
+    if (Number.isFinite(readyAtMs) && (latestReadyAtMs === null || readyAtMs > latestReadyAtMs)) {
+      latestReadyAtMs = readyAtMs;
+      latestMuscle = m.muscle;
+    }
     // Strict less-than: the FIRST muscle to reach a new minimum stays named
     // (stable, deterministic over plannedSetsByMuscle's own key order).
     if (m.recoveredPercent < minPercent) {
@@ -88,5 +113,7 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
   const limitingEntry = limitingMuscle ? map[limitingMuscle] : null;
   const limitingReadyAtMs = limitingEntry ? (limitingEntry.readyAtMs ?? null) : null;
 
-  return { verdict, minPercent, weightedPercent, limitingMuscle, limitingReadyAtMs, evidence, muscles };
+  return {
+    verdict, minPercent, weightedPercent, limitingMuscle, limitingReadyAtMs, latestMuscle, latestReadyAtMs, evidence, muscles,
+  };
 }

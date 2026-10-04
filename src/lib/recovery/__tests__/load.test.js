@@ -276,7 +276,11 @@ describe('loadMuscleRecovery', () => {
   });
 
   test('a completed workout within the window contributes to the map for the muscle it loaded', async () => {
-    const startedAt = NOW - 2 * DAY_MS;
+    // D219 RE-PIN (design 4.13 "base clocks", founder answer Q3 = A): two sets
+    // of quads now clear in about 44 h (54 h x 0.7, and a first session is
+    // novel, x 1.15), so a workout two days ago reads fully recovered; one day
+    // ago is still inside the clock.
+    const startedAt = NOW - 1 * DAY_MS;
     mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', userId: 'u1', isCompleted: 1, deletedAt: null, startedAt, endedAt: startedAt + 3600000, mesocycleId: null, mesocycleWeekId: null },
     ]);
@@ -335,10 +339,11 @@ describe('loadMuscleRecovery', () => {
     ]);
     expect(mockDb.getMesocycleWeeks).not.toHaveBeenCalled();
     const withFirstWeekRir0 = await loadMuscleRecovery('u1', NOW);
-    // Week 1 (isFirstWeek) at RIR 0 (intensityFactor 1.15) lengthens recovery
-    // relative to the same session read as NOT week 1 / neutral RIR --
-    // observed indirectly via a lower recoveredPercent for the same elapsed
-    // time and dose, proving the week row was actually consulted.
+    // Week 1 at RIR 0 (intensityFactor 1.25) lengthens recovery relative to
+    // the same session read as week 5 at RIR 3 (0.80) -- observed indirectly
+    // via a lower recoveredPercent for the same elapsed time and dose,
+    // proving the week row was actually consulted. (D219: the effort ladder
+    // is what moves it; the first-week flag no longer does.)
     mockDb.getMesocycleWeeks.mockResolvedValue([{ id: 'wk1', week_index: 5, is_deload: 0, rir_target: 3 }]);
     const withLaterWeekRir3 = await loadMuscleRecovery('u1', NOW);
     expect(withFirstWeekRir0.map.quads.recoveredPercent).toBeLessThan(withLaterWeekRir3.map.quads.recoveredPercent);
