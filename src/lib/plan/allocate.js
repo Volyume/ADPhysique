@@ -187,8 +187,11 @@ export function allocatePeakWeek({
       if ((sessionFrac[s][j] || 0) + c * delta > fractionalCap(j) + EPS && roles[j]?.direct) return false;
     }
     const next = withStep(clock[s], slot, delta, opening);
-    if (next.workingSets > SESSION_CEILINGS.workingSets) return false;
-    if (next.exercises > SESSION_CEILINGS.exercises) return false;
+    // `ignoreTime`: a focus muscle's programmed sets, which the session's
+    // length and its D45 ceilings give way to (founder rules 2026-10-04:
+    // the session runs longer and the person is told).
+    if (!ignoreTime && next.workingSets > SESSION_CEILINGS.workingSets) return false;
+    if (!ignoreTime && next.exercises > SESSION_CEILINGS.exercises) return false;
     if (!ignoreTime && minutesOf(next) > timeLimit + EPS) return false;
     return true;
   };
@@ -392,6 +395,8 @@ export function allocatePeakWeek({
         slots: sess.slots.filter((x) => x.sets > 0),
         minutes,
         overMinutes: Number.isFinite(limit) ? Math.max(0, Math.round((minutes - limit) * 10) / 10) : 0,
+        overCeilings: sess.slots.filter((x) => x.sets > 0).length > SESSION_CEILINGS.exercises
+          || sess.slots.reduce((a, x) => a + x.sets, 0) > SESSION_CEILINGS.workingSets,
         workingSets: sess.slots.reduce((a, x) => a + x.sets, 0),
       };
     }),

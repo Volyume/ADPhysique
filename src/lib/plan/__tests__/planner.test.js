@@ -112,8 +112,13 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
 
   test.each(BUILT.map((b) => [label(b), b]))('%s: sessions inside D45 and the session length', (_name, { inputs, plan: p }) => {
     p.workouts.forEach((w, i) => {
-      expect(w.exercises.length).toBeLessThanOrEqual(SESSION_CEILINGS.exercises);
-      expect(w.exercises.reduce((a, e) => a + e.peakSets, 0)).toBeLessThanOrEqual(SESSION_CEILINGS.workingSets);
+      // Past D45 only where focus sets took it (founder 2026-10-04), and reported.
+      const over = w.exercises.length > SESSION_CEILINGS.exercises
+        || w.exercises.reduce((a, e) => a + e.peakSets, 0) > SESSION_CEILINGS.workingSets;
+      if (over) {
+        expect({ session: w.name, focusInIt: w.exercises.some((e) => p.v2.roles[e.muscle] === 'focus'), reported: p.v2.overCeilings.includes(w.sessionKey) })
+          .toEqual({ session: w.name, focusInIt: true, reported: true });
+      }
       expect(p.v2.sessionMinutesAtPeak[i]).toBeDefined();
     });
     // Over the length only where focus sets took it (founder rule 2026-10-04:
@@ -139,11 +144,11 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     for (const w of p.workouts) for (const e of w.exercises) expect({ e: e.name, s: peak[e.slotKey] }).toEqual({ e: e.name, s: e.peakSets });
   });
 
-  test.each(BUILT.map((b) => [label(b), b]))('%s: nothing planned above 30, a focus muscle never above 24', (_name, { plan: p }) => {
+  test.each(BUILT.map((b) => [label(b), b]))('%s: nothing planned above 30, a focus muscle never above its planned ceiling', (_name, { plan: p }) => {
     for (const [m, v] of Object.entries(p.weeklyVolumeSummary)) {
       expect(v.fractional).toBeLessThanOrEqual(30);
-      // The focus range runs to 24 (ROLE_TARGETS.focus.high): a squat's glute credit can carry it past the 22 peak.
-      if (p.v2.roles[m] === 'focus') expect(v.fractional).toBeLessThanOrEqual(ROLE_TARGETS.focus.high + 1e-9);
+      // A squat's glute credit can carry a focus muscle past its 22 peak; the design's planned ceiling is 30.
+      if (p.v2.roles[m] === 'focus') expect(v.fractional).toBeLessThanOrEqual(ROLE_TARGETS.focus.plannedCeiling + 1e-9);
     }
   });
 
@@ -220,8 +225,10 @@ describe('determinism and the person\'s clocks', () => {
 });
 
 describe('focus muscles keep their programmed sets (founder rule 2026-10-04)', () => {
-  test('two focus muscles in four 75-minute sessions each reach their 20 sets a week', () => {
-    const p = plan({ focusMuscles: ['glutes', 'chest'] });
+  test('three focus muscles in four 75-minute sessions: chest and glutes reach 20, side delts the 18 two upper days hold', () => {
+    const p = plan({ focusMuscles: ['glutes', 'side_delts', 'chest'] });
+    // Side delts: 3 lateral raise variants x 3 sets (D8) x 2 upper sessions = 18.
+    expect(p.weeklyVolumeSummary.side_delts.fractional).toBeGreaterThanOrEqual(18 - 1e-9);
     for (const m of ['glutes', 'chest']) {
       expect({ muscle: m, ok: p.weeklyVolumeSummary[m].fractional >= 20 - 1e-9 }).toEqual({ muscle: m, ok: true });
     }

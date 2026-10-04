@@ -880,6 +880,8 @@ function toPlan(chosen, ctx, inputs, factor) {
       limitedBy: alloc.limitedBy,
       sessionMinutesAtPeak: alloc.sessions.map((s) => s.minutes),
       overTime: Object.fromEntries(alloc.sessions.map((s, si) => [sessionKey(si), s.overMinutes || 0]).filter(([, v]) => v > 5)),
+      // Sessions the focus sets take past 8 exercises or 25 working sets (D45).
+      overCeilings: alloc.sessions.map((s, si) => (s.overCeilings ? sessionKey(si) : null)).filter(Boolean),
     },
   };
 }

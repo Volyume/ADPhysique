@@ -62,6 +62,10 @@ module.exports = {
     {
       name: 'Cable Lateral Raise',
       kind: 'isolation'
+    },
+    {
+      name: 'Machine Lateral Raise',
+      kind: 'isolation'
     }
   ],
   rear_delts: [
