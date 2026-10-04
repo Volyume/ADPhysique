@@ -41,6 +41,9 @@ async function migrationCount() {
 // and workout_sets tables are added below for the new ALTERs on tables
 // this fixture never created.
 function withExerciseIntent(raw) {
+  // 2026-10-04 (D219 lane S1): programmes.plan_facts is appended after this
+  // file's window, so a minimal programmes table is added for that ALTER.
+  raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT);');
   raw.exec(`CREATE TABLE exercise_intent (
     id TEXT PRIMARY KEY, user_id TEXT, exercise_id TEXT, kind TEXT,
     scope_mesocycle_id TEXT, reason TEXT,
@@ -61,7 +64,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 11}`);
+  raw.exec(`PRAGMA user_version = ${total - 12}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -86,7 +89,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 10}`);
+  raw.exec(`PRAGMA user_version = ${total - 11}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()
