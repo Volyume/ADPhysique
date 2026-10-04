@@ -330,7 +330,8 @@ export function allocatePeakWeek({
         for (const m of members) {
           const target = level(m);
           const W = weekly[m]?.fractional || 0;
-          if (W + 1 > target + EPS) continue;
+          // Up to the level, the last set allowed to carry it just past.
+          if (W + EPS >= target || W + 1 > roles[m].peak + EPS) continue;
           const step = bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gapAfter, allowOpening, ignoreTime });
           if (!step) continue;
           const [focus, standard] = valued ? closes(step) : [0, 0];
