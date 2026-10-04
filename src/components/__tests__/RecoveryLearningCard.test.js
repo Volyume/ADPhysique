@@ -70,14 +70,16 @@ describe('the example', () => {
     const personal = reading({ factor: 1.2, prior: 1, pairs: 30, reason: 'adjusted', pairsByMuscle: { quads: 20, chest: 10 } });
     const now = spokenDuration(recoveryHours('quads', { sets: REFERENCE_SETS, personalFactor: 1.2 }));
     const before = spokenDuration(recoveryHours('quads', { sets: REFERENCE_SETS, personalFactor: 1 }));
-    expect(now).toBe('3½ days'); // 72 h x 1.2 = 86.4 h, 3.6 days
-    expect(before).toBe('3 days'); // 72 h
+    // RE-PINNED D219 (founder Q3, design 4.13): quads re-centred from 72 h to
+    // 54 h. 54 h x 1.2 = 64.8 h; both read "2½ days", so the card speaks hours.
+    expect(now).toBe('2½ days');
+    expect(before).toBe('2½ days');
     expect(learningExample(personal)).toEqual({
       name: 'Quads',
       sets: REFERENCE_SETS,
-      before: '3 days',
-      now: '3½ days',
-      sentence: `Quads after ${REFERENCE_SETS} sets: about 3½ days, up from 3 days.`,
+      before: '54 hours',
+      now: '65 hours',
+      sentence: `Quads after ${REFERENCE_SETS} sets: about 65 hours, up from 54 hours.`,
     });
   });
 
