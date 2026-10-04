@@ -328,6 +328,9 @@ describe('boundedFit', () => {
   });
 });
 
+/** Set numbers 1..n of one lift in a session. */
+const sets = (n) => Array.from({ length: n }, (_, i) => i + 1);
+
 /**
  * A clean (noise-free) athlete on a varied schedule whose lifts follow the
  * model exactly at `trueFactor` with sensitivity 0.1: every performance
@@ -335,7 +338,7 @@ describe('boundedFit', () => {
  * to session (4 to 8) and the load is set so the estimated max is exact, so
  * the lifts are never read as logged-as-planned.
  */
-function cleanAthlete(trueFactor, days = 112) {
+function cleanAthlete(trueFactor, days = 112, setsPerLift = 3) {
   const gaps = [1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2, 2, 4, 1, 3, 1, 2, 4, 3, 1, 2, 3, 4, 1, 2, 2, 3, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 2, 4, 1, 3, 2, 1];
   const sessions = [];
   let day = 0;
@@ -346,7 +349,7 @@ function cleanAthlete(trueFactor, days = 112) {
       id: `s${i}`, startedAt, endedAt: startedAt + HOUR_MS, durationMinutes: 60,
       weekRirTarget: null, weekStatus: 'none', isFirstWeek: false, isDeload: false,
       ratings: { sorenessNext: null, fatigue: null, joint: null },
-      sets: [1, 2, 3].flatMap((n) => [set('bench', 1, 1, n), set('squat', 1, 1, n)]),
+      sets: sets(setsPerLift).flatMap((n) => [set('bench', 1, 1, n), set('squat', 1, 1, n)]),
     });
   }
   const curve = {};
@@ -371,7 +374,7 @@ function cleanAthlete(trueFactor, days = 112) {
     // calculate1RM is linear in the load at fixed reps, so this load gives
     // exactly the intended estimated max.
     const loadFor = (max) => max / calculate1RM(1, reps);
-    s.sets = [1, 2, 3].flatMap((n) => [set('bench', loadFor(bench), reps, n), set('squat', loadFor(squat), reps, n)]);
+    s.sets = sets(setsPerLift).flatMap((n) => [set('bench', loadFor(bench), reps, n), set('squat', loadFor(squat), reps, n)]);
   });
   return sessions;
 }
@@ -387,14 +390,21 @@ describe('the fit (spec sections 4 and 5)', () => {
   });
 
   test('a clean fast recoverer is found faster; where several faster factors fit equally, the one nearest the start is taken', () => {
-    const learned = learnPersonalRecovery({ sessions: cleanAthlete(0.8), exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
+    // D219 RE-PIN (design 4.13 "base clocks", founder answer Q3 = A): the legs'
+    // clock is 54 h now, not 72 h. At the old three sets a lift this athlete's
+    // quads clock at the start is 38 h, so every gap of two days or more is
+    // fully recovered under EVERY candidate, only the one-day gaps carry any
+    // fatigue, one magnitude the fitted sensitivity absorbs, and the start
+    // wins the tie (reason not_clear). Four sets a lift, the dose the
+    // calibration simulation trains at, spans the two-day gaps again.
+    const learned = learnPersonalRecovery({ sessions: cleanAthlete(0.8, 112, 4), exerciseById: EX, recoveryRating: 'average', nowMs: NOW });
     expect(learned.reason).toBe('adjusted');
     expect(personalDirection(learned)).toBe('faster');
     // In this history a fast recoverer shows fatigue only after one-day
-    // gaps, so every factor from 0.8 to 0.9 predicts the same pattern, only
+    // gaps, so every factor from 0.75 to 0.9 predicts the same pattern, only
     // scaled, and the fitted sensitivity absorbs the scale: the tie goes to
     // the factor nearest the start (the smallest claim the lifts support).
-    expect(learned.factor).toBe(0.9);
+    expect(learned.factor).toBe(0.95);
   });
 
   test('an athlete whose truth IS the start stays at the start', () => {

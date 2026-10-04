@@ -2,12 +2,22 @@
  * constants.test.js -- the per-muscle recovery estimate's constants and
  * factor functions (register D201, spec section 3.1). Pins: every engine
  * muscle key has a baseline and the table holds the spec's values; the
- * dose factor is a clamped square root; the rating, intensity, first-week
- * and feedback factors take their spec values; feedback never shortens an
- * estimate; recoveryHours is clamped to [24, 168] and deterministic; an
- * unknown muscle takes the most conservative baseline; the module does no
- * I/O; recoveryHoursAcross (register D210) gives exactly recoveryHours at
- * each learned factor.
+ * dose factor is a clamped square root; the rating, intensity and feedback
+ * factors take their spec values; feedback never shortens an estimate;
+ * recoveryHours is clamped to [24, 168] and deterministic; an unknown muscle
+ * takes the most conservative baseline; the module does no I/O;
+ * recoveryHoursAcross (register D210) gives exactly recoveryHours at each
+ * learned factor.
+ *
+ * D219 (lane B3a) RE-PINS, each justified by design 4.13 of
+ * docs/audit/plan-builder-science-2026-10-04/00-AUDIT-AND-PLAN.md: the base
+ * table (quads and glutes 54, hamstrings 60: founder answer Q3 = A, "base
+ * clocks" row); the intensity ladder (RIR 0 1.25, RIR 1 1.10, RIR 2 1.00,
+ * RIR 3 or more 0.80: "effort factor" row); the first-week factor is gone
+ * and `novel` (1.15) stands in its place ("first-week factor" row); the
+ * unknown-muscle fallback is the longest clock the table now holds, 60.
+ * The new multipliers and the band have their own suite
+ * (recoveryClocks.d219.test.js).
  *
  * LANE R-G addition (Opus review finding 25, spec section 9; D201 addendum,
  * lead ruling 3, and addendum 6 ruling 12): TYPICAL_WEEK_GAP_HOURS holds
@@ -20,7 +30,7 @@ import path from 'path';
 import { VOLUME_LANDMARKS } from '../../algorithms';
 import {
   RECOVERY_ESTIMATE_LABEL, BASE_RECOVERY_HOURS, REFERENCE_SETS,
-  DOSE_FACTOR_MIN, DOSE_FACTOR_MAX, RATING_FACTOR, FIRST_WEEK_FACTOR, FEEDBACK_FACTOR,
+  DOSE_FACTOR_MIN, DOSE_FACTOR_MAX, RATING_FACTOR, FEEDBACK_FACTOR,
   RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, READY_PERCENT, NEARLY_PERCENT, LOOKBACK_DAYS,
   TYPICAL_WEEK_GAP_HOURS, PLAN_OPENING_RIR,
   doseFactor, ratingFactor, intensityFactor, feedbackFactor, recoveryHours, recoveryHoursAcross,
@@ -33,7 +43,7 @@ describe('baselines', () => {
 
   test('the table holds the spec values', () => {
     expect(BASE_RECOVERY_HOURS).toEqual({
-      quads: 72, hamstrings: 72, glutes: 72, adductors: 60, back: 60, chest: 60,
+      quads: 54, hamstrings: 60, glutes: 54, adductors: 60, back: 60, chest: 60,
       triceps: 48, biceps: 48, side_delts: 48, front_delts: 48, rear_delts: 48, traps: 48,
       forearms: 36, calves: 36, abs: 36, neck: 36, tibialis: 36,
     });
@@ -45,7 +55,6 @@ describe('baselines', () => {
     expect(READY_PERCENT).toBe(90);
     expect(NEARLY_PERCENT).toBe(75);
     expect(LOOKBACK_DAYS).toBe(14);
-    expect(FIRST_WEEK_FACTOR).toBe(1.10);
     expect(RATING_FACTOR).toEqual({ poor: 1.15, average: 1.0, good: 0.9 });
     expect(FEEDBACK_FACTOR).toEqual({ highSorenessOrFatigue: 1.20, jointDiscomfortAdd: 0.10 });
   });
@@ -76,12 +85,12 @@ describe('ratingFactor, intensityFactor, feedbackFactor', () => {
     expect(ratingFactor('anything')).toBe(1.0);
   });
 
-  test('intensity: RIR 0-1 lengthens, 2 neutral, 3+ shortens, unknown neutral', () => {
-    expect(intensityFactor(0)).toBe(1.15);
-    expect(intensityFactor(1)).toBe(1.15);
+  test('intensity: RIR 0 and 1 lengthen (1.25, 1.10), 2 neutral, 3+ shortens (0.80), unknown neutral', () => {
+    expect(intensityFactor(0)).toBe(1.25);
+    expect(intensityFactor(1)).toBe(1.10);
     expect(intensityFactor(2)).toBe(1.0);
-    expect(intensityFactor(3)).toBe(0.9);
-    expect(intensityFactor(4)).toBe(0.9);
+    expect(intensityFactor(3)).toBe(0.8);
+    expect(intensityFactor(4)).toBe(0.8);
     expect(intensityFactor(null)).toBe(1.0);
     expect(intensityFactor(undefined)).toBe(1.0);
   });
@@ -100,20 +109,20 @@ describe('ratingFactor, intensityFactor, feedbackFactor', () => {
 
 describe('recoveryHours', () => {
   test('a standard-dose, average, RIR 2, mid-block, unrated session reads the baseline', () => {
-    expect(recoveryHours('quads')).toBe(72);
+    expect(recoveryHours('quads')).toBe(54);
     expect(recoveryHours('calves')).toBe(36);
   });
 
-  test('the factors multiply: hard legs in week 1 for a poor recoverer at RIR 1', () => {
-    const h = recoveryHours('quads', { sets: 12, recoveryRating: 'poor', rirTarget: 1, firstWeek: true });
-    expect(h).toBeCloseTo(72 * Math.sqrt(2) * 1.15 * 1.15 * 1.10, 6);
+  test('the factors multiply: hard legs after a new exercise for a poor recoverer at RIR 1', () => {
+    const h = recoveryHours('quads', { sets: 12, recoveryRating: 'poor', rirTarget: 1, novel: true });
+    expect(h).toBeCloseTo(54 * Math.sqrt(2) * 1.15 * 1.10 * 1.15, 6);
     expect(h).toBeLessThanOrEqual(RECOVERY_HOURS_MAX);
   });
 
   test('is clamped to [24, 168] hours', () => {
     expect(recoveryHours('calves', { sets: 1, recoveryRating: 'good', rirTarget: 4 })).toBe(RECOVERY_HOURS_MIN);
     expect(recoveryHours('quads', {
-      sets: 60, recoveryRating: 'poor', rirTarget: 0, firstWeek: true, ratings: { fatigue: 5, joint: 3 },
+      sets: 60, recoveryRating: 'poor', rirTarget: 0, novel: true, ratings: { fatigue: 5, joint: 3 },
     })).toBe(RECOVERY_HOURS_MAX);
   });
 
@@ -123,8 +132,8 @@ describe('recoveryHours', () => {
     expect(recoveryHours('chest', { ratings: { fatigue: 1, sorenessNext: 1, joint: 0 } })).toBe(base);
   });
 
-  test('an unknown muscle takes the most conservative baseline in the table', () => {
-    expect(recoveryHours('not_a_muscle')).toBe(72);
+  test('an unknown muscle takes the most conservative baseline in the table (60 h since the legs were re-centred)', () => {
+    expect(recoveryHours('not_a_muscle')).toBe(60);
   });
 
   test('is deterministic', () => {
@@ -141,7 +150,7 @@ describe('recoveryHours', () => {
       ['quads', {}],
       ['calves', { sets: 1, recoveryRating: 'good', rirTarget: 4 }],
       ['back', {
-        sets: 9, recoveryRating: 'poor', rirTarget: 0, firstWeek: true, ratings: { fatigue: 5, joint: 3 },
+        sets: 9, recoveryRating: 'poor', rirTarget: 0, novel: true, ratings: { fatigue: 5, joint: 3 },
       }],
       ['chest', { sets: 0, rirTarget: null, ratings: { sorenessNext: 3 } }],
       ['hamstrings', { sets: 7.5, rirTarget: '2', ratings: null }],

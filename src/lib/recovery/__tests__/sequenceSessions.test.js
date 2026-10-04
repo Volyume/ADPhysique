@@ -443,11 +443,15 @@ describe('describeSpacing', () => {
     });
     const sentence = describeSpacing(result);
 
-    // TYPICAL_WEEK_GAP_HOURS[4] (D201 addendum, lead ruling 3): quads and
-    // hamstrings' worst gap is 72 h, not the old flat 84 h.
+    // TYPICAL_WEEK_GAP_HOURS[4] (D201 addendum, lead ruling 3): the worst gap
+    // is 72 h, not the old flat 84 h.
+    // D219 RE-PIN (design 4.13 "base clocks", founder answer Q3 = A): the
+    // quads' clock is now 54 h, so they no longer share the longest clock
+    // among the muscles trained twice; the chest and the hamstrings (60 h each)
+    // do, and the sentence names them. The gap, 72 h, is unchanged.
     // Muscles are named in the scorer's fixed alphabetical order (the same
     // order every candidate sums its terms in, see TIE_TOLERANCE).
-    expect(sentence).toBe('Assuming a usual 4-day week, sessions are ordered to leave about 72 hours before the next session that trains the hamstrings and quads.');
+    expect(sentence).toBe('Assuming a usual 4-day week, sessions are ordered to leave about 72 hours before the next session that trains the chest and hamstrings.');
     expect(sentence).not.toMatch(/—/);
     expect(sentence).not.toMatch(/you must/i);
   });

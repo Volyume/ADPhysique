@@ -15,6 +15,16 @@
  * readyAtMs; both functions are deterministic and the model does no I/O;
  * recoveredFractionsAt (register D210) reads exactly what
  * recoveredFractionAt reads, for every candidate length at once.
+ *
+ * D219 (lane B3a) RE-PINS, justified by design 4.13 of
+ * docs/audit/plan-builder-science-2026-10-04/00-AUDIT-AND-PLAN.md: the quads
+ * clock is 54 h, not 72 h (founder answer Q3 = A, "base clocks" row), and a
+ * session that meets an exercise new to the history is novel and reads 15%
+ * longer ("first-week factor" row, replaced by novelty), which includes the
+ * first session ever read. The decay-geometry fixtures below therefore carry
+ * two older sessions (familiarBefore) so the session under test is familiar:
+ * the numbers they pin stay the shape of the decay, not novelty. Novelty,
+ * long length and the indirect factor are pinned in recoveryModel.d219.test.js.
  */
 import fs from 'fs';
 import path from 'path';
@@ -48,6 +58,16 @@ function quadsSession(id, endedAt, extra = {}) {
     sets: Array.from({ length: 6 }, () => set('legPress')), // 6 = REFERENCE_SETS, quads only
     ...extra,
   };
+}
+
+/**
+ * Two earlier leg-press sessions, 23 and 16 days before `endMs`: older than the
+ * 14-day window at any "now" at or after `endMs` (so they add nothing to a
+ * reading) and inside the 21-day layoff (so the session at `endMs` is
+ * familiar, not novel). See the D219 note in the header.
+ */
+function familiarBefore(endMs) {
+  return [quadsSession('f1', endMs - 23 * DAY), quadsSession('f2', endMs - 16 * DAY)];
 }
 
 describe('sessionMuscleLoads -- allocation parity with calculateWeeklyVolume', () => {
@@ -102,7 +122,7 @@ describe('buildMuscleRecoveryMap -- a single standard-dose quads session', () =>
 
   function quadsAt(nowMs) {
     return buildMuscleRecoveryMap({
-      sessions: [session], exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
+      sessions: [...familiarBefore(END), session], exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
     }).quads;
   }
 
@@ -112,22 +132,22 @@ describe('buildMuscleRecoveryMap -- a single standard-dose quads session', () =>
     expect(at.status).toBe('recovering');
   });
 
-  test('50% at 36 hours', () => {
-    expect(quadsAt(END + 36 * HOUR).recoveredPercent).toBe(50);
+  test('50% at 27 hours', () => {
+    expect(quadsAt(END + 27 * HOUR).recoveredPercent).toBe(50);
   });
 
-  test('100% at 72 hours', () => {
-    const at = quadsAt(END + 72 * HOUR);
+  test('100% at 54 hours', () => {
+    const at = quadsAt(END + 54 * HOUR);
     expect(at.recoveredPercent).toBe(100);
     expect(at.status).toBe('recovered');
   });
 
-  test('readyAtMs is end + 0.895 * 72 hours (where the rounded percent first reads 90)', () => {
+  test('readyAtMs is end + 0.895 * 54 hours (where the rounded percent first reads 90)', () => {
     // Lead review (Opus finding 23): recoveredPercent is rounded, so the
     // status turns recovered at a raw 89.5%; ready-by aims at that same
     // instant, never at the unrounded 90% twenty minutes later.
     const { readyAtMs } = quadsAt(END);
-    const expected = END + 0.895 * 72 * HOUR;
+    const expected = END + 0.895 * 54 * HOUR;
     expect(Math.abs(readyAtMs - expected)).toBeLessThan(2);
     const atReady = quadsAt(readyAtMs);
     expect(atReady.recoveredPercent).toBe(90);
@@ -135,11 +155,11 @@ describe('buildMuscleRecoveryMap -- a single standard-dose quads session', () =>
   });
 
   test('status bands: nearly at 80%, recovered at 92%', () => {
-    const at80 = quadsAt(END + 0.8 * 72 * HOUR);
+    const at80 = quadsAt(END + 0.8 * 54 * HOUR);
     expect(at80.recoveredPercent).toBe(80);
     expect(at80.status).toBe('nearly');
 
-    const at92 = quadsAt(END + 0.92 * 72 * HOUR);
+    const at92 = quadsAt(END + 0.92 * 54 * HOUR);
     expect(at92.recoveredPercent).toBe(92);
     expect(at92.status).toBe('recovered');
   });
@@ -158,7 +178,7 @@ describe('buildMuscleRecoveryMap -- compounding fatigue', () => {
   const session1 = quadsSession('w1', END1);
   const session2 = quadsSession('w2', END2);
   const map = buildMuscleRecoveryMap({
-    sessions: [session1, session2], exerciseById: EXERCISES, recoveryRating: 'average', nowMs: END2,
+    sessions: [...familiarBefore(END1), session1, session2], exerciseById: EXERCISES, recoveryRating: 'average', nowMs: END2,
   });
 
   test('residual exceeds 1.0 and clamps to 0%, never negative', () => {
@@ -167,12 +187,12 @@ describe('buildMuscleRecoveryMap -- compounding fatigue', () => {
   });
 
   test('readyAtMs lands after the OLDER session would have recovered alone, before the newer one would', () => {
-    // Session 1 alone would fully decay at END1 + 72h = END2 + 48h; session 2
-    // alone would fully decay at END2 + 72h. Compounding must land strictly
+    // Session 1 alone would fully decay at END1 + 54h = END2 + 30h; session 2
+    // alone would fully decay at END2 + 54h. Compounding must land strictly
     // between the two, later than either session's own recovery would allow
     // in isolation of the other's continuing decay.
-    expect(map.quads.readyAtMs).toBeGreaterThan(END2 + 48 * HOUR);
-    expect(map.quads.readyAtMs).toBeLessThan(END2 + 72 * HOUR);
+    expect(map.quads.readyAtMs).toBeGreaterThan(END2 + 30 * HOUR);
+    expect(map.quads.readyAtMs).toBeLessThan(END2 + 54 * HOUR);
   });
 
   test('projecting to readyAtMs reads recoveredPercent >= 90 and status recovered', () => {
@@ -313,8 +333,12 @@ describe('lead review: contributions cap at F and the ready-by walk stays exact 
 
   test('a session ending one hour AFTER now contributes exactly F, never more', () => {
     const now = 1_000_000_000_000;
+    // Two older chest sessions keep the one under test familiar (D219 header note).
+    const older = [23, 16].map((d, i) => ({
+      id: `f${i}`, startedAt: now + HOUR - d * 24 * HOUR - HOUR, endedAt: now + HOUR - d * 24 * HOUR, sets,
+    }));
     const map = buildMuscleRecoveryMap({
-      sessions: [{ id: 'w1', startedAt: now, endedAt: now + HOUR, sets }],
+      sessions: [...older, { id: 'w1', startedAt: now, endedAt: now + HOUR, sets }],
       exerciseById: EX, recoveryRating: 'average', nowMs: now,
     });
     // F = 6 / 6 = 1.0 -> residual 1.0 -> 0%, not below 0 and not "more than fully fatigued".

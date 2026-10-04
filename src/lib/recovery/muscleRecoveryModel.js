@@ -14,8 +14,10 @@
  * REFERENCE_SETS dose and clamped to [FATIGUE_UNIT_MIN, FATIGUE_UNIT_MAX]),
  * decaying LINEARLY from the session's end to zero at T hours later (T =
  * constants.recoveryHours(muscle, ...), which folds in the session's own
- * dose, the user's recovery rating, the block week's RIR target, whether it
- * fell in a block's first week, and the user's ratings). The residual at any
+ * dose, the user's recovery rating, the block week's RIR target, whether the
+ * muscle met a new exercise or came back from a layoff (novelty), how much of
+ * its direct work was long-length exercises, whether its credit was mostly
+ * synergist work, and the user's ratings). The residual at any
  * instant t is the sum, over every session within LOOKBACK_DAYS of "now",
  * of max(0, F * (1 - (t - end) / T)): a session already past its own T
  * contributes nothing; two sessions whose windows overlap COMPOUND, which is
@@ -41,11 +43,14 @@
  * The caller (a later lane's src/lib/recovery/load.js) does all the
  * reading and hands these functions plain data.
  */
-import { VOLUME_LANDMARKS, calculateWeeklyVolume } from '../algorithms';
+import {
+  VOLUME_LANDMARKS, calculateWeeklyVolume, allocateExerciseVolume, exerciseForSet,
+} from '../algorithms';
 import {
   REFERENCE_SETS, FATIGUE_UNIT_MIN, FATIGUE_UNIT_MAX, LOOKBACK_DAYS,
   READY_PERCENT, NEARLY_PERCENT, DEFAULT_SESSION_MINUTES,
-  recoveryHours, feedbackFactor,
+  NOVELTY_SESSIONS, NOVELTY_LAYOFF_DAYS,
+  recoveryHours, feedbackFactor, isLongLengthExercise,
 } from './constants';
 
 const MS_PER_MINUTE = 60 * 1000;
@@ -58,6 +63,10 @@ const LOOKBACK_MS = LOOKBACK_DAYS * 24 * MS_PER_HOUR;
 // (Opus review finding 23: aiming at the unrounded 0.100 put ready-by about
 // 20 minutes after the status had already turned recovered).
 const READY_FRACTION = 1 - (READY_PERCENT - 0.5) / 100;
+const NOVELTY_LAYOFF_MS = NOVELTY_LAYOFF_DAYS * 24 * MS_PER_HOUR;
+// Credit comes in halves and tenths; this only keeps "more than half" from
+// flipping on floating-point dust.
+const CREDIT_EPSILON = 1e-9;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 
@@ -84,7 +93,8 @@ function resolveEndMs(session) {
  * muscle credit here can never disagree with the heatmap's.
  *
  * @param {Array<object>} sessions - completed sessions: { id, startedAt,
- *   endedAt, durationMinutes, sets, weekRirTarget, isFirstWeek, ratings }
+ *   endedAt, durationMinutes, sets, weekRirTarget, ratings } (a session may
+ *   still carry isFirstWeek from load.js; the model no longer reads it)
  * @param {object} exerciseById - { [exerciseId]: exercise }
  * @returns {Array<{ workoutId: *, endMs: number, setsByMuscle: object }>}
  */
@@ -103,6 +113,109 @@ export function sessionMuscleLoads(sessions, exerciseById) {
       setsByMuscle,
     };
   });
+}
+
+/**
+ * One session's credit on each muscle, split into the muscle's DIRECT sets
+ * (it is the exercise's primary mover, 1.0 a set), its SYNERGIST credit (the
+ * exercise's secondary contribution, 0.5 unless the exercise says otherwise),
+ * the direct sets that came from long-length exercises, and the exercises
+ * that credited it. Each set is first put through calculateWeeklyVolume on its
+ * own, the volume tracker's own gate (warm-ups, ballistic rows and sets
+ * whose exercise cannot be resolved give nothing), so what is counted here
+ * can never differ from sessionMuscleLoads or the heatmap; the exercise's
+ * allocation then says which credit was direct.
+ */
+function sessionMuscleCredit(sets, exerciseMap) {
+  const out = {};
+  const list = Array.isArray(sets) ? sets : [];
+  for (const set of list) {
+    if (!set || !Object.keys(calculateWeeklyVolume([set], exerciseMap)).length) continue;
+    const exercise = exerciseForSet(exerciseMap, set);
+    if (!exercise) continue;
+    const long = isLongLengthExercise(exercise);
+    const key = exercise.id ?? set.exerciseId ?? set.exercise_id ?? exercise.name ?? null;
+    for (const { muscle, sets: credit, role } of allocateExerciseVolume(exercise)) {
+      if (!muscle) continue;
+      if (!out[muscle]) out[muscle] = { direct: 0, indirect: 0, longDirect: 0, keys: new Set() };
+      const entry = out[muscle];
+      if (role === 'primary') {
+        entry.direct += credit;
+        if (long) entry.longDirect += credit;
+      } else {
+        entry.indirect += credit;
+      }
+      if (key !== null) entry.keys.add(key);
+    }
+  }
+  return out;
+}
+
+/**
+ * What a history says about each muscle's session, for constants.recoveryHours
+ * (register D219, design 4.13 of docs/audit/plan-builder-science-2026-10-04/
+ * 00-AUDIT-AND-PLAN.md): per session, per muscle it credited,
+ *  - `novel`: the muscle met an exercise it has not been trained with before
+ *    in the history given, or came back after NOVELTY_LAYOFF_DAYS or more
+ *    without a session; the session that triggers it and the next one are
+ *    both novel (NOVELTY_SESSIONS in all). The very first session in the
+ *    history is novel: every exercise in it is new to the history. "Trained
+ *    with" is any exercise that credits the muscle, as prime mover or as a
+ *    synergist. The history is read in time order whatever order it arrives
+ *    in, and a session's novelty depends only on the sessions before it;
+ *  - `longLengthShare`: the share (0 to 1) of the muscle's direct sets in the
+ *    session that came from long-length exercises (constants.
+ *    LONG_LENGTH_EXERCISE_NAMES); 0 when the muscle had no direct sets;
+ *  - `mostlyIndirect`: more than half of the muscle's credit in the session
+ *    was synergist credit (exactly half is not);
+ *  - `directSets`, `indirectSets`: the credit behind the two ratios; their
+ *    sum is sessionMuscleLoads' credit for the muscle.
+ *
+ * Pass it the WHOLE history the caller has, not only the sessions inside the
+ * 14-day window: load.js reads 126 days (personalRecovery.PERSONAL_HISTORY_DAYS),
+ * so a session in the live window is judged against at least 16 weeks of
+ * earlier sessions. A history that is short says so honestly: its earliest
+ * sessions read as novel.
+ *
+ * @param {Array<object>} sessions - as sessionMuscleLoads
+ * @param {object} exerciseById - { [exerciseId]: exercise }, exercises
+ *   carrying `name` for the long-length list
+ * @returns {Array<object>} one entry per session, same order: { [muscle]:
+ *   { novel, longLengthShare, mostlyIndirect, directSets, indirectSets } }
+ */
+export function sessionMuscleTerms(sessions, exerciseById) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  const exerciseMap = exerciseById ?? {};
+  const credit = list.map((session) => sessionMuscleCredit(session?.sets, exerciseMap));
+  const endMs = list.map((session) => resolveEndMs(session));
+  const inTimeOrder = list.map((_, i) => i).sort((a, b) => (endMs[a] - endMs[b]) || (a - b));
+
+  const history = {}; // muscle -> { seen: Set, lastEndMs, noveltyLeft }
+  const out = list.map(() => ({}));
+  for (const i of inTimeOrder) {
+    for (const muscle of Object.keys(credit[i])) {
+      const c = credit[i][muscle];
+      if (!(c.direct + c.indirect > 0)) continue;
+      if (!history[muscle]) history[muscle] = { seen: new Set(), lastEndMs: null, noveltyLeft: 0 };
+      const h = history[muscle];
+      const away = h.lastEndMs !== null && endMs[i] - h.lastEndMs >= NOVELTY_LAYOFF_MS;
+      let metNew = false;
+      for (const key of c.keys) if (!h.seen.has(key)) metNew = true;
+      if (away || metNew) h.noveltyLeft = NOVELTY_SESSIONS;
+      const novel = h.noveltyLeft > 0;
+      if (novel) h.noveltyLeft -= 1;
+      for (const key of c.keys) h.seen.add(key);
+      h.lastEndMs = endMs[i];
+      out[i][muscle] = {
+        novel,
+        longLengthShare: c.direct > 0 ? c.longDirect / c.direct : 0,
+        mostlyIndirect: c.indirect - c.direct > CREDIT_EPSILON,
+        directSets: c.direct,
+        indirectSets: c.indirect,
+      };
+    }
+  }
+  return out;
 }
 
 /** sets -> fatigue unit F, clamped. Mirrors constants.doseFactor's ratio. */
@@ -310,6 +423,9 @@ export function buildMuscleRecoveryMap({
 } = {}) {
   const sessionList = Array.isArray(sessions) ? sessions : [];
   const loads = sessionMuscleLoads(sessionList, exerciseById);
+  // D219: what the WHOLE history says about each muscle's session (novelty,
+  // long length, mostly indirect), read once, in time order.
+  const terms = sessionMuscleTerms(sessionList, exerciseById);
 
   const map = {};
   for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
@@ -322,11 +438,14 @@ export function buildMuscleRecoveryMap({
       if (nowMs - load.endMs > LOOKBACK_MS) continue; // older than LOOKBACK_DAYS: no contribution
 
       const session = sessionList[i] ?? {};
+      const term = terms[i]?.[muscle] ?? {};
       const hoursT = recoveryHours(muscle, {
         sets: rawSets,
         recoveryRating,
         rirTarget: session.weekRirTarget,
-        firstWeek: session.isFirstWeek,
+        novel: term.novel,
+        longLengthShare: term.longLengthShare,
+        mostlyIndirect: term.mostlyIndirect,
         ratings: session.ratings,
         personalFactor,
       });
