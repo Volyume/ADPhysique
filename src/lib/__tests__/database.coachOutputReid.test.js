@@ -74,6 +74,11 @@ function freshDb() {
   // v72 in this window and ALTERs workout_sets (evidence_class); empty
   // here, so it is a no-op against this fixture.
   raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT);');
+  // D219 lane S1 (2026-10-04): programmes.plan_facts was appended after the
+  // window above, so the window widens by one (runLast 19 -> 20, rerun 17 ->
+  // 18, a mechanical re-anchor) and the table that ALTER targets has to exist
+  // here. Empty is enough: this suite asserts nothing about it.
+  raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT);');
   return raw;
 }
 
@@ -96,7 +101,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 19).then(() => {
+  return runLast(raw, 20).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -111,9 +116,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 19); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
+  await runLast(raw, 20); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 17}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 18}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

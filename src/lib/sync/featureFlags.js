@@ -1,7 +1,8 @@
 /**
  * Sync-layer feature flags.
  *
- * One flag today: CIRCUIT_SYNC_COLUMNS_ENABLED, gating whether the three
+ * Two flags: CIRCUIT_SYNC_COLUMNS_ENABLED (below) and PLAN_FACTS_PUSH (end of
+ * file). The first gates whether the three
  * EL-9/EL-7 circuit columns (routine_exercises.group_kind,
  * routine_exercises.round_rest_seconds, workout_sets.evidence_class -
  * docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md) are included
@@ -24,3 +25,26 @@
  * block updated to APPLIED).
  */
 export const CIRCUIT_SYNC_COLUMNS_ENABLED = true;
+
+/**
+ * PLAN_FACTS_PUSH (D219, lane S1; the EL-9 pattern above): gates whether
+ * programmes.plan_facts, the facts a plan built by the new planner carries
+ * (docs/audit/plan-builder-science-2026-10-04/00-AUDIT-AND-PLAN.md section 9),
+ * goes in the programmes upsert.
+ *
+ * The local column exists (SCHEMA_MIGRATIONS in database.js) but its cloud
+ * counterpart, supabase/migrate_188_programmes_plan_facts.sql, is WRITTEN,
+ * NOT APPLIED: only the founder's exact phrase "run against production"
+ * applies a cloud migration. The programmes upsert is ONE request with no
+ * fallback (sync.js _pushProgrammes), so a build that pushed a column the
+ * cloud lacks would stop programme sync for every user and block ordinary
+ * sign-out (the sign-out push-first safety refuses while a push errors).
+ * Omitting the column while this flag is off keeps every other programme
+ * field syncing normally. The pull side already reads plan_facts defensively
+ * (a missing key is NULL, and a cloud NULL never overwrites a local value).
+ *
+ * Ships OFF. Flip this to true ONLY in the landing after the founder has run
+ * migrate_188 against production and its presence has been verified
+ * (supabase/README status block updated to APPLIED).
+ */
+export const PLAN_FACTS_PUSH = false;

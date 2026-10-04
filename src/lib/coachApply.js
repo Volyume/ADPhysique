@@ -27,6 +27,12 @@
 // male cut suggestion could be written below the 1500 male floor). KCAL_FLOOR
 // stays the female/default (unknown-sex) floor for backwards compatibility.
 import { kcalFloorForSex as engineKcalFloorForSex } from './nutritionEngine';
+// D219 (founder Q6: only the two volume functions of this file change): the
+// plan's set counts for a week come from prescribe.js, a pure module whose
+// only import is science.js. It must stay that way: this file is an
+// ED-safety module and may never reach src/lib/recovery (the edIsolation
+// guard, made transitive).
+import { prescribeWeek } from './plan/prescribe';
 
 export const KCAL_FLOOR = 1200;
 export const KCAL_FLOOR_MALE = 1500;
@@ -327,14 +333,44 @@ export function computeVolumeApply(plannedRows, volumeDelta, holdMuscles = null)
  * UNAPPLIED coach output: only persisted rows move a session, which is the
  * confirm-then-apply law end-to-end.
  *
- * @param {Array<{exerciseId:string, primaryMuscle:string, recommendedSets:number}>} exercises
+ * D219 (design 4.9, register D219 build ruling 1): a plan the new planner
+ * built carries `facts.version === 2` in `programmes.plan_facts`. For such a
+ * plan the caller passes `planContext` ({ facts, sessions }, built by
+ * sessionAdjustments from the plan's routines in rotation order) and the
+ * week's sets come from `prescribeWeek` instead of the multiplier above: each
+ * muscle's weekly row is shared across its sessions and exercises, never past
+ * 4 sets for a compound or 3 for an isolation exercise, in every week of the
+ * block. The result is restricted to `exercises` and keeps this function's
+ * shape (exerciseId -> sets). Without `planContext`, or with any other
+ * version, the multiplier runs exactly as before (byte-identical for every
+ * legacy plan).
+ *
+ * @param {Array<{exerciseId:string, primaryMuscle:string, recommendedSets:number, slotId?:string}>} exercises
+ *        `slotId` (v2 only) is the plan slot the exercise occupies today (the
+ *        routine exercise row id); without it the slot id is the exerciseId
  * @param {Object<string, number>} weekPlannedByMuscle    this week's planned_sets per muscle
  * @param {Object<string, number>} baselinePlannedByMuscle week-1 planned_sets per muscle
+ * @param {?{facts: object, sessions: Array}} [planContext]  the v2 plan context, or null
  * @returns {Object<string, number>} exerciseId -> allocated working-set count
  */
-export function computeWeeklySessionAllocation(exercises, weekPlannedByMuscle, baselinePlannedByMuscle) {
+export function computeWeeklySessionAllocation(exercises, weekPlannedByMuscle, baselinePlannedByMuscle, planContext = null) {
   const out = {};
   if (!Array.isArray(exercises)) return out;
+  if (planContext?.facts?.version === 2 && Array.isArray(planContext.sessions)) {
+    const facts = planContext.facts;
+    const { sets } = prescribeWeek({
+      sessions: planContext.sessions,
+      weekTargets: weekPlannedByMuscle || {},
+      facts: { exposureShares: facts.exposureShares, sessionCaps: facts.sessionCaps },
+    });
+    for (const ex of exercises) {
+      const id = ex?.exerciseId;
+      if (!id) continue;
+      const served = sets[ex?.slotId ?? id];
+      if (Number.isFinite(served) && served >= 1) out[id] = served;
+    }
+    return out;
+  }
   const week = weekPlannedByMuscle || {};
   const base = baselinePlannedByMuscle || {};
   for (const ex of exercises) {

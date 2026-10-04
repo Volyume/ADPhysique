@@ -25,6 +25,7 @@ import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import { getPlanServeContextForRoutine, getCurrentWeekPlanSets } from '../lib/sessionAdjustments';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { getSplitRationale } from '../lib/whyThisTemplates';
@@ -58,6 +59,10 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [setCounts, setSetCounts] = useState({});
+  // D219 (design 4.9, one number everywhere): this week's served sets per
+  // routine, for the ACTIVE plan when the new planner built it. Empty for every
+  // other plan, which keeps the stored counts above.
+  const [servedSetCounts, setServedSetCounts] = useState({});
   // F-17 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence
   // A10): the preview named neither circuits nor rounds, so the only
   // signal before someone committed to a circuit plan was the free-text
@@ -139,6 +144,28 @@ export default function PlanDetailScreen({ navigation, route }) {
         if (groups.length) circuits[routine.id] = groups;
       }
       setCircuitGroups(circuits);
+      // D219: the same per-week sets the logger serves (sessionAdjustments),
+      // only for the active plan and only when the new planner built it.
+      // Best-effort: any failure leaves the stored counts, as before.
+      const servedByRoutine = {};
+      if (user?.id && active?.id === planId && (routines ?? []).length) {
+        try {
+          const planContext = await getPlanServeContextForRoutine(routines[0].id);
+          if (planContext) {
+            for (const routine of routines) {
+              const rows = detailsByRoutine[routine.id] ?? [];
+              // eslint-disable-next-line no-await-in-loop
+              const bySlot = await getCurrentWeekPlanSets({ userId: user.id, routineId: routine.id, rows, planContext });
+              if (!bySlot) continue;
+              servedByRoutine[routine.id] = rows.reduce((sum, row) => {
+                const stored = Number(row?.routineExercise?.recommendedSets);
+                return sum + (bySlot[row?.routineExercise?.id] ?? (Number.isFinite(stored) ? stored : 3));
+              }, 0);
+            }
+          }
+        } catch (e) { logError('PlanDetailScreen.servedSets', e, { planId }); }
+      }
+      setServedSetCounts(servedByRoutine);
       // The rationale cache is per-user and always tracks the active
       // auto-generated plan (every reroll archives the others), so it's
       // only meaningful here when this plan is the active one. Loading it
@@ -402,7 +429,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   // only if a routine has no set-count data), so the estimate reflects the real
   // programme rather than assuming a flat 3 sets per exercise.
   const totalWorkingSets = workouts.reduce(
-    (sum, w) => sum + (setCounts[w.id] || (exerciseCounts[w.id] || 0) * 3),
+    (sum, w) => sum + (servedSetCounts[w.id] || setCounts[w.id] || (exerciseCounts[w.id] || 0) * 3),
     0,
   );
   // C5-P10-02 (D96): days a week, read from the plan's existing days:N tag.

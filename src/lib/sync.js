@@ -15,7 +15,7 @@
 
 import { getSupabaseClient } from './supabase';
 import { isNetworkNoise } from './observability/networkNoise';
-import { CIRCUIT_SYNC_COLUMNS_ENABLED } from './sync/featureFlags';
+import { CIRCUIT_SYNC_COLUMNS_ENABLED, PLAN_FACTS_PUSH } from './sync/featureFlags';
 import {
   getAllWorkouts,
   getWorkoutById,
@@ -949,6 +949,16 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
 
 // ─── Per-table push helpers ───────────────────────────────────────────────
 
+// D219: the programmes push's plan_facts field, or {} to omit the key (no local
+// value, or unreadable text: an omitted key leaves the cloud value untouched).
+function planFactsPushField(raw) {
+  if (raw == null || raw === '') return {};
+  try {
+    const v = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return v && typeof v === 'object' && !Array.isArray(v) ? { plan_facts: v } : {};
+  } catch (_) { return {}; }
+}
+
 async function _pushProgrammes(sb, supabaseUserId, localUserId) {
   try {
     const programmes = await getAllProgrammes(localUserId);
@@ -967,6 +977,15 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       // My Plans organisation survives a device change. Nullable; an unfiled
       // plan ships NULL.
       folder_id: p.folderId ?? null,
+      // D219: plan_facts (the new planner's facts, TEXT locally, jsonb in the
+      // cloud) goes in the upsert ONLY while PLAN_FACTS_PUSH is on, i.e. after
+      // the founder has applied migrate_188: this upsert is one request with
+      // no fallback, so an unknown column would reject every programme.
+      // Parsed to an OBJECT for the jsonb column (a raw string would store
+      // double-encoded), and the key is OMITTED when this device has none or
+      // the text is unreadable, so an upsert never erases a cloud value (the
+      // block_ledger rule, mesocycles push below).
+      ...(PLAN_FACTS_PUSH ? planFactsPushField(p.planFacts) : {}),
       // F5 Phase A (SD-3): the 2s-debounced full re-push used to re-stamp
       // every programme to now each cycle - the audit's exemplar of the bug.
       updated_at: new Date(p.updatedAt ?? p.createdAt ?? Date.now()).toISOString(),

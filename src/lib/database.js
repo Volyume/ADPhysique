@@ -2846,6 +2846,36 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE exercises ADD COLUMN aliases TEXT',
     'ALTER TABLE exercises ADD COLUMN load_character TEXT',
   ],
+  // D219 (docs/audit/plan-builder-science-2026-10-04/00-AUDIT-AND-PLAN.md
+  // section 9; register D219 "Build rulings, 2026-10-04" items 1 to 3).
+  //   Purpose:  one nullable TEXT column on `programmes`, `plan_facts`: the
+  //             facts a plan built by the new planner carries (the version
+  //             marker, `version: 2` meaning the new planner built it, each
+  //             muscle's role, the session shares and caps, the gap ranks,
+  //             the learned factor, every week's targets). A generated plan
+  //             is a new programme row on every build (S0 recon 1.5), so the
+  //             facts refresh with the plan. JSON text; read and written only
+  //             through getProgrammePlanFacts / setProgrammePlanFacts.
+  //   Applied locally: yes, on every device that reaches this migration
+  //             index; ALTER TABLE ADD COLUMN only, so every existing
+  //             programme row reads NULL = "not a plan the new planner
+  //             built" and is served exactly as before (FQ-4).
+  //   Applied remotely: NO. The cloud counterpart is
+  //             supabase/migrate_188_programmes_plan_facts.sql, WRITTEN, NOT
+  //             APPLIED (the founder's phrase "run against production" is
+  //             the only trigger). Until it is applied the push omits the
+  //             column (PLAN_FACTS_PUSH in src/lib/sync/featureFlags.js is
+  //             false), because the programmes upsert is one request with no
+  //             fallback; the pull reads the field defensively, so an absent
+  //             cloud column degrades to NULL with no crash.
+  //   Safe to re-run: yes. The benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run.
+  //   Rollback: leave the column in place and ignore it; every reader treats
+  //             NULL as "serve this plan as before", and no v2 plan can exist
+  //             on a device that has not run this migration.
+  [
+    'ALTER TABLE programmes ADD COLUMN plan_facts TEXT',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the
@@ -4813,6 +4843,45 @@ export async function getProgrammeById(id) {
   const d = await db();
   const row = await d.getFirstAsync('SELECT * FROM programmes WHERE id = ?', [id]);
   return rowToCamel(row);
+}
+
+/**
+ * D219: the facts a plan built by the new planner carries
+ * (`programmes.plan_facts`, JSON text; `version: 2` marks the new planner's
+ * plans). Returns the parsed object, or null when the programme has none, the
+ * programme is unknown, or the stored text is unreadable (logged, never
+ * thrown: a bad value must read as "serve this plan as before").
+ */
+export async function getProgrammePlanFacts(programmeId) {
+  if (!programmeId) return null;
+  try {
+    const d = await db();
+    const row = await d.getFirstAsync('SELECT plan_facts FROM programmes WHERE id = ?', [programmeId]);
+    const raw = row?.plan_facts;
+    if (raw == null || raw === '') return null;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    logError('database.getProgrammePlanFacts', e, { programmeId });
+    return null;
+  }
+}
+
+/**
+ * D219: store a programme's plan facts as JSON text and bump `updated_at`
+ * (the programmes pull is last-write-wins on it, and the push re-sends the
+ * row). `facts` null clears the column. `scheduleSync` follows createProgramme:
+ * a caller inside a larger write passes false and schedules once itself.
+ */
+export async function setProgrammePlanFacts(programmeId, facts, { scheduleSync = true } = {}) {
+  if (!programmeId) return;
+  const d = await db();
+  const text = facts == null ? null : JSON.stringify(facts);
+  await d.runAsync(
+    'UPDATE programmes SET plan_facts = ?, updated_at = ? WHERE id = ?',
+    [text, Date.now(), programmeId],
+  );
+  if (scheduleSync) _scheduleSync();
 }
 
 export async function copyRoutineFromLibrary(routineId, userId) {
@@ -10184,6 +10253,16 @@ export async function insertProgrammeFromCloud(userId, p) {
     'SELECT updated_at FROM programmes WHERE id = ?', [p.id],
   ).catch(() => null);
   const createdAt = tsMs(p.created_at) ?? Date.now();
+  // D219: plan_facts (jsonb in the cloud, TEXT here) is the one column this
+  // applier now carries besides the synced ones. Parsed the way block_ledger
+  // is: an OBJECT from supabase-js is stringified for the TEXT column, a
+  // plain string is kept as is. A cloud NULL (or an absent key: the column
+  // not yet applied, or a row pushed by a build that omits it) is NULL here,
+  // and the UPDATE below COALESCEs it, so a cloud NULL never overwrites a
+  // local value.
+  const incomingPlanFacts = (p.plan_facts == null || p.plan_facts === '')
+    ? null
+    : (typeof p.plan_facts === 'string' ? p.plan_facts : JSON.stringify(p.plan_facts));
   if (existing) {
     // Without a cloud timestamp the row cannot prove it is fresher than
     // the local copy, so it must not replace one.
@@ -10192,7 +10271,8 @@ export async function insertProgrammeFromCloud(userId, p) {
     await d.runAsync(
       `UPDATE programmes SET
         user_id = ?, name = ?, description = ?, is_library = ?, is_active = ?,
-        is_archived = ?, source_programme_id = ?, updated_at = ?
+        is_archived = ?, source_programme_id = ?, updated_at = ?,
+        plan_facts = COALESCE(?, plan_facts)
        WHERE id = ?`,
       [
         userId, p.name, p.description ?? null,
@@ -10200,15 +10280,15 @@ export async function insertProgrammeFromCloud(userId, p) {
         p.is_active ? 1 : 0,
         p.is_archived ? 1 : 0,
         p.source_programme_id ?? null,
-        cloudUpdated, p.id,
+        cloudUpdated, incomingPlanFacts, p.id,
       ],
     );
     return;
   }
   await d.runAsync(
     `INSERT OR IGNORE INTO programmes
-      (id, user_id, name, description, is_library, is_active, is_archived, source_programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, user_id, name, description, is_library, is_active, is_archived, source_programme_id, created_at, updated_at, plan_facts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       p.id, userId, p.name, p.description ?? null,
       p.is_library ? 1 : 0,
@@ -10217,6 +10297,7 @@ export async function insertProgrammeFromCloud(userId, p) {
       p.source_programme_id ?? null,
       createdAt,
       cloudUpdated ?? createdAt,
+      incomingPlanFacts,
     ],
   );
 }

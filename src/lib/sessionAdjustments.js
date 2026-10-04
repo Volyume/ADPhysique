@@ -24,29 +24,147 @@ import {
   createAdaptationEvent,
   getPlannedMuscleVolumeForBlock,
   getMesocycleWeekById,
+  getRoutineById,
+  getRoutinesForPlan,
+  getRoutineExercisesWithDetails,
+  getProgrammeById,
+  getProgrammePlanFacts,
 } from './database';
 import {
   buildSessionAdjustmentInput,
   computeSessionAdjustments,
   computeAdaptiveLandmarks,
+  allocateExerciseVolume,
 } from './algorithms';
 import { computeWeeklySessionAllocation } from './coachApply';
+import { deriveParamKey } from './poolGenerator';
 import { logWarn } from './errorLog';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * D219 (design 4.9 and 9): the plan's sessions in the shape prescribeWeek reads,
+ * built from the programme's routines in rotation order. Pure.
+ *
+ * Each slot is { id, muscle, kind, baseSets, credits, thinEquipment, focus }:
+ *  - id: the routine exercise row id. It is unique across the whole plan, so
+ *    the same exercise in two sessions (a manual or library plan) never
+ *    collides; today's session maps its exercises back through `slotId`
+ *    (computeWeeklySessionAllocation).
+ *  - muscle: the exercise's primary muscle, normalised as the volume counter
+ *    does (allocateExerciseVolume).
+ *  - kind: the generator's prescription key, derived the way the generator and
+ *    the swap path derive it (poolGenerator.deriveParamKey); prescribeWeek
+ *    only needs to know isolation from compound.
+ *  - baseSets: the stored week-1 sets (recommended_sets), the slot's weight.
+ *  - credits: the half credit (or the exercise's own) each secondary muscle gets.
+ *  - thinEquipment: facts.thin[routineId] lists the exercise ids the plan gave
+ *    the thin-equipment bonus.
+ *  - focus: the slot's muscle has the 'focus' role in facts.roles, so
+ *    prescribe lets its isolation exercise take 4 sets (founder answer
+ *    2026-10-04, D219); every other muscle's isolation exercise stays at 3.
+ * A circuit member is left out: its stored count is the circuit's rounds, not
+ * a set count, so it is served as stored (no allocation entry).
+ *
+ * @param {Array<{routine: {id: string}, rows: Array<{routineExercise: object, exercise: object}>}>} routinesWithRows
+ * @param {object} facts  the v2 plan facts
+ */
+export function buildPlanSessions(routinesWithRows, facts) {
+  return (Array.isArray(routinesWithRows) ? routinesWithRows : []).map(({ routine, rows }) => {
+    const thin = Array.isArray(facts?.thin?.[routine?.id]) ? facts.thin[routine.id] : [];
+    const slots = [];
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const re = row?.routineExercise ?? {};
+      const ex = row?.exercise ?? {};
+      if (re.groupKind === 'circuit') continue;
+      const alloc = allocateExerciseVolume(ex);
+      const primary = alloc.find((a) => a.role === 'primary') ?? null;
+      const credits = {};
+      for (const a of alloc) {
+        if (a.role !== 'secondary' || !a.muscle || a.muscle === primary?.muscle) continue;
+        credits[a.muscle] = (credits[a.muscle] || 0) + a.sets;
+      }
+      const base = re.recommendedSets == null ? NaN : Number(re.recommendedSets);
+      const muscle = primary?.muscle ?? null;
+      slots.push({
+        id: re.id ?? `${routine?.id}:${ex.id}`,
+        muscle,
+        kind: deriveParamKey(ex.equipmentCategory, ex.compoundIsolation),
+        baseSets: Number.isFinite(base) ? base : undefined,
+        credits,
+        thinEquipment: thin.includes(ex.id),
+        focus: muscle != null && facts?.roles?.[muscle] === 'focus',
+      });
+    }
+    return { id: routine?.id, slots };
+  });
+}
+
+/**
+ * D219: the v2 serve context ({ programmeId, facts, sessions }) of a
+ * programme, or null when its plan facts do not carry `version: 2` (every plan
+ * the new planner did not build) or the plan has no routines. Reads the facts
+ * first (unless the caller already has them), so a legacy plan costs one
+ * query. Throws on a read failure: callers wrap it.
+ */
+async function loadPlanServeContext(programmeId, knownFacts) {
+  const facts = knownFacts !== undefined ? knownFacts : await getProgrammePlanFacts(programmeId);
+  if (facts?.version !== 2) return null;
+  const routines = await getRoutinesForPlan(programmeId);
+  if (!Array.isArray(routines) || routines.length === 0) return null;
+  const routinesWithRows = [];
+  for (const routine of routines) {
+    // eslint-disable-next-line no-await-in-loop
+    routinesWithRows.push({ routine, rows: await getRoutineExercisesWithDetails(routine.id) });
+  }
+  return { programmeId, facts, sessions: buildPlanSessions(routinesWithRows, facts) };
+}
+
+/**
+ * D219: the v2 serve context of the ACTIVE programme that owns `routineId`,
+ * or null: a routine outside a programme, a programme that is not active, a
+ * plan the new planner did not build, or ANY failure (a null context serves the
+ * plan exactly as before, the FQ-4 multiplier). Never throws.
+ */
+export async function getPlanServeContextForRoutine(routineId) {
+  try {
+    if (!routineId) return null;
+    const routine = await getRoutineById(routineId);
+    const programmeId = routine?.programmeId ?? null;
+    if (!programmeId) return null;
+    const facts = await getProgrammePlanFacts(programmeId);
+    if (facts?.version !== 2) return null;
+    const programme = await getProgrammeById(programmeId);
+    if (!programme?.isActive) return null;
+    return await loadPlanServeContext(programmeId, facts);
+  } catch (e) {
+    logWarn('sessionAdjustments.planServeContext', e?.message);
+    return null;
+  }
+}
 
 /**
  * FQ-4 (D96): resolve this session's per-exercise WORKING-SET base from the
  * week's persisted volume allocation. Reads the block's planned_muscle_volume
  * rows, splits them into this week's and the block's first week (the
  * baseline the routines were generated against), and scales through the pure
- * allocator. Returns { allocation, weekRows } - allocation is null when the
+ * allocator. Returns { allocation, weekRows, v2 } - allocation is null when the
  * session has no mesocycle week or the rows are absent/unreadable, in which
  * case every caller falls back to the routine's static counts (identity).
  * Never throws.
+ *
+ * D219: for a plan the new planner built (the active programme's plan facts
+ * carry version 2) the week's sets come from prescribe() through the same
+ * allocator (computeWeeklySessionAllocation, planContext) and `v2` is true;
+ * every other plan is served exactly as before. This is the ONE resolver every
+ * reader of a week's set count goes through: the logger, the mini bar and the
+ * plan screens (getCurrentWeekPlanSets below), so the person sees one number.
+ * `planContext` is for a caller that already resolved the plan's context (the
+ * plan screen resolves it once for all of a plan's routines); left undefined
+ * the context is resolved from `workout.routineId`.
  */
-export async function getSessionWeeklyAllocation({ workout, exercises }) {
-  const none = { allocation: null, weekRows: [] };
+export async function getSessionWeeklyAllocation({ workout, exercises, planContext: given }) {
+  const none = { allocation: null, weekRows: [], v2: false };
   try {
     if (!workout?.mesocycleWeekId) return none;
     const week = await getMesocycleWeekById(workout.mesocycleWeekId).catch(() => null);
@@ -63,12 +181,56 @@ export async function getSessionWeeklyAllocation({ workout, exercises }) {
       exerciseId: e?.exercise?.id ?? e?.exerciseId ?? null,
       primaryMuscle: e?.exercise?.primaryMuscle ?? e?.primaryMuscle ?? null,
       recommendedSets: e?.routineExercise?.recommendedSets ?? e?.recommendedSets ?? null,
+      slotId: e?.routineExercise?.id ?? null,
     }));
-    const allocation = computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows));
-    return { allocation: Object.keys(allocation).length ? allocation : null, weekRows };
+    const planContext = given !== undefined ? given : await getPlanServeContextForRoutine(workout.routineId);
+    const allocation = computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows), planContext);
+    return { allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
     return none;
+  }
+}
+
+/**
+ * D219 (design 4.9: "the plan screens show stored rows the logger never serves"):
+ * the sets a session of `routineId` serves in the plan's CURRENT week, for the
+ * screens that show a plan session outside a workout (plan detail, routine
+ * detail). It is the logger's own resolver run on the routine's stored rows
+ * (getSessionWeeklyAllocation), so a screen and the logger cannot disagree.
+ *
+ * Returns { [routineExerciseId]: sets }, or null when the routine's plan is
+ * not one the new planner built (the screen then shows its stored counts, as
+ * today), there is no current week, or anything fails. Never throws.
+ *
+ * @param {object} args
+ * @param {string} args.userId
+ * @param {string} args.routineId
+ * @param {Array<{routineExercise: object, exercise: object}>} args.rows  the routine's rows
+ *        (getRoutineExercisesWithDetails)
+ * @param {?object} [args.planContext]  the plan's context when the caller
+ *        already resolved it (getPlanServeContextForRoutine); omit to resolve it
+ */
+export async function getCurrentWeekPlanSets({ userId, routineId, rows, planContext }) {
+  try {
+    if (!userId || !routineId || !Array.isArray(rows) || rows.length === 0) return null;
+    const week = await getCurrentMesocycleWeek(userId);
+    if (!week?.id) return null;
+    const { allocation, v2 } = await getSessionWeeklyAllocation({
+      workout: { mesocycleWeekId: week.id, routineId },
+      exercises: rows,
+      planContext,
+    });
+    if (!v2 || !allocation) return null;
+    const bySlot = {};
+    for (const row of rows) {
+      const served = allocation[row?.exercise?.id];
+      if (Number.isFinite(served) && row?.routineExercise?.id) bySlot[row.routineExercise.id] = served;
+    }
+    return Object.keys(bySlot).length ? bySlot : null;
+  } catch (e) {
+    logWarn('sessionAdjustments.currentWeekPlanSets', e?.message);
+    return null;
   }
 }
 

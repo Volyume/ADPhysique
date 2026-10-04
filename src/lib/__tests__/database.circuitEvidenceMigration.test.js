@@ -19,6 +19,10 @@
  * exercises.aliases/load_character now runs alongside this migration in
  * the "last 2" window, so the fixture also carries a minimal exercises
  * table (that ALTER is a no-op against it).
+ *
+ * 2026-10-04 (D219 lane S1): programmes.plan_facts was appended after both,
+ * so the window is the "last 3" and the fixture carries a minimal programmes
+ * table for that ALTER (a mechanical +1 re-anchor; nothing else changed).
  */
 const { DatabaseSync } = require('node:sqlite');
 const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
@@ -50,6 +54,7 @@ function freshDb() {
     id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, equipment TEXT,
     is_custom INTEGER DEFAULT 0
   )`);
+  raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT)');
   raw.prepare('INSERT INTO routine_exercises (id, routine_id, exercise_id, order_in_routine, recommended_sets, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
     .run('re-1', 'routine-1', 'ex-squat', 0, 3, 111);
   raw.prepare('INSERT INTO workout_sets (id, user_id, workout_id, exercise_id, set_type, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
@@ -65,7 +70,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 2);
+  await runLast(raw, 3);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -79,13 +84,13 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 2);
+  const total = await runLast(raw, 3);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
   };
 
-  raw.exec(`PRAGMA user_version = ${total - 2}`);
+  raw.exec(`PRAGMA user_version = ${total - 3}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
 
   expect(raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1')).toEqual(before.re);
@@ -94,7 +99,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 2);
+  await runLast(raw, 3);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

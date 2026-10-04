@@ -21,7 +21,7 @@
  * Calm/ED: exercise name + timer only, nothing celebratory, no
  * weight/food-adjacent number, so no suppression applies.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, {
@@ -30,6 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
+import { getSessionWeeklyAllocation } from '../lib/sessionAdjustments';
 import PressableCard from './PressableCard';
 import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -47,15 +48,36 @@ function MiniBarStatus() {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1.
   const t = useTheme();
-  const { restActive, remaining, setsDone, recommended } = useAppStore(useShallow((s) => {
+  const { restActive, remaining, setsDone, recommended, exerciseId, activeWorkout, workoutExercises } = useAppStore(useShallow((s) => {
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     return {
       restActive: s.restTimerActive,
       remaining: s.restTimerRemaining,
       setsDone: ex?.sets?.length ?? 0,
       recommended: ex?.routineExercise?.recommendedSets ?? null,
+      exerciseId: ex?.exercise?.id ?? null,
+      activeWorkout: s.activeWorkout,
+      workoutExercises: s.workoutExercises,
     };
   }));
+  // D219 (design 4.9, one number everywhere): for a plan the new planner
+  // built, the week's sets for this exercise come from the same resolver the
+  // logger reads (getSessionWeeklyAllocation), not the stored week-1 count.
+  // Any other plan, or any failure, keeps the stored count exactly as before.
+  const [served, setServed] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeWorkout?.id) { setServed(null); return undefined; }
+    getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
+      .then(({ allocation, v2 }) => { if (!cancelled) setServed(v2 ? allocation : null); })
+      .catch(() => {}); // best effort: the stored count stands
+    return () => { cancelled = true; };
+  // Resolved once per session: the allocation depends only on the workout's
+  // week and routine, both fixed for the life of a session (the logger keys
+  // its own resolution the same way), so a logged set must not re-resolve it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id]);
+  const target = served?.[exerciseId] ?? recommended;
   if (restActive && remaining > 0) {
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
@@ -69,8 +91,8 @@ function MiniBarStatus() {
       </Animated.View>
     );
   }
-  const label = recommended && setsDone < recommended
-    ? `Set ${setsDone + 1} of ${recommended}`
+  const label = target && setsDone < target
+    ? `Set ${setsDone + 1} of ${target}`
     : `${setsDone} ${setsDone === 1 ? 'set' : 'sets'} done`;
   return <Text style={[styles.statusText, { ...t.type.captionStrong, color: t.colors.textMuted }]}>{label}</Text>;
 }

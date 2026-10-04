@@ -629,10 +629,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the session has no mesocycle week / no rows), in which case every
   // consumer falls back to the routine's static counts.
   const [weeklyAllocation, setWeeklyAllocation] = useState(null);
+  // D219: true when that allocation came from prescribe() for a plan the new
+  // planner built. The outline then shows the same served count for every
+  // exercise, not only the current one (design 4.9, one number everywhere).
+  const [planServedV2, setPlanServedV2] = useState(false);
   useEffect(() => {
     let cancelled = false;
     getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
-      .then(({ allocation }) => { if (!cancelled) setWeeklyAllocation(allocation); })
+      .then(({ allocation, v2 }) => {
+        if (cancelled) return;
+        setWeeklyAllocation(allocation);
+        setPlanServedV2(!!v2);
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   // The allocation depends only on the workout's week and the exercise list
@@ -4348,6 +4356,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         : null,
     };
   });
+  // D219 (design 4.9): for a plan the new planner built, every row's total is
+  // the week's served count (the same resolver the current exercise reads
+  // above), so the outline never shows the stored week-1 number beside the
+  // logger's. Any other plan keeps the rows exactly as derived above.
+  const outlineItemsShown = planServedV2
+    ? outlineItems.map((item, i) => (i === currentExerciseIndex
+      ? item
+      : { ...item, total: weeklyAllocation?.[workoutExercises[i]?.exercise?.id] || item.total }))
+    : outlineItems;
 
   if (!exercise) {
     return (
@@ -4405,7 +4422,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             active logger. Every exercise is one tap away at all times
             (failure 5); tap = jump only, long-press = the reorder sheet. */}
         <WorkoutOutline
-          items={outlineItems}
+          items={outlineItemsShown}
           currentIndex={currentExerciseIndex}
           onSelect={handleJumpToExercise}
           onReorder={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}
