@@ -196,7 +196,16 @@ describe('C16-9 the dry run and the commit agree, by construction', () => {
     // And both sides run the SAME continuity pass before resolving, or the
     // preview would show replacements the commit is not going to make.
     expect(src.match(/function withContinuity/g)).toHaveLength(1);
-    expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(2);
+    // D219 lane B7 (lead ruling 4) re-pinned this from 2 to 3: the new
+    // planner's kept-exercise pass (plannerV2KeptExercises) is a third caller of
+    // the SAME function, asking it which of the person's own exercises it would
+    // keep. That pass is itself shared by both sides of the new planner (the
+    // save and the dry-run twin call it once each), so the single-function
+    // contract this pin exists for still holds: the verdicts that decide in the
+    // preview are the verdicts that decide in the save.
+    expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(3);
+    expect(src.match(/function plannerV2KeptExercises/g)).toHaveLength(1);
+    expect(src.match(/(?<!function )plannerV2KeptExercises\(/g)).toHaveLength(2);
   });
 
   test('the preview contains exactly the exercises the commit writes, with the same ids', async () => {

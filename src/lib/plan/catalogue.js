@@ -23,11 +23,38 @@
  * ROLE FIELDS. id, rank (1 first choice, 2 second, 3 third), names, credited
  * (a role the design marks "credited from": the muscle's first choice is
  * indirect, the half credit it gets from other exercises, so the role has no
- * exercise of its own), optIn, reason, grade (S's A to D) and source (a line a
- * person can read behind the rule). The reason reads beside the exercise name
- * and does not repeat it; it is one plain sentence, no stronger than the
- * grade (a D-graded role gets a plain description, never a claimed result),
- * and never an instruction (D204).
+ * exercise of its own), optIn, credits (the fractional set one set of the
+ * role gives each OTHER muscle, below), reason, grade (S's A to D) and source
+ * (a line a person can read behind the rule). The reason reads beside the
+ * exercise name and does not repeat it; it is one plain sentence, no stronger
+ * than the grade (a D-graded role gets a plain description, never a claimed
+ * result), and never an instruction (D204).
+ *
+ * CREDITS (lead ruling, D219 lane B7, D33). They follow ONE curated rule, by
+ * the role an exercise fills, every equipment variant of the role included; the
+ * corpus's own secondary muscles are never read, because the corpus credits
+ * rear-delt flyes to back, squats to hamstrings and hip thrusts to quads, which
+ * made the planner give back 4 direct sets a week. At half a set each: flat and
+ * incline presses credit the triceps and front delts; the overhead press, the
+ * triceps and side delts; vertical pulls, the biceps (the wide-grip pulldown the
+ * rear delts as well); rows, the biceps, rear delts and traps; squats, the hack
+ * squat and the leg press, the glutes and adductors; the Romanian deadlift and
+ * other hinges, the glutes; the hip thrust, the hamstrings; a lunge or split
+ * squat listed under glutes, the quads, and listed under quads, the glutes; a
+ * press listed under triceps (the close-grip bench press, a dip, a diamond
+ * push-up), the chest and front delts. Every isolation exercise credits
+ * nothing, and an exercise counts 1 for the muscle its role trains.
+ *
+ * A THIN-KIT STAND-IN carries the credits of its OWN movement pattern, not of
+ * the role it stands in for (lead ruling 2, lane B7 follow-up): a Bulgarian
+ * split squat standing in for the leg extension credits the glutes, a dip
+ * standing in for the overhead extension credits the chest and front delts.
+ * Where its movement is the role's (a goblet squat for the squat, a push-up for
+ * the flat press) the two are the same. A role whose names are of two kinds (the
+ * back's third choice, a pulldown or a row; a role with such stand-ins) says so
+ * in creditsByName. src/lib/plan/__tests__/fixtures/choices.js is the first
+ * rule written out for the planner's tests, and the catalogue suite pins that
+ * the two agree.
  *
  * THIN KITS. The six equipment profiles are exerciseMetadata.js's (full_gym,
  * machines_cables, dumbbells_only, barbell_plates, home_gym, bodyweight). Where
@@ -47,11 +74,27 @@
  *
  * Pure: no I/O, no clock, no randomness, and no imports. This module may sit
  * under check-in placement, which coachApply.js reaches, so it must never
- * reach src/lib/recovery/ (edIsolation.guard.test.js). Its two small
- * derivations, the pool's paramKey and the half credit a set gives other
- * muscles, copy poolGenerator.deriveParamKey and algorithms.allocateExerciseVolume
- * rule for rule; catalogue.test.js pins both against the originals.
+ * reach src/lib/recovery/ (edIsolation.guard.test.js). Its one small
+ * derivation, the pool's paramKey, copies poolGenerator.deriveParamKey rule for
+ * rule; catalogue.test.js pins it against the original.
  */
+
+// The curated credits (header, CREDITS), frozen and shared: resolveCatalogue and
+// catalogueCredits hand out copies.
+const credit = (map) => Object.freeze({ ...map });
+const NO_CREDITS = credit({});
+const PRESS_CREDITS = credit({ triceps: 0.5, front_delts: 0.5 });
+const OVERHEAD_PRESS_CREDITS = credit({ triceps: 0.5, side_delts: 0.5 });
+const VERTICAL_PULL_CREDITS = credit({ biceps: 0.5 });
+const WIDE_GRIP_PULLDOWN_CREDITS = credit({ biceps: 0.5, rear_delts: 0.5 });
+const ROW_CREDITS = credit({ biceps: 0.5, rear_delts: 0.5, traps: 0.5 });
+const SQUAT_CREDITS = credit({ glutes: 0.5, adductors: 0.5 });
+const HINGE_CREDITS = credit({ glutes: 0.5 });
+const HIP_THRUST_CREDITS = credit({ hamstrings: 0.5 });
+const LUNGE_CREDITS = credit({ quads: 0.5 });
+// The same movements listed under the other muscle (header, CREDITS).
+const LUNGE_UNDER_QUADS_CREDITS = credit({ glutes: 0.5 });
+const TRICEPS_PRESS_CREDITS = credit({ chest: 0.5, front_delts: 0.5 });
 
 // A role the person reads about, in one line. Frozen so a consumer cannot edit
 // the table by accident.
@@ -62,6 +105,7 @@ function role(id, rank, names, extra) {
     names: Object.freeze([...names]),
     credited: false,
     optIn: false,
+    credits: NO_CREDITS,
     ...extra,
   });
 }
@@ -89,6 +133,19 @@ export const CATALOGUE_PROFILES = Object.freeze([
 ]);
 
 const VERTICAL_PULL_NAMES = ['Lat Pulldown (Wide Grip)', 'Pull-Up', 'Chin-Up', 'Lat Pulldown (Neutral Grip)'];
+// A pulldown and a pull-up credit the biceps; the wide-grip pulldown the rear
+// delts as well. Shared by the vertical pull and the back's third choice, whose
+// names are of both kinds, so a name has one set of credits wherever it is listed.
+const VERTICAL_PULL_CREDITS_BY_NAME = Object.freeze(Object.fromEntries(VERTICAL_PULL_NAMES.map((n) => [
+  n, n === 'Lat Pulldown (Wide Grip)' ? WIDE_GRIP_PULLDOWN_CREDITS : VERTICAL_PULL_CREDITS,
+])));
+// The thin-kit stand-ins whose own movement is not the role's they stand in for
+// (THIN_KIT below): lunges and split squats stand in for the quads' leg extension
+// and squat, and dips and a diamond push-up for the triceps' extensions. Each
+// carries its own movement's credits (header, CREDITS). Every other stand-in's
+// movement is its role's.
+const lungesUnderQuads = (...names) => Object.freeze(Object.fromEntries(names.map((n) => [n, LUNGE_UNDER_QUADS_CREDITS])));
+const pressesUnderTriceps = (...names) => Object.freeze(Object.fromEntries(names.map((n) => [n, TRICEPS_PRESS_CREDITS])));
 const HORIZONTAL_ROW_NAMES = [
   'Seated Cable Row', 'Chest-Supported Row (Dumbbell)', 'Machine Row (Chest Supported)',
   'Barbell Row (Bent Over)', 'Dumbbell Row',
@@ -99,11 +156,13 @@ export const CATALOGUE = Object.freeze({
   // Chest: flat press, incline press, then a fly only when a session needs it.
   chest: Object.freeze([
     role('flat_press', 1, ['Barbell Bench Press', 'Dumbbell Bench Press', 'Machine Chest Press'], {
+      credits: PRESS_CREDITS,
       reason: 'The standard flat press; in a 10-week trial of healthy men, bench pressing grew the chest, the front of the shoulder and the triceps.',
       grade: 'B',
       source: 'Lanza 2024: 10-week bench press trial in healthy men (S Q12)',
     }),
     role('incline_press', 2, ['Incline Dumbbell Press', 'Incline Barbell Bench Press', 'Incline Machine Press'], {
+      credits: PRESS_CREDITS,
       reason: 'Covers the upper chest, which flat pressing reaches less; in an 8-week trial of untrained men, incline pressing grew the upper chest more.',
       grade: 'B',
       source: 'Chaves 2020: 8-week trial in 47 untrained men (S Q12)',
@@ -118,16 +177,21 @@ export const CATALOGUE = Object.freeze({
   // Back: a vertical pull and a row; the third is the other variant of either.
   back: Object.freeze([
     role('vertical_pull', 1, VERTICAL_PULL_NAMES, {
+      credits: VERTICAL_PULL_CREDITS,
+      creditsByName: VERTICAL_PULL_CREDITS_BY_NAME,
       reason: 'A vertical pull works the lats and the width of the back; no trial has compared back exercises for growth, so it is chosen for what the movement does.',
       grade: 'D',
       source: NO_TRIAL('back exercises'),
     }),
     role('horizontal_row', 2, HORIZONTAL_ROW_NAMES, {
+      credits: ROW_CREDITS,
       reason: 'A row works the lats and upper back from a different angle to a pulldown; no trial has compared back exercises for growth, so it is chosen for what the movement does.',
       grade: 'D',
       source: NO_TRIAL('back exercises'),
     }),
     role('other_pull', 3, [...VERTICAL_PULL_NAMES, ...HORIZONTAL_ROW_NAMES], {
+      credits: ROW_CREDITS, // the rows; the pulls are in creditsByName
+      creditsByName: VERTICAL_PULL_CREDITS_BY_NAME,
       reason: 'A second pulling angle for the back; no trial has compared back exercises for growth, so it is chosen for what the movement does.',
       grade: 'D',
       source: NO_TRIAL('back exercises'),
@@ -173,6 +237,7 @@ export const CATALOGUE = Object.freeze({
       source: 'Lanza 2024: 10-week bench press trial in healthy men (S Q12)',
     }),
     role('overhead_press', 2, ['Barbell Overhead Press', 'Dumbbell Shoulder Press', 'Machine Shoulder Press'], {
+      credits: OVERHEAD_PRESS_CREDITS,
       reason: 'Pressing overhead works the front of the shoulder directly, on top of the half credit it gets from chest presses; no trial has tested direct front-shoulder work.',
       grade: 'D',
       source: NO_TRIAL('direct front-shoulder work'),
@@ -209,16 +274,19 @@ export const CATALOGUE = Object.freeze({
   // Triceps: the overhead extension is the evidence-preferred first choice.
   triceps: Object.freeze([
     role('overhead_extension', 1, ['Cable Overhead Tricep Extension', 'Dumbbell Overhead Tricep Extension'], {
+      creditsByName: pressesUnderTriceps('Bench Dip', 'Tricep Dip (Parallel Bars)'),
       reason: 'Extending the elbow with the arm overhead works the long head of the triceps at a long length; in a 12-week trial of 21 adults it grew the triceps more than a neutral-arm extension (about 20% against 14%).',
       grade: 'B',
       source: 'Maeo 2023: 12-week trial in 21 adults (S Q12)',
     }),
     role('pushdown', 2, ['Tricep Pushdown (Rope)', 'Tricep Pushdown (Bar)'], {
+      creditsByName: pressesUnderTriceps('Diamond Push-Up'),
       reason: 'Extending the elbow with the arm by your side works the lateral and medial triceps; in a 12-week trial this neutral-arm version grew the triceps about 14%.',
       grade: 'B',
       source: 'Maeo 2023: the neutral-arm comparison in a 12-week trial in 21 adults (S Q12)',
     }),
     role('close_grip_press', 3, ['Close-Grip Bench Press'], {
+      credits: TRICEPS_PRESS_CREDITS,
       reason: 'Pressing with a close grip gives the triceps more of the work than a standard bench press, with the chest and front of the shoulder helping; no trial has measured triceps growth from it.',
       grade: 'D',
       source: NO_TRIAL('the close-grip bench press'),
@@ -228,17 +296,23 @@ export const CATALOGUE = Object.freeze({
   // Quads: a squat or press to depth, the leg extension, then the other squat variant.
   quads: Object.freeze([
     role('squat_or_press', 1, SQUAT_OR_PRESS_NAMES, {
+      credits: SQUAT_CREDITS,
+      creditsByName: lungesUnderQuads('Bodyweight Split Squat'),
       reason: 'Squatting or pressing to depth works the muscles at the front of the thigh; a deep squat grew the front thigh 4 to 7% more than a shallow one in a 12-week trial of 17 men.',
       grade: 'B',
       source: 'Bloomquist 2013 (17 men, 12 weeks); Kubo 2019; Kinoshita 2026 (S Q12)',
     }),
     role('leg_extension', 2, ['Leg Extension'], {
+      creditsByName: lungesUnderQuads(
+        'Bulgarian Split Squat', 'Barbell Lunge', 'Split Squat', 'Bodyweight Reverse Lunge', 'Bodyweight Walking Lunge',
+      ),
       reason: 'Works the rectus femoris, the part of the thigh a squat or leg press reaches less; in a 12-week trial of 17 untrained adults it grew about 13% against about 1% for the leg press.',
       grade: 'B',
       source: 'Kinoshita 2026: 12-week trial in 17 untrained adults; Kassiano 2026 (S Q12)',
     }),
     // The leg press first: it is in nearly every gym and it credits the glutes.
     role('other_squat', 3, ['Leg Press', 'Hack Squat Machine', 'Barbell Back Squat'], {
+      credits: SQUAT_CREDITS,
       reason: 'A second squat or press variant for the front of the thigh; a deep squat grew the front thigh 4 to 7% more than a shallow one in a 12-week trial of 17 men.',
       grade: 'B',
       source: 'Bloomquist 2013 (17 men, 12 weeks); Kubo 2019; Kinoshita 2026 (S Q12)',
@@ -256,6 +330,7 @@ export const CATALOGUE = Object.freeze({
       source: 'Maeo 2021: 12-week trial in 20 adults; Maeo 2024 (S Q12)',
     }),
     role('hip_hinge', 2, ['Romanian Deadlift (Barbell)', 'Romanian Deadlift (Dumbbell)'], {
+      credits: HINGE_CREDITS,
       reason: 'Hinging at the hips works the hamstrings where they cross the hip, which a leg curl does not; a close relative, the stiff-leg deadlift, grew them about 7% in a 9-week trial of untrained adults.',
       grade: 'B',
       source: 'Morin 2025: 9-week trial in untrained adults, stiff-leg deadlift (S Q12)',
@@ -270,11 +345,13 @@ export const CATALOGUE = Object.freeze({
       source: 'Kinoshita 2026: 12-week trial in untrained adults; Kubo 2019 (S Q12)',
     }),
     role('hip_thrust', 2, ['Barbell Hip Thrust', 'Machine Hip Thrust'], {
+      credits: HIP_THRUST_CREDITS,
       reason: 'Works the glutes at the top of the movement; in a 9-week trial of 34 untrained adults the hip thrust and the back squat grew the glutes by a similar amount.',
       grade: 'B',
       source: 'Plotkin 2023: 9-week trial in 34 untrained adults (S Q12)',
     }),
     role('lunge', 3, ['Walking Lunge', 'Bulgarian Split Squat'], {
+      credits: LUNGE_CREDITS,
       reason: 'A lunge or split squat works the front of the thigh and the glutes together; no trial has measured glute growth from it.',
       grade: 'D',
       source: NO_TRIAL('lunges as a glute exercise'),
@@ -474,46 +551,6 @@ function profilesOf(row) {
   return [];
 }
 
-// algorithms.allocateExerciseVolume, rule for rule: the primary muscle at 1,
-// each secondary at its contribution (default 0.5); the legacy 'shoulders'
-// reads as side_delts for a primary and front_delts for a secondary.
-function allocationOf(row) {
-  const out = [];
-  let primary = String(row.primaryMuscle ?? row.primary_muscle ?? '').toLowerCase();
-  if (primary === 'shoulders') primary = 'side_delts';
-  if (primary) out.push([primary, 1]);
-
-  let secondary = null;
-  if (Array.isArray(row.secondaryMuscles)) secondary = row.secondaryMuscles;
-  else if (typeof row.secondary_muscles === 'string') {
-    try { secondary = JSON.parse(row.secondary_muscles); } catch { secondary = []; }
-  } else if (Array.isArray(row.secondary_muscles)) secondary = row.secondary_muscles;
-  if (!Array.isArray(secondary)) secondary = [];
-
-  for (const sec of secondary) {
-    let muscle = sec && typeof sec === 'object' ? sec.muscle : sec;
-    if (typeof muscle !== 'string' || !muscle) continue;
-    muscle = muscle.toLowerCase();
-    if (muscle === 'shoulders') muscle = 'front_delts';
-    const contribution = (sec && typeof sec === 'object' ? sec.contribution : undefined) ?? 0.5;
-    out.push([muscle, contribution]);
-  }
-  return out;
-}
-
-// One set of this exercise, for the muscle the role trains: what that muscle
-// itself gets (1 for its own exercises, the half credit for a synergist row)
-// and what every OTHER muscle gets.
-function splitAllocation(row, muscle) {
-  const credits = {};
-  let direct = 0;
-  for (const [m, sets] of allocationOf(row)) {
-    if (m === muscle) direct += sets;
-    else credits[m] = (credits[m] ?? 0) + sets;
-  }
-  return { credits, direct };
-}
-
 // The pool admits weight-and-reps and weighted-bodyweight rows only (a
 // duration or distance row cannot take an automatic rep prescription).
 function hasLoadPrescription(row) {
@@ -553,8 +590,8 @@ function toNameSet(names) {
  * @property {string} role            the catalogue role id it fills
  * @property {number} rank            1 first choice, 2 second, 3 third (credited roles are left out, so a muscle's first array item is not always rank 1)
  * @property {'heavy_compound'|'mod_compound'|'machine'|'isolation'} kind  the pool's paramKey for the row
- * @property {Object<string, number>} credits  the fractional set one set gives each OTHER muscle (allocateExerciseVolume's rules; for a bench press { triceps: 0.5, front_delts: 0.5 })
- * @property {number} direct          what one set gives the muscle the role trains: 1 for an exercise built for it, 0.5 for a row that only credits it (a lunge listed under glutes)
+ * @property {Object<string, number>} credits  the fractional set one set gives each OTHER muscle: the curated rule for the role (header, CREDITS), never the corpus's secondary muscles; for a bench press { triceps: 0.5, front_delts: 0.5 }
+ * @property {number} direct          what one set gives the muscle the role trains: always 1 (lead ruling, D219 lane B7: a lunge listed under glutes counts a full set for glutes and credits quads half a set)
  * @property {string} primaryMuscle   the library row's own primary muscle
  * @property {string} reason          one plain sentence a person reads beside the exercise name
  * @property {'A'|'B'|'C'|'D'} grade  the evidence grade behind the role (03-SCIENCE.md section 0.1)
@@ -563,6 +600,34 @@ function toNameSet(names) {
  * @property {boolean} optIn          true for adductors, forearms, neck and tibialis: trained directly only when the person adds them
  * @property {boolean} logged         true when the person's own logged exercise was chosen
  */
+
+// The curated credits of a name in a role: the role's own, unless the role says
+// otherwise for that name. A fresh object, so a caller can never edit the table.
+const creditsOfRole = (r, name) => ({ ...(r.creditsByName?.[name] ?? r.credits ?? NO_CREDITS) });
+
+/**
+ * The curated credits (header, CREDITS) of `name` as an exercise of `muscle`:
+ * the credits of the role of that muscle's catalogue that lists the name, a
+ * thin-kit fallback for the role included. A name the muscle's catalogue does
+ * not list (an unknown name, an unknown muscle, or a name the catalogue lists
+ * under another muscle) gets {}: the same answer for a person's own exercise
+ * that the planner is handed in the catalogue's place. A fresh object.
+ *
+ * @param {string} muscle  a catalogue muscle key
+ * @param {string} name    the corpus exercise name
+ * @returns {Object<string, number>}
+ */
+export function catalogueCredits(muscle, name) {
+  const roles = CATALOGUE[muscle];
+  if (!roles || typeof name !== 'string') return {};
+  for (const r of roles) {
+    if (r.names.includes(name)) return creditsOfRole(r, name);
+    for (const byMuscle of Object.values(THIN_KIT)) {
+      if (byMuscle[muscle]?.[r.id]?.includes(name)) return creditsOfRole(r, name);
+    }
+  }
+  return {};
+}
 
 /**
  * The standard exercises for the person's equipment profile, per muscle, in
@@ -612,15 +677,14 @@ export function resolveCatalogue({ library, profile, loggedExerciseNames } = {})
       if (name == null) continue;
       taken.add(name);
       const row = rows.get(name);
-      const { credits, direct } = splitAllocation(row, muscle);
       chosen.push({
         name,
         exerciseId: row.id ?? null,
         role: r.id,
         rank: r.rank,
         kind: paramKeyOf(row),
-        credits,
-        direct,
+        credits: creditsOfRole(r, name),
+        direct: 1,
         primaryMuscle: String(row.primaryMuscle ?? row.primary_muscle ?? '').toLowerCase(),
         reason: fallback ? thinKitReason(muscle) : (r.reasonByName?.[name] ?? r.reason),
         grade: fallback ? 'D' : r.grade,

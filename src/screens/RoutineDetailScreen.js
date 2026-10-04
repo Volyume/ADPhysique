@@ -18,7 +18,7 @@ import {
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
   updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan, getProgrammeById,
   recordExerciseSwap, setExerciseIntent, clearExerciseIntent, setExerciseSlotDefault,
-  getActiveBlock, EXERCISE_INTENT,
+  getActiveBlock, EXERCISE_INTENT, recordTypedSetCount,
 } from '../lib/database';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
@@ -609,6 +609,21 @@ export default function RoutineDetailScreen({ navigation, route }) {
         restSeconds: editRest ? parseInt(editRest, 10) : null,
         startingWeight: editStartWeight ? parseDecimalInput(editStartWeight) : null,
       });
+      // D219 (design 4.3): a set count the person typed themselves is theirs for
+      // the rest of the block. On a plan the new planner built it is recorded in
+      // the plan's facts, so every week serves it as typed (no climb on top of
+      // it, and the planner's caps never trim it). Only a CHANGED count counts
+      // as typed: editing reps or rest alone must not freeze the plan's own sets.
+      // Any other plan is untouched (recordTypedSetCount answers false). A
+      // failure here is logged and never blocks the edit: the routine row above
+      // is already saved.
+      if (sets !== Number(editingExercise.routineExercise.recommendedSets)) {
+        try {
+          await recordTypedSetCount(routine?.programmeId, editingExercise.routineExercise.id, sets);
+        } catch (e) {
+          logError('RoutineDetailScreen.recordTypedSetCount', e, { routineId });
+        }
+      }
     }
     setEditingExercise(null);
     await loadRoutine();

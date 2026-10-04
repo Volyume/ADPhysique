@@ -13,6 +13,7 @@ import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
 import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK, parseBlockStartMs } from './mesocycle';
+import { BLOCK as PLAN_BLOCK } from './plan/science';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
 import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } from './effectiveMaintenance';
@@ -20,6 +21,16 @@ import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
 }
+
+// D219 (founder answer Q5, "Stop 1 rep short"): the effort ladder every block
+// activated from now is stored with, from the plan builder's own constants
+// (science.js BLOCK.rirLadder, [3,2,2,1,1,4]): heavy weeks stop one rep short of
+// failure, the recovery week four. It replaces the old default [3,2,1,0,0,4],
+// whose two weeks at failure cost recovery for a small growth edge. A block
+// already running keeps the ladder it was stored with (register D219, build
+// ruling 4): only activatePlanWithBlock writes this, and the keep-block rebuild
+// never does.
+const NEW_BLOCK_RIR_LADDER = JSON.stringify(PLAN_BLOCK.rirLadder);
 
 let _db = null;
 let _initPromise = null;
@@ -4884,6 +4895,31 @@ export async function setProgrammePlanFacts(programmeId, facts, { scheduleSync =
   if (scheduleSync) _scheduleSync();
 }
 
+/**
+ * D219 (design 4.3, lead ruling 6): the person typed a set count for a routine
+ * exercise of a plan the new planner built. The count is recorded in the plan's
+ * facts as `typed[routineExerciseId] = n`, so every week of the block serves
+ * it as typed (prescribe(): no climb on top of it, and the planner's caps bind
+ * the planner, never the person's own choice). Every other fact, and every
+ * count typed before, is kept; a count typed again replaces its own.
+ *
+ * Returns true when the count was recorded. It records nothing, and returns
+ * false, for a plan the new planner did not build (no facts, another version,
+ * facts that cannot be read), for no programme or routine exercise, and for a
+ * count that is not a whole number of at least one. A text count ('5') is read
+ * as a number. Throws only on a write failure: the caller logs it.
+ */
+export async function recordTypedSetCount(programmeId, routineExerciseId, sets) {
+  if (!programmeId || !routineExerciseId) return false;
+  const n = typeof sets === 'string' && sets.trim() !== '' ? Number(sets) : sets;
+  if (typeof n !== 'number' || !Number.isFinite(n) || Math.round(n) < 1) return false;
+  const facts = await getProgrammePlanFacts(programmeId);
+  if (facts?.version !== 2) return false;
+  const typed = facts.typed && typeof facts.typed === 'object' && !Array.isArray(facts.typed) ? facts.typed : {};
+  await setProgrammePlanFacts(programmeId, { ...facts, typed: { ...typed, [routineExerciseId]: Math.round(n) } });
+  return true;
+}
+
 export async function copyRoutineFromLibrary(routineId, userId) {
   const original = await getRoutineById(routineId);
   if (!original) throw new Error('Routine not found');
@@ -5389,7 +5425,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // an active plan but no training block.
   const endDate = new Date(Date.now() + BLOCK_PLANNED_WEEKS * 7 * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
-  // 6 weeks: 5 accumulation (RIR 3→2→1→0→0) + 1 deload (RIR 4). deload_week
+  // 6 weeks: 5 accumulation (RIR 3,2,2,1,1) + 1 deload (RIR 4). deload_week
   // is written (X19, Wave 2 audit 2026-07-30) so MesocycleBuilderScreen's
   // deload highlighting -- previously always NULL/dead for every real
   // block -- has a real value; week 6 is always the deload week here,
@@ -5427,7 +5463,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, 1)`,
       [id, userId, planName, startDate, endDate,
         BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
-        'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+        'hypertrophy', 'offseason_hypertrophy', NEW_BLOCK_RIR_LADDER, now, now],
     );
   });
 

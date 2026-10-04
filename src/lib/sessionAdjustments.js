@@ -46,23 +46,33 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  * D219 (design 4.9 and 9): the plan's sessions in the shape prescribeWeek reads,
  * built from the programme's routines in rotation order. Pure.
  *
- * Each slot is { id, muscle, kind, baseSets, credits, thinEquipment, focus }:
+ * Each slot is { id, muscle, kind, baseSets, credits, thinEquipment, focus,
+ * typedSets? }:
  *  - id: the routine exercise row id. It is unique across the whole plan, so
  *    the same exercise in two sessions (a manual or library plan) never
  *    collides; today's session maps its exercises back through `slotId`
  *    (computeWeeklySessionAllocation).
- *  - muscle: the exercise's primary muscle, normalised as the volume counter
- *    does (allocateExerciseVolume).
- *  - kind: the generator's prescription key, derived the way the generator and
- *    the swap path derive it (poolGenerator.deriveParamKey); prescribeWeek
- *    only needs to know isolation from compound.
+ *  - muscle, kind, credits: the PLANNER'S own model of the slot when the
+ *    plan's facts carry it (facts.slots[routineId][exerciseId], written when
+ *    the plan was built; D219 lane B7): the muscle its catalogue role trains
+ *    (the Walking Lunge is a quads row in the corpus and a glutes exercise in
+ *    the plan, so its sets are served out of the glutes' weekly sets), its
+ *    pool kind, and the fractional credit one set gives other muscles. An
+ *    exercise with no entry (one the person swapped in) is derived as before,
+ *    field by field: the primary muscle normalised as the volume counter does
+ *    (allocateExerciseVolume), the generator's prescription key
+ *    (poolGenerator.deriveParamKey; prescribeWeek only needs to know isolation
+ *    from compound) and the corpus's secondary credits.
  *  - baseSets: the stored week-1 sets (recommended_sets), the slot's weight.
- *  - credits: the half credit (or the exercise's own) each secondary muscle gets.
  *  - thinEquipment: facts.thin[routineId] lists the exercise ids the plan gave
  *    the thin-equipment bonus.
  *  - focus: the slot's muscle has the 'focus' role in facts.roles, so
  *    prescribe lets its isolation exercise take 4 sets (founder answer
  *    2026-10-04, D219); every other muscle's isolation exercise stays at 3.
+ *  - typedSets: facts.typed[routineExerciseId], the set count the person typed
+ *    for this exercise (design 4.3; recordTypedSetCount). prescribe serves it
+ *    as typed in every week, never climbing on top of it. Absent unless the
+ *    person typed one.
  * A circuit member is left out: its stored count is the circuit's rounds, not
  * a set count, so it is served as stored (no allocation entry).
  *
@@ -70,8 +80,11 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  * @param {object} facts  the v2 plan facts
  */
 export function buildPlanSessions(routinesWithRows, facts) {
+  const isObject = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
   return (Array.isArray(routinesWithRows) ? routinesWithRows : []).map(({ routine, rows }) => {
     const thin = Array.isArray(facts?.thin?.[routine?.id]) ? facts.thin[routine.id] : [];
+    const plannedSlots = isObject(facts?.slots?.[routine?.id]) ? facts.slots[routine.id] : {};
+    const typedSets = isObject(facts?.typed) ? facts.typed : {};
     const slots = [];
     for (const row of Array.isArray(rows) ? rows : []) {
       const re = row?.routineExercise ?? {};
@@ -85,15 +98,19 @@ export function buildPlanSessions(routinesWithRows, facts) {
         credits[a.muscle] = (credits[a.muscle] || 0) + a.sets;
       }
       const base = re.recommendedSets == null ? NaN : Number(re.recommendedSets);
-      const muscle = primary?.muscle ?? null;
+      // The planner's own model of this slot, where the plan carries it.
+      const planned = isObject(plannedSlots[ex.id]) ? plannedSlots[ex.id] : null;
+      const muscle = (typeof planned?.muscle === 'string' && planned.muscle) || (primary?.muscle ?? null);
+      const typedRaw = typedSets[re.id];
       slots.push({
         id: re.id ?? `${routine?.id}:${ex.id}`,
         muscle,
-        kind: deriveParamKey(ex.equipmentCategory, ex.compoundIsolation),
+        kind: (typeof planned?.kind === 'string' && planned.kind) || deriveParamKey(ex.equipmentCategory, ex.compoundIsolation),
         baseSets: Number.isFinite(base) ? base : undefined,
-        credits,
+        credits: isObject(planned?.credits) ? planned.credits : credits,
         thinEquipment: thin.includes(ex.id),
         focus: muscle != null && facts?.roles?.[muscle] === 'focus',
+        ...(typeof typedRaw === 'number' && Number.isFinite(typedRaw) && typedRaw >= 1 ? { typedSets: typedRaw } : {}),
       });
     }
     return { id: routine?.id, slots };

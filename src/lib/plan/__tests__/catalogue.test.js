@@ -22,15 +22,18 @@
  *     (D204), British English, no em dash.
  *   - resolveCatalogue is deterministic and independent of library order,
  *     prefers the person's own logged exercise (S Q5), carries each row's
- *     paramKey and half credit exactly as poolGenerator.deriveParamKey and
- *     algorithms.allocateExerciseVolume compute them, and leaves credited
- *     roles out.
+ *     paramKey exactly as poolGenerator.deriveParamKey computes it, and leaves
+ *     credited roles out.
+ *   - D219 lane B7 (lead ruling 1): the credits an item carries are one curated
+ *     rule by role, never the corpus's secondary muscles (see the credits
+ *     blocks at the end of this file); direct is always 1. The tests that used
+ *     to pin allocateExerciseVolume's credits and direct were re-pinned to it.
  *   - A thin-kit fallback is used only where no listed name carries the
  *     profile, is always marked, and is pinned here so the lead's ruling is a
  *     test edit. The gaps with no recognisable row at all are pinned too.
  */
 import {
-  CATALOGUE, CATALOGUE_MUSCLES, CATALOGUE_PROFILES, THIN_KIT, resolveCatalogue,
+  CATALOGUE, CATALOGUE_MUSCLES, CATALOGUE_PROFILES, THIN_KIT, resolveCatalogue, catalogueCredits,
 } from '../catalogue';
 import { GROWTH_MUSCLES } from '../roles';
 import { autoTier, AUTO_TIER } from '../../exercise/canonicality';
@@ -209,10 +212,10 @@ describe('every catalogue name exists and is a standard exercise (design 4.7 rul
   });
 
   test('a listed name is the muscle\'s own exercise, except the two lunge rows under glutes', () => {
-    // Walking Lunge and Bulgarian Split Squat are quads rows in the library
-    // (the tracker credits quads 1 and glutes 0.5), listed by the design as the
-    // glutes' third choice. The resolver reports the truth in `direct` and
-    // `credits`; this pin keeps the exception named.
+    // Walking Lunge and Bulgarian Split Squat are quads rows in the library,
+    // listed by the design as the glutes' third choice. The ruling for credits
+    // (B7, ruling 1) counts a full set for the glutes and credits the quads half
+    // a set; this pin keeps the exception named.
     const foreign = allRoles()
       .flatMap(({ muscle, role }) => role.names.map((n) => ({ muscle, role: role.id, name: n })))
       .filter(({ muscle, name }) => BY_NAME.get(name).primaryMuscle !== muscle)
@@ -438,7 +441,7 @@ describe('resolveCatalogue: the full gym', () => {
     }
   });
 
-  test('the bench press credits the triceps and the front delts at half a set, as the tracker does', () => {
+  test('the bench press credits the triceps and the front delts at half a set', () => {
     const bench = resolve('full_gym').chest[0];
     expect(bench.credits).toEqual({ triceps: 0.5, front_delts: 0.5 });
     expect(bench.kind).toBe('heavy_compound');
@@ -468,36 +471,40 @@ describe('resolveCatalogue: the full gym', () => {
     }
   });
 
-  test('a lunge listed under glutes reports the truth: half a set to glutes, a full set to quads', () => {
+  // Re-pinned for D219 lane B7, lead ruling 1: it used to pin the corpus's
+  // truth for a quads row (direct 0.5, credits { quads: 1, hamstrings: 0.5 }).
+  test('a lunge listed under glutes counts a full set for the glutes and credits the quads half a set', () => {
     const lunge = resolve('full_gym').glutes.find((x) => x.name === 'Walking Lunge');
     expect(lunge.primaryMuscle).toBe('quads');
-    expect(lunge.direct).toBe(0.5);
-    expect(lunge.credits).toEqual({ quads: 1, hamstrings: 0.5 });
+    expect(lunge.direct).toBe(1);
+    expect(lunge.credits).toEqual({ quads: 0.5 });
   });
 });
 
-describe('resolveCatalogue: the same numbers as the engine and the tracker', () => {
-  test.each(CATALOGUE_PROFILES)('%s: kind is the pool\'s paramKey, credits and direct are allocateExerciseVolume\'s', (profile) => {
-    for (const [muscle, list] of Object.entries(resolve(profile))) {
+describe('resolveCatalogue: the same numbers as the engine', () => {
+  // Re-pinned for D219 lane B7, lead ruling 1 (it also pinned credits and
+  // direct to allocateExerciseVolume's; the credits blocks at the end of this
+  // file now pin the curated rule instead). The pool's paramKey stays the
+  // generator's own.
+  test.each(CATALOGUE_PROFILES)('%s: kind is the pool\'s paramKey, and the row is the library\'s own', (profile) => {
+    for (const list of Object.values(resolve(profile))) {
       for (const x of list) {
         const row = BY_NAME.get(x.name);
         expect(x.kind).toBe(deriveParamKey(row.equipmentCategory, row.compoundIsolation));
-        const expected = { direct: 0, credits: {} };
-        for (const { muscle: m, sets } of allocateExerciseVolume(row)) {
-          if (m === muscle) expected.direct += sets;
-          else expected.credits[m] = (expected.credits[m] ?? 0) + sets;
-        }
-        expect({ direct: x.direct, credits: x.credits }).toEqual(expected);
         expect(x.primaryMuscle).toBe(row.primaryMuscle);
         expect(x.exerciseId).toBe(row.id);
       }
     }
   });
 
-  test('kind, direct and credits agree with the originals for every combination the library has', () => {
-    // The resolver's two small derivations are private, so swap each library
-    // row's category, compound flag and muscles onto the bench press row and
-    // compare what the chest slot reports with the real functions.
+  // Re-pinned for D219 lane B7, lead ruling 1: the sweep used to compare credits
+  // and direct with allocateExerciseVolume's. The kind still follows the
+  // generator's key for every combination; the credits and direct no longer
+  // depend on the row's muscles at all.
+  test('kind agrees with the original for every combination the library has, and credits and direct never follow the row\'s muscles', () => {
+    // The resolver's derivation is private, so swap each library row's category,
+    // compound flag and muscles onto the bench press row and compare what the
+    // chest slot reports with the real function.
     const bench = BY_NAME.get('Barbell Bench Press');
     const seen = new Set();
     for (const row of LIBRARY) {
@@ -515,12 +522,8 @@ describe('resolveCatalogue: the same numbers as the engine and the tracker', () 
       const item = resolveCatalogue({ library, profile: 'full_gym' }).chest[0];
       expect(item.name).toBe(bench.name);
       expect(item.kind).toBe(deriveParamKey(row.equipmentCategory, row.compoundIsolation));
-      const expected = { direct: 0, credits: {} };
-      for (const { muscle: m, sets } of allocateExerciseVolume(probe)) {
-        if (m === 'chest') expected.direct += sets;
-        else expected.credits[m] = (expected.credits[m] ?? 0) + sets;
-      }
-      expect({ direct: item.direct, credits: item.credits }).toEqual(expected);
+      expect(item.direct).toBe(1);
+      expect(item.credits).toEqual({ triceps: 0.5, front_delts: 0.5 });
     }
     // Four paramKeys, and a good spread of muscle shapes, were swept.
     expect(seen.size).toBeGreaterThan(40);
@@ -640,11 +643,15 @@ describe('resolveCatalogue: the library as the app and the database hand it over
     expect(resolveCatalogue({ library: LIBRARY.map(asAppRow), profile })).toEqual(wanted);
   });
 
-  test('a secondary muscle written as { muscle, contribution } is credited at its contribution', () => {
-    const row = { ...BY_NAME.get('Barbell Bench Press'), secondaryMuscles: [{ muscle: 'triceps', contribution: 0.3 }, 'shoulders'] };
+  // Re-pinned for D219 lane B7, lead ruling 1: a secondary muscle written as
+  // { muscle, contribution } used to be credited at its contribution
+  // ({ triceps: 0.3, front_delts: 0.5 }); the corpus's secondary muscles are no
+  // longer read, so the role's credits stand whatever the row says.
+  test('a secondary muscle written as { muscle, contribution } changes nothing: the role\'s credits stand', () => {
+    const row = { ...BY_NAME.get('Barbell Bench Press'), secondaryMuscles: [{ muscle: 'triceps', contribution: 0.3 }, 'quads', 'shoulders'] };
     const library = LIBRARY.map((e) => (e.name === row.name ? row : e));
     const bench = resolveCatalogue({ library, profile: 'full_gym' }).chest[0];
-    expect(bench.credits).toEqual({ triceps: 0.3, front_delts: 0.5 });
+    expect(bench.credits).toEqual({ triceps: 0.5, front_delts: 0.5 });
   });
 
   test('no library, an empty library or an unknown profile give every muscle an empty list and never throw', () => {
@@ -859,5 +866,242 @@ describe('thin-kit fallbacks: used only where no listed name carries the profile
     for (const m of ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs']) {
       expect(res[m].length).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+// ── Credits: the lead's curated rule (D219 lane B7, lead ruling 1) ────────────
+//
+// The corpus's secondary muscles are NOT the credits (the corpus credits
+// rear-delt flyes to back, squats to hamstrings and hip thrusts to quads, which
+// made the planner give back 4 direct sets a week). The catalogue's credits
+// follow one curated rule, by the role an exercise fills, every equipment
+// variant of the role included; an exercise counts 1 for the muscle its role
+// trains. src/lib/plan/__tests__/fixtures/choices.js is the same rule, written
+// out for the planner's own tests, and is the contract here.
+//
+// Two rulings after the first (lead, D33, lane B7 follow-up): the close-grip
+// bench press credits { chest: 0.5, front_delts: 0.5 }, and a thin-kit stand-in
+// carries the credits of its OWN movement pattern, not of the role it stands in
+// for (a Bulgarian split squat standing in for the leg extension credits
+// { glutes: 0.5 }).
+
+const FIXTURE_CHOICES = require('./fixtures/choices');
+
+const PRESS_CREDITS = { triceps: 0.5, front_delts: 0.5 };
+const ROW_CREDITS = { biceps: 0.5, rear_delts: 0.5, traps: 0.5 };
+const SQUAT_CREDITS = { glutes: 0.5, adductors: 0.5 };
+const VERTICAL_PULL_NAMES = ['Lat Pulldown (Wide Grip)', 'Pull-Up', 'Chin-Up', 'Lat Pulldown (Neutral Grip)'];
+
+// A press listed under the triceps credits the chest and the front of the
+// shoulder (the close-grip bench press, a dip, a diamond push-up); a lunge or
+// split squat listed under the quads credits the glutes (listed under the glutes
+// it credits the quads). Every one of these named from the exercise's own
+// movement, whichever role it stands in for.
+const TRICEPS_PRESS_CREDITS = { chest: 0.5, front_delts: 0.5 };
+const PRESSES_UNDER_TRICEPS = ['Close-Grip Bench Press', 'Bench Dip', 'Tricep Dip (Parallel Bars)', 'Diamond Push-Up'];
+const LUNGES_UNDER_QUADS_CREDITS = { glutes: 0.5 };
+const LUNGES_UNDER_QUADS = [
+  'Bulgarian Split Squat', 'Barbell Lunge', 'Split Squat',
+  'Bodyweight Split Squat', 'Bodyweight Reverse Lunge', 'Bodyweight Walking Lunge',
+];
+
+// The rulings, written out from their words, never from the catalogue module.
+// Anything they do not list is an isolation exercise.
+function ruledCredits(muscle, roleId, name) {
+  if (muscle === 'triceps' && PRESSES_UNDER_TRICEPS.includes(name)) return TRICEPS_PRESS_CREDITS;
+  if (muscle === 'quads' && LUNGES_UNDER_QUADS.includes(name)) return LUNGES_UNDER_QUADS_CREDITS;
+  if (muscle === 'chest' && (roleId === 'flat_press' || roleId === 'incline_press')) return PRESS_CREDITS;
+  if (muscle === 'front_delts' && roleId === 'overhead_press') return { triceps: 0.5, side_delts: 0.5 };
+  if (muscle === 'back') {
+    const vertical = roleId === 'vertical_pull' || (roleId === 'other_pull' && VERTICAL_PULL_NAMES.includes(name));
+    if (vertical) return name === 'Lat Pulldown (Wide Grip)' ? { biceps: 0.5, rear_delts: 0.5 } : { biceps: 0.5 };
+    return ROW_CREDITS; // horizontal_row, and the rows of other_pull
+  }
+  if (muscle === 'quads' && (roleId === 'squat_or_press' || roleId === 'other_squat')) return SQUAT_CREDITS;
+  if (muscle === 'hamstrings' && roleId === 'hip_hinge') return { glutes: 0.5 };
+  if (muscle === 'glutes' && roleId === 'hip_thrust') return { hamstrings: 0.5 };
+  if (muscle === 'glutes' && roleId === 'lunge') return { quads: 0.5 };
+  return {};
+}
+
+const corpusCredits = (name, muscle) => {
+  const out = {};
+  for (const { muscle: m, sets } of allocateExerciseVolume(BY_NAME.get(name))) {
+    if (m !== muscle) out[m] = (out[m] ?? 0) + sets;
+  }
+  return out;
+};
+
+describe('credits: the curated rule, not the corpus\'s secondary muscles (D219 lane B7, ruling 1)', () => {
+  test('every resolved item, in every profile, carries the credits the rulings give its role or its own movement, and direct 1', () => {
+    let seen = 0;
+    for (const profile of CATALOGUE_PROFILES) {
+      for (const [muscle, list] of Object.entries(resolve(profile))) {
+        for (const x of list) {
+          expect(x.credits).toEqual(ruledCredits(muscle, x.role, x.name));
+          expect(x.direct).toBe(1);
+          seen += 1;
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(150);
+  });
+
+  // Re-pinned for the lead's second ruling (it pinned role credits for a stand-in:
+  // a Bulgarian split squat standing in for the leg extension was credited {}).
+  test('a thin-kit stand-in carries the credits of its own movement pattern, not of the role it stands in for', () => {
+    const goblet = resolve('dumbbells_only').quads.find((x) => x.name === 'Goblet Squat');
+    expect(goblet).toMatchObject({ role: 'squat_or_press', thinKit: true });
+    expect(goblet.credits).toEqual(SQUAT_CREDITS); // a squat standing in for a squat
+    // A split squat standing in for the leg extension is a split squat: the glutes.
+    const split = resolve('dumbbells_only').quads.find((x) => x.name === 'Bulgarian Split Squat');
+    expect(split).toMatchObject({ role: 'leg_extension', thinKit: true });
+    expect(split.credits).toEqual({ glutes: 0.5 });
+    // Listed under the glutes it is the same exercise with the other muscle credited.
+    expect(catalogueCredits('glutes', 'Bulgarian Split Squat')).toEqual({ quads: 0.5 });
+    expect(catalogueCredits('quads', 'Bulgarian Split Squat')).toEqual({ glutes: 0.5 });
+    // A dip standing in for the overhead extension is a press: the chest and the front delts.
+    const dip = resolve('bodyweight').triceps.find((x) => x.name === 'Bench Dip');
+    expect(dip).toMatchObject({ role: 'overhead_extension', thinKit: true });
+    expect(dip.credits).toEqual(TRICEPS_PRESS_CREDITS);
+  });
+
+  test('every thin-kit stand-in, in every kit, carries the credits of its own movement, and the ones that differ from their role\'s are named', () => {
+    const differing = [];
+    let seen = 0;
+    for (const [kit, byMuscle] of Object.entries(THIN_KIT)) {
+      for (const [muscle, byRole] of Object.entries(byMuscle)) {
+        for (const [roleId, names] of Object.entries(byRole)) {
+          const role = CATALOGUE[muscle].find((r) => r.id === roleId);
+          for (const name of names) {
+            const credits = catalogueCredits(muscle, name);
+            expect(credits).toEqual(ruledCredits(muscle, roleId, name));
+            if (JSON.stringify(credits) !== JSON.stringify(role.credits)) differing.push(`${kit}:${muscle}.${roleId}:${name}`);
+            seen += 1;
+          }
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(40);
+    // The stand-ins whose own movement is not the role's: the lunges and split
+    // squats under the quads, and the dips and the diamond push-up under the triceps.
+    expect(differing.sort()).toEqual([
+      'barbell_plates:quads.leg_extension:Barbell Lunge',
+      'barbell_plates:quads.leg_extension:Split Squat',
+      'bodyweight:quads.leg_extension:Bodyweight Reverse Lunge',
+      'bodyweight:quads.leg_extension:Bodyweight Walking Lunge',
+      'bodyweight:quads.squat_or_press:Bodyweight Split Squat',
+      'bodyweight:triceps.overhead_extension:Bench Dip',
+      'bodyweight:triceps.overhead_extension:Tricep Dip (Parallel Bars)',
+      'bodyweight:triceps.pushdown:Diamond Push-Up',
+      'dumbbells_only:quads.leg_extension:Bulgarian Split Squat',
+      'home_gym:quads.leg_extension:Bulgarian Split Squat',
+    ].sort());
+  });
+
+  test('the premise: the corpus WOULD have credited the three the ruling names, and the catalogue does not', () => {
+    expect(corpusCredits('Dumbbell Rear Delt Fly', 'rear_delts')).toHaveProperty('back');
+    expect(corpusCredits('Barbell Back Squat', 'quads')).toHaveProperty('hamstrings');
+    expect(corpusCredits('Barbell Hip Thrust', 'glutes')).toHaveProperty('quads');
+    const full = resolve('full_gym');
+    expect(full.quads.find((x) => x.name === 'Barbell Back Squat').credits).toEqual(SQUAT_CREDITS);
+    expect(full.glutes.find((x) => x.name === 'Barbell Hip Thrust').credits).toEqual({ hamstrings: 0.5 });
+    const library = LIBRARY.filter((e) => e.name !== 'Reverse Pec Deck' && e.name !== 'Face Pull');
+    expect(resolveCatalogue({ library, profile: 'full_gym' }).rear_delts[0]).toMatchObject({ name: 'Dumbbell Rear Delt Fly', credits: {} });
+  });
+
+  test('the full-gym output carries the same credits as the planner fixture, name by name', () => {
+    // Each fixture name is resolved alone for its muscle, so the role that
+    // names it is the role it fills.
+    let compared = 0;
+    for (const [muscle, list] of Object.entries(FIXTURE_CHOICES)) {
+      const catalogueNames = new Set(CATALOGUE[muscle].flatMap((r) => r.names));
+      for (const f of list) {
+        const library = LIBRARY.filter((e) => e.name === f.name || !catalogueNames.has(e.name));
+        const item = resolveCatalogue({ library, profile: 'full_gym' })[muscle].find((x) => x.name === f.name);
+        expect(item).toBeTruthy();
+        expect(item.credits).toEqual(f.credits ?? {});
+        compared += 1;
+      }
+    }
+    expect(compared).toBe(Object.values(FIXTURE_CHOICES).reduce((a, list) => a + list.length, 0));
+    // And the ordinary full-gym resolution agrees on every name it shares with the fixture.
+    for (const [muscle, list] of Object.entries(resolve('full_gym'))) {
+      for (const x of list) {
+        const f = (FIXTURE_CHOICES[muscle] ?? []).find((c) => c.name === x.name);
+        if (f) expect(x.credits).toEqual(f.credits ?? {});
+      }
+    }
+  });
+
+  // Re-pinned for the lead's second ruling: it was credited nothing, the one
+  // compound the first ruling left open.
+  test('the close-grip bench press credits { chest: 0.5, front_delts: 0.5 }', () => {
+    const press = resolve('full_gym').triceps.find((x) => x.name === 'Close-Grip Bench Press');
+    expect(press.role).toBe('close_grip_press');
+    expect(press.credits).toEqual({ chest: 0.5, front_delts: 0.5 });
+    expect(press.direct).toBe(1);
+    expect(catalogueCredits('triceps', 'Close-Grip Bench Press')).toEqual({ chest: 0.5, front_delts: 0.5 });
+  });
+
+  test('every item\'s credits are its own copy: editing one never edits the catalogue or the next call', () => {
+    const first = resolve('full_gym');
+    first.chest[0].credits.triceps = 99;
+    first.chest[0].credits.neck = 1;
+    expect(resolve('full_gym').chest[0].credits).toEqual(PRESS_CREDITS);
+  });
+
+  test('every role carries its credits, a role\'s per-name credits name only names it lists, and a name has one set of credits per muscle', () => {
+    const standIns = (muscle, roleId) => Object.values(THIN_KIT).flatMap((byMuscle) => byMuscle[muscle]?.[roleId] ?? []);
+    for (const { muscle, role } of allRoles()) {
+      expect(typeof role.credits).toBe('object');
+      expect(Object.isFrozen(role.credits)).toBe(true);
+      // A name with its own credits is one the role lists, or one of its thin-kit stand-ins.
+      for (const name of Object.keys(role.creditsByName ?? {})) {
+        expect([...role.names, ...standIns(muscle, role.id)]).toContain(name);
+      }
+    }
+    for (const muscle of CATALOGUE_MUSCLES) {
+      const byName = new Map();
+      for (const r of rolesOf(muscle)) {
+        for (const name of [...r.names, ...standIns(muscle, r.id)]) {
+          const credits = JSON.stringify(r.creditsByName?.[name] ?? r.credits);
+          if (byName.has(name)) expect(credits).toBe(byName.get(name));
+          byName.set(name, credits);
+        }
+      }
+    }
+  });
+});
+
+describe('catalogueCredits: the same rule, by muscle and name (a kept exercise handed to the planner)', () => {
+  test('a name the muscle\'s catalogue lists gets that role\'s credits, a thin-kit name included', () => {
+    expect(catalogueCredits('chest', 'Barbell Bench Press')).toEqual(PRESS_CREDITS);
+    expect(catalogueCredits('back', 'Lat Pulldown (Wide Grip)')).toEqual({ biceps: 0.5, rear_delts: 0.5 });
+    expect(catalogueCredits('back', 'Pull-Up')).toEqual({ biceps: 0.5 });
+    expect(catalogueCredits('back', 'Dumbbell Row')).toEqual(ROW_CREDITS);
+    expect(catalogueCredits('quads', 'Hack Squat Machine')).toEqual(SQUAT_CREDITS);
+    expect(catalogueCredits('quads', 'Goblet Squat')).toEqual(SQUAT_CREDITS);
+    expect(catalogueCredits('glutes', 'Walking Lunge')).toEqual({ quads: 0.5 });
+    expect(catalogueCredits('biceps', 'Hammer Curl')).toEqual({});
+  });
+
+  test('every catalogue name, under the muscle that lists it, agrees with the rules', () => {
+    for (const { muscle, role } of allRoles()) {
+      for (const name of role.names) expect(catalogueCredits(muscle, name)).toEqual(ruledCredits(muscle, role.id, name));
+    }
+  });
+
+  test('anything the muscle\'s catalogue does not list is credited nothing: an unknown name, an unknown muscle, or a name listed under another muscle', () => {
+    expect(catalogueCredits('chest', 'Zercher Squat')).toEqual({});
+    expect(catalogueCredits('shoulders', 'Barbell Bench Press')).toEqual({});
+    expect(catalogueCredits('quads', 'Walking Lunge')).toEqual({});
+    expect(catalogueCredits(undefined, undefined)).toEqual({});
+  });
+
+  test('each call returns its own object', () => {
+    const a = catalogueCredits('chest', 'Barbell Bench Press');
+    a.triceps = 7;
+    expect(catalogueCredits('chest', 'Barbell Bench Press')).toEqual(PRESS_CREDITS);
   });
 });

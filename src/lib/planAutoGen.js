@@ -43,20 +43,20 @@ import {
   generatePlan, DIVISION_MATRIX, SELECTION_REASON, resolveWeakPointKeys,
 } from './planEngine';
 import { PLANNER_V2 } from './plan/release';
-import { resolveCatalogue } from './plan/catalogue';
+import { resolveCatalogue, catalogueCredits } from './plan/catalogue';
 import { assessPlanFit, assessDurationOptions } from './planFit';
 import { phaseToNutritionKey } from './coachingGoals';
 import { ageFromDateOfBirth } from './ageFromDateOfBirth';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
-import { applyContinuity, slotKey, summariseDecisions } from './exercise/continuity';
+import { applyContinuity, slotKey, summariseDecisions, SLOT_OUTCOME } from './exercise/continuity';
 import { movementFamily } from './exercise/movementFamily';
 import {
   exerciseEvidence, swappedAwayCount, EVIDENCE_MATURITY,
   isEligible, isFamilyBlocked, movementFamilyOf,
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
-import { parseProfiles } from './poolGenerator';
+import { parseProfiles, deriveParamKey } from './poolGenerator';
 import { styleKeyFromTags, stylePoolFor } from './exercise/stylePools';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
@@ -681,10 +681,12 @@ function libraryForReviewedProposal(filteredLibrary, replacementIds) {
  */
 async function withContinuity(
   userId, plan, allExercises, intentState, filteredLibrary, continuityProposal = null,
-  equipment = null,
+  equipment = null, knownIncumbents = null,
 ) {
   try {
-    const incumbents = await loadIncumbentSlots(userId);
+    // D219 lane B7: the new planner's kept-exercise pass already holds the
+    // person's current exercises and hands them in; every other caller reads them.
+    const incumbents = knownIncumbents ?? await loadIncumbentSlots(userId);
     if (incumbents.length === 0) {
       return { workouts: plan.workouts, decisions: [], isRebuild: false };
     }
@@ -1032,7 +1034,7 @@ export async function generateAndSavePlan(userId, profile, {
   if (PLANNER_V2 && !stylePool) {
     const savedV2 = await saveWithPlannerV2({
       userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary,
-      ledger, allowLearnedCarry, keepBlock,
+      ledger, allowLearnedCarry, keepBlock, continuityProposal,
     });
     if (savedV2) return savedV2;
   }
@@ -1243,10 +1245,13 @@ export async function generateAndSavePlan(userId, profile, {
 // plan facts (setProgrammePlanFacts; register D219, "Build rulings" 1).
 // Nothing in this section runs while the switch is off.
 //
-// Not wired here (the brief names generateAndSavePlan only): the dry-run twin
-// below, and the rebuild-continuity pass (withContinuity), which splices the
-// person's own exercises back into a generated plan. Both need a ruling before
-// the switch is turned on; the report for this lane lists them.
+// Lane B7 adds the rest of what a new plan needs before the switch is turned
+// on: the plan's slot facts (the planner's own muscle, kind and credits per
+// exercise), the dry-run twin that previews the plan that is saved
+// (generatePlanDryRun), and the rebuild continuity: the person's own exercises
+// that withContinuity's verdicts keep are handed to the planner, each in the
+// place of the catalogue's choice for the same family (plannerV2KeptExercises,
+// plannerV2KeptChoices).
 // ───────────────────────────────────────────────────────────────────────────
 
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -1273,7 +1278,10 @@ export function plannerV2SelectionReason(choice) {
  * The planner's workouts in rotation order (plan.v2.order, which is the
  * routine position), each exercise shaped for resolvePlanAgainstLibrary and
  * the routine writers: the catalogue's own exercise id, week 1's sets, the
- * plan's reps and rest, and a valid selection-reason code. Pure.
+ * plan's reps and rest, and a valid selection-reason code. The planner's kind
+ * and the choice's credits ride along (resolvePlanAgainstLibrary keeps every
+ * field), so the saved plan's slot facts are written from the exercises that
+ * were actually written. Pure.
  */
 export function plannerV2WorkoutsForWrite(plan, choices) {
   const bySession = new Map((plan?.workouts ?? []).map((w) => [w.sessionKey, w]));
@@ -1290,6 +1298,8 @@ export function plannerV2WorkoutsForWrite(plan, choices) {
           exerciseName: x.name,
           exerciseId: choice?.exerciseId ?? null,
           muscle: x.muscle,
+          kind: x.kind ?? choice?.kind,
+          credits: choice?.credits,
           sets: x.sets,
           repMin: x.repMin,
           repMax: x.repMax,
@@ -1313,8 +1323,13 @@ export function plannerV2WorkoutsForWrite(plan, choices) {
  * @param {object} v2  plan.v2 from planner.buildPlan
  * @param {Object<string, string>} routineIdBySession  's0' -> the saved routine's id
  * @param {Object<string, string[]>} thinByRoutine  routine id -> library exercise ids
+ * @param {Object<string, Object<string, {muscle: string, kind: string, credits: object}>>} [slotsByRoutine]
+ *        D219 lane B7: routine id -> library exercise id -> the planner's own
+ *        muscle, kind and credits for the slot, so the reader serves the plan
+ *        with the planner's model (a Walking Lunge planned under glutes is
+ *        served under glutes), not the corpus's
  */
-export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine) {
+export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine, slotsByRoutine) {
   const ids = routineIdBySession ?? {};
   return {
     version: v2.version,
@@ -1326,6 +1341,7 @@ export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine) {
     lightCaps: rekeyNested(v2.lightCaps, ids),
     gapRanks: rekeyFlat(v2.gapRanks, ids),
     thin: thinByRoutine ?? {},
+    slots: slotsByRoutine ?? {},
     builtFactor: v2.builtFactor,
     rirLadder: v2.rirLadder,
     readiness: v2.readiness,
@@ -1363,6 +1379,185 @@ async function plannerV2FirstBlock(userId) {
   }
 }
 
+// The rows a plan can prescribe by sets and reps, as the catalogue admits them
+// (plan/catalogue.js hasLoadPrescription): a duration or distance row cannot
+// take an automatic rep range.
+const PLANNER_V2_LOAD_TYPES = new Set(['weight_reps', 'weighted_bodyweight']);
+
+/**
+ * D219 lane B7 (lead ruling 4, D33; family dedupe by the lead's follow-up
+ * ruling): the person's own exercises that a rebuild keeps go to the new
+ * planner as choices for their primary muscle.
+ *
+ * A kept exercise takes the place of the catalogue choice that does its job,
+ * keeping that role's position and rank:
+ *   1. the same exercise already in the muscle's list keeps its own place (it
+ *      is that choice, so it is never listed twice);
+ *   2. otherwise the first catalogue choice not yet taken in the same FAMILY,
+ *      muscle::family, continuity's own key (slotKey(muscle, movementFamily)),
+ *      the way the catalogue groups variants of one role: a kept Smith Machine
+ *      Bench Press takes the Barbell Bench Press's place, so the incline press
+ *      stays;
+ *   3. only a kept exercise whose family the catalogue has no choice for goes at
+ *      the FRONT, ahead of the catalogue's own choices, in the order the
+ *      person's plan has them. (The ruling is silent when the family exists but
+ *      every place of it is already taken by another kept exercise: such an
+ *      extra stays beside its family, right after the family's last place,
+ *      never ahead of the exercises that took the places.)
+ * The planner reads name, kind and credits, and takes a muscle's first choices
+ * in turn, so a kept exercise appears in the plan whenever the planner trains
+ * its muscle with that many exercises. Each carries the kind the generator's own
+ * key gives the row (poolGenerator.deriveParamKey) and the curated credits where
+ * the muscle's catalogue lists the name, none where it does not
+ * (plan/catalogue.catalogueCredits).
+ *
+ * Not handed over: a row with no name, a row with no load prescription, and a
+ * row whose muscle the planner has no choices for. Pure: nothing is mutated,
+ * and with nothing to hand over the catalogue's own object comes back.
+ *
+ * @param {Object<string, Array>} choices  plan/catalogue.resolveCatalogue's answer
+ * @param {Array<object>} keptRows  library rows (camelCase, or snake_case as SQLite returns them), in the order of the person's plan
+ * @param {(choice: object) => ?object} [rowOf]  the library row of a catalogue
+ *        choice, so its family can be read; without it only rule 1 and rule 3
+ *        can apply
+ */
+export function plannerV2KeptChoices(choices, keptRows, rowOf = null) {
+  // continuity's key for two exercises that do the same job in a programme.
+  const familyOf = (row) => {
+    const muscle = row?.primaryMuscle ?? row?.primary_muscle;
+    return muscle ? slotKey(muscle, movementFamily(row.name, muscle, row.subregion ?? null)) : null;
+  };
+  const keptByMuscle = new Map();
+  const seen = new Set();
+  for (const row of Array.isArray(keptRows) ? keptRows : []) {
+    const name = row?.name;
+    if (typeof name !== 'string' || !name || seen.has(name)) continue;
+    if (!PLANNER_V2_LOAD_TYPES.has(row.exerciseType ?? row.exercise_type ?? 'weight_reps')) continue;
+    // The volume counter's own reading of a primary muscle (allocateExerciseVolume).
+    let muscle = String(row.primaryMuscle ?? row.primary_muscle ?? '').toLowerCase();
+    if (muscle === 'shoulders') muscle = 'side_delts';
+    if (!muscle || !hasOwn(choices ?? {}, muscle)) continue;
+    seen.add(name);
+    if (!keptByMuscle.has(muscle)) keptByMuscle.set(muscle, []);
+    keptByMuscle.get(muscle).push({
+      family: familyOf(row),
+      choice: {
+        name,
+        exerciseId: row.id ?? null,
+        role: null,
+        rank: 1,
+        kind: deriveParamKey(
+          row.equipmentCategory ?? row.equipment_category,
+          row.compoundIsolation ?? row.compound_isolation,
+        ),
+        credits: catalogueCredits(muscle, name),
+        direct: 1,
+        primaryMuscle: muscle,
+        reason: null,
+        grade: null,
+        source: null,
+        thinKit: false,
+        optIn: false,
+        logged: true,
+        kept: true,
+      },
+    });
+  }
+  if (keptByMuscle.size === 0) return choices;
+  const out = { ...choices };
+  for (const [muscle, kept] of keptByMuscle) {
+    const list = [...(choices[muscle] ?? [])];
+    // The catalogue's own families, read once before any place is taken.
+    const familyAt = list.map((c) => familyOf(rowOf?.(c)));
+    const claimed = new Set(); // places in `list` a kept exercise has taken
+    const first = [];
+    const beside = new Map(); // list index -> extras to put right after it
+    for (const { family, choice } of kept) {
+      const places = family != null ? familyAt.flatMap((f, i) => (f === family ? [i] : [])) : [];
+      let at = list.findIndex((c, i) => !claimed.has(i) && c.name === choice.name);
+      if (at < 0) at = places.find((i) => !claimed.has(i)) ?? -1;
+      if (at >= 0) {
+        claimed.add(at);
+        list[at] = { ...choice, role: list[at].role ?? null, rank: list[at].rank ?? choice.rank };
+      } else if (places.length > 0) {
+        const last = places[places.length - 1];
+        beside.set(last, [...(beside.get(last) ?? []), choice]);
+      } else {
+        first.push(choice);
+      }
+    }
+    out[muscle] = [...first, ...list.flatMap((c, i) => [c, ...(beside.get(i) ?? [])])];
+  }
+  return out;
+}
+
+/**
+ * D219 lane B7 (lead ruling 4): which of the person's own exercises would a
+ * rebuild keep? The answer is continuity's own, never a second opinion
+ * ("two implementations of 'should this exercise stay' would drift",
+ * exercise/continuity.js): each exercise of the person's current plan is
+ * offered back to withContinuity as a slot of its own, so the same evidence,
+ * the reviewed proposal's verdicts and slotVerdict decide, and the RETAINED
+ * ones are the kept ones. Returns their library rows, in the order of the
+ * person's plan; [] when there is no current plan or anything fails (a rebuild
+ * that loses continuity is worse than the plain catalogue; one that fails is
+ * worse than both). Read-only.
+ */
+async function plannerV2KeptExercises({
+  userId, allExercises, intentState, filteredLibrary, continuityProposal, equipment,
+}) {
+  try {
+    const incumbents = await loadIncumbentSlots(userId);
+    const seen = new Set();
+    const unique = [];
+    for (const incumbent of incumbents) {
+      if (!incumbent.exerciseId || seen.has(incumbent.exerciseId)) continue;
+      seen.add(incumbent.exerciseId);
+      unique.push(incumbent);
+    }
+    if (unique.length === 0) return [];
+    const offered = {
+      workouts: [{
+        name: 'Your plan',
+        exercises: unique.map((i) => ({ exerciseId: i.exerciseId, exerciseName: i.exerciseName })),
+      }],
+    };
+    const { decisions } = await withContinuity(
+      userId, offered, allExercises, intentState, filteredLibrary, continuityProposal, equipment, unique,
+    );
+    const keptIds = new Set(
+      decisions.filter((d) => d.outcome === SLOT_OUTCOME.RETAINED).map((d) => d.exerciseId),
+    );
+    const rowById = new Map((allExercises ?? []).map((e) => [e.id, e]));
+    return unique.filter((i) => keptIds.has(i.exerciseId)).map((i) => rowById.get(i.exerciseId)).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+/**
+ * The one resolution pass of a plan the new planner built, shared by the save
+ * and its dry-run twin so the preview cannot show anything the save would write
+ * differently: the planner's workouts shaped for the writers, resolved against
+ * the library (identity first, the person's exclusions applied), and put in
+ * the order a floor, position or transfer constraint asks for. Pure.
+ */
+function resolvePlannerV2Plan(plan, choices, allExercises, filteredLibrary, intentState) {
+  const resolution = resolvePlanAgainstLibrary(
+    { ...plan, workouts: plannerV2WorkoutsForWrite(plan, choices) },
+    buildExerciseIndex(allExercises),
+    filteredLibrary,
+  );
+  return {
+    ...resolution,
+    workouts: orderSamePositionContiguously(
+      resolution.workouts,
+      new Map((allExercises ?? []).map((e) => [e.id, e])),
+      intentState?.capability,
+    ),
+  };
+}
+
 /**
  * Build the plan with the new planner. Throws on a planner failure (the caller
  * logs it and falls back to today's generator).
@@ -1371,16 +1566,20 @@ async function plannerV2FirstBlock(userId) {
  * is also imported (for equipmentReachable) by modules on the check-in path,
  * which must never reach src/lib/recovery/ through a static import.
  */
-async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises) {
+async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises, keptExercises = []) {
   // eslint-disable-next-line global-require
   const { buildPlan } = require('./plan/planner');
   const loggedExerciseNames = await plannerV2LoggedNames(userId, allExercises);
   const firstBlock = await plannerV2FirstBlock(userId);
-  const choices = resolveCatalogue({
+  // The person's own exercises that continuity keeps take the place of the
+  // catalogue's choice for the same job, or lead their muscle's list when it has
+  // none (plannerV2KeptChoices); with none kept this is the catalogue's own answer.
+  const rowById = new Map((allExercises ?? []).map((e) => [e.id, e]));
+  const choices = plannerV2KeptChoices(resolveCatalogue({
     library: generationLibrary,
     profile: inputs.equipment,
     loggedExerciseNames,
-  });
+  }), keptExercises, (choice) => rowById.get(choice.exerciseId));
   const plan = buildPlan({
     daysPerWeek: inputs.daysPerWeek,
     sessionLengthMinutes: inputs.sessionLengthMinutes,
@@ -1467,11 +1666,16 @@ async function writePlannerV2WeeklyRows({ userId, blockId, weeklyTargets, blockK
  */
 async function saveWithPlannerV2({
   userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary,
-  ledger, allowLearnedCarry, keepBlock,
+  ledger, allowLearnedCarry, keepBlock, continuityProposal = null,
 }) {
+  // Read before anything is written, because it reads the plan that is about to
+  // be replaced (the same reason today's continuity pass runs first).
+  const kept = await plannerV2KeptExercises({
+    userId, allExercises, intentState, filteredLibrary, continuityProposal, equipment: inputs.equipment,
+  });
   let built;
   try {
-    built = await buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises);
+    built = await buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises, kept);
   } catch (e) {
     // eslint-disable-next-line global-require
     try { require('./errorLog').logError('plan.generateAndSave.plannerV2Failed', e, { inputs }); } catch (_) {}
@@ -1486,31 +1690,25 @@ async function saveWithPlannerV2({
     await AsyncStorage.setItem(PLAN_WHYTHIS_KEY(userId), JSON.stringify({}));
   } catch (_) { /* non-fatal */ }
 
-  const workoutsForWrite = plannerV2WorkoutsForWrite(plan, choices);
   const planName = await makeUniquePlanName(userId, plan.name ?? 'Your plan');
   let programmeId = null;
   try {
     const d = await db();
     const routineIdBySession = {};
     const thinByRoutine = {};
+    const slotsByRoutine = {};
     const writeResult = await runInTransaction(d, async () => {
       const prog = await createProgramme(
         userId, planName, plan.description ?? '', 0, null, null, null, false,
       );
       programmeId = prog.id;
 
-      // The same one resolution pass as today's save (C16 job 9).
+      // The same one resolution pass as today's save (C16 job 9), and the one
+      // the dry-run twin runs: the preview is the plan that is saved.
       const {
-        workouts: rawResolvedWorkouts, totalRequested, totalResolved: totalWritten,
+        workouts: resolvedWorkouts, totalRequested, totalResolved: totalWritten,
         missedCount, missedNames, blockedSlots,
-      } = resolvePlanAgainstLibrary(
-        { ...plan, workouts: workoutsForWrite }, buildExerciseIndex(allExercises), filteredLibrary,
-      );
-      const resolvedWorkouts = orderSamePositionContiguously(
-        rawResolvedWorkouts,
-        new Map(allExercises.map((e) => [e.id, e])),
-        intentState?.capability,
-      );
+      } = resolvePlannerV2Plan(plan, choices, allExercises, filteredLibrary, intentState);
 
       // Routines in the planner's rotation order: createRoutine gives each the
       // next position, so the position IS the rotation position.
@@ -1532,6 +1730,14 @@ async function saveWithPlannerV2({
           if (ex.thinEquipment === true) {
             if (!thinByRoutine[routine.id]) thinByRoutine[routine.id] = [];
             thinByRoutine[routine.id].push(ex.exerciseId);
+          }
+          // The planner's own model of the slot, by the id actually written
+          // (lead ruling 2). An exercise in a session twice keeps its first slot.
+          if (!slotsByRoutine[routine.id]) slotsByRoutine[routine.id] = {};
+          if (!hasOwn(slotsByRoutine[routine.id], ex.exerciseId)) {
+            slotsByRoutine[routine.id][ex.exerciseId] = {
+              muscle: ex.muscle, kind: ex.kind, credits: { ...(ex.credits ?? {}) },
+            };
           }
         }
       }
@@ -1568,7 +1774,9 @@ async function saveWithPlannerV2({
     // plan is never active without them. A failure here tears the programme
     // down through the catch below, never leaving a plan the new planner built
     // without the marker that says so.
-    await setProgrammePlanFacts(prog.id, plannerV2PlanFacts(plan.v2, routineIdBySession, thinByRoutine));
+    await setProgrammePlanFacts(
+      prog.id, plannerV2PlanFacts(plan.v2, routineIdBySession, thinByRoutine, slotsByRoutine),
+    );
 
     let blockKept = false;
     let blockId = null;
@@ -1593,8 +1801,11 @@ async function saveWithPlannerV2({
       ok: true,
       programmeId: prog.id,
       blockKept,
-      // No rebuild continuity yet (see the section note): nothing was kept or
-      // replaced by that pass.
+      // The person's own exercises continuity keeps are in the plan (they led
+      // the planner's choices), but the receipt that says so is not produced
+      // for the new planner: the one-time note of what changed and why is
+      // design section 8's, a later lane. Until it lands this reports no
+      // decisions.
       continuity: {
         isRebuild: false,
         decisions: [],
@@ -1622,6 +1833,73 @@ async function saveWithPlannerV2({
 }
 
 /**
+ * D219 lane B7 (lead ruling 3): generatePlanDryRun's body for the new planner,
+ * the read-only twin of saveWithPlannerV2. The same inputs, the same history
+ * and kept exercises, the same planner call and the same resolution pass
+ * (resolvePlannerV2Plan), so the preview the person sees is the plan that is
+ * saved. Returns the dry run's own result object, or null in exactly the cases
+ * the save falls back on (a planner failure, no workouts, or nothing resolving
+ * for a reason other than the person's own exclusions): the caller then
+ * previews today's generator, as the save would build with it.
+ */
+async function previewWithPlannerV2({
+  userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary, continuityProposal,
+}) {
+  let built;
+  try {
+    const kept = await plannerV2KeptExercises({
+      userId, allExercises, intentState, filteredLibrary, continuityProposal, equipment: inputs.equipment,
+    });
+    built = await buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises, kept);
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.dryRun.plannerV2Failed', e, { inputs }); } catch (_) {}
+    return null;
+  }
+  const { plan, choices } = built;
+  if (!plan?.workouts?.length || !plan?.v2) return null;
+
+  const {
+    workouts, totalResolved, missedCount, missedNames, blockedSlots,
+  } = resolvePlannerV2Plan(plan, choices, allExercises, filteredLibrary, intentState);
+  // The save's zero-match guard, so the preview never offers a plan the save
+  // would refuse to write.
+  if (totalResolved === 0) {
+    if (blockedSlots.length > 0) {
+      return attachBlockedSlots(
+        { ok: false, error: 'plan_blocked_by_exclusions' },
+        blockedSlots,
+        intentState?.unavailable,
+        { capabilityState: intentState?.capability, library: allExercises },
+      );
+    }
+    return null;
+  }
+
+  const result = {
+    ok: true,
+    plan: { ...plan, workouts },
+    sessionLengthMinutes: inputs.sessionLengthMinutes,
+    // The new planner does not read the demonstrated structure, so its history
+    // did not shape this plan and the review must not say it did.
+    structureMemory: null,
+    // As in the save: the receipt of what continuity kept is a later lane's.
+    continuity: {
+      isRebuild: false,
+      decisions: [],
+      summary: summariseDecisions([]),
+    },
+  };
+  if (missedCount > 0) {
+    result.partial = true;
+    result.missedCount = missedCount;
+    result.missedExercises = missedNames;
+  }
+  return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
+    { capabilityState: intentState?.capability, library: allExercises });
+}
+
+/**
  * ULTIMATE-PLANDIFF-01: generate the prospective plan WITHOUT writing or
  * activating it, so a before/after diff can be shown pre-commit. This is the
  * read-only twin of generateAndSavePlan: same inputs, same pure engine
@@ -1635,6 +1913,11 @@ async function saveWithPlannerV2({
  * commit's blocked-slot report ({ blockedByIntent, needsChoice, blockedCount,
  * blockedSlots }), so the preview shows the same "this slot needs your
  * choice" facts the commit would produce.
+ *
+ * D219 lane B7: with the release switch on (PLANNER_V2) and no style pool, the
+ * preview is built by the new planner through previewWithPlannerV2, the same
+ * way the save builds it, so the preview is the plan that is saved; it falls
+ * back to today's generator in exactly the cases the save does.
  */
 export async function generatePlanDryRun(userId, profile, { continuityProposal = null } = {}) {
   if (!userId) return { ok: false, error: 'No user' };
@@ -1671,6 +1954,16 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
     styleKey = styleKeyFromTags(currentPlan?.tags);
   } catch (_) { styleKey = null; }
   const stylePool = styleKey ? stylePoolFor(styleKey) : null;
+
+  // D219 lane B7: the twin of generateAndSavePlan's hand-over to the new
+  // planner, for the same cases (switch on, no style pool) and with the same
+  // fallback. With the switch off this block is never entered.
+  if (PLANNER_V2 && !stylePool) {
+    const previewV2 = await previewWithPlannerV2({
+      userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary, continuityProposal,
+    });
+    if (previewV2) return previewV2;
+  }
 
   let plan;
   try {
