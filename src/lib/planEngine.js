@@ -77,7 +77,9 @@ const WEAK_POINT_MAP = {
   'Traps':            'traps',
 };
 
-function resolveWeakPointKeys(uiLabels) {
+// Exported (D219 lane B6): planAutoGen hands the new planner the person's focus
+// picks as muscle keys, read exactly as this generator reads them (max 3).
+export function resolveWeakPointKeys(uiLabels) {
   const keys = [];
   for (const label of uiLabels) {
     const key = WEAK_POINT_MAP[label];

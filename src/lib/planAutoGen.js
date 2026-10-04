@@ -30,9 +30,20 @@ import {
   getActivePlan,
   getRoutinesForPlan,
   getRoutineExercisesWithDetails,
+  // D219 lane B6: the new planner's save path only (PLANNER_V2).
+  upsertPlannedMuscleVolume,
+  getMesocycleWeeks,
+  getCurrentMesocycleWeek,
+  getRecentlyUsedExerciseIds,
+  getAllMesocycles,
+  setProgrammePlanFacts,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { generatePlan } from './planEngine';
+import {
+  generatePlan, DIVISION_MATRIX, SELECTION_REASON, resolveWeakPointKeys,
+} from './planEngine';
+import { PLANNER_V2 } from './plan/release';
+import { resolveCatalogue } from './plan/catalogue';
 import { assessPlanFit, assessDurationOptions } from './planFit';
 import { phaseToNutritionKey } from './coachingGoals';
 import { ageFromDateOfBirth } from './ageFromDateOfBirth';
@@ -1012,6 +1023,20 @@ export async function generateAndSavePlan(userId, profile, {
   } catch (_) { styleKey = null; }
   const stylePool = styleKey ? stylePoolFor(styleKey) : null;
 
+  // D219 lane B6: with the release switch on, the new planner builds the plan
+  // from the standard catalogue and saves it through the same writers. It
+  // cannot build a style-tagged plan (the kettlebell and circuit templates
+  // keep their own pool), and it never leaves anyone without a plan: those
+  // cases, and any planner failure, carry on below exactly as before. With the
+  // switch off this block is never entered.
+  if (PLANNER_V2 && !stylePool) {
+    const savedV2 = await saveWithPlannerV2({
+      userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary,
+      ledger, allowLearnedCarry, keepBlock,
+    });
+    if (savedV2) return savedV2;
+  }
+
   let plan;
   try {
     plan = generatePlan({
@@ -1194,6 +1219,395 @@ export async function generateAndSavePlan(userId, profile, {
     const finalResult = attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
     { capabilityState: intentState?.capability, library: allExercises });
     return finalResult;
+  } catch (e) {
+    if (programmeId) {
+      try {
+        await deleteProgrammeCascade(programmeId, { scheduleSync: false });
+      } catch (cleanupError) {
+        // eslint-disable-next-line global-require
+        try { require('./errorLog').logError('plan.generateAndSave.cleanupFailed', cleanupError, { userId, programmeId }); } catch (_) {}
+      }
+    }
+    return { ok: false, error: e?.message ?? 'DB write failed' };
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// D219 lane B6: the new planner's save path (PLANNER_V2, plan/release.js).
+//
+// generateAndSavePlan hands over to saveWithPlannerV2 when the release switch
+// is on. The plan comes from plan/planner.buildPlan over the standard
+// catalogue (plan/catalogue.resolveCatalogue) and is written through the SAME
+// writers as today's plan, so activation, archiving, sync and every reader see
+// an ordinary programme. What the new planner adds travels in the programme's
+// plan facts (setProgrammePlanFacts; register D219, "Build rulings" 1).
+// Nothing in this section runs while the switch is off.
+//
+// Not wired here (the brief names generateAndSavePlan only): the dry-run twin
+// below, and the rebuild-continuity pass (withContinuity), which splices the
+// person's own exercises back into a generated plan. Both need a ruling before
+// the switch is turned on; the report for this lane lists them.
+// ───────────────────────────────────────────────────────────────────────────
+
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const rekeyFlat = (map, ids) => Object.fromEntries(
+  Object.entries(map ?? {}).map(([k, v]) => [hasOwn(ids, k) ? ids[k] : k, v]),
+);
+const rekeyNested = (map, ids) => Object.fromEntries(
+  Object.entries(map ?? {}).map(([k, inner]) => [k, rekeyFlat(inner, ids)]),
+);
+
+/**
+ * The reason code a catalogue pick is saved with: an EXISTING code, so
+ * planRationale.explainSelection renders it. A catalogue pick covers a
+ * movement the week needs; a thin-kit fallback is the best available option
+ * for that movement given the equipment (planEngine.SELECTION_REASON).
+ */
+export function plannerV2SelectionReason(choice) {
+  return choice?.thinKit === true
+    ? SELECTION_REASON.COVERAGE_FALLBACK
+    : SELECTION_REASON.REQUIRED_ROLE;
+}
+
+/**
+ * The planner's workouts in rotation order (plan.v2.order, which is the
+ * routine position), each exercise shaped for resolvePlanAgainstLibrary and
+ * the routine writers: the catalogue's own exercise id, week 1's sets, the
+ * plan's reps and rest, and a valid selection-reason code. Pure.
+ */
+export function plannerV2WorkoutsForWrite(plan, choices) {
+  const bySession = new Map((plan?.workouts ?? []).map((w) => [w.sessionKey, w]));
+  const out = [];
+  for (const key of plan?.v2?.order ?? []) {
+    const workout = bySession.get(key);
+    if (!workout) continue;
+    out.push({
+      name: workout.name,
+      sessionKey: workout.sessionKey,
+      exercises: (workout.exercises ?? []).map((x) => {
+        const choice = (choices?.[x.muscle] ?? []).find((c) => c.name === x.name) ?? null;
+        return {
+          exerciseName: x.name,
+          exerciseId: choice?.exerciseId ?? null,
+          muscle: x.muscle,
+          sets: x.sets,
+          repMin: x.repMin,
+          repMax: x.repMax,
+          restSec: x.restSec,
+          notes: null,
+          selectionReason: plannerV2SelectionReason(choice),
+          thinEquipment: x.thinEquipment === true,
+        };
+      }),
+    });
+  }
+  return out;
+}
+
+/**
+ * The facts a plan the new planner built carries (register D219, "Build
+ * rulings" 1): the planner's own `v2` block with every session key (s0, s1,
+ * ...) replaced by the saved routine's id, plus the exercises that sit on thin
+ * equipment, by routine. Pure.
+ *
+ * @param {object} v2  plan.v2 from planner.buildPlan
+ * @param {Object<string, string>} routineIdBySession  's0' -> the saved routine's id
+ * @param {Object<string, string[]>} thinByRoutine  routine id -> library exercise ids
+ */
+export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine) {
+  const ids = routineIdBySession ?? {};
+  return {
+    version: v2.version,
+    family: v2.family,
+    roles: v2.roles,
+    weeklyTargets: v2.weeklyTargets,
+    exposureShares: rekeyNested(v2.exposureShares, ids),
+    sessionCaps: rekeyNested(v2.sessionCaps, ids),
+    lightCaps: rekeyNested(v2.lightCaps, ids),
+    gapRanks: rekeyFlat(v2.gapRanks, ids),
+    thin: thinByRoutine ?? {},
+    builtFactor: v2.builtFactor,
+    rirLadder: v2.rirLadder,
+    readiness: v2.readiness,
+    notes: v2.notes,
+    limitedBy: v2.limitedBy,
+  };
+}
+
+// The exercises the person has logged (most recent first), by name: the
+// catalogue prefers a role's variant they already do (the repeated-bout
+// effect, S Q5). Best-effort: no history read means the catalogue's own order.
+async function plannerV2LoggedNames(userId, allExercises) {
+  try {
+    const ids = await getRecentlyUsedExerciseIds(userId, 400);
+    const nameById = new Map((allExercises ?? []).map((e) => [e.id, e.name]));
+    return (ids ?? []).map((id) => nameById.get(id)).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+// "The person's first block on a plan" (roles.assignRoles: a beginner's peaks
+// are lower in it). The app has no such flag, so it is read from the one
+// definition of a completed block (mesocycle.blockCompletionState, the same
+// one readDemonstratedStructure uses): no completed block, first block. A read
+// failure answers true, the planner's own default and the cautious one.
+async function plannerV2FirstBlock(userId) {
+  try {
+    const blocks = await getAllMesocycles(userId);
+    // eslint-disable-next-line global-require
+    const { blockCompletionState, BLOCK_COMPLETION } = require('./mesocycle');
+    return !(blocks ?? []).some((m) => blockCompletionState(m) === BLOCK_COMPLETION.COMPLETED);
+  } catch (_) {
+    return true;
+  }
+}
+
+/**
+ * Build the plan with the new planner. Throws on a planner failure (the caller
+ * logs it and falls back to today's generator).
+ *
+ * The planner is required lazily: it reads the recovery model, and this file
+ * is also imported (for equipmentReachable) by modules on the check-in path,
+ * which must never reach src/lib/recovery/ through a static import.
+ */
+async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises) {
+  // eslint-disable-next-line global-require
+  const { buildPlan } = require('./plan/planner');
+  const loggedExerciseNames = await plannerV2LoggedNames(userId, allExercises);
+  const firstBlock = await plannerV2FirstBlock(userId);
+  const choices = resolveCatalogue({
+    library: generationLibrary,
+    profile: inputs.equipment,
+    loggedExerciseNames,
+  });
+  const plan = buildPlan({
+    daysPerWeek: inputs.daysPerWeek,
+    sessionLengthMinutes: inputs.sessionLengthMinutes,
+    equipment: inputs.equipment,
+    goal: inputs.goal,
+    experience: inputs.experience,
+    nutritionPhase: inputs.nutritionPhase,
+    recoveryRating: inputs.recoveryRating,
+    // The focus picks, as generatePlan reads them today: the weak points, at
+    // most three, as muscle keys. No profile field for opt-in muscles exists
+    // yet, so none are added.
+    focusMuscles: resolveWeakPointKeys((inputs.weakPoints ?? []).slice(0, 3)),
+    addedMuscles: [],
+    firstBlock,
+    // The generator does not read the last four weeks per muscle, so
+    // `loggedWeekly` is not passed (the planner then ramps from its own
+    // no-history limit).
+    choices,
+    divisionMatrix: DIVISION_MATRIX,
+    // generatePlan's own test for strength reps and rest (its internalGoal is
+    // strength_hypertrophy exactly when the phase is strength_size).
+    isStrength: inputs.phase === 'strength_size',
+  });
+  return { plan, choices };
+}
+
+/**
+ * The planner's targets for every week of the block, in direct sets, into
+ * planned_muscle_volume through the existing upsert (its ON CONFLICT clause
+ * updates the planned sets and the source only, so mev, mav and mrv stay as
+ * today's writer set them when the block was created). A kept block keeps its
+ * past weeks: only the current and later weeks take the new targets.
+ * Best-effort after activation: a failure leaves the block's template rows and
+ * is logged, because the plan is already active and must not be torn down.
+ */
+async function writePlannerV2WeeklyRows({ userId, blockId, weeklyTargets, blockKept }) {
+  try {
+    if (!blockId) return;
+    let fromWeekIndex = 1;
+    if (blockKept) {
+      const current = await getCurrentMesocycleWeek(userId);
+      const index = Number(current?.weekIndex);
+      if (!Number.isFinite(index)) return; // cannot tell which week it is: leave the rows
+      fromWeekIndex = index;
+    }
+    // eslint-disable-next-line global-require
+    const { VOLUME_LANDMARKS } = require('./algorithms');
+    const weeks = await getMesocycleWeeks(blockId);
+    const d = await db();
+    await runInTransaction(d, async () => {
+      for (const week of weeks ?? []) {
+        const weekIndex = Number(week.week_index ?? week.weekIndex);
+        if (!(weekIndex >= fromWeekIndex)) continue;
+        for (const [muscle, targets] of Object.entries(weeklyTargets ?? {})) {
+          const planned = targets?.[weekIndex - 1];
+          const landmarks = VOLUME_LANDMARKS[muscle];
+          if (!Number.isFinite(planned) || !landmarks) continue;
+          await upsertPlannedMuscleVolume({
+            mesocycleWeekId: week.id,
+            muscle,
+            plannedSets: planned,
+            mev: landmarks.mev,
+            mav: landmarks.mav,
+            mrv: landmarks.mrv,
+            // The research-based source: these targets are the planner's own, set
+            // from the evidence with nothing learned from the person's blocks.
+            source: 'template',
+          });
+        }
+      }
+    });
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.generateAndSave.plannerV2Rows', e, { blockId }); } catch (_) {}
+  }
+}
+
+/**
+ * generateAndSavePlan's body for the new planner. Returns the same result
+ * object, or null when the new planner could not build a plan (a planner
+ * failure, no workouts, or no exercise resolving against the library for a
+ * reason other than the person's own exclusions): the caller then carries on
+ * with today's generator, so nobody is left without a plan.
+ */
+async function saveWithPlannerV2({
+  userId, inputs, allExercises, intentState, filteredLibrary, generationLibrary,
+  ledger, allowLearnedCarry, keepBlock,
+}) {
+  let built;
+  try {
+    built = await buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises);
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.generateAndSave.plannerV2Failed', e, { inputs }); } catch (_) {}
+    return null;
+  }
+  const { plan, choices } = built;
+  if (!plan?.workouts?.length || !plan?.v2) return null;
+
+  // The reasons are read from the saved plan, not from a cached rationale, so
+  // a rationale cached for an earlier plan must not describe this one.
+  try {
+    await AsyncStorage.setItem(PLAN_WHYTHIS_KEY(userId), JSON.stringify({}));
+  } catch (_) { /* non-fatal */ }
+
+  const workoutsForWrite = plannerV2WorkoutsForWrite(plan, choices);
+  const planName = await makeUniquePlanName(userId, plan.name ?? 'Your plan');
+  let programmeId = null;
+  try {
+    const d = await db();
+    const routineIdBySession = {};
+    const thinByRoutine = {};
+    const writeResult = await runInTransaction(d, async () => {
+      const prog = await createProgramme(
+        userId, planName, plan.description ?? '', 0, null, null, null, false,
+      );
+      programmeId = prog.id;
+
+      // The same one resolution pass as today's save (C16 job 9).
+      const {
+        workouts: rawResolvedWorkouts, totalRequested, totalResolved: totalWritten,
+        missedCount, missedNames, blockedSlots,
+      } = resolvePlanAgainstLibrary(
+        { ...plan, workouts: workoutsForWrite }, buildExerciseIndex(allExercises), filteredLibrary,
+      );
+      const resolvedWorkouts = orderSamePositionContiguously(
+        rawResolvedWorkouts,
+        new Map(allExercises.map((e) => [e.id, e])),
+        intentState?.capability,
+      );
+
+      // Routines in the planner's rotation order: createRoutine gives each the
+      // next position, so the position IS the rotation position.
+      for (const workout of resolvedWorkouts) {
+        const routine = await createRoutine(
+          userId, workout.name, null, plan.splitType, 0, null, prog.id, false, false,
+        );
+        routineIdBySession[workout.sessionKey] = routine.id;
+        for (let i = 0; i < workout.exercises.length; i++) {
+          const ex = workout.exercises[i];
+          await addExerciseToRoutine(
+            routine.id, ex.exerciseId, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+            null,                          // startingWeight, the planner does not set one
+            ex.restSec ?? null,
+            null,                          // no superset pairing from the new planner
+            false,
+            ex.selectionReason ?? null,
+          );
+          if (ex.thinEquipment === true) {
+            if (!thinByRoutine[routine.id]) thinByRoutine[routine.id] = [];
+            thinByRoutine[routine.id].push(ex.exerciseId);
+          }
+        }
+      }
+      if (totalWritten === 0) {
+        // In-transaction rollback of the empty programme (the raw InTx variant:
+        // a nested runInTransaction would deadlock the queue).
+        await deleteProgrammeCascadeInTx(d, prog.id);
+        return { zeroMatch: true, prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots };
+      }
+      return { zeroMatch: false, prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots };
+    });
+    if (writeResult.zeroMatch) {
+      // The person's own exclusions are why: say so, exactly as today's save
+      // does. Otherwise today's generator tries instead.
+      if (writeResult.blockedSlots.length > 0) {
+        return attachBlockedSlots(
+          { ok: false, error: 'plan_blocked_by_exclusions' },
+          writeResult.blockedSlots,
+          intentState?.unavailable,
+          { capabilityState: intentState?.capability, library: allExercises },
+        );
+      }
+      return null;
+    }
+    const { prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots } = writeResult;
+    if (totalWritten < totalRequested) {
+      try {
+        // eslint-disable-next-line global-require
+        require('./errorLog').logInfo('planAutoGen.partial', `${totalWritten}/${totalRequested} matched`, { missed: missedNames });
+      } catch (_) {}
+    }
+
+    // The plan's facts, keyed by the saved routine ids, before activation so a
+    // plan is never active without them. A failure here tears the programme
+    // down through the catch below, never leaving a plan the new planner built
+    // without the marker that says so.
+    await setProgrammePlanFacts(prog.id, plannerV2PlanFacts(plan.v2, routineIdBySession, thinByRoutine));
+
+    let blockKept = false;
+    let blockId = null;
+    if (keepBlock) {
+      const keptBlockId = await activatePlanKeepingBlock(userId, prog.id);
+      blockKept = !!keptBlockId;
+      blockId = keptBlockId || null;
+    }
+    if (!blockKept) {
+      blockId = await activatePlanWithBlock(userId, prog.id, planName, { ledger, allowLearnedCarry });
+    }
+    await writePlannerV2WeeklyRows({
+      userId, blockId, weeklyTargets: plan.v2.weeklyTargets, blockKept,
+    });
+    await archiveOtherUserPlans(userId, prog.id);
+    try {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('./telemetry/firsts');
+      trackFirst(userId, 'first_plan_generated').catch(() => {});
+    } catch (_) { /* tolerate test env without telemetry */ }
+    const result = {
+      ok: true,
+      programmeId: prog.id,
+      blockKept,
+      // No rebuild continuity yet (see the section note): nothing was kept or
+      // replaced by that pass.
+      continuity: {
+        isRebuild: false,
+        decisions: [],
+        summary: summariseDecisions([]),
+      },
+    };
+    if (missedCount > 0) {
+      result.partial = true;
+      result.missedCount = missedCount;
+      result.missedExercises = missedNames;
+    }
+    return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
+      { capabilityState: intentState?.capability, library: allExercises });
   } catch (e) {
     if (programmeId) {
       try {

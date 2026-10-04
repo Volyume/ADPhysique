@@ -102,6 +102,7 @@ const STAPLE = [
   // Quads: the squat patterns and the extension.
   'Barbell Back Squat', 'Hack Squat Machine', 'Leg Press',
   'Bulgarian Split Squat', 'Leg Extension',
+  'Walking Lunge', // D219 (design 4.7): standard in nearly every commercial gym; the catalogue's third glute choice. Moved up from COMMON.
 
   // Hamstrings: one hinge, two curls.
   'Romanian Deadlift', 'Romanian Deadlift (Barbell)',
@@ -116,16 +117,30 @@ const STAPLE = [
 
   // Biceps: the curls that need no explanation.
   'Barbell Curl', 'EZ Bar Curl', 'Dumbbell Curl', 'Hammer Curl',
-  'Incline Dumbbell Curl', 'Cable Curl', // 'Preacher Curl (EZ Bar)' retired into 'EZ Bar Preacher Curl' (EL-25), listed under COMMON
+  'Incline Dumbbell Curl', 'Cable Curl', // 'Preacher Curl (EZ Bar)' retired into 'EZ Bar Preacher Curl' (EL-25), listed below since D219
+  // The preacher curl is the evidence-preferred first choice for the biceps:
+  // it grew the lower biceps where an incline curl grew none (S Q12:
+  // Zabaleta-Korta 2023, Pedrosa 2023, Nunes 2020, Attarieh 2025). Each
+  // variant moved up from COMMON under D219 (design 4.7).
+  'EZ Bar Preacher Curl', // D219: evidence-preferred biceps choice (S Q12)
+  'Preacher Curl (Dumbbell)', // D219: evidence-preferred biceps choice (S Q12)
+  'Preacher Curl (Barbell)', // D219: evidence-preferred biceps choice (S Q12)
+  'Preacher Curl Machine', // D219: evidence-preferred biceps choice (S Q12)
 
   // Triceps: pushdown, overhead, and the standard extension.
   'Tricep Pushdown (Rope)', 'Tricep Pushdown (Bar)',
   'Cable Pushdown (Straight Bar)', // 'Rope Pushdown' retired into 'Tricep Pushdown (Rope)' (EL-21)
-  'EZ Bar Skull Crusher', // 'Overhead Cable Tricep Extension' retired into 'Cable Overhead Tricep Extension' (EL-25), listed under COMMON
+  'EZ Bar Skull Crusher', // 'Overhead Cable Tricep Extension' retired into 'Cable Overhead Tricep Extension' (EL-25), listed below since D219
   'Close-Grip Bench Press',
+  // The overhead extension is the evidence-preferred first choice for the
+  // triceps: it grew the triceps about 20% against 14% for the neutral-arm
+  // version (S Q12: Maeo 2023). Moved up from COMMON under D219 (design 4.7).
+  'Cable Overhead Tricep Extension', // D219: evidence-preferred triceps choice (S Q12)
+  'Dumbbell Overhead Tricep Extension', // D219: evidence-preferred triceps choice (S Q12)
 
   // Abs: loaded flexion and hanging raises.
   'Cable Crunch', 'Hanging Leg Raise', 'Hanging Knee Raise',
+  'Machine Crunch', // D219 (design 4.7): standard in nearly every commercial gym; the catalogue's alternative to the cable crunch. Moved up from COMMON. ('Ab Crunch Machine' retired into it, EL-21.)
 
   // Traps.
   'Barbell Shrug', 'Dumbbell Shrug',
@@ -187,7 +202,7 @@ const COMMON = [
 
   // Quads
   'Barbell Front Squat', 'Smith Machine Squat', 'Goblet Squat',
-  'Walking Lunge', 'Dumbbell Lunge', 'Barbell Lunge', 'Reverse Lunge',
+  'Dumbbell Lunge', 'Barbell Lunge', 'Reverse Lunge', // 'Walking Lunge' moved up to STAPLE (D219)
   'Split Squat', 'Step-Up (Dumbbell)', 'Single Leg Press',
   'Pendulum Squat', 'Belt Squat', 'Leg Press (Narrow Stance)',
   'Leg Press (High Foot)', 'Safety Bar Squat', 'SSB Squat',
@@ -218,8 +233,7 @@ const COMMON = [
   'Single-Leg Calf Raise (Dumbbell)',
 
   // Biceps
-  'Preacher Curl (Barbell)', 'Preacher Curl (Dumbbell)',
-  'EZ Bar Preacher Curl', 'Preacher Curl Machine',
+  // The four preacher curls moved up to STAPLE (D219, design 4.7).
   'Plate-Loaded Preacher Curl', 'Machine Curl', // 'Cable Hammer Curl (Rope)' retired into 'Cable Rope Hammer Curl' (EL-25)
   'Cable Rope Hammer Curl', 'Concentration Curl', 'Spider Curl',
   'Seated Dumbbell Curl', 'Cross-Body Hammer Curl', 'Reverse Curl',
@@ -228,8 +242,9 @@ const COMMON = [
 
   // Triceps
   'Dumbbell Skull Crusher', 'Barbell Skull Crusher',
-  'Dumbbell Overhead Tricep Extension', // 'Overhead Dumbbell Extension' retired into this (EL-21)
-  'Cable Overhead Tricep Extension', 'Overhead Cable Rope Extension',
+  // The two overhead triceps extensions moved up to STAPLE (D219, design 4.7).
+  // 'Overhead Dumbbell Extension' retired into the dumbbell one (EL-21).
+  'Overhead Cable Rope Extension',
   'Plate-Loaded Overhead Extension', 'Machine Tricep Extension',
   'Weighted Dips (Triceps)', // 'Triceps Extension Machine' retired into 'Machine Tricep Extension' (EL-21)
   'Tricep Dip (Parallel Bars)', 'Dip Machine', 'Seated Dip Machine',
@@ -239,7 +254,7 @@ const COMMON = [
   'Single-Arm Overhead Cable Extension', 'Cross-Body Cable Tricep Extension',
 
   // Abs
-  'Machine Crunch', 'Decline Crunch', 'Crunch', // 'Ab Crunch Machine' retired into 'Machine Crunch' (EL-21)
+  'Decline Crunch', 'Crunch', // 'Machine Crunch' moved up to STAPLE (D219)
   'Reverse Crunch', 'Leg Raise', 'Leg Raise (Flat Bench)', 'Weighted Sit-Up',
   'Kneeling Cable Crunch', 'Ab Wheel Rollout', 'Ab Rollout',
   'Ab Wheel (Kneeling)', 'Kneeling Ab Rollout', 'Plank', 'Side Plank',
@@ -251,6 +266,10 @@ const COMMON = [
   // Traps
   'Cable Shrug', 'Smith Machine Shrug', 'Trap Bar Shrug', 'Hex Bar Shrug',
   'Incline Shrug', 'Single-Arm Dumbbell Shrug', 'Face Pull (Traps)',
+
+  // Adductors. D219 (design 4.7): the catalogue's adductor exercise, offered
+  // only when the person adds adductors; the other adductor rows stay SPECIALIST.
+  'Hip Adduction Machine', // D219: standard in nearly every commercial gym. Moved up from SPECIALIST.
 
   // exercise-library-expansion-2026-09-05 (integration stage 2, tierRulings
   // in lead-overrides.json): 75 rows promoted from SPECIALIST. Bodyweight,
@@ -600,8 +619,9 @@ const SPECIALIST = [
   'Plate Neck Extension', 'Neck Rotation (Resistance)',
   'Plate Neck Lateral Flexion', 'Neck Machine Lateral Flexion',
 
-  // Adductor-specific or adductor-biased.
-  'Hip Adduction Machine', 'Cable Hip Adduction', 'Copenhagen Adduction',
+  // Adductor-specific or adductor-biased. ('Hip Adduction Machine' moved up
+  // to COMMON under D219, listed there.)
+  'Cable Hip Adduction', 'Copenhagen Adduction',
   'Cossack Squat', 'Sumo Squat (Adductor Focus)', 'Side-Lying Adduction',
   'Lateral Lunge', 'Adductor Squeeze (Ball)',
   'Wide-Stance Goblet Squat (Adductor Bias)',

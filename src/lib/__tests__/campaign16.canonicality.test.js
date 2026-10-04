@@ -90,6 +90,49 @@ describe('C16-2 the registry is internally sound', () => {
   });
 });
 
+// D219 lane B6 (design 4.7, lead ruling under D33; the stopped lane B1's
+// registry change, taken because it matches the design exactly): the standard
+// catalogue names the evidence-preferred or everyday exercise for each muscle,
+// and every name the planner picks without being asked must be a STAPLE row.
+// Eight catalogue names sat one tier too low, and the hip adduction machine
+// (nearly every commercial gym has one) sat at SPECIALIST. These nine moves
+// are the whole registry change; the nine are pinned by name, and the
+// catalogue suite (plan/__tests__/catalogue.test.js) pins every catalogue name
+// against the registry.
+describe('D219 B6: the nine registry tier changes (design 4.7)', () => {
+  const TO_STAPLE = [
+    // The preacher curl is the evidence-preferred first choice for the biceps
+    // (S Q12: Zabaleta-Korta 2023, Pedrosa 2023, Nunes 2020, Attarieh 2025).
+    'EZ Bar Preacher Curl', 'Preacher Curl (Dumbbell)', 'Preacher Curl (Barbell)', 'Preacher Curl Machine',
+    // The overhead extension is the evidence-preferred first choice for the
+    // triceps (S Q12: Maeo 2023).
+    'Cable Overhead Tricep Extension', 'Dumbbell Overhead Tricep Extension',
+    // Standard in nearly every commercial gym, and catalogue choices.
+    'Machine Crunch', 'Walking Lunge',
+  ];
+
+  test.each(TO_STAPLE)('%s moved from COMMON to STAPLE', (name) => {
+    expect(LIBRARY_NAMES.has(name)).toBe(true);
+    expect(autoTier(name)).toBe(AUTO_TIER.STAPLE);
+    expect(REGISTRY_LISTS.STAPLE).toContain(name);
+    expect(REGISTRY_LISTS.COMMON).not.toContain(name);
+  });
+
+  test('Hip Adduction Machine moved from SPECIALIST to COMMON', () => {
+    expect(LIBRARY_NAMES.has('Hip Adduction Machine')).toBe(true);
+    expect(autoTier('Hip Adduction Machine')).toBe(AUTO_TIER.COMMON);
+    expect(REGISTRY_LISTS.COMMON).toContain('Hip Adduction Machine');
+    expect(REGISTRY_LISTS.SPECIALIST).not.toContain('Hip Adduction Machine');
+  });
+
+  test('wrist curl, neck machine and tibialis raise stay SPECIALIST, offered only when the person adds them', () => {
+    for (const name of ['Barbell Wrist Curl', 'Dumbbell Wrist Curl', 'Neck Flexion (Machine)', 'Neck Extension (Machine)',
+      'Tibialis Raise (Wall)', 'Seated Tibialis Raise']) {
+      expect(autoTier(name)).toBe(AUTO_TIER.SPECIALIST);
+    }
+  });
+});
+
 describe('C16-2 NEVER_AUTO can never be generated (7)', () => {
   const PROFILES = [
     {}, { experience: 'beginner' }, { experience: 'advanced', daysPerWeek: 6 },
