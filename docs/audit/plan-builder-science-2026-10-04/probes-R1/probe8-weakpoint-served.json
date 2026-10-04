@@ -1,0 +1,230 @@
+{
+ "d4": {
+  "split": "upper_lower",
+  "base": {
+   "chest": 0,
+   "back": 0,
+   "side_delts": 0,
+   "biceps": 0,
+   "triceps": 0,
+   "quads": 0,
+   "hamstrings": 0,
+   "glutes": 0,
+   "calves": 0
+  },
+  "servedPerWeek": {
+   "chest": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "back": [
+    8,
+    10,
+    10,
+    12,
+    12,
+    8
+   ],
+   "side_delts": [
+    18,
+    24,
+    30,
+    30,
+    36,
+    18
+   ],
+   "biceps": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "triceps": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "quads": [
+    6,
+    8,
+    8,
+    10,
+    10,
+    6
+   ],
+   "hamstrings": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "glutes": [
+    16,
+    28,
+    36,
+    48,
+    56,
+    16
+   ],
+   "calves": [
+    6,
+    8,
+    8,
+    10,
+    10,
+    6
+   ]
+  },
+  "topExercises": [
+   [
+    14,
+    "Barbell Hip Thrust (Lower A, week 5, base 4)"
+   ],
+   [
+    14,
+    "Cable Donkey Kickback (Lower A, week 5, base 4)"
+   ],
+   [
+    14,
+    "B-Stance Hip Thrust (Lower B, week 5, base 4)"
+   ],
+   [
+    14,
+    "Abduction Machine (Lower B, week 5, base 4)"
+   ],
+   [
+    12,
+    "Barbell Hip Thrust (Lower A, week 4, base 4)"
+   ],
+   [
+    12,
+    "Cable Donkey Kickback (Lower A, week 4, base 4)"
+   ]
+  ]
+ },
+ "d5": {
+  "split": "upper_lower_wp",
+  "base": {
+   "chest": 0,
+   "back": 0,
+   "side_delts": 0,
+   "biceps": 0,
+   "triceps": 0,
+   "glutes": 0,
+   "quads": 0,
+   "hamstrings": 0,
+   "calves": 0
+  },
+  "servedPerWeek": {
+   "chest": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "back": [
+    8,
+    10,
+    10,
+    12,
+    12,
+    8
+   ],
+   "side_delts": [
+    24,
+    32,
+    40,
+    40,
+    48,
+    24
+   ],
+   "biceps": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "triceps": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "glutes": [
+    15,
+    25,
+    35,
+    45,
+    55,
+    15
+   ],
+   "quads": [
+    6,
+    8,
+    8,
+    10,
+    10,
+    6
+   ],
+   "hamstrings": [
+    6,
+    8,
+    10,
+    12,
+    14,
+    6
+   ],
+   "calves": [
+    6,
+    8,
+    8,
+    10,
+    10,
+    6
+   ]
+  },
+  "topExercises": [
+   [
+    11,
+    "B-Stance Hip Thrust (Weak Point Specialisation, week 5, base 3)"
+   ],
+   [
+    11,
+    "Abduction Machine (Weak Point Specialisation, week 5, base 3)"
+   ],
+   [
+    11,
+    "Abduction Machine (Lower A, week 5, base 3)"
+   ],
+   [
+    11,
+    "Barbell Hip Thrust (Lower B, week 5, base 3)"
+   ],
+   [
+    11,
+    "Cable Donkey Kickback (Lower B, week 5, base 3)"
+   ],
+   [
+    9,
+    "B-Stance Hip Thrust (Weak Point Specialisation, week 4, base 3)"
+   ]
+  ]
+ }
+}

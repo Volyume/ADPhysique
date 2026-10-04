@@ -1,0 +1,58 @@
+[
+ {
+  "m": "chest",
+  "openingSets": 3,
+  "opening": 38,
+  "week5Sets": 7,
+  "week5": 75
+ },
+ {
+  "m": "back",
+  "openingSets": 5,
+  "opening": 49,
+  "week5Sets": 8,
+  "week5": 80
+ },
+ {
+  "m": "quads",
+  "openingSets": 4,
+  "opening": 53,
+  "week5Sets": 7,
+  "week5": 89
+ },
+ {
+  "m": "hamstrings",
+  "openingSets": 3,
+  "opening": 46,
+  "week5Sets": 7,
+  "week5": 89
+ },
+ {
+  "m": "glutes",
+  "openingSets": 3,
+  "opening": 46,
+  "week5Sets": 11,
+  "week5": 112
+ },
+ {
+  "m": "abs",
+  "openingSets": 3,
+  "opening": 24,
+  "week5Sets": 12,
+  "week5": 59
+ },
+ {
+  "m": "side_delts",
+  "openingSets": 4,
+  "opening": 35,
+  "week5Sets": 8,
+  "week5": 64
+ },
+ {
+  "m": "biceps",
+  "openingSets": 3,
+  "opening": 31,
+  "week5Sets": 7,
+  "week5": 60
+ }
+]

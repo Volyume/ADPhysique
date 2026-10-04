@@ -1,0 +1,175 @@
+{
+ "changes": [
+  "chest:10->13",
+  "back:13->16",
+  "front_delts:4->7",
+  "side_delts:12->15",
+  "rear_delts:11->14",
+  "biceps:10->13",
+  "triceps:10->13",
+  "forearms:10->13",
+  "quads:11->14",
+  "hamstrings:10->13",
+  "glutes:9->12",
+  "adductors:5->8",
+  "calves:11->14",
+  "abs:10->13",
+  "traps:9->12",
+  "neck:5->8",
+  "tibialis:5->8"
+ ],
+ "sessions": [
+  {
+   "name": "Upper A",
+   "ex": [
+    {
+     "n": "Barbell Bench Press",
+     "m": "chest",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Lat Pulldown (Close Grip)",
+     "m": "back",
+     "base": 5,
+     "served": 8
+    },
+    {
+     "n": "Cable Lateral Raise",
+     "m": "side_delts",
+     "base": 4,
+     "served": 8
+    },
+    {
+     "n": "Cable Face Pull",
+     "m": "rear_delts",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Barbell Curl",
+     "m": "biceps",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Close-Grip Bench Press",
+     "m": "triceps",
+     "base": 3,
+     "served": 7
+    }
+   ]
+  },
+  {
+   "name": "Lower A",
+   "ex": [
+    {
+     "n": "Barbell Back Squat",
+     "m": "quads",
+     "base": 4,
+     "served": 7
+    },
+    {
+     "n": "B-Stance Romanian Deadlift",
+     "m": "hamstrings",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "B-Stance Hip Thrust",
+     "m": "glutes",
+     "base": 3,
+     "served": 9
+    },
+    {
+     "n": "Donkey Calf Raise",
+     "m": "calves",
+     "base": 3,
+     "served": 5
+    },
+    {
+     "n": "Ab Rollout",
+     "m": "abs",
+     "base": 3,
+     "served": 10
+    }
+   ]
+  },
+  {
+   "name": "Upper B",
+   "ex": [
+    {
+     "n": "Decline Barbell Bench Press",
+     "m": "chest",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Barbell Row (Bent Over)",
+     "m": "back",
+     "base": 5,
+     "served": 8
+    },
+    {
+     "n": "Dumbbell Lateral Raise",
+     "m": "side_delts",
+     "base": 4,
+     "served": 8
+    },
+    {
+     "n": "Bent-Over Cable Rear Delt Fly",
+     "m": "rear_delts",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Bayesian Curl",
+     "m": "biceps",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Dip Machine",
+     "m": "triceps",
+     "base": 3,
+     "served": 7
+    }
+   ]
+  },
+  {
+   "name": "Lower B",
+   "ex": [
+    {
+     "n": "Leg Extension",
+     "m": "quads",
+     "base": 4,
+     "served": 7
+    },
+    {
+     "n": "Lying Leg Curl",
+     "m": "hamstrings",
+     "base": 3,
+     "served": 7
+    },
+    {
+     "n": "Barbell Hip Thrust",
+     "m": "glutes",
+     "base": 3,
+     "served": 9
+    },
+    {
+     "n": "Donkey Calf Raise (Machine)",
+     "m": "calves",
+     "base": 4,
+     "served": 7
+    },
+    {
+     "n": "Ab Wheel (Kneeling)",
+     "m": "abs",
+     "base": 3,
+     "served": 10
+    }
+   ]
+  }
+ ]
+}

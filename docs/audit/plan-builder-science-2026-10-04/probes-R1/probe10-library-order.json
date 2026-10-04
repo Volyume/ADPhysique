@@ -1,0 +1,32 @@
+{
+ "nameAsc_asShipped": {
+  "staple": 11,
+  "common": 11,
+  "picks": [
+   "Upper A: Barbell Bench Press[s], Lat Pulldown (Close Grip)[s], Cable Lateral Raise[s], Cable Face Pull[c], Barbell Curl[s], Close-Grip Bench Press[s]",
+   "Lower A: Barbell Back Squat[s], B-Stance Romanian Deadlift[c], B-Stance Hip Thrust[c], Donkey Calf Raise[c], Ab Rollout[c]",
+   "Upper B: Decline Barbell Bench Press[c], Barbell Row (Bent Over)[s], Dumbbell Lateral Raise[s], Bent-Over Cable Rear Delt Fly[c], Bayesian Curl[c], Dip Machine[c]",
+   "Lower B: Leg Extension[s], Lying Leg Curl[s], Barbell Hip Thrust[s], Donkey Calf Raise (Machine)[c], Ab Wheel (Kneeling)[c]"
+  ]
+ },
+ "nameDesc": {
+  "staple": 4,
+  "common": 18,
+  "picks": [
+   "Upper A: Wide-Grip Bench Press[c], V-Bar Pulldown[c], Single-Arm Cable Lateral Raise[c], TRX Face Pull[c], Spider Curl[c], Smith Machine Close-Grip Press[c]",
+   "Lower A: Split Squat[c], Stiff-Leg Deadlift[c], Kickstand Hip Thrust[c], Standing Calf Raise (Machine)[s], TRX Knee Tuck[c]",
+   "Upper B: TRX Chest Press[c], T-Bar Row[s], Machine Lateral Raise[s], TRX Reverse Fly[c], Single-Arm Cable Curl (Low Pulley)[c], Close-Grip Bench Press[s]",
+   "Lower B: Sissy Squat Machine[c], TRX Hamstring Curl[c], Walking Lunge (Glute Focus)[c], Standing Calf Raise (Barbell)[c], Weighted Sit-Up[c]"
+  ]
+ },
+ "tierThenName": {
+  "staple": 21,
+  "common": 1,
+  "picks": [
+   "Upper A: Barbell Bench Press[s], Lat Pulldown (Close Grip)[s], Cable Lateral Raise[s], Face Pull[s], Barbell Curl[s], Close-Grip Bench Press[s]",
+   "Lower A: Barbell Back Squat[s], Romanian Deadlift[s], Barbell Hip Thrust[s], Leg Press Calf Raise[s], Cable Crunch[s]",
+   "Upper B: Incline Barbell Bench Press[s], Barbell Row (Bent Over)[s], Dumbbell Lateral Raise[s], Cable Rear Delt Fly[s], Cable Curl[s], Cable Pushdown (Straight Bar)[s]",
+   "Lower B: Leg Extension[s], Lying Leg Curl[s], B-Stance Hip Thrust[c], Seated Calf Raise[s], Hanging Knee Raise[s]"
+  ]
+ }
+}

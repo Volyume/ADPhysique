@@ -1,0 +1,131 @@
+{
+ "total": 918,
+ "tiers": {
+  "common": 274,
+  "specialist": 231,
+  "never_auto": 99,
+  "niche": 246,
+  "staple": 68
+ },
+ "perMuscle": {
+  "glutes": {
+   "fullGymAutoEligible": 38,
+   "staple": 2,
+   "common": 20,
+   "specialist": 9,
+   "niche": 7
+  },
+  "abs": {
+   "fullGymAutoEligible": 75,
+   "staple": 3,
+   "common": 26,
+   "specialist": 21,
+   "niche": 25
+  },
+  "adductors": {
+   "fullGymAutoEligible": 10,
+   "staple": 0,
+   "common": 0,
+   "specialist": 10,
+   "niche": 0
+  },
+  "chest": {
+   "fullGymAutoEligible": 81,
+   "staple": 8,
+   "common": 28,
+   "specialist": 23,
+   "niche": 22
+  },
+  "front_delts": {
+   "fullGymAutoEligible": 37,
+   "staple": 4,
+   "common": 8,
+   "specialist": 12,
+   "niche": 13
+  },
+  "back": {
+   "fullGymAutoEligible": 80,
+   "staple": 11,
+   "common": 30,
+   "specialist": 22,
+   "niche": 17
+  },
+  "quads": {
+   "fullGymAutoEligible": 83,
+   "staple": 5,
+   "common": 26,
+   "specialist": 23,
+   "niche": 29
+  },
+  "triceps": {
+   "fullGymAutoEligible": 42,
+   "staple": 5,
+   "common": 18,
+   "specialist": 5,
+   "niche": 14
+  },
+  "hamstrings": {
+   "fullGymAutoEligible": 35,
+   "staple": 5,
+   "common": 13,
+   "specialist": 11,
+   "niche": 6
+  },
+  "tibialis": {
+   "fullGymAutoEligible": 7,
+   "staple": 0,
+   "common": 0,
+   "specialist": 6,
+   "niche": 1
+  },
+  "calves": {
+   "fullGymAutoEligible": 20,
+   "staple": 4,
+   "common": 8,
+   "specialist": 1,
+   "niche": 7
+  },
+  "biceps": {
+   "fullGymAutoEligible": 41,
+   "staple": 6,
+   "common": 17,
+   "specialist": 8,
+   "niche": 10
+  },
+  "rear_delts": {
+   "fullGymAutoEligible": 29,
+   "staple": 4,
+   "common": 12,
+   "specialist": 4,
+   "niche": 9
+  },
+  "side_delts": {
+   "fullGymAutoEligible": 17,
+   "staple": 3,
+   "common": 5,
+   "specialist": 0,
+   "niche": 9
+  },
+  "forearms": {
+   "fullGymAutoEligible": 14,
+   "staple": 0,
+   "common": 0,
+   "specialist": 13,
+   "niche": 1
+  },
+  "traps": {
+   "fullGymAutoEligible": 19,
+   "staple": 2,
+   "common": 8,
+   "specialist": 0,
+   "niche": 9
+  },
+  "neck": {
+   "fullGymAutoEligible": 15,
+   "staple": 0,
+   "common": 0,
+   "specialist": 10,
+   "niche": 5
+  }
+ }
+}

@@ -1,0 +1,166 @@
+{
+ "d2 len0": {
+  "status": "fit",
+  "minutes": [
+   85,
+   79
+  ],
+  "perMuscle": {
+   "back": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "rear_delts": 6,
+   "triceps": 3,
+   "abs": 3,
+   "side_delts": 3,
+   "calves": 3,
+   "chest": 3,
+   "biceps": 3,
+   "glutes": 3
+  }
+ },
+ "d3 len0": {
+  "status": "fit",
+  "minutes": [
+   92,
+   75,
+   75
+  ],
+  "perMuscle": {
+   "back": 10,
+   "quads": 8,
+   "calves": 8,
+   "chest": 6,
+   "triceps": 6,
+   "side_delts": 8,
+   "rear_delts": 6,
+   "glutes": 4,
+   "hamstrings": 6,
+   "biceps": 6,
+   "abs": 4
+  }
+ },
+ "d2 len60": {
+  "status": "user_decision_required",
+  "minutes": [
+   85,
+   79
+  ],
+  "perMuscle": {
+   "back": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "rear_delts": 6,
+   "triceps": 3,
+   "abs": 3,
+   "side_delts": 3,
+   "calves": 3,
+   "chest": 3,
+   "biceps": 3,
+   "glutes": 3
+  }
+ },
+ "d3 len60": {
+  "status": "user_decision_required",
+  "minutes": [
+   82,
+   73,
+   65
+  ],
+  "perMuscle": {
+   "back": 10,
+   "quads": 8,
+   "calves": 6,
+   "chest": 6,
+   "triceps": 3,
+   "side_delts": 8,
+   "rear_delts": 6,
+   "glutes": 4,
+   "hamstrings": 6,
+   "biceps": 3,
+   "abs": 3
+  }
+ },
+ "d2 len90": {
+  "status": "fit",
+  "minutes": [
+   85,
+   79
+  ],
+  "perMuscle": {
+   "back": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "rear_delts": 6,
+   "triceps": 3,
+   "abs": 3,
+   "side_delts": 3,
+   "calves": 3,
+   "chest": 3,
+   "biceps": 3,
+   "glutes": 3
+  }
+ },
+ "d3 len90": {
+  "status": "fit",
+  "minutes": [
+   82,
+   75,
+   75
+  ],
+  "perMuscle": {
+   "back": 10,
+   "quads": 8,
+   "calves": 7,
+   "chest": 6,
+   "triceps": 3,
+   "side_delts": 8,
+   "rear_delts": 6,
+   "glutes": 4,
+   "hamstrings": 6,
+   "biceps": 6,
+   "abs": 4
+  }
+ },
+ "d2 len120": {
+  "status": "fit",
+  "minutes": [
+   85,
+   79
+  ],
+  "perMuscle": {
+   "back": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "rear_delts": 6,
+   "triceps": 3,
+   "abs": 3,
+   "side_delts": 3,
+   "calves": 3,
+   "chest": 3,
+   "biceps": 3,
+   "glutes": 3
+  }
+ },
+ "d3 len120": {
+  "status": "fit",
+  "minutes": [
+   92,
+   75,
+   75
+  ],
+  "perMuscle": {
+   "back": 10,
+   "quads": 8,
+   "calves": 8,
+   "chest": 6,
+   "triceps": 6,
+   "side_delts": 8,
+   "rear_delts": 6,
+   "glutes": 4,
+   "hamstrings": 6,
+   "biceps": 6,
+   "abs": 4
+  }
+ }
+}

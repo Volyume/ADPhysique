@@ -1,0 +1,141 @@
+{
+ "d4 none/lean_gain": {
+  "split": "upper_lower",
+  "sessions": [
+   "Upper A:21",
+   "Lower A:16",
+   "Upper B:21",
+   "Lower B:17"
+  ],
+  "perMuscle": {
+   "chest": "6(x2)",
+   "back": "10(x2)",
+   "side_delts": "8(x2)",
+   "rear_delts": "6(x2)",
+   "biceps": "6(x2)",
+   "triceps": "6(x2)",
+   "quads": "8(x2)",
+   "hamstrings": "6(x2)",
+   "glutes": "6(x2)",
+   "calves": "7(x2)",
+   "abs": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 5
+ },
+ "d4 WP[side delts,glutes]/lean_gain": {
+  "split": "upper_lower",
+  "sessions": [
+   "Upper A:21",
+   "Lower A:16",
+   "Upper B:21",
+   "Lower B:17"
+  ],
+  "perMuscle": {
+   "chest": "6(x2)",
+   "back": "10(x2)",
+   "side_delts": "8(x2)",
+   "rear_delts": "6(x2)",
+   "biceps": "6(x2)",
+   "triceps": "6(x2)",
+   "quads": "8(x2)",
+   "hamstrings": "6(x2)",
+   "glutes": "6(x2)",
+   "calves": "7(x2)",
+   "abs": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 5
+ },
+ "d4 WP[side delts,glutes]/weak_point": {
+  "split": "upper_lower",
+  "sessions": [
+   "Upper A:22",
+   "Lower A:17",
+   "Upper B:22",
+   "Lower B:17"
+  ],
+  "perMuscle": {
+   "chest": "6(x2)",
+   "back": "8(x2)",
+   "side_delts": "18(x2)",
+   "biceps": "6(x2)",
+   "triceps": "6(x2)",
+   "quads": "6(x2)",
+   "hamstrings": "6(x2)",
+   "glutes": "16(x2)",
+   "calves": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 4
+ },
+ "d5 none/lean_gain": {
+  "split": "balanced_ul",
+  "sessions": [
+   "Upper A:18",
+   "Lower A:17",
+   "Upper B:18",
+   "Lower B:16",
+   "Upper C:18"
+  ],
+  "perMuscle": {
+   "chest": "9(x3)",
+   "back": "9(x3)",
+   "side_delts": "9(x3)",
+   "rear_delts": "6(x2)",
+   "biceps": "6(x2)",
+   "triceps": "9(x3)",
+   "quads": "8(x2)",
+   "hamstrings": "6(x2)",
+   "glutes": "6(x2)",
+   "calves": "7(x2)",
+   "abs": "6(x2)",
+   "traps": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 4
+ },
+ "d5 WP[side delts,glutes]/lean_gain": {
+  "split": "balanced_ul",
+  "sessions": [
+   "Upper A:18",
+   "Lower A:17",
+   "Upper B:18",
+   "Lower B:16",
+   "Upper C:18"
+  ],
+  "perMuscle": {
+   "chest": "9(x3)",
+   "back": "9(x3)",
+   "side_delts": "9(x3)",
+   "rear_delts": "6(x2)",
+   "biceps": "6(x2)",
+   "triceps": "9(x3)",
+   "quads": "8(x2)",
+   "hamstrings": "6(x2)",
+   "glutes": "6(x2)",
+   "calves": "7(x2)",
+   "abs": "6(x2)",
+   "traps": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 4
+ },
+ "d5 WP[side delts,glutes]/weak_point": {
+  "split": "upper_lower_wp",
+  "sessions": [
+   "Upper A:19",
+   "Weak Point Specialisation:15",
+   "Lower A:12",
+   "Upper B:22",
+   "Lower B:15"
+  ],
+  "perMuscle": {
+   "chest": "6(x2)",
+   "back": "8(x2)",
+   "side_delts": "24(x3)",
+   "biceps": "6(x2)",
+   "triceps": "6(x2)",
+   "glutes": "15(x3)",
+   "quads": "6(x2)",
+   "hamstrings": "6(x2)",
+   "calves": "6(x2)"
+  },
+  "maxSetsOnOneExercise": 4
+ }
+}

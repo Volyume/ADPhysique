@@ -1,0 +1,46 @@
+{
+ "corpusOrder_asInTest": {
+  "{}": {
+   "n": 22,
+   "staples": 15,
+   "ratio": 0.68
+  },
+  "{\"daysPerWeek\":3}": {
+   "n": 18,
+   "staples": 13,
+   "ratio": 0.72
+  },
+  "{\"daysPerWeek\":5}": {
+   "n": 29,
+   "staples": 18,
+   "ratio": 0.62
+  },
+  "{\"experience\":\"beginner\"}": {
+   "n": 22,
+   "staples": 14,
+   "ratio": 0.64
+  }
+ },
+ "nameAsc_asShipped": {
+  "{}": {
+   "n": 22,
+   "staples": 11,
+   "ratio": 0.5
+  },
+  "{\"daysPerWeek\":3}": {
+   "n": 18,
+   "staples": 9,
+   "ratio": 0.5
+  },
+  "{\"daysPerWeek\":5}": {
+   "n": 28,
+   "staples": 13,
+   "ratio": 0.46
+  },
+  "{\"experience\":\"beginner\"}": {
+   "n": 22,
+   "staples": 9,
+   "ratio": 0.41
+  }
+ }
+}

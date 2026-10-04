@@ -1,0 +1,3042 @@
+{
+ "chest@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 84,
+    "afterAuto": 81,
+    "recognisable": 36
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Decline Barbell Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "lower",
+     "sfr": 3,
+     "idx": 9,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 110.7
+    },
+    {
+     "n": "Cable Chest Press (Standing)",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 112.6
+    },
+    {
+     "n": "Floor Press (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 14,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 115.6
+    },
+    {
+     "n": "Incline Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 3,
+     "idx": 17,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 116.7
+    },
+    {
+     "n": "Decline Dumbbell Press",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "lower",
+     "sfr": 4,
+     "idx": 10,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 121.6
+    },
+    {
+     "n": "Dumbbell Bench Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 121.6
+    },
+    {
+     "n": "Landmine Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 125.6
+    }
+   ],
+   "poolSize": 36
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 84,
+    "afterAuto": 81,
+    "recognisable": 36
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Incline Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 3,
+     "idx": 17,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Floor Press (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 14,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 101.6
+    },
+    {
+     "n": "Landmine Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 101.6
+    },
+    {
+     "n": "Decline Barbell Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "lower",
+     "sfr": 3,
+     "idx": 9,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 101.7
+    },
+    {
+     "n": "Wide-Grip Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 35,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 101.7
+    },
+    {
+     "n": "Dumbbell Bench Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 109.6
+    },
+    {
+     "n": "Incline Dumbbell Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 109.6
+    }
+   ],
+   "poolSize": 36
+  }
+ },
+ "chest@3/9": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 84,
+    "afterAuto": 81,
+    "recognisable": 36
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Decline Barbell Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "lower",
+     "sfr": 3,
+     "idx": 9,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 110.7
+    },
+    {
+     "n": "Cable Chest Press (Standing)",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 112.6
+    },
+    {
+     "n": "Floor Press (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 14,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 115.6
+    },
+    {
+     "n": "Incline Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 3,
+     "idx": 17,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 116.7
+    },
+    {
+     "n": "Decline Dumbbell Press",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "lower",
+     "sfr": 4,
+     "idx": 10,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 121.6
+    },
+    {
+     "n": "Dumbbell Bench Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 121.6
+    },
+    {
+     "n": "Landmine Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 125.6
+    }
+   ],
+   "poolSize": 36
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 84,
+    "afterAuto": 81,
+    "recognisable": 36
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Incline Barbell Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 3,
+     "idx": 17,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Floor Press (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 14,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 101.6
+    },
+    {
+     "n": "Landmine Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 101.6
+    },
+    {
+     "n": "Decline Barbell Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "lower",
+     "sfr": 3,
+     "idx": 9,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 101.7
+    },
+    {
+     "n": "Wide-Grip Bench Press",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "flat",
+     "sfr": 3,
+     "idx": 35,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 101.7
+    },
+    {
+     "n": "Dumbbell Bench Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "flat",
+     "sfr": 4,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 109.6
+    },
+    {
+     "n": "Incline Dumbbell Press",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "incline",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 109.6
+    }
+   ],
+   "poolSize": 36
+  }
+ },
+ "back@5/10": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 97,
+    "afterAuto": 80,
+    "recognisable": 41
+   },
+   "requiredSubs": [
+    "vertical_pull",
+    "horizontal_row"
+   ],
+   "top": [
+    {
+     "n": "Barbell Row (Bent Over)",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 3,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 0.7
+    },
+    {
+     "n": "Chest-Supported Row (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 7.5
+    },
+    {
+     "n": "Chest-Supported T-Bar Row",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "horizontal_lat",
+     "sfr": 5,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 7.5
+    },
+    {
+     "n": "Cable High Row",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "upper_mid_row",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 14.6
+    },
+    {
+     "n": "Chest-Supported Row (Dumbbell)",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "upper_mid_row",
+     "sfr": 5,
+     "idx": 7,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 16.5
+    },
+    {
+     "n": "Landmine Row",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "horizontal_lat",
+     "sfr": 4,
+     "idx": 15,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 16.6
+    },
+    {
+     "n": "Dumbbell Row",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "horizontal_lat",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 18.6
+    },
+    {
+     "n": "Pendlay Row",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 22.6
+    }
+   ],
+   "poolSize": 40
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 97,
+    "afterAuto": 80,
+    "recognisable": 41
+   },
+   "requiredSubs": [
+    "vertical_pull",
+    "horizontal_row"
+   ],
+   "top": [
+    {
+     "n": "Chest-Supported T-Bar Row",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "horizontal_lat",
+     "sfr": 5,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": -0.5
+    },
+    {
+     "n": "Barbell Row (Bent Over)",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 3,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": -0.3
+    },
+    {
+     "n": "T-Bar Row",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "horizontal_lat",
+     "sfr": 3,
+     "idx": 36,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": -0.3
+    },
+    {
+     "n": "Chest-Supported Row (Barbell)",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 1.5
+    },
+    {
+     "n": "Seal Row",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 5,
+     "idx": 27,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 1.5
+    },
+    {
+     "n": "Landmine Row",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "horizontal_lat",
+     "sfr": 4,
+     "idx": 15,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Pendlay Row",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "upper_mid_row",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Chest-Supported Row (Dumbbell)",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "upper_mid_row",
+     "sfr": 5,
+     "idx": 7,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 9.5
+    }
+   ],
+   "poolSize": 40
+  }
+ },
+ "quads@4/8": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 85,
+    "afterAuto": 83,
+    "recognisable": 31
+   },
+   "requiredSubs": [
+    "squat_press",
+    "knee_extension"
+   ],
+   "top": [
+    {
+     "n": "Barbell Back Squat",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": -0.3
+    },
+    {
+     "n": "Barbell Front Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 2.7
+    },
+    {
+     "n": "Barbell Lunge",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 2,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 3.7
+    },
+    {
+     "n": "Hatfield Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 9.6
+    },
+    {
+     "n": "Heel-Elevated Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 10.6
+    },
+    {
+     "n": "Bulgarian Split Squat",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 13.6
+    },
+    {
+     "n": "Dumbbell Lunge",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 5,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 16.6
+    },
+    {
+     "n": "Goblet Squat",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 17.6
+    }
+   ],
+   "poolSize": 30
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 85,
+    "afterAuto": 83,
+    "recognisable": 31
+   },
+   "requiredSubs": [
+    "squat_press",
+    "knee_extension"
+   ],
+   "top": [
+    {
+     "n": "Barbell Back Squat",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": -0.3
+    },
+    {
+     "n": "Hatfield Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Heel-Elevated Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "SSB Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 20,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Safety Bar Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Split Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 4,
+     "idx": 26,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Barbell Front Squat",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 1.7
+    },
+    {
+     "n": "Barbell Lunge",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "squat_press",
+     "sfr": 3,
+     "idx": 2,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 1.7
+    }
+   ],
+   "poolSize": 30
+  }
+ },
+ "hamstrings@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 39,
+    "afterAuto": 35,
+    "recognisable": 18
+   },
+   "requiredSubs": [
+    "hip_extension",
+    "knee_flexion"
+   ],
+   "top": [
+    {
+     "n": "B-Stance Romanian Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Landmine Romanian Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 4.6
+    },
+    {
+     "n": "Romanian Deadlift",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 6.6
+    },
+    {
+     "n": "Romanian Deadlift (Barbell)",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 7.6
+    },
+    {
+     "n": "Dumbbell Single-Leg RDL",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 12.6
+    },
+    {
+     "n": "Stiff-Leg Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 15,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 16.6
+    },
+    {
+     "n": "Romanian Deadlift (Dumbbell)",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 18.6
+    },
+    {
+     "n": "Single-Leg Romanian Deadlift",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 11,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 22.6
+    }
+   ],
+   "poolSize": 18
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 39,
+    "afterAuto": 35,
+    "recognisable": 18
+   },
+   "requiredSubs": [
+    "hip_extension",
+    "knee_flexion"
+   ],
+   "top": [
+    {
+     "n": "Romanian Deadlift",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": -0.4
+    },
+    {
+     "n": "Romanian Deadlift (Barbell)",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 8,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": -0.4
+    },
+    {
+     "n": "B-Stance Romanian Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Landmine Romanian Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Stiff-Leg Deadlift",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 15,
+     "reqBonus": 0,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 1.6
+    },
+    {
+     "n": "Romanian Deadlift (Dumbbell)",
+     "tier": "staple",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 9.6
+    },
+    {
+     "n": "Smith Machine Romanian Deadlift",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 5,
+     "idx": 13,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 11.5
+    },
+    {
+     "n": "Dumbbell Single-Leg RDL",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "hip_extension",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 11.6
+    }
+   ],
+   "poolSize": 18
+  }
+ },
+ "glutes@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 38,
+    "afterAuto": 38,
+    "recognisable": 22
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "B-Stance Hip Thrust",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 103.5
+    },
+    {
+     "n": "Barbell Hip Thrust",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 103.5
+    },
+    {
+     "n": "Barbell Glute Bridge",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 104.6
+    },
+    {
+     "n": "Kickstand Hip Thrust",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 13,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 114.5
+    },
+    {
+     "n": "45-Degree Hip Extension",
+     "tier": "common",
+     "p": "machine",
+     "sub": "activator",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 20,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 121.6
+    },
+    {
+     "n": "Dumbbell Glute Bridge",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "activator",
+     "sfr": 4,
+     "idx": 10,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 121.6
+    },
+    {
+     "n": "Dumbbell Hip Thrust",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 11,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 122.5
+    },
+    {
+     "n": "Reverse Lunge (Glute Focus)",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "stretcher",
+     "sfr": 4,
+     "idx": 16,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 127.6
+    }
+   ],
+   "poolSize": 22
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 38,
+    "afterAuto": 38,
+    "recognisable": 22
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Hip Thrust",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 99.5
+    },
+    {
+     "n": "B-Stance Hip Thrust",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 101.5
+    },
+    {
+     "n": "Kickstand Hip Thrust",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 13,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 101.5
+    },
+    {
+     "n": "Barbell Glute Bridge",
+     "tier": "common",
+     "p": "heavy_compound",
+     "sub": "activator",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 101.6
+    },
+    {
+     "n": "Dumbbell Hip Thrust",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 11,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 111.5
+    },
+    {
+     "n": "Smith Machine Hip Thrust",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "activator",
+     "sfr": 5,
+     "idx": 17,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 111.5
+    },
+    {
+     "n": "Dumbbell Glute Bridge",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "activator",
+     "sfr": 4,
+     "idx": 10,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 111.6
+    },
+    {
+     "n": "Reverse Lunge (Glute Focus)",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "stretcher",
+     "sfr": 4,
+     "idx": 16,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 111.6
+    }
+   ],
+   "poolSize": 22
+  }
+ },
+ "calves@3/7": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 20,
+    "afterAuto": 20,
+    "recognisable": 12
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Donkey Calf Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Donkey Calf Raise (Machine)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 132.6
+    },
+    {
+     "n": "Leg Press Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 132.6
+    },
+    {
+     "n": "Dumbbell Calf Raise (Standing)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 133.6
+    },
+    {
+     "n": "Seated Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 133.6
+    },
+    {
+     "n": "Seated Calf Raise (Barbell)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 136.6
+    },
+    {
+     "n": "Seated Machine Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 136.6
+    },
+    {
+     "n": "Seated Dumbbell Calf Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 137.6
+    }
+   ],
+   "poolSize": 12
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 20,
+    "afterAuto": 20,
+    "recognisable": 12
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Leg Press Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Seated Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Seated Machine Calf Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Standing Calf Raise (Machine)",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 11,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Donkey Calf Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Donkey Calf Raise (Machine)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Dumbbell Calf Raise (Standing)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "gastro",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Seated Calf Raise (Barbell)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "soleus",
+     "sfr": 4,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    }
+   ],
+   "poolSize": 12
+  }
+ },
+ "biceps@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 42,
+    "afterAuto": 41,
+    "recognisable": 23
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Bayesian Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "long_head",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 132.5
+    },
+    {
+     "n": "Cable Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 132.6
+    },
+    {
+     "n": "Cable Concentration Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 133.5
+    },
+    {
+     "n": "Cable Rope Hammer Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "brachialis",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 135.6
+    },
+    {
+     "n": "Concentration Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 136.5
+    },
+    {
+     "n": "Dumbbell Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 136.6
+    },
+    {
+     "n": "Cross-Body Hammer Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "brachialis",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 137.6
+    }
+   ],
+   "poolSize": 23
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 42,
+    "afterAuto": 41,
+    "recognisable": 23
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Incline Dumbbell Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "long_head",
+     "sfr": 5,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Barbell Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Cable Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Dumbbell Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "EZ Bar Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 4,
+     "idx": 8,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Hammer Curl",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "brachialis",
+     "sfr": 4,
+     "idx": 10,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Bayesian Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "long_head",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Cable Concentration Curl",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "short_head",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    }
+   ],
+   "poolSize": 23
+  }
+ },
+ "triceps@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 42,
+    "afterAuto": 42,
+    "recognisable": 23
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Close-Grip Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 103.7
+    },
+    {
+     "n": "Dip Machine",
+     "tier": "common",
+     "p": "machine",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 20,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 127.7
+    },
+    {
+     "n": "Smith Machine Close-Grip Press",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 19,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 130.7
+    },
+    {
+     "n": "Barbell Skull Crusher",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "overhead",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Cable Pushdown (Straight Bar)",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "pushdown",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 131.6
+    },
+    {
+     "n": "Cable Overhead Tricep Extension",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "overhead",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 132.5
+    },
+    {
+     "n": "Cable Pushdown (V-Bar)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "pushdown",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 134.6
+    },
+    {
+     "n": "Seated Dip Machine",
+     "tier": "common",
+     "p": "machine",
+     "sub": "pushdown",
+     "sfr": 5,
+     "idx": 15,
+     "reqBonus": 100,
+     "paramBonus": 20,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 136.5
+    }
+   ],
+   "poolSize": 22
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 42,
+    "afterAuto": 42,
+    "recognisable": 23
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Close-Grip Bench Press",
+     "tier": "staple",
+     "p": "heavy_compound",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 0,
+     "goalBonus": -0.3,
+     "canonBonus": 0,
+     "total": 99.7
+    },
+    {
+     "n": "Smith Machine Close-Grip Press",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 19,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 111.7
+    },
+    {
+     "n": "Seated Dip Machine",
+     "tier": "common",
+     "p": "machine",
+     "sub": "pushdown",
+     "sfr": 5,
+     "idx": 15,
+     "reqBonus": 100,
+     "paramBonus": 20,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 121.5
+    },
+    {
+     "n": "Dip Machine",
+     "tier": "common",
+     "p": "machine",
+     "sub": "pushdown",
+     "sfr": 3,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 20,
+     "goalBonus": -0.3,
+     "canonBonus": 2,
+     "total": 121.7
+    },
+    {
+     "n": "Cable Pushdown (Straight Bar)",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "pushdown",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "EZ Bar Skull Crusher",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "overhead",
+     "sfr": 4,
+     "idx": 9,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Tricep Pushdown (Bar)",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "pushdown",
+     "sfr": 4,
+     "idx": 20,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Tricep Pushdown (Rope)",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "pushdown",
+     "sfr": 4,
+     "idx": 21,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    }
+   ],
+   "poolSize": 22
+  }
+ },
+ "side_delts@4/8": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 21,
+    "afterAuto": 17,
+    "recognisable": 8
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Cable Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Dumbbell Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 131.5
+    },
+    {
+     "n": "Cross-Body Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 132.5
+    },
+    {
+     "n": "Leaning Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 134.5
+    },
+    {
+     "n": "Machine Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 134.5
+    },
+    {
+     "n": "Leaning Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 135.5
+    },
+    {
+     "n": "Seated Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 137.5
+    },
+    {
+     "n": "Single-Arm Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 138.5
+    }
+   ],
+   "poolSize": 8
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 21,
+    "afterAuto": 17,
+    "recognisable": 8
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Cable Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Dumbbell Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Machine Lateral Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Cross-Body Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Leaning Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Leaning Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Seated Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Single-Arm Cable Lateral Raise",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "side",
+     "sfr": 5,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    }
+   ],
+   "poolSize": 8
+  }
+ },
+ "rear_delts@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 29,
+    "afterAuto": 29,
+    "recognisable": 16
+   },
+   "requiredSubs": [
+    "face_pull",
+    "horiz_abduction"
+   ],
+   "top": [
+    {
+     "n": "Bent-Over Cable Rear Delt Fly",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 31.5
+    },
+    {
+     "n": "Cable Face Pull",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 32.5
+    },
+    {
+     "n": "Cable Rear Delt Fly",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 3,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 32.5
+    },
+    {
+     "n": "Cable Face Pull (Rope)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 33.5
+    },
+    {
+     "n": "Dumbbell Rear Delt Fly",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 33.5
+    },
+    {
+     "n": "Face Pull",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 34.5
+    },
+    {
+     "n": "Machine Rear Delt Fly",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 37.5
+    },
+    {
+     "n": "Plate-Loaded Rear Delt",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 7,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 38.5
+    }
+   ],
+   "poolSize": 16
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 29,
+    "afterAuto": 29,
+    "recognisable": 16
+   },
+   "requiredSubs": [
+    "face_pull",
+    "horiz_abduction"
+   ],
+   "top": [
+    {
+     "n": "Cable Rear Delt Fly",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 3,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 29.5
+    },
+    {
+     "n": "Dumbbell Rear Delt Fly",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 29.5
+    },
+    {
+     "n": "Face Pull",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 29.5
+    },
+    {
+     "n": "Reverse Pec Deck",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 10,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 29.5
+    },
+    {
+     "n": "Bent-Over Cable Rear Delt Fly",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 31.5
+    },
+    {
+     "n": "Cable Face Pull",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 31.5
+    },
+    {
+     "n": "Cable Face Pull (Rope)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "face_pull",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 31.5
+    },
+    {
+     "n": "Machine Rear Delt Fly",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "horiz_abduction",
+     "sfr": 5,
+     "idx": 6,
+     "reqBonus": 0,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 31.5
+    }
+   ],
+   "poolSize": 16
+  }
+ },
+ "abs@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 76,
+    "afterAuto": 75,
+    "recognisable": 29
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Ab Rollout",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Ab Wheel (Kneeling)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 132.5
+    },
+    {
+     "n": "Ab Wheel Rollout",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 133.5
+    },
+    {
+     "n": "Cable Crunch",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "flexion",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 134.5
+    },
+    {
+     "n": "Bicycle Crunch",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "flexion",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 134.6
+    },
+    {
+     "n": "Bird Dog",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 135.5
+    },
+    {
+     "n": "TRX Knee Tuck",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "flexion",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 135.6
+    },
+    {
+     "n": "Cable Woodchop",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_rotation",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 137.6
+    }
+   ],
+   "poolSize": 29
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 76,
+    "afterAuto": 75,
+    "recognisable": 29
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "TRX Knee Tuck",
+     "tier": "common",
+     "p": "mod_compound",
+     "sub": "flexion",
+     "sfr": 4,
+     "idx": 24,
+     "reqBonus": 100,
+     "paramBonus": 10,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 111.6
+    },
+    {
+     "n": "Cable Crunch",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "flexion",
+     "sfr": 5,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Hanging Leg Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "flexion",
+     "sfr": 5,
+     "idx": 13,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 0,
+     "total": 129.5
+    },
+    {
+     "n": "Hanging Knee Raise",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "flexion",
+     "sfr": 4,
+     "idx": 12,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Ab Rollout",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Ab Wheel (Kneeling)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Ab Wheel Rollout",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    },
+    {
+     "n": "Bird Dog",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "anti_extension",
+     "sfr": 5,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.5,
+     "canonBonus": 2,
+     "total": 131.5
+    }
+   ],
+   "poolSize": 29
+  }
+ },
+ "traps@3/6": {
+  "withIdx": {
+   "stage": {
+    "afterEquip": 19,
+    "afterAuto": 19,
+    "recognisable": 10
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Shrug",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Dumbbell Shrug",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 131.6
+    },
+    {
+     "n": "Cable Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 132.6
+    },
+    {
+     "n": "Face Pull (Traps)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 134.6
+    },
+    {
+     "n": "Hex Bar Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 135.6
+    },
+    {
+     "n": "Incline Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 136.6
+    },
+    {
+     "n": "Machine Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 137.6
+    },
+    {
+     "n": "Single-Arm Dumbbell Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 138.6
+    }
+   ],
+   "poolSize": 10
+  },
+  "noIdx": {
+   "stage": {
+    "afterEquip": 19,
+    "afterAuto": 19,
+    "recognisable": 10
+   },
+   "requiredSubs": [],
+   "top": [
+    {
+     "n": "Barbell Shrug",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 0,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Dumbbell Shrug",
+     "tier": "staple",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 2,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 0,
+     "total": 129.6
+    },
+    {
+     "n": "Cable Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 1,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Face Pull (Traps)",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 3,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Hex Bar Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 4,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Incline Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 5,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Machine Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 6,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    },
+    {
+     "n": "Single-Arm Dumbbell Shrug",
+     "tier": "common",
+     "p": "isolation",
+     "sub": "upper",
+     "sfr": 4,
+     "idx": 7,
+     "reqBonus": 100,
+     "paramBonus": 30,
+     "goalBonus": -0.4,
+     "canonBonus": 2,
+     "total": 131.6
+    }
+   ],
+   "poolSize": 10
+  }
+ }
+}

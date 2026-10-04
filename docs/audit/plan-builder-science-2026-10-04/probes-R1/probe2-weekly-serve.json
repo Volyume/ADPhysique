@@ -1,0 +1,2942 @@
+{
+ "d3": [
+  {
+   "week": 1,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "plannedChest": 8,
+   "plannedBack": 12,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 6
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 6
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "plannedChest": 10,
+   "plannedBack": 13,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 7
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 7
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 9
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "plannedChest": 12,
+   "plannedBack": 15,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 12
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "plannedChest": 14,
+   "plannedBack": 16,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 8
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 14
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 8
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Full Body A",
+     "ex": [
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Full Body B",
+     "ex": [
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 4,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Full Body C",
+     "ex": [
+      {
+       "n": "Barbell Front Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "d4": [
+  {
+   "week": 1,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "plannedChest": 8,
+   "plannedBack": 12,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 6
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 6
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "plannedChest": 10,
+   "plannedBack": 13,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 7
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 8
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 7
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "plannedChest": 12,
+   "plannedBack": 15,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 10
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "plannedChest": 14,
+   "plannedBack": 16,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 8
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 12
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 8
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 8
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 5,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Bent-Over Cable Rear Delt Fly",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "d5": [
+  {
+   "week": 1,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "plannedChest": 8,
+   "plannedBack": 12,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "plannedChest": 10,
+   "plannedBack": 13,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 8
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 8
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 4
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "plannedChest": 12,
+   "plannedBack": 15,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 10
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 10
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 9
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "plannedChest": 14,
+   "plannedBack": 16,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 12
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 12
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 7
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 5
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 11
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 6
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 8
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "plannedChest": 6,
+   "plannedBack": 10,
+   "sessions": [
+    {
+     "name": "Upper A",
+     "ex": [
+      {
+       "n": "Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Close Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Close-Grip Bench Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower A",
+     "ex": [
+      {
+       "n": "Leg Extension",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Lying Leg Curl",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise (Machine)",
+       "m": "calves",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "Ab Wheel (Kneeling)",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper B",
+     "ex": [
+      {
+       "n": "Decline Barbell Bench Press",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Barbell Row (Bent Over)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dumbbell Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dumbbell Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Bayesian Curl",
+       "m": "biceps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Dip Machine",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Lower B",
+     "ex": [
+      {
+       "n": "Barbell Back Squat",
+       "m": "quads",
+       "base": 4,
+       "served": 4
+      },
+      {
+       "n": "B-Stance Romanian Deadlift",
+       "m": "hamstrings",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "B-Stance Hip Thrust",
+       "m": "glutes",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Donkey Calf Raise",
+       "m": "calves",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Ab Rollout",
+       "m": "abs",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    },
+    {
+     "name": "Upper C",
+     "ex": [
+      {
+       "n": "Cable Chest Press (Standing)",
+       "m": "chest",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Lat Pulldown (Neutral Grip)",
+       "m": "back",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Shrug",
+       "m": "traps",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cross-Body Cable Lateral Raise",
+       "m": "side_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Cable Face Pull (Rope)",
+       "m": "rear_delts",
+       "base": 3,
+       "served": 3
+      },
+      {
+       "n": "Smith Machine Close-Grip Press",
+       "m": "triceps",
+       "base": 3,
+       "served": 3
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

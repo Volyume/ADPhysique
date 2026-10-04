@@ -1,0 +1,37 @@
+{
+ "whyThisKeys": [
+  "schedule",
+  "goal",
+  "experience",
+  "progression",
+  "equipment",
+  "nutrition",
+  "weakPoints",
+  "sequencing"
+ ],
+ "weakPoints": "Side Delts and Glutes receive more weekly sets than the rest of the plan. Consistently giving extra attention to an area that's behind, over several weeks, while the rest of the plan stays balanced, is the most reliable way to close the gap.",
+ "personalisationWeakPoints": "Weak points targeted: Side Delts, Glutes",
+ "planKeys": [
+  "name",
+  "goal",
+  "splitType",
+  "daysPerWeek",
+  "estimatedSessionMinutes",
+  "workouts",
+  "weeklyVolumeSummary",
+  "divisionCoverage",
+  "timeConstraint",
+  "personalisationSummary",
+  "whyThis",
+  "warnings",
+  "nutritionContext"
+ ],
+ "sameWorkouts": true,
+ "volumeSummaryWP": [
+  "shoulders",
+  "glutes"
+ ],
+ "warnings": [],
+ "schedule": "Upper / Lower was chosen for your 4 days at intermediate level. Training each muscle group twice a week is the most well-supported frequency for consistent progress: each muscle gets enough practice to grow, enough sets per session to make training worthwhile, and 48–72 hours between sessions to recover.",
+ "progression": "The plan spans 6 weeks. You start at the sets shown here and add roughly one to two sets per muscle group per week across the first 5 weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block."
+}

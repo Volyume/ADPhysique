@@ -1,0 +1,2256 @@
+{
+ "d2": {
+  "name": "Build Muscle · Lean Gain · Full Body 2×/week",
+  "splitType": "full_body",
+  "days": 2,
+  "whyThisSequencing": "Assuming a usual 2-day week, sessions are ordered to leave about 72 hours before the next session that trains the quads.",
+  "timeConstraint": {
+   "status": "user_decision_required",
+   "requestedSessionMinutes": 60,
+   "over": [
+    {
+     "name": "Full Body A",
+     "minutes": 85
+    },
+    {
+     "name": "Full Body B",
+     "minutes": 79
+    }
+   ]
+  },
+  "weekly": {
+   "chest": {
+    "plannedSets": 3,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "back": {
+    "plannedSets": 9,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "shoulders": {
+    "plannedSets": 9,
+    "indirectSets": 5.5,
+    "isWeakPoint": false,
+    "heads": {
+     "side_delts": 3,
+     "rear_delts": 6,
+     "front_delts": 0
+    }
+   },
+   "biceps": {
+    "plannedSets": 3,
+    "indirectSets": 4.5,
+    "isWeakPoint": false
+   },
+   "triceps": {
+    "plannedSets": 3,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "quads": {
+    "plannedSets": 6,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "hamstrings": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "glutes": {
+    "plannedSets": 3,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "calves": {
+    "plannedSets": 3,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "abs": {
+    "plannedSets": 3,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "traps": {
+    "plannedSets": 0,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   }
+  },
+  "workouts": [
+   {
+    "name": "Full Body A",
+    "minutes": 85,
+    "totalSets": 25,
+    "exercises": [
+     {
+      "name": "Lat Pulldown (Close Grip)",
+      "sets": 4,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Back Squat",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 5,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Romanian Deadlift",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "hamstrings",
+      "sub": "hip_extension",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Lying Leg Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "hamstrings",
+      "sub": "knee_flexion",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Face Pull",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Bent-Over Cable Rear Delt Fly",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "horiz_abduction",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Close-Grip Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Rollout",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Full Body B",
+    "minutes": 79,
+    "totalSets": 23,
+    "exercises": [
+     {
+      "name": "Barbell Row (Bent Over)",
+      "sets": 5,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "upper_mid_row",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Leg Extension",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "knee_extension",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Dumbbell Lateral Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise (Machine)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "biceps",
+      "sub": "short_head",
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "B-Stance Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   }
+  ]
+ },
+ "d3": {
+  "name": "Build Muscle · Lean Gain · Full Body 3×/week",
+  "splitType": "full_body",
+  "days": 3,
+  "whyThisSequencing": "Assuming a usual 3-day week, sessions are ordered to leave about 72 hours before the next session that trains the quads.",
+  "timeConstraint": {
+   "status": "user_decision_required",
+   "requestedSessionMinutes": 60,
+   "over": [
+    {
+     "name": "Full Body A",
+     "minutes": 82
+    },
+    {
+     "name": "Full Body B",
+     "minutes": 73
+    }
+   ]
+  },
+  "weekly": {
+   "chest": {
+    "plannedSets": 6,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "back": {
+    "plannedSets": 10,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "shoulders": {
+    "plannedSets": 14,
+    "indirectSets": 5.5,
+    "isWeakPoint": false,
+    "heads": {
+     "side_delts": 8,
+     "rear_delts": 6,
+     "front_delts": 0
+    }
+   },
+   "biceps": {
+    "plannedSets": 3,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "triceps": {
+    "plannedSets": 3,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "quads": {
+    "plannedSets": 8,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "hamstrings": {
+    "plannedSets": 6,
+    "indirectSets": 4,
+    "isWeakPoint": false
+   },
+   "glutes": {
+    "plannedSets": 4,
+    "indirectSets": 5.5,
+    "isWeakPoint": false
+   },
+   "calves": {
+    "plannedSets": 6,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "abs": {
+    "plannedSets": 3,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "traps": {
+    "plannedSets": 0,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   }
+  },
+  "workouts": [
+   {
+    "name": "Full Body A",
+    "minutes": 82,
+    "totalSets": 21,
+    "exercises": [
+     {
+      "name": "Lat Pulldown (Close Grip)",
+      "sets": 5,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Back Squat",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 5,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Donkey Calf Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Decline Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "chest",
+      "sub": "decline",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Close-Grip Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Full Body B",
+    "minutes": 73,
+    "totalSets": 22,
+    "exercises": [
+     {
+      "name": "Barbell Row (Bent Over)",
+      "sets": 5,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "upper_mid_row",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise (Machine)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cable Face Pull",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Bent-Over Cable Rear Delt Fly",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "horiz_abduction",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Hip Thrust",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Full Body C",
+    "minutes": 65,
+    "totalSets": 20,
+    "exercises": [
+     {
+      "name": "Barbell Front Squat",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 3,
+      "reason": "required_role"
+     },
+     {
+      "name": "Dumbbell Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "B-Stance Romanian Deadlift",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "hamstrings",
+      "sub": "hip_extension",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Lying Leg Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "hamstrings",
+      "sub": "knee_flexion",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "biceps",
+      "sub": "short_head",
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Rollout",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   }
+  ]
+ },
+ "d4": {
+  "name": "Build Muscle · Lean Gain · Upper-Lower 4×/week",
+  "splitType": "upper_lower",
+  "days": 4,
+  "whyThisSequencing": "Assuming a usual 4-day week, sessions are ordered to leave about 72 hours before the next session that trains the glutes, hamstrings and quads.",
+  "timeConstraint": {
+   "status": "user_decision_required",
+   "requestedSessionMinutes": 60,
+   "over": [
+    {
+     "name": "Upper A",
+     "minutes": 72
+    },
+    {
+     "name": "Upper B",
+     "minutes": 71
+    }
+   ]
+  },
+  "weekly": {
+   "chest": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "back": {
+    "plannedSets": 10,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "shoulders": {
+    "plannedSets": 14,
+    "indirectSets": 7,
+    "isWeakPoint": false,
+    "heads": {
+     "side_delts": 8,
+     "rear_delts": 6,
+     "front_delts": 0
+    }
+   },
+   "biceps": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "triceps": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "quads": {
+    "plannedSets": 8,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "hamstrings": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "glutes": {
+    "plannedSets": 6,
+    "indirectSets": 3.5,
+    "isWeakPoint": false
+   },
+   "calves": {
+    "plannedSets": 7,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "abs": {
+    "plannedSets": 6,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "traps": {
+    "plannedSets": 0,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   }
+  },
+  "workouts": [
+   {
+    "name": "Upper A",
+    "minutes": 72,
+    "totalSets": 21,
+    "exercises": [
+     {
+      "name": "Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Lat Pulldown (Close Grip)",
+      "sets": 5,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cable Face Pull",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "biceps",
+      "sub": "short_head",
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Close-Grip Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Lower A",
+    "minutes": 60,
+    "totalSets": 16,
+    "exercises": [
+     {
+      "name": "Barbell Back Squat",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 5,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Romanian Deadlift",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "hamstrings",
+      "sub": "hip_extension",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Rollout",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Upper B",
+    "minutes": 71,
+    "totalSets": 21,
+    "exercises": [
+     {
+      "name": "Decline Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "chest",
+      "sub": "decline",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Row (Bent Over)",
+      "sets": 5,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "upper_mid_row",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Dumbbell Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Bent-Over Cable Rear Delt Fly",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "horiz_abduction",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Bayesian Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "biceps",
+      "sub": "long_head",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dip Machine",
+      "sets": 3,
+      "reps": "8-15",
+      "rest": 120,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "machine_selectorised",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Lower B",
+    "minutes": 51,
+    "totalSets": 17,
+    "exercises": [
+     {
+      "name": "Leg Extension",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "knee_extension",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Lying Leg Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "hamstrings",
+      "sub": "knee_flexion",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise (Machine)",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Wheel (Kneeling)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   }
+  ]
+ },
+ "d5": {
+  "name": "Build Muscle · Lean Gain · Upper-Lower 5×/week",
+  "splitType": "balanced_ul",
+  "days": 5,
+  "whyThisSequencing": "Assuming a usual 5-day week, sessions are ordered to give the glutes, hamstrings and quads the longest gap the week allows, about 48 hours.",
+  "timeConstraint": {
+   "status": "constrained_but_valid",
+   "requestedSessionMinutes": 60,
+   "over": []
+  },
+  "weekly": {
+   "chest": {
+    "plannedSets": 9,
+    "indirectSets": 4.5,
+    "isWeakPoint": false
+   },
+   "back": {
+    "plannedSets": 9,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "shoulders": {
+    "plannedSets": 15,
+    "indirectSets": 7.5,
+    "isWeakPoint": false,
+    "heads": {
+     "side_delts": 9,
+     "rear_delts": 6,
+     "front_delts": 0
+    }
+   },
+   "biceps": {
+    "plannedSets": 6,
+    "indirectSets": 4.5,
+    "isWeakPoint": false
+   },
+   "triceps": {
+    "plannedSets": 9,
+    "indirectSets": 4.5,
+    "isWeakPoint": false
+   },
+   "quads": {
+    "plannedSets": 8,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "hamstrings": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "glutes": {
+    "plannedSets": 6,
+    "indirectSets": 3.5,
+    "isWeakPoint": false
+   },
+   "calves": {
+    "plannedSets": 7,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "abs": {
+    "plannedSets": 6,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "traps": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   }
+  },
+  "workouts": [
+   {
+    "name": "Upper A",
+    "minutes": 62,
+    "totalSets": 18,
+    "exercises": [
+     {
+      "name": "Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Lat Pulldown (Close Grip)",
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Lateral Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cable Face Pull",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "biceps",
+      "sub": "short_head",
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Close-Grip Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Lower A",
+    "minutes": 51,
+    "totalSets": 17,
+    "exercises": [
+     {
+      "name": "Leg Extension",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "knee_extension",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Lying Leg Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "hamstrings",
+      "sub": "knee_flexion",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise (Machine)",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Wheel (Kneeling)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Upper B",
+    "minutes": 60,
+    "totalSets": 18,
+    "exercises": [
+     {
+      "name": "Decline Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "chest",
+      "sub": "decline",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Row (Bent Over)",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "upper_mid_row",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Dumbbell Shrug",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "traps",
+      "sub": null,
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dumbbell Lateral Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Bayesian Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "biceps",
+      "sub": "long_head",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dip Machine",
+      "sets": 3,
+      "reps": "8-15",
+      "rest": 120,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "machine_selectorised",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Lower B",
+    "minutes": 60,
+    "totalSets": 16,
+    "exercises": [
+     {
+      "name": "Barbell Back Squat",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 5,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Romanian Deadlift",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "hamstrings",
+      "sub": "hip_extension",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Rollout",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Upper C",
+    "minutes": 60,
+    "totalSets": 18,
+    "exercises": [
+     {
+      "name": "Cable Chest Press (Standing)",
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Lat Pulldown (Neutral Grip)",
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Shrug",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "traps",
+      "sub": null,
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cross-Body Cable Lateral Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cable Face Pull (Rope)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Smith Machine Close-Grip Press",
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "smith",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 1,
+      "reason": "family_diversity"
+     }
+    ]
+   }
+  ]
+ },
+ "d6": {
+  "name": "Build Muscle · Lean Gain · PPL A/B 6×/week",
+  "splitType": "ppl_ab",
+  "days": 6,
+  "whyThisSequencing": "Assuming a usual 6-day week, sessions are ordered to leave about 72 hours before the next session that trains the glutes, hamstrings and quads.",
+  "timeConstraint": {
+   "status": "fit",
+   "requestedSessionMinutes": 60,
+   "over": []
+  },
+  "weekly": {
+   "chest": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "back": {
+    "plannedSets": 10,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "shoulders": {
+    "plannedSets": 14,
+    "indirectSets": 7,
+    "isWeakPoint": false,
+    "heads": {
+     "side_delts": 8,
+     "rear_delts": 6,
+     "front_delts": 0
+    }
+   },
+   "biceps": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "triceps": {
+    "plannedSets": 6,
+    "indirectSets": 3,
+    "isWeakPoint": false
+   },
+   "quads": {
+    "plannedSets": 8,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   },
+   "hamstrings": {
+    "plannedSets": 6,
+    "indirectSets": 5,
+    "isWeakPoint": false
+   },
+   "glutes": {
+    "plannedSets": 6,
+    "indirectSets": 3.5,
+    "isWeakPoint": false
+   },
+   "calves": {
+    "plannedSets": 7,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "abs": {
+    "plannedSets": 6,
+    "indirectSets": 0,
+    "isWeakPoint": false
+   },
+   "traps": {
+    "plannedSets": 6,
+    "indirectSets": 1.5,
+    "isWeakPoint": false
+   }
+  },
+  "workouts": [
+   {
+    "name": "Push A",
+    "minutes": 39,
+    "totalSets": 10,
+    "exercises": [
+     {
+      "name": "Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "chest",
+      "sub": "flat",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Cable Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Close-Grip Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Pull A",
+    "minutes": 45,
+    "totalSets": 14,
+    "exercises": [
+     {
+      "name": "Lat Pulldown (Close Grip)",
+      "sets": 5,
+      "reps": "8-12",
+      "rest": 150,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "vertical_pull",
+      "cat": "cable",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Cable Face Pull",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "face_pull",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "biceps",
+      "sub": "short_head",
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Barbell Shrug",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "traps",
+      "sub": null,
+      "cat": "barbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Legs A",
+    "minutes": 60,
+    "totalSets": 16,
+    "exercises": [
+     {
+      "name": "Barbell Back Squat",
+      "sets": 4,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "squat_press",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 5,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Romanian Deadlift",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "hamstrings",
+      "sub": "hip_extension",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 4,
+      "fat": 3,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "B-Stance Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Rollout",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Push B",
+    "minutes": 36,
+    "totalSets": 10,
+    "exercises": [
+     {
+      "name": "Decline Barbell Bench Press",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "chest",
+      "sub": "decline",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dumbbell Lateral Raise",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "side_delts",
+      "sub": "lateral_raise",
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dip Machine",
+      "sets": 3,
+      "reps": "8-15",
+      "rest": 120,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "triceps",
+      "sub": "pushdown",
+      "cat": "machine_selectorised",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Pull B",
+    "minutes": 47,
+    "totalSets": 14,
+    "exercises": [
+     {
+      "name": "Barbell Row (Bent Over)",
+      "sets": 5,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "back",
+      "sub": "upper_mid_row",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 3,
+      "fat": 4,
+      "diff": 2,
+      "reason": "required_role"
+     },
+     {
+      "name": "Bent-Over Cable Rear Delt Fly",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "rear_delts",
+      "sub": "horiz_abduction",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Bayesian Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "biceps",
+      "sub": "long_head",
+      "cat": "cable",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Dumbbell Shrug",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "traps",
+      "sub": null,
+      "cat": "dumbbell",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   },
+   {
+    "name": "Legs B",
+    "minutes": 51,
+    "totalSets": 17,
+    "exercises": [
+     {
+      "name": "Leg Extension",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "quads",
+      "sub": "knee_extension",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Lying Leg Curl",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "hamstrings",
+      "sub": "knee_flexion",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 1,
+      "reason": "required_role"
+     },
+     {
+      "name": "Barbell Hip Thrust",
+      "sets": 3,
+      "reps": "6-10",
+      "rest": 180,
+      "rir": 2,
+      "tier": "staple",
+      "muscle": "glutes",
+      "sub": "activator",
+      "cat": "barbell",
+      "ci": "compound",
+      "sfr": 5,
+      "fat": 3,
+      "diff": 2,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Donkey Calf Raise (Machine)",
+      "sets": 4,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "calves",
+      "sub": "gastro",
+      "cat": "machine_selectorised",
+      "ci": "isolation",
+      "sfr": 4,
+      "fat": 2,
+      "diff": 1,
+      "reason": "family_diversity"
+     },
+     {
+      "name": "Ab Wheel (Kneeling)",
+      "sets": 3,
+      "reps": "10-20",
+      "rest": 75,
+      "rir": 2,
+      "tier": "common",
+      "muscle": "abs",
+      "sub": "anti_extension",
+      "cat": "bodyweight",
+      "ci": "isolation",
+      "sfr": 5,
+      "fat": 2,
+      "diff": 2,
+      "reason": "family_diversity"
+     }
+    ]
+   }
+  ]
+ }
+}

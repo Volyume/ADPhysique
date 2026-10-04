@@ -1,0 +1,1818 @@
+[
+ {
+  "from": "Barbell Bench Press",
+  "muscle": "chest",
+  "sets": 3,
+  "structuralTop": [
+   "Band-Resisted Bench Press [chest] 130",
+   "Cambered Bar Bench Press [chest] 130",
+   "Chain-Loaded Bench Press [chest] 130",
+   "Chaos Bench Press [chest] 130",
+   "Floor Press (Barbell) [chest] 130",
+   "Guillotine Press [chest] 130",
+   "Larsen Press [chest] 130",
+   "Paused Bench Press [chest] 130"
+  ],
+  "shown": [
+   {
+    "n": "Dumbbell Bench Press",
+    "m": "chest",
+    "tier": "staple",
+    "score": 115,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Floor Press (Barbell)",
+    "m": "chest",
+    "tier": "common",
+    "score": 130,
+    "rep": "6-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Wide-Grip Bench Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 130,
+    "rep": "6-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Converging Chest Press Machine",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Hammer Strength Chest Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Iso-Lateral Chest Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Band-Resisted Bench Press",
+    "m": "chest",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "3-6",
+    "ci": "compound"
+   },
+   {
+    "n": "Cambered Bar Bench Press",
+    "m": "chest",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "5-10",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Lat Pulldown (Close Grip)",
+  "muscle": "back",
+  "sets": 5,
+  "structuralTop": [
+   "Behind-the-Neck Lat Pulldown [back] 130",
+   "Cable Reverse-Grip Pulldown [back] 130",
+   "Lat Pulldown (Neutral Grip) [back] 130",
+   "Lat Pulldown (Wide Grip) [back] 130",
+   "Rope Lat Pulldown [back] 130",
+   "Single-Arm Lat Pulldown [back] 130",
+   "Underhand Lat Pulldown [back] 130",
+   "V-Bar Pulldown [back] 130"
+  ],
+  "shown": [
+   {
+    "n": "Lat Pulldown (Neutral Grip)",
+    "m": "back",
+    "tier": "staple",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Lat Pulldown (Wide Grip)",
+    "m": "back",
+    "tier": "staple",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Seated Cable Row",
+    "m": "back",
+    "tier": "staple",
+    "score": 105,
+    "rep": "10-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Single-Arm Lat Pulldown",
+    "m": "back",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "compound"
+   },
+   {
+    "n": "V-Bar Pulldown",
+    "m": "back",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Iso-Lateral Front Pulldown",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded Lat Pulldown",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Weighted Chin-Up",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "4-10",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Cable Lateral Raise",
+  "muscle": "side_delts",
+  "sets": 4,
+  "structuralTop": [
+   "Cross-Body Cable Lateral Raise [side_delts] 130",
+   "Leaning Cable Lateral Raise [side_delts] 130",
+   "Dumbbell Lateral Raise [side_delts] 115",
+   "Dumbbell Lateral to Front Raise [side_delts] 115",
+   "Incline Lateral Raise (Bench) [side_delts] 115",
+   "Landmine Lateral Raise [side_delts] 115",
+   "Leaning Lateral Raise [side_delts] 115",
+   "Machine Lateral Raise [side_delts] 115"
+  ],
+  "shown": [
+   {
+    "n": "Dumbbell Lateral Raise",
+    "m": "side_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Machine Lateral Raise",
+    "m": "side_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cross-Body Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Leaning Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Leaning Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Arm Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 105,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Bayesian Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 65,
+    "rep": "10-15",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": [
+   "Bayesian Curl"
+  ]
+ },
+ {
+  "from": "Cable Face Pull",
+  "muscle": "rear_delts",
+  "sets": 3,
+  "structuralTop": [
+   "Cable Face Pull (Rope) [rear_delts] 130",
+   "Face Pull [rear_delts] 130",
+   "TRX Face Pull [rear_delts] 115",
+   "Cable Y-Raise (Prone) [rear_delts] 105",
+   "Landmine Rear Delt Row [rear_delts] 90",
+   "Lying Rear Delt Row [rear_delts] 90",
+   "TRX T-Raise [rear_delts] 90",
+   "TRX W-Raise [rear_delts] 90"
+  ],
+  "shown": [
+   {
+    "n": "Face Pull",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 85,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dumbbell Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 70,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Face Pull (Rope)",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "TRX Face Pull",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Bent-Over Cable Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 85,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Reverse Cable Crossover",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 85,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Arm Cable Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 85,
+    "rep": "12-20",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Barbell Curl",
+  "muscle": "biceps",
+  "sets": 3,
+  "structuralTop": [
+   "Preacher Curl (Barbell) [biceps] 130",
+   "Wide-Grip Barbell Curl [biceps] 130",
+   "Cheat Curl [biceps] 120",
+   "Cable Concentration Curl [biceps] 115",
+   "Cable Curl [biceps] 115",
+   "Cable Overhead Bicep Curl [biceps] 115",
+   "Concentration Curl [biceps] 115",
+   "Dumbbell Curl [biceps] 115"
+  ],
+  "shown": [
+   {
+    "n": "Cable Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dumbbell Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "EZ Bar Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 115,
+    "rep": "8-12",
+    "ci": "isolation"
+   },
+   {
+    "n": "Preacher Curl (Barbell)",
+    "m": "biceps",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-12",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Concentration Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Concentration Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "EZ Bar Preacher Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-12",
+    "ci": "isolation"
+   },
+   {
+    "n": "High Cable Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Close-Grip Bench Press",
+  "muscle": "triceps",
+  "sets": 3,
+  "structuralTop": [
+   "Board Press [triceps] 130",
+   "Close-Grip Decline Bench Press [triceps] 130",
+   "Close-Grip Floor Press [triceps] 130",
+   "Close-Grip Incline Bench Press [triceps] 130",
+   "JM Press [triceps] 130",
+   "Pin Press (Bench) [triceps] 130",
+   "Bench Press (Close Grip, Dumbbell) [triceps] 115",
+   "Dip Machine [triceps] 115"
+  ],
+  "shown": [
+   {
+    "n": "Cable Pushdown (Straight Bar)",
+    "m": "triceps",
+    "tier": "staple",
+    "score": 85,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dip Machine",
+    "m": "triceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Smith Machine Close-Grip Press",
+    "m": "triceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Weighted Dips (Triceps)",
+    "m": "triceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Seated Dip Machine",
+    "m": "triceps",
+    "tier": "common",
+    "score": 105,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Cable Pushdown (V-Bar)",
+    "m": "triceps",
+    "tier": "common",
+    "score": 85,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cross-Body Cable Tricep Extension",
+    "m": "triceps",
+    "tier": "common",
+    "score": 85,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Machine Tricep Extension",
+    "m": "triceps",
+    "tier": "common",
+    "score": 85,
+    "rep": "12-20",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Barbell Back Squat",
+  "muscle": "quads",
+  "sets": 4,
+  "structuralTop": [
+   "Anderson Squat [quads] 130",
+   "Band-Resisted Squat [quads] 130",
+   "Barbell Front Squat [quads] 130",
+   "Barbell Hack Squat [quads] 130",
+   "Barbell Lunge [quads] 130",
+   "Barbell Reverse Lunge [quads] 130",
+   "Barbell Thruster [quads] 130",
+   "Barbell Walking Lunge [quads] 130"
+  ],
+  "shown": [
+   {
+    "n": "Barbell Front Squat",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "5-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Lunge",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Hatfield Squat",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Heel-Elevated Squat",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Low-Bar Back Squat",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "3-8",
+    "ci": "compound"
+   },
+   {
+    "n": "Band-Resisted Squat",
+    "m": "quads",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "3-6",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Reverse Lunge",
+    "m": "quads",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Thruster",
+    "m": "quads",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "5-10",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "B-Stance Romanian Deadlift",
+  "muscle": "hamstrings",
+  "sets": 3,
+  "structuralTop": [
+   "Barbell Good Morning [hamstrings] 130",
+   "Good Morning [hamstrings] 130",
+   "Romanian Deadlift [hamstrings] 130",
+   "Romanian Deadlift (Barbell) [hamstrings] 130",
+   "Snatch-Grip Romanian Deadlift [hamstrings] 130",
+   "Stiff-Leg Deadlift [hamstrings] 130",
+   "Trap Bar Deadlift (Hamstring) [hamstrings] 120",
+   "Zercher Deadlift [hamstrings] 120"
+  ],
+  "shown": [
+   {
+    "n": "Romanian Deadlift",
+    "m": "hamstrings",
+    "tier": "staple",
+    "score": 130,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Romanian Deadlift (Barbell)",
+    "m": "hamstrings",
+    "tier": "staple",
+    "score": 130,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Stiff-Leg Deadlift",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 130,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Dumbbell Single-Leg RDL",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Glute-Ham Raise Machine",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Landmine Romanian Deadlift",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Good Morning",
+    "m": "hamstrings",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Good Morning",
+    "m": "hamstrings",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "B-Stance Hip Thrust",
+  "muscle": "glutes",
+  "sets": 3,
+  "structuralTop": [
+   "Barbell Glute Bridge [glutes] 130",
+   "Barbell Hip Thrust [glutes] 130",
+   "Kickstand Hip Thrust [glutes] 130",
+   "45-Degree Hip Extension [glutes] 115",
+   "Cable Pull-Through [glutes] 115",
+   "Dumbbell Glute Bridge [glutes] 115",
+   "Dumbbell Hip Thrust [glutes] 115",
+   "GHD Hip Extension [glutes] 115"
+  ],
+  "shown": [
+   {
+    "n": "Barbell Hip Thrust",
+    "m": "glutes",
+    "tier": "staple",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Machine Hip Thrust",
+    "m": "glutes",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Glute Bridge",
+    "m": "glutes",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Kickstand Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "45-Degree Hip Extension",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Dumbbell Glute Bridge",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Dumbbell Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Donkey Calf Raise",
+  "muscle": "calves",
+  "sets": 3,
+  "structuralTop": [
+   "Calf Raise on Steps [calves] 130",
+   "Eccentric Calf Raise (Bodyweight) [calves] 130",
+   "Single-Leg Calf Raise (Bodyweight) [calves] 130",
+   "Standing Calf Raise (Bodyweight) [calves] 130",
+   "Calf Raise on Leg Press Sled [calves] 115",
+   "Deficit Dumbbell Calf Raise (Standing) [calves] 115",
+   "Donkey Calf Raise (Barbell) [calves] 115",
+   "Donkey Calf Raise (Machine) [calves] 115"
+  ],
+  "shown": [
+   {
+    "n": "Leg Press Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Standing Calf Raise (Machine)",
+    "m": "calves",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 90,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Machine Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 90,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Calf Raise on Leg Press Sled",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Donkey Calf Raise (Machine)",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dumbbell Calf Raise (Standing)",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Leg Calf Raise (Dumbbell)",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Ab Rollout",
+  "muscle": "abs",
+  "sets": 3,
+  "structuralTop": [
+   "Ab Wheel (Kneeling) [abs] 130",
+   "Ab Wheel Rollout [abs] 130",
+   "Bear Crawl [abs] 130",
+   "Bird Dog [abs] 130",
+   "Copenhagen Plank [abs] 130",
+   "Dead Bug [abs] 130",
+   "Dragon Flag [abs] 130",
+   "Hollow Body Hold [abs] 130"
+  ],
+  "shown": [
+   {
+    "n": "Ab Wheel (Kneeling)",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Ab Wheel Rollout",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Bird Dog",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Kneeling Ab Rollout",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Plank",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "20-60",
+    "ci": "isolation"
+   },
+   {
+    "n": "Side Plank",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "20-60",
+    "ci": "isolation"
+   },
+   {
+    "n": "Long-Lever Plank",
+    "m": "abs",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "10-30",
+    "ci": "isolation"
+   },
+   {
+    "n": "Plank Shoulder Tap",
+    "m": "abs",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "10-24",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Decline Barbell Bench Press",
+  "muscle": "chest",
+  "sets": 3,
+  "structuralTop": [
+   "Decline Cable Chest Press [chest] 115",
+   "Decline Dumbbell Press [chest] 115",
+   "Decline Machine Press [chest] 115",
+   "Plate-Loaded Decline Press [chest] 115",
+   "Weighted Dips (Chest) [chest] 115",
+   "Barbell Bench Press [chest] 105",
+   "Floor Press (Barbell) [chest] 105",
+   "Guillotine Press [chest] 105"
+  ],
+  "shown": [
+   {
+    "n": "Barbell Bench Press",
+    "m": "chest",
+    "tier": "staple",
+    "score": 105,
+    "rep": "4-8",
+    "ci": "compound"
+   },
+   {
+    "n": "Incline Barbell Bench Press",
+    "m": "chest",
+    "tier": "staple",
+    "score": 105,
+    "rep": "5-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Decline Dumbbell Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Decline Machine Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Weighted Dips (Chest)",
+    "m": "chest",
+    "tier": "common",
+    "score": 115,
+    "rep": "6-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Floor Press (Barbell)",
+    "m": "chest",
+    "tier": "common",
+    "score": 105,
+    "rep": "6-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Wide-Grip Bench Press",
+    "m": "chest",
+    "tier": "common",
+    "score": 105,
+    "rep": "6-10",
+    "ci": "compound"
+   },
+   {
+    "n": "Decline Cable Chest Press",
+    "m": "chest",
+    "tier": "specialist",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Barbell Row (Bent Over)",
+  "muscle": "back",
+  "sets": 5,
+  "structuralTop": [
+   "Pendlay Row [back] 130",
+   "Barbell Upright Row (Wide) [back] 120",
+   "Chest-Supported Row (Barbell) [back] 120",
+   "Seal Row [back] 120",
+   "Swiss Bar Row [back] 120",
+   "Trap Bar Row [back] 120",
+   "Archer Row on Rings [back] 115",
+   "Batwing Row [back] 115"
+  ],
+  "shown": [
+   {
+    "n": "Pendlay Row",
+    "m": "back",
+    "tier": "common",
+    "score": 130,
+    "rep": "5-8",
+    "ci": "compound"
+   },
+   {
+    "n": "Chest-Supported Row (Barbell)",
+    "m": "back",
+    "tier": "common",
+    "score": 120,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Seal Row",
+    "m": "back",
+    "tier": "common",
+    "score": 120,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded High Row",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded Row",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded T-Bar Row (Chest-Supported)",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Seated Machine Row (Wide)",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "compound"
+   },
+   {
+    "n": "TRX Row (Single-Arm)",
+    "m": "back",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Dumbbell Lateral Raise",
+  "muscle": "side_delts",
+  "sets": 4,
+  "structuralTop": [
+   "Dumbbell Lateral to Front Raise [side_delts] 130",
+   "Incline Lateral Raise (Bench) [side_delts] 130",
+   "Leaning Lateral Raise [side_delts] 130",
+   "Seated Lateral Raise [side_delts] 130",
+   "Cable Lateral Raise [side_delts] 115",
+   "Cross-Body Cable Lateral Raise [side_delts] 115",
+   "Landmine Lateral Raise [side_delts] 115",
+   "Leaning Cable Lateral Raise [side_delts] 115"
+  ],
+  "shown": [
+   {
+    "n": "Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Machine Lateral Raise",
+    "m": "side_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Leaning Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cross-Body Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Leaning Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Arm Cable Lateral Raise",
+    "m": "side_delts",
+    "tier": "common",
+    "score": 90,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Concentration Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 65,
+    "rep": "12-15",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": [
+   "Concentration Curl"
+  ]
+ },
+ {
+  "from": "Bent-Over Cable Rear Delt Fly",
+  "muscle": "rear_delts",
+  "sets": 3,
+  "structuralTop": [
+   "Cable Rear Delt Fly [rear_delts] 130",
+   "Reverse Cable Crossover [rear_delts] 130",
+   "Single-Arm Cable Rear Delt Fly [rear_delts] 130",
+   "Dumbbell Rear Delt Fly [rear_delts] 115",
+   "Dumbbell Side-Lying Rear Delt [rear_delts] 115",
+   "Machine Rear Delt Fly [rear_delts] 115",
+   "Machine Y-Raise [rear_delts] 115",
+   "Plate-Loaded Rear Delt [rear_delts] 115"
+  ],
+  "shown": [
+   {
+    "n": "Cable Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dumbbell Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Reverse Pec Deck",
+    "m": "rear_delts",
+    "tier": "staple",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Reverse Cable Crossover",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Arm Cable Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 130,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Machine Rear Delt Fly",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Plate-Loaded Rear Delt",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Prone Reverse Fly",
+    "m": "rear_delts",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Bayesian Curl",
+  "muscle": "biceps",
+  "sets": 3,
+  "structuralTop": [
+   "Cable Drag Curl [biceps] 130",
+   "Cable Incline Curl [biceps] 130",
+   "Lying Cable Curl [biceps] 130",
+   "Barbell Drag Curl [biceps] 115",
+   "Close-Grip Barbell Curl [biceps] 115",
+   "Dumbbell Drag Curl [biceps] 115",
+   "EZ Bar Drag Curl [biceps] 115",
+   "Incline Dumbbell Curl [biceps] 115"
+  ],
+  "shown": [
+   {
+    "n": "Incline Dumbbell Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 105,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Barbell Curl",
+    "m": "biceps",
+    "tier": "staple",
+    "score": 90,
+    "rep": "8-12",
+    "ci": "isolation"
+   },
+   {
+    "n": "Incline Hammer Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Spider Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-12",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Concentration Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 105,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Rope Hammer Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 105,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "High Cable Curl",
+    "m": "biceps",
+    "tier": "common",
+    "score": 105,
+    "rep": "10-15",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Dip Machine",
+  "muscle": "triceps",
+  "sets": 3,
+  "structuralTop": [
+   "Seated Dip Machine [triceps] 120",
+   "Bench Press (Close Grip, Dumbbell) [triceps] 115",
+   "Board Press [triceps] 115",
+   "Close-Grip Bench Press [triceps] 115",
+   "Close-Grip Decline Bench Press [triceps] 115",
+   "Close-Grip Floor Press [triceps] 115",
+   "Close-Grip Incline Bench Press [triceps] 115",
+   "JM Press [triceps] 115"
+  ],
+  "shown": [
+   {
+    "n": "Close-Grip Bench Press",
+    "m": "triceps",
+    "tier": "staple",
+    "score": 115,
+    "rep": "6-12",
+    "ci": "compound"
+   },
+   {
+    "n": "Cable Pushdown (Straight Bar)",
+    "m": "triceps",
+    "tier": "staple",
+    "score": 85,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Dip Machine",
+    "m": "triceps",
+    "tier": "common",
+    "score": 120,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Smith Machine Close-Grip Press",
+    "m": "triceps",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Weighted Dips (Triceps)",
+    "m": "triceps",
+    "tier": "common",
+    "score": 105,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Machine Tricep Extension",
+    "m": "triceps",
+    "tier": "common",
+    "score": 100,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cable Pushdown (V-Bar)",
+    "m": "triceps",
+    "tier": "common",
+    "score": 85,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Cross-Body Cable Tricep Extension",
+    "m": "triceps",
+    "tier": "common",
+    "score": 85,
+    "rep": "12-20",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Leg Extension",
+  "muscle": "quads",
+  "sets": 4,
+  "structuralTop": [
+   "Single-Leg Leg Extension [quads] 130",
+   "Sissy Squat Machine [quads] 130",
+   "Reverse Nordic Curl [quads] 115",
+   "Sissy Squat [quads] 115",
+   "Spanish Squat [quads] 115",
+   "Terminal Knee Extension [quads] 115",
+   "Hip Flexion Machine (Seated) [quads] 105",
+   "Wall Sit [quads] 105"
+  ],
+  "shown": [
+   {
+    "n": "Hack Squat Machine",
+    "m": "quads",
+    "tier": "staple",
+    "score": 65,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Sissy Squat Machine",
+    "m": "quads",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single Leg Press",
+    "m": "quads",
+    "tier": "common",
+    "score": 75,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Abduction Machine",
+    "m": "glutes",
+    "tier": "common",
+    "score": 65,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Belt Squat",
+    "m": "quads",
+    "tier": "common",
+    "score": 65,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Calf Raise on Leg Press Sled",
+    "m": "calves",
+    "tier": "common",
+    "score": 65,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Donkey Kickback (Machine)",
+    "m": "glutes",
+    "tier": "common",
+    "score": 65,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Glute Kickback Machine",
+    "m": "glutes",
+    "tier": "common",
+    "score": 65,
+    "rep": "12-20",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": [
+   "Abduction Machine",
+   "Calf Raise on Leg Press Sled",
+   "Donkey Kickback (Machine)",
+   "Glute Kickback Machine"
+  ]
+ },
+ {
+  "from": "Lying Leg Curl",
+  "muscle": "hamstrings",
+  "sets": 3,
+  "structuralTop": [
+   "Glute Ham Raise [hamstrings] 130",
+   "Prone Leg Curl [hamstrings] 130",
+   "Seated Leg Curl [hamstrings] 130",
+   "Single-Leg Lying Leg Curl [hamstrings] 130",
+   "Standing Leg Curl [hamstrings] 130",
+   "Leg Curl (Cable) [hamstrings] 115",
+   "Nordic Curl [hamstrings] 115",
+   "Slider Leg Curl (Bodyweight) [hamstrings] 115"
+  ],
+  "shown": [
+   {
+    "n": "Seated Leg Curl",
+    "m": "hamstrings",
+    "tier": "staple",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Prone Leg Curl",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Standing Leg Curl",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Leg Curl (Cable)",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "TRX Hamstring Curl",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Glute-Ham Raise Machine",
+    "m": "hamstrings",
+    "tier": "common",
+    "score": 75,
+    "rep": "8-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Abduction Machine",
+    "m": "glutes",
+    "tier": "common",
+    "score": 65,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Calf Raise on Leg Press Sled",
+    "m": "calves",
+    "tier": "common",
+    "score": 65,
+    "rep": "15-25",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": [
+   "Abduction Machine",
+   "Calf Raise on Leg Press Sled"
+  ]
+ },
+ {
+  "from": "Barbell Hip Thrust",
+  "muscle": "glutes",
+  "sets": 3,
+  "structuralTop": [
+   "B-Stance Hip Thrust [glutes] 130",
+   "Barbell Glute Bridge [glutes] 130",
+   "Kickstand Hip Thrust [glutes] 130",
+   "45-Degree Hip Extension [glutes] 115",
+   "Cable Pull-Through [glutes] 115",
+   "Dumbbell Glute Bridge [glutes] 115",
+   "Dumbbell Hip Thrust [glutes] 115",
+   "GHD Hip Extension [glutes] 115"
+  ],
+  "shown": [
+   {
+    "n": "Machine Hip Thrust",
+    "m": "glutes",
+    "tier": "staple",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "B-Stance Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-15",
+    "ci": "compound"
+   },
+   {
+    "n": "Barbell Glute Bridge",
+    "m": "glutes",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Kickstand Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "45-Degree Hip Extension",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Dumbbell Glute Bridge",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Dumbbell Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "10-20",
+    "ci": "compound"
+   },
+   {
+    "n": "Plate-Loaded Hip Thrust",
+    "m": "glutes",
+    "tier": "common",
+    "score": 115,
+    "rep": "8-15",
+    "ci": "compound"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Donkey Calf Raise (Machine)",
+  "muscle": "calves",
+  "sets": 4,
+  "structuralTop": [
+   "Calf Raise on Leg Press Sled [calves] 130",
+   "Leg Press Calf Raise [calves] 130",
+   "Standing Calf Raise (Machine) [calves] 130",
+   "Calf Raise on Steps [calves] 115",
+   "Deficit Dumbbell Calf Raise (Standing) [calves] 115",
+   "Donkey Calf Raise [calves] 115",
+   "Donkey Calf Raise (Barbell) [calves] 115",
+   "Dumbbell Calf Raise (Standing) [calves] 115"
+  ],
+  "shown": [
+   {
+    "n": "Leg Press Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Standing Calf Raise (Machine)",
+    "m": "calves",
+    "tier": "staple",
+    "score": 130,
+    "rep": "10-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 105,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Seated Machine Calf Raise",
+    "m": "calves",
+    "tier": "staple",
+    "score": 105,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Calf Raise on Leg Press Sled",
+    "m": "calves",
+    "tier": "common",
+    "score": 130,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Donkey Calf Raise",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   },
+   {
+    "n": "Dumbbell Calf Raise (Standing)",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "12-20",
+    "ci": "isolation"
+   },
+   {
+    "n": "Single-Leg Calf Raise (Dumbbell)",
+    "m": "calves",
+    "tier": "common",
+    "score": 115,
+    "rep": "15-25",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ },
+ {
+  "from": "Ab Wheel (Kneeling)",
+  "muscle": "abs",
+  "sets": 3,
+  "structuralTop": [
+   "Ab Rollout [abs] 130",
+   "Ab Wheel Rollout [abs] 130",
+   "Bear Crawl [abs] 130",
+   "Bird Dog [abs] 130",
+   "Copenhagen Plank [abs] 130",
+   "Dead Bug [abs] 130",
+   "Dragon Flag [abs] 130",
+   "Hollow Body Hold [abs] 130"
+  ],
+  "shown": [
+   {
+    "n": "Ab Rollout",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Ab Wheel Rollout",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Bird Dog",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Kneeling Ab Rollout",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "8-15",
+    "ci": "isolation"
+   },
+   {
+    "n": "Plank",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "20-60",
+    "ci": "isolation"
+   },
+   {
+    "n": "Side Plank",
+    "m": "abs",
+    "tier": "common",
+    "score": 130,
+    "rep": "20-60",
+    "ci": "isolation"
+   },
+   {
+    "n": "Long-Lever Plank",
+    "m": "abs",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "10-30",
+    "ci": "isolation"
+   },
+   {
+    "n": "Plank Shoulder Tap",
+    "m": "abs",
+    "tier": "specialist",
+    "score": 130,
+    "rep": "10-24",
+    "ci": "isolation"
+   }
+  ],
+  "otherMuscle": []
+ }
+]

@@ -1,0 +1,834 @@
+{
+ "plans": 63,
+ "tiers": {
+  "common": 829,
+  "staple": 644,
+  "specialist": 11
+ },
+ "specialistPicks": {
+  "Cossack Squat (Dumbbell) [specialist]": 3,
+  "Lateral Lunge [specialist]": 2,
+  "Zercher Sumo Squat (Adductor Focus) [specialist]": 6
+ },
+ "commonByFreq": [
+  [
+   "B-Stance Hip Thrust",
+   63
+  ],
+  [
+   "B-Stance Romanian Deadlift",
+   60
+  ],
+  [
+   "Donkey Calf Raise",
+   56
+  ],
+  [
+   "Ab Rollout",
+   54
+  ],
+  [
+   "Cable Face Pull",
+   53
+  ],
+  [
+   "Bent-Over Cable Rear Delt Fly",
+   49
+  ],
+  [
+   "Bayesian Curl",
+   39
+  ],
+  [
+   "Cross-Body Cable Lateral Raise",
+   37
+  ],
+  [
+   "Chest-Supported Row (Barbell)",
+   35
+  ],
+  [
+   "Barbell Skull Crusher",
+   34
+  ],
+  [
+   "Decline Barbell Bench Press",
+   26
+  ],
+  [
+   "Barbell Front Squat",
+   25
+  ],
+  [
+   "Donkey Calf Raise (Machine)",
+   23
+  ],
+  [
+   "Leg Curl (Cable)",
+   23
+  ],
+  [
+   "Leaning Cable Lateral Raise",
+   21
+  ],
+  [
+   "Landmine Romanian Deadlift",
+   20
+  ],
+  [
+   "Assisted Pull-Up",
+   18
+  ],
+  [
+   "Abduction Machine",
+   18
+  ],
+  [
+   "Cable Donkey Kickback",
+   18
+  ],
+  [
+   "Cable Chest Press (Standing)",
+   17
+  ],
+  [
+   "Ab Wheel (Kneeling)",
+   16
+  ],
+  [
+   "Cable Overhead Tricep Extension",
+   15
+  ],
+  [
+   "Cable Face Pull (Rope)",
+   13
+  ],
+  [
+   "Barbell Glute Bridge",
+   12
+  ],
+  [
+   "Cable Hip Abduction",
+   12
+  ],
+  [
+   "Sissy Squat Machine",
+   12
+  ],
+  [
+   "Reverse Lunge (Glute Focus)",
+   11
+  ],
+  [
+   "Landmine Press",
+   9
+  ],
+  [
+   "Seated Calf Raise (Barbell)",
+   9
+  ],
+  [
+   "Barbell Lunge",
+   4
+  ],
+  [
+   "Seated Barbell Overhead Press",
+   4
+  ],
+  [
+   "Cable Lat Pullover",
+   4
+  ],
+  [
+   "Decline Dumbbell Press",
+   4
+  ],
+  [
+   "Dip Machine",
+   4
+  ],
+  [
+   "Cable Shrug",
+   4
+  ],
+  [
+   "Assisted Dip Machine",
+   2
+  ],
+  [
+   "Smith Machine Close-Grip Press",
+   2
+  ],
+  [
+   "Dumbbell Overhead Tricep Extension",
+   2
+  ],
+  [
+   "Cable High Row",
+   1
+  ]
+ ],
+ "stapleByFreq": [
+  [
+   "Cable Lateral Raise",
+   63
+  ],
+  [
+   "Lying Leg Curl",
+   59
+  ],
+  [
+   "Leg Extension",
+   57
+  ],
+  [
+   "Barbell Row (Bent Over)",
+   54
+  ],
+  [
+   "Lat Pulldown (Close Grip)",
+   54
+  ],
+  [
+   "Barbell Bench Press",
+   53
+  ],
+  [
+   "Dumbbell Lateral Raise",
+   50
+  ],
+  [
+   "Barbell Curl",
+   45
+  ],
+  [
+   "Barbell Hip Thrust",
+   32
+  ],
+  [
+   "Barbell Back Squat",
+   31
+  ],
+  [
+   "Lat Pulldown (Neutral Grip)",
+   26
+  ],
+  [
+   "Incline Barbell Bench Press",
+   24
+  ],
+  [
+   "Seated Calf Raise",
+   23
+  ],
+  [
+   "Bulgarian Split Squat",
+   18
+  ],
+  [
+   "Close-Grip Bench Press",
+   16
+  ],
+  [
+   "Barbell Shrug",
+   10
+  ],
+  [
+   "Cable Rear Delt Fly",
+   7
+  ],
+  [
+   "Cable Straight-Arm Pulldown",
+   6
+  ],
+  [
+   "Barbell Overhead Press",
+   5
+  ],
+  [
+   "Incline Dumbbell Curl",
+   5
+  ],
+  [
+   "Dumbbell Shrug",
+   4
+  ],
+  [
+   "Cable Curl",
+   1
+  ],
+  [
+   "Chest-Supported Row (Dumbbell)",
+   1
+  ]
+ ],
+ "perPlan": [
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "general",
+   "rows": 12,
+   "staple": 6,
+   "common": 6,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "bodybuilding",
+   "rows": 20,
+   "staple": 9,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "bikini",
+   "rows": 16,
+   "staple": 7,
+   "common": 9,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "mens_physique",
+   "rows": 18,
+   "staple": 6,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "classic_physique",
+   "rows": 22,
+   "staple": 10,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "wellness",
+   "rows": 16,
+   "staple": 8,
+   "common": 7,
+   "other": 1
+  },
+  {
+   "experience": "beginner",
+   "days": 3,
+   "goal": "figure",
+   "rows": 20,
+   "staple": 7,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "general",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "bodybuilding",
+   "rows": 25,
+   "staple": 11,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "bikini",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "mens_physique",
+   "rows": 22,
+   "staple": 11,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "classic_physique",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "wellness",
+   "rows": 24,
+   "staple": 8,
+   "common": 14,
+   "other": 2
+  },
+  {
+   "experience": "beginner",
+   "days": 4,
+   "goal": "figure",
+   "rows": 24,
+   "staple": 10,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "general",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "bodybuilding",
+   "rows": 25,
+   "staple": 11,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "bikini",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "mens_physique",
+   "rows": 22,
+   "staple": 11,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "classic_physique",
+   "rows": 22,
+   "staple": 9,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "wellness",
+   "rows": 24,
+   "staple": 8,
+   "common": 14,
+   "other": 2
+  },
+  {
+   "experience": "beginner",
+   "days": 5,
+   "goal": "figure",
+   "rows": 24,
+   "staple": 10,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "general",
+   "rows": 18,
+   "staple": 9,
+   "common": 9,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "bodybuilding",
+   "rows": 23,
+   "staple": 9,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "bikini",
+   "rows": 21,
+   "staple": 8,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "mens_physique",
+   "rows": 21,
+   "staple": 10,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "classic_physique",
+   "rows": 23,
+   "staple": 11,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "wellness",
+   "rows": 16,
+   "staple": 8,
+   "common": 7,
+   "other": 1
+  },
+  {
+   "experience": "intermediate",
+   "days": 3,
+   "goal": "figure",
+   "rows": 20,
+   "staple": 8,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "general",
+   "rows": 22,
+   "staple": 11,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "bodybuilding",
+   "rows": 30,
+   "staple": 11,
+   "common": 19,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "bikini",
+   "rows": 23,
+   "staple": 7,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "mens_physique",
+   "rows": 23,
+   "staple": 12,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "classic_physique",
+   "rows": 24,
+   "staple": 11,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "wellness",
+   "rows": 25,
+   "staple": 9,
+   "common": 15,
+   "other": 1
+  },
+  {
+   "experience": "intermediate",
+   "days": 4,
+   "goal": "figure",
+   "rows": 25,
+   "staple": 11,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "general",
+   "rows": 28,
+   "staple": 13,
+   "common": 15,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "bodybuilding",
+   "rows": 34,
+   "staple": 15,
+   "common": 19,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "bikini",
+   "rows": 26,
+   "staple": 10,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "mens_physique",
+   "rows": 26,
+   "staple": 14,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "classic_physique",
+   "rows": 28,
+   "staple": 12,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "wellness",
+   "rows": 26,
+   "staple": 11,
+   "common": 14,
+   "other": 1
+  },
+  {
+   "experience": "intermediate",
+   "days": 5,
+   "goal": "figure",
+   "rows": 30,
+   "staple": 13,
+   "common": 17,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "general",
+   "rows": 18,
+   "staple": 11,
+   "common": 7,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "bodybuilding",
+   "rows": 21,
+   "staple": 12,
+   "common": 9,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "bikini",
+   "rows": 22,
+   "staple": 8,
+   "common": 14,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "mens_physique",
+   "rows": 21,
+   "staple": 10,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "classic_physique",
+   "rows": 23,
+   "staple": 11,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "wellness",
+   "rows": 17,
+   "staple": 8,
+   "common": 8,
+   "other": 1
+  },
+  {
+   "experience": "advanced",
+   "days": 3,
+   "goal": "figure",
+   "rows": 21,
+   "staple": 9,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "general",
+   "rows": 24,
+   "staple": 12,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "bodybuilding",
+   "rows": 32,
+   "staple": 11,
+   "common": 21,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "bikini",
+   "rows": 23,
+   "staple": 7,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "mens_physique",
+   "rows": 23,
+   "staple": 12,
+   "common": 11,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "classic_physique",
+   "rows": 26,
+   "staple": 11,
+   "common": 15,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "wellness",
+   "rows": 25,
+   "staple": 9,
+   "common": 15,
+   "other": 1
+  },
+  {
+   "experience": "advanced",
+   "days": 4,
+   "goal": "figure",
+   "rows": 25,
+   "staple": 12,
+   "common": 13,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "general",
+   "rows": 30,
+   "staple": 14,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "bodybuilding",
+   "rows": 40,
+   "staple": 17,
+   "common": 23,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "bikini",
+   "rows": 25,
+   "staple": 9,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "mens_physique",
+   "rows": 26,
+   "staple": 14,
+   "common": 12,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "classic_physique",
+   "rows": 28,
+   "staple": 12,
+   "common": 16,
+   "other": 0
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "wellness",
+   "rows": 26,
+   "staple": 11,
+   "common": 14,
+   "other": 1
+  },
+  {
+   "experience": "advanced",
+   "days": 5,
+   "goal": "figure",
+   "rows": 30,
+   "staple": 14,
+   "common": 16,
+   "other": 0
+  }
+ ]
+}

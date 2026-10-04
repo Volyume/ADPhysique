@@ -1,0 +1,464 @@
+/* TEMPORARY SCRATCH PROBE (lane R1, D219). Read-only; deleted before the lane finishes. */
+import fs from 'fs';
+import { generatePlan } from '../planEngine';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
+import { autoTier } from '../exercise/canonicality';
+
+const OUT = '/tmp/claude-0/-home-user-ADPhysique/786bfebd-8f9e-5cc9-9432-3682cc10db7d/scratchpad/d219/R1';
+
+// The real flow: seed rows -> SQLite -> getAllExercises (ORDER BY name ASC, binary collation).
+const rows = CORPUS.map(corpusEntryToSeedRow);
+rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+const byName = new Map(rows.map((r) => [r.name, r]));
+const canonicalNames = new Set(rows.filter((r) => !r.isCustom).map((r) => r.name));
+
+function run(opts) {
+  return generatePlan({
+    experience: 'intermediate',
+    sessionLengthMinutes: 60,
+    equipment: 'full_gym',
+    goal: 'general',
+    phase: 'lean_gain',
+    nutritionPhase: 'lean_gain',
+    weakPoints: [],
+    recoveryRating: 'average',
+    age: null,
+    exerciseLibrary: rows,
+    canonicalNames,
+    ...opts,
+  });
+}
+
+function describePlan(plan) {
+  return {
+    name: plan.name,
+    splitType: plan.splitType,
+    days: plan.daysPerWeek,
+    whyThisSequencing: plan.whyThis?.sequencing ?? null,
+    timeConstraint: plan.timeConstraint,
+    weekly: plan.weeklyVolumeSummary,
+    workouts: plan.workouts.map((w) => ({
+      name: w.name,
+      minutes: w.estimatedDurationMinutes,
+      totalSets: w.exercises.reduce((s, e) => s + e.sets, 0),
+      exercises: w.exercises.map((e) => {
+        const r = byName.get(e.exerciseName) || {};
+        return {
+          name: e.exerciseName,
+          sets: e.sets,
+          reps: `${e.repMin}-${e.repMax}`,
+          rest: e.restSec,
+          rir: e.rirTarget,
+          tier: autoTier(e.exerciseName),
+          muscle: r.primaryMuscle,
+          sub: r.subregion,
+          cat: r.equipmentCategory,
+          ci: r.compoundIsolation,
+          sfr: r.stimulusToFatigueRatio,
+          fat: r.fatigueCost,
+          diff: r.difficulty,
+          reason: e.selectionReason,
+        };
+      }),
+    })),
+  };
+}
+
+test('probe: typical full gym general intermediate 2..6 days', () => {
+  const result = {};
+  for (const days of [2, 3, 4, 5, 6]) {
+    result[`d${days}`] = describePlan(run({ daysPerWeek: days }));
+  }
+  fs.writeFileSync(`${OUT}/probe1-general-intermediate.json`, JSON.stringify(result, null, 1));
+  expect(Object.keys(result).length).toBe(5);
+});
+
+// ---------------------------------------------------------------------------
+// Probe 2: how a plan's static sets become per-week served sets, and how an
+// exercise reaches 6+ sets. Pure replicas of: database.generateInitialPlannedVolume
+// (template ramp), sessionAdjustments.getSessionWeeklyAllocation -> coachApply
+// computeWeeklySessionAllocation, CoachOutputScreen.handleApplyTraining -> computeVolumeApply.
+// ---------------------------------------------------------------------------
+import { VOLUME_LANDMARKS } from '../algorithms';
+import { computeWeeklySessionAllocation, computeVolumeApply } from '../coachApply';
+
+function templateWeeks() {
+  // 6 weeks: 5 accumulation + deload (week 6)  (database.js:5361 rir_ladder [3,2,1,0,0,4], planned_weeks 6)
+  const weeks = [];
+  for (let w = 1; w <= 6; w += 1) weeks.push({ index: w, rows: {} });
+  for (const [muscle, lm] of Object.entries(VOLUME_LANDMARKS)) {
+    const acc = 5;
+    for (let i = 0; i < acc; i += 1) {
+      const progress = acc <= 1 ? 1 : i / (acc - 1);
+      weeks[i].rows[muscle] = { planned: Math.round(lm.mev + (lm.mav - lm.mev) * progress), mev: lm.mev, mav: lm.mav, mrv: lm.mrv };
+    }
+    weeks[5].rows[muscle] = { planned: lm.mev, mev: lm.mev, mav: lm.mav, mrv: lm.mrv };
+  }
+  return weeks;
+}
+
+test('probe: weekly serve of a static plan (template ramp), coach +3, session +1', () => {
+  const out = {};
+  const weeks = templateWeeks();
+  for (const days of [3, 4, 5]) {
+    const plan = run({ daysPerWeek: days });
+    const perWeek = [];
+    for (let wi = 0; wi < 6; wi += 1) {
+      const weekMap = Object.fromEntries(Object.entries(weeks[wi].rows).map(([m, r]) => [m, r.planned]));
+      const baseMap = Object.fromEntries(Object.entries(weeks[0].rows).map(([m, r]) => [m, r.planned]));
+      const sessions = plan.workouts.map((w) => {
+        const todays = w.exercises.map((e) => ({
+          exerciseId: `${w.name}|${e.exerciseName}`,
+          primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle,
+          recommendedSets: e.sets,
+        }));
+        const alloc = computeWeeklySessionAllocation(todays, weekMap, baseMap);
+        return { name: w.name, ex: w.exercises.map((e) => ({ n: e.exerciseName, m: byName.get(e.exerciseName)?.primaryMuscle, base: e.sets, served: alloc[`${w.name}|${e.exerciseName}`] })) };
+      });
+      perWeek.push({ week: wi + 1, plannedChest: weekMap.chest, plannedBack: weekMap.back, sessions });
+    }
+    out[`d${days}`] = perWeek;
+  }
+  fs.writeFileSync(`${OUT}/probe2-weekly-serve.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(3);
+});
+
+test('probe: coach +3 apply on next-week rows, then serve', () => {
+  const weeks = templateWeeks();
+  const plan = run({ daysPerWeek: 4 });
+  const res = {};
+  // check-in at end of week 2 applies to week 3 (nextTrainingWeekId)
+  const rows3 = Object.entries(weeks[2].rows).map(([m, r]) => ({ muscle: m, planned_sets: r.planned, mev: r.mev, mav: r.mav, mrv: r.mrv }));
+  const changes = computeVolumeApply(rows3, 3, new Set());
+  const w3 = Object.fromEntries(rows3.map((r) => [r.muscle, r.planned_sets]));
+  for (const c of changes) w3[c.muscle] = c.plannedSets;
+  const base = Object.fromEntries(Object.entries(weeks[0].rows).map(([m, r]) => [m, r.planned]));
+  res.changes = changes.map((c) => `${c.muscle}:${rows3.find((r) => r.muscle === c.muscle).planned_sets}->${c.plannedSets}`);
+  res.sessions = plan.workouts.map((w) => {
+    const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+    const alloc = computeWeeklySessionAllocation(todays, w3, base);
+    return { name: w.name, ex: w.exercises.map((e) => ({ n: e.exerciseName, m: byName.get(e.exerciseName)?.primaryMuscle, base: e.sets, served: alloc[`${w.name}|${e.exerciseName}`] })) };
+  });
+  fs.writeFileSync(`${OUT}/probe2b-coach-plus3.json`, JSON.stringify(res, null, 1));
+  expect(res.sessions.length).toBe(4);
+});
+
+// ---------------------------------------------------------------------------
+// Probe 3: replica of selectExercisesForMuscle's candidate ranking for the
+// library path (planEngine.js:1484-1700), to show every score component.
+// ---------------------------------------------------------------------------
+import { generatePoolFromLibrary } from '../poolGenerator';
+import { movementFamily, CLASSIFIED_MUSCLES, familySatisfiesRole } from '../exercise/movementFamily';
+import { tierRank, TIER_RANK, AUTO_TIER, isAutoEligible } from '../exercise/canonicality';
+import { divisionPoolRule, divisionRoleSpecs } from '../division/profile';
+import { SUBREGION_REQUIREMENTS } from '../planEngine';
+
+function normalise(pool) {
+  const outp = {};
+  for (const [muscle, entries] of Object.entries(pool)) {
+    if (!CLASSIFIED_MUSCLES.includes(muscle)) { outp[muscle] = entries; continue; }
+    outp[muscle] = entries.map((e) => { const f = movementFamily(e.n, muscle, e.sub); return f === e.sub ? e : { ...e, sub: f }; });
+  }
+  return outp;
+}
+
+function rankReplica(muscle, sessionTarget, weeklyTotal, { goal = 'general', equipment = 'full_gym', experience = 'intermediate', usedNames = new Set(), noIdx = false } = {}) {
+  const pool = normalise(generatePoolFromLibrary(rows))[muscle] ?? [];
+  let available = pool.filter((e) => e.eq.includes(equipment));
+  const rule = divisionPoolRule(goal, muscle);
+  if (rule) {
+    const restricted = available.filter((e) => {
+      if (rule.allowSubs && !rule.allowSubs.includes(e.sub)) return false;
+      if (rule.denySubs && rule.denySubs.includes(e.sub)) return false;
+      if (rule.denyParams && rule.denyParams.includes(e.p)) return false;
+      return true;
+    });
+    if (restricted.length >= 1) available = restricted;
+  }
+  available = available.filter((e) => isAutoEligible(e.n));
+  const numExHint = Math.max(1, Math.ceil(sessionTarget / 4));
+  const recognisable = available.filter((e) => tierRank(e.n) <= TIER_RANK[AUTO_TIER.COMMON]);
+  const stage = { afterEquip: pool.filter((e) => e.eq.includes(equipment)).length, afterAuto: available.length, recognisable: recognisable.length };
+  if (recognisable.length >= Math.max(2, numExHint)) available = recognisable;
+  if (experience !== 'beginner') {
+    const gated = available.filter((e) => !/\bassisted\b/i.test(e.n));
+    if (gated.length >= Math.max(2, numExHint)) available = gated;
+  }
+  const req = SUBREGION_REQUIREMENTS[muscle];
+  let requiredSubs = [];
+  if (req && weeklyTotal >= req.minSets) requiredSubs = [...req.required];
+  const roleSpecs = divisionRoleSpecs(goal, muscle);
+  const preferredRoles = roleSpecs.map((s) => s.role);
+  const satisfies = (e) => requiredSubs.some((r) => familySatisfiesRole(muscle, r, e.sub));
+  const scored = available.map((e, idx) => {
+    const reqBonus = satisfies(e) ? 0 : 100;
+    const paramBonus = ({ heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 }[e.p] ?? 3) * 10;
+    const roleIndex = preferredRoles.findIndex((role) => e.sub === role);
+    const divBonus = roleIndex === -1 ? 0 : -5 / (roleIndex + 1);
+    const goalBonus = e.sfr != null ? -(e.sfr / 10) : 0;
+    const canonBonus = tierRank(e.n) * 2;
+    const idxTerm = noIdx ? 0 : idx;
+    return { n: e.n, tier: e.n && (tierRank(e.n) === 0 ? 'staple' : tierRank(e.n) === 1 ? 'common' : 'other'), p: e.p, sub: e.sub, sfr: e.sfr, idx, reqBonus, paramBonus, goalBonus, canonBonus, total: reqBonus + paramBonus + divBonus + goalBonus + canonBonus + idxTerm };
+  });
+  scored.sort((a, b) => a.total - b.total);
+  return { stage, requiredSubs, top: scored.slice(0, 8), poolSize: available.length };
+}
+
+test('probe: candidate ranking replica (library path, general/intermediate/full_gym)', () => {
+  const cases = [
+    ['chest', 3, 6], ['chest', 3, 9], ['back', 5, 10], ['quads', 4, 8], ['hamstrings', 3, 6], ['glutes', 3, 6], ['calves', 3, 7],
+    ['biceps', 3, 6], ['triceps', 3, 6], ['side_delts', 4, 8], ['rear_delts', 3, 6], ['abs', 3, 6], ['traps', 3, 6],
+  ];
+  const res = {};
+  for (const [m, st, wk] of cases) {
+    res[`${m}@${st}/${wk}`] = { withIdx: rankReplica(m, st, wk), noIdx: rankReplica(m, st, wk, { noIdx: true }) };
+  }
+  fs.writeFileSync(`${OUT}/probe3-ranking.json`, JSON.stringify(res, null, 1));
+  expect(Object.keys(res).length).toBe(cases.length);
+});
+
+// ---------------------------------------------------------------------------
+// Probe 4: the swap sheet's candidate list for each slot of a typical plan
+// (rankSwaps top 20 -> rankPersonalised with an EMPTY state -> top 8), as
+// ActiveWorkoutScreen.handleOpenSwap does (lines 1597-1620).
+// ---------------------------------------------------------------------------
+import { rankSwaps } from '../swapEngine';
+import { rankPersonalised } from '../exercise/intent';
+import { canonicalExerciseId } from '../exercise/canonicalId';
+
+test('probe: swap sheet candidates (full_gym, intermediate, empty history)', () => {
+  const lib = rows.map((r) => ({ ...r, id: canonicalExerciseId(r.name) }));
+  const libByName = new Map(lib.map((r) => [r.name, r]));
+  const plan = run({ daysPerWeek: 4 });
+  const inPlan = plan.workouts.flatMap((w) => w.exercises.map((e) => e.exerciseName));
+  const alreadyInWorkoutFor = (w) => w.exercises.map((e) => libByName.get(e.exerciseName)?.id).filter(Boolean);
+  const emptyState = { intents: new Map(), swaps: [], defaults: [], usage: new Map(), progression: new Map(), activeMesocycleId: null, unavailable: false, capability: null };
+  const out = [];
+  for (const w of plan.workouts) {
+    for (const e of w.exercises) {
+      const orig = libByName.get(e.exerciseName);
+      if (!orig) continue;
+      const ranked = rankSwaps(orig, lib, { excludeIds: alreadyInWorkoutFor(w), numResults: 20, excludeAssisted: true, equipment: 'full_gym' });
+      const ordered = rankPersonalised(emptyState, ranked, { fromExerciseId: orig.id, routineId: null }).slice(0, 8);
+      out.push({
+        from: e.exerciseName, muscle: orig.primaryMuscle, sets: e.sets,
+        structuralTop: ranked.slice(0, 8).map((c) => `${c.exercise.name} [${c.exercise.primaryMuscle}] ${c.score}`),
+        shown: ordered.map((c) => ({ n: c.exercise.name, m: c.exercise.primaryMuscle, tier: autoTier(c.exercise.name), score: c.score, rep: `${c.exercise.defaultRepMin}-${c.exercise.defaultRepMax}`, ci: c.exercise.compoundIsolation })),
+        otherMuscle: ordered.filter((c) => c.exercise.primaryMuscle !== orig.primaryMuscle).map((c) => c.exercise.name),
+      });
+    }
+  }
+  fs.writeFileSync(`${OUT}/probe4-swap-candidates.json`, JSON.stringify(out, null, 1));
+  expect(out.length).toBeGreaterThan(10);
+});
+
+// ---------------------------------------------------------------------------
+// Probe 5: what a swap does to the served sets in a later week.
+// ---------------------------------------------------------------------------
+test('probe: swap effect on served sets (plan-level same/different muscle; in-session id-key fallback)', () => {
+  const weeks = templateWeeks();
+  const base = Object.fromEntries(Object.entries(weeks[0].rows).map(([m, r]) => [m, r.planned]));
+  const res = {};
+  const weekMap = (wi) => Object.fromEntries(Object.entries(weeks[wi].rows).map(([m, r]) => [m, r.planned]));
+  const serve = (muscle, sets, wi) => computeWeeklySessionAllocation([{ exerciseId: 'x', primaryMuscle: muscle, recommendedSets: sets }], weekMap(wi), base).x;
+  const cases = [
+    ['Leg Extension (quads, 4 sets)', 'quads', 4],
+    ['  swapped at plan level to Abduction Machine (glutes)', 'glutes', 4],
+    ['  swapped at plan level to Calf Raise on Leg Press Sled (calves)', 'calves', 4],
+    ['Cable Lateral Raise (side_delts, 4 sets)', 'side_delts', 4],
+    ['  swapped at plan level to Bayesian Curl (biceps)', 'biceps', 4],
+    ['Lying Leg Curl (hamstrings, 3 sets)', 'hamstrings', 3],
+    ['  swapped at plan level to Abduction Machine (glutes)', 'glutes', 3],
+  ];
+  res.rows = cases.map(([label, m, s]) => ({ label, week1_to_6: [0, 1, 2, 3, 4, 5].map((wi) => serve(m, s, wi)) }));
+  fs.writeFileSync(`${OUT}/probe5-swap-effect.json`, JSON.stringify(res, null, 1));
+  expect(res.rows.length).toBe(cases.length);
+});
+
+test('probe: library census by tier and full_gym pool per muscle', () => {
+  const pool = generatePoolFromLibrary(rows);
+  const tiers = {};
+  for (const r of rows) tiers[autoTier(r.name)] = (tiers[autoTier(r.name)] ?? 0) + 1;
+  const perMuscle = {};
+  for (const [m, entries] of Object.entries(pool)) {
+    const fg = entries.filter((e) => e.eq.includes('full_gym') && isAutoEligible(e.n));
+    const t = { staple: 0, common: 0, specialist: 0, niche: 0 };
+    for (const e of fg) t[autoTier(e.n)] = (t[autoTier(e.n)] ?? 0) + 1;
+    perMuscle[m] = { fullGymAutoEligible: fg.length, ...t };
+  }
+  fs.writeFileSync(`${OUT}/probe6-census.json`, JSON.stringify({ total: rows.length, tiers, perMuscle }, null, 1));
+  expect(rows.length).toBeGreaterThan(100);
+});
+
+// ---------------------------------------------------------------------------
+// Probe 7: weak points with and without phase === 'weak_point'.
+// ---------------------------------------------------------------------------
+test('probe: weak points under non-weak_point phase vs weak_point phase', () => {
+  const out = {};
+  const per = (plan) => {
+    const m = {}; const freq = {};
+    for (const w of plan.workouts) {
+      const seen = new Set();
+      for (const e of w.exercises) {
+        const mu = byName.get(e.exerciseName)?.primaryMuscle;
+        m[mu] = (m[mu] || 0) + e.sets; seen.add(mu);
+      }
+      for (const mu of seen) freq[mu] = (freq[mu] || 0) + 1;
+    }
+    return Object.fromEntries(Object.entries(m).map(([k, v]) => [k, `${v}(x${freq[k]})`]));
+  };
+  for (const days of [4, 5]) {
+    for (const [label, opts] of [
+      ['none/lean_gain', { weakPoints: [], phase: 'lean_gain' }],
+      ['WP[side delts,glutes]/lean_gain', { weakPoints: ['Side Delts', 'Glutes'], phase: 'lean_gain' }],
+      ['WP[side delts,glutes]/weak_point', { weakPoints: ['Side Delts', 'Glutes'], phase: 'weak_point' }],
+    ]) {
+      const plan = run({ daysPerWeek: days, ...opts });
+      out[`d${days} ${label}`] = { split: plan.splitType, sessions: plan.workouts.map((w) => `${w.name}:${w.exercises.reduce((s, e) => s + e.sets, 0)}`), perMuscle: per(plan), maxSetsOnOneExercise: Math.max(...plan.workouts.flatMap((w) => w.exercises.map((e) => e.sets))) };
+    }
+  }
+  fs.writeFileSync(`${OUT}/probe7-weakpoints.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(6);
+});
+
+test('probe: weak points under non-weak_point phase, matrix divisions', () => {
+  const out = {};
+  const per = (plan) => {
+    const m = {};
+    for (const w of plan.workouts) for (const e of w.exercises) { const mu = byName.get(e.exerciseName)?.primaryMuscle; m[mu] = (m[mu] || 0) + e.sets; }
+    return m;
+  };
+  for (const goal of ['bikini', 'mens_physique']) {
+    for (const days of [4, 5]) {
+      for (const [label, opts] of [
+        ['none', { weakPoints: [], phase: 'lean_gain' }],
+        ['WP/lean_gain', { weakPoints: ['Side Delts', 'Glutes'], phase: 'lean_gain' }],
+      ]) {
+        const plan = run({ goal, daysPerWeek: days, ...opts });
+        out[`${goal} d${days} ${label}`] = { split: plan.splitType, sessions: plan.workouts.map((w) => `${w.name}:${w.exercises.reduce((s, e) => s + e.sets, 0)}`), perMuscle: per(plan) };
+      }
+    }
+  }
+  fs.writeFileSync(`${OUT}/probe7b-weakpoints-matrix.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(8);
+});
+
+test('probe: whyThis text under weak points with a non-weak_point phase', () => {
+  const plan = run({ daysPerWeek: 4, weakPoints: ['Side Delts', 'Glutes'], phase: 'lean_gain' });
+  const planNone = run({ daysPerWeek: 4, weakPoints: [], phase: 'lean_gain' });
+  const out = {
+    whyThisKeys: Object.keys(plan.whyThis),
+    weakPoints: plan.whyThis.weakPoints ?? null,
+    personalisationWeakPoints: plan.personalisationSummary?.weakPoints ?? plan.personalisation?.weakPoints ?? null,
+    planKeys: Object.keys(plan),
+    sameWorkouts: JSON.stringify(plan.workouts) === JSON.stringify(planNone.workouts),
+    volumeSummaryWP: Object.entries(plan.weeklyVolumeSummary).filter(([, v]) => v.isWeakPoint).map(([k]) => k),
+    warnings: plan.warnings,
+    schedule: plan.whyThis.schedule,
+    progression: plan.whyThis.progression,
+  };
+  fs.writeFileSync(`${OUT}/probe7c-whythis.json`, JSON.stringify(out, null, 1));
+  expect(out.whyThisKeys.length).toBeGreaterThan(2);
+});
+
+test('probe: weak-point plan served through the template ramp (FQ-4 scaling)', () => {
+  const weeks = templateWeeks();
+  const out = {};
+  for (const days of [4, 5]) {
+    const plan = run({ daysPerWeek: days, weakPoints: ['Side Delts', 'Glutes'], phase: 'weak_point' });
+    const perWeekMuscle = {};
+    const maxEx = [];
+    for (let wi = 0; wi < 6; wi += 1) {
+      const weekMap = Object.fromEntries(Object.entries(weeks[wi].rows).map(([m, r]) => [m, r.planned]));
+      const baseMap = Object.fromEntries(Object.entries(weeks[0].rows).map(([m, r]) => [m, r.planned]));
+      for (const w of plan.workouts) {
+        const todays = w.exercises.map((e) => ({ exerciseId: `${w.name}|${e.exerciseName}`, primaryMuscle: byName.get(e.exerciseName)?.primaryMuscle, recommendedSets: e.sets }));
+        const alloc = computeWeeklySessionAllocation(todays, weekMap, baseMap);
+        for (const e of w.exercises) {
+          const mu = byName.get(e.exerciseName)?.primaryMuscle;
+          const s = alloc[`${w.name}|${e.exerciseName}`];
+          perWeekMuscle[mu] = perWeekMuscle[mu] || Array(6).fill(0);
+          perWeekMuscle[mu][wi] += s;
+          maxEx.push([s, `${e.exerciseName} (${w.name}, week ${wi + 1}, base ${e.sets})`]);
+        }
+      }
+    }
+    maxEx.sort((a, b) => b[0] - a[0]);
+    out[`d${days}`] = { split: plan.splitType, base: Object.fromEntries(plan.workouts.flatMap((w) => w.exercises.map((e) => [byName.get(e.exerciseName)?.primaryMuscle, 0]))), servedPerWeek: perWeekMuscle, topExercises: maxEx.slice(0, 6) };
+  }
+  fs.writeFileSync(`${OUT}/probe8-weakpoint-served.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(2);
+});
+
+test('probe: tier census over a sweep (3 experience x 3 days x 7 goals, full gym)', () => {
+  const tiers = {}; const byName = {}; const specialistPicks = {};
+  const perPlan = [];
+  const goals = ['general', 'bodybuilding', 'bikini', 'mens_physique', 'classic_physique', 'wellness', 'figure'];
+  for (const experience of ['beginner', 'intermediate', 'advanced']) {
+    for (const days of [3, 4, 5]) {
+      for (const goal of goals) {
+        const plan = run({ experience, daysPerWeek: days, goal });
+        const rowsHere = plan.workouts.flatMap((w) => w.exercises);
+        const c = { staple: 0, common: 0, other: 0 };
+        for (const e of rowsHere) {
+          const t = autoTier(e.exerciseName);
+          tiers[t] = (tiers[t] || 0) + 1;
+          byName[e.exerciseName] = (byName[e.exerciseName] || 0) + 1;
+          if (t === 'staple') c.staple += 1; else if (t === 'common') c.common += 1; else { c.other += 1; specialistPicks[`${e.exerciseName} [${t}]`] = (specialistPicks[`${e.exerciseName} [${t}]`] || 0) + 1; }
+        }
+        perPlan.push({ experience, days, goal, rows: rowsHere.length, ...c });
+      }
+    }
+  }
+  const commonByFreq = Object.entries(byName).filter(([n]) => autoTier(n) === 'common').sort((a, b) => b[1] - a[1]);
+  const stapleByFreq = Object.entries(byName).filter(([n]) => autoTier(n) === 'staple').sort((a, b) => b[1] - a[1]);
+  fs.writeFileSync(`${OUT}/probe9-tier-census.json`, JSON.stringify({ plans: perPlan.length, tiers, specialistPicks, commonByFreq: commonByFreq.slice(0, 40), stapleByFreq: stapleByFreq.slice(0, 40), perPlan }, null, 1));
+  expect(perPlan.length).toBe(63);
+});
+
+test('probe: the real engine under different library ORDER (same rows, same everything else)', () => {
+  const sortBy = (cmp) => [...rows].sort(cmp);
+  const orders = {
+    nameAsc_asShipped: sortBy((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+    nameDesc: sortBy((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0)),
+    tierThenName: sortBy((a, b) => (tierRank(a.name) - tierRank(b.name)) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+  };
+  const out = {};
+  for (const [label, lib] of Object.entries(orders)) {
+    const plan = generatePlan({
+      experience: 'intermediate', sessionLengthMinutes: 60, equipment: 'full_gym', goal: 'general', phase: 'lean_gain', nutritionPhase: 'lean_gain',
+      weakPoints: [], recoveryRating: 'average', age: null, exerciseLibrary: lib, canonicalNames, daysPerWeek: 4,
+    });
+    const all = plan.workouts.flatMap((w) => w.exercises.map((e) => ({ n: e.exerciseName, t: autoTier(e.exerciseName) })));
+    out[label] = { staple: all.filter((e) => e.t === 'staple').length, common: all.filter((e) => e.t === 'common').length, picks: plan.workouts.map((w) => `${w.name}: ${w.exercises.map((e) => `${e.exerciseName}[${autoTier(e.exerciseName)[0]}]`).join(', ')}`) };
+  }
+  fs.writeFileSync(`${OUT}/probe10-library-order.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(3);
+});
+
+test('probe: the canonicality pin (staples > 0.6) under corpus order vs name order', () => {
+  // eslint-disable-next-line global-require
+  const helpers = require('./campaign16.helpers');
+  const { LIBRARY, inputs, planExerciseNames } = helpers;
+  const byNameAsc = [...LIBRARY].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const out = {};
+  for (const [label, lib] of [['corpusOrder_asInTest', LIBRARY], ['nameAsc_asShipped', byNameAsc]]) {
+    out[label] = {};
+    for (const over of [{}, { daysPerWeek: 3 }, { daysPerWeek: 5 }, { experience: 'beginner' }]) {
+      const names = planExerciseNames(generatePlan({ ...inputs(over), exerciseLibrary: lib }));
+      const staples = names.filter((n) => autoTier(n) === 'staple').length;
+      out[label][JSON.stringify(over)] = { n: names.length, staples, ratio: Math.round((staples / names.length) * 100) / 100 };
+    }
+  }
+  fs.writeFileSync(`${OUT}/probe12-canonicality-pin.json`, JSON.stringify(out, null, 1));
+  expect(Object.keys(out).length).toBe(2);
+});
+
+test('probe: recovery hours the sequencer assumed (opening dose, RIR 3) vs week-5 served dose (RIR 0)', () => {
+  // eslint-disable-next-line global-require
+  const { recoveryHours } = require('../recovery/constants');
+  const cases = [['chest', 3, 7], ['back', 5, 8], ['quads', 4, 7], ['hamstrings', 3, 7], ['glutes', 3, 11], ['abs', 3, 12], ['side_delts', 4, 8], ['biceps', 3, 7]];
+  const out = cases.map(([m, s1, s5]) => ({ m, openingSets: s1, opening: Math.round(recoveryHours(m, { sets: s1, rirTarget: 3 })), week5Sets: s5, week5: Math.round(recoveryHours(m, { sets: s5, rirTarget: 0 })) }));
+  fs.writeFileSync(`${OUT}/probe13-recovery-hours.json`, JSON.stringify(out, null, 1));
+  expect(out.length).toBe(8);
+});

@@ -1,0 +1,182 @@
+{
+ "bikini d4 none": {
+  "split": "Glute Focus",
+  "sessions": [
+   "Lower (Glute + Ham):17",
+   "Upper (Delts + Back):18",
+   "Glutes (Pump) + Delts:19",
+   "Lower (Glute + Quad):19"
+  ],
+  "perMuscle": {
+   "glutes": 22,
+   "hamstrings": 12,
+   "abs": 6,
+   "side_delts": 9,
+   "back": 9,
+   "rear_delts": 6,
+   "chest": 3,
+   "quads": 6
+  }
+ },
+ "bikini d4 WP/lean_gain": {
+  "split": "Glute Focus",
+  "sessions": [
+   "Lower (Glute + Ham):17",
+   "Upper (Delts + Back):21",
+   "Glutes (Pump) + Delts:22",
+   "Lower (Glute + Quad):20"
+  ],
+  "perMuscle": {
+   "glutes": 24,
+   "hamstrings": 12,
+   "abs": 6,
+   "side_delts": 14,
+   "back": 9,
+   "rear_delts": 6,
+   "chest": 3,
+   "quads": 6
+  }
+ },
+ "bikini d5 none": {
+  "split": "Glute Focus",
+  "sessions": [
+   "Glutes (Max):16",
+   "Delts + Back + Abs:24",
+   "Lower (Quad + Glute):16",
+   "Delts + Arms:20",
+   "Glutes (Medius + Ham):16"
+  ],
+  "perMuscle": {
+   "glutes": 22,
+   "hamstrings": 16,
+   "side_delts": 14,
+   "back": 6,
+   "rear_delts": 8,
+   "abs": 3,
+   "chest": 6,
+   "quads": 7,
+   "calves": 3,
+   "biceps": 4,
+   "triceps": 3
+  }
+ },
+ "bikini d5 WP/lean_gain": {
+  "split": "Glute Focus",
+  "sessions": [
+   "Glutes (Max):16",
+   "Delts + Back + Abs:18",
+   "Lower (Quad + Glute):18",
+   "Delts + Arms:20",
+   "Glutes (Medius + Ham):16"
+  ],
+  "perMuscle": {
+   "glutes": 24,
+   "hamstrings": 16,
+   "side_delts": 14,
+   "back": 3,
+   "rear_delts": 8,
+   "abs": 3,
+   "chest": 3,
+   "quads": 7,
+   "calves": 3,
+   "biceps": 4,
+   "triceps": 3
+  }
+ },
+ "mens_physique d4 none": {
+  "split": "V-Taper",
+  "sessions": [
+   "Back + Delts (Width):17",
+   "Chest + Arms:16",
+   "Lower + Abs:21",
+   "Back + Delts (Thickness):19"
+  ],
+  "perMuscle": {
+   "back": 15,
+   "side_delts": 12,
+   "rear_delts": 6,
+   "chest": 7,
+   "triceps": 3,
+   "biceps": 6,
+   "quads": 6,
+   "hamstrings": 6,
+   "glutes": 3,
+   "calves": 3,
+   "abs": 3,
+   "traps": 3
+  }
+ },
+ "mens_physique d4 WP/lean_gain": {
+  "split": "V-Taper",
+  "sessions": [
+   "Back + Delts (Width):17",
+   "Chest + Arms:16",
+   "Lower + Abs:24",
+   "Back + Delts (Thickness):20"
+  ],
+  "perMuscle": {
+   "back": 14,
+   "side_delts": 14,
+   "rear_delts": 6,
+   "chest": 7,
+   "triceps": 3,
+   "biceps": 6,
+   "quads": 6,
+   "hamstrings": 6,
+   "glutes": 6,
+   "calves": 3,
+   "abs": 3,
+   "traps": 3
+  }
+ },
+ "mens_physique d5 none": {
+  "split": "V-Taper",
+  "sessions": [
+   "Pull (Width):15",
+   "Legs + Abs:21",
+   "Delts + Arms:19",
+   "Pull (Thickness):14",
+   "Push (Delts + Chest):18"
+  ],
+  "perMuscle": {
+   "back": 16,
+   "rear_delts": 9,
+   "biceps": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "glutes": 3,
+   "calves": 3,
+   "abs": 3,
+   "side_delts": 13,
+   "triceps": 7,
+   "traps": 3,
+   "chest": 6,
+   "front_delts": 3
+  }
+ },
+ "mens_physique d5 WP/lean_gain": {
+  "split": "V-Taper",
+  "sessions": [
+   "Pull (Width):15",
+   "Legs + Abs:24",
+   "Delts + Arms:19",
+   "Pull (Thickness):14",
+   "Push (Delts + Chest):19"
+  ],
+  "perMuscle": {
+   "back": 16,
+   "rear_delts": 9,
+   "biceps": 9,
+   "quads": 6,
+   "hamstrings": 6,
+   "glutes": 6,
+   "calves": 3,
+   "abs": 3,
+   "side_delts": 14,
+   "triceps": 7,
+   "traps": 3,
+   "chest": 6,
+   "front_delts": 3
+  }
+ }
+}
