@@ -12,7 +12,10 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_187` (187 applied 2026-09-27 15:59 UTC under the founder's "run
+> `migrate_188` (188 applied 2026-10-05 11:14 UTC under the founder's "run
+> against production: 188": `programmes.plan_facts jsonb`, the new planner's
+> plan facts, and the app's push of it is on; 187 applied 2026-09-27 15:59
+> UTC under the founder's "run
 > against production: 187": the server reads an automatic post's
 > `everyone` as `public`, so the builds already in the stores post; 186
 > applied 2026-09-26 18:44 UTC under the founder's "Run
@@ -58,7 +61,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_188`, applied through 187 except 049 HELD; 188 written 2026-10-04, UNAPPLIED; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_188`, applied through 188 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

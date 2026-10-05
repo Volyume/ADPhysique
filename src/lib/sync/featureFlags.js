@@ -32,10 +32,10 @@ export const CIRCUIT_SYNC_COLUMNS_ENABLED = true;
  * (docs/audit/plan-builder-science-2026-10-04/00-AUDIT-AND-PLAN.md section 9),
  * goes in the programmes upsert.
  *
- * The local column exists (SCHEMA_MIGRATIONS in database.js) but its cloud
- * counterpart, supabase/migrate_188_programmes_plan_facts.sql, is WRITTEN,
- * NOT APPLIED: only the founder's exact phrase "run against production"
- * applies a cloud migration. The programmes upsert is ONE request with no
+ * The local column exists (SCHEMA_MIGRATIONS in database.js) and its cloud
+ * counterpart, supabase/migrate_188_programmes_plan_facts.sql, is APPLIED
+ * (2026-10-05 11:14:30 UTC, founder: "run against production: 188"; verified
+ * read-only: jsonb, nullable, no default). The programmes upsert is ONE request with no
  * fallback (sync.js _pushProgrammes), so a build that pushed a column the
  * cloud lacks would stop programme sync for every user and block ordinary
  * sign-out (the sign-out push-first safety refuses while a push errors).
@@ -43,8 +43,7 @@ export const CIRCUIT_SYNC_COLUMNS_ENABLED = true;
  * field syncing normally. The pull side already reads plan_facts defensively
  * (a missing key is NULL, and a cloud NULL never overwrites a local value).
  *
- * Ships OFF. Flip this to true ONLY in the landing after the founder has run
- * migrate_188 against production and its presence has been verified
- * (supabase/README status block updated to APPLIED).
+ * ON since the landing after migrate_188 was applied and verified
+ * (supabase/README status block, APPLIED 2026-10-05).
  */
-export const PLAN_FACTS_PUSH = false;
+export const PLAN_FACTS_PUSH = true;

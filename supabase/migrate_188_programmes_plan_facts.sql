@@ -46,7 +46,7 @@
 -- Applied locally:   YES (database.js SCHEMA_MIGRATIONS: one ALTER TABLE ADD
 --                    COLUMN on programmes, plan_facts TEXT, no backfill; every
 --                    existing row is correctly NULL).
--- Applied remotely:  NO. STATUS: UNAPPLIED (written 2026-10-04 by D219 lane
+-- Applied remotely:  YES. STATUS: APPLIED 2026-10-05 11:14:30 UTC (founder: "run against production: 188"; written 2026-10-04 by D219 lane
 --                    S1). Applied only on the founder's exact phrase
 --                    "run against production" (CLAUDE.md section 2, "Database
 --                    schema"); the app never runs it and the deploy workflow

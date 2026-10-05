@@ -7,10 +7,12 @@
  * (sync.js _pushProgrammes), so a build that sent a column the cloud lacks
  * would reject every programme for every user and block ordinary sign-out.
  * plan_facts therefore goes in the payload ONLY while PLAN_FACTS_PUSH is on,
- * and the flag stays off until the founder applies migrate_188.
+ * and the flag stayed off until the founder applied migrate_188 (applied
+ * 2026-10-05; the flag is now on).
  *
  * Pins (each fails on the code before this lane):
- *  - the shipped flag is OFF (source pin on featureFlags.js);
+ *  - the shipped flag is ON now that migrate_188 is applied (source pin on
+ *    featureFlags.js; it shipped OFF until the apply);
  *  - with the flag off, the programmes upsert carries NO plan_facts key, even
  *    for a programme that holds facts, and every other field is unchanged;
  *  - with the flag on, the facts go out as an OBJECT for the jsonb column (a
@@ -18,7 +20,7 @@
  *    device holds no facts or unreadable text, so an upsert never erases a
  *    cloud value;
  *  - the cloud migration file exists, is additive and idempotent, and is
- *    recorded UNAPPLIED.
+ *    recorded APPLIED (2026-10-05).
  *
  * Drives the real sync.js through bulkUploadLocalData with supabase and
  * database mocked at the boundary, the convention of
@@ -106,9 +108,9 @@ beforeEach(() => {
 const pushedRow = () => captured.programmes[0][0];
 
 describe('the flag', () => {
-  test('PLAN_FACTS_PUSH ships OFF in featureFlags.js (flipped only after migrate_188 is applied)', () => {
+  test('PLAN_FACTS_PUSH ships ON in featureFlags.js (flipped in the landing after migrate_188 was applied)', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'sync', 'featureFlags.js'), 'utf8');
-    expect(src).toMatch(/^export const PLAN_FACTS_PUSH = false;$/m);
+    expect(src).toMatch(/^export const PLAN_FACTS_PUSH = true;$/m);
     expect(src).toContain('migrate_188');
   });
 });
@@ -189,12 +191,12 @@ describe('the cloud migration file', () => {
     expect(sql).not.toMatch(/ADD COLUMN IF NOT EXISTS plan_facts jsonb\s+(DEFAULT|NOT NULL|CHECK)/i);
   });
 
-  test('its header carries purpose, applied locally, applied remotely (UNAPPLIED), re-run safety and rollback', () => {
+  test('its header carries purpose, applied locally, applied remotely (APPLIED), re-run safety and rollback', () => {
     const sql = readSql();
     for (const word of ['Purpose', 'Applied locally', 'Applied remotely', 'Safe to re-run', 'Rollback']) {
       expect(sql).toContain(word);
     }
-    expect(sql).toMatch(/STATUS: UNAPPLIED/);
+    expect(sql).toMatch(/STATUS: APPLIED 2026-10-05/);
     expect(sql).toContain('"run against production"');
   });
 
