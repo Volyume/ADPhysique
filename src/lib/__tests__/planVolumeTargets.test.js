@@ -59,13 +59,30 @@ describe('what the plan programs each week', () => {
 });
 
 describe('the band around what the plan aims at', () => {
-  test("the plan's weekly total becomes the sweet spot for that muscle", () => {
-    const { table, source } = buildPlanLandmarks({
-      plannedByMuscle: { chest: 16 },
-      userProfile: INTERMEDIATE,
-    });
-    expect(table.chest.mav).toBe(16);
-    expect(source.chest).toBe('plan');
+  // RE-PINNED under D219 lane A5 (design 5.3, "the plan layer of the resolved
+  // landmarks stops setting mav to the plan's static week-1 total"): the plan's
+  // week-1 total used to BE the sweet spot, which made a plan followed to the
+  // letter climb past it from week 2. The plan layer still marks a muscle the
+  // plan programmes as 'plan' (the plan-trained set the heatmap and the
+  // Progress strip read), but its numbers no longer move with the plan's total.
+  test("the plan marks the muscle 'plan' but its week-1 total is no longer the sweet spot", () => {
+    const profileOnly = buildPlanLandmarks({ userProfile: INTERMEDIATE }).table.chest;
+    for (const planned of [4, 11, 16]) {
+      const { table, source } = buildPlanLandmarks({
+        plannedByMuscle: { chest: planned },
+        userProfile: INTERMEDIATE,
+      });
+      expect(source.chest).toBe('plan');
+      expect(table.chest.mav).toBe(profileOnly.mav);
+    }
+  });
+
+  test('a plan that programmes past the profile ceiling still keeps the ceiling above it', () => {
+    const { mav, mrv } = buildPlanLandmarks({
+      plannedByMuscle: { chest: 80 }, userProfile: INTERMEDIATE,
+    }).table.chest;
+    expect(mrv).toBeGreaterThan(80);
+    expect(mav).toBeLessThan(mrv);
   });
 
   test('the floor and ceiling stay the ones the plan itself was built to respect', () => {
@@ -109,11 +126,15 @@ describe('the band around what the plan aims at', () => {
     }
   });
 
-  test('a fractional planned total is a whole number of sets on screen', () => {
-    // A secondary muscle earns half a set, so a week can plan 7.5.
-    expect(buildPlanLandmarks({
+  // RE-PINNED under D219 lane A5: the plan's total no longer sets mav, so a
+  // fractional total (a secondary muscle earns half a set, a week can plan 7.5)
+  // is only the plan-trained marker and leaves the numbers whole.
+  test('a fractional planned total leaves whole-number landmarks', () => {
+    const { table, source } = buildPlanLandmarks({
       plannedByMuscle: { chest: 7.5 }, userProfile: INTERMEDIATE,
-    }).table.chest.mav).toBe(8);
+    });
+    expect(source.chest).toBe('plan');
+    for (const key of ['mev', 'mav', 'mrv']) expect(Number.isInteger(table.chest[key])).toBe(true);
   });
 });
 
@@ -127,11 +148,13 @@ describe('the numbers really are not the research table', () => {
     expect(beginner.mrv).not.toBe(advanced.mrv);
   });
 
-  test('and a plan moves the sweet spot off the research value', () => {
-    const research = VOLUME_LANDMARKS.chest.mav;
+  // RE-PINNED under D219 lane A5: the sweet spot is the profile's own, matched to
+  // experience, recovery, phase and age, and no longer the plan's week-1 total.
+  test('the sweet spot is the profile\'s own, off the research value, and the plan does not move it', () => {
+    const profileOnly = buildPlanLandmarks({ userProfile: INTERMEDIATE }).table.chest;
     const withPlan = buildPlanLandmarks({
-      plannedByMuscle: { chest: research + 5 }, userProfile: INTERMEDIATE,
+      plannedByMuscle: { chest: VOLUME_LANDMARKS.chest.mav + 5 }, userProfile: INTERMEDIATE,
     }).table.chest;
-    expect(withPlan.mav).toBe(research + 5);
+    expect(withPlan.mav).toBe(profileOnly.mav);
   });
 });

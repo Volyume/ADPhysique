@@ -11,6 +11,9 @@ import {
 // never by dividing milliseconds by a week constant.
 import { localWeekStartMs } from './dayKey';
 import { localDaysElapsed } from './mesocycle';
+// D219 (design 5.3, lane A5): the deload check's over pass reads the ONE band
+// function. plan/bands.js imports only plan/science.js, so there is no cycle.
+import { BAND, ROLE, bandFor } from './plan/bands';
 
 // Weekly set landmarks per muscle group. Single source of truth, imported by planEngine too.
 //
@@ -658,6 +661,28 @@ export function bestPRPerExercise(prs) {
   return order.map(k => bestByKey.get(k));
 }
 
+/**
+ * D219 (design 5.3, lane A5): has a week's fractional total gone past what its
+ * role's band supports? This is the deload check's "over" pass, and it reads
+ * the same band function and the muscle's role as every surface that judges
+ * weekly sets (volumeJudgement.js), not the landmark table's MRV. A focus (or
+ * raised) muscle is counted only past the 42 weekly sets studies have tested; a
+ * muscle that is not a focus past 30 (the top of the focus range, far above the
+ * 20 its plan peaks at). Nothing below that is counted for any role, so the 27
+ * weekly biceps sets of a muscle the plan raised are never "more sets than it
+ * can usually recover from" (a set count cannot say that, Meeusen 2013).
+ *
+ * @param {number} weeklyFractionalSets  calculateWeeklyVolume's workingSets
+ * @param {string} [role]  focus | raised | standard | maintenance (unknown is standard)
+ * @returns {boolean}
+ */
+export function weeklyTotalBeyondRoleBand(weeklyFractionalSets, role = ROLE.STANDARD) {
+  const band = bandFor(weeklyFractionalSets);
+  if (band === BAND.BEYOND_STUDIED) return true;
+  const focusLike = role === ROLE.FOCUS || role === ROLE.RAISED;
+  return !focusLike && band === BAND.TOP_OF_STUDIED;
+}
+
 // Algorithm 7: Deload Detection
 // Signal weighting: performance 50%, wellness composite 30%, soreness 20%.
 // Rationale: Coleman et al. (2024, PeerJ) found soreness is an unreliable deload trigger
@@ -719,9 +744,11 @@ export function shouldDeload(last4WeeksData) {
   const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
   if (overMRVWeeks >= 2) {
     score += 12;
-    // Plain-English sweep 2026-09-26: 'productive volume range' was jargon;
-    // hasOverMRV means a muscle got more sets than it can usually recover from.
-    reasons.push('More sets on a muscle than it can usually recover from, in 2 or more weeks');
+    // D219 (design 5.3): hasOverMRV (the property keeps its name for its
+    // readers) now means a week past what the muscle's role supports
+    // (weeklyTotalBeyondRoleBand); the old reason claimed a muscle "cannot
+    // recover" from the sets, which a set count cannot say.
+    reasons.push('Far more weekly sets on a muscle than your plan calls for, in 2 or more weeks');
   }
 
   // Soreness (20% weight, down-weighted; unreliable in trained populations).
@@ -816,6 +843,11 @@ function deloadRepsTypeOf(set, exerciseMap, repsTypeById) {
  *   Campaign 1 P0-7 D6). Kept as a disabled, documented option rather than
  *   deleted so the shape of the bug this replaced stays legible; defaults
  *   to false (the correct, answered-only behaviour).
+ * @param {Object<string,string>|null} [opts.roles] - D219 (design 5.3): each
+ *   muscle's role in the active plan (focus, raised, standard, maintenance),
+ *   from the plan facts. The hasOverMRV pass reads the band function and this
+ *   role (weeklyTotalBeyondRoleBand): a focus muscle inside its focus range is
+ *   never counted. Absent, every muscle reads the standard bands.
  * @param {number|null} [opts.weeksSinceLastDeloadOverride] - if a finite
  *   number, every bucket gets this flat value instead of the derived,
  *   per-bucket-back-projected figure (HomeScreen's current `99`, since it
@@ -834,6 +866,7 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
     zeroFillUnrated = false,
     weeksSinceLastDeloadOverride = null,
     repsTypeById = null,
+    roles = null,
   } = opts;
   const WEEK_MS = DELOAD_BUCKET_WEEK_MS;
 
@@ -930,10 +963,12 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
     let hasOverMRV = false;
     if (exerciseMap) {
       const vol = calculateWeeklyVolume(wkSets, exerciseMap);
-      hasOverMRV = Object.entries(vol).some(([muscle, data]) => {
-        const lm = VOLUME_LANDMARKS[muscle];
-        return lm && data.workingSets > lm.mrv;
-      });
+      // D219 (design 5.3): the band function and the role, not the MRV. `roles`
+      // is the active plan's facts' role map (volumeJudgement.roleFor reads the
+      // same map); without one every muscle reads the standard bands.
+      hasOverMRV = Object.entries(vol).some(([muscle, data]) => (
+        !!VOLUME_LANDMARKS[muscle] && weeklyTotalBeyondRoleBand(data.workingSets, roles?.[muscle])
+      ));
     }
 
     rawBuckets.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV });

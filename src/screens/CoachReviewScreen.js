@@ -10,36 +10,47 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getExerciseLookup, getCurrentMesocycleWeek } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { calculateWeeklyVolume, shouldDeload, MUSCLE_DISPLAY_NAMES, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
-import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
+import { getPlanRoles } from '../lib/effectiveLandmarks';
 import { useShallow } from 'zustand/react/shallow';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { volumeBandLabel } from '../lib/volumeBandLabels';
+// D219 (design 5.3, lane A5): the check-in review reads the ONE judgement every
+// surface that judges a muscle's weekly sets reads (volumeJudgement.js: the
+// role-aware band function, the muscle's role from the active plan's facts),
+// so a muscle the plan raised reads inside its focus range with the reason and
+// nothing here calls planned focus volume "more than you can recover from".
+import { judgeWeek, roleFor, toneColors, GROUP, TONE } from '../lib/volumeJudgement';
 
 // --- Helpers -----------------------------------------------------------------
 
-// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): takes the
-// live colours so callers pass t.colors instead of the frozen static import.
-function statusDotColor(status, c = colors) {
-  switch (status) {
-    case 'optimal': return c.success;
-    case 'minimum': return c.warning;
-    case 'near_mrv': return c.warning;
-    case 'over_mrv': return c.error;
-    default: return c.textMuted; // below / unknown
-  }
+// D219: the one judgement of a muscle's week (the figure shown is the figure
+// judged: the credit rounded once), with its role from the plan's facts. The
+// colour is the tone's, never a warning or error token (the highest band is an
+// information colour).
+function judgeMuscle(muscle, data) {
+  return judgeWeek({ muscle, sets: Math.round(data.workingSets), role: roleFor(_planRoles, muscle) });
 }
 
-// The five band names are the Volume heatmap's own, from the one shared map
-// (D214 addendum 9, census 0.24): one vocabulary on every surface.
-function volumeStatusLabel(status) {
-  return volumeBandLabel(status, 'No data');
+// What went well: a muscle inside the normal growth range or its focus range.
+function isInGrowthRange(judgement) {
+  return judgement.group === GROUP.NORMAL || judgement.group === GROUP.FOCUS;
+}
+
+// What stood out: below maintenance, above the normal growth range for a muscle
+// that is not a focus (and near the top of what studies have tested), or beyond
+// the studied range. A focus muscle inside its focus range, or at the top of
+// it, is the plan's own intent and never stands out.
+function standsOut(judgement) {
+  return judgement.group === GROUP.BELOW
+    || judgement.group === GROUP.ABOVE_NORMAL
+    || judgement.group === GROUP.BEYOND
+    || (judgement.group === GROUP.TOP && judgement.role !== 'focus' && judgement.role !== 'raised');
 }
 
 // Build progressive overload wins by comparing this week's sets to prior sets
@@ -93,12 +104,11 @@ function detectProgressionWins(thisWeekSets, allSets, exerciseMap) {
   return wins;
 }
 
-// D90 #3 (2026-08-06): the screen-resolved landmark table (manual >
-// adapted(Pro) > research, effectiveLandmarks.js). Module-scoped so the
-// leaf VolumeRow reads the same table the screen resolved; loadData writes
-// it before any row renders. (The next-week recommendations that also read
-// it were retired under D204 addendum 3, 2026-09-26: see the render below.)
-let _resolvedLandmarks = null;
+// D219: each muscle's role in the active plan (focus, raised, standard,
+// maintenance), from the plan facts. Module-scoped so the leaf VolumeRow reads
+// the same map the screen resolved; loadData writes it before any row renders.
+// Empty reads every muscle standard (a plan with no facts, or none at all).
+let _planRoles = {};
 
 // --- Sub-components -----------------------------------------------------------
 
@@ -112,9 +122,9 @@ function VolumeRow({ muscle, data }) {
   // block) for why.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-  const dot = statusDotColor(status, t.colors);
-  const label = volumeStatusLabel(status);
+  const judgement = judgeMuscle(muscle, data);
+  const dot = toneColors(t.colors)[judgement.tone];
+  const label = judgement.label;
   const displayName = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
   const sets = Math.round(data.workingSets);
 
@@ -155,9 +165,8 @@ export default function CoachReviewScreen() {
   const t = useTheme();
   const live = buildLiveStyles(t);
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, tier } = useAppStore(useShallow(s => ({
+  const { user } = useAppStore(useShallow(s => ({
     user: s.user,
-    tier: s.tier,
   })));
 
   const [loading, setLoading] = useState(true);
@@ -184,7 +193,7 @@ export default function CoachReviewScreen() {
   }, [user?.id]);
 
   async function loadData() {
-    _resolvedLandmarks = await getEffectiveLandmarks(user?.id, { tier }).then(r => r?.table ?? null).catch(() => null);
+    _planRoles = await getPlanRoles(user?.id);
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
@@ -272,6 +281,9 @@ export default function CoachReviewScreen() {
       // behaviour exactly.
       const patchedBuckets = buildLast4WeekDeloadBuckets(allSets, allWorkouts, lookup, {
         weekAnchorMs: weekStartMs,
+        // D219 (design 5.3): the over pass reads the band function and the
+        // muscle's role, so a muscle the plan raised is never counted as over.
+        roles: _planRoles,
       });
 
       const deload = shouldDeload(patchedBuckets);
@@ -293,15 +305,9 @@ export default function CoachReviewScreen() {
     .filter(([, data]) => data.workingSets > 0)
     .sort(([, a], [, b]) => b.workingSets - a.workingSets);
 
-  const optimalMuscles = trainedMuscles.filter(([muscle, data]) => {
-    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-    return status === 'optimal';
-  });
+  const optimalMuscles = trainedMuscles.filter(([muscle, data]) => isInGrowthRange(judgeMuscle(muscle, data)));
 
-  const watchMuscles = trainedMuscles.filter(([muscle, data]) => {
-    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-    return status === 'over_mrv' || status === 'near_mrv' || status === 'below' || status === 'minimum';
-  });
+  const watchMuscles = trainedMuscles.filter(([muscle, data]) => standsOut(judgeMuscle(muscle, data)));
 
   // X6: was trainedMuscles.reduce(...data.workingSets), which sums muscle
   // CREDIT (allocateExerciseVolume gives each secondary muscle 0.5+), not a
@@ -456,15 +462,18 @@ export default function CoachReviewScreen() {
                 </Card>
               ) : (
                 <Card style={styles.insightCard}>
-                  {optimalMuscles.map(([muscle]) => (
-                    <InsightRow
-                      key={muscle}
-                      icon="checkmark-circle-outline"
-                      iconColor={t.colors.success}
-                      text={`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} training is in a good range`}
-                      subtext="Enough sets to drive progress without overdoing it."
-                    />
-                  ))}
+                  {optimalMuscles.map(([muscle, data]) => {
+                    const j = judgeMuscle(muscle, data);
+                    return (
+                      <InsightRow
+                        key={muscle}
+                        icon="checkmark-circle-outline"
+                        iconColor={t.colors.success}
+                        text={`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - ${j.label.toLowerCase()}`}
+                        subtext={j.reason ?? j.line}
+                      />
+                    );
+                  })}
                   {progressionWins.map((win, i) => (
                     <InsightRow
                       key={`win-${i}`}
@@ -490,39 +499,14 @@ export default function CoachReviewScreen() {
               ) : (
                 <Card style={styles.insightCard}>
                   {watchMuscles.map(([muscle, data]) => {
-                    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
-                    const isOver = status === 'over_mrv';
-                    const isNear = status === 'near_mrv';
-                    const isAtMinimum = status === 'minimum';
-                    const icon = isOver
-                      ? 'arrow-up-circle-outline'
-                      : isNear
-                      ? 'alert-circle-outline'
-                      : 'arrow-down-circle-outline';
-                    const iconColor = isOver
-                      ? t.colors.error
-                      : isNear
-                      ? t.colors.warning
-                      : t.colors.textMuted;
-                    const text = isOver
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - more sets than you can comfortably recover from`
-                      : isNear
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - approaching the upper limit`
-                      : isAtMinimum
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - at the minimum for meaningful progress`
-                      : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - below the minimum for meaningful progress`;
-                    const subtext = isOver
-                      ? 'That is past the upper limit, the most sets a muscle can usually recover from in a week.'
-                      : isNear
-                      ? 'The upper limit is the most sets a muscle can usually recover from in a week.'
-                      : 'The minimum is the fewest sets a week a muscle needs to make progress.';
+                    const j = judgeMuscle(muscle, data);
                     return (
                       <InsightRow
                         key={muscle}
-                        icon={icon}
-                        iconColor={iconColor}
-                        text={text}
-                        subtext={subtext}
+                        icon="information-circle-outline"
+                        iconColor={j.tone === TONE.BEYOND ? t.colors.macroCarb : t.colors.textMuted}
+                        text={`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - ${j.label.toLowerCase()}`}
+                        subtext={j.line}
                       />
                     );
                   })}

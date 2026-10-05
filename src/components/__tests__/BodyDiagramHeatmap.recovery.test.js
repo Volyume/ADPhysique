@@ -327,7 +327,8 @@ describe('the volume path is unchanged when recoveryByMuscle is absent (regressi
 
   test('the volume legend and its tooltip are present, with no recovery wording', () => {
     const tree = render({ volumeByMuscle: VOLUME_BY_MUSCLE });
-    expect(legendTexts(tree)).toEqual(['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much', 'No sets']);
+    // RE-PINNED under D219 lane A5 (design 5.3): the legend names the four tones of the one judgement.
+    expect(legendTexts(tree)).toEqual(['Below maintenance', 'Maintenance to growth', 'Growth range', 'Beyond the studied range', 'No sets']);
     expect(tree.root.findAllByType(InfoTooltip).length).toBeGreaterThan(0);
     const all = host(tree, () => true).map((n) => [].concat(n.props.children).filter((c) => typeof c === 'string').join('')).join('|');
     ['More to recover', 'Recovered', 'No session in 14 days', 'No recent session'].forEach((w) => expect(all).not.toContain(w));

@@ -29,7 +29,7 @@ import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import useVisualPillar from '../hooks/useVisualPillar';
 import { sessionSummaryParams } from '../lib/sessionReport';
-import { getEffectiveLandmarks, getPlanLandmarks } from '../lib/effectiveLandmarks';
+import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';
 import { resolveProgrammePosition } from '../lib/programmePosition';
 import { planTrainedMuscles } from '../lib/volumeLogged';
 import { logError } from '../lib/errorLog';
@@ -63,9 +63,9 @@ const PILLARS_SKELETON_HEIGHT = 410;
 const NO_TRAINING_COPY = Object.freeze({ state: null, evidence: null });
 
 // What the screen holds for the plan context before it is read (undefined) and
-// when there is no signed-in account (no plan, nothing plan-trained, research
-// landmarks).
-const NO_PLAN_CONTEXT = Object.freeze({ position: null, planTrained: new Set(), landmarks: null });
+// when there is no signed-in account (no plan, nothing plan-trained, no roles,
+// so every muscle reads the standard bands).
+const NO_PLAN_CONTEXT = Object.freeze({ position: null, planTrained: new Set(), roles: Object.freeze({}) });
 
 // The person's own word for a session's difficulty (1 to 5), the words the
 // Workout Summary rates it in; the spoken label carries "4 of 5" (D214, PR-1).
@@ -200,9 +200,8 @@ export default function AnalyticsScreen({ navigation, route }) {
   //   - the plan-trained muscle set, the plan layer's own source map exactly as
   //     VolumeHeatmapScreen reads it (never the merged source, so a hand-edited
   //     band cannot drop a muscle from it);
-  //   - the resolved landmark table (manual > adapted > plan > profile >
-  //     research, effectiveLandmarks.js: D90 #3), the one table both screens
-  //     judge by.
+  //   - each muscle's role in the active plan (getPlanRoles, D219), the roles
+  //     both screens judge by (volumeJudgement.js: the one band function).
   // undefined until the first read settles; every read is best effort, so a
   // failure degrades to the no-plan, research-table reading and is logged.
   const [planContext, setPlanContext] = useState(undefined);
@@ -215,22 +214,19 @@ export default function AnalyticsScreen({ navigation, route }) {
     if (!user?.id) { setPlanContext(NO_PLAN_CONTEXT); return; }
     const profile = userProfileRef.current;
     try {
-      const [position, planLayer, resolution] = await Promise.all([
+      const [position, planLayer, roles] = await Promise.all([
         resolveProgrammePosition(user.id).catch(() => null),
         getPlanLandmarks(user.id, { userProfile: profile }).catch((e) => {
           logError('AnalyticsScreen.readPlanLandmarks', e, { userId: user.id });
           return null;
         }),
-        getEffectiveLandmarks(user.id, { userProfile: profile }).catch((e) => {
-          logError('AnalyticsScreen.resolveLandmarks', e, { userId: user.id });
-          return null;
-        }),
+        getPlanRoles(user.id),
       ]);
       if (planRequestRef.current !== requestId) return;
       setPlanContext({
         position: position ?? null,
         planTrained: planTrainedMuscles(planLayer),
-        landmarks: resolution?.table ?? null,
+        roles: roles ?? {},
       });
     } catch (e) {
       // Never an unread plan slot forever: whatever failed, the screen reads as
@@ -330,9 +326,10 @@ export default function AnalyticsScreen({ navigation, route }) {
     [planContext, allSets, completedDays, currentMesoWeek],
   );
   // The strip under it: this Monday week so far, in logged sets (never the
-  // credits summed), judged against the same resolved landmark table and the
-  // same plan-trained set the Volume heatmap reads, so its "under their range"
-  // count is that screen's first group (src/lib/progress/volumeStrip.js). The
+  // credits summed), judged by the same one judgement (each muscle's role in
+  // the active plan, volumeJudgement.js) and the same plan-trained set the
+  // Volume heatmap reads, so its "below maintenance" count is that screen's
+  // first group (src/lib/progress/volumeStrip.js). The
   // recovery week is the programme position's GATED planned recovery week,
   // with the calendar flag only as the fallback when the position is unread.
   const recoveryWeek = useMemo(
@@ -343,7 +340,7 @@ export default function AnalyticsScreen({ navigation, route }) {
     allSets,
     exerciseMap: exercisesForSets,
     nowMs: Date.now(),
-    landmarks: planContext?.landmarks ?? null,
+    roles: planContext?.roles ?? null,
     planTrained: planContext?.planTrained ?? null,
     recoveryWeek,
   }), [allSets, exercisesForSets, planContext, recoveryWeek]);

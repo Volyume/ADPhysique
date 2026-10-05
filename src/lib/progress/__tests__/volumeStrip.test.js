@@ -9,36 +9,38 @@
  * heatmap it opens:
  *  - "N sets logged" counts working-set ROWS in the Monday week so far, a
  *    compound set once (VH-16), never the per-muscle credits summed;
- *  - "N under their range" counts the muscles whose `bandGroupFor` group is
- *    'below', the heatmap's first group by construction: a trained muscle under
- *    its range whether or not the plan programmes it, plus a muscle the plan
- *    programmes with no sets yet, never a muscle with no sets the plan does not
- *    programme; each muscle is judged on the heatmap's own rounded figure
- *    against the same resolved landmark table;
- *  - the strip folds five bands into three named tones (Under the range, Inside
- *    the range, Too much) read from one colour table, so the legend and the bar
- *    can never name different colours, in every palette;
- *  - RE-ANCHORED D214 addendum 9 (6.7, P7, P8): the middle tone is "Inside the
- *    range", not "In the range" (the Volume heatmap has a band called "In
- *    range" and the two differ by one article while counting different
- *    things), and the strip's (i) carries the credit sentence and names the
- *    three heatmap bands the middle tone folds, in both the normal and the
- *    recovery-week versions;
+ *  - "N below maintenance" counts the muscles whose `bandGroupFor` group is
+ *    below_maintenance, the heatmap's first group by construction: a trained
+ *    muscle below maintenance whether or not the plan programmes it, plus a
+ *    muscle the plan programmes with no sets yet, never a muscle with no sets the
+ *    plan does not programme; each muscle is judged on the heatmap's own rounded
+ *    figure;
+ *  - the strip folds the eight groups into three named tones (Below
+ *    maintenance, Within the studied range, Beyond the studied range) read from
+ *    one colour table, so the legend and the bar can never name different
+ *    colours, in every palette;
+ *  - RE-PINNED under D219 lane A5 (design 5.3, register D219): the strip reads
+ *    the ONE judgement every surface shares (volumeJudgement.judgeWeek, the
+ *    role-aware band function) and no longer the landmark table. Its old third
+ *    tone, "Too much" in the error colour, is gone: a focus muscle at 27 weekly
+ *    sets is Within the studied range (the founder's case), and only a total
+ *    beyond the 42 sets studies have tested is marked, in an information colour,
+ *    never the error one. Its (i) names the bands instead of the landmark range;
  *  - in the block's planned recovery week (the programme position's GATED
- *    state, never an adaptive adjustment) no under count is printed and no
- *    verdict is drawn (PR-14);
+ *    state, never an adaptive adjustment) no count is printed and no verdict is
+ *    drawn (PR-14);
  *  - the module is pure, holds no copy of the shared definitions, and
  *    describes: no instruction to the athlete (D204).
  */
 import fs from 'fs';
 import path from 'path';
 import {
-  STRIP_TONE, RECOVERY_WEEK_LINE, STRIP_LEGEND_LABEL, toneForStatus, stripToneColors,
+  STRIP_TONE, RECOVERY_WEEK_LINE, STRIP_LEGEND_LABEL, toneForGroup, stripToneColors,
   stripLegendItems, isStripRecoveryWeek, buildVolumeStrip, STRIP_TOOLTIP, STRIP_RECOVERY_TOOLTIP,
 } from '../volumeStrip';
 import { LISTED_MUSCLES, bandGroupFor, buildDataset, buildWindowView } from '../../volumeLogged';
-import { VOLUME_LANDMARKS, getVolumeStatus } from '../../algorithms';
-import { resolveTheme, buildVolumeStatusColor } from '../../../styles/theme';
+import { judgeWeek, GROUP, toneColors } from '../../volumeJudgement';
+import { resolveTheme } from '../../../styles/theme';
 import { RECOVERY_STATE } from '../../recoveryState';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
@@ -56,6 +58,7 @@ const EXERCISES = {
   press: { id: 'press', primary_muscle: 'chest', secondary_muscles: JSON.stringify(['triceps', 'front_delts']) },
   row: { id: 'row', primary_muscle: 'back', secondary_muscles: '[]' },
   squat: { id: 'squat', primary_muscle: 'quads', secondary_muscles: '[]' },
+  curl: { id: 'curl', primary_muscle: 'biceps', secondary_muscles: '[]' },
   kbswing: { id: 'kbswing', primary_muscle: 'hamstrings', secondary_muscles: '[]' },
 };
 
@@ -115,34 +118,34 @@ describe('N sets logged: working-set rows in the Monday week so far, never the c
   });
 });
 
-describe('N under their range: the heatmap\'s first group, by construction', () => {
-  // chest 5 (under: mev 6), back 12 (Just enough: 10 to 12), quads 21 (over: mrv 20).
-  const sets = [...rows('bench', 5), ...rows('row', 12), ...rows('squat', 21)];
+describe('N below maintenance: the heatmap\'s first group, by construction', () => {
+  // chest 1 (below maintenance: under 2), back 12 (normal growth), quads 21 (above normal growth).
+  const sets = [...rows('bench', 1), ...rows('row', 12), ...rows('squat', 21)];
 
-  test('no plan: the trained muscles under their range, and only those', () => {
+  test('no plan: the trained muscles below maintenance, and only those', () => {
     const s = strip(sets);
-    expect(s.loggedSets).toBe(38);
+    expect(s.loggedSets).toBe(34);
     expect(s.musclesWorked).toBe(3);
     expect(s.under).toBe(1);
-    expect(s.line).toBe('This week so far: 38 sets logged across 3 muscles · 1 under their range');
+    expect(s.line).toBe('This week so far: 34 sets logged across 3 muscles · 1 below maintenance');
   });
 
   test('a plan-programmed muscle with no sets yet counts; one the plan does not programme and has no sets never does', () => {
     const planTrained = new Set(['chest', 'back', 'quads', 'biceps']);
     expect(strip(sets, { planTrained }).under).toBe(2); // chest + biceps (no sets, programmed)
     // front_delts, calves and the rest have no sets and are not programmed: uncounted.
-    expect(strip(sets, { planTrained }).line).toContain('· 2 under their range');
+    expect(strip(sets, { planTrained }).line).toContain('· 2 below maintenance');
   });
 
-  test('a trained muscle under its range counts even when the plan does not programme it (lead ruling, D214 addendum 3)', () => {
+  test('a trained muscle below maintenance counts even when the plan does not programme it (lead ruling, D214 addendum 3)', () => {
     const planTrained = new Set(['biceps']); // chest is trained and NOT programmed
-    expect(strip(sets, { planTrained }).under).toBe(2); // chest (trained, under) + biceps (programmed, no sets)
+    expect(strip(sets, { planTrained }).under).toBe(2); // chest (trained, below) + biceps (programmed, no sets)
   });
 
-  test('none under: "none under their range", never "0 under"', () => {
+  test('none below: "none below maintenance", never "0 below"', () => {
     const s = strip([...rows('row', 12)]);
     expect(s.under).toBe(0);
-    expect(s.line).toBe('This week so far: 12 sets logged across 1 muscle · none under their range');
+    expect(s.line).toBe('This week so far: 12 sets logged across 1 muscle · none below maintenance');
   });
 
   test('the count equals the number of muscles whose heatmap group is the first one, over every muscle', () => {
@@ -152,51 +155,54 @@ describe('N under their range: the heatmap\'s first group, by construction', () 
     let below = 0;
     for (const muscle of LISTED_MUSCLES) {
       const sec = Math.round(view.perWeek[muscle]?.workingSets || 0);
-      const { status } = getVolumeStatus(sec, muscle, null);
+      const { group } = judgeWeek({ muscle, sets: sec, role: 'standard' });
       const hasCredit = (view.raw[muscle]?.workingSets || 0) > 0;
-      if (bandGroupFor({ muscle, status, hasCredit, planTrained }) === 'below') below += 1;
+      if (bandGroupFor({ muscle, status: group, hasCredit, planTrained }) === GROUP.BELOW) below += 1;
     }
     expect(s.under).toBe(below);
   });
 
-  test('each muscle is judged on the heatmap\'s own rounded figure: 5.5 credits is 6 sets, Just enough, not under', () => {
-    // 11 pressing rows credit triceps 5.5 (mev 6): unrounded it would be under, rounded once it is 6.
-    const s = strip(rows('press', 11));
+  test('each muscle is judged on the heatmap\'s own rounded figure: 1.5 credits is 2 sets, maintenance, not below', () => {
+    // 3 pressing rows credit triceps 1.5: unrounded it would be below maintenance (under 2), rounded once it is 2.
+    const s = strip(rows('press', 3));
     expect(s.under).toBe(0);
     const triceps = s.segments.find((seg) => seg.muscle === 'triceps');
-    expect(triceps.sets).toBe(5.5);
+    expect(triceps.sets).toBe(1.5);
     expect(triceps.tone).toBe(STRIP_TONE.IN);
   });
 
-  test('it judges by the resolved landmark table it is given, not the research table', () => {
-    const landmarks = { chest: { ...VOLUME_LANDMARKS.chest, mev: 12, mav: 16, mrv: 24 } };
-    expect(strip(rows('bench', 8)).under).toBe(0); // research chest: 8 is Just enough
-    expect(strip(rows('bench', 8), { landmarks }).under).toBe(1); // a raised band: 8 is under
+  // D219 (the founder's case): the strip reads the role from the plan's facts, and
+  // 27 weekly sets on a focus muscle are inside the studied range, never marked.
+  test('27 sets of a focus muscle read as Within the studied range; only a total past 42 is Beyond', () => {
+    const focus = strip(rows('curl', 27), { roles: { biceps: 'focus' } });
+    expect(focus.segments[0]).toMatchObject({ muscle: 'biceps', sets: 27, tone: STRIP_TONE.IN });
+    const plain = strip(rows('curl', 27));
+    expect(plain.segments[0].tone).toBe(STRIP_TONE.IN);
+    expect(strip(rows('curl', 43), { roles: { biceps: 'focus' } }).segments[0].tone).toBe(STRIP_TONE.OVER);
   });
 });
 
 describe('the three tones and the bar', () => {
-  test('five bands fold into three: below is Under, minimum, optimal and near_mrv are In, over_mrv is Too much', () => {
-    expect(toneForStatus('below')).toBe(STRIP_TONE.UNDER);
-    expect(toneForStatus('unknown')).toBe(STRIP_TONE.UNDER);
-    expect(toneForStatus('minimum')).toBe(STRIP_TONE.IN);
-    expect(toneForStatus('optimal')).toBe(STRIP_TONE.IN);
-    expect(toneForStatus('near_mrv')).toBe(STRIP_TONE.IN);
-    expect(toneForStatus('over_mrv')).toBe(STRIP_TONE.OVER);
+  test('eight groups fold into three: below maintenance is Under, beyond the studied range is Over, the rest are Within', () => {
+    expect(toneForGroup(GROUP.BELOW)).toBe(STRIP_TONE.UNDER);
+    expect(toneForGroup('unknown')).toBe(STRIP_TONE.UNDER);
+    for (const g of [GROUP.MAINTENANCE, GROUP.BETWEEN, GROUP.NORMAL, GROUP.FOCUS, GROUP.ABOVE_NORMAL, GROUP.TOP]) {
+      expect(toneForGroup(g)).toBe(STRIP_TONE.IN);
+    }
+    expect(toneForGroup(GROUP.BEYOND)).toBe(STRIP_TONE.OVER);
   });
 
   test('one segment per muscle with credit, widest first, each in its tone', () => {
-    const s = strip([...rows('bench', 5), ...rows('row', 12), ...rows('squat', 21)]);
+    const s = strip([...rows('bench', 1), ...rows('row', 12), ...rows('squat', 45)]);
     expect(s.segments.map((seg) => seg.muscle)).toEqual(['quads', 'back', 'chest']);
     expect(s.segments.map((seg) => seg.tone)).toEqual([STRIP_TONE.OVER, STRIP_TONE.IN, STRIP_TONE.UNDER]);
-    expect(s.segments.map((seg) => seg.sets)).toEqual([21, 12, 5]);
+    expect(s.segments.map((seg) => seg.sets)).toEqual([45, 12, 1]);
   });
 
   test('the legend names exactly the three tones, in the strip\'s words', () => {
     const colors = resolveTheme({}).colors;
     const items = stripLegendItems({ colors });
-    // RE-ANCHORED addendum 9 (6.7): "Inside the range", the lead's word.
-    expect(items.map((i) => i.label)).toEqual(['Under the range', 'Inside the range', 'Too much']);
+    expect(items.map((i) => i.label)).toEqual(['Below maintenance', 'Within the studied range', 'Beyond the studied range']);
     expect(items.map((i) => i.label)).toEqual([STRIP_LEGEND_LABEL.under, STRIP_LEGEND_LABEL.in, STRIP_LEGEND_LABEL.over]);
   });
 
@@ -215,29 +221,32 @@ describe('the three tones and the bar', () => {
     expect(items.find((i) => i.key === STRIP_TONE.UNDER).swatch.fill).toBe(tone.under);
     expect(items.find((i) => i.key === STRIP_TONE.IN).swatch.fill).toBe(tone.in);
     expect(items.find((i) => i.key === STRIP_TONE.OVER).swatch.fill).toBe(tone.over);
-    // The same three colours the heatmap's resolver gives the matching statuses.
-    const resolve = buildVolumeStatusColor(colors);
-    expect(tone.under).toBe(resolve('below'));
-    expect(tone.in).toBe(resolve('optimal'));
-    expect(tone.over).toBe(resolve('over_mrv'));
+    // The same three colours the heatmap's tones give (volumeJudgement.toneColors),
+    // and none is a warning or an error token (D219: the highest band is a note).
+    const tones = toneColors(colors);
+    expect(tone.under).toBe(tones.below);
+    expect(tone.in).toBe(tones.growth);
+    expect(tone.over).toBe(tones.beyond);
     expect(tone.under).toBe(colors.textMuted);
     expect(tone.in).toBe(colors.success);
-    expect(tone.over).toBe(colors.error);
+    expect(tone.over).toBe(colors.macroCarb);
+    expect(Object.values(tone)).not.toContain(colors.error);
+    expect(Object.values(tone)).not.toContain(colors.warning);
   });
 });
 
-describe('a recovery week: no under count, no verdict (PR-14)', () => {
-  const sets = [...rows('bench', 5), ...rows('row', 12), ...rows('squat', 21)];
+describe('a recovery week: no count, no verdict (PR-14)', () => {
+  const sets = [...rows('bench', 1), ...rows('row', 12), ...rows('squat', 21)];
 
   test('the line keeps the facts, the recovery sentence follows, and no under count is printed', () => {
     const s = strip(sets, { recoveryWeek: true, planTrained: new Set(['biceps']) });
     expect(s.recoveryWeek).toBe(true);
     expect(s.under).toBeNull();
-    expect(s.line).toBe('This week so far: 38 sets logged across 3 muscles');
-    expect(s.line).not.toMatch(/under/i);
+    expect(s.line).toBe('This week so far: 34 sets logged across 3 muscles');
+    expect(s.line).not.toMatch(/below maintenance/i);
     expect(s.recoveryLine).toBe('Recovery week: sets are planned lower this week');
     expect(s.recoveryLine).toBe(RECOVERY_WEEK_LINE);
-    expect(s.spoken).toBe('This week so far: 38 sets logged across 3 muscles. Recovery week: sets are planned lower this week');
+    expect(s.spoken).toBe('This week so far: 34 sets logged across 3 muscles. Recovery week: sets are planned lower this week');
   });
 
   test('the legend is the one neutral shade, named "Trained"', () => {
@@ -255,7 +264,7 @@ describe('a recovery week: no under count, no verdict (PR-14)', () => {
   });
 
   test('the spoken line never reads the middle dot', () => {
-    expect(strip(sets).spoken).toBe('This week so far: 38 sets logged across 3 muscles, 1 under their range');
+    expect(strip(sets).spoken).toBe('This week so far: 34 sets logged across 3 muscles, 1 below maintenance');
     expect(strip(sets).spoken).not.toContain('·');
   });
 });
@@ -311,7 +320,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
     expect(SCREEN_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
   });
 
-  test('the middle tone is named "Inside the range" everywhere the strip speaks, never "In the range"', () => {
+  test('the middle tone is named "Within the studied range" everywhere the strip speaks, and nothing says "too much"', () => {
     const colors = resolveTheme({}).colors;
     const spoken = [
       strip([...rows('bench', 5), ...rows('row', 12)]).spoken,
@@ -321,47 +330,42 @@ describe('the module is pure, shares the one definition and never instructs', ()
       STRIP_RECOVERY_TOOLTIP,
       ...stripLegendItems({ colors }).map((i) => i.label),
     ].join(' | ');
-    // The summary line and spoken label print only the under count ("N under
-    // their range"); the word for the middle tone is the legend's and the (i)'s.
-    expect(spoken).not.toMatch(/\bIn the range\b|\bin the range\b/);
-    expect(STRIP_LEGEND_LABEL.in).toBe('Inside the range');
-    expect(STRIP_TOOLTIP).toContain('Inside the range covers');
+    expect(spoken).not.toMatch(/too much|near the limit|under the range|inside the range|just enough/i);
+    expect(STRIP_LEGEND_LABEL.in).toBe('Within the studied range');
+    expect(STRIP_TOOLTIP).toContain('Within the studied range covers');
   });
 
-  test('the (i), normal week: the opening, the credit sentence, the range, the three bands folded, "Too much"', () => {
+  test('the (i), normal week: the opening, the credit sentence, the bands, the plan role, the folded groups', () => {
     expect(STRIP_TOOLTIP).toBe(
       'This week so far counts the sets you have logged since Monday.\n\n'
       + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
-      + "A muscle's range runs from the fewest weekly sets that still help it grow to the most it can recover from. "
-      + 'Under the range means fewer sets than that so far, and a muscle your plan trains counts as under the range even before its first set. '
-      + 'Inside the range covers the three bands the Volume heatmap calls Just enough, In range and Near the limit. '
-      + 'Too much means more than the top of the range.',
+      + 'The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 6 holds the size you have, 10 to 20 is the normal growth range and 20 to 30 is the range for a muscle you picked to bring up. '
+      + 'A muscle you picked to bring up in your plan reads against that range. '
+      + 'A muscle your plan trains counts as below maintenance even before its first set. '
+      + 'Within the studied range covers every band from maintenance up to 42 sets, and beyond that studies have little to say.',
     );
-    // It names every legend word, with the middle tone's three folded bands.
-    const colors = resolveTheme({}).colors;
-    for (const item of stripLegendItems({ colors })) expect(STRIP_TOOLTIP).toContain(item.label);
-    // The three bands it names are exactly the statuses toneForStatus folds into the middle tone.
-    const folded = ['below', 'minimum', 'optimal', 'near_mrv', 'over_mrv'].filter((s) => toneForStatus(s) === STRIP_TONE.IN);
-    expect(folded).toEqual(['minimum', 'optimal', 'near_mrv']);
-    expect(STRIP_TOOLTIP).toContain('Just enough, In range and Near the limit');
+    // It names the legend's first two tones in the legend's own words, and the third as "beyond 42".
+    expect(STRIP_TOOLTIP.toLowerCase()).toContain(STRIP_LEGEND_LABEL.under.toLowerCase());
+    expect(STRIP_TOOLTIP).toContain(STRIP_LEGEND_LABEL.in);
+    expect(STRIP_TOOLTIP).toContain('beyond that studies have little to say');
   });
 
   test('the (i), recovery week: the same opening and credit sentence, then why nothing is judged', () => {
     expect(STRIP_RECOVERY_TOOLTIP).toBe(
       'This week so far counts the sets you have logged since Monday.\n\n'
       + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
-      + 'In a recovery week sets are planned lower, so no muscle is judged against its range. '
+      + 'In a recovery week sets are planned lower, so no muscle is judged against a band. '
       + 'The bar draws one shade for the muscles you trained.',
     );
     // Both versions open with the same two sentences (the one credit rule at every site, V2).
-    const shared = STRIP_TOOLTIP.split(' A muscle')[0];
+    const shared = STRIP_TOOLTIP.split(' The bands')[0];
     expect(STRIP_RECOVERY_TOOLTIP.startsWith(shared)).toBe(true);
   });
 
   test('every string the strip can print describes: no instruction verb (D204)', () => {
     const colors = resolveTheme({}).colors;
     const printed = [
-      strip([...rows('bench', 5), ...rows('row', 12), ...rows('squat', 21)]).line,
+      strip([...rows('bench', 1), ...rows('row', 12), ...rows('squat', 21)]).line,
       strip([...rows('bench', 5)], { recoveryWeek: true }).line,
       strip([]).line,
       RECOVERY_WEEK_LINE,

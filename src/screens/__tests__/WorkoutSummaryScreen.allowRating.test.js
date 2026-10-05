@@ -100,7 +100,11 @@ jest.mock('../../lib/wellbeing', () => ({ isCalm: jest.fn(() => false), WELLBEIN
 jest.mock('../../lib/milestones', () => ({ claimMilestones: jest.fn() }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), prAchieved: jest.fn() }));
 jest.mock('../../lib/feedback', () => ({ shouldPrompt: jest.fn().mockResolvedValue(false) }));
-jest.mock('../../lib/effectiveLandmarks', () => ({ getEffectiveLandmarks: jest.fn().mockResolvedValue(null) }));
+jest.mock('../../lib/effectiveLandmarks', () => ({
+  getEffectiveLandmarks: jest.fn().mockResolvedValue(null),
+  // D219 (design 5.3, lane A5): the volume card reads each muscle's role in the active plan.
+  getPlanRoles: jest.fn().mockResolvedValue({}),
+}));
 jest.mock('../../lib/sync', () => ({ syncWorkout: jest.fn() }));
 jest.mock('../../lib/storeReview', () => ({
   incrementSessionCount: jest.fn().mockResolvedValue(undefined),

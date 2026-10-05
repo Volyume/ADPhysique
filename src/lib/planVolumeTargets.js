@@ -68,8 +68,9 @@ export function plannedWeeklyVolumeByMuscle(routines = []) {
  * The band, per muscle, from the plan and the athlete's own profile.
  *
  * Precedence inside this layer:
- *   plan    — the plan programs this muscle, so its weekly total IS the
- *             sweet spot, inside the profile's own floor and ceiling.
+ *   plan    — the plan programs this muscle: it is marked 'plan' (the
+ *             plan-trained set), and its numbers stay the profile's own
+ *             (D219: the plan's week-1 total no longer sets the sweet spot).
  *   profile — no planned volume for this muscle, so the band is the
  *             personalised table the plan was generated from.
  *   research— no profile either: the population starting point, named
@@ -103,12 +104,22 @@ export function buildPlanLandmarks({
       ?? { mev: base.mev, mav: base.mav, mrv: base.mrv };
     const planned = Math.round(Number(plannedByMuscle?.[muscle]) || 0);
     if (planned > 0) {
-      const mav = planned;
+      // D219 (design 5.3, lane A5): the plan's static week-1 total used to BE
+      // the sweet spot (`mav = planned`). The plan then climbs to about 2.3
+      // times that by week 5, so a plan followed to the letter read "Near the
+      // limit" on 12 of 13 muscles from week 2 (R2 10.2). The plan layer now
+      // only marks the muscle as one the plan trains (the plan-trained set the
+      // heatmap and the Progress strip read): its numbers stay the profile's
+      // own, and the ceiling still sits above whatever the plan programmes so
+      // the band stays orderable. Every judging surface reads this week's
+      // planned target and the role band instead (volumeJudgement.js).
+      const mrv = Math.max(prior.mrv, planned + 1);
+      const mav = Math.min(prior.mav, mrv - 1);
       table[muscle] = {
         ...base,
         mev: Math.min(prior.mev, Math.max(1, mav - 1)),
         mav,
-        mrv: Math.max(prior.mrv, mav + 1),
+        mrv,
       };
       source[muscle] = 'plan';
       continue;

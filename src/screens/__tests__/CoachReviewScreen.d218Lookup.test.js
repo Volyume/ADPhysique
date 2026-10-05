@@ -161,7 +161,10 @@ describe('D218 (F-3): the Training review credits every logged set through the u
       const [, , exerciseMap, opts] = spy.mock.calls[0];
       expect(typeof exerciseMap.resolve).toBe('function');
       expect(exerciseMap.get('ex-custom-curl')).toMatchObject({ name: 'Zottman Curl X' });
-      expect(Object.keys(opts)).toEqual(['weekAnchorMs']);
+      // RE-PINNED under D219 lane A5 (design 5.3): the over pass reads each muscle's
+      // role in the active plan, so the options carry `roles` beside the anchor (no
+      // zero-fill, no recency override, as before).
+      expect(Object.keys(opts)).toEqual(['weekAnchorMs', 'roles']);
     } finally {
       spy.mockRestore();
     }

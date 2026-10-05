@@ -596,8 +596,10 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     expect(src).toMatch(/const adviceAllowed = weekJudgeable && !hasExcludedWork;/);
     expect(src).toMatch(/const insight = adviceAllowed \? getVolumeInsight\(/);
     expect(src).toMatch(/const why = adviceAllowed \? getVolumeWhy\(/);
-    // getVolumeStatus, the landmarks and the colours are untouched.
-    expect(src).toMatch(/const \{ label, status \} = getVolumeStatus\(data\.workingSets, muscle, landmarkResolution\?\.table\);/);
+    // RE-PINNED under D219 lane A5 (design 5.3): the badge, the line and the why
+    // all read the ONE judgement (volumeJudgement.judgeWeek, the role-aware band
+    // function), which replaced the engine's landmark verdict on this card.
+    expect(src).toMatch(/const judgement = judgeWeek\(\{\s*muscle, sets: Math\.round\(data\.workingSets\), role: roleFor\(planRoles, muscle\),\s*\}\);/);
   });
 
   test('the first summary answers what happens next, and says why feedback is asked before asking', () => {

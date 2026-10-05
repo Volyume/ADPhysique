@@ -1,54 +1,58 @@
 /**
- * volumeBandLabels.js: the ONE display map from the engine's volume status to
- * the word a person reads (register D214 addendum 9, census 0.24 and W4).
+ * volumeBandLabels.js: the ONE display map from a muscle's weekly-set band to
+ * the words a person reads (register D214 addendum 9 for the single map;
+ * D219 lane A5, design 5.3 for the bands).
  *
- * `getVolumeStatus` (algorithms.js, the deterministic engine, never edited
- * here) returns a status key with a label of its own ("Below target", "Good
- * range", "Getting close"). No surface prints those labels any more: the Volume
- * heatmap's rows and the Workout Summary's badges and tooltip say the same five
- * words, so one band is one word on every screen. This map is keyed by the
- * status value and is the only place those five words are written for the two
- * screens that read a status; the figure's own legend (BodyDiagramHeatmap.js)
- * names the same words and volumeBandLabels.test.js holds the two equal.
+ * D219 retired the five words the old engine status carried ("Under the
+ * range", "Just enough", "In range", "Near the limit", "Too much"): they were
+ * judged against a landmark table that ignored the plan's own intent, so 27
+ * weekly sets on a muscle the person picked to bring up read as a fault. The
+ * words below name the evidence bands the one band function returns
+ * (src/lib/plan/bands.js; Pelland's tiers, 03-SCIENCE.md Q3b), and a muscle
+ * the plan did not raise reads "Above normal growth" where a focus muscle
+ * reads "Focus range". Nothing here says "too much", "near the limit",
+ * "overtrained" or "junk" (D204: a screen describes), and no band below
+ * "Beyond the studied range" is anything but a plain fact.
  *
- * Also here: the one way a muscle's range is put into words, so the heatmap
- * rows and the Workout Summary lines never disagree about it.
+ * Two tables, one meaning. `VOLUME_BAND_LABELS` names the eight GROUPS a list
+ * can be sorted into (a band, with the focus range split by the muscle's role).
+ * `VOLUME_TONE_LABELS` names the four TONES the figure, the legend and the
+ * Progress strip paint, which fold the groups by colour. The Volume heatmap's
+ * legend, the Workout Summary's badges and the check-in review read these two
+ * tables only, and volumeJudgement.test.js holds them to the group and tone
+ * lists.
  *
  * Pure. No React, no I/O.
  */
 
 export const VOLUME_BAND_LABELS = Object.freeze({
-  below: 'Under the range',
-  minimum: 'Just enough',
-  optimal: 'In range',
-  near_mrv: 'Near the limit',
-  over_mrv: 'Too much',
+  below_maintenance: 'Below maintenance',
+  maintenance: 'Maintenance range',
+  between: 'Between maintenance and growth',
+  normal_growth: 'Normal growth range',
+  focus_range: 'Focus range',
+  above_normal: 'Above normal growth',
+  top_of_studied: 'Top of the studied range',
+  beyond_studied: 'Beyond the studied range',
+});
+
+export const VOLUME_TONE_LABELS = Object.freeze({
+  below: 'Below maintenance',
+  building: 'Maintenance to growth',
+  growth: 'Growth range',
+  beyond: 'Beyond the studied range',
 });
 
 /**
- * The display word for an engine status. `fallback` is returned for a status
- * the map has no word for (the engine's 'unknown', a muscle with no range).
+ * The display words for a group. `fallback` is returned for a group the map has
+ * no word for (a muscle with no band).
  *
- * @param {string} status  a `getVolumeStatus().status` value
+ * @param {string} group  a volumeJudgement GROUP value
  * @param {string} [fallback]
  * @returns {string}
  */
-export function volumeBandLabel(status, fallback = '') {
-  return Object.prototype.hasOwnProperty.call(VOLUME_BAND_LABELS, status)
-    ? VOLUME_BAND_LABELS[status]
+export function volumeBandLabel(group, fallback = '') {
+  return Object.prototype.hasOwnProperty.call(VOLUME_BAND_LABELS, group)
+    ? VOLUME_BAND_LABELS[group]
     : fallback;
-}
-
-/**
- * A muscle's weekly range in words: "6 to 22", or "up to 14" for a muscle whose
- * range has no lower bound (a range that starts at 0 never reads "0 to 14").
- * The range means one thing on every surface (D214 addendum 1): from the fewest
- * weekly sets that still help the muscle grow to the most it can recover from.
- *
- * @param {number} mev  the fewest weekly sets that still help it grow
- * @param {number} mrv  the most weekly sets it can recover from
- * @returns {string}
- */
-export function volumeRangeText(mev, mrv) {
-  return (Number(mev) || 0) > 0 ? `${mev} to ${mrv}` : `up to ${mrv}`;
 }

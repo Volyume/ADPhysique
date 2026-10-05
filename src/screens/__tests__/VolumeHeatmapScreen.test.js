@@ -10,13 +10,15 @@
  *    partial-history divisor;
  *  - the summary counts LOGGED working-set rows (a set that credits a helper
  *    muscle counts once; warm-ups and explosive sets never count);
- *  - the rows are grouped by band with counts (Under the range, Just enough, In
- *    range, Near the limit, Too much, then No sets), where the Under group's
- *    population is the plan's (a plan-programmed muscle with no sets is Under,
- *    an unprogrammed one is No sets, without a plan a muscle with no sets is No
- *    sets: lane 5 review S2), print "N sets so far this week, range MEV to
- *    MRV" where N is the rounded number that is also the number judged (D214
- *    addendum 9, census 0.4: it read "N of MEV to MRV sets this week"), and
+ *  - the rows are grouped by band with counts (D219 lane A5: Below maintenance up
+ *    to Beyond the studied range, the focus range split by the muscle's role in the
+ *    active plan, then No sets; "Too much" and "Near the limit" are retired), where
+ *    the Below maintenance group's population is the plan's (a plan-programmed
+ *    muscle with no sets is Below maintenance, an unprogrammed one is No sets,
+ *    without a plan a muscle with no sets is No sets: lane 5 review S2), print "N
+ *    sets so far this week" where N is the rounded number that is also the number
+ *    judged (D214 addendum 9, census 0.4), a tap explains the band and the
+ *    plan's reason for a focus muscle, and
  *    carry no instruction (D204 addendum 3: no "N more", no "add");
  *  - a recovery week is framed, not judged: no band word, one neutral shade;
  *  - NOTHING IS JUDGED UNTIL A SET IS LOGGED in the window shown (D214
@@ -73,7 +75,9 @@ jest.mock('../../lib/sync', () => ({
 jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
 jest.mock('../../lib/effectiveLandmarks', () => {
   const actual = jest.requireActual('../../lib/effectiveLandmarks');
-  return { ...actual, getEffectiveLandmarks: jest.fn(), getPlanLandmarks: jest.fn() };
+  return {
+    ...actual, getEffectiveLandmarks: jest.fn(), getPlanLandmarks: jest.fn(), getPlanRoles: jest.fn(),
+  };
 });
 
 jest.mock('../../lib/database', () => ({
@@ -105,12 +109,13 @@ import {
 import { buildExerciseLookup } from '../../lib/exercise/lookup';
 import { RETIRED_ID_TO_SURVIVOR_ID, survivorExerciseId } from '../../lib/exercise/retiredIds';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
-import { getEffectiveLandmarks, getPlanLandmarks, mergeLandmarkPrecedence } from '../../lib/effectiveLandmarks';
+import {
+  getEffectiveLandmarks, getPlanLandmarks, getPlanRoles, mergeLandmarkPrecedence,
+} from '../../lib/effectiveLandmarks';
 import { logError } from '../../lib/errorLog';
 import { syncUserPref } from '../../lib/sync';
 import VolumeHeatmapScreen from '../VolumeHeatmapScreen';
 import { VOLUME_LANDMARKS } from '../../lib/algorithms';
-import { VOLUME_BAND_LABELS } from '../../lib/volumeBandLabels';
 import { colors } from '../../styles/theme';
 
 const read = (rel) => require('fs').readFileSync(require('path').resolve(__dirname, rel), 'utf8');
@@ -226,6 +231,8 @@ beforeEach(() => {
   getEffectiveLandmarks.mockImplementation(() => Promise.resolve(mergeLandmarkPrecedence({})));
   // No plan by default: the plan layer's own source map programmes no muscle.
   getPlanLandmarks.mockResolvedValue({ table: {}, source: {} });
+  // D219 (design 5.3): no plan facts by default, so every muscle reads the standard bands.
+  getPlanRoles.mockResolvedValue({});
 });
 
 afterEach(() => { jest.useRealTimers(); });
@@ -284,7 +291,7 @@ describe('VolumeHeatmapScreen states', () => {
     expect(text).not.toContain('Below target');
     expect(groupHeaders(tree)).toEqual([]);
     expect(text).toContain('Nothing is judged until a set is logged.');
-    expect(text).toContain('0 sets so far this week, range 6 to 22');
+    expect(text).toContain('0 sets so far this week');
   });
 
   test('explains when saved training exists outside the selected volume window', async () => {
@@ -332,13 +339,13 @@ describe('VolumeHeatmapScreen states', () => {
     await act(async () => { oldSets.resolve(chestSets(3)); });
     await flush();
     let text = flattenText(tree.toJSON());
-    expect(text).not.toContain('3 sets so far this week, range 6 to 22');
+    expect(text).not.toContain('3 sets so far this week');
 
     await act(async () => { newSets.resolve(chestSets(11)); });
     await flush();
     text = flattenText(tree.toJSON());
-    expect(text).toContain('11 sets so far this week, range 6 to 22');
-    expect(text).not.toContain('3 sets so far this week, range 6 to 22');
+    expect(text).toContain('11 sets so far this week');
+    expect(text).not.toContain('3 sets so far this week');
   });
 });
 
@@ -365,27 +372,30 @@ describe('D214 (7.4 item 2, amending D200 ruling 1): the window control sits abo
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Sets logged since Monday');
-    expect(text).toContain('6 sets so far this week, range 6 to 22');
+    expect(text).toContain('6 sets so far this week');
     expect(text).not.toContain('8 sets so far this week'); // the old rolling window would have read 8
   });
 
   // Lane 5 review S6: the 2- and 4-week wording must never leak into "This week".
   // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.4 and H3): the sentence was "N of range sets this week".
-  test('at "This week" no row says "An average of", and every row sentence is exactly "N sets so far this week, range A to B"', async () => {
+  // RE-PINNED under D219 lane A5 (design 5.3): the sentence no longer carries the
+  // landmark range ("range 6 to 22", "up to 14"); the band is the row's group and
+  // its tap, so the sentence is exactly "N sets so far this week".
+  test('at "This week" no row says "An average of", and every row sentence is exactly "N sets so far this week"', async () => {
     atWednesday();
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 6, MONDAY_9AM));
     const tree = await mount();
 
     expect(flattenText(tree.toJSON())).not.toContain('An average of');
     const sentences = tree.root
-      .findAll((n) => n.type === 'Text' && /\bsets? so far this week, (range \d+ to \d+|up to \d+)$/.test(flattenText(n)))
+      .findAll((n) => n.type === 'Text' && /^\d+ sets? so far this week$/.test(flattenText(n)))
       .map((n) => flattenText(n));
     expect(sentences).toHaveLength(17);
     for (const sentence of sentences) {
-      expect(sentence).toMatch(/^\d+ sets? so far this week, (range \d+ to \d+|up to \d+)$/);
+      expect(sentence).toMatch(/^\d+ sets? so far this week$/);
     }
-    expect(sentences).toContain('6 sets so far this week, range 6 to 22');
-    expect(sentences).toContain('0 sets so far this week, up to 14'); // front delts: MEV 0
+    expect(sentences).toContain('6 sets so far this week');
+    expect(sentences).toContain('0 sets so far this week'); // front delts: nothing logged
     // A singular set reads "1 set", never "1 sets".
     expect(sentences.join(' | ')).not.toMatch(/\b1 sets\b/);
   });
@@ -400,7 +410,7 @@ describe('D214 (7.4 item 2, amending D200 ruling 1): the window control sits abo
     expect(text).toContain('No sets logged so far this week');
     // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 6.4): with nothing logged this week the rows are
     // the flat unjudged list, and the figure on each row is still its own sentence.
-    expect(text).toContain('0 sets so far this week, range 6 to 22');
+    expect(text).toContain('0 sets so far this week');
     expect(text).toContain('Nothing is judged until a set is logged.');
     expect(groupHeaders(tree)).toEqual([]);
   });
@@ -417,16 +427,16 @@ describe('D214 (7.4 item 2, amending D200 ruling 1): the window control sits abo
 
     await act(async () => { pressWindow(tree, '2 weeks').props.onPress(); });
     // (6 + 2) over 2 weeks: the 20-day-old sets lie outside the rolling 14 days.
-    expect(flattenText(tree.toJSON())).toContain('An average of 4 sets a week, range 6 to 22');
+    expect(flattenText(tree.toJSON())).toContain('An average of 4 sets a week');
     expect(flattenText(tree.toJSON())).toContain('Average sets a week over the last 2 weeks');
 
     await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
     // (6 + 2 + 10) over 4 weeks is 4.5, rounded once to 5.
-    expect(flattenText(tree.toJSON())).toContain('An average of 5 sets a week, range 6 to 22');
+    expect(flattenText(tree.toJSON())).toContain('An average of 5 sets a week');
     expect(flattenText(tree.toJSON())).toContain('Average sets a week over the last 4 weeks');
   });
 
-  test('a steady weekly rate reads the same band at 4 weeks as its weekly rate, never "Too much"', async () => {
+  test('a steady weekly rate reads the same band at 4 weeks as its weekly rate, never above it', async () => {
     atWednesday();
     getCompletedWorkoutSets.mockResolvedValue([
       ...setsOf('bench', 12, NOW - 3 * DAY),
@@ -438,13 +448,13 @@ describe('D214 (7.4 item 2, amending D200 ruling 1): the window control sits abo
     const tree = await mount();
     await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
 
-    expect(flattenText(tree.toJSON())).toContain('An average of 12 sets a week, range 6 to 22');
+    expect(flattenText(tree.toJSON())).toContain('An average of 12 sets a week');
     const chest = findMuscleRow(tree, 'Chest:');
-    expect(chest.props.accessibilityLabel).toContain('In range');
-    expect(chest.props.accessibilityLabel).not.toContain('Too much');
+    expect(chest.props.accessibilityLabel).toContain('Normal growth range');
+    expect(chest.props.accessibilityLabel).not.toContain('Above normal growth');
     // The row's spoken label names the average and the window total (D200-1).
     // The spoken label says the row's own words, then names the window and the total.
-    expect(chest.props.accessibilityLabel).toContain('an average of 12 sets a week, range 6 to 22, over the last 4 weeks, 48 in total');
+    expect(chest.props.accessibilityLabel).toContain('an average of 12 sets a week, over the last 4 weeks, 48 in total');
   });
 
   test('a young account divides by the weeks it actually has, and the note says so', async () => {
@@ -455,7 +465,7 @@ describe('D214 (7.4 item 2, amending D200 ruling 1): the window control sits abo
     await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('An average of 10 sets a week, range 6 to 22');
+    expect(text).toContain('An average of 10 sets a week');
     // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.15): "(your log covers 2 of them)" said it as a
     // log's coverage; the lead's words say what the person did.
     expect(text).toContain('Average sets a week over the last 4 weeks (you logged in 2 of those weeks)');
@@ -563,29 +573,68 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
   // (7.4 item 5: "Under the range . 9, Just enough . 1, In range . 5 ...", the
   // strip's count first) and adds the last group "No sets" for a muscle outside
   // the plan's population with no sets. The old order ran Too much first.
-  test('Under the range, Just enough, In range, Near the limit, Too much, then No sets, each with its count; empty groups omitted', async () => {
+  // RE-PINNED under D219 lane A5 (design 5.3, register D219): the groups are the one
+  // judgement's (volumeJudgement.js), from Below maintenance up to Beyond the
+  // studied range, then No sets. "Too much" and "Near the limit" are retired.
+  test('Below maintenance up to the top of the studied range, then No sets, each with its count; empty groups omitted', async () => {
     atWednesday();
     // The plan programmes quads and hamstrings (no sets yet this week) as well
     // as the four muscles trained below.
     planProgrammes('chest', 'back', 'biceps', 'triceps', 'quads', 'hamstrings');
     getCompletedWorkoutSets.mockResolvedValue([
-      ...setsOf('bench', 25, MONDAY_9AM), // chest 25 > MRV 22: Too much
-      ...setsOf('row', 20, MONDAY_9AM), // back 20: MAV 16 < 20 <= MRV 25: Near the limit
-      ...setsOf('curl', 10, MONDAY_9AM), // biceps 10: MEV 6 + 2 < 10 <= MAV 14: In range
-      ...setsOf('pushdown', 7, MONDAY_9AM), // triceps 7: MEV 6 <= 7 <= 8: Just enough
+      ...setsOf('bench', 25, MONDAY_9AM), // chest 25: above the normal growth range, not a focus
+      ...setsOf('row', 35, MONDAY_9AM), // back 35: the top of the studied range (30 to 42)
+      ...setsOf('curl', 10, MONDAY_9AM), // biceps 10: the normal growth range (10 to 20)
+      ...setsOf('pushdown', 7, MONDAY_9AM), // triceps 7: between maintenance and growth (6 to 10)
     ]);
     const tree = await mount();
 
     expect(groupHeaders(tree)).toEqual([
-      'Under the range, 2 muscles', // quads and hamstrings: planned, no sets
-      'Just enough, 1 muscle',
-      'In range, 1 muscle',
-      'Near the limit, 1 muscle',
-      'Too much, 1 muscle',
+      'Below maintenance, 2 muscles', // quads and hamstrings: planned, no sets
+      'Between maintenance and growth, 1 muscle',
+      'Normal growth range, 1 muscle',
+      'Above normal growth, 1 muscle',
+      'Top of the studied range, 1 muscle',
       'No sets, 11 muscles', // the rest: unprogrammed and untrained
     ]);
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Too much');
-    expect(findMuscleRow(tree, 'Back:').props.accessibilityLabel).toContain('Near the limit');
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Above normal growth');
+    expect(findMuscleRow(tree, 'Back:').props.accessibilityLabel).toContain('Top of the studied range');
+    expect(flattenText(tree.toJSON())).not.toMatch(/Too much|Near the limit/);
+  });
+
+  // The founder's case (register D219): "As I did 27 sets of biceps which is upper
+  // tier but it shows I have overtrained or something". With biceps a focus in the
+  // active plan's facts, 27 weekly sets read as the focus range, with the reason on a
+  // tap; the same number on a muscle the plan did not raise is described as focus-level
+  // volume. Neither reads "Too much", and no warning or error colour is drawn.
+  test('27 biceps sets read as the Focus range when the plan raised biceps, with the reason on a tap', async () => {
+    atWednesday();
+    getPlanRoles.mockResolvedValue({ biceps: 'focus' });
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('curl', 27, MONDAY_9AM));
+    const tree = await mount();
+
+    expect(groupHeaders(tree)).toEqual(['Focus range, 1 muscle', 'No sets, 16 muscles']);
+    const biceps = findMuscleRow(tree, 'Biceps:');
+    expect(biceps.props.accessibilityLabel).toContain('27 sets so far this week, Focus range');
+    expect(flattenText(tree.toJSON())).not.toMatch(/Too much|Near the limit|overtrain/i);
+    await act(async () => { findMuscleRow(tree, 'Biceps:').props.onPress(); });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(text).toContain('Studies have found small extra gains at weekly totals like this.');
+    // The figure and the bar paint the tone of the growth range, never error or warning.
+    expect(lastFigureInput().volumeByMuscle.biceps).toMatchObject({ workingSets: 27, status: 'focus_range', color: colors.success });
+    const bar = tree.root.findAll((n) => typeof n.type === 'function' && n.props.value === 27 && n.props.rangeStart !== undefined)[0];
+    expect(bar.props).toMatchObject({ rangeStart: 2, rangeEnd: 42, bandStart: 20, bandEnd: 30, max: 42, fillColor: colors.success });
+  });
+
+  test('the same 27 sets on a muscle the plan did not raise read as Above normal growth, described and not blamed', async () => {
+    atWednesday();
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('curl', 27, MONDAY_9AM));
+    const tree = await mount();
+    expect(groupHeaders(tree)).toEqual(['Above normal growth, 1 muscle', 'No sets, 16 muscles']);
+    await act(async () => { findMuscleRow(tree, 'Biceps:').props.onPress(); });
+    expect(flattenText(tree.toJSON())).toContain('This is focus-level volume for a muscle that is not a focus in your plan.');
+    expect(flattenText(tree.toJSON())).not.toMatch(/Too much|Near the limit|overtrain/i);
   });
 
   test('a group with no rows is omitted', async () => {
@@ -593,55 +642,53 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
     getCompletedWorkoutSets.mockResolvedValue(setsOf('curl', 10, MONDAY_9AM));
     const tree = await mount();
     // No plan: the sixteen muscles with no sets are outside the verdict population.
-    expect(groupHeaders(tree)).toEqual(['In range, 1 muscle', 'No sets, 16 muscles']);
+    expect(groupHeaders(tree)).toEqual(['Normal growth range, 1 muscle', 'No sets, 16 muscles']);
   });
 
-  test('"N sets, range MEV to MRV": the rounded number is the one judged (5.5 reads 6, Just enough, not Under)', async () => {
+  // RE-PINNED under D219 lane A5: the sentence no longer carries the landmark
+  // range, and the band is the one judgement's (below maintenance is under 2).
+  test('the rounded number is the one judged (1.5 reads 2, Maintenance range, not Below maintenance)', async () => {
     atWednesday();
-    // 11 chest sets over the last two weeks: an average of 5.5, MEV 6.
+    // 3 chest sets over the last two weeks: an average of 1.5, which reads 2.
     getCompletedWorkoutSets.mockResolvedValue([
-      ...setsOf('bench', 11, NOW - 3 * DAY),
+      ...setsOf('bench', 3, NOW - 3 * DAY),
       ...setsOf('bench', 1, NOW - 60 * DAY),
     ]);
     const tree = await mount();
     await act(async () => { pressWindow(tree, '2 weeks').props.onPress(); });
 
-    expect(flattenText(tree.toJSON())).toContain('An average of 6 sets a week, range 6 to 22');
+    expect(flattenText(tree.toJSON())).toContain('An average of 2 sets a week');
     const chest = findMuscleRow(tree, 'Chest:');
-    expect(chest.props.accessibilityLabel).toContain('Just enough');
-    expect(chest.props.accessibilityLabel).not.toContain('Under the range');
-    // The figure takes the same rounded number and the same band.
-    expect(lastFigureInput().volumeByMuscle.chest).toMatchObject({ workingSets: 6, status: 'minimum' });
+    expect(chest.props.accessibilityLabel).toContain('Maintenance range');
+    expect(chest.props.accessibilityLabel).not.toContain('Below maintenance');
+    // The figure takes the same rounded number and the same group.
+    expect(lastFigureInput().volumeByMuscle.chest).toMatchObject({ workingSets: 2, status: 'maintenance' });
   });
 
-  test('a range that starts at 0 reads "up to 14", never "0 to 14" (Front delts), at every window', async () => {
+  test('no row prints a landmark range ("range 6 to 22", "up to 14"), at every window; the bar reads the studied range', async () => {
     atWednesday();
-    // Front delts: MEV 0, MAV 8, MRV 14. Twelve presses credit them half a set each: six sets.
+    // Twelve presses credit front delts half a set each: six sets.
     getCompletedWorkoutSets.mockResolvedValue(setsOf('press', 12, MONDAY_9AM));
     const tree = await mount();
 
-    expect(flattenText(tree.toJSON())).toContain('6 sets so far this week, up to 14');
-    expect(flattenText(tree.toJSON())).not.toMatch(/\b0 to 14\b/);
-    expect(flattenText(tree.toJSON())).not.toContain('range up to');
-    expect(findMuscleRow(tree, 'Front delts:').props.accessibilityLabel).toContain('6 sets so far this week, up to 14');
-    // The bar still takes the range from 0, so the range and the band stay drawn.
+    expect(flattenText(tree.toJSON())).toContain('6 sets so far this week');
+    expect(flattenText(tree.toJSON())).not.toMatch(/range \d+ to \d+|up to \d+|\b0 to 14\b/);
+    expect(findMuscleRow(tree, 'Front delts:').props.accessibilityLabel).toContain('6 sets so far this week');
     const bar = tree.root.findAll(
-      (n) => typeof n.type === 'function' && n.props.value === 6 && n.props.rangeEnd === 14,
+      (n) => typeof n.type === 'function' && n.props.value === 6 && n.props.rangeEnd === 42,
     )[0];
-    expect(bar.props).toMatchObject({ rangeStart: 0, rangeEnd: 14, bandStart: 2, bandEnd: 8, max: 14 });
+    expect(bar.props).toMatchObject({ rangeStart: 2, rangeEnd: 42, bandStart: 10, bandEnd: 20, max: 42 });
 
     await act(async () => { pressWindow(tree, '2 weeks').props.onPress(); });
-    expect(flattenText(tree.toJSON())).toContain('An average of 6 sets a week, up to 14');
-    expect(flattenText(tree.toJSON())).not.toMatch(/\b0 to 14\b/);
-    expect(findMuscleRow(tree, 'Front delts:').props.accessibilityLabel)
-      .toContain('an average of 6 sets a week, up to 14');
+    expect(flattenText(tree.toJSON())).toContain('An average of 6 sets a week');
+    expect(flattenText(tree.toJSON())).not.toMatch(/range \d+ to \d+|up to \d+/);
   });
 
-  test('every group header reads its label, a middle dot and its count in one line ("In range · 1")', async () => {
+  test('every group header reads its label, a middle dot and its count in one line ("Normal growth range · 1")', async () => {
     atWednesday();
     getCompletedWorkoutSets.mockResolvedValue([
-      ...setsOf('bench', 25, MONDAY_9AM), // chest: Too much
-      ...setsOf('curl', 10, MONDAY_9AM), // biceps: In range
+      ...setsOf('bench', 25, MONDAY_9AM), // chest: Above normal growth
+      ...setsOf('curl', 10, MONDAY_9AM), // biceps: Normal growth range
     ]);
     const tree = await mount();
     const headers = tree.root.findAll(
@@ -650,22 +697,23 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
         && /, \d+ muscles?$/.test(n.props.accessibilityLabel || ''),
     );
     // RE-ANCHORED D214 (lane 5 review S2): the plan's order, and "No sets" for the unplanned untrained.
-    expect(headers.map(h => flattenText(h))).toEqual(['In range · 1', 'Too much · 1', 'No sets · 15']);
+    expect(headers.map(h => flattenText(h))).toEqual(['Normal growth range · 1', 'Above normal growth · 1', 'No sets · 15']);
   });
 
-  test('the bar draws the helpful range MEV to MRV with the in-range band MEV + 2 to MAV (the track runs to MRV, or to the value past it)', async () => {
+  // RE-PINNED under D219 lane A5: the bar draws the studied range (2 to 42 sets) with
+  // the zone the plan aims at marked inside it (10 to 20; 20 to 30 for a focus muscle).
+  test('the bar draws the studied range 2 to 42 with the normal growth range marked (the track runs to 42, or to the value past it)', async () => {
     atWednesday();
-    getCompletedWorkoutSets.mockResolvedValue([...setsOf('bench', 5, MONDAY_9AM), ...setsOf('curl', 30, MONDAY_9AM)]);
+    getCompletedWorkoutSets.mockResolvedValue([...setsOf('bench', 5, MONDAY_9AM), ...setsOf('curl', 50, MONDAY_9AM)]);
     const tree = await mount();
     const bars = tree.root.findAll((n) => typeof n.type === 'function' && n.props.rangeStart !== undefined && n.props.rangeEnd !== undefined);
     const byValue = (value) => bars.find(b => b.props.value === value);
-    // Chest: MEV 6, MAV 14, MRV 22, five sets.
-    expect(byValue(5).props).toMatchObject({ value: 5, max: 22, rangeStart: 6, rangeEnd: 22, bandStart: 8, bandEnd: 14 });
-    // Biceps: 30 sets is past MRV 22, so the track runs to the value.
-    expect(byValue(30).props).toMatchObject({ value: 30, max: 30, rangeStart: 6, rangeEnd: 22, bandStart: 8, bandEnd: 14 });
+    expect(byValue(5).props).toMatchObject({ value: 5, max: 42, rangeStart: 2, rangeEnd: 42, bandStart: 10, bandEnd: 20 });
+    // Biceps: 50 sets is past the 42 studied, so the track runs to the value.
+    expect(byValue(50).props).toMatchObject({ value: 50, max: 50, rangeStart: 2, rangeEnd: 42, bandStart: 10, bandEnd: 20 });
   });
 
-  test('the bar fill carries the status colour, and no row prints an instruction', async () => {
+  test('the bar fill carries the tone colour, never the error token, and no row prints an instruction', async () => {
     atWednesday();
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 25, MONDAY_9AM));
     const tree = await mount();
@@ -673,53 +721,47 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
     // D204 addendum 3: a surface describes. The gap to the range is visible from the figures.
     expect(text).not.toMatch(/more to reach|\bmore sets\b|\badd\b|consider|you should|try to/i);
     const bar = tree.root.findAll((n) => typeof n.type === 'function' && n.props.value === 25 && n.props.rangeStart !== undefined)[0];
-    expect(bar.props.fillColor).toBe(colors.error);
+    expect(bar.props.fillColor).toBe(colors.success); // 25 sets: above normal growth, a growth-range tone
+    expect(bar.props.fillColor).not.toBe(colors.error);
   });
 
-  test('a row\'s tap opens one line: where its band came from (never a caption on every row)', async () => {
+  test('a row\'s tap opens the band\'s explanation, in the one judgement\'s words (never a caption on every row)', async () => {
     atWednesday();
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 5, MONDAY_9AM));
-    const plan = mergeLandmarkPrecedence({
-      plan: { table: { chest: { mev: 8, mav: 16, mrv: 24 } }, source: { chest: 'plan' } },
-    });
-    getEffectiveLandmarks.mockResolvedValue(plan);
     const tree = await mount();
 
-    expect(flattenText(tree.toJSON())).not.toContain('Source:');
+    expect(flattenText(tree.toJSON())).not.toContain('Maintenance range: studies find this holds the size you have.');
     await act(async () => { findMuscleRow(tree, 'Chest:').props.onPress(); });
-    expect(flattenText(tree.toJSON())).toContain('Source: your plan');
+    expect(flattenText(tree.toJSON())).toContain('Maintenance range: studies find this holds the size you have.');
+    expect(flattenText(tree.toJSON())).not.toContain('Source:');
     // One open at a time: tapping again closes it.
     await act(async () => { findMuscleRow(tree, 'Chest:').props.onPress(); });
-    expect(flattenText(tree.toJSON())).not.toContain('Source:');
+    expect(flattenText(tree.toJSON())).not.toContain('Maintenance range: studies find this holds the size you have.');
   });
 
-  test('every source has its words', () => {
+  test('the landmark sources are gone from the rows: no "Source:" line, no source words in the screen', () => {
     for (const words of [
       "plan: 'your plan'",
       "research: 'research starting point'",
       "adapted: 'adjusted from your logged training'",
       "profile: 'matched to your profile'",
       "manual: 'your own targets'",
-    ]) expect(VOLUME_HEATMAP_SOURCE).toContain(words);
+    ]) expect(VOLUME_HEATMAP_SOURCE).not.toContain(words);
+    expect(VOLUME_HEATMAP_SOURCE).not.toContain('SOURCE_WORDS');
   });
 
-  test('one line under the list names the muscles on their own targets, and omits the clause when none', async () => {
-    const base = 'Targets start from research figures and adjust to your plan and your logged sessions';
+  test('one fixed line under the list says where the bands come from, whoever set their own targets', async () => {
+    const note = 'Bands come from studies of weekly sets. A muscle you picked as a focus in your plan reads against its focus range.';
     let tree = await mount();
-    expect(flattenText(tree.toJSON())).toContain(`${base}.`);
+    expect(flattenText(tree.toJSON())).toContain(note);
     expect(flattenText(tree.toJSON())).not.toContain('use your own targets');
 
     getEffectiveLandmarks.mockResolvedValue(mergeLandmarkPrecedence({
       manual: { chest: { mev: 7, mav: 14, mrv: 22 }, back: { mev: 11, mav: 16, mrv: 25 } },
     }));
     tree = await mount();
-    expect(flattenText(tree.toJSON())).toContain(`${base}; Chest and Back use your own targets.`);
-
-    getEffectiveLandmarks.mockResolvedValue(mergeLandmarkPrecedence({
-      manual: { chest: { mev: 7, mav: 14, mrv: 22 } },
-    }));
-    tree = await mount();
-    expect(flattenText(tree.toJSON())).toContain(`${base}; Chest uses your own targets.`);
+    expect(flattenText(tree.toJSON())).toContain(note);
+    expect(flattenText(tree.toJSON())).not.toMatch(/use your own targets|uses your own targets/);
   });
 
   test('a tap on a region selects it on the figure and scrolls to its row', async () => {
@@ -732,21 +774,24 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
   });
 });
 
-describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Under group is the plan\'s population, and the rest with no sets is "No sets"', () => {
-  const VERDICT_WORDS = /Under the range|Just enough|In range|Near the limit|Too much/;
+// RE-PINNED under D219 lane A5: "the Under group" is the Below maintenance group of the
+// one judgement (the population rule is unchanged: the plan plus what was logged).
+describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Below maintenance group is the plan\'s population, and the rest with no sets is "No sets"', () => {
+  const VERDICT_WORDS = /Below maintenance|Maintenance range|Between maintenance|Normal growth range|Focus range|Above normal growth|Top of the studied range|Beyond the studied range/;
 
-  test('a plan-programmed muscle with no sets is Under the range; an unprogrammed one with no sets is No sets', async () => {
+  test('a plan-programmed muscle with no sets is Below maintenance; an unprogrammed one with no sets is No sets', async () => {
     atWednesday();
     planProgrammes('chest', 'quads');
-    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM)); // chest 10: In range
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM)); // chest 10: Normal growth range
     const tree = await mount();
 
-    expect(groupHeaders(tree)).toEqual(['Under the range, 1 muscle', 'In range, 1 muscle', 'No sets, 15 muscles']);
-    expect(findMuscleRow(tree, 'Quads:').props.accessibilityLabel).toContain('0 sets so far this week, range 8 to 20, Under the range');
+    expect(groupHeaders(tree)).toEqual(['Below maintenance, 1 muscle', 'Normal growth range, 1 muscle', 'No sets, 15 muscles']);
+    expect(findMuscleRow(tree, 'Quads:').props.accessibilityLabel).toContain('0 sets so far this week, Below maintenance');
     // The No sets row prints its figure and no verdict word, aloud or on screen.
     const forearms = findMuscleRow(tree, 'Forearms:').props.accessibilityLabel;
-    expect(forearms).toContain('0 sets so far this week, range 4 to 22');
+    expect(forearms).toContain('0 sets so far this week');
     expect(forearms).not.toMatch(VERDICT_WORDS);
+    expect(forearms).not.toMatch(/source:/);
   });
 
   test('the plan layer is read once per load, for the signed-in person with their profile', async () => {
@@ -758,24 +803,24 @@ describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Under grou
     expect(getPlanLandmarks).toHaveBeenCalledWith('u1', { userProfile: store.userProfile });
   });
 
-  test('without a plan a muscle with no sets is No sets, and a trained muscle below its range is still Under the range', async () => {
+  test('without a plan a muscle with no sets is No sets, and a trained muscle below maintenance is still Below maintenance', async () => {
     atWednesday();
-    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 3, MONDAY_9AM)); // chest 3 < MEV 6
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 1, MONDAY_9AM)); // chest 1 < 2
     const tree = await mount();
 
-    expect(groupHeaders(tree)).toEqual(['Under the range, 1 muscle', 'No sets, 16 muscles']);
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Under the range');
+    expect(groupHeaders(tree)).toEqual(['Below maintenance, 1 muscle', 'No sets, 16 muscles']);
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Below maintenance');
     expect(findMuscleRow(tree, 'Quads:').props.accessibilityLabel).not.toMatch(VERDICT_WORDS);
   });
 
   test('a trained muscle the plan does not programme is still judged: the population is the plan plus what was logged', async () => {
     atWednesday();
     planProgrammes('quads');
-    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 3, MONDAY_9AM)); // chest is off the plan
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 1, MONDAY_9AM)); // chest is off the plan
     const tree = await mount();
 
-    expect(groupHeaders(tree)).toEqual(['Under the range, 2 muscles', 'No sets, 15 muscles']);
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Under the range');
+    expect(groupHeaders(tree)).toEqual(['Below maintenance, 2 muscles', 'No sets, 15 muscles']);
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Below maintenance');
   });
 
   test('a manual edit never drops a muscle from the plan-trained set (read from the plan layer, not the merged source)', async () => {
@@ -786,10 +831,10 @@ describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Under grou
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM));
     const tree = await mount();
 
-    expect(groupHeaders(tree)).toEqual(['Under the range, 1 muscle', 'In range, 1 muscle', 'No sets, 15 muscles']);
+    expect(groupHeaders(tree)).toEqual(['Below maintenance, 1 muscle', 'Normal growth range, 1 muscle', 'No sets, 15 muscles']);
     const quads = findMuscleRow(tree, 'Quads:').props.accessibilityLabel;
-    expect(quads).toContain('0 sets so far this week, range 9 to 20, Under the range');
-    expect(quads).toContain('source: your own targets');
+    expect(quads).toContain('0 sets so far this week, Below maintenance');
+    expect(quads).not.toContain('source:'); // D219: the landmark source is not a row's business any more
   });
 
   test('the figure draws a muscle with no sets hollow whichever group its row sits in', async () => {
@@ -827,7 +872,7 @@ describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Under grou
     const tree = await mount();
 
     expect(logError).toHaveBeenCalledWith('VolumeHeatmapScreen.readPlanTrained', expect.any(Error), { userId: 'u1' });
-    expect(groupHeaders(tree)).toEqual(['In range, 1 muscle', 'No sets, 16 muscles']);
+    expect(groupHeaders(tree)).toEqual(['Normal growth range, 1 muscle', 'No sets, 16 muscles']);
   });
 
   test('the plan-trained set comes from the plan layer through the one shared reader (source guard)', () => {
@@ -844,7 +889,7 @@ describe('D214 lane 5 review N3: a failed band read is logged, never silent', ()
     const tree = await mount();
 
     expect(logError).toHaveBeenCalledWith('VolumeHeatmapScreen.resolveLandmarks', expect.any(Error), { userId: 'u1' });
-    expect(flattenText(tree.toJSON())).toContain('5 sets so far this week, range 6 to 22'); // chest at the research band
+    expect(flattenText(tree.toJSON())).toContain('5 sets so far this week'); // chest at the research band
   });
 
   test('the post-save and post-reset re-reads of the bands log their failure (source guard)', () => {
@@ -913,7 +958,7 @@ describe('AX-04 (launch accessibility audit): the muscle rows are the accessible
 
     const chestRow = rows.find((r) => r.props.accessibilityLabel.startsWith('Chest:'));
     expect(chestRow.props.accessibilityLabel)
-      .toBe('Chest: 11 sets so far this week, range 6 to 22, In range, Trained 2 days ago, source: research starting point');
+      .toBe('Chest: 11 sets so far this week, Normal growth range, Trained 2 days ago');
     expect(StyleSheet.flatten(chestRow.props.style).minHeight).toBeGreaterThanOrEqual(44);
   });
 
@@ -950,18 +995,18 @@ describe('D214 (7.4 items 2 and 3, PR-14 and VH-10): a recovery week is framed, 
     const tree = await recoveryWeekTree();
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Recovery week: sets are planned lower this week');
-    for (const word of ['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much']) {
+    for (const word of ['Below maintenance', 'Maintenance range', 'Normal growth range', 'Above normal growth', 'Beyond the studied range']) {
       expect(text).not.toContain(word);
     }
     expect(groupHeaders(tree)).toEqual([]);
     // The rows still print their figures.
-    expect(text).toContain('3 sets so far this week, range 6 to 22');
+    expect(text).toContain('3 sets so far this week');
     // RE-ANCHORED 2026-10-02 (D214 addendum 9, census 0.16): the neutral figure's note says it in plain words.
     expect(text).toContain('No muscle is judged this week. Every muscle you trained is shown in one colour on the figure.');
     expect(text).not.toMatch(/share one shade|its legend says only/);
     // A recovery week already says nothing is judged, so the unjudged line is not said twice.
     expect(text).not.toContain('Nothing is judged until a set is logged.');
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).not.toMatch(/Under the range|Just enough|In range|Near the limit|Too much/);
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).not.toMatch(/Below maintenance|Maintenance range|Between maintenance|Normal growth range|Focus range|Above normal growth|Top of the studied range|Beyond the studied range/);
   });
 
   // D214 addendum 2 (lane 5 landing): the recovery week is the programme
@@ -1009,8 +1054,8 @@ describe('D214 (7.4 items 2 and 3, PR-14 and VH-10): a recovery week is framed, 
     const tree = await mount();
 
     expect(flattenText(tree.toJSON())).not.toContain('Recovery week');
-    expect(groupHeaders(tree)).toEqual(['Under the range, 1 muscle', 'No sets, 16 muscles']);
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Under the range');
+    expect(groupHeaders(tree)).toEqual(['Maintenance range, 1 muscle', 'No sets, 16 muscles']);
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Maintenance range');
     expect(lastFigureInput().neutralVolume).toBe(false);
     // The position was readable, so the calendar row is not consulted at all.
     expect(getCurrentMesocycleWeek).not.toHaveBeenCalled();
@@ -1075,23 +1120,26 @@ describe('D214 (7.4 item 4): the one legend', () => {
     for (const old of ['Below target', 'Good range', 'Getting close']) expect(text).not.toContain(old);
   });
 
-  test('the figure\'s own legend names all six colours the screen can draw', () => {
-    for (const word of ['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much', 'No sets']) {
-      expect(BODY_DIAGRAM_SOURCE).toContain(`label: '${word}'`);
+  // RE-PINNED under D219 lane A5: the legend names the four tones of the one judgement
+  // (read from volumeBandLabels.js) and "No sets"; the five engine words are retired.
+  test('the figure\'s own legend names all five colours the screen can draw', () => {
+    const { VOLUME_TONE_LABELS } = require('../../lib/volumeBandLabels');
+    expect(Object.values(VOLUME_TONE_LABELS)).toEqual([
+      'Below maintenance', 'Maintenance to growth', 'Growth range', 'Beyond the studied range',
+    ]);
+    for (const tone of ['BELOW', 'BUILDING', 'GROWTH', 'BEYOND']) {
+      expect(BODY_DIAGRAM_SOURCE).toContain(`VOLUME_TONE_LABELS[TONE.${tone}]`);
     }
+    expect(BODY_DIAGRAM_SOURCE).toContain("label: 'No sets'");
   });
 
   // RE-ANCHORED 2026-10-02 (D214 addendum 9, census W4): the five words are written ONCE, in
   // lib/volumeBandLabels.js, and this screen reads them from it (the Workout Summary reads the same map);
   // the figure's own legend names the same words and is held equal to the map here.
-  test('the group headers use the legend\'s own words, read from the one shared map', () => {
-    expect(VOLUME_HEATMAP_SOURCE).toMatch(/import \{ VOLUME_BAND_LABELS, volumeRangeText \} from '\.\.\/lib\/volumeBandLabels';/);
-    for (const key of ['below', 'minimum', 'optimal', 'near_mrv', 'over_mrv']) {
-      expect(VOLUME_HEATMAP_SOURCE).toContain(`label: VOLUME_BAND_LABELS.${key}`);
-    }
-    for (const word of Object.values(VOLUME_BAND_LABELS)) {
-      expect(BODY_DIAGRAM_SOURCE).toContain(`label: '${word}'`);
-    }
+  test('the group headers read the one shared map, and the figure\'s legend reads its tone words', () => {
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/import \{ VOLUME_BAND_LABELS \} from '\.\.\/lib\/volumeBandLabels';/);
+    expect(VOLUME_HEATMAP_SOURCE).toContain('...GROUP_ORDER.map((group) => ({ status: group, label: VOLUME_BAND_LABELS[group] })),');
+    expect(BODY_DIAGRAM_SOURCE).toMatch(/import \{ VOLUME_TONE_LABELS \} from '\.\.\/lib\/volumeBandLabels';/);
   });
 });
 
@@ -1130,8 +1178,8 @@ describe('D214 (7.4 item 6): the trend card', () => {
     const data = chart.props.data;
     expect(data).toHaveLength(4);
     expect(data[3].color).toBe(colors.textSecondary); // this week so far: never a full-week verdict
-    expect(data[2].color).toBe(colors.success); // 14 sets: In range
-    expect(data[0].color).toBe(colors.success); // 10 sets: In range
+    expect(data[2].color).toBe(colors.success); // 14 sets: Normal growth range
+    expect(data[0].color).toBe(colors.success); // 10 sets: Normal growth range
   });
 
   test('the takeaway counts LOGGED sets per Monday week, never the credits', async () => {
@@ -1227,7 +1275,7 @@ describe('D214 (7.4 item 6): the trend card', () => {
     const text = flattenText(tree.toJSON());
     expect(text).not.toContain("Couldn't load volume heatmap");
     expect(text).not.toContain('Sets a week');
-    expect(text).toContain('5 sets so far this week, range 6 to 22');
+    expect(text).toContain('5 sets so far this week');
   });
 });
 
@@ -1473,7 +1521,7 @@ describe('R2 (2026-07-11) design-cohesion census', () => {
 
   test('every pure set-count/target readout carries tabular figures', () => {
     // RE-ANCHORED D214: the old setsCount / "/22" pair and the bare trend
-    // count are sentences now ("5 sets so far this week, range 6 to 22", "this week so
+    // count are sentences now ("5 sets so far this week", "this week so
     // far: 5 sets"). The editor's numeric boxes keep tabular figures, and the
     // trend figure reads through type.num (tabular) in its frozen style and its
     // live-theme twin (D70 precedent).
@@ -1554,7 +1602,7 @@ describe('F6 (progress-tab audit 2026-09-24): the division legend names the week
 // unjudged list; a window that HAS sets keeps lane 5's population rule.
 // ───────────────────────────────────────────────────────────────────────────
 describe('D214 addendum 9 (census 6.4): nothing is judged until a set is logged in the window shown', () => {
-  const VERDICT = /Under the range|Just enough|In range|Near the limit|Too much/;
+  const VERDICT = /Below maintenance|Maintenance range|Between maintenance|Normal growth range|Focus range|Above normal growth|Top of the studied range|Beyond the studied range/;
   const NOTHING_JUDGED = 'Nothing is judged until a set is logged.';
 
   test('a plan that programmes muscles and nothing logged: one flat list, no band header, no verdict, and the one line', async () => {
@@ -1573,7 +1621,7 @@ describe('D214 addendum 9 (census 6.4): nothing is judged until a set is logged 
     );
     expect(rows).toHaveLength(17);
     const quads = findMuscleRow(tree, 'Quads:').props.accessibilityLabel;
-    expect(quads).toMatch(/^Quads: 0 sets so far this week, range 8 to 20(, |$)/);
+    expect(quads).toMatch(/^Quads: 0 sets so far this week(, |$)/);
     expect(quads).not.toMatch(VERDICT);
     // No verdict colour reaches the figure or a bar, and the figure is told nothing is judged by drawing none.
     for (const entry of Object.values(lastFigureInput().volumeByMuscle)) expect(entry).not.toHaveProperty('color');
@@ -1582,15 +1630,15 @@ describe('D214 addendum 9 (census 6.4): nothing is judged until a set is logged 
     for (const bar of bars) expect(bar.props.fillColor).toBeUndefined();
   });
 
-  test('the same plan with a set logged judges again: the planned muscles with no sets list under Under the range', async () => {
+  test('the same plan with a set logged judges again: the planned muscles with no sets list under Below maintenance', async () => {
     atWednesday();
     planProgrammes('chest', 'back', 'quads', 'hamstrings');
-    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM)); // chest 10: In range
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM)); // chest 10: Normal growth range
     const tree = await mount();
 
-    expect(groupHeaders(tree)).toEqual(['Under the range, 3 muscles', 'In range, 1 muscle', 'No sets, 13 muscles']);
+    expect(groupHeaders(tree)).toEqual(['Below maintenance, 3 muscles', 'Normal growth range, 1 muscle', 'No sets, 13 muscles']);
     expect(flattenText(tree.toJSON())).not.toContain(NOTHING_JUDGED);
-    expect(findMuscleRow(tree, 'Quads:').props.accessibilityLabel).toContain('Under the range');
+    expect(findMuscleRow(tree, 'Quads:').props.accessibilityLabel).toContain('Below maintenance');
   });
 
   test('it is about the window shown: sets 20 days ago leave "This week" unjudged and the 4 weeks view judged', async () => {
@@ -1603,7 +1651,7 @@ describe('D214 addendum 9 (census 6.4): nothing is judged until a set is logged 
     await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
     expect(groupHeaders(tree).length).toBeGreaterThan(0);
     expect(flattenText(tree.toJSON())).not.toContain(NOTHING_JUDGED);
-    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toMatch(/Under the range|Just enough|In range/);
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toMatch(/Below maintenance|Maintenance range|Between maintenance|Normal growth range/);
   });
 
   test('any window: nothing logged in 2 weeks is unjudged at 2 weeks too, each row an average of nothing', async () => {
@@ -1614,7 +1662,7 @@ describe('D214 addendum 9 (census 6.4): nothing is judged until a set is logged 
     expect(groupHeaders(tree)).toEqual([]);
     expect(text).toContain(NOTHING_JUDGED);
     expect(text).toContain('No sets logged in the last 2 weeks');
-    expect(text).toContain('An average of 0 sets a week, range 6 to 22');
+    expect(text).toContain('An average of 0 sets a week');
     expect(text).not.toMatch(VERDICT);
   });
 
@@ -1663,7 +1711,7 @@ describe('D214 addendum 9 (census 6.5): an adaptive adjustment is said in plain 
     expect(text.indexOf(LINE)).toBeGreaterThan(text.indexOf('sets logged so far this week'));
     expect(text).not.toMatch(/recovery week/i);
     expect(text).not.toContain('No muscle is judged this week');
-    expect(groupHeaders(tree)).toEqual(['Under the range, 1 muscle', 'No sets, 16 muscles']);
+    expect(groupHeaders(tree)).toEqual(['Maintenance range, 1 muscle', 'No sets, 16 muscles']);
     expect(lastFigureInput().neutralVolume).toBe(false);
   });
 

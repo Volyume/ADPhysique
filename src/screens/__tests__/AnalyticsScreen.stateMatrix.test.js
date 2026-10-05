@@ -642,7 +642,9 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     // R4 plan evidence (a set landed inside the current Monday-anchored week):
     // the strip's line, in logged sets and "so far" (the old section title
     // "This week's volume" is gone with the old strip).
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 under their range');
+    // RE-PINNED under D219 lane A5 (design 5.3): the count is "below maintenance"
+    // (the one judgement's first group), no longer "under their range".
+    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 below maintenance');
     expect(flattenText(tree)).not.toContain("This week's volume");
     // R6 utilities. Body Metrics and Lifts were removed from this list as
     // duplicates of the Answer Block's pillar rows above (Body ->
@@ -908,7 +910,7 @@ describe('State matrix — I: recovery week active (isDeload true)', () => {
     const txt = flattenText(tree);
     expect(txt).toContain('Recovery week: sets are planned lower this week');
     expect(txt).toContain('This week so far: 2 sets logged across 2 muscles');
-    expect(txt).not.toMatch(/under their range/i);
+    expect(txt).not.toMatch(/under their range|below maintenance/i);
     expect(txt).not.toMatch(/deload/i);
     expect(txt).not.toMatch(/lighter week/i);
     expect(txt).not.toContain("This week's volume");
@@ -1485,9 +1487,9 @@ describe('D214 lane 3 — the strip under it: "This week so far", logged sets, t
     applyFixture({ db: richDb(), scan: null });
     const nav = makeNav();
     const { tree } = await mountAnalytics({ navigation: nav });
-    const label = 'This week so far: 2 sets logged across 2 muscles, 2 under their range';
+    const label = 'This week so far: 2 sets logged across 2 muscles, 2 below maintenance';
     expect(findByLabel(tree, STRIP_LABEL).map((n) => n.props.accessibilityLabel)).toEqual([label]);
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 under their range');
+    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 2 below maintenance');
     pressByLabel(tree, label);
     expect(nav.navigate).toHaveBeenCalledWith('VolumeHeatmap', { windowWeeks: 1 });
   });
@@ -1522,7 +1524,7 @@ describe('D214 lane 3 — the strip under it: "This week so far", logged sets, t
     })));
     const { tree } = await mountAnalytics({});
     // chest (trained, programmed) + hamstrings (trained, not programmed) + quads (programmed, no sets) = 3.
-    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 3 under their range');
+    expect(flattenText(tree)).toContain('This week so far: 2 sets logged across 2 muscles · 3 below maintenance');
   });
 
   test('every colour on the strip is named in the shared LegendRow, and the bar draws only those colours', async () => {
@@ -1530,13 +1532,16 @@ describe('D214 lane 3 — the strip under it: "This week so far", logged sets, t
     applyFixture({ db: richDb(), scan: null });
     const { tree } = await mountAnalytics({});
     const text = flattenText(tree);
-    expect(text).toContain('Under the range');
-    // RE-ANCHORED addendum 9 (6.7): the middle tone is "Inside the range".
-    expect(text).toContain('Inside the range');
-    expect(text).toContain('Too much');
+    // RE-PINNED under D219 lane A5 (design 5.3): the three tones are Below
+    // maintenance, Within the studied range and Beyond the studied range; the
+    // highest is an information colour, never the error token.
+    expect(text).toContain('Below maintenance');
+    expect(text).toContain('Within the studied range');
+    expect(text).toContain('Beyond the studied range');
+    expect(text).not.toMatch(/Too much|Under the range|Inside the range/);
     const c = resolveTheme({}).colors;
     const fills = swatchFills(tree);
-    expect(fills).toEqual([c.textMuted, c.success, c.error]);
+    expect(fills).toEqual([c.textMuted, c.success, c.macroCarb]);
     const bar = hostNodes(tree, (n) => n.props.testID === 'volume-strip-bar')[0];
     const segmentColours = bar.children.map((child) => StyleSheet.flatten(child.props.style).backgroundColor);
     expect(segmentColours.length).toBe(2);
@@ -1579,9 +1584,9 @@ describe('D214 lane 3 — a recovery week prints no under count (PR-14)', () => 
     const text = flattenText(tree);
     expect(text).toContain('Recovery week: sets are planned lower this week');
     expect(text).toContain('This week so far: 2 sets logged across 2 muscles');
-    expect(text).not.toMatch(/under their range/);
+    expect(text).not.toMatch(/· \d+ below maintenance/);
     expect(text).toContain('Trained');
-    expect(text).not.toContain('Under the range');
+    expect(text).not.toContain('Below maintenance');
     expect(swatchFills(tree)).toEqual([resolveTheme({}).colors.surface3]);
   });
 
@@ -1595,7 +1600,7 @@ describe('D214 lane 3 — a recovery week prints no under count (PR-14)', () => 
     const { tree } = await mountAnalytics({});
     const text = flattenText(tree);
     expect(text).not.toContain('Recovery week:');
-    expect(text).toMatch(/· \d+ under their range/);
+    expect(text).toMatch(/· \d+ below maintenance/);
   });
 });
 

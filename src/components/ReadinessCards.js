@@ -17,6 +17,17 @@
  * fatigue trend moved in from Consistency; a failed read is said and
  * logged, never swallowed.
  *
+ * D219 (lane B4, design 5.1 and 5.2): the block now leads with the "Next in
+ * your plan" card (NextInPlanCard, built by lib/recovery/nextInPlan.js): the
+ * plan's own next session, each of its muscles' estimated readiness by a part of
+ * the day, and when every muscle in it is estimated recovered (the latest
+ * muscle's ready time); with the plan week complete it names next week's first
+ * session. It replaces the next-workout sentence. The muscle rows and the card's
+ * muscle detail also say what the plan intends for a muscle and where this
+ * week's sets sit against the evidence bands (lib/recovery/muscleDetail.js and
+ * lib/volumeJudgement.js), so a muscle raised to bring up reads inside its focus
+ * range with the reason. Nothing recommends another session.
+ *
  * Voice rules: CLAUDE.md. No em dashes. D204: this screen describes, it
  * never tells the athlete to train, rest or monitor themselves. Facts are
  * ink: no amber and no status colour on a fact (plan 7.0 rule 3). Nothing
@@ -37,11 +48,13 @@ import SectionLabel from './SectionLabel';
 import Button from './Button';
 import BodyDiagramHeatmap from './BodyDiagramHeatmap';
 import MuscleRecoveryList, { buildMuscleSessionSplits } from './MuscleRecoveryList';
+import NextInPlanCard from './NextInPlanCard';
 import RecoveryLearningCard from './RecoveryLearningCard';
 import FatigueTrendCard from './FatigueTrendCard';
 import { SkeletonCard } from './Skeleton';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { MUSCLE_DISPLAY_NAMES, muscleDisplayName } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { getPlanRoles } from '../lib/effectiveLandmarks';
 import { sessionSummaryParams } from '../lib/sessionReport';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
@@ -69,11 +82,13 @@ import { SESSION_STATE } from '../lib/blockProgression';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
 // The "ready now / later today / by Thursday / in N days" wording is
-// nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js
-// for the rows and here for the sentence; this file only needs the
-// per-session readiness itself besides (D219: it describes the plan's next
-// session, it never recommends another).
-import { recommendNextWorkout, readyClause, muscleVerb } from '../lib/recovery/nextWorkoutRecommendation';
+// nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js for
+// the rows; this file needs only the still-to-do list from it (D219: it describes
+// the plan's sessions, it never recommends another).
+import { recommendNextWorkout } from '../lib/recovery/nextWorkoutRecommendation';
+// D219 (lane B4): the "Next in your plan" card's model and the week's sets per muscle.
+import { buildNextInPlanCard } from '../lib/recovery/nextInPlan';
+import { weekFigures as buildWeekFigures } from '../lib/recovery/muscleDetail';
 
 const DAY_MS = 86400000;
 
@@ -315,46 +330,6 @@ export function recoveryAnswerLine(counts) {
 }
 
 /**
- * The next-workout sentence in the answer block (D214 7.2 a). It names the
- * plan's own next session, with its limiting muscle named AS the limiting one:
- * "Upper A is next: Back is the least recovered of the muscles it trains,
- * estimated 60% recovered, ready by tomorrow." When nothing it trains has a
- * session in the window it says that ("No recent session on the muscles
- * Upper A trains.", RC-5), and never "every muscle ... recovered" for
- * muscles with nothing behind them. null when the session's planned sets
- * could not be read (no estimate to state). D219: there is no swap reason
- * any more (the plan's order is fixed when the plan is built, so no surface
- * recommends another session); this sentence is the plan's next session
- * only, until the "Next in your plan" card replaces it.
- */
-export function buildNextWorkoutSentence(recommendation, nowMs) {
-  if (!recommendation) return null;
-  // An unnamed routine (rare) reads "Next up:" and "it trains", never "Your
-  // next session is next" (lane 2 review N7), the lib's own fallback.
-  const name = recommendation.programmeNextName || '';
-  const lead = name ? `${name} is next` : 'Next up';
-  const entry = (recommendation.perSession ?? [])
-    .find((p) => p.routineId === recommendation.programmeNext?.routineId);
-  const now = entry?.readinessNow ?? null;
-  if (now) {
-    const counted = Array.isArray(now.muscles) ? now.muscles : [];
-    if (!now.evidence) {
-      return counted.length ? `No recent session on the muscles ${name ? `${name} trains` : 'it trains'}.` : null;
-    }
-    if (now.verdict !== 'ready' && now.limitingMuscle) {
-      const verb = muscleVerb(now.limitingMuscle);
-      return `${lead}: ${muscleDisplayName(now.limitingMuscle)} ${verb} the least recovered of the muscles it trains, estimated ${Math.round(now.minPercent)}% recovered, ${readyClause(now.limitingReadyAtMs, nowMs)}.`;
-    }
-    // Every counted muscle with a session behind it is ready (or only some
-    // have one and the line says which): the shared line, after the name.
-    if (recommendation.programmeNextLine) return `${lead}. ${recommendation.programmeNextLine}`;
-    return null;
-  }
-  if (!recommendation.programmeNextLine) return null;
-  return `${lead}. ${recommendation.programmeNextLine}`;
-}
-
-/**
  * One row per OUTSTANDING session this plan week (D214 7.2 b), from
  * recommendNextWorkout().perSession, which holds outstanding sessions only,
  * in programme order: the session's name and nothing else ("Upper B").
@@ -528,6 +503,13 @@ export default function ReadinessCards({
   // next session; D219: no recommendation), or null when there is no active
   // block, no outstanding session to describe, or the read failed.
   const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
+  // D219 (lane B4): the "Next in your plan" card's model, or null when there is no
+  // active block, nothing to describe, or the read failed; the active plan's muscle
+  // roles (focus, raised, standard, maintenance; empty reads every muscle standard);
+  // and this week's sets per muscle, the Volume heatmap's own week.
+  const [nextCard, setNextCard] = useState(null);
+  const [planRoles, setPlanRoles] = useState({});
+  const [weekByMuscle, setWeekByMuscle] = useState({});
   // The counted sessions' own sets and the exercise library, for the
   // breakdown's "as the main muscle worked" / "as a helper" split (RC-9, RC-10).
   const [splitData, setSplitData] = useState({ sets: [], exercises: [] });
@@ -676,10 +658,15 @@ export default function ReadinessCards({
           setMuscleRecovery(null);
           setMuscleRecoveryFailed(true);
           setRecoveryRecommendation(null);
+          setNextCard(null);
           return;
         }
         setMuscleRecoveryFailed(false);
         setMuscleRecovery(recoveryLoad);
+        // D219: the active plan's muscle roles (getPlanRoles never throws): the card, the
+        // rows and the muscle detail say what the plan intends for each muscle.
+        const roles = await getPlanRoles(userId);
+        setPlanRoles(roles);
         // The breakdown's split of each counted session into main-mover and
         // helper sets: only the sets of the sessions the model counted, and
         // the exercise rows (read once; reused when the rate-last-session
@@ -689,7 +676,11 @@ export default function ReadinessCards({
         // counted session on a soft-deleted custom exercise is split like any
         // other instead of falling back to the model's own figure.
         try {
-          const exercises = (lookupRead ?? (await getExerciseLookup()))?.rows ?? [];
+          const lookup = lookupRead ?? (await getExerciseLookup());
+          const exercises = lookup?.rows ?? [];
+          // This week's sets per muscle: the Volume heatmap's own week, so the two
+          // screens print the same number (muscleDetail.weekFigures).
+          setWeekByMuscle(buildWeekFigures({ sets: completedSets, exerciseMap: lookup, nowMs: recoveryLoad.nowMs }));
           const wanted = new Set();
           for (const entry of Object.values(recoveryLoad?.map ?? {})) {
             for (const cs of entry?.contributingSessions ?? []) if (cs?.workoutId) wanted.add(cs.workoutId);
@@ -701,50 +692,69 @@ export default function ReadinessCards({
         } catch (e) {
           logError('ReadinessCards.loadSessionSplits', e, { userId });
           setSplitData({ sets: [], exercises: [] });
+          setWeekByMuscle({});
         }
         try {
           const position = await resolveProgrammePosition(userId);
-          const programmeNext = position?.nextSession ?? null;
           // Opus review finding 1: a FINISHED block awaiting the athlete's
           // decision has no "next workout" to suggest; Home's own hero says
           // "choose what comes after this block" there, and this row must not
           // contradict it. resolveProgrammePosition's gated recovery state is
           // the one authority for that reading.
           const awaitingDecision = !!position?.recoveryState?.awaitingDecision;
-          if (position && programmeNext && !awaitingDecision) {
+          if (position && !awaitingDecision && (position.nextSession || position.weekResolved === true)) {
             const sessions = position.sessions ?? [];
             const outstandingIds = sessions
               .filter((s) => s.state === SESSION_STATE.OUTSTANDING)
               .map((s) => s.routineId);
-            const plannedSetsByRoutine = await loadPlannedSetsByRoutine(outstandingIds);
-            const projectedAtMs = nextLikelyTrainingTime({
-              nowMs: recoveryLoad.nowMs,
-              habitualWeekdays: recoveryLoad.habitualWeekdays,
-              typicalStartMinute: recoveryLoad.typicalStartMinute,
-            });
+            // D219 (design 5.1): the card's own session is the plan's next one (the
+            // authority Home reads, position.nextSession) or, with the plan week
+            // complete, next week's first session in programme order (the session
+            // Home names under "Week complete"). Its planned sets are read too.
+            const firstInOrder = [...sessions].sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0))[0] ?? null;
+            const cardRoutineId = position.nextSession?.routineId ?? firstInOrder?.routineId ?? null;
+            const ids = [...new Set([...outstandingIds, ...(cardRoutineId ? [cardRoutineId] : [])])];
+            const plannedSetsByRoutine = ids.length ? await loadPlannedSetsByRoutine(ids) : {};
             const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
-            const result = recommendNextWorkout({
-              sessions,
+            setNextCard(buildNextInPlanCard({
+              position,
               plannedSetsByRoutine,
               recoveryMap: recoveryLoad.map,
-              projectedAtMs,
               nowMs: recoveryLoad.nowMs,
               routineNamesById,
-            });
-            // Lead review: this block has no card title naming the session
-            // (Home does), so it carries the programme-next name itself,
-            // looked up from the same sessions the readings were built from;
-            // the names also label the still-to-do rows (D214).
-            setRecoveryRecommendation({
-              ...result,
-              programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
-              routineNamesById,
-            });
+              roles,
+            }));
+            if (position.nextSession) {
+              const projectedAtMs = nextLikelyTrainingTime({
+                nowMs: recoveryLoad.nowMs,
+                habitualWeekdays: recoveryLoad.habitualWeekdays,
+                typicalStartMinute: recoveryLoad.typicalStartMinute,
+              });
+              const result = recommendNextWorkout({
+                sessions,
+                plannedSetsByRoutine,
+                recoveryMap: recoveryLoad.map,
+                projectedAtMs,
+                nowMs: recoveryLoad.nowMs,
+                routineNamesById,
+              });
+              // The names label the still-to-do rows (D214); the readings the
+              // result also holds are no longer shown (D219, design 5.2).
+              setRecoveryRecommendation({
+                ...result,
+                programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
+                routineNamesById,
+              });
+            } else {
+              setRecoveryRecommendation(null);
+            }
           } else {
+            setNextCard(null);
             setRecoveryRecommendation(null);
           }
         } catch (e) {
           logError('ReadinessCards.loadRecoveryRecommendation', e, { userId });
+          setNextCard(null);
           setRecoveryRecommendation(null);
         }
       } catch (e) {
@@ -752,6 +762,7 @@ export default function ReadinessCards({
         setMuscleRecovery(null);
         setMuscleRecoveryFailed(true);
         setRecoveryRecommendation(null);
+        setNextCard(null);
       }
     } finally {
       setLoaded(true);
@@ -798,7 +809,6 @@ export default function ReadinessCards({
       ? 'No session in the last 14 days, so there is no estimate to show.'
       : "Each muscle's recovery shows here after your first session.")
     : null;
-  const nextText = muscleRecovery ? buildNextWorkoutSentence(recoveryRecommendation, muscleRecoveryNowMs) : null;
   const stillToDoRows = muscleRecovery ? buildStillToDoRows(recoveryRecommendation) : [];
   const sessionSplits = useMemo(
     () => (muscleRecovery ? buildMuscleSessionSplits(muscleRecovery.map, splitData.sets, splitData.exercises) : null),
@@ -937,6 +947,13 @@ export default function ReadinessCards({
             succeeded. */}
         {slots ? <SkeletonCard height={320} /> : (muscleRecovery || muscleRecoveryFailed) && (
           <View style={styles.byMuscle}>
+            {/* D219 (lane B4, design 5.1): the top card, always the plan's own next
+                session, with each muscle's estimated readiness and when every
+                muscle in it is estimated recovered. It describes; it never
+                recommends another session. */}
+            {!muscleRecoveryFailed && nextCard ? (
+              <NextInPlanCard card={nextCard} nowMs={muscleRecoveryNowMs} weekByMuscle={weekByMuscle} />
+            ) : null}
             <View>
               <Text style={live.mfTitle} accessibilityRole="header">Recovery by muscle</Text>
               {/* The sub-line carries "Estimated" for every percent in the
@@ -950,7 +967,6 @@ export default function ReadinessCards({
                 <View style={styles.answerBlock}>
                   {answerLine ? <Text style={live.answerLine}>{answerLine}</Text> : null}
                   {emptyLine ? <Text style={live.nextText}>{emptyLine}</Text> : null}
-                  {nextText ? <Text style={live.nextText}>{nextText}</Text> : null}
                   {stillToDoRows.length > 0 ? (
                     <View style={styles.stillToDo}>
                       <Text style={live.stillLabel}>Still to do this plan week</Text>
@@ -977,6 +993,8 @@ export default function ReadinessCards({
                   onSelect={setSelectedMuscle}
                   learnedSpeed={muscleRecovery.personal?.reason === 'adjusted'}
                   sessionSplits={sessionSplits}
+                  roles={planRoles}
+                  weekFigures={weekByMuscle}
                   registerRow={(muscle, node) => { rowNodes.current[muscle] = node; }}
                   registerNames={(node) => { namesNode.current = node; }}
                 />

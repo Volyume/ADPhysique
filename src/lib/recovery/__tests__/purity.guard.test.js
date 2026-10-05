@@ -26,7 +26,9 @@ import fs from 'fs';
 import path from 'path';
 
 // personalRecovery (register D210): the personal learner is engine code too.
-const FILES = ['nextLikelyTrainingTime', 'nextWorkoutRecommendation', 'sequenceSessions', 'personalRecovery'];
+// D219 lane B4: the Recovery screen's "Next in your plan" card and the muscle detail are
+// engine-side derivations too (pure, no I/O, no clock read).
+const FILES = ['nextLikelyTrainingTime', 'nextWorkoutRecommendation', 'sequenceSessions', 'personalRecovery', 'nextInPlan', 'muscleDetail'];
 
 /** `src` with block and line comments removed (a "//" inside a URL is
  * kept: only a "//" not preceded by ":" starts a line comment here). */
@@ -45,7 +47,7 @@ const FORBIDDEN = [
   'async-storage',
 ];
 
-describe('purity (source guard): nextLikelyTrainingTime, nextWorkoutRecommendation, sequenceSessions, personalRecovery', () => {
+describe('purity (source guard): nextLikelyTrainingTime, nextWorkoutRecommendation, sequenceSessions, personalRecovery, nextInPlan, muscleDetail', () => {
   for (const name of FILES) {
     const src = codeOnly(fs.readFileSync(path.join(__dirname, '..', `${name}.js`), 'utf8'));
 

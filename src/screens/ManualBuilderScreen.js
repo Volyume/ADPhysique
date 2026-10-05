@@ -27,6 +27,11 @@ import {
   softDeleteRoutine, updateProgrammeName, db, runInTransaction,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
+// D219 (design 5.3, lane A5): the builder nudges on the per-exercise and
+// per-session caps (the one band module's session flag), not on a weekly total
+// above a landmark ceiling ("Biceps volume is very high" read a muscle the
+// person picked to bring up as a fault).
+import { sessionVolumeFlag } from '../lib/plan/bands';
 import { suggestRestSeconds } from '../lib/restSuggest';
 import { classifySupersetPair, estimateWorkoutMinutes } from '../lib/planEngine';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -115,6 +120,10 @@ function computePlanVolume(days) {
   return sets;
 }
 
+// D219: only the low side is judged here (none, low, good). A weekly total above
+// a landmark ceiling used to read 'over' in the error colour; it is simply good
+// now, and what a builder can still say about too many sets is said per
+// exercise (the 4 set toast) and per session (sessionFlags below).
 function muscleStatus(muscle, totalSets) {
   const lm = VOLUME_LANDMARKS[muscle];
   if (!lm) return null;
@@ -122,9 +131,27 @@ function muscleStatus(muscle, totalSets) {
   // zero direct sets is acceptable, so don't flag them as missing.
   if (totalSets === 0)      return lm.mev === 0 ? 'good' : 'none';
   if (totalSets < lm.mev)   return 'low';
-  if (totalSets <= lm.mav)  return 'good';
-  if (totalSets <= lm.mrv)  return 'high';
-  return 'over';
+  return 'good';
+}
+
+// D219 (design 4.3 and 5.3): the muscles whose direct sets in ONE day are above
+// the session cap (8), each with the one band module's own line. A calm note,
+// never a block, never in a warning colour.
+function sessionFlags(days) {
+  const flags = [];
+  for (const day of days) {
+    const bySession = {};
+    for (const ex of day.exercises) {
+      const m = ex.primaryMuscle;
+      if (!m || !VOLUME_LANDMARKS[m]) continue;
+      bySession[m] = (bySession[m] || 0) + (ex.sets || 3);
+    }
+    for (const [muscle, direct] of Object.entries(bySession)) {
+      const flag = sessionVolumeFlag({ direct, fractional: direct });
+      if (flag) flags.push({ muscle, dayName: day.name, direct, line: flag.line });
+    }
+  }
+  return flags;
 }
 
 // CP-10 batch G (2026-07-11): converted to accept the live colour table `c`
@@ -135,16 +162,12 @@ function buildStatusColor(c) {
     none: c.textMuted,
     low:  c.warning,
     good: c.success,
-    high: c.success,
-    over: c.error,
   };
 }
 const STATUS_DOT = {
   none: '○',
   low:  '◐',
   good: '●',
-  high: '●',
-  over: '●',
 };
 
 // CP-10 batch G (2026-07-11): rendered once per screen render (not a list
@@ -166,7 +189,7 @@ function PlanBalanceCard({ days }) {
   }).filter(r => r.status !== null);
 
   const warnings = rows.filter(r => r.status === 'none' || r.status === 'low');
-  const overloaded = rows.filter(r => r.status === 'over');
+  const sessionNotes = sessionFlags(days);
   // D139: the typical (mean) session length across days that actually have
   // exercises, so an empty day someone hasn't got to yet never drags the
   // figure toward zero.
@@ -225,13 +248,13 @@ function PlanBalanceCard({ days }) {
         </Card>
       )}
 
-      {overloaded.length > 0 && (
+      {sessionNotes.length > 0 && (
         <Card surface="surface2" radius="md" padding="md" style={balanceStyles.warningBox}>
-          {overloaded.map(({ muscle }) => (
-            <View key={muscle} style={balanceStyles.warningRow}>
-              <Ionicons name="warning-outline" size={14} color={t.colors.error} />
-              <Text style={[balanceStyles.warningText, live.warningText, { color: t.colors.error }]}>
-                {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high. This may affect recovery.`}
+          {sessionNotes.map(({ muscle, dayName, direct, line }) => (
+            <View key={`${muscle}-${dayName}`} style={balanceStyles.warningRow}>
+              <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+              <Text style={[balanceStyles.warningText, live.warningText]}>
+                {`${MUSCLE_DISPLAY_NAMES[muscle]}: ${direct} sets in ${dayName}. ${line}`}
               </Text>
             </View>
           ))}

@@ -10,6 +10,7 @@ import {
   calculateWeeklyVolume,
   calculate1RM, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
+import { getPlanRoles } from '../lib/effectiveLandmarks';
 import { logError } from '../lib/errorLog';
 import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
@@ -378,16 +379,21 @@ export default function useProgressData() {
     setWeeklyVolume(vol);
   }
 
-  function loadDeloadCheck(sets, exMap, workouts, isCurrentRequest = () => true) {
+  async function loadDeloadCheck(sets, exMap, workouts, isCurrentRequest = () => true) {
     if (!isCurrentRequest()) return;
     try {
+      // D219 (design 5.3, lane A5): the over pass reads the band function and
+      // each muscle's role in the active plan, so a muscle the plan raised to
+      // bring up is never counted as over (getPlanRoles never throws).
+      const roles = await getPlanRoles(user?.id);
+      if (!isCurrentRequest()) return;
       // Campaign 24 §2: bucket-building extracted to the shared
       // buildLast4WeekDeloadBuckets (src/lib/algorithms.js), byte-identical
       // to this file's prior inline derivation -- every default matches
       // this caller's behaviour verbatim (rolling anchor, full exerciseMap,
       // answered-only soreness/joint, derived weeksSinceLastDeload, no
       // warmup exclusion). shouldDeload itself is untouched.
-      const buckets = buildLast4WeekDeloadBuckets(sets, workouts, exMap, { now: Date.now() });
+      const buckets = buildLast4WeekDeloadBuckets(sets, workouts, exMap, { now: Date.now(), roles });
       const result = shouldDeload(buckets);
       setDeloadAlert(result.deload ? result : null);
     } catch (e) {

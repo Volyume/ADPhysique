@@ -14,16 +14,18 @@
  * per-muscle credits summed (a press credits chest, triceps and front delts,
  * and is still one logged set, VH-16).
  *
- * THE GROUP RULE (plan 7.1 item 2 and 7.4 item 5, B17). The heatmap lists its
- * muscles under the five verdict words plus "No sets", and the Progress strip
- * counts "N under their range" over the same population, so the strip's count
- * is the list's first group. The population is every muscle with logged sets
+ * THE GROUP RULE (plan 7.1 item 2 and 7.4 item 5, B17; D219 lane A5). The
+ * heatmap lists its muscles under the band groups of volumeJudgement.js (below
+ * maintenance up to beyond the studied range, the focus range split by the
+ * muscle's role) plus "No sets", and the Progress strip counts "N below
+ * maintenance" over the same population, so the strip's count is the list's
+ * first group. The population is every muscle with logged sets
  * in the window plus, with a plan, the muscles the plan programmes with
  * planned sets above zero: a trained muscle is judged whether or not the plan
  * programmes it, and a plan-programmed muscle is judged before its first set.
  * A muscle outside that population (no sets, not programmed) is in no verdict
  * group at all (`bandGroupFor` returns 'none', "No sets"); every other muscle
- * sits in its own `getVolumeStatus` band. `planTrainedMuscles` reads the plan's set from the
+ * sits in its own volumeJudgement group. `planTrainedMuscles` reads the plan's set from the
  * plan layer (effectiveLandmarks.getPlanLandmarks), never from the merged
  * source map, so a muscle the person edited by hand is still plan-trained.
  *
@@ -203,17 +205,17 @@ export function planTrainedMuscles(planLayer) {
 }
 
 /**
- * The group a muscle's row sits in: its `getVolumeStatus` band, or
+ * The group a muscle's row sits in: its volumeJudgement group, or
  * NO_SETS_GROUP ('none') for a muscle outside the verdict population with no
  * sets in the window (see the header). A plan-programmed muscle with no sets
- * is still judged ('below', "Under the range"); without a plan a muscle with no
- * sets is in no verdict group. The Progress strip counts "under their range" as
- * the muscles whose group is 'below', so its number is the heatmap's first
- * group by construction.
+ * is still judged ('below_maintenance'); without a plan a muscle with no sets
+ * is in no verdict group. The Progress strip counts "below maintenance" as the
+ * muscles whose group is 'below_maintenance', so its number is the heatmap's
+ * first group by construction.
  *
  * @param {object} p
  * @param {string} p.muscle - a listed muscle key
- * @param {string} p.status - the muscle's getVolumeStatus status
+ * @param {string} p.status - the muscle's volumeJudgement group
  * @param {boolean} p.hasCredit - the muscle has any credit in the window
  * @param {?Set<string>} p.planTrained - from planTrainedMuscles
  * @returns {string} the status, or 'none'

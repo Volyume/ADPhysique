@@ -48,6 +48,19 @@
  * here tells anyone to train or rest. Facts are ink and the bar is the
  * `recovery` token: no amber and no traffic-light status colour anywhere.
  *
+ * D219 (lanes A5 and B4, design 5.1 and 5.3): with `roles` (the active plan's
+ * muscle roles) and `weekFigures` (the Monday week's sets per muscle) the
+ * breakdown also says what the plan intends for the muscle and where this
+ * week's sets sit against the evidence bands, in the one judgement's words
+ * (volumeJudgement.js), so a muscle the plan raised to bring up reads inside
+ * its focus range with the reason ("Biceps are your focus this block: 27 sets,
+ * inside the focus range of 20 to 30.") and never as a fault; it shows the
+ * muscle's OWN recovery clock in plain words (biceps about 2 days, back about
+ * 2.5, each an estimate with a range), the estimate after the last session and
+ * the spacing of the sessions counted (muscleDetail.js). A muscle the plan
+ * raised also carries its intent on the row's own muted line. Without the two
+ * props the list is exactly as it was.
+ *
  * Pure presentation: no I/O, never imports `../lib/database`.
  *
  * Props:
@@ -65,6 +78,8 @@
  *                   as the model's own credit
  *   registerRow     (muscle, node) => void, so the screen can scroll to a row
  *   registerNames   (node) => void, the same for the names line
+ *   roles           D219: { [muscle]: role } from the active plan's facts, or null
+ *   weekFigures     D219: muscleDetail.weekFigures' result, or null
  */
 
 import { useState } from 'react';
@@ -79,6 +94,8 @@ import { trainingRecency } from '../lib/trainingRecency';
 import { safeFormatDate } from '../lib/safeFormat';
 import { RECOVERY_ESTIMATE_LABEL, LOOKBACK_DAYS } from '../lib/recovery/constants';
 import { readyClause } from '../lib/recovery/nextWorkoutRecommendation';
+import { muscleDetailRows } from '../lib/recovery/muscleDetail';
+import { roleFor } from '../lib/volumeJudgement';
 
 /** Group order and labels: the figure legend's own words, in the spec's row
  * order (recovering first, then nearly, then recovered). */
@@ -333,9 +350,20 @@ function sessionSetsText(cs, split) {
   return `${plural(credit, 'set')} counted (a helper set counts as half)`;
 }
 
-/** The breakdown lines behind one row's estimate, newest session first. */
-export function muscleRecoveryDetailLines(entry, learnedSpeed = false, splits = null) {
+/**
+ * The breakdown lines behind one row's estimate, newest session first. D219:
+ * with `extra` ({ role, week, nowMs }) the plan's intent, this week's sets and
+ * their band, the muscle's own clock, the estimate with its range and the
+ * spacing follow the muscle's name (muscleDetail.muscleDetailRows); without it
+ * the lines are exactly what they were.
+ */
+export function muscleRecoveryDetailLines(entry, learnedSpeed = false, splits = null, extra = null) {
   const lines = [{ label: 'Muscle', value: musclePlainWord(entry.muscle) }];
+  if (extra) {
+    lines.push(...muscleDetailRows({
+      muscle: entry.muscle, entry, role: extra.role, week: extra.week ?? null, nowMs: extra.nowMs,
+    }));
+  }
   const sessions = Array.isArray(entry.contributingSessions) ? [...entry.contributingSessions].reverse() : [];
   for (const cs of sessions) {
     const when = safeFormatDate(cs?.endMs, 'EEE d MMM', '') || 'Session';
@@ -345,8 +373,30 @@ export function muscleRecoveryDetailLines(entry, learnedSpeed = false, splits = 
   return lines;
 }
 
+/**
+ * The open breakdown: label and value lines, then the half-credit sentence and
+ * where the recovery answer lives. Shared by the rows below and the "Next in
+ * your plan" card (D219), so the two read the same.
+ */
+export function MuscleDetail({ lines }) {
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  return (
+    <View style={[styles.detail, live.detail]}>
+      {lines.map((line, i) => (
+        <View key={`${line.label}-${i}`} style={styles.detailLine} accessible accessibilityLabel={`${line.label}: ${line.value}`}>
+          <Text style={live.detailLabel}>{line.label}</Text>
+          <Text style={[styles.detailValue, live.detailValue]}>{line.value}</Text>
+        </View>
+      ))}
+      <Text style={[styles.detailNote, live.detailNote]}>{HALF_CREDIT_NOTE}</Text>
+      <Text style={[styles.detailNote, live.detailNote]}>{RECOVERY_ANSWER_NOTE}</Text>
+    </View>
+  );
+}
+
 function MuscleRecoveryRow({
-  entry, nowMs, lastTrainedAt, expanded, onToggle, t, live, learnedSpeed, splits, registerRow,
+  entry, nowMs, lastTrainedAt, expanded, onToggle, t, live, learnedSpeed, splits, registerRow, extra,
 }) {
   const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
   const percent = Number.isFinite(entry.recoveredPercent)
@@ -358,7 +408,13 @@ function MuscleRecoveryRow({
   const estimatedPercentText = `${percent}% recovered`; // estimated recovery
   const estimatedFillWidth = `${percent}%`; // estimated recovery, the bar's fill
   const fill = muscleRecoveryBarFill(percent, t.colors);
-  const detail = expanded ? muscleRecoveryDetailLines(entry, learnedSpeed, splits) : null;
+  const detail = expanded ? muscleRecoveryDetailLines(entry, learnedSpeed, splits, extra) : null;
+  // D219: a muscle the plan raised carries its intent on the row (the reason, with this week's
+  // sets), so the screen shows the intent beside the recovery and never reads a focus as a fault.
+  const intent = extra && (extra.role === 'focus' || extra.role === 'raised')
+    ? muscleDetailRows({ muscle: entry.muscle, entry, role: extra.role, week: extra.week ?? null, nowMs })
+      .find((r) => r.label === 'In your plan')?.value ?? null
+    : null;
   // The breakdown is a SIBLING of the touchable, never its child: a
   // touchable with its own accessibilityLabel is one opaque node to
   // VoiceOver and TalkBack, so anything nested inside it is unreachable
@@ -376,7 +432,10 @@ function MuscleRecoveryRow({
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt)}
+        // The intent line sits inside this control, so it is spoken with the row's label.
+        accessibilityLabel={intent
+          ? `${muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt)}. ${intent}`
+          : muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt)}
         accessibilityHint={expanded ? 'Hides the sessions behind this estimate' : 'Shows the sessions behind this estimate'}
       >
         <View style={styles.rowTop}>
@@ -399,19 +458,9 @@ function MuscleRecoveryRow({
         <Text style={live.meta}>
           {muscleRecoveryRowMeta(entry, nowMs, lastTrainedAt)}
         </Text>
+        {intent ? <Text style={live.meta}>{intent}</Text> : null}
       </TouchableOpacity>
-      {detail ? (
-        <View style={[styles.detail, live.detail]}>
-          {detail.map((line, i) => (
-            <View key={`${line.label}-${i}`} style={styles.detailLine} accessible accessibilityLabel={`${line.label}: ${line.value}`}>
-              <Text style={live.detailLabel}>{line.label}</Text>
-              <Text style={[styles.detailValue, live.detailValue]}>{line.value}</Text>
-            </View>
-          ))}
-          <Text style={[styles.detailNote, live.detailNote]}>{HALF_CREDIT_NOTE}</Text>
-          <Text style={[styles.detailNote, live.detailNote]}>{RECOVERY_ANSWER_NOTE}</Text>
-        </View>
-      ) : null}
+      {detail ? <MuscleDetail lines={detail} /> : null}
     </View>
   );
 }
@@ -431,7 +480,7 @@ function GroupHeader({ label, count, live }) {
 
 export default function MuscleRecoveryList({
   rows, nowMs, freshness = null, selectedMuscle = null, onSelect, learnedSpeed = false,
-  sessionSplits = null, registerRow = null, registerNames = null,
+  sessionSplits = null, registerRow = null, registerNames = null, roles = null, weekFigures = null,
 }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -456,6 +505,9 @@ export default function MuscleRecoveryList({
       learnedSpeed={learnedSpeed}
       splits={sessionSplits?.[entry.muscle]}
       registerRow={registerRow}
+      extra={roles != null || weekFigures != null
+        ? { role: roleFor(roles, entry.muscle), week: weekFigures?.[entry.muscle] ?? null, nowMs }
+        : null}
     />
   );
 

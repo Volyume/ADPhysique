@@ -519,3 +519,63 @@ describe('source guards', () => {
     expect(code).not.toMatch(/—/);
   });
 });
+
+// D219 lanes A5 and B4 (design 5.1 and 5.3): with the plan's roles and the week's sets the
+// breakdown says what the plan intends for a muscle, where this week's sets sit against the
+// evidence bands, and the muscle's OWN recovery clock; a muscle the plan raised carries its
+// intent on the row. Without the two props the list is exactly as it was (the suites above).
+describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock', () => {
+  const WEEK = {
+    biceps: { credit: 27, direct: 20, indirect: 14, sessionCredit: 13.5, sessionDirect: 10 },
+  };
+  const BICEPS_FOCUS = { biceps: 'focus' };
+  const bicepsRow = (tree) => rowButtons(tree).find((n) => n.props.accessibilityLabel.startsWith('Biceps,'));
+
+  test('a muscle the plan raised carries the reason on its row, and the row\'s spoken label says it', () => {
+    const tree = render({ roles: BICEPS_FOCUS, weekFigures: WEEK, selectedMuscle: null });
+    // The recovered group is names only until "Show details"; open it to see the row.
+    act(() => { tree.root.findAll((n) => n.props?.accessibilityLabel === 'Show details for the recovered muscles')[0].props.onPress(); });
+    expect(texts(tree)).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(bicepsRow(tree).props.accessibilityLabel).toMatch(/\. Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30\.$/);
+  });
+
+  test('a standard muscle\'s row carries no intent line', () => {
+    const tree = render({ roles: {}, weekFigures: WEEK, selectedMuscle: 'quads' });
+    expect(texts(tree).some((t) => /your focus this block/.test(t))).toBe(false);
+  });
+
+  test('the open breakdown: intent, this week so far, the band, the clock, then the sessions, in that order', () => {
+    const tree = render({ roles: BICEPS_FOCUS, weekFigures: WEEK, selectedMuscle: 'biceps' });
+    const all = texts(tree);
+    const idx = (label) => all.indexOf(label);
+    expect(idx('Muscle')).toBeGreaterThanOrEqual(0);
+    expect(idx('In your plan')).toBeGreaterThan(idx('Muscle'));
+    expect(idx('This week so far')).toBeGreaterThan(idx('In your plan'));
+    expect(idx('Band')).toBeGreaterThan(idx('This week so far'));
+    expect(idx('Recovery clock')).toBeGreaterThan(idx('Band'));
+    expect(idx('Based on')).toBeGreaterThan(idx('Recovery clock'));
+    expect(all).toContain('27 sets counted: 20 direct and 14 indirect at half credit.');
+    expect(all).toContain('Within your focus range for biceps: you picked it to bring up. Studies have found small extra gains at weekly totals like this.');
+  });
+
+  test('the clock is the muscle\'s own and differs from back\'s: biceps about 2 days, an estimate with a range', () => {
+    const bicepsLines = muscleRecoveryDetailLines(ROWS[2], false, null, { role: 'standard', week: null, nowMs: NOW });
+    const clock = bicepsLines.find((l) => l.label === 'Recovery clock').value;
+    expect(clock).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
+    expect(clock).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+  });
+
+  test('without roles and week figures the breakdown lines are exactly what they were', () => {
+    const plain = muscleRecoveryDetailLines(ROWS[2], false, null);
+    // The muscle, one counted session (labelled by its date), and what the estimate is based on.
+    expect(plain.map((l) => l.label)).toEqual(['Muscle', expect.any(String), 'Based on']);
+    expect(plain.some((l) => l.label === 'Recovery clock')).toBe(false);
+  });
+
+  test('nothing here blames or instructs, and no row carries an em dash (D204)', () => {
+    const tree = render({ roles: BICEPS_FOCUS, weekFigures: WEEK, selectedMuscle: 'biceps' });
+    const printed = texts(tree).join(' | ');
+    expect(printed).not.toMatch(/too much|overtrain|near the limit|you should|consider|take it easy/i);
+    expect(printed).not.toContain('—');
+  });
+});

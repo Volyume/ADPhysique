@@ -5,11 +5,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, circle, fontFamily,
+  colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getEffectiveLandmarks, getPlanLandmarks, isManualEdit } from '../lib/effectiveLandmarks';
+import { getEffectiveLandmarks, getPlanLandmarks, getPlanRoles, isManualEdit } from '../lib/effectiveLandmarks';
 import BackHeader from '../components/BackHeader';
 import ModalHeader from '../components/ModalHeader';
 import InfoTooltip from '../components/InfoTooltip';
@@ -32,10 +32,17 @@ import { buildPlanInputs } from '../lib/planAutoGen';
 import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
 import { syncUserPref, notePrefWrite } from '../lib/sync';
-import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus } from '../lib/algorithms';
-// D214 addendum 9 (census 0.24, W4): the five band words are written ONCE, in
+import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+// D214 addendum 9 (census 0.24, W4): the band words are written ONCE, in
 // volumeBandLabels.js, and read by this screen and the Workout Summary alike.
-import { VOLUME_BAND_LABELS, volumeRangeText } from '../lib/volumeBandLabels';
+// D219 (design 5.3, lane A5): the words and the verdict are the ONE judgement
+// every surface that judges a muscle's weekly sets reads (volumeJudgement.js):
+// the role-aware band function with the muscle's role from the active plan's
+// facts, so a muscle the person picked to bring up reads inside its focus range.
+import { VOLUME_BAND_LABELS } from '../lib/volumeBandLabels';
+import {
+  GROUP_ORDER, judgeWeek, roleFor, rangeBarFor, toneColors, toneForGroup,
+} from '../lib/volumeJudgement';
 // D200-1 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
 // the 2/4-week windows read the AVERAGE working sets per week against the
 // unchanged weekly bands, instead of the window's raw total. D214 amends
@@ -97,11 +104,16 @@ import { localWeekEndMs } from '../lib/dayKey';
  *  - A row says what it is: "5 sets so far this week, range 6 to 22" (an
  *    average over 2 and 4 weeks), the range being the fewest weekly sets that
  *    still help the muscle grow to the most it can recover from (census 0.4).
- *  - The rows read Under the range, Just enough, In range, Near the limit, Too
- *    much, then No sets (plan 7.4 item 5). The Under group's population is the
- *    Progress strip's: with a plan, the muscles it programmes; without one, the
- *    muscles with logged sets. A muscle outside it with no sets is "No sets"
- *    and carries no verdict (volumeLogged.js bandGroupFor).
+ *  - D219 (design 5.3, lane A5): the rows read the one judgement every surface
+ *    that judges a muscle's weekly sets reads (volumeJudgement.js: Below
+ *    maintenance up to Beyond the studied range, the focus range split by the
+ *    muscle's role in the active plan, so a muscle picked to bring up reads
+ *    inside its Focus range with the reason on a tap), then No sets (plan 7.4
+ *    item 5). Nothing reads "Too much" or "Near the limit". The Below
+ *    maintenance group's population is the Progress strip's: with a plan, the
+ *    muscles it programmes; without one, the muscles with logged sets. A muscle
+ *    outside it with no sets is "No sets" and carries no verdict
+ *    (volumeLogged.js bandGroupFor).
  *  - Targets are described, and edited, as the bands in force: the editor
  *    seeds from them and saves ONLY the muscles the person touched.
  */
@@ -113,30 +125,16 @@ const WINDOW_OPTIONS = [
 ];
 
 // The row groups, in the order the screen reads them (plan 7.4 item 5): the
-// verdict words from the lowest band up, then "No sets" for a muscle outside
-// the verdict population with no sets (volumeLogged.js bandGroupFor). Named in
-// the words of the figure's own legend (BodyDiagramHeatmap.js), the screen's
-// one legend, read from the one shared map the Workout Summary reads too
-// (volumeBandLabels.js; a test holds the legend's words equal to it).
+// bands from the lowest up, then "No sets" for a muscle outside the verdict
+// population with no sets (volumeLogged.js bandGroupFor). D219: the groups are
+// volumeJudgement's (a band, with the focus range split by the muscle's role),
+// named by the one shared map the Workout Summary reads too
+// (volumeBandLabels.js); the figure's legend names the four tones they paint.
 const BAND_GROUPS = [
-  { status: 'below', label: VOLUME_BAND_LABELS.below },
-  { status: 'minimum', label: VOLUME_BAND_LABELS.minimum },
-  { status: 'optimal', label: VOLUME_BAND_LABELS.optimal },
-  { status: 'near_mrv', label: VOLUME_BAND_LABELS.near_mrv },
-  { status: 'over_mrv', label: VOLUME_BAND_LABELS.over_mrv },
+  ...GROUP_ORDER.map((group) => ({ status: group, label: VOLUME_BAND_LABELS[group] })),
   { status: NO_SETS_GROUP, label: 'No sets' },
 ];
 const BAND_LABEL = Object.fromEntries(BAND_GROUPS.map(g => [g.status, g.label]));
-
-// Where a muscle's band came from (effectiveLandmarks.js source), as the
-// one-line source a row shows when it is tapped.
-const SOURCE_WORDS = {
-  plan: 'your plan',
-  research: 'research starting point',
-  adapted: 'adjusted from your logged training',
-  profile: 'matched to your profile',
-  manual: 'your own targets',
-};
 
 const SUMMARY_TOOLTIP = 'A set counts once for the muscle it works most and half for each muscle that helps, '
   + 'so the rows add up to more than the sets you logged.';
@@ -173,15 +171,10 @@ const WIDER_VIEWS_LINE = {
 const NO_PLAN_MUSCLES = new Set();
 const EMPTY_PLAN_CONTEXT = Object.freeze({
   recoveryWeek: false, adaptiveAdjustment: false, hasPlan: false, sessionsLeft: null, planTrained: NO_PLAN_MUSCLES,
+  roles: Object.freeze({}),
 });
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-
-// "Chest", "Chest and Back", "Chest, Back and Biceps".
-function joinNames(names) {
-  if (names.length <= 1) return names.join('');
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}
 
 // The plan context behind "N sessions left", the recovery-week framing and the
 // plan-trained muscle set. Best effort: an unreadable block is not evidence of
@@ -226,6 +219,9 @@ async function readPlanContext(userId, userProfile) {
       out.recoveryWeek = week?.isDeload === true && week?.awaitingDecision !== true;
     } catch (_) { /* best effort: no recovery-week framing */ }
   }
+  // D219 (design 5.3): each muscle's role in the active plan, from the plan's
+  // facts (getPlanRoles never throws; an empty map reads every muscle standard).
+  out.roles = await getPlanRoles(userId);
   try {
     out.planTrained = planTrainedMuscles(await getPlanLandmarks(userId, { userProfile }));
   } catch (e) {
@@ -265,15 +261,12 @@ export default function VolumeHeatmapScreen({ route }) {
     if (routeWindowWeeks != null) setWindowWeeks(normaliseWindowWeeks(routeWindowWeeks));
   }, [routeWindowWeeks]);
   const [customLandmarks, setCustomLandmarks] = useState(null);
-  // D90 #3 (2026-08-06): display statuses read the ONE resolved precedence
-  // (manual > adapted > plan > profile > research, effectiveLandmarks.js).
-  // D214: the editor now seeds from that same resolved table (the band in
-  // force), and saves only what the person touched.
+  // D90 #3 (2026-08-06): the resolved precedence (manual > adapted > plan >
+  // profile > research, effectiveLandmarks.js). D214: the editor seeds from
+  // that table (the band in force) and saves only what the person touched.
+  // D219: the rows no longer judge by it (they read volumeJudgement.js); the
+  // table stays for the editor and the engines that read the stored targets.
   const [resolvedLandmarks, setResolvedLandmarks] = useState(null);
-  // C6 closeout B1 (founder-approved): the per-muscle source map, kept
-  // beside the resolved table so a row can say WHERE its band came from
-  // when it is tapped (D214: one line in the row's tap, no caption per row).
-  const [resolvedSource, setResolvedSource] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
   // The editor is a native Modal, which sits above the app's toast and alert
@@ -378,7 +371,6 @@ export default function VolumeHeatmapScreen({ route }) {
   async function resolveLandmarksNow() {
     const r = await getEffectiveLandmarks(user.id, { userProfile });
     setResolvedLandmarks(r?.table ?? null);
-    setResolvedSource(r?.source ?? null);
     return r;
   }
 
@@ -517,14 +509,12 @@ export default function VolumeHeatmapScreen({ route }) {
         const r = await getEffectiveLandmarks(user.id, { userProfile });
         if (!isCurrentRequest()) return;
         setResolvedLandmarks(r?.table ?? null);
-        setResolvedSource(r?.source ?? null);
       } catch (e) {
         // The rows then judge by the research table, and the editor seeds from
         // it, so the failure is logged rather than left silent (review N3).
         logError('VolumeHeatmapScreen.resolveLandmarks', e, { userId: user?.id });
         if (!isCurrentRequest()) return;
         setResolvedLandmarks(null);
-        setResolvedSource(null);
       }
 
       await loadTrend(trendKeyRef.current, ds);
@@ -755,32 +745,27 @@ export default function VolumeHeatmapScreen({ route }) {
   // One model per muscle: the rounded figure that is both shown and judged
   // (D214, VH-2: round once), its band word, the bar's numbers and the recency.
   const rowModels = useMemo(() => {
-    const resolveColor = buildVolumeStatusColor(t.colors);
+    const tones = toneColors(t.colors);
     return muscles.map((muscle) => {
       const credit = view?.raw[muscle]?.workingSets || 0;
       const avg = view?.perWeek[muscle]?.workingSets || 0;
       const sets = Math.round(avg);
       const total = Math.round(credit);
-      const band = bandFor(muscle);
-      const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+      // D219: the ONE judgement, on the figure shown (round once, D214 VH-2),
+      // with this muscle's role in the active plan.
+      const judgement = judgeWeek({ muscle, sets, role: roleFor(planContext.roles, muscle) });
+      const status = judgement.group;
       const hasCredit = credit > 0;
-      // The Under group's population is the plan's (volumeLogged.js): a muscle
-      // outside it with no sets is "No sets" and carries no verdict.
+      // The below-maintenance group's population is the plan's (volumeLogged.js):
+      // a muscle outside it with no sets is "No sets" and carries no verdict.
       const group = bandGroupFor({ muscle, status, hasCredit, planTrained: planContext.planTrained });
       const judged = !unjudged && group !== NO_SETS_GROUP;
-      // "range 6 to 22" when the range starts above zero; a range that starts at 0
-      // (Front delts) reads "up to 14", never "0 to 14" (census 0.4, H3).
-      const rangeWords = volumeRangeText(band.mev, band.mrv);
-      const rangeClause = (Number(band.mev) || 0) > 0 ? `range ${rangeWords}` : rangeWords;
       const setsWords = plural(sets, 'set', 'sets');
       const figureText = windowWeeks === 1
-        ? `${setsWords} so far this week, ${rangeClause}`
-        : `An average of ${setsWords} a week, ${rangeClause}`;
+        ? `${setsWords} so far this week`
+        : `An average of ${setsWords} a week`;
       const lastMs = dataset?.lastTrained?.[muscle] ?? null;
       const recency = trainingRecency(lastMs, dataset?.loadedAtMs ?? Date.now());
-      const source = resolvedSource?.[muscle] && SOURCE_WORDS[resolvedSource[muscle]]
-        ? resolvedSource[muscle]
-        : null;
       // The spoken label says the same words as the row, then names the window.
       const spokenFigure = windowWeeks === 1
         ? figureText
@@ -789,7 +774,6 @@ export default function VolumeHeatmapScreen({ route }) {
         `${MUSCLE_DISPLAY_NAMES[muscle]}: ${spokenFigure}`,
         judged ? BAND_LABEL[status] : null,
         recency.known ? recency.label : null,
-        source ? `source: ${SOURCE_WORDS[source]}` : null,
       ].filter(Boolean).join(', ');
       return {
         muscle,
@@ -799,31 +783,31 @@ export default function VolumeHeatmapScreen({ route }) {
         hasCredit,
         status,
         group,
-        color: judged ? resolveColor(status) : undefined,
-        band,
-        // The bar's track runs to the limit, or to the value when it is past it.
-        max: Math.max(Number(band.mrv) || 0, sets),
+        color: judged ? tones[judgement.tone] : undefined,
+        // The bar's numbers (the studied range, the zone the plan aims at) and
+        // what a tap explains, both from the one judgement (D219).
+        bar: rangeBarFor(judgement.role, sets),
+        why: judged ? judgement.why : [],
         figureText,
         recencyText: recency.known ? recency.label : null,
-        source,
         a11yLabel,
       };
     });
-  }, [view, dataset, windowWeeks, unjudged, resolvedSource, effectiveLandmarks, bandFor, muscles, t,
-    planContext.planTrained]);
+  }, [view, dataset, windowWeeks, unjudged, muscles, t,
+    planContext.planTrained, planContext.roles]);
 
   // The figure's input. An entry with no colour draws as "No sets", so a muscle
   // with no sets in the window carries none; in a recovery week every trained
   // muscle takes one neutral shade (no verdict colour, D214 section 7.4 item 3).
   const volumeByMuscle = useMemo(() => {
-    const resolveColor = buildVolumeStatusColor(t.colors);
+    const tones = toneColors(t.colors);
     const map = {};
     for (const r of rowModels) {
       map[r.muscle] = {
         workingSets: r.sets,
         status: r.status,
         label: BAND_LABEL[r.status],
-        ...(r.hasCredit ? { color: recoveryWeek ? t.colors.surface3 : resolveColor(r.status) } : {}),
+        ...(r.hasCredit ? { color: recoveryWeek ? t.colors.surface3 : tones[toneForGroup(r.status)] } : {}),
       };
     }
     return map;
@@ -839,9 +823,6 @@ export default function VolumeHeatmapScreen({ route }) {
       .filter(g => g.rows.length > 0);
   }, [rowModels, unjudged]);
 
-  const manualNames = useMemo(() => muscles
-    .filter(m => resolvedSource?.[m] === 'manual')
-    .map(m => MUSCLE_DISPLAY_NAMES[m]), [resolvedSource, muscles]);
 
   // Muscles trained at least once in the trend window, in heatmap order.
   const trainedMuscles = useMemo(() => {
@@ -949,7 +930,7 @@ export default function VolumeHeatmapScreen({ route }) {
     );
   }
 
-  const resolveBandColor = buildVolumeStatusColor(t.colors);
+  const bandTones = toneColors(t.colors);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -1054,7 +1035,7 @@ export default function VolumeHeatmapScreen({ route }) {
                   <View
                     style={group.status === NO_SETS_GROUP
                       ? [styles.groupDot, styles.groupDotNone, live.groupDotNone]
-                      : [styles.groupDot, { backgroundColor: resolveBandColor(group.status) }]}
+                      : [styles.groupDot, { backgroundColor: bandTones[toneForGroup(group.status)] }]}
                   />
                   <Text style={[styles.groupLabel, live.groupLabel]}>{`${group.label} · ${group.rows.length}`}</Text>
                 </View>
@@ -1073,10 +1054,7 @@ export default function VolumeHeatmapScreen({ route }) {
         </View>
 
         <Text style={[styles.footerNote, live.footerNote]}>
-          {'Targets start from research figures and adjust to your plan and your logged sessions'}
-          {manualNames.length
-            ? `; ${joinNames(manualNames)} ${manualNames.length === 1 ? 'uses' : 'use'} your own targets.`
-            : '.'}
+          {'Bands come from studies of weekly sets. A muscle you picked as a focus in your plan reads against its focus range.'}
         </Text>
 
         {/* Sets a week: the trend card. The chips name the window, and a chip
@@ -1095,7 +1073,7 @@ export default function VolumeHeatmapScreen({ route }) {
                 key={muscle}
                 muscle={muscle}
                 trendData={trendData}
-                landmarks={effectiveLandmarks}
+                role={roleFor(planContext.roles, muscle)}
               />
             ))}
           </Card>
@@ -1256,7 +1234,10 @@ export default function VolumeHeatmapScreen({ route }) {
 function VolumeRow({ row, expanded, onToggle, onLayout }) {
   const t = useTheme();
   const rowLive = useMemo(() => buildLiveStyles(t), [t]);
-  const sourceLine = row.source ? `Source: ${SOURCE_WORDS[row.source]}` : null;
+  // D219: a tap explains the band for THIS muscle, in the one judgement's words
+  // (the reason for a muscle the plan raised, the evidence sentence for the
+  // band), where it used to name the landmark table the range came from.
+  const whyLines = Array.isArray(row.why) ? row.why : [];
   return (
     <View onLayout={onLayout}>
       <TouchableOpacity
@@ -1265,7 +1246,7 @@ function VolumeRow({ row, expanded, onToggle, onLayout }) {
         activeOpacity={0.75}
         accessibilityRole="button"
         accessibilityLabel={row.a11yLabel}
-        accessibilityHint={sourceLine ? 'Shows where this target comes from' : undefined}
+        accessibilityHint={whyLines.length ? 'Shows why this muscle sits in this band' : undefined}
         accessibilityState={{ expanded }}
       >
         <View style={styles.rowHead}>
@@ -1275,14 +1256,16 @@ function VolumeRow({ row, expanded, onToggle, onLayout }) {
         <Text style={[styles.figure, rowLive.figure]}>{row.figureText}</Text>
         <RangeBar
           value={row.sets}
-          max={row.max}
-          rangeStart={Number(row.band.mev) || 0}
-          rangeEnd={Number(row.band.mrv) || 0}
-          bandStart={(Number(row.band.mev) || 0) + 2}
-          bandEnd={Number(row.band.mav) || 0}
+          max={row.bar.max}
+          rangeStart={row.bar.rangeStart}
+          rangeEnd={row.bar.rangeEnd}
+          bandStart={row.bar.bandStart}
+          bandEnd={row.bar.bandEnd}
           fillColor={row.color}
         />
-        {expanded && sourceLine ? <Text style={[styles.sourceLine, rowLive.sourceLine]}>{sourceLine}</Text> : null}
+        {expanded && whyLines.length ? whyLines.map((line) => (
+          <Text key={line} style={[styles.sourceLine, rowLive.sourceLine]}>{line}</Text>
+        )) : null}
       </TouchableOpacity>
     </View>
   );
@@ -1297,14 +1280,14 @@ const SPARK_MAX_HEIGHT = 24;
 // from VolumeHeatmapScreen), so its own useTheme() call is cleaner than
 // threading two extra props through. Own buildTrendLiveStyles(t) below since
 // this component already has its own separate `trendStyles` block.
-function MuscleTrendRow({ muscle, trendData, landmarks }) {
+function MuscleTrendRow({ muscle, trendData, role }) {
   // trendData is the window's weekly array (oldest to newest), each entry has
   // volumeByMuscle. COMP-019 Stage 1b: bars render through VolyumeChart's bar
   // variant with tap-and-hold scrub; since a 24px row has no room for a tooltip
   // card, the scrubbed week's count surfaces in the label above instead.
   const t = useTheme();
   const trendLive = useMemo(() => buildTrendLiveStyles(t), [t]);
-  const resolveVolumeStatusColor = buildVolumeStatusColor(t.colors);
+  const tones = toneColors(t.colors);
   // Rounded once: the figure shown and the figure judged are the same number.
   const counts = trendData.map(w => Math.round(w.volumeByMuscle?.[muscle] || 0));
   const lastIdx = counts.length - 1;
@@ -1316,7 +1299,8 @@ function MuscleTrendRow({ muscle, trendData, landmarks }) {
   const barColorFor = (count, idx) => {
     if (count === 0) return t.colors.surface3;
     if (idx === lastIdx) return t.colors.textSecondary;
-    return resolveVolumeStatusColor(getVolumeStatus(count, muscle, landmarks).status);
+    // D219: a completed week is judged by the one judgement, with the muscle's role.
+    return tones[judgeWeek({ muscle, sets: count, role }).tone];
   };
 
   const barData = counts.map((c, i) => ({ value: c, color: barColorFor(c, i) }));

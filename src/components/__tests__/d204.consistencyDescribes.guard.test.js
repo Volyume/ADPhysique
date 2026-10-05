@@ -96,7 +96,10 @@ describe('the four-week fatigue banner describes, in a neutral card', () => {
     expect(reasons).toEqual([
       'Your average reps per set have dropped over the last 4 weeks',
       'Recurring joint discomfort across the block',
-      'More sets on a muscle than it can usually recover from, in 2 or more weeks',
+      // RE-PINNED under D219 lane A5 (design 5.3): the over pass now reads the band
+      // function and the muscle's role, and no longer claims the muscle "cannot
+      // recover" from a set count (Meeusen 2013); the reason says what was counted.
+      'Far more weekly sets on a muscle than your plan calls for, in 2 or more weeks',
       'Sustained soreness across 3 or more weeks',
     ]);
     for (const r of reasons) {

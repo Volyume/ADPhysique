@@ -8,7 +8,10 @@ describe('Coach and weekly check-in copy polish', () => {
   test('Coach review uses ASCII-safe separators in insight rows', () => {
     expect(coachReviewSource).not.toMatch(/\u00b7/);
     expect(coachReviewSource).toContain("`${win.exerciseName} - ${win.detail}`");
-    expect(coachReviewSource).toContain("`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - approaching the upper limit`");
+    // RE-PINNED under D219 lane A5 (design 5.3): the muscle rows read the one judgement, so the
+    // row says the band ("Biceps - focus range"), still with an ASCII hyphen, never an upper limit.
+    expect(coachReviewSource).toContain("`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - ${j.label.toLowerCase()}`");
+    expect(coachReviewSource).not.toContain('approaching the upper limit');
   });
 
   test('weekly check-in avoids fragile punctuation and gives a direct reminders action', () => {

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -42,12 +42,15 @@ import { claimMilestones } from '../lib/milestones';
 import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
 import { MilestoneBurst } from '../components/PRCelebration';
 import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
-import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
-import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
+import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
+import { getEffectiveLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
-// D214 addendum 9 (census 0.24, W4): the five band words, one map shared with the
-// Volume heatmap, so a band reads the same on both screens.
-import { volumeBandLabel } from '../lib/volumeBandLabels';
+// D219 (design 5.3, lane A5): the ONE judgement every surface that judges a
+// muscle's weekly sets reads (the role-aware band function, the muscle's role
+// from the active plan's facts), one map of words shared with the Volume
+// heatmap, so a band reads the same on both screens and a muscle the plan
+// raised reads inside its focus range, never "Too much".
+import { judgeWeek, roleFor, toneColors } from '../lib/volumeJudgement';
 import {
   topSetFromExerciseData, intensityTier, liftOptionsFromExerciseData, shareCardTitle, shareHighlightOptions,
   compareWithPriorSessions,
@@ -291,9 +294,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   // D90 #3 (2026-08-06): the ONE landmark precedence (manual > adapted(Pro)
-  // > research) resolved once per load; both getVolumeStatus call sites and
-  // the tooltip copy read it. { table, source } from effectiveLandmarks.js.
+  // > research) resolved once per load. D219 (design 5.3): the volume card no
+  // longer judges by it (it reads volumeJudgement.js); the adaptive session
+  // engine below still takes its landmarks from it. { table, source } from
+  // effectiveLandmarks.js.
   const [landmarkResolution, setLandmarkResolution] = useState(null);
+  // D219: each muscle's role in the active plan (focus, raised, standard,
+  // maintenance), from the plan facts; empty reads every muscle standard.
+  const [planRoles, setPlanRoles] = useState({});
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
 
@@ -730,9 +738,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // Build per-muscle feedback using the weekly volume
     const muscleFeedback = {};
     for (const [muscle, volData] of Object.entries(weeklyVolume)) {
-      const { mev = 6, mav = 14, mrv = 22 } = (typeof getVolumeStatus === 'function'
-        ? (getVolumeStatus(volData.workingSets, muscle, landmarkResolution?.table)?.landmarks || {})
-        : {});
+      // The adaptive session engine reads the resolved landmark table as its
+      // inputs; it is not a verdict, so it keeps the table (D219 lane A5 moved
+      // only the judging surfaces onto the band function).
+      const { mev = 6, mav = 14, mrv = 22 } = landmarkResolution?.table?.[muscle] || VOLUME_LANDMARKS[muscle] || {};
       muscleFeedback[muscle] = {
         soreness,
         performance,
@@ -799,6 +808,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     ]);
     const resolved = await getEffectiveLandmarks(user.id).catch(() => null);
     setLandmarkResolution(resolved);
+    setPlanRoles(await getPlanRoles(user.id));
     const recentSets = allSets.filter(s => s.createdAt >= sessionWeekStart && s.createdAt < sessionWeekEnd);
     const exerciseMap = lookup ?? {};
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
@@ -824,8 +834,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // told the user to add sets next week -- sets their plan already covers
     // on Wednesday and Friday. The card contradicted the app's own
     // prescription at the most trust-sensitive moment in the product.
-    // getVolumeStatus, the landmarks and the colours are untouched; only
-    // the advice waits until the week can actually be judged.
+    // The badge and its colour are unchanged; only the explanation waits
+    // until the week can actually be judged.
     const sessionsThisWeek = allWorkouts.filter(w => w.isCompleted
       && workoutDayMs({ startedAt: w.startedAt, endedAt: w.endedAt }) >= sessionWeekStart
       && workoutDayMs({ startedAt: w.startedAt, endedAt: w.endedAt }) < sessionWeekEnd).length;
@@ -1936,47 +1946,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {/* O16: a history reopen shows the SESSION's week, so the
                   heading must not claim the current one. */}
               <Text style={[styles.sectionTitle, live.sectionTitle]}>{readOnly ? "That week's volume" : "This week's volume"}</Text>
-              {/* O1 (comprehension-trust-audit-2026-08-06): 'minimum' used
-                  to share the warning yellow with 'near_mrv' -- one colour
-                  giving two opposite instructions ("add more" vs "ease
-                  off"). 'minimum' now has its own line and its own colour
-                  (theme.js's stateColors.info). */}
-              {/* D214 addendum 9 (census W1 to W4): the first line says what the figures
-                  are, sets, and on a history reopen the session's own week rather than
-                  "this week"; the five band names are the Volume heatmap's own, read
-                  from the one shared map (volumeBandLabels.js); and no line tells
-                  anyone to do less (D204: a surface describes). */}
+              {/* D219 (design 5.3, lane A5): the (i) names the bands of the one
+                  judgement, in the Volume heatmap's own words, and says what the
+                  plan's role does. Nothing says a muscle has too much, and no
+                  line tells anyone to do less (D204: a surface describes). */}
               <InfoTooltip size={11} text={
                 `${readOnly ? 'How many sets you did for each muscle group.' : 'How much you\'ve trained each muscle group this week.'}\n\n` +
-                // The badges carry the band names; the colour words went because the
-                // light and colour-blind-safe themes draw other colours (closing review S4).
-                `${volumeBandLabel('optimal')}: enough training to grow without overdoing it\n` +
-                `${volumeBandLabel('near_mrv')}: one more session and it may be too much\n` +
-                `${volumeBandLabel('over_mrv')}: past the most sets the muscle can recover from in a week\n` +
-                `${volumeBandLabel('minimum')}: at the bottom of the range, enough to grow but only just\n` +
-                `${volumeBandLabel('below')}: not enough logged yet to drive growth\n\n` +
-                // C6 RE6-4 (D97-25): the adapted branch fired on ANY single
-                // adapted muscle but claimed the plural for all of them -
-                // the sentence is now scoped to "muscles with enough
-                // logged data", true whatever the mix.
-                // Founder ruling 2026-08-23: the bands can now come from
-                // the athlete's own plan or their profile, so "research
-                // starting points" is false for most readers. Each source
-                // gets its own true sentence, checked in the order that
-                // describes the strongest thing behind the ranges.
-                (() => {
-                  const sources = Object.values(landmarkResolution?.source ?? {});
-                  if (sources.includes('adapted')) {
-                    return 'These ranges start from your plan and your profile and, for muscles with enough logged data, have adjusted to your own response. You can set your own under Volume targets, the last row of the Volume heatmap; your own targets always win.';
-                  }
-                  if (sources.includes('plan')) {
-                    return 'These ranges come from what your plan programmes each week, inside the range your experience, recovery, phase and age support. You can set your own under Volume targets, the last row of the Volume heatmap; your own targets always win.';
-                  }
-                  if (sources.includes('profile')) {
-                    return 'These ranges are matched to your training experience, recovery, phase and age. Once a plan programmes a muscle they follow what it aims at, and you can set your own under Volume targets, the last row of the Volume heatmap.';
-                  }
-                  return 'These ranges are research-based starting points. Once you have finished blocks behind you they adjust from how those went, and you can set your own under Volume targets, the last row of the Volume heatmap.';
-                })()
+                'The bands come from studies of weekly sets:\n' +
+                'Below maintenance: under 2 sets a week\n' +
+                'Maintenance range: 2 to 6 sets, enough to hold the size you have\n' +
+                'Normal growth range: 10 to 20 sets\n' +
+                'Focus range: 20 to 30 sets, for a muscle you picked to bring up in your plan\n' +
+                'Beyond the studied range: over 42 sets, where the research cannot say what extra sets add\n\n' +
+                'A set counts once for the muscle it works most and half for each muscle that helps. A muscle your plan raised reads against its focus range, and one it did not reads as above normal growth from 20 sets.'
               } />
             </View>
             {/* C5-P16-01 (D96): the week-in-progress statement, so the
@@ -1992,38 +1974,37 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Card padding="none" style={styles.volumeCard}>
             {musclesWorked.map((muscle, mi) => {
               const data = weeklyVolume[muscle];
-              const { label, status } = getVolumeStatus(data.workingSets, muscle, landmarkResolution?.table);
-              // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live
-              // variant of volumeStatusColor (src/styles/theme.js), fed by
-              // this screen's own t.colors so the muscle-volume tone stays in
-              // step with the rest of this screen's theme generation. Same
-              // status -> tone mapping as the legacy singleton (kept for
-              // VolumeHeatmapScreen.js/AnalyticsScreen.js, unmigrated).
-              const color = buildVolumeStatusColor(t.colors)(status);
-              // C5-P16-01 (D96): mid-week, the verdict copy and its
-              // "add a couple of sets next week" explanation are withheld
-              // in favour of the neutral count line this card already has
-              // as its fallback branch. The status badge, its colour and
-              // the landmarks are unchanged; only the advice waits until
-              // the week is one that can be judged.
+              // D219: the ONE judgement, on the figure shown (the week's credit
+              // rounded once), with this muscle's role in the active plan.
+              const judgement = judgeWeek({
+                muscle, sets: Math.round(data.workingSets), role: roleFor(planRoles, muscle),
+              });
+              // CP-10 stage 3 (theming FINAL batch, 2026-07-10): the tone colours
+              // come from this screen's own t.colors so the muscle-volume tone
+              // stays in step with the rest of this screen's theme generation.
+              // D219: no warning or error token; the highest band is a note.
+              const color = toneColors(t.colors)[judgement.tone];
+              // C5-P16-01 (D96): mid-week, the band line and its explanation
+              // are withheld in favour of the neutral count line this card
+              // already has as its fallback branch. The status badge and its
+              // colour are unchanged; only the explanation waits until the
+              // week is one that can be judged.
               const weekJudgeable = readOnly || !weekProgress.inProgress;
-              // C6 RD6-1 (D97-25): the copy receives the SAME resolved
-              // table (and this muscle's source) the verdict two lines up
-              // was computed from, so the quoted range can never
-              // contradict the status beside it.
+              // D219: the line and the explanation come from the SAME judgement
+              // the badge two lines up was read from, so they cannot disagree.
               // S4: advice waits when this muscle also did work the read
               // excluded; the count line then says so instead.
               const hasExcludedWork = (excludedVolume?.[muscle]?.excludedSets ?? 0) > 0;
               const adviceAllowed = weekJudgeable && !hasExcludedWork;
-              const insight = adviceAllowed ? getVolumeInsight(muscle, data.workingSets, status, landmarkResolution?.table) : null;
-              const why = adviceAllowed ? getVolumeWhy(muscle, data.workingSets, status, landmarkResolution?.table, landmarkResolution?.source?.[muscle] ?? null) : null;
+              const insight = adviceAllowed ? getVolumeInsight(judgement) : null;
+              const why = adviceAllowed ? getVolumeWhy(judgement) : null;
               const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
                   <View style={styles.volumeRowMain}>
                     <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
-                      <Text style={[styles.statusText, live.statusText, { color }]}>{volumeBandLabel(status, label)}</Text>
+                      <Text style={[styles.statusText, live.statusText, { color }]}>{judgement.label}</Text>
                     </View>
                   </View>
                   {insight ? (

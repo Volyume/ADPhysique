@@ -143,6 +143,33 @@ export async function getPlanLandmarks(userId, { userProfile = null } = {}) {
 }
 
 /**
+ * D219 (design 5.3, lane A5): the roles of the ACTIVE plan's muscles, read from
+ * the plan's own facts (`programmes.plan_facts`, `version: 2`, the plan the new
+ * planner built; a check-in that raised a muscle writes `raised` there). Every
+ * surface that judges a muscle's weekly sets reads the same map, so a muscle the
+ * person picked to bring up is judged against its focus range and not against a
+ * ceiling that never knew. A plan with no facts (a library, kit or manual plan,
+ * a plan the older generator built), no plan at all, or an unreadable read gives
+ * an empty map, and every muscle then reads the standard bands. Best effort:
+ * never throws, and the lazy require keeps pure consumers out of the DB graph.
+ *
+ * @param {string} userId
+ * @returns {Promise<Object<string, string>>} { [muscle]: 'focus'|'raised'|'standard'|'maintenance' }
+ */
+export async function getPlanRoles(userId) {
+  if (!userId) return {};
+  try {
+    // eslint-disable-next-line global-require
+    const { getActivePlan, getProgrammePlanFacts } = require('./database');
+    const plan = await getActivePlan(userId);
+    if (!plan?.id) return {};
+    const facts = await getProgrammePlanFacts(plan.id);
+    const roles = facts?.version === 2 ? facts.roles : null;
+    return roles && typeof roles === 'object' && !Array.isArray(roles) ? { ...roles } : {};
+  } catch (_) { return {}; /* roles absent: the standard bands */ }
+}
+
+/**
  * Whether a stored manual entry is a REAL user edit rather than an
  * untouched research default. The volume-targets editor historically
  * saved ALL muscles (defaults included) on any save, so a table entry's

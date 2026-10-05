@@ -36,15 +36,17 @@ export const GLOSSARY = {
   effort:
     'How close to your limit each set is planned to feel: 5 means you could not do another rep, 0 means very easy.',
   // `volumeBands` is read by the Manual Builder's Plan balance card (a plan being
-  // built, not sets done) and stays as it was; the Volume heatmap's legend reads
-  // `volumeHeatmapBands` just below, whose words are about sets DONE in a window.
+  // built, not sets done) and stays about a plan; the Volume heatmap's legend
+  // reads `volumeHeatmapBands` just below, whose words are about sets DONE in a
+  // window. D219 (design 5.3): neither says a muscle has too many sets; the
+  // heatmap's names the evidence bands of volumeJudgement.js.
   volumeBands:
-    'How many sets a plan gives a muscle each week, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. “Too much” means past the point of extra benefit, not dangerous.',
-  // D214 addendum 9 (census 0.21, H10): the Volume heatmap legend's (i). It says
-  // what the figure counts (sets, this week so far or a weekly average over 2 or
-  // 4 weeks), what "the range" is, and which of the legend's words sit inside it.
+    'How many direct sets a week your plan gives each muscle, against the fewest that still help it grow. A hollow dot means none yet, a half dot means fewer than that, and a full dot means at least that.',
+  // D214 addendum 9 (census 0.21, H10), re-worded under D219: the Volume heatmap
+  // legend's (i). It says what the figure counts (sets, this week so far or a
+  // weekly average over 2 or 4 weeks) and what the four colours are.
   volumeHeatmapBands:
-    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. Just enough, In range and Near the limit all sit inside the range. “Too much” means past the point of extra benefit, not dangerous. Each row’s bar shades the muscle’s range, marks the in-range band inside it and ends at the most it can recover from.',
+    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 10 runs from holding the size you have towards growth, 10 to 20 is the normal growth range, 20 to 30 is a focus range, and studies have little to say beyond 42. A muscle you picked as a focus in your plan reads against its focus range. Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:

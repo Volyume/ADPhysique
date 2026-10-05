@@ -562,17 +562,22 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
 });
 
 describe('C6 closeout B1/B4 (founder-approved visibility pass)', () => {
-  test('B1: the volume screen names each muscle band\'s provenance, in the three-state vocabulary', () => {
+  // RE-PINNED under D219 lane A5 (design 5.3, register D219): the founder-approved B1 pass named
+  // where each LANDMARK band came from ("Source: your own targets", "adjusted from your logged
+  // training", "research starting point") on a row's tap. The rows no longer judge by a landmark
+  // band: they read the one role-aware band function (volumeJudgement.js), so there is no landmark
+  // range on a row for a source to explain. What a tap says now is why THIS muscle sits in its
+  // band, in the plan's own words (the reason for a muscle the plan raised, the evidence sentence
+  // for the band), so nothing the person was shown is hidden; the Volume targets editor, which
+  // writes the stored targets, is unchanged.
+  test('B1 (re-pinned, D219): a row\'s tap explains its band; the landmark provenance words are retired from the rows', () => {
     const src = read('screens/VolumeHeatmapScreen.js');
-    // RE-ANCHORED D214 (plan section 7.4 item 5, VH-4): provenance is one line in
-    // the row's tap ("Source: your own targets") instead of a caption on every
-    // row, so the same three-state vocabulary now reads in lower case after the
-    // label (the five words the plan names, in VolumeHeatmapScreen.js SOURCE_WORDS).
-    expect(src).toMatch(/your own targets/);
-    expect(src).toMatch(/adjusted from your logged training/);
-    expect(src).toMatch(/research starting point/);
-    // The research caption stays free-safe: no learning promise on it.
-    expect(src).not.toMatch(/research starting point until/);
+    expect(src).not.toMatch(/SOURCE_WORDS|Source: /);
+    expect(src).not.toMatch(/your own targets|adjusted from your logged training|research starting point/);
+    expect(src).toMatch(/whyLines/);
+    expect(src).toMatch(/Shows why this muscle sits in this band/);
+    // The editor that writes the person's own targets is still there, so "your own targets" still has a home.
+    expect(src).toContain('label="Volume targets"');
   });
 
   test('B4: the calorie hero provenance forks on a REAL applied change; day-0 wording unchanged', () => {

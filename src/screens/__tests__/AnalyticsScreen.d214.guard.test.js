@@ -37,6 +37,7 @@ const PILLARS = read('../../lib/progress/pillars.js');
 // Source with comments removed, so a retirement note may name a retired idiom.
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const CODE = stripComments(SCREEN);
+const CODE_OF = (src) => stripComments(src);
 
 function functionSource(src, name) {
   const start = src.indexOf(`function ${name}(`);
@@ -101,12 +102,14 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
     expect(SCREEN).toMatch(/stripToneColors\(t\.colors\)/);
     // No hand-rolled swatch or flag legend survives.
     expect(CODE).not.toMatch(/volLegendDot|volLegendItem|volSummaryFlags|below target|over max|All in range/);
-    // The three tones' words live with the model, naming "the range" once.
-    expect(STRIP).toContain("under: 'Under the range'");
-    // RE-ANCHORED addendum 9 (6.7): the middle tone is "Inside the range", so
-    // it is never mistaken for the heatmap's "In range" band.
-    expect(STRIP).toContain("in: 'Inside the range'");
-    expect(STRIP).toContain("over: 'Too much'");
+    // The three tones' words live with the model. RE-PINNED under D219 lane A5
+    // (design 5.3): the strip reads the one judgement, so its tones are Below
+    // maintenance, Within the studied range and Beyond the studied range; the old
+    // "Under the range", "Inside the range" and "Too much" are retired.
+    expect(STRIP).toContain("under: 'Below maintenance'");
+    expect(STRIP).toContain("in: 'Within the studied range'");
+    expect(STRIP).toContain("over: 'Beyond the studied range'");
+    expect(CODE_OF(STRIP)).not.toMatch(/Too much|Under the range|Inside the range/);
   });
 
   test('the recovery week is the position\'s GATED state, the calendar flag only the fallback', () => {
@@ -115,9 +118,11 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
     expect(STRIP).not.toMatch(/isLighterTrainingState/);
   });
 
-  test('the landmark table and the plan-trained set are re-read on every focus, not once per user (PR-16)', () => {
-    expect(SCREEN).toContain("import { getEffectiveLandmarks, getPlanLandmarks } from '../lib/effectiveLandmarks';");
-    expect(SCREEN).toContain('getEffectiveLandmarks(user.id, { userProfile: profile })');
+  // RE-PINNED under D219 lane A5: the strip judges by each muscle's role in the
+  // active plan (getPlanRoles), no longer by the resolved landmark table.
+  test('the plan roles and the plan-trained set are re-read on every focus, not once per user (PR-16)', () => {
+    expect(SCREEN).toContain("import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';");
+    expect(SCREEN).toContain('getPlanRoles(user.id)');
     expect(SCREEN).toContain('planTrained: planTrainedMuscles(planLayer)');
     expect(CODE).not.toMatch(/\[user\?\.id, tier\]/);
     expect(CODE).not.toMatch(/landmarkResolution/);
@@ -255,8 +260,8 @@ describe('D214 addendum 6: wiring pins', () => {
     expect(SRC).toMatch(/windowDays: 30/);
     expect(SRC).not.toMatch(/windowDays: (?!30)\d+/);
   });
-  test('the resolved landmark table flows into the strip (PR-16)', () => {
-    expect(SRC).toMatch(/landmarks: planContext\?\.landmarks/);
+  test('the plan roles flow into the strip (PR-16, D219 lane A5)', () => {
+    expect(SRC).toMatch(/roles: planContext\?\.roles/);
   });
   test('the Recaps gate text waits for the session read and is withheld on a failed load', () => {
     expect(SRC).toMatch(/const sessionsRead = !loading && !loadError;/);

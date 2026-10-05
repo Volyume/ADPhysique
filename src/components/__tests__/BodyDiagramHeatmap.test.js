@@ -433,24 +433,30 @@ describe('the volume palette and its legend', () => {
     });
   });
 
-  test('the legend names six entries, in order, through LegendRow, with the tooltip kept', () => {
+  // RE-PINNED under D219 lane A5 (design 5.3): the legend used to name five
+  // statuses ("Under the range" to "Too much", the last two in warning and error
+  // colours); it names the four tones of the one judgement (volumeJudgement.js),
+  // and none of them is a warning or an error token.
+  test('the legend names five entries, in order, through LegendRow, with the tooltip kept', () => {
     const t = resolveTheme({});
     const tree = create(<BodyDiagramHeatmap volumeByMuscle={VOLUME_BY_MUSCLE} onMuscleTap={() => {}} />);
     const group = host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0];
     const legend = group.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
-    expect(legend).toEqual(['Under the range', 'Just enough', 'In range', 'Near the limit', 'Too much', 'No sets']);
+    expect(legend).toEqual(['Below maintenance', 'Maintenance to growth', 'Growth range', 'Beyond the studied range', 'No sets']);
     const sw = swatches(tree);
     expect(sw.map((s) => s.backgroundColor)).toEqual([
-      t.colors.textMuted, t.colors.volumeMinimum, t.colors.success, t.colors.warning, t.colors.error, undefined,
+      t.colors.textMuted, t.colors.volumeMinimum, t.colors.success, t.colors.macroCarb, undefined,
     ]);
+    expect(sw.map((s) => s.backgroundColor)).not.toContain(t.colors.error);
+    expect(sw.map((s) => s.backgroundColor)).not.toContain(t.colors.warning);
     // "No sets" is a hairline, not a gap.
-    expect(sw[5]).toMatchObject({ borderWidth: 1, borderColor: t.colors.border, borderStyle: 'solid' });
+    expect(sw[4]).toMatchObject({ borderWidth: 1, borderColor: t.colors.border, borderStyle: 'solid' });
     expect(tree.root.findAllByType(InfoTooltip).length).toBeGreaterThan(0);
     expect(host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0].props.accessibilityLabel)
-      .toBe('Key: Under the range, Just enough, In range, Near the limit, Too much, No sets');
+      .toBe('Key: Below maintenance, Maintenance to growth, Growth range, Beyond the studied range, No sets');
   });
 
-  test('under the colour-blind-safe palette "Just enough" and "In range" are different colours', () => {
+  test('under the colour-blind-safe palette "Maintenance to growth" and "Growth range" are different colours', () => {
     mockPrefs = { colorBlindSafe: true };
     const t = resolveTheme(mockPrefs);
     expect(t.colors.volumeMinimum).not.toBe(t.colors.success);

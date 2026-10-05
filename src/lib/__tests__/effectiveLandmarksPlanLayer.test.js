@@ -84,18 +84,24 @@ describe('the merge places the plan below adapted and above research', () => {
 });
 
 describe('the loader actually reads the plan', () => {
-  test("a plan that programs eight chest sets a week puts the sweet spot at eight", async () => {
+  // RE-PINNED under D219 lane A5 (design 5.3): a plan that programmes eight chest
+  // sets a week still marks chest 'plan' (the plan-trained set), but its week-1
+  // total is no longer the sweet spot (it was, and a plan followed to the letter
+  // then climbed past it from week 2).
+  test("a plan that programs eight chest sets a week marks chest 'plan' without setting the sweet spot to eight", async () => {
     givePlan([4, 4]);
     const { table, source } = await getEffectiveLandmarks('u1', { tier: 'free', userProfile: PROFILE });
+    const profileOnly = await getEffectiveLandmarks('u1', { tier: 'free', userProfile: PROFILE });
     expect(source.chest).toBe('plan');
-    expect(table.chest.mav).toBe(8);
+    expect(table.chest.mav).toBe(profileOnly.table.chest.mav);
+    expect(table.chest.mav).not.toBe(8);
   });
 
   test('a Free athlete gets the plan band too: reading their own plan is not coaching output', async () => {
     givePlan([5, 5, 5]);
     const { source, table } = await getEffectiveLandmarks('u1', { tier: 'free', userProfile: PROFILE });
     expect(source.chest).toBe('plan');
-    expect(table.chest.mav).toBe(15);
+    expect(table.chest.mav).not.toBe(15); // D219 A5: the plan's total no longer sets the sweet spot
   });
 
   test('a muscle the plan never trains falls to the profile band, not the research table', async () => {
@@ -127,6 +133,6 @@ describe('the loader actually reads the plan', () => {
     ));
     const { table, source } = await getEffectiveLandmarks('u1', { tier: 'free', userProfile: PROFILE });
     expect(source.chest).toBe('plan');
-    expect(table.chest.mav).toBe(4);
+    expect(table.chest.mav).not.toBe(4); // D219 A5: still the plan-trained marker, not the sweet spot
   });
 });

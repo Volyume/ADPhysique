@@ -24,6 +24,18 @@
  * next: Back is the least recovered ... "), which stays until the "Next in
  * your plan" card replaces it.
  *
+ * RE-PINNED under D219 lane B4 (design 5.1 and 5.2): the "Next in your plan" card
+ * replaced the next-workout sentence ("Upper A is next: Back is the least recovered
+ * ..."), so buildNextWorkoutSentence and its cases are gone. The card is the plan's
+ * own next session (position.nextSession, the authority Home reads), each muscle's
+ * estimated readiness by a part of the day, and when every muscle in it is
+ * estimated recovered (the latest muscle's ready time); with the plan week complete
+ * it names next week's first session. The muscle rows and the card's muscle detail
+ * also carry the plan's role for a muscle and this week's sets against the evidence
+ * bands. The card's own pure model is pinned in lib/recovery/__tests__/
+ * nextInPlan.test.js and muscleDetail.test.js; this suite pins that the screen
+ * feeds them and shows what they return.
+ *
  * Mocking follows ReadinessCards.rateLastSession.test.js's own pattern
  * (react-navigation/useFocusEffect, Ionicons, zustand shallow, the store,
  * AnimatedEntrance/InfoTooltip/SectionLabel/Button stand-ins, and
@@ -125,6 +137,8 @@ jest.mock('../../lib/database', () => ({
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
+// D219: the active plan's muscle roles (focus, raised, standard, maintenance), read from the plan's facts.
+jest.mock('../../lib/effectiveLandmarks', () => ({ getPlanRoles: jest.fn() }));
 jest.mock('../../lib/recovery/load', () => ({
   loadMuscleRecovery: jest.fn(),
   loadPlannedSetsByRoutine: jest.fn(),
@@ -135,7 +149,7 @@ jest.mock('../../lib/recovery/nextWorkoutRecommendation', () => ({
 }));
 
 import ReadinessCards, {
-  recoveryByMuscleCaption, recoveryCounts, recoveryAnswerLine, buildNextWorkoutSentence, buildStillToDoRows,
+  recoveryByMuscleCaption, recoveryCounts, recoveryAnswerLine, buildStillToDoRows,
   scrollToNode, RECOVERY_PERCENT_NOTE,
 } from '../ReadinessCards';
 import BodyDiagramHeatmap from '../BodyDiagramHeatmap';
@@ -143,6 +157,9 @@ import * as database from '../../lib/database';
 import { logError } from '../../lib/errorLog';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../../lib/recovery/load';
+import { getPlanRoles } from '../../lib/effectiveLandmarks';
+import { recoveredPhrase, partOfDay } from '../../lib/recovery/nextInPlan';
+import { clockLine } from '../../lib/recovery/muscleDetail';
 import { recommendNextWorkout, readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
 import { RECOVERY_ESTIMATE_LABEL } from '../../lib/recovery/constants';
 
@@ -204,6 +221,7 @@ beforeEach(() => {
   resolveProgrammePosition.mockResolvedValue(null);
   loadMuscleRecovery.mockResolvedValue(RECOVERY_RESULT);
   loadPlannedSetsByRoutine.mockResolvedValue({});
+  getPlanRoles.mockResolvedValue({});
   recommendNextWorkout.mockReturnValue({
     programmeNext: null, programmeNextLine: null, perSession: [],
   });
@@ -479,7 +497,7 @@ describe('the line under the list names EVERY muscle with no row (replaces the T
   });
 });
 
-describe('the next-workout sentence and the sessions still to do (D214 7.2 a and b)', () => {
+describe('the "Next in your plan" card and the sessions still to do (D219 lane B4; D214 7.2 b)', () => {
   const SESSIONS = [
     { routineId: 'r-legs', name: 'Legs', state: 'outstanding', order: 0 },
     { routineId: 'r-push', name: 'Push', state: 'outstanding', order: 1 },
@@ -504,21 +522,48 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
       ...over,
     },
   });
+  // The card's own session reads its planned sets: chest, quads and biceps have a session behind them, triceps does not.
+  const UPPER_A_SETS = { chest: 6, quads: 8, biceps: 4, triceps: 4 };
+
+  // Design 5.2 and the lane A6 re-pin: nothing recommends another session or ranks sessions by
+  // readiness; the card replaced the next-workout sentence, so that sentence is gone for good.
+  test('the next-workout sentence is gone (the card replaced it): no export, and no " is next" sentence is ever printed', async () => {
+    const mod = require('../ReadinessCards');
+    expect(mod.buildNextWorkoutSentence).toBeUndefined();
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
+    recommendNextWorkout.mockReturnValue(NEXT({
+      programmeNextLine: 'Back is estimated 60% recovered, ready by tomorrow.',
+      perSession: [limitingEntry('r-legs')],
+    }));
+    const all = texts(await render());
+    expect(all.some((t) => / is next[:.]/.test(t))).toBe(false);
+    expect(all.some((t) => /the least recovered of the muscles it trains/.test(t))).toBe(false);
+  });
 
   test('is absent when there is no active block (and no "Next workout" block exists any more)', async () => {
     resolveProgrammePosition.mockResolvedValue(null);
     const tree = await render();
     const all = texts(tree);
     expect(all).not.toContain('Next workout');
-    expect(all.some((t) => / is next/.test(t))).toBe(false);
+    expect(all.some((t) => /^Next in your plan/.test(t))).toBe(false);
     expect(all).not.toContain('Still to do this plan week');
   });
 
-  test('is absent when the block has no outstanding session', async () => {
+  test('is absent when the block has no outstanding session and the week is not resolved', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: null, sessions: SESSIONS });
     const tree = await render();
     expect(texts(tree)).not.toContain('Still to do this plan week');
+    expect(texts(tree).some((t) => /^Next in your plan/.test(t))).toBe(false);
     expect(recommendNextWorkout).not.toHaveBeenCalled();
+  });
+
+  test('is absent for a finished block awaiting the athlete\'s decision (Home says "choose what comes after this block")', async () => {
+    resolveProgrammePosition.mockResolvedValue({
+      nextSession: { routineId: 'r-legs' }, sessions: SESSIONS, recoveryState: { awaitingDecision: true },
+    });
+    const tree = await render();
+    expect(texts(tree).some((t) => /^Next in your plan/.test(t))).toBe(false);
   });
 
   test('never prints a swap reason (D219): a result still carrying the old recommended/reason fields shows only the plan\'s own next session', async () => {
@@ -537,60 +582,125 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
     const all = texts(tree);
     expect(all).not.toContain(SWAP_REASON);
     expect(all.some((t) => /is next in your plan|Push is ready now/.test(t))).toBe(false);
-    // What it prints instead: the plan's next session, then its own readiness.
-    expect(all).toContain('Legs is next. Quads are estimated 64% recovered, ready by Thursday.');
+    // What it prints instead: the plan's own next session, as the card's title.
+    expect(all).toContain('Next in your plan: Legs');
+    expect(all.some((t) => /Next in your plan: Push/.test(t))).toBe(false);
   });
 
-  test('names the limiting muscle AS the limiting one: "Upper A is next: Back is the least recovered of the muscles it trains, estimated 60% recovered, ready by tomorrow."', async () => {
+  // The one authority (founder R8): the card names position.nextSession, whatever
+  // the readiness says and whatever the recommendation module returns.
+  test('the card names the plan\'s own next session, even when another session is more recovered (one number everywhere with Home)', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
-    recommendNextWorkout.mockReturnValue(NEXT({
-      programmeNextLine: 'Back is estimated 60% recovered, ready by tomorrow.',
-      perSession: [limitingEntry('r-legs')],
-    }));
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS, 'r-push': { biceps: 8 } });
+    recommendNextWorkout.mockReturnValue(NEXT({ programmeNext: { routineId: 'r-push' } }));
     const tree = await render();
-    expect(texts(tree)).toContain('Upper A is next: Back is the least recovered of the muscles it trains, estimated 60% recovered, ready by tomorrow.');
+    const all = texts(tree);
+    expect(all).toContain('Next in your plan: Upper A');
+    expect(all.some((t) => /Next in your plan: Lower B/.test(t))).toBe(false);
+  });
+
+  test('the card: the session\'s muscles, each one\'s own estimate, and when every muscle with a session behind it is estimated recovered', async () => {
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
+    recommendNextWorkout.mockReturnValue(NEXT());
+    const tree = await render();
+    const all = texts(tree);
+    expect(all).toContain('Next in your plan: Upper A');
+    expect(all).toContain('Chest, quads, biceps and triceps.');
+    // Each muscle's own readiness, by a part of the day, from the map's own ready times.
+    expect(all).toContain(recoveredPhrase(CHEST_READY_AT, NOW));
+    expect(all).toContain(recoveredPhrase(QUADS_READY_AT, NOW));
+    expect(all).toContain('estimated recovered now'); // biceps: recovered
+    expect(all).toContain('No recent session on triceps.'); // RC-5: never called recovered
+    // The session line reads the LATEST muscle (quads, two days out), and says what has no session behind it.
+    const clause = partOfDay(QUADS_READY_AT, NOW).text;
+    expect(all).toContain(`Chest, Quads and Biceps: estimated recovered ${clause}. No recent session on Triceps.`);
+    // It comes first in the block: before the heading, the answer line and the rows.
+    expect(all.indexOf('Next in your plan: Upper A')).toBeLessThan(all.indexOf('Recovery by muscle'));
+    expect(all.indexOf('Next in your plan: Upper A')).toBeLessThan(all.indexOf('1 muscle still recovering, 1 nearly recovered, 1 recovered.'));
   });
 
   test('D214 RC-5: no recent session on any muscle it trains says exactly that, never "every muscle ... recovered"', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
-    recommendNextWorkout.mockReturnValue(NEXT({
-      programmeNextLine: 'No recent session on the muscles Upper A trains.',
-      perSession: [{
-        routineId: 'r-legs',
-        readinessNow: {
-          verdict: 'ready', minPercent: 100, limitingMuscle: null, limitingReadyAtMs: null, evidence: false,
-          muscles: [{ muscle: 'quads', plannedSets: 8, recoveredPercent: 100, status: 'no_recent_session' }],
-        },
-      }],
-    }));
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': { triceps: 8 } });
+    recommendNextWorkout.mockReturnValue(NEXT());
     const tree = await render();
     const all = texts(tree);
     expect(all).toContain('No recent session on the muscles Upper A trains.');
-    expect(all.some((t) => /Every muscle it trains/.test(t))).toBe(false);
+    expect(all.some((t) => /Every muscle in it/.test(t))).toBe(false);
   });
 
-  test('falls back to "<Name> is next." plus programmeNextLine when the session\'s readiness entry is absent', async () => {
-    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS });
-    recommendNextWorkout.mockReturnValue({
-      programmeNext: { routineId: 'r-legs' },
-      programmeNextLine: 'Every muscle it trains is estimated recovered.',
-      perSession: [],
+  test('the plan week is complete: next week\'s first session, labelled as such, with its own planned sets read', async () => {
+    resolveProgrammePosition.mockResolvedValue({
+      nextSession: null, weekResolved: true,
+      sessions: [
+        { routineId: 'r-push', name: 'Lower B', state: 'completed', order: 1 },
+        { routineId: 'r-legs', name: 'Upper A', state: 'completed', order: 0 },
+      ],
     });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
     const tree = await render();
-    // Lead review: unlike Home's card, this block has no title naming the
-    // session, so it names it itself.
-    expect(texts(tree)).toContain('Legs is next. Every muscle it trains is estimated recovered.');
+    expect(texts(tree)).toContain('Next in your plan, when the plan week turns on Monday: Upper A');
+    expect(loadPlannedSetsByRoutine).toHaveBeenCalledWith(['r-legs']);
+    // Nothing is still to do, so no "Still to do" list, and no recommendation was asked for.
+    expect(texts(tree)).not.toContain('Still to do this plan week');
+    expect(recommendNextWorkout).not.toHaveBeenCalled();
   });
 
-  test('is absent when the programme-next session\'s planned sets could not be read (no line to state)', async () => {
+  test('is quiet about a session whose planned sets could not be read: its name, and no estimate to state', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS });
-    recommendNextWorkout.mockReturnValue({
-      programmeNext: { routineId: 'r-legs' },
-      programmeNextLine: null,
-      perSession: [],
-    });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': null });
+    recommendNextWorkout.mockReturnValue(NEXT());
     const tree = await render();
-    expect(texts(tree).some((t) => / is next/.test(t))).toBe(false);
+    const all = texts(tree);
+    expect(all).toContain('Next in your plan: Legs');
+    expect(all.some((t) => /^Every muscle in it|^No recent session on the muscles/.test(t))).toBe(false);
+  });
+
+  test('a muscle line opens its detail: the muscle\'s own clock, which differs from back\'s, as an estimate', async () => {
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
+    recommendNextWorkout.mockReturnValue(NEXT());
+    const tree = await render();
+    expect(texts(tree)).not.toContain(clockLine('biceps'));
+    const line = tree.root.findAll((n) => typeof n.type === 'string' && /^Biceps, estimated recovered now/.test(n.props.accessibilityLabel || ''))[0];
+    expect(line.props.accessibilityRole).toBe('button');
+    await act(async () => { line.props.onPress(); });
+    const all = texts(tree);
+    expect(all).toContain(clockLine('biceps'));
+    expect(clockLine('biceps')).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
+    expect(clockLine('biceps')).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    // Tapping again closes it.
+    await act(async () => { line.props.onPress(); });
+    expect(texts(tree)).not.toContain(clockLine('biceps'));
+  });
+
+  test('a muscle the plan raised carries its role on the card, and the founder\'s case reads inside the focus range on its row and detail', async () => {
+    getPlanRoles.mockResolvedValue({ biceps: 'focus' });
+    resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
+    loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
+    recommendNextWorkout.mockReturnValue(NEXT());
+    // 27 weekly biceps sets this week: 20 curls and 14 rows at half credit.
+    database.getAllExercises.mockResolvedValue([
+      { id: 'curl', name: 'Curl', primaryMuscle: 'biceps', secondaryMuscles: [] },
+      { id: 'row', name: 'Row', primaryMuscle: 'back', secondaryMuscles: ['biceps'] },
+    ]);
+    const setRow = (exerciseId, i) => ({ id: `${exerciseId}${i}`, workoutId: 'w1', exerciseId, createdAt: NOW, setType: 'straight' });
+    database.getCompletedWorkoutSets.mockResolvedValue([
+      ...Array.from({ length: 20 }, (_, i) => setRow('curl', i)),
+      ...Array.from({ length: 14 }, (_, i) => setRow('row', i)),
+    ]);
+    const tree = await render();
+    // The card's own line for the muscle says why it matters.
+    expect(texts(tree)).toContain('Focus: you picked biceps to bring up.');
+    // The row's own muted line carries the reason with this week's sets (the recovered group opens on a figure tap).
+    await act(async () => { BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0].onMuscleTap('biceps'); });
+    await flush();
+    const all = texts(tree);
+    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(all).toContain('27 sets counted: 20 direct and 14 indirect at half credit.');
+    expect(all.some((t) => /^Within your focus range for biceps: you picked it to bring up\./.test(t))).toBe(true);
+    expect(all.join(' | ')).not.toMatch(/too much|overtrain|near the limit/i);
   });
 
   // RE-ANCHORED D214 addendum 9 (V3): "Still to do this plan week". The rows are
@@ -667,22 +777,6 @@ describe('the next-workout sentence and the sessions still to do (D214 7.2 a and
   test('buildStillToDoRows: a session with no name reads "Session"', () => {
     const rows = buildStillToDoRows({ routineNamesById: {}, perSession: [{ routineId: 'x', readinessNow: null }] }, NOW);
     expect(rows.map((r) => r.text)).toEqual(['Session']);
-  });
-
-  test('buildNextWorkoutSentence: the all-clear and the mixed line follow the name with a full stop', () => {
-    const rec = (readinessNow, line) => ({
-      programmeNext: { routineId: 'a' }, programmeNextName: 'Upper A', programmeNextLine: line,
-      perSession: [{ routineId: 'a', readinessNow }],
-    });
-    expect(buildNextWorkoutSentence(rec({
-      verdict: 'ready', evidence: true, limitingMuscle: null, minPercent: 100,
-      muscles: [{ muscle: 'chest', status: 'recovered', recoveredPercent: 95 }],
-    }, 'Every muscle it trains is estimated recovered.'), NOW)).toBe('Upper A is next. Every muscle it trains is estimated recovered.');
-    expect(buildNextWorkoutSentence(rec({
-      verdict: 'ready', evidence: true, limitingMuscle: null, minPercent: 100,
-      muscles: [{ muscle: 'chest', status: 'recovered', recoveredPercent: 95 }, { muscle: 'triceps', status: 'no_recent_session', recoveredPercent: 100 }],
-    }, 'Chest is estimated recovered; no recent session on Triceps.'), NOW)).toBe('Upper A is next. Chest is estimated recovered; no recent session on Triceps.');
-    expect(buildNextWorkoutSentence(null, NOW)).toBeNull();
   });
 
   test('calls loadPlannedSetsByRoutine with only the outstanding routine ids, and recommendNextWorkout with the loaded map', async () => {
@@ -788,7 +882,11 @@ describe('loader failure: the estimate says so, the ratings stay intact', () => 
 describe('source guards (D214)', () => {
   const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-  const FILES = ['ReadinessCards.js', 'MuscleRecoveryList.js', 'RecoveryLearningCard.js', 'FatigueTrendCard.js'];
+  // D219 lane B4: the card, its model and the muscle detail are Recovery copy too.
+  const FILES = [
+    'ReadinessCards.js', 'MuscleRecoveryList.js', 'RecoveryLearningCard.js', 'FatigueTrendCard.js',
+    'NextInPlanCard.js', '../lib/recovery/nextInPlan.js', '../lib/recovery/muscleDetail.js',
+  ];
 
   test('every ${percent} template line in the section\'s files also names RECOVERY_ESTIMATE_LABEL or "estimated"', () => {
     // The rows moved to MuscleRecoveryList.js (D201 addendum 9); the law
@@ -807,11 +905,28 @@ describe('source guards (D214)', () => {
   });
 
   test('"estimated" is on every recovery percent the screen prints: each sentence template with "% recovered" says estimated, and the rows sit under the "Estimated from your sessions" sub-line', () => {
+    // D219: the card's own sentence templates live in nextInPlan.js now.
     const cards = strip(read('ReadinessCards.js'));
-    const printed = cards.split('\n').filter((l) => /% recovered/.test(l) && /`/.test(l));
+    const printed = [cards, strip(read('../lib/recovery/nextInPlan.js'))].join('\n').split('\n')
+      .filter((l) => /% recovered/.test(l) && /`/.test(l));
     expect(printed.length).toBeGreaterThan(0);
     for (const line of printed) expect(line).toMatch(/estimated/i);
     expect(cards).toContain('Estimated from your sessions · last 14 days');
+  });
+
+  // D219 lane B4 (founder R8, "one number everywhere with Home"): the card is built from the
+  // programme position, the one next-session authority Home reads, and never from the
+  // recommendation module's pick or from how recovered each session is.
+  test('D219 B4: the card reads position.nextSession like Home does, and is handed no recommendation', () => {
+    const cards = strip(read('ReadinessCards.js'));
+    const home = strip(read('../screens/HomeScreen.js'));
+    expect(cards).toContain('const position = await resolveProgrammePosition(userId);');
+    expect(cards).toMatch(/buildNextInPlanCard\(\{\s*position,\s*plannedSetsByRoutine,\s*recoveryMap: recoveryLoad\.map,/);
+    expect(cards).not.toMatch(/buildNextInPlanCard\(\{[^}]*(result|recommendation|programmeNext)/);
+    expect(home).toContain('const next = position?.nextSession ?? null;');
+    const model = strip(read('../lib/recovery/nextInPlan.js'));
+    expect(model).toContain('position.nextSession');
+    expect(model).not.toMatch(/recommendNextWorkout|readinessAtProjected|limitingMuscle/);
   });
 
   test('no amber on the screen: none of the Recovery files reads the accent family or the warning token (D214 plan 7.0 rule 3)', () => {

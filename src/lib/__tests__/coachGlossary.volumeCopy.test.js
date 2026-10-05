@@ -27,23 +27,28 @@ import { checkJargon } from '../whyThisTemplates';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', '..', rel), 'utf8');
 
-describe('the Volume heatmap legend\'s (i): sets done, in a window, against a range that is defined', () => {
+// RE-PINNED under D219 lane A5 (design 5.3): the legend's (i) used to define "the
+// range" as the fewest sets that help a muscle grow up to the most it can recover
+// from, and to say "Just enough, In range and Near the limit all sit inside the
+// range" and "Too much means past the point of extra benefit". Those words judged
+// against a landmark table that ignored the plan; the legend now names the four
+// tones of the one judgement (volumeJudgement.js) and says what the bands are.
+describe('the Volume heatmap legend\'s (i): sets done, in a window, against the studied bands', () => {
   test('the lead\'s text, word for word', () => {
     expect(GLOSSARY.volumeHeatmapBands).toBe(
-      'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks, against its range: '
-      + 'from the fewest weekly sets that still help it grow to the most it can recover from. '
-      + 'Just enough, In range and Near the limit all sit inside the range. '
-      + '“Too much” means past the point of extra benefit, not dangerous. '
-      + 'Each row’s bar shades the muscle’s range, marks the in-range band inside it and ends at the most it can recover from.', // the bars named (closing review S7)
+      'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. '
+      + 'The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 10 runs from holding the size you have towards growth, '
+      + '10 to 20 is the normal growth range, 20 to 30 is a focus range, and studies have little to say beyond 42. '
+      + 'A muscle you picked as a focus in your plan reads against its focus range. '
+      + 'Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
     );
   });
 
-  test('it names the three windows\' figure, defines the range, and keeps the heatmap\'s own words', () => {
+  test('it names the windows\' figure, names the bands, and never says "too much" or "near the limit"', () => {
     const text = GLOSSARY.volumeHeatmapBands;
     expect(text).toMatch(/this week so far or as a weekly average over 2 or 4 weeks/);
-    expect(text).toMatch(/fewest weekly sets that still help it grow to the most it can recover from/);
-    for (const word of ['Just enough', 'In range', 'Near the limit', 'Too much']) expect(text).toContain(word);
-    expect(text).not.toMatch(/helpful range|you've trained|compared with/);
+    for (const word of ['below maintenance', 'normal growth range', 'focus range']) expect(text).toContain(word);
+    expect(text).not.toMatch(/too much|near the limit|just enough|helpful range|you've trained|compared with|recover from/i);
     expect(text).not.toContain('—');
   });
 
@@ -59,10 +64,13 @@ describe('the Volume heatmap legend\'s (i): sets done, in a window, against a ra
     expect(read('components/BodyDiagramHeatmap.js')).toContain('<InfoTooltip text={GLOSSARY.volumeHeatmapBands} size={14} />');
     expect(read('components/BodyDiagramHeatmap.js')).not.toContain('GLOSSARY.volumeBands');
     expect(read('screens/ManualBuilderScreen.js')).toContain('<InfoTooltip text={GLOSSARY.volumeBands} size={14} />');
+    // RE-PINNED under D219 lane A5: the Plan balance card no longer reads a weekly
+    // ceiling as "too much" (it nudges on the exercise and session caps instead),
+    // so its gloss describes the dots against the fewest sets that help a muscle grow.
     expect(GLOSSARY.volumeBands).toBe(
-      'How many sets a plan gives a muscle each week, against its range: from the fewest weekly sets that still help it grow to the most it can recover from. “Too much” means past the point of extra benefit, not dangerous.',
+      'How many direct sets a week your plan gives each muscle, against the fewest that still help it grow. A hollow dot means none yet, a half dot means fewer than that, and a full dot means at least that.',
     );
-    expect(GLOSSARY.volumeBands).not.toMatch(/helpful range|you've trained|this week/);
+    expect(GLOSSARY.volumeBands).not.toMatch(/helpful range|you've trained|this week|too much|recover from/i);
   });
 
   test('the entries the brief names by other keys are untouched: `volume` stays the weekly-sets gloss, `rir` stays removed', () => {

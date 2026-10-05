@@ -6,6 +6,8 @@ import InfoTooltip from './InfoTooltip';
 import LegendRow from './LegendRow';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { LOOKBACK_DAYS } from '../lib/recovery/constants';
+import { TONE, toneColors } from '../lib/volumeJudgement';
+import { VOLUME_TONE_LABELS } from '../lib/volumeBandLabels';
 
 // The body figure (register D214, build lane 1 of the Progress elevation;
 // plan docs/audit/progress-recovery-consistency-audit-2026-10-01/
@@ -23,8 +25,10 @@ import { LOOKBACK_DAYS } from '../lib/recovery/constants';
 // One component, two palettes, chosen by the caller:
 //   - VOLUME (no `recoveryByMuscle`): each region takes the entry's `color`
 //     exactly as the screen resolved it; an entry with no colour is "No sets"
-//     (no fill, the silhouette ground, a hairline). Legend: Under the range,
-//     Just enough, In range, Near the limit, Too much, No sets.
+//     (no fill, the silhouette ground, a hairline). Legend (D219, the four
+//     tones of volumeJudgement.js, read from volumeBandLabels.js): Below
+//     maintenance, Maintenance to growth, Growth range, Beyond the studied
+//     range, No sets.
 //   - RECOVERY (`recoveryByMuscle`, D201 + D214 Q1 = A): one hue, the
 //     `recovery` token, at graded intensity by how much is left to recover
 //     (under 50% solid, 50 to 74% at alpha.half, 75 to 89% at alpha.edge with
@@ -289,13 +293,16 @@ function recoveryPaint(c, entry) {
 }
 
 // ─── Legends (both through LegendRow) ───────────────────────────────────────
+// D219 (design 5.3, lane A5): the legend names the four tones the one judgement
+// paints (volumeJudgement.toneColors: no warning or error token; the highest
+// band is an information colour), in the words of volumeBandLabels.js.
 function volumeLegendItems(c) {
+  const tone = toneColors(c);
   return [
-    { key: 'under', label: 'Under the range', swatch: { fill: c.textMuted } },
-    { key: 'just', label: 'Just enough', swatch: { fill: c.volumeMinimum } },
-    { key: 'in', label: 'In range', swatch: { fill: c.success } },
-    { key: 'near', label: 'Near the limit', swatch: { fill: c.warning } },
-    { key: 'over', label: 'Too much', swatch: { fill: c.error } },
+    { key: TONE.BELOW, label: VOLUME_TONE_LABELS[TONE.BELOW], swatch: { fill: tone[TONE.BELOW] } },
+    { key: TONE.BUILDING, label: VOLUME_TONE_LABELS[TONE.BUILDING], swatch: { fill: tone[TONE.BUILDING] } },
+    { key: TONE.GROWTH, label: VOLUME_TONE_LABELS[TONE.GROWTH], swatch: { fill: tone[TONE.GROWTH] } },
+    { key: TONE.BEYOND, label: VOLUME_TONE_LABELS[TONE.BEYOND], swatch: { fill: tone[TONE.BEYOND] } },
     { key: 'none', label: 'No sets', swatch: { outline: 'solid' } },
   ];
 }

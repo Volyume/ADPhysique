@@ -3,11 +3,13 @@
  *
  * Lane 1 fresh-eyes review (register D214 addendum 2), the seams the figure
  * shares with the rest of the tree. What this suite pins and why:
- *   1. S4: the volume legend's five swatch fills are the SAME colours the
- *      screens resolve a status to through `buildVolumeStatusColor`
- *      (theme.js), in every palette. The legend is a hand-written list and
- *      the resolver a table; rule 3 of the plan ("every colour is named,
- *      once") rests on the two never drifting apart.
+ *   1. S4: the volume legend's four swatch fills are the SAME colours the
+ *      screens paint a band with, `toneColors` (volumeJudgement.js), in every
+ *      palette. The legend is a hand-written list and the resolver a table;
+ *      rule 3 of the plan ("every colour is named, once") rests on the two
+ *      never drifting apart. RE-PINNED under D219 lane A5 (design 5.3): the
+ *      legend used to name five statuses and read `buildVolumeStatusColor`; it
+ *      names the four tones of the one judgement, none a warning or error token.
  *   2. S6: the spoken summary follows the paint. An entry with an unknown
  *      status is DRAWN as no session (recoveryBand's default) and must be
  *      SPOKEN as no session, never counted as a recent session.
@@ -15,7 +17,9 @@
  *      recovery model's own LOOKBACK_DAYS, not a literal that can drift.
  */
 import { create } from 'react-test-renderer';
-import { resolveTheme, buildVolumeStatusColor } from '../../styles/theme';
+import { resolveTheme } from '../../styles/theme';
+import { toneColors, TONE } from '../../lib/volumeJudgement';
+import { VOLUME_TONE_LABELS } from '../../lib/volumeBandLabels';
 import { LOOKBACK_DAYS } from '../../lib/recovery/constants';
 
 jest.mock('react-native-svg', () => {
@@ -34,7 +38,6 @@ jest.mock('../../hooks/useTheme', () => () => require('../../styles/theme').reso
 import BodyDiagramHeatmap from '../BodyDiagramHeatmap';
 
 const PALETTES = [{}, { theme: 'light' }, { colorBlindSafe: true }, { theme: 'light', colorBlindSafe: true }, { higherContrast: true }];
-const STATUSES = { below: 'Under the range', minimum: 'Just enough', optimal: 'In range', near_mrv: 'Near the limit', over_mrv: 'Too much' };
 
 const flat = (style) => Object.assign({}, ...[].concat(style || []).flat(Infinity).filter(Boolean));
 function legendFills(tree) {
@@ -53,18 +56,22 @@ const summaryOf = (tree) => tree.root.findAll((n) => typeof n.type === 'string' 
 
 beforeEach(() => { mockPrefs = {}; });
 
-describe('S4: the volume legend names exactly the colours the resolver gives a status', () => {
+describe('S4: the volume legend names exactly the colours the one judgement paints a tone with', () => {
   PALETTES.forEach((prefs) => {
     test(`palette ${JSON.stringify(prefs)}`, () => {
       mockPrefs = prefs;
       const t = resolveTheme(prefs);
-      const resolve = buildVolumeStatusColor(t.colors);
+      const tones = toneColors(t.colors);
       const tree = create(<BodyDiagramHeatmap volumeByMuscle={{}} onMuscleTap={() => {}} />);
       const fills = legendFills(tree);
-      Object.entries(STATUSES).forEach(([status, label]) => {
+      Object.values(TONE).forEach((tone) => {
+        const label = VOLUME_TONE_LABELS[tone];
         expect(fills[label]).toBeDefined();
-        expect(fills[label]).toBe(resolve(status));
+        expect(fills[label]).toBe(tones[tone]);
       });
+      // No legend swatch is a warning or an error token (D219: a note is an information colour).
+      expect(Object.values(fills)).not.toContain(t.colors.error);
+      expect(Object.values(fills)).not.toContain(t.colors.warning);
     });
   });
 });
