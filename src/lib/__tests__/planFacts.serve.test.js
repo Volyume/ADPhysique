@@ -621,9 +621,19 @@ describe('coachApply.js reaches prescribe.js and nothing under src/lib/recovery 
     return out;
   };
 
-  test('coachApply.js imports exactly one plan module, prescribe', () => {
+  // RE-PINNED (D219 lane A3, brief item 2: "no new import beyond ./plan/*";
+  // register D219, founder Q6: computeVolumeApply calls the new check-in
+  // module): coachApply.js now imports two plan modules, prescribe and
+  // checkinPlacement, and the next test pins that the second reaches nothing
+  // either. The transitive walk below and in edIsolation.guard.test.js hold the
+  // line on src/lib/recovery.
+  test('coachApply.js imports exactly two plan modules, prescribe and checkinPlacement', () => {
     const plan = importsOf('lib/coachApply.js').filter((spec) => /(^|\/)plan(\/|$)/.test(spec));
-    expect(plan).toEqual(['./plan/prescribe']);
+    expect(plan).toEqual(['./plan/prescribe', './plan/checkinPlacement']);
+  });
+
+  test('checkinPlacement.js imports only science.js and prescribe.js', () => {
+    expect(importsOf('lib/plan/checkinPlacement.js').sort()).toEqual(['./prescribe', './science']);
   });
 
   test('prescribe.js imports only science.js, and science.js imports nothing', () => {

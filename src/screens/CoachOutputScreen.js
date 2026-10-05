@@ -90,6 +90,10 @@ import { readMaintenanceInputs } from '../lib/maintenanceInputs';
 import { effectiveMaintenanceReceipt, resolveEffectiveMaintenance } from '../lib/effectiveMaintenance';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
 import { loadVolumeIncreaseHolds } from '../lib/coachApplySafety';
+// D219 lane A3 (design 4.10): the check-in for a plan the new planner built is
+// placed set by set. resolveCheckinPlan only reads; writeCheckinPlan runs on
+// Apply. Both give way to today's path (null) for every other plan.
+import { resolveCheckinPlan, writeCheckinPlan, checkinWithheld } from '../lib/checkinPlan';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
 import {
@@ -382,6 +386,9 @@ function TrainingNextWeekCard({
   blockFinished = false,
   nextWeekIsDeload = false,
   currentWeekIsDeload = false,
+  // D219 lane A3 (design 4.10): the words for a plan the new planner built
+  // (checkinPlacement.describeCheckin), or null for every other plan.
+  checkin = null,
   // C18 recovery-visibility amendment: the block's RESOLVED recovery state,
   // so this card can tell a mid-block recovery adjustment apart from the
   // block's own recovery week instead of calling both "your recovery week".
@@ -413,7 +420,15 @@ function TrainingNextWeekCard({
     : signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
     : 'Volume stays the same';
-  const applyable = canApply && signal !== 0 && !applied && !upwardBlocked;
+  // D219 lane A3 (design 4.10): on a plan the new planner built the card names
+  // where each added set goes, shows Apply for a hold as well as a step (and not
+  // for +1, which is the plan's own climb), and says what happens if it is left.
+  const v2 = !applied && !deloadSuggested ? checkin : null;
+  const appliedHeading = applied ? (output.appliedAdjustments?.training?.checkinHeading ?? null) : null;
+  const shownLabel = v2 ? v2.heading : (appliedHeading ?? label);
+  const applyable = v2
+    ? canApply && v2.showApply && !applied
+    : canApply && signal !== 0 && !applied && !upwardBlocked;
 
   // When the coach calls a deload, the recovery week IS the training
   // decision, so it replaces the incremental volume row. Applying brings
@@ -459,8 +474,8 @@ function TrainingNextWeekCard({
           <AdjustmentRow
             iconName="barbell-outline"
             label={applied && output.appliedAdjustments?.training?.musclesChanged
-              ? `${label} · ${output.appliedAdjustments.training.musclesChanged} updated`
-              : label}
+              ? `${shownLabel} · ${output.appliedAdjustments.training.musclesChanged} updated`
+              : shownLabel}
             note={note}
             applied={applied}
             onApply={applyable ? onApply : undefined}
@@ -468,6 +483,13 @@ function TrainingNextWeekCard({
             onApplySettled={() => onApplySettled('training')}
             emphasis={hero}
           />
+          {v2 ? (
+            <View style={styles.checkinLines}>
+              {[...v2.lines, ...v2.unplacedLines, v2.notRaisedLine, v2.ifLeft].filter(Boolean).map((line) => (
+                <Text key={line} style={[styles.adjustmentNote, live.adjustmentNote]}>{line}</Text>
+              ))}
+            </View>
+          ) : null}
           <View style={[styles.planNote, live.planNote]}>
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
             <Text style={[styles.planNoteText, live.planNoteText]}>
@@ -974,6 +996,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
   const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
+  // D219 lane A3 (design 4.10): the check-in card's words for a plan the new
+  // planner built: where each added set goes, what could not be placed, whether
+  // Apply shows and what happens if the card is left. Null for every other
+  // plan, which keeps today's card. A preview only: nothing is written until
+  // the person taps Apply (D96).
+  const [checkinV2, setCheckinV2] = useState(null);
   // CC33 D112 R5 (closes audit T2-25's copy half): the durable
   // reintroduction line - non-null while the current or next week's
   // planned volume carries rows stamped source 'reintroduction' (the
@@ -1323,14 +1351,17 @@ export default function CoachOutputScreen({ navigation, route }) {
     if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'training')) return;
     const delta = output.volumeSignal ?? 0;
-    if (!delta || !nextTrainingWeekId) return;
+    if (!nextTrainingWeekId) return;
+    // D219 lane A3 (design 4.10): a hold has an Apply only where the card shows
+    // one, on a plan the new planner built. On every other plan a zero signal
+    // is informational, exactly as before.
+    if (!delta && !checkinV2?.showApply) return;
     // Stage 4: never add sets to a recovery week (the card explains this
     // instead of offering the button; this guard is the backstop).
     if (delta > 0 && nextWeekIsDeload) return;
     applyingRef.current = true;
     setApplyingKey('training');
     try {
-      const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
       // CC31 (section 20): the per-muscle apply re-checks eligibility at
       // APPLY time, never from the stale proposal. An increase never
       // lands on a muscle under an active capability episode, nor on one
@@ -1351,14 +1382,44 @@ export default function CoachOutputScreen({ navigation, route }) {
         toast.show('Volyume could not check Injuries & limitations just now, so this increase waits. Try again in a moment.', { variant: 'warning' });
         return;
       }
-      const changes = computeVolumeApply(rows, delta, holdMuscles);
+      // D219 lane A3 (design 4.10): for a plan the new planner built the step
+      // is placed set by set and carried into the later weeks, recomputed now
+      // from what is on the device (never from the card the person saw). Null
+      // for every other plan, which takes today's path below, unchanged.
+      const v2 = await resolveCheckinPlan({
+        userId: user.id, profile: userProfile, signal: delta, withheld: checkinWithheld(output), holdMuscles,
+      });
+      if ((!v2 && !delta) || (v2 && (v2.nextWeekId !== nextTrainingWeekId || !v2.card.showApply))) {
+        // The plan moved on since the card was drawn (a new week, a rebuilt
+        // plan). Nothing is written, and the tap does not end in silence.
+        toast.show('Your plan changed since this card was shown, so nothing was applied. Open your coaching decision again to see the latest.', { variant: 'warning' });
+        return;
+      }
+      let changes;
+      if (v2) {
+        await writeCheckinPlan(v2);
+        changes = v2.nextWeekChanges;
+      } else {
+        const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
+        changes = computeVolumeApply(rows, delta, holdMuscles);
+      }
+      // D219 lane A3: what the receipt keeps of a check-in on a new-planner plan.
+      const v2Details = v2 ? {
+        checkinKind: v2.plan.kind,
+        checkinStep: v2.plan.step,
+        checkinHeading: v2.card.heading,
+        exercisesAdded: v2.plan.opened.length,
+      } : null;
       const updated = markApplied(output, 'training', {
-        volumeDelta: delta, musclesChanged: changes.length,
+        volumeDelta: delta, musclesChanged: v2 ? new Set(v2.changes.map((c) => c.muscle)).size : changes.length,
+        ...v2Details,
         // Campaign 18: same record, training side. Judged on recovery and
         // performance rather than on the scale, which is what the old
         // outcome pairing got wrong.
         intervention: buildInterventionRecord({
-          kind: INTERVENTION_KIND.VOLUME_START,
+          // A hold adds and removes nothing: a null kind builds no volume-start
+          // record, so nothing is judged later and no later increase waits on it.
+          kind: (v2 && !delta) ? null : INTERVENTION_KIND.VOLUME_START,
           appliedAtMs: Date.now(),
           direction: Math.sign(delta),
           magnitude: Math.abs(delta),
@@ -2401,6 +2462,42 @@ export default function CoachOutputScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, reloadKey, redirectWeekStart]);
 
+  // D219 lane A3 (design 4.10): the check-in card for a plan the new planner
+  // built. Read only, and any failure leaves today's card: the preview must
+  // never block this screen. Once applied the receipt keeps its own heading.
+  const trainingApplied = isApplied(output, 'training');
+  useEffect(() => {
+    let cancelled = false;
+    async function preview() {
+      if (!user?.id || !output?.hasEnoughData || !nextTrainingWeekId
+        || output.deloadSuggested || trainingApplied) {
+        if (!cancelled) setCheckinV2(null);
+        return;
+      }
+      try {
+        const signal = output.volumeSignal ?? 0;
+        // An increase never reaches a muscle held by a capability limit or a
+        // soreness answer; a failed read shows the card without that line and
+        // the Apply tap re-checks (and waits if it still cannot read). The read
+        // is only made for an increase on a plan the new planner built.
+        const resolved = await resolveCheckinPlan({
+          userId: user.id,
+          profile: userProfile,
+          signal,
+          withheld: checkinWithheld(output),
+          holdMuscles: () => loadVolumeIncreaseHolds(user.id),
+        });
+        if (!cancelled) setCheckinV2(resolved ? resolved.card : null);
+      } catch (e) {
+        logError('CoachOutputScreen.checkinPreview', e, { userId: user?.id });
+        if (!cancelled) setCheckinV2(null);
+      }
+    }
+    preview();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, output?.weekStart, output?.volumeSignal, output?.deloadSuggested, nextTrainingWeekId, trainingApplied, userProfile?.equipment]);
+
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
   // pass3-v2-founder-decisions.md:166 + NA-coaching-10, pass4-blueprints-
   // coaching-progress.md:283-291): Coached mode invokes the SAME apply
@@ -2768,6 +2865,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       blockFinished={blockAwaitingDecision}
       nextWeekIsDeload={nextWeekIsDeload}
       currentWeekIsDeload={currentWeekIsDeload}
+      checkin={checkinV2}
       currentRecoveryState={currentRecoveryState}
       // Stage 8 (§3.6): ramp position; the coach clause appears only for
       // an APPLIED delta that actually changed rows (review #6), and the
@@ -3186,6 +3284,8 @@ const styles = StyleSheet.create({
   // quietActionCentred retired (R2 cohesion): Coaching history moved into
   // footerActions below, full width, no longer centred.
   quietActionSpace: { marginTop: spacing.xs },
+  // D219 lane A3: the check-in card's set-by-set lines sit under the Apply row.
+  checkinLines: { marginTop: spacing.sm, gap: spacing.xs },
   safe: {
     flex: 1,
     backgroundColor: colors.background,

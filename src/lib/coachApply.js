@@ -33,6 +33,10 @@ import { kcalFloorForSex as engineKcalFloorForSex } from './nutritionEngine';
 // ED-safety module and may never reach src/lib/recovery (the edIsolation
 // guard, made transitive).
 import { prescribeWeek } from './plan/prescribe';
+// D219 lane A3 (founder Q6: only the two volume functions change): a check-in
+// on a plan the new planner built is placed by checkinPlacement.js, which
+// imports only science.js and prescribe.js, so the same rule holds.
+import { planCheckin } from './plan/checkinPlacement';
 
 export const KCAL_FLOOR = 1200;
 export const KCAL_FLOOR_MALE = 1500;
@@ -272,7 +276,36 @@ export function isApplied(output, key) {
  *
  * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
  */
-export function computeVolumeApply(plannedRows, volumeDelta, holdMuscles = null) {
+export function computeVolumeApply(plannedRows, volumeDelta, holdMuscles = null, planContext = null) {
+  // D219 lane A3 (design 4.10, register D219, founder Q6): for a plan the new
+  // planner built (`planContext.facts.version === 2`) the check-in's step is
+  // placed by checkinPlacement.planCheckin instead of being added to next
+  // week's rows. `plannedRows` are then the block's planned_muscle_volume rows
+  // from THIS week on (every week, snake_case as SQLite returns them) and
+  // `planContext` is { facts, sessions, weeks: [{ id, index, deload }] (this
+  // week first), catalogue?, withheld? }. A hold (volumeDelta 0) and a
+  // withheld increase are real steps here: they keep this week's level. The
+  // result is the rows to write, each carrying its `mesocycleWeekId` and
+  // `weekIndex`, for next week and every later week the level carries into.
+  // The calorie floors and every ED path are elsewhere in this file and are
+  // untouched. Every other plan takes the path below, byte-identical.
+  if (planContext?.facts?.version === 2
+    && Array.isArray(planContext.sessions) && Array.isArray(planContext.weeks)) {
+    if (!Array.isArray(plannedRows)) return [];
+    const heldV2 = holdMuscles instanceof Set
+      ? holdMuscles
+      : new Set(Array.isArray(holdMuscles) ? holdMuscles : []);
+    return planCheckin({
+      sessions: planContext.sessions,
+      facts: planContext.facts,
+      weeks: planContext.weeks,
+      rows: plannedRows,
+      signal: volumeDelta,
+      withheld: planContext.withheld === true,
+      held: heldV2,
+      catalogue: planContext.catalogue ?? null,
+    }).changes;
+  }
   if (!Array.isArray(plannedRows) || !volumeDelta) return [];
   const changes = [];
   // CC31 (section 20, per-muscle application): an INCREASE never lands on
