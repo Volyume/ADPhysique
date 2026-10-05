@@ -1,0 +1,25 @@
+# 06. A stronger signal for the recovery learner: the design for the founder's approval (lead, 2026-10-05)
+
+Authority: founder answer 2026-10-05, register D219 ("Give it more to learn from": the design comes to the founder before anything is built). Evidence: `05-LEARNER-RECON.md` (lane L1, every number below is from it, with its N). Nothing here is built.
+
+## 1. What the recon found (observed)
+
+1. At the pinned gate (10) the learner finds almost nobody, plan or not: 0 of 600 in both directions in all 20 plan cells of the repo's own run; at most 6 of 600 in four no-plan stress cells (05 section 0 F1, section 2.1). The "123 of 600" still quoted in `14-PERSONAL-LEARNING-V2.md` section 0, `03-SCIENCE.md` Q10 and Q11d and register D210 addendum 3 predates D210 addendum 5 (the statistic now counts workout days).
+2. Why: on a fixed weekly schedule the same-weekday pairing leaves no contrast (spread 0.02 against a 0.10 gate); on a varied one, a plan block gives about 10 usable days, and a comparison carries about 4.7% noise against a 1.1% signal (median statistic 0.65 against 10). The physiology itself limits it: the 24-hour decrement after plan-dose sessions is a few per cent (Refalo 2023, Goulart 2021). Stacking every lever tested reaches a median of 2.0, 2% found (05 sections 2.2 to 2.7).
+3. The only signal class that can work on a fixed schedule is a level (how recovered the person feels walking in, scored against the model's prediction), not a performance contrast. Its evidence is C-graded for within-person tracking (Tolusso 2022 r = .84 and .80 with jump and bar velocity; Saw 2016, 56 studies, subjective measures more sensitive than objective ones) and D-graded for a muscle-specific speed (soreness and function run on different clocks: Ferreira 2017, Nosaka 2002) (05 candidate B).
+4. Closed routes: the weekly check-in's soreness and energy answers feed the rapid-loss calorie path (ED-woven), so they cannot be used; a per-set effort picker would reverse founder ruling D96 FQ-3(b) ("the picker stays removed"), and at the published error of trained lifters it gains nothing (x0.7 to x1.1) (05 F5, F6).
+5. Two design items never wired: the slower recoverer's lower session cap (design 4.4, `science.js` LEARNED_FACTOR.slowerDirectCapFloor, no consumer), and the learner's curves omit the D219 session terms the clocks carry (tested harmless at the gate) (05 F7).
+6. The learner and its card read neither calm mode nor an open ED flag (05 F8).
+
+## 2. The design (proposed)
+
+1. **A one-tap recovery check at the start of a session.** Before the first set: "How do your legs feel?" (the session's main muscle groups, named plainly), three answers: Fresh, A bit sore, Still sore; optional, skippable, asked once a session, never re-asked, switch-off for good in settings. Stored per session and per muscle group on the device, synced with the session.
+2. **Scored against the model.** For each answer the model already gives each trained muscle's predicted recovered fraction at that moment under every candidate factor (`personalRecovery.js` fractionsAt). A bounded ordinal likelihood, with the person's own reporting style learned from anchor sessions (the muscle untrained for 7 days or more, or the first session after a recovery week), maximised over the same factor grid. One-sided: it can only find "slower than the model expects", the safe direction for a plan. Deterministic, no AI, no randomness.
+3. **Noise taken out of the performance stream, with no new questions:** pair by routine slot when the person's weekdays are irregular (guarded: fixed schedules keep the weekday rule; x1.6 to x1.8 on varied schedules), use sleep and energy as covariates (x1.3 to x1.6), and record whether a logged set was typed or kept as filled in (one nullable column; its cloud migration needs the founder's "run against production").
+4. **The fixes found:** the slower recoverer's lower session cap wired as design 4.4 says (only where the sets can move to another session, never a weekly target); the learner's curves made equal to the clocks'; the soreness answer used once (as evidence, not also to lengthen the clock).
+5. **Safety:** under calm mode or an open ED flag the check is not asked and the learner does not move (fail closed). The answers never reach nutrition, weight or calories (an isolation guard test, as for the check-in). The learned factor keeps every pinned bound (0.75 to 1.40, never a weekly target, block boundary only).
+6. **The gate before anything ships:** the safety simulation gains the generators in 05 section 5 (a soreness link of three strengths, reporting bias, novelty soreness, missing-not-at-random answers, plan x as-prescribed cells, irregular schedules). It ships only if false directions stay inside today's bounds for every athlete type; the simulation, not a guess, sets the new gate and says how many people it would reach.
+
+## 3. Honest expectation
+
+Even with all of it, the learner will move a minority of people, mostly towards "slower", after several weeks of answers, and nobody on day one. The simulation gives the number before the founder decides to ship.
