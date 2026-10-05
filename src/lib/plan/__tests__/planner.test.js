@@ -143,6 +143,22 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     }
     const peak = serve(p, BLOCK.peakWeek).sets;
     for (const w of p.workouts) for (const e of w.exercises) expect({ e: e.name, s: peak[e.slotKey] }).toEqual({ e: e.name, s: e.peakSets });
+    // Week 1 served in the saved order is the week the plan says and saves.
+    const first = serve(p, 1).sets;
+    for (const w of p.workouts) for (const e of w.exercises) expect({ e: e.name, s: first[e.slotKey] }).toEqual({ e: e.name, s: e.sets });
+  });
+
+  test.each(MATRIX.filter((x) => x.sessionLengthMinutes === 75).map((inputs) => [
+    `${inputs.daysPerWeek} days, ${inputs.goal}, focus ${inputs.focusMuscles.join('+') || 'none'}`, inputs,
+  ]))('%s, a slow recoverer with a learned factor: the order their clocks choose is the order served', (_name, inputs) => {
+    const p = plan({ ...inputs, recoveryRating: 'slow', learnedFactor: 1.15 });
+    const first = serve(p, 1).sets;
+    const peak = serve(p, BLOCK.peakWeek).sets;
+    for (const w of p.workouts) {
+      for (const e of w.exercises) {
+        expect({ e: e.name, week1: first[e.slotKey], peak: peak[e.slotKey] }).toEqual({ e: e.name, week1: e.sets, peak: e.peakSets });
+      }
+    }
   });
 
   test.each(BUILT.map((b) => [label(b), b]))('%s: nothing planned above 30, a focus muscle never above its planned ceiling', (_name, { plan: p }) => {

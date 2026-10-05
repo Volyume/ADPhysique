@@ -192,6 +192,25 @@ describe('prescribeWeek: worked examples (design 4.9)', () => {
   });
 
   test('the planner\'s heavy and light shares hold: quads 12 a week is 4 light and 8 heavy', () => {
+    const lower = (id, n) => ({
+      id,
+      slots: [
+        { id: `${id}-squat`, muscle: 'quads', kind: 'heavy_compound', baseSets: 2 },
+        { id: `${id}-legext`, muscle: 'quads', kind: 'isolation', baseSets: 2 },
+        { id: `${id}-press`, muscle: 'quads', kind: 'machine', baseSets: 2 },
+      ].slice(0, n),
+    });
+    const { sets } = prescribeWeek({
+      sessions: [lower('LA', 2), lower('LB', 3)],
+      weekTargets: { quads: 12 },
+      facts: { exposureShares: { quads: { LA: 1 / 3, LB: 2 / 3 } } },
+    });
+    const total = (id) => (sets[`${id}-squat`] || 0) + (sets[`${id}-legext`] || 0) + (sets[`${id}-press`] || 0);
+    expect(total('LA')).toBe(4);
+    expect(total('LB')).toBe(8);
+  });
+
+  test('no exercise is served one set in a normal week: a share below its exercises\' floors takes sets from the session with the most to spare', () => {
     const lower = (id) => ({
       id,
       slots: [
@@ -200,14 +219,21 @@ describe('prescribeWeek: worked examples (design 4.9)', () => {
         { id: `${id}-press`, muscle: 'quads', kind: 'machine', baseSets: 2 },
       ],
     });
+    // The shares alone would give LA 4 sets over 3 exercises (2, 1, 1).
     const { sets } = prescribeWeek({
       sessions: [lower('LA'), lower('LB')],
       weekTargets: { quads: 12 },
       facts: { exposureShares: { quads: { LA: 1 / 3, LB: 2 / 3 } } },
     });
-    const total = (id) => sets[`${id}-squat`] + sets[`${id}-legext`] + sets[`${id}-press`];
-    expect(total('LA')).toBe(4);
-    expect(total('LB')).toBe(8);
+    for (const n of Object.values(sets)) expect(n).toBe(2);
+    // A week below every exercise's floor still serves one-set exercises.
+    const low = prescribeWeek({
+      sessions: [lower('LA'), lower('LB')],
+      weekTargets: { quads: 9 },
+      facts: { exposureShares: { quads: { LA: 1 / 3, LB: 2 / 3 } } },
+    });
+    expect(Object.values(low.sets).reduce((a, b) => a + b, 0)).toBe(9);
+    expect(Math.min(...Object.values(low.sets))).toBe(1);
   });
 
   test('a set count the person typed is served as typed and counts toward the week', () => {

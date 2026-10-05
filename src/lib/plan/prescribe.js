@@ -19,7 +19,9 @@
  *      session's exercise caps. A share that does not fit moves to m's other
  *      sessions with room.
  *   3. Inside a session every exercise of m starts at its floor (2; 1 in a
- *      week whose target is below that) and one set at a time goes to the
+ *      week whose target is below every exercise's 2; a session the shares
+ *      leave short of its exercises' floors in any other week takes the sets
+ *      from m's session with the most to spare) and one set at a time goes to the
  *      exercise with the most room under its cap, the first choice first on
  *      a tie (4 sets for a compound, 3 for an isolation movement, plus the
  *      thin-equipment bonus where the plan allowed it).
@@ -219,6 +221,26 @@ export function prescribeWeek({ sessions, weekTargets, facts = {} } = {}) {
       excess -= 1;
     }
     if (excess > 0) shortfall[m] = (shortfall[m] || 0) + excess;
+
+    // In a week whose sets cover every exercise's floor, every exercise gets
+    // it (step 3): a session the shares left below its exercises' floors
+    // takes the sets it is missing from m's session with the most above its
+    // own floors, the later session on a tie, so no exercise is served one
+    // set in a normal week. The week's total does not change.
+    const floors = sessionOrder.map((si, k) => Math.min(caps[k], SETS_PER_EXERCISE.floor * slotsIn.get(si).length));
+    if (placed.reduce((a, b) => a + b, 0) >= floors.reduce((a, b) => a + b, 0)) {
+      for (let k = 0; k < placed.length; k++) {
+        while (placed[k] < floors[k]) {
+          let donor = -1;
+          for (let j = 0; j < placed.length; j++) {
+            if (j !== k && placed[j] > floors[j] && (donor < 0 || placed[j] - floors[j] >= placed[donor] - floors[donor])) donor = j;
+          }
+          if (donor < 0) break;
+          placed[donor] -= 1;
+          placed[k] += 1;
+        }
+      }
+    }
 
     let over = 0;
     sessionOrder.forEach((si, k) => {

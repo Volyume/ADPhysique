@@ -81,7 +81,14 @@ const FOCUS = plan({ daysPerWeek: 4, sessionLengthMinutes: 75, focusMuscles: ['g
 const OVER_TIME = plan({ daysPerWeek: 4, sessionLengthMinutes: 45, focusMuscles: ['glutes'] });
 const LIMITED = plan({ daysPerWeek: 3, sessionLengthMinutes: 75, focusMuscles: ['glutes'] });
 const THREE_FOCUS = plan({ daysPerWeek: 4, sessionLengthMinutes: 75, focusMuscles: ['glutes', 'side_delts', 'chest'] });
-const EXTRA_SESSION = plan({ daysPerWeek: 3, sessionLengthMinutes: 75 });
+// A full-body week keeps glutes in two sessions from the start (review
+// 2026-10-05, finding 6), so no fixture plan needs the readiness fix any more;
+// the note is the one the fix records (planner.js, the fix loop's notes).
+const EXTRA_SESSION = (() => {
+  const p = plan({ daysPerWeek: 3, sessionLengthMinutes: 75 });
+  const peak = Math.round(p.weeklyVolumeSummary.glutes.fractional * 10) / 10;
+  return { ...p, v2: { ...p.v2, notes: [...p.v2.notes, { muscle: 'glutes', kind: 'extra_session', peak }] } };
+})();
 
 function explain(p, { minutes = p.estimatedSessionMinutes, ...over } = {}) {
   return explainPlan({

@@ -106,6 +106,8 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
  * @param {number[]} [args.gapAfter]  hours after each session in the rotation (by session index); a tie between
  *        two of a muscle's sessions goes to the one followed by the longer gap, so the heavier one has more
  *        time to clear (design 4.5 step 2)
+ * @param {string[]} [args.twiceFirst]  a full-body week's big muscles: their further sessions open once every
+ *        muscle has its first exercise, before any set is added (the planner's big five)
  * @returns {{
  *   sessions: Array<{ slots: Array<{ muscle: string, name: string, kind: string, credits: object, restSec: number, sets: number, cap: number, thinEquipment: boolean }>, minutes: number, workingSets: number }>,
  *   weekly: Object<string, { direct: number, fractional: number }>,
@@ -114,7 +116,7 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
  */
 export function allocatePeakWeek({
   sessionCount, roles, exposures, choices, lightCaps = {}, maxSlots = {}, sessionCaps = {},
-  sessionLengthMinutes = 60, equipment = 'full_gym', gapAfter = null, sessionChoices = null,
+  sessionLengthMinutes = 60, equipment = 'full_gym', gapAfter = null, sessionChoices = null, twiceFirst = [],
 }) {
   const n = Math.max(1, sessionCount | 0);
   const sessions = Array.from({ length: n }, () => ({ slots: [] }));
@@ -159,7 +161,20 @@ export function allocatePeakWeek({
     if (list.length === 0) return null;
     const pair = Math.min(2, list.length);
     const order = Math.max(0, (exposures[m] || []).indexOf(s));
-    const index = slotIndex < pair ? (order + slotIndex) % pair : slotIndex;
+    let index = slotIndex < pair ? (order + slotIndex) % pair : slotIndex;
+    // A muscle whose first choice is a compound opens every session with a
+    // compound: where the rotation would open its second session with the
+    // isolation movement (the quads' leg extension alone on day B), the
+    // session opens with the next compound on the list (the leg press), then
+    // the isolation, then the first choice.
+    const compound = (c) => c != null && c.kind !== 'isolation';
+    if (pair === 2 && order % 2 === 1 && compound(list[0]) && !compound(list[1])) {
+      const alt = list.findIndex((c, i) => i >= 2 && compound(c));
+      if (alt >= 0) {
+        const seq = [alt, 1, 0, ...list.map((_, i) => i).filter((i) => i >= 2 && i !== alt)];
+        index = seq[slotIndex] ?? slotIndex;
+      }
+    }
     return list[index] ? { choice: list[index], index } : null;
   };
 
@@ -315,6 +330,12 @@ export function allocatePeakWeek({
     }
   } else {
     placeRound(muscles, 0);
+    // A full-body week (`twiceFirst`, the planner's big five): once every
+    // muscle has its first exercise, those muscles' further sessions open
+    // before any set is added, so the week's time goes to training the big
+    // muscles twice, as a coach programmes a full-body week, before the
+    // smaller muscles' sets (review 2026-10-05, finding 6).
+    placeRemaining(muscles.filter((m) => twiceFirst.includes(m) && roles[m].role !== ROLE.FOCUS));
     placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);
   }
 

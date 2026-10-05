@@ -146,7 +146,57 @@ export function buildPlan(inputs) {
 
   const evaluated = families.map((family, index) => ({ index, family, ...evaluateFamily(family, ctx) }));
   const chosen = chooseFamily(evaluated);
-  return toPlan(ctx.personal ? personalise(chosen, ctx) : chosen, ctx, inputs, factor);
+  const final = ctx.personal ? personalise(chosen, ctx) : chosen;
+  return toPlan({ ...final, recoverySafeMax: recoverySafeMax(final, ctx) }, ctx, inputs, factor);
+}
+
+/**
+ * Design 4.14 step 4: each muscle's recovery-safe weekly maximum, in direct
+ * sets, which the save writes into the plan's weekly rows (`mrv`) so a
+ * check-in can never raise a muscle past it (checkinPlacement.js clamps to
+ * the rows' `mrv`). It is the most direct sets a week the muscle can take in
+ * every training week of the block, the heaviest effort included, with the
+ * readiness check still finding every muscle that passed it recovered at the
+ * start of each session in the usual week, read in the saved order on the
+ * population clocks (the volume step's clocks, 4.13). A muscle the check
+ * already finds short of recovered (the growth floor won, or back-to-back
+ * days), or a maintenance muscle (a check-in never raises one), keeps its
+ * planned peak. It stops where the sessions have no room for another set.
+ */
+const SAFE_MAX_SEARCH = 12;
+function recoverySafeMax(chosen, ctx) {
+  const { block, order, state } = chosen;
+  const n = order.length;
+  const layouts = spacingLayouts(n, ctx.typical, ctx.ownGaps);
+  const usual = layouts.own || layouts.typical;
+  const served = order.map((si) => block.sessions[si]);
+  const facts = { exposureShares: block.exposureShares, sessionCaps: state.sessionCaps };
+  const trainingWeeks = BLOCK.peakWeek;
+  const readOf = (weekLoads) => simulateBlock({ order, weekLoads, rirLadder: BLOCK.rirLadder, layout: usual, hoursFor: ctx.hoursVolume });
+  const failingAtPlan = new Set(readOf(block.weekLoads).failures.map((f) => f.muscle));
+  const placedOf = (sets, m) => block.sessions.reduce((a, sess) => a + sess.slots.filter((x) => x.muscle === m).reduce((b, x) => b + (sets[x.id] || 0), 0), 0);
+  const out = {};
+  for (const m of Object.keys(block.targets).sort()) {
+    const peak = Math.max(...block.targets[m].slice(0, trainingWeeks));
+    out[m] = peak;
+    if (failingAtPlan.has(m) || state.roles[m]?.role === ROLE.MAINTENANCE) continue;
+    let placedBefore = placedOf(block.weekSets[trainingWeeks - 1], m);
+    for (let X = peak + 1; X <= peak + SAFE_MAX_SEARCH; X++) {
+      let placed = 0;
+      const weekLoads = block.weekLoads.map((loads, w) => {
+        if (w >= trainingWeeks) return loads;
+        const weekTargets = Object.fromEntries(Object.entries(block.targets).map(([j, list]) => [j, j === m ? Math.max(list[w], X) : list[w]]));
+        const res = prescribeWeek({ sessions: served, weekTargets, facts });
+        if (w === trainingWeeks - 1) placed = placedOf(res.sets, m);
+        return block.sessions.map((sess) => ({ direct: res.perSession[sess.id]?.direct || {}, fractional: res.perSession[sess.id]?.fractional || {} }));
+      });
+      if (placed <= placedBefore) break;
+      if (readOf(weekLoads).failures.some((f) => !failingAtPlan.has(f.muscle))) break;
+      placedBefore = placed;
+      out[m] = X;
+    }
+  }
+  return out;
 }
 
 /**
@@ -166,10 +216,17 @@ function personalise(chosen, ctx) {
   const heavyHolds = (order) => split.every((m) => heavyBeforeLongestGap(m, exposures, state.lightCaps[m], order, usual));
   const current = simulate(block, chosen.order, usual, ctx.hoursPerson);
   const best = readinessOrder(block, alloc, layouts, usual, hoursPeakPerson, ctx.hoursPerson, loadsOf, heavyHolds);
-  if (!best || readinessDeficit(best.sim) >= readinessDeficit(current) - 1e-9) {
+  if (!best || best.order.join() === chosen.order.join()) {
     return { ...chosen, sim: current, readinessPasses: current.passes };
   }
-  return { ...chosen, order: best.order, sim: best.sim, readinessPasses: best.sim.passes };
+  // The new order's block, prescribed in that order (as the logger serves it),
+  // is the one read and kept.
+  const moved = buildBlock(alloc, exposures, n, ctx, state.sessionCaps, best.order);
+  const sim = simulate(moved, best.order, usual, ctx.hoursPerson);
+  if (readinessDeficit(sim) >= readinessDeficit(current) - 1e-9) {
+    return { ...chosen, sim: current, readinessPasses: current.passes };
+  }
+  return { ...chosen, order: best.order, block: moved, sim, readinessPasses: sim.passes };
 }
 
 /**
@@ -315,6 +372,13 @@ function evaluateFamily(family, ctx) {
     const fullBodyBig = family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m);
     k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, two || fullBodyBig ? 2 : 1);
   }
+  // The two sessions are kept: the search and the readiness fixes never take
+  // a big-five muscle of a full-body week below them (the search runs without
+  // the clock, so it once traded the quads' second session for a second
+  // rear-delt exercise, and the clock then left the quads one squat a week;
+  // review 2026-10-05, finding 6).
+  const twiceAtLeast = (m) => !fixed && family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m) && allowedBy[m].length >= 2;
+  const lowestK = (m) => (twiceAtLeast(m) ? 2 : 1);
   const state = {
     k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
   };
@@ -368,6 +432,7 @@ function evaluateFamily(family, ctx) {
       sessionLengthMinutes: unlimited ? Infinity : ctx.sessionLengthMinutes,
       equipment: ctx.equipment,
       gapAfter: gapAfterSessions(state.placementOrder, ctx.ownGaps || ctx.typical),
+      twiceFirst: fixed || !family.key.startsWith('full_body') ? [] : [...FULL_BODY_TWICE],
     });
     balanceSlots(alloc, state.roles, fixed !== null);
     // An exposure that took no sets (it did not fit) is not one: the split
@@ -464,7 +529,7 @@ function evaluateFamily(family, ctx) {
       return capped || blocked;
     }).sort((a, b) => ((floorOf(b) - W(b)) - (floorOf(a) - W(a))) || (muscleIndex(a) - muscleIndex(b)));
     const crowded = crowdedSessions(alloc, exposures, trainable, state.roles, ctx.choices, state.maxSlots);
-    const lowers = trainable.filter((m) => state.k[m] >= 2
+    const lowers = trainable.filter((m) => state.k[m] > lowestK(m)
       && (exposures[m] || []).some((si) => crowded.has(si) && alloc.sessions[si].slots.some((x) => x.muscle === m))).sort((a, b) => ((W(b) - floorOf(b)) - (W(a) - floorOf(a))) || (muscleIndex(a) - muscleIndex(b)));
     const moves = [...raises.map((m) => [m, 1]), ...lowers.map((m) => [m, -1])]
       .filter(([m, d]) => !rejected.has(`${m}:${state.k[m]}:${d}`));
@@ -520,12 +585,21 @@ function evaluateFamily(family, ctx) {
   // The block, and the readiness promise at the usual spacing (design 4.14).
   let block;
   let sim;
+  // The block is built in the order it is read in: when the readiness check
+  // moves the order, the block is prescribed again in the new order and read
+  // again, so the plan's sets and its readiness are those of the order saved.
   const settle = () => {
-    block = buildBlock(alloc, exposures, n, ctx, state.sessionCaps);
-    const best = readinessOrder(block, alloc, layouts, usual, hoursPeak, ctx.hoursVolume, loadsOf, holds)
-      || readinessOrder(block, alloc, layouts, usual, hoursPeak, ctx.hoursVolume, loadsOf);
-    order = best.order;
-    sim = best.sim;
+    for (let i = 0; i < SETTLE_TRIES; i++) {
+      block = buildBlock(alloc, exposures, n, ctx, state.sessionCaps, order);
+      const best = readinessOrder(block, alloc, layouts, usual, hoursPeak, ctx.hoursVolume, loadsOf, holds)
+        || readinessOrder(block, alloc, layouts, usual, hoursPeak, ctx.hoursVolume, loadsOf);
+      const same = best.order.join() === order.join();
+      order = best.order;
+      sim = best.sim;
+      if (same) return;
+    }
+    block = buildBlock(alloc, exposures, n, ctx, state.sessionCaps, order);
+    sim = simulate(block, order, usual, ctx.hoursVolume);
   };
   // When a muscle's number of sessions changes, its light and heavy split is
   // worked out again for its new sessions in the current order.
@@ -595,7 +669,7 @@ function evaluateFamily(family, ctx) {
           // which is what `sim` reads (see buildPlan).
           if (!sim.failures.some((f) => f.muscle === m)) continue;
           if (kind === 'fewer_sessions') {
-            if (tried.fewer[m] || state.k[m] <= 1) continue;
+            if (tried.fewer[m] || state.k[m] <= lowestK(m)) continue;
             tried.fewer[m] = true;
             state.k[m] -= 1;
             resplit(m);
@@ -767,6 +841,9 @@ function worstByMuscle(failures) {
  * order.
  */
 const READINESS_ORDER_TRIES = 8;
+// How many times the block is prescribed again for a moved order before the
+// last order found is kept and its own block read.
+const SETTLE_TRIES = 3;
 function readinessOrder(block, alloc, layouts, usual, hoursPeak, hoursPerson, loadsOf, accept = null) {
   const loads = loadsOf(alloc);
   const score = prepareRotation({ loads, layouts, hoursFor: hoursPeak });
@@ -891,7 +968,7 @@ function sortKeys(o) {
 
 // ── the block: targets, shares and every week's loads ──────────────────
 
-function buildBlock(alloc, exposures, n, ctx, sessionCaps = {}) {
+function buildBlock(alloc, exposures, n, ctx, sessionCaps = {}, order = null) {
   const sessions = alloc.sessions.map((sess, si) => ({
     id: `s${si}`,
     slots: sess.slots.map((x, xi) => ({
@@ -925,11 +1002,16 @@ function buildBlock(alloc, exposures, n, ctx, sessionCaps = {}) {
     const slots = sessions.reduce((a, s) => a + s.slots.filter((x) => x.muscle === m).length, 0);
     targets[m] = blockTargets({ peak, floors: SETS_PER_EXERCISE.floor * slots, maintenance: 0 });
   }
+  // Prescribed in the rotation order the plan is saved in, the order the
+  // logger serves it in, so a tie breaks the same way in both and the plan's
+  // sets are the sets served (prescribe() breaks a tie by rotation order).
+  // The loads stay indexed by session.
+  const served = Array.isArray(order) && order.length === sessions.length ? order.map((si) => sessions[si]) : sessions;
   const weekLoads = [];
   const weekSets = [];
   for (let w = 0; w < BLOCK.weeks; w++) {
     const weekTargets = Object.fromEntries(Object.entries(targets).map(([m, list]) => [m, list[w]]));
-    const out = prescribeWeek({ sessions, weekTargets, facts: { exposureShares, sessionCaps } });
+    const out = prescribeWeek({ sessions: served, weekTargets, facts: { exposureShares, sessionCaps } });
     weekSets.push(out.sets);
     weekLoads.push(sessions.map((s) => ({
       direct: out.perSession[s.id]?.direct || {},
@@ -1052,6 +1134,8 @@ function toPlan(chosen, ctx, inputs, factor) {
       },
       notes,
       limitedBy: alloc.limitedBy,
+      // Design 4.14 step 4: written into the weekly rows' mrv at the save.
+      recoverySafeMax: chosen.recoverySafeMax || {},
       sessionMinutesAtPeak: alloc.sessions.map((s) => s.minutes),
       overTime: Object.fromEntries(alloc.sessions.map((s, si) => [sessionKey(si), s.overMinutes || 0]).filter(([, v]) => v > 5)),
       // Sessions the focus sets take past 8 exercises or 25 working sets (D45).
