@@ -285,11 +285,13 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
     expect(t).not.toMatch(/every muscle is estimated at least 90% recovered when its next session starts, in every week/);
   });
 
+  // With big muscles first (founder answer 2026-10-05) this plan's one
+  // limited muscle is the hamstrings, held at their growth floor.
   test('a single limited muscle (3 days, glutes in focus)', () => {
     const r = explain(LIMITED, { minutes: 75 });
-    const note = LIMITED.v2.notes.find((n) => n.kind === 'promise_limited' && n.muscle === 'glutes');
-    expect(note).toBeDefined();
-    expect(textOf(r, 'readiness')).toContain(`Glutes about ${Math.round(note.lowest * 100)}%`);
+    const limited = LIMITED.v2.notes.filter((n) => n.kind === 'promise_limited');
+    expect(limited.map((n) => n.muscle)).toEqual(['hamstrings']);
+    expect(textOf(r, 'readiness')).toContain(`Hamstrings about ${Math.round(limited[0].lowest * 100)}%`);
   });
 
   test('more than three limited muscles: the worst three are named and the rest counted', () => {

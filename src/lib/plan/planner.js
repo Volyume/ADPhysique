@@ -65,6 +65,10 @@ import { repRangeFor, restFor } from '../exercise/prescription';
 
 export const PLANNER_VERSION = 2;
 const FULL_BODY_TWICE = new Set(['quads', 'hamstrings', 'glutes', 'chest', 'back']);
+// Founder answer 2026-10-05, "Big muscles first": when time is short, chest,
+// back, quads, hamstrings and glutes reach their growth floor before a smaller
+// muscle gets another session (register D219).
+const BIG_MUSCLES = FULL_BODY_TWICE;
 const MAX_FIX_ROUNDS = 8;
 
 const muscleIndex = (m) => {
@@ -478,6 +482,7 @@ function evaluateFamily(family, ctx) {
       equipment: ctx.equipment,
       gapAfter: gapAfterSessions(state.placementOrder, ctx.ownGaps || ctx.typical),
       twiceFirst: fixed || !family.key.startsWith('full_body') ? [] : [...FULL_BODY_TWICE],
+      bigFirst: [...BIG_MUSCLES],
     });
     balanceSlots(alloc, state.roles, fixed !== null);
     // An exposure that took no sets (it did not fit) is not one: the split
@@ -822,6 +827,7 @@ function gapAfterSessions(order, layout) {
 function floorShortfall(roles, weekly, muscles) {
   let maintenance = 0;
   let focus = 0;
+  let big = 0;
   let standard = 0;
   for (const m of muscles) {
     const r = roles[m];
@@ -831,9 +837,12 @@ function floorShortfall(roles, weekly, muscles) {
     maintenance += Math.max(0, Math.min(ROLE_TARGETS.maintenance.low, floor) - W);
     const short = Math.max(0, floor - W);
     if (r.role === ROLE.FOCUS) focus += short;
+    // Founder answer 2026-10-05 ("Big muscles first"): the big five's
+    // shortfall below their growth floor is judged before a smaller muscle's.
+    else if (BIG_MUSCLES.has(m)) big += (r.weight || 1) * short;
     else standard += (r.weight || 1) * short;
   }
-  return [maintenance, focus, standard];
+  return [maintenance, focus, big, standard];
 }
 
 const sameVector = (a, b) => a.every((x, i) => Math.abs(x - b[i]) <= 1e-9);

@@ -108,6 +108,8 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
  *        time to clear (design 4.5 step 2)
  * @param {string[]} [args.twiceFirst]  a full-body week's big muscles: their further sessions open once every
  *        muscle has its first exercise, before any set is added (the planner's big five)
+ * @param {string[]} [args.bigFirst]  the big muscles: their further sessions and growth sets come before a smaller
+ *        muscle's (founder answer 2026-10-05, "Big muscles first")
  * @returns {{
  *   sessions: Array<{ slots: Array<{ muscle: string, name: string, kind: string, credits: object, restSec: number, sets: number, cap: number, thinEquipment: boolean }>, minutes: number, workingSets: number }>,
  *   weekly: Object<string, { direct: number, fractional: number }>,
@@ -117,6 +119,7 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
 export function allocatePeakWeek({
   sessionCount, roles, exposures, choices, lightCaps = {}, maxSlots = {}, sessionCaps = {},
   sessionLengthMinutes = 60, equipment = 'full_gym', gapAfter = null, sessionChoices = null, twiceFirst = [],
+  bigFirst = [],
 }) {
   const n = Math.max(1, sessionCount | 0);
   const sessions = Array.from({ length: n }, () => ({ slots: [] }));
@@ -392,12 +395,25 @@ export function allocatePeakWeek({
     // never cut to fit the session length; a session that runs over says so
     // (and first shortens the smaller muscles' rest, below).
     { members: growers.filter((m) => roles[m].role === ROLE.FOCUS), level: floorOf, openings: true, valued: true, ignoreTime: true },
-    { members: growers.filter((m) => roles[m].role !== ROLE.FOCUS), level: floorOf, openings: true, valued: true },
+    // Founder answer 2026-10-05, "Big muscles first": the big muscles
+    // (`bigFirst`) open their further sessions and reach their growth floor
+    // before a smaller muscle gets another session or its growth sets, so a
+    // short week's time goes to them first, as coaches programme short weeks.
+    {
+      members: growers.filter((m) => roles[m].role !== ROLE.FOCUS && bigFirst.includes(m)),
+      opens: muscles.filter((m) => roles[m].role !== ROLE.FOCUS && bigFirst.includes(m)),
+      level: floorOf, openings: true, valued: true,
+    },
+    {
+      members: growers.filter((m) => roles[m].role !== ROLE.FOCUS && !bigFirst.includes(m)),
+      opens: muscles.filter((m) => roles[m].role !== ROLE.FOCUS && !bigFirst.includes(m)),
+      level: floorOf, openings: true, valued: true,
+    },
   ];
-  for (const [index, { members, level, openings, valued, ignoreTime = false }] of floorSteps.entries()) {
+  for (const { members, level, openings, valued, ignoreTime = false, opens = null } of floorSteps) {
     // The other muscles' further sessions open once the focus muscles have
-    // their sets (step 1).
-    if (index === 2) placeRemaining(muscles.filter((m) => roles[m].role !== ROLE.FOCUS));
+    // their sets (step 1): the big muscles' first, then the rest.
+    if (opens) placeRemaining(opens);
     let floorGuard = 2000;
     while (floorGuard-- > 0) {
       let best = null;
