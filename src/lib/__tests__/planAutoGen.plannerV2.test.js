@@ -57,6 +57,7 @@ jest.mock('../database', () => ({
   getRecentlyUsedExerciseIds: jest.fn(),
   getAllMesocycles: jest.fn(),
   setProgrammePlanFacts: jest.fn(),
+  getWeeklyVolumeByMuscle: jest.fn(async () => []),
   recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
@@ -74,7 +75,7 @@ import {
   activatePlanWithBlock, activatePlanKeepingBlock, archiveOtherUserPlans, getAllProgrammes,
   db, runInTransaction, deleteProgrammeCascade, deleteProgrammeCascadeInTx,
   getActivePlan, upsertPlannedMuscleVolume, getMesocycleWeeks, getCurrentMesocycleWeek,
-  getRecentlyUsedExerciseIds, getAllMesocycles, setProgrammePlanFacts,
+  getRecentlyUsedExerciseIds, getAllMesocycles, setProgrammePlanFacts, getWeeklyVolumeByMuscle,
 } from '../database';
 
 const { LIBRARY } = require('./campaign16.helpers');
@@ -335,8 +336,30 @@ describe('PLANNER_V2 on: the planner is handed the person\'s inputs, read as the
     });
     expect(handed.divisionMatrix).toBe(DIVISION_MATRIX);
     expect(handed.choices).toEqual(resolveCatalogue({ library: LIBRARY, profile: 'full_gym', loggedExerciseNames: [] }));
-    // The generator does not read the last four weeks per muscle: nothing is invented.
-    expect(handed).not.toHaveProperty('loggedWeekly');
+    // No training in the last four weeks: no history is invented (the
+    // planner ramps from its own no-history limit).
+    expect(handed.loggedWeekly).toBeNull();
+  });
+
+  test('ramp, do not jump (design 4.4): what the person logged a week per muscle, over the weeks they trained', async () => {
+    getWeeklyVolumeByMuscle.mockResolvedValueOnce([
+      { weekLabel: 'W1', volumeByMuscle: {} },
+      { weekLabel: 'W2', volumeByMuscle: { chest: 8, triceps: 4 } },
+      { weekLabel: 'W3', volumeByMuscle: {} },
+      { weekLabel: 'W4', volumeByMuscle: { chest: 12, quads: 6 } },
+    ]);
+    await generateAndSavePlan('u1', profile);
+
+    expect(getWeeklyVolumeByMuscle).toHaveBeenCalledWith('u1', 4);
+    expect(handedTo().loggedWeekly).toEqual({ chest: 10, triceps: 2, quads: 3 });
+  });
+
+  test('a history that cannot be read is no history, never a failed plan', async () => {
+    getWeeklyVolumeByMuscle.mockRejectedValueOnce(new Error('locked'));
+    const result = await generateAndSavePlan('u1', profile);
+
+    expect(result).toBeTruthy();
+    expect(handedTo().loggedWeekly).toBeNull();
   });
 
   test('the catalogue is resolved for the person\'s own kit', async () => {

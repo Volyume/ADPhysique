@@ -41,7 +41,7 @@ import { deriveParamKey } from './poolGenerator';
 import { logWarn } from './errorLog';
 import { prescribeWeek } from './plan/prescribe';
 import { PER_SESSION, exerciseCap } from './plan/science';
-import { roleCeiling } from './plan/checkinPlacement';
+import { roleTop } from './plan/checkinPlacement';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -349,8 +349,8 @@ const CLOSED_PLAN_LIMITS = Object.freeze({
  *    plan's session caps for it (the facts' own, else 8 direct and 11
  *    fractional);
  *  - weekFractional: the muscle's planned week across every session, and
- *    weekTop the role's top (checkinPlacement.roleCeiling, the number a
- *    check-in may raise it to).
+ *    weekTop the role's top (checkinPlacement.roleTop: 20 for a standard
+ *    muscle, design 4.11), the week the session's own +1 keeps it under.
  * Keyed by exercise id, in the shape computeSessionAdjustments reads as `plan`.
  * Returns null when the plan is not one the new planner built, or today's
  * routine is not one of its sessions: the caller then runs the +1 as it always
@@ -400,7 +400,7 @@ export function buildPlanLimits({ planContext, routineId, weekTargets, exercises
       sessionFractional: per.fractional?.[muscle] || 0,
       sessionFractionalCap: capOf(muscle, 'fractional', PER_SESSION.fractionalCap),
       weekFractional: weekFractional[muscle] || 0,
-      weekTop: roleCeiling(facts?.roles?.[muscle]),
+      weekTop: roleTop(facts?.roles?.[muscle]),
     };
   }
   return out;

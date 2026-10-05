@@ -38,6 +38,7 @@ import {
   getAllMesocycles,
   setProgrammePlanFacts,
   getProgrammePlanFacts,
+  getWeeklyVolumeByMuscle,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -1364,6 +1365,13 @@ export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine, slotsB
     overTime: rekeyFlat(v2.overTime ?? {}, ids),
     overCeilings: (Array.isArray(v2.overCeilings) ? v2.overCeilings : [])
       .map((k) => (Object.prototype.hasOwnProperty.call(ids, k) ? ids[k] : k)),
+    // Design 4.14 step 4: each muscle's recovery-safe weekly maximum, in direct
+    // sets, which a check-in never raises a muscle past (checkinPlacement.js).
+    // Kept here rather than in the weekly rows' mrv, which also feeds the
+    // landmark table other screens read (effectiveLandmarks.js), where a
+    // recovery number would read as the muscle's most recoverable volume.
+    recoverySafeMax: Object.fromEntries(Object.entries(v2.recoverySafeMax ?? {})
+      .filter(([, n]) => Number.isFinite(n) && n >= 0)),
   };
 }
 
@@ -1679,6 +1687,34 @@ function plannerV2SessionCount(inputs) {
  * equipmentReachable) by modules on the check-in path, which must never reach
  * src/lib/recovery/ through a static import.
  */
+/**
+ * Design 4.4 (ramp, do not jump): what the person logged a week per muscle
+ * over the last four weeks, in the planner's own unit (fractional sets: an
+ * exercise's primary muscle 1, each secondary 0.5, as the heatmap counts them,
+ * getWeeklyVolumeByMuscle), averaged over the weeks of the four they trained.
+ * Null when they trained in none of them, or the read fails, so the planner
+ * ramps from its no-history limit as before.
+ */
+async function plannerV2LoggedWeekly(userId) {
+  try {
+    if (!userId) return null;
+    const weeks = (await getWeeklyVolumeByMuscle(userId, 4)) ?? [];
+    const trained = weeks.filter((w) => Object.values(w?.volumeByMuscle ?? {}).some((v) => Number.isFinite(v) && v > 0));
+    if (trained.length === 0) return null;
+    const out = {};
+    for (const w of trained) {
+      for (const [muscle, v] of Object.entries(w.volumeByMuscle)) {
+        if (Number.isFinite(v) && v > 0) out[muscle] = (out[muscle] || 0) + v / trained.length;
+      }
+    }
+    return out;
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.generateAndSave.plannerV2LoggedWeekly', e, {}); } catch (_) {}
+    return null;
+  }
+}
+
 async function plannerV2Personalisation(userId, inputs) {
   const none = { learnedFactor: null, ownGaps: null };
   try {
@@ -1762,9 +1798,9 @@ async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExer
     // gated factor and their own gaps, never a weekly target.
     learnedFactor,
     ownGaps,
-    // The generator does not read the last four weeks per muscle, so
-    // `loggedWeekly` is not passed (the planner then ramps from its own
-    // no-history limit).
+    // Ramp, do not jump (design 4.4): what the person logged a week per muscle
+    // lately; null with no recent training (the planner's no-history limit).
+    loggedWeekly: await plannerV2LoggedWeekly(userId),
     choices,
     divisionMatrix: DIVISION_MATRIX,
     // generatePlan's own test for strength reps and rest (its internalGoal is

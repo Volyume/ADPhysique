@@ -51,7 +51,7 @@ const database = require('../database');
 const { computeSessionAdjustments } = require('../algorithms');
 const { prescribeWeek } = require('../plan/prescribe');
 const { exerciseCap, PER_SESSION } = require('../plan/science');
-const { roleCeiling } = require('../plan/checkinPlacement');
+const { roleTop } = require('../plan/checkinPlacement');
 const {
   buildPlanSessions,
   buildPlanLimits,
@@ -262,12 +262,16 @@ describe('buildPlanLimits writes the limits from the plan\'s own facts and the s
     expect(own.bench.sessionDirectCap).toBe(8);
   });
 
-  test('the week\'s top is the role\'s: a focus muscle 30, a standard muscle 24, a maintenance muscle 6', () => {
+  // Design 4.11: the +1 keeps the week under the ROLE's top (4.2), 20 for a
+  // standard muscle, not the check-in ceiling's raised 24 (review finding 8).
+  test('the week\'s top is the role\'s: a focus muscle 24, a standard muscle 20, a raised muscle 24, a maintenance muscle 6', () => {
     const l = limits(2, 'r-ua', { ...FACTS, roles: { ...FACTS.roles, back: 'maintenance' } });
-    expect(l.curl.weekTop).toBe(roleCeiling('focus'));
-    expect(l.curl.weekTop).toBe(30);
-    expect(l.bench.weekTop).toBe(24);
+    expect(l.curl.weekTop).toBe(roleTop('focus'));
+    expect(l.curl.weekTop).toBe(24);
+    expect(l.bench.weekTop).toBe(20);
     expect(l.row.weekTop).toBe(6);
+    const raised = limits(2, 'r-ua', { ...FACTS, roles: { ...FACTS.roles, chest: 'raised' } });
+    expect(raised.bench.weekTop).toBe(24);
   });
 
   test('null for a plan the new planner did not build, and for a routine that is not one of its sessions', () => {

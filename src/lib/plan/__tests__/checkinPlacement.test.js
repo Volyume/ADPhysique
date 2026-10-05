@@ -405,6 +405,7 @@ function planParts(p) {
   }));
   const facts = {
     version: 2, roles: p.v2.roles, exposureShares: p.v2.exposureShares, sessionCaps: p.v2.sessionCaps, gapRanks: p.v2.gapRanks,
+    recoverySafeMax: p.v2.recoverySafeMax,
   };
   const rows = [];
   for (const [muscle, list] of Object.entries(p.v2.weeklyTargets)) {
@@ -494,6 +495,37 @@ describe('caps hold in every week after any check-in (planner output)', () => {
       }
     }
     expect(checked).toBeGreaterThan(20);
+  });
+});
+
+describe('the recovery-safe weekly maximum (design 4.14 step 4; review finding 5)', () => {
+  test.each(BUILT.map((b) => [label(b), b]))('%s: four +3 check-ins never take a muscle past it', (_name, { plan: built }) => {
+    const { sessions, facts, catalogue } = planParts(built);
+    let { rows } = planParts(built);
+    const stored = Object.fromEntries(rows.map((r) => [`${r.mesocycle_week_id}:${r.muscle}`, r.planned_sets]));
+    for (let current = 0; current <= 3; current++) {
+      const plan = planCheckin({ sessions, facts, weeks: weeksFrom(current), rows, signal: 3, catalogue });
+      rows = applyChanges(rows, plan.changes);
+    }
+    for (const r of rows) {
+      const safe = facts.recoverySafeMax[r.muscle];
+      if (!Number.isFinite(safe)) continue;
+      const before = stored[`${r.mesocycle_week_id}:${r.muscle}`];
+      // A row the plan already held above it stands; no row is raised past it.
+      expect({ week: r.mesocycle_week_id, m: r.muscle, ok: r.planned_sets <= Math.max(safe, before) })
+        .toEqual({ week: r.mesocycle_week_id, m: r.muscle, ok: true });
+    }
+  });
+
+  test('a muscle at its recovery-safe maximum is not raised; with no maximum the band top still holds', () => {
+    const built = BUILT[0].plan;
+    const { sessions, facts, rows, catalogue } = planParts(built);
+    const m = Object.keys(facts.recoverySafeMax).find((x) => facts.roles[x] !== 'maintenance' && facts.roles[x] !== undefined);
+    const at = rows.find((r) => r.mesocycle_week_id === 'w1' && r.muscle === m).planned_sets;
+    const capped = planCheckin({ sessions, facts: { ...facts, recoverySafeMax: { ...facts.recoverySafeMax, [m]: at } }, weeks: weeksFrom(0), rows, signal: 3, catalogue });
+    expect(capped.changes.filter((c) => c.muscle === m && c.mesocycleWeekId === 'w1' && c.plannedSets > at)).toEqual([]);
+    const open = planCheckin({ sessions, facts: { ...facts, recoverySafeMax: {} }, weeks: weeksFrom(0), rows, signal: 3, catalogue });
+    expect(open.changes.some((c) => c.muscle === m && c.mesocycleWeekId === 'w1' && c.plannedSets > at)).toBe(true);
   });
 });
 

@@ -36,3 +36,17 @@ describe('the stored facts keep the session length facts', () => {
     expect(JSON.stringify(plain)).not.toMatch(/"s[0-9]"/);
   });
 });
+
+// Design 4.14 step 4 (review finding 5): the recovery-safe weekly maximum the
+// check-in clamps to rides in the facts, by muscle, whole numbers only.
+describe('the stored facts keep the recovery-safe weekly maximum', () => {
+  test('each muscle\'s maximum, in direct sets; anything not a number is left out', () => {
+    const facts = plannerV2PlanFacts({ ...V2, recoverySafeMax: { chest: 12, quads: 11, glutes: Number.NaN, back: null } }, { s0: 'routine-a', s1: 'routine-b' }, {}, {});
+    expect(facts.recoverySafeMax).toEqual({ chest: 12, quads: 11 });
+  });
+
+  test('a plan built before the maximum existed stores an empty one', () => {
+    const facts = plannerV2PlanFacts({ ...V2, recoverySafeMax: undefined }, { s0: 'routine-a', s1: 'routine-b' }, {}, {});
+    expect(facts.recoverySafeMax).toEqual({});
+  });
+});

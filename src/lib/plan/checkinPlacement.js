@@ -118,6 +118,20 @@ export function roleCeiling(role) {
   return ROLE_TARGETS.raised.high;
 }
 
+/**
+ * The role's top (fractional) the session's own +1 keeps the week under
+ * (design 4.11, the roles of 4.2): a standard muscle's 20, a raised muscle's
+ * 24, a focus muscle's 24, a maintenance muscle's 6. Below roleCeiling, which
+ * bounds a check-in, so a good session never carries a standard muscle into
+ * the band the app words as above the normal growth range (review finding 8).
+ */
+export function roleTop(role) {
+  if (role === 'focus') return ROLE_TARGETS.focus.high;
+  if (role === 'maintenance') return ROLE_TARGETS.maintenance.high;
+  if (role === 'raised') return ROLE_TARGETS.raised.high;
+  return ROLE_TARGETS.standard.peakMax;
+}
+
 // ── small helpers ────────────────────────────────────────────────────────
 
 function indexRows(rows) {
@@ -167,6 +181,18 @@ function mrvCapOf(row) {
   return ROLE_TARGETS.focus.plannedCeiling;
 }
 
+/**
+ * The most direct sets a week a check-in may take muscle m to: the row's band
+ * top, and never past the recovery-safe weekly maximum the planner worked out
+ * for the plan (design 4.14 step 4, facts.recoverySafeMax), so a check-in
+ * cannot raise a muscle past what the readiness check found recovered.
+ */
+function raiseCapOf(row, m, facts) {
+  const band = mrvCapOf(row);
+  const safe = facts?.recoverySafeMax?.[m];
+  return isNum(safe) && safe >= 0 ? Math.min(band, safe) : band;
+}
+
 function modeOfPositive(values) {
   const counts = new Map();
   for (const v of values) if (v > 0) counts.set(v, (counts.get(v) || 0) + 1);
@@ -205,7 +231,7 @@ function emptyPlan(kind, step) {
  * @param {Array<{id: string, slots: Array<object>}>} args.sessions  prescribe's session shape, in rotation
  *        order; a slot may also carry `name` and `exerciseId` (the card names exercises, and an
  *        opened exercise is never one already in the plan for the muscle)
- * @param {object} args.facts  the plan's v2 facts: roles, exposureShares, sessionCaps, gapRanks
+ * @param {object} args.facts  the plan's v2 facts: roles, exposureShares, sessionCaps, gapRanks, recoverySafeMax
  * @param {Array<{id: string, index?: number, deload?: boolean}>} args.weeks  the block's weeks from
  *        THIS week on, this week first, then next week and every later one
  * @param {Array<object>} args.rows  planned_muscle_volume rows (snake_case or camelCase) for those weeks
@@ -275,7 +301,7 @@ export function planCheckin({
       const room = Math.floor(roleCeiling(roleOf(m)) - weekly(before, m, 'fractional') + EPS);
       const by = Math.min(step, room);
       if (by < 1) { out.notRaised.push({ muscle: m, why: 'top' }); continue; }
-      want[m] = Math.max(s, Math.min(c + by, Math.max(s, mrvCapOf(nextRows[m]))));
+      want[m] = Math.max(s, Math.min(c + by, Math.max(s, raiseCapOf(nextRows[m], m, facts))));
       eligible.push(m);
     }
   }
@@ -342,7 +368,7 @@ export function planCheckin({
       const climb = Math.max(0, storedW[m] - prevStored[m]);
       const climbed = prevFinal[m] + climb;
       tw[m] = climbed > storedW[m]
-        ? Math.max(storedW[m], Math.min(climbed, Math.max(storedW[m], mrvCapOf(rowsW[m]))))
+        ? Math.max(storedW[m], Math.min(climbed, Math.max(storedW[m], raiseCapOf(rowsW[m], m, facts))))
         : climbed;
     }
     const fit = settle({
