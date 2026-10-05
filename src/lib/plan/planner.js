@@ -1053,6 +1053,29 @@ function chooseFamily(evaluated) {
 
 // ── the output ───────────────────────────────────────────────────────────
 
+/**
+ * The sessions' names in the order they are trained: where a kind of session
+ * comes more than once ("Upper A", "Upper B"), its letters follow the
+ * rotation, so the plan reads Upper A before Upper B however the order search
+ * placed them. Other names are kept.
+ */
+function letteredInOrder(list) {
+  const lettered = (name) => /^(.+) ([A-Z])$/.exec(name);
+  const count = {};
+  for (const name of list) {
+    const m = lettered(name);
+    if (m) count[m[1]] = (count[m[1]] || 0) + 1;
+  }
+  const next = {};
+  return list.map((name) => {
+    const m = lettered(name);
+    if (!m || count[m[1]] < 2) return name;
+    const i = next[m[1]] || 0;
+    next[m[1]] = i + 1;
+    return `${m[1]} ${String.fromCharCode(65 + i)}`;
+  });
+}
+
 function toPlan(chosen, ctx, inputs, factor) {
   const { family, alloc, order, block, sim, notes, state } = chosen;
   const sessionKey = (si) => `s${si}`;
@@ -1060,11 +1083,12 @@ function toPlan(chosen, ctx, inputs, factor) {
   // exerciseId, so the caller can write the targets and facts onto the
   // person's own rows. Without it the output is exactly what it always was.
   const fixedMode = family.fixed === true;
-  const workouts = order.map((si) => {
+  const names = fixedMode ? order.map((si) => family.sessions[si].name) : letteredInOrder(order.map((si) => family.sessions[si].name));
+  const workouts = order.map((si, p) => {
     const sess = alloc.sessions[si];
     const slots = sess.slots; // already in their final order (balanceSlots)
     return {
-      name: family.sessions[si].name,
+      name: names[p],
       sessionKey: sessionKey(si),
       ...(fixedMode ? { routineId: family.sessions[si].routineId ?? null } : {}),
       exercises: slots.map((x) => {

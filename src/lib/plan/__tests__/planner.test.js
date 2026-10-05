@@ -180,6 +180,19 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     }
   });
 
+  test.each(BUILT.map((b) => [label(b), b]))('%s: a kind of session that comes more than once is lettered in the order it is trained', (_name, { plan: p }) => {
+    const seen = {};
+    for (const w of p.workouts) {
+      const m = /^(.+) ([A-Z])$/.exec(w.name);
+      if (!m) continue;
+      seen[m[1]] = [...(seen[m[1]] || []), m[2]];
+    }
+    for (const [kind, letters] of Object.entries(seen)) {
+      if (letters.length < 2) continue;
+      expect({ kind, letters }).toEqual({ kind, letters: letters.map((_, i) => String.fromCharCode(65 + i)) });
+    }
+  });
+
   test.each(BUILT.map((b) => [label(b), b]))('%s: every muscle the plan trains keeps an exercise', (_name, { plan: p }) => {
     const trained = new Set(p.workouts.flatMap((w) => w.exercises.map((e) => e.muscle)));
     for (const [m, role] of Object.entries(p.v2.roles)) {
