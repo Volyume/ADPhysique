@@ -164,6 +164,82 @@ export function slotMuscleChange({ facts, routineId, oldExercise, newExercise } 
   return { from, to };
 }
 
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const sumOf = (map) => Object.values(map).reduce((a, b) => a + b, 0);
+// A muscle's session shares as sets (share x the muscle's weekly target), the positive ones only.
+const asSets = (shares, target) => Object.fromEntries(
+  Object.entries(shares).filter(([, v]) => isNum(v) && v > 0).map(([k, v]) => [k, v * target]),
+);
+const asShares = (sets) => {
+  const total = sumOf(sets);
+  return Object.fromEntries(Object.entries(sets).filter(([, v]) => v > 0).map(([k, v]) => [k, v / total]));
+};
+
+/**
+ * The plan's per-muscle session shares (facts.exposureShares: for each muscle the
+ * fraction of its weekly sets each session takes, the weights prescribe splits a
+ * week's target by) after `sets` sets of a slot in session `sessionId` move from
+ * muscle `from` to muscle `to` (a permanent swap into another primary muscle;
+ * D219 review finding 2). Worked in sets so the other sessions keep exactly the
+ * sets they had: the slot's session gives up `sets` of `from` and takes `sets`
+ * more of `to`, against the targets the muscles had, and each muscle's shares
+ * are then re-normalised to sum to 1. A muscle with no stored shares is left as
+ * it is (prescribe then weights its sessions by their slots' stored sets), and
+ * a muscle left with nothing loses its entry. Returns the input untouched when
+ * nothing moves. Never mutates.
+ *
+ * @param {?Object<string, Object<string, number>>} shares
+ * @param {object} args
+ * @param {string} args.sessionId   the routine the swapped slot is in
+ * @param {string} args.from        the muscle the slot's sets leave
+ * @param {string} args.to          the muscle they join
+ * @param {number} args.sets        the slot's served sets in the week the fractions are read from
+ * @param {number} args.targetFrom  `from`'s weekly target in that week, before the move
+ * @param {number} args.targetTo    `to`'s weekly target in that week, before the move
+ */
+export function moveSlotShares(shares, { sessionId, from, to, sets, targetFrom, targetTo } = {}) {
+  if (!isObject(shares) || !sessionId || !from || !to || from === to || !(sets > 0) || !(targetFrom > 0)) return shares;
+  const out = { ...shares };
+  if (isObject(out[from])) {
+    const left = asSets(out[from], targetFrom);
+    left[sessionId] = Math.max(0, (left[sessionId] ?? 0) - sets);
+    if (sumOf(left) > 0) out[from] = asShares(left);
+    else delete out[from];
+  }
+  if (isObject(out[to]) && targetTo > 0) {
+    const gained = asSets(out[to], targetTo);
+    gained[sessionId] = (gained[sessionId] ?? 0) + sets;
+    out[to] = asShares(gained);
+  }
+  return out;
+}
+
+/**
+ * The plan's own record of every week's per-muscle targets (facts.weeklyTargets,
+ * { muscle: [week 1 .. recovery week] }) after a slot's sets move from `from` to
+ * `to`: each move is { weekIndex (1 to 6), sets }, the sets that week served the
+ * slot, taken from `from`'s week and given to `to`'s. A target never goes below
+ * zero; a muscle with no series, or a week outside it, is skipped. Returns the
+ * input untouched when nothing changes. Never mutates.
+ */
+export function moveWeeklyTargets(weeklyTargets, { from, to, moves } = {}) {
+  if (!isObject(weeklyTargets) || !from || !to || from === to || !Array.isArray(moves) || moves.length === 0) return weeklyTargets;
+  const out = { ...weeklyTargets };
+  let changed = false;
+  for (const [muscle, sign] of [[from, -1], [to, 1]]) {
+    if (!Array.isArray(out[muscle])) continue;
+    const series = [...out[muscle]];
+    for (const move of moves) {
+      const i = Number(move?.weekIndex) - 1;
+      if (!Number.isInteger(i) || i < 0 || i >= series.length || !isNum(series[i]) || !(move?.sets > 0)) continue;
+      series[i] = Math.max(0, series[i] + sign * move.sets);
+      changed = true;
+    }
+    out[muscle] = series;
+  }
+  return changed ? out : weeklyTargets;
+}
+
 const spoken = (muscle) => muscleDisplayName(muscle).toLowerCase();
 
 /** The note before a permanent swap into another muscle is confirmed (design 4.12). */

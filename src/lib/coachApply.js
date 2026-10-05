@@ -378,9 +378,12 @@ export function computeVolumeApply(plannedRows, volumeDelta, holdMuscles = null,
  * version, the multiplier runs exactly as before (byte-identical for every
  * legacy plan).
  *
- * @param {Array<{exerciseId:string, primaryMuscle:string, recommendedSets:number, slotId?:string}>} exercises
+ * @param {Array<{exerciseId:string, primaryMuscle:string, recommendedSets:number, slotId?:string, cap?:number}>} exercises
  *        `slotId` (v2 only) is the plan slot the exercise occupies today (the
- *        routine exercise row id); without it the slot id is the exerciseId
+ *        routine exercise row id); without it the slot id is the exerciseId.
+ *        `cap` (v2 only) is the most sets this exercise may be served (its own
+ *        per-exercise cap, sessionAdjustments.servedSetsCap); the slot's count
+ *        is held to it
  * @param {Object<string, number>} weekPlannedByMuscle    this week's planned_sets per muscle
  * @param {Object<string, number>} baselinePlannedByMuscle week-1 planned_sets per muscle
  * @param {?{facts: object, sessions: Array}} [planContext]  the v2 plan context, or null
@@ -400,7 +403,13 @@ export function computeWeeklySessionAllocation(exercises, weekPlannedByMuscle, b
       const id = ex?.exerciseId;
       if (!id) continue;
       const served = sets[ex?.slotId ?? id];
-      if (Number.isFinite(served) && served >= 1) out[id] = served;
+      if (!(Number.isFinite(served) && served >= 1)) continue;
+      // D219 review fix 1 (design 4.12): the slot's sets are served to whichever
+      // exercise is in it today, held to THAT exercise's own cap (sessionAdjustments
+      // sets `cap`), so a one-off swap to an isolation exercise is never served a
+      // compound's 4. No cap given (or none that is a whole number of sets) serves
+      // the slot's count as before.
+      out[id] = Number.isFinite(ex?.cap) && ex.cap >= 1 ? Math.min(served, ex.cap) : served;
     }
     return out;
   }

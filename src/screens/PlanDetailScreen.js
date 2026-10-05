@@ -18,6 +18,11 @@ import {
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import { explainPlan, sessionsFromRoutines } from '../lib/plan/explain';
 import PlanExplainLines from '../components/PlanExplainLines';
+// D219 lane C1b: the first open of an active plan the new planner did not build rebuilds
+// it, and the person sees a one-time note of what changed.
+import PlanRebuildNote from '../components/PlanRebuildNote';
+import { ensureActivePlanRebuilt } from '../lib/planRebuild';
+import { explainLinesForKind } from '../lib/planRebuildNote';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
 import { getPlanDays } from '../lib/onboarding/freeStarter';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
@@ -118,6 +123,9 @@ export default function PlanDetailScreen({ navigation, route }) {
   async function loadData() {
     if (!planId) return;
     try {
+      // D219 lane C1b (founder Q1 = A): once per plan, never throws, a failure leaves
+      // the plan exactly as it was; a no-op on every later open.
+      if (user?.id) await ensureActivePlanRebuilt(user.id);
       const [p, routines, counts, sets, active] = await Promise.all([
         getProgrammeById(planId),
         getRoutinesForPlan(planId),
@@ -209,7 +217,12 @@ export default function PlanDetailScreen({ navigation, route }) {
             facts,
             (routines ?? []).map(routine => ({ routine, rows: detailsByRoutine[routine.id] ?? [] })),
           );
-          explained = explainPlan({ facts, sessions, week, sessionLengthMinutes, targetsByWeek })?.lines ?? null;
+          // D219 lane C1b: a library, kit or manual plan is version 2 once rebuilt, and its
+          // explanation leaves out what only a plan the planner structured can say.
+          explained = explainLinesForKind(
+            explainPlan({ facts, sessions, week, sessionLengthMinutes, targetsByWeek })?.lines ?? null,
+            facts.kind,
+          );
         }
       } catch (e) { logError('PlanDetailScreen.explain', e, { planId }); }
       setExplainLines(explained?.length ? explained : null);
@@ -519,6 +532,10 @@ export default function PlanDetailScreen({ navigation, route }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
+        {/* D219 lane C1b: the one-time note of what changed after the plan was
+            rebuilt. Renders nothing when there is none or once dismissed. */}
+        <PlanRebuildNote userId={user?.id} reloadKey={activePlan?.id ?? null} />
+
         {/* Plan header */}
         <AnimatedEntrance index={0}>
         <View style={styles.planHeader}>

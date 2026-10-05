@@ -121,6 +121,24 @@ export function buildPlanSessions(routinesWithRows, facts) {
 }
 
 /**
+ * D219 review fix 1: the exercise each plan slot was PLANNED with, { routine
+ * exercise id: exercise id }, from the plan's own rows. buildPlanSessions keeps
+ * its slots exactly as prescribe reads them, so this rides beside them in the
+ * serve context: an exercise a person puts in a slot for one session is not the
+ * slot's planned exercise, and the slot's thin-equipment bonus is not its to
+ * inherit (servedSetsCap). Pure.
+ */
+function plannedExerciseBySlot(routinesWithRows) {
+  const out = {};
+  for (const { rows } of Array.isArray(routinesWithRows) ? routinesWithRows : []) {
+    for (const row of Array.isArray(rows) ? rows : []) {
+      if (row?.routineExercise?.id != null && row?.exercise?.id != null) out[row.routineExercise.id] = row.exercise.id;
+    }
+  }
+  return out;
+}
+
+/**
  * D219: the v2 serve context ({ programmeId, facts, sessions }) of a
  * programme, or null when its plan facts do not carry `version: 2` (every plan
  * the new planner did not build) or the plan has no routines. Reads the facts
@@ -137,7 +155,9 @@ async function loadPlanServeContext(programmeId, knownFacts) {
     // eslint-disable-next-line no-await-in-loop
     routinesWithRows.push({ routine, rows: await getRoutineExercisesWithDetails(routine.id) });
   }
-  return { programmeId, facts, sessions: buildPlanSessions(routinesWithRows, facts) };
+  return {
+    programmeId, facts, sessions: buildPlanSessions(routinesWithRows, facts), planned: plannedExerciseBySlot(routinesWithRows),
+  };
 }
 
 /**
@@ -161,6 +181,91 @@ export async function getPlanServeContextForRoutine(routineId) {
     logWarn('sessionAdjustments.planServeContext', e?.message);
     return null;
   }
+}
+
+/**
+ * D219 lane C1b (register D219 build ruling 5): a MANUAL plan's every set count
+ * is the person's own, served as typed in weeks 1 to 5 and at half in the
+ * recovery week, never climbed on top. prescribe() serves a typed count as
+ * typed in every week (the recovery week included), which is right for the one
+ * count a person types on a plan the planner built (design 4.3) but would leave
+ * a manual plan, where EVERY count is typed, with no recovery week at all. So,
+ * for a plan whose facts say kind 'manual' and a week the block marks as its
+ * recovery week (mesocycle_weeks.is_deload), each typed count is served as
+ * round(half), never below 1. Every other plan, and every other week, comes
+ * back exactly as it was given. This is the one resolver the logger, the mini
+ * bar and the plan screens share (getSessionWeeklyAllocation), so they cannot
+ * disagree. Pure.
+ *
+ * @param {object} args
+ * @param {?object} args.facts  the plan's facts (the serve context's)
+ * @param {?object} args.week   the mesocycle_weeks row of the week served
+ * @param {Array<{exerciseId: ?string, slotId: ?string}>} args.exercises  today's rows
+ * @param {Object<string, number>} args.allocation  exerciseId -> sets, as prescribe served it
+ */
+export function manualRecoveryWeekSets({ facts, week, exercises, allocation }) {
+  if (facts?.version !== 2 || facts?.kind !== 'manual') return allocation;
+  if (Number(week?.is_deload ?? week?.isDeload) !== 1) return allocation;
+  const typed = facts.typed != null && typeof facts.typed === 'object' && !Array.isArray(facts.typed) ? facts.typed : {};
+  const out = { ...allocation };
+  for (const ex of Array.isArray(exercises) ? exercises : []) {
+    const n = ex?.slotId != null ? typed[ex.slotId] : undefined;
+    if (!ex?.exerciseId || typeof n !== 'number' || !Number.isFinite(n) || n < 1) continue;
+    out[ex.exerciseId] = Math.max(1, Math.round(n / 2));
+  }
+  return out;
+}
+
+/**
+ * D219 review fix 1 (design 4.12: "The swapped-in exercise is checked against the
+ * caps like any other"): the most sets the exercise in one of today's rows may be
+ * served. The week's sets come from the SLOT (the plan never hears of a one-off
+ * swap), so an isolation exercise swapped into a slot that serves a compound's 4
+ * sets would be served 4, past its cap of 3, on every read but the first (a
+ * remount, a crash restore, the refetch after a swap). Each exercise carries its
+ * own cap into the resolver instead:
+ *  - the slot's own planned exercise: the cap the planner served the slot under
+ *    (its kind, the thin-equipment bonus where the plan gave it, and a focus
+ *    muscle's isolation exercise taking 4), so serving it is unchanged;
+ *  - any other exercise in the slot (a one-off swap, a serve-time substitute):
+ *    exerciseCap of ITS OWN kind, no thin bonus (that was the planned
+ *    exercise's), and 4 for a focus muscle's isolation exercise per facts.roles,
+ *    the muscle being the plan's own fact for the exercise else its primary;
+ *  - undefined (no cap) for a plan the new planner did not build, a row with no
+ *    slot, and a slot whose count the person typed: that count is served as typed
+ *    over any cap (design 4.3: the caps bind the planner, never the person).
+ * Pure.
+ *
+ * @param {{exercise: object, routineExercise: object}} row  one of today's rows
+ * @param {?{facts: object, sessions: Array, planned?: Object<string, string>}} planContext
+ * @returns {number|undefined}
+ */
+export function servedSetsCap(row, planContext) {
+  const facts = planContext?.facts;
+  if (facts?.version !== 2 || !Array.isArray(planContext?.sessions)) return undefined;
+  const slotId = row?.routineExercise?.id;
+  const exercise = row?.exercise;
+  if (slotId == null || exercise?.id == null) return undefined;
+  let slot = null;
+  let sessionId = null;
+  for (const session of planContext.sessions) {
+    const hit = (Array.isArray(session?.slots) ? session.slots : []).find((x) => x?.id === slotId);
+    if (hit) { slot = hit; sessionId = session.id; break; }
+  }
+  if (!slot) return undefined;
+  if (typeof slot.typedSets === 'number' && Number.isFinite(slot.typedSets)) return undefined;
+  if (planContext.planned?.[slotId] === exercise.id) {
+    return exerciseCap(slot.kind, slot.thinEquipment === true, { focus: slot.focus === true });
+  }
+  const own = facts.slots?.[sessionId]?.[exercise.id];
+  const muscle = (typeof own?.muscle === 'string' && own.muscle)
+    || allocateExerciseVolume(exercise).find((a) => a.role === 'primary')?.muscle
+    || null;
+  const kind = deriveParamKey(
+    exercise.equipmentCategory ?? exercise.equipment_category,
+    exercise.compoundIsolation ?? exercise.compound_isolation,
+  );
+  return exerciseCap(kind, false, { focus: muscle != null && facts.roles?.[muscle] === 'focus' });
 }
 
 /**
@@ -197,14 +302,21 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     const firstIndex = Math.min(...rows.map(r => Number(r.week_index)).filter(Number.isFinite));
     const baselineRows = rows.filter(r => Number(r.week_index) === firstIndex);
     const toMap = (list) => Object.fromEntries(list.map(r => [r.muscle, r.planned_sets]));
+    const planContext = given !== undefined ? given : await getPlanServeContextForRoutine(workout.routineId);
     const todays = (exercises || []).map(e => ({
       exerciseId: e?.exercise?.id ?? e?.exerciseId ?? null,
       primaryMuscle: e?.exercise?.primaryMuscle ?? e?.primaryMuscle ?? null,
       recommendedSets: e?.routineExercise?.recommendedSets ?? e?.recommendedSets ?? null,
       slotId: e?.routineExercise?.id ?? null,
+      // D219 review fix 1: the exercise in the slot today is held to its own cap.
+      cap: servedSetsCap(e, planContext),
     }));
-    const planContext = given !== undefined ? given : await getPlanServeContextForRoutine(workout.routineId);
-    const allocation = computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows), planContext);
+    const allocation = manualRecoveryWeekSets({
+      facts: planContext?.facts,
+      week,
+      exercises: todays,
+      allocation: computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows), planContext),
+    });
     // planContext rides along (D219 lane R3) so the session's own +1 reads the
     // same plan facts the week was served from; callers read the fields they
     // need, and the `none` shape above is unchanged.

@@ -14,6 +14,7 @@ import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import { applyExerciseSwap } from '../lib/exercise/swapApply';
+import { getCurrentWeekPlanSets } from '../lib/sessionAdjustments';
 import {
   SWAP_SCOPE_OPTIONS, swapScopeHint, slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
   applySessionSwaps,
@@ -247,6 +248,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // slot's routine exercise id, and reaches the workout started from this screen
   // (handleStartWorkout). Leaving the screen drops it; the plan never held it.
   const [sessionSwaps, setSessionSwaps] = useState({});
+  // D219 (design 4.9, review finding 3): { routine exercise id: sets } for the
+  // ACTIVE plan the new planner built, the sets this week serves (the resolver
+  // the logger and the mini bar read); null for every other plan, where the
+  // stored counts are the plan's, as before.
+  const [servedSets, setServedSets] = useState(null);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   // iOS cannot present a second native modal while the first is still up, so
   // the ranked swap sheet must fully dismiss BEFORE the full-library picker is
@@ -412,8 +418,21 @@ export default function RoutineDetailScreen({ navigation, route }) {
       toast.show("Couldn't load this workout, try again", { variant: 'error' });
       return;
     }
+    // D219 (design 4.9: one number everywhere; review finding 3): the stored
+    // count is WEEK 1's. For the active plan the new planner built, each row shows
+    // what this week serves, from getCurrentWeekPlanSets, the logger's own
+    // resolver run on these rows (null for any other plan and on any failure,
+    // which keeps the stored counts as before). The edit sheet below still edits
+    // and records the stored/typed count.
+    let served = null;
+    try {
+      served = user?.id ? await getCurrentWeekPlanSets({ userId: user.id, routineId, rows: withExercises }) : null;
+    } catch (e) {
+      logError('RoutineDetailScreen.servedSets', e, { routineId });
+    }
     setRoutine(r);
     setExercises(withExercises);
+    setServedSets(served);
     setAllExercises(all);
 
     // A4: division fingerprint. Pure re-presentation of the volume overlay
@@ -1292,7 +1311,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   </>
                 ) : (
                   <>
-                    {routineExercise.recommendedSets} sets ·{' '}
+                    {servedSets?.[routineExercise.id] ?? routineExercise.recommendedSets} sets ·{' '}
                     {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                     {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
                   </>

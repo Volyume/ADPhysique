@@ -5180,6 +5180,15 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
     restSec = require('./exercise/swapCarry').restAfterSwap({ oldExercise, newExercise, restSeconds: restSec });
   } catch (_) { /* leave the rest alone; the load is still cleared */ }
 
+  // What this swap does to the plan, read BEFORE the row changes: the plan serves
+  // the slot from the plan as it stands now (D219 review fix 2; see below).
+  let plan = null;
+  try {
+    plan = await readSwapPlanState(d, before?.routineId ?? null, routineExerciseId, oldExercise, newExercise);
+  } catch (e) {
+    logError('database.updateRoutineExerciseExercise.planState', e, { routineExerciseId });
+  }
+
   if (restSec !== (before?.restSec ?? null)) {
     await d.runAsync(
       `UPDATE routine_exercises
@@ -5196,9 +5205,19 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
     );
   }
 
-  let muscleChange = null;
+  // The muscle the slot's sets move between, for the caller's calm note: from the
+  // plan's facts when they were read, else from the corpus alone.
+  let muscleChange = plan?.change ?? null;
+  if (plan == null) {
+    try {
+      // eslint-disable-next-line global-require
+      muscleChange = require('./exercise/swapCarry').slotMuscleChange({ facts: null, routineId: before?.routineId ?? null, oldExercise, newExercise });
+    } catch (_) { muscleChange = null; }
+  }
   try {
-    muscleChange = await carrySwapIntoPlanFacts(d, before?.routineId ?? null, oldExercise, newExercise);
+    // One write: the plan's facts and, for a swap into another muscle, the block's
+    // weekly rows, so the plan is never left half moved.
+    await inOneWrite(d, () => carrySwapIntoPlanFacts(d, plan, before?.routineId ?? null, newExercise));
   } catch (e) {
     logError('database.updateRoutineExerciseExercise.planFacts', e, { routineExerciseId });
   }
@@ -5206,24 +5225,151 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
   return { muscleChange };
 }
 
-// D219 lane A4 (design 4.12, lane brief 3): a permanent swap's effect on the plan's
-// facts. Returns the muscle change for the caller's note (null when the muscle is
-// the same, or unknown). Writes only on a plan the new planner built (version 2),
-// and only the new exercise's slot entry (exercise/swapCarry.planFactsAfterSwap);
-// the write is not scheduled here, the swap's own schedule covers it.
-async function carrySwapIntoPlanFacts(d, routineId, oldExercise, newExercise) {
+// A write that is one transaction, or joins the one it is already inside (the
+// queue behind runInTransaction would wait on its own caller).
+async function inOneWrite(d, task) {
+  if (typeof d.isInTransactionSync === 'function' && d.isInTransactionSync()) return task();
+  return runInTransaction(d, task);
+}
+
+/**
+ * D219 lane A4 (design 4.12, lane brief 3; the phase-close review's finding 2):
+ * everything a permanent swap needs to know about the plan, read BEFORE the row
+ * changes. Returns { programmeId, facts, change, moves }; every part that cannot
+ * be read is absent (null), never an error the swap must fail on.
+ *
+ *  - facts: the plan's facts, only when the new planner built the plan (version 2);
+ *  - change: the { from, to } muscles when the new exercise trains another primary
+ *    muscle, else null;
+ *  - moves: for a swap into another muscle on the ACTIVE plan's running block, the
+ *    sets the slot is served in the current week and in every later week, as the
+ *    plan serves them now (prescribe, per week, on the plan as it stands), with
+ *    each week's two targets. Those are the sets that move: the new exercise gets
+ *    the old slot's sets and the old muscle shows no shortfall. Past weeks keep
+ *    theirs; a plan that is not the active one has no running block, so nothing
+ *    moves and only the facts follow.
+ */
+async function readSwapPlanState(d, routineId, routineExerciseId, oldExercise, newExercise) {
   // eslint-disable-next-line global-require
-  const { planFactsAfterSwap, slotMuscleChange } = require('./exercise/swapCarry');
-  if (!routineId || !newExercise?.id) return null;
+  const { slotMuscleChange } = require('./exercise/swapCarry');
+  const state = { programmeId: null, facts: null, change: null, moves: null };
+  if (!routineId || !newExercise?.id) return state;
   const routine = await d.getFirstAsync('SELECT programme_id AS programmeId FROM routines WHERE id = ?', [routineId]);
-  const programmeId = routine?.programmeId ?? null;
-  const facts = programmeId ? await getProgrammePlanFacts(programmeId) : null;
-  const change = slotMuscleChange({ facts, routineId, oldExercise, newExercise });
-  if (programmeId && facts?.version === 2) {
-    const next = planFactsAfterSwap(facts, { routineId, newExercise });
-    if (next.changed) await setProgrammePlanFacts(programmeId, next.facts, { scheduleSync: false });
+  state.programmeId = routine?.programmeId ?? null;
+  const facts = state.programmeId ? await getProgrammePlanFacts(state.programmeId) : null;
+  state.facts = facts?.version === 2 ? facts : null;
+  state.change = slotMuscleChange({ facts, routineId, oldExercise, newExercise });
+  if (!state.facts || !state.change) return state;
+
+  const programme = await d.getFirstAsync('SELECT user_id AS userId, is_active AS isActive FROM programmes WHERE id = ?', [state.programmeId]);
+  if (!programme?.userId || Number(programme.isActive) !== 1) return state;
+  const current = await getCurrentMesocycleWeek(programme.userId);
+  if (!current?.mesocycleId || current.awaitingDecision || !Number.isFinite(Number(current.weekIndex))) return state;
+  // eslint-disable-next-line global-require
+  const { getPlanServeContextForRoutine } = require('./sessionAdjustments');
+  // eslint-disable-next-line global-require
+  const { prescribeWeek } = require('./plan/prescribe');
+  const context = await getPlanServeContextForRoutine(routineId);
+  if (!Array.isArray(context?.sessions)) return state;
+
+  const weeks = [];
+  for (const week of await getMesocycleWeeks(current.mesocycleId)) {
+    if (Number(week.week_index) < Number(current.weekIndex)) continue;
+    // eslint-disable-next-line no-await-in-loop
+    const rows = await d.getAllAsync('SELECT muscle, planned_sets FROM planned_muscle_volume WHERE mesocycle_week_id = ?', [week.id]);
+    if (!rows.length) continue;
+    const weekTargets = Object.fromEntries(rows.map((r) => [r.muscle, r.planned_sets]));
+    const sets = prescribeWeek({
+      sessions: context.sessions,
+      weekTargets,
+      facts: { exposureShares: state.facts.exposureShares, sessionCaps: state.facts.sessionCaps },
+    }).sets?.[routineExerciseId];
+    if (Number.isFinite(sets) && sets >= 1) {
+      weeks.push({
+        id: week.id,
+        weekIndex: Number(week.week_index),
+        sets,
+        targetFrom: weekTargets[state.change.from],
+        targetTo: weekTargets[state.change.to],
+      });
+    }
   }
-  return change;
+  if (weeks.length) state.moves = { from: state.change.from, to: state.change.to, current: Number(current.weekIndex), weeks };
+  return state;
+}
+
+// D219 lane A4 (design 4.12, lane brief 3; review fix 2): the write half of a
+// permanent swap, inside ONE transaction. Writes only on a plan the new planner
+// built (version 2): the new exercise's slot entry (exercise/swapCarry.
+// planFactsAfterSwap) and, for a swap into another muscle on a running block, the
+// slot's sets moved between the two muscles' weekly rows, its share of each muscle
+// moved in the facts the same way (moveSlotShares) and the facts' own record of
+// every week's targets with them (moveWeeklyTargets). The write is not scheduled
+// here, the swap's own schedule covers it.
+async function carrySwapIntoPlanFacts(d, state, routineId, newExercise) {
+  // eslint-disable-next-line global-require
+  const { planFactsAfterSwap, moveSlotShares, moveWeeklyTargets } = require('./exercise/swapCarry');
+  if (!state?.programmeId || !state.facts || !routineId || !newExercise?.id) return;
+  const base = await getProgrammePlanFacts(state.programmeId);
+  if (base?.version !== 2) return;
+  let next = planFactsAfterSwap(base, { routineId, newExercise }).facts;
+  const moves = state.moves;
+  if (moves && await moveSlotSetsInBlock(d, moves)) {
+    const week = moves.weeks.find((w) => w.weekIndex === moves.current) ?? moves.weeks[0];
+    const shares = moveSlotShares(next.exposureShares, {
+      sessionId: routineId, from: moves.from, to: moves.to, sets: week.sets, targetFrom: week.targetFrom, targetTo: week.targetTo,
+    });
+    const targets = moveWeeklyTargets(next.weeklyTargets, {
+      from: moves.from, to: moves.to, moves: moves.weeks.map(({ weekIndex, sets }) => ({ weekIndex, sets })),
+    });
+    next = {
+      ...next,
+      ...(shares !== next.exposureShares ? { exposureShares: shares } : {}),
+      ...(targets !== next.weeklyTargets ? { weeklyTargets: targets } : {}),
+    };
+  }
+  if (next !== base) await setProgrammePlanFacts(state.programmeId, next, { scheduleSync: false });
+}
+
+// The block's weekly rows for a slot's sets moving from muscle `from` to `to`:
+// each week's served sets leave `from`'s planned_sets (never below zero) and join
+// `to`'s (a row is made for a muscle the week has none for, with the landmark
+// band). Rows keep their band and source. Never raises what an injury protocol is
+// holding down (a reintroduction ramp, or a muscle blocked in the block, mrv 0:
+// the rule the keep-block rebuild keeps), so a protective destination moves
+// nothing at all. Returns whether the sets moved.
+async function moveSlotSetsInBlock(d, { from, to, weeks }) {
+  // eslint-disable-next-line global-require
+  const { VOLUME_LANDMARKS } = require('./algorithms');
+  const band = VOLUME_LANDMARKS[to];
+  const found = [];
+  for (const week of weeks) {
+    // eslint-disable-next-line no-await-in-loop
+    const rows = await d.getAllAsync(
+      'SELECT id, muscle, planned_sets, source, mrv FROM planned_muscle_volume WHERE mesocycle_week_id = ? AND muscle IN (?, ?)',
+      [week.id, from, to],
+    );
+    const toRow = rows.find((r) => r.muscle === to) ?? null;
+    if (toRow ? (toRow.source === 'reintroduction' || Number(toRow.mrv) <= 0) : !(band && band.mrv > 0)) return false;
+    found.push({ week, fromRow: rows.find((r) => r.muscle === from) ?? null, toRow });
+  }
+  const now = Date.now();
+  for (const { week, fromRow, toRow } of found) {
+    if (fromRow) {
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync('UPDATE planned_muscle_volume SET planned_sets = ?, updated_at = ? WHERE id = ?', [Math.max(0, fromRow.planned_sets - week.sets), now, fromRow.id]);
+    }
+    if (toRow) {
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync('UPDATE planned_muscle_volume SET planned_sets = ?, updated_at = ? WHERE id = ?', [toRow.planned_sets + week.sets, now, toRow.id]);
+    } else {
+      // eslint-disable-next-line no-await-in-loop
+      await upsertPlannedMuscleVolumeInTx(d, {
+        mesocycleWeekId: week.id, muscle: to, plannedSets: week.sets, mev: band.mev, mav: band.mav, mrv: band.mrv, source: 'engine',
+      });
+    }
+  }
+  return true;
 }
 
 export async function getAllRoutineExerciseCounts() {
@@ -6624,6 +6770,256 @@ export async function upsertPlannedMuscleVolume(args) {
   const d = await db();
   await upsertPlannedMuscleVolumeInTx(d, args);
   _scheduleSync();
+}
+
+// D219 lane C1b (register D219, "Build rulings" 3, 4 and 5): rows the v2
+// keep-block rebuild never rewrites. A muscle the capability lane is easing
+// back in carries source 'reintroduction' (capability/reintroduction.js), and a
+// muscle blocked in the block carries mrv 0 (generateInitialPlannedVolume): a
+// rebuilt plan must never raise what an injury protocol is holding down.
+const REBUILD_KEEPS_SOURCES = new Set(['reintroduction']);
+
+/**
+ * D219 lane C1b (founder Q1 = A, register D219 "Build rulings" 3 to 5, design
+ * section 8): the v2 keep-block writer. It rebuilds the plan a person is
+ * following WITHOUT touching the block they are in. Ruling 4: "D140:
+ * activatePlanKeepingBlock and its guard stay exactly as they are for today's
+ * keep-block rebuild. The Q1 = A rebuild uses a NEW v2 path that keeps the
+ * block and its weeks, rewrites the targets for the current and later weeks
+ * only, and writes the plan facts. A running block keeps its stored effort
+ * ladder; the new ladder applies to new blocks." This is that path.
+ *
+ * It is ONE transaction. Every read that decides the write (the running block,
+ * its current week, its stored ladder) happens before it, every write happens
+ * inside it, and any throw rolls all of it back, so a failure leaves the plan,
+ * its routines and exercises, its facts and every planned-volume row exactly as
+ * they were (the caller logs it and never blocks the session).
+ *
+ * Two modes, by what the plan is:
+ *  - 'new_programme' (a GENERATED plan, which is a new programme row on every
+ *    build, register ruling 1): `programme` {name, description} and `workouts`
+ *    (in rotation order: {sessionKey, name, splitType, exercises: [{exerciseId,
+ *    repMin, repMax, notes, sets, restSec, selectionReason, thinEquipment,
+ *    muscle, kind, credits}]}) are written as new rows and activated, and ONLY
+ *    the replaced plan is archived (never the person's other saved plans), kept
+ *    so it can be restored;
+ *  - 'in_place' (a LIBRARY, KIT or MANUAL plan, which keeps its own rows):
+ *    `programmeId` must be the person's active plan, and `routines`
+ *    ([{routineId, position, exercises: [{routineExerciseId, sets}]}]) set only
+ *    recommended sets and routine order on the rows that exist. Reps, rest,
+ *    notes, load and supersets are never written here.
+ * Both: `buildFacts({routineIdBySession, thinByRoutine, slotsByRoutine})`
+ * returns the plan's facts (the writer stores them, and replaces their
+ * `rirLadder` with the running block's stored ladder: the new ladder is for
+ * new blocks); `weeklyTargets` {muscle: [week 1 .. recovery week]} are the
+ * direct sets written to the block's rows for the current and later weeks only
+ * (the recovery week takes the last entry); `band` {muscle: {mev, mav, mrv}} is
+ * optional and replaces a row's band only where given.
+ *
+ * No active block: the plan rows and facts are written and no week row is,
+ * and no block is created (a block exists only by the person's own activation).
+ * The block's current week unreadable: the whole rebuild is refused.
+ *
+ * Returns { programmeId, blockId, rowsWritten, routineIdBySession }.
+ */
+export async function rebuildPlanKeepingBlockV2(userId, spec) {
+  const newProgramme = spec?.mode === 'new_programme';
+  if (!userId || !spec || (!newProgramme && spec.mode !== 'in_place')) {
+    throw new Error('rebuildPlanKeepingBlockV2: needs a user and a spec with mode new_programme or in_place');
+  }
+  if (typeof spec.buildFacts !== 'function') {
+    throw new Error('rebuildPlanKeepingBlockV2: needs buildFacts');
+  }
+  const d = await db();
+
+  // The block that is kept, read before the write. Its current week decides
+  // which rows are rewritten; a block whose current week cannot be read is not
+  // guessed at.
+  const block = await d.getFirstAsync(
+    'SELECT id, rir_ladder FROM mesocycles WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1',
+    [userId],
+  );
+  let fromWeekIndex = null;
+  let weeks = [];
+  let storedLadder = null;
+  if (block?.id) {
+    const current = await getCurrentMesocycleWeek(userId);
+    const index = Number(current?.weekIndex);
+    if (!Number.isFinite(index)) {
+      throw new Error('rebuildPlanKeepingBlockV2: the current week of the running block cannot be read');
+    }
+    fromWeekIndex = index;
+    weeks = await getMesocycleWeeks(block.id);
+    try {
+      const parsed = JSON.parse(block.rir_ladder);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((n) => Number.isFinite(n))) storedLadder = parsed;
+    } catch (_) { /* an unreadable stored ladder: the facts keep the builder's own */ }
+  }
+
+  const written = await runInTransaction(d, async () => {
+    const routineIdBySession = {};
+    const thinByRoutine = {};
+    const slotsByRoutine = {};
+    let programmeId;
+
+    if (newProgramme) {
+      const replaced = await d.getAllAsync(
+        'SELECT id FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL)',
+        [userId],
+      );
+      const programme = await createProgramme(
+        userId, spec.programme?.name ?? 'Your plan', spec.programme?.description ?? '', 0, null, null, null, false,
+      );
+      programmeId = programme.id;
+      // Routines in the planner's rotation order: createRoutine gives each the
+      // next position, so the position IS the rotation position.
+      for (const workout of Array.isArray(spec.workouts) ? spec.workouts : []) {
+        const routine = await createRoutine(
+          userId, workout.name, null, workout.splitType ?? null, 0, null, programmeId, false, false,
+        );
+        if (workout.sessionKey != null) routineIdBySession[workout.sessionKey] = routine.id;
+        const list = Array.isArray(workout.exercises) ? workout.exercises : [];
+        for (let i = 0; i < list.length; i++) {
+          const ex = list[i];
+          await addExerciseToRoutine(
+            routine.id, ex.exerciseId, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+            null, ex.restSec ?? null, null, false, ex.selectionReason ?? null,
+          );
+          if (ex.thinEquipment === true) {
+            if (!thinByRoutine[routine.id]) thinByRoutine[routine.id] = [];
+            thinByRoutine[routine.id].push(ex.exerciseId);
+          }
+          // The planner's own model of the slot, by the id actually written. An
+          // exercise in a session twice keeps its first slot.
+          if (!slotsByRoutine[routine.id]) slotsByRoutine[routine.id] = {};
+          if (!Object.prototype.hasOwnProperty.call(slotsByRoutine[routine.id], ex.exerciseId)) {
+            slotsByRoutine[routine.id][ex.exerciseId] = {
+              muscle: ex.muscle, kind: ex.kind, credits: { ...(ex.credits ?? {}) },
+            };
+          }
+        }
+      }
+      // Activation, inline: setActivePlan opens its own transaction and a nested
+      // one deadlocks the queue. Same statements, same ownership scope.
+      const now = Date.now();
+      // Only the rows that ARE active are deactivated: a saved plan is not touched
+      // (setActivePlan also stamps every other row; an automatic rebuild must not).
+      await d.runAsync('UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ? AND is_active = 1', [now, userId]);
+      await d.runAsync(
+        'UPDATE programmes SET is_active = 1, is_archived = 0, updated_at = ? WHERE id = ? AND user_id = ?',
+        [now, programmeId, userId],
+      );
+      // Only the plan this one replaces is archived: kept, restorable, and the
+      // person's other saved plans are never touched by an automatic rebuild.
+      for (const old of replaced) {
+        if (old.id === programmeId) continue;
+        await d.runAsync('UPDATE programmes SET is_archived = 1, updated_at = ? WHERE id = ? AND user_id = ?', [now, old.id, userId]);
+      }
+    } else {
+      programmeId = spec.programmeId;
+      const plan = programmeId
+        ? await d.getFirstAsync('SELECT id FROM programmes WHERE id = ? AND user_id = ? AND is_active = 1', [programmeId, userId])
+        : null;
+      if (!plan?.id) throw new Error('rebuildPlanKeepingBlockV2: the plan is not the active plan of this user');
+      const now = Date.now();
+      for (const routine of Array.isArray(spec.routines) ? spec.routines : []) {
+        const mine = await d.getFirstAsync(
+          'SELECT id, position FROM routines WHERE id = ? AND programme_id = ? AND user_id = ?',
+          [routine.routineId, programmeId, userId],
+        );
+        if (!mine?.id) throw new Error('rebuildPlanKeepingBlockV2: a routine is not part of the plan');
+        if (Number.isFinite(routine.position) && routine.position !== mine.position) {
+          await d.runAsync('UPDATE routines SET position = ?, updated_at = ? WHERE id = ?', [routine.position, now, mine.id]);
+        }
+        for (const row of Array.isArray(routine.exercises) ? routine.exercises : []) {
+          const sets = Math.round(Number(row.sets));
+          if (!(sets >= 1)) throw new Error('rebuildPlanKeepingBlockV2: a set count is not usable');
+          const res = await d.runAsync(
+            'UPDATE routine_exercises SET recommended_sets = ?, updated_at = ? WHERE id = ? AND routine_id = ? AND deleted_at IS NULL',
+            [sets, now, row.routineExerciseId, mine.id],
+          );
+          if (res?.changes !== 1) throw new Error('rebuildPlanKeepingBlockV2: an exercise row is not part of the routine');
+        }
+      }
+    }
+
+    // The plan's facts, in the same transaction as the rows they describe. The
+    // running block's own stored ladder replaces the builder's (ruling 4).
+    const facts = spec.buildFacts({ routineIdBySession, thinByRoutine, slotsByRoutine });
+    if (!facts || typeof facts !== 'object' || Array.isArray(facts)) {
+      throw new Error('rebuildPlanKeepingBlockV2: buildFacts gave no facts');
+    }
+    await setProgrammePlanFacts(
+      programmeId,
+      storedLadder ? { ...facts, rirLadder: storedLadder } : facts,
+      { scheduleSync: false },
+    );
+
+    // The targets: the block's current and later weeks only, past weeks never.
+    let rowsWritten = 0;
+    if (block?.id) {
+      // eslint-disable-next-line global-require
+      const { VOLUME_LANDMARKS } = require('./algorithms');
+      const now = Date.now();
+      for (const week of weeks ?? []) {
+        const weekIndex = Number(week.week_index ?? week.weekIndex);
+        if (!(weekIndex >= fromWeekIndex)) continue;
+        const recovery = Number(week.is_deload ?? week.isDeload) === 1;
+        for (const [muscle, targets] of Object.entries(spec.weeklyTargets ?? {})) {
+          if (!Array.isArray(targets) || targets.length === 0) continue;
+          // A recovery week takes the plan's last entry, an accumulation week its
+          // own: a block whose week count differs never gets a peak in its
+          // recovery week or the recovery value in a working week.
+          const raw = recovery
+            ? targets[targets.length - 1]
+            : targets[Math.min(weekIndex, Math.max(1, targets.length - 1)) - 1];
+          if (!Number.isFinite(raw)) continue;
+          const planned = Math.max(0, Math.round(raw));
+          const id = `pmv_${week.id}_${muscle}`;
+          const existing = await d.getFirstAsync('SELECT id, source, mrv FROM planned_muscle_volume WHERE id = ?', [id]);
+          const band = spec.band?.[muscle] ?? null;
+          if (existing) {
+            if (REBUILD_KEEPS_SOURCES.has(existing.source) || existing.mrv === 0) continue;
+            if (band) {
+              await d.runAsync(
+                'UPDATE planned_muscle_volume SET planned_sets = ?, mev = ?, mav = ?, mrv = ?, source = ?, updated_at = ? WHERE id = ?',
+                [planned, band.mev, band.mav, band.mrv, 'template', now, id],
+              );
+            } else {
+              await d.runAsync(
+                'UPDATE planned_muscle_volume SET planned_sets = ?, source = ?, updated_at = ? WHERE id = ?',
+                [planned, 'template', now, id],
+              );
+            }
+          } else {
+            const landmarks = band ?? VOLUME_LANDMARKS[muscle];
+            if (!landmarks) continue;
+            await d.runAsync(
+              `INSERT INTO planned_muscle_volume (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [id, week.id, muscle, planned, landmarks.mev, landmarks.mav, landmarks.mrv, 'template', now, now],
+            );
+          }
+          rowsWritten += 1;
+        }
+      }
+    }
+    return { programmeId, rowsWritten, routineIdBySession };
+  });
+
+  _scheduleSync();
+  if (newProgramme) {
+    // Same reminder refresh a plan swap performs: the push copy names the plan
+    // the Train tab shows. Best-effort; the rebuild never fails on it.
+    try {
+      const active = await getActivePlan(userId).catch(() => null);
+      // eslint-disable-next-line global-require
+      require('./notifications/trainingReminders')
+        .scheduleTrainingReminders(active?.name)
+        .catch(() => {});
+    } catch (_) { /* notifications layer unavailable -- reminders refresh on next schedule */ }
+  }
+  return { ...written, blockId: block?.id ?? null };
 }
 
 // Stage 6 (2026-08-09): the dead createMesocycle function is DELETED. It

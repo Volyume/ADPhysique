@@ -34,6 +34,8 @@ import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt, BL
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+// D219 lane C1b: the first open of an active plan the new planner did not build rebuilds it.
+import { ensureActivePlanRebuilt } from '../lib/planRebuild';
 // CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
 // runs the capability pre-flight first - never a silent fail-open.
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
@@ -346,6 +348,9 @@ export default function PlansScreen({ navigation }) {
     if (!user?.id) return;
     const req = ++ledgerLoadRef.current;
     try {
+      // D219 lane C1b (founder Q1 = A): once per plan, never throws, a failure leaves
+      // the plan exactly as it was; a no-op on every later open.
+      await ensureActivePlanRebuilt(user.id);
       const [active, all, archived, tmpl, pwc, exc, block, folderRows] = await Promise.all([
         getActivePlan(user.id),
         getAllPlansForUser(user.id),

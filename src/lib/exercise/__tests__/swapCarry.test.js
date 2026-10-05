@@ -34,7 +34,7 @@ const { SWAP_SCOPE } = require('../swapScope');
 const {
   slotMuscleOf, slotFactsFor, restAfterSwap, carryPrescription, carriedSetCount,
   planFactsAfterSwap, slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
-  applySessionSwaps, SWAP_SCOPE_OPTIONS, swapScopeHint,
+  applySessionSwaps, SWAP_SCOPE_OPTIONS, swapScopeHint, moveSlotShares, moveWeeklyTargets,
 } = require('../swapCarry');
 
 const ex = (id, name, primaryMuscle, equipmentCategory, compoundIsolation, extra = {}) => (
@@ -253,5 +253,63 @@ describe('a one-off made on the plan screen reaches the workout started from the
     expect(applySessionSwaps(rows, { gone: { exercise: LEG_EXT } })).toEqual(rows);
     expect(applySessionSwaps(rows, null)).toBe(rows);
     expect(applySessionSwaps(null, { re1: { exercise: LEG_EXT } })).toEqual([]);
+  });
+});
+
+describe('a permanent swap into another muscle moves the slot\'s sets, in the plan\'s facts too (review finding 2)', () => {
+  // The review's case: quads 10 sets in week 5 (Lower A 4, Lower B 6, of which the
+  // Leg Extension's 2), glutes 6 (3 and 3). The Leg Extension becomes a glute exercise.
+  const SHARES = { quads: { A: 0.4, B: 0.6 }, glutes: { A: 0.5, B: 0.5 }, back: { A: 0.5, B: 0.5 } };
+
+  test('the slot\'s share leaves the old muscle and joins the new one, each muscle\'s shares still sum to 1', () => {
+    const before = JSON.stringify(SHARES);
+    const out = moveSlotShares(SHARES, { sessionId: 'B', from: 'quads', to: 'glutes', sets: 2, targetFrom: 10, targetTo: 6 });
+    expect(out.quads.A).toBeCloseTo(0.5, 9);
+    expect(out.quads.B).toBeCloseTo(0.5, 9);
+    expect(out.glutes.A).toBeCloseTo(0.375, 9);
+    expect(out.glutes.B).toBeCloseTo(0.625, 9);
+    for (const m of ['quads', 'glutes']) expect(Object.values(out[m]).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+    // Every other muscle is as it was, and the input is never mutated.
+    expect(out.back).toEqual(SHARES.back);
+    expect(JSON.stringify(SHARES)).toBe(before);
+  });
+
+  test('a session the new muscle had no share in gets one', () => {
+    const out = moveSlotShares({ glutes: { A: 1 }, quads: { A: 0.5, B: 0.5 } }, { sessionId: 'B', from: 'quads', to: 'glutes', sets: 2, targetFrom: 8, targetTo: 6 });
+    expect(out.glutes.A).toBeCloseTo(0.75, 9);
+    expect(out.glutes.B).toBeCloseTo(0.25, 9);
+  });
+
+  test('a muscle with no stored shares is left to the slot weights, and a muscle with nothing left loses its entry', () => {
+    const out = moveSlotShares({ quads: { B: 1 } }, { sessionId: 'B', from: 'quads', to: 'glutes', sets: 4, targetFrom: 4, targetTo: 0 });
+    expect(out.glutes).toBeUndefined();
+    expect(out.quads).toBeUndefined();
+  });
+
+  test('nothing moves for no sets, no target, the same muscle or shares that are not a map', () => {
+    for (const args of [
+      { sessionId: 'B', from: 'quads', to: 'glutes', sets: 0, targetFrom: 10, targetTo: 6 },
+      { sessionId: 'B', from: 'quads', to: 'quads', sets: 2, targetFrom: 10, targetTo: 10 },
+      { sessionId: 'B', from: 'quads', to: 'glutes', sets: 2, targetFrom: 0, targetTo: 0 },
+    ]) expect(moveSlotShares(SHARES, args)).toBe(SHARES);
+    expect(moveSlotShares(null, { sessionId: 'B', from: 'quads', to: 'glutes', sets: 2, targetFrom: 10, targetTo: 6 })).toBeNull();
+    expect(moveSlotShares(undefined, { sessionId: 'B', from: 'quads', to: 'glutes', sets: 2, targetFrom: 10, targetTo: 6 })).toBeUndefined();
+  });
+
+  test('the facts\' weekly targets move by each week\'s own sets, for the weeks given only', () => {
+    const targets = { quads: [6, 8, 9, 10, 10, 5], glutes: [4, 5, 5, 6, 6, 3], back: [6, 6, 6, 6, 6, 3] };
+    const before = JSON.stringify(targets);
+    const out = moveWeeklyTargets(targets, { from: 'quads', to: 'glutes', moves: [{ weekIndex: 5, sets: 2 }, { weekIndex: 6, sets: 1 }] });
+    expect(out.quads).toEqual([6, 8, 9, 10, 8, 4]);
+    expect(out.glutes).toEqual([4, 5, 5, 6, 8, 4]);
+    expect(out.back).toBe(targets.back);
+    expect(JSON.stringify(targets)).toBe(before);
+  });
+
+  test('a target never goes below zero, a muscle with no targets is skipped, and no moves change nothing', () => {
+    const targets = { quads: [1, 1, 1, 1, 1, 1] };
+    expect(moveWeeklyTargets(targets, { from: 'quads', to: 'glutes', moves: [{ weekIndex: 1, sets: 3 }] }).quads[0]).toBe(0);
+    expect(moveWeeklyTargets(targets, { from: 'quads', to: 'glutes', moves: [] })).toBe(targets);
+    expect(moveWeeklyTargets(null, { from: 'quads', to: 'glutes', moves: [{ weekIndex: 1, sets: 3 }] })).toBeNull();
   });
 });

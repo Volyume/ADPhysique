@@ -1623,10 +1623,14 @@ async function plannerV2KeptExercises({
  */
 async function resolvePlannerV2Plan({
   userId, plan, choices, equipment, allExercises, filteredLibrary, intentState, continuityProposal = null,
+  // D219 lane C1b: the incumbents continuity compares against, when the caller
+  // has narrowed them (a rebuild that replaces a generator pick). Null: read the
+  // person's current plan, exactly as every other caller does.
+  incumbents = null,
 }) {
   const generated = { ...plan, workouts: plannerV2WorkoutsForWrite(plan, choices) };
   const continuity = await withContinuity(
-    userId, generated, allExercises, intentState, filteredLibrary, continuityProposal, equipment,
+    userId, generated, allExercises, intentState, filteredLibrary, continuityProposal, equipment, incumbents,
   );
   const resolution = resolvePlanAgainstLibrary(
     { ...plan, workouts: continuity.workouts },
@@ -2016,6 +2020,129 @@ async function saveWithPlannerV2({
       }
     }
     return { ok: false, error: e?.message ?? 'DB write failed' };
+  }
+}
+
+/**
+ * D219 lane C1b (register D219 "Build rulings" 5; founder Q1 = A): what the new
+ * planner builds for a GENERATED plan a person already follows, without writing
+ * anything. "A GENERATED plan is rebuilt by the new planner at the person's next
+ * session (structure search), keeping their week, days and every exercise they
+ * chose": the same inputs, the same kept exercises (continuity's own verdicts,
+ * plannerV2KeptExercises), the same planner and the same resolution pass as the
+ * save (saveWithPlannerV2), with the person's DAYS fixed at what they follow now
+ * (`daysPerWeek`, the plan's routine count) and nothing else different. The
+ * block, and so the week position, is kept by the writer
+ * (database.rebuildPlanKeepingBlockV2), not here.
+ *
+ * Read-only and total: it never throws and never writes. It answers
+ * `{ ok: true, inputs, plan, resolved, planName }` for the writer, or
+ * `{ ok: false, reason }` when this plan must stay exactly as it is:
+ *   profile_incomplete  no training goal to build from (retried later, not final)
+ *   days_not_kept       the planner cannot hold the person's days (a beginner's
+ *                       cap of 4, a count outside 2 to 6, or a session that
+ *                       resolved to nothing): a plan is never rebuilt over
+ *                       different days than the person's
+ *   style_plan          a kettlebell or circuit template keeps its own pool; the
+ *                       planner cannot build it
+ *   no_catalogue, no_plan, nothing_resolved   nothing to build from or to write
+ *   error               anything threw (`error` carries it, for the caller to log)
+ */
+export async function planGeneratedRebuildV2({ userId, profile, daysPerWeek, replaceIds = null }) {
+  try {
+    const base = buildPlanInputs(profile);
+    if (!base) return { ok: false, reason: 'profile_incomplete' };
+    const inputs = { ...base, daysPerWeek };
+    if (plannerV2SessionCount(inputs) !== daysPerWeek) return { ok: false, reason: 'days_not_kept' };
+    let styleKey = null;
+    try {
+      styleKey = styleKeyFromTags((await getActivePlan(userId))?.tags);
+    } catch (_) { styleKey = null; }
+    if (styleKey) return { ok: false, reason: 'style_plan' };
+
+    const allExercises = await getAllExercises();
+    const intentState = await loadGenerationIntent(userId);
+    const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+    const generationLibrary = libraryForReviewedProposal(filteredLibrary, reviewedReplacementIds(null));
+    // `replaceIds`: the generator's own picks outside the catalogue (the caller
+    // decides which: the person's own and trained exercises never are). They are
+    // neither handed to the planner as kept nor offered to continuity as
+    // incumbents, so the catalogue's choice for their job takes their place.
+    const drop = replaceIds instanceof Set && replaceIds.size > 0 ? replaceIds : null;
+    const keptAll = await plannerV2KeptExercises({
+      userId, allExercises, intentState, filteredLibrary, continuityProposal: null, equipment: inputs.equipment,
+    });
+    const kept = drop ? keptAll.filter((row) => !drop.has(row.id)) : keptAll;
+    const built = await buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExercises, kept);
+    if (!built) return { ok: false, reason: 'no_catalogue' };
+    if (!built.plan?.workouts?.length || !built.plan.v2) return { ok: false, reason: 'no_plan' };
+    if (built.plan.workouts.length !== daysPerWeek) return { ok: false, reason: 'days_not_kept' };
+    const resolved = await resolvePlannerV2Plan({
+      userId,
+      plan: built.plan,
+      choices: built.choices,
+      equipment: inputs.equipment,
+      allExercises,
+      filteredLibrary,
+      intentState,
+      continuityProposal: null,
+      incumbents: drop ? (await loadIncumbentSlots(userId)).filter((i) => !drop.has(i.exerciseId)) : null,
+    });
+    if (resolved.totalResolved === 0) return { ok: false, reason: 'nothing_resolved' };
+    if (resolved.workouts.length !== daysPerWeek) return { ok: false, reason: 'days_not_kept' };
+    const planName = await makeUniquePlanName(userId, built.plan.name ?? 'Your plan');
+    return { ok: true, inputs, plan: built.plan, resolved, planName };
+  } catch (error) {
+    return { ok: false, reason: 'error', error };
+  }
+}
+
+/**
+ * D219 lane C1b (register D219 "Build rulings" 5): what the new planner builds
+ * for a LIBRARY or KIT plan a person already follows, without writing anything:
+ * "a LIBRARY or KIT plan keeps its authored sessions and exercises, and the new
+ * planner sets its sets, climb and order around them (a fixed-structure mode)".
+ * `fixedSessions` is the plan's own structure in the planner's shape
+ * ([{ name, routineId, exercises: [{ exerciseId, name, muscle, kind,
+ * credits }] }], in the plan's order), built by the caller from the rows that
+ * exist; the planner's output carries each session's routineId and each
+ * exercise's exerciseId so the writer can map it back onto those rows. The
+ * person's profile supplies the same inputs a new plan is built with; the
+ * person's days are the sessions they have.
+ *
+ * Read-only and total, like planGeneratedRebuildV2: `{ ok: true, inputs, plan }`
+ * or `{ ok: false, reason }` (profile_incomplete, or error with `error`).
+ */
+export async function planFixedRebuildV2({ userId, profile, fixedSessions }) {
+  try {
+    const inputs = buildPlanInputs(profile);
+    if (!inputs) return { ok: false, reason: 'profile_incomplete' };
+    // eslint-disable-next-line global-require
+    const { buildPlan } = require('./plan/planner');
+    const sessions = Array.isArray(fixedSessions) ? fixedSessions : [];
+    const firstBlock = await plannerV2FirstBlock(userId);
+    const focusMuscles = resolveWeakPointKeys((inputs.weakPoints ?? []).slice(0, 3));
+    const { learnedFactor, ownGaps } = await plannerV2Personalisation(userId, { ...inputs, daysPerWeek: sessions.length });
+    const plan = buildPlan({
+      daysPerWeek: sessions.length,
+      sessionLengthMinutes: inputs.sessionLengthMinutes,
+      equipment: inputs.equipment,
+      goal: inputs.goal,
+      experience: inputs.experience,
+      nutritionPhase: inputs.nutritionPhase,
+      recoveryRating: inputs.recoveryRating,
+      focusMuscles,
+      addedMuscles: [],
+      firstBlock,
+      learnedFactor,
+      ownGaps,
+      divisionMatrix: DIVISION_MATRIX,
+      isStrength: inputs.phase === 'strength_size',
+      fixedSessions: sessions,
+    });
+    return { ok: true, inputs, plan };
+  } catch (error) {
+    return { ok: false, reason: 'error', error };
   }
 }
 

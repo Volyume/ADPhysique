@@ -49,6 +49,10 @@ import { useToast } from '../components/Toast';
 import { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
+// D219 lane C1b: a plan the new planner did not build is rebuilt once at the first
+// open (before anything below reads it), with a one-time note of what changed.
+import PlanRebuildNote from '../components/PlanRebuildNote';
+import { ensureActivePlanRebuilt } from '../lib/planRebuild';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
@@ -521,6 +525,11 @@ export default function HomeScreen({ navigation, route }) {
     // their own errors, but Promise.all rejects on the first unhandled
     // throw and would otherwise skip setInitialLoading(false).
     try {
+      // D219 lane C1b (founder Q1 = A): the first open of an active plan whose facts
+      // are not version 2 rebuilds it by its kind, so every loader below reads the
+      // plan that is there. Once per plan, never throws, a failure leaves the plan
+      // exactly as it was; a no-op on every later open.
+      if (user?.id) await ensureActivePlanRebuilt(user.id);
       await Promise.all([
         loadWeekStats(),
         loadNextWorkout(),
@@ -2739,6 +2748,11 @@ export default function HomeScreen({ navigation, route }) {
             onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
           />
         )}
+
+        {/* D219 lane C1b: the one-time note of what changed after the plan was
+            rebuilt at its first open. Renders nothing when there is none, and
+            nothing after the person dismisses it. */}
+        {!initialLoading && <PlanRebuildNote userId={user?.id} reloadKey={activePlan?.id ?? null} />}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (

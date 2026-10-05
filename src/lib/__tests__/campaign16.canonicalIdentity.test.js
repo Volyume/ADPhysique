@@ -214,10 +214,18 @@ describe('C16-9 the dry run and the commit agree, by construction', () => {
     // save and the dry-run twin (one definition, two call sites), so the verdicts
     // that decide in the preview are still the verdicts that decide in the save.
     expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(4);
+    // D219 lane C1b (founder Q1 = A, register D219 build ruling 5) re-pinned
+    // both counts below from 2 to 3: the next-session rebuild of a GENERATED plan
+    // (planGeneratedRebuildV2) builds with the SAME kept-exercise pass and the
+    // SAME resolution pass, once each, so the verdicts and the resolution that
+    // decide in the save and the preview are the ones that decide in the rebuild.
+    // Still one definition each; the rebuild only reads (it writes through
+    // database.rebuildPlanKeepingBlockV2), and it adds no caller of withContinuity
+    // or resolvePlanAgainstLibrary of its own (the two counts above are unchanged).
     expect(src.match(/function plannerV2KeptExercises/g)).toHaveLength(1);
-    expect(src.match(/(?<!function )plannerV2KeptExercises\(/g)).toHaveLength(2);
+    expect(src.match(/(?<!function )plannerV2KeptExercises\(/g)).toHaveLength(3);
     expect(src.match(/function resolvePlannerV2Plan/g)).toHaveLength(1);
-    expect(src.match(/(?<!function )resolvePlannerV2Plan\(/g)).toHaveLength(2);
+    expect(src.match(/(?<!function )resolvePlannerV2Plan\(/g)).toHaveLength(3);
   });
 
   test('the preview contains exactly the exercises the commit writes, with the same ids', async () => {
