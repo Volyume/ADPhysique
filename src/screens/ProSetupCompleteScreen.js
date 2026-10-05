@@ -17,12 +17,17 @@ import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
-import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
+import {
+  getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag,
+  getProgrammePlanFacts, getRoutineExercisesWithDetails,
+} from '../lib/database';
 import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
 import { firstReviewUnlockDate } from '../lib/trialActivation';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+import { explainPlan, sessionsFromRoutines } from '../lib/plan/explain';
+import PlanExplainLines from '../components/PlanExplainLines';
 import { planReady } from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
@@ -67,6 +72,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // the user should reach Start training before reading every rationale line.
   const [planOpen, setPlanOpen] = useState(false);
   const [whyThis, setWhyThis] = useState(null);
+  // D219 lane B5 (design section 6): for a plan the new planner built, the lines
+  // that say what the plan did and why, computed from its own facts. Null for
+  // every other plan, which keeps the rationale it showed before.
+  const [explainLines, setExplainLines] = useState(null);
+  const sessionLengthMinutes = userProfile?.sessionLengthMinutes ?? null;
   // Optional head start: build the first week of meals from the targets shown
   // above (founder 2026-06-15). It persists, so it's waiting in Meal planning
   // when the user enters the app.
@@ -200,6 +210,25 @@ export default function ProSetupCompleteScreen({ navigation }) {
           setPlanName(active.name);
           const routines = await getRoutinesForPlan(active.id);
           setPlanRoutines(routines || []);
+          // D219 lane B5: its own try, so a plan without readable facts shows
+          // the rationale below exactly as before and never blocks it.
+          try {
+            const facts = await getProgrammePlanFacts(active.id);
+            if (facts?.version === 2) {
+              const withRows = [];
+              for (const routine of routines || []) {
+                // eslint-disable-next-line no-await-in-loop
+                withRows.push({ routine, rows: await getRoutineExercisesWithDetails(routine.id) });
+              }
+              const explained = explainPlan({
+                facts,
+                sessions: sessionsFromRoutines(facts, withRows),
+                week: 1,
+                sessionLengthMinutes,
+              });
+              if (explained?.lines?.length) setExplainLines(explained.lines);
+            }
+          } catch (_) { /* the reveal keeps the rationale it showed before */ }
         }
         const raw = await AsyncStorage.getItem(PLAN_WHYTHIS_KEY(user.id));
         if (raw) {
@@ -208,7 +237,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
         }
       } catch (_) {}
     })();
-  }, [user?.id]);
+  }, [user?.id, sessionLengthMinutes]);
 
   async function handleStart() {
     await completeFirstRun();
@@ -378,7 +407,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={[styles.splitList, live.splitList]}>
                 {/* The richer engine rationale supersedes the one-line split
                     note when it's available. */}
-                {!whyThis && planRoutines[0]?.split_type ? (
+                {!explainLines && !whyThis && planRoutines[0]?.split_type ? (
                   <Text style={[styles.splitWhy, live.splitWhy]}>{getSplitRationale(planRoutines[0].split_type)}</Text>
                 ) : null}
                 {planRoutines.map((r, i) => (
@@ -389,7 +418,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     <Text style={[styles.splitName, live.splitName]}>{r.name}</Text>
                   </View>
                 ))}
-                {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
+                {explainLines ? (
+                  <View style={[styles.whyPlanWrap, live.whyPlanWrap]}>
+                    <SectionLabel>Why this plan, for you</SectionLabel>
+                    <PlanExplainLines lines={explainLines} />
+                  </View>
+                ) : whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
                   <View style={[styles.whyPlanWrap, live.whyPlanWrap]}>
                     <SectionLabel>Why this plan, for you</SectionLabel>
                     {WHY_ORDER.filter(k => whyThis[k]).map(k => (

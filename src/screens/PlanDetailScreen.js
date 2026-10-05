@@ -13,9 +13,11 @@ import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
   activatePlanWithBlock, archivePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan, getAllRoutineSetCounts,
-  updateRoutinePosition,
+  updateRoutinePosition, getProgrammePlanFacts, getCurrentMesocycleWeek, getPlannedMuscleVolumeForBlock,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+import { explainPlan, sessionsFromRoutines } from '../lib/plan/explain';
+import PlanExplainLines from '../components/PlanExplainLines';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
 import { getPlanDays } from '../lib/onboarding/freeStarter';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
@@ -47,9 +49,10 @@ export default function PlanDetailScreen({ navigation, route }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
   // here -- the Duplicate action it used to gate is retired.
-  const { user, startWorkout } = useAppStore(useShallow(s => ({
+  const { user, startWorkout, sessionLengthMinutes } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
+    sessionLengthMinutes: s.userProfile?.sessionLengthMinutes ?? null,
   })));
   const toast = useToast();
   // C6 P9-04 (D97): the one activation entry point RB-3 missed - the
@@ -70,6 +73,10 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [circuitGroups, setCircuitGroups] = useState({});
   const [activePlan, setActivePlanData] = useState(null);
   const [whyThis, setWhyThis] = useState(null);
+  // D219 lane B5 (design section 6): for a plan the new planner built, the lines
+  // that say what the plan did and why, computed from its own facts, each with
+  // its source on tap. Null for every other plan: "Why this plan" is as before.
+  const [explainLines, setExplainLines] = useState(null);
   // D139 (finding: "the library's 'N to swap' fact vanished on the deciding
   // screen"): the same capability-computed compatibility verdict the
   // library grid shows, recomputed for this plan's own exercises so the
@@ -166,6 +173,46 @@ export default function PlanDetailScreen({ navigation, route }) {
         } catch (e) { logError('PlanDetailScreen.servedSets', e, { planId }); }
       }
       setServedSetCounts(servedByRoutine);
+      // D219 lane B5 (design section 6): the plan's own explanation. Only a plan
+      // with version 2 facts has one; every other plan keeps "Why this plan" as
+      // it was. "Now" is the active plan's current week with the sets the block
+      // holds today (planned_muscle_volume, which check-ins change); a plan that
+      // is not the active one reads week 1 from its own facts. Best-effort: any
+      // failure leaves the screen as it was.
+      let explained = null;
+      try {
+        const facts = await getProgrammePlanFacts(planId);
+        if (facts?.version === 2) {
+          let week = 1;
+          let targetsByWeek = null;
+          if (user?.id && active?.id === planId) {
+            try {
+              const current = await getCurrentMesocycleWeek(user.id);
+              if (current?.mesocycleId && Number.isFinite(Number(current.weekIndex))) {
+                week = Number(current.weekIndex);
+                targetsByWeek = {};
+                for (const row of (await getPlannedMuscleVolumeForBlock(current.mesocycleId)) ?? []) {
+                  const w = Number(row?.week_index);
+                  const sets = Number(row?.planned_sets);
+                  if (!Number.isFinite(w) || !Number.isFinite(sets) || typeof row?.muscle !== 'string') continue;
+                  targetsByWeek[w] = targetsByWeek[w] || {};
+                  targetsByWeek[w][row.muscle] = sets;
+                }
+              }
+            } catch (e) {
+              week = 1;
+              targetsByWeek = null;
+              logError('PlanDetailScreen.explainWeek', e, { planId });
+            }
+          }
+          const sessions = sessionsFromRoutines(
+            facts,
+            (routines ?? []).map(routine => ({ routine, rows: detailsByRoutine[routine.id] ?? [] })),
+          );
+          explained = explainPlan({ facts, sessions, week, sessionLengthMinutes, targetsByWeek })?.lines ?? null;
+        }
+      } catch (e) { logError('PlanDetailScreen.explain', e, { planId }); }
+      setExplainLines(explained?.length ? explained : null);
       // The rationale cache is per-user and always tracks the active
       // auto-generated plan (every reroll archives the others), so it's
       // only meaningful here when this plan is the active one. Loading it
@@ -716,7 +763,17 @@ export default function PlanDetailScreen({ navigation, route }) {
         {/* Why this plan, for you. Only on the active auto-generated plan,
             mirroring the enrollment reveal so the rationale is here any
             time, not just right after setup. */}
-        {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
+        {explainLines ? (
+          // D219 lane B5: a plan the new planner built explains itself from its
+          // own facts (lib/plan/explain.js); the static notes below are for every
+          // other plan.
+          <View style={styles.section}>
+            <SectionLabel>Why this plan, for you</SectionLabel>
+            <Card style={styles.whyCard}>
+              <PlanExplainLines lines={explainLines} />
+            </Card>
+          </View>
+        ) : isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
           <View style={styles.section}>
             <SectionLabel>Why this plan, for you</SectionLabel>
             <Card style={styles.whyCard}>
