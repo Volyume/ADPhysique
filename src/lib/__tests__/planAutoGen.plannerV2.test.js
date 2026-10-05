@@ -485,3 +485,9 @@ describe('PLANNER_V2 on: when the new planner cannot build, today\'s generator c
     expect(activatePlanWithBlock).not.toHaveBeenCalled();
   });
 });
+
+describe('the release switch', () => {
+  test('ships on: new plans are built by the new planner (lead, 2026-10-04)', () => {
+    expect(jest.requireActual('../plan/release').PLANNER_V2).toBe(true);
+  });
+});

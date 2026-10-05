@@ -5,13 +5,13 @@
  * plan with the planner in this folder (`buildPlan`, from the standard
  * catalogue) or with today's generator (`planEngine.generatePlan`).
  *
- * It is false. The planner and everything it needs are on main so that every
- * commit stays shippable (founder law: merge to main continually), and the
- * lead turns this on only after the core lanes are reviewed and on main (the
- * storage home for the plan's facts, `prescribe()`, the readers, the check-ins,
- * the planner and the next-session rebuild; register D219, "Build rulings",
- * and the sequencing ruling in the register entry). While it is false the save
- * path is byte-identical to the one that shipped before D219.
+ * It is on (lead, 2026-10-04, the founder's priority that new plans are
+ * built by this planner on the corrected recovery model): the storage home
+ * for the plan's facts, prescribe() serving every week, the catalogue, the
+ * preview and the continuity path are reviewed and on main (register D219,
+ * "Build rulings", and the sequencing ruling). With it off the save path is
+ * byte-identical to the one that shipped before D219 (pinned by the two
+ * plannerV2 "off" suites, which hold it off with a module mock).
  *
  * A switch for finished work, not a hold on it: nothing else reads this file
  * but planAutoGen.js, and tests turn it on with a module mock
@@ -19,4 +19,4 @@
  *
  * Pure: a constant, no I/O.
  */
-export const PLANNER_V2 = false;
+export const PLANNER_V2 = true;

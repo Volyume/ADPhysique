@@ -9,8 +9,8 @@
  *  - SLOT FACTS (ruling 2). The saved plan's facts carry
  *    slots[routineId][exerciseId] = { muscle, kind, credits } taken from the
  *    planner's own exercises, so the reader serves a slot with the planner's
- *    model rather than the corpus's (the Walking Lunge is planned under
- *    glutes). End to end: the facts the save writes, read back through
+ *    model rather than the corpus's (the hip thrust credits the hamstrings
+ *    only; the corpus also credits the quads). End to end: the facts the save writes, read back through
  *    buildPlanSessions and prescribe, serve every muscle's weekly target in
  *    every week, and serve week 1 exactly as the planner built it.
  *  - THE PREVIEW IS THE PLAN THAT IS SAVED (ruling 3). generatePlanDryRun
@@ -192,22 +192,25 @@ describe('slot facts: the saved plan carries the planner\'s own muscle, kind and
     expect(JSON.parse(JSON.stringify(facts.slots))).toEqual(facts.slots);
   });
 
-  test('the Walking Lunge the planner puts under glutes is stored under glutes, with the curated credit', async () => {
-    // The 4-day full-gym plan holds the lunge as the glutes' third choice (probed
-    // 2026-10-04: so does every 3 to 6 day plan); if the planner stops placing
-    // it here, this test names the case that needs another profile.
+  // Re-pinned for D219 lane B8 (lead ruling 1, one attribution): it pinned the
+  // Walking Lunge the catalogue listed under glutes while the corpus counts it
+  // for the quads. Every choice is now listed under its corpus muscle, so the
+  // planner's muscle for a slot is the corpus's; what still differs, and what the
+  // facts carry, is the curated credit and the kind.
+  test('the slot fact is the planner\'s curated credit, not the corpus\'s secondary muscles: the Barbell Hip Thrust credits the hamstrings only', async () => {
     await generateAndSavePlan('u1', profile);
     const facts = setProgrammePlanFacts.mock.calls[0][1];
-    const holders = Object.values(facts.slots).filter((held) => held['Walking Lunge']);
+    const holders = Object.values(facts.slots).filter((held) => held['Barbell Hip Thrust']);
     expect(holders.length).toBeGreaterThan(0);
     for (const held of holders) {
-      expect(held['Walking Lunge']).toEqual({ muscle: 'glutes', kind: 'mod_compound', credits: { quads: 0.5 } });
+      expect(held['Barbell Hip Thrust']).toEqual({ muscle: 'glutes', kind: 'heavy_compound', credits: { hamstrings: 0.5 } });
     }
-    // The corpus's own word for it is the quads: the fact is what differs.
-    expect(BY_NAME.get('Walking Lunge').primaryMuscle).toBe('quads');
+    // The corpus's own word credits the quads too: the fact is what differs.
+    expect(BY_NAME.get('Barbell Hip Thrust').secondaryMuscles).toContain('quads');
+    expect(BY_NAME.get('Barbell Hip Thrust').primaryMuscle).toBe('glutes');
   });
 
-  test('read back through the reader, the lunge is a glutes slot and every week serves every muscle\'s target', async () => {
+  test('read back through the reader, the hip thrust is a glutes slot and every week serves every muscle\'s target', async () => {
     await generateAndSavePlan('u1', profile);
     const facts = setProgrammePlanFacts.mock.calls[0][1];
     const routines = writtenRoutines();
@@ -220,9 +223,9 @@ describe('slot facts: the saved plan carries the planner\'s own muscle, kind and
     }));
     const sessions = buildPlanSessions(withRows, facts);
     const rowBySlot = new Map(withRows.flatMap((r) => r.rows).map((x) => [x.routineExercise.id, x]));
-    const lunge = sessions.flatMap((s) => s.slots).filter((slot) => rowBySlot.get(slot.id).exercise.name === 'Walking Lunge');
-    expect(lunge.length).toBeGreaterThan(0);
-    for (const slot of lunge) expect(slot.muscle).toBe('glutes');
+    const thrust = sessions.flatMap((s) => s.slots).filter((slot) => rowBySlot.get(slot.id).exercise.name === 'Barbell Hip Thrust');
+    expect(thrust.length).toBeGreaterThan(0);
+    for (const slot of thrust) expect(slot.muscle).toBe('glutes');
 
     for (let w = 1; w <= 6; w += 1) {
       const weekTargets = Object.fromEntries(Object.entries(facts.weeklyTargets).map(([m, list]) => [m, list[w - 1]]));
@@ -416,7 +419,8 @@ describe('plannerV2KeptChoices: a kept exercise takes its family\'s place, else 
     expect(incline.chest[0].kept).toBeUndefined();
     // The leg press is in the squat family, as is the squat above it: it stays third, the squat stays first.
     const press = keep('Leg Press');
-    expect(namesOf(press, 'quads')).toEqual(['Barbell Back Squat', 'Leg Extension', 'Leg Press']);
+    // (The full gym's quads list has had a fourth choice, the lunge, since lane B8.)
+    expect(namesOf(press, 'quads')).toEqual(['Barbell Back Squat', 'Leg Extension', 'Leg Press', 'Walking Lunge']);
     expect(press.quads[2]).toMatchObject({ kept: true, role: 'other_squat' });
     expect(press.quads[0].kept).toBeUndefined();
     // Handed over twice (it is in two of the person's sessions) it is still one entry.
@@ -449,13 +453,18 @@ describe('plannerV2KeptChoices: a kept exercise takes its family\'s place, else 
     ]);
   });
 
+  // Re-pinned for D219 lane B8 (lead ruling 1): the Walking Lunge is a quads row in
+  // the library and, since the catalogue lists every choice under its corpus muscle,
+  // a quads choice there too (its last role): a kept lunge keeps its own place.
   test('families are per muscle: a kept exercise is matched only within the muscle it is primary for', () => {
-    // The Walking Lunge is a quads row in the library, so it is a quads exercise
-    // here, in the squat family: it takes the squat's place. The catalogue's own
-    // glutes list, which names the same lunge as the glutes' third choice, is not touched.
-    const out = keep('Walking Lunge');
-    expect(namesOf(out, 'quads')).toEqual(['Walking Lunge', 'Leg Extension', 'Leg Press']);
-    expect(out.glutes).toBe(choices.glutes);
+    const lunge = keep('Walking Lunge');
+    expect(namesOf(lunge, 'quads')).toEqual(namesOf(choices, 'quads'));
+    expect(lunge.quads[3]).toMatchObject({ name: 'Walking Lunge', kept: true, role: 'lunge', rank: 4 });
+    expect(lunge.glutes).toBe(choices.glutes);
+    // A squat-family row the catalogue does not list for the full gym takes the squat's place, in the quads only.
+    const hack = keep('Hack Squat Machine');
+    expect(namesOf(hack, 'quads')).toEqual(['Hack Squat Machine', 'Leg Extension', 'Leg Press', 'Walking Lunge']);
+    expect(hack.glutes).toBe(choices.glutes);
   });
 
   test('kind is the generator\'s key for the row, whatever the catalogue would say', () => {
@@ -473,8 +482,9 @@ describe('plannerV2KeptChoices: a kept exercise takes its family\'s place, else 
     const outside = keep('Smith Machine Bench Press').chest[0];
     expect(outside.name).toBe('Smith Machine Bench Press');
     expect(outside.credits).toEqual({});
-    // A lunge kept under quads is not credited by the glutes' rule.
-    expect(keep('Walking Lunge').quads[0].credits).toEqual({});
+    // A lunge kept under quads takes the quads' own rule for it (lane B8: it is a quads
+    // choice crediting the glutes), where it used to be credited nothing.
+    expect(keep('Walking Lunge').quads.find((x) => x.kept).credits).toEqual({ glutes: 0.5 });
     // The close-grip bench press, in the triceps' catalogue, takes the press credit.
     expect(keep('Close-Grip Bench Press').triceps.find((x) => x.kept).credits).toEqual({ chest: 0.5, front_delts: 0.5 });
   });

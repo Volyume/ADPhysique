@@ -262,8 +262,18 @@ export function allocatePeakWeek({
       }
     }
   };
+  // Each round goes to the muscle furthest below its growth floor first (the
+  // plan's muscle order on a tie), so a short session's time reaches the
+  // quads' second session before a muscle the rows already credit.
+  const behind = (m) => {
+    const floor = Math.max(1, Math.min(roles[m].growthFloor || 0, roles[m].peak) || 1);
+    return (weekly[m]?.fractional || 0) / floor;
+  };
   const placeRemaining = (list, ignoreTime = false) => {
-    for (let round = 1; list.some((m) => queue[m].length > 0); round++) placeRound(list, round, ignoreTime);
+    for (let round = 1; list.some((m) => queue[m].length > 0); round++) {
+      const ordered = [...list].sort((a, b) => (behind(a) - behind(b)) || (muscleOrder(a) - muscleOrder(b)));
+      placeRound(ordered, round, ignoreTime);
+    }
   };
   placeRound(muscles, 0);
   placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);

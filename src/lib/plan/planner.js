@@ -54,6 +54,7 @@ import { recoveryHours, TYPICAL_WEEK_GAP_HOURS } from '../recovery/constants';
 import { repRangeFor, restFor } from '../exercise/prescription';
 
 export const PLANNER_VERSION = 2;
+const FULL_BODY_TWICE = new Set(['quads', 'hamstrings', 'glutes', 'chest', 'back']);
 const MAX_FIX_ROUNDS = 8;
 
 const muscleIndex = (m) => {
@@ -201,7 +202,12 @@ function evaluateFamily(family, ctx) {
   const k = {};
   for (const m of trainable) {
     const two = roles[m].peak >= FREQUENCY.preferTwoExposuresFromWeekly && n >= FREQUENCY.preferTwoExposuresMinSessions;
-    k[m] = Math.min(allowedBy[m].length, two ? 2 : 1);
+    // Lead ruling (D219 build, the founder's "in line with what elite coaches
+    // would do"): a full-body week trains the big five (quads, hamstrings,
+    // glutes, chest, back) in at least two sessions, as full-body programming
+    // does; design 4.4's preference for two starts only at four sessions.
+    const fullBodyBig = family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m);
+    k[m] = Math.min(allowedBy[m].length, two || fullBodyBig ? 2 : 1);
   }
   const state = {
     k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
@@ -847,8 +853,15 @@ function toPlan(chosen, ctx, inputs, factor) {
   const ranked = [...gapAfter].sort((a, b) => (b.h - a.h) || (order.indexOf(a.si) - order.indexOf(b.si)));
   const gapRanks = Object.fromEntries(ranked.map((g, r) => [sessionKey(g.si), r]));
 
+  // plannedSets: week 1's direct sets, the number the saved routines carry
+  // (the generator's contract: what a plan claims is what reaches the
+  // database, campaign16.volumeIntegrity); direct and fractional are the peak.
+  const weekOne = {};
+  for (const w of workouts) for (const e of w.exercises) weekOne[e.muscle] = (weekOne[e.muscle] || 0) + e.sets;
   const weekly = {};
-  for (const [m, v] of Object.entries(alloc.weekly)) weekly[m] = { direct: v.direct, fractional: v.fractional };
+  for (const [m, v] of Object.entries(alloc.weekly)) {
+    weekly[m] = { direct: v.direct, fractional: v.fractional, ...(weekOne[m] ? { plannedSets: weekOne[m] } : {}) };
+  }
   const roles = Object.fromEntries(Object.entries(state.roles).map(([m, r]) => [m, r.role]));
 
   return {

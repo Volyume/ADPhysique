@@ -18,9 +18,13 @@
  * never a term. Every name a plan picks without being asked is a STAPLE row of
  * the canonicality registry (a test pins it); the exceptions are the opt-in
  * muscles (adductors, forearms, neck, tibialis, trained only when the person
- * adds them) and the thin-kit fallbacks below, which are never below COMMON.
+ * adds them), the thin-kit fallbacks below, which are never below COMMON, and the
+ * glutes' kickbacks and bridges (COMMON rows, named in catalogue.test.js: the
+ * corpus has only two STAPLE glute-primary rows a gym carries, the barbell and
+ * the machine hip thrust, and lead ruling 1 asks for at least three choices).
  *
- * ROLE FIELDS. id, rank (1 first choice, 2 second, 3 third), names, credited
+ * ROLE FIELDS. id, rank (1 first choice, 2 second, 3 third; 4 and 5 only for the
+ * quads' lunge and the glutes' kickback and bridge, lane B8), names, credited
  * (a role the design marks "credited from": the muscle's first choice is
  * indirect, the half credit it gets from other exercises, so the role has no
  * exercise of its own), optIn, credits (the fractional set one set of the
@@ -39,11 +43,20 @@
  * triceps and side delts; vertical pulls, the biceps (the wide-grip pulldown the
  * rear delts as well); rows, the biceps, rear delts and traps; squats, the hack
  * squat and the leg press, the glutes and adductors; the Romanian deadlift and
- * other hinges, the glutes; the hip thrust, the hamstrings; a lunge or split
- * squat listed under glutes, the quads, and listed under quads, the glutes; a
- * press listed under triceps (the close-grip bench press, a dip, a diamond
- * push-up), the chest and front delts. Every isolation exercise credits
- * nothing, and an exercise counts 1 for the muscle its role trains.
+ * other hinges, the glutes; the hip thrust and the bridge, the hamstrings; a
+ * lunge or split squat, a quads choice, the glutes; a press listed under
+ * triceps (the close-grip bench press, a dip, a diamond push-up), the chest and
+ * front delts. Every isolation exercise credits nothing, and an exercise counts
+ * 1 for the muscle its role trains.
+ *
+ * ONE ATTRIBUTION (D219 lane B8, lead ruling 1). Every choice is listed under
+ * the muscle the rest of the app counts it for: its primary muscle in the corpus,
+ * the one exercise/volumeAudit.countDeliveredSets and the heatmap read. A plan's
+ * volume claim and the sets its saved rows deliver are then the same number
+ * (campaign16.volumeIntegrity). The design's table listed the walking lunge and
+ * the Bulgarian split squat as the glutes' third choice; the corpus counts both
+ * for the quads, so they are a quads choice (its last role) and the glutes' own
+ * extra choices are glute-primary rows (catalogue.test.js pins both).
  *
  * A THIN-KIT STAND-IN carries the credits of its OWN movement pattern, not of
  * the role it stands in for (lead ruling 2, lane B7 follow-up): a Bulgarian
@@ -91,9 +104,8 @@ const ROW_CREDITS = credit({ biceps: 0.5, rear_delts: 0.5, traps: 0.5 });
 const SQUAT_CREDITS = credit({ glutes: 0.5, adductors: 0.5 });
 const HINGE_CREDITS = credit({ glutes: 0.5 });
 const HIP_THRUST_CREDITS = credit({ hamstrings: 0.5 });
-const LUNGE_CREDITS = credit({ quads: 0.5 });
-// The same movements listed under the other muscle (header, CREDITS).
-const LUNGE_UNDER_QUADS_CREDITS = credit({ glutes: 0.5 });
+// A lunge or split squat is a quads choice and credits the glutes (header, CREDITS).
+const LUNGE_CREDITS = credit({ glutes: 0.5 });
 const TRICEPS_PRESS_CREDITS = credit({ chest: 0.5, front_delts: 0.5 });
 
 // A role the person reads about, in one line. Frozen so a consumer cannot edit
@@ -144,7 +156,7 @@ const VERTICAL_PULL_CREDITS_BY_NAME = Object.freeze(Object.fromEntries(VERTICAL_
 // and squat, and dips and a diamond push-up for the triceps' extensions. Each
 // carries its own movement's credits (header, CREDITS). Every other stand-in's
 // movement is its role's.
-const lungesUnderQuads = (...names) => Object.freeze(Object.fromEntries(names.map((n) => [n, LUNGE_UNDER_QUADS_CREDITS])));
+const lungesUnderQuads = (...names) => Object.freeze(Object.fromEntries(names.map((n) => [n, LUNGE_CREDITS])));
 const pressesUnderTriceps = (...names) => Object.freeze(Object.fromEntries(names.map((n) => [n, TRICEPS_PRESS_CREDITS])));
 const HORIZONTAL_ROW_NAMES = [
   'Seated Cable Row', 'Chest-Supported Row (Dumbbell)', 'Machine Row (Chest Supported)',
@@ -317,6 +329,17 @@ export const CATALOGUE = Object.freeze({
       grade: 'B',
       source: 'Bloomquist 2013 (17 men, 12 weeks); Kubo 2019; Kinoshita 2026 (S Q12)',
     }),
+    // The design listed these two as the glutes' third choice; the corpus counts
+    // both for the quads (header, ONE ATTRIBUTION), so they are a quads choice
+    // that credits the glutes. A fourth role: a session never needs it in the
+    // full gym, but a kit with no squat or press (dumbbells, a home gym) gets a
+    // third quads exercise from it.
+    role('lunge', 4, ['Walking Lunge', 'Bulgarian Split Squat'], {
+      credits: LUNGE_CREDITS,
+      reason: 'A lunge or split squat works the front of the thigh and the glutes together; no trial has measured thigh growth from it.',
+      grade: 'D',
+      source: NO_TRIAL('lunges and split squats'),
+    }),
   ]),
 
   // Hamstrings: the seated curl first, a hip hinge second (in another session).
@@ -337,7 +360,10 @@ export const CATALOGUE = Object.freeze({
     }),
   ]),
 
-  // Glutes: credited from squats and leg presses; hip thrust second; a lunge third.
+  // Glutes: credited from squats and leg presses, then the hip thrust, and then
+  // glute-primary variants only (ONE ATTRIBUTION, header): the other hip thrust,
+  // a kickback, a bridge. A full gym gets four choices, every other kit one to
+  // two as far as the corpus has a standard glute row that carries it.
   glutes: Object.freeze([
     creditedRole('glute_credit', {
       reason: 'The glutes get about half a set from every squat and leg press, and the leg press grew the gluteus maximus about 15% in a 12-week trial of untrained adults.',
@@ -350,11 +376,28 @@ export const CATALOGUE = Object.freeze({
       grade: 'B',
       source: 'Plotkin 2023: 9-week trial in 34 untrained adults (S Q12)',
     }),
-    role('lunge', 3, ['Walking Lunge', 'Bulgarian Split Squat'], {
-      credits: LUNGE_CREDITS,
-      reason: 'A lunge or split squat works the front of the thigh and the glutes together; no trial has measured glute growth from it.',
+    // The other of the two: the full gym trains the barbell version in one session
+    // and the machine in the next (the planner takes a muscle's first two choices
+    // in turn).
+    role('other_hip_thrust', 3, ['Machine Hip Thrust', 'Barbell Hip Thrust'], {
+      credits: HIP_THRUST_CREDITS,
+      reason: 'The other hip thrust variant, for a second glutes session; in a 9-week trial of 34 untrained adults the hip thrust and the back squat grew the glutes by a similar amount.',
+      grade: 'B',
+      source: 'Plotkin 2023: 9-week trial in 34 untrained adults (S Q12)',
+    }),
+    // A single-joint exercise, so it credits nothing.
+    role('glute_kickback', 4, ['Glute Kickback Machine', 'Cable Kickback'], {
+      reason: 'A kickback works the glutes on their own, with no other muscle sharing the work; no growth trial was found for it.',
       grade: 'D',
-      source: NO_TRIAL('lunges as a glute exercise'),
+      source: NO_TRIAL('glute kickbacks'),
+    }),
+    // The same movement as the hip thrust from the floor; the three names carry
+    // three different kits (barbell, dumbbells, bodyweight).
+    role('glute_bridge', 5, ['Barbell Glute Bridge', 'Dumbbell Glute Bridge', 'Glute Bridge'], {
+      credits: HIP_THRUST_CREDITS,
+      reason: 'A glute bridge lifts the hips from the floor and works the glutes; no growth trial was found for it.',
+      grade: 'D',
+      source: NO_TRIAL('glute bridges'),
     }),
   ]),
 
@@ -588,10 +631,10 @@ function toNameSet(names) {
  * @property {string} name            the corpus exercise name
  * @property {string|null} exerciseId the library row's id
  * @property {string} role            the catalogue role id it fills
- * @property {number} rank            1 first choice, 2 second, 3 third (credited roles are left out, so a muscle's first array item is not always rank 1)
+ * @property {number} rank            1 first choice, 2 second, 3 third, and 4 or 5 for the quads' lunge and the glutes' kickback and bridge (credited roles are left out, so a muscle's first array item is not always rank 1)
  * @property {'heavy_compound'|'mod_compound'|'machine'|'isolation'} kind  the pool's paramKey for the row
  * @property {Object<string, number>} credits  the fractional set one set gives each OTHER muscle: the curated rule for the role (header, CREDITS), never the corpus's secondary muscles; for a bench press { triceps: 0.5, front_delts: 0.5 }
- * @property {number} direct          what one set gives the muscle the role trains: always 1 (lead ruling, D219 lane B7: a lunge listed under glutes counts a full set for glutes and credits quads half a set)
+ * @property {number} direct          what one set gives the muscle the role trains: always 1 (lead ruling, D219 lane B7: a lunge, a quads choice, counts a full set for the quads and credits the glutes half a set)
  * @property {string} primaryMuscle   the library row's own primary muscle
  * @property {string} reason          one plain sentence a person reads beside the exercise name
  * @property {'A'|'B'|'C'|'D'} grade  the evidence grade behind the role (03-SCIENCE.md section 0.1)

@@ -47,6 +47,10 @@ jest.mock('../database', () => ({
 
 import { generatePlanDryRun } from '../planAutoGen';
 import { PLANNER_V2 } from '../plan/release';
+
+// The switch ships on (lead, 2026-10-04): this suite holds it off with a
+// module mock and pins that the old path is unchanged.
+jest.mock('../plan/release', () => ({ PLANNER_V2: false }));
 import { buildPlan } from '../plan/planner';
 import { POOL } from '../planEngine';
 import {
@@ -58,7 +62,7 @@ import {
 const FULL_LIBRARY = Object.values(POOL).flat().map((e) => ({ name: e.n }));
 
 describe('the release switch ships off: the dry run is today\'s', () => {
-  test('PLANNER_V2 is false', () => {
+  test('the switch is held off here', () => {
     expect(PLANNER_V2).toBe(false);
   });
 

@@ -2,7 +2,9 @@
  * fixtures/choices.js -- a realistic resolved catalogue for the planner tests:
  * per muscle, the exercises a full-gym person gets, in catalogue order, with
  * the pool kind and the half credit each set gives other muscles (the shape
- * lane B1's resolveCatalogue returns, design 4.7). Test data only.
+ * lane B1's resolveCatalogue returns, design 4.7). Every name is listed under
+ * its primary muscle in the corpus (lane B8, lead ruling 1): the lunge is a
+ * quads choice, the glutes' choices are glute-primary. Test data only.
  */
 module.exports = {
   chest: [
@@ -118,6 +120,13 @@ module.exports = {
         glutes: 0.5,
         adductors: 0.5
       }
+    },
+    {
+      name: 'Walking Lunge',
+      kind: 'mod_compound',
+      credits: {
+        glutes: 0.5
+      }
     }
   ],
   hamstrings: [
@@ -142,18 +151,16 @@ module.exports = {
       }
     },
     {
-      name: 'Walking Lunge',
-      kind: 'mod_compound',
+      name: 'Machine Hip Thrust',
+      kind: 'machine',
       credits: {
-        quads: 0.5
+        hamstrings: 0.5
       }
     },
     {
-      name: 'Bulgarian Split Squat',
-      kind: 'mod_compound',
-      credits: {
-        quads: 0.5
-      }
+      name: 'Glute Kickback Machine',
+      kind: 'isolation',
+      credits: {}
     },
   ],
   calves: [

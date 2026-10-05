@@ -40,6 +40,10 @@ jest.mock('../database', () => ({
   runInTransaction: jest.fn(),
   deleteProgrammeCascade: jest.fn(),
   deleteProgrammeCascadeInTx: jest.fn(),
+  // D219 lane B8: the new planner's save (PLANNER_V2 ships on) writes the plan's
+  // facts inside the write transaction. The suite's other reads the new planner
+  // makes (the current plan, the history) are absent here and read as none.
+  setProgrammePlanFacts: jest.fn(),
   recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
@@ -203,9 +207,17 @@ describe('C16-9 the dry run and the commit agree, by construction', () => {
     // save and the dry-run twin call it once each), so the single-function
     // contract this pin exists for still holds: the verdicts that decide in the
     // preview are the verdicts that decide in the save.
-    expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(3);
+    // D219 lane B8 (lead ruling 3) re-pinned it again, from 3 to 4: the new
+    // planner's one resolution pass (resolvePlannerV2Plan) runs the SAME
+    // continuity function over the planner's workouts, for the receipt, the
+    // reviewed proposal and the reviewed rep ranges. That pass is shared by the
+    // save and the dry-run twin (one definition, two call sites), so the verdicts
+    // that decide in the preview are still the verdicts that decide in the save.
+    expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(4);
     expect(src.match(/function plannerV2KeptExercises/g)).toHaveLength(1);
     expect(src.match(/(?<!function )plannerV2KeptExercises\(/g)).toHaveLength(2);
+    expect(src.match(/function resolvePlannerV2Plan/g)).toHaveLength(1);
+    expect(src.match(/(?<!function )resolvePlannerV2Plan\(/g)).toHaveLength(2);
   });
 
   test('the preview contains exactly the exercises the commit writes, with the same ids', async () => {

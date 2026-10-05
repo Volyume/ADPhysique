@@ -31,6 +31,15 @@
  *   - A thin-kit fallback is used only where no listed name carries the
  *     profile, is always marked, and is pinned here so the lead's ruling is a
  *     test edit. The gaps with no recognisable row at all are pinned too.
+ *   - D219 lane B8 (lead ruling 1): ONE ATTRIBUTION. Every listed name is under
+ *     its primary muscle in the corpus (the muscle countDeliveredSets and the
+ *     heatmap count it for), with no exception. The walking lunge and the
+ *     Bulgarian split squat moved from the glutes' third choice to the quads
+ *     (the last role, crediting the glutes half a set); the glutes' own choices
+ *     are glute-primary, and a full gym has at least three. Re-pinned for it:
+ *     the role-count limit (quads 4, glutes 5), the design-table names, the
+ *     STAPLE rule (named COMMON glute rows, below), the full-gym picks, the rank
+ *     list, the lunge's credits and the foreign-name exception.
  */
 import {
   CATALOGUE, CATALOGUE_MUSCLES, CATALOGUE_PROFILES, THIN_KIT, resolveCatalogue, catalogueCredits,
@@ -44,6 +53,20 @@ const { LIBRARY, LIBRARY_NAMES, BY_NAME } = require('../../__tests__/campaign16.
 
 const OPT_IN_MUSCLES = ['adductors', 'forearms', 'neck', 'tibialis'];
 const CREDITED_FIRST_CHOICE = ['front_delts', 'glutes', 'adductors'];
+
+// Lane B8, lead ruling 1: a full gym needs at least three glute-primary
+// choices, and the corpus has exactly two STAPLE glute-primary rows a gym
+// carries (the barbell and the machine hip thrust). The kickbacks and the
+// bridges are COMMON rows, named here so the exception stays this small: a new
+// COMMON name under any muscle, or a glute row that is not one of these, fails
+// the STAPLE tests.
+const COMMON_GLUTE_EXTRAS = [
+  'glutes.glute_kickback: Glute Kickback Machine', 'glutes.glute_kickback: Cable Kickback',
+  'glutes.glute_bridge: Barbell Glute Bridge', 'glutes.glute_bridge: Dumbbell Glute Bridge',
+  'glutes.glute_bridge: Glute Bridge',
+];
+
+const ROLE_LIMIT = { quads: 4, glutes: 5 };
 
 const rolesOf = (muscle) => CATALOGUE[muscle];
 const allRoles = () => CATALOGUE_MUSCLES.flatMap((m) => rolesOf(m).map((r) => ({ muscle: m, role: r })));
@@ -83,9 +106,18 @@ const EXPECTED_NAMES = {
     ['Leg Extension'],
     // The other squat variant: the leg press first, it is in nearly every gym.
     ['Leg Press', 'Hack Squat Machine', 'Barbell Back Squat'],
+    // The lunges the design listed under glutes: the corpus counts them for the quads (lane B8).
+    ['Walking Lunge', 'Bulgarian Split Squat'],
   ],
   hamstrings: [['Seated Leg Curl', 'Lying Leg Curl'], ['Romanian Deadlift (Barbell)', 'Romanian Deadlift (Dumbbell)']],
-  glutes: [[], ['Barbell Hip Thrust', 'Machine Hip Thrust'], ['Walking Lunge', 'Bulgarian Split Squat']],
+  glutes: [
+    [],
+    ['Barbell Hip Thrust', 'Machine Hip Thrust'],
+    // The other of the two hip thrusts, then glute-primary kickbacks and bridges (lane B8).
+    ['Machine Hip Thrust', 'Barbell Hip Thrust'],
+    ['Glute Kickback Machine', 'Cable Kickback'],
+    ['Barbell Glute Bridge', 'Dumbbell Glute Bridge', 'Glute Bridge'],
+  ],
   adductors: [[], ['Hip Adduction Machine']],
   calves: [['Standing Calf Raise (Machine)'], ['Seated Calf Raise', 'Seated Machine Calf Raise'], ['Leg Press Calf Raise']],
   abs: [['Cable Crunch', 'Machine Crunch'], ['Hanging Knee Raise', 'Hanging Leg Raise']],
@@ -110,7 +142,8 @@ describe('the catalogue table (design 4.7)', () => {
     for (const muscle of CATALOGUE_MUSCLES) {
       const roles = rolesOf(muscle);
       expect(roles.length).toBeGreaterThan(0);
-      expect(roles.length).toBeLessThanOrEqual(3);
+      // Design 4.7 lists at most three roles; lane B8 adds the quads' lunge and the glutes' three extra choices.
+      expect(roles.length).toBeLessThanOrEqual(ROLE_LIMIT[muscle] ?? 3);
       // First choice, second choice, third; a credited first choice keeps its rank 1.
       expect(roles.map((r) => r.rank)).toEqual(roles.map((_, i) => i + 1));
       expect(new Set(roles.map((r) => r.id)).size).toBe(roles.length);
@@ -165,13 +198,22 @@ describe('every catalogue name exists and is a standard exercise (design 4.7 rul
     expect(names.filter((n) => !LIBRARY_NAMES.has(n))).toEqual([]);
   });
 
-  test('every listed name outside the opt-in muscles resolves to a STAPLE row', () => {
+  test('every listed name outside the opt-in muscles resolves to a STAPLE row, but the glutes\' named COMMON extras', () => {
     const notStaple = allRoles()
       .filter(({ role }) => !role.optIn)
       .flatMap(({ muscle, role }) => role.names.map((n) => ({ muscle, role: role.id, name: n, tier: tierOf(n) })))
-      .filter((x) => x.tier !== AUTO_TIER.STAPLE)
+      .filter((x) => x.tier !== AUTO_TIER.STAPLE && !COMMON_GLUTE_EXTRAS.includes(`${x.muscle}.${x.role}: ${x.name}`))
       .map((x) => `${x.muscle}.${x.role}: ${x.name} (${x.tier})`);
     expect(notStaple).toEqual([]);
+  });
+
+  test('the premise of that exception: only two STAPLE glute-primary rows carry the full gym, and each extra is COMMON', () => {
+    const stapleGluteRows = LIBRARY
+      .filter((e) => e.primaryMuscle === 'glutes' && e.exerciseType === 'weight_reps' && e.equipmentProfiles.includes('full_gym') && tierOf(e.name) === AUTO_TIER.STAPLE)
+      .map((e) => e.name)
+      .sort();
+    expect(stapleGluteRows).toEqual(['Barbell Hip Thrust', 'Machine Hip Thrust']);
+    for (const entry of COMMON_GLUTE_EXTRAS) expect(tierOf(entry.split(': ')[1])).toBe(AUTO_TIER.COMMON);
   });
 
   test('opt-in rows are at least SPECIALIST: never NICHE or NEVER_AUTO, and the hip adduction machine is COMMON', () => {
@@ -211,20 +253,27 @@ describe('every catalogue name exists and is a standard exercise (design 4.7 rul
     }
   });
 
-  test('a listed name is the muscle\'s own exercise, except the two lunge rows under glutes', () => {
-    // Walking Lunge and Bulgarian Split Squat are quads rows in the library,
-    // listed by the design as the glutes' third choice. The ruling for credits
-    // (B7, ruling 1) counts a full set for the glutes and credits the quads half
-    // a set; this pin keeps the exception named.
+  test('ONE ATTRIBUTION: every listed name is its muscle\'s own exercise, the muscle the corpus counts it for, with no exception', () => {
+    // Walking Lunge and Bulgarian Split Squat are quads rows in the library. The
+    // design listed them as the glutes' third choice and this pin used to name
+    // them as the exception; the lead's ruling moved them to the quads, so a plan
+    // that claims glute sets delivers glute sets (campaign16.volumeIntegrity).
     const foreign = allRoles()
       .flatMap(({ muscle, role }) => role.names.map((n) => ({ muscle, role: role.id, name: n })))
       .filter(({ muscle, name }) => BY_NAME.get(name).primaryMuscle !== muscle)
       .map(({ muscle, role, name }) => `${muscle}.${role}: ${name} (primary ${BY_NAME.get(name).primaryMuscle})`)
       .sort();
-    expect(foreign).toEqual([
-      'glutes.lunge: Bulgarian Split Squat (primary quads)',
-      'glutes.lunge: Walking Lunge (primary quads)',
-    ]);
+    expect(foreign).toEqual([]);
+    // The thin-kit stand-ins too.
+    const foreignStandIns = [];
+    for (const [kit, byMuscle] of Object.entries(THIN_KIT)) {
+      for (const [muscle, byRole] of Object.entries(byMuscle)) {
+        for (const names of Object.values(byRole)) {
+          for (const n of names) if (BY_NAME.get(n).primaryMuscle !== muscle) foreignStandIns.push(`${kit}.${muscle}: ${n}`);
+        }
+      }
+    }
+    expect(foreignStandIns).toEqual([]);
   });
 
   test('each name sits in the role its library subregion says it fills', () => {
@@ -240,6 +289,10 @@ describe('every catalogue name exists and is a standard exercise (design 4.7 rul
       'hamstrings.leg_curl': 'knee_flexion',
       'hamstrings.hip_hinge': 'hip_extension',
       'glutes.hip_thrust': 'activator',
+      'glutes.other_hip_thrust': 'activator',
+      'glutes.glute_kickback': 'pumper',
+      'glutes.glute_bridge': 'activator',
+      'quads.lunge': 'squat_press',
       'calves.standing_calf': 'gastro',
       'calves.seated_calf': 'soleus',
       'abs.loaded_crunch': 'flexion',
@@ -391,9 +444,9 @@ const FULL_GYM_PICKS = {
   biceps: ['EZ Bar Preacher Curl', 'Barbell Curl', 'Hammer Curl'],
   triceps: ['Cable Overhead Tricep Extension', 'Tricep Pushdown (Rope)', 'Close-Grip Bench Press'],
   forearms: ['Barbell Wrist Curl'],
-  quads: ['Barbell Back Squat', 'Leg Extension', 'Leg Press'],
+  quads: ['Barbell Back Squat', 'Leg Extension', 'Leg Press', 'Walking Lunge'],
   hamstrings: ['Seated Leg Curl', 'Romanian Deadlift (Barbell)'],
-  glutes: ['Barbell Hip Thrust', 'Walking Lunge'],
+  glutes: ['Barbell Hip Thrust', 'Machine Hip Thrust', 'Glute Kickback Machine', 'Barbell Glute Bridge'],
   adductors: ['Hip Adduction Machine'],
   calves: ['Standing Calf Raise (Machine)', 'Seated Calf Raise', 'Leg Press Calf Raise'],
   abs: ['Cable Crunch', 'Hanging Knee Raise'],
@@ -425,7 +478,7 @@ describe('resolveCatalogue: the full gym', () => {
         expect(['heavy_compound', 'mod_compound', 'machine', 'isolation']).toContain(x.kind);
         expect(typeof x.credits).toBe('object');
         expect(Number.isFinite(x.direct)).toBe(true);
-        expect([1, 2, 3]).toContain(x.rank);
+        expect([1, 2, 3, 4, 5]).toContain(x.rank);
         expect(typeof x.thinKit).toBe('boolean');
         expect(typeof x.optIn).toBe('boolean');
         expect(typeof x.logged).toBe('boolean');
@@ -471,13 +524,85 @@ describe('resolveCatalogue: the full gym', () => {
     }
   });
 
-  // Re-pinned for D219 lane B7, lead ruling 1: it used to pin the corpus's
-  // truth for a quads row (direct 0.5, credits { quads: 1, hamstrings: 0.5 }).
-  test('a lunge listed under glutes counts a full set for the glutes and credits the quads half a set', () => {
-    const lunge = resolve('full_gym').glutes.find((x) => x.name === 'Walking Lunge');
-    expect(lunge.primaryMuscle).toBe('quads');
-    expect(lunge.direct).toBe(1);
-    expect(lunge.credits).toEqual({ quads: 0.5 });
+  // Re-pinned for D219 lane B7, lead ruling 1 (it used to pin the corpus's truth
+  // for a quads row: direct 0.5, credits { quads: 1, hamstrings: 0.5 }), and again
+  // for lane B8, lead ruling 1: the lunge is a quads choice, so it counts a full
+  // set for the quads and credits the glutes half a set.
+  test('a lunge is a quads choice: a full set for the quads, half a set credited to the glutes', () => {
+    const lunge = resolve('full_gym').quads.find((x) => x.name === 'Walking Lunge');
+    expect(lunge).toMatchObject({ role: 'lunge', rank: 4, primaryMuscle: 'quads', direct: 1, thinKit: false });
+    expect(lunge.credits).toEqual({ glutes: 0.5 });
+    expect(resolve('full_gym').glutes.map((x) => x.name)).not.toContain('Walking Lunge');
+  });
+});
+
+// ── One attribution, and the glutes' own choices (lane B8, lead ruling 1) ────
+
+describe('one attribution: every choice is listed under the muscle the corpus counts it for', () => {
+  test.each(CATALOGUE_PROFILES)('%s: every resolved choice\'s primary muscle is the muscle that lists it', (profile) => {
+    const foreign = [];
+    for (const [muscle, list] of Object.entries(resolve(profile))) {
+      for (const x of list) if (x.primaryMuscle !== muscle) foreign.push(`${muscle}: ${x.name} (primary ${x.primaryMuscle})`);
+    }
+    expect(foreign).toEqual([]);
+  });
+
+  test('the lunges are quads choices on the kits that carry them, crediting the glutes', () => {
+    for (const kit of ['full_gym', 'dumbbells_only', 'home_gym']) {
+      const lunge = resolve(kit).quads.find((x) => x.name === 'Walking Lunge');
+      expect(lunge).toMatchObject({ role: 'lunge', primaryMuscle: 'quads', credits: { glutes: 0.5 } });
+    }
+    // Neither lunge is ever a glutes choice.
+    for (const kit of CATALOGUE_PROFILES) {
+      const glutes = resolve(kit).glutes.map((x) => x.name);
+      expect(glutes).not.toContain('Walking Lunge');
+      expect(glutes).not.toContain('Bulgarian Split Squat');
+    }
+  });
+});
+
+describe('the glutes have glute-primary choices: at least three in a full gym, and each kit as far as the corpus allows', () => {
+  // Per kit: the glute-primary rows its resolution lists. The full gym trains the
+  // barbell hip thrust and the machine in turn, then a kickback and a bridge; the
+  // other kits get the rows they carry (a thin-kit hip thrust or bridge first).
+  const GLUTES_BY_KIT = {
+    full_gym: ['Barbell Hip Thrust', 'Machine Hip Thrust', 'Glute Kickback Machine', 'Barbell Glute Bridge'],
+    machines_cables: ['Machine Hip Thrust', 'Glute Kickback Machine'],
+    dumbbells_only: ['Dumbbell Hip Thrust', 'Dumbbell Glute Bridge'],
+    barbell_plates: ['Barbell Hip Thrust', 'Barbell Glute Bridge'],
+    home_gym: ['Dumbbell Hip Thrust', 'Dumbbell Glute Bridge'],
+    bodyweight: ['Single-Leg Glute Bridge', 'Glute Bridge'],
+  };
+
+  test.each(CATALOGUE_PROFILES)('%s: the glutes list is the pinned glute-primary rows', (profile) => {
+    const list = resolve(profile).glutes;
+    expect(list.map((x) => x.name)).toEqual(GLUTES_BY_KIT[profile]);
+    for (const x of list) expect(BY_NAME.get(x.name).primaryMuscle).toBe('glutes');
+  });
+
+  test('a full gym has at least three glute-primary choices, hip thrust first', () => {
+    const list = resolve('full_gym').glutes;
+    expect(list.length).toBeGreaterThanOrEqual(3);
+    expect(list[0].name).toBe('Barbell Hip Thrust');
+    expect(list.every((x) => x.primaryMuscle === 'glutes')).toBe(true);
+  });
+
+  test('no kit has fewer than two glutes choices (before this lane the barbell, machines and bodyweight kits had one)', () => {
+    for (const kit of CATALOGUE_PROFILES) expect(resolve(kit).glutes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('the hip thrusts and bridges credit the hamstrings half a set, a kickback credits nothing', () => {
+    const full = resolve('full_gym').glutes;
+    for (const x of full) {
+      expect(x.credits).toEqual(x.role === 'glute_kickback' ? {} : { hamstrings: 0.5 });
+      expect(x.direct).toBe(1);
+    }
+  });
+
+  test('a name is chosen once: the machine hip thrust is the first choice where the kit has no barbell, never listed twice', () => {
+    const machines = resolve('machines_cables').glutes;
+    expect(machines[0]).toMatchObject({ name: 'Machine Hip Thrust', role: 'hip_thrust' });
+    expect(machines.filter((x) => x.name === 'Machine Hip Thrust')).toHaveLength(1);
   });
 });
 
@@ -689,7 +814,7 @@ describe('every exercise a plan picks without being asked is a STAPLE row (desig
           if (![AUTO_TIER.STAPLE, AUTO_TIER.COMMON, AUTO_TIER.SPECIALIST].includes(tier)) offences.push(`${muscle}: ${x.name} (${tier})`);
         } else if (x.thinKit) {
           if (![AUTO_TIER.STAPLE, AUTO_TIER.COMMON].includes(tier)) offences.push(`${muscle}: ${x.name} (${tier})`);
-        } else if (tier !== AUTO_TIER.STAPLE) {
+        } else if (tier !== AUTO_TIER.STAPLE && !COMMON_GLUTE_EXTRAS.includes(`${muscle}.${x.role}: ${x.name}`)) {
           offences.push(`${muscle}: ${x.name} (${tier})`);
         }
       }
@@ -894,14 +1019,14 @@ const VERTICAL_PULL_NAMES = ['Lat Pulldown (Wide Grip)', 'Pull-Up', 'Chin-Up', '
 
 // A press listed under the triceps credits the chest and the front of the
 // shoulder (the close-grip bench press, a dip, a diamond push-up); a lunge or
-// split squat listed under the quads credits the glutes (listed under the glutes
-// it credits the quads). Every one of these named from the exercise's own
+// split squat is a quads choice and credits the glutes (lane B8: it is no longer
+// listed under the glutes). Every one of these named from the exercise's own
 // movement, whichever role it stands in for.
 const TRICEPS_PRESS_CREDITS = { chest: 0.5, front_delts: 0.5 };
 const PRESSES_UNDER_TRICEPS = ['Close-Grip Bench Press', 'Bench Dip', 'Tricep Dip (Parallel Bars)', 'Diamond Push-Up'];
 const LUNGES_UNDER_QUADS_CREDITS = { glutes: 0.5 };
 const LUNGES_UNDER_QUADS = [
-  'Bulgarian Split Squat', 'Barbell Lunge', 'Split Squat',
+  'Walking Lunge', 'Bulgarian Split Squat', 'Barbell Lunge', 'Split Squat',
   'Bodyweight Split Squat', 'Bodyweight Reverse Lunge', 'Bodyweight Walking Lunge',
 ];
 
@@ -919,9 +1044,8 @@ function ruledCredits(muscle, roleId, name) {
   }
   if (muscle === 'quads' && (roleId === 'squat_or_press' || roleId === 'other_squat')) return SQUAT_CREDITS;
   if (muscle === 'hamstrings' && roleId === 'hip_hinge') return { glutes: 0.5 };
-  if (muscle === 'glutes' && roleId === 'hip_thrust') return { hamstrings: 0.5 };
-  if (muscle === 'glutes' && roleId === 'lunge') return { quads: 0.5 };
-  return {};
+  if (muscle === 'glutes' && ['hip_thrust', 'other_hip_thrust', 'glute_bridge'].includes(roleId)) return { hamstrings: 0.5 };
+  return {}; // every isolation exercise, the glutes' kickbacks included
 }
 
 const corpusCredits = (name, muscle) => {
@@ -957,8 +1081,8 @@ describe('credits: the curated rule, not the corpus\'s secondary muscles (D219 l
     const split = resolve('dumbbells_only').quads.find((x) => x.name === 'Bulgarian Split Squat');
     expect(split).toMatchObject({ role: 'leg_extension', thinKit: true });
     expect(split.credits).toEqual({ glutes: 0.5 });
-    // Listed under the glutes it is the same exercise with the other muscle credited.
-    expect(catalogueCredits('glutes', 'Bulgarian Split Squat')).toEqual({ quads: 0.5 });
+    // A quads choice crediting the glutes; the glutes no longer list it (lane B8), so it credits nothing there.
+    expect(catalogueCredits('glutes', 'Bulgarian Split Squat')).toEqual({});
     expect(catalogueCredits('quads', 'Bulgarian Split Squat')).toEqual({ glutes: 0.5 });
     // A dip standing in for the overhead extension is a press: the chest and the front delts.
     const dip = resolve('bodyweight').triceps.find((x) => x.name === 'Bench Dip');
@@ -1082,7 +1206,9 @@ describe('catalogueCredits: the same rule, by muscle and name (a kept exercise h
     expect(catalogueCredits('back', 'Dumbbell Row')).toEqual(ROW_CREDITS);
     expect(catalogueCredits('quads', 'Hack Squat Machine')).toEqual(SQUAT_CREDITS);
     expect(catalogueCredits('quads', 'Goblet Squat')).toEqual(SQUAT_CREDITS);
-    expect(catalogueCredits('glutes', 'Walking Lunge')).toEqual({ quads: 0.5 });
+    expect(catalogueCredits('quads', 'Walking Lunge')).toEqual({ glutes: 0.5 });
+    expect(catalogueCredits('glutes', 'Machine Hip Thrust')).toEqual({ hamstrings: 0.5 });
+    expect(catalogueCredits('glutes', 'Glute Kickback Machine')).toEqual({});
     expect(catalogueCredits('biceps', 'Hammer Curl')).toEqual({});
   });
 
@@ -1095,7 +1221,7 @@ describe('catalogueCredits: the same rule, by muscle and name (a kept exercise h
   test('anything the muscle\'s catalogue does not list is credited nothing: an unknown name, an unknown muscle, or a name listed under another muscle', () => {
     expect(catalogueCredits('chest', 'Zercher Squat')).toEqual({});
     expect(catalogueCredits('shoulders', 'Barbell Bench Press')).toEqual({});
-    expect(catalogueCredits('quads', 'Walking Lunge')).toEqual({});
+    expect(catalogueCredits('glutes', 'Walking Lunge')).toEqual({});
     expect(catalogueCredits(undefined, undefined)).toEqual({});
   });
 
