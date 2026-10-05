@@ -221,14 +221,15 @@ describe('C14-2 reset-to-default keeps its own semantics (requirement 10)', () =
     expect(cloud.get('@volyume_units').value).toBe('kg');
   });
 
-  test('the landmark reset keeps pushing the tombstone it always pushed', () => {
-    // Campaign 1 established the empty-value sentinel here first, and the
-    // reader treats a falsy stored value as "use the research defaults".
-    // C14 generalised that convention; it must not have changed it.
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): this pinned the editor's "back to Volyume's
+  // targets" reset pushing an empty-value tombstone (Campaign 1's sentinel, which C14 generalised). The reset went
+  // with the editor and nothing in the screen writes the key any more; the sentinel convention itself lives in
+  // sync.js, which this change leaves untouched, and the deleteUserPref pins below still hold it.
+  test('the landmark reset is gone with the editor: the screen pushes no tombstone and writes no preference', () => {
     const SRC = fs.readFileSync(
       path.resolve(__dirname, '../../screens/VolumeHeatmapScreen.js'), 'utf8',
     );
-    expect(SRC).toMatch(/syncUserPref\(user\.id, key, ''\)/);
+    expect(SRC).not.toMatch(/syncUserPref|notePrefWrite|volyume_landmarks/);
   });
 
   test('deleteUserPref is not a "clear all prefs" hammer', () => {

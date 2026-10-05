@@ -1,28 +1,23 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily,
+  colors, spacing, radius, type, circle,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getEffectiveLandmarks, getPlanLandmarks, getPlanRoles, isManualEdit } from '../lib/effectiveLandmarks';
+import { getPlanLandmarks, getPlanRoles } from '../lib/effectiveLandmarks';
 import BackHeader from '../components/BackHeader';
-import ModalHeader from '../components/ModalHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
-import Button from '../components/Button';
-import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import EmptyState from '../components/EmptyState';
 import RangeBar from '../components/RangeBar';
-import { NavRow, NavGroup } from '../components/NavRow';
 import { SkeletonCard } from '../components/Skeleton';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
-import { useToast } from '../components/Toast';
 import {
   getCompletedWorkoutSets, getAllExercises, getExerciseLookup, getWeeklyVolumeByMuscle, getActivePlan,
   getCurrentMesocycleWeek,
@@ -31,8 +26,7 @@ import { computeDivisionDiff, fingerprintMarkers, planWearsDivision } from '../l
 import { buildPlanInputs } from '../lib/planAutoGen';
 import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
-import { syncUserPref, notePrefWrite } from '../lib/sync';
-import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 // D214 addendum 9 (census 0.24, W4): the band words are written ONCE, in
 // volumeBandLabels.js, and read by this screen and the Workout Summary alike.
 // D219 (design 5.3, lane A5): the words and the verdict are the ONE judgement
@@ -82,8 +76,11 @@ import { localWeekEndMs } from '../lib/dayKey';
  *
  * The screen's question: "Am I doing enough for each muscle this week?"
  * Order: the window control, the summary line (logged sets, never credits),
- * the figure with its ONE legend, the rows grouped by band with counts, the
- * trend card, and one "Volume targets" door to the editor.
+ * the figure with its ONE legend, the rows grouped by band with counts, and
+ * the trend card. The screen ends there: the "Volume targets" door and its
+ * editor are removed (D219, founder answer 2026-10-05, "Remove the editor":
+ * one set of numbers everywhere, so the person's own targets are neither
+ * shown nor applied).
  *
  * Standing rules held here:
  *  - D204 and D204 addendum 3: the screen describes and never instructs, so no
@@ -114,8 +111,9 @@ import { localWeekEndMs } from '../lib/dayKey';
  *    muscles it programmes; without one, the muscles with logged sets. A muscle
  *    outside it with no sets is "No sets" and carries no verdict
  *    (volumeLogged.js bandGroupFor).
- *  - Targets are described, and edited, as the bands in force: the editor
- *    seeds from them and saves ONLY the muscles the person touched.
+ *  - One set of numbers: the screen reads no stored target of the person's
+ *    own. Every row is judged by the plan's evidence-based role bands
+ *    (volumeJudgement.js), the same ones every other screen reads.
  */
 
 const WINDOW_OPTIONS = [
@@ -144,7 +142,7 @@ const RECOVERY_WEEK_LINE = 'Recovery week: sets are planned lower this week';
 // D214 addendum 9 (census 6.5). An ADAPTIVE adjustment (recovery evidence easing
 // one accumulation week) is never called a recovery week, so the muscles are
 // still judged and these words never appear. The bands the rows judge against
-// do NOT drop with it: they come from the manual, adapted, plan-routine and
+// do NOT drop with it: they come from the adapted, plan-routine and
 // profile layers (effectiveLandmarks.js), none of which the adjustment writes
 // (it flips the week's flag and cuts planned_muscle_volume, which no band
 // reads), so a muscle can read under its range while the coach holds sets back.
@@ -193,7 +191,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 // "Sessions left" is the required sessions of the plan week the programme is
 // on that are still outstanding. The plan-trained set is the plan layer's own
 // (the plan's weekly sets per muscle, effectiveLandmarks.getPlanLandmarks),
-// never the merged source map, so a manual edit cannot drop a muscle from it.
+// never the merged source map, so no other layer can drop a muscle from it.
 async function readPlanContext(userId, userProfile) {
   const out = { ...EMPTY_PLAN_CONTEXT };
   let position = null;
@@ -238,7 +236,6 @@ export default function VolumeHeatmapScreen({ route }) {
     user: s.user,
     userProfile: s.userProfile,
   })));
-  const toast = useToast();
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // because this screen renders a muscle-row list and a trend list.
   const t = useTheme();
@@ -260,32 +257,6 @@ export default function VolumeHeatmapScreen({ route }) {
   useEffect(() => {
     if (routeWindowWeeks != null) setWindowWeeks(normaliseWindowWeeks(routeWindowWeeks));
   }, [routeWindowWeeks]);
-  const [customLandmarks, setCustomLandmarks] = useState(null);
-  // D90 #3 (2026-08-06): the resolved precedence (manual > adapted > plan >
-  // profile > research, effectiveLandmarks.js). D214: the editor seeds from
-  // that table (the band in force) and saves only what the person touched.
-  // D219: the rows no longer judge by it (they read volumeJudgement.js); the
-  // table stays for the editor and the engines that read the stored targets.
-  const [resolvedLandmarks, setResolvedLandmarks] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [editValues, setEditValues] = useState({});
-  // The editor is a native Modal, which sits above the app's toast and alert
-  // hosts, so what it has to say (a failed write, a muscle handed back) is said
-  // inside it, and the "back to Volyume's targets" confirmation is inline.
-  const [editNotice, setEditNotice] = useState(null);
-  const [confirmingReset, setConfirmingReset] = useState(false);
-  // The values each field was SEEDED with when the editor opened (the band in
-  // force). A muscle is saved only when it was touched or differs from this,
-  // never when it merely differs from the research table: a plan band is not
-  // a manual edit (the Stage 6 blocker stays closed).
-  const editSeedRef = useRef({});
-  // C8 Work 3 (RA6-6): which muscles the user actually TOUCHED in this
-  // editing session. A deliberate save is user intent even when the
-  // chosen number equals the value it was seeded with or the research
-  // default, and intent must never be inferred from the number - but simply
-  // opening the editor and tapping Save must NOT mark every muscle manual
-  // (that was the Stage 6 blocker that disabled adaptation body-wide).
-  const touchedMusclesRef = useRef(new Set());
   const [trendData, setTrendData] = useState([]);
   // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
   // at 4W by default to preserve the section's current shape; chips widen it.
@@ -364,14 +335,6 @@ export default function VolumeHeatmapScreen({ route }) {
       logError('VolumeHeatmapScreen.loadTrend', e, { userId: user?.id, windowKey });
       setTrendData([]);
     }
-  }
-
-  // The resolved bands and their sources, read afresh (after a save or a
-  // release, so the rows and the editor follow the bands now in force).
-  async function resolveLandmarksNow() {
-    const r = await getEffectiveLandmarks(user.id, { userProfile });
-    setResolvedLandmarks(r?.table ?? null);
-    return r;
   }
 
   async function loadData() {
@@ -488,35 +451,6 @@ export default function VolumeHeatmapScreen({ route }) {
         setDivisionLabel(null);
       }
 
-      // Custom volume targets. Stored in AsyncStorage under an @volyume_
-      // key, which the generic user_prefs sync round-trips to cloud (push
-      // in bulkUploadLocalData, restore in pullFromCloud), so the setting
-      // survives a reinstall or a sign-out/in on the same account. Saving
-      // and releasing below also push immediately via syncUserPref so the
-      // change is not stranded until the next bulk sync.
-      const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
-      if (!isCurrentRequest()) return;
-      let parsed = null;
-      if (stored) {
-        try { parsed = JSON.parse(stored); } catch (_) {}
-      }
-      setCustomLandmarks(parsed);
-      // D214: the bands in force are read BEFORE the first paint, so the rows,
-      // the figure and each row's source all come from the same resolution
-      // (a late resolution used to draw research values under a caption that
-      // said otherwise, VH-4).
-      try {
-        const r = await getEffectiveLandmarks(user.id, { userProfile });
-        if (!isCurrentRequest()) return;
-        setResolvedLandmarks(r?.table ?? null);
-      } catch (e) {
-        // The rows then judge by the research table, and the editor seeds from
-        // it, so the failure is logged rather than left silent (review N3).
-        logError('VolumeHeatmapScreen.resolveLandmarks', e, { userId: user?.id });
-        if (!isCurrentRequest()) return;
-        setResolvedLandmarks(null);
-      }
-
       await loadTrend(trendKeyRef.current, ds);
     } catch (e) {
       if (!isCurrentRequest()) return;
@@ -533,189 +467,7 @@ export default function VolumeHeatmapScreen({ route }) {
     }
   }
 
-  const effectiveLandmarks = resolvedLandmarks ?? customLandmarks ?? null;
   const muscles = LISTED_MUSCLES;
-
-  // The band in force for a muscle: what the rows judge by and the editor seeds.
-  const bandFor = useCallback((muscle) => effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle],
-    [effectiveLandmarks]);
-
-  function openEditor() {
-    const seed = {};
-    const values = {};
-    for (const muscle of muscles) {
-      const band = bandFor(muscle);
-      seed[muscle] = { mev: Number(band.mev) || 0, mav: Number(band.mav) || 0, mrv: Number(band.mrv) || 0 };
-      values[muscle] = { ...seed[muscle] };
-    }
-    editSeedRef.current = seed;
-    touchedMusclesRef.current = new Set();
-    setEditValues(values);
-    setEditNotice(null);
-    setConfirmingReset(false);
-    setEditing(true);
-  }
-
-  function cancelEditing() {
-    // Review D4: an abandoned edit is not intent. Cancel discards both the
-    // typed values (the editor is re-seeded on the next open) and the record
-    // of which muscles were touched, so a later save in the same visit cannot
-    // stamp them as the user's own setting (which would be permanent and
-    // outrank everything, including adaptive learning).
-    touchedMusclesRef.current = new Set();
-    setEditing(false);
-  }
-
-  async function saveLandmarks() {
-    if (!user?.id) return;
-    // Stage 6 review blocker #1, closed again under D214: persist ONLY what the
-    // person set. A muscle is written when it was touched in this editing
-    // session or its numbers differ from the values the editor SEEDED (the band
-    // in force), never because it differs from the research table: seeded from
-    // a plan, an untouched muscle already differs from research and must not
-    // become a manual edit. A muscle that already holds a saved edit keeps it.
-    const stored = customLandmarks || {};
-    const seed = editSeedRef.current || {};
-    const map = {};
-    for (const muscle of muscles) {
-      const vals = editValues[muscle] || {};
-      const entry = {
-        mev: parseInt(vals.mev, 10) || 0,
-        mav: parseInt(vals.mav, 10) || 0,
-        mrv: parseInt(vals.mrv, 10) || 0,
-      };
-      const seeded = seed[muscle];
-      const touched = touchedMusclesRef.current.has(muscle);
-      const changedFromSeed = !!seeded
-        && (entry.mev !== seeded.mev || entry.mav !== seeded.mav || entry.mrv !== seeded.mrv);
-      const prior = stored[muscle];
-      if (touched || changedFromSeed) {
-        // C8 Work 3 (RA6-6): a deliberate edit is the person's own setting even
-        // when they landed on the value it was seeded with; `explicit` records
-        // the intent so no reader has to infer it from the number.
-        map[muscle] = { ...entry, explicit: true };
-      } else if (prior && (prior.explicit === true || isManualEdit(prior, VOLUME_LANDMARKS[muscle]))) {
-        map[muscle] = prior; // an earlier real edit stays exactly as saved
-      }
-    }
-    const key = `@volyume_landmarks_${user.id}`;
-    try {
-      if (Object.keys(map).length === 0) {
-        touchedMusclesRef.current = new Set();
-        if (customLandmarks) {
-          // Only neutral legacy entries were stored: nothing is the person's
-          // own, so the blob goes (same semantics as a reset).
-          await AsyncStorage.removeItem(key);
-          // Campaign 1 P0-8 D10: stamp the local write so a stale cloud copy
-          // of the landmark blob cannot be applied back over this edit.
-          notePrefWrite(key).catch(() => {});
-          syncUserPref(user.id, key, '').catch(() => {});
-          setCustomLandmarks(null);
-          toast.show('Volume targets saved', { variant: 'success' });
-        }
-        setEditing(false);
-        return;
-      }
-      const json = JSON.stringify(map);
-      await AsyncStorage.setItem(key, json);
-      // Campaign 1 P0-8 D10: stamp the local write (see above).
-      notePrefWrite(key).catch(() => {});
-      // Push straight to cloud so the targets survive a reinstall even if no
-      // bulk sync runs before then. Best-effort: a failure just defers the
-      // push to the next bulk sync, which still covers this key.
-      syncUserPref(user.id, key, json).catch(() => {});
-      touchedMusclesRef.current = new Set();
-      setCustomLandmarks(map);
-      setEditing(false);
-      toast.show('Volume targets saved', { variant: 'success' });
-      resolveLandmarksNow().catch((e) => logError('VolumeHeatmapScreen.resolveLandmarksNow', e, { userId: user?.id }));
-    } catch (e) {
-      logError('VolumeHeatmapScreen.saveLandmarks', e, { muscle: 'all' });
-      setEditNotice("Couldn't save your volume targets. Try again.");
-    }
-  }
-
-  // C14 job 7 (RA6-6): a muscle is Volyume-managed when the user holds no
-  // saved override for it AND has not touched it in this editing session.
-  // The control only appears when there is something to hand back.
-  function isMuscleManaged(muscle) {
-    return !customLandmarks?.[muscle] && !touchedMusclesRef.current.has(muscle);
-  }
-
-  // Hand ONE muscle back to Volyume's targets. Drops its saved entry (explicit
-  // marker and all) and the session's record that it was touched, then writes
-  // the remaining table through the same path a save uses, so the cloud copy
-  // cannot ride the next pull back in and undo it. An empty table is a full
-  // reset, which is what removing the last override means; the reader treats a
-  // falsy stored value as "use the targets Volyume works out".
-  async function clearMuscleOverride(muscle) {
-    const hadSaved = !!customLandmarks?.[muscle];
-    touchedMusclesRef.current.delete(muscle);
-    if (!hadSaved) {
-      // Only typed in this editing session, never saved: nothing is stored for
-      // it, so nothing is written. The fields go back to what they were seeded
-      // with, the band Volyume is using.
-      const seeded = editSeedRef.current?.[muscle];
-      if (seeded) setEditValues(prev => ({ ...prev, [muscle]: { ...seeded } }));
-      setEditNotice(`${MUSCLE_DISPLAY_NAMES[muscle]} is back to Volyume's targets.`);
-      return;
-    }
-    const next = { ...(customLandmarks || {}) };
-    delete next[muscle];
-    const key = `@volyume_landmarks_${user.id}`;
-    const empty = Object.keys(next).length === 0;
-    try {
-      if (empty) await AsyncStorage.removeItem(key);
-      else await AsyncStorage.setItem(key, JSON.stringify(next));
-      notePrefWrite(key).catch(() => {});
-      syncUserPref(user.id, key, empty ? '' : JSON.stringify(next)).catch(() => {});
-    } catch (e) {
-      logError('VolumeHeatmapScreen.clearMuscleOverride', e, { muscle });
-      setEditNotice("Couldn't save that change. Try again.");
-      return;
-    }
-    setCustomLandmarks(empty ? null : next);
-    // The muscle's band is now whatever Volyume works out for it, so the
-    // editor's fields for that muscle follow it.
-    try {
-      const r = await resolveLandmarksNow();
-      const band = r?.table?.[muscle] || VOLUME_LANDMARKS[muscle];
-      const seeded = { mev: Number(band.mev) || 0, mav: Number(band.mav) || 0, mrv: Number(band.mrv) || 0 };
-      editSeedRef.current = { ...editSeedRef.current, [muscle]: seeded };
-      setEditValues(prev => ({ ...prev, [muscle]: { ...seeded } }));
-    } catch (_) { /* best-effort: the fields keep what they show */ }
-    setEditNotice(`${MUSCLE_DISPLAY_NAMES[muscle]} is back to Volyume's targets.`);
-  }
-
-  // Every muscle back to the bands the app would use without the person's
-  // edits (plan, adjusted, profile or research). Confirmed inline in the editor
-  // (confirmingReset) before it runs.
-  async function resetToVolyumeTargets() {
-    const key = `@volyume_landmarks_${user.id}`;
-    try {
-      await AsyncStorage.removeItem(key);
-      // Campaign 1 P0-8 D10: stamp the local write so a stale cloud
-      // copy cannot ride back in and undo the reset.
-      notePrefWrite(key).catch(() => {});
-      // Clear the cloud copy too. Without this the old custom targets
-      // would ride pullFromCloud back onto the device on the next
-      // reinstall and silently undo the reset. There is no pref-delete
-      // RPC, so an empty value is the "no custom targets" sentinel:
-      // loadData treats a falsy stored value as no custom targets.
-      syncUserPref(user.id, key, '').catch(() => {});
-    } catch (e) {
-      logError('VolumeHeatmapScreen.resetToVolyumeTargets', e, {});
-      setConfirmingReset(false);
-      setEditNotice("Couldn't save that change. Try again.");
-      return;
-    }
-    touchedMusclesRef.current = new Set();
-    setCustomLandmarks(null);
-    setConfirmingReset(false);
-    setEditing(false);
-    resolveLandmarksNow().catch((e) => logError('VolumeHeatmapScreen.resolveLandmarksNow', e, { userId: user?.id }));
-    toast.show("Volume targets back to Volyume's targets", { variant: 'success' });
-  }
 
   // ScrollView + per-row offsets so the body diagram can scroll the user to a
   // muscle's row when its region is tapped. A row's y is relative to its group,
@@ -724,12 +476,6 @@ export default function VolumeHeatmapScreen({ route }) {
   const listY = useRef(0);
   const groupY = useRef({});
   const rowY = useRef({});
-  // A4 (pre-release sweep 2026-07-27): the volume-targets Min/Target/Max
-  // fields are all number-pad (no Return key on iOS), so returnKeyType/
-  // onSubmitEditing would be inert -- chain focus instead via TextField's
-  // numeric Done-bar "Next" affordance. Keyed by `${muscle}:${key}` since
-  // every muscle row renders its own MEV/MAV/MRV trio.
-  const editFieldRefs = useRef({});
 
   // Everything the current chip reads, from the loaded history.
   const view = useMemo(() => (dataset ? buildWindowView(dataset, windowWeeks) : null), [dataset, windowWeeks]);
@@ -1078,151 +824,7 @@ export default function VolumeHeatmapScreen({ route }) {
             ))}
           </Card>
         )}
-
-        {/* Volume targets: one door to the editor. */}
-        <NavGroup>
-          <NavRow
-            icon="stats-chart-outline"
-            label="Volume targets"
-            sub="How many sets each muscle gets each week."
-            onPress={openEditor}
-          />
-        </NavGroup>
       </ScrollView>
-
-      {/* The editor: the bands in force, one box each, saving only the muscles
-          the person touches. */}
-      <Modal visible={editing} animationType="slide" onRequestClose={cancelEditing}>
-        <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-          <ModalHeader title="Volume targets" onClose={cancelEditing} />
-          <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <ScrollView contentContainerStyle={styles.editContent} keyboardShouldPersistTaps="handled">
-              <Text style={[styles.editSubtitle, live.editSubtitle]}>
-                Weekly sets per muscle: minimum, target and maximum. Each box starts at the target Volyume is using for you today, and only the muscles you change are saved as your own.
-              </Text>
-              {/* D93 (Campaign 2, Phase 7): the second consequence of a manual
-                  override was disclosed nowhere - a manually-set block is also
-                  skipped by the learned-range replay (learnedRange.js min
-                  evidence, D91-12), so hand-set targets pause learning too. */}
-              <Text style={[styles.editSubtitle, live.editSubtitle]}>
-                Your numbers set the targets from here; a block already underway keeps its written plan. While your own settings are in place, the app stops adjusting these ranges from your finished blocks.
-              </Text>
-              {editNotice ? (
-                <Text style={[styles.editNotice, live.editNotice]} accessibilityLiveRegion="polite">{editNotice}</Text>
-              ) : null}
-              {muscles.map(muscle => (
-                <View key={muscle} style={[styles.editRow, live.editRow]}>
-                  <View style={styles.editRowHeader}>
-                    <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
-                    {/* C14 job 7 (RA6-6): the distinct "hand this one back"
-                        action. Explicit intent is a CHOICE, so it can only be
-                        undone by another choice. Releasing here returns this
-                        muscle to Volyume's targets and drops its explicit
-                        marker, without the user having to move a number away
-                        and back again to prove they meant it. */}
-                    {isMuscleManaged(muscle) ? null : (
-                      <TouchableOpacity
-                        onPress={() => clearMuscleOverride(muscle)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} back to Volyume's targets`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Text style={[styles.editRowClear, live.editRowClear]}>Back to Volyume's targets</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <View style={styles.editInputs}>
-                    {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label], idx, arr) => {
-                      const nextKey = arr[idx + 1]?.[0];
-                      return (
-                        <TextField
-                          key={key}
-                          ref={el => { editFieldRefs.current[`${muscle}:${key}`] = el; }}
-                          label={label}
-                          value={String(editValues[muscle]?.[key] ?? '')}
-                          onChangeText={v => {
-                            touchedMusclesRef.current.add(muscle); // C8 RA6-6
-                            setEditValues(prev => ({
-                              ...prev,
-                              [muscle]: { ...prev[muscle], [key]: v },
-                            }));
-                          }}
-                          keyboardType="number-pad"
-                          selectTextOnFocus
-                          accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
-                          containerStyle={styles.editInputGroup}
-                          labelStyle={[styles.editInputLabel, live.editInputLabel]}
-                          fieldStyle={styles.editInputField}
-                          inputStyle={styles.editInputText}
-                          onAccessoryNext={nextKey ? () => editFieldRefs.current[`${muscle}:${nextKey}`]?.focus() : undefined}
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-              {(customLandmarks && Object.keys(customLandmarks).length > 0) || touchedMusclesRef.current.size > 0 ? (
-                <View style={styles.resetBlock}>
-                  {confirmingReset ? (
-                    <>
-                      <Text style={[styles.editSubtitle, live.editSubtitle]}>
-                        Your own targets are removed. Each muscle goes back to the target Volyume works out from your plan and your logged training.
-                      </Text>
-                      <View style={styles.resetActions}>
-                        <Button
-                          title="Keep mine"
-                          variant="secondary"
-                          size="sm"
-                          onPress={() => setConfirmingReset(false)}
-                          accessibilityLabel="Keep my own targets"
-                          style={styles.editActionButton}
-                        />
-                        <Button
-                          title="Back to Volyume's targets"
-                          size="sm"
-                          onPress={resetToVolyumeTargets}
-                          accessibilityLabel="Confirm all muscles back to Volyume's targets"
-                          style={styles.editActionButton}
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[styles.editSubtitle, live.editSubtitle]}>
-                        The targets Volyume would use without your edits come from your plan and your logged training.
-                      </Text>
-                      <Button
-                        title="Back to Volyume's targets"
-                        variant="secondary"
-                        size="sm"
-                        onPress={() => setConfirmingReset(true)}
-                        accessibilityLabel="All muscles back to Volyume's targets"
-                      />
-                    </>
-                  )}
-                </View>
-              ) : null}
-            </ScrollView>
-            <View style={[styles.editFooter, live.editFooter]}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                size="sm"
-                onPress={cancelEditing}
-                accessibilityLabel="Cancel"
-                style={styles.editActionButton}
-              />
-              <Button
-                title="Save"
-                size="sm"
-                onPress={saveLandmarks}
-                accessibilityLabel="Save volume targets"
-                style={styles.editActionButton}
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -1389,7 +991,6 @@ function buildTrendLiveStyles(t) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  keyboardAvoid: { flex: 1 },
   loadingStack: { padding: spacing.lg, gap: spacing.lg },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   noteRow: {
@@ -1459,43 +1060,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   trendTakeaway: { ...type.bodySm, color: colors.textSecondary },
-  editContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
-  editSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary },
-  editRow: {
-    gap: spacing.sm,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-  },
-  editMuscleName: { ...type.label, color: colors.textSecondary },
-  editRowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  editRowClear: { ...type.caption, color: colors.primary },
-  editInputs: { flexDirection: 'row', gap: spacing.sm },
-  editInputGroup: { flex: 1, gap: spacing.xs },
-  editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  // R2 (2026-07-11): input class -> radius.md (control/input/icon-backing,
-  // FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
-  editInputField: { borderRadius: radius.md },
-  // Numeric target input: tabular figures so the min/target/max values align.
-  editInputText: { textAlign: 'center', fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
-  editNotice: { ...type.bodySm, color: colors.textPrimary },
-  resetBlock: { gap: spacing.sm },
-  resetActions: { flexDirection: 'row', gap: spacing.md },
-  editFooter: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-  },
-  editActionButton: {
-    flex: 1,
-  },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -1521,12 +1085,5 @@ function buildLiveStyles(t) {
     sourceLine: { ...t.type.caption, color: t.colors.textMuted },
     footerNote: { ...t.type.bodySm, color: t.colors.textMuted },
     trendTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
-    editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    editNotice: { ...t.type.bodySm, color: t.colors.textPrimary },
-    editRow: { borderBottomColor: t.colors.borderSubtle },
-    editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
-    editRowClear: { ...t.type.caption, color: t.colors.primary },
-    editInputLabel: { ...t.type.caption, color: t.colors.textMuted },
-    editFooter: { borderTopColor: t.colors.borderSubtle },
   };
 }

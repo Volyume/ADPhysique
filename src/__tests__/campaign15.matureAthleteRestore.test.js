@@ -30,6 +30,14 @@
  *
  *   Reinstall must not overrule the user. A pinned muscle stays pinned,
  *   including at research values, and a released one stays released.
+ *
+ * RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor": "One set of
+ * numbers everywhere"): the last law is reversed. The Volume targets editor is
+ * gone and a person's stored custom targets are no longer applied anywhere, so a
+ * pin that arrives with a restore changes no seed, and the two decisions must
+ * also agree with a person who never set any. The pin is still seeded below
+ * because the blob still travels and stays on disk (no data change); the
+ * restore laws above are untouched.
  */
 
 jest.mock('../lib/dbCrypto', () => {
@@ -77,6 +85,9 @@ const day = ms => new Date(ms).toISOString().slice(0, 10);
 // that the SECOND one has nothing but what a restore actually delivers.
 const A = 'athlete-established';
 const B = 'athlete-reinstalled';
+// RE-PINNED 2026-10-05 (D219): the same history with NO stored custom targets, the control the pinned
+// accounts' decisions must now equal.
+const C = 'athlete-no-pin';
 
 // A judged block entry, in the shape the ledger really stores.
 const entry = (muscle, { start, peak, proposalStart, classification = 'RESPONSIVE', confidence = 0.9 }) => ({
@@ -153,6 +164,8 @@ async function seedAccount(uid, { blockAgeDays = [130, 90, 50] } = {}) {
 // `chest` is deliberately NOT pinned, so it is the muscle whose seed is
 // decided by restored learned evidence and the equivalence comparison has
 // something real to compare. `back` is absent because it was RELEASED.
+// RE-PINNED 2026-10-05 (D219): the pin is stored and restored as before, and
+// is now ignored by the decision; account C below has none, as the control.
 async function seedManualChoices(uid) {
   const research = VOLUME_LANDMARKS.quads;
   await AsyncStorage.setItem(`@volyume_landmarks_${uid}`, JSON.stringify({
@@ -162,6 +175,7 @@ async function seedManualChoices(uid) {
 
 let seedA;
 let seedB;
+let seedC;
 
 beforeAll(async () => {
   await db();
@@ -175,7 +189,15 @@ beforeAll(async () => {
   await seedAccount(B);
   await seedManualChoices(B);
   seedB = await buildSeedRangesForNextBlock(B, { intent: 'adjust', tier: 'pro' });
+
+  await seedAccount(C);
+  seedC = await buildSeedRangesForNextBlock(C, { intent: 'adjust', tier: 'pro' });
 });
+
+// The decision as a map, for whole-map comparisons.
+const shapeOf = s => Object.fromEntries(Object.entries(s.ranges).map(([m, r]) => [m, {
+  source: r.source, startSets: r.startSets, peakSets: r.peakSets, probed: r.probed ?? false,
+}]));
 
 describe('C15-3 the decision agrees before and after a reinstall (7)', () => {
   test('both decisions were actually produced', () => {
@@ -264,33 +286,34 @@ describe('C15-3 reinstall does not make old evidence young again (10)', () => {
   });
 });
 
-describe('C15-3 the user still outranks the engine after a restore (11, 12)', () => {
-  test('a manual pin AT the research values survives (11)', () => {
-    // The Campaign 14 case. Before explicit intent was recorded this was
-    // indistinguishable from "never edited", so a restore plus an adaptive
-    // pass could move numbers the user had deliberately chosen.
+describe('C15-3 the stored custom pins are not applied, before or after a restore (11, 12, 13)', () => {
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): these three pinned that the user outranks
+  // the engine after a restore: a pin AT the research values survived (11), a released muscle stayed released
+  // (12), and a manual muscle did not teach the learned engine (13). With the layer retired the pin changes
+  // nothing on any device, so the pinned accounts must decide exactly as the account that never set one.
+  test('a custom pin AT the research values is no longer applied, on either device (11)', () => {
+    // The predicate still reads the entry as intent (the data is kept); no seed is taken from it.
     const research = VOLUME_LANDMARKS.quads;
     expect(isManualEdit(
       { mev: research.mev, mav: research.mav, mrv: research.mrv, explicit: true }, research,
     )).toBe(true);
-    expect(seedB.ranges.quads.source).toBe('manual');
-    expect(seedB.ranges.quads.startSets).toBe(research.mev);
+    expect(seedA.ranges.quads.source).not.toBe('manual');
+    expect(seedB.ranges.quads.source).not.toBe('manual');
+    expect(seedB.ranges.quads).toEqual(seedA.ranges.quads);
   });
 
-  test('a released muscle stays released (12)', () => {
-    // `back` was handed back to Volyume, recorded as absence from the
-    // table. A restore must not read that absence as anything else.
-    expect(seedB.ranges.back.source).not.toBe('manual');
+  test('no muscle on either device is seeded from a custom pin, released or not (12)', () => {
+    for (const seed of [seedA, seedB, seedC]) {
+      expect(Object.values(seed.ranges).map(r => r.source)).not.toContain('manual');
+    }
     expect(seedB.ranges.back.source).toBe(seedA.ranges.back.source);
   });
 
-  test('a manual muscle does not teach the learned engine after restore (13)', () => {
-    // Manual blocks are excluded from learned replay, and a restore must
-    // not launder them in. quads is pinned at research values, so if the
-    // pin were being learned from, its seed would drift off them.
-    const research = VOLUME_LANDMARKS.quads;
-    expect(seedB.ranges.quads.startSets).toBe(research.mev);
-    expect(seedB.ranges.quads.source).toBe('manual');
+  test('a pinned account decides exactly as an account that never set one, muscle by muscle (13)', () => {
+    expect(shapeOf(seedA)).toEqual(shapeOf(seedC));
+    expect(shapeOf(seedB)).toEqual(shapeOf(seedC));
+    // The control means something: quads carries judged evidence, so it is not a default read.
+    expect(['learned', 'ledger']).toContain(seedC.ranges.quads.source);
   });
 });
 

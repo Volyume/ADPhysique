@@ -379,8 +379,21 @@ describe('6. manual user choice, once made, cannot be silently overridden', () =
     });
   });
 
-  describe('mergeLandmarkPrecedence: a genuinely manual, explicit edit wins over ANY adapted values (fuzzed adapted mev/mav/mrv)', () => {
-    test('6 seeded fuzz trials over adapted values: manual always wins for chest, regardless of how "good" the adapted numbers look', () => {
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// 6b. RETIRED: THE MANUAL LANDMARK LAYER (D219, founder answer 2026-10-05)
+// ═════════════════════════════════════════════════════════════════════════
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor": "One set of numbers everywhere"). Family 6 used
+// to carry a property that a genuinely manual, explicit landmark edit wins over ANY adapted values. The founder
+// removed the Volume targets editor and the person's stored targets stop being applied, so the property is
+// reversed and moved out of family 6 (whose other properties, a decline and a set override, are unchanged
+// manual choices that still hold): the retired layer is ignored whatever it holds and whatever the adapted
+// layer says.
+
+describe('6b. the retired manual landmark layer is ignored for ANY adapted values', () => {
+  describe('mergeLandmarkPrecedence: a manual, explicit edit never wins, and the adapted values always stand (fuzzed adapted mev/mav/mrv)', () => {
+    test('6 seeded fuzz trials over adapted values: the adapted numbers always win for chest, whatever the manual table holds', () => {
       const rng = mulberry32(505);
       for (let trial = 0; trial < 6; trial++) {
         const adaptedMev = 4 + Math.floor(rng() * 10);
@@ -391,8 +404,8 @@ describe('6. manual user choice, once made, cannot be silently overridden', () =
           adapted: { chest: { mev: adaptedMev, mav: adaptedMav, mrv: adaptedMrv, isAdapted: true } },
           research: { chest: { mv: 4, mev: 6, mav: 14, mrv: 22 } },
         });
-        expect(merged.source.chest).toBe('manual');
-        expect(merged.table.chest.mev).toBe(8);
+        expect(merged.source.chest).toBe('adapted');
+        expect(merged.table.chest).toMatchObject({ mev: adaptedMev, mav: adaptedMav, mrv: adaptedMrv });
       }
     });
   });

@@ -568,16 +568,18 @@ describe('C6 closeout B1/B4 (founder-approved visibility pass)', () => {
   // band: they read the one role-aware band function (volumeJudgement.js), so there is no landmark
   // range on a row for a source to explain. What a tap says now is why THIS muscle sits in its
   // band, in the plan's own words (the reason for a muscle the plan raised, the evidence sentence
-  // for the band), so nothing the person was shown is hidden; the Volume targets editor, which
-  // writes the stored targets, is unchanged.
+  // for the band), so nothing the person was shown is hidden. (The Volume targets editor that wrote the stored
+  // targets has since been removed, D219 founder answer 2026-10-05.)
   test('B1 (re-pinned, D219): a row\'s tap explains its band; the landmark provenance words are retired from the rows', () => {
     const src = read('screens/VolumeHeatmapScreen.js');
     expect(src).not.toMatch(/SOURCE_WORDS|Source: /);
     expect(src).not.toMatch(/your own targets|adjusted from your logged training|research starting point/);
     expect(src).toMatch(/whyLines/);
     expect(src).toMatch(/Shows why this muscle sits in this band/);
-    // The editor that writes the person's own targets is still there, so "your own targets" still has a home.
-    expect(src).toContain('label="Volume targets"');
+    // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): this pinned that the editor writing the
+    // person's own targets was still there, so "your own targets" still had a home. The editor and its door are
+    // removed (one set of numbers everywhere), so there is no such home any more.
+    expect(src).not.toContain('label="Volume targets"');
   });
 
   test('B4: the calorie hero provenance forks on a REAL applied change; day-0 wording unchanged', () => {

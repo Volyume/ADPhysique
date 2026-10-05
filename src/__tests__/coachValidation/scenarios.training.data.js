@@ -1091,7 +1091,11 @@ export const SCENARIOS = [
   {
     id: 'TRN-65',
     family: 'training',
-    why: 'a genuinely edited manual entry wins the precedence over an adapted entry, per muscle (ORACLE T-VOLUME-08, "manual > adapted(Pro only) > research, strict per-muscle order")',
+    // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): this scenario pinned that a genuinely edited
+    // manual entry wins over an adapted entry (ORACLE T-VOLUME-08, "manual > adapted(Pro only) > research"). The
+    // manual layer is retired, so the same input now resolves to the adapted entry. Note: the oracle statement in
+    // ORACLE-LOCK.md and the ledger.json text for T-VOLUME-08 still describe the retired precedence.
+    why: 'a manual entry, however explicit, no longer wins the precedence: the adapted entry stands, per muscle (the manual layer is retired, D219; ORACLE T-VOLUME-08 described manual > adapted > research)',
     rules: ['T-VOLUME-08'],
     facts: {
       _fn: 'mergeLandmarkPrecedence',
@@ -1103,8 +1107,8 @@ export const SCENARIOS = [
     },
     run: 'landmarks',
     must: [
-      { kind: 'equals', path: 'source.chest', equals: 'manual' },
-      { kind: 'equals', path: 'table.chest.mev', equals: 8 },
+      { kind: 'equals', path: 'source.chest', equals: 'adapted' },
+      { kind: 'equals', path: 'table.chest.mev', equals: 10 },
     ],
   },
   {

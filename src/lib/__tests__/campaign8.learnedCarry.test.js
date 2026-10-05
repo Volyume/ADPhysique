@@ -15,12 +15,14 @@
  *
  *   - mature user -> a different compatible plan (carry)
  *   - phase change (carry: the band is muscle-level, not phase-level)
- *   - manual override present (the user's setting wins and is labelled)
+ *   - a stored custom target present (RE-PINNED 2026-10-05, D219 founder answer
+ *     "Remove the editor": it used to win and be labelled the user's own; it is
+ *     no longer applied, so the carry is the engine's own)
  *   - safety suppression present (no upward carry during calm/ED)
  *   - genuinely incompatible context (nothing to carry -> template ramp)
  *
  * Review D1 is pinned here too: the returned map contains ONLY muscles
- * that genuinely carried something, so one manual override can never
+ * that genuinely carried something, so no single muscle can ever
  * hand the whole body a profile-prior ramp.
  *
  * Volyume is fully free (founder decision 2026-09-03): the old Pro gate
@@ -48,18 +50,23 @@ jest.mock('../database', () => ({
   storeBlockLedger: jest.fn(),
 }));
 
-const mockManual = jest.fn();
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): the manual getter is no longer mocked. These
+// tests used to hand the runner a manual table through a mocked getter and expect it to win; a mock would now
+// bypass the very switch that retired the layer. A custom-target blob is put in STORAGE instead (the data still
+// exists on devices) and the REAL getter reads it, so what is pinned is what production does: nothing.
+let mockStoredBlob = null;
 jest.mock('../effectiveLandmarks', () => {
   const actual = jest.requireActual('../effectiveLandmarks');
   return {
     ...actual,
-    getManualLandmarks: (...a) => mockManual(...a),
     getAdaptedLandmarks: jest.fn().mockResolvedValue(null),
   };
 });
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(mockWellbeing)),
+  getItem: jest.fn((key) => Promise.resolve(
+    String(key).startsWith('@volyume_landmarks_') ? mockStoredBlob : mockWellbeing,
+  )),
   setItem: jest.fn(() => Promise.resolve()),
 }));
 
@@ -106,8 +113,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockWellbeing = null;
   mockGetOpenEdPatternFlag.mockResolvedValue(null);
-  mockManual.mockResolvedValue(null);
+  mockStoredBlob = null;
 });
+const storeCustom = (table) => { mockStoredBlob = JSON.stringify(table); };
 
 describe('Work 2: learned evidence survives a legitimate activation', () => {
   // FOUNDER RULING (option (b)): a RECENT compatible activation supplies
@@ -204,12 +212,15 @@ describe('Work 2: learned evidence survives a legitimate activation', () => {
     expect(out.ranges.hamstrings).toBeUndefined();
   });
 
-  test('a manual override outranks the carry and is labelled as the user\'s own', async () => {
+  // RE-PINNED 2026-10-05 (D219): "a manual override outranks the carry and is labelled as the user's own".
+  // The stored custom target is no longer applied, so the carry is the engine's (the last judged block's 15 to 20).
+  test('a stored custom target no longer outranks the carry: the carry is the engine\'s own', async () => {
     mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest'));
-    mockManual.mockResolvedValue({ chest: { mev: 9, mav: 14, mrv: 19, explicit: true } });
+    storeCustom({ chest: { mev: 9, mav: 14, mrv: 19, explicit: true } });
     const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
-    expect(out.ranges.chest.source).toBe('manual');
-    expect(out.ranges.chest.startSets).toBe(9);
+    expect(out.ranges.chest.source).toBe('ledger');
+    expect(out.ranges.chest.startSets).toBe(15);
+    expect(out.ranges.chest.peakSets).toBe(20);
   });
 
   test('SAFETY: under suppression nothing is carried upward', async () => {
@@ -287,13 +298,12 @@ describe('D10: stale memory alone cannot authorise a fresh upward prescription',
     expect(await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' })).toBeNull();
   });
 
-  test('a manual setting is NOT evidence and survives the staleness gate', async () => {
+  // RE-PINNED 2026-10-05 (D219): "a manual setting is NOT evidence and survives the staleness gate". There is no
+  // applied setting to survive it now: with stale evidence nothing carries, custom target stored or not.
+  test('a stored custom target does not survive the staleness gate: stale evidence carries nothing', async () => {
     mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest', { lastEndedDaysAgo: 240 }));
-    mockManual.mockResolvedValue({ chest: { mev: 9, mav: 14, mrv: 19, explicit: true } });
-    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
-    // The user's own setting carries; the stale learned band does not.
-    expect(Object.keys(out.ranges)).toEqual(['chest']);
-    expect(out.ranges.chest.source).toBe('manual');
+    storeCustom({ chest: { mev: 9, mav: 14, mrv: 19, explicit: true } });
+    expect(await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' })).toBeNull();
   });
 });
 
@@ -313,13 +323,16 @@ describe('Review D5: a repeat never falls through to the learned carry', () => {
 });
 
 describe('Review D1: the carry is PER MUSCLE, never body-wide', () => {
-  test('one manual muscle does not hand every other muscle a profile-prior ramp', async () => {
-    // No learnable history at all; a single unrelated manual override.
+  // RE-PINNED 2026-10-05 (D219): both tests used one manual muscle (calves) to prove the map holds only muscles that
+  // genuinely carried. A stored custom target carries nothing now, so they use a muscle with judged history
+  // instead; the per-muscle law is the same.
+  test('one carried muscle does not hand every other muscle a profile-prior ramp', async () => {
+    // No other learnable history at all; a stored custom target on an unrelated muscle adds nothing.
     mockGetAllMesocyclesForUser.mockResolvedValue([block(Date.now() - 30 * DAY, 'calves', { start: 10, peak: 16 })]);
-    mockManual.mockResolvedValue({ calves: { mev: 10, mav: 16, mrv: 20, explicit: true } });
+    storeCustom({ chest: { mev: 10, mav: 16, mrv: 20, explicit: true } });
     const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
     expect(out).not.toBeNull();
-    // ONLY the manual muscle is written. Everything else is absent, so the
+    // ONLY the muscle with judged history is written. Everything else is absent, so the
     // writer leaves it on the honest template ramp.
     expect(Object.keys(out.ranges)).toEqual(['calves']);
     expect(out.ranges.chest).toBeUndefined();
@@ -327,15 +340,15 @@ describe('Review D1: the carry is PER MUSCLE, never body-wide', () => {
 
   test('a mixed body writes only the muscles that genuinely carried', async () => {
     mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest'));
-    mockManual.mockResolvedValue({ calves: { mev: 10, mav: 16, mrv: 20, explicit: true } });
+    storeCustom({ calves: { mev: 10, mav: 16, mrv: 20, explicit: true } });
     const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
-    expect(Object.keys(out.ranges).sort()).toEqual(['calves', 'chest']);
+    // calves has a stored custom target but no judged history, so it is absent; only chest carried.
+    expect(Object.keys(out.ranges)).toEqual(['chest']);
     expect(out.ranges.chest.source).toBe('ledger');
-    expect(out.ranges.calves.source).toBe('manual');
-    // Never 'profile' or 'research': a muscle that carried nothing is
+    // Never 'profile', 'research' or 'manual': a muscle that carried nothing is
     // absent, not relabelled.
     for (const r of Object.values(out.ranges)) {
-      expect(['ledger', 'learned', 'manual']).toContain(r.source);
+      expect(['ledger', 'learned']).toContain(r.source);
     }
   });
 });
