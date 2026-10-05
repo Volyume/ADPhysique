@@ -73,12 +73,13 @@ describe('the retired "ranges come from" sentences are gone with the landmark ve
     expect(SECTION).not.toMatch(/on the Volume screen|set them by hand|your edits always win/);
   });
 
-  test('the Volume heatmap still has its "Volume targets" door as the last row (the editor is unchanged)', () => {
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): this test pinned the Volume heatmap's
+  // "Volume targets" door as its last row, the control the retired sentences above used to name. The editor
+  // and the door are removed, so the sentences have nothing left to point at; the screen ends with its trend card.
+  test('the Volume heatmap has no "Volume targets" door any more: its scroll content ends with the trend card', () => {
     const heatmap = fs.readFileSync(path.resolve(__dirname, '..', 'VolumeHeatmapScreen.js'), 'utf8');
-    expect(heatmap).toContain('label="Volume targets"');
-    // Nothing follows the door inside the scroll content: it is the last row.
-    const door = heatmap.indexOf('label="Volume targets"');
-    expect(heatmap.slice(door, heatmap.indexOf('</ScrollView>', door))).not.toMatch(/<(NavRow|Card|Text)\b[^>]*>\s*[A-Z]/);
+    expect(heatmap).not.toContain('label="Volume targets"');
+    expect(code(heatmap)).toMatch(/<\/Card>\s*\)\}\s*<\/ScrollView>/);
   });
 });
 

@@ -251,9 +251,12 @@ voice, which is what the in-app screen already says.
 - **Session summary wording.** The count is one entry per lift, not per
   record, and now says so: "New bests on 4 lifts". Verified commit
   `aabf5ec` against `detectedPRs` / `bestPRPerExercise`.
-- **Weekly set targets.** Resolved by precedence manual > adapted > plan >
-  profile > research, so the target reflects the user's own plan and
-  profile rather than a population table. Verified commit `416269c`.
+- **Weekly set targets.** Resolved by precedence adapted > plan > profile >
+  research, so the target reflects the user's own plan and profile rather
+  than a population table. Verified commit `416269c`. AMENDED 2026-10-05
+  (register D219): the hand-set "Volume targets" editor is removed and
+  hand-set targets are no longer applied; do not claim that people set
+  their own weekly volume targets.
 - **Session share cards.** Redrawn (frame, plan-name pill, hero label, stat
   icons) and the intensity badge is retired, so a session is no longer
   graded on the card. Verified commit `6f32275`.

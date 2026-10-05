@@ -740,6 +740,14 @@ SOURCE: FOUNDER — CLAUDE.md Section 2 free/pro gating; ARCH —
       isManualEdit's value-comparison fallback, now fixed, was a
       documented historical defect where saving the whole table silently
       disabled adaptation for every muscle).
+AMENDED 2026-10-05 (register D219, founder answer "Remove the editor":
+      "One set of numbers everywhere"): the manual layer is RETIRED. The
+      Volume targets editor is removed and the stored targets are never
+      read (effectiveLandmarks.js, getManualLandmarks answers null), so the
+      precedence is now adapted (where adapted) > plan > profile >
+      research, per muscle; a manual entry never wins. The tests that pinned
+      manual > adapted are re-pinned to this (coachValidation properties
+      family 6b, scenario TRN-65).
 DEFECT: none (Stage 6 blocker #1 is documented FIXED, not live).
 ```
 

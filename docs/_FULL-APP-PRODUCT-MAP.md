@@ -1828,7 +1828,7 @@ Entries are alphabetical by file name.
 - **Empty state:** `EmptyState` "No sessions logged this week" + "Start a workout".
 - **Loading state:** `SkeletonCard` (5 usages).
 - **Error state:** `EmptyState` "Couldn't load your review" + "Try again".
-- **Relevant settings:** effective landmarks (volume targets edited in VolumeHeatmap).
+- **Relevant settings:** effective landmarks (adapted, plan, profile, research; the hand-set Volume targets editor was removed 2026-10-05, register D219).
 - **Engine/data deps:** `lib/algorithms`, `lib/effectiveLandmarks`, `lib/database`.
 - **Where next:** BuildWorkout, back to Home.
 - **Implementation refs:** `src/screens/CoachReviewScreen.js`; registrations `RootNavigator.js:457, :511`.
@@ -2975,7 +2975,7 @@ Entries are alphabetical by file name.
 - **Entry points:** `AnalyticsScreen.js:743`.
 - **Purpose:** Per-muscle weekly volume against landmarks, on a body diagram, with editable targets.
 - **Primary content:** `BodyDiagramHeatmap`, status legend ("Below minimum", "Optimal", "Too much", "Fresh", "Recently trained", "Recovering", "Getting close"), "Volume trend" chart with `WindowChips`, muscle recovery read (`lib/muscleRecovery`).
-- **Primary actions:** "Edit volume targets" → inline editor with "Save", "Reset to defaults", "Cancel" (writes `lib/effectiveLandmarks`).
+- **Primary actions:** none for targets: the "Edit volume targets" editor was removed 2026-10-05 (register D219, founder answer "Remove the editor").
 - **Secondary actions:** change chart window; `InfoTooltip` glossary.
 - **Conditional content:** division-diff markers (`lib/divisionDiff`); iOS keyboard branch.
 - **Empty state:** `EmptyState` (4 usages).

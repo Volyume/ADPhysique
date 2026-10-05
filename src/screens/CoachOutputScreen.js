@@ -1953,7 +1953,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // C18 adversarial closure job B4: the volume dials the athlete holds
       // themselves. A volume outcome read against a muscle they set by hand
       // is CONFOUNDED, not a verdict on our change. Best-effort: an empty
-      // list on failure leaves the loop exactly as it was.
+      // list on failure leaves the loop exactly as it was. D219 (founder
+      // answer 2026-10-05, "Remove the editor"): nobody holds such a dial any
+      // more, so the getter is inert and this list is always empty.
       // eslint-disable-next-line global-require
       const { getManualVolumeMuscles } = require('../lib/effectiveLandmarks');
       const manualVolumeMuscles = await getManualVolumeMuscles(user.id).catch(() => []);

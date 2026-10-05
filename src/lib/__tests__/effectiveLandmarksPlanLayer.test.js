@@ -2,7 +2,8 @@
  * The plan layer inside the ONE landmark precedence.
  *
  * Founder ruling 2026-08-23. The precedence is now
- * manual > adapted(Pro) > plan > profile > research, and every display
+ * adapted > plan > profile > research (the manual layer that used to head it
+ * is retired, D219 founder answer 2026-10-05), and every display
  * surface reads it through getEffectiveLandmarks, so the workout
  * summary, the volume screen, analytics and the coach review can never
  * show different bands for the same muscle.
@@ -54,12 +55,15 @@ describe('the merge places the plan below adapted and above research', () => {
     source: { chest: 'plan', quads: 'plan' },
   };
 
-  test('a hand-set target still wins', () => {
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): "a hand-set target still wins" pinned the
+  // manual layer on top of the plan band. The layer is retired, so a hand-set table passed here changes nothing
+  // and the plan band is what shows (the full pin is effectiveLandmarks.manualLayerRetired.test.js).
+  test('a hand-set target no longer wins: the plan band still shows', () => {
     const { table, source } = mergeLandmarkPrecedence({
       manual: { chest: { mev: 9, mav: 18, mrv: 26 } }, plan, research,
     });
-    expect(source.chest).toBe('manual');
-    expect(table.chest).toMatchObject({ mav: 18 });
+    expect(source.chest).toBe('plan');
+    expect(table.chest).toMatchObject({ mev: 6, mav: 16, mrv: 22 });
   });
 
   test('an adapted muscle still wins', () => {

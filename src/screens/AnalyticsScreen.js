@@ -198,8 +198,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   //   - the programme position (resolveProgrammePosition: null on a read
   //     failure or with no block, which reads as no plan);
   //   - the plan-trained muscle set, the plan layer's own source map exactly as
-  //     VolumeHeatmapScreen reads it (never the merged source, so a hand-edited
-  //     band cannot drop a muscle from it);
+  //     VolumeHeatmapScreen reads it (never the merged source);
   //   - each muscle's role in the active plan (getPlanRoles, D219), the roles
   //     both screens judge by (volumeJudgement.js: the one band function).
   // undefined until the first read settles; every read is best effort, so a

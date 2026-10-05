@@ -293,8 +293,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
-  // D90 #3 (2026-08-06): the ONE landmark precedence (manual > adapted(Pro)
-  // > research) resolved once per load. D219 (design 5.3): the volume card no
+  // D90 #3 (2026-08-06): the ONE landmark precedence (adapted > plan > profile
+  // > research; the manual layer that used to head it is retired, D219 founder
+  // answer 2026-10-05) resolved once per load. D219 (design 5.3): the volume card no
   // longer judges by it (it reads volumeJudgement.js); the adaptive session
   // engine below still takes its landmarks from it. { table, source } from
   // effectiveLandmarks.js.

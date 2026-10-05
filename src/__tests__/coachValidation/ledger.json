@@ -2716,7 +2716,7 @@
   "authority": "src/lib/effectiveLandmarks.js:41 mergeLandmarkPrecedence, :94 isManualEdit",
   "decision": "",
   "thresholds": "manual wins only if isManualEdit(entry, research) is true \u2014 either entry.explicit===true (editor stamped it) or at least one of mev/mav/mrv differs numerically from the research default; adapted wins only if a.isAdapted && all three values finite; else research",
-  "precedence": "manual > adapted (Pro only) > research, strictly in that order per muscle (not per user \u2014 mixed sources across muscles are legitimate)",
+  "precedence": "adapted > plan > profile > research per muscle; the manual layer is retired (D219, founder answer 2026-10-05, Remove the editor) and a manual entry never wins (was manual > adapted (Pro only) > research)",
   "direct_case": [
    "TRN-65",
    "TRN-66"

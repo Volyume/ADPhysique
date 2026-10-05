@@ -26,7 +26,10 @@
  *    week's flat list, no band header, no verdict colour, one line saying so;
  *    a window that HAS sets keeps lane 5's population rule; an adaptive
  *    adjustment is said in plain words and never called a recovery week (6.5);
- *  - the editor seeds the bands in force and saves ONLY what the person touched;
+ *  - the Volume targets editor and its door are REMOVED (D219, founder answer
+ *    2026-10-05, "Remove the editor": one set of numbers everywhere): the screen
+ *    reads no stored target of the person's own and no landmark table, writes
+ *    nothing, and ends with the trend card;
  *  - ONE legend (the figure's own), the trend figure in ink, the route param.
  * Source-level guards (fs + regex, the CLAUDE.md convention) lock the founder
  * rules that a render cannot see.
@@ -55,11 +58,6 @@ jest.mock('../../components/VolyumeChart', () => 'VolyumeChart');
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
-// A host stand-in for the text field: its props (value, onChangeText) are what the editor drives.
-jest.mock('../../components/TextField', () => {
-  const React = require('react');
-  return { __esModule: true, default: React.forwardRef((props, _ref) => React.createElement('TextField', props)) };
-});
 jest.mock('../../lib/haptics', () => ({
   selection: jest.fn(),
   commit: jest.fn(),
@@ -67,9 +65,10 @@ jest.mock('../../lib/haptics', () => ({
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn() }));
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): the screen no longer writes any
+// preference, so these stand-ins exist only to prove it never calls them.
 jest.mock('../../lib/sync', () => ({
   syncUserPref: jest.fn(() => Promise.resolve()),
-  // Campaign 1 P0-8 D10: the save/reset paths stamp the local write time.
   notePrefWrite: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('../../lib/programmePosition', () => ({ resolveProgrammePosition: jest.fn() }));
@@ -750,18 +749,20 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
     expect(VOLUME_HEATMAP_SOURCE).not.toContain('SOURCE_WORDS');
   });
 
-  test('one fixed line under the list says where the bands come from, whoever set their own targets', async () => {
+  test('one fixed line under the list says where the bands come from, whoever once set their own targets', async () => {
     const note = 'Bands come from studies of weekly sets. A muscle you picked as a focus in your plan reads against its focus range.';
     let tree = await mount();
     expect(flattenText(tree.toJSON())).toContain(note);
     expect(flattenText(tree.toJSON())).not.toContain('use your own targets');
 
-    getEffectiveLandmarks.mockResolvedValue(mergeLandmarkPrecedence({
-      manual: { chest: { mev: 7, mav: 14, mrv: 22 }, back: { mev: 11, mav: 16, mrv: 25 } },
-    }));
+    // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): a person who once saved their own
+    // targets has the blob in storage still; the screen never reads it, so the line is the same for them.
+    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === '@volyume_landmarks_u1'
+      ? JSON.stringify({ chest: { mev: 7, mav: 14, mrv: 22, explicit: true }, back: { mev: 11, mav: 16, mrv: 25 } }) : null));
     tree = await mount();
     expect(flattenText(tree.toJSON())).toContain(note);
     expect(flattenText(tree.toJSON())).not.toMatch(/use your own targets|uses your own targets/);
+    expect(AsyncStorage.getItem.mock.calls.map(([k]) => k)).not.toContain('@volyume_landmarks_u1');
   });
 
   test('a tap on a region selects it on the figure and scrolls to its row', async () => {
@@ -823,13 +824,18 @@ describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Below main
     expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Below maintenance');
   });
 
-  test('a manual edit never drops a muscle from the plan-trained set (read from the plan layer, not the merged source)', async () => {
+  test('the plan-trained set comes from the plan layer alone: a stored custom target of the person\'s changes no group, and the merged table is never read', async () => {
     atWednesday();
     planProgrammes('chest', 'quads');
-    // Quads is the person's own band now, so the MERGED source says 'manual'.
-    getEffectiveLandmarks.mockResolvedValue(mergeLandmarkPrecedence({ manual: { quads: { mev: 9, mav: 14, mrv: 20 } } }));
+    // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): a custom band on quads used to make
+    // the MERGED source say 'manual', which is why the set is read from the plan layer. The layer is retired
+    // and the screen reads neither the stored blob nor the merged table, so the groups are the plan's alone.
+    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === '@volyume_landmarks_u1'
+      ? JSON.stringify({ quads: { mev: 9, mav: 14, mrv: 20, explicit: true } }) : null));
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM));
     const tree = await mount();
+    expect(getEffectiveLandmarks).not.toHaveBeenCalled();
+    expect(AsyncStorage.getItem.mock.calls.map(([k]) => k)).not.toContain('@volyume_landmarks_u1');
 
     expect(groupHeaders(tree)).toEqual(['Below maintenance, 1 muscle', 'Normal growth range, 1 muscle', 'No sets, 15 muscles']);
     const quads = findMuscleRow(tree, 'Quads:').props.accessibilityLabel;
@@ -881,23 +887,25 @@ describe('D214 lane 5 review S2 (plan 7.4 item 5 and 7.1 item 2): the Below main
   });
 });
 
-describe('D214 lane 5 review N3: a failed band read is logged, never silent', () => {
-  test('a failed read of the bands in force on load is logged, and the rows judge by the research table', async () => {
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): D214 lane 5 review N3 pinned that a failed
+// read of the bands in force (the table the editor seeded from) was logged and never silent. The screen
+// reads no landmark table any more, so there is no such read to fail, and a failing resolver is not the
+// screen's business: the rows judge by the one role-aware band function (volumeJudgement.js) regardless.
+describe('D219: the screen reads no landmark table, so a failing resolver cannot touch it', () => {
+  test('the resolver is never called, and a rejecting one changes nothing on screen or in the log', async () => {
     atWednesday();
     getEffectiveLandmarks.mockRejectedValue(new Error('resolve failed'));
     getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 5, MONDAY_9AM));
     const tree = await mount();
 
-    expect(logError).toHaveBeenCalledWith('VolumeHeatmapScreen.resolveLandmarks', expect.any(Error), { userId: 'u1' });
-    expect(flattenText(tree.toJSON())).toContain('5 sets so far this week'); // chest at the research band
+    expect(getEffectiveLandmarks).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalledWith('VolumeHeatmapScreen.resolveLandmarks', expect.anything(), expect.anything());
+    expect(flattenText(tree.toJSON())).toContain('5 sets so far this week');
+    expect(findMuscleRow(tree, 'Chest:').props.accessibilityLabel).toContain('Maintenance range');
   });
 
-  test('the post-save and post-reset re-reads of the bands log their failure (source guard)', () => {
-    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/resolveLandmarksNow\(\)\.catch\(\(\) => \{\}\)/);
-    const logged = VOLUME_HEATMAP_SOURCE.match(
-      /resolveLandmarksNow\(\)\.catch\(\(e\) => logError\('VolumeHeatmapScreen\.resolveLandmarksNow'/g,
-    );
-    expect(logged).toHaveLength(2);
+  test('no resolve step is left in the screen source (the post-save and post-reset re-reads went with the editor)', () => {
+    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/resolveLandmarksNow|VolumeHeatmapScreen\.resolveLandmarks/);
   });
 });
 
@@ -1279,253 +1287,73 @@ describe('D214 (7.4 item 6): the trend card', () => {
   });
 });
 
-describe('D214 (7.4 item 7): Volume targets, one door to a touched-only editor', () => {
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor": "One set of numbers everywhere. People's
+// existing custom targets stop being shown"). D214 plan 7.4 item 7 pinned "Volume targets, one door to a
+// touched-only editor" in 16 tests (the door, the seeding, the touched-only save, the per-muscle and whole
+// release, the failure notice inside the modal). Since D219 every screen judges by the plan's role bands, so
+// the editor changed no verdict; it and its door are gone, and so are those tests. What is pinned now is the
+// absence, in a render and in the source (the full source sweep is VolumeHeatmapScreen.editorRemoved.guard.test.js).
+describe('D219 (founder answer 2026-10-05): the Volume targets editor and its door are removed', () => {
   const KEY = '@volyume_landmarks_u1';
+  // A custom-target blob exactly as the retired editor saved it.
+  const BLOB = JSON.stringify({ chest: { mev: 7, mav: 15, mrv: 23, explicit: true } });
 
-  // A plan band on chest (8/16/24), everything else at research.
-  const planTable = () => mergeLandmarkPrecedence({
-    plan: { table: { chest: { mev: 8, mav: 16, mrv: 24 } }, source: { chest: 'plan' } },
-  });
+  const byLabel = (tree, label) => tree.root.findAll(
+    (n) => typeof n.props.accessibilityLabel === 'string'
+      && (n.props.accessibilityLabel === label || n.props.accessibilityLabel.startsWith(`${label}. `)),
+  );
 
-  // The jest Modal mock renders its children whether or not it is visible (a real
-  // Modal mounts nothing while closed), so open/closed is read from its prop.
-  const editorOpen = (tree) => tree.root.findAllByType(Modal)[0].props.visible === true;
-  const field = (tree, label) => tree.root.findAll((n) => n.type === 'TextField' && n.props.accessibilityLabel === label)[0];
-  const press = (tree, label) => tree.root.findAll(
-    // The door's spoken label carries its sub line too (NavRow, the lead's D214
-    // rule 3 landing fix), so the press matches the label or its first sentence.
-    (n) => (n.props.accessibilityLabel === label || (typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith(`${label}. `)))
-      && typeof n.props.onPress === 'function',
-  )[0];
-  const savedBlob = () => {
-    const call = AsyncStorage.setItem.mock.calls.find(([k]) => k === KEY);
-    return call ? JSON.parse(call[1]) : null;
-  };
-
-  async function openEditor(tree) {
-    await act(async () => { press(tree, 'Volume targets').props.onPress(); });
-  }
-  async function type(tree, label, value) {
-    await act(async () => { field(tree, label).props.onChangeText(value); });
-  }
-  async function save(tree) {
-    await act(async () => { await press(tree, 'Save volume targets').props.onPress(); });
-    await flush();
-  }
-
-  beforeEach(() => {
-    getEffectiveLandmarks.mockImplementation(() => Promise.resolve(planTable()));
-  });
-
-  test('the screen ends with one NavRow "Volume targets" and the editor is closed until it is pressed', async () => {
+  test('the screen renders no door, no modal and no number field, and says nothing about editing targets', async () => {
     const tree = await mount();
-    expect(press(tree, 'Volume targets')).toBeTruthy();
-    expect(flattenText(tree.toJSON())).toContain('How many sets each muscle gets each week.');
-    expect(editorOpen(tree)).toBe(false);
-    await openEditor(tree);
-    expect(editorOpen(tree)).toBe(true);
-    expect(VOLUME_HEATMAP_SOURCE).toMatch(/import \{ NavRow, NavGroup \} from '\.\.\/components\/NavRow';/);
-    expect(VOLUME_HEATMAP_SOURCE).not.toContain('Reset to defaults');
+    const text = flattenText(tree.toJSON());
+    expect(byLabel(tree, 'Volume targets')).toHaveLength(0);
+    expect(text).not.toContain('How many sets each muscle gets each week.');
+    expect(text).not.toMatch(/Volume targets|Back to Volyume's targets|Save volume targets/);
+    expect(tree.root.findAllByType(Modal)).toHaveLength(0);
+    expect(tree.root.findAll((n) => n.type === 'TextField')).toHaveLength(0);
+  });
+
+  test('a person with custom targets still stored sees the same rows as one without, and the blob is never read', async () => {
+    atWednesday();
+    getCompletedWorkoutSets.mockResolvedValue(setsOf('bench', 10, MONDAY_9AM));
+    let tree = await mount();
+    const without = { headers: groupHeaders(tree), chest: findMuscleRow(tree, 'Chest:').props.accessibilityLabel };
+
+    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY ? BLOB : null));
+    tree = await mount();
+    expect({ headers: groupHeaders(tree), chest: findMuscleRow(tree, 'Chest:').props.accessibilityLabel }).toEqual(without);
+    expect(AsyncStorage.getItem.mock.calls.map(([k]) => k)).not.toContain(KEY);
+    expect(getEffectiveLandmarks).not.toHaveBeenCalled();
+  });
+
+  test('the screen writes nothing: no preference, no removal, no cloud push', async () => {
+    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY ? BLOB : null));
+    await mount();
+    expect(AsyncStorage.setItem.mock.calls.filter(([k]) => k === KEY)).toEqual([]);
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    expect(syncUserPref).not.toHaveBeenCalled();
+  });
+
+  test('the source carries no editor: no door, no modal, no stored-target key, no editor styles', () => {
+    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/label="Volume targets"|<Modal|ModalHeader|TextField|NavRow|NavGroup/);
+    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/saveLandmarks|openEditor|resetToVolyumeTargets|clearMuscleOverride|touchedMusclesRef/);
+    expect(VOLUME_HEATMAP_SOURCE).not.toContain('@volyume_landmarks_');
+    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/\bedit[A-Z]\w*: /);
     expect(VOLUME_HEATMAP_SOURCE).not.toContain('Edit volume targets');
-  });
-
-  test('the editor seeds each field with the band in force, not the research table', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    expect(field(tree, 'Chest Min').props.value).toBe('8'); // the plan band (research is 6)
-    expect(field(tree, 'Chest Target').props.value).toBe('16');
-    expect(field(tree, 'Chest Max').props.value).toBe('24');
-    expect(field(tree, 'Back Min').props.value).toBe(String(VOLUME_LANDMARKS.back.mev));
-  });
-
-  test('a plan-banded muscle left untouched is never written as a manual edit', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Back Min', '12'); // touch only back
-    await save(tree);
-
-    const blob = savedBlob();
-    expect(Object.keys(blob)).toEqual(['back']);
-    expect(blob.back).toEqual({ mev: 12, mav: VOLUME_LANDMARKS.back.mav, mrv: VOLUME_LANDMARKS.back.mrv, explicit: true });
-    expect(blob).not.toHaveProperty('chest'); // chest's seed differs from research, and must not be saved for that
-    expect(syncUserPref).toHaveBeenCalledWith('u1', KEY, JSON.stringify(blob));
-  });
-
-  test('opening the editor and saving with nothing touched writes nothing', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await save(tree);
-    expect(AsyncStorage.setItem.mock.calls.filter(([k]) => k === KEY)).toEqual([]);
-    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-    expect(syncUserPref).not.toHaveBeenCalled();
-    expect(editorOpen(tree)).toBe(false); // the editor closed
-  });
-
-  test('a failed re-read of the bands after a save is logged, and the save still stands', async () => {
-    getEffectiveLandmarks.mockReset();
-    getEffectiveLandmarks.mockResolvedValueOnce(planTable()).mockRejectedValue(new Error('re-read failed'));
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Back Min', '12');
-    await save(tree);
-
-    expect(savedBlob()).toEqual({
-      back: { mev: 12, mav: VOLUME_LANDMARKS.back.mav, mrv: VOLUME_LANDMARKS.back.mrv, explicit: true },
-    });
-    expect(logError).toHaveBeenCalledWith('VolumeHeatmapScreen.resolveLandmarksNow', expect.any(Error), { userId: 'u1' });
-  });
-
-  test('a touched muscle saved at the research value is still explicit, even against a different seed', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    // Chest was seeded at the plan band 8/16/24; the person types the research values 6/14/22.
-    await type(tree, 'Chest Min', '6');
-    await type(tree, 'Chest Target', '14');
-    await type(tree, 'Chest Max', '22');
-    await save(tree);
-
-    expect(savedBlob()).toEqual({ chest: { mev: 6, mav: 14, mrv: 22, explicit: true } });
-  });
-
-  test('a touched muscle typed back to its own seeded value is still the person\'s own (intent is recorded, not inferred)', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Chest Min', '9');
-    await type(tree, 'Chest Min', '8');
-    await save(tree);
-    expect(savedBlob()).toEqual({ chest: { mev: 8, mav: 16, mrv: 24, explicit: true } });
-  });
-
-  test('an abandoned edit is not intent: cancelling then saving another muscle never stamps the first', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Chest Min', '9');
-    await act(async () => { press(tree, 'Cancel').props.onPress(); });
-    await openEditor(tree);
-    expect(field(tree, 'Chest Min').props.value).toBe('8'); // re-seeded: the typed 9 is gone
-    await type(tree, 'Back Min', '12');
-    await save(tree);
-    expect(Object.keys(savedBlob())).toEqual(['back']);
-  });
-
-  test('an earlier saved edit survives a save that touches another muscle; a neutral legacy default does not', async () => {
-    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY ? JSON.stringify({
-      biceps: { mev: 8, mav: 14, mrv: 22 }, // a real legacy edit (differs from research 6/14/22), no flag
-      quads: { mev: 8, mav: 14, mrv: 20 }, // an untouched research default saved by the old editor: not intent
-    }) : null));
-    getEffectiveLandmarks.mockImplementation(() => Promise.resolve(mergeLandmarkPrecedence({
-      manual: { biceps: { mev: 8, mav: 14, mrv: 22 } },
-      plan: { table: { chest: { mev: 8, mav: 16, mrv: 24 } }, source: { chest: 'plan' } },
-    })));
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Back Min', '12');
-    await save(tree);
-
-    const blob = savedBlob();
-    expect(Object.keys(blob).sort()).toEqual(['back', 'biceps']);
-    expect(blob.biceps).toEqual({ mev: 8, mav: 14, mrv: 22 });
-  });
-
-  test('"Back to Volyume\'s targets" sits inside the editor: per muscle, and for all', async () => {
-    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY
-      ? JSON.stringify({ chest: { mev: 7, mav: 15, mrv: 23, explicit: true } }) : null));
-    const tree = await mount();
-    expect(editorOpen(tree)).toBe(false);
-    await openEditor(tree);
-    expect(press(tree, "Chest back to Volyume's targets")).toBeTruthy();
-    expect(press(tree, "Back back to Volyume's targets")).toBeUndefined(); // nothing to hand back
-    expect(press(tree, "All muscles back to Volyume's targets")).toBeTruthy();
-
-    // The per-muscle release drops that muscle's entry and tombstones the cloud copy when it was the last.
-    await act(async () => { await press(tree, "Chest back to Volyume's targets").props.onPress(); });
-    await flush();
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(KEY);
-    expect(syncUserPref).toHaveBeenCalledWith('u1', KEY, '');
-  });
-
-  test('releasing a muscle that was only typed in this session writes nothing and restores its seeded band', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Chest Min', '9'); // chest is seeded at the plan band, min 8
-    expect(field(tree, 'Chest Min').props.value).toBe('9');
-    await act(async () => { await press(tree, "Chest back to Volyume's targets").props.onPress(); });
-    await flush();
-    expect(field(tree, 'Chest Min').props.value).toBe('8');
-    expect(flattenText(tree.toJSON())).toContain("Chest is back to Volyume's targets.");
-    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-    expect(AsyncStorage.setItem.mock.calls.filter(([k]) => k === KEY)).toEqual([]);
-    expect(syncUserPref).not.toHaveBeenCalled();
-    // And a save now writes nothing: the muscle is no longer touched.
-    await save(tree);
-    expect(AsyncStorage.setItem.mock.calls.filter(([k]) => k === KEY)).toEqual([]);
-  });
-
-  test('"All muscles back to Volyume\'s targets" confirms inline, then removes the blob and tombstones the cloud copy', async () => {
-    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY
-      ? JSON.stringify({ chest: { mev: 7, mav: 15, mrv: 23, explicit: true } }) : null));
-    const tree = await mount();
-    await openEditor(tree);
-    await act(async () => { press(tree, "All muscles back to Volyume's targets").props.onPress(); });
-    // A confirmation is showing; nothing has been written yet.
-    expect(flattenText(tree.toJSON())).toContain('Your own targets are removed.');
-    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-    expect(syncUserPref).not.toHaveBeenCalled();
-
-    await act(async () => { await press(tree, "Confirm all muscles back to Volyume's targets").props.onPress(); });
-    await flush();
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(KEY);
-    expect(syncUserPref).toHaveBeenCalledWith('u1', KEY, '');
-    expect(editorOpen(tree)).toBe(false);
-    // The bands in force are read again, so the rows follow the targets Volyume now uses.
-    expect(getEffectiveLandmarks.mock.calls.length).toBeGreaterThanOrEqual(2);
-  });
-
-  test('"Keep mine" backs out of the confirmation without writing anything', async () => {
-    AsyncStorage.getItem.mockImplementation((k) => Promise.resolve(k === KEY
-      ? JSON.stringify({ chest: { mev: 7, mav: 15, mrv: 23, explicit: true } }) : null));
-    const tree = await mount();
-    await openEditor(tree);
-    await act(async () => { press(tree, "All muscles back to Volyume's targets").props.onPress(); });
-    await act(async () => { press(tree, 'Keep my own targets').props.onPress(); });
-    expect(press(tree, "All muscles back to Volyume's targets")).toBeTruthy();
-    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-    expect(editorOpen(tree)).toBe(true);
-  });
-
-  test('a failed save says so inside the editor, which sits above the toast host, and stays open', async () => {
-    const tree = await mount();
-    await openEditor(tree);
-    await type(tree, 'Back Min', '12');
-    AsyncStorage.setItem.mockRejectedValueOnce(new Error('disk full'));
-    await save(tree);
-    expect(flattenText(tree.toJSON())).toContain("Couldn't save your volume targets. Try again.");
-    expect(editorOpen(tree)).toBe(true);
-  });
-
-  test('the editor is a native Modal, so it never calls the alert host (which would sit behind it)', () => {
-    expect(VOLUME_HEATMAP_SOURCE).toContain('<Modal visible={editing}');
-    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/appAlert/);
-  });
-
-  test('no editor copy tells the athlete what to do', () => {
-    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/more to reach|N more|add a couple|consider|you should|try adding/i);
+    expect(VOLUME_HEATMAP_SOURCE).not.toContain('Reset to defaults');
   });
 });
 
 describe('R2 (2026-07-11) design-cohesion census', () => {
-  test('the target-edit input uses the input radius (md), not the tighter sm', () => {
-    // Input class -> radius.md (FOOD-DESIGN-STANDARD.md section 4).
-    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputField: \{ borderRadius: radius\.md \}/);
-  });
-
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): the first test here pinned the target-edit
+  // input's radius (editInputField, md not sm) and the second pinned the editor's numeric boxes (editInputText)
+  // for tabular figures. Both boxes went with the editor, so the radius test is gone and only the figure
+  // pins of the second remain.
   test('every pure set-count/target readout carries tabular figures', () => {
     // RE-ANCHORED D214: the old setsCount / "/22" pair and the bare trend
     // count are sentences now ("5 sets so far this week", "this week so
-    // far: 5 sets"). The editor's numeric boxes keep tabular figures, and the
-    // trend figure reads through type.num (tabular) in its frozen style and its
-    // live-theme twin (D70 precedent).
-    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputText: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    // far: 5 sets"). The trend figure reads through type.num (tabular) in its
+    // frozen style and its live-theme twin (D70 precedent).
     expect(VOLUME_HEATMAP_SOURCE).toMatch(/figure: \{\n    \.\.\.type\.num\('caption'\),/);
     expect(VOLUME_HEATMAP_SOURCE).toMatch(/figure: \{ \.\.\.t\.type\.num\('caption'\), color: t\.colors\.textSecondary \}/);
   });
@@ -1736,8 +1564,8 @@ describe('D214 addendum 9 (census 6.5): an adaptive adjustment is said in plain 
 
   test('the bands do not drop with the adjustment: the band resolver reads none of what the adjustment writes (source guard)', () => {
     // The adjustment flips the week's flag and cuts planned_muscle_volume (database.js
-    // setMesocycleWeekDeload, applyCoachTrainingAdjustment). The bands come from the manual, adapted,
-    // plan-routine and profile layers; if one of them ever starts to follow the adjustment, the second
+    // setMesocycleWeekDeload, applyCoachTrainingAdjustment). The bands come from the adapted,
+    // plan-routine and profile layers (the manual layer is retired, D219); if one of them ever starts to follow the adjustment, the second
     // clause of the line ("so a muscle can read under its range") is untrue and must go.
     for (const rel of ['../../lib/effectiveLandmarks.js', '../../lib/planVolumeTargets.js']) {
       expect({ rel, hit: /planned_muscle_volume|PlannedMuscleVolume|is_deload|isDeload|recoveryState|MesocycleWeek/.test(read(rel)) })
@@ -1773,13 +1601,9 @@ describe('D214 addendum 9 (census H1): the empty-window line names the wider vie
   });
 });
 
-describe('D214 addendum 9 (census H7): the editor names the three boxes the way the boxes do', () => {
-  test('"minimum, target and maximum", beside the fields Min, Target and Max; no "ceiling"', () => {
-    expect(VOLUME_HEATMAP_SOURCE).toContain('Weekly sets per muscle: minimum, target and maximum.');
-    expect(VOLUME_HEATMAP_SOURCE).not.toMatch(/minimum, target and ceiling|\bceiling\b/);
-    for (const label of ["'Min'", "'Target'", "'Max'"]) expect(VOLUME_HEATMAP_SOURCE).toContain(label);
-  });
-});
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): census H7 pinned that the editor named its
+// three boxes "minimum, target and maximum" beside the fields Min, Target and Max. The editor is gone, so that
+// describe is gone with it; the absence of any such copy is pinned above and in the editorRemoved guard.
 
 // ───────────────────────────────────────────────────────────────────────────
 // D218 (founder order 2026-10-03: "I need you to check across the board and

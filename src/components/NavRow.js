@@ -1,7 +1,8 @@
 /**
  * NavRow and NavGroup: the grouped list of tappable rows the Coach tab (YouScreen)
- * has always used, extracted so the Volume heatmap's "Volume targets" door
- * (D214 lane 5) and the Progress doors (lane 3) read the same component.
+ * has always used, extracted so the Progress doors (D214 lane 3) read the same
+ * component (the Volume heatmap's "Volume targets" door it was first shared
+ * with is gone: the editor was removed, D219, founder answer 2026-10-05).
  *
  * Moved from YouScreen.js: same selection haptic, same layout. D214 (plan
  * 7.0 rule 3, "amber only on an action, at most one per screen, never on a

@@ -148,7 +148,7 @@ export default function SettingsScreen({ navigation }) {
             instead). Now opens the Hub itself; the privacy controls are
             one tap further in, from inside Community. Community lives in
             the Home stack, so this is a cross-tab jump like the
-            volume-targets row on Coach. */}
+            Community row on Coach. */}
         <SettingRow
           icon="people-outline"
           label="Community"

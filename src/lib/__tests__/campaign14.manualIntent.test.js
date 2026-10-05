@@ -23,6 +23,14 @@
  * The final pin is the one that must never move: recording intent at
  * research values does not launder those numbers into learned history. A
  * manual block still does not teach the engine.
+ *
+ * RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): the editor
+ * that recorded and released intent is removed, and the stored targets are no
+ * longer read or applied. The pure predicate (29) and the preference's sync
+ * contract (33, 34) are unchanged and still pinned here. The editor's own
+ * source pins (30, 32, the write-path and tombstone pins of 33) went with it,
+ * each replaced by the absence of that machinery, and (35) now says what is
+ * left of "manual does not teach the engine" with no editor to feed it.
  */
 
 const fs = require('fs');
@@ -63,58 +71,14 @@ describe('C14-7 an explicit save at research values IS manual intent (29)', () =
   });
 });
 
-describe('C14-7 only a real save records intent (30)', () => {
-  // RE-ANCHORED D214 (plan section 7.4 item 7): the editor seeds the band in
-  // force and saves only touched muscles, so the stamp is written for a
-  // touched (or changed-from-seed) muscle unconditionally, and an earlier
-  // saved edit is kept as stored instead of being re-derived.
-  test('the marker is stamped from a touched field, at save time', () => {
-    // Typing records that the muscle was touched; the SAVE turns that into
-    // stored intent. Opening or scrolling the editor writes nothing.
-    expect(HEATMAP).toMatch(/touchedMusclesRef\.current\.add\(muscle\); \/\/ C8 RA6-6/);
-    expect(HEATMAP).toMatch(/map\[muscle\] = \{ \.\.\.entry, explicit: true \};/);
-  });
-
-  test('an abandoned edit is not intent', () => {
-    // Cancel discards the typed values AND the record of what was touched,
-    // so a later save in the same visit cannot stamp them.
-    const start = HEATMAP.indexOf('function cancelEditing');
-    const body = HEATMAP.slice(start, HEATMAP.indexOf('async function saveLandmarks', start));
-    expect(body).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
-  });
-});
-
-describe('C14-7 a distinct action returns a muscle to Volyume (32)', () => {
-  test('the per-muscle release exists and is reachable', () => {
-    expect(HEATMAP).toMatch(/async function clearMuscleOverride\(muscle\)/);
-    // RE-ANCHORED D214: the control is named for what it does, "Back to
-    // Volyume's targets" (the bands the app would use without the edits).
-    expect(HEATMAP).toContain("Back to Volyume's targets</Text>");
-    expect(HEATMAP).toMatch(/accessibilityLabel=\{`\$\{MUSCLE_DISPLAY_NAMES\[muscle\]\} back to Volyume's targets`\}/);
-  });
-
-  test('releasing clears BOTH the stored entry and the session marker', () => {
-    const start = HEATMAP.indexOf('async function clearMuscleOverride');
-    const body = HEATMAP.slice(start, HEATMAP.indexOf('\n  }\n', start));
-    expect(body).toMatch(/delete next\[muscle\];/);
-    expect(body).toMatch(/touchedMusclesRef\.current\.delete\(muscle\);/);
-  });
-
-  test('the user is never made to move a number away from research and back', () => {
-    // The control appears whenever there is something to hand back, so
-    // releasing never depends on making the entry numerically differ.
-    expect(HEATMAP).toMatch(/function isMuscleManaged\(muscle\) \{/);
-    expect(HEATMAP).toMatch(/\{isMuscleManaged\(muscle\) \? null : \(/);
-  });
-
-  test('the whole-table reset still clears everything', () => {
-    // RE-ANCHORED D214: it lives inside the editor, is named "Back to
-    // Volyume's targets" and re-resolves the bands the app would use without
-    // the edits (it no longer restores the research table).
-    const start = HEATMAP.indexOf('function resetToVolyumeTargets');
-    const body = HEATMAP.slice(start, start + 2400);
-    expect(body).toMatch(/AsyncStorage\.removeItem\(key\)/);
-    expect(body).toMatch(/syncUserPref\(user\.id, key, ''\)/);
+// RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): (30) pinned that only a real save recorded
+// intent (the stamp from a touched field, an abandoned edit is not intent) and (32) that a distinct action returned
+// one muscle to Volyume. Both were pinned from the editor's source; the editor is gone, so none of it can run.
+describe('C14-7 the editor that recorded and released intent (30, 32) is gone', () => {
+  test('nothing is left that stamps, discards or releases intent in the Volume heatmap screen', () => {
+    expect(HEATMAP).not.toMatch(/touchedMusclesRef|explicit: true|cancelEditing|saveLandmarks/);
+    expect(HEATMAP).not.toMatch(/clearMuscleOverride|isMuscleManaged|resetToVolyumeTargets/);
+    expect(HEATMAP).not.toContain("Back to Volyume's targets");
   });
 });
 
@@ -133,47 +97,35 @@ describe('C14-7 intent persists and converges like the preference it is (33, 34)
     expect(isGuardedPref('@volyume_landmarks_abc123')).toBe(true);
   });
 
-  test('every write path stamps the edit, including the release', () => {
-    for (const marker of [
-      /notePrefWrite\(key\)\.catch\(\(\) => \{\}\)/,
-    ]) expect(HEATMAP).toMatch(marker);
-    const start = HEATMAP.indexOf('async function clearMuscleOverride');
-    const body = HEATMAP.slice(start, HEATMAP.indexOf('\n  }\n', start));
-    expect(body).toMatch(/notePrefWrite\(key\)/);
-    // And it pushes, so the release reaches the other device rather than
-    // sitting locally until something else happens to sync.
-    expect(body).toMatch(/syncUserPref\(user\.id, key,/);
-  });
-
-  test('releasing the LAST override tombstones the cloud copy', () => {
-    // An empty table means "no overrides", which is exactly what the
-    // whole-table reset means, and it has to survive the next pull.
-    const start = HEATMAP.indexOf('async function clearMuscleOverride');
-    const body = HEATMAP.slice(start, HEATMAP.indexOf('\n  }\n', start));
-    expect(body).toMatch(/empty \? '' :/);
+  // RE-PINNED 2026-10-05 (D219): "every write path stamps the edit, including the release" and "releasing the
+  // LAST override tombstones the cloud copy" were pinned from the editor's write paths. There is no write path
+  // left, and the screen must not grow one back; the sync registry above is what keeps the stored blob.
+  test('no write path is left in the Volume heatmap screen: no stamp, no push, no tombstone', () => {
+    expect(HEATMAP).not.toMatch(/notePrefWrite|syncUserPref/);
+    expect(HEATMAP).not.toContain('volyume_landmarks');
   });
 });
 
-describe('C14-7 manual intent still does not teach the engine (35)', () => {
-  test('a manual muscle is excluded from learned evidence', () => {
-    // The rule predates this campaign and must be unaffected by it:
-    // recording intent AT the research values must not launder those
-    // numbers into learned history.
-    const runner = SRC('../blockLedgerRunner.js');
-    expect(runner).toMatch(/isManualEdit\(/);
+describe('C14-7 manual intent does not teach the engine (35)', () => {
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): with the editor gone and the stored targets
+  // never read, no new block is judged against a hand-set number. What is left of the rule is the frozen
+  // record: ledger entries stored while a person's targets were in force still carry deferredToManual, and
+  // the learned-range replay still skips them, so those blocks do not teach the engine either.
+  test('the learned-range replay still skips a stored entry that was deferred to manual', () => {
     const learned = SRC('../learnedRange.js');
-    expect(learned.length).toBeGreaterThan(0);
+    expect(learned).toMatch(/if \(raw\.proposal\?\.deferredToManual\) continue;/);
   });
 
-  test('manual override still wins the seed', () => {
+  test('the seed chain keeps its manual step as a pure mechanism, and nothing feeds it: the getter is inert', async () => {
     const seed = SRC('../blockSeed.js');
     expect(seed).toMatch(/isManualEdit\(manual, research\)/);
+    // eslint-disable-next-line global-require
+    const { getManualLandmarks } = require('../effectiveLandmarks');
+    await expect(getManualLandmarks('abc123')).resolves.toBeNull();
   });
 
-  test('the editor still discloses that manual pauses learning', () => {
-    // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
-    expect(HEATMAP).toContain(
-      'While your own settings are in place, the app stops adjusting these ranges from your finished blocks.',
-    );
+  test('the editor no longer discloses that manual pauses learning, because there is no manual to pause it', () => {
+    expect(HEATMAP).not.toContain('While your own settings are in place');
+    expect(HEATMAP).not.toContain('stops adjusting these ranges');
   });
 });

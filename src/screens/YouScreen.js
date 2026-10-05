@@ -531,19 +531,6 @@ export default function YouScreen({ navigation }) {
             sub="Reminders for your weekly check-in, weigh-ins and logging."
             onPress={() => navigation.navigate('CoachingReminders')}
           />
-          {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
-              other route is data-gated through Analytics, so a coached
-              user with sparse data had no path to the one control whose
-              manual numbers outrank the coach. Direct row, canonical
-              editor unchanged. */}
-          <NavRow
-            icon="stats-chart-outline"
-            label="Volume targets"
-            sub="How many sets each muscle gets each week."
-            // Review A finding 3: VolumeHeatmap lives in the Home and Progress
-            // stacks, not ProfileTab; cross-tab helper or the tap is dead.
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
-          />
           </NavGroup>
         </View>
 

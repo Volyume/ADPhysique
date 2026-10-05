@@ -11,13 +11,10 @@
  * precedence anywhere else.
  *
  * Precedence, per muscle:
- *   1. MANUAL — the user's own Edit-volume-targets values
- *      (@volyume_landmarks_<userId>, VolumeHeatmapScreen). A hand-set value
- *      always beats the engine: explicit user intent wins.
- *   2. ADAPTED — computeAdaptiveLandmarks output, only when that muscle has
+ *   1. ADAPTED — computeAdaptiveLandmarks output, only when that muscle has
  *      enough data (isAdapted, 3+ points). Deterministic: same history,
  *      same numbers.
- *   3. PLAN — planVolumeTargets.buildPlanLandmarks: what the athlete's own
+ *   2. PLAN — planVolumeTargets.buildPlanLandmarks: what the athlete's own
  *      plan programs for that muscle each week, inside the floor and
  *      ceiling their own profile produces. Founder ruling 2026-08-23: the
  *      targets must be consistent with the plan, "not just rudimental".
@@ -25,23 +22,42 @@
  *      plan does not train, and to research when there is no profile.
  *      See planVolumeTargets.js for why the display lane was reading a
  *      cruder table than the one the plan itself was generated from.
- *   4. RESEARCH — VOLUME_LANDMARKS, the population starting points, now
+ *   3. RESEARCH — VOLUME_LANDMARKS, the population starting points, now
  *      only reached with neither a plan nor a profile to go on.
+ *
+ * RETIRED LAYER, INERT BY DESIGN (D219, founder answer 2026-10-05, "Remove
+ * the editor": "One set of numbers everywhere. People's existing custom
+ * targets stop being shown", and stop being applied). A fourth layer used to
+ * sit above ADAPTED: the person's own Volume targets, one blob at
+ * @volyume_landmarks_<userId>, written by an editor on the Volume heatmap
+ * screen. The editor is gone and the layer is switched off HERE, at its one
+ * source, so every reader (the display surfaces, the session engine's
+ * landmark table, the block ledger, the seed chain, the learned carry, the
+ * weekly coach's "set by hand" list) runs on the numbers it would use for a
+ * person who never set any:
+ *   - mergeLandmarkPrecedence takes no manual input and never reports a
+ *     'manual' source;
+ *   - getManualLandmarks answers null and getManualVolumeMuscles answers [],
+ *     without reading storage.
+ * The stored blob is deliberately left alone: not deleted, not migrated, still
+ * synced as a preference (src/lib/sync.js). It is just never read. Reviving
+ * the layer is a founder decision, not an edit here.
  *
  * Volyume is fully free (founder decision 2026-09-03): there is no Free/Pro
  * split, so the old ADAPTED-layer Pro gate is gone -- the adapted table is
  * available to every user with enough data. No ED-safety surface is
  * involved (training volume bands, not calories).
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VOLUME_LANDMARKS, computeAdaptiveLandmarks } from './algorithms';
 import { buildPlanLandmarks, plannedWeeklyVolumeByMuscle } from './planVolumeTargets';
 
 /**
  * Pure merge of the three layers. Exported for tests and for callers that
- * already hold the pieces (VolumeHeatmapScreen holds manual in state).
+ * already hold the pieces. A `manual` input, which callers used to pass, is
+ * ignored: that layer is retired (see the header, D219 founder answer
+ * 2026-10-05), so nothing a caller holds of the person's own targets can
+ * change the table.
  *
- * @param {?object} manual   { [muscle]: {mev,mav,mrv} } or null
  * @param {?object} adapted  computeAdaptiveLandmarks output or null
  * @param {?object} plan     buildPlanLandmarks output ({table, source}) or
  *                           null. Absent means fall straight to research,
@@ -50,27 +66,12 @@ import { buildPlanLandmarks, plannedWeeklyVolumeByMuscle } from './planVolumeTar
  * @param {object}  research defaults table
  * @returns {{ table: object, source: object }} table is complete over
  *   research's muscles; source maps each muscle to
- *   'manual'|'adapted'|'plan'|'profile'|'research'.
+ *   'adapted'|'plan'|'profile'|'research'.
  */
-export function mergeLandmarkPrecedence({ manual = null, adapted = null, plan = null, research = VOLUME_LANDMARKS } = {}) {
+export function mergeLandmarkPrecedence({ adapted = null, plan = null, research = VOLUME_LANDMARKS } = {}) {
   const table = {};
   const source = {};
   for (const muscle of Object.keys(research)) {
-    const m = manual?.[muscle];
-    // C6 RA6-1 (D97-25): only a REAL edit counts as manual - the same
-    // isManualEdit rule the ledger runner and the seed already apply
-    // (Stage 6 blocker #1). Without it, a legacy full-table save of
-    // untouched research defaults silently disabled the Pro adapted
-    // layer on every display surface AND in the ledger's landmark frame,
-    // while labelling values the user never chose "your own setting".
-    // An untouched/legacy default now falls through to adapted, then
-    // research; a genuinely edited muscle behaves byte-identically.
-    if (m && Number.isFinite(m.mev) && Number.isFinite(m.mav) && Number.isFinite(m.mrv)
-      && isManualEdit(m, research[muscle])) {
-      table[muscle] = { ...research[muscle], mev: m.mev, mav: m.mav, mrv: m.mrv };
-      source[muscle] = 'manual';
-      continue;
-    }
     const a = adapted?.[muscle];
     if (a?.isAdapted && Number.isFinite(a.mev) && Number.isFinite(a.mav) && Number.isFinite(a.mrv)) {
       table[muscle] = { ...research[muscle], mev: a.mev, mav: a.mav, mrv: a.mrv };
@@ -99,10 +100,11 @@ export function mergeLandmarkPrecedence({ manual = null, adapted = null, plan = 
  */
 export async function getEffectiveLandmarks(userId, { userProfile = null } = {}) {
   if (!userId) return mergeLandmarkPrecedence({});
-  const manual = await getManualLandmarks(userId);
+  // No manual read: the person's own targets layer is retired (see the header,
+  // D219 founder answer 2026-10-05), so the stored blob is never consulted.
   const adapted = await getAdaptedLandmarks(userId);
   const plan = await getPlanLandmarks(userId, { userProfile });
-  return mergeLandmarkPrecedence({ manual, adapted, plan });
+  return mergeLandmarkPrecedence({ adapted, plan });
 }
 
 /**
@@ -178,6 +180,12 @@ export async function getPlanRoles(userId) {
  * (Stage 6 review blocker #1). An entry counts as an edit only when at
  * least one band differs from the research default; with no research
  * row to compare against, the user's explicit table wins.
+ *
+ * A pure predicate on whatever entry it is handed. Since the manual layer
+ * was retired (D219, founder answer 2026-10-05) no caller in the app reads a
+ * stored entry to hand it one (getManualLandmarks answers null), so in the
+ * app it only ever sees "no entry" and answers false; it stays exported for
+ * the pure engine modules and suites that still take an entry as input.
  */
 export function isManualEdit(entry, research) {
   if (!entry) return false;
@@ -200,35 +208,36 @@ export function isManualEdit(entry, research) {
 }
 
 /**
- * The user's hand-set manual landmark table, or null. Exported (Stage 6,
- * 2026-08-09) so blockLedgerRunner can read the manual layer on its own —
- * a manual entry both wins the seeding fallback chain and marks the
- * muscle's ledger entry deferredToManual (via isManualEdit above).
+ * RETIRED, INERT: the person's own landmark table. Always resolves null and
+ * never reads storage (D219, founder answer 2026-10-05, "Remove the editor":
+ * "One set of numbers everywhere"; see the header).
+ *
+ * It used to read @volyume_landmarks_<userId> so blockLedgerRunner could let a
+ * manual entry win the seeding fallback chain and mark the muscle's ledger
+ * entry deferredToManual. Those callers still import and await it, so it
+ * stays exported and async, and now tells each of them "none": the block
+ * ledger, the next-block and activation seeds and the learned carry then run
+ * exactly as they do for a person who never set any targets. The stored blob
+ * is not deleted or migrated and keeps syncing; it is only never read.
  */
-export async function getManualLandmarks(userId) {
-  if (!userId) return null;
-  try {
-    const raw = await AsyncStorage.getItem(`@volyume_landmarks_${userId}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_) { return null; /* manual layer absent */ }
+export async function getManualLandmarks(_userId) {
+  return null;
 }
 
 /**
- * The muscles whose volume the ATHLETE sets by hand, as a plain list.
+ * RETIRED, INERT: the muscles whose volume the athlete sets by hand. Always
+ * resolves an empty list (D219, founder answer 2026-10-05; see the header).
  *
- * C18 adversarial closure job B4: the weekly coach has to know this to judge
- * its own volume changes honestly. A change to a dial the user is holding
- * themselves cannot be read as a response to our decision, so the outcome is
- * CONFOUNDED rather than scored. One authority - `isManualEdit` still decides
- * what counts as a genuine edit, so an untouched editor default is not one.
- *
- * Fails to an empty list: a read failure must never make an outcome look
- * confounded and quietly disable the learning loop.
+ * C18 adversarial closure job B4 had the weekly coach read this to judge its
+ * own volume changes honestly: a change to a dial the user held themselves was
+ * CONFOUNDED rather than scored. With the editor removed nobody holds such a
+ * dial, so no outcome is confounded by it and the coach reads a person who
+ * once set targets exactly as it reads one who never did. The weekly coach
+ * itself is unchanged: it takes this list as an input, and the input is empty.
+ * Still async, because its caller chains `.catch` on the promise.
  */
-export async function getManualVolumeMuscles(userId) {
-  const table = await getManualLandmarks(userId);
-  if (!table || typeof table !== 'object') return [];
-  return Object.keys(table).filter((m) => isManualEdit(table[m], VOLUME_LANDMARKS[m]));
+export async function getManualVolumeMuscles(_userId) {
+  return [];
 }
 
 /**

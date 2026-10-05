@@ -9,7 +9,7 @@
 //   import { useToast } from '../components/Toast';
 //   const toast = useToast();
 //   toast.show('Set logged');
-//   toast.show('Volume targets saved', { variant: 'success' });
+//   toast.show('Plan saved', { variant: 'success' });
 //   toast.show('Could not save', { variant: 'error', duration: 5000 });
 //
 // Mount the provider once at the app root (App.js):

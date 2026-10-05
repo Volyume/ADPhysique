@@ -66,8 +66,14 @@ describe('CONTEXTUAL shortcuts navigate to the canonical owner', () => {
     expect(read('screens/SettingsScreen.js')).not.toMatch(/PerDayTargets/);
   });
 
-  test('the Coach tab routes to the volume-target editor', () => {
-    expect(read('screens/YouScreen.js')).toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'VolumeHeatmap'\)/);
+  // RE-PINNED 2026-10-05 (D219, founder answer "Remove the editor"): this pinned the Coach tab's shortcut to the
+  // volume-target editor (D94, Campaign 3 phase 9). The editor and both doors to it are removed, so the shortcut
+  // is gone too; like the Diary's per-day offset row above, it is pinned as an absence so nothing can point at
+  // a control that no longer exists.
+  test('the Coach tab no longer routes to a volume-target editor', () => {
+    const src = read('screens/YouScreen.js');
+    expect(src).not.toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'VolumeHeatmap'\)/);
+    expect(src).not.toContain('label="Volume targets"');
   });
 
   test('Body metrics links its displayed unit to the Workout and units editor', () => {
