@@ -19,11 +19,12 @@
  *     and on the clocks the plan was checked with.
  *
  * Design 4.14 step 4 (review finding 5): each muscle's recovery-safe weekly
- * maximum (v2.recoverySafeMax, written into the rows' mrv that a check-in
- * clamps to) is at least its planned peak; serving every training week at
- * that maximum keeps every muscle that passed the readiness check recovered;
- * and one set more either does not fit or breaks it. A muscle the check finds
- * short, or a maintenance muscle, stays at its peak.
+ * maximum (v2.recoverySafeMax, kept in the plan's facts, which a check-in
+ * clamps to) is at least its planned peak; serving every training week with
+ * EVERY muscle at its maximum together (a check-in raises them at once, and a
+ * squat's sets credit the glutes) keeps every muscle that passed the
+ * readiness check recovered, and so does each muscle at its maximum alone. A
+ * muscle the check finds short, or a maintenance muscle, stays at its peak.
  */
 import { buildPlan } from '../planner';
 import { prescribeWeek } from '../prescribe';
@@ -53,7 +54,7 @@ for (const equipment of ['full_gym', 'dumbbells_only']) {
   }
 }
 
-function served(p, credits, week, raise = null) {
+function served(p, credits, week, raise = null, all = null) {
   const sessions = p.workouts.map((w) => ({
     id: w.sessionKey,
     slots: w.exercises.map((e) => ({
@@ -63,14 +64,15 @@ function served(p, credits, week, raise = null) {
   }));
   const weekTargets = Object.fromEntries(Object.entries(p.v2.weeklyTargets).map(([m, list]) => [m, list[week - 1]]));
   if (raise && week <= BLOCK.peakWeek) weekTargets[raise.muscle] = Math.max(weekTargets[raise.muscle], raise.sets);
+  if (all && week <= BLOCK.peakWeek) for (const [m, n] of Object.entries(all)) weekTargets[m] = Math.max(weekTargets[m] ?? 0, n);
   return prescribeWeek({ sessions, weekTargets, facts: { exposureShares: p.v2.exposureShares, sessionCaps: p.v2.sessionCaps } });
 }
 
-function readServed(p, credits, raise = null) {
+function readServed(p, credits, raise = null, all = null) {
   const weekLoads = [];
   let placed = 0;
   for (let week = 1; week <= BLOCK.weeks; week++) {
-    const r = served(p, credits, week, raise);
+    const r = served(p, credits, week, raise, all);
     if (raise && week === BLOCK.peakWeek) {
       for (const w of p.workouts) for (const e of w.exercises) if (e.muscle === raise.muscle) placed += r.sets[e.slotKey];
     }
@@ -145,10 +147,18 @@ describe('the recovery-safe weekly maximum a check-in is clamped to (design 4.14
       }
       const at = readServed(p, c.credits, { muscle: m, sets: max });
       expect({ m, max, newFailures: at.sim.failures.filter((f) => !failing.has(f.muscle)).map((f) => f.muscle) }).toEqual({ m, max, newFailures: [] });
-      const past = readServed(p, c.credits, { muscle: m, sets: max + 1 });
-      const breaks = past.sim.failures.some((f) => !failing.has(f.muscle));
-      const noRoom = past.placed <= at.placed;
-      expect({ m, max, stops: breaks || noRoom || max - peak >= 12 }).toEqual({ m, max, stops: true });
     }
+    const together = readServed(p, c.credits, null, p.v2.recoverySafeMax);
+    expect(Array.from(new Set(together.sim.failures.filter((f) => !failing.has(f.muscle)).map((f) => f.muscle)))).toEqual([]);
+  });
+
+  test('the maximum is not trivially the peak: some muscle of a 4-day 75-minute plan can take more', () => {
+    const c = CASES.find((x) => !x.personal && x.equipment === 'full_gym' && x.daysPerWeek === 4 && x.sessionLengthMinutes === 75 && x.goal === 'general' && x.focusMuscles.length === 0);
+    const p = buildPlan({
+      daysPerWeek: 4, sessionLengthMinutes: 75, goal: 'general', experience: 'intermediate',
+      equipment: c.equipment, choices: c.choices, divisionMatrix: DIVISION_MATRIX, focusMuscles: [],
+    });
+    const above = Object.entries(p.v2.recoverySafeMax).filter(([m, max]) => max > Math.max(...p.v2.weeklyTargets[m].slice(0, BLOCK.peakWeek)));
+    expect(above.length).toBeGreaterThan(0);
   });
 });

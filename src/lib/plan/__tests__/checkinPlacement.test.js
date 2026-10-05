@@ -294,6 +294,18 @@ describe('placement set by set (design 4.10 steps 1 to 3)', () => {
     expect(tri.opened.map((o) => o.name)).toEqual(['Skull Crusher']);
   });
 
+  test('a plan with a recovery-safe maximum opens nothing: the raise stays inside its own exercises and the rest is reported', () => {
+    // The same full triceps as above, on a plan the planner gave a maximum
+    // (design 4.14 step 4): an exercise opened here would place sets the
+    // readiness check never read.
+    const paths = { chest: [8, 10, 12, 14, 16, 8], triceps: [4, 6, 6, 6, 6, 3] };
+    const plan = run({ rows: rowsFor(paths), weeks: weeksFrom(2), facts: { ...SMALL_FACTS, recoverySafeMax: { chest: 16, triceps: 9 } } });
+    expect(plan.opened).toEqual([]);
+    const next = plan.changes.filter((c) => c.muscle === 'triceps' && c.mesocycleWeekId === 'w3').map((c) => c.plannedSets);
+    // No row passes what the plan's own exercises can serve (3 + 3).
+    for (const n of next) expect(n).toBeLessThanOrEqual(6);
+  });
+
   test('nothing opens while an existing slot of the muscle still has room', () => {
     // Chest alone: its exercises have room for +3, so no exercise is added.
     const plan = run({ rows: rowsFor({ chest: CHEST_TRICEPS.chest }) });

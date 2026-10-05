@@ -187,6 +187,11 @@ function mrvCapOf(row) {
  * for the plan (design 4.14 step 4, facts.recoverySafeMax), so a check-in
  * cannot raise a muscle past what the readiness check found recovered.
  */
+function hasSafeMax(facts) {
+  const v = facts?.recoverySafeMax;
+  return v != null && typeof v === 'object' && Object.values(v).some((n) => isNum(n));
+}
+
 function raiseCapOf(row, m, facts) {
   const band = mrvCapOf(row);
   const safe = facts?.recoverySafeMax?.[m];
@@ -322,7 +327,14 @@ export function planCheckin({
     targets: want,
     base: storedNext,
     facts,
-    allowOpen: kind === CHECKIN_KIND.INCREASE,
+    // A plan with a recovery-safe maximum (design 4.14 step 4) is raised only
+    // within its own exercises: the maximum already stops where they are full,
+    // and an exercise opened here would place sets the readiness check never
+    // read (review 2026-10-05: raised together, the quads' credit filled the
+    // glutes' session cap and the check-in opened a glute exercise in another
+    // session, so a plan that passed found the glutes short). What does not
+    // fit is reported, as when the structure is full.
+    allowOpen: kind === CHECKIN_KIND.INCREASE && !hasSafeMax(facts),
     resolveCatalogue,
     roleOf,
     rank,

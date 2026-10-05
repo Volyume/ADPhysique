@@ -158,10 +158,12 @@ export function buildPlan(inputs) {
  * every training week of the block, the heaviest effort included, with the
  * readiness check still finding every muscle that passed it recovered at the
  * start of each session in the usual week, read in the saved order on the
- * population clocks (the volume step's clocks, 4.13). A muscle the check
- * already finds short of recovered (the growth floor won, or back-to-back
- * days), or a maintenance muscle (a check-in never raises one), keeps its
- * planned peak. It stops where the sessions have no room for another set.
+ * population clocks (the volume step's clocks, 4.13), with every other
+ * muscle at its own maximum too, since a check-in raises them together. A
+ * muscle the check already finds short of recovered (the growth floor won, or
+ * back-to-back days), or a maintenance muscle (a check-in never raises one),
+ * keeps its planned peak. It stops where the sessions have no room for
+ * another set.
  */
 const SAFE_MAX_SEARCH = 12;
 function recoverySafeMax(chosen, ctx) {
@@ -195,6 +197,49 @@ function recoverySafeMax(chosen, ctx) {
       placedBefore = placed;
       out[m] = X;
     }
+  }
+  // A check-in raises every muscle that can take it at once, and one muscle's
+  // sets credit another (a squat's half set for the glutes), so the maxima
+  // must hold together: while serving every muscle at its maximum finds a
+  // muscle short that the plan found recovered, that muscle and the muscles
+  // whose exercises credit it each give back a set above their peaks. If that
+  // cannot settle it, every muscle stays at its planned peak.
+  const peakOf = (m) => Math.max(...block.targets[m].slice(0, trainingWeeks));
+  const providers = {};
+  for (const sess of block.sessions) {
+    for (const x of sess.slots) {
+      for (const [j, c] of Object.entries(x.credits || {})) {
+        if (j !== x.muscle && c > 0) (providers[j] = providers[j] || new Set()).add(x.muscle);
+      }
+    }
+  }
+  // Raised together, a muscle's maximum must also still fit the plan's own
+  // exercises (another muscle's credit can fill its session's cap), or the
+  // check-in would open an exercise the readiness check never read.
+  const joint = () => {
+    const short = new Set();
+    const weekLoads = block.weekLoads.map((loads, w) => {
+      if (w >= trainingWeeks) return loads;
+      const weekTargets = Object.fromEntries(Object.entries(block.targets).map(([j, list]) => [j, Math.max(list[w], out[j] ?? list[w])]));
+      const res = prescribeWeek({ sessions: served, weekTargets, facts });
+      for (const [j, n] of Object.entries(res.shortfall || {})) if (n > 0 && out[j] > block.targets[j][w]) short.add(j);
+      return block.sessions.map((sess) => ({ direct: res.perSession[sess.id]?.direct || {}, fractional: res.perSession[sess.id]?.fractional || {} }));
+    });
+    return { weekLoads, short };
+  };
+  for (let guard = 0; ; guard++) {
+    if (!Object.keys(out).some((m) => out[m] > peakOf(m))) break;
+    const { weekLoads, short } = joint();
+    const fresh = Array.from(new Set(readOf(weekLoads).failures.map((f) => f.muscle).filter((m) => !failingAtPlan.has(m)))).sort();
+    if (fresh.length === 0 && short.size === 0) break;
+    const give = new Set();
+    for (const m of short) if (out[m] > peakOf(m)) give.add(m);
+    for (const f of fresh) for (const m of [f, ...(providers[f] || [])]) if (out[m] > peakOf(m)) give.add(m);
+    if (give.size === 0 || guard >= SAFE_MAX_SEARCH * 4) {
+      for (const m of Object.keys(out)) out[m] = peakOf(m);
+      break;
+    }
+    for (const m of give) out[m] -= 1;
   }
   return out;
 }
