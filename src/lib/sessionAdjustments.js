@@ -39,6 +39,9 @@ import {
 import { computeWeeklySessionAllocation } from './coachApply';
 import { deriveParamKey } from './poolGenerator';
 import { logWarn } from './errorLog';
+import { prescribeWeek } from './plan/prescribe';
+import { PER_SESSION, exerciseCap } from './plan/science';
+import { roleCeiling } from './plan/checkinPlacement';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -202,11 +205,93 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     }));
     const planContext = given !== undefined ? given : await getPlanServeContextForRoutine(workout.routineId);
     const allocation = computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows), planContext);
-    return { allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null };
+    // planContext rides along (D219 lane R3) so the session's own +1 reads the
+    // same plan facts the week was served from; callers read the fields they
+    // need, and the `none` shape above is unchanged.
+    return {
+      allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
+    };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
     return none;
   }
+}
+
+// The limits of an exercise whose plan limits cannot be read: no room anywhere,
+// so the session's own +1 never places a set on it (it fails closed).
+const CLOSED_PLAN_LIMITS = Object.freeze({
+  cap: 0, sessionDirect: 0, sessionDirectCap: 0, sessionFractional: 0, sessionFractionalCap: 0, weekFractional: 0, weekTop: 0,
+});
+
+/**
+ * D219 (design 4.11): the limits the session's own +1 must stay inside, for
+ * each exercise of today's session, on a plan the new planner built. Pure.
+ *
+ * Read from the plan's own facts and the week served for it, so the +1 and the
+ * plan can never disagree about a cap:
+ *  - cap: the exercise's own cap (science.exerciseCap: 4 for a compound, 3 for
+ *    an isolation exercise, 4 for a focus muscle's isolation exercise, plus the
+ *    thin-equipment bonus where the plan gave it);
+ *  - sessionDirect and sessionFractional: the muscle's sets in today's session
+ *    as the week is served, and sessionDirectCap and sessionFractionalCap the
+ *    plan's session caps for it (the facts' own, else 8 direct and 11
+ *    fractional);
+ *  - weekFractional: the muscle's planned week across every session, and
+ *    weekTop the role's top (checkinPlacement.roleCeiling, the number a
+ *    check-in may raise it to).
+ * Keyed by exercise id, in the shape computeSessionAdjustments reads as `plan`.
+ * Returns null when the plan is not one the new planner built, or today's
+ * routine is not one of its sessions: the caller then runs the +1 as it always
+ * has (no plan), or closes every exercise's limits (a plan whose limits cannot
+ * be read), so a plan the new planner built never gets an uncapped set.
+ *
+ * @param {object} args
+ * @param {?object} args.planContext  { facts, sessions } (getPlanServeContextForRoutine)
+ * @param {string} args.routineId     today's routine
+ * @param {Object<string, number>} args.weekTargets  this week's direct-set target per muscle
+ * @param {Array<{routineExercise: object, exercise: object}>} args.exercises  today's rows
+ */
+export function buildPlanLimits({ planContext, routineId, weekTargets, exercises }) {
+  const facts = planContext?.facts;
+  const sessions = planContext?.sessions;
+  if (facts?.version !== 2 || !Array.isArray(sessions) || !routineId) return null;
+  const served = prescribeWeek({
+    sessions,
+    weekTargets: weekTargets || {},
+    facts: { exposureShares: facts.exposureShares, sessionCaps: facts.sessionCaps },
+  });
+  const here = sessions.find((s) => s?.id === routineId);
+  const per = served.perSession?.[routineId];
+  if (!here || !per) return null;
+
+  const weekFractional = {};
+  for (const total of Object.values(served.perSession || {})) {
+    for (const [muscle, sets] of Object.entries(total?.fractional || {})) {
+      weekFractional[muscle] = (weekFractional[muscle] || 0) + sets;
+    }
+  }
+  const capOf = (muscle, which, fallback) => {
+    const v = facts?.sessionCaps?.[muscle]?.[which];
+    return Number.isFinite(v) && v > 0 ? v : fallback;
+  };
+  const slotById = new Map((here.slots || []).map((slot) => [slot?.id, slot]));
+  const out = {};
+  for (const row of Array.isArray(exercises) ? exercises : []) {
+    const exerciseId = row?.exercise?.id;
+    const slot = slotById.get(row?.routineExercise?.id);
+    const muscle = slot?.muscle;
+    if (exerciseId == null || !slot || !muscle) continue;
+    out[exerciseId] = {
+      cap: exerciseCap(slot.kind, slot.thinEquipment === true, { focus: slot.focus === true }),
+      sessionDirect: per.direct?.[muscle] || 0,
+      sessionDirectCap: capOf(muscle, 'direct', PER_SESSION.directCap),
+      sessionFractional: per.fractional?.[muscle] || 0,
+      sessionFractionalCap: capOf(muscle, 'fractional', PER_SESSION.fractionalCap),
+      weekFractional: weekFractional[muscle] || 0,
+      weekTop: roleCeiling(facts?.roles?.[muscle]),
+    };
+  }
+  return out;
 }
 
 /**
@@ -252,6 +337,40 @@ export async function getCurrentWeekPlanSets({ userId, routineId, rows, planCont
 }
 
 /**
+ * D219 (design 4.14, lane R3 item 4): the served sets for the recovery forecast.
+ * Returns the resolver recovery/load.loadPlannedSetsByRoutine takes,
+ * (routineId, rows) => { [routineExerciseId]: sets } | null: the sets
+ * getCurrentWeekPlanSets gives the plan screens (the logger's own resolver run
+ * on the routine's rows), so a forecast, a screen and the logger read one
+ * number. The plan's context is resolved once for all of a plan's routines.
+ * Null for a plan the new planner did not build (the forecast then reads the
+ * stored sets, as before) and on ANY failure: it never throws, so a failed read
+ * can only leave the forecast where it was.
+ *
+ * The recovery loader imports none of this: the numbers are passed in from the
+ * caller (Home, the Recovery cards), so the recovery domain stays free of this
+ * module's route into coachApply.
+ *
+ * @param {string} userId
+ */
+export function servedSetsResolver(userId) {
+  let context = null;
+  return async (routineId, rows) => {
+    try {
+      if (!userId || !routineId) return null;
+      if (!(context?.sessions || []).some((s) => s?.id === routineId)) {
+        context = await getPlanServeContextForRoutine(routineId);
+      }
+      if (!context) return null;
+      return await getCurrentWeekPlanSets({ userId, routineId, rows, planContext: context });
+    } catch (e) {
+      logWarn('sessionAdjustments.servedSets', e?.message);
+      return null;
+    }
+  };
+}
+
+/**
  * Compute this session's adjustments and log them. Returns the decision list
  * for the store (drives the UI in Stage 4). Always resolves to an array; never
  * throws, so a failure here can never block or break starting a workout.
@@ -274,7 +393,23 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     // The session-layer ±1 tweaks below then apply on top of the allocated
     // base, so an applied coach change (or the recovery week's per-muscle
     // reductions) and the readiness tweaks compose instead of competing.
-    const { allocation, weekRows } = await getSessionWeeklyAllocation({ workout, exercises });
+    const { allocation, weekRows, planContext } = await getSessionWeeklyAllocation({ workout, exercises });
+
+    // D219 (design 4.11): on a plan the new planner built, the +1 stays inside
+    // that plan's caps (the exercise's, the session's and the role's top).
+    let planLimits = null;
+    if (planContext) {
+      try {
+        planLimits = buildPlanLimits({
+          planContext,
+          routineId: workout.routineId,
+          weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
+          exercises,
+        });
+      } catch (e) {
+        logWarn('sessionAdjustments.planLimits', e?.message);
+      }
+    }
 
     const todaysExercises = (exercises || [])
       .map(e => ({
@@ -282,6 +417,9 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
         primaryMuscle: e?.exercise?.primaryMuscle ?? null,
         plannedSets: allocation?.[e?.exercise?.id]
           ?? e?.routineExercise?.recommendedSets ?? null,
+        // A plan the new planner built fails CLOSED: an exercise whose limits
+        // cannot be read takes no extra set (the easing and the holds still run).
+        ...(planContext ? { plan: planLimits?.[e?.exercise?.id] ?? CLOSED_PLAN_LIMITS } : {}),
       }))
       .filter(e => e.exerciseId && e.primaryMuscle && Number.isFinite(e.plannedSets) && e.plannedSets >= 1);
     if (todaysExercises.length === 0) return []; // ad-hoc / empty session → silent

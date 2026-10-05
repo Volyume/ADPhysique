@@ -89,6 +89,8 @@ import {
 import { buildMuscleRecoveryMap } from './muscleRecoveryModel';
 import { DEFAULT_TRAINING_START_MINUTE } from './constants';
 import { learnPersonalRecovery, PERSONAL_HISTORY_DAYS } from './personalRecovery';
+import { plannerLearnedFactor, ownGapsFromHistory } from './planPersonalisation';
+import { ROTATION } from '../plan/science';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -386,6 +388,78 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   };
 }
 
+/**
+ * D219 (design 4.13 and 4.6, S F14, lane R3 item 3): what the planner may be
+ * told about this person at a build, a rebuild and a block boundary, never
+ * mid-block (nothing re-runs the planner on its own). The planner takes plain
+ * numbers, so this reads and answers:
+ *  - learnedFactor: the personal learner's factor through S F14's safeguards
+ *    (planPersonalisation.plannerLearnedFactor: the gate passed, 12 weeks of
+ *    history from the person's FIRST completed workout, 3 muscles, a move of
+ *    0.10 from `builtOnFactor`, the value the current plan was built on), or
+ *    null, which is the start (their recovery answer). A degraded read or a
+ *    failed learner never gives a factor: the start is the safe direction.
+ *  - ownGaps: the median hours the person leaves after each slot of their
+ *    rotation over the last 8 weeks (planPersonalisation.ownGapsFromHistory),
+ *    or null when 8 sessions in 8 weeks are not there. A workout's slot is its
+ *    routine's position in the old rotation (`routineIdsInOrder`), used only
+ *    when that rotation has as many sessions as the new plan; otherwise the
+ *    person's median gap between any two sessions stands for every slot.
+ * The factor never changes a weekly target, calories, weight, food or
+ * notifications (planner.js holds that); it only orders the rotation and
+ * scales the readiness shown. Every read is best-effort and nothing throws: a
+ * failure leaves the planner exactly where it stood before.
+ *
+ * @param {string} userId
+ * @param {object} args
+ * @param {number} args.sessionsPerWeek    the new plan's number of sessions
+ * @param {string[]} [args.routineIdsInOrder]  the old plan's routines, in rotation order
+ * @param {?number} [args.builtOnFactor]   the factor the current plan was built on
+ * @param {number} [args.nowMs]
+ * @returns {Promise<{ learnedFactor: ?number, ownGaps: ?number[] }>}
+ */
+export async function loadPlanPersonalisation(userId, {
+  sessionsPerWeek, routineIdsInOrder = [], builtOnFactor = null, nowMs = Date.now(),
+} = {}) {
+  const out = { learnedFactor: null, ownGaps: null };
+  if (!userId) return out;
+
+  try {
+    const recovery = await loadMuscleRecovery(userId, nowMs);
+    if (!recovery.degraded && recovery.personal) {
+      const timestamps = (await getCompletedWorkoutStartTimestamps(userId)).filter((t) => Number.isFinite(t));
+      const first = timestamps.length ? Math.min(...timestamps) : null;
+      const historyDays = first === null ? 0 : (nowMs - first) / DAY_MS;
+      out.learnedFactor = plannerLearnedFactor({ personal: recovery.personal, historyDays, builtOnFactor }).factor;
+    }
+  } catch (e) {
+    logError('recovery.load.planPersonalisation.factor', e, { userId });
+    out.learnedFactor = null;
+  }
+
+  try {
+    const windowStartMs = nowMs - ROTATION.ownGapsWindowWeeks * WEEK_MS;
+    const completed = selectCompletedWorkouts(
+      await getCompletedWorkoutsBetween(userId, windowStartMs, nowMs + 1), windowStartMs, nowMs,
+    );
+    const order = Array.isArray(routineIdsInOrder) ? routineIdsInOrder : [];
+    const slotOf = new Map(order.map((id, i) => [id, i]));
+    const slotted = order.length > 0 && order.length === Math.round(Number(sessionsPerWeek));
+    out.ownGaps = ownGapsFromHistory({
+      sessions: completed.map((w) => ({
+        startedAt: Number(w.startedAt),
+        slot: slotted && slotOf.has(w.routineId) ? slotOf.get(w.routineId) : null,
+      })),
+      sessionsPerWeek,
+      nowMs,
+    });
+  } catch (e) {
+    logError('recovery.load.planPersonalisation.gaps', e, { userId });
+    out.ownGaps = null;
+  }
+  return out;
+}
+
 // The learner's last answer (see the header): one entry, keyed by
 // everything it reads (personalMemoKey).
 let personalMemo = null;
@@ -551,17 +625,38 @@ export function __resetPersonalMemoForTests() {
  * evidence that `programmeNext` itself is ready. `{}` would read as
  * "genuinely nothing to recover" and win as the safest choice.
  *
+ * D219 (design 4.14): for a plan the new planner built, a session's sets in
+ * the forecast are the sets the plan SERVES this week, not `recommended_sets`
+ * (the week-1 count, which week 5 serves up to twice over). The numbers come
+ * from the caller, never from here: `resolveServed(routineId, rows)` answers
+ * { [routineExerciseId]: sets } for a plan with facts (sessionAdjustments.
+ * servedSetsResolver) or null, so this module imports neither the plan's serve
+ * path nor coachApply. A resolver that answers null, throws or is absent leaves
+ * the stored sets (every other plan, and a failed read, forecast as before).
+ *
  * @param {string[]} routineIds
+ * @param {function(string, Array): Promise<?Object<string, number>>} [resolveServed]
  * @returns {Promise<object>} { [routineId]: { [muscle]: primarySets } | null }
  */
-export async function loadPlannedSetsByRoutine(routineIds) {
+export async function loadPlannedSetsByRoutine(routineIds, resolveServed = null) {
   const ids = Array.from(new Set((Array.isArray(routineIds) ? routineIds : []).filter(Boolean)));
   const result = {};
   for (const routineId of ids) {
     try {
       // eslint-disable-next-line no-await-in-loop
       const rows = await getRoutineExercisesWithDetails(routineId);
-      result[routineId] = primarySetsFromRoutineRows(rows);
+      let served = null;
+      if (typeof resolveServed === 'function') {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          served = await resolveServed(routineId, rows);
+        } catch (e) {
+          // Best-effort: the stored sets still forecast (the pre-D219 reading).
+          logError('recovery.load.servedSets', e, { routineId });
+          served = null;
+        }
+      }
+      result[routineId] = primarySetsFromRoutineRows(rows, served);
     } catch (e) {
       logError('recovery.load.loadPlannedSetsByRoutine', e, { routineId });
       result[routineId] = null;
@@ -574,13 +669,21 @@ export async function loadPlannedSetsByRoutine(routineIds) {
  * { [muscle]: primary sets } from getRoutineExercisesWithDetails rows, or
  * null when the routine is unknown (see loadPlannedSetsByRoutine). Pure
  * and exported so it is directly unit-testable with plain fixtures.
+ *
+ * `served` (D219, design 4.14): { [routineExerciseId]: sets } for a plan the
+ * new planner built, the sets this week serves. A row it names (a number of
+ * one or more) counts its served sets; every other row, and every row when
+ * `served` is absent, counts its stored `recommended_sets` as before.
  */
-export function primarySetsFromRoutineRows(rows) {
+export function primarySetsFromRoutineRows(rows, served = null) {
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return null;
   const out = {};
   for (const row of list) {
-    const sets = Number(row?.routineExercise?.recommendedSets ?? row?.routineExercise?.recommended_sets);
+    const servedSets = served && typeof served === 'object' ? Number(served[row?.routineExercise?.id]) : NaN;
+    const sets = Number.isFinite(servedSets) && servedSets >= 1
+      ? servedSets
+      : Number(row?.routineExercise?.recommendedSets ?? row?.routineExercise?.recommended_sets);
     const exercise = row?.exercise ?? null;
     if (!exercise || !exercise.primaryMuscle) return null; // an unresolved exercise: unknown
     if (!Number.isFinite(sets) || sets <= 0) continue;

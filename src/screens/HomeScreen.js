@@ -78,7 +78,7 @@ import {
   FIRST_CHECKIN_MIN_DAYS,
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
-import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
+import { computeAndLogSessionAdjustments, servedSetsResolver } from '../lib/sessionAdjustments';
 // D201 (per-muscle recovery, docs/recovery-programme-2026-09-25/00-SPEC.md
 // section 4): all recovery-domain I/O goes through this loader -- this
 // screen composes only. loadMuscleRecovery/loadPlannedSetsByRoutine are the
@@ -1480,7 +1480,7 @@ export default function HomeScreen({ navigation, route }) {
         .map((s) => s.routineId);
       const [recovery, plannedSetsByRoutine] = await Promise.all([
         loadMuscleRecovery(user.id),
-        loadPlannedSetsByRoutine(outstandingIds),
+        loadPlannedSetsByRoutine(outstandingIds, servedSetsResolver(user.id)),
       ]);
       // Opus review finding 10: a core read that failed is not an all-clear;
       // the card renders exactly as before this feature existed.

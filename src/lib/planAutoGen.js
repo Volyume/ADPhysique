@@ -37,6 +37,7 @@ import {
   getRecentlyUsedExerciseIds,
   getAllMesocycles,
   setProgrammePlanFacts,
+  getProgrammePlanFacts,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -1644,6 +1645,72 @@ async function resolvePlannerV2Plan({
 }
 
 /**
+ * The number of sessions a week the planner builds for these inputs: its own
+ * clamp (planner.js clampDays), 2 to 6, and a beginner at most 4. The person's
+ * own gaps must have exactly this many entries or the planner ignores them.
+ */
+function plannerV2SessionCount(inputs) {
+  let n = Math.max(2, Math.min(6, Math.round(inputs.daysPerWeek || 3)));
+  if (inputs.experience === 'beginner') n = Math.min(n, 4);
+  return n;
+}
+
+/**
+ * D219 (design 4.13 and 4.6, S F14, lane R3 item 3): what the person's own
+ * history lets the planner know, at a build, a rebuild and a block boundary
+ * (every route into buildPlanWithPlannerV2; nothing re-runs the planner on its
+ * own mid-block). { learnedFactor, ownGaps }, each a number or null:
+ *  - learnedFactor is the personal learner's factor, already through its gate
+ *    and S F14's safeguards (12 weeks of history, 3 muscles, a move of 0.10 from
+ *    the value the current plan was built on, a revert when the evidence fades);
+ *    the planner uses it only to order the rotation and scale the readiness it
+ *    reports, never for a weekly target;
+ *  - ownGaps is the median hours the person leaves after each slot of their
+ *    rotation, when 8 sessions in 8 weeks are logged.
+ * The plan being replaced supplies its routines in rotation order (the slots of
+ * the person's own workouts) and the factor it was built on (its facts'
+ * builtFactor). Best-effort and silent on absence: any failure answers
+ * { null, null }, the start, so a plan is always built. The recovery loader is
+ * required lazily, as the planner is: this file is also imported (for
+ * equipmentReachable) by modules on the check-in path, which must never reach
+ * src/lib/recovery/ through a static import.
+ */
+async function plannerV2Personalisation(userId, inputs) {
+  const none = { learnedFactor: null, ownGaps: null };
+  try {
+    let routineIdsInOrder = [];
+    let builtOnFactor = null;
+    try {
+      const current = await getActivePlan(userId);
+      if (current?.id) {
+        routineIdsInOrder = ((await getRoutinesForPlan(current.id)) ?? []).map((r) => r?.id).filter(Boolean);
+        const facts = await getProgrammePlanFacts(current.id);
+        builtOnFactor = Number.isFinite(facts?.builtFactor) ? facts.builtFactor : null;
+      }
+    } catch (e) {
+      // The old plan is only the reference: without it the start is the reference.
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logWarn('plan.generateAndSave.plannerV2CurrentPlan', e?.message); } catch (_) {}
+    }
+    // eslint-disable-next-line global-require
+    const { loadPlanPersonalisation } = require('./recovery/load');
+    const out = await loadPlanPersonalisation(userId, {
+      sessionsPerWeek: plannerV2SessionCount(inputs),
+      routineIdsInOrder,
+      builtOnFactor,
+    });
+    return {
+      learnedFactor: Number.isFinite(out?.learnedFactor) ? out.learnedFactor : null,
+      ownGaps: Array.isArray(out?.ownGaps) ? out.ownGaps : null,
+    };
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logWarn('plan.generateAndSave.plannerV2Personalisation', e?.message); } catch (_) {}
+    return none;
+  }
+}
+
+/**
  * Build the plan with the new planner. Throws on a planner failure (the caller
  * logs it and falls back to today's generator); answers null when the library
  * holds nothing of the standard catalogue for the person's kit (no row carries
@@ -1675,6 +1742,7 @@ async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExer
   // most three, as muscle keys. No profile field for opt-in muscles exists
   // yet, so none are added.
   const focusMuscles = resolveWeakPointKeys((inputs.weakPoints ?? []).slice(0, 3));
+  const { learnedFactor, ownGaps } = await plannerV2Personalisation(userId, inputs);
   const built = buildPlan({
     daysPerWeek: inputs.daysPerWeek,
     sessionLengthMinutes: inputs.sessionLengthMinutes,
@@ -1686,6 +1754,10 @@ async function buildPlanWithPlannerV2(userId, inputs, generationLibrary, allExer
     focusMuscles,
     addedMuscles: [],
     firstBlock,
+    // What the person's own history lets the planner know (above): the learner's
+    // gated factor and their own gaps, never a weekly target.
+    learnedFactor,
+    ownGaps,
     // The generator does not read the last four weeks per muscle, so
     // `loggedWeekly` is not passed (the planner then ramps from its own
     // no-history limit).

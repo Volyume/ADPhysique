@@ -30,8 +30,8 @@
  *
  * THE SIMULATED ATHLETE (spec section 7). Twelve weeks on one of five
  * schedules, with or without a plan (the plan's effort ladder is RIR 3, 2,
- * 1, 0, 0 then a recovery week at 4, and no exercise repeats within a week,
- * as the plan generator builds it). Each athlete has a true recovery factor,
+ * 2, 1, 1 then a recovery week at 4, or on a running block 3, 2, 1, 0, 0 then
+ * 4, and no exercise repeats within a week, as the plan generator builds it). Each athlete has a true recovery factor,
  * a true sensitivity per muscle drawn from [0.06, 0.12], a strength level, a
  * small weekly progression per exercise, and day-to-day noise (a shared day
  * effect, an exercise effect and a per-set effect, about 3% on each set's
@@ -43,6 +43,16 @@
  * athlete's plan in whole plate steps; the effort left in reserve varies by
  * a rep either way; performance shows as whole reps at that load. The true
  * recovered fraction comes from the model's own curve at the true factor.
+ *
+ * D219 (design 4.13, founder answer Q4 "Extend it, safety-tested"): the learner
+ * now pairs the same lift across plan weeks at different effort targets,
+ * reading each session at the effort the plan asked of it
+ * (personalRecovery.effortComparison). It ships only because this suite holds:
+ * the bounds below are UNCHANGED, and every plan cell runs on both ladders, the
+ * one a new block gets (RIR 3, 2, 2, 1, 1, then 4, Q5) and the one a block that
+ * is already running keeps (3, 2, 1, 0, 0, then 4). The same athletes, seeds
+ * and truths run on both. The full run (PERSONAL_CALIBRATION=full) was
+ * re-run with the extension and holds every cell to both promises.
  *
  * The random numbers are drawn HERE, from a seeded generator, so the suite
  * is the same on every run; the learner itself stays deterministic and never
@@ -74,7 +84,11 @@ const FALSE_ALLOWED = FULL_RUN ? Math.floor(ATHLETES * 0.05) : 5;
 const WRONG_ALLOWED = FULL_RUN ? Math.floor(ATHLETES / 60) : 3;
 // The gate the full calibration set (constants.js, PERSONAL_LR_MIN).
 const CALIBRATED_GATE = 10;
-const RIR_LADDER = [3, 2, 1, 0, 0, 4];
+// D219 (founder answer Q5): a new block runs RIR 3, 2, 2, 1, 1 then a recovery
+// week at 4 (science.js BLOCK.rirLadder). A block already running keeps the
+// ladder it was stored with (3, 2, 1, 0, 0, 4), so the plan cells run both.
+const RIR_LADDER = [3, 2, 2, 1, 1, 4];
+const RUNNING_LADDER = [3, 2, 1, 0, 0, 4];
 const FREESTYLE_TARGET_RIR = 1;
 const PRIOR = 1.0; // recovery answer 'average'
 
@@ -161,9 +175,9 @@ const SCHEDULES = [
  * logging modes: the learner had been calibrated on one exercise a muscle
  * and four fresh sets, and more of either broke its promise.
  */
-function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured') {
+function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured', ladder = RIR_LADDER) {
   const {
-    logging = 'measured', perMuscle = 1, sets: setsPerExercise = 4, fatiguePerSet = 0,
+    logging = 'measured', perMuscle = 1, sets: setsPerExercise = 4, fatiguePerSet = 0, ignoresPlanEffort = false,
   } = typeof style === 'string' ? { logging: style } : style;
   const rand = seeded(seed);
   const strength = uniform(rand, 0.7, 1.3);
@@ -185,7 +199,7 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
   const slots = schedule.slots(rand).filter((slot) => breakStart === null || slot.day < breakStart || slot.day >= breakEnd);
   const sessions = slots.map((slot, i) => {
     const week = Math.floor(slot.day / 7);
-    const blockWeek = week % RIR_LADDER.length;
+    const blockWeek = week % ladder.length;
     const jitter = uniform(rand, -schedule.jitterHours, schedule.jitterHours) * HOUR_MS;
     const startedAt = START_MS + slot.day * DAY_MS + 18 * HOUR_MS + Math.round(jitter);
     const exerciseIds = slot.muscles.flatMap((m) => {
@@ -202,10 +216,10 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
       startedAt,
       endedAt: startedAt + HOUR_MS,
       durationMinutes: 60,
-      weekRirTarget: withPlan ? RIR_LADDER[blockWeek] : null,
+      weekRirTarget: withPlan ? ladder[blockWeek] : null,
       weekStatus: withPlan ? 'resolved' : 'none',
       isFirstWeek: withPlan && blockWeek === 0,
-      isDeload: withPlan && blockWeek === RIR_LADDER.length - 1,
+      isDeload: withPlan && blockWeek === ladder.length - 1,
       ratings: { sorenessNext: null, fatigue: null, joint: null },
       exerciseIds,
       sets: exerciseIds.flatMap((exerciseId) => Array.from({ length: setsPerExercise }, () => ({
@@ -242,7 +256,10 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
     const weeks = (session.startedAt - START_MS) / (7 * DAY_MS);
     const weekday = new Date(session.startedAt).getDay();
     const dayEffect = normal(rand) * 0.02 + weekdayEffect[weekday] - detraining(session.day);
-    const targetRir = session.weekRirTarget ?? FREESTYLE_TARGET_RIR;
+    // A person who stops at their own effort whatever the plan asks (the plan's
+    // target is still what the session records): their load and their reps
+    // follow their own reserve, not the week's.
+    const targetRir = ignoresPlanEffort ? FREESTYLE_TARGET_RIR : (session.weekRirTarget ?? FREESTYLE_TARGET_RIR);
     session.sets = [];
     for (const exerciseId of session.exerciseIds) {
       const ex = EXERCISES[exerciseId];
@@ -292,14 +309,14 @@ function styleCode(style) {
 }
 
 /** Every athlete's evidence in one cell (schedule x plan x style x true factor). */
-function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured') {
+function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured', ladder = RIR_LADDER) {
   const schedule = SCHEDULES[scheduleIndex];
   const factorCode = Math.round(trueFactor * 100);
   const out = [];
   for (let a = 0; a < ATHLETES; a += 1) {
     const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + styleCode(style)
       + factorCode * 10007 + a * 7919;
-    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style);
+    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style, ladder);
     out.push(personalRecoveryEvidence({
       sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
     }));
@@ -324,6 +341,24 @@ SCHEDULES.forEach((schedule, si) => {
       slower: runCell(si, withPlan, 1.4),
     });
   }
+  // A block already running keeps its stored ladder (D219 Q5): the same
+  // athletes on a plan with the earlier ladder.
+  CELLS.push({
+    label: `${schedule.name}, with a plan on the running ladder (RIR 3, 2, 1, 0, 0)`,
+    null: runCell(si, true, PRIOR, 'measured', RUNNING_LADDER),
+    faster: runCell(si, true, 0.75, 'measured', RUNNING_LADDER),
+    slower: runCell(si, true, 1.4, 'measured', RUNNING_LADDER),
+  });
+  // The across-plan-weeks reading adjusts for the effort the plan ASKED for. A
+  // person who stops at their own effort whatever the plan asks hands it an
+  // adjustment that is wrong in a way tied to the week's place in the block:
+  // the stress case for that reading (D219 Q4).
+  CELLS.push({
+    label: `${schedule.name}, with a plan, stopping at their own effort whatever the plan asks`,
+    null: runCell(si, true, PRIOR, { ignoresPlanEffort: true }),
+    faster: runCell(si, true, 0.75, { ignoresPlanEffort: true }),
+    slower: runCell(si, true, 1.4, { ignoresPlanEffort: true }),
+  });
 });
 // The reviews' cases (D210 addenda 3 and 5): how people really train and
 // log. Run without a plan, where the learner otherwise has most to go on,

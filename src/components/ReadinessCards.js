@@ -80,6 +80,7 @@ import { logError } from '../lib/errorLog';
 import { resolveProgrammePosition } from '../lib/programmePosition';
 import { SESSION_STATE } from '../lib/blockProgression';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
+import { servedSetsResolver } from '../lib/sessionAdjustments';
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
 // The "ready now / later today / by Thursday / in N days" wording is
 // nextWorkoutRecommendation.js's readyClause, read by MuscleRecoveryList.js for
@@ -714,7 +715,7 @@ export default function ReadinessCards({
             const firstInOrder = [...sessions].sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0))[0] ?? null;
             const cardRoutineId = position.nextSession?.routineId ?? firstInOrder?.routineId ?? null;
             const ids = [...new Set([...outstandingIds, ...(cardRoutineId ? [cardRoutineId] : [])])];
-            const plannedSetsByRoutine = ids.length ? await loadPlannedSetsByRoutine(ids) : {};
+            const plannedSetsByRoutine = ids.length ? await loadPlannedSetsByRoutine(ids, servedSetsResolver(userId)) : {};
             const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
             setNextCard(buildNextInPlanCard({
               position,

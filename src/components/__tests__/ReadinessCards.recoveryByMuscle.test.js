@@ -641,7 +641,7 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
     const tree = await render();
     expect(texts(tree)).toContain('Next in your plan, when the plan week turns on Monday: Upper A');
-    expect(loadPlannedSetsByRoutine).toHaveBeenCalledWith(['r-legs']);
+    expect(loadPlannedSetsByRoutine).toHaveBeenCalledWith(['r-legs'], expect.any(Function));
     // Nothing is still to do, so no "Still to do" list, and no recommendation was asked for.
     expect(texts(tree)).not.toContain('Still to do this plan week');
     expect(recommendNextWorkout).not.toHaveBeenCalled();
@@ -782,7 +782,7 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
   test('calls loadPlannedSetsByRoutine with only the outstanding routine ids, and recommendNextWorkout with the loaded map', async () => {
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS });
     await render();
-    expect(loadPlannedSetsByRoutine).toHaveBeenCalledWith(['r-legs', 'r-push']);
+    expect(loadPlannedSetsByRoutine).toHaveBeenCalledWith(['r-legs', 'r-push'], expect.any(Function));
     const call = recommendNextWorkout.mock.calls[0][0];
     expect(call.sessions).toBe(SESSIONS);
     expect(call.recoveryMap).toBe(MAP_FIXTURE);
