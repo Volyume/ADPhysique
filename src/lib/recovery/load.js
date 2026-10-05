@@ -73,13 +73,35 @@
  * safe direction for learning is out, CAP-12): the map then reads with the
  * recovery answer alone and `personal` is null. A failed learner does the
  * same. Neither degrades the map.
+ *
+ * THE PAUSE (D219, learner design 06 section 2.5; founder answer 2026-10-05,
+ * "Pause it then"). While calm mode is on or an ED-pattern flag is open, the
+ * learner does not move: it is not run, nothing it would learn is kept, and
+ * the reading in effect stays as it was. readLearnerPause reads both the way
+ * blockLedgerRunner.readSuppression does, and FAILS CLOSED: a read that fails
+ * counts as a pause. What "as it was" is, stated for what each reader can
+ * see: the screens keep the learner's last reading this app process holds for
+ * the person (the daily memo; a cold start under a pause has none, and the map
+ * then reads on the recovery answer alone, which is the safe direction); the
+ * planner keeps the factor its current plan was built on (the plan's own
+ * `builtFactor`, which is stored), so a block boundary under a pause neither
+ * learns a factor nor loses one. The read sits here, where the learner is
+ * run, and in no ED module (edIsolation.guard.test.js keeps them from
+ * importing this domain); the learner itself (personalRecovery.js) stays pure.
+ *
+ * THE DAY'S CHIPS (D219, learner design 06 section 2.3). Each session carries
+ * the sleep and energy chips the person tapped on the start sheet
+ * (`walkedIn`, 2 to 4 or null): the learner's day-effect covariates, never
+ * read by the clock and never a recovery marker. Soreness is not among them.
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercisesIncludingDeleted,
   getMesocycleWeeks, getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
-  getCapabilityConstraints,
+  getCapabilityConstraints, getOpenEdPatternFlag,
 } from '../database';
 import { buildExerciseLookup } from '../exercise/lookup';
+import { isCalm, WELLBEING_KEY } from '../wellbeing';
 import { logError } from '../errorLog';
 import { localWeekStartMs, localDayKey } from '../dayKey';
 import { allocateExerciseVolume } from '../algorithms';
@@ -182,6 +204,8 @@ export function indexWeeks(weekRows) {
  * always null here; pairSorenessNext resolves it afterwards, since it needs
  * to see the FOLLOWING session too.
  *
+ * `walkedIn` (D219) carries the start sheet's sleep and energy chips.
+ *
  * `weekStatus` (register D210) says whether the effort target is known:
  * 'none' for a session outside any plan (no week id), 'resolved' when its
  * week row was found, 'unresolved' when it has a week id whose row was not
@@ -218,6 +242,13 @@ export function buildRecoverySession(workout, workoutSets, week) {
       fatigue: workout.fatigueLevel ?? null,
       joint: workout.jointDiscomfort ?? maxJointDiscomfort,
       sorenessNext: null,
+    },
+    // How the person walked in, from the start sheet (2 to 4, null when the
+    // chip was skipped): the learner's day-effect covariates. Soreness is not
+    // here: it is a mediator of recovery and the learner never adjusts for it.
+    walkedIn: {
+      sleep: workout.sleepQuality ?? null,
+      energy: workout.energyScore ?? null,
     },
   };
 }
@@ -264,7 +295,10 @@ function selectCompletedWorkouts(allWorkouts, windowStartMs, nowMs) {
  * @returns {Promise<{ map: object, nowMs: number, recoveryRating: string,
  *   personal: ({ factor: number, prior: number, pairs: number,
  *   reason: string, pairsByMuscle: object }|null), habitualWeekdays: number[]|null,
- *   typicalStartMinute: number, degraded: boolean }>}
+ *   typicalStartMinute: number, degraded: boolean, learnerPaused: boolean }>}
+ *   `learnerPaused` is true while calm mode is on, an ED-pattern flag is open
+ *   or either read failed: `personal` is then the reading held from before
+ *   (or null), never a new one (see THE PAUSE in the header)
  */
 export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   const recoveryRating = readRecoveryRating();
@@ -277,6 +311,7 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
       habitualWeekdays: null,
       typicalStartMinute: DEFAULT_TRAINING_START_MINUTE,
       degraded: false,
+      learnerPaused: false,
     };
   }
 
@@ -372,9 +407,17 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
     typicalStartMinute = DEFAULT_TRAINING_START_MINUTE;
   }
 
-  const personal = degraded ? null : await learnFromSessions({
-    userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
-  });
+  // The pause is read once, here, right before the learner would run, and
+  // whatever the answer it is returned: the planner's reader needs it even
+  // when a core read failed (see loadPlanPersonalisation).
+  const learnerPaused = await readLearnerPause(userId);
+  let personal = null;
+  if (learnerPaused) personal = heldReading(userId);
+  else if (!degraded) {
+    personal = await learnFromSessions({
+      userId, sessions, exercises, exerciseById, recoveryRating, nowMs,
+    });
+  }
   const map = buildMuscleRecoveryMap({
     sessions,
     exerciseById,
@@ -384,8 +427,40 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   });
 
   return {
-    map, nowMs, recoveryRating, personal, habitualWeekdays, typicalStartMinute, degraded,
+    map, nowMs, recoveryRating, personal, habitualWeekdays, typicalStartMinute, degraded, learnerPaused,
   };
+}
+
+/**
+ * Is the learner paused? True while calm mode is on or an ED-pattern flag is
+ * open, and FAIL CLOSED: a flag read or a wellbeing read that fails (or throws
+ * before it can fail) counts as a pause, so a possibly-flagged person never
+ * has the learner move because a read timed out. The same two reads, and the
+ * same rule, as blockLedgerRunner.readSuppression (D219, learner design 06
+ * section 2.5; founder answer 2026-10-05, "Pause it then").
+ *
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function readLearnerPause(userId) {
+  try {
+    const edFlag = await getOpenEdPatternFlag(userId).catch((e) => {
+      logError('recovery.load.learnerPause.edFlag', e, { userId });
+      return 'read_failed';
+    });
+    const wellbeing = await AsyncStorage.getItem(WELLBEING_KEY)
+      .then((v) => v || 'unspecified')
+      .catch((e) => {
+        logError('recovery.load.learnerPause.wellbeing', e, {});
+        return 'read_failed';
+      });
+    return !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
+  } catch (e) {
+    // The read itself could not start (a missing function, a throw before a
+    // promise exists): the same answer as a failed read.
+    logError('recovery.load.learnerPause', e, { userId });
+    return true;
+  }
 }
 
 /**
@@ -399,6 +474,9 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
  *    0.10 from `builtOnFactor`, the value the current plan was built on), or
  *    null, which is the start (their recovery answer). A degraded read or a
  *    failed learner never gives a factor: the start is the safe direction.
+ *    While the learner is paused (calm mode on, an ED flag open, a failed
+ *    read of either: readLearnerPause) the factor is `builtOnFactor` itself:
+ *    the plan keeps what it was built on, whatever the learner would say.
  *  - ownGaps: the median hours the person leaves after each slot of their
  *    rotation over the last 8 weeks (planPersonalisation.ownGapsFromHistory),
  *    or null when 8 sessions in 8 weeks are not there. A workout's slot is its
@@ -426,7 +504,13 @@ export async function loadPlanPersonalisation(userId, {
 
   try {
     const recovery = await loadMuscleRecovery(userId, nowMs);
-    if (!recovery.degraded && recovery.personal) {
+    if (recovery.learnerPaused) {
+      // Paused (calm mode, an open ED flag, or a failed read: D219, learner
+      // design 06 section 2.5): nothing is learned and nothing is lost. The
+      // plan keeps the factor it was built on, the one number about the
+      // learner that is stored, whatever the learner's own reading is.
+      out.learnedFactor = Number.isFinite(builtOnFactor) ? builtOnFactor : null;
+    } else if (!recovery.degraded && recovery.personal) {
       const timestamps = (await getCompletedWorkoutStartTimestamps(userId)).filter((t) => Number.isFinite(t));
       const first = timestamps.length ? Math.min(...timestamps) : null;
       const historyDays = first === null ? 0 : (nowMs - first) / DAY_MS;
@@ -461,8 +545,18 @@ export async function loadPlanPersonalisation(userId, {
 }
 
 // The learner's last answer (see the header): one entry, keyed by
-// everything it reads (personalMemoKey).
+// everything it reads (personalMemoKey), and by whom it is for (`userId`), so
+// a pause can hold it for that person and no one else (heldReading).
 let personalMemo = null;
+
+/**
+ * The reading a pause holds: the learner's last answer for THIS person, or
+ * null when this process has none (a cold start under a pause). Never a new
+ * reading, never a write.
+ */
+function heldReading(userId) {
+  return personalMemo && personalMemo.userId === userId ? personalMemo.value : null;
+}
 
 /** The allocator's primary-muscle normalisation (algorithms.allocateExerciseVolume), for keys that arrive raw. */
 function normaliseMuscleKey(muscle) {
@@ -527,7 +621,8 @@ function injuryInputsKey(capRows, exercises) {
  * injury inputs (injuryInputsKey), and for each session the fields its
  * pairing, its outcome and its curve read (times, the week's target, first
  * week and recovery week, the ratings, and each set's exercise, type,
- * weight, reps and order), with the exercises those sets name. Any change
+ * weight, reps, order and whether it was typed, and the session's start-sheet
+ * chips), with the exercises those sets name and their names. Any change
  * to any of them, a set corrected, a rating added, a week turned into a
  * recovery week, an injury limit logged or backdated, re-runs the learner
  * the same day (review of 2026-09-26: a shorter key missed all of these
@@ -543,6 +638,7 @@ function personalMemoKey({
     parts.push([
       session.id, session.startedAt, session.endedAt, session.durationMinutes, session.weekRirTarget,
       session.isFirstWeek, session.isDeload, session.weekStatus, r.fatigue, r.joint, r.sorenessNext,
+      session.walkedIn?.sleep, session.walkedIn?.energy,
     ].join('|'));
     for (const set of Array.isArray(session.sets) ? session.sets : []) {
       const exerciseId = set?.exerciseId ?? set?.exercise_id;
@@ -551,6 +647,7 @@ function personalMemoKey({
         set?.id, exerciseId, set?.setType ?? set?.set_type, set?.evidenceClass ?? set?.evidence_class,
         set?.weight, set?.actualReps ?? set?.actual_reps, set?.setNumber ?? set?.set_number,
         set?.createdAt ?? set?.created_at, set?.deletedAt ?? set?.deleted_at,
+        set?.entryTyped ?? set?.entry_typed,
       ].join('|'));
     }
   }
@@ -559,6 +656,8 @@ function personalMemoKey({
     parts.push(e ? [
       id, e.primaryMuscle ?? e.primary_muscle, JSON.stringify(e.secondaryMuscles ?? e.secondary_muscles ?? null),
       e.loadSemantics ?? e.load_semantics, e.exerciseType ?? e.exercise_type,
+      // The long-length term reads the exercise's name (constants.isLongLengthExercise).
+      e.name,
     ].join('|') : `${id}|none`);
   }
   return parts.join('\n');
@@ -586,13 +685,13 @@ async function learnFromSessions({
   const key = personalMemoKey({
     userId, nowMs, recoveryRating, sessions, exerciseById, injuryKey: injuryInputsKey(capRows, exercises),
   });
-  if (personalMemo && personalMemo.key === key) return personalMemo.value;
+  if (personalMemo && personalMemo.key === key && personalMemo.userId === userId) return personalMemo.value;
   try {
     const excluded = excludedEvidence(capRows, sessions, exercises);
     const value = learnPersonalRecovery({
       sessions, exerciseById, recoveryRating, nowMs, excluded,
     });
-    personalMemo = { key, value };
+    personalMemo = { key, value, userId };
     return value;
   } catch (e) {
     logError('recovery.load.learnPersonalRecovery', e, { userId });

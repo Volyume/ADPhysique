@@ -54,6 +54,36 @@
  * and truths run on both. The full run (PERSONAL_CALIBRATION=full) was
  * re-run with the extension and holds every cell to both promises.
  *
+ * D219 (learner design docs/audit/plan-builder-science-2026-10-04/
+ * 06-LEARNER-SIGNAL-DESIGN.md sections 2.3 and 2.4, founder answer 2026-10-05
+ * "Only what's already recorded"; the cells are the ones 05-LEARNER-RECON.md
+ * section 5 lists): the learner now also pairs a lift with its previous session
+ * on any weekday when the weekdays do not set the person's gaps
+ * (personalRecovery.weekdayGapCoupling), leaves out the sets a person kept as
+ * filled in (entryTyped 0), takes the start sheet's sleep and energy chips out of
+ * each comparison as a capped, non-negative day effect, and fits the curve the
+ * clock draws (novelty, long length, mostly indirect). It ships only because this
+ * suite holds with every bound UNCHANGED (the gate 10, 5% shown a direction whose
+ * truth is the start, 1 in 60 the wrong one, the factor range 0.75 to 1.40), over
+ * 34 more cells: plan users logging as prescribed on every schedule, sets typed or
+ * kept as filled in with an edit probability tied to the day, a person who retypes
+ * the plan, weekday-bound irregular schedules, a habit that moved, one that slipped,
+ * a third of sessions moved a day, the time of day, a day effect that is partly
+ * sleep reported coarsely and skipped more after a bad night, an energy chip that
+ * also follows fatigue, a poor chip that eases the session, and an athlete whose
+ * true clock is the screen's. Every new behaviour of the athlete (the `edits`,
+ * `hours`, `chips` and `clocks` styles) draws from a second generator, so no
+ * earlier cell changed by a bit. The full run (PERSONAL_CALIBRATION=full, 66 cells,
+ * 600 a cell) holds every cell: at the gate the worst cell shows a direction to 9
+ * of 600 whose truth is the start (30 allowed) and the wrong one to 2 (10
+ * allowed), and the smallest gate meeting both promises is 8 (5 before). The
+ * guard opens for none of the athletes on any fixed, moved or slipping
+ * schedule, for 45% of those who never train at weekends and for 94% of the
+ * varied; read at each of five weeks (8 to 12) instead of only the last, no
+ * athlete of 300 in any of eight schedule and plan combinations was shown a
+ * direction at the gate (scratch run, not pinned: the guard flips between
+ * readings for about 30% of those who never train at weekends).
+ *
  * The random numbers are drawn HERE, from a seeded generator, so the suite
  * is the same on every run; the learner itself stays deterministic and never
  * draws a number (CLAUDE.md: the engine is deterministic, no randomness).
@@ -61,8 +91,10 @@
 import { personalRecoveryEvidence, learnPersonalRecovery } from '../personalRecovery';
 import {
   PERSONAL_LR_MIN, PERSONAL_MIN_PAIRS, PERSONAL_MIN_SPREAD, LOOKBACK_DAYS, recoveryHours,
+  PERSONAL_FACTOR_GRID, PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX, PERFORMANCE_SENSITIVITY_MIN,
+  PERFORMANCE_SENSITIVITY_MAX, PERSONAL_MIN_MUSCLE_PAIRS, PERSONAL_MAX_CHANGE, PERSONAL_MAX_FIXED_REPS_SHARE,
 } from '../constants';
-import { sessionMuscleLoads, recoveredFractionAt } from '../muscleRecoveryModel';
+import { sessionMuscleLoads, sessionMuscleTerms, recoveredFractionAt } from '../muscleRecoveryModel';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -90,6 +122,7 @@ const CALIBRATED_GATE = 10;
 const RIR_LADDER = [3, 2, 2, 1, 1, 4];
 const RUNNING_LADDER = [3, 2, 1, 0, 0, 4];
 const FREESTYLE_TARGET_RIR = 1;
+const PLAN_REPS = 8; // what the logging screen fills in ('prescribed' and 'filledIn')
 const PRIOR = 1.0; // recovery answer 'average'
 
 /** mulberry32: small, seeded, good enough for a simulation. */
@@ -125,6 +158,16 @@ const EXERCISES = {
   legcurl: { id: 'legcurl', primaryMuscle: 'hamstrings', secondaryMuscles: [], base: 60, step: 2.5 },
   seatedcurl: { id: 'seatedcurl', primaryMuscle: 'hamstrings', secondaryMuscles: [], base: 55, step: 2.5 },
 };
+// The same lifts with the names four of them carry on the long-length list
+// (constants.js LONG_LENGTH_EXERCISE_NAMES), for the athletes whose true clock
+// is the one the screen draws, D219 terms and all (style.clocks === 'd219').
+const EXERCISES_NAMED = {
+  ...EXERCISES,
+  squat: { ...EXERCISES.squat, name: 'Barbell Back Squat' },
+  hacksquat: { ...EXERCISES.hacksquat, name: 'Hack Squat Machine' },
+  rdl: { ...EXERCISES.rdl, name: 'Romanian Deadlift' },
+  seatedcurl: { ...EXERCISES.seatedcurl, name: 'Seated Leg Curl' },
+};
 const VARIANTS = {
   chest: ['bench', 'incline', 'dbpress'],
   back: ['row', 'pulldown', 'cablerow'],
@@ -147,6 +190,35 @@ const variable = (rand) => {
   return out;
 };
 
+// D219 (learner design 06 section 2.3, candidate D): schedules whose gaps the
+// weekdays do or do not set, drawn to test the guard on slot pairing. Every
+// session is full body, as the varied schedule's are. Days run from a Monday.
+/** Monday to Friday only, each weekday trained with probability p: the weekend
+ * is always a gap, so Monday's gap is long whatever else happens. */
+const weekdaysOnly = (p) => (rand) => {
+  const out = [];
+  for (let w = 0; w < WEEKS; w += 1) for (let d = 0; d < 5; d += 1) if (rand() < p) out.push({ day: w * 7 + d, muscles: FULL });
+  return out;
+};
+/** One schedule for the first half of the twelve weeks and another after it: a habit that moved. */
+const shifting = (first, second) => () => {
+  const out = [];
+  for (let w = 0; w < WEEKS; w += 1) for (const d of (w < WEEKS / 2 ? first : second)) out.push({ day: w * 7 + d, muscles: FULL });
+  return out;
+};
+/** A weekly pattern with a share of its sessions moved a day later. */
+const movedSometimes = (days, share) => (rand) => {
+  const out = [];
+  for (let w = 0; w < WEEKS; w += 1) for (const d of days) out.push({ day: w * 7 + d + (rand() < share ? 1 : 0), muscles: FULL });
+  return out;
+};
+/** A weekly pattern that slips a day later every four weeks. */
+const drifting = (days) => () => {
+  const out = [];
+  for (let w = 0; w < WEEKS; w += 1) for (const d of days) out.push({ day: w * 7 + d + Math.floor(w / 4), muscles: FULL });
+  return out;
+};
+
 const SCHEDULES = [
   { name: 'Mon/Wed/Fri full body', slots: weekly([[0, FULL], [2, FULL], [4, FULL]]), jitterHours: 1 },
   { name: 'Mon/Thu full body', slots: weekly([[0, FULL], [3, FULL]]), jitterHours: 1 },
@@ -157,6 +229,11 @@ const SCHEDULES = [
     jitterHours: 1,
   },
   { name: 'variable, gaps of 1 to 4 days', slots: variable, jitterHours: 3 },
+  // Index 5 on: D219. Appended, so every earlier cell keeps its seed.
+  { name: 'never at weekends, 3 days of 5 (the weekend sets a gap)', slots: weekdaysOnly(0.6), jitterHours: 3 },
+  { name: 'habit moved: Mon/Wed/Fri, then Tue/Thu/Sat', slots: shifting([0, 2, 4], [1, 3, 5]), jitterHours: 1 },
+  { name: 'Mon/Wed/Fri, a third of sessions moved a day', slots: movedSometimes([0, 2, 4], 1 / 3), jitterHours: 1 },
+  { name: 'Mon/Wed/Fri slipping a day every four weeks', slots: drifting([0, 2, 4]), jitterHours: 1 },
 ];
 
 /**
@@ -174,12 +251,47 @@ const SCHEDULES = [
  * The review of 2026-09-26 (D210 addendum 5) added all but the first two
  * logging modes: the learner had been calibrated on one exercise a muscle
  * and four fresh sets, and more of either broke its promise.
+ *
+ * D219 (learner design 06 sections 2.3 and 2.4, 05-LEARNER-RECON.md section 5)
+ * adds what the stronger learner reads. Every one is off unless the style asks,
+ * draws its own random numbers from a SECOND generator (so no earlier cell's
+ * athletes change by a bit), and is an ASSUMED size: nothing here is measured
+ * on people.
+ *  - logging 'filledIn', with `edits` { down, up, retype }: the logging screen
+ *    fills in the plan's 8 reps; the person does what the day allows (the
+ *    measured reps) and keeps the filled-in 8 when that was it, types what they
+ *    did with probability `down` when the day gave fewer (tired days are edited)
+ *    and `up` when it gave more (fresh days seldom are), and otherwise logs 8
+ *    unedited. Each set carries `entryTyped` (1 typed, 0 kept as filled in).
+ *    `retype` is a person who types the plan's own numbers into every set: every
+ *    set is typed and none says anything about the day;
+ *  - `hours` { base, spread, circadian }: sessions start at base hour +- spread
+ *    instead of 18:00 +- the schedule's jitter, and strength follows the clock,
+ *    +circadian at 17:00 and -circadian at 05:00 (peak in the early evening:
+ *    Atkinson and Reilly 1996, PMID 8726347; the size is assumed);
+ *  - `chips` { share, skip, skipBadExtra, mediator, easing }: the day's form is
+ *    partly the night's sleep (`share` of its variance, the total unchanged at
+ *    2%); the start sheet's sleep and energy chips (2, 3 or 4) report it coarsely
+ *    (a noisy three-way reading of the sleep state, energy a noisier reading of
+ *    a state that follows it), the whole sheet is skipped with probability
+ *    `skip`, more often (`skipBadExtra`) after a bad night; `mediator` makes the
+ *    energy chip also follow how fatigued the session's muscles are; `easing`
+ *    makes a poor chip ease the session half the time (one set fewer, 5%
+ *    lighter, as sessionAdjustments does for "below par");
+ *  - `clocks: 'd219'`: the exercises carry the names four of them have on the
+ *    long-length list and the athlete's TRUE clock carries the three session
+ *    terms the screen's clock carries (novelty, long length, mostly indirect), so
+ *    the learner's curve is the true one.
  */
 function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured', ladder = RIR_LADDER) {
   const {
     logging = 'measured', perMuscle = 1, sets: setsPerExercise = 4, fatiguePerSet = 0, ignoresPlanEffort = false,
+    clocks = 'plain', hours = null, chips = null, edits = null,
   } = typeof style === 'string' ? { logging: style } : style;
   const rand = seeded(seed);
+  // D219: the second generator, for everything the earlier cells do not have.
+  const rand2 = seeded((seed ^ 0x9E3779B9) >>> 0);
+  const exercises = clocks === 'd219' ? EXERCISES_NAMED : EXERCISES;
   const strength = uniform(rand, 0.7, 1.3);
   const sensitivity = Object.fromEntries(MUSCLES.map((m) => [m, uniform(rand, 0.06, 0.12)]));
   const progression = Object.fromEntries(Object.keys(EXERCISES).map((id) => [id, uniform(rand, 0.002, 0.01)]));
@@ -200,8 +312,9 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
   const sessions = slots.map((slot, i) => {
     const week = Math.floor(slot.day / 7);
     const blockWeek = week % ladder.length;
-    const jitter = uniform(rand, -schedule.jitterHours, schedule.jitterHours) * HOUR_MS;
-    const startedAt = START_MS + slot.day * DAY_MS + 18 * HOUR_MS + Math.round(jitter);
+    const spread = hours ? hours.spread : schedule.jitterHours;
+    const jitter = uniform(rand, -spread, spread) * HOUR_MS;
+    const startedAt = START_MS + slot.day * DAY_MS + (hours ? hours.base : 18) * HOUR_MS + Math.round(jitter);
     const exerciseIds = slot.muscles.flatMap((m) => {
       const key = `${week}|${m}`;
       const n = occurrences.get(key) ?? 0;
@@ -228,12 +341,15 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
     };
   });
 
-  // The true curve: the model's own, at the athlete's true factor.
+  // The true curve: the model's own, at the athlete's true factor (and, for
+  // clocks 'd219', with the session terms the screen's clock carries).
   const curve = {};
-  sessionMuscleLoads(sessions, EXERCISES).forEach((load, i) => {
+  const termsOf = clocks === 'd219' ? sessionMuscleTerms(sessions, exercises) : null;
+  sessionMuscleLoads(sessions, exercises).forEach((load, i) => {
     for (const [muscle, sets] of Object.entries(load.setsByMuscle)) {
       if (!(sets > 0)) continue;
       if (!curve[muscle]) curve[muscle] = [];
+      const term = termsOf?.[i]?.[muscle] ?? {};
       curve[muscle].push({
         endMs: load.endMs,
         sets,
@@ -243,6 +359,9 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
           firstWeek: sessions[i].isFirstWeek,
           ratings: sessions[i].ratings,
           personalFactor: trueFactor,
+          novel: term.novel,
+          longLengthShare: term.longLengthShare,
+          mostlyIndirect: term.mostlyIndirect,
         }),
       });
     }
@@ -255,14 +374,35 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
   for (const session of sessions) {
     const weeks = (session.startedAt - START_MS) / (7 * DAY_MS);
     const weekday = new Date(session.startedAt).getDay();
-    const dayEffect = normal(rand) * 0.02 + weekdayEffect[weekday] - detraining(session.day);
+    const dayNoise = normal(rand);
+    // D219: strength follows the clock when the style says so.
+    const hourOfDay = ((session.startedAt - START_MS) % DAY_MS) / HOUR_MS;
+    const circadian = hours ? hours.circadian * Math.cos((2 * Math.PI * (hourOfDay - 17)) / 24) : 0;
+    // D219: the night's sleep is part of the day's form, and the start sheet reports it.
+    let sleepState = 0;
+    let eased = false;
+    if (chips) {
+      sleepState = normal(rand2);
+      const energyState = 0.5 * sleepState + Math.sqrt(0.75) * normal(rand2);
+      const fatigueNow = session.exerciseIds
+        .reduce((sum, id) => sum + (1 - trueFraction(exercises[id].primaryMuscle, session.startedAt)), 0) / session.exerciseIds.length;
+      const chipOf = (state) => (state < -0.55 ? 2 : (state > 0.55 ? 4 : 3));
+      const sleepChip = chipOf(sleepState + 0.6 * normal(rand2));
+      const energyChip = chipOf(energyState - chips.mediator * fatigueNow + 0.6 * normal(rand2));
+      const skipped = rand2() < Math.min(0.95, chips.skip + (sleepState < -0.5 ? chips.skipBadExtra : 0));
+      eased = !skipped && chips.easing && (sleepChip === 2 || energyChip === 2) && rand2() < 0.5;
+      session.walkedIn = skipped ? { sleep: null, energy: null } : { sleep: sleepChip, energy: energyChip };
+    }
+    const dayEffect = (chips
+      ? 0.02 * (Math.sqrt(chips.share) * sleepState + Math.sqrt(1 - chips.share) * dayNoise)
+      : dayNoise * 0.02) + weekdayEffect[weekday] - detraining(session.day) + circadian;
     // A person who stops at their own effort whatever the plan asks (the plan's
     // target is still what the session records): their load and their reps
     // follow their own reserve, not the week's.
     const targetRir = ignoresPlanEffort ? FREESTYLE_TARGET_RIR : (session.weekRirTarget ?? FREESTYLE_TARGET_RIR);
     session.sets = [];
     for (const exerciseId of session.exerciseIds) {
-      const ex = EXERCISES[exerciseId];
+      const ex = exercises[exerciseId];
       const muscle = ex.primaryMuscle;
       const ability = ex.base * strength * Math.exp(progression[exerciseId] * weeks);
       const today = ability
@@ -273,15 +413,20 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
       const planAbility = logging === 'measured'
         ? ability
         : ex.base * strength * Math.exp(progression[exerciseId] * Math.floor(weeks));
-      const load = Math.max(ex.step, Math.round(planAbility / (1 + (8 + targetRir) / 30) / ex.step) * ex.step);
+      const load = Math.max(ex.step, Math.round((eased ? 0.95 : 1) * planAbility / (1 + (8 + targetRir) / 30) / ex.step) * ex.step);
       const rir = Math.max(0, targetRir + pick(rand, [-1, 0, 0, 1]));
-      for (let j = 0; j < setsPerExercise; j += 1) {
+      const setsToday = eased ? Math.max(1, setsPerExercise - 1) : setsPerExercise;
+      for (let j = 0; j < setsToday; j += 1) {
         const setMax = today * Math.exp(normal(rand) * 0.01);
         const toFailure = 30 * (setMax / load - 1) - fatiguePerSet * j;
-        const lastFree = logging === 'lastFree' && j === setsPerExercise - 1;
+        const lastFree = logging === 'lastFree' && j === setsToday - 1;
         let reps;
+        let entryTyped;
         if (logging === 'measured') reps = Math.max(1, Math.round(toFailure - rir));
-        else if (lastFree) reps = Math.max(1, Math.round(toFailure));
+        else if (logging === 'filledIn') {
+          const done = Math.max(1, Math.round(toFailure - rir));
+          if (edits.retype) { reps = PLAN_REPS; entryTyped = 1; } else if (done === PLAN_REPS) { reps = PLAN_REPS; entryTyped = 0; } else if (rand2() < (done < PLAN_REPS ? edits.down : edits.up)) { reps = done; entryTyped = 1; } else { reps = PLAN_REPS; entryTyped = 0; }
+        } else if (lastFree) reps = Math.max(1, Math.round(toFailure));
         else reps = Math.max(1, Math.min(8, Math.round(toFailure)));
         session.sets.push({
           exerciseId,
@@ -290,6 +435,7 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
           actualReps: reps,
           setNumber: j + 1,
           createdAt: session.startedAt + j * 3 * 60 * 1000,
+          ...(entryTyped === undefined ? {} : { entryTyped }),
         });
       }
     }
@@ -318,7 +464,7 @@ function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured', ladder
       + factorCode * 10007 + a * 7919;
     const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style, ladder);
     out.push(personalRecoveryEvidence({
-      sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
+      sessions, exerciseById: style?.clocks === 'd219' ? EXERCISES_NAMED : EXERCISES, recoveryRating: 'average', nowMs,
     }));
   }
   return out;
@@ -332,7 +478,8 @@ function directionAt(evidence, lrMin) {
 }
 
 const CELLS = [];
-SCHEDULES.forEach((schedule, si) => {
+// The five schedules of the calibration (the D219 ones, from index 5, have their own cells below).
+SCHEDULES.slice(0, 5).forEach((schedule, si) => {
   for (const withPlan of [false, true]) {
     CELLS.push({
       label: `${schedule.name}, ${withPlan ? 'with a plan' : 'no plan'}`,
@@ -385,6 +532,60 @@ SCHEDULES.forEach((schedule, si) => {
   });
 });
 
+// D219 (learner design 06-LEARNER-SIGNAL-DESIGN.md sections 2.3 and 2.4; the
+// cells 05-LEARNER-RECON.md section 5 lists for candidates C, D and E and for
+// plan users): what the stronger learner reads, each with every promise above
+// unchanged. [schedule, plan, style, words].
+const HOURS = { base: 14.5, spread: 6.5, circadian: 0.015 };
+const CHIPS = {
+  share: 0.5, skip: 0.3, skipBadExtra: 0.15, mediator: 0, easing: false,
+};
+[
+  // Plan users logging as the logging screen fills it in, on every schedule,
+  // and the other things the plan cells never did (recon section 5, common).
+  ...[0, 1, 2, 3, 4].map((si) => [si, true, 'prescribed', 'reps logged as prescribed']),
+  [4, true, { perMuscle: 2 }, 'two exercises a muscle'],
+  [4, true, { logging: 'prescribed', sets: 8 }, 'eight sets an exercise, reps logged as prescribed'],
+  [4, true, { logging: 'prescribed', fatiguePerSet: 1 }, 'reps logged as prescribed, tiring through the sets'],
+  // Candidate C: the set says whether it was typed or kept as filled in.
+  [4, true, { logging: 'filledIn', edits: { down: 0.9, up: 0.25 } }, 'sets typed or kept as filled in (typed 9 in 10 on a tired day, 1 in 4 on a fresh one), flagged'],
+  [4, true, { logging: 'filledIn', edits: { down: 0.95, up: 0.05 } }, 'sets typed or kept as filled in (tired days nearly always typed, fresh days nearly never), flagged'],
+  [4, true, { logging: 'filledIn', edits: { down: 0.5, up: 0.5 } }, 'sets typed or kept as filled in (half of each kind of day typed), flagged'],
+  [4, false, { logging: 'filledIn', edits: { down: 0.9, up: 0.25 } }, 'sets typed or kept as filled in (typed 9 in 10 on a tired day, 1 in 4 on a fresh one), flagged'],
+  [0, true, { logging: 'filledIn', edits: { down: 0.9, up: 0.25 } }, 'sets typed or kept as filled in (typed 9 in 10 on a tired day, 1 in 4 on a fresh one), flagged'],
+  [4, true, { logging: 'filledIn', edits: { retype: true } }, 'the plan retyped into every set, flagged as typed'],
+  [0, true, { logging: 'filledIn', edits: { retype: true } }, 'the plan retyped into every set, flagged as typed'],
+  // Candidate D: schedules whose gaps the weekdays set, or do not.
+  [5, false, 'measured', 'measured reps'],
+  [5, true, 'measured', 'measured reps'],
+  [6, false, 'measured', 'measured reps'],
+  [6, true, 'measured', 'measured reps'],
+  [7, false, 'measured', 'measured reps'],
+  [7, true, 'measured', 'measured reps'],
+  [8, false, 'measured', 'measured reps'],
+  [4, false, { hours: HOURS }, 'start time anywhere from 08:00 to 21:00, strength following the clock'],
+  [4, true, { hours: HOURS }, 'start time anywhere from 08:00 to 21:00, strength following the clock'],
+  [0, false, { hours: HOURS }, 'start time anywhere from 08:00 to 21:00, strength following the clock'],
+  // Candidate E: the day's form is partly the night's sleep, reported coarsely.
+  [4, false, { chips: CHIPS }, 'half the day\'s form is sleep, chips skipped 3 days in 10'],
+  [4, true, { chips: CHIPS }, 'half the day\'s form is sleep, chips skipped 3 days in 10'],
+  [4, false, { chips: { ...CHIPS, skip: 0.8 } }, 'half the day\'s form is sleep, chips skipped 8 days in 10 (more after a bad night)'],
+  [4, true, { chips: { ...CHIPS, share: 0.25, easing: true } }, 'a quarter of the day\'s form is sleep, a poor chip eases the session'],
+  [0, false, { chips: CHIPS }, 'half the day\'s form is sleep, chips skipped 3 days in 10'],
+  [4, false, { chips: { ...CHIPS, share: 0.25, mediator: 1.5 } }, 'the energy chip also follows how fatigued the muscles are'],
+  // One curve: the athlete's true clock is the one the screen draws.
+  [4, false, { clocks: 'd219' }, 'true clock with novelty, long length and mostly indirect'],
+  [4, true, { clocks: 'd219' }, 'true clock with novelty, long length and mostly indirect'],
+  [0, true, { clocks: 'd219' }, 'true clock with novelty, long length and mostly indirect'],
+].forEach(([si, withPlan, style, words]) => {
+  CELLS.push({
+    label: `${SCHEDULES[si].name}, ${withPlan ? 'with a plan' : 'no plan'}, ${words}`,
+    null: runCell(si, withPlan, PRIOR, style),
+    faster: runCell(si, withPlan, 0.75, style),
+    slower: runCell(si, withPlan, 1.4, style),
+  });
+});
+
 /**
  * The smallest whole-number gate that lets at most `allowed` of these
  * athletes be shown a direction `wrong(direction)` says is wrong: one more
@@ -427,12 +628,16 @@ if (process.env.PERSONAL_SIM_REPORT) {
     const pairs = cell.null.map((ev) => ev.pairs).sort((x, y) => x - y);
     const spread = cell.null.map((ev) => ev.spread).sort((x, y) => x - y);
     const lrs = cell.null.filter((e) => directionAt(e, 0) !== null).map((e) => e.lr).sort((x, y) => y - x);
+    const slot = cell.null.filter((ev) => ev.pairing === 'slot').length;
+    const chipPairs = cell.null.map((ev) => ev.dayEffectPairs ?? 0).sort((x, y) => x - y);
     lines.push([
       cell.label.padEnd(48),
       `pairs~${pairs[30]}`, `spread~${spread[30].toFixed(2)}`,
       `nullTop=${lrs.slice(0, 5).map((v) => v.toFixed(1)).join(',')}`,
+      `false ${cell.null.filter((ev) => directionAt(ev, PERSONAL_LR_MIN) !== null).length}`,
       `fast ${count(cell.faster, 'faster')}/${count(cell.faster, 'slower')}`,
       `slow ${count(cell.slower, 'slower')}/${count(cell.slower, 'faster')}`,
+      `slotPairing ${slot}/${ATHLETES}`, `chipPairs~${chipPairs[30]}`,
     ].join('  '));
   }
   // eslint-disable-next-line no-console
@@ -443,6 +648,35 @@ describe('personal recovery learning: calibration by simulation (spec section 7)
   test(`PERSONAL_LR_MIN is the gate the full calibration set (${CALIBRATED_GATE}; this run alone would need ${calibratedLrMin})`, () => {
     expect(PERSONAL_LR_MIN).toBe(CALIBRATED_GATE);
     if (FULL_RUN) expect(PERSONAL_LR_MIN).toBeGreaterThanOrEqual(calibratedLrMin);
+  });
+
+  // D219 (learner design 06): the stronger learner changes none of the bounds the calibration is
+  // about. Every cell below is judged at the same gate, over the same candidate range (0.75 to 1.40,
+  // 5% apart), with the same floors for what counts as evidence.
+  test('every other pinned bound stands: the factor range, the sensitivity bounds and the evidence floors', () => {
+    expect(PERSONAL_FACTOR_MIN).toBe(0.75);
+    expect(PERSONAL_FACTOR_MAX).toBe(1.4);
+    expect(PERSONAL_FACTOR_GRID[0]).toBe(0.75);
+    expect(PERSONAL_FACTOR_GRID[PERSONAL_FACTOR_GRID.length - 1]).toBe(1.4);
+    expect(PERSONAL_FACTOR_GRID).toHaveLength(14);
+    expect(PERFORMANCE_SENSITIVITY_MIN).toBe(0.04);
+    expect(PERFORMANCE_SENSITIVITY_MAX).toBe(0.15);
+    expect(PERSONAL_MIN_PAIRS).toBe(8);
+    expect(PERSONAL_MIN_MUSCLE_PAIRS).toBe(5);
+    expect(PERSONAL_MIN_SPREAD).toBe(0.1);
+    expect(PERSONAL_MAX_CHANGE).toBe(0.2);
+    expect(PERSONAL_MAX_FIXED_REPS_SHARE).toBe(0.5);
+    // And no athlete is ever told a factor outside the range.
+    let lowest = Infinity;
+    let highest = -Infinity;
+    for (const cell of CELLS) {
+      for (const ev of [...cell.null, ...cell.faster, ...cell.slower]) {
+        lowest = Math.min(lowest, ev.best);
+        highest = Math.max(highest, ev.best);
+      }
+    }
+    expect(lowest).toBeGreaterThanOrEqual(0.75);
+    expect(highest).toBeLessThanOrEqual(1.4);
   });
 
   for (const cell of CELLS) {
@@ -460,6 +694,26 @@ describe('personal recovery learning: calibration by simulation (spec section 7)
       expect(slowWrong).toBeLessThanOrEqual(WRONG_ALLOWED);
     });
   }
+
+  // D219 (learner design 06 section 2.3, candidate D): the recon measured pairing on any weekday as
+  // UNSAFE on a fixed schedule (a false direction for 4% and the wrong one for 2% at the gate), so the
+  // guard must never open there. Pinned on every athlete of every fixed, moved or slipping schedule in
+  // every cell above, at all three true factors; and it must open for most of a varied schedule, or the
+  // rule does nothing.
+  test('fixed, moved and slipping schedules keep the same-weekday rule for every athlete drawn; a varied schedule mostly does not', () => {
+    const fixed = /^(Mon\/Wed\/Fri|Mon\/Thu|upper\/lower|push\/pull\/legs|habit moved)/;
+    let checked = 0;
+    for (const cell of CELLS.filter((c) => fixed.test(c.label))) {
+      for (const ev of [...cell.null, ...cell.faster, ...cell.slower]) {
+        expect(ev.pairing).toBe('weekday');
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(ATHLETES * 3 * 20);
+    const varied = CELLS.find((c) => c.label === 'variable, gaps of 1 to 4 days, no plan');
+    const slot = varied.null.filter((ev) => ev.pairing === 'slot').length;
+    expect(slot).toBeGreaterThanOrEqual(Math.floor(ATHLETES * 0.8));
+  });
 
   test('reps logged as prescribed on three set days a week: nobody is shown a direction, and the reps-never-change reason is given', () => {
     const reasons = {};
