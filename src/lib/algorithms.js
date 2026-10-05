@@ -1283,8 +1283,54 @@ const DAYS_4 = 4 * 24 * 60 * 60 * 1000;
 const DAYS_14 = 14 * 24 * 60 * 60 * 1000;
 
 /**
+ * D219 (design 4.11, register D219): where one muscle's session +1 may go on a
+ * plan the new planner built. Every exercise of such a plan carries `plan`, the
+ * limits of its slot (sessionAdjustments.buildPlanLimits writes them from the
+ * plan's own facts and this week's served sets):
+ *  - cap: sets the exercise may take (science.exerciseCap);
+ *  - sessionDirect and sessionDirectCap, sessionFractional and
+ *    sessionFractionalCap: the muscle's sets in today's session against the
+ *    plan's session caps;
+ *  - weekFractional and weekTop: the muscle's planned week (every session, the
+ *    muscle's whole planned total, not one exercise's sets) against the role's
+ *    top.
+ * The set goes to the exercise with the most room under its cap (the first on a
+ * tie), and only while one more set keeps the session under both caps and the
+ * week under the top; the week is read as the larger of the planned week and
+ * what the week has already held plus today's session, so a week that ran
+ * ahead is never under-counted. Returns null when no exercise of the muscle
+ * carries `plan` (every plan the new planner did not build), else
+ * { exercise: the exercise to give the set, or null when nothing may take it,
+ * projectedWeek }. Pure.
+ */
+function planAddTarget(group, doneThisWeek) {
+  const planned = (Array.isArray(group) ? group : []).filter((e) => e && e.plan && typeof e.plan === 'object');
+  if (planned.length === 0) return null;
+  const EPS = 1e-9;
+  const num = (v) => (Number.isFinite(v) ? v : 0);
+  let best = null;
+  let bestRoom = 0;
+  let projectedWeek = 0;
+  planned.forEach((e, i) => {
+    const p = e.plan;
+    const week = Math.max(num(p.weekFractional), num(doneThisWeek) + num(p.sessionFractional));
+    if (i === 0) projectedWeek = week;
+    const room = num(p.cap) - e.plannedSets;
+    const fits = room >= 1
+      && num(p.sessionDirect) + 1 <= num(p.sessionDirectCap) + EPS
+      && num(p.sessionFractional) + 1 <= num(p.sessionFractionalCap) + EPS
+      && week + 1 <= num(p.weekTop) + EPS;
+    if (fits && room > bestRoom) { best = e; bestRoom = room; }
+  });
+  return { exercise: best, projectedWeek };
+}
+
+/**
  * @param {object} input
- * @param {Array}  input.todaysExercises  [{ exerciseId, primaryMuscle, plannedSets }]
+ * @param {Array}  input.todaysExercises  [{ exerciseId, primaryMuscle, plannedSets, plan? }]. `plan` is present
+ *                                          only on a plan the new planner built (D219, design 4.11): the limits of the
+ *                                          exercise's slot, { cap, sessionDirect, sessionDirectCap, sessionFractional,
+ *                                          sessionFractionalCap, weekFractional, weekTop } (planAddTarget below)
  * @param {object} input.muscleSignals    { [muscle]: { lastTrainedAt, lastFeedback: { pump, joint, performance },
  *                                          checkinSore, checkinAt, presessionSoreness, displayName } }
  * @param {object} input.weeklyContext    { doneThisWeekByMuscle, landmarks, weeklySignal:'reduce'|'hold'|'push',
@@ -1317,6 +1363,7 @@ export function computeSessionAdjustments({
   // one exercise per muscle ever adjusts (and only its PRIMARY muscle — never
   // secondary credit, matching allocateExerciseVolume semantics).
   const firstExerciseForMuscle = new Map();
+  const exercisesForMuscle = new Map();
   const muscleOrder = [];
   for (const ex of todaysExercises) {
     const m = ex.primaryMuscle;
@@ -1324,8 +1371,10 @@ export function computeSessionAdjustments({
     if (!Number.isFinite(ex.plannedSets) || ex.plannedSets < 1) continue;
     if (!firstExerciseForMuscle.has(m)) {
       firstExerciseForMuscle.set(m, ex);
+      exercisesForMuscle.set(m, []);
       muscleOrder.push(m);
     }
+    exercisesForMuscle.get(m).push(ex);
   }
 
   // Add-frequency cap (this week) and revert memory (this meso), both derived
@@ -1364,6 +1413,11 @@ export function computeSessionAdjustments({
     const mrv = lk.mrv ?? Infinity;
     // Projected weekly sets for this muscle if today runs as planned.
     const projectedPlanned = (doneByMuscle[muscle] ?? 0) + plannedSets;
+    // D219 (design 4.11): on a plan the new planner built, the +1 reads the
+    // muscle's whole planned week and goes to the exercise with the most room
+    // under its cap (null on every other plan: the rule below is unchanged).
+    const addPlan = planAddTarget(exercisesForMuscle.get(muscle), doneByMuscle[muscle] ?? 0);
+    let target = ex;
 
     const lastTrainedAt = sig.lastTrainedAt ?? null;
     const trainedWithin72h = lastTrainedAt != null && (now - lastTrainedAt) <= HOURS_72 && (now - lastTrainedAt) >= 0;
@@ -1419,7 +1473,7 @@ export function computeSessionAdjustments({
         feedbackRecent &&
         lastPerformance <= 2 &&
         lastPump <= 2 &&
-        projectedPlanned < mav &&
+        (addPlan ? addPlan.exercise !== null : projectedPlanned < mav) &&
         !addedThisWeek.has(muscle);
       if (stimulusReady) {
         const blockedBySafety = safetyHold;
@@ -1428,6 +1482,13 @@ export function computeSessionAdjustments({
           reasonCode = SESSION_REASON_CODES.HOLD_SAFETY;       // R5
         } else if (blockedByWeekly) {
           reasonCode = SESSION_REASON_CODES.HOLD_WEEKLY_PRECEDENCE; // R5
+        } else if (addPlan) {
+          // R4 on a plan with facts: the planner's own limits (exercise cap,
+          // session caps, the role's top) were checked when the target was
+          // chosen, so the set can never pass any of them.
+          reasonCode = SESSION_REASON_CODES.ADD_UNDER_STIMULUS;
+          setDelta = +1;
+          target = addPlan.exercise;
         } else if (projectedPlanned + 1 <= mrv && projectedPlanned + 1 <= mav) {
           // R4: clamp keeps projected ≤ mav (and ≤ mrv) — the session layer
           // never pushes a muscle past its working ceiling on its own.
@@ -1448,11 +1509,11 @@ export function computeSessionAdjustments({
       || (isPrecedenceHold && presessionIntent === 'sharp');
 
     candidates.push({
-      exerciseId: ex.exerciseId,
+      exerciseId: target.exerciseId,
       muscle,
       setDelta,
-      adjustedSets: plannedSets + setDelta,
-      plannedSets,
+      adjustedSets: target.plannedSets + setDelta,
+      plannedSets: target.plannedSets,
       reasonCode,
       reasonText: getSessionAdjustmentMessage(reasonCode, msgOpts),
       show,
@@ -1465,7 +1526,7 @@ export function computeSessionAdjustments({
         lastPump,
         lastPerformance,
         lastJoint,
-        projectedPlanned,
+        projectedPlanned: addPlan ? addPlan.projectedWeek : projectedPlanned,
         weeklySignal,
         safetyHold,
       },

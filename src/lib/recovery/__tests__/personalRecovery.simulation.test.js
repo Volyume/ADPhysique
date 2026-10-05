@@ -74,7 +74,11 @@ const FALSE_ALLOWED = FULL_RUN ? Math.floor(ATHLETES * 0.05) : 5;
 const WRONG_ALLOWED = FULL_RUN ? Math.floor(ATHLETES / 60) : 3;
 // The gate the full calibration set (constants.js, PERSONAL_LR_MIN).
 const CALIBRATED_GATE = 10;
-const RIR_LADDER = [3, 2, 1, 0, 0, 4];
+// D219 (founder answer Q5): a new block runs RIR 3, 2, 2, 1, 1 then a recovery
+// week at 4 (science.js BLOCK.rirLadder). A block already running keeps the
+// ladder it was stored with (3, 2, 1, 0, 0, 4), so the plan cells run both.
+const RIR_LADDER = [3, 2, 2, 1, 1, 4];
+const RUNNING_LADDER = [3, 2, 1, 0, 0, 4];
 const FREESTYLE_TARGET_RIR = 1;
 const PRIOR = 1.0; // recovery answer 'average'
 
@@ -161,7 +165,7 @@ const SCHEDULES = [
  * logging modes: the learner had been calibrated on one exercise a muscle
  * and four fresh sets, and more of either broke its promise.
  */
-function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured') {
+function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured', ladder = RIR_LADDER) {
   const {
     logging = 'measured', perMuscle = 1, sets: setsPerExercise = 4, fatiguePerSet = 0,
   } = typeof style === 'string' ? { logging: style } : style;
@@ -185,7 +189,7 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
   const slots = schedule.slots(rand).filter((slot) => breakStart === null || slot.day < breakStart || slot.day >= breakEnd);
   const sessions = slots.map((slot, i) => {
     const week = Math.floor(slot.day / 7);
-    const blockWeek = week % RIR_LADDER.length;
+    const blockWeek = week % ladder.length;
     const jitter = uniform(rand, -schedule.jitterHours, schedule.jitterHours) * HOUR_MS;
     const startedAt = START_MS + slot.day * DAY_MS + 18 * HOUR_MS + Math.round(jitter);
     const exerciseIds = slot.muscles.flatMap((m) => {
@@ -202,10 +206,10 @@ function simulateAthlete(seed, schedule, withPlan, trueFactor, style = 'measured
       startedAt,
       endedAt: startedAt + HOUR_MS,
       durationMinutes: 60,
-      weekRirTarget: withPlan ? RIR_LADDER[blockWeek] : null,
+      weekRirTarget: withPlan ? ladder[blockWeek] : null,
       weekStatus: withPlan ? 'resolved' : 'none',
       isFirstWeek: withPlan && blockWeek === 0,
-      isDeload: withPlan && blockWeek === RIR_LADDER.length - 1,
+      isDeload: withPlan && blockWeek === ladder.length - 1,
       ratings: { sorenessNext: null, fatigue: null, joint: null },
       exerciseIds,
       sets: exerciseIds.flatMap((exerciseId) => Array.from({ length: setsPerExercise }, () => ({
@@ -292,14 +296,14 @@ function styleCode(style) {
 }
 
 /** Every athlete's evidence in one cell (schedule x plan x style x true factor). */
-function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured') {
+function runCell(scheduleIndex, withPlan, trueFactor, style = 'measured', ladder = RIR_LADDER) {
   const schedule = SCHEDULES[scheduleIndex];
   const factorCode = Math.round(trueFactor * 100);
   const out = [];
   for (let a = 0; a < ATHLETES; a += 1) {
     const seed = 1 + scheduleIndex * 1000003 + (withPlan ? 500009 : 0) + styleCode(style)
       + factorCode * 10007 + a * 7919;
-    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style);
+    const { sessions, nowMs } = simulateAthlete(seed, schedule, withPlan, trueFactor, style, ladder);
     out.push(personalRecoveryEvidence({
       sessions, exerciseById: EXERCISES, recoveryRating: 'average', nowMs,
     }));
@@ -324,6 +328,14 @@ SCHEDULES.forEach((schedule, si) => {
       slower: runCell(si, withPlan, 1.4),
     });
   }
+  // A block already running keeps its stored ladder (D219 Q5): the same
+  // athletes on a plan with the earlier ladder.
+  CELLS.push({
+    label: `${schedule.name}, with a plan on the running ladder (RIR 3, 2, 1, 0, 0)`,
+    null: runCell(si, true, PRIOR, 'measured', RUNNING_LADDER),
+    faster: runCell(si, true, 0.75, 'measured', RUNNING_LADDER),
+    slower: runCell(si, true, 1.4, 'measured', RUNNING_LADDER),
+  });
 });
 // The reviews' cases (D210 addenda 3 and 5): how people really train and
 // log. Run without a plan, where the learner otherwise has most to go on,

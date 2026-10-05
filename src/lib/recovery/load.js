@@ -551,17 +551,38 @@ export function __resetPersonalMemoForTests() {
  * evidence that `programmeNext` itself is ready. `{}` would read as
  * "genuinely nothing to recover" and win as the safest choice.
  *
+ * D219 (design 4.14): for a plan the new planner built, a session's sets in
+ * the forecast are the sets the plan SERVES this week, not `recommended_sets`
+ * (the week-1 count, which week 5 serves up to twice over). The numbers come
+ * from the caller, never from here: `resolveServed(routineId, rows)` answers
+ * { [routineExerciseId]: sets } for a plan with facts (sessionAdjustments.
+ * servedSetsResolver) or null, so this module imports neither the plan's serve
+ * path nor coachApply. A resolver that answers null, throws or is absent leaves
+ * the stored sets (every other plan, and a failed read, forecast as before).
+ *
  * @param {string[]} routineIds
+ * @param {function(string, Array): Promise<?Object<string, number>>} [resolveServed]
  * @returns {Promise<object>} { [routineId]: { [muscle]: primarySets } | null }
  */
-export async function loadPlannedSetsByRoutine(routineIds) {
+export async function loadPlannedSetsByRoutine(routineIds, resolveServed = null) {
   const ids = Array.from(new Set((Array.isArray(routineIds) ? routineIds : []).filter(Boolean)));
   const result = {};
   for (const routineId of ids) {
     try {
       // eslint-disable-next-line no-await-in-loop
       const rows = await getRoutineExercisesWithDetails(routineId);
-      result[routineId] = primarySetsFromRoutineRows(rows);
+      let served = null;
+      if (typeof resolveServed === 'function') {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          served = await resolveServed(routineId, rows);
+        } catch (e) {
+          // Best-effort: the stored sets still forecast (the pre-D219 reading).
+          logError('recovery.load.servedSets', e, { routineId });
+          served = null;
+        }
+      }
+      result[routineId] = primarySetsFromRoutineRows(rows, served);
     } catch (e) {
       logError('recovery.load.loadPlannedSetsByRoutine', e, { routineId });
       result[routineId] = null;
@@ -574,13 +595,21 @@ export async function loadPlannedSetsByRoutine(routineIds) {
  * { [muscle]: primary sets } from getRoutineExercisesWithDetails rows, or
  * null when the routine is unknown (see loadPlannedSetsByRoutine). Pure
  * and exported so it is directly unit-testable with plain fixtures.
+ *
+ * `served` (D219, design 4.14): { [routineExerciseId]: sets } for a plan the
+ * new planner built, the sets this week serves. A row it names (a number of
+ * one or more) counts its served sets; every other row, and every row when
+ * `served` is absent, counts its stored `recommended_sets` as before.
  */
-export function primarySetsFromRoutineRows(rows) {
+export function primarySetsFromRoutineRows(rows, served = null) {
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return null;
   const out = {};
   for (const row of list) {
-    const sets = Number(row?.routineExercise?.recommendedSets ?? row?.routineExercise?.recommended_sets);
+    const servedSets = served && typeof served === 'object' ? Number(served[row?.routineExercise?.id]) : NaN;
+    const sets = Number.isFinite(servedSets) && servedSets >= 1
+      ? servedSets
+      : Number(row?.routineExercise?.recommendedSets ?? row?.routineExercise?.recommended_sets);
     const exercise = row?.exercise ?? null;
     if (!exercise || !exercise.primaryMuscle) return null; // an unresolved exercise: unknown
     if (!Number.isFinite(sets) || sets <= 0) continue;

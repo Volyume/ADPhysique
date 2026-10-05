@@ -33,7 +33,10 @@
  * on the same weekday it cancels): inside PERSONAL_BASELINE_MAX_GAP_DAYS;
  * the same effort target (both week RIR targets known and equal, or both
  * sessions outside any plan; a session whose plan week did not resolve is
- * never comparable); neither in a recovery week; neither under an injury
+ * never comparable) or, D219 (design 4.13, founder answer Q4), both inside
+ * plans with different known targets, in which case each session's sets are
+ * read at the effort the plan asked of them (see "ACROSS PLAN WEEKS" below);
+ * neither in a recovery week; neither under an injury
  * limit for X's primary muscle nor inside its 14-day return period (the
  * caller's `excluded`, built with capability/eligibility's
  * constrainedMusclesInWindow). X must be load-based strength: never an
@@ -52,6 +55,23 @@
  * same reps set for set (PERSONAL_MAX_FIXED_REPS_SHARE) teaches nothing and
  * is left out; when that leaves too few pairs, the reason says so
  * ('fixed_reps').
+ *
+ * ACROSS PLAN WEEKS (D219, design 4.13, founder answer Q4: "Extend it,
+ * safety-tested"). A plan's effort target changes from week to week (the
+ * block's stored ladder, 3, 2, 2, 1, 1 and a recovery week at 4 for a new
+ * block), so comparing only equal targets left nobody on a plan with a pair
+ * to learn from (0 of 60 simulated plan users). Two sessions of the same lift
+ * on the same weekday in different plan weeks now pair even when their
+ * targets differ, and each comparison is adjusted for the planned difference
+ * in effort: both sessions' sets are read as the estimated max the plan's
+ * reps in reserve imply (reps plus the week's RIR target), which is the same
+ * ability whatever the week asked. Pairs at one target are read exactly as
+ * before. A pair needs both targets known: a session outside a plan never
+ * pairs with one inside. The adjustment is the plan's, not the person's: a
+ * set stopped earlier or later than planned stays noise, as it always was.
+ * This ships only because the calibration simulation, run with the new ladder
+ * and the one running blocks still carry, holds every cell inside its pinned
+ * bounds (personalRecovery.simulation.test.js).
  *
  * OUTCOME (section 3). y = ln(PI_B / PI_P), where PI is the mean estimated
  * max (algorithms.calculate1RM) of the first k working sets of X in each
@@ -149,6 +169,22 @@ export function sameEffortTarget(sessionB, sessionP) {
 }
 
 /**
+ * How two sessions' effort compares (D219, design 4.13): 'same' (both targets
+ * known and equal, or both outside any plan: read as ever), 'adjusted' (both
+ * known and different: each session's sets are read at the effort the plan
+ * asked of it, see meanFirstAtPlannedEffort), or null (never comparable: a
+ * session whose plan week did not resolve, or one inside a plan and one not).
+ */
+export function effortComparison(sessionB, sessionP) {
+  if (sessionB?.weekStatus === 'unresolved' || sessionP?.weekStatus === 'unresolved') return null;
+  const rb = sessionB?.weekRirTarget;
+  const rp = sessionP?.weekRirTarget;
+  if (!hasTarget(rb) && !hasTarget(rp)) return 'same';
+  if (!hasTarget(rb) || !hasTarget(rp)) return null;
+  return Number(rb) === Number(rp) ? 'same' : 'adjusted';
+}
+
+/**
  * The primary mover of a load-strength exercise, or null. `cache` (a Map by
  * exercise id) keeps the answer for the rest of one learner run, so the
  * allocator reads each exercise once rather than once per session.
@@ -194,6 +230,7 @@ export function sessionLifts(session, exerciseById, cache = null) {
       muscle,
       e1rms: ordered.map((s) => calculate1RM(Number(s.weight), Number(s.actualReps ?? s.actual_reps))),
       reps: ordered.map((s) => Number(s.actualReps ?? s.actual_reps)),
+      weights: ordered.map((s) => Number(s.weight)),
     });
   }
   return out;
@@ -203,6 +240,19 @@ export function sessionLifts(session, exerciseById, cache = null) {
 function meanFirst(values, k) {
   let sum = 0;
   for (let i = 0; i < k; i += 1) sum += values[i];
+  return sum / k;
+}
+
+/**
+ * The mean of the first k estimated maxes with each set's reps raised by the
+ * plan's reps in reserve for that session: the estimated max at the effort the
+ * week asked of the set (D219, across plan weeks), so sessions planned at
+ * different efforts read as the same ability when the person's day was the
+ * same. Used only for a pair whose targets differ (effortComparison).
+ */
+function meanFirstAtPlannedEffort(lift, reserve, k) {
+  let sum = 0;
+  for (let i = 0; i < k; i += 1) sum += calculate1RM(lift.weights[i], lift.reps[i] + reserve);
   return sum / k;
 }
 
@@ -349,6 +399,7 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       if (isExcluded(sessionB, muscle)) continue;
       if (fractionsAt(muscle, startB) === null) continue; // nothing to recover from
       let p = -1;
+      let effort = null;
       for (let j = b - 1; j >= 0; j -= 1) {
         const sessionP = list[j];
         if (Number(sessionP.startedAt) < startB - BASELINE_GAP_MS) break;
@@ -358,15 +409,19 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
         if (startB - Number(sessionP.startedAt) < EARLIER_WEEK_MS) continue;
         if (!lifts[j].has(exerciseId)) continue;
         if (isFlagSet(sessionP.isDeload) || isExcluded(sessionP, muscle)) continue;
-        if (!sameEffortTarget(sessionB, sessionP)) continue;
+        effort = effortComparison(sessionB, sessionP);
+        if (effort === null) continue;
         p = j;
         break;
       }
       if (p < 0) continue;
       const liftP = lifts[p].get(exerciseId);
       const k = Math.min(PERSONAL_MATCHED_SETS, liftB.e1rms.length, liftP.e1rms.length);
-      const piB = meanFirst(liftB.e1rms, k);
-      const piP = meanFirst(liftP.e1rms, k);
+      // Pairs at one effort are read as ever; a pair across plan weeks reads
+      // both sessions at the effort the plan asked of them (D219, Q4).
+      const adjusted = effort === 'adjusted';
+      const piB = adjusted ? meanFirstAtPlannedEffort(liftB, Number(sessionB.weekRirTarget), k) : meanFirst(liftB.e1rms, k);
+      const piP = adjusted ? meanFirstAtPlannedEffort(liftP, Number(list[p].weekRirTarget), k) : meanFirst(liftP.e1rms, k);
       if (!(piB > 0) || !(piP > 0)) continue;
       const y = Math.log(piB / piP);
       if (Math.abs(y) > PERSONAL_MAX_CHANGE) continue; // not a recovery signal (constants.js)

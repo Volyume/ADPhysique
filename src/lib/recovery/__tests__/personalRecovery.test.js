@@ -22,7 +22,7 @@
  * (personalRecovery.simulation.test.js).
  */
 import {
-  isLoadStrengthExercise, sameEffortTarget, sessionLifts, boundedFit, comparablePairs,
+  isLoadStrengthExercise, sameEffortTarget, effortComparison, sessionLifts, boundedFit, comparablePairs,
   personalRecoveryEvidence, learnPersonalRecovery, personalDirection, PERSONAL_HISTORY_DAYS,
 } from '../personalRecovery';
 import {
@@ -118,6 +118,32 @@ describe('the same effort target', () => {
   });
 });
 
+describe('how two sessions\' effort compares (D219, design 4.13, founder answer Q4)', () => {
+  test('the same target, or both outside any plan, reads as ever: same', () => {
+    expect(effortComparison({ weekRirTarget: null, weekStatus: 'none' }, { weekRirTarget: null, weekStatus: 'none' })).toBe('same');
+    expect(effortComparison({ weekRirTarget: 2, weekStatus: 'resolved' }, { weekRirTarget: 2, weekStatus: 'resolved' })).toBe('same');
+    expect(effortComparison({ weekRirTarget: 0 }, { weekRirTarget: '0' })).toBe('same');
+  });
+
+  test('both inside plans with different known targets: adjusted for the planned difference', () => {
+    expect(effortComparison({ weekRirTarget: 3, weekStatus: 'resolved' }, { weekRirTarget: 2, weekStatus: 'resolved' })).toBe('adjusted');
+    expect(effortComparison({ weekRirTarget: 0 }, { weekRirTarget: 1 })).toBe('adjusted');
+  });
+
+  test('one inside a plan and one outside, or a week that did not resolve, never compare (the effort of one is unknown)', () => {
+    expect(effortComparison({ weekRirTarget: 2 }, { weekRirTarget: null })).toBeNull();
+    // Number(null) is 0: an absent target must not read as RIR 0.
+    expect(effortComparison({ weekRirTarget: 0 }, { weekRirTarget: null })).toBeNull();
+    expect(effortComparison({ weekRirTarget: null, weekStatus: 'unresolved' }, { weekRirTarget: null, weekStatus: 'none' })).toBeNull();
+    expect(effortComparison({ weekStatus: 'unresolved' }, { weekStatus: 'unresolved' })).toBeNull();
+    expect(effortComparison({ weekRirTarget: 2, weekStatus: 'unresolved' }, { weekRirTarget: 3, weekStatus: 'resolved' })).toBeNull();
+  });
+
+  test('sameEffortTarget itself is unchanged: different targets are still not the same target', () => {
+    expect(sameEffortTarget({ weekRirTarget: 3 }, { weekRirTarget: 2 })).toBe(false);
+  });
+});
+
 describe('comparable pairs (spec sections 2 and 3, D210 addendum 3)', () => {
   // NOW is a Monday; sessions a whole number of weeks back fall on Mondays.
   test('each session pairs with the most recent earlier session of the same lift on the same weekday; the outcome is the log ratio', () => {
@@ -142,17 +168,48 @@ describe('comparable pairs (spec sections 2 and 3, D210 addendum 3)', () => {
     expect(pairs.chest).toBeUndefined();
   });
 
-  test('the walk back skips an incomparable session (another effort target) for an earlier comparable one', () => {
+  // RE-PINNED (D219, design 4.13, founder answer Q4): this test pinned that a
+  // session at another effort target was skipped for an earlier one at the same
+  // target. A plan's target changes every week, so that left plan users with no
+  // pair to learn from (0 of 60 simulated plan users); sessions at different
+  // known targets now pair, each read at the effort the plan asked of it.
+  test('a session at another plan effort pairs with the most recent earlier session, adjusted for the planned difference in effort', () => {
     const planned = (id, daysAgo, rir, reps) => session(id, daysAgo, benchSets(100, reps), { weekRirTarget: rir, weekStatus: 'resolved' });
     const pairs = comparablePairs({
       sessions: [planned('p1', 21, 2, 8), planned('p2', 14, 1, 9), planned('b', 7, 2, 10)],
       exerciseById: EX,
       nowMs: NOW,
     });
-    // p2 (RIR 1) pairs with nothing; b (RIR 2) pairs with p1, skipping p2.
-    expect(pairs.chest).toEqual([{
-      startB: NOW - 7 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 8)),
-    }]);
+    // p2 (RIR 1, 9 reps) pairs with p1 (RIR 2, 8 reps): each read at reps plus its
+    // reserve, 10 and 10, the same ability, so the outcome is 0. b (RIR 2, 10 reps)
+    // pairs with p2, the most recent earlier session (no longer skipped): 12 and 10.
+    expect(pairs.chest).toEqual([
+      { startB: NOW - 14 * DAY_MS, startP: NOW - 21 * DAY_MS, y: Math.log(calculate1RM(100, 10) / calculate1RM(100, 10)) },
+      { startB: NOW - 7 * DAY_MS, startP: NOW - 14 * DAY_MS, y: Math.log(calculate1RM(100, 12) / calculate1RM(100, 10)) },
+    ]);
+  });
+
+  test('the same performance at a different planned effort reads as no change, where the unadjusted maxes would read as a gain', () => {
+    // RIR 3 week: 8 reps. RIR 2 week: 9 reps at the same load. One more rep at
+    // one less in reserve is the same ability.
+    const planned = (id, daysAgo, rir, reps) => session(id, daysAgo, benchSets(100, reps), { weekRirTarget: rir, weekStatus: 'resolved' });
+    const pairs = comparablePairs({ sessions: [planned('a', 14, 3, 8), planned('b', 7, 2, 9)], exerciseById: EX, nowMs: NOW });
+    expect(pairs.chest).toHaveLength(1);
+    expect(pairs.chest[0].y).toBeCloseTo(0, 12);
+    expect(Math.log(calculate1RM(100, 9) / calculate1RM(100, 8))).toBeGreaterThan(0.01);
+  });
+
+  test('a pair at one target is read exactly as before: the adjustment never touches it', () => {
+    const planned = (id, daysAgo, reps) => session(id, daysAgo, benchSets(100, reps), { weekRirTarget: 2, weekStatus: 'resolved' });
+    const pairs = comparablePairs({ sessions: [planned('a', 14, 8), planned('b', 7, 10)], exerciseById: EX, nowMs: NOW });
+    expect(pairs.chest[0].y).toBe(Math.log(calculate1RM(100, 10) / calculate1RM(100, 8)));
+  });
+
+  test('a session in a plan never pairs with one outside any plan: the effort of one is unknown', () => {
+    const inPlan = session('a', 14, benchSets(100, 8), { weekRirTarget: 2, weekStatus: 'resolved' });
+    const outside = session('b', 7, benchSets(100, 9));
+    expect(comparablePairs({ sessions: [inPlan, outside], exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
+    expect(comparablePairs({ sessions: [outside, { ...inPlan, startedAt: NOW - 0 * DAY_MS - 1000 }], exerciseById: EX, nowMs: NOW }).chest).toBeUndefined();
   });
 
   test('a recovery week never pairs: not as the later session, not as the baseline', () => {
