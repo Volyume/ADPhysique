@@ -160,82 +160,85 @@ const targetsOf = async (blockId) => {
   return out;
 };
 
+// Upper B: the session whose Lat Pulldown the plan serves 4 sets in week 5
+// (with big muscles first, founder answer 2026-10-05, Upper A's is served 3,
+// which would not test the cap).
 describe('finding 1: a one-off swap is served inside the new exercise\'s own cap', () => {
   const ISOLATION_CAP = exerciseCap('isolation');
 
-  test('the premise: week 5 serves the Upper A Lat Pulldown a compound\'s sets, above an isolation exercise\'s cap', async () => {
+  test('the premise: week 5 serves the Upper B Lat Pulldown a compound\'s sets, above an isolation exercise\'s cap', async () => {
     const { week, routine } = await seedPlan();
-    const rows = await rowsOf(routine('Upper A').id);
+    const rows = await rowsOf(routine('Upper B').id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     expect(lat.exercise.compoundIsolation).toBe('compound');
-    const allocation = await served({ week, routineId: routine('Upper A').id, exercises: rows });
+    const allocation = await served({ week, routineId: routine('Upper B').id, exercises: rows });
     expect(allocation[lat.exercise.id]).toBeGreaterThan(ISOLATION_CAP);
   });
 
   test('swapped for an isolation pulldown for one session it is served 3, on every read, and the plan is untouched', async () => {
     const { week, routine } = await seedPlan();
-    const upperA = routine('Upper A');
-    const rows = await rowsOf(upperA.id);
+    const upper = routine('Upper B');
+    const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const isolation = exerciseNamed('Cable Straight-Arm Pulldown');
     expect(isolation.compoundIsolation).toBe('isolation');
     // The logger's rows after a one-off swap: the new exercise in the slot's own routineExercise.
     const asLogged = rows.map((r) => (r === lat ? { ...r, exercise: isolation } : r));
 
-    const first = await served({ week, routineId: upperA.id, exercises: asLogged });
+    const first = await served({ week, routineId: upper.id, exercises: asLogged });
     expect(first[isolation.id]).toBe(ISOLATION_CAP);
     expect(ISOLATION_CAP).toBe(3);
     // A remount, a crash restore: the same rows read again, from nothing but the rows.
-    const again = await served({ week, routineId: upperA.id, exercises: asLogged.map((r) => ({ ...r, routineExercise: { ...r.routineExercise } })) });
+    const again = await served({ week, routineId: upper.id, exercises: asLogged.map((r) => ({ ...r, routineExercise: { ...r.routineExercise } })) });
     expect(again[isolation.id]).toBe(ISOLATION_CAP);
 
     // The rest of the session is served as it was, and the plan never held the one-off.
-    const before = await served({ week, routineId: upperA.id, exercises: rows });
+    const before = await served({ week, routineId: upper.id, exercises: rows });
     for (const r of rows) {
       if (r !== lat) expect(again[r.exercise.id]).toBe(before[r.exercise.id]);
     }
-    const after = await rowsOf(upperA.id);
+    const after = await rowsOf(upper.id);
     expect(rowNamed(after, 'Lat Pulldown (Wide Grip)').routineExercise.id).toBe(lat.routineExercise.id);
   });
 
   test('swapped for a compound the slot\'s sets are kept: the cap is the exercise\'s own, not a cut', async () => {
     const { week, routine } = await seedPlan();
-    const upperA = routine('Upper A');
-    const rows = await rowsOf(upperA.id);
+    const upper = routine('Upper B');
+    const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const closeGrip = exerciseNamed('Lat Pulldown (Close Grip)');
     const asLogged = rows.map((r) => (r === lat ? { ...r, exercise: closeGrip } : r));
-    const planned = (await served({ week, routineId: upperA.id, exercises: rows }))[lat.exercise.id];
-    expect((await served({ week, routineId: upperA.id, exercises: asLogged }))[closeGrip.id]).toBe(planned);
+    const planned = (await served({ week, routineId: upper.id, exercises: rows }))[lat.exercise.id];
+    expect((await served({ week, routineId: upper.id, exercises: asLogged }))[closeGrip.id]).toBe(planned);
   });
 
   test('the person\'s own typed count is served as typed, even over the swapped-in exercise\'s cap (design 4.3)', async () => {
     const { programmeId, week, routine } = await seedPlan();
-    const upperA = routine('Upper A');
-    const rows = await rowsOf(upperA.id);
+    const upper = routine('Upper B');
+    const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const facts = await getProgrammePlanFacts(programmeId);
     await conn.runAsync('UPDATE programmes SET plan_facts = ? WHERE id = ?', [JSON.stringify({ ...facts, typed: { [lat.routineExercise.id]: 5 } }), programmeId]);
     const isolation = exerciseNamed('Cable Straight-Arm Pulldown');
     const asLogged = rows.map((r) => (r === lat ? { ...r, exercise: isolation } : r));
-    expect((await served({ week, routineId: upperA.id, exercises: asLogged }))[isolation.id]).toBe(5);
+    expect((await served({ week, routineId: upper.id, exercises: asLogged }))[isolation.id]).toBe(5);
   });
 
   test('a permanent swap to the same isolation exercise is served inside the cap on the refetch too', async () => {
     const { userId, week, routine } = await seedPlan();
-    const upperA = routine('Upper A');
-    const rows = await rowsOf(upperA.id);
+    const upper = routine('Upper B');
+    const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const isolation = exerciseNamed('Cable Straight-Arm Pulldown');
     await applyExerciseSwap({
-      userId, scope: SWAP_SCOPE.PROGRAMME, routineId: upperA.id, routineExerciseId: lat.routineExercise.id,
+      userId, scope: SWAP_SCOPE.PROGRAMME, routineId: upper.id, routineExerciseId: lat.routineExercise.id,
       fromExercise: lat.exercise, toExercise: isolation,
     });
-    const refetched = await rowsOf(upperA.id);
-    expect((await served({ week, routineId: upperA.id, exercises: refetched }))[isolation.id]).toBeLessThanOrEqual(ISOLATION_CAP);
+    const refetched = await rowsOf(upper.id);
+    expect((await served({ week, routineId: upper.id, exercises: refetched }))[isolation.id]).toBeLessThanOrEqual(ISOLATION_CAP);
     // The logger's refetch hands the resolver its in-memory rows, the new exercise in the slot's own row.
     const inMemory = rows.map((r) => (r === lat ? { ...r, exercise: isolation } : r));
-    expect((await served({ week, routineId: upperA.id, exercises: inMemory }))[isolation.id]).toBeLessThanOrEqual(ISOLATION_CAP);
+    expect((await served({ week, routineId: upper.id, exercises: inMemory }))[isolation.id]).toBeLessThanOrEqual(ISOLATION_CAP);
   });
 });
 

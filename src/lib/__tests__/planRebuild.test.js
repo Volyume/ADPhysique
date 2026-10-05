@@ -454,7 +454,11 @@ describe('GENERATED: a generator pick outside the catalogue is replaced and name
     expect(await namesOfActivePlan()).toContain(OUTSIDE);
   });
 
-  test('every other exercise the person was training is still in the plan', async () => {
+  // Every other exercise stays where the new plan has a place for it; one it
+  // has no place for is named in the note as taken out, never dropped in
+  // silence. (With big muscles first, founder answer 2026-10-05, a smaller
+  // muscle can have fewer exercises than the old plan gave it.)
+  test('every other exercise the person was training is still in the plan, or named in the note as taken out', async () => {
     const old = await seedGenerated({ sessions: SESSIONS });
     const oldNames = new Set();
     for (const r of await getRoutinesForPlan(old.programmeId)) {
@@ -462,7 +466,10 @@ describe('GENERATED: a generator pick outside the catalogue is replaced and name
     }
     await ensureActivePlanRebuilt(U, { profile: PROFILE });
     const now = new Set(await namesOfActivePlan());
-    expect([...oldNames].filter((n) => !now.has(n))).toEqual([OUTSIDE]);
+    const gone = [...oldNames].filter((n) => !now.has(n));
+    expect(gone).toContain(OUTSIDE);
+    const changes = ((await getPlanRebuildNote(U))?.lines ?? []).find((l) => l.id === 'changes')?.text ?? '';
+    for (const name of gone.filter((n) => n !== OUTSIDE)) expect({ name, named: changes.includes(name) }).toEqual({ name, named: true });
   });
 });
 
