@@ -40,6 +40,11 @@ jest.mock('../../database', () => ({
   deleteProgrammeCascade: jest.fn(),
   deleteProgrammeCascadeInTx: jest.fn(),
   recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
+  // D219: the new planner's save path (PLANNER_V2 on) also writes the plan's
+  // facts and its weekly rows; exclusions must hold on that path too.
+  setProgrammePlanFacts: jest.fn(async () => undefined),
+  upsertPlannedMuscleVolume: jest.fn(async () => undefined),
+  getMesocycleWeeks: jest.fn(async () => []),
 }));
 
 import { filterLibraryForGeneration, generationBlockFor, GENERATION_BLOCK } from '../generation';
