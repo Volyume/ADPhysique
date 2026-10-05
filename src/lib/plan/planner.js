@@ -133,6 +133,7 @@ export function buildPlan(inputs) {
     typical: TYPICAL_WEEK_GAP_HOURS[n],
     ownGaps: Array.isArray(inputs.ownGaps) && inputs.ownGaps.length === n ? inputs.ownGaps : null,
     loggedWeekly: inputs.loggedWeekly || null,
+    factor,
     lowestRir: Math.min(...BLOCK.rirLadder.slice(0, BLOCK.peakWeek)),
     hoursPerson: (m, sets, rir) => recoveryHours(m, {
       sets, rirTarget: rir, recoveryRating: inputs.recoveryRating || 'average', personalFactor: factor,
@@ -429,7 +430,7 @@ function evaluateFamily(family, ctx) {
   const twiceAtLeast = (m) => !fixed && family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m) && allowedBy[m].length >= 2;
   const lowestK = (m) => (twiceAtLeast(m) ? 2 : 1);
   const state = {
-    k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
+    k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, slowerCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
   };
 
   // Each muscle's sessions, spaced as evenly as the current cycle order allows.
@@ -466,6 +467,11 @@ function evaluateFamily(family, ctx) {
           caps[m] = { direct: need, fractional: caps[m]?.fractional ?? PER_SESSION.fractionalCap };
         }
       }
+    }
+    // A slower recoverer's lower direct cap (design 4.4), where it was found
+    // to keep every weekly total (below).
+    for (const [m, cap] of Object.entries(state.slowerCaps || {})) {
+      caps[m] = { direct: Math.min(caps[m]?.direct ?? PER_SESSION.directCap, cap), fractional: caps[m]?.fractional ?? PER_SESSION.fractionalCap };
     }
     state.sessionCaps = caps;
     const exposures = exposuresNow();
@@ -768,6 +774,42 @@ function evaluateFamily(family, ctx) {
       for (const m of jumps) state.maxSlots[m] = Math.max(1, maxSlotsPerSession(alloc, m) - 1);
       rebuild();
       for (const m of jumps) notes.push({ muscle: m, kind: 'ramped' });
+    }
+  }
+
+  // Design 4.4 and 4.13: a slower recoverer (a learned factor above 1) gets a
+  // lower direct cap a session, max(6, floor(8 / factor)), so a session's
+  // load for a muscle is lighter, but only where the sets can move to the
+  // muscle's other sessions: a cap is kept only if every muscle keeps its
+  // weekly sets and its number of exercises, so the learned factor never
+  // changes a weekly target. All muscles at once, else one at a time.
+  if (!fixed && Number.isFinite(ctx.factor) && ctx.factor > 1 + 1e-9) {
+    const cap = Math.max(LEARNED_FACTOR.slowerDirectCapFloor, Math.floor(PER_SESSION.directCap * Math.min(1, 1 / ctx.factor)));
+    const candidates = trainable.filter((m) => (exposures[m] || []).length >= 2).sort();
+    if (cap < PER_SESSION.directCap && candidates.length > 0) {
+      const slotsOf = (a, m) => a.sessions.reduce((t, sess) => t + sess.slots.filter((x) => x.muscle === m).length, 0);
+      const base = Object.fromEntries(trainable.map((m) => [m, { w: alloc.weekly[m]?.fractional || 0, slots: slotsOf(alloc, m) }]));
+      const keeps = (a) => trainable.every((m) => (a.weekly[m]?.fractional || 0) + 1e-9 >= base[m].w && slotsOf(a, m) === base[m].slots);
+      const before = snapshot();
+      const beforeSlower = state.slowerCaps;
+      state.slowerCaps = Object.fromEntries(candidates.map((m) => [m, cap]));
+      let trial = run();
+      if (!keeps(trial.alloc)) {
+        state.slowerCaps = {};
+        for (const m of candidates) {
+          const kept = state.slowerCaps;
+          state.slowerCaps = { ...kept, [m]: cap };
+          if (!keeps(run().alloc)) state.slowerCaps = kept;
+        }
+        trial = run();
+      }
+      if (Object.keys(state.slowerCaps).length > 0 && keeps(trial.alloc)) {
+        ({ exposures, alloc } = trial);
+        settle();
+      } else {
+        state.slowerCaps = beforeSlower;
+        restore(before);
+      }
     }
   }
 
