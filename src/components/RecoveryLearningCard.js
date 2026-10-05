@@ -28,8 +28,10 @@
  * arrives from loadMuscleRecovery (via ReadinessCards) as `personal`.
  *
  * Props:
- *   personal   { factor, prior, pairs, reason, pairsByMuscle } or null
- *              (null renders nothing)
+ *   personal   { factor, prior, pairs, reason, pairsByMuscle, pairing? } or
+ *              null (null renders nothing); `pairing` is 'slot' only when the
+ *              comparisons were not of the same weekday (see
+ *              recoveryLearningCopy)
  */
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -114,6 +116,18 @@ export function learningExample(personal) {
  * one at the week's maximum longer: RECOVERY_HOURS_MIN and _MAX); and each
  * "not yet" names its own reason, true of the schedules that produce it.
  *
+ * D219 (founder answer 2026-10-05; lead ruling 6.4 the same day): when the
+ * weekdays do not set the person's gaps, the learner pairs a lift with its
+ * previous session whenever it fell, and says so in the reading
+ * (`personal.pairing === 'slot'`). The words that say "on the same day" are
+ * then untrue, so each of them has a slot form: the evidence line reads "of
+ * the same exercise on different days" (a slot pair can fall in one week, so
+ * "in different weeks" would be untrue too; lead ruling 2026-10-05) and the two method
+ * paragraphs that describe the comparison say "the last time you did it".
+ * The reason 'fixed_reps' also covers sets kept exactly as the screen filled
+ * them in (the learner leaves those out too, and counts a comparison with
+ * none left with the lifts logged as planned).
+ *
  * `summary` is the ONE sentence under the headline; `body` is the method
  * paragraph behind "How this is worked out".
  *
@@ -125,7 +139,10 @@ export function recoveryLearningCopy(personal) {
   const direction = personalDirection(personal);
   if (!direction) return null;
   const pairs = Math.max(0, Number(personal.pairs) || 0);
-  const evidence = `Based on ${plural(pairs, 'comparison')} of the same exercise on the same day in different weeks.`;
+  const slot = personal.pairing === 'slot';
+  const evidence = slot
+    ? `Based on ${plural(pairs, 'comparison')} of the same exercise on different days.`
+    : `Based on ${plural(pairs, 'comparison')} of the same exercise on the same day in different weeks.`;
   if (direction === 'faster' || direction === 'slower') {
     const pct = Math.round(Math.abs(personal.factor / personal.prior - 1) * 100);
     return {
@@ -162,7 +179,9 @@ export function recoveryLearningCopy(personal) {
       headline: 'Not learning yet',
       // Addendum 9 (0.9): "rest" is the common word for the time between workouts.
       summary: 'The rest between your workouts has not varied enough to learn from yet.',
-      body: 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.',
+      body: slot
+        ? 'Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.'
+        : 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.',
       example: null,
       evidence: null,
       progress: null,
@@ -172,8 +191,8 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      summary: 'Too few comparisons are left once exercises with the same reps every time are set aside.',
-      body: 'When an exercise is logged with exactly the same reps at least half the time, that shows the plan rather than how each workout went, so it is left out. That leaves too few comparisons so far.',
+      summary: 'Too few comparisons are left once repeated reps and sets kept as filled in are set aside.',
+      body: 'Sets kept exactly as the screen filled them in, and exercises logged with the same reps at least half the time, show the plan rather than how each workout went, so they are left out. That leaves too few comparisons so far.',
       example: null,
       evidence: null,
       progress: null,
@@ -183,7 +202,7 @@ export function recoveryLearningCopy(personal) {
     state: 'learning',
     headline: 'Still learning',
     summary: `Learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
-    body: `Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
+    body: `${slot ? 'Each exercise is compared with the last time you did it.' : 'Each exercise is compared with the same exercise on the same day in an earlier week.'} A muscle’s comparisons become usable once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },

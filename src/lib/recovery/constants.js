@@ -366,14 +366,99 @@ export const PERSONAL_MIN_SPREAD = 0.1;
  * workout days x ln(SSE at the start / SSE at the best), counting the days
  * the later sessions fell on, not the comparisons (comparisons from one day
  * share that day's form; D210 addendum 5). The full calibration on that
- * statistic (600 simulated athletes a case, 22 cases including two
- * exercises a muscle, eight sets, pre-filled reps and tiring through the
- * sets): at 10, a direction shown to at most 2 in 600 whose recovery equals
- * the start (the spec allows 5%) and the wrong one to at most 1 in 600
- * (1 in 60 allowed); the smallest gate meeting both was 4. Kept at 10: the
- * stricter choice. The cost is reach: in twelve weeks it almost never moves
- * anyone, and the card says why. */
+ * statistic (600 simulated athletes a case, 66 cases: the 32 of the plan
+ * cells and the stress cases of two exercises a muscle, eight sets, pre-filled
+ * reps and tiring through the sets, and 34 for the stronger learner of D219,
+ * learner design 06: plan users logging as the screen fills in, sets typed or
+ * kept as filled in, schedules the weekdays do and do not set, the time of
+ * day, the day's sleep, a clock with novelty): at 10, a direction shown to at
+ * most 9 in 600 whose recovery equals the start (the spec allows 5%, 30) and
+ * the wrong one to at most 2 in 600 (1 in 60 allowed, 10); the smallest gate
+ * meeting both is 8 (it was 5 before the stronger learner: pairing by slot is
+ * what raises the tail, in the no-plan cells that log reps as prescribed).
+ * Kept at 10: the stricter choice. The cost is reach: in twelve weeks it
+ * almost never moves anyone, and the card says why. */
 export const PERSONAL_LR_MIN = 10;
+
+/**
+ * PAIRING BY SLOT WHEN THE WEEKDAYS DO NOT SET THE GAP (D219, learner design
+ * 06-LEARNER-SIGNAL-DESIGN.md section 2.3, founder answer 2026-10-05).
+ *
+ * The learner pairs a lift with its earlier session on the SAME WEEKDAY
+ * because, on a weekly schedule, the weekday sets the break before a session,
+ * so comparing across weekdays reads a steady weekday difference in strength
+ * as recovery (D210 addendum 3: a lifter 2% stronger on Mondays was shown
+ * "slower" for 12 of 60). The same rule throws away most of the evidence of a
+ * person who does not train to a weekly pattern: on a varied schedule it is
+ * the largest single loss of comparisons (36 of 128 lifts without a plan, 52
+ * with one; 05-LEARNER-RECON.md section 2.4), and a plan block then gives
+ * about 10 usable days instead of 23 (section 2.6). When the weekdays do not
+ * set the gap the confound is not there, so the baseline is the lift's
+ * previous session whenever it fell (its slot in the person's own rotation).
+ *
+ * The guard that says so is measured from the sessions themselves, so the
+ * calibration simulation exercises exactly what a phone runs: of the gaps
+ * between consecutive sessions (a break of more than a week, or two sessions
+ * in one day, say nothing about the routine and are left out), how much of
+ * their variation does the weekday of the later session explain? The share is
+ * omega squared of a one-way analysis of variance (adjusted for the number of
+ * weekdays, so a random schedule reads about 0, not a chance share). What the
+ * calibration simulation's own schedules read (medians over 600 athletes each):
+ * a fixed weekly schedule 0.99 to 1.00; a habit that moved from one fixed pattern
+ * to another 0.89; a fixed one with a third of its sessions moved a day 0.66; one
+ * that slipped a day every four weeks 0.53; three days of five with the weekend
+ * always a gap 0.23 (0.05 to 0.44 across athletes); a random one -0.02. At 0.2
+ * the guard opens for none of the 600 on any fixed, moved or slipping schedule,
+ * for 45% of the weekend-bound ones and for 94% of the random ones (the
+ * simulation holds every promise with it open; 05-LEARNER-RECON.md section 2.6
+ * gives the cost of getting it wrong: any-weekday pairing on a fixed schedule
+ * shows a false direction to 4% at gate 10 and the wrong direction to 2%). Too
+ * few gaps, one weekday, or gaps that never differ read as coupled: the weekday
+ * rule stands (today's behaviour). The habit read the app already has
+ * (trainingHabitSchedule.deriveHabitualTrainingWeekdays) is not the guard: it
+ * names a weekday habitual when it is trained in half the weeks, and 194 of 200
+ * athletes on the simulation's varied schedule have at least one (2.9 on
+ * average), so as the guard it would open for 3% where this one opens for 94%.
+ */
+export const PERSONAL_SLOT_MAX_COUPLING = 0.2;
+/** Fewer session gaps than this: the weekday rule stands (too little to say). */
+export const PERSONAL_SLOT_MIN_GAPS = 12;
+/** Gaps shorter than this (two sessions in a day) or longer than a week (a
+ * break) are not the routine, and are not read by the guard. */
+export const PERSONAL_SLOT_MIN_GAP_HOURS = 12;
+export const PERSONAL_SLOT_MAX_GAP_HOURS = 168;
+
+/**
+ * THE DAY'S SLEEP AND ENERGY AS A DAY-EFFECT COVARIATE (D219, learner design
+ * 06 section 2.3 and 05-LEARNER-RECON.md candidate E). The start sheet's sleep
+ * chip (Poor 2, OK 3, Good 4) and energy chip (Low 2, OK 3, High 4) say how
+ * the person walked in. They are NOT recovery markers: they are used to take
+ * out of a comparison the part of the day's form they explain (the shared day
+ * effect is about 31% of a comparison's noise variance in the calibration
+ * simulation, 05-LEARNER-RECON.md section 2.5), so a poor night before the
+ * later session no longer reads as a slow recoverer. Soreness is never used:
+ * it is a mediator of recovery, and adjusting for it would remove the signal.
+ *
+ * Evidence for the direction and the size. Sleep loss lowers performance (mean
+ * -7.56%, 95% CI -11.9 to -3.13, 69 publications, I-squared 98%, with about
+ * 0.4% lost for each hour awake before the task; Craven et al. 2022, Sports
+ * Med 52:2669-2690, PMID 35708888, grade A), and inadequate sleep impairs
+ * maximal strength in compound movements, with little effect from total
+ * deprivation (17 studies of moderate or weak quality; Knowles et al. 2018, J
+ * Sci Med Sport 21:959-968, PMID 29422383, grade A). A three-level, optional,
+ * self-reported chip explains far less than the whole decrement, so the term
+ * is HELD: its sign cannot be negative (a better night never predicts a worse
+ * session), and its size is capped at PERSONAL_DAY_EFFECT_MAX of the estimated
+ * max for each chip step, so Poor against Good can move a comparison by at
+ * most twice that. One term is fitted for the person (the day's form is shared
+ * by every lift of the session), on a grid of PERSONAL_DAY_EFFECT_STEPS + 1
+ * values from 0 to the cap, at each candidate factor; it is used only from
+ * PERSONAL_DAY_EFFECT_MIN_PAIRS comparisons with both chips answered. A
+ * comparison without both chips is read exactly as it was.
+ */
+export const PERSONAL_DAY_EFFECT_MAX = 0.02;
+export const PERSONAL_DAY_EFFECT_STEPS = 4;
+export const PERSONAL_DAY_EFFECT_MIN_PAIRS = 8;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 

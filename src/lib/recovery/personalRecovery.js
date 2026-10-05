@@ -73,6 +73,46 @@
  * and the one running blocks still carry, holds every cell inside its pinned
  * bounds (personalRecovery.simulation.test.js).
  *
+ * PAIRING BY SLOT WHEN THE WEEKDAYS DO NOT SET THE GAP (D219, learner design
+ * 06-LEARNER-SIGNAL-DESIGN.md section 2.3, founder answer 2026-10-05). The
+ * same-weekday rule above exists because on a weekly schedule the weekday
+ * sets the break; where it does not, the rule throws away most of a person's
+ * comparisons. weekdayGapCoupling reads the person's own session gaps, and
+ * only when the weekday of a session explains almost none of the gap before
+ * it (constants.js PERSONAL_SLOT_MAX_COUPLING) is the baseline the lift's
+ * previous session whenever it fell (at least 12 hours earlier, inside the
+ * same 28-day gap). A fixed or habitual schedule, one whose weekend mostly
+ * sets the gaps, and a history too short to tell all keep the weekday rule
+ * exactly as it was. The calibration simulation holds every promise with the
+ * guard open and with it shut (its cells for each kind of schedule).
+ *
+ * WHICH SETS ARE MEASUREMENTS (D219, same design, candidate C). The logging
+ * screen fills in the prescribed weight and reps, and a person who logs them as
+ * given records the plan, not the day. A set may now say which it was:
+ * `entryTyped` 1 (the person typed a value) or 0 (kept as filled in); absent or
+ * null, which every set logged before the flag existed is, reads exactly as it
+ * did. A set kept as filled in is not a measurement: it is left out, and a
+ * comparison reads only the set positions typed in BOTH sessions (the index
+ * must compare the same sets, not the first sets of one and the last of the
+ * other); a comparison with no such position is counted with the lifts logged
+ * as planned. The rule above that leaves out a lift whose reps repeat is
+ * unchanged, and applies to what is left: a person who retypes the plan is
+ * still logging the plan.
+ *
+ * THE DAY'S FORM (D219, same design, candidate E). The start sheet's sleep and
+ * energy chips enter each comparison as a covariate, y = a + g * days + s * x
+ * + b * (chips at B minus chips at P), b held between 0 and
+ * PERSONAL_DAY_EFFECT_MAX a chip step (constants.js says why), one b for the
+ * person, fitted at each candidate. A comparison without both chips, or a
+ * history with fewer than PERSONAL_DAY_EFFECT_MIN_PAIRS of them, is read
+ * exactly as before. Soreness is never a covariate.
+ *
+ * ONE CURVE (D219, same design, section 2.4). A candidate's recovery curve
+ * carries the same session terms the clock the person sees carries (novelty,
+ * long length, mostly indirect: muscleRecoveryModel.sessionMuscleTerms), so
+ * the curve the learner fits at a factor is the clock buildMuscleRecoveryMap
+ * draws at that factor (recoveryCurve; pinned).
+ *
  * OUTCOME (section 3). y = ln(PI_B / PI_P), where PI is the mean estimated
  * max (algorithms.calculate1RM) of the first k working sets of X in each
  * session, k = min(PERSONAL_MATCHED_SETS, sets in B, sets in P): matched set
@@ -115,10 +155,13 @@ import {
   PERSONAL_FACTOR_GRID, PERFORMANCE_SENSITIVITY_MIN, PERFORMANCE_SENSITIVITY_MAX,
   PERSONAL_MIN_PAIRS, PERSONAL_MIN_MUSCLE_PAIRS, PERSONAL_MIN_SPREAD, PERSONAL_LR_MIN,
   PERSONAL_MAX_CHANGE, PERSONAL_MAX_FIXED_REPS_SHARE, ratingFactor, recoveryHoursAcross,
+  PERSONAL_SLOT_MAX_COUPLING, PERSONAL_SLOT_MIN_GAPS, PERSONAL_SLOT_MIN_GAP_HOURS, PERSONAL_SLOT_MAX_GAP_HOURS,
+  PERSONAL_DAY_EFFECT_MAX, PERSONAL_DAY_EFFECT_STEPS, PERSONAL_DAY_EFFECT_MIN_PAIRS,
 } from './constants';
-import { sessionMuscleLoads, recoveredFractionsAt } from './muscleRecoveryModel';
+import { sessionMuscleLoads, sessionMuscleTerms, recoveredFractionsAt } from './muscleRecoveryModel';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 const LOOKBACK_MS = LOOKBACK_DAYS * DAY_MS;
 const WINDOW_MS = PERSONAL_WINDOW_DAYS * DAY_MS;
 const BASELINE_GAP_MS = PERSONAL_BASELINE_MAX_GAP_DAYS * DAY_MS;
@@ -126,6 +169,9 @@ const EPSILON = 1e-12;
 // Two sessions on the same weekday are either on the same day (hours apart)
 // or a week or more apart; three days tells them apart across any clock change.
 const EARLIER_WEEK_MS = 3 * DAY_MS;
+// When the weekdays do not set the gap (weekdayGapCoupling), a baseline is any
+// earlier session of the lift that is not a second session the same day.
+const SAME_DAY_MS = PERSONAL_SLOT_MIN_GAP_HOURS * HOUR_MS;
 const NON_LOAD_TYPES = new Set(['distance', 'duration']);
 
 /** How far back load.js must read: the window, a pair's baseline gap, and the curve's lookback before that. */
@@ -198,8 +244,49 @@ function liftMuscle(exerciseId, exerciseById, cache) {
 }
 
 /**
+ * Did the person type this set's weight or reps (1), or keep what the logging
+ * screen filled in (0)? null when the set does not say, which every set logged
+ * before the flag existed does not: such a set is read as a measurement, as it
+ * always was. An absent value is checked before it is read as a number
+ * (Number(null) is 0, which would read every unflagged set as kept as filled
+ * in).
+ */
+export function entryTypedOf(set) {
+  const v = set?.entryTyped ?? set?.entry_typed;
+  if (v === null || v === undefined || v === '') return null;
+  if (v === 1 || v === true || v === '1') return 1;
+  if (v === 0 || v === false || v === '0') return 0;
+  return null;
+}
+
+/**
+ * How the person walked into a session, from the start sheet's two chips, as
+ * one number: the mean of the answered chips, each measured from OK (3), so a
+ * poor night reads -1 and a good one +1 (Poor 2, OK 3, Good 4; Low 2, OK 3,
+ * High 4). null when neither chip was answered. An unanswered chip is checked
+ * before it is read as a number (Number(null) is 0, which would read a skipped
+ * chip as the worst answer), and a value outside the sheet's 1 to 5 domain is
+ * not an answer.
+ */
+export function walkInScore(session) {
+  const chips = session?.walkedIn;
+  if (!chips) return null;
+  let sum = 0;
+  let n = 0;
+  for (const raw of [chips.sleep, chips.energy]) {
+    if (raw === null || raw === undefined || raw === '') continue;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v < 1 || v > 5) continue;
+    sum += v - 3;
+    n += 1;
+  }
+  return n ? sum / n : null;
+}
+
+/**
  * One session's eligible working sets per load-strength exercise, in set
- * order: Map exerciseId -> { muscle, e1rms: number[], reps: number[] }.
+ * order: Map exerciseId -> { muscle, e1rms: number[], reps: number[],
+ * weights: number[], typed: Array<1|0|null> }.
  * Straight sets only (see the header). `cache`: see liftMuscle.
  */
 export function sessionLifts(session, exerciseById, cache = null) {
@@ -231,29 +318,35 @@ export function sessionLifts(session, exerciseById, cache = null) {
       e1rms: ordered.map((s) => calculate1RM(Number(s.weight), Number(s.actualReps ?? s.actual_reps))),
       reps: ordered.map((s) => Number(s.actualReps ?? s.actual_reps)),
       weights: ordered.map((s) => Number(s.weight)),
+      // 1 typed, 0 kept as filled in, null unknown (read as a measurement, as ever).
+      typed: ordered.map(entryTypedOf),
     });
   }
   return out;
 }
 
-/** The mean of the first k values. */
-function meanFirst(values, k) {
+/**
+ * The mean of the values at the given set positions, added in position order.
+ * With every one of the first k positions (the usual case: no set says it was
+ * kept as filled in) this is the mean of the first k values, to the bit.
+ */
+function meanAt(values, positions) {
   let sum = 0;
-  for (let i = 0; i < k; i += 1) sum += values[i];
-  return sum / k;
+  for (const i of positions) sum += values[i];
+  return sum / positions.length;
 }
 
 /**
- * The mean of the first k estimated maxes with each set's reps raised by the
- * plan's reps in reserve for that session: the estimated max at the effort the
- * week asked of the set (D219, across plan weeks), so sessions planned at
- * different efforts read as the same ability when the person's day was the
- * same. Used only for a pair whose targets differ (effortComparison).
+ * The mean estimated max at the given set positions with each set's reps
+ * raised by the plan's reps in reserve for that session: the estimated max at
+ * the effort the week asked of the set (D219, across plan weeks), so sessions
+ * planned at different efforts read as the same ability when the person's day
+ * was the same. Used only for a pair whose targets differ (effortComparison).
  */
-function meanFirstAtPlannedEffort(lift, reserve, k) {
+function meanAtPlannedEffort(lift, reserve, positions) {
   let sum = 0;
-  for (let i = 0; i < k; i += 1) sum += calculate1RM(lift.weights[i], lift.reps[i] + reserve);
-  return sum / k;
+  for (const i of positions) sum += calculate1RM(lift.weights[i], lift.reps[i] + reserve);
+  return sum / positions.length;
 }
 
 /**
@@ -312,23 +405,86 @@ export function boundedFit(xs, ys) {
   return { s, sse, sxx };
 }
 
-/**
- * The comparable pairs in the history, per primary muscle (spec sections 2
- * and 3), and the curve that reads each muscle's recovered fraction at any
- * instant for any candidate.
- */
-function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
-  const list = (Array.isArray(sessions) ? sessions : [])
+/** The sessions with a start, oldest first (a copy: the caller's list is never reordered). */
+function sortedSessions(sessions) {
+  return (Array.isArray(sessions) ? sessions : [])
     .filter((s) => s && Number.isFinite(Number(s.startedAt)))
     .slice()
     .sort((a, b) => Number(a.startedAt) - Number(b.startedAt));
+}
 
+/**
+ * Do the person's weekdays set the gap before their sessions? (D219, learner
+ * design 06 section 2.3; constants.js PERSONAL_SLOT_MAX_COUPLING says why and
+ * what each kind of schedule reads.) Of the gaps between consecutive sessions
+ * (a break of more than a week and two sessions in one day are not the
+ * routine), the share of their variation the weekday of the LATER session
+ * explains: omega squared of a one-way analysis of variance, adjusted for the
+ * number of weekdays so that a schedule with no weekday pattern reads about 0.
+ * `coupled` is true, and the same-weekday rule stands, when the share is above
+ * PERSONAL_SLOT_MAX_COUPLING, and also whenever there is too little to say
+ * (fewer than PERSONAL_SLOT_MIN_GAPS gaps, one weekday, or gaps that never
+ * differ): the guard only ever opens on evidence that the weekdays do not set
+ * the gap. Pure: the weekday is a conversion of each given instant.
+ *
+ * @param {number[]} startsMs - session starts, any order
+ * @returns {{ coupled: boolean, omega2: (number|null), gaps: number }}
+ */
+export function weekdayGapCoupling(startsMs) {
+  const starts = (Array.isArray(startsMs) ? startsMs : [])
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  const byWeekday = Array.from({ length: 7 }, () => []);
+  let gaps = 0;
+  for (let i = 1; i < starts.length; i += 1) {
+    const hours = (starts[i] - starts[i - 1]) / HOUR_MS;
+    if (hours < PERSONAL_SLOT_MIN_GAP_HOURS || hours > PERSONAL_SLOT_MAX_GAP_HOURS) continue;
+    byWeekday[weekdayOf(starts[i])].push(hours / 24);
+    gaps += 1;
+  }
+  let weekdays = 0;
+  let sum = 0;
+  for (const g of byWeekday) {
+    if (!g.length) continue;
+    weekdays += 1;
+    for (const v of g) sum += v;
+  }
+  const unknown = { coupled: true, omega2: null, gaps };
+  if (gaps < PERSONAL_SLOT_MIN_GAPS || weekdays < 2) return unknown;
+  const mean = sum / gaps;
+  let between = 0;
+  let within = 0;
+  for (const g of byWeekday) {
+    if (!g.length) continue;
+    let m = 0;
+    for (const v of g) m += v;
+    m /= g.length;
+    between += g.length * (m - mean) ** 2;
+    for (const v of g) within += (v - m) ** 2;
+  }
+  const total = between + within;
+  if (!(total > EPSILON) || gaps - weekdays <= 0) return unknown;
+  const msWithin = within / (gaps - weekdays);
+  const omega2 = (between - (weekdays - 1) * msWithin) / (total + msWithin);
+  return { coupled: !(omega2 <= PERSONAL_SLOT_MAX_COUPLING), omega2, gaps };
+}
+
+/**
+ * The curve that reads each muscle's recovered fraction at any instant for
+ * any candidate: `fractionsAt(muscle, atMs)` is an array indexed like
+ * `candidates`, or null when no session on the muscle ended inside the
+ * lookback before it. Each contributing session's recovery length at every
+ * candidate is the clock's own: recoveryHoursAcross with the session's sets,
+ * its week's effort target, its ratings AND the three session terms the clock
+ * the person sees carries (novelty, long length, mostly indirect: D219 design
+ * 4.13, muscleRecoveryModel.sessionMuscleTerms), read over the same history,
+ * so a candidate's curve is the clock buildMuscleRecoveryMap draws at that
+ * factor.
+ */
+function buildCurve(list, exerciseById, candidates) {
   const loads = sessionMuscleLoads(list, exerciseById);
-  const muscleCache = new Map();
-  const lifts = list.map((s) => sessionLifts(s, exerciseById, muscleCache));
-  const weekdays = list.map((s) => weekdayOf(s.startedAt));
-  const isExcluded = (session, muscle) => !!excluded && typeof excluded.has === 'function'
-    && excluded.has(`${session.id}|${muscle}`);
+  const terms = sessionMuscleTerms(list, exerciseById);
 
   // Per muscle, the sessions that loaded it (the curve's contributors), in
   // end order. Each one's recovery length at every candidate factor is
@@ -342,7 +498,7 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       if (!(sets > 0)) continue;
       if (!curve[muscle]) curve[muscle] = [];
       curve[muscle].push({
-        muscle, endMs: load.endMs, sets, session: list[i], hours: null,
+        muscle, endMs: load.endMs, sets, session: list[i], term: terms[i]?.[muscle] ?? {}, hours: null,
       });
     }
   });
@@ -351,22 +507,25 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
     if (!entry.hours) {
       const s = entry.session;
       entry.hours = recoveryHoursAcross(entry.muscle, {
-        sets: entry.sets, rirTarget: s.weekRirTarget, firstWeek: s.isFirstWeek, ratings: s.ratings,
+        sets: entry.sets,
+        rirTarget: s.weekRirTarget,
+        ratings: s.ratings,
+        novel: entry.term.novel,
+        longLengthShare: entry.term.longLengthShare,
+        mostlyIndirect: entry.term.mostlyIndirect,
       }, candidates);
     }
     return entry.hours;
   };
 
-  // Every candidate's recovered fraction for `muscle` at `atMs`, as an array
-  // indexed like `candidates`; null when no session on the muscle ended
-  // inside the lookback before it. The contributors are the entries ending
-  // in [atMs - lookback, atMs], found by a binary search for the first
-  // (spec section 8: no walk over the whole history per reading); they are
-  // the same for every candidate, only their lengths differ, so one pass
-  // reads them all. Memoised per instant: a session is B in one pair and P
-  // in the next.
+  // Every candidate's recovered fraction for `muscle` at `atMs`. The
+  // contributors are the entries ending in [atMs - lookback, atMs], found by
+  // a binary search for the first (spec section 8: no walk over the whole
+  // history per reading); they are the same for every candidate, only their
+  // lengths differ, so one pass reads them all. Memoised per instant: a
+  // session is B in one pair and P in the next.
   const memo = new Map();
-  const fractionsAt = (muscle, atMs) => {
+  return (muscle, atMs) => {
     const key = `${muscle}|${atMs}`;
     if (memo.has(key)) return memo.get(key);
     const entries = curve[muscle] ?? [];
@@ -385,9 +544,47 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
     memo.set(key, out);
     return out;
   };
+}
+
+/**
+ * The learner's candidate curves, exposed so the equality with the clock can
+ * be pinned (personalRecovery.curve.d219.test.js): the recovered fraction of a
+ * muscle at an instant under each candidate factor, from the history given.
+ *
+ * @param {object} params
+ * @param {Array<object>} params.sessions - as learnPersonalRecovery
+ * @param {object} params.exerciseById
+ * @param {number[]} [params.candidates] - the factors to read (default: the start, 1)
+ * @returns {function(string, number): (number[]|null)}
+ */
+export function recoveryCurve({ sessions, exerciseById, candidates = [1] } = {}) {
+  return buildCurve(sortedSessions(sessions), exerciseById, candidates);
+}
+
+/**
+ * The comparable pairs in the history, per primary muscle (spec sections 2
+ * and 3), and the curve that reads each muscle's recovered fraction at any
+ * instant for any candidate.
+ */
+function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
+  const list = sortedSessions(sessions);
+
+  const muscleCache = new Map();
+  const lifts = list.map((s) => sessionLifts(s, exerciseById, muscleCache));
+  const weekdays = list.map((s) => weekdayOf(s.startedAt));
+  const isExcluded = (session, muscle) => !!excluded && typeof excluded.has === 'function'
+    && excluded.has(`${session.id}|${muscle}`);
+  const fractionsAt = buildCurve(list, exerciseById, candidates);
+
+  // Whether the weekdays set the gap decides the baseline rule (see the
+  // header): the guard reads the person's own sessions up to now.
+  const slotPairing = !weekdayGapCoupling(
+    list.filter((s) => Number(s.startedAt) <= nowMs).map((s) => Number(s.startedAt)),
+  ).coupled;
 
   const windowStartMs = nowMs - WINDOW_MS;
   const found = [];
+  const keptAsFilledIn = [];
   for (let b = 0; b < list.length; b += 1) {
     const sessionB = list[b];
     const startB = Number(sessionB.startedAt);
@@ -403,10 +600,16 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       for (let j = b - 1; j >= 0; j -= 1) {
         const sessionP = list[j];
         if (Number(sessionP.startedAt) < startB - BASELINE_GAP_MS) break;
-        if (weekdays[j] !== weekdayB) continue;
-        // The same day of the week in an EARLIER week: a second session of
-        // the lift on the same day is not a baseline for the first.
-        if (startB - Number(sessionP.startedAt) < EARLIER_WEEK_MS) continue;
+        if (slotPairing) {
+          // The weekdays do not set the gap: the lift's previous session,
+          // whenever it fell, short of a second session the same day.
+          if (startB - Number(sessionP.startedAt) < SAME_DAY_MS) continue;
+        } else {
+          if (weekdays[j] !== weekdayB) continue;
+          // The same day of the week in an EARLIER week: a second session of
+          // the lift on the same day is not a baseline for the first.
+          if (startB - Number(sessionP.startedAt) < EARLIER_WEEK_MS) continue;
+        }
         if (!lifts[j].has(exerciseId)) continue;
         if (isFlagSet(sessionP.isDeload) || isExcluded(sessionP, muscle)) continue;
         effort = effortComparison(sessionB, sessionP);
@@ -417,18 +620,36 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       if (p < 0) continue;
       const liftP = lifts[p].get(exerciseId);
       const k = Math.min(PERSONAL_MATCHED_SETS, liftB.e1rms.length, liftP.e1rms.length);
+      // The sets compared are the first k positions that were measurements in
+      // BOTH sessions: a set kept as filled in (entryTyped 0) is the plan, not
+      // the day (see the header). With no such flag these are the first k.
+      const positions = [];
+      for (let i = 0; i < k; i += 1) if (liftB.typed[i] !== 0 && liftP.typed[i] !== 0) positions.push(i);
+      if (positions.length === 0) {
+        keptAsFilledIn.push(muscle);
+        continue;
+      }
       // Pairs at one effort are read as ever; a pair across plan weeks reads
       // both sessions at the effort the plan asked of them (D219, Q4).
       const adjusted = effort === 'adjusted';
-      const piB = adjusted ? meanFirstAtPlannedEffort(liftB, Number(sessionB.weekRirTarget), k) : meanFirst(liftB.e1rms, k);
-      const piP = adjusted ? meanFirstAtPlannedEffort(liftP, Number(list[p].weekRirTarget), k) : meanFirst(liftP.e1rms, k);
+      const piB = adjusted ? meanAtPlannedEffort(liftB, Number(sessionB.weekRirTarget), positions) : meanAt(liftB.e1rms, positions);
+      const piP = adjusted ? meanAtPlannedEffort(liftP, Number(list[p].weekRirTarget), positions) : meanAt(liftP.e1rms, positions);
       if (!(piB > 0) || !(piP > 0)) continue;
       const y = Math.log(piB / piP);
       if (Math.abs(y) > PERSONAL_MAX_CHANGE) continue; // not a recovery signal (constants.js)
       let identical = true;
-      for (let i = 0; i < k; i += 1) if (liftB.reps[i] !== liftP.reps[i]) identical = false;
+      for (const i of positions) if (liftB.reps[i] !== liftP.reps[i]) identical = false;
+      // How each day started, when the person said (both chips, both days).
+      const walkB = walkInScore(sessionB);
+      const walkP = walkInScore(list[p]);
       found.push({
-        muscle, exerciseId, startB, startP: Number(list[p].startedAt), y, identical,
+        muscle,
+        exerciseId,
+        startB,
+        startP: Number(list[p].startedAt),
+        y,
+        identical,
+        dc: walkB !== null && walkP !== null ? walkB - walkP : null,
       });
     }
   }
@@ -454,20 +675,32 @@ function collectPairs({ sessions, exerciseById, nowMs, excluded, candidates }) {
       continue;
     }
     if (!pairsByMuscle[q.muscle]) pairsByMuscle[q.muscle] = [];
-    pairsByMuscle[q.muscle].push({ startB: q.startB, startP: q.startP, y: q.y });
+    const pair = { startB: q.startB, startP: q.startP, y: q.y };
+    // Only a pair with both chips carries the field: a pair without them is
+    // the same object it always was.
+    if (q.dc !== null) pair.dc = q.dc;
+    pairsByMuscle[q.muscle].push(pair);
+  }
+  // A comparison of sets kept as filled in shows the plan too: it is counted
+  // with the lifts logged as planned, which is what the reason says.
+  for (const muscle of keptAsFilledIn) {
+    fixedRepsPairs += 1;
+    fixedRepsByMuscle[muscle] = (fixedRepsByMuscle[muscle] ?? 0) + 1;
   }
   return {
-    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt,
+    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt, slotPairing,
   };
 }
 
 /**
  * The comparable pairs in the history, per primary muscle: each
- * { startB, startP, y } (spec sections 2 and 3). The evidence the learner
- * fits, exposed so the pairing rules can be pinned directly.
+ * { startB, startP, y } (spec sections 2 and 3), and `dc` (the start-sheet
+ * chips' difference between the two days) only when both days were answered.
+ * The evidence the learner fits, exposed so the pairing rules can be pinned
+ * directly.
  *
  * @param {object} params - as learnPersonalRecovery (recoveryRating unused)
- * @returns {object} { [muscle]: Array<{ startB:number, startP:number, y:number }> }
+ * @returns {object} { [muscle]: Array<{ startB:number, startP:number, y:number, dc?:number }> }
  */
 export function comparablePairs({
   sessions, exerciseById, nowMs, excluded = null,
@@ -496,19 +729,34 @@ export function comparablePairs({
  * recovers more slowly, however clearly the lifts showed it.
  *
  * @param {object} params - as learnPersonalRecovery
- * @returns {{ prior:number, pairs:number, spread:number, best:number, lr:number,
- *   pairsByMuscle: object, fixedRepsPairs: number }} `best` the
- *   best-fitting factor (the start when nothing fits better); `lr` =
- *   pairs x ln(SSE(start) / SSE(best)), 0 when best is the start;
+ * @returns {{ prior:number, pairs:number, workoutDays:number, spread:number,
+ *   best:number, lr:number, pairsByMuscle: object, fixedRepsPairs: number,
+ *   pairing: 'weekday'|'slot', dayEffectPairs: number, dayEffect: number }}
+ *   `best` the best-fitting factor (the start when nothing fits better); `lr`
+ *   = workoutDays x ln(SSE(start) / SSE(best)), 0 when best is the start;
  *   `pairsByMuscle` the counted pairs per muscle; `fixedRepsPairs` the pairs
- *   left out because their lift's reps never change
+ *   left out because their lift's reps never change or were kept as filled
+ *   in; `pairing` the baseline rule in force (weekdayGapCoupling);
+ *   `dayEffectPairs` the counted pairs with both chips answered and
+ *   `dayEffect` the chip term fitted at the best factor (0 when unused)
  */
 export function personalRecoveryEvidence({
   sessions, exerciseById, recoveryRating, nowMs, excluded = null,
 } = {}) {
   const prior = ratingFactor(recoveryRating);
   const none = {
-    prior, pairs: 0, workoutDays: 0, spread: 0, best: prior, lr: 0, pairsByMuscle: {}, fixedRepsPairs: 0, fixedRepsWouldCount: false,
+    prior,
+    pairs: 0,
+    workoutDays: 0,
+    spread: 0,
+    best: prior,
+    lr: 0,
+    pairsByMuscle: {},
+    fixedRepsPairs: 0,
+    fixedRepsWouldCount: false,
+    pairing: 'weekday',
+    dayEffectPairs: 0,
+    dayEffect: 0,
   };
   if (!Number.isFinite(nowMs)) return none;
 
@@ -516,10 +764,11 @@ export function personalRecoveryEvidence({
   const candidates = [...PERSONAL_FACTOR_GRID.filter((f) => f !== prior), prior];
   const priorIndex = candidates.length - 1;
   const {
-    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt,
+    pairsByMuscle, fixedRepsPairs, fixedRepsByMuscle, fractionsAt, slotPairing,
   } = collectPairs({
     sessions, exerciseById, nowMs, excluded, candidates,
   });
+  const pairing = slotPairing ? 'slot' : 'weekday';
 
   const muscles = Object.keys(pairsByMuscle)
     .filter((m) => pairsByMuscle[m].length >= PERSONAL_MIN_MUSCLE_PAIRS)
@@ -536,7 +785,7 @@ export function personalRecoveryEvidence({
       if (k >= PERSONAL_MIN_MUSCLE_PAIRS) withFixed += k;
     }
     return {
-      ...none, pairs: n, pairsByMuscle: counted, fixedRepsPairs, fixedRepsWouldCount: fixedRepsPairs > 0 && withFixed >= PERSONAL_MIN_PAIRS,
+      ...none, pairs: n, pairsByMuscle: counted, fixedRepsPairs, fixedRepsWouldCount: fixedRepsPairs > 0 && withFixed >= PERSONAL_MIN_PAIRS, pairing,
     };
   }
 
@@ -549,16 +798,48 @@ export function personalRecoveryEvidence({
   }))]));
   const daysByMuscle = Object.fromEntries(muscles.map((m) => [m, pairsByMuscle[m].map((q) => (q.startB - q.startP) / DAY_MS)]));
   const ysByMuscle = Object.fromEntries(muscles.map((m) => [m, residualOnDays(pairsByMuscle[m].map((q) => q.y), daysByMuscle[m])]));
+
+  // The day's form (candidate E, see the header): the pairs with both chips
+  // answered carry the chips' difference between the two days, and with enough
+  // of them one non-negative term, capped, takes out of every comparison the
+  // part of the day's form the chips explain. A pair without both chips has
+  // no difference (0): it is read as it was. Fewer than the minimum pairs, and
+  // the term is not fitted at all.
+  let dayEffectPairs = 0;
+  for (const m of muscles) for (const q of pairsByMuscle[m]) if (q.dc !== undefined) dayEffectPairs += 1;
+  const dayEffectOn = dayEffectPairs >= PERSONAL_DAY_EFFECT_MIN_PAIRS;
+  const chipsByMuscle = dayEffectOn
+    ? Object.fromEntries(muscles.map((m) => [m, residualOnDays(pairsByMuscle[m].map((q) => q.dc ?? 0), daysByMuscle[m])]))
+    : null;
+  const dayEffects = Array.from({ length: PERSONAL_DAY_EFFECT_STEPS }, (_, i) => (PERSONAL_DAY_EFFECT_MAX * (i + 1)) / PERSONAL_DAY_EFFECT_STEPS);
+
   const fits = candidates.map((_, ci) => {
+    const xsByMuscle = muscles.map((m) => residualOnDays(
+      readings[m].map(({ atB, atP }) => atB[ci] - (atP ? atP[ci] : 1)),
+      daysByMuscle[m],
+    ));
+    // The fit with no day effect: what the learner has always done.
     let sse = 0;
     let sxx = 0;
-    for (const m of muscles) {
-      const xs = residualOnDays(readings[m].map(({ atB, atP }) => atB[ci] - (atP ? atP[ci] : 1)), daysByMuscle[m]);
-      const fit = boundedFit(xs, ysByMuscle[m]);
+    muscles.forEach((m, mi) => {
+      const fit = boundedFit(xsByMuscle[mi], ysByMuscle[m]);
       sse += fit.sse;
       sxx += fit.sxx;
+    });
+    // With the chips: the term that leaves the least error, 0 unless one of
+    // the capped values beats it (ties keep the smaller).
+    let dayEffect = 0;
+    if (dayEffectOn) {
+      for (const b of dayEffects) {
+        let sseAt = 0;
+        muscles.forEach((m, mi) => {
+          const adjusted = ysByMuscle[m].map((y, i) => y - b * chipsByMuscle[m][i]);
+          sseAt += boundedFit(xsByMuscle[mi], adjusted).sse;
+        });
+        if (sseAt < sse - EPSILON) { sse = sseAt; dayEffect = b; }
+      }
     }
-    return { sse, sxx };
+    return { sse, sxx, dayEffect };
   });
   const spread = Math.max(...fits.map((fit) => Math.sqrt(fit.sxx / n)));
 
@@ -586,7 +867,18 @@ export function personalRecoveryEvidence({
     ? workoutDays * Math.log(atPrior.sse / Math.max(best.sse, EPSILON))
     : 0;
   return {
-    prior, pairs: n, workoutDays, spread, best: candidates[best.ci], lr, pairsByMuscle: counted, fixedRepsPairs, fixedRepsWouldCount: false,
+    prior,
+    pairs: n,
+    workoutDays,
+    spread,
+    best: candidates[best.ci],
+    lr,
+    pairsByMuscle: counted,
+    fixedRepsPairs,
+    fixedRepsWouldCount: false,
+    pairing,
+    dayEffectPairs,
+    dayEffect: fits[best.ci].dayEffect,
   };
 }
 
@@ -597,21 +889,26 @@ export function personalRecoveryEvidence({
  * @param {Array<object>} params.sessions - completed sessions in load.js's
  *   shape ({ id, startedAt, endedAt, durationMinutes, sets, weekRirTarget,
  *   weekStatus: 'none'|'resolved'|'unresolved', isFirstWeek, isDeload,
- *   ratings }), any order, covering PERSONAL_HISTORY_DAYS before nowMs.
+ *   ratings, walkedIn: { sleep, energy } }), any order, covering
+ *   PERSONAL_HISTORY_DAYS before nowMs. A set may carry `entryTyped` (1 typed,
+ *   0 kept as filled in); a session may carry `walkedIn` (the start sheet's
+ *   chips); both are read when present and read as unknown when not.
  * @param {object} params.exerciseById
  * @param {string} [params.recoveryRating] - poor | average | good: the start.
  * @param {number} params.nowMs
  * @param {Set<string>} [params.excluded] - `${sessionId}|${muscle}` pairs under
  *   an injury limit or its return period.
  * @returns {{ factor:number, prior:number, pairs:number, reason:string,
- *   pairsByMuscle: object }} reason one of 'adjusted' | 'too_few' |
- *   'no_spread' | 'not_clear'; factor is the prior unless adjusted;
- *   pairsByMuscle the counted comparisons per muscle (the screen names the
- *   muscle the learning rests on most)
+ *   pairsByMuscle: object, pairing?: 'slot' }} reason one of 'adjusted' |
+ *   'too_few' | 'fixed_reps' | 'no_spread' | 'not_clear'; factor is the prior
+ *   unless adjusted; pairsByMuscle the counted comparisons per muscle (the
+ *   screen names the muscle the learning rests on most); pairing is 'slot'
+ *   only when the weekdays did not set the person's gaps and the baseline was
+ *   the lift's previous session on any weekday (absent: the same weekday)
  */
 export function learnPersonalRecovery(params = {}) {
   const {
-    prior, pairs, spread, best, lr, pairsByMuscle, fixedRepsWouldCount,
+    prior, pairs, spread, best, lr, pairsByMuscle, fixedRepsWouldCount, pairing,
   } = personalRecoveryEvidence(params);
   let reason = 'not_clear';
   if (pairs < PERSONAL_MIN_PAIRS) {
@@ -620,7 +917,15 @@ export function learnPersonalRecovery(params = {}) {
   } else if (spread < PERSONAL_MIN_SPREAD) reason = 'no_spread';
   else if (best !== prior && lr >= PERSONAL_LR_MIN) reason = 'adjusted';
   return {
-    factor: reason === 'adjusted' ? best : prior, prior, pairs, reason, pairsByMuscle,
+    factor: reason === 'adjusted' ? best : prior,
+    prior,
+    pairs,
+    reason,
+    pairsByMuscle,
+    // Said only when the baseline was the lift's previous session on any
+    // weekday: the screen's "on the same day in different weeks" is then not
+    // what these comparisons are.
+    ...(pairing === 'slot' ? { pairing } : {}),
   };
 }
 

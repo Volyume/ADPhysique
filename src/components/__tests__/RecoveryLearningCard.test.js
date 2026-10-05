@@ -17,6 +17,11 @@
  * first estimate" while they coincide), never a round thumb; the "You"
  * marker is ink, not amber. `body` still holds the method paragraph (its
  * pins are unchanged).
+ *
+ * D219 (lead ruling 6.4, 2026-10-05): a reading with `pairing: 'slot'` (the
+ * learner paired each lift with its previous session because the weekdays did
+ * not set the gaps) must not say "on the same day"; and the 'fixed_reps' reason
+ * also covers sets kept exactly as the screen filled them in. Pinned below.
  */
 import { create, act } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -155,13 +160,20 @@ describe('what the card says, state by state', () => {
     expect(`${copy.summary} ${copy.body}`).not.toMatch(/\bbreaks?\b/i);
   });
 
-  test('reps that repeat: says which lifts are left out, and that too few comparisons remain', () => {
+  // Re-pinned for lead ruling 6.4: the reason now also covers sets kept exactly as the screen filled
+  // them in (the learner leaves those out as well as the lifts whose reps repeat).
+  test('reps that repeat or sets kept as filled in: says what is left out, and that too few comparisons remain', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 2, reason: 'fixed_reps' }));
     expect(copy.state).toBe('waiting');
     expect(copy.headline).toBe('Not learning yet');
-    expect(copy.body).toBe('When an exercise is logged with exactly the same reps at least half the time, that shows the plan rather than how each workout went, so it is left out. That leaves too few comparisons so far.');
+    expect(copy.body).toBe('Sets kept exactly as the screen filled them in, and exercises logged with the same reps at least half the time, show the plan rather than how each workout went, so they are left out. That leaves too few comparisons so far.');
     expect(copy.progress).toBeNull();
-    expect(copy.summary).toBe('Too few comparisons are left once exercises with the same reps every time are set aside.');
+    expect(copy.summary).toBe('Too few comparisons are left once repeated reps and sets kept as filled in are set aside.');
+    // Both kinds are named, in the summary and in the method.
+    expect(copy.summary).toMatch(/repeated reps/);
+    expect(copy.summary).toMatch(/kept as filled in/);
+    expect(copy.body).toMatch(/kept exactly as the screen filled them in/);
+    expect(copy.body).toMatch(/the same reps at least half the time/);
   });
 
   test('too few: how far along it is', () => {
@@ -223,6 +235,114 @@ describe('what the card says, state by state', () => {
     for (const reason of ['no_spread', 'fixed_reps', 'too_few']) {
       expect(recoveryLearningSubtitle(recoveryLearningCopy(reading({ pairs: 3, reason })))).toBe('Learns from your workouts · estimated');
     }
+  });
+});
+
+// D219 (lead ruling 6.4): when the learner paired each lift with its previous session (the
+// weekdays did not set the gaps), "on the same day" is untrue, so the words change with it.
+describe('what the card says when the comparisons were not of the same weekday (pairing: slot)', () => {
+  const SLOT = { pairing: 'slot' };
+
+  test('the comparisons line: the ruled wording for slot pairing, the same-weekday wording otherwise', () => {
+    for (const over of [
+      { factor: 0.85, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 42 } },
+      { factor: 1.3, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 42 } },
+      { pairs: 25, reason: 'not_clear', pairsByMuscle: { chest: 25 } },
+    ]) {
+      expect(recoveryLearningCopy(reading({ ...over, ...SLOT })).evidence)
+        .toBe(`Based on ${over.pairs} comparisons of the same exercise on different days.`);
+      expect(recoveryLearningCopy(reading(over)).evidence)
+        .toBe(`Based on ${over.pairs} comparisons of the same exercise on the same day in different weeks.`);
+    }
+  });
+
+  test('one comparison is singular, in both forms', () => {
+    expect(recoveryLearningCopy(reading({ pairs: 1, reason: 'not_clear', ...SLOT })).evidence)
+      .toBe('Based on 1 comparison of the same exercise on different days.');
+    expect(recoveryLearningCopy(reading({ pairs: 1, reason: 'not_clear' })).evidence)
+      .toBe('Based on 1 comparison of the same exercise on the same day in different weeks.');
+  });
+
+  test('a pairing that is not "slot" reads as the same weekday (only the learner\'s own word counts)', () => {
+    for (const pairing of [undefined, null, '', 'weekday', 'SLOT', true]) {
+      expect(recoveryLearningCopy(reading({ pairs: 9, reason: 'not_clear', pairing })).evidence)
+        .toBe('Based on 9 comparisons of the same exercise on the same day in different weeks.');
+    }
+  });
+
+  test('the method paragraphs that describe the comparison say "the last time you did it", never "on the same day"', () => {
+    const noSpread = recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread', ...SLOT }));
+    expect(noSpread.body).toBe('Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
+    const learning = recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few', ...SLOT }));
+    expect(learning.body).toBe(`Each exercise is compared with the last time you did it. A muscle’s comparisons become usable once it has 5, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`);
+    for (const reason of ['adjusted', 'not_clear', 'no_spread', 'fixed_reps', 'too_few']) {
+      const copy = recoveryLearningCopy(reading({
+        reason, factor: reason === 'adjusted' ? 1.3 : 1, pairs: 12, pairsByMuscle: { quads: 12 }, ...SLOT,
+      }));
+      const words = [copy.headline, copy.summary, copy.body, copy.example?.sentence, copy.evidence].filter(Boolean).join(' ');
+      expect(words).not.toMatch(/same day|same weekday|day of the week/i);
+    }
+  });
+
+  test('the other readings (not slot) keep the words they had', () => {
+    expect(recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread' })).body)
+      .toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
+    expect(recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few' })).body)
+      .toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has 5, and learning starts after 8 usable comparisons.');
+  });
+
+  test('everything else about a slot reading is as for any other: state, headline, summary, scale and progress do not move', () => {
+    for (const over of [
+      { factor: 0.85, prior: 1, pairs: 42, reason: 'adjusted', pairsByMuscle: { quads: 42 } },
+      { pairs: 25, reason: 'not_clear' }, { pairs: 16, reason: 'no_spread' }, { pairs: 4, reason: 'fixed_reps' }, { pairs: 3, reason: 'too_few' },
+    ]) {
+      const { body, evidence, ...rest } = recoveryLearningCopy(reading({ ...over, ...SLOT }));
+      const { body: otherBody, evidence: otherEvidence, ...otherRest } = recoveryLearningCopy(reading(over));
+      expect(rest).toEqual(otherRest);
+      expect(typeof body).toBe('string');
+      expect(typeof otherBody).toBe('string');
+      expect(evidence === null).toBe(otherEvidence === null);
+    }
+  });
+
+  test('the slot words are plain, describe rather than instruct, and carry no em dash', () => {
+    const all = [
+      reading({ factor: 0.8, prior: 1, pairs: 40, reason: 'adjusted', pairsByMuscle: { quads: 40 }, ...SLOT }),
+      reading({ pairs: 30, reason: 'not_clear', ...SLOT }),
+      reading({ pairs: 30, reason: 'no_spread', ...SLOT }),
+      reading({ pairs: 4, reason: 'fixed_reps', ...SLOT }),
+      reading({ pairs: 2, reason: 'too_few', ...SLOT }),
+    ].map(recoveryLearningCopy);
+    const words = all.flatMap((c) => [c.headline, c.summary, c.body, c.example?.sentence, c.evidence]).filter(Boolean).join(' \n ');
+    expect(words).not.toMatch(/—/);
+    expect(words).not.toMatch(/factor|pairs?\b|calibrat|algorithm|regression|significan/i);
+    expect(words).not.toMatch(/\b(you should|try to|make sure|train (more|less)|rest more|take (a|more) rest|vary your|change your)\b/i);
+    expect(words).not.toMatch(/\byour lifts\b|\bhold up\b|\bsession\b|\bsame lift\b/i);
+    // One sentence under the headline, as for every state (D214).
+    for (const c of all) {
+      expect(c.summary.endsWith('.')).toBe(true);
+      expect(c.summary.slice(0, -1)).not.toMatch(/\.\s/);
+    }
+  });
+
+  test('rendered: the evidence line is the slot wording', () => {
+    let tree;
+    const slotReading = reading({ factor: 0.85, prior: 1, pairs: 12, reason: 'adjusted', pairsByMuscle: { quads: 12 }, ...SLOT });
+    act(() => { tree = create(<RecoveryLearningCard personal={slotReading} />); });
+    const shown = tree.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+    expect(shown).toContain('Based on 12 comparisons of the same exercise on different days.');
+    expect(shown.some((x) => /on the same day/.test(x))).toBe(false);
+  });
+
+  test('rendered: "How this is worked out" opens to the slot wording for a reading still learning', () => {
+    let tree;
+    act(() => { tree = create(<RecoveryLearningCard personal={reading({ pairs: 5, reason: 'too_few', ...SLOT })} />); });
+    const toggle = tree.root.findAll((n) => n.props.accessibilityLabel === 'How this is worked out' && typeof n.props.onPress === 'function')[0];
+    act(() => { toggle.props.onPress(); });
+    const shown = tree.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+    expect(shown).toContain(recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few', ...SLOT })).body);
+    expect(shown.some((x) => /Each exercise is compared with the last time you did it\./.test(x))).toBe(true);
+    expect(shown.some((x) => /same day/.test(x))).toBe(false);
   });
 });
 

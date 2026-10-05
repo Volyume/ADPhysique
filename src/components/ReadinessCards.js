@@ -31,8 +31,14 @@
  * Voice rules: CLAUDE.md. No em dashes. D204: this screen describes, it
  * never tells the athlete to train, rest or monitor themselves. Facts are
  * ink: no amber and no status colour on a fact (plan 7.0 rule 3). Nothing
- * on this screen reads calm mode or an ED flag, and nothing changes under
- * either (the recovery model reads no weight or food data).
+ * on this screen reads calm mode or an ED flag itself, and the recovery
+ * model reads no weight or food data. The one thing that answers to either
+ * is the personal learner's reading: while calm mode is on or an ED flag is
+ * open, loadMuscleRecovery HOLDS it (D219, founder answer 2026-10-05, "Pause
+ * it then"), so the learning card and the learned speed the rows use stay as
+ * they were last shown, across a restart too, and nothing new is learned
+ * until the pause lifts (src/lib/recovery/load.js, THE PAUSE). Nothing else
+ * on this screen changes under either.
  */
 import {
   useState, useCallback, useEffect, useMemo, useRef,

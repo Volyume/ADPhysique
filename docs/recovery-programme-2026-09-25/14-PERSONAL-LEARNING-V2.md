@@ -137,6 +137,25 @@ review, which said do not land (addendum 3).
 
 ## 2. The evidence: comparable pairs
 
+**Dated note, 2026-10-05.** (1) Slot pairing now applies when the weekdays do
+not set the gap (register D219, "Founder answers on the learner design",
+2026-10-05). Where the weekday of a session explains almost none of the gap
+before it (`weekdayGapCoupling`, `PERSONAL_SLOT_MAX_COUPLING` in
+`constants.js`), a lift's baseline is its previous session whenever it fell
+(at least 12 hours earlier, inside the same 28-day gap and the same
+comparability rules below), not the same weekday of an earlier week. The
+same-weekday baseline of section 0 stands, as written, for a habitual or
+fixed weekly schedule, a weekend that sets the gaps, and a history too short
+to tell. A reading from slot pairing carries `pairing: 'slot'`, and the card
+then says "of the same exercise on different days" and "the last time you
+did it" in place of "on the same day". (2) Section 0's reach figure ("on a
+varied schedule without a plan, 123 of 600 slow recoverers (1.40) and 11 of
+600 fast ones (0.75)") is superseded (register, "Correction to D210 addendum
+3", 2026-10-05): it predates D210 addendum 5, which changed the statistic
+from comparisons to workout days, and at the pinned gate (10) the repo's own
+full run finds 0 of 600 in both directions in all 20 plan cells and at most 6
+of 600 in four no-plan stress cells.
+
 For each muscle m, for each completed session B in the last
 `PERSONAL_WINDOW_DAYS` (84) and each exercise X whose PRIMARY muscle is m:
 

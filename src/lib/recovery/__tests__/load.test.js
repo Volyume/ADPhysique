@@ -41,6 +41,10 @@ const mockDb = {
   getRoutineExercisesWithDetails: jest.fn(async () => []),
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
   getCapabilityConstraints: jest.fn(async () => []),
+  // D219 (the learner's pause): load.js now reads the ED-pattern flag before it
+  // runs the learner, and a read that cannot be made counts as a pause (fail
+  // closed), so a mock without it would pause every test below.
+  getOpenEdPatternFlag: jest.fn(async () => null),
 };
 jest.mock('../../database', () => mockDb);
 
@@ -82,6 +86,7 @@ beforeEach(() => {
   mockDb.getRoutineExercisesWithDetails.mockResolvedValue([]);
   mockDb.getCompletedWorkoutStartTimestamps.mockResolvedValue([]);
   mockDb.getCapabilityConstraints.mockResolvedValue([]);
+  mockDb.getOpenEdPatternFlag.mockResolvedValue(null);
   mockStoreProfile = { recoveryRating: 'average' };
   __resetPersonalMemoForTests();
 });
@@ -94,11 +99,27 @@ describe('buildRecoverySession', () => {
       id: 'w1', startedAt: 1000, endedAt: 2000, durationMinutes: 60, fatigueLevel: 4, jointDiscomfort: 2,
     };
     const session = buildRecoverySession(workout, [], { rirTarget: 2, isFirstWeek: true });
+    // RE-PINNED (D219, learner design 06 section 2.3): the session now carries the
+    // start sheet's sleep and energy chips (null when skipped) for the learner's
+    // day-effect covariates; every other field is as it was.
     expect(session).toEqual({
       id: 'w1', startedAt: 1000, endedAt: 2000, durationMinutes: 60, sets: [],
       weekRirTarget: 2, isFirstWeek: true, isDeload: false, weekStatus: 'none',
       ratings: { fatigue: 4, joint: 2, sorenessNext: null },
+      walkedIn: { sleep: null, energy: null },
     });
+  });
+
+  test('walkedIn (D219): the start sheet\'s sleep and energy chips, null when skipped, and never soreness', () => {
+    const answered = buildRecoverySession({
+      id: 'w1', startedAt: 1000, sleepQuality: 2, energyScore: 4, soreness24hBefore: 3,
+    }, [], null);
+    expect(answered.walkedIn).toEqual({ sleep: 2, energy: 4 });
+    const skipped = buildRecoverySession({ id: 'w2', startedAt: 1000, sleepQuality: null, energyScore: undefined }, [], null);
+    expect(skipped.walkedIn).toEqual({ sleep: null, energy: null });
+    // Soreness feeds the clock as a lengthening rating of the previous session, as it did; it is
+    // not a covariate, and not in the chips.
+    expect(Object.keys(answered.walkedIn).sort()).toEqual(['energy', 'sleep']);
   });
 
   test('weekStatus (D210): none outside a plan, resolved when the week row was found, unresolved when it was not', () => {
@@ -489,6 +510,25 @@ describe('loadMuscleRecovery: the personal factor (register D210)', () => {
     expect(unchanged.map.quads.readyAtMs).toBe(baseline.map.quads.readyAtMs);
   });
 
+  test('the learner is handed the start sheet\'s chips and each set\'s typed flag as the database returned them (D219)', async () => {
+    const answered = { ...workout('w1', 3), sleepQuality: 2, energyScore: 4 };
+    const skipped = workout('w2', 1);
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([answered, skipped]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue(QUADS);
+    mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
+      ...quadSets('w1').map((x, i) => ({ ...x, entryTyped: i === 0 ? 1 : 0 })),
+      ...quadSets('w2'),
+    ]);
+    await loadMuscleRecovery('u1', NOW);
+    const { sessions } = personalRecovery.learnPersonalRecovery.mock.calls[0][0];
+    const byId = Object.fromEntries(sessions.map((x) => [x.id, x]));
+    expect(byId.w1.walkedIn).toEqual({ sleep: 2, energy: 4 });
+    expect(byId.w2.walkedIn).toEqual({ sleep: null, energy: null });
+    expect(byId.w1.sets.map((x) => x.entryTyped).sort()).toEqual([0, 1]);
+    // A set the database did not flag stays unflagged (null reads as a measurement, as it always did).
+    expect(byId.w2.sets.every((x) => x.entryTyped === undefined)).toBe(true);
+  });
+
   test('the learner runs once per user, day, answer and history, and again when any of them changes', async () => {
     seed([workout('w1', 3)]);
     await loadMuscleRecovery('u1', NOW);
@@ -573,6 +613,18 @@ describe('loadMuscleRecovery: the personal factor (register D210)', () => {
       ['a set\'s time corrected', () => mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(
         quadSets('w1').map((x, i) => (i === 0 ? { ...x, createdAt: NOW - 3 * DAY_MS + 60 * 1000 } : x)),
       )],
+      // D219 (learner design 06 section 2.3): what the stronger learner reads, each changed on its own.
+      ['a sleep chip answered', () => mockDb.getCompletedWorkoutsBetween.mockResolvedValue([{ ...planned('w1', 3), sleepQuality: 2 }])],
+      ['an energy chip answered', () => mockDb.getCompletedWorkoutsBetween.mockResolvedValue([{ ...planned('w1', 3), energyScore: 4 }])],
+      ['a set marked as typed', () => mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(
+        quadSets('w1').map((x, i) => (i === 0 ? { ...x, entryTyped: 1 } : x)),
+      )],
+      ['a set marked as kept as filled in', () => mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue(
+        quadSets('w1').map((x, i) => (i === 0 ? { ...x, entryTyped: 0 } : x)),
+      )],
+      ['the exercise renamed (the long-length list reads the name)', () => mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([
+        { ...QUADS[0], name: 'Barbell Back Squat' },
+      ])],
     ];
     // The scan itself is eligibility's own (tested there): here it reports
     // quads for any session it is asked about.

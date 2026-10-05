@@ -38,6 +38,9 @@ const mockDb = {
   getRoutineExercisesWithDetails: jest.fn(async () => []),
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
   getCapabilityConstraints: jest.fn(async () => []),
+  // D219 (the learner's pause): the loader reads the ED-pattern flag before it
+  // runs the learner; a mock without it would read as a failed read, a pause.
+  getOpenEdPatternFlag: jest.fn(async () => null),
 };
 jest.mock('../../database', () => mockDb);
 jest.mock('../../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
