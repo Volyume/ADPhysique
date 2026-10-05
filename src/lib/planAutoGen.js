@@ -1355,6 +1355,14 @@ export function plannerV2PlanFacts(v2, routineIdBySession, thinByRoutine, slotsB
     readiness: v2.readiness,
     notes: v2.notes,
     limitedBy: v2.limitedBy,
+    // The session length facts, so a session the focus sets take past the
+    // person's length says so on the device (founder rule 2026-10-04: "if it
+    // goes over time they're made aware"; explain.js reads them).
+    sessionMinutesAtPeak: Object.fromEntries((Array.isArray(v2.sessionMinutesAtPeak) ? v2.sessionMinutesAtPeak : [])
+      .map((m, i) => [Object.prototype.hasOwnProperty.call(ids, `s${i}`) ? ids[`s${i}`] : `s${i}`, m])),
+    overTime: rekeyFlat(v2.overTime ?? {}, ids),
+    overCeilings: (Array.isArray(v2.overCeilings) ? v2.overCeilings : [])
+      .map((k) => (Object.prototype.hasOwnProperty.call(ids, k) ? ids[k] : k)),
   };
 }
 

@@ -34,10 +34,11 @@
  * internal reference, nothing cited that EVIDENCE does not cite; the suite
  * checks both), because EVIDENCE's text is written for the engineers.
  *
- * Facts that are NOT stored. programmes.plan_facts (plannerV2PlanFacts) keeps
- * the roles, targets, shares, caps, gap ranks, ladder, readiness, notes and
- * limitedBy; it does not keep sessionMinutesAtPeak, overTime or overCeilings,
- * which the planner's `v2` block carries. A line whose facts are missing is
+ * Stored facts. programmes.plan_facts (plannerV2PlanFacts) keeps the roles,
+ * targets, shares, caps, gap ranks, ladder, readiness, notes and limitedBy,
+ * and (since the lead's follow-up to lane B5) sessionMinutesAtPeak, overTime
+ * and overCeilings keyed by routine id. A plan saved before that keeps none
+ * of the last three. A line whose facts are missing is
  * left out, never guessed. The `length`, `over` and `ceilings` lines therefore
  * show wherever the planner's own block is given, and on a device once the
  * plan's facts store those three keys (keyed by routine id, as gapRanks is).
