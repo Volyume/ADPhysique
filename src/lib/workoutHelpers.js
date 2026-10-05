@@ -185,3 +185,74 @@ export function formatLoggedSet(set, units, exerciseType = 'weight_reps') {
   }
   return { text: `${set.weight}${units} × ${reps}`, showE1RM: true };
 }
+
+// ─── Entry provenance (D219 learner data path) ───────────────────────────────
+//
+// `workout_sets.entry_typed` (local INTEGER, cloud boolean; cloud counterpart
+// supabase/migrate_189_workout_sets_entry_typed.sql) is ONE extra fact about a
+// logged set, kept beside it and never in place of anything in it. Register
+// D219, "Founder answers on the learner design, 2026-10-05"; evidence
+// docs/audit/plan-builder-science-2026-10-04/05-LEARNER-RECON.md candidate C.
+//
+//   1     the person typed or changed the weight or the reps
+//   0     the weight and the reps are exactly what the screen filled in
+//   NULL  unknown: every set logged before the column existed, and every set
+//         logged by a path that cannot compare an entry with a fill (a watch
+//         event, an import, a row pulled from a copy that lacks the fact).
+//         Unknown is never guessed into 0 or 1.
+//
+// The recovery learner reads it to tell a logged number that is a measurement
+// (typed) from one the screen supplied and the person accepted (kept). It
+// describes how a number was entered, nothing about the person or their body,
+// and it never changes how a set's weight, reps or completion are saved or
+// shown.
+
+/**
+ * One stored or incoming flag as 1, 0 or null. Accepts the local integers and
+ * the cloud booleans; anything else (undefined, null, a string, 2, NaN) is
+ * null, so a malformed value reads as unknown rather than as a claim.
+ *
+ * @param {*} value
+ * @returns {1|0|null}
+ */
+export function normaliseEntryTyped(value) {
+  if (value === 1 || value === true) return 1;
+  if (value === 0 || value === false) return 0;
+  return null;
+}
+
+// An entry is blank (nothing in the box) or a number, whether it was kept as a
+// number or typed and held as text.
+const _blankEntry = (v) => v == null || v === '';
+const _sameReps = (a, b) => {
+  if (_blankEntry(a) || _blankEntry(b)) return _blankEntry(a) && _blankEntry(b);
+  return Number(a) === Number(b);
+};
+
+/**
+ * Whether the entry being logged was typed (or changed) by the person, or kept
+ * exactly as the screen filled it in. It is the comparison the logger already
+ * makes to decide whether an entry holds unsaved work
+ * (ActiveWorkoutScreen.hasInProgressSetEntry: the weight read as text, the reps
+ * against the seed), applied at the moment a set is logged. `seed` is what the
+ * screen last filled in by itself (the prescription's weight and reps, the
+ * carry-forward after a logged set, the first working set after a warm-up).
+ *
+ * `loggedReps` is the reps number that will be STORED. It differs from the
+ * entry's own reps only on a path that builds the number from more than the
+ * box: a cluster set (myo-reps, rest-pause) stores the sum of the mini-sets the
+ * person typed, so a cluster that added a mini-set is typed whatever the box
+ * said.
+ *
+ * Unknown is null: no entry, or no seed to compare it with.
+ *
+ * @param {{ entry: ?{weight: *, reps: *}, seed: ?{weight: *, reps: *}, loggedReps?: ?number }} input
+ * @returns {1|0|null}
+ */
+export function deriveEntryTyped({ entry, seed, loggedReps = null } = {}) {
+  if (!entry || typeof entry !== 'object' || !seed || typeof seed !== 'object') return null;
+  const sameWeight = String(entry.weight ?? '') === String(seed.weight ?? '');
+  const sameReps = _sameReps(entry.reps, seed.reps)
+    && (loggedReps == null || _sameReps(loggedReps, entry.reps));
+  return sameWeight && sameReps ? 0 : 1;
+}

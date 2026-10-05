@@ -17,6 +17,7 @@ import { BLOCK as PLAN_BLOCK } from './plan/science';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
 import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } from './effectiveMaintenance';
+import { normaliseEntryTyped } from './workoutHelpers';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -2871,14 +2872,13 @@ const SCHEMA_MIGRATIONS = [
   //             index; ALTER TABLE ADD COLUMN only, so every existing
   //             programme row reads NULL = "not a plan the new planner
   //             built" and is served exactly as before (FQ-4).
-  //   Applied remotely: NO. The cloud counterpart is
-  //             supabase/migrate_188_programmes_plan_facts.sql, WRITTEN, NOT
-  //             APPLIED (the founder's phrase "run against production" is
-  //             the only trigger). Until it is applied the push omits the
-  //             column (PLAN_FACTS_PUSH in src/lib/sync/featureFlags.js is
-  //             false), because the programmes upsert is one request with no
-  //             fallback; the pull reads the field defensively, so an absent
-  //             cloud column degrades to NULL with no crash.
+  //   Applied remotely: YES, 2026-10-05 11:14:30 UTC, under the founder's
+  //             "run against production: 188"
+  //             (supabase/migrate_188_programmes_plan_facts.sql); the push
+  //             carries the column since (PLAN_FACTS_PUSH in
+  //             src/lib/sync/featureFlags.js is true). The pull reads the
+  //             field defensively, so an absent cloud value degrades to NULL
+  //             with no crash.
   //   Safe to re-run: yes. The benign-duplicate-column skip
   //             (isProvenBenignMigrationError) covers a second run.
   //   Rollback: leave the column in place and ignore it; every reader treats
@@ -2886,6 +2886,37 @@ const SCHEMA_MIGRATIONS = [
   //             on a device that has not run this migration.
   [
     'ALTER TABLE programmes ADD COLUMN plan_facts TEXT',
+  ],
+  // D219 learner data path (register D219, "Founder answers on the learner
+  // design, 2026-10-05"; docs/audit/plan-builder-science-2026-10-04/
+  // 05-LEARNER-RECON.md candidate C and 06-LEARNER-SIGNAL-DESIGN.md section 2.3).
+  //   Purpose:  one nullable INTEGER column on `workout_sets`, `entry_typed`:
+  //             1 = the person typed or changed the weight or the reps of the
+  //             set, 0 = the weight and the reps are exactly what the screen
+  //             filled in, NULL = unknown (every row logged before this
+  //             migration, and every set logged by a path that cannot compare
+  //             an entry with a fill: a watch event, an import, a cloud row
+  //             that lacks the fact). The recovery learner reads it to tell a
+  //             measured number from one the screen supplied and the person
+  //             accepted. An extra fact only: no existing column, and nothing
+  //             about how a set is saved or shown, changes.
+  //   Applied locally: yes, on every device that reaches this migration
+  //             index; ALTER TABLE ADD COLUMN only, no default and no backfill,
+  //             so every existing row reads NULL = unknown.
+  //   Applied remotely: NO. The cloud counterpart is
+  //             supabase/migrate_189_workout_sets_entry_typed.sql, WRITTEN, NOT
+  //             APPLIED (the founder's phrase "run against production: 189" is
+  //             the only trigger). Until it is applied the push omits the
+  //             column (ENTRY_TYPED_PUSH in src/lib/sync/featureFlags.js is
+  //             false), because an unknown column fails a whole workout_sets
+  //             upsert chunk; the pull reads the field defensively, so an
+  //             absent cloud column degrades to NULL with no crash.
+  //   Safe to re-run: yes. The benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run.
+  //   Rollback: leave the column in place and ignore it; every reader treats
+  //             NULL as unknown and nothing depends on a value being present.
+  [
+    'ALTER TABLE workout_sets ADD COLUMN entry_typed INTEGER',
   ],
 ];
 
@@ -4157,6 +4188,17 @@ export async function getWorkoutSetsSince(userId, sinceMs, { completedOnly = tru
   return rows.map(rowToCamel);
 }
 
+// D219 learner data path (migrate_189): a workout_sets row in camelCase, with
+// `entryTyped` always present as 1 (typed or changed), 0 (kept exactly as the
+// screen filled it in) or null (unknown), never undefined and never a stray
+// value, so a reader can test it without guarding. The recovery learner reads
+// logged sets through getWorkoutSetsForWorkoutIds below.
+function setRowToCamel(row) {
+  const out = rowToCamel(row);
+  if (out) out.entryTyped = normaliseEntryTyped(out.entryTyped);
+  return out;
+}
+
 // LB-7: sets for a specific set of workout ids. The history list needs
 // per-workout counts for only the page it shows (most recent 50), so it
 // fetches those workouts' sets rather than every set ever logged.
@@ -4168,7 +4210,7 @@ export async function getWorkoutSetsForWorkoutIds(workoutIds) {
     `SELECT * FROM workout_sets WHERE workout_id IN (${placeholders}) ORDER BY created_at DESC`,
     workoutIds,
   );
-  return rows.map(rowToCamel);
+  return rows.map(setRowToCamel);
 }
 
 // Returns an array of `weeksBack` entries, ordered oldest → newest.
@@ -4530,8 +4572,8 @@ export async function createWorkoutSet(input) {
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, is_amrap, amrap_reps, left_reps, right_reps, evidence_class,
-       created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       entry_typed, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.userId,
@@ -4557,6 +4599,12 @@ export async function createWorkoutSet(input) {
       // (ActiveWorkoutScreen) from structure + exercise metadata, never
       // chosen by the user.
       data.evidenceClass ?? null,
+      // D219 learner data path (migrate_189): 1 = the person typed or changed
+      // the weight or the reps, 0 = kept exactly as the screen filled them in.
+      // Supplied only by a caller that compared the entry with its fill (the
+      // live screen); every other caller says nothing and the set is stored
+      // NULL = unknown, never guessed. Anything but 1/0/true/false is NULL.
+      normaliseEntryTyped(data.entryTyped),
       now,
       now,
     ],
@@ -4589,10 +4637,16 @@ const _SET_EDIT_COLUMNS = {
   leftReps: 'left_reps',
   rightReps: 'right_reps',
 };
+// D219 learner data path (migrate_189): the edits that make a set "typed"
+// (entry_typed = 1) are the ones that change its weight or its reps. A note, a
+// set type or an effort figure leaves the fact as it was.
+const _SET_ENTRY_KEYS = new Set(['weight', 'actualReps', 'leftReps', 'rightReps']);
 export async function updateWorkoutSet(setId, fields = {}) {
   if (!setId) return;
   const sets = [];
   const vals = [];
+  const entryChanged = [];
+  const entryChangedVals = [];
   for (const [key, col] of Object.entries(_SET_EDIT_COLUMNS)) {
     if (fields[key] === undefined) continue;
     let v = fields[key];
@@ -4602,8 +4656,23 @@ export async function updateWorkoutSet(setId, fields = {}) {
     else v = v ?? null;
     sets.push(`${col} = ?`);
     vals.push(v);
+    if (_SET_ENTRY_KEYS.has(key)) {
+      entryChanged.push(`${col} IS NOT ?`);
+      entryChangedVals.push(v);
+    }
   }
   if (!sets.length) return;
+  // An edit that CHANGES the weight or the reps makes the set typed: the person
+  // entered the number now stored. SQLite evaluates every right-hand side of
+  // an UPDATE against the row as it was before the statement, so these tests
+  // compare each new value with the stored one inside the same statement, with
+  // no read-then-write gap. A save that changes neither (the editor opened and
+  // saved as it was) leaves the fact as it was, whatever it was; an unknown
+  // (NULL) set that an edit does not change stays unknown, never guessed.
+  if (entryChanged.length) {
+    sets.push(`entry_typed = CASE WHEN ${entryChanged.join(' OR ')} THEN 1 ELSE entry_typed END`);
+    vals.push(...entryChangedVals);
+  }
   sets.push('updated_at = ?');
   vals.push(Date.now());
   vals.push(setId);
@@ -11418,9 +11487,17 @@ export async function insertWorkoutSetFromCloud(userId, s) {
   // Last-write-wins, same as insertWorkoutFromCloud: a stale cloud set must
   // not clobber a newer local edit (RIR, notes, post-set ratings).
   const cloudMs = _tsToMs(s.updated_at);
-  const existing = await d.getFirstAsync('SELECT updated_at, created_at FROM workout_sets WHERE id = ?', [s.id]);
+  const existing = await d.getFirstAsync('SELECT updated_at, created_at, entry_typed FROM workout_sets WHERE id = ?', [s.id]);
   const localMs = existing?.updated_at ?? null;
   if (localMs && cloudMs && localMs >= cloudMs) return;
+  // D219 learner data path (migrate_189): the cloud boolean (true = typed or
+  // changed, false = kept as filled in) maps to 1 / 0 when it is present. A
+  // cloud NULL, an absent key (the column not yet applied, or a row pushed by a
+  // build or a moment that omitted it) or any other value is "not present":
+  // the local value stands, so a cloud NULL never overwrites a local one. The
+  // INSERT OR REPLACE below rewrites the whole row, so the value has to be
+  // carried through it explicitly or the replace would reset it to NULL.
+  const entryTyped = normaliseEntryTyped(s.entry_typed) ?? normaliseEntryTyped(existing?.entry_typed);
   // PD-6 (bundle 2 prelude): restore used to stamp Date.now() as
   // created_at, so every restored set's chronology collapsed to restore
   // time and created_at-ordered consumers (the PR path) saw history in
@@ -11435,8 +11512,8 @@ export async function insertWorkoutSetFromCloud(userId, s) {
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, post_set_pump, post_set_muscle_connection, joint_discomfort,
        is_amrap, amrap_reps, missed_reps, left_reps, right_reps, evidence_class,
-       created_at, updated_at, deleted_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       entry_typed, created_at, updated_at, deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       s.id, userId, s.workout_id, exerciseId, exerciseName,
       s.set_number ?? 1, s.set_type ?? 'straight',
@@ -11452,6 +11529,7 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       // omitted it under CIRCUIT_SYNC_COLUMNS_ENABLED=false) degrades to
       // null - conventional, same as pre-campaign.
       s.evidence_class ?? null,
+      entryTyped,
       createdAt, cloudMs ?? Date.now(),
       s.deleted_at ? new Date(s.deleted_at).getTime() : null,
     ],

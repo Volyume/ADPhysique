@@ -23,6 +23,10 @@
  * 2026-10-04 (D219 lane S1): programmes.plan_facts was appended after both,
  * so the window is the "last 3" and the fixture carries a minimal programmes
  * table for that ALTER (a mechanical +1 re-anchor; nothing else changed).
+ *
+ * 2026-10-05 (D219 lane LR2): workout_sets.entry_typed was appended after
+ * those, so the window is the "last 4" (a mechanical +1 re-anchor again; the
+ * fixture's workout_sets table already carries what that ALTER needs).
  */
 const { DatabaseSync } = require('node:sqlite');
 const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
@@ -70,7 +74,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 3);
+  await runLast(raw, 4);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -84,13 +88,13 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 3);
+  const total = await runLast(raw, 4);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
   };
 
-  raw.exec(`PRAGMA user_version = ${total - 3}`);
+  raw.exec(`PRAGMA user_version = ${total - 4}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
 
   expect(raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1')).toEqual(before.re);
@@ -99,7 +103,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 3);
+  await runLast(raw, 4);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

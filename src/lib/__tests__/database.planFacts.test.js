@@ -110,8 +110,12 @@ describe('the local migration', () => {
   test('a pre-migration database upgrades: every existing programme reads NULL', async () => {
     const raw = new DatabaseSync(':memory:');
     raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
+    // 2026-10-05 (D219 lane LR2): workout_sets.entry_typed was appended after
+    // plan_facts, so the window is the last 2 and the fixture carries the
+    // workout_sets table that later ALTER needs (a mechanical +1 re-anchor).
+    raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     await runMigrations(adaptRaw(raw));
 
     const row = raw.prepare('SELECT id, name, updated_at, plan_facts FROM programmes WHERE id = ?').get('p-old');
@@ -122,13 +126,14 @@ describe('the local migration', () => {
   test('is idempotent: a second run changes nothing and throws on neither run', async () => {
     const raw = new DatabaseSync(':memory:');
     raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
+    raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
     raw.prepare('INSERT INTO programmes (id, name, updated_at) VALUES (?, ?, ?)').run('p-old', 'Old plan', 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     await runMigrations(adaptRaw(raw));
     raw.prepare('UPDATE programmes SET plan_facts = ? WHERE id = ?').run('{"version":2}', 'p-old');
     const before = raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old');
 
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     expect(raw.prepare('SELECT * FROM programmes WHERE id = ?').get('p-old')).toEqual(before);

@@ -15,7 +15,8 @@
 
 import { getSupabaseClient } from './supabase';
 import { isNetworkNoise } from './observability/networkNoise';
-import { CIRCUIT_SYNC_COLUMNS_ENABLED, PLAN_FACTS_PUSH } from './sync/featureFlags';
+import { CIRCUIT_SYNC_COLUMNS_ENABLED, PLAN_FACTS_PUSH, ENTRY_TYPED_PUSH } from './sync/featureFlags';
+import { normaliseEntryTyped } from './workoutHelpers';
 import {
   getAllWorkouts,
   getWorkoutById,
@@ -546,6 +547,16 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
   }
 }
 
+// D219 learner data path (migrate_189): a set's entry_typed push field. The
+// local 1 / 0 go up as the cloud boolean (true = the person typed or changed the
+// weight or reps, false = kept exactly as the screen filled them in). An
+// unknown (NULL) set yields {} so the key is OMITTED from its row, and
+// _upsertSets keeps keyless rows out of any request that carries the key.
+function entryTypedPushField(raw) {
+  const v = normaliseEntryTyped(raw);
+  return v == null ? {} : { entry_typed: v === 1 };
+}
+
 async function _upsertSets(sb, supabaseUserId, sets) {
   if (!sets?.length) return;
   const rows = sets.map(s => ({
@@ -583,6 +594,12 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     // CIRCUIT_SYNC_COLUMNS_ENABLED is false - an unknown column fails the
     // whole upsert chunk.
     ...(CIRCUIT_SYNC_COLUMNS_ENABLED ? { evidence_class: s.evidenceClass ?? null } : {}),
+    // D219 learner data path (migrate_189): whether the person typed or changed
+    // the weight or reps, or kept them as the screen filled them in. Cloud
+    // counterpart WRITTEN, NOT APPLIED, so the key is OMITTED from every row
+    // while ENTRY_TYPED_PUSH is false - an unknown column fails the whole
+    // upsert chunk - and, once on, only for a set whose value is known.
+    ...(ENTRY_TYPED_PUSH ? entryTypedPushField(s.entryTyped) : {}),
     // PD-6 (bundle 2 prelude): carry the set's TRUE creation time to the
     // cloud. Without this the cloud column held its first-push NOW()
     // default, so a restore could only ever guess. Forward-only: rows
@@ -590,11 +607,25 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     created_at: new Date(s.createdAt ?? s.updatedAt ?? Date.now()).toISOString(),
     updated_at: new Date(s.updatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
   }));
+  // D219 (migrate_189): PostgREST writes one column list for a whole request
+  // (supabase-js sends the union of every row's keys) and fills NULL into a
+  // column for a row that lacks it, so a set whose entry_typed is unknown must
+  // never travel in the same request as sets that carry it: the unknown would
+  // erase a known value already in the cloud. Rows that carry the key go in
+  // requests of their own. While ENTRY_TYPED_PUSH is off no row carries it and
+  // this is the one group of rows it always was, in the same order and chunks.
+  const carrying = rows.filter((r) => 'entry_typed' in r);
+  const groups = carrying.length === 0 || carrying.length === rows.length
+    ? [rows]
+    : [carrying, rows.filter((r) => !('entry_typed' in r))];
   // Chunk to avoid hitting Supabase row limits
+  const chunks = [];
+  for (const group of groups) {
+    for (let i = 0; i < group.length; i += 200) chunks.push(group.slice(i, i + 200));
+  }
   let chunkFailures = 0;
   let lastChunkError = null;
-  for (let i = 0; i < rows.length; i += 200) {
-    const chunk = rows.slice(i, i + 200);
+  for (const chunk of chunks) {
     const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync._upsertSets', error);

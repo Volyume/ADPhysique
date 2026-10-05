@@ -79,6 +79,10 @@ function freshDb() {
   // 18, a mechanical re-anchor) and the table that ALTER targets has to exist
   // here. Empty is enough: this suite asserts nothing about it.
   raw.exec('CREATE TABLE programmes (id TEXT PRIMARY KEY, name TEXT);');
+  // D219 lane LR2 (2026-10-05): workout_sets.entry_typed was appended after
+  // that, so the window widens by one more (runLast 20 -> 21, rerun 18 -> 19,
+  // a mechanical re-anchor); the workout_sets table above already carries what
+  // that ALTER needs.
   return raw;
 }
 
@@ -101,7 +105,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 20).then(() => {
+  return runLast(raw, 21).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -116,9 +120,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 20); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
+  await runLast(raw, 21); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 18}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 19}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

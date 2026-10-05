@@ -1,8 +1,8 @@
 /**
  * Sync-layer feature flags.
  *
- * Two flags: CIRCUIT_SYNC_COLUMNS_ENABLED (below) and PLAN_FACTS_PUSH (end of
- * file). The first gates whether the three
+ * Three flags: CIRCUIT_SYNC_COLUMNS_ENABLED (below), PLAN_FACTS_PUSH and
+ * ENTRY_TYPED_PUSH (end of file). The first gates whether the three
  * EL-9/EL-7 circuit columns (routine_exercises.group_kind,
  * routine_exercises.round_rest_seconds, workout_sets.evidence_class -
  * docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md) are included
@@ -47,3 +47,28 @@ export const CIRCUIT_SYNC_COLUMNS_ENABLED = true;
  * (supabase/README status block, APPLIED 2026-10-05).
  */
 export const PLAN_FACTS_PUSH = true;
+
+/**
+ * ENTRY_TYPED_PUSH (D219 learner data path, lane LR2; the EL-9 pattern above):
+ * gates whether workout_sets.entry_typed, the fact of whether the person typed
+ * or changed a set's weight or reps (true) or kept it exactly as the screen
+ * filled it in (false), goes in the workout_sets upsert.
+ *
+ * The local column exists (SCHEMA_MIGRATIONS in database.js) and its cloud
+ * counterpart, supabase/migrate_189_workout_sets_entry_typed.sql, is WRITTEN,
+ * NOT APPLIED (CLAUDE.md Section 2: only the founder's exact phrase
+ * "run against production: 189" applies it). Pushing the column against a cloud
+ * schema that lacks it fails the WHOLE upsert chunk in Postgres, and with it
+ * the workout's sets (sync.js _upsertSets throws after every chunk so the
+ * push watermark holds), so while this flag is off the key is omitted from
+ * every set and every other field syncs normally. The pull side already reads
+ * the field defensively (an absent key is NULL, and a cloud NULL never
+ * overwrites a local value).
+ *
+ * Flip this to true ONLY in the landing after the founder has run migrate_189
+ * against production and its presence has been verified read-only (the
+ * supabase/README status block says APPLIED, the migration header is edited to
+ * match, and the guard in src/lib/__tests__/sync.entryTypedPush.test.js is
+ * re-pinned in the same landing).
+ */
+export const ENTRY_TYPED_PUSH = false;

@@ -1,0 +1,101 @@
+-- migrate_189_workout_sets_entry_typed.sql
+--
+-- Tables and columns changing: public.workout_sets gains ONE column,
+-- entry_typed (boolean, nullable, no default, no backfill, no CHECK).
+-- Additive, not destructive. Environment: the EU-Dublin production project
+-- (and any staging copy), applied by hand only.
+--
+-- Purpose:           D219 learner data path (register D219, "Founder answers
+--                    on the learner design, 2026-10-05"; evidence
+--                    docs/audit/plan-builder-science-2026-10-04/
+--                    05-LEARNER-RECON.md candidate C; design
+--                    06-LEARNER-SIGNAL-DESIGN.md section 2.3). ONE extra fact
+--                    about a logged set, kept beside it and never in place of
+--                    anything in it:
+--                      true   the person typed or changed the weight or the
+--                             reps of this set
+--                      false  the weight and the reps are exactly what the
+--                             screen filled in (the prescription, or the
+--                             previous set carried forward)
+--                      NULL   unknown: every set logged before the fact was
+--                             recorded, and every set logged by a path that
+--                             cannot compare an entry with a fill (a watch
+--                             event, an import)
+--                    The recovery learner reads it to tell a logged number
+--                    that is a measurement (typed) from one the screen
+--                    supplied and the person accepted (kept): a lifter who
+--                    logs as prescribed leaves no trace of how recovered the
+--                    muscle was (register D210 addendum 3). It is never
+--                    guessed: an unknown stays NULL. It is an extra fact
+--                    only; no existing column changes and nothing about how a
+--                    set's weight, reps or completion is saved or shown
+--                    changes. The local column is `workout_sets.entry_typed`
+--                    INTEGER (1 / 0 / NULL); the cloud type is boolean, as
+--                    `failed` and `is_amrap` already are on this table.
+--
+--                    Push:  src/lib/sync.js _upsertSets. The key is OMITTED
+--                           from every set's payload while ENTRY_TYPED_PUSH
+--                           (src/lib/sync/featureFlags.js) is false, which is
+--                           how it ships: an unknown column fails the WHOLE
+--                           upsert chunk in Postgres, and the workout's sets
+--                           with it. Once on, a set whose value is unknown
+--                           omits the key too, and travels in a request apart
+--                           from the sets that carry it (PostgREST fills NULL
+--                           into a column for a row that lacks it, so an
+--                           unknown must never share a request with a known
+--                           value it could erase). The flag flips in the
+--                           landing AFTER this file is applied and verified.
+--                    Pull:  src/lib/database.js insertWorkoutSetFromCloud
+--                           maps true / false to 1 / 0 when present. A cloud
+--                           NULL, an absent key or any other value is "not
+--                           present": the local value stands, so a cloud NULL
+--                           never overwrites a local value.
+--
+-- Applied locally:   YES (database.js SCHEMA_MIGRATIONS: one ALTER TABLE ADD
+--                    COLUMN on workout_sets, entry_typed INTEGER, no backfill;
+--                    every existing row is correctly NULL = unknown).
+-- Applied remotely:  NO (UNAPPLIED; apply only on the founder's
+--                    "run against production: 189"). STATUS: UNAPPLIED,
+--                    written 2026-10-05 by D219 lane LR2. Applied only on the
+--                    founder's exact phrase "run against production"
+--                    (CLAUDE.md section 2, "Database schema"); the app never
+--                    runs it and the deploy workflow is manual-dispatch only.
+--                    The route is the Claude session's Supabase connector
+--                    under the checksum protocol (docs/rules/supabase.md,
+--                    "Cloud route"; supabase/README.md, the 170 status
+--                    block). After the apply: read-only verification (the
+--                    acceptance SELECT below), this header edited to the
+--                    applied state, the README ledger row and the CLAUDE.md
+--                    "applied through" line updated, and ENTRY_TYPED_PUSH
+--                    flipped in the same landing (with the guard in
+--                    src/lib/__tests__/sync.entryTypedPush.test.js re-pinned).
+-- Additive and idempotent: yes (ADD COLUMN IF NOT EXISTS, nullable, no default,
+-- no backfill: a metadata-only change, no table rewrite). Safe to re-run: yes
+-- (a no-op when the column is present).
+-- Rollback:          ALTER TABLE public.workout_sets DROP COLUMN entry_typed;
+--                    The column is nullable and unread by any RLS policy,
+--                    trigger, view or function (the erasure RPC deletes
+--                    workout_sets by user_id, so the column is erased with
+--                    its row), so dropping it strands nothing: every reader
+--                    treats a NULL as unknown. Set ENTRY_TYPED_PUSH back to
+--                    false BEFORE a rollback, or the next workout_sets upsert
+--                    rejects on the unknown column.
+-- GDPR note:         the fact describes how a logged number was entered, not
+--                    the person: no name, no bodyweight, no measurement, no
+--                    private note, no food or calorie figure. The column sits
+--                    in the existing per-user row already covered by the
+--                    workout_sets row-level-security policy and by the
+--                    account-erasure path, in the EU-Dublin project (data
+--                    residency unchanged). No new table, so no new policy is
+--                    needed.
+
+ALTER TABLE public.workout_sets
+  ADD COLUMN IF NOT EXISTS entry_typed boolean;
+
+-- Verification: prints the column when present (expect boolean, nullable YES,
+-- no default).
+SELECT column_name, data_type, is_nullable, column_default
+  FROM information_schema.columns
+ WHERE table_schema = 'public'
+   AND table_name = 'workout_sets'
+   AND column_name = 'entry_typed';

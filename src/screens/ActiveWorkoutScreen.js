@@ -91,6 +91,7 @@ import {
   setNumberForKind,
   validateSetEntryValue,
   shouldConfirmBeforeFinish,
+  deriveEntryTyped,
 } from '../lib/workoutHelpers';
 import {
   circuitRoundState,
@@ -2841,6 +2842,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // circuit-grouped or ballistic exercise (it is excluded from
         // evidence everywhere by set_type anyway).
         evidenceClass: currentSet.setType === 'warmup' ? null : currentEvidenceClass,
+        // D219 learner data path (migrate_189, register D219 "Founder answers
+        // on the learner design, 2026-10-05"): one extra fact about this set,
+        // from the comparison hasInProgressSetEntry already makes, taken at the
+        // tap. 1 = the person typed or changed the weight or the reps, 0 = both
+        // are exactly what the screen filled in (seededEntryRef), null = no
+        // seed to compare with. A cluster stores the sum of the mini-sets the
+        // person typed, so loggedReps is what makes it typed. It records how
+        // the numbers were entered and changes nothing about how they are
+        // saved or shown.
+        entryTyped: deriveEntryTyped({
+          entry: currentSet,
+          seed: seededEntryRef.current,
+          loggedReps: effectiveReps,
+        }),
       });
 
       const setData = {

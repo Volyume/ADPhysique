@@ -3148,3 +3148,168 @@ describe('Community discovery screens mount with their route params', () => {
     }
   });
 });
+
+// ─── D219 learner data path (lane LR2, 2026-10-05) ───────────────────────────
+//
+// register D219, "Founder answers on the learner design, 2026-10-05";
+// docs/audit/plan-builder-science-2026-10-04/05-LEARNER-RECON.md candidate C;
+// cloud counterpart supabase/migrate_189_workout_sets_entry_typed.sql (WRITTEN,
+// NOT APPLIED). The real ActiveWorkoutScreen is mounted, the real "Log set"
+// control is pressed, and what reaches createWorkoutSet is captured: the
+// logger records, as one extra fact, whether the entry was typed or changed by
+// the person (1) or kept exactly as the screen filled it in (0). It changes
+// nothing about the weight and reps that are saved. Self-contained helpers
+// (the deliberate small duplication the blocks above make).
+describe('D219 learner data path: the logger records whether an entry was typed or kept', () => {
+  async function actFlush(fn) {
+    await TestRenderer.act(async () => {
+      if (fn) await fn();
+      for (let i = 0; i < 15; i++) await Promise.resolve();
+      await new Promise(r => setImmediate(r));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    });
+  }
+
+  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
+  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
+  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
+
+  function mkEntry({ exerciseId, repsMin = 8, repsMax = 15, sets = 4 }) {
+    return {
+      exercise: { id: exerciseId, name: 'Bench Press', equipment: 'Barbell', primaryMuscle: 'chest', exerciseType: 'weight_reps', exerciseCategory: 'compound' },
+      routineExercise: { id: `re-${exerciseId}`, recommendedSets: sets, recommendedRepsMin: repsMin, recommendedRepsMax: repsMax },
+      sets: [],
+    };
+  }
+
+  // One comparable history session (80x12 / 80x10 / 75x10) so the first box is
+  // filled in by the resolver (80), exactly as the Campaign 20 block above.
+  function mockHistory(database, exerciseId) {
+    const at = Date.now() - 3 * 86400000;
+    const histSets = [
+      { id: 'h1', exerciseId, workoutId: 'histW1', setNumber: 1, setType: 'straight', actualReps: 12, weight: 80, createdAt: at, targetRepsMin: 8, targetRepsMax: 15 },
+      { id: 'h2', exerciseId, workoutId: 'histW1', setNumber: 2, setType: 'straight', actualReps: 10, weight: 80, createdAt: at, targetRepsMin: 8, targetRepsMax: 15 },
+      { id: 'h3', exerciseId, workoutId: 'histW1', setNumber: 3, setType: 'straight', actualReps: 10, weight: 75, createdAt: at, targetRepsMin: 8, targetRepsMax: 15 },
+    ];
+    database.getLastNWorkoutSets = async () => [histSets];
+    database.getWorkoutById = async (id) => ({ id, startedAt: at, sessionDifficulty: 2 });
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+  }
+
+  // Replace the writer with a recorder: what the screen hands to the database
+  // layer is exactly what is captured.
+  function recordWrites(database) {
+    const calls = [];
+    database.createWorkoutSet = jest.fn(async (data) => {
+      calls.push(data);
+      return { id: `set-d219-${calls.length}`, ...data, createdAt: Date.now(), updatedAt: Date.now() };
+    });
+    return calls;
+  }
+
+  function baseState(entry) {
+    return {
+      user: { id: 'u-d219', isLocal: false },
+      session: { user: { id: 'u-d219' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'C', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w-d219', userId: 'u-d219', routineId: 'r-d219', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [entry],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    };
+  }
+
+  async function withMountedLogger(exerciseId, run) {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockHistory(database, exerciseId);
+    const calls = recordWrites(database);
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree).not.toBeNull();
+      await run({ tree, calls });
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  }
+
+  const tapLog = (tree) => actFlush(() => logButton(tree).props.onPress());
+  const typeWeight = (tree, value) => actFlush(() => { weightInput(tree).props.onChangeText(String(value)); });
+  const typeReps = (tree, value) => actFlush(() => { repsInput(tree).props.onChangeText(String(value)); });
+
+  test('a set logged with the boxes exactly as the screen filled them in stores 0, and saves the same weight and reps', async () => {
+    await withMountedLogger('exET1', async ({ tree, calls }) => {
+      expect(weightInput(tree).props.value).toBe('80'); // filled in by the resolver
+      const filledReps = Number(repsInput(tree).props.value);
+      expect(filledReps).toBeGreaterThan(0);
+
+      await tapLog(tree);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].entryTyped).toBe(0);
+      expect(calls[0].weight).toBe(80);
+      expect(calls[0].actualReps).toBe(filledReps);
+    });
+  });
+
+  test('a weight the person typed stores 1', async () => {
+    await withMountedLogger('exET2', async ({ tree, calls }) => {
+      await typeWeight(tree, 82.5);
+      await tapLog(tree);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].entryTyped).toBe(1);
+      expect(calls[0].weight).toBe(82.5);
+    });
+  });
+
+  test('a rep count the person changed stores 1, whatever the weight', async () => {
+    await withMountedLogger('exET3', async ({ tree, calls }) => {
+      const filledReps = Number(repsInput(tree).props.value);
+      await typeReps(tree, filledReps + 1);
+      await tapLog(tree);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].entryTyped).toBe(1);
+      expect(calls[0].weight).toBe(80);
+      expect(calls[0].actualReps).toBe(filledReps + 1);
+    });
+  });
+
+  test('the same weight typed over the fill is not a change: it stores 0, as the unsaved-work check would read it', async () => {
+    await withMountedLogger('exET4', async ({ tree, calls }) => {
+      await typeWeight(tree, 80);
+      await tapLog(tree);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].entryTyped).toBe(0);
+    });
+  });
+
+  test('the next set is filled in from the one just logged: kept stays 0, a change is 1, per set', async () => {
+    await withMountedLogger('exET5', async ({ tree, calls }) => {
+      await typeWeight(tree, 82.5);
+      await tapLog(tree); // set 1: typed
+      expect(weightInput(tree).props.value).toBe('82.5'); // the screen carries it into the next box
+
+      await tapLog(tree); // set 2: nothing touched, the fill kept
+      expect(weightInput(tree).props.value).toBe('82.5');
+
+      await typeWeight(tree, 85);
+      await tapLog(tree); // set 3: typed again
+
+      expect(calls.map((c) => c.entryTyped)).toEqual([1, 0, 1]);
+      expect(calls.map((c) => c.weight)).toEqual([82.5, 82.5, 85]);
+    });
+  });
+});

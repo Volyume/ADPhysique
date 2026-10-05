@@ -57,6 +57,10 @@ function withExerciseIntent(raw) {
   raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, name TEXT)');
   raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY)');
   raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT)');
+  // 2026-10-05 (D219 lane LR2): workout_sets.entry_typed is appended after this
+  // file's window, so every last-N window and user_version reset moves by one
+  // (a mechanical +1 re-anchor); the workout_sets table below already carries
+  // what that ALTER needs.
   raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
   return raw;
 }
@@ -64,7 +68,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 12}`);
+  raw.exec(`PRAGMA user_version = ${total - 13}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -89,7 +93,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 11}`);
+  raw.exec(`PRAGMA user_version = ${total - 12}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()
