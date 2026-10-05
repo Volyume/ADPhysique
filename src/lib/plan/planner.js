@@ -28,6 +28,16 @@
  * then the rotation penalty within 0.05 of the best, then the expected
  * growth, then the most recognisable structure, then the authored order.
  *
+ * Fixed-structure mode (`inputs.fixedSessions`, register D219 build ruling 5):
+ * a library or kit plan keeps its authored sessions and exercises. The only
+ * family is those sessions, in that order (key 'fixed'); a muscle's sessions
+ * are exactly the sessions whose exercises train it, so the session-count
+ * search and the readiness fixes that add or remove a session do not run
+ * (nor does the ramp, which would drop an exercise); every authored exercise
+ * is kept in its session and its order, opened at its 2-set floor at least;
+ * the sets above the floors, the climb, the light and heavy split, the
+ * rotation order and the readiness check run as for any plan.
+ *
  * The output keeps planEngine.generatePlan's shape (so the existing save and
  * activation paths can write it) and adds `v2`: the facts the plan carries
  * (roles, every week's targets, the session shares, the session caps, the
@@ -80,27 +90,39 @@ const muscleIndex = (m) => {
  * @param {number[]|null} [inputs.ownGaps]          the person's own median gap after each position
  * @param {number|null} [inputs.learnedFactor]      already through the learner's gate and S F14's safeguards
  * @param {boolean} [inputs.isStrength]
+ * @param {Array<{ name: string, routineId?: string|null, exercises: Array<{ exerciseId?: string|null, name: string, muscle: string, kind?: string, credits?: Object<string, number> }> }>} [inputs.fixedSessions]
+ *        fixed-structure mode (register D219, build ruling 5), for a library or kit plan that keeps its authored
+ *        sessions and exercises: 2 to 6 sessions, in the person's order, each with its exercises in their order.
+ *        The only family is those sessions (key 'fixed'); a muscle's sessions are exactly the sessions whose
+ *        exercises train it; every exercise is kept, in its session and its order, opened at its 2-set floor at
+ *        least; the planner sets the sets, the climb, the light and heavy split and the rotation order around
+ *        them. `choices` and `daysPerWeek` are not read. Throws a RangeError for fewer than 2 or more than 6
+ *        sessions and a TypeError for a session without an exercise list or an exercise without a muscle: a plan
+ *        is never built over a different structure than the person's. Absent or empty: the planner is unchanged.
  */
 export function buildPlan(inputs) {
-  const n = clampDays(inputs);
+  const fixed = prepareFixed(inputs.fixedSessions);
+  const n = fixed ? fixed.family.sessions.length : clampDays(inputs);
   const focusMuscles = (inputs.focusMuscles || []).filter((m) => PLAN_MUSCLES.includes(m));
-  const division = divisionFamily(inputs.divisionMatrix, inputs.goal, n);
-  const families = division ? [division] : familiesFor(n, { focusMuscles });
-  const roles = assignRoles({
+  const division = fixed ? null : divisionFamily(inputs.divisionMatrix, inputs.goal, n);
+  const families = fixed ? [fixed.family] : (division ? [division] : familiesFor(n, { focusMuscles }));
+  const assigned = assignRoles({
     goal: inputs.goal,
     focusMuscles,
     addedMuscles: inputs.addedMuscles,
     experience: inputs.experience,
     firstBlock: inputs.firstBlock !== false,
     nutritionPhase: inputs.nutritionPhase,
-    trainedMuscles: division ? Array.from(new Set(division.sessions.flatMap((s) => s.muscles))) : null,
+    trainedMuscles: fixed ? fixed.muscles : (division ? Array.from(new Set(division.sessions.flatMap((s) => s.muscles))) : null),
   });
+  const roles = fixed ? heldWhereAuthored(assigned, fixed) : assigned;
   const factor = Number.isFinite(inputs.learnedFactor)
     ? Math.min(LEARNED_FACTOR.max, Math.max(LEARNED_FACTOR.min, inputs.learnedFactor))
     : null;
   const ctx = {
     n,
     roles,
+    fixed,
     choices: inputs.choices || {},
     equipment: inputs.equipment || 'full_gym',
     sessionLengthMinutes: inputs.sessionLengthMinutes > 0 ? inputs.sessionLengthMinutes : 60,
@@ -181,17 +203,101 @@ function clampDays(inputs) {
   return n;
 }
 
+// ── fixed-structure mode (register D219, build ruling 5) ────────────────
+
+// The week's rotation search is exhaustive and built for 2 to 6 sessions
+// (design 4.6), the same range every generated plan has (clampDays).
+const FIXED_SESSIONS = Object.freeze({ min: 2, max: 6 });
+
+/**
+ * The person's own structure, checked and indexed: a library or kit plan's
+ * sessions and exercises, which the planner sets sets, climb and order around
+ * and never adds to, removes from or reorders inside. Null when there is none
+ * (the planner builds as ever). Throws, rather than build over a different
+ * structure than the person's, when the list cannot be one.
+ *
+ * @returns {null|{ family: object, sessionChoices: Array<Object<string, object[]>>, muscles: string[],
+ *   sessionsFor: (m: string) => number[], floorSum: (m: string, si: number) => number, floorNeed: (m: string) => number }}
+ */
+function prepareFixed(list) {
+  if (!Array.isArray(list) || list.length === 0) return null;
+  if (list.length < FIXED_SESSIONS.min || list.length > FIXED_SESSIONS.max) {
+    throw new RangeError(`buildPlan: fixedSessions needs ${FIXED_SESSIONS.min} to ${FIXED_SESSIONS.max} sessions, got ${list.length}`);
+  }
+  const sessionChoices = [];
+  const sessions = [];
+  const muscles = [];
+  list.forEach((sess, si) => {
+    if (!sess || !Array.isArray(sess.exercises)) throw new TypeError(`buildPlan: fixedSessions[${si}] needs an exercises list`);
+    const byMuscle = {};
+    sess.exercises.forEach((e, i) => {
+      if (!e || typeof e.muscle !== 'string' || e.muscle === '' || typeof e.name !== 'string') {
+        throw new TypeError(`buildPlan: fixedSessions[${si}].exercises[${i}] needs a name and a muscle`);
+      }
+      // authoredIndex: the exercise's place in its session, so the session's
+      // own order can be put back after the sets are placed.
+      (byMuscle[e.muscle] = byMuscle[e.muscle] || []).push({ ...e, authoredIndex: i });
+      if (!muscles.includes(e.muscle)) muscles.push(e.muscle);
+    });
+    sessionChoices.push(byMuscle);
+    sessions.push({
+      name: typeof sess.name === 'string' && sess.name ? sess.name : `Session ${si + 1}`,
+      routineId: sess.routineId ?? null,
+      muscles: Object.keys(byMuscle),
+    });
+  });
+  const floorSum = (m, si) => SETS_PER_EXERCISE.floor * (sessionChoices[si]?.[m]?.length || 0);
+  return {
+    family: { key: 'fixed', label: 'Your own sessions', recognisable: 0, fixed: true, sessions },
+    sessionChoices,
+    muscles,
+    // Exactly the sessions whose exercises train the muscle, in session order.
+    sessionsFor: (m) => sessionChoices.map((by, si) => (by[m] ? si : -1)).filter((si) => si >= 0),
+    floorSum,
+    // The most sets the person's own exercises for a muscle hold at their floors in one session.
+    floorNeed: (m) => Math.max(0, ...sessionChoices.map((_by, si) => floorSum(m, si))),
+  };
+}
+
+/**
+ * An authored exercise is always kept, so every authored muscle needs a role
+ * that trains it directly. A muscle the goal would only hold on other work
+ * (traps, forearms, front delts, adductors), an opt-in muscle the person has
+ * not added (neck, tibialis) or a key outside the plan's muscles is held at
+ * maintenance on its own exercise: kept at its floors, never grown (design
+ * 4.2: the person's own exercise is the person's choice to train it).
+ */
+function heldWhereAuthored(roles, fixed) {
+  const out = { ...roles };
+  for (const m of fixed.muscles) {
+    if (out[m]?.direct) continue;
+    out[m] = {
+      role: ROLE.MAINTENANCE,
+      weight: 0,
+      peak: out[m]?.peak ?? ROLE_TARGETS.maintenance.target,
+      growthFloor: 0,
+      direct: true,
+    };
+  }
+  return out;
+}
+
 // ── one family ──────────────────────────────────────────────────────────
 
 function evaluateFamily(family, ctx) {
   const n = family.sessions.length;
   const roles = { ...ctx.roles };
+  // Fixed-structure mode: the person's own sessions and exercises (see
+  // buildPlan). A muscle's sessions are exactly the sessions whose exercises
+  // train it, its exercises are the ones authored, and nothing below adds a
+  // session, removes one or drops an exercise.
+  const fixed = ctx.fixed || null;
   const allowedBy = {};
   for (const m of Object.keys(roles)) {
     if (!roles[m].direct) continue;
-    allowedBy[m] = sessionsAllowing(family, m, { focus: roles[m].role === ROLE.FOCUS });
+    allowedBy[m] = fixed ? fixed.sessionsFor(m) : sessionsAllowing(family, m, { focus: roles[m].role === ROLE.FOCUS });
   }
-  const trainable = Object.keys(allowedBy).filter((m) => allowedBy[m].length > 0 && (ctx.choices[m] || []).length > 0)
+  const trainable = Object.keys(allowedBy).filter((m) => allowedBy[m].length > 0 && (fixed || (ctx.choices[m] || []).length > 0))
     .sort((a, b) => muscleIndex(a) - muscleIndex(b));
 
 
@@ -207,7 +313,7 @@ function evaluateFamily(family, ctx) {
     // glutes, chest, back) in at least two sessions, as full-body programming
     // does; design 4.4's preference for two starts only at four sessions.
     const fullBodyBig = family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m);
-    k[m] = Math.min(allowedBy[m].length, two || fullBodyBig ? 2 : 1);
+    k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, two || fullBodyBig ? 2 : 1);
   }
   const state = {
     k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
@@ -235,6 +341,19 @@ function evaluateFamily(family, ctx) {
         delete caps[m];
       }
     }
+    // Fixed structure: a session whose authored exercises for a muscle hold
+    // more than the session cap at their 2-set floors (5 or more exercises of
+    // one muscle in a session) keeps them all, so the plan's own cap for the
+    // muscle is raised to what they hold: prescribe() reads it, and so serves
+    // the very sets the planner placed.
+    if (fixed) {
+      for (const m of trainable) {
+        const need = fixed.floorNeed(m);
+        if (need > (caps[m]?.direct ?? PER_SESSION.directCap)) {
+          caps[m] = { direct: need, fractional: caps[m]?.fractional ?? PER_SESSION.fractionalCap };
+        }
+      }
+    }
     state.sessionCaps = caps;
     const exposures = exposuresNow();
     const alloc = allocatePeakWeek({
@@ -242,6 +361,7 @@ function evaluateFamily(family, ctx) {
       roles: state.roles,
       exposures,
       choices: ctx.choices,
+      sessionChoices: fixed ? fixed.sessionChoices : null,
       lightCaps: state.lightCaps,
       maxSlots: state.maxSlots,
       sessionCaps: state.sessionCaps,
@@ -249,7 +369,7 @@ function evaluateFamily(family, ctx) {
       equipment: ctx.equipment,
       gapAfter: gapAfterSessions(state.placementOrder, ctx.ownGaps || ctx.typical),
     });
-    balanceSlots(alloc, state.roles);
+    balanceSlots(alloc, state.roles, fixed !== null);
     // An exposure that took no sets (it did not fit) is not one: the split
     // and the order read the sessions the muscle is really trained in.
     for (const m of Object.keys(exposures)) {
@@ -258,8 +378,14 @@ function evaluateFamily(family, ctx) {
     return { exposures, alloc };
   };
 
-  const sessionRoom = (m) => {
+  const sessionRoom = (m, si) => {
     const direct = state.sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
+    if (fixed) {
+      // The person's own exercises for m in session si, never thin-equipment.
+      const own = fixed.sessionChoices[si]?.[m] || [];
+      const focus = state.roles[m]?.role === ROLE.FOCUS;
+      return Math.min(direct, own.reduce((a, c) => a + exerciseCap(c.kind, false, { focus }), 0));
+    }
     const list = ctx.choices[m] || [];
     const slots = Math.min(exercisesAllowed(m, { focus: state.roles[m]?.role === ROLE.FOCUS }), Number.isFinite(state.maxSlots[m]) ? state.maxSlots[m] : Infinity, list.length);
     const room = list.slice(0, slots).reduce((a, c) => a + exerciseCap(c.kind, list.length === 1, { focus: state.roles[m]?.role === ROLE.FOCUS }), 0);
@@ -267,7 +393,7 @@ function evaluateFamily(family, ctx) {
   };
   const sessionCapOf = (m, s) => {
     const light = state.lightCaps?.[m]?.[s];
-    return Math.min(Number.isFinite(light) ? light : Infinity, sessionRoom(m));
+    return Math.min(Number.isFinite(light) ? light : Infinity, sessionRoom(m, s));
   };
   // A light session never takes a focus muscle below its programmed sets
   // (founder rule 2026-10-04: a focus muscle's volume is never cut): where
@@ -275,10 +401,27 @@ function evaluateFamily(family, ctx) {
   // reports the tighter recovery instead.
   const keepsFocusFloor = (m, caps) => {
     if (state.roles[m]?.role !== ROLE.FOCUS || !caps) return true;
-    const room = (exposures[m] || []).reduce((a, si) => a + Math.min(Number.isFinite(caps[si]) ? caps[si] : Infinity, sessionRoom(m)), 0);
+    const room = (exposures[m] || []).reduce((a, si) => a + Math.min(Number.isFinite(caps[si]) ? caps[si] : Infinity, sessionRoom(m, si)), 0);
     return room + 1e-9 >= (state.roles[m].growthFloor || 0);
   };
-  const sparingFocus = (caps) => Object.fromEntries(Object.entries(caps || {}).filter(([m, c]) => keepsFocusFloor(m, c)));
+  // Fixed structure: a light session never holds fewer sets than the person's
+  // own exercises for the muscle do at their 2-set floors (every authored
+  // exercise is kept), so its cap is raised to them; a cap that then no
+  // longer limits the session is no split at all. The readiness check reports
+  // the tighter recovery instead, as it does for a focus muscle (below).
+  const withAuthoredFloors = (m, caps) => {
+    if (!fixed || !caps) return caps;
+    const top = state.sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
+    const out = {};
+    for (const [si, cap] of Object.entries(caps)) {
+      const floored = Math.max(cap, fixed.floorSum(m, Number(si)));
+      if (floored < top - 1e-9) out[si] = floored;
+    }
+    return Object.keys(out).length ? out : null;
+  };
+  const sparingFocus = (caps) => Object.fromEntries(Object.entries(caps || {})
+    .map(([m, c]) => [m, withAuthoredFloors(m, c)])
+    .filter(([m, c]) => c && keepsFocusFloor(m, c)));
 
   // Then search from that start (design 4.4: frequency is the fewest
   // sessions that keep every session under its caps, never raised for its
@@ -311,7 +454,8 @@ function evaluateFamily(family, ctx) {
     return objectiveOf(a) > objectiveOf(b) + 1e-9;
   };
   const rejected = new Set();
-  for (let iter = 0; iter < 4 * trainable.length; iter++) {
+  // Fixed structure: no search; the person's sessions are the sessions.
+  for (let iter = 0; iter < (fixed ? 0 : 4 * trainable.length); iter++) {
     const W = (m) => alloc.weekly[m]?.fractional || 0;
     const raises = trainable.filter((m) => {
       if (state.k[m] >= allowedBy[m].length || W(m) + 1 > state.roles[m].peak + 1e-9) return false;
@@ -424,8 +568,10 @@ function evaluateFamily(family, ctx) {
     for (const { muscle: m } of worst) {
       const attempts = [];
       if (!tried.split[m] && state.k[m] >= 2) attempts.push('split');
-      if (!tried.extra[m] && state.k[m] < allowedBy[m].length) attempts.push('extra_session');
-      attempts.push('fewer_sessions', 'peak_lowered');
+      // Fixed structure: no fix adds a session for a muscle or removes one.
+      if (!fixed && !tried.extra[m] && state.k[m] < allowedBy[m].length) attempts.push('extra_session');
+      if (!fixed) attempts.push('fewer_sessions');
+      attempts.push('peak_lowered');
       for (const kind of attempts) {
         const before = snapshot();
         const deficit = readinessDeficit(sim);
@@ -433,7 +579,7 @@ function evaluateFamily(family, ctx) {
         let acted = false;
         if (kind === 'split') {
           tried.split[m] = true;
-          const mine = lightCapsForMuscle(m, exposures, order, usual, hoursPeak, true);
+          const mine = withAuthoredFloors(m, lightCapsForMuscle(m, exposures, order, usual, hoursPeak, true));
           if (mine && keepsFocusFloor(m, mine)) {
             state.lightCaps = { ...state.lightCaps, [m]: mine };
             state.forcedSplit = { ...state.forcedSplit, [m]: true };
@@ -482,8 +628,9 @@ function evaluateFamily(family, ctx) {
   }
 
   // Ramp, do not jump (design 4.4): a week 1 more than 3 sets above what the
-  // person logged opens with fewer exercises for that muscle.
-  if (ctx.loggedWeekly) {
+  // person logged opens with fewer exercises for that muscle. Not in fixed
+  // structure: every authored exercise is kept, so none can be dropped to ramp.
+  if (ctx.loggedWeekly && !fixed) {
     for (let pass = 0; pass < 3; pass++) {
       const jumps = trainable.filter((m) => {
         const logged = ctx.loggedWeekly[m];
@@ -644,10 +791,17 @@ function readinessOrder(block, alloc, layouts, usual, hoursPeak, hoursPerson, lo
  * over that order (floors first, then the most room, the earlier exercise on
  * a tie), so the planner's peak and every week prescribe() serves are one
  * number.
+ *
+ * `keepAuthored` (fixed structure): the session keeps the order its exercises
+ * were authored in, not design 4.8's. The caller writes the targets onto the
+ * person's own rows, which stay where they are, and prescribe() serves a
+ * session over its stored order, so the sets are split over that very order.
  */
-function balanceSlots(alloc, roles) {
+function balanceSlots(alloc, roles, keepAuthored = false) {
   for (const sess of alloc.sessions) {
-    sess.slots = orderSession(sess.slots, roles);
+    sess.slots = keepAuthored
+      ? [...sess.slots].sort((a, b) => a.choice.authoredIndex - b.choice.authoredIndex)
+      : orderSession(sess.slots, roles);
     const byMuscle = new Map();
     for (const slot of sess.slots) {
       if (!byMuscle.has(slot.muscle)) byMuscle.set(slot.muscle, []);
@@ -820,12 +974,17 @@ function chooseFamily(evaluated) {
 function toPlan(chosen, ctx, inputs, factor) {
   const { family, alloc, order, block, sim, notes, state } = chosen;
   const sessionKey = (si) => `s${si}`;
+  // Fixed structure: each session carries its routineId and each exercise its
+  // exerciseId, so the caller can write the targets and facts onto the
+  // person's own rows. Without it the output is exactly what it always was.
+  const fixedMode = family.fixed === true;
   const workouts = order.map((si) => {
     const sess = alloc.sessions[si];
     const slots = sess.slots; // already in their final order (balanceSlots)
     return {
       name: family.sessions[si].name,
       sessionKey: sessionKey(si),
+      ...(fixedMode ? { routineId: family.sessions[si].routineId ?? null } : {}),
       exercises: slots.map((x) => {
         const reps = repRangeFor(x.name, x.kind, inputs.isStrength === true);
         const blockSlot = block.sessions[si].slots[sess.slots.indexOf(x)];
@@ -838,10 +997,11 @@ function toPlan(chosen, ctx, inputs, factor) {
           repMin: reps.repMin,
           repMax: reps.repMax,
           restSec: x.restTrimmed ? x.restSec : restFor(x.kind, inputs.isStrength === true),
-          selectionReason: 'catalogue',
+          selectionReason: fixedMode ? 'authored' : 'catalogue',
           reason: x.choice?.reason ?? null,
           thinEquipment: x.thinEquipment === true,
           slotKey: blockSlot.id,
+          ...(fixedMode ? { exerciseId: x.choice?.exerciseId ?? null } : {}),
         };
       }),
     };

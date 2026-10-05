@@ -25,6 +25,16 @@
  * Inputs are already resolved: which sessions train each muscle (its
  * exposures) and, per muscle, the ordered exercises the catalogue chose for
  * the person's equipment. Pure: no I/O, no clock, no randomness.
+ *
+ * Fixed-structure mode (register D219, build ruling 5): with `sessionChoices`
+ * the sessions and exercises are the person's own (a library or kit plan).
+ * Each session's exercises for a muscle are that session's choices for it, in
+ * place of the catalogue list; every authored exercise is kept and opened at
+ * its floor in step 1 whatever the session ceilings, the session's length or
+ * the per-muscle allowance say (the structure is the person's, so those limits
+ * bind only the sets above the floors); no exercise is ever opened after
+ * step 1; and nothing is thin-equipment (the person's list is not the kit's
+ * limit). Steps 2 to 4 then place the sets inside every cap as ever.
  */
 import { ROLE } from './bands';
 import {
@@ -85,6 +95,9 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
  * @param {Object<string, number[]>} args.exposures  per muscle, the session indexes that train it
  * @param {Object<string, Array<{ name: string, kind: string, credits?: Object<string, number>, restSec?: number }>>} args.choices
  *        per muscle, the exercises for its direct slots in catalogue order (credited roles excluded)
+ * @param {Array<Object<string, Array<{ name: string, kind: string, credits?: Object<string, number>, restSec?: number }>>>|null} [args.sessionChoices]
+ *        fixed-structure mode: by session index, then muscle, the person's own exercises in their order
+ *        (see the header); `choices` is not read when this is given
  * @param {Object<string, Object<number, number>>} [args.lightCaps]  per muscle, per session, a lower direct cap
  * @param {Object<string, number>} [args.maxSlots]   per muscle, a lower limit on its exercises a session
  * @param {Object<string, {direct?: number, fractional?: number}>} [args.sessionCaps]
@@ -101,7 +114,7 @@ const roleRank = (role) => (role === ROLE.FOCUS ? 0 : role === ROLE.STANDARD ? 1
  */
 export function allocatePeakWeek({
   sessionCount, roles, exposures, choices, lightCaps = {}, maxSlots = {}, sessionCaps = {},
-  sessionLengthMinutes = 60, equipment = 'full_gym', gapAfter = null,
+  sessionLengthMinutes = 60, equipment = 'full_gym', gapAfter = null, sessionChoices = null,
 }) {
   const n = Math.max(1, sessionCount | 0);
   const sessions = Array.from({ length: n }, () => ({ slots: [] }));
@@ -109,13 +122,19 @@ export function allocatePeakWeek({
     .sort((a, b) => muscleOrder(a) - muscleOrder(b));
   const timeLimit = (sessionLengthMinutes > 0 ? sessionLengthMinutes : 60) + TIME_TOLERANCE_MINUTES;
 
-  const choiceList = (m) => (Array.isArray(choices[m]) ? choices[m] : []);
-  const thin = (m) => choiceList(m).length === 1;
-  const slotsAllowed = (m) => Math.min(
+  // Fixed-structure mode: the person's own exercises, by session and muscle.
+  const fixed = Array.isArray(sessionChoices);
+  const authored = (m, s) => (fixed && Array.isArray(sessionChoices[s]?.[m]) ? sessionChoices[s][m] : []);
+
+  const choiceList = (m) => (Array.isArray(choices?.[m]) ? choices[m] : []);
+  const thin = (m) => !fixed && choiceList(m).length === 1;
+  // How many exercises of m session s may hold. In fixed mode it is exactly
+  // the person's own, whatever the per-muscle allowance or maxSlots say.
+  const slotsAllowed = (m, s) => (fixed ? authored(m, s).length : Math.min(
     exercisesAllowed(m, { focus: roles[m]?.role === ROLE.FOCUS }),
     Number.isFinite(maxSlots[m]) ? maxSlots[m] : Infinity,
     choiceList(m).length,
-  );
+  ));
   const directCap = (m, s) => {
     const light = lightCaps?.[m]?.[s];
     const cap = sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
@@ -131,6 +150,11 @@ export function allocatePeakWeek({
   // second in its next, so the week has both; a session with two has both;
   // the third only when a session needs it.
   const slotChoice = (m, s, slotIndex) => {
+    if (fixed) {
+      // The person's own list for this muscle in this session, in order.
+      const own = authored(m, s);
+      return own[slotIndex] ? { choice: own[slotIndex], index: slotIndex } : null;
+    }
     const list = choiceList(m);
     if (list.length === 0) return null;
     const pair = Math.min(2, list.length);
@@ -240,7 +264,7 @@ export function allocatePeakWeek({
   // session's exercises go to the muscle being brought up first (design 4.5
   // step 6; founder rule 2026-10-04).
   const queue = {};
-  for (const m of muscles) queue[m] = [...(exposures[m] || [])];
+  for (const m of muscles) queue[m] = fixed ? [] : [...(exposures[m] || [])];
   const placeRound = (list, round, ignoreTime = false) => {
     for (const m of list) {
       if (queue[m].length === 0) continue;
@@ -275,8 +299,24 @@ export function allocatePeakWeek({
       placeRound(ordered, round, ignoreTime);
     }
   };
-  placeRound(muscles, 0);
-  placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);
+  if (fixed) {
+    // Fixed structure: every authored exercise is kept and opened at its floor,
+    // whatever the session's ceilings, its length or the per-muscle allowance
+    // say (the structure is the person's). The caller puts a session's
+    // exercises back in their authored order. Nothing opens after this.
+    for (const m of muscles) {
+      for (const s of exposures[m] || []) {
+        for (let i = 0; i < authored(m, s).length; i++) {
+          const slot = openSlot(s, m);
+          if (!slot) break;
+          apply({ muscle: m, session: s, slot, delta: SETS_PER_EXERCISE.floor, opening: true });
+        }
+      }
+    }
+  } else {
+    placeRound(muscles, 0);
+    placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);
+  }
 
   // ── 2. maintenance muscles trained directly: up to their target, no further ──
   for (const m of muscles.filter((x) => roles[x].role === ROLE.MAINTENANCE)) {
@@ -435,7 +475,7 @@ function bestStepFor(m, {
     let step = null;
     if (target && fits(s, target, 1, false, ignoreTime)) {
       step = { muscle: m, session: s, slot: target, delta: 1, opening: false };
-    } else if (allowOpening && mine.length < slotsAllowed(m)) {
+    } else if (allowOpening && mine.length < slotsAllowed(m, s)) {
       const fresh = openSlot(s, m);
       if (fresh && fits(s, fresh, SETS_PER_EXERCISE.floor, true, ignoreTime)) {
         step = { muscle: m, session: s, slot: fresh, delta: SETS_PER_EXERCISE.floor, opening: true };
