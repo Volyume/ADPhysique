@@ -13,11 +13,17 @@ import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
+import { applyExerciseSwap } from '../lib/exercise/swapApply';
+import {
+  SWAP_SCOPE_OPTIONS, swapScopeHint, slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
+  applySessionSwaps,
+} from '../lib/exercise/swapCarry';
+import SegmentedControl from '../components/SegmentedControl';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
   updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan, getProgrammeById,
-  recordExerciseSwap, setExerciseIntent, clearExerciseIntent, setExerciseSlotDefault,
+  getProgrammePlanFacts, setExerciseIntent, clearExerciseIntent, setExerciseSlotDefault,
   getActiveBlock, EXERCISE_INTENT, recordTypedSetCount,
 } from '../lib/database';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
@@ -224,6 +230,23 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // for the currently open sheet.
   const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
   const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
+  // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
+  // session" or "From now on". This screen edits the plan, so a fresh sheet
+  // starts at "From now on" (what a swap here has always done). The ref is what
+  // handleConfirmSwap reads: the sheet's list cells and the full-library picker
+  // call it from closures that outlive a re-render. swapPlanFactsRef holds the
+  // plan's facts (version 2 only) for the muscle note.
+  const [swapScope, setSwapScope] = useState(SWAP_SCOPE.PROGRAMME);
+  const swapScopeRef = useRef(SWAP_SCOPE.PROGRAMME);
+  const swapPlanFactsRef = useRef(null);
+  function chooseSwapScope(value) {
+    swapScopeRef.current = value;
+    setSwapScope(value);
+  }
+  // A "Just this session" swap leaves the plan alone: it is held here, by the
+  // slot's routine exercise id, and reaches the workout started from this screen
+  // (handleStartWorkout). Leaving the screen drops it; the plan never held it.
+  const [sessionSwaps, setSessionSwaps] = useState({});
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   // iOS cannot present a second native modal while the first is still up, so
   // the ranked swap sheet must fully dismiss BEFORE the full-library picker is
@@ -648,6 +671,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
     } catch (_) { styleKey = null; }
     setSwapStylePoolKey(styleKey);
     setSwapStyleShowAll(relaxStyle);
+    // D219 lane A4 (design 4.12): a fresh open starts at "From now on"; a re-open
+    // to show every exercise keeps the choice already made. The plan's facts (the
+    // new planner's only) are read for the note on an exercise of another muscle.
+    if (!relaxStyle) chooseSwapScope(SWAP_SCOPE.PROGRAMME);
+    swapPlanFactsRef.current = null;
+    if (routine?.programmeId) {
+      try {
+        const facts = await getProgrammePlanFacts(routine.programmeId);
+        swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
+      } catch (_) { swapPlanFactsRef.current = null; }
+    }
     const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     // C9 Work 3: structural suitability still decides WHICH exercises are
     // valid replacements - that judgement stays in swapEngine. The personal
@@ -886,40 +920,78 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   // R9 (D70): the swap commits immediately with an undo toast (swapping
   // back is the exact inverse write), replacing the old blocking confirm +
-  // silent success. Targets are untouched either way; the toast copy keeps
-  // the old confirm's one load-bearing fact (future sessions change).
+  // silent success. D219 lane A4 (design 4.12): sets and reps stay the same
+  // either way, and the person chose the scope on the sheet: "From now on"
+  // writes the plan (applyExerciseSwap), "Just this session" leaves it alone.
   async function handleConfirmSwap(newExercise) {
     if (!swapState) return;
     const originalId = swapState.exercise?.id;
     const originalName = swapState.exercise?.name || 'exercise';
     const rowId = swapState.routineExerciseId;
     haptics.selection();
-    await updateRoutineExerciseExercise(rowId, newExercise.id);
-    // C9 Work 3: the swap IS the evidence. Recorded with its context (which
-    // exercise it replaced, in which routine) so preference stays
-    // contextual - "usually chosen instead of A here", never "the user
-    // prefers B". Only real actions write here; ranking never does.
-    if (user?.id && originalId) {
+    // Re-linking a broken row repairs the plan, so it is always permanent.
+    const toPlan = !!swapState.exercise?.unresolved || swapScopeRef.current === SWAP_SCOPE.PROGRAMME;
+    const closeSheet = () => {
+      setSwapState(null);
+      setSwapCandidates([]);
+      setDefaultProposal(null);
+      setSwapStylePoolKey(null);
+      setSwapStyleShowAll(false);
+      setShowSwapPicker(false);
+      setPendingSwapPicker(false);
+    };
+    if (!toPlan) {
+      // Just this session: the plan is untouched. The choice is held for the
+      // workout started from this screen, and logged as a session swap then.
+      setSessionSwaps((prev) => ({ ...prev, [rowId]: { exercise: newExercise } }));
+      closeSheet();
+      toast.show(`${newExercise.name} will replace ${originalName} when you start this workout from here. Your plan is unchanged.`, {
+        variant: 'undo',
+        action: {
+          label: 'Undo',
+          onPress: () => setSessionSwaps((prev) => {
+            const { [rowId]: _gone, ...rest } = prev;
+            return rest;
+          }),
+        },
+      });
+      return;
+    }
+    let res = null;
+    try {
+      // C9 Work 3: the swap IS the evidence. Recorded with its context (which
+      // exercise it replaced, in which routine) so preference stays
+      // contextual - "usually chosen instead of A here", never "the user
+      // prefers B". Only real actions write here; ranking never does.
+      //
       // C16 quality law 1: PROGRAMME scope. This one really did edit the
       // plan, so it is the kind of swap that may legitimately count as
-      // negative preference.
-      recordExerciseSwap(user.id, originalId, newExercise.id, {
-        routineId, explicit: true, scope: SWAP_SCOPE.PROGRAMME,
-        // EL-11: a swap made while the sheet was still restricted to the
-        // plan's style pool (not relaxed via "Show all exercises") stays
-        // inside the pool, so it is not preference evidence.
+      // negative preference. EL-11: a swap made while the sheet was still
+      // restricted to the plan's style pool (not relaxed via "Show all
+      // exercises") stays inside the pool, so it is not preference evidence.
+      res = await applyExerciseSwap({
+        userId: user?.id,
+        scope: SWAP_SCOPE.PROGRAMME,
+        routineId,
+        routineExerciseId: rowId,
+        fromExercise: swapState.exercise,
+        toExercise: newExercise,
         causeOverride: (swapStylePoolKey && !swapStyleShowAll) ? 'style' : null,
-      })
-        .catch(() => {}); // best-effort: a failed record must not fail the swap
+      });
+    } catch (e) {
+      logError('RoutineDetailScreen.handleConfirmSwap', e, { routineId, routineExerciseId: rowId });
+      toast.show('That swap did not save. Please try again.', { variant: 'error' });
+      return;
     }
     const proposal = defaultProposal;
-    setSwapState(null);
-    setSwapCandidates([]);
-    setDefaultProposal(null);
-    setSwapStylePoolKey(null);
-    setSwapStyleShowAll(false);
-    setShowSwapPicker(false);
-    setPendingSwapPicker(false);
+    closeSheet();
+    // The plan's row now holds the exercise the person chose for good, so an
+    // earlier one-off for this row is superseded.
+    setSessionSwaps((prev) => {
+      if (!(rowId in prev)) return prev;
+      const { [rowId]: _superseded, ...rest } = prev;
+      return rest;
+    });
     await loadRoutine();
     // Work 6: after a repeatedly-chosen replacement, OFFER to make it the
     // default. Never automatic, and the user can decline or change it later.
@@ -938,7 +1010,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
       );
       return;
     }
-    toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.`, {
+    // The calm note says what moved when the new exercise trains another
+    // primary muscle (design 4.12; D204: it describes, it never advises).
+    toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.${res?.muscleChange ? ` ${swapMuscleDoneNote(res.muscleChange)}` : ''}`, {
       variant: 'undo',
       action: {
         label: 'Undo',
@@ -1025,7 +1099,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
     }
     try {
       const workout = await createWorkout(user.id, routineId);
-      const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
+      // D219 lane A4 (design 4.12): a "Just this session" swap made here reaches
+      // this workout, with the slot's sets and reps carried; the plan's own rows
+      // are never changed.
+      const sessionRows = applySessionSwaps(exercises, sessionSwaps);
+      const initialExercises = sessionRows.map(({ exercise, routineExercise }) => ({
         exercise,
         routineExercise,
         sets: [],
@@ -1036,6 +1114,18 @@ export default function RoutineDetailScreen({ navigation, route }) {
         roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
       }));
       startWorkout(workout, initialExercises);
+      // The one-offs happened in a session now: log each as a session swap (never
+      // preference evidence), best-effort, and let them go.
+      for (const row of exercises) {
+        const held = sessionSwaps[row?.routineExercise?.id];
+        if (held?.exercise?.id && held.exercise.id !== row.exercise?.id) {
+          applyExerciseSwap({
+            userId: user.id, scope: SWAP_SCOPE.SESSION, routineId,
+            fromExercise: row.exercise, toExercise: held.exercise,
+          }).catch(() => { /* best effort: a failed log never fails the start */ });
+        }
+      }
+      setSessionSwaps({});
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
@@ -1093,6 +1183,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // whether it renders inside FlashList's ListHeaderComponent (browsing) or
   // above the drag list (reorder mode, see below) -- one JSX value shared
   // by both so the two containers can never drift apart.
+  // D219 lane A4: the "just this session" swaps still on a row of this routine.
+  const heldSwapCount = exercises.filter(({ routineExercise }) => !!sessionSwaps[routineExercise?.id]).length;
   const listHeader = (
     <>
       <Button
@@ -1102,6 +1194,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
         onPress={handleStartWorkout}
         style={styles.startBtn}
       />
+      {heldSwapCount > 0 ? (
+        <Text style={[styles.divisionLine, live.divisionLine]}>
+          {heldSwapCount === 1 ? '1 swap' : `${heldSwapCount} swaps`} for this session only. Your plan is unchanged.
+        </Text>
+      ) : null}
       <MuscleTagRow exercises={exercises} />
       {divisionGapLine ? (
         <Text style={[styles.divisionLine, live.divisionLine]}>{divisionGapLine}</Text>
@@ -1551,9 +1648,26 @@ export default function RoutineDetailScreen({ navigation, route }) {
           <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
             Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
+          {/* D219 lane A4 (design 4.12): sets and reps stay the same, rest suits the
+              new exercise unless the person set it, and the sheet asks once:
+              "Just this session" or "From now on". Re-linking a broken row repairs
+              the plan, so it is never a one-off and the choice is not shown. */}
           <Text style={[styles.swapNote, live.swapNote]}>
-            Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
+            Choose a substitute. Sets and reps stay the same, and rest suits the new exercise unless you set it yourself.
           </Text>
+          {!swapState?.exercise?.unresolved ? (
+            <View style={styles.swapScopeBlock}>
+              <SegmentedControl
+                options={SWAP_SCOPE_OPTIONS}
+                value={swapScope}
+                onChange={chooseSwapScope}
+                accessibilityLabel="Swap just for this session, or from now on"
+              />
+              <Text style={[styles.swapNote, live.swapNote, styles.swapScopeHint]}>
+                {swapScopeHint(swapScope, { fromName: swapState?.exercise?.name, surface: 'routine' })}
+              </Text>
+            </View>
+          ) : null}
           {/* T2-08 (D112 R5, closes audit T2-08): the ranked list narrows
               silently against the user's capability rules (rankPersonalised
               -> isEligibleExercise); this says so instead, visibility only -
@@ -1582,10 +1696,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
           ) : null}
           <FlashList
             data={swapCandidates}
+            extraData={swapScope}
             keyExtractor={item => item.exercise.id}
             contentContainerStyle={{ padding: spacing.lg }}
             ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-            renderItem={({ item }) => (
+            renderItem={({ item }) => {
+              // D219 lane A4 (design 4.12): "From now on" into an exercise that trains
+              // another primary muscle says what moves, before it is confirmed.
+              const muscleMove = swapScope === SWAP_SCOPE.PROGRAMME && !swapState?.exercise?.unresolved
+                ? slotMuscleChange({ facts: swapPlanFactsRef.current, routineId, oldExercise: swapState?.exercise, newExercise: item.exercise })
+                : null;
+              return (
               <Card
                 radius="md"
                 style={styles.swapItem}
@@ -1602,10 +1723,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                     <Text style={[styles.swapItemTag, live.swapItemTag]}>{item.personal.tag}</Text>
                   ) : null}
                   <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
+                  {muscleMove ? (
+                    <Text style={[styles.swapItemReason, live.swapItemReason]}>{swapMuscleNote(muscleMove)}</Text>
+                  ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </Card>
-            )}
+              );
+            }}
             ListEmptyComponent={
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet.'}
@@ -1802,6 +1927,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
+  // D219 lane A4: the scope choice sits under the sheet's note, on the note's own gutters.
+  swapScopeBlock: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xs },
+  swapScopeHint: { paddingHorizontal: 0, paddingTop: spacing.xs },
   swapNote: {
     ...type.caption,
     color: colors.textMuted,

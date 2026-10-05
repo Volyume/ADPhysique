@@ -37,8 +37,17 @@ describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () 
     // live.swapNote override in its style array. The frozen `styles.swapNote`
     // definition is byte-identical -- this is a mechanical literal update,
     // the pinned clause wording is unchanged.
+    //
+    // RE-PINNED (D219 lane A4, design 4.12): the sheet now asks "Just this
+    // session" or "From now on" where a permanent swap is possible, so it can no
+    // longer claim the plan is unchanged unconditionally. The note is one Text
+    // with two wordings; the founder's NA-wr-3 clause is in BOTH, verbatim, and
+    // "Your plan is not changed" stays only where the plan cannot change (a
+    // freeform exercise, and the "I can't do this" route that already asked).
     expect(ACTIVE_WORKOUT).toContain(
-      "<Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>",
+      "<Text style={[styles.swapNote, live.swapNote]}>{swapScopeOffered\n"
+      + "              ? \"Choose a close match. It keeps this slot's sets and reps, and sets you log count towards the new exercise's own muscle in your weekly volume.\"\n"
+      + "              : \"Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.\"}</Text>",
     );
   });
 

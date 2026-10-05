@@ -5111,7 +5111,7 @@ export async function updateRoutineExercise(id, data) {
 
 /**
  * Plan-level exercise swap: replaces the exercise referenced by a
- * routine_exercises row. Set count and slot position are preserved.
+ * routine_exercises row. Set count, rep range and slot position are preserved.
  *
  * C16 job 7. This used to leave set/rep/rest AND STARTING WEIGHT unchanged,
  * which meant a replacement inherited the previous exercise's load. Swapping
@@ -5119,78 +5119,73 @@ export async function updateRoutineExercise(id, data) {
  * prescription for a movement nobody had ever performed, on a plan the user
  * is meant to be able to follow.
  *
- * Two rules now apply, and they are deliberately different:
+ * The slot, not the exercise, owns the prescription (D219 lane A4, design
+ * 4.12: "the new exercise should have the same sets and reps ideally so we
+ * don't misplace load"). Three rules, deliberately different:
  *
  *   LOAD is always cleared. It belongs to the exercise, not the slot. There
  *   is no honest way to carry a barbell number onto a machine, and an empty
  *   field asks the user rather than inventing a number.
  *
- *   REPS AND REST are recalibrated only when the row still carries the
- *   DEFAULT prescription for the outgoing exercise's tier and the incoming
- *   exercise sits in a different tier. A user who tuned their own rep range
- *   keeps it; an untouched slot that has gone from a heavy compound to an
- *   isolation stops asking for three minutes' rest at 6-10 reps.
+ *   SETS AND REPS always carry. A tier change used to recalibrate the rep
+ *   range of an untouched row to the new tier's band (a squat's 6-10 became an
+ *   extension's 10-20), which is the load misplaced.
  *
- * Best-effort throughout: if the tier cannot be resolved the swap still
- * happens and only the load is cleared, because refusing to swap would be a
- * worse outcome than an unrecalibrated rep range.
+ *   REST follows the new exercise, but only when the row still carries the
+ *   outgoing tier's DEFAULT rest and the exercise changes tier; a rest the user
+ *   set stays (exercise/swapCarry.restAfterSwap).
+ *
+ * On a plan the new planner built (programmes.plan_facts, version 2) the new
+ * exercise's muscle, kind and curated credits are also written into the plan's
+ * slot facts, so every week is served on the planner's model; a plan it did not
+ * build keeps its facts exactly as they were (no facts are ever created here).
+ *
+ * Returns { muscleChange }: the { from, to } muscles the slot's sets move
+ * between when the new exercise trains another primary muscle, else null, for the
+ * caller's calm note. Best-effort throughout: if the tier or the facts cannot be
+ * resolved the swap still happens and only the load is cleared, because refusing
+ * to swap would be a worse outcome than an unrecalibrated rest.
  */
 export async function updateRoutineExerciseExercise(routineExerciseId, newExerciseId) {
   const d = await db();
   const now = Date.now();
-  // Look up the canonical name for the new exercise and store it on
-  // the row alongside the FK update. Keeps the denormalised
-  // exercise_name in sync with the FK so future syncs ship the
-  // correct name and other devices' LEFT JOIN fallback resolves
-  // correctly.
+  // Store the canonical name beside the FK so future syncs ship the correct
+  // name and other devices' LEFT JOIN fallback resolves correctly.
   let newRow = null;
   try {
     newRow = await d.getFirstAsync(
-      'SELECT name, equipment_category, compound_isolation FROM exercises WHERE id = ?',
+      'SELECT name, primary_muscle, equipment_category, compound_isolation FROM exercises WHERE id = ?',
       [newExerciseId],
     );
   } catch (_) { /* tolerate */ }
   const newName = newRow?.name ?? null;
 
-  let repMin = null;
-  let repMax = null;
-  let restSec = null;
-  let recalibrate = false;
+  let before = null;
   try {
-    // eslint-disable-next-line global-require
-    const { deriveParamKey } = require('./poolGenerator');
-    // eslint-disable-next-line global-require
-    const { repRangeFor, restFor, isDefaultPrescription } = require('./exercise/prescription');
-    const row = await d.getFirstAsync(
-      `SELECT re.recommended_reps_min AS repMin, re.recommended_reps_max AS repMax,
-              re.rest_seconds AS restSec, e.equipment_category AS eq,
-              e.compound_isolation AS ci
+    before = await d.getFirstAsync(
+      `SELECT re.routine_id AS routineId, re.exercise_id AS oldId, re.rest_seconds AS restSec,
+              e.name AS name, e.primary_muscle AS pm, e.equipment_category AS eq, e.compound_isolation AS ci
          FROM routine_exercises re
          LEFT JOIN exercises e ON e.id = re.exercise_id
         WHERE re.id = ?`,
       [routineExerciseId],
     );
-    if (row && newRow && row.eq) {
-      const oldParam = deriveParamKey(row.eq, row.ci);
-      const newParam = deriveParamKey(newRow.equipment_category, newRow.compound_isolation);
-      if (oldParam !== newParam && isDefaultPrescription(oldParam, row)) {
-        const rr = repRangeFor(newName, newParam, false);
-        repMin = rr.repMin;
-        repMax = rr.repMax;
-        restSec = restFor(newParam, false);
-        recalibrate = true;
-      }
-    }
-  } catch (_) { /* leave the prescription alone; the load is still cleared */ }
+  } catch (_) { /* tolerate */ }
+  const oldExercise = { id: before?.oldId ?? null, name: before?.name ?? null, primaryMuscle: before?.pm ?? null, equipmentCategory: before?.eq ?? null, compoundIsolation: before?.ci ?? null };
+  const newExercise = { id: newExerciseId, name: newName, primaryMuscle: newRow?.primary_muscle ?? null, equipmentCategory: newRow?.equipment_category ?? null, compoundIsolation: newRow?.compound_isolation ?? null };
 
-  if (recalibrate) {
+  let restSec = before?.restSec ?? null;
+  try {
+    // eslint-disable-next-line global-require
+    restSec = require('./exercise/swapCarry').restAfterSwap({ oldExercise, newExercise, restSeconds: restSec });
+  } catch (_) { /* leave the rest alone; the load is still cleared */ }
+
+  if (restSec !== (before?.restSec ?? null)) {
     await d.runAsync(
       `UPDATE routine_exercises
-          SET exercise_id = ?, exercise_name = ?, starting_weight = NULL,
-              recommended_reps_min = ?, recommended_reps_max = ?, rest_seconds = ?,
-              updated_at = ?
+          SET exercise_id = ?, exercise_name = ?, starting_weight = NULL, rest_seconds = ?, updated_at = ?
         WHERE id = ?`,
-      [newExerciseId, newName, repMin, repMax, restSec, now, routineExerciseId],
+      [newExerciseId, newName, restSec, now, routineExerciseId],
     );
   } else {
     await d.runAsync(
@@ -5200,7 +5195,35 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
       [newExerciseId, newName, now, routineExerciseId],
     );
   }
+
+  let muscleChange = null;
+  try {
+    muscleChange = await carrySwapIntoPlanFacts(d, before?.routineId ?? null, oldExercise, newExercise);
+  } catch (e) {
+    logError('database.updateRoutineExerciseExercise.planFacts', e, { routineExerciseId });
+  }
   _scheduleSync();
+  return { muscleChange };
+}
+
+// D219 lane A4 (design 4.12, lane brief 3): a permanent swap's effect on the plan's
+// facts. Returns the muscle change for the caller's note (null when the muscle is
+// the same, or unknown). Writes only on a plan the new planner built (version 2),
+// and only the new exercise's slot entry (exercise/swapCarry.planFactsAfterSwap);
+// the write is not scheduled here, the swap's own schedule covers it.
+async function carrySwapIntoPlanFacts(d, routineId, oldExercise, newExercise) {
+  // eslint-disable-next-line global-require
+  const { planFactsAfterSwap, slotMuscleChange } = require('./exercise/swapCarry');
+  if (!routineId || !newExercise?.id) return null;
+  const routine = await d.getFirstAsync('SELECT programme_id AS programmeId FROM routines WHERE id = ?', [routineId]);
+  const programmeId = routine?.programmeId ?? null;
+  const facts = programmeId ? await getProgrammePlanFacts(programmeId) : null;
+  const change = slotMuscleChange({ facts, routineId, oldExercise, newExercise });
+  if (programmeId && facts?.version === 2) {
+    const next = planFactsAfterSwap(facts, { routineId, newExercise });
+    if (next.changed) await setProgrammePlanFacts(programmeId, next.facts, { scheduleSync: false });
+  }
+  return change;
 }
 
 export async function getAllRoutineExerciseCounts() {

@@ -214,7 +214,7 @@ describe('C16-7 load: never invented, never inherited', () => {
     expect(after.starting_weight).toBeNull();
   });
 
-  test('a swap across tiers recalibrates an UNTOUCHED prescription', async () => {
+  test('a swap across tiers carries the slot\'s reps and lets REST follow an UNTOUCHED prescription', async () => {
     const squat = canonicalExerciseId('C16 Squat');
     const extension = canonicalExerciseId('C16 Extension');
     await insertExerciseWithId(squat, {
@@ -241,9 +241,14 @@ describe('C16-7 load: never invented, never inherited', () => {
     const after = await conn.getFirstAsync(
       `SELECT recommended_reps_min AS lo, recommended_reps_max AS hi, rest_seconds AS rest
          FROM routine_exercises WHERE id = ?`, [row.id]);
-    // An isolation slot no longer asks for three minutes' rest at 6-10.
-    expect(after.lo).toBe(REP_RANGES.isolation.repMin);
-    expect(after.hi).toBe(REP_RANGES.isolation.repMax);
+    // RE-PINNED (D219 lane A4, design 4.12, founder R10: "the new exercise
+    // should have the same sets and reps ideally so we don't misplace load").
+    // This used to assert the new tier's rep band (10-20) on the row; the reps
+    // are now the SLOT's, so the 6-10 stays. Rest still follows the new
+    // exercise, which is what Campaign 16 job 7 was for: an isolation slot no
+    // longer asks for three minutes' rest.
+    expect(after.lo).toBe(REP_RANGES.heavy_compound.repMin);
+    expect(after.hi).toBe(REP_RANGES.heavy_compound.repMax);
     expect(after.rest).toBe(REST_SEC.isolation);
   });
 

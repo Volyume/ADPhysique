@@ -142,9 +142,10 @@ export function restFor(paramKey, isStrength = false) {
  * Is this row still carrying the DEFAULT prescription for `paramKey`, or has
  * the user edited it?
  *
- * Used by the swap path so a slot the user has tuned themselves is never
- * quietly overwritten, while an untouched slot can be recalibrated when the
- * exercise in it changes tier.
+ * Used by the swap path (exercise/swapCarry.restAfterSwap, on the rest alone) so
+ * a rest the user has set themselves is never quietly overwritten, while an
+ * untouched one can follow the new exercise when it changes tier. D219 lane A4:
+ * the reps no longer take part in a swap, they always carry with the slot.
  */
 export function isDefaultPrescription(paramKey, { repMin, repMax, restSec }) {
   const isDefaultFor = (table, restTable) => {

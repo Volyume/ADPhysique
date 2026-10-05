@@ -102,15 +102,28 @@ describe('LAW 1 a session substitution is not a statement about the exercise', (
     expect(swappedAwayCount(s, 'bench')).toBe(0);
   });
 
-  test('the two screens record DIFFERENT scopes, which is the whole fix', () => {
+  test('the two screens record the scope the person CHOSE, which is the whole fix', () => {
+    // RE-PINNED (D219 lane A4, design 4.12). This used to pin one fixed scope
+    // per screen (the logger SESSION, the routine screen PROGRAMME), because
+    // neither screen offered the other choice. Both now ask "Just this session"
+    // or "From now on" and record what was chosen, through one function
+    // (exercise/swapApply.applyExerciseSwap), so the law moves there: only
+    // PROGRAMME ever edits the plan, a one-off is SESSION and never preference
+    // evidence. That is pinned behaviourally in swapScope.plan.test.js; here the
+    // screens are pinned to go through it and never to record a fixed scope.
     const active = fs.readFileSync(
       path.resolve(__dirname, '../../screens/ActiveWorkoutScreen.js'), 'utf8');
     const routine = fs.readFileSync(
       path.resolve(__dirname, '../../screens/RoutineDetailScreen.js'), 'utf8');
-    expect(active).toMatch(/scope: SWAP_SCOPE\.SESSION/);
-    expect(active).not.toMatch(/scope: SWAP_SCOPE\.PROGRAMME/);
-    expect(routine).toMatch(/scope: SWAP_SCOPE\.PROGRAMME/);
-    expect(routine).not.toMatch(/scope: SWAP_SCOPE\.SESSION/);
+    for (const src of [active, routine]) {
+      expect(src).toMatch(/applyExerciseSwap\(/);
+      expect(src).not.toMatch(/recordExerciseSwap\(/);
+    }
+    // The logger: the scope is the choice, defaulting to a one-off.
+    expect(active).toMatch(/scope: swapToPlan \? SWAP_SCOPE\.PROGRAMME : SWAP_SCOPE\.SESSION/);
+    // The routine screen: a permanent swap is PROGRAMME, a one-off is SESSION.
+    expect(routine).toMatch(/scope: SWAP_SCOPE\.PROGRAMME,/);
+    expect(routine).toMatch(/scope: SWAP_SCOPE\.SESSION,/);
   });
 
   test('explicit Don\'t Suggest remains a THIRD, stronger fact of its own', () => {

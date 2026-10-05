@@ -42,7 +42,13 @@ import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT, getExerciseLookup } from '../lib/database';
+import { applyExerciseSwap } from '../lib/exercise/swapApply';
+import {
+  SWAP_SCOPE_OPTIONS, swapScopeHint, restAfterSwap, carriedSetCount, slotMuscleOf,
+  slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
+} from '../lib/exercise/swapCarry';
+import SegmentedControl from '../components/SegmentedControl';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
@@ -284,28 +290,24 @@ export { LoggedSetRow };
 const MAX_BOTTOM_CHROME = 320;
 
 /**
- * Rebuild a slot's routineExercise for a swapped-in exercise. The slot's
- * routineExercise carries the OLD exercise's planned load and rep band;
- * left attached, a swapped-in move with no history of its own prefills
- * the previous exercise's startingWeight and rep range. The rep band
- * comes from the new exercise's own defaults and the carried-over weight
- * is cleared; the planned set count is the user's choice for the slot,
- * so it stays. Shared by the manual swap path and the capability
- * effective view (D112 R2, audit T2-03) so both substitution routes
- * carry identical load semantics.
+ * Rebuild a slot's routineExercise for a swapped-in exercise. The slot owns
+ * the prescription (D219 lane A4, design 4.12, founder R10: "the new
+ * exercise should have the same sets and reps ideally so we don't misplace
+ * load"): its planned set count AND its rep range stay, exactly as the plan
+ * path carries them (database.updateRoutineExerciseExercise). Only the load
+ * is cleared: the slot's routineExercise carries the OLD exercise's
+ * startingWeight, and a swapped-in move with no history of its own would
+ * prefill that number (Campaign 16 job 7). Rest follows the new exercise at
+ * the call site, where the outgoing exercise is known (restAfterSwap).
+ * Shared by the manual swap path and the capability effective view (D112 R2,
+ * audit T2-03) so both substitution routes carry identical load semantics.
  */
 function rebuildRoutineExerciseFor(newExercise, prevRoutineEx) {
   if (!prevRoutineEx) return null;
-  const newRepMin = newExercise.defaultRepMin ?? newExercise.default_rep_min
-    ?? prevRoutineEx?.recommendedRepsMin ?? 6;
-  const newRepMax = newExercise.defaultRepMax ?? newExercise.default_rep_max
-    ?? prevRoutineEx?.recommendedRepsMax ?? 12;
   return {
     ...prevRoutineEx,
     exerciseId: newExercise.id,
     exerciseName: newExercise.name,
-    recommendedRepsMin: newRepMin,
-    recommendedRepsMax: newRepMax,
     startingWeight: null,
   };
 }
@@ -585,6 +587,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercises"); it resets to false every time the sheet is (re)opened.
   const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
   const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
+  // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
+  // session" or "From now on". swapScope is the choice (the segmented control
+  // reads the state); the refs are what handleConfirmSwap reads, because the
+  // sheet's FlashList cells and the full-library picker call it from closures
+  // that outlive a re-render. swapScopeOffered is false where a permanent swap
+  // has no plan row to write (a freeform exercise) and on the "I can't do
+  // this" route, which already asked "just for today, or from now on".
+  // swapPlanFactsRef holds the plan's facts (version 2 only), read when the
+  // sheet opens, for the muscle note and the focus allowance.
+  const [swapScope, setSwapScope] = useState(SWAP_SCOPE.SESSION);
+  const [swapScopeOffered, setSwapScopeOffered] = useState(false);
+  const swapScopeRef = useRef(SWAP_SCOPE.SESSION);
+  const swapScopeOfferedRef = useRef(false);
+  const swapPlanFactsRef = useRef(null);
+  function chooseSwapScope(value) {
+    swapScopeRef.current = value;
+    setSwapScope(value);
+  }
   // D107-2: exercise-intent state kept at screen scope (not just inside
   // handleOpenSwap's local read) so the logger can show a quiet notice when
   // the CURRENT exercise's movement pattern is being avoided - "never
@@ -1593,14 +1613,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // and additive - a read failure just means no style restriction, same
     // as an ordinary plan.
     let styleKey = null;
+    let swapProgrammeId = null;
     try {
       const routineId = activeWorkout?.routineId ?? null;
       const routineRow = routineId ? await getRoutineById(routineId) : null;
+      swapProgrammeId = routineRow?.programmeId ?? null;
       const programmeRow = routineRow?.programmeId ? await getProgrammeById(routineRow.programmeId) : null;
       styleKey = styleKeyFromTags(programmeRow?.tags);
     } catch (_) { styleKey = null; }
     setSwapStylePoolKey(styleKey);
     setSwapStyleShowAll(relaxStyle);
+    // D219 lane A4 (design 4.12): offer "From now on" where the slot has a plan
+    // row to write, and read the plan's facts (the new planner's only) for the
+    // muscle note and the focus allowance. A re-open to show every exercise
+    // keeps the choice already made; a fresh open starts at "Just this session".
+    const offerScope = !workAroundSwapRef.current && !!routineExercise?.id && !!activeWorkout?.routineId;
+    swapScopeOfferedRef.current = offerScope;
+    setSwapScopeOffered(offerScope);
+    if (!relaxStyle) chooseSwapScope(SWAP_SCOPE.SESSION);
+    swapPlanFactsRef.current = null;
+    if (offerScope && swapProgrammeId) {
+      try {
+        const facts = await getProgrammePlanFacts(swapProgrammeId);
+        swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
+      } catch (_) { swapPlanFactsRef.current = null; }
+    }
     const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     const ranked = rankSwaps(exercise, allExercises, {
       excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment,
@@ -1685,15 +1722,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleConfirmSwap(newExercise) {
     const store = useAppStore.getState();
     const updatedExercises = [...workoutExercises];
-    // Load semantics rebuilt from the new exercise's own defaults - the
-    // module-level helper shared with the capability effective view, so a
-    // manual swap and an automatic substitution carry identical
-    // prescription behaviour (D112 R2).
+    // Load semantics rebuilt by the module-level helper shared with the
+    // capability effective view, so a manual swap and an automatic
+    // substitution carry identical prescription behaviour (D112 R2): the
+    // slot's sets and reps stay, the load is cleared.
     const prevRoutineEx = updatedExercises[currentExerciseIndex]?.routineExercise;
     const rebuiltRoutineEx = rebuildRoutineExerciseFor(newExercise, prevRoutineEx);
+    // D219 lane A4 (design 4.12): rest follows the new exercise, where the
+    // outgoing exercise is known and the rest was its tier's default (a rest
+    // the person set stays). Sets and reps were carried by the rebuild above.
+    const carriedRoutineEx = rebuiltRoutineEx && rebuiltRoutineEx.restSeconds !== undefined
+      ? { ...rebuiltRoutineEx, restSeconds: restAfterSwap({ oldExercise: exercise, newExercise, restSeconds: rebuiltRoutineEx.restSeconds }) }
+      : rebuiltRoutineEx;
+    // The choice the person made on the sheet: only an offered "From now on",
+    // for a slot with a plan row, writes the plan. Anything else is a one-off.
+    const swapToPlan = swapScopeOfferedRef.current
+      && swapScopeRef.current === SWAP_SCOPE.PROGRAMME
+      && !!prevRoutineEx?.id
+      && !!newExercise?.id && newExercise.id !== exercise?.id;
     // The zero-history seed below wants the same band floor the rebuild
-    // chose; with no routineExercise to rebuild, fall to the new
-    // exercise's own defaults exactly as before.
+    // chose (the slot's own, carried); with no routineExercise to rebuild,
+    // fall to the new exercise's own defaults exactly as before.
     const newRepMin = rebuiltRoutineEx?.recommendedRepsMin
       ?? newExercise.defaultRepMin ?? newExercise.default_rep_min ?? 6;
     // Round 10 (R10-2): swapping away a serve-substituted row is the
@@ -1712,12 +1761,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     updatedExercises[currentExerciseIndex] = {
       ...updatedExercises[currentExerciseIndex],
       exercise: newExercise,
-      routineExercise: rebuiltRoutineEx,
+      routineExercise: carriedRoutineEx,
       sets: [],
       _userAdded: true,
       ...(prevTemp ? { _capabilityTemp: undefined } : {}),
     };
     store.setWorkoutExercises(updatedExercises);
+    // D219 lane A4 (design 4.12): the week's sets stay with the slot. The
+    // weekly allocation is keyed by exercise id, so the new id would fall back
+    // to the unscaled stored count (R1 12.2); carry the old exercise's served
+    // number onto it, held to the new exercise's caps on a plan the new planner
+    // built. Nothing is carried where there was no weekly serve for the slot.
+    const servedHere = weeklyAllocation?.[exercise?.id];
+    const carriedSets = carriedSetCount({
+      served: servedHere,
+      newExercise,
+      capped: planServedV2,
+      focus: swapPlanFactsRef.current?.roles?.[slotMuscleOf(newExercise)] === 'focus',
+    });
+    if (carriedSets != null && newExercise?.id && newExercise.id !== exercise?.id) {
+      setWeeklyAllocation((prev) => ({ ...(prev || {}), [newExercise.id]: carriedSets }));
+    }
     if (prevTemp?.fromId && user?.id && activeWorkout?.id && newExercise?.id) {
       // eslint-disable-next-line global-require
       const { amendSessionConstraintSubstitution } = require('../lib/database');
@@ -1727,20 +1791,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         exerciseTo: newExercise.id,
       }).catch(() => { /* best effort; the swap itself must never fail */ });
     }
-    // C9 Work 3: a session swap is a deliberate choice, so it is evidence
-    // too - even though it deliberately does NOT change the plan (the sheet
-    // says so). Recorded with the routine it happened in, so the preference
-    // stays contextual. Best-effort: this must never fail the swap.
+    // C9 Work 3: a swap is a deliberate choice, so it is evidence too. Recorded
+    // with the routine it happened in, so the preference stays contextual.
+    // Best-effort: this must never fail the swap.
     //
-    // C16 quality law 1: recorded as SESSION scope. Substituting here
-    // because the machine was busy must never teach Volyume that the user
-    // dislikes the exercise - before this it was indistinguishable from
-    // editing the exercise out of the programme, and two busy-machine days
-    // were enough to have it proposed for removal.
+    // C16 quality law 1 and D219 lane A4 (design 4.12): recorded with the scope
+    // the person CHOSE. "Just this session" is SESSION scope and leaves the
+    // plan alone: substituting here because the machine was busy must never
+    // teach Volyume that the user dislikes the exercise (two busy-machine days
+    // were enough to have it proposed for removal). "From now on" is PROGRAMME
+    // scope and writes the slot's routine row through the plan-level swap path
+    // (applyExerciseSwap), which carries the slot's sets and reps and updates
+    // the plan's facts; it is an edit of the plan, as on the routine screen.
     if (user?.id && exercise?.id && newExercise?.id) {
-      recordExerciseSwap(user.id, exercise.id, newExercise.id, {
-        routineId: activeWorkout?.routineId ?? null, explicit: true,
-        scope: SWAP_SCOPE.SESSION,
+      applyExerciseSwap({
+        userId: user.id,
+        scope: swapToPlan ? SWAP_SCOPE.PROGRAMME : SWAP_SCOPE.SESSION,
+        routineId: activeWorkout?.routineId ?? null,
+        routineExerciseId: swapToPlan ? prevRoutineEx.id : null,
+        fromExercise: exercise,
+        toExercise: newExercise,
         // T2-28a: a Work-around-sheet swap is capability-motivated by the
         // user's own declaration, rule or no rule yet. EL-11: absent that,
         // a swap made while the sheet was still restricted to the plan's
@@ -1749,9 +1819,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         causeOverride: workAroundSwapRef.current ? 'constraint'
           : (swapStylePoolKey && !swapStyleShowAll) ? 'style'
           : null,
-      }).catch(() => {});
+      }).then((res) => {
+        if (!res?.plan) return;
+        // The plan changed: say so calmly, with what moved when the new
+        // exercise trains another muscle (D204: describes, never advises).
+        toast.show(`${newExercise.name} now replaces ${exercise.name} in your plan.${res.muscleChange ? ` ${swapMuscleDoneNote(res.muscleChange)}` : ''}`);
+        // On a plan the new planner built the planner re-solves the week for
+        // the new slot: show the number the plan screens will show.
+        if (planServedV2) {
+          getSessionWeeklyAllocation({ workout: activeWorkout, exercises: useAppStore.getState().workoutExercises })
+            .then(({ allocation }) => { if (allocation) setWeeklyAllocation(allocation); })
+            .catch(() => {});
+        }
+      }).catch((e) => {
+        logError('ActiveWorkoutScreen.swapIntoPlan', e, { routineExerciseId: prevRoutineEx?.id ?? null });
+        toast.show('Swapped for this session. Your plan could not be updated just now.', { variant: 'warning' });
+      });
     }
     workAroundSwapRef.current = false;
+    swapScopeOfferedRef.current = false;
+    chooseSwapScope(SWAP_SCOPE.SESSION);
     cancelAutoAdvance();
     setSwapCandidates([]);
     setSwapStylePoolKey(null);
@@ -6172,7 +6259,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Ionicons name="close" size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
+            {/* D219 lane A4 (design 4.12): where a permanent swap is possible the sheet asks
+                once, "Just this session" or "From now on"; the note keeps the
+                founder's NA-wr-3 clause (logged sets count towards the new
+                exercise's own muscle) in both forms, and says the plan is
+                unchanged only where it cannot change. */}
+            <Text style={[styles.swapNote, live.swapNote]}>{swapScopeOffered
+              ? "Choose a close match. It keeps this slot's sets and reps, and sets you log count towards the new exercise's own muscle in your weekly volume."
+              : "Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume."}</Text>
+            {swapScopeOffered ? (
+              <View style={styles.swapScopeBlock}>
+                <SegmentedControl
+                  options={SWAP_SCOPE_OPTIONS}
+                  value={swapScope}
+                  onChange={chooseSwapScope}
+                  accessibilityLabel="Swap just for this session, or from now on"
+                />
+                <Text style={[styles.swapNote, live.swapNote, styles.swapScopeHint]}>
+                  {swapScopeHint(swapScope, { fromName: exercise?.name, surface: 'workout' })}
+                </Text>
+              </View>
+            ) : null}
             {/* T2-08 (D112 R5, closes audit T2-08): the ranked list narrows
                 silently against the user's capability rules (rankPersonalised
                 -> isEligibleExercise); this says so instead, visibility only -
@@ -6197,10 +6304,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
             <FlashList
               data={swapCandidates}
+              extraData={swapScope}
               keyExtractor={item => item.exercise.id}
               contentContainerStyle={styles.swapListContent}
               ItemSeparatorComponent={() => <View style={styles.swapItemGap} />}
-              renderItem={({ item }) => (
+              renderItem={({ item }) => {
+                // D219 lane A4 (design 4.12): choosing "From now on" for an exercise that
+                // trains another primary muscle says what moves, before it is confirmed.
+                const muscleMove = swapScope === SWAP_SCOPE.PROGRAMME && swapScopeOffered
+                  ? slotMuscleChange({ facts: swapPlanFactsRef.current, routineId: activeWorkout?.routineId, oldExercise: exercise, newExercise: item.exercise })
+                  : null;
+                return (
                 <TouchableOpacity style={[styles.swapItem, live.swapItem]} onPress={() => handleConfirmSwap(item.exercise)} accessibilityRole="button" accessibilityLabel={`Swap in ${item.exercise.name}`}>
                   <View style={[styles.swapItemIcon, live.swapItemIcon]}>
                     <Ionicons name="swap-horizontal" size={16} color={t.colors.textSecondary} />
@@ -6213,10 +6327,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       <Text style={[styles.swapItemTag, live.swapItemTag]}>{item.personal.tag}</Text>
                     ) : null}
                     <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
+                    {muscleMove ? (
+                      <Text style={[styles.swapItemReason, live.swapItemReason]}>{swapMuscleNote(muscleMove)}</Text>
+                    ) : null}
                   </View>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
-              )}
+                );
+              }}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
                   <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
@@ -6452,6 +6570,9 @@ const styles = StyleSheet.create({
   },
   swapNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs },
   swapListContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  // D219 lane A4: the scope choice sits under the sheet's note, on the note's own gutters.
+  swapScopeBlock: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xs },
+  swapScopeHint: { paddingHorizontal: 0, paddingTop: spacing.xs },
   swapItemGap: { height: spacing.sm },
   swapItem: {
     flexDirection: 'row',

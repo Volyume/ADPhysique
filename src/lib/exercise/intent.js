@@ -765,7 +765,14 @@ export function rankPersonalised(state, candidates, { fromExerciseId, routineId 
   // makes a sensible default (staples before obscure movements), then the
   // structural score the engine already computed, then the engine's own
   // order. Fully deterministic, never random.
-  decorated.sort((a, b) => b.personal.weighted - a.personal.weighted
+  //
+  // D219 lane A4 (design 4.12): before any of that, candidates that share the
+  // original's primary muscle (rankSwaps' `sameMuscle`) stay ahead of the rest,
+  // so personal standing and staple-ness reorder WITHIN a muscle and never lift
+  // another muscle's exercise over a same-muscle one. Candidates that carry no
+  // flag (a caller with no original to compare) are all equal on this key.
+  decorated.sort((a, b) => Number(b.sameMuscle === true) - Number(a.sameMuscle === true)
+    || b.personal.weighted - a.personal.weighted
     || tierRank(a?.exercise?.name) - tierRank(b?.exercise?.name)
     || (b.score ?? 0) - (a.score ?? 0)
     || a._i - b._i);

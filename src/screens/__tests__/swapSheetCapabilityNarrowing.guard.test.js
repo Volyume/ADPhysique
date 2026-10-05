@@ -149,9 +149,14 @@ describe('ActiveWorkoutScreen swap sheet: quiet line + capability-aware empty st
 });
 
 describe('RoutineDetailScreen swap sheet: quiet line + capability-aware empty state', () => {
+  // RE-ANCHORED (D219 lane A4, design 4.12): the sheet's note used to say "Your
+  // routine will be updated. Your set, rep and rest targets stay the same.",
+  // untrue on a tier-changing swap of an untouched row (rest follows the new
+  // exercise) and silent about the scope choice the sheet now offers. The
+  // narrowing lines this block pins are unchanged.
   const modalBlock = slice(
     ROUTINE_DETAIL,
-    'Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.',
+    'Choose a substitute. Sets and reps stay the same, and rest suits the new exercise unless you set it yourself.',
     'ListFooterComponent={',
   );
 

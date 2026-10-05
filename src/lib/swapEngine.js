@@ -35,6 +35,17 @@ const SIMILAR_WITHIN = 1; // ±1 threshold for fatigueCost and SFR
 // Word boundary so it only catches genuinely assisted lifts.
 const ASSISTED_RE = /\bassisted\b/i;
 
+// D219 lane A4 (design 4.12): the primary muscle a candidate is compared on,
+// the way the volume counter reads it (algorithms.allocateExerciseVolume:
+// lower case, the legacy 'shoulders' as side delts), from a camelCase or a
+// snake_case row. Null when the exercise has none, so an original with no
+// muscle (a custom exercise) is ranked on score alone, as before.
+function muscleKeyOf(ex) {
+  let m = String(ex?.primaryMuscle ?? ex?.primary_muscle ?? '').toLowerCase();
+  if (m === 'shoulders') m = 'side_delts';
+  return m || null;
+}
+
 // ---------------------------------------------------------------------------
 // Internal: score a single candidate against the original
 // ---------------------------------------------------------------------------
@@ -205,7 +216,10 @@ export function buildSwapReason(original, candidate) {
  *                       behaviour for every ordinary plan. The sheet's
  *                       explicit "Show all exercises" relaxes this by
  *                       simply omitting the option on that call.
- * @returns {{ exercise: object, score: number, reason: string }[]}
+ * @returns {{ exercise: object, score: number, reason: string, sameMuscle: boolean }[]}
+ *          D219 lane A4 (design 4.12): candidates that share the original's primary
+ *          muscle come first (each in score order), then the rest; `sameMuscle`
+ *          says which group a result is in. Nothing is filtered out.
  */
 export function rankSwaps(originalExercise, allExercises, options = {}) {
   const {
@@ -217,6 +231,7 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
   } = options;
 
   const excludeSet = new Set([originalExercise.id, ...excludeIds]);
+  const originalMuscle = muscleKeyOf(originalExercise);
   const styleSet = Array.isArray(stylePool) && stylePool.length ? new Set(stylePool) : null;
 
   const scored = allExercises
@@ -257,17 +272,23 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     .map((ex) => ({
       exercise: ex,
       score: scoreCandidate(originalExercise, ex),
+      sameMuscle: originalMuscle != null && muscleKeyOf(ex) === originalMuscle,
     }))
-    // Sort descending by score; stable tie-break by name for determinism.
-    // Names default to '' so a custom user-added exercise with no name
-    // doesn't crash localeCompare on undefined.
-    .sort((a, b) => b.score - a.score || (a.exercise.name ?? '').localeCompare(b.exercise.name ?? ''))
+    // D219 lane A4 (design 4.12): the same primary muscle first, so a swap does
+    // not move the slot's weekly sets to another muscle unless the person goes
+    // looking for it. Then descending by score; stable tie-break by name for
+    // determinism. Names default to '' so a custom user-added exercise with no
+    // name doesn't crash localeCompare on undefined.
+    .sort((a, b) => Number(b.sameMuscle) - Number(a.sameMuscle)
+      || b.score - a.score
+      || (a.exercise.name ?? '').localeCompare(b.exercise.name ?? ''))
     // Take top N
     .slice(0, numResults)
     // Attach reason
-    .map(({ exercise, score }) => ({
+    .map(({ exercise, score, sameMuscle }) => ({
       exercise,
       score,
+      sameMuscle,
       reason: buildSwapReason(originalExercise, exercise),
     }));
 
