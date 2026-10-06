@@ -35,7 +35,7 @@ options; the build starts only on the founder's choice.
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
 | 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line: the primitives, chrome, data rows, amber census, motion, sheets, pickers, states, light theme, the app's best surfaces (600 lines) |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
-| 08-options-page.html | lead | hands-on | the mockup page (current logger beside options A, B and C), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
+| 08-options-page.html | lead | hands-on | the mockup page (the live logger beside the concepts Instrument, Ledger and Stage; the first set of three was rejected and replaced on 2026-10-06), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -690,164 +690,73 @@ F15. The rest strip and the lock-screen or Live Activity card name the
     duration (6.5); auto-advance after the last set becomes a setting,
     on by default with today's cancellable countdown.
 
-### 8.2 Option A: "Focus, finished". The same model, rebuilt to instrument standard
+### 8.2 The visual law every concept is drawn to (second set, after the founder rejected the first)
 
-The model stays one exercise at a time, which fits a prescriber (the
-engine tells you the next set, as Fitbod, Alpha Progression and Dr.
-Muscle do), and every pinned structure law is kept. What changes is
-everything the person sees.
+The first set of three drawings (tables of numbers in grey boxes, an amber
+filled button, nothing above 32px) was rejected by the founder on
+2026-10-06: "I don't like the layouts or font sizing. None of them look
+elite and elegant and stylish and world class", and "nowhere in the design
+on the app elsewhere do we have solid amber buttons". The second set is
+drawn to the founder's own September law (D165, 20-DIRECTION-AND-PLAN.md
+section 4a and the direction page's rules): one loud thing per screen at
+40 to 72px, and in the logger that thing is the working weight; rows on
+the canvas separated by hairlines, no card round a set; hierarchy from
+weight and space, colour only for state; amber spent on the set you are
+on and a record, nothing else; the house button (charcoal `primary`, amber
+glyph) as on Today; the ribbon device applied to the session's exercises;
+every number beside its unit in tabular figures. Live tokens only.
 
-Header: close X (muted) left, the exercise count and session name
-centred as one quiet line ("Upper A · 2 of 6"), the finish tick right;
-elapsed moves to a `caption` under the session name. No overline, no
-clock as hero.
+### 8.3 Concept "Instrument" (one exercise at a time; every pinned law kept)
 
-Exercise hero: the exercise name at `h2` (24, semibold) with its meta
-line under it in `bodySm` (muscle · equipment · "3 × 6-10 · rest 1:30");
-a swipe left or right moves to the next or previous exercise (the
-outline list stays behind a tap on "2 of 6"); a thin six-segment
-progress rule under the hero marks the exercises done, current and to
-come. The outline strip and its five-second timer go.
+Header: close glyph, one caps caption "UPPER A · 12:00", the amber finish
+glyph (the pinned icon-only header). Under it the exercise ribbon: six
+cells, done in ink, current in amber, upcoming muted; swipe left or right
+moves between exercises; tap "Exercise 2 of 6" for the list. Eyebrow
+"EXERCISE 2 OF 6 · BACK · BARBELL", the name at 30px ExtraBold ("Barbell
+Row"), meta at 14px ("Bent over · 3 sets of 6 to 10 · rest 1:30"). The
+hero: the working weight at 72px ExtraBold tabular with "kg" beside it,
+"×", the reps at 44px, "reps". Tap a number to change it: the increment
+glyphs appear beside it while selected (the exercise's own step), or type.
+One quiet line: "Last time 72.5 × 8 · Best 82.5 × 6 · Record at 9" (the
+record words in amber; the callout copy unchanged in spirit). The ledger:
+hairline rows W, 1, 2 (Now, amber dot), 3 (planned, muted); 48dp rows,
+tabular, done rows carry a success tick. "Next: Incline Dumbbell Press ·
+3 × 8 to 12" as the last row. The rest strip docks above the bar as pinned
+and names the next set ("then 72.5 × 8"). The bar: the house primary
+"Log set". Lifts no law; re-shapes D105 and D66 as 5.3 records.
 
-The set table, one for this exercise, on the canvas (no card): a header
-row SET · PREVIOUS · KG · REPS; completed rows quiet (success tick, the
-numbers in `textSecondary`); the current row carries the amber set
-badge and the two live values at `type.num('h2')`; upcoming rows show
-the prescription ghosted ("72.5 × 8" in `textMuted`). Warm-up rows wear
-a "W" badge, no colour. Previous is the matching set from the last
-session of this exercise, every row, so the comparison is a column, not
-a strip. Tapping a completed row edits it in place; tapping an upcoming
-row makes it current.
+### 8.4 Concept "Ledger" (the whole session as one page; one law lifted)
 
-Entry: the current row's cells are the inputs. Tapping one raises the
-in-app number pad in the bottom dock (8.5), with the exercise's own
-increment on its plus and minus keys and a "Use last" key; or, if the
-founder keeps the steppers (question Q2), the current row expands to
-the compact stepper pair exactly as today.
+The same header and ribbon. Each exercise is a section: name at 20px
+semibold with "1 of 3" right, a 13px meta line, then the set rows. The
+current set is the only loud row on the page: 84dp tall, the weight at
+44px and the reps at 30px inside it, the amber dot at its end. Completed
+exercises fold to one line of their sets with "record" in amber where one
+was set. Upcoming exercises show their first planned row so the next
+station can be prepared. The page scrolls on each log so the current row
+holds a fixed stage; a "Now" pill returns to it. One law lifted (the
+one-exercise workspace), re-pinned as one loud row, a fixed stage, quiet
+rows, the strip. Risk as recorded: the input is in a scrolling list, which
+the S22 verdict rejected; the stage scroll must be proven on device.
 
-Bottom: the rest strip (unchanged, pinned) and one bar: "Log set" as
-the amber `emphatic` button, the only amber action on the screen; the
-state machine (Next exercise, Finish workout, Log another set) unchanged.
+### 8.5 Concept "Stage" (the ledger above, the instrument below; the lead's recommendation)
 
-Next line: "Next: Incline Dumbbell Press · 3 × 8-12" as a quiet row
-under the table, tappable, so the next exercise is never a surprise.
+The Ledger's page, read-only, above a fixed stage on `surface` with a top
+hairline: eyebrow "BARBELL ROW · SET 2 OF 3 · 6 TO 10 REPS", the working
+weight at 56px and the reps at 36px, the "Last time · Record" line, the
+house "Log set". The rest strip docks between the numbers and the button
+while a rest runs. Tap any upcoming row to make it the now set; tap a done
+row to edit it on the stage. Inputs live only on the stage; the stage never
+moves; the ledger never holds an input. Same law lifted as Ledger,
+re-pinned stricter. The vertical budget (stage about 230dp with the strip)
+is proven on the founder's phone before anything else is built.
 
-Kept: every guided flow (clusters, per side, warm-up ramp, supersets),
-the record callout, the PR toast, the note row, the status chips (now
-one row of `Chip`s under the hero), the overflow actions.
+### 8.5a Entry control (Q3)
 
-Needs from the founder: no pinned law lifted; the re-shapes in 5.3
-(name size, elapsed as a caption, the beat line's form). Q2 (pad or
-steppers).
-Risk: lowest. Size: the smallest of the three (one screen, no new
-model); the foundation is most of the work.
-
-### 8.3 Option B: "The sheet". The whole session on one scrolling page
-
-The model the field converged on (Strong, Hevy, Boostcamp, JEFIT,
-Setgraph, Gymaholic, Caliber): every exercise is a block on one page,
-every set a row, and the person always sees what is done, what is now
-and what is left. Volyume's version keeps what the September device
-verdict was really about: the active row never drifts, rest is a strip,
-completed work is quiet, and the way forward is visible.
-
-Header as in A. Under it, the sheet: for each exercise a block with the
-name at `h3` (20, medium), the meta line, the set table (SET · PREVIOUS
-· KG · REPS · done), an "Add set" text row, and a hairline between
-blocks. The block header is sticky while its rows scroll under it, so
-the current exercise's name is always on screen. Supersets are one
-block with two names and alternating rows (A1, B1, A2, B2) joined by a
-link glyph.
-
-The current row is the one amber-badged row on the whole page. When a
-set logs, the page scrolls so the next current row sits at the same
-screen position (the "stage", about a third down), which is how the
-"never pushes the input away" law is honoured without hiding the rest
-of the session. A "Now" pill appears when the person scrolls away, and
-tapping it returns to the stage.
-
-Entry: tapping the current row's weight or reps cell raises the number
-pad in the dock, as in A. The dock's "Log set" is the one committing
-action; the tick on a row is state, not a button, so there is one way
-to log, as today.
-
-Bottom: rest strip and bar as in A.
-
-Kept: every guided flow; the clusters and per-side flows render inside
-the current row; the status chips sit under the header; the overflow
-actions move to a "…" on each block header.
-
-Needs from the founder: the structure law "the workspace scroll hosts
-ONLY the active exercise" lifted (the guard test re-pinned to the new
-invariants: the stage position, the single current row, the quiet
-rows, the strip), plus the re-shapes in 5.3. Q2.
-Risk: medium; the re-pins are many, and the auto-scroll must be built
-and device-checked carefully (the September failure was a list that
-drifted; this design scrolls on purpose and must prove it). Size:
-large (the orchestrator becomes a sheet renderer).
-
-### 8.4 Option C: "The sheet with a now dock". The overview above, the instrument below (the lead's recommendation)
-
-Option B's sheet for the overview, plus a fixed "now" dock at the bottom
-that holds the entry. The sheet never contains an input; the dock never
-moves. This is the one model that satisfies every intent behind the
-pinned laws AND gives the person the whole session, and no competitor
-read in this audit does both (set 1 dossiers; Setgraph and Liftin'
-come closest).
-
-Sheet (top, scrolling): as in B, with the rows read-only: tapping any
-upcoming row makes it the now set; tapping a completed row opens the
-in-place editor in the dock. The page auto-scrolls so the now row is
-visible just above the dock.
-
-Now dock (bottom, fixed, on `surface` with a top hairline):
-- line 1: exercise name (`title`) · "Set 2 of 3 · 6-10 reps" (`label`);
-- line 2: the two values at `type.num('h1')` (32) with their units
-  under them in `caption` ("kg", "reps"); under the weight, "Last 72.5
-  × 8" in `caption`; a note glyph on the right;
-- line 3: the record callout when a record is dialled in (unchanged
-  copy), else nothing;
-- the number pad (8.5) slides in under the values when a value is
-  tapped, and slides away on Log;
-- the bar: "Log set" amber `emphatic`, full width; the state machine
-  unchanged (Next exercise, Finish workout, Log another set).
-- the rest strip docks between the values and the bar, as today.
-
-Entry never moves, never scrolls, never sits under the keyboard
-(Android has no `KeyboardAvoidingView` today; the pad makes the system
-keyboard unnecessary for weight and reps).
-
-Kept: everything in A and B; the guided flows render in the dock.
-
-Needs from the founder: the same structure law lifted as B, re-pinned
-as "inputs live only in the dock; the dock is fixed; the sheet is
-read-only", plus the re-shapes in 5.3. Q2 is settled by the design (the pad is part of the dock;
-steppers would not fit a dock and a sheet); if the founder keeps the
-steppers, C becomes A.
-Risk: medium; one new component family (sheet, dock, pad), a careful
-vertical budget (dock about 190dp, strip 44dp, bar 76dp: on a 780dp
-phone the sheet keeps about 420dp, nine rows), and the re-pins. Size:
-the largest, by about a fifth over B.
-
-Why C over B, and over A: A keeps the lagging feeling's root cause (the
-person cannot see the session); B fixes that but puts the input back in
-a scrolling list, which is what the founder's own S22 verdict rejected,
-and the stage trick is a mitigation, not a cure; C removes the conflict
-by construction. It is also the most distinctive: no app in the field
-reads as "the session above, the instrument below", and that reading is
-Volyume's identity (a precision instrument, numbers as the hero).
-
-### 8.5 The number pad (part of A, B and C unless Q2 keeps the steppers)
-
-A 4 × 4 in-app pad on `surface2` keys, `radius.md`, 52dp tall: digits,
-the decimal separator (comma or dot by locale, both accepted), delete;
-a right column with "−2.5", "+2.5" (the exercise's own increment, 1 for
-reps), "Use last" (fills weight and reps from the previous session's
-matching set) and "Next" (weight to reps) which becomes "Done" on reps.
-Done on reps logs the set, as the keyboard's Done does today. Hold on
-plus or minus repeats. Every key 48dp effective, labelled for
-TalkBack. No system keyboard for weight or reps; the note field keeps
-the system keyboard.
+The drawings show tap-to-change numbers with the exercise's increment as
+minus and plus glyphs beside the selected number, or typing on the system
+pad. The alternative is the boxed steppers exactly as today. Either way the
+increment taps stay (the user voice, 6.5).
 
 ### 8.6 The surfaces around the logger (every option)
 
@@ -894,24 +803,21 @@ is the lead's.)
 
 ## 9. Questions for the founder (delivered in chat; recorded here)
 
-Q1. The model: A (focus, finished), B (the sheet), or C (the sheet with a
-    now dock, the lead's recommendation). B and C lift one pinned
-    structure law (the one-exercise workspace); A lifts none. Every
-    option re-shapes D105, D66 ruling 2 and D58 as section 5.3 says.
-Q2. The entry: the in-app number pad (8.5), or the steppers as today.
-    (C assumes the pad.) The user voice says the input control is the
-    change most likely to draw anger (6.5), so whichever is chosen keeps
-    the increment taps; the pad has them as keys.
-Q3. Watch: build the Wear OS and Apple Watch logger (large; a separate
-    campaign), or not in this round.
-Q4. The summary's order (8.6): numbers first and Community after, or as
-    today.
-Q5. Build order once the model is chosen: foundation first (F1 to F15,
-    visible fixes within days), then the model; or the model first.
-Q6. A session cut short: offer to carry the remaining sets to a planned
-    workout (StrengthLog's path) and decide whether carried sets count
-    toward the week's volume landmarks; or keep today's ended-early
-    resolution.
+Q1. The idea: Instrument (one exercise, no law lifted), Ledger (the whole
+    session, one law lifted) or Stage (ledger above, instrument below, the
+    lead's recommendation). Every idea re-shapes D105 and D66 as 5.3 says.
+Q2. The button: the app's charcoal primary with an amber glyph (drawn), or
+    the solid ink button from the September direction page.
+Q3. Entering a number: tap the big number and change it with the increment
+    glyphs or type (drawn), or the boxed steppers as today.
+Q4. Watch: build the Wear OS and Apple Watch logger (a separate campaign),
+    or not in this round.
+Q5. The summary's order (8.6): numbers first and Community after, or as today.
+Q6. Build order: foundation first (F1 to F15), then the idea; or the idea first.
+Q7. The weekday-dependent test (reported in chat): fix the one line now
+    and merge the audit record to main, or leave it for the next code lane.
+Q8. A session cut short: carry the remaining sets to a planned workout, or
+    keep today's ended-early resolution.
 
 Not asked, by the founder's own prior words (5.1): the plate calculator,
 an RPE or RIR input, exercise media, a typeface change.
