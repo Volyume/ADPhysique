@@ -251,14 +251,146 @@ other side, Start cluster, then Next exercise or Finish workout with a
 
 _To be filled from 03._
 
-## 6. The field (from lanes A4, A5, A7)
+## 6. The field (from lanes A4, A5, A7; the dossiers and sources are in 04, 05 and 07)
 
-_To be filled: the feature matrix across the field, the five things the
-best loggers agree on, what users switch for, and what nobody does._
+### 6.1 Who was read
+
+Set 1 (04): Hevy, Strong, Fitbod, JEFIT, Boostcamp, Alpha Progression, RP
+Hypertrophy, Juggernaut AI, Caliber, Setgraph, Gymaholic, Dr. Muscle: twelve
+dossiers at equal depth, a 37-row matrix, 211 sources. Set 2 and the user
+voice (05) and the wider field (07): see 6.5 and 6.6, filled as those lanes
+land. Reddit was unreachable from this container (the fetch tool refuses
+it), so user voice comes from dated store reviews, Hacker News, forums and
+vendor feedback boards; Google Play pages load truncated, so Android cells
+are thin (04 section 0).
+
+### 6.2 The shape of the market (04 section 1)
+
+- Pure loggers (Hevy, Strong, Setgraph, Gymaholic), library-plus-logger
+  (Boostcamp, JEFIT), algorithmic prescribers that log (Fitbod, Alpha
+  Progression, Dr. Muscle), periodised coaches (RP, Juggernaut AI), a
+  coaching marketplace (Caliber).
+- Logging is free without a time limit in six of twelve; every prescriber
+  charges from the first week (Fitbod $95.99 a year, RP $299.99, Juggernaut
+  $349.99, Dr. Muscle $399.99). Volyume is a prescriber with a deterministic
+  engine and is free: no app in the set occupies that position.
+- Ratings: Hevy 4.92 (96,234), Strong 4.86 (108,525), Fitbod 4.81
+  (286,624), Alpha 4.92 (2,200), Boostcamp 4.85, Caliber 4.84, JEFIT 4.76,
+  Setgraph 4.72 (US App Store, dates in 04).
+
+### 6.3 The five things the best loggers agree on (04 section 4, each with at least four vendor sources)
+
+1. Completing a set is one deliberate tap, and completion is the trigger
+   for everything after it: the rest timer (eight of twelve), the PR check,
+   the saved record. "Logging a set takes one tap, which matters more than
+   it sounds when you're sweaty, out of breath" (a 2026 hands-on review).
+2. Last time's numbers sit at the point of entry and one gesture copies
+   them: Hevy's PREVIOUS column, Boostcamp's tap-to-fill, Caliber's "Last"
+   key, Setgraph's swipe-to-repeat.
+3. Set type and effort attach to the row by small optional controls (tap
+   the set number for W, D, F), and warm-ups stay out of the numbers.
+4. Mid-session structure edits are cheap and sit in one menu, and the app
+   then asks whether to write them back (Hevy "Update Routine / Keep
+   Original", Strong's four-way template prompt).
+5. The rest timer has left the app: seven of twelve document an iOS
+   lock-screen surface, only Hevy documents the Android route and set
+   completion from it, and the laggards have vote queues for it.
+
+Where they do not agree (so no norm exists): what is paid; the entry
+control (Strong and Caliber custom keyboards, Hevy an accessory bar, Alpha
+a picker); the effort scale (RPE 6 to 10, RIR 4+ to 0, both, or a single
+"how hard was that"); record versus prescribe; and the wrist (Apple Watch
+common, Wear OS only in Hevy, JEFIT and partly Fitbod).
+
+### 6.4 The set-1 matrix against Volyume (04 section 3 against 01 and 02)
+
+| Capability | In the set of twelve | Volyume today | Reading |
+|---|---|---|---|
+| Previous values at the set | 8 yes or partial | one strip, for the matching set index only | gap: a column on every row |
+| One-gesture fill from previous | 6 | the "Use" cue | parity when the index matches |
+| Custom keyboard or accessory bar | Strong, Alpha, Caliber; Hevy, Setgraph, Dr. Muscle partial | steppers plus the system keypad | different; Q2 |
+| Per-set target before the set | Fitbod, RP, Juggernaut, Dr. Muscle; Alpha paid; Hevy, JEFIT, Boostcamp paid partial | the resolver seeds weight and reps, ghosted | parity, free; the target is not named as a target |
+| Warm-up, drop, failure or AMRAP types | most | warm-up, drop, AMRAP, plus myo-reps and rest-pause (only Dr. Muscle has rest-pause) | ahead |
+| RPE or RIR per set | 6, plus 3 partial | none (struck D14, D19) | gap by ruling; Q4 |
+| Exercise notes that persist | 8 | a note on the next logged set only; the per-exercise note table has no UI | gap |
+| Plate calculator | 6 (paid in Strong and Alpha) | none (struck D57) | gap by ruling; Q3 |
+| Warm-up calculator | Hevy, Strong, Alpha (all paid), Juggernaut | the warm-up ramp sheet, free | ahead |
+| Estimated 1RM | 9 | records and exercise detail; routine per-set copy removed by device verdict | parity |
+| Duration or distance sets | 8 | yes (display defects on the summary) | parity once defect 12 closes |
+| Bodyweight, assisted, weighted | Hevy, Strong, Alpha | yes, with per-hand and assistance labels | parity (when the entry carries its type, defect 1) |
+| Weight-unit toggle | Hevy, Strong, Alpha | kg only (lb removed by an earlier ruling) | gap for lb users; not reopened here |
+| Available-weights or equipment profile | Fitbod, Alpha paid; partial in five | equipment profiles shape plans; no load rounding to plates | gap, tied to Q3 |
+| Rest auto-start, per-exercise default, adjust, sound | most | all present | parity |
+| iOS lock screen or Live Activity | 7 | yes (rest only) | parity; show the set (8.6) |
+| Android lock-screen route | Hevy only | foreground chronometer, alarms, actions | ahead |
+| Complete a set from the lock screen | Hevy; Setgraph partial | yes while a rest runs | parity with the leader |
+| Apple Watch or Wear OS logging | 6 Apple, 3 Wear | none | gap; Q6 |
+| Supersets or circuits | most | supersets, giant sets, circuits with rounds | ahead |
+| Replace or reorder mid-workout | most | yes | parity |
+| Exercise history or charts one tap from the workout | Strong, Fitbod, JEFIT, Boostcamp, Setgraph | no link from the logger | gap (8.6) |
+| Live PR hint while logging | Hevy, JEFIT, Boostcamp, Caliber | the record callout | parity |
+| Share card | most | yes | parity |
+| Write-back prompt after in-session edits | Hevy, Strong | swap scope only | gap (8.7) |
+| Offline logging | Fitbod, Boostcamp, Alpha, Dr. Muscle document it | offline-first by design | ahead |
+| Resume an unfinished workout after a kill | Hevy (Dr. Muscle partial) | yes, with a draft of the typed entry | ahead |
+| Free logging, no limit | 6 | everything | ahead |
+| Instruction media | 10 (video, animation or illustration) | text only | gap; Q5 |
+| Edit a finished session | Hevy, Strong, Boostcamp, JEFIT (dossiers) | hard delete only | gap (F9) |
+
+### 6.5 Set 2 and the user voice (05)
+
+_Fills when lane A5 lands._
+
+### 6.6 The wider field (07)
+
+_Fills when lane A7 lands._
 
 ## 7. Gap analysis: what they have that we do not, and what brings value
 
-_To be filled._
+Ranked by the value to a person logging a session, the lead's judgement
+on the evidence in section 6 and the maps in section 4.
+
+1. **The session in view.** Every leading logger shows the whole session;
+   Volyume shows one exercise and hides the rest behind a strip that closes
+   itself. This is the structural gap and the root of "lagging". Options B
+   and C close it; A does not.
+2. **Previous on every row, one gesture to copy.** The field's second
+   agreement. Volyume shows one strip for the matching index. Every option
+   adds the PREVIOUS column and "Use last".
+3. **Entry that does not fight the phone.** Strong, Caliber, Alpha and
+   Setgraph own the entry control; Volyume's steppers are good but the
+   system keypad still rises for typing, covers the bottom chrome on
+   Android, and drops a comma. The in-app pad (8.5) closes this; Q2.
+4. **Instruction media.** Ten of twelve ship video, animation or
+   illustration; Volyume has text. An asset decision, Q5.
+5. **Correct a finished session.** Hevy, Strong, Boostcamp and JEFIT edit
+   after the fact; Volyume can only delete. F9.
+6. **Write-back after in-session edits.** Both market leaders ask "update
+   the routine?" when sets, loads or exercises changed; Volyume writes back
+   swaps only. Added to every option.
+7. **The exercise's own history one tap from the set.** Five of twelve;
+   Volyume's exercise detail is complete but unreachable from the logger.
+   8.6 adds the sheet.
+8. **Exercise notes that persist.** Eight of twelve; Volyume's note is
+   attached to the next logged set and the per-exercise note store has no
+   screen. Every option adds the exercise note in the block header (8.3)
+   or the dock (8.4).
+9. **Plate calculator and available-weights rounding.** Six of twelve;
+   struck by D57. Q3, not re-proposed.
+10. **RPE or RIR.** Six of twelve; struck by D14 and D19. Q4, not re-proposed.
+11. **The wrist.** Six Apple Watch, three Wear OS; Volyume none. Q6.
+12. **Pounds.** Three of twelve toggle units; Volyume is kg-only by an
+    earlier ruling. Noted, not reopened.
+
+What Volyume has that the field does not (keep, and say so in the store
+listing): free prescription from a deterministic engine (every prescriber
+charges); offline-first with a draft that survives a kill (one competitor
+documents resume); the deepest Android rest surface in the set (a
+foreground chronometer, alarm cues, lock-screen actions, where only Hevy
+documents an Android route at all); rest-pause and myo-rep clusters,
+per-side logging, circuits with rounds; honest first-lift handling and
+calm-mode suppression of celebration; a summary that judges the week's
+volume per muscle and feeds a recovery estimate.
 
 ## 8. The options
 
@@ -504,8 +636,8 @@ is the lead's.)
 | Whole session visible | every sheet logger | behind the outline strip | B and C |
 | Fixed entry that never moves | Setgraph (swipe), Liftin' | the Now card scrolls | C |
 | In-app number pad with increments | Strong (toolbar), Setgraph, Gymaholic | steppers | 8.5, Q2 |
-| Plate calculator | Hevy, Strong Pro, Boostcamp, JEFIT | struck, D57 "never revisit" | Q3: the founder's reversal or not; the audit does not re-propose it |
-| RPE or RIR per set | Hevy, Strong, Boostcamp, RP, Alpha Progression | struck, D14 and D19 | Q4: reversal or not; the engine already stores rir |
+| Plate calculator | Hevy, Strong (paid), Boostcamp, Alpha (paid), Setgraph, Gymaholic | struck, D57 "never revisit" | Q3: the founder's reversal or not; the audit does not re-propose it |
+| RPE or RIR per set | Hevy, Strong, Boostcamp, Alpha (paid), Juggernaut, Dr. Muscle; Fitbod, JEFIT, RP partial | struck, D14 and D19 | Q4: reversal or not; the engine already stores rir |
 | Exercise video or illustration | JEFIT, Alpha Progression (795 videos), Fitbod, Hevy | text instructions only | Q5: an asset decision (licence, size, source) |
 | Watch logging | Hevy, Strong, Gymaholic, JEFIT, Fitbod | dormant bridge, no target | Q6: a build decision outside this round |
 | Edit a finished session | Hevy, Strong, Boostcamp, JEFIT | hard delete only | F9 |
@@ -523,12 +655,13 @@ Q1. The model: A (focus, finished), B (the sheet), or C (the sheet with a
     structure law (the one-exercise workspace); A lifts none.
 Q2. The entry: the in-app number pad (8.5), or the steppers as today.
     (C assumes the pad.)
-Q3. The plate calculator was struck by D57 ("never revisit"). Four of
-    the five most-used loggers carry one. Reverse, or keep struck.
-Q4. A visible RPE or RIR input was struck by D14 and D19. Five of the
-    twelve set-1 apps carry one; the engine already stores `rir`.
-    Reverse (as an optional per-set field, off by default), or keep
-    struck.
+Q3. The plate calculator was struck by D57 ("never revisit"). Six of the
+    twelve leading loggers document one (Hevy, Strong, Boostcamp, Alpha,
+    Setgraph, Gymaholic). Reverse, or keep struck.
+Q4. A visible RPE or RIR input was struck by D14 and D19. Six of the
+    twelve document one and three more partially; the engine already
+    stores `rir`. Reverse (as an optional per-set field, off by default),
+    or keep struck.
 Q5. Exercise media: none today. Options: licensed illustration set
     (a dependency and an asset decision), app-drawn line illustrations
     for the 918 exercises over time, or stay text-only.

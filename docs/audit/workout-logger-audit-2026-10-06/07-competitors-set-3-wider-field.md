@@ -204,3 +204,154 @@ Snapshot. Swedish strength-training log with a powerlifting lean. App Store: iPh
 
 **10. Price and tier.** Free: unlimited logging, no ads, no account, plate calculator, rest timer, PR tracking, challenges. Premium: RPE/RiR, full programme library, advanced statistics, muscle analytics, Train Again bulk edits; US App Store $16.90 per month, $37.90 per 3 months, $109.00 per year, the dearest price seen in this set so far. (https://apps.apple.com/us/app/strengthlog-workout-tracker/id1434229662, f; https://help.strengthlog.com/how-to-activate-rpe-rir-in-your-workouts/, f)
 
+### 2.4 Train Fitness, now Motra (automatic rep counting from an Apple Watch)
+
+Snapshot. The only app in this set that counts reps and recognises exercises from wrist motion. Rebranded from Train Fitness to Motra in build 6.0.0 on 2026-01-07 (https://www.motra.com/what-is-new, 2026-01-07). App Store: developer Train Fitness Inc., 4.7 from 3K ratings, free with subscription tiers listed from $5.99 to $99.99, iPhone, iPad, Mac, Vision and Apple Watch Series 4 or later, iOS 17 and watchOS 10 or later (https://apps.apple.com/app/id1548577496, f). Funding report: $2.5M seed closed end of May 2023, "Over 10,000 weekly active users", "96% accuracy; targeting 99% by year-end" (a vendor claim relayed by the press; 160+ exercises then, 470+ now) (https://betakit.com/train-fitness-closes-2-5-million-usd-to-expand-automatic-workout-tracking-app-for-strength-training/, 2023-06-21). No Android app was found: UNKNOWN beyond "Apple Watch required" in the vendor copy (https://www.motra.com/, f). Release dates below come from the vendor changelog; the App Store listing dates the same builds a few weeks later, so treat dates as approximate to the week.
+
+**1. Active-workout screen anatomy**
+- OBS/vendor: "Start a workout on either your Apple Watch or iPhone. Your session will sync and mirror on both devices." (https://help.motra.com/en/articles/9980535-getting-started-with-motra, f)
+- OBS/vendor: the watch workout display has three slots from six stats (heart rate, total volume lifted, workout duration, heart-rate zone, active calories, average rest time); "The first slot cannot be changed and will always show rest time or the rest alarm". Open it by swiping left, Settings, Display. (https://help.motra.com/en/articles/9911165-customizing-apple-watch-display, f)
+- UNKNOWN: the iPhone set-row layout, top bar and pinned controls (no source read describes the phone screen).
+
+**2. Set-entry mechanics**
+- OBS/vendor: the primary path is no entry: "Simply start exercising, and you'll see automatic rep and weight detection on your watch." After the exercise: "confirm the sets and adjust the weight if necessary. The exercise will then be logged." Detection needs "a minimum of 3 reps", "real weights (not air exercises)" and the right Digital Crown orientation setting. (https://help.motra.com/en/articles/9980535-getting-started-with-motra, f)
+- OBS/review (conflict with the vendor line above): "Train/Motra does NOT detect weight. The app can remember and predict what weight might be coming next" (https://riven.fit/blog/best-automatic-rep-counter-apps-apple-watch, 2026, T3: the site sells a rival app). An App Store reviewer, 2025-08-20, "criticized inability to detect weight, poor machine-based leg exercise detection, and constant need for manual adjustment" (https://apps.apple.com/app/id1548577496, f). INFERRED: weight is a prefilled prediction from history that you correct, not a sensed value; the vendor help line overstates it.
+- OBS/vendor: editing a set offers three scopes: "All Sets", "This Set", and "Auto Update" (the default), which changes later unlogged sets by the same increment; it never touches logged sets and can be switched off in Workout Settings. (https://help.motra.com/en/articles/11081434-updating-set-weight-reps-and-rest-time, f; https://help.motra.com/en/articles/14076038-workout-data-not-saving, f)
+- OBS/vendor: changelog items that are set-entry features: per-exercise lb or kg (5.4.0, 2025-11-12); negative-weight support for assisted exercises and an "Integrated timer for time-based exercises" (5.5.0, 2025-11-22); "customizable exercise measurement (reps/distance/time)", a "Circuit" label on exercise groups and a "Smart Swap" feature (6.2.0, 2026-05-01); gym builder with "custom weight increments" (6.4.0, 2026-06-05). (https://www.motra.com/what-is-new, 2026-06-05)
+
+**3. Rest timer**
+- OBS/vendor: "Rest Time and Rest Alarm provide a visual and audio reminder to start the next set" (search summary of the help centre, T4: https://help.motra.com/en/collections/10026070-workouts-and-features, f); the watch's first display slot always shows rest time or the alarm (https://help.motra.com/en/articles/9911165-customizing-apple-watch-display, f).
+- OBS/user: a 2-star review (2025-04-06) objected to an "intrusive voice rest timer that disrupts workflow". (https://apps.apple.com/app/id1548577496, f)
+- OBS/vendor: two shipped fixes show the audio rest alarm is fragile in the background: "rest alarm audio not triggering when the phone app transitions to background" (5.3.2, 2025-11-10) and "audio playback rest alarms could become unreliable" (6.1.1, 2026-03-03). (https://www.motra.com/what-is-new, 2026-03-03)
+- UNKNOWN: Live Activity or lock-screen surface on the phone; Wear OS (none found).
+
+**4. Mid-workout exercise management**
+- OBS/vendor: 470+ detectable exercises; 1,000+ exercises added in 5.5.0 along with stretches, warm-ups and an Exercise Details page with instructions; custom exercises can be auto-detected (5.3.0). (https://www.motra.com/what-is-new, 2025-11-22)
+- OBS/vendor: "Gym Builder" lists the equipment a gym has so generated workouts "only use machines and weights you actually have access to". (search summary, T4: https://help.motra.com/en/articles/14076033-gym-builder, f)
+- OBS/user: "removing exercise grouping, poor superset recognition" (2-star, 2025-04-06). (https://apps.apple.com/app/id1548577496, f)
+
+**5. Finishing**
+- OBS/vendor: at finish the app "alerts users to unlogged sets"; choices are "Log All Sets" or "Discard X Unlogged Sets", and discarded sets cannot be recovered. (https://help.motra.com/en/articles/14076038-workout-data-not-saving, f)
+- OBS/vendor: after a template workout "The templated workout you saved will reflect the actual data (reps, weight, etc.) instead of the planned template", with a choice to update the template's weight, reps and structure. (https://help.motra.com/en/articles/9698208-templated-workouts, f)
+- OBS/vendor: data export by date range and ChatGPT access to workout history through MCP, read-only (6.2.0, 2026-05-01). (https://www.motra.com/what-is-new, 2026-05-01)
+
+**6. Resilience (the best-documented of any app in this file)**
+- OBS/vendor: Watch workouts "are stored locally on the device first, then transferred to iPhone"; locally saved workouts are kept "up to 14 days". A workout stuck in "pending upload" shows a "Workout Processing" banner with "Upload Saved Workout", and is "automatically deleted after 14 days". (https://help.motra.com/en/articles/14076038-workout-data-not-saving, f)
+- OBS/vendor: after a dead battery watchOS can preserve in-progress data "for up to 8 hours", but "recovery only works with freeform workouts, not template-based sessions". (https://help.motra.com/en/articles/14076038-workout-data-not-saving, f)
+- INFERRED: the app has a real failure mode where a finished workout exists only in a pending state; the vendor's own help centre has an article for "Workout Data Not Saving".
+
+**7. How it fits together**
+- OBS/vendor: templates (start from phone or watch), "Last Hit Templates" and exercise search in Trends (6.1.0, 2026-03-01), recovery percentage and watch streak widgets, a Trends tab, AI-generated workouts "tailored to past sessions, recovery, and fitness goals", and an AI Coach with video chat and template saving (6.3.0, 2026-05-19). (https://www.motra.com/what-is-new, 2026-05-19; https://www.motra.com/, f)
+- OBS/vendor: "Smart Weights" begin after "at least five logged workouts" and use a Brzycki 1RM, weight and rep history, muscle recovery, rest time and workout structure. (https://help.motra.com/en/articles/10060175-unlocking-gains-progressive-overload, f)
+
+**8. Praise, complaints, switching**
+- OBS/user: "This app is extremely convenient and best of all, it's free to use." Reviewer noted "not 100% accurate" but editing is easy (5 stars, 2025-01-03). (https://apps.apple.com/app/id1548577496, f)
+- OBS/user: "The app tracks muscle group recovery and the AI will create a routine for your workout that day based on what has recovered" (5 stars, 2025-07-12). (https://apps.apple.com/app/id1548577496, f)
+- OBS/review (T3, vendor-run sites): an independent score of 3 out of 5, "not yet reliable enough to replace intentional logging", with complex movements and cable work confusing it (https://riven.fit/blog/best-automatic-rep-counter-apps-apple-watch, 2026); "Sometimes feels slower than manual logging" because of corrections (https://www.findyouredge.app/news/best-strength-training-apps-apple-watch-2026, 2026-10-06; the site sells a rival app).
+- INFERRED: on this evidence automatic counting saves taps only where detection is right; the cost of a wrong guess (confirm, correct, re-enter weight) can exceed the cost of tapping.
+
+**9. Distinctive**
+- Rep counting and exercise recognition from the watch's accelerometer, no manual entry, 470+ exercises (vendor CLAIM; accuracy contested by T3 reviews). (https://www.motra.com/, f)
+- Auto Update: one edit rewrites the remaining unlogged sets by the same increment. (https://help.motra.com/en/articles/11081434-updating-set-weight-reps-and-rest-time, f)
+- A documented offline pipeline: watch stores first, phone uploads later, with stated retention windows. (https://help.motra.com/en/articles/14076038-workout-data-not-saving, f)
+- Other wrist-motion counters named by a T3 source: Gymatic, Rep Up (haptic count only), Fitnexx, Riven; none reads weight. (https://riven.fit/blog/best-automatic-rep-counter-apps-apple-watch, 2026)
+
+**10. Price and tier.** Free tier with paid subscriptions ($5.99 to $99.99 SKUs on the App Store); the 2023 launch pricing was $7.99 per month or $49.99 per year with a limited free version. (https://apps.apple.com/app/id1548577496, f; https://betakit.com/train-fitness-closes-2-5-million-usd-to-expand-automatic-workout-tracking-app-for-strength-training/, 2023-06-21)
+
+### 2.5 Gymshark Training (retired Android app, frozen iOS app)
+
+Snapshot. Free workout-video and log app from the apparel brand Gymshark Ltd. Status is the headline: the vendor's support article dated 2026-07-27 says "The Training app is no longer available to download on Android" and "The Training App will no longer be updated with any fixes or new features for both IOS & Android"; it remains downloadable on the iOS App Store "in most worldwide locations" (https://support.gymshark.com/en/articles/11185911-the-gymshark-training-app, 2026-07-27). A search-engine summary of APKMirror and AppBrain pages (T4, pages not loadable) dates the Google Play removal to 12 March 2025 with final Android build 2.54.0 on 3 December 2024 (https://www.appbrain.com/app/gymshark-training-fitness-app/com.gymshark.fitness, undated; search summary 2026-10-06). The App Store listing shows 4.8 from 15K ratings (the store API says 4.85 from 15,155), last build 2.62.0 on 2025-06-25, which "Migrated to new data management system; users must update and log in by September 2025 to maintain data sync" (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, f; https://itunes.apple.com/search?term=workout%20tracker&country=us&entity=software&limit=40, 2026-10-06).
+
+**1. Active-workout screen anatomy.** UNKNOWN in detail; no hands-on write-up could be read (Tom's Guide and a Medium review returned truncated or 403 pages). OBS/vendor: "video demonstrations with built-in timers" and rep and set monitoring. (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, f)
+
+**2. Set-entry mechanics**
+- OBS/vendor (search summary of release notes, T4): build 2.31.0 introduced "Sets & Reps: Tracked Mode" through "Gymshark Labs", letting you "record sets, reps, weight, and duration to match your training goals"; build 2.32.0 made Tracked Mode "show your previous exercise data", described as a response to user feedback. (https://apkmirror.com/apk/gymshark-ltd/gymshark-training-fitness-app/gymshark-training-fitness-app-2-32-0-release, undated; page returned 403, so the text is the search engine's summary)
+- OBS/vendor: custom workouts have "personalised sets, reps, and rest". (https://support.gymshark.com/en/articles/11185911-the-gymshark-training-app, 2026-07-27)
+- INFERRED: before Tracked Mode the app logged completion of prescribed sets, not performed weights; a free brand app added true logging late and then stopped.
+
+**3. Rest timer.** OBS/vendor: rest is a field of the custom workout builder (above). Auto-start, lock-screen and wearable behaviour: UNKNOWN.
+
+**4. Mid-workout exercise management.** OBS/vendor: "SMART SEARCH" filters workouts by type, duration, equipment or target muscle group; "Step by step videos". Replace, reorder, remove mid-session: UNKNOWN. (https://support.gymshark.com/en/articles/11185911-the-gymshark-training-app, 2026-07-27)
+
+**5. Finishing.** UNKNOWN (summary, share, rating). The app also carried a "Gymshark66" 66-day habit challenge and Apple Health integration. (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, f)
+
+**6. Resilience.** UNKNOWN beyond the 2025 forced migration: "users must update and log in by September 2025 to maintain data sync" (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, 2025-06-25). INFERRED: data lived on a vendor account that had to be re-authenticated, so a user who skipped the update risked losing sync.
+
+**7. How it fits together.** OBS/vendor: library of "thousands of free workouts led by Gymshark athletes", programmes, a custom builder, "TRACK YOUR PROGRESS" tab; weekly new content. (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, f)
+
+**8. Praise, complaints, switching**
+- OBS/user: "completely free, no in app purchases" and a developer who answered suggestions within 10 minutes (5 stars, 2024-09-06); "10/10 Recommend ... clear video demonstrations" (2025-05-13); a 2022 user asked to "search progress during workouts" and for "progress graphs beyond three major lifts". (https://apps.apple.com/us/app/gymshark-training-and-fitness/id1139151320, f)
+- OBS/review (search summary of a hands-on review, T4): the Progress tab is "one of the least detailed and developed parts"; people wanted weight-progression graphs per exercise and workout streaks. (https://tomsguide.com/wellness/fitness/gymshark-training-app-review-effective-workouts-for-free, undated; page truncated)
+
+**9. Distinctive.** A free, no-IAP, brand-funded logger; its end-of-life notice is itself the lesson for a free product (see section 4, pattern W-14). INFERRED.
+
+**10. Price and tier.** Free, no in-app purchases. (https://support.gymshark.com/en/articles/11185911-the-gymshark-training-app, 2026-07-27)
+
+### 2.6 Liftoff (two unrelated apps share the name)
+
+Name collision, stated so nothing is mixed: "Liftoff - Ranked Gym Workouts" (Liftoff Labs Inc., formerly GymBros Inc., App Store ID 6448081563, Android package `com.gymbros.app`) is the gamified one covered below. A different, tiny "Liftoff - Workout Log" (ID 1085414909, developer Nicholas Domenicali) is described in one line at the end; its own page returned 404, so that line comes from a search summary only (T4). (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563, f; https://apps.apple.com/app/id1085414909, search summary 2026-10-06)
+
+Snapshot. US App Store 4.83 from 98,347 ratings, free with Liftoff Pro ($3.99 to $79.99 SKUs), iPhone, iPad, Apple Watch, Vision; build 2.16.4 "Apple Watch support is here! Track workouts from your wrist" released the day before the fetch, build 2.15.6 on 3 Sep "Get your rank on 500+ exercises for free!" (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563, f; https://itunes.apple.com/search?term=workout%20tracker&country=us&entity=software&limit=40, 2026-10-06). Google Play: 4.8 from 94.5K reviews, "over 1 million downloads", in-app purchases (https://play.google.com/store/search?q=liftoff%20ranked%20gym%20workouts&c=apps&hl=en&gl=US, 2026-10-06; store search page, the detail page did not load). Business facts from a newsletter: founder Jason Lin, team of two or three, "$300,000" monthly revenue reported, growth by organic TikTok (https://ventureradar.substack.com/p/this-gym-app-built-by-college-students, 2025-05-21; second-hand revenue figures, unverified).
+
+**1. Active-workout screen anatomy**
+- OBS/review (UX teardown, T2, undated): card-based layout; each exercise card has name, illustration and muscle targets; a set table with weight, reps and completion status "with drag reordering"; an "Add Set" action that duplicates the previous set or adds an entry; session notes and a bodyweight field; contextual "How to Log" modals. (https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f)
+- OBS/review: "Top-of-screen positioning" for a prominent countdown timer. (https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f)
+
+**2. Set-entry mechanics**
+- OBS/review: supersets, exercise reordering, notes and "detailed set-by-set input"; custom exercises and reusable routines. (https://screensdesign.com/showcase/liftoff-ranked-gym-workouts, f)
+- OBS/user: a 4-star review asks for a pause on the timers and better logging for unilateral dumbbell work where one side is weaker; another (2025-12-31) says exercises cannot be skipped "without deleting them". (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563?see-all=reviews, f)
+- UNKNOWN: numeric pad, RPE/RIR, plate calculator, previous-session ghost values.
+
+**3. Rest timer.** OBS/review: adjustable-time buttons, a skip control, remaining minutes and seconds shown at the top; a second teardown says "no specific rest timer feature is mentioned", so the two teardowns disagree and the timer is only partly established. Lock screen, Live Activity, Wear OS: UNKNOWN; the Apple Watch app is new (2.16.4). (https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f; https://screensdesign.com/showcase/liftoff-ranked-gym-workouts, f)
+
+**4. Mid-workout exercise management.** OBS/vendor: 600+ exercises; custom exercises and routines. Reorder by drag handles (OBS/review above). Skipping without deleting is requested by a user, so it is absent or hard to find. (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563, f)
+
+**5. Finishing**
+- OBS/review: summary cards for duration, total volume and experience points, a mascot celebration ("Jymbo", a blue elephant), rank-promotion and streak unlocks, sharing to Instagram or saved image, an egg/XP reward currency. (https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f)
+- OBS/review: dual-media social posts that pair a real photo with in-app data graphics. (https://screensdesign.com/showcase/liftoff-ranked-gym-workouts, f)
+
+**6. Resilience.** UNKNOWN. OBS/user (aggregator, T4): complaints of "App crashes and freezing issues". (https://mwm.ai/ko/apps/liftoff-ranked-gym-workouts/6448081563, f)
+
+**7. How it fits together**
+- OBS/review: onboarding is a quiz (goals, experience, age, weight, height, equipment), an avatar builder, Apple Health permission, account creation, AI plan generation, then a paywall with a "7-day free trial" and $79.99 per year; a "Welcome Quest" gamifies setup, including adding the home-screen widget. (https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f; https://screensdesign.com/showcase/liftoff-ranked-gym-workouts, f)
+- OBS/vendor: global, regional and friends leaderboards; rank tiers (reported as Bronze, Silver, Gold, Olympian); a "General Strength Rank"; streaks, quests, achievements; a photo calorie scanner. (https://mwm.ai/ko/apps/liftoff-ranked-gym-workouts/6448081563, f)
+
+**8. Praise, complaints, switching**
+- OBS/user: "an excellent idea to rank people's workouts because...it makes me excited to go to the gym" (App Store review, undated in the fetch); concern that "some exercises receive disproportionately high ranks relative to difficulty" and that rank weighs absolute weight over reps. (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563, f)
+- OBS/user: food search "completely random results about 90% of the time" (2025-04-11). (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563?see-all=reviews, f)
+- OBS/user (aggregator, T4): surprise charges after the trial because the expiry alert was unclear. (https://mwm.ai/ko/apps/liftoff-ranked-gym-workouts/6448081563, f)
+
+**9. Distinctive.** Per-exercise rank against a global population, an XP and level economy, an avatar and mascot, and a "tap and hold to commit" onboarding screen. The gamification replaces coaching rather than adding to it. (https://screensdesign.com/showcase/liftoff-ranked-gym-workouts, f)
+
+**10. Price and tier.** Free base (ranks on 500+ exercises free per the 2.15.6 note); Pro $3.99 to $79.99 SKUs, annual $79.99 after a 7-day trial. (https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563, f; https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657, f)
+
+The other "Liftoff - Workout Log": a search summary says "no ads or in-app purchases, unlimited routines, swipe gesture logging, progress graphs, 1 Rep Max tracking, automatic rest timers, and 100+ pre-loaded exercises", 4.7 from 31 ratings (T4, https://apps.apple.com/app/id1085414909, search summary 2026-10-06). UNKNOWN beyond that.
+
+### 2.7 HeavySet (Runloop Ltd, iPhone and iPad only)
+
+Snapshot. A long-lived, dense iPhone gym log: US App Store 4.6 from 1.3K ratings, free with a single "Lifetime Intermediate" purchase at $19.99, iPhone only, iOS 16.6 or later, latest build 2025.1 on 2025-08-20 (https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310, f). No Android release (a third-party page last checked 2026-09-27 says so: https://wellnessproject.ai/heavyset-for-android, 2026-09-27; that site sells a rival).
+
+**1. Active-workout screen anatomy.** UNKNOWN in layout. OBS/vendor: "View workout preview", "Local notifications when timers end", "View all current rep records for current exercise" and PR notifications during the log. (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f)
+
+**2. Set-entry mechanics**
+- OBS/vendor: "Log using intelligent suggested values"; the site says it "logs a set in as few taps as possible" with Smart Values that "anticipate the weight and reps you'll enter next". (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f; https://www.heavyset.app/, f)
+- OBS/vendor: sets driven by intensity and training max ("Automatically calculate weight using intensity and training max"), rep ranges, set ranges, AMRAP, RPE, supersets and giant sets, base weight and bodyweight, assisted exercises, unilateral option that doubles volume in statistics, volume groups. (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f)
+- OBS/vendor: plate calculator; deload "intensity, volume or rest automatically". (same listing)
+- OBS/user: older reviews (2021) missed warm-up, failed and dropped set logging and pre-entry of planned weights; 2020 review found "touchy buttons and unclear feedback during set logging". (https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310?see-all=reviews, f) The 2018 release added "unilateral exercises, base weight options" and "new record alerts"; a 2019 build added timed exercises and deload parameters (https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310, f). Current warm-up and drop-set support: UNKNOWN.
+
+**3. Rest timer.** OBS/vendor: "Preset rest timers per exercise", "Rest timer with presets and quick modifiers", a "Tempo timer metronome" for pacing reps, "Auto-advancing exercises and super sets", local notifications when a timer ends. (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f) Live Activity and watch: UNKNOWN (none mentioned).
+
+**4. Mid-workout exercise management.** OBS/vendor: add any exercise; per-exercise notes; "Full exercise history with notes"; training max per exercise. Replace and reorder: UNKNOWN. (same listing)
+
+**5. Finishing.** OBS/vendor: weekly progress stats, a log of every rep record "filter record log by rep amount", PR notifications for "rep records, estimated 1rm, volume & more". (same listing)
+
+**6. Resilience.** OBS/vendor: "Automatic iCloud backup", CSV export "without upgrading", CSV import with presets "for Strong, StrongLifts, and more", in-app FAQs, help videos and developer chat. Offline and kill-resume: UNKNOWN (local-first is INFERRED from iCloud backup and no account). (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f; https://www.heavyset.app/, f)
+
+**7. How it fits together.** OBS/vendor: routines built from earlier workouts or imported and exported as plain text for sharing ("Import plain text routines for rapid routine building"); an estimated duration and intensity per routine. (same listing)
+
+**8. Praise, complaints, switching.** OBS/user: "It's the best app for seriously tracking training I've ever seen" and "HeavySet finally dethroned the old app as my workout tracker" (App Store, undated in the fetch). A search summary quotes: "I've tried out Strong, Fitbod, and Stacked. Heavyset is far better than all of them." (T4; https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310, f). The 2023 request for "automatic weekly weight increases" (periodisation) is the recurring gap. (https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310?see-all=reviews, 2023-06-26)
+
+**9. Distinctive.** Plain-text routine import and export for sharing, a tempo metronome, intensity and training-max driven loads, and a rep-record log filterable by rep count. (https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310, f)
+
+**10. Price and tier.** Free to download; the one in-app purchase is a $19.99 lifetime unlock, and a non-paying user is "limited in the number of times you can perform the routines you input" (search summary, T4). (https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310, f)
+
