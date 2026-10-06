@@ -18,8 +18,8 @@ feels like that's now an area where the app is lagging. It needs to be
 better than all competitors." Same day: "We are not accepting just hevy
 and strong that's lazy look at many more."
 
-STATUS: AUDIT COMPLETE, 2026-10-06 (lane A7's file closes as its lane
-hands back; lane A6 is the build lanes' reference). Nothing under src/
+STATUS: AUDIT COMPLETE, 2026-10-06; every lane file is landed (lane A6
+is the build lanes' visual reference). Nothing under src/
 changes in this round. The proposals went to the founder in chat as
 options; the build starts only on the founder's choice.
 
@@ -33,7 +33,7 @@ options; the build starts only on the founder's choice.
 | 03-rulings-survey.md | A3 | Haiku | every recorded founder ruling that touches the logger (forbidden, locked, reverted) |
 | 04-competitors-set-1.md | A4 | Sonnet | twelve leading loggers in depth, feature matrix |
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
-| 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line (lane cut by a rate limit at 15:5x UTC before writing; relaunched after the reset, or run as the build's first reference lane) |
+| 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line: the primitives, chrome, data rows, amber census, motion, sheets, pickers, states, light theme, the app's best surfaces (600 lines) |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
 | 08-options-page.html | lead | hands-on | the mockup page (current logger beside options A, B and C), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
