@@ -34,6 +34,7 @@ the founder's choice.
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
 | 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
+| 08-options-page.html | lead | hands-on | the mockup page (current logger beside options A, B and C), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
