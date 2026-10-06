@@ -33,7 +33,7 @@ options; the build starts only on the founder's choice.
 | 03-rulings-survey.md | A3 | Haiku | every recorded founder ruling that touches the logger (forbidden, locked, reverted) |
 | 04-competitors-set-1.md | A4 | Sonnet | twelve leading loggers in depth, feature matrix |
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
-| 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line |
+| 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line (lane cut by a rate limit at 15:5x UTC before writing; relaunched after the reset, or run as the build's first reference lane) |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
 | 08-options-page.html | lead | hands-on | the mockup page (current logger beside options A, B and C), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
