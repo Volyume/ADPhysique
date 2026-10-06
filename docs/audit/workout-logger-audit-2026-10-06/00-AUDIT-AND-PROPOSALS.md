@@ -337,9 +337,93 @@ common, Wear OS only in Hevy, JEFIT and partly Fitbod).
 | Instruction media | 10 (video, animation or illustration) | text only | gap; Q5 |
 | Edit a finished session | Hevy, Strong, Boostcamp, JEFIT (dossiers) | hard delete only | gap (F9) |
 
-### 6.5 Set 2 and the user voice (05)
+### 6.5 Set 2 and the user voice (05: twenty-one dossiers; 380 dated user statements from 260 sources)
 
-_Fills when lane A5 lands._
+Set 2 covered FitNotes, GymBook, Liftin', StrongLifts, KeyLifts, Lyfta,
+Gravl, GainFrame, SensAI, Simple Workout Log, Stacked, Apple's Workout
+app (watchOS 26 and 27), Google Fit and Fitbit, Peloton Strength+,
+Ladder, Future, Trainerize, MyFitnessPal, the Android-native rivals in
+Play rankings, Boostcamp's programme-first rivals and Reps & Sets 27.
+The user voice (05 section 3) is 3,260 App Store reviews across 25 apps,
+359 Google Play reviews, a Reddit archive and Hacker News, 2024 to 2026;
+every quoted fragment was checked against the raw review feed.
+
+**Why people switch (05 s3A, 87 dated moves and wishes).** Price and
+paywalls first (StrongLifts' 2026 subscription wave, Fitbod's locked
+history, lifetime purchases not honoured); platform surfaces second (a
+Strong user with a lifetime licence left for Hevy over Live Activity:
+"Over a year and they never built Dynamic Island and lock screen access.
+This is a huge miss"); then bugs and sync, then prescription quality.
+
+**The ten complaints, ranked (05 s3B, 672 low-star reviews since 2025).**
+Bugs, crashes, freezes and lag 24.6%; price, paywall and revoked lifetime
+purchases 21.2% (31.7% with the StrongLifts wave); updates that make it
+worse (redesign, bloat, AI creep) 14.8%; watch problems 13.4%;
+prescription quality 8.7%; then sync and lost data, the exercise library,
+history buried or locked, notifications and timers, support.
+
+**The delights, ranked (05 s3C, 1,706 high-star reviews).** Simple, easy,
+fast, no fluff 23.5%; shows what you did last time, progress, PRs, charts
+21.9%; free, no ads, fair price 17.8%; results and consistency 17.0%; a
+plan or coach does the thinking 16.4%.
+
+**The micro-interactions users name (05 s3D).**
+- One tap logs the set as prescribed; the extra tap records a shortfall
+  (StrongLifts: tap the circle to log the goal reps, tap again to drop a
+  rep). The fastest pattern in the sources makes success the default.
+- Last time, shown where the set is entered, is the most-praised fact in
+  a set row; its absence is named as a reason not to switch (Peloton
+  Strength+: "It's way too difficult to see previous lifts during a
+  workout").
+- The rest screen should show what comes next: two Peloton reviewers ask
+  for the next set's load during the countdown ("so I can prepare it
+  during the rest countdown"); Hevy's and Musklr's Live Activities show
+  it and are praised for it.
+- Plus and minus 15 on a running rest; Boostcamp lost a star for removing
+  its one-tap presets.
+- Number entry is taste, not fact: wheels annoy people who scroll by one
+  pound, keyboards annoy people who type every time, a lagging field
+  annoys everyone; JEFIT's 2026 switch from reels to the keyboard drew
+  one-star reviews ("I hate with a passion the way they changed the
+  input"). Three apps changed their input mode in 2026 and each paid for
+  it. Bears on Q2: whichever control is chosen, keep the increment taps
+  the stepper users have today.
+- Auto-advance after the last set is wanted by some and resented by
+  lifters who add a bonus set (Alpha Progression, 3 stars); GymBook makes
+  it a setting. Volyume's cancellable 1.8 s countdown with "Log another
+  set" already sits between the two; a setting would settle it.
+- Swipe-to-delete is fast and loses data (Boostcamp, 1 star: "no way to
+  restore it unless you click undo within a 3 second timer"); Strive
+  removed the gesture. Volyume's confirm-before-delete is the right side
+  of this.
+- A workout clock that outlives the workout: StrongLifts pauses after ten
+  idle minutes because "many people forget to finish their workouts and
+  end up with long workout durations". Volyume's 4-hour stale prompt is
+  late by comparison; an idle pause of the elapsed clock belongs in the
+  foundation (F15).
+- Lock-screen set completion must complete the right set: SensAI shipped
+  a fix for "completing the wrong set" and Reps & Sets removed its Live
+  Activity controls five weeks after adding them. Volyume's action is
+  already guarded (only while a rest runs, never on an unconfirmed
+  ghost); keep that guard whatever the dock does.
+
+**Design language (05 s3F).** Design praise is rare (29 of 1,675
+five-star reviews) and specific: "simple, elegant", "feels like an apple
+developed app", "CLEAN AESTHETIC", "bloat free and AI-free". Design anger
+comes after changes and names the same three things every time: a
+calendar view, a next-workout card and a history screen that a redesign
+buried, plus "too much margin spacing" and "more taps to enter the exact
+same information". Legibility complaints are concrete: black on black,
+fonts "reduced to being nearly unreadable", plates "hard to tell apart".
+Restraint is the premium signal; native feel is the second.
+
+What this means for the redesign, in the lead's reading: the options
+must not add a tap to logging a set (one tap when the prescription is
+right, as today); nothing a person uses daily moves without a visible
+door; the whole session in view and "last time" on every row are what
+the market praises most; and the entry control is the one change most
+likely to draw anger, so it is a founder decision (Q2) and, whichever
+way it goes, the increment taps stay.
 
 ### 6.6 The wider field (07: forty dossiers, the Android market read on 2026-10-06)
 
@@ -509,6 +593,12 @@ F13. A change to the current set's load or reps is applied to the
     sets (6.6, W-07).
 F14. "Update the routine?" at finish when sets, loads or exercises
     differed from the plan (the field's fourth agreement, 6.3).
+F15. The rest strip and the lock-screen or Live Activity card name the
+    next set ("Next: 72.5 × 8") so the weight can be racked during the
+    rest (6.5); the elapsed clock pauses after ten idle minutes and
+    resumes on the next log, so a forgotten finish does not inflate the
+    duration (6.5); auto-advance after the last set becomes a setting,
+    on by default with today's cancellable countdown.
 
 ### 8.2 Option A: "Focus, finished". The same model, rebuilt to instrument standard
 
@@ -716,7 +806,9 @@ Q1. The model: A (focus, finished), B (the sheet), or C (the sheet with a
     now dock, the lead's recommendation). B and C lift one pinned
     structure law (the one-exercise workspace); A lifts none.
 Q2. The entry: the in-app number pad (8.5), or the steppers as today.
-    (C assumes the pad.)
+    (C assumes the pad.) The user voice says the input control is the
+    change most likely to draw anger (6.5), so whichever is chosen keeps
+    the increment taps; the pad has them as keys.
 Q3. The plate calculator was struck by D57 ("never revisit"). Six of the
     twelve leading loggers document one (Hevy, Strong, Boostcamp, Alpha,
     Setgraph, Gymaholic). Reverse, or keep struck.
