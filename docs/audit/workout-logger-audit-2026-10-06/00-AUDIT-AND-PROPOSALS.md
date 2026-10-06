@@ -35,9 +35,9 @@ options; the build starts only on the founder's choice.
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
 | 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line: the primitives, chrome, data rows, amber census, motion, sheets, pickers, states, light theme, the app's best surfaces (600 lines) |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
-| 08-research-page.html | lead | hands-on | the research page (repository copy, full store screenshots by URL): twelve measured active-workout screens, the legibility evidence, our logger measured the same way, the derived design and its drawing; published with the enlarged crops at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC (the same URL that carried the two rejected sets of concepts; both are withdrawn) |
+| 08-research-page.html | lead | hands-on | the research page (repository copy, full store screenshots by URL): twelve measured active-workout screens, the legibility evidence, our logger measured the same way, the redesign with its three drawings and the verdicts it re-opens; published with the enlarged crops at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC (the same URL that carried the two rejected sets of concepts; both are withdrawn) |
 | 09-design-research.md | lead | hands-on | the research record: method, the exact source screenshot per app, the measurements, the pattern counts, the quoted legibility sources and the distance table, the derived design with its evidence, the questions |
-| 09-drawing.png | lead | hands-on | the derived design rendered at 2x from 08 by headless Chromium (390 x 844) |
+| 09-drawing-lift.png, 09-drawing-rest.png, 09-drawing-fields.png | lead | hands-on | the redesign rendered at 2x from 08 by headless Chromium (390 x 844): the Lift state with the ruler and dots, the Rest state, and the Lift state with number fields |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -698,56 +698,92 @@ F15. The rest strip and the lock-screen or Live Activity card name the
     duration (6.5); auto-advance after the last set becomes a setting,
     on by default with today's cancellable countdown.
 
-### 8.2 The design, derived from the field (the full evidence table is 09 section 7 and the page section 7)
+### 8.2 The redesign (from a clean sheet; the evidence is 09 sections 1 to 6; the drawings are 09-drawing-lift.png, 09-drawing-rest.png, 09-drawing-fields.png and the page section 8)
 
-Measured: the field's row values sit at 17 on 44 to 48 dp rows, its live
-values at 17 with an upper cluster of 20 to 26 (Fitbod 24, Setgraph 26),
-previous at 13, column labels at 11 in capitals; 7 of 12 use a set table
-with a previous column; 7 of 12 box the inputs; 5 of 12 mark a done set
-with a green check; the layout model splits 6 sheets to 6 one-exercise
-focus apps, and the focus apps are the prescribers. Our logger today runs
-its live values at 16, its logged rows at 13 on 36 dp rows and its last
-session line at 11; no number on the screen is above 17. The design
-system's own rule, "Numbers are the hero", is not met by the logger.
+Three rounds were rejected before this one: the first set of concepts (an
+amber-filled button, grey boxes), the second (72 px numerals drawn to the
+September law), and the first design drawn from the research (6 October,
+page version 4), which kept the current screen's skeleton and re-used a
+set table with boxed inputs. The founder: "This is a complete redesign
+it's not steal ideas from previously rejected items in docs." That design
+is withdrawn with the others. What stands starts from the lifter's job and
+the research, not from the current screen or any earlier document.
 
-The design:
+The job. A set has two moments with the phone: in the hand for a few
+seconds (about 35 cm: read the plan, record what happened) and on the
+bench for one to three minutes (60 cm or more: how long is left, what to
+load next). The distance evidence (09 section 6) says these need
+different type, 13 to 25 dp in the hand and 22 to 43 dp from the bench.
+No logger in the field changes with the moment. Volyume prescribes every
+set, so most sets are done as planned: recording should be confirmation
+and changing a number the exception (A5: "simple, fast, no fluff" 23.5%
+of delights; "shows what I did last time" 21.9%; redesigns that add taps
+14.8% of complaints).
 
-- One exercise in the workspace (pinned law; the field's prescribers).
-- One set table: SET, LAST, KG, REPS, state. Warm-ups are W rows.
-- Column labels `overline` 11 capitals. Logged rows 48 dp quiet lines:
-  values `type.num('title')` 17, last time 13, a 16 green check, no fill
-  or tint. Upcoming rows the same line in `textSecondary` with the
-  prescription.
-- The active row is a row of that table, full width, `surface`, one
-  uniform 1 dp `borderSubtle` edge, radius `md`: the position line at
-  13 with an amber-ringed marker; two 56 dp input boxes (`surface2`, 1 dp
-  `border`) holding the pinned 36 dp steppers and the value at
-  `type.num('h2')` 24; "Last session 72.5 kg x 8" with Use at 13; the
-  record line (13 over 11, one amber trophy); Add a note at 11.
-- Exercise header: name `h3` 20 with the swap chevron, the prescription
-  at 13 under it, Help and the overflow as today. Header, progress line
-  and the exercise strip unchanged.
-- Rest strip: the pinned 44 dp strip with REST 11, remaining time at 24
-  tabular, "of 2:00" 13, -15 / +15 and Skip as 44 dp targets.
-- Log set: the house primary button (charcoal `surface2`, 1 dp `border`,
-  radius `lg`, 56 dp, label only).
-- Amber only on the active marker, stepper glyphs, Use, the record
-  glyph, Finish and the progress line; green only on done checks.
+Six principles, each tied to evidence:
 
-Why 24 and not larger: the fetched viewing-distance rule gives a minimum
-of 22 dp for a glance from the bench (60 cm) and a comfortable 25 dp in
-the hand (35 cm); 24 meets both, sits on the field's top live values and
-the house `h2`. The rule's "comfortable" figure from the bench is 43 dp
-and from the floor 72 dp; no logger does that on its logging screen, the
-task is recognising a self-entered number, and such sizes were judged
-oversized on device. 32 (`h1`) is the one defensible step up (Q1).
+1. Two states on one screen. Lift and Rest alternate automatically on Log
+   and when the rest ends; each is built for the distance it is read at.
+2. The plan is the default. Weight and reps arrive filled from the coach;
+   one tap logs them; the button names what it records ("Log 70 kg x 9").
+3. Last time lives on the control: an amber tick on the weight ruler at
+   last session's weight, an amber ring on last session's rep count, plus
+   one line in words.
+4. No table, no boxes, no cards. One object on the background; time and
+   progress are thin amber lines (the session line under the header, the
+   rest line under the countdown).
+5. Numbers at platform sizes and no further: 32 for the pair in the hand
+   (Material headlineLarge, the house h1, above the field's 26), 40 for
+   the one countdown read from the bench (the house display role, "the one
+   hero number on a screen"; comfortable at 60 cm is 43), 24 for the next
+   set during rest (above the 22 bench minimum), 13 and 11 for everything
+   secondary.
+6. One accent on the live thing: amber only for the session line, the
+   rest line, the last-time marks, the chosen rep and Finish; green only
+   for a done mark.
 
-### 8.3 to 8.5a: withdrawn
+The screen, Lift state: header with close, the session clock small in the
+centre, the icon-only Finish; a full-width hairline that fills amber as
+the session's sets are logged (the only progress display). Eyebrow "Upper
+A . Exercise 2 of 6" (opens the session sheet), the exercise name at 24
+with the details chevron, the set's prescription at 13. Weight: the value
+at 32 over a ruler of 2.5 kg steps (labels every 10), dragged with a
+detent per step; the white marker is the value, the amber tick last
+session's weight; a weight scale, never a plate readout. Reps: the value
+at 32 over fifteen dots, the target range filled, last time ringed in
+amber, the chosen count amber; one tap sets it; more than fifteen by
+holding the last dot or tapping the number. A record line at 13 with the
+one trophy glyph, in plain words. The exercise's sets as sentence lines
+at 15 anchored above the button (warm-up, logged sets with a green check,
+the planned set), tap to edit; three or more logged sets fold behind one
+line. The house primary button, "Log 70 kg x 9".
 
-The concepts Instrument, Ledger and Stage, their shared "visual law" and
-the entry-control question of the second set are withdrawn with the
-founder's rejection and are not re-proposed. The functional items they
-carried that still stand are in 8.1, 8.6 and 8.7.
+Rest state: the entry object becomes the rest object: "Rest . 2:00" as
+the eyebrow, the countdown at 40, a hairline that drains, -15 / +15 /
+Skip as 44 dp text targets; "Next" at 24 (set 3 of 3, 70 kg x 6 to 10)
+with last time at 13; the logged set joins the list with Edit; the button
+reads "Start set 3"; at zero the screen returns to Lift by itself with the
+haptic and notification as today. The input is never pushed: it is
+replaced and returns to the same place.
+
+The alternative entry (drawn as the third phone): two quiet fields (kg,
+reps, each with last time under the value) and a number pad sheet with
+2.5 and 1.25 kg steps; the conventional path and the accessibility path,
+which can also sit behind a tap on the value when the ruler is used.
+
+What this re-opens (founder device verdicts pinned in
+`loggerVisualArchitecture.guard.test.js`; nothing is built until the
+answer): rest as a 44 dp strip and "timer small" (D168) for the Rest
+state; the logged-above / entry-row / upcoming-below sequence (no table
+remains); the 36 dp steppers (ruler, dots, number pad instead); the
+ELAPSED label and the "Exercise 2 of 6 . 2/18 sets" strip (a small clock,
+the hairline, the eyebrow instead). Kept: icon-only Finish and bare
+header actions; no trophy on the Log button (D150) and the calm PR toast
+(D63); no accent stripe and no Card, taken further to no card at all; no
+plate calculator (D15, D57), no RPE or RIR, no exercise media, no typeface
+change (D53); one exercise in the workspace; the fold of three or more
+logged sets. Under the founder's answers the pinned tests are re-written
+to the new contract before any build lane starts.
 
 ### 8.6 The surfaces around the logger (every option)
 
@@ -792,31 +828,28 @@ is the lead's.)
 | Draft that survives an app kill | few | present | keep |
 | Honest PR handling, calm-mode suppression | none | present | keep (a differentiator, not a gap) |
 
-## 9. Questions for the founder (delivered in chat 2026-10-06 with the research page; recorded here)
+## 9. Questions for the founder (delivered in chat 2026-10-06 with the redesign; recorded here)
 
-Q1. Live value size in the input boxes and the rest strip: A 24 (`h2`),
-    the field's top, comfortable in the hand, clears the bench glance;
-    B 32 (`h1`), one step up for the bench glance, above every
-    competitor; C 24 in the boxes and 32 in the rest strip only.
-Q2. The LAST column on every row (A, as drawn, plus the Use line) or the
-    Use line only (B).
-Q3. Done mark on logged rows: A the 16 green check (the field's done
-    mark, 5 of 12); B none, the quiet line alone.
-Q4. The warm-up row: A a W-marked row in the same table (Boostcamp,
-    Strong, Hevy); B today's labelled "Warm-up" pill above the table.
-Q5. Log set glyph: A label only; B the house primary's amber glyph
-    beside the label, as Start workout carries one on Today.
-Q6. Scope of the first build: A the whole screen as one pass; B type and
-    rows first (the measured defects), the active row's restructure
-    second.
+Q1. The two-state model: Rest takes the screen after Log and hands back
+    to Lift. A: yes, build it (re-opens the strip and "timer small"
+    verdicts). B: no, keep rest as a small strip; the design then loses
+    its far-distance state.
+Q2. Entering a number. A: the ruler and the rep dots, with the number pad
+    behind a tap on the value for typing and accessibility (both
+    drawings together). B: the ruler and dots only. C: the two fields
+    and the number pad only.
+Q3. Sizes. A: 32 for the pair in Lift, 40 for the countdown, 24 for Next
+    (drawn). B: 24, 32, 20.
+Q4. The Log button's label. A: it names the set, "Log 70 kg x 9". B: a
+    fixed "Log set".
+Q5. Scope. A: the whole logger in one campaign: this screen, the session
+    sheet and the fifteen functional fixes of 8.1. B: this screen first,
+    the rest after a device walk.
 
 Carried open from the first round, not re-asked on the page: the
 weekday-dependent test (`d218.reportingReaders.test.js`, fix the one line
 and merge the audit record to main, or leave it for the next code lane);
-the watch logger (a separate campaign or not this round); the summary's
-order (8.6); a session cut short (carry remaining sets to a planned
-workout or keep today's resolution); the build order against the
-functional foundation (8.1 first, or the screen first).
+the watch logger; the summary's order (8.6); a session cut short.
 
 Not asked, by the founder's own prior words (5.1): the plate calculator,
 an RPE or RIR input, exercise media, a typeface change.

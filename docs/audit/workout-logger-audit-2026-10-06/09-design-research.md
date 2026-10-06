@@ -257,71 +257,50 @@ says why 13 to 16 is wrong for a live value: 16 is "the lower edge of
 comfortable" in the hand and under the 22 bench minimum. It is what the
 logger uses today.
 
-## 7. The derived design (every line cites its evidence; see the page section 7 for the full table)
+## 7. The first design drawn from this research, withdrawn
 
-- Model: one exercise in the workspace (pinned law; the field's 6
-  prescribers).
-- One set table for the exercise: SET, LAST, KG, REPS, state; warm-ups
-  are W rows (7 of 12 tables; W markers in Boostcamp, Strong, Hevy;
-  pinned one-sequence law).
-- Column labels `overline` 11 capitals `textMuted` (field median 11;
-  M3 labelSmall 11; iOS caption 11).
-- Logged rows 48 dp quiet lines: marker 24 (`surface2`, number 11),
-  LAST 13 `textSecondary`, KG and REPS `type.num('title')` 17
-  `textPrimary`, a 16 `success` check; no fill, border or tint (row
-  median 17; rows 44 to 48; touch minimum 48; done mark 5 of 12; pinned
-  quiet-lines law).
-- Upcoming rows: the same line in `textSecondary` with a hollow marker
-  and the prescription (pinned light-lines law; Boostcamp Target, Alpha).
-- The active row: a row of the same table, full width, `surface`,
-  uniform 1 dp `borderSubtle`, radius `md`; line 1 amber-ringed marker +
-  "Set 2 of 3 . Working . 6 to 10 reps" 13; line 2 two input boxes; line
-  3 last session + Use; then the record line and the note line (pinned:
-  a row not a Card, no stripe, uniform border; Gravl outline, Alpha
-  marked row; Caliber's 13 prescription line).
-- Input boxes 56 dp, `surface2`, 1 dp `border`, radius `md`; the pinned
-  36 dp steppers with amber glyphs; value `type.num('h2')` 24 SemiBold
-  centred; label above in `overline` 11 (boxes 7 of 12; Fitbod 56; value
-  24 per section 6).
-- Last session: "Last session 72.5 kg x 8" 13 + "Use" 13 amber under
-  the boxes, and the LAST column on every row (7 of 12; A5 21.9%).
-- Record line: trophy 16 amber + the existing record copy 13 over 11,
-  no strip (pinned record line; D150).
-- Exercise header: name `h3` 20 Medium + swap chevron; "3 working sets
-  . 6 to 10 reps" 13; Help and overflow (focus apps 20 to 22; iOS Title
-  3 20; media held).
-- Header and progress unchanged (founder laws).
-- Rest strip: pinned 44 dp; REST 11, remaining `type.num('h2')` 24, "of
-  2:00" 13; -15 / +15 amber and Skip 13 as 44 dp targets (24 clears the
-  bench minimum inside a 44 row; above every in-frame field timer).
-- Log set: the house primary (`Button.js` primary variant: `surface2`,
-  1 dp `border`, radius `lg`), 56 dp, "Log set" 16 Medium, no icon (no
-  amber fill anywhere in the app; single-CTA contract; D150; the design
-  system's largest-button rule).
-- Colour: amber only on the active marker, stepper glyphs, Use, the
-  record glyph, Finish and the progress line; green only on done checks.
-- Larger text: every size x1.2; the active row grows into the scroll;
-  the strip and the button do not move.
+Page version 4 (6 October) derived a set table (SET, LAST, KG, REPS,
+state) with two boxed inputs at 24 and kept the current screen's header,
+strip, rest strip and button. The founder: "This is a complete redesign
+it's not steal ideas from previously rejected items in docs." Observed:
+the design re-used the table-and-boxes grammar of the first rejected set
+and the skeleton of the live screen. It is withdrawn; its page is
+superseded in place by version 5.
 
-Deliberately absent: a photo, a tinted row, a filled amber button, a
-trophy on the button, a plate calculator, an RPE field, a value above 24,
-a second accent.
+## 8. The redesign (page version 5; 00 section 8.2 is the specification)
 
-## 8. Questions put to the founder (in chat, 2026-10-06)
+Principles and their evidence rows: two states for two distances (section
+6 table; no logger in section 4 changes with the moment); the plan as the
+default and one-tap logging (prescriber model, section 5; A5 23.5% and
+14.8%); last time on the control (A5 21.9%; 7 of 12 show previous, all in
+a column); no table, boxes or cards (design system: hierarchy through
+contrast; the field's tables are the user voice's clutter); sizes 32 /
+40 / 24 / 13 / 11 (Material headlineLarge 32 and the house h1; the house
+display 40 and the 43 dp comfortable figure at 60 cm; 24 above the 22 dp
+bench minimum; iOS 13 and 11, Material 12 and 11); one accent on the live
+thing (design system accent discipline).
 
-- Q1 live value size: A 24 (`h2`), B 32 (`h1`), C 24 in the boxes and
-  32 in the rest strip.
-- Q2 LAST column on every row (A, as drawn) or the Use line only (B).
-- Q3 done mark: A the 16 green check, B the quiet line alone.
-- Q4 warm-up: A a W row in the table, B today's labelled pill.
-- Q5 Log set: A label only, B the house primary's amber glyph beside it.
-- Q6 first build scope: A the whole screen in one pass, B type and rows
-  first, the active row's restructure second.
+Drawings: `09-drawing-lift.png` (ruler and dots), `09-drawing-rest.png`,
+`09-drawing-fields.png` (the number-field alternative), rendered from
+`08-research-page.html` section 8 by headless Chromium at 2x.
 
-Carried open from the first round (00 section 9, not re-asked on the
-page): the weekday-dependent test (`d218.reportingReaders.test.js`), the
-watch logger, the summary's order, a session cut short, and the build
-order against the functional foundation (00 section 8.1).
+The ruler is a weight scale with 2.5 kg steps and never shows plates or
+per-side loads (D15, D57 hold). The dots are fifteen; more by holding the
+last dot or tapping the number. Both have the number pad sheet behind a
+tap on the value as the typing and accessibility path.
 
-Not asked, by the founder's own prior words (00 section 5.1): the plate
-calculator, an RPE or RIR input, exercise media, a typeface change.
+Verdicts the redesign re-opens, each with its reason, and the ones it
+keeps: 00 section 8.2, last paragraph, and the page section 9.
+
+## 9. Questions put to the founder (in chat, 2026-10-06, with version 5)
+
+Q1 the two-state model (A build, B keep the strip); Q2 entry (A ruler and
+dots with the number pad behind the value, B ruler and dots only, C fields
+and number pad only); Q3 sizes (A 32 / 40 / 24, B 24 / 32 / 20); Q4 the
+Log button's label (A names the set, B fixed); Q5 scope (A the whole
+logger in one campaign, B this screen first).
+
+Carried open from the first round: the weekday-dependent test
+(`d218.reportingReaders.test.js`), the watch logger, the summary's order,
+a session cut short. Not asked, by the founder's own prior words: the
+plate calculator, an RPE or RIR input, exercise media, a typeface change.

@@ -147,6 +147,48 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 .ph .home i{display:block;width:134px;height:5px;border-radius:3px;background:var(--s3)}
 .ph svg{display:block;flex:0 0 auto}
 .callout{position:relative}
+
+/* ---------- redesign phones ---------- */
+.ph .r-pad{padding:0 24px}
+.ph .r-body{display:flex;flex-direction:column;flex:1;min-height:0}
+.ph .r-hdr{height:48px;display:flex;align-items:center;justify-content:space-between;margin:0 -8px}
+.ph .r-tgt{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.ph .r-line{height:2px;background:var(--s3);position:relative}
+.ph .r-line i{position:absolute;left:0;top:0;bottom:0;background:var(--a)}
+.ph .r-ey{font-size:11px;line-height:15px;letter-spacing:.5px;text-transform:uppercase;font-weight:500;color:var(--t3);display:inline-flex;align-items:center;gap:5px}
+.ph .r-last{color:var(--a)}
+.ph .r-name{font-size:24px;line-height:32px;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:4px}
+.ph .r-meta{font-size:13px;line-height:18px;color:var(--t2);margin-top:6px}
+.ph .r-blk{margin-top:28px}
+.ph .r-row{display:flex;justify-content:space-between;align-items:center}
+.ph .r-big{font-size:32px;line-height:40px;font-weight:700;text-align:center;margin:4px 0 6px}
+.ph .r-rulerwrap{height:56px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.ph .ruler{display:block}
+.ph .dots{display:flex;justify-content:space-between;gap:3px}
+.ph .dot{width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;font-weight:500;color:var(--td);border:1px solid var(--bs);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.ph .dot.tgt{background:var(--s2);border-color:var(--s2);color:var(--t1)}
+.ph .dot.last{border-color:var(--a);color:var(--a)}
+.ph .dot.sel{background:var(--a);border-color:var(--a);color:#0D0D0D;font-weight:600}
+.ph .r-rec{display:flex;gap:8px;align-items:flex-start;margin-top:26px;font-size:13px;line-height:18px;color:var(--t2)}
+.ph .r-sets{margin-top:auto;padding-top:24px;padding-bottom:12px}
+.ph .r-set{height:26px;display:flex;align-items:center;gap:10px;font-size:15px;line-height:20px;color:var(--t1)}
+.ph .r-set .k{width:64px;color:var(--t3);font-size:13px;flex:0 0 auto}
+.ph .r-set.dim{color:var(--t3)}
+.ph .r-set .edit{margin-left:auto;font-size:13px;font-weight:500;color:var(--a)}
+.ph .r-bar{margin-top:auto;padding-top:12px}
+.ph .r-btn{height:56px;border-radius:16px;background:var(--s2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--t1)}
+.ph .r-count{font-size:40px;line-height:48px;font-weight:700;text-align:center;margin-top:4px}
+.ph .r-restbar{height:2px;background:var(--s3);position:relative;margin:12px 0 10px}
+.ph .r-restbar i{position:absolute;left:0;top:0;bottom:0;width:85%;background:var(--a)}
+.ph .r-ctl{display:flex;justify-content:center;gap:8px}
+.ph .r-ctl span{height:44px;min-width:60px;padding:0 12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:var(--a);border-radius:10px}
+.ph .r-ctl span.g{color:var(--t2)}
+.ph .r-next{font-size:24px;line-height:32px;font-weight:600;margin-top:4px}
+.ph .r-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.ph .r-fld{height:96px;border:1px solid var(--bs);border-radius:10px;background:var(--s);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.ph .r-fld b{font-size:32px;line-height:40px;font-weight:700;color:var(--t1)}
+.ph .r-fld span{font-size:13px;line-height:18px;color:var(--t2)}
+.ph .r-fld span.r-ey{color:var(--t3)}
 </style>
 </head>
 <body>
@@ -154,7 +196,7 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 <div class="col">
 <p class="eyebrow">Volyume · workout logger · research record · 6 October 2026</p>
 <h1>The logger, derived from the field</h1>
-<p class="lede">Twelve real active-workout screens, measured. The platform type scales and the reading-distance evidence, cited. Our logger measured the same way. Then one design whose every size and element points at a row of that evidence, drawn once in the live tokens.</p>
+<p class="lede">Twelve real active-workout screens, measured. The platform type scales and the reading-distance evidence, cited. Our logger measured the same way. Then a redesign from a clean sheet whose every size and element points at a row of that evidence, drawn in the live tokens.</p>
 <p>Nothing on this page comes from an earlier brief, blueprint or options page. Where a pinned repository law constrains the design (the guard tests that protect the logger's structure), it is named as a law, not as a design source.</p>
 
 <h2>1. Method and limits</h2>
@@ -321,132 +363,183 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 </div>
 </div>
 
-<h2>7. The design, element by element</h2>
-<p>Every line names the evidence it comes from: a row of the measurement table (§3), a platform figure (§5), a pinned law (the guard tests in <code>src/screens/__tests__/loggerVisualArchitecture.guard.test.js</code>), or a live token.</p>
-<div class="scroller">
-<table class="cmp">
-<thead><tr><th>Element</th><th>Specification</th><th>Why (evidence)</th></tr></thead>
-<tbody>
-<tr><td>Model</td><td>One exercise in the workspace; the session lives in the outline sheet.</td><td>Pinned law ("the workspace scroll hosts ONLY the active exercise"). Matches the 6 prescriber apps in the field (§4). Users punish redesigns that bury controls or add taps (A5: 14.8% of complaints).</td></tr>
-<tr><td>Set table</td><td>One table for every set of the exercise: SET · LAST · KG · REPS · state. Warm-ups are rows with a W marker, not a tinted pill.</td><td>The dominant grammar, 7 of 12, 6 with the set number first and a previous column (§4). Pinned law: one continuous sequence, logged above, upcoming below.</td></tr>
-<tr><td>Column labels</td><td><code>overline</code> 11, capitals, <code>textMuted</code>.</td><td>Field 10 to 13, median 11 (§3). Material labelSmall 11; iOS caption 11; above the iOS 10 floor.</td></tr>
-<tr><td>Logged rows</td><td>48 dp quiet lines: marker 24 (<code>surface2</code>, number 11), LAST 13 <code>textSecondary</code>, KG and REPS 17 tabular <code>textPrimary</code>, a 16 <code>success</code> check. No row fill, no border, no tint.</td><td>Row value median 17 (§3) = <code>title</code> role, Material titleMedium 16 / iOS body 17. Height: field 44 to 48; the house touch minimum is 48. Green check is the field's done mark (5 of 12); the row tint is not taken because three sheets use it and it fights a one-accent dark theme. Pinned law: completed rows are quiet lines.</td></tr>
-<tr><td>Upcoming rows</td><td>Same 48 dp line in <code>textSecondary</code>: hollow marker, LAST, the prescription "70 · 6–10".</td><td>Pinned law: upcoming previews are light lines. Showing the prescription in the row is Boostcamp's Target column and Alpha's planned row (§2).</td></tr>
-<tr><td>The active row</td><td>A row of the same table, full width, <code>surface</code> fill, one uniform 1 dp <code>borderSubtle</code> edge, radius <code>md</code>. Line 1: amber-ringed marker, "Set 2 of 3 · Working · 6 to 10 reps" at 13. Line 2: two input boxes. Line 3: last session + Use. Then the record line and the note line.</td><td>Pinned law: a row, not a Card, no accent stripe, uniform border. Current-set cue by outline, as Gravl, and by a marked row, as Alpha (§4). Caliber puts the exercise's rep range and rest at 13 under the name (§2).</td></tr>
-<tr><td>Input boxes</td><td>Two boxes, 56 dp tall, <code>surface2</code> fill, 1 dp <code>border</code>, radius <code>md</code>; − and + are the pinned 36 dp stepper buttons with amber glyphs; the value is <code>type.num('h2')</code> <b>24</b> SemiBold, centred; label above in <code>overline</code> 11.</td><td>Boxed cells in 7 of 12 (§4); box height 56 as Fitbod (§2). Value 24: the field's upper cluster (Fitbod 24, Setgraph 26), <code>h2</code>, Material headlineSmall; comfortable in the hand (25) and above the bench-glance minimum (22) (§5c). Steppers stay because they are pinned at 36 with hitSlop and are the one-handed path Setgraph also uses.</td></tr>
-<tr><td>Last session</td><td>"Last session 72.5 kg × 8" at 13 <code>textSecondary</code> with "Use" at 13 in amber, one line under the boxes, and the LAST column on every other row.</td><td>Previous beside the values in 7 of 12; shown at 13 to 15 (§3); "shows what I did last time" is the second-ranked delight (A5). Caliber's "Last:" under each box is the one-exercise form of the same idea.</td></tr>
-<tr><td>Record line</td><td>Trophy glyph 16 amber + the existing record copy at 13 over 11, no strip, no tint.</td><td>Pinned: PR detection and the record line survive; the one place that says a PR is on (D150). Gymaholic's record badge is the field's only in-row record mark; a line is calmer and already exists.</td></tr>
-<tr><td>Exercise header</td><td>Name <code>h3</code> <b>20</b> Medium with the swap chevron; "3 working sets · 6 to 10 reps" at 13 under it; Help and the overflow at the right.</td><td>Focus apps name the exercise at 20 to 22 (Gravl 20, Liftin' 20, Alpha 22; Fitbod 28 only over a photo) (§3). iOS Title 3 is 20; the house <code>h3</code> is 20. No photo: media is held by founder ruling.</td></tr>
-<tr><td>Header and progress</td><td>Unchanged: close, ELAPSED over 17 tabular, icon-only Finish in amber; the amber progress hairline; the "Exercise 2 of 6 · 2/18 sets" strip at 13.</td><td>Founder laws (icon-only Finish, bare header actions). Progress-in-session is Hevy's and Musklr's header stats in a quieter form.</td></tr>
-<tr><td>Rest strip</td><td>The pinned 44 dp strip: REST at 11, remaining time <code>type.num('h2')</code> <b>24</b>, "of 2:00" at 13; −15 / +15 in amber and Skip at 13 as 44 dp targets.</td><td>Pinned law: compact 44 dp strip, docked outside the scroll, the only variant. 24 clears the bench-glance minimum (22) within a 44 row; in-frame field timers run 11 to 20 and dedicated surfaces 34 to 44 (§4), so 24 is the largest a strip can carry and larger than any in-frame timer in the field.</td></tr>
-<tr><td>Log set</td><td>The house primary button: 56 dp, <code>surface2</code> fill, 1 dp <code>border</code>, radius <code>lg</code>, "Log set" at 16 Medium, no icon.</td><td>Live <code>Button.js</code> primary variant, the same control as Start workout on Today; no amber fill anywhere in the app. Pinned: the single-CTA contract; D150 no trophy on Log set; design system: the largest button on the screen.</td></tr>
-<tr><td>Colour</td><td>Amber only on the active marker, the stepper glyphs, Use, the record glyph, the Finish glyph and the progress line. Green only on the done checks. Everything else achromatic.</td><td>Design system accent discipline; every field app runs one accent on the current row or the exercise name (§4).</td></tr>
-<tr><td>Larger text</td><td>Every size above scales ×1.2 under the accessibility setting; the active row grows and the scroll absorbs it, the 44 strip and the 56 button do not move.</td><td>Design system rule; pinned law that completing work never pushes the input away.</td></tr>
-</tbody></table>
-</div>
+<h2>7. The redesign</h2>
+<p>The first design drawn from this research (6 October, version 4 of this page) kept the current screen's skeleton and re-used a set table with boxed inputs, the grammar of the sheets above and of a rejected concept. It is withdrawn. What follows starts from the lifter's job and the evidence, not from the existing screen or from any earlier document.</p>
+<h3>The job, and what the evidence says about it</h3>
+<p>A set has two moments with the phone. <b>In the hand</b> (about 35 cm) for a few seconds: read what to do, then record what happened. <b>On the bench</b> (60 cm or more) for one to three minutes: see how long is left and what to load next. The distance table in §5c says these need different type: 13 to 25 dp in the hand, 22 to 43 dp from the bench. No logger in §2 changes with the moment; each shows one static layout and leaves the far moment to a separate rest sheet or a small chip.</p>
+<p>Volyume prescribes every set. In a prescriber, most sets are done as planned, so recording should be confirmation, and changing a number the exception. The user voice behind this audit (lane A5, 380 dated statements) ranks "simple, fast, no fluff" first among delights at 23.5% and "shows what I did last time" second at 21.9%; redesigns that bury controls or add taps are 14.8% of complaints.</p>
+<h3>Six principles, each tied to a row of evidence</h3>
+<ol>
+<li><b>Two states on one screen.</b> Lift and Rest alternate automatically when a set is logged and when the rest ends. The screen is built for the distance it is read at (§5c). Nothing in the field does this (§4, timer row).</li>
+<li><b>The plan is the default.</b> Weight and reps arrive filled from the coach; one tap logs them. The button says what it will record (prescriber model, §4; A5 delights and complaints).</li>
+<li><b>Last time lives on the control.</b> An amber tick on the weight ruler at 72.5 and an amber ring on rep 8 show last session where the hand is, plus one line in words (A5, 21.9%; 7 of 12 show previous, all of them in a column).</li>
+<li><b>No table, no boxes, no cards.</b> One object on the background; time and progress are thin amber lines (the design system's "hierarchy through contrast, not complexity"; the field's tables are what the user voice calls clutter).</li>
+<li><b>Numbers at platform sizes, no further.</b> 32 for the pair in the hand (Material headlineLarge, the house <code>h1</code>, above the field's 26), 40 for the one countdown read from the bench (the house <code>display</code>, "the one hero number on a screen"; §5c comfortable at 60 cm is 43), 24 for the next set during rest (clears the bench minimum of 22), 13 and 11 for everything secondary (iOS 13 and 11, Material 12 and 11).</li>
+<li><b>One accent, on the live thing.</b> Amber only for the session line, the rest line, the last-time marks, the selected rep and Finish. Green only for a done mark.</li>
+</ol>
 
-<h2>8. The drawing</h2>
-<p>Set 2 of 3 of Barbell Row, mid-rest after set 1, drawn at 390 × 844 in the live dark tokens, Inter, with every size from §7. The numbered notes point at what each region does.</p>
+<h2>8. The drawings</h2>
+<p>Three phones at 390 × 844 in the live dark tokens and Inter. Left: Lift, with the ruler and the rep dots. Middle: Rest, the same screen a second after Log. Right: Lift with plain number fields instead of the ruler, the conventional alternative (Q2).</p>
 <div class="stage">
 <div class="phonewrap">
-<div class="ph" aria-label="Volyume logger, the derived design">
+<div class="ph" aria-label="Lift state, ruler and dots">
   <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
-  <div class="pad">
-    <div class="hdr">
-      <div class="tgt"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></div>
-      <div class="mid"><span class="ov">Elapsed</span><span class="title n">12:00</span></div>
-      <div class="tgt"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+  <div class="r-pad">
+    <div class="r-hdr">
+      <div class="r-tgt"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></div>
+      <span class="lab n" style="color:#9C9C9C">12:00</span>
+      <div class="r-tgt"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
     </div>
   </div>
-  <div class="prog"><i></i></div>
-  <div class="pad">
-    <div class="strip">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
-      <span class="lab" style="color:#FFFFFF">Exercise 2 of 6</span><span class="lab n" style="color:#9C9C9C">2/18 sets</span>
+  <div class="r-line"><i style="width:11%"></i></div>
+  <div class="r-pad r-body">
+    <div class="r-blk" style="margin-top:24px">
+      <div class="r-ey">Upper A · Exercise 2 of 6 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-name">Barbell Row (Bent Over) <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-meta">Working set 2 of 3 · 6 to 10 reps</div>
     </div>
-    <div class="exh">
-      <div class="nm"><span class="h3">Barbell Row (Bent Over)</span><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
-      <div class="acts"><span class="lab">Help</span><svg width="20" height="20" viewBox="0 0 20 20" fill="#9C9C9C"><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/></svg></div>
+    <div class="r-blk">
+      <div class="r-row"><span class="r-ey">Weight · kg</span><span class="r-ey r-last"><svg width="8" height="12" viewBox="0 0 8 12"><rect x="3" y="0" width="2" height="12" fill="#F5A623"/></svg> Last time 72.5</span></div>
+      <div class="r-big n">70</div>
+      <div class="r-rulerwrap"><svg class="ruler" width="342" height="56" viewBox="0 0 342 56" aria-label="weight ruler, 70 kilograms selected, last time 72.5"><line x1="3.0" y1="0" x2="3.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="15.0" y1="0" x2="15.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="27.0" y1="0" x2="27.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="27.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">40</text><line x1="39.0" y1="0" x2="39.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="51.0" y1="0" x2="51.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="63.0" y1="0" x2="63.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="75.0" y1="0" x2="75.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="75.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">50</text><line x1="87.0" y1="0" x2="87.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="99.0" y1="0" x2="99.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="111.0" y1="0" x2="111.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="123.0" y1="0" x2="123.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="123.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">60</text><line x1="135.0" y1="0" x2="135.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="147.0" y1="0" x2="147.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="159.0" y1="0" x2="159.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="171.0" y1="0" x2="171.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="171.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">70</text><line x1="183.0" y1="0" x2="183.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="195.0" y1="0" x2="195.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="207.0" y1="0" x2="207.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="219.0" y1="0" x2="219.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="219.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">80</text><line x1="231.0" y1="0" x2="231.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="243.0" y1="0" x2="243.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="255.0" y1="0" x2="255.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="267.0" y1="0" x2="267.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="267.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">90</text><line x1="279.0" y1="0" x2="279.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="291.0" y1="0" x2="291.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="303.0" y1="0" x2="303.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="315.0" y1="0" x2="315.0" y2="18" stroke="#6E6E6E" stroke-width="1"/><text x="315.0" y="54" font-size="11" fill="#9C9C9C" text-anchor="middle" font-family="Inter, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">100</text><line x1="327.0" y1="0" x2="327.0" y2="8" stroke="#6E6E6E" stroke-width="1"/><line x1="339.0" y1="0" x2="339.0" y2="13" stroke="#6E6E6E" stroke-width="1"/><line x1="183.0" y1="0" x2="183.0" y2="26" stroke="#F5A623" stroke-width="2"/><line x1="171" y1="0" x2="171" y2="34" stroke="#FFFFFF" stroke-width="2"/></svg></div>
     </div>
-    <div class="lab" style="margin-top:4px">3 working sets · 6 to 10 reps</div>
-
-    <div class="tbl head">
-      <span class="ov c">Set</span><span class="ov">Last</span><span class="ov c">kg</span><span class="ov c">Reps</span><span></span>
+    <div class="r-blk">
+      <div class="r-row"><span class="r-ey">Reps · target 6 to 10</span><span class="r-ey r-last"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#F5A623" stroke-width="1.5"/></svg> Last time 8</span></div>
+      <div class="r-big n">9</div>
+      <div class="dots" aria-label="reps, 9 selected, target 6 to 10, last time 8"><span class="dot">1</span><span class="dot">2</span><span class="dot">3</span><span class="dot">4</span><span class="dot">5</span><span class="dot tgt">6</span><span class="dot tgt">7</span><span class="dot tgt last">8</span><span class="dot tgt sel">9</span><span class="dot tgt">10</span><span class="dot">11</span><span class="dot">12</span><span class="dot">13</span><span class="dot">14</span><span class="dot">15</span></div>
     </div>
-    <div class="tbl row">
-      <span class="mk" style="margin:0 auto">W</span>
-      <span class="last n dim">40 × 10</span>
-      <span class="val n c dim">40</span><span class="val n c dim">10</span>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg>
-    </div>
-    <div class="tbl row">
-      <span class="mk" style="margin:0 auto">1</span>
-      <span class="last n">72.5 × 8</span>
-      <span class="val n c">70</span><span class="val n c">8</span>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg>
-    </div>
-
-    <div class="now">
-      <div class="l1">
-        <span class="mk act">2</span>
-        <span class="pos">Set 2 of 3 · Working <span>· 6 to 10 reps</span></span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
-      </div>
-      <div class="boxes">
-        <div class="box"><span class="ov">kg</span>
-          <div class="fld"><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10"/></svg></span><span class="v n">70</span><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10M9 4v10"/></svg></span></div>
-        </div>
-        <div class="box"><span class="ov">Reps</span>
-          <div class="fld"><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10"/></svg></span><span class="v n">9</span><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10M9 4v10"/></svg></span></div>
-        </div>
-      </div>
-      <div class="line"><span class="last n">Last session 72.5 kg × 8</span><span class="lab" style="color:#F5A623">Use</span></div>
-      <div class="rec">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><path d="M5 2h6v4a3 3 0 0 1-6 0V2z"/><path d="M5 3H3v1.5A2.5 2.5 0 0 0 5.5 7M11 3h2v1.5A2.5 2.5 0 0 1 10.5 7"/><path d="M8 9v3M5.5 14h5M8 12c1.5 0 2.5.7 2.5 2h-5c0-1.3 1-2 2.5-2z"/></svg>
-        <div><div class="t">New PR if you complete this set</div><div class="w n">Most reps at 70 kg · previous best 8 reps</div></div>
-      </div>
-      <div class="line" style="justify-content:flex-start"><span class="ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10L11 2.5z"/></svg><span class="cap" style="color:#9C9C9C">Add a note</span></span></div>
-    </div>
-
-    <div class="tbl row">
-      <span class="mk pend" style="margin:0 auto">3</span>
-      <span class="last n dim">72.5 × 8</span>
-      <span class="val n c dim">70</span><span class="val n c dim">6–10</span>
-      <span></span>
+    <div class="r-rec"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px;flex:0 0 auto"><path d="M5 2h6v4a3 3 0 0 1-6 0V2z"/><path d="M5 3H3v1.5A2.5 2.5 0 0 0 5.5 7M11 3h2v1.5A2.5 2.5 0 0 1 10.5 7"/><path d="M8 9v3M5.5 14h5M8 12c1.5 0 2.5.7 2.5 2h-5c0-1.3 1-2 2.5-2z"/></svg><span>9 or more at 70 kg beats your best of 8.</span></div>
+    <div class="r-sets">
+      <div class="r-set dim"><span class="k">Warm-up</span><span class="n">40 kg × 10</span></div>
+      <div class="r-set"><span class="k">Set 1</span><span class="n">70 kg × 8</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg></div>
+      <div class="r-set dim"><span class="k">Set 3</span><span class="n">70 kg × 6 to 10</span></div>
     </div>
   </div>
-
-  <div class="pad rest">
-    <div class="lft"><span class="ov">Rest</span><span class="h2 n">1:42</span><span class="lab n" style="color:#9C9C9C">of 2:00</span></div>
-    <div class="rt"><span class="n" style="color:#F5A623">−15</span><span class="n" style="color:#F5A623">+15</span><span style="color:#9E9E9E">Skip</span></div>
-  </div>
-  <div class="bar"><div class="btn">Log set</div></div>
+  <div class="r-pad r-bar"><div class="r-btn n">Log 70 kg × 9</div></div>
   <div class="home"><i></i></div>
 </div>
 </div>
-<div class="legend">
-<ol>
-<li><b>Header, unchanged.</b> Close, ELAPSED 11 over 12:00 at 17, the icon-only Finish in amber, the amber progress hairline, the "Exercise 2 of 6 · 2/18 sets" strip at 13.</li>
-<li><b>Exercise header.</b> Name at 20 (h3) with the swap chevron; the prescription "3 working sets · 6 to 10 reps" at 13; Help and the overflow where they are today.</li>
-<li><b>One table.</b> SET · LAST · KG · REPS · state at 11 capitals. The warm-up is a W row, not a pill. Logged rows are 48 dp quiet lines: values 17 tabular, last time at 13, a green check.</li>
-<li><b>The active row.</b> The same table's row for set 2, full width, one surface, one hairline edge, the marker ringed in amber. Position line at 13. Two 56 dp input boxes with the pinned 36 dp steppers; values at 24. Last session and Use on one line at 13. The record line at 13 over 11 with the one amber trophy. Add a note at 11, muted.</li>
-<li><b>Upcoming set 3.</b> A light line showing the prescription, 70 · 6–10, with a hollow marker.</li>
-<li><b>Rest strip.</b> The pinned 44 dp strip: REST, 1:42 at 24 tabular, of 2:00 at 13, −15 / +15 and Skip as 44 dp targets.</li>
-<li><b>Log set.</b> The house primary button, charcoal with the 1 dp border, 56 dp, label only.</li>
-</ol>
-<p>What is deliberately absent: a photo, a tinted row, a filled amber button, a trophy on the button, a plate calculator, an RPE field, a value above 24, a second accent.</p>
+
+<div class="phonewrap">
+<div class="ph" aria-label="Rest state">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="r-pad">
+    <div class="r-hdr">
+      <div class="r-tgt"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></div>
+      <span class="lab n" style="color:#9C9C9C">12:03</span>
+      <div class="r-tgt"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+    </div>
+  </div>
+  <div class="r-line"><i style="width:17%"></i></div>
+  <div class="r-pad r-body">
+    <div class="r-blk" style="margin-top:24px">
+      <div class="r-ey">Upper A · Exercise 2 of 6 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-name">Barbell Row (Bent Over) <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-meta">Set 2 logged · 70 kg × 9 · a record</div>
+    </div>
+    <div class="r-blk" style="margin-top:36px">
+      <div class="r-ey" style="justify-content:center;width:100%">Rest · 2:00</div>
+      <div class="r-count n">1:42</div>
+      <div class="r-restbar"><i></i></div>
+      <div class="r-ctl"><span class="n">−15</span><span class="n">+15</span><span class="g">Skip</span></div>
+    </div>
+    <div class="r-blk" style="margin-top:32px">
+      <div class="r-ey">Next</div>
+      <div class="r-next n">Set 3 of 3 · 70 kg × 6 to 10</div>
+      <div class="r-meta">Last time 72.5 kg × 8</div>
+    </div>
+    <div class="r-sets">
+      <div class="r-set dim"><span class="k">Warm-up</span><span class="n">40 kg × 10</span></div>
+      <div class="r-set"><span class="k">Set 1</span><span class="n">70 kg × 8</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg></div>
+      <div class="r-set"><span class="k">Set 2</span><span class="n">70 kg × 9</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg><span class="edit">Edit</span></div>
+    </div>
+  </div>
+  <div class="r-pad r-bar"><div class="r-btn">Start set 3</div></div>
+  <div class="home"><i></i></div>
 </div>
 </div>
 
-<h2>9. Decisions I need from you</h2>
-<p>Each is a real fork where the evidence supports more than one answer. Reply with the letters.</p>
+<div class="phonewrap">
+<div class="ph" aria-label="Lift state, number fields">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="r-pad">
+    <div class="r-hdr">
+      <div class="r-tgt"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></div>
+      <span class="lab n" style="color:#9C9C9C">12:00</span>
+      <div class="r-tgt"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+    </div>
+  </div>
+  <div class="r-line"><i style="width:11%"></i></div>
+  <div class="r-pad r-body">
+    <div class="r-blk" style="margin-top:24px">
+      <div class="r-ey">Upper A · Exercise 2 of 6 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-name">Barbell Row (Bent Over) <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="r-meta">Working set 2 of 3 · 6 to 10 reps</div>
+    </div>
+    <div class="r-blk">
+      <div class="r-fields">
+        <div class="r-fld"><span class="r-ey">kg</span><b class="n">70</b><span class="n">Last time 72.5</span></div>
+        <div class="r-fld"><span class="r-ey">Reps</span><b class="n">9</b><span class="n">Last time 8</span></div>
+      </div>
+      <div class="r-meta" style="text-align:center;margin-top:10px">Tap a number to change it</div>
+    </div>
+    <div class="r-rec"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px;flex:0 0 auto"><path d="M5 2h6v4a3 3 0 0 1-6 0V2z"/><path d="M5 3H3v1.5A2.5 2.5 0 0 0 5.5 7M11 3h2v1.5A2.5 2.5 0 0 1 10.5 7"/><path d="M8 9v3M5.5 14h5M8 12c1.5 0 2.5.7 2.5 2h-5c0-1.3 1-2 2.5-2z"/></svg><span>9 or more at 70 kg beats your best of 8.</span></div>
+    <div class="r-sets">
+      <div class="r-set dim"><span class="k">Warm-up</span><span class="n">40 kg × 10</span></div>
+      <div class="r-set"><span class="k">Set 1</span><span class="n">70 kg × 8</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg></div>
+      <div class="r-set dim"><span class="k">Set 3</span><span class="n">70 kg × 6 to 10</span></div>
+    </div>
+  </div>
+  <div class="r-pad r-bar"><div class="r-btn n">Log 70 kg × 9</div></div>
+  <div class="home"><i></i></div>
+</div>
+</div>
+</div>
+
+<div class="legend" style="max-width:760px">
+<h3>Lift (left)</h3>
+<ol>
+<li><b>Header.</b> Close, the session clock small in the centre, the icon-only Finish in amber. Under it a full-width hairline that fills amber as the session's sets are logged: this is the only progress display.</li>
+<li><b>Exercise.</b> Eyebrow "Upper A · Exercise 2 of 6" at 11, which opens the session sheet (every exercise and set, reorder, swap, add); the name at 24 with the chevron that opens exercise details; the set's prescription at 13.</li>
+<li><b>Weight.</b> The value at 32 over a ruler of 2.5 kg steps (labels every 10). Drag the ruler to change it, with a detent at each step; the white marker is the value, the amber tick is last session's 72.5. It is a weight scale, never a plate readout.</li>
+<li><b>Reps.</b> The value at 32 over fifteen dots: the target range 6 to 10 filled, last time's 8 ringed in amber, the chosen 9 amber. One tap sets the count. For more than 15, hold the last dot or tap the number.</li>
+<li><b>Record line.</b> One line at 13 with the one trophy glyph, in plain words. The PR itself is still the calm toast after Log.</li>
+<li><b>This exercise.</b> Warm-up, set 1 with its green check, set 3 as the plan, each a sentence line at 15, anchored above the button where the thumb is; tap a logged line to edit it. Three or more logged sets fold behind one line, as today.</li>
+<li><b>Log.</b> The house primary button, charcoal with the 1 dp border, and it names what it will record: "Log 70 kg × 9".</li>
+</ol>
+<h3>Rest (middle)</h3>
+<ol>
+<li>The moment Log is tapped the entry object becomes the rest object: "Rest · 2:00" as the eyebrow, the countdown at 40, a hairline that drains, −15 / +15 / Skip as 44 dp text targets. The session hairline at the top advances.</li>
+<li><b>Next</b> at 24: set 3 of 3, 70 kg × 6 to 10, with last time at 13. Readable from the bench.</li>
+<li>The logged set appears in the list with Edit. The button becomes "Start set 3"; at zero the screen returns to Lift by itself, with the haptic and notification as today.</li>
+</ol>
+<h3>Lift with fields (right)</h3>
+<p>The same screen with two quiet fields instead of the ruler and dots. Tapping a field opens the number pad sheet (with 2.5 and 1.25 kg steps on it). This is the conventional path and the accessibility path; it can also sit behind the ruler for people who prefer typing.</p>
+<p>Not on any of the three: a table, an input box per set, a card inside a card, an exercise photo, a plate calculator, an RPE field, a filled amber button, a number above 40, a second accent.</p>
+</div>
+
+<h2>9. What this re-opens, and what it keeps</h2>
+<p>These are founder device verdicts pinned in the logger's guard tests. A complete redesign cannot honour all of them and still change the model, so each is named with the reason the design asks to re-open it. Nothing is built until the answer.</p>
+<div class="kv">
+<div class="k">Rest as a 44 dp strip</div><div class="v"><b>Re-opened.</b> The strip verdict followed a rest card inside the scroll that pushed the input away. Here nothing is pushed: the rest object replaces the entry and the entry returns to the same place. The countdown and the next set are the far-distance content and the distance table says 22 to 43 dp for them; a 44 dp strip cannot carry that.</div>
+<div class="k">"Timer small" (D168)</div><div class="v"><b>Re-opened</b> for the Rest state only. In Lift the clock is 13.</div>
+<div class="k">Logged rows above, entry row, upcoming below</div><div class="v"><b>Re-opened.</b> There is no table. The exercise's sets are sentence lines under the entry object.</div>
+<div class="k">36 dp stepper buttons</div><div class="v"><b>Re-opened.</b> Replaced by the ruler, the dots and the number pad sheet.</div>
+<div class="k">ELAPSED label and the "Exercise 2 of 6 · 2/18 sets" strip</div><div class="v"><b>Re-opened.</b> The clock is a small number in the header; progress is the hairline; the position is the eyebrow.</div>
+<div class="k">Icon-only Finish, bare header actions</div><div class="v"><b>Kept.</b></div>
+<div class="k">No trophy on the Log button (D150); calm PR toast (D63)</div><div class="v"><b>Kept.</b> The record line is the one place that says a record is on.</div>
+<div class="k">No accent stripe, no Card for the entry</div><div class="v"><b>Kept</b>, and taken further: no card at all.</div>
+<div class="k">Plate calculator never (D15, D57); no RPE or RIR; no exercise media; no typeface change (D53)</div><div class="v"><b>Kept.</b> The ruler shows total weight only.</div>
+<div class="k">Workspace hosts one exercise; three or more logged sets fold</div><div class="v"><b>Kept.</b></div>
+</div>
+
+<h2>10. Decisions I need from you</h2>
 <div class="q">
-<div class="k">Q1</div><div class="v">Live value size in the input boxes and the rest strip.<span> A: 24 (h2): the field's top, comfortable in the hand, clears the bench glance. B: 32 (h1): one step up for the bench glance, above every competitor, still inside the house scale. C: 24 in the boxes, 32 in the rest strip only.</span></div>
-<div class="k">Q2</div><div class="v">The LAST column on every row.<span> A: as drawn, last time's kg × reps beside every set, plus the Use line on the active row. B: the Use line only, no column (quieter, loses the 7-of-12 pattern and the row-by-row comparison).</span></div>
-<div class="k">Q3</div><div class="v">Done mark on logged rows.<span> A: the 16 green check, as drawn (field's done mark, 5 of 12). B: no mark, the quiet line alone (the green is the one semantic colour on the screen; the row order already says done).</span></div>
-<div class="k">Q4</div><div class="v">The warm-up row.<span> A: a W-marked row in the same table, as drawn (Boostcamp, Strong, Hevy). B: keep today's labelled "Warm-up" pill above the table.</span></div>
-<div class="k">Q5</div><div class="v">Log set glyph.<span> A: label only, as drawn. B: the house primary's amber glyph (a small check) beside the label, as Start workout carries one on Today.</span></div>
-<div class="k">Q6</div><div class="v">Scope of the first build.<span> A: the whole screen in §7 as one pass. B: type and rows first (the measured defects), the active row's restructure second.</span></div>
+<div class="k">Q1</div><div class="v">The two-state model: Rest takes the screen after Log and hands back to Lift.<span> A: yes, build it (re-opens the strip and "timer small" verdicts). B: no, keep rest as a small strip; the design then loses its far-distance state.</span></div>
+<div class="k">Q2</div><div class="v">Entering a number.<span> A: the ruler and the rep dots, with the number pad behind a tap on the value for typing and accessibility (both drawings, together). B: the ruler and dots only. C: the two fields and the number pad only.</span></div>
+<div class="k">Q3</div><div class="v">Sizes.<span> A: 32 for the pair in Lift, 40 for the countdown, 24 for Next (drawn). B: 24, 32, 20.</span></div>
+<div class="k">Q4</div><div class="v">The Log button's label.<span> A: it names the set, "Log 70 kg × 9". B: a fixed "Log set".</span></div>
+<div class="k">Q5</div><div class="v">Scope.<span> A: the whole logger in one campaign: this screen, the session sheet and the fifteen functional fixes already specified (00 section 8.1). B: this screen first, the rest after a device walk.</span></div>
 </div>
 
 <h2>Sources</h2>
