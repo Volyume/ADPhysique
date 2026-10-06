@@ -551,6 +551,19 @@ own value judgements are labelled there and re-judged here by the lead):
   Observed, with no cause claimed. Reading: an Android-first logger that
   gets the timer, the keyboard and the notification right is not
   competing against a uniformly polished Android field.
+- **Also from the lane's final hand-back (07 s4, W-24 to W-27).** The plan
+  survives a missed day and Home says what is next (deterministic rule,
+  no guilt copy); Android rest surfaces with a documented failure
+  checklist (within NOTIFICATIONS_LOCKED); record hygiene (exclude a set
+  from records, merge two exercises); one-control scaling of the day's
+  targets. Backlog candidates, not for this round.
+- **A caveat on 07's quotations (07 s0 limit 3 and s5.6).** The lane's
+  automated check matched 979 quoted strings to their cited page, 234 to
+  another downloaded page, and 150 to nothing (pages that returned 403,
+  search summaries, close paraphrases left in quotation marks). Nothing
+  in this document's conclusions rests on a 07 quotation alone; the
+  set-1 and set-2 files (04, 05) verified every quoted fragment against
+  raw pages or review feeds.
 - **Do not copy (07 s5.5).** AI coaches and AI plans (barred); rank and XP
   loops (comparison pressure against the calm voice and the ED posture);
   locking a set after processing (WHOOP's most-criticised choice); silent
