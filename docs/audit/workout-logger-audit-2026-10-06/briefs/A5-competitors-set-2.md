@@ -44,3 +44,14 @@ F. Design language: which loggers are praised for looking premium and why
 Write ONE file: docs/audit/workout-logger-audit-2026-10-06/05-competitors-set-2-and-user-voice.md
 End the file with a Sources list of every URL used.
 Do not touch anything else. No code reading is needed for this lane.
+
+Note added 2026-10-06 after lane A4 ran: the fetch tool refuses
+www.reddit.com and the search tool rejects reddit.com as a domain. Try
+old.reddit.com and a public Redlib mirror first; if those fail too, take
+the user voice from dated App Store and Google Play reviews (mwm.ai and
+similar aggregators quote them with version and date), Hacker News,
+lifting forums (T-Nation, Bodybuilding.com, Lift Vault, Stronger by
+Science's comments), vendor public feedback boards (Hevy, Strong, Fitbod,
+Boostcamp canny or feature-request pages), YouTube review transcripts via
+search summaries, and Product Hunt. Record in the method section which
+sources were reachable. A quote with no date or link is not evidence.
