@@ -18,9 +18,10 @@ feels like that's now an area where the app is lagging. It needs to be
 better than all competitors." Same day: "We are not accepting just hevy
 and strong that's lazy look at many more."
 
-STATUS: AUDIT IN PROGRESS. Nothing under src/ changes in this round. The
-proposals go to the founder in chat as options; the build starts only on
-the founder's choice.
+STATUS: AUDIT COMPLETE, 2026-10-06 (lane A7's file closes as its lane
+hands back; lane A6 is the build lanes' reference). Nothing under src/
+changes in this round. The proposals went to the founder in chat as
+options; the build starts only on the founder's choice.
 
 ## 0. Map of this folder
 
@@ -902,6 +903,66 @@ Q6. A session cut short: offer to carry the remaining sets to a planned
 Not asked, by the founder's own prior words (5.1): the plate calculator,
 an RPE or RIR input, exercise media, a typeface change.
 
-## 10. Device checklist for whichever option is chosen
+## 10. Device checklist for whichever option is chosen (physical Android, EAS build; written now so the build lanes inherit it)
 
-_To be filled._
+Foundation (every option):
+1. Start a session from Today, from Train's hero, from a plan day, from a
+   routine, from History's Repeat and from the launcher shortcut. Expect:
+   the same readiness sheet wherever the setting is on; the session
+   attributed to the programme position when the routine is the plan's;
+   starting a second session while one is live asks Resume or Discard and
+   never silently replaces it.
+2. Open a planned dumbbell lift. Expect: the weight label reads "per
+   hand"; the stepper or pad increment is the dumbbell's, not 2.5 kg.
+3. Press Android back mid-session. Expect: the session stays live, the
+   mini bar and the Continue card appear; Cancel from the header is the
+   only route to discard, with its confirm.
+4. Log a working set, a drop set and a warm-up. Expect: the outline (or
+   sheet) count, the mini bar and the finish summary agree; the drop set
+   carries its own badge.
+5. Swap an exercise after logging two sets. Expect: a prompt asking what
+   to do with those sets; the finish totals match what you chose.
+6. Type "82,5" with a comma keypad. Expect: 82.5 kg saved.
+7. Shorten session. Expect: either the next rest is shorter, or the copy
+   no longer claims a rest cut; Undo keeps every set logged since.
+8. Finish, then open the session from History. Expect: edit a set's load,
+   add a missed set, rename, re-date; PRs and weekly volume recompute.
+9. Open a routine on a comma-region device and a timed exercise. Expect:
+   the summary prints time as mm:ss, distance as metres.
+
+The logger (A, B or C):
+10. The screen at rest. Expect: the exercise name is the largest text;
+    the elapsed time is a caption; "Log set" is the only amber button;
+    nine amber marks have become two.
+11. The set table. Expect: PREVIOUS on every row; the current row (or the
+    dock) shows the live values large; warm-up rows have no yellow.
+12. (B, C) Scroll away during a rest and log from the dock or stage.
+    Expect: the current row is at the stage (B) or the dock never moved
+    (C); the "Now" pill (B) returns you.
+13. (C) Tap a done row. Expect: it edits in the dock, not in the sheet.
+14. Rest running. Expect: the strip names the next set's load; minus and
+    plus 15 and Skip work; the lock-screen card shows the same next set.
+15. Tap "why this number" on a served load. Expect: one sentence naming
+    the source (last session, the plan, a recovery week, the increment).
+16. Change the load on set 2 before logging. Expect: a quiet "applied to
+    the sets below" line with undo; logged sets untouched.
+17. Finish with sets or loads changed from the plan. Expect: one
+    "Update the routine?" prompt; Keep leaves the plan alone.
+18. Leave the app for 12 minutes mid-session. Expect: the elapsed clock
+    has paused and resumes on the next log.
+19. TalkBack on: log a set, rest, advance. Expect: the same announcements
+    as today; every pad key and row is labelled; nothing times out.
+20. Larger text on, light theme on. Expect: no clipped values in the
+    table or the dock; the sheet still shows at least six rows above the
+    dock on a 780dp phone.
+
+ED-safety cases (the logger is not weight- or food-adjacent, but these
+touch celebration and notifications):
+21. Calm mode on, then log a genuine PR. Expect: the record callout and
+    the toast in their calm forms, no burst, no reward haptic.
+22. With an open ED flag (test fixture), finish a session. Expect: the
+    summary's first-session line, milestone card and Community strip
+    behave exactly as today (suppressed); nothing new appears.
+23. The rest-end alert fires with the phone locked. Expect: the same copy
+    as today ("Rest done / Next set when you're ready."), no new
+    notification category.
