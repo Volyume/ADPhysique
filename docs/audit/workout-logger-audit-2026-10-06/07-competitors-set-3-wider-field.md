@@ -589,7 +589,7 @@ Snapshot. Not an app you open to train: the watch records the set, Garmin Connec
 
 **6. Resilience.** UNKNOWN for the strength mode specifically (a watch activity file is stored on the watch until synced; INFERRED from the manual's "Save and send ... to your Garmin Connect account"). Two 2026 reports concern Garmin's screenless Cirqa band, not the strength mode as such, but they show what happens when a session can be started on the device and ended on the phone:
 - OBS/review: workouts "disappearing when they're finished": users who began an activity with the button and ended it in the Connect app lost it; a forum member: "If you start an activity with the button, you have to end it with the button." Garmin's reply: "Several users in this thread have reported losing activity data after selecting End from the initial prompt"; the workaround is to choose Resume, then stop and save from the recording screen. (https://www.techradar.com/health-fitness/fitness-trackers/garmin-investigates-disappearing-workouts-issue-thats-hitting-cirqa-owners-and-confirms-a-workaround-to-stop-it-happening-to-you, 2026-09-18)
-- OBS/review (the fetch tool's answer, not re-checked on the raw page, because the page returned 403 to a plain download): the5krunner lists further causes of lost sessions including a missed button press at the end and recording beside a second Garmin device, says two of the lost sessions were strength sessions, and concludes "it doesn't reliably save the workouts it records, and a reference sensor that occasionally loses a session is no use to me." (https://the5krunner.com/2026/09/26/garmin-cirqa-workouts-disappearing/, 2026-09-26)
+- OBS/review (the fetch tool's transcript, not re-checked on the raw page because it returned 403 to curl; the conclusion sentence came back identically in two separate fetches): the5krunner reports "One owner's second press at the end of a strength session did not register. The prompt then appeared, End was chosen, and the session was gone", that the author "lost three important workouts where I pressed the button, nothing saved, and nothing auto-detected either" and "A friend lost a strength session the same way", names recording with an HRM-600 or a Forerunner 970 as "the only common factor I can find", and concludes "it doesn't reliably save the workouts it records, and a reference sensor that occasionally loses a session is no use to me." (https://the5krunner.com/2026/09/26/garmin-cirqa-workouts-disappearing/, 2026-09-26)
 - INFERRED: when a watch, a phone and a notification can all end the same session, one of them has to be the single owner of Finish, and the others must not be able to discard work.
 
 **8. Evidence on accuracy and trust**
@@ -615,16 +615,16 @@ Snapshot. On 2026-05-21 Strava announced "a full overhaul" of strength: a purpos
 
 **1-2. Log and entry.** OBS/vendor: the log shows "set number, reps, weight, and duration for time-based exercises", weight in your preferred unit. A manual strength activity is built by tapping to add exercises, searching "Strava's exercise library", entering sets, reps and weight and saving; "Your summary stats and muscle map will generate automatically". Types supported: Weight Training, Workout, HIIT, CrossFit. Edits (change exercise, update set, delete) recalculate volume, sets and the map. (https://support.strava.com/en-us/articles/15401547-strength-training, f)
 
-**3-6. Rest timer, resume, summary.** UNKNOWN: no rest timer is mentioned in the press release or support article; another outlet notes the same absence (https://athletechnews.com/strava-strength-training-major-update/, 2026-05-21, "Rest Timer: Not mentioned"). Strava states strength sessions arrive mainly from partner apps and watches: "Once connected, your strength workouts will automatically sync to Strava with full exercise data." (https://support.strava.com/en-us/articles/15401547-strength-training, f)
+**3-6. Rest timer, resume, summary.** UNKNOWN: none of the Strava-related pages read as raw text (the press release, the support article, 9to5Mac, Athletech News, Tour-Magazin, Notebookcheck, the Play listing) mentions a rest timer, and a missing mention is not evidence of absence (https://athletechnews.com/strava-strength-training-major-update/, 2026-05-21). Strava states strength sessions arrive mainly from partner apps and watches: "Once connected, your strength workouts will automatically sync to Strava with full exercise data." (https://support.strava.com/en-us/articles/15401547-strength-training, f)
 
 **7. Muscle map rule.** OBS/vendor: "Shading is based on the number of working sets for each muscle group, not the weight you lifted or your reps"; four intensity levels; "Exercises that work more than one muscle group split the credit"; front and back views. (https://support.strava.com/en-us/articles/15401529-muscle-map-for-strength-activities, f)
 
-**8. Critique.** OBS/review: "most gym sessions are improvised. Sets are skipped, weights adjusted mid-workout, and exercises substituted when equipment is occupied" and "A muscle map generated from incomplete or approximate inputs looks informative. It is not."; a commenter calls the current map "little more than a front-and-back body-image generator" with no way to correct it; the analyst's view is that Strava's opening is the social layer, since "Hevy, Strong, and Fitbod already dominate strength logging". (https://the5krunner.com/2026/05/21/strava-strength-training/, 2026-05-21)
+**8. Critique.** OBS/review (the fetch tool's transcript of a page that returned 403 to curl; the first two sentences came back identically in two separate fetches): "In practice, most gym sessions are improvised. Sets are skipped, weights adjusted mid-workout, and exercises substituted when equipment is occupied." and "A muscle map generated from incomplete or approximate inputs looks informative. It is not."; the author says "a strand of commentary across various forums" describes the current implementation as "little more than a front-and-back body-image generator" (the page names no commenter); and on the social layer, "Apps such as Hevy, Strong, and Fitbod already serve that market well" while "no platform has yet become the default social layer for strength training, as Strava did for endurance sports". (https://the5krunner.com/2026/05/21/strava-strength-training/, 2026-05-21)
 
-- OBS/user (third-party mirror of an r/Strava thread, T2): strength sets uploaded from a Garmin arrived without the exercise list; a user wrote "The matching of exercises between Garmin and Strava is not perfect at all" and a Strava team account answered that "The per-exercise list is the newest part" and "requires exercise names to match Strava's database", with unmatched ones editable as "Unknown". (https://reddit.sentinel-team.org/posts/1v39e8f/snapshots/2026-07-23T07%3A38%3A40.428Z, 2026-07-23)
+- OBS/user (third-party mirror of an r/Strava thread, T2): strength sets uploaded from a Garmin arrived without the exercise list; a user wrote "The matching of exercises between Garmin and Strava is not perfect at all" and a Strava team account answered that "The per-exercise list is the newest part of the strength view" and that it "only fills in when the exercise names carry across and match Strava's library; unmatched ones show as “unknown” and can be edited on the activity". (https://reddit.sentinel-team.org/posts/1v39e8f/snapshots/2026-07-23T07%3A38%3A40.428Z, 2026-07-23)
 
-**9-10. Distinctive and price.** A social network used as the aggregation point for other loggers' data. Price: Strava's own text does not say; a Notebookcheck report on the Amazfit integration states "All these capabilities are included at no cost" (OBS/review, https://notebookcheck.net/Amazfit-joins-Strava-s-new-strength-training-ecosystem-new-features-free-for-everyone.1306179.0.html, undated, reporting the 2026-05-21 announcement; the headline reads "new features free for everyone"). (https://www.tour-magazin.de/en/training/strength-training-on-strava-update-with-muscle-maps-and-training-log/, 2026-05-28)
-Android (Google Play, read 2026-10-06): Strava is 4.6 from 1.2M reviews, 100M+ downloads, updated 2026-10-05, and its listing states "See the full story of your strength training. Lifting in the gym weekly, doing HIIT workouts? Use your favorite device or strength app and your exercises, sets, reps, weights and a muscle map show up automatically." So the strength view is advertised on Android. (https://play.google.com/store/apps/details?id=com.strava&hl=en&gl=US, 2026-10-05)
+**9-10. Distinctive and price.** A social network used as the aggregation point for other loggers' data. Price: the Strava pages read do not state a price for the strength log. A Notebookcheck report on the Amazfit integration says "The free update introduces auto-populated muscle maps, set and rep tracking, and five new shareables", rolling out "globally to all Strava users in the coming weeks", and its headline reads "new features free for everyone" (OBS/review, https://notebookcheck.net/Amazfit-joins-Strava-s-new-strength-training-ecosystem-new-features-free-for-everyone.1306179.0.html, 2026-05-26, updated 2026-10-05). Tour-Magazin describes the same three building blocks, the 14 interfaces and the worldwide rollout, and also gives no price. (https://www.tour-magazin.de/en/training/strength-training-on-strava-update-with-muscle-maps-and-training-log/, 2026-05-28)
+Android (Google Play, read 2026-10-06): Strava is 4.6 from 1.2M reviews, 100M+ downloads, updated 2026-10-05, and its listing states "See the full story of your strength training" and, beneath it, "Lifting in the gym weekly, doing HIIT workouts? Use your favorite device or strength app and your exercises, sets, reps, weights and a muscle map show up automatically." So the strength view is advertised on Android. (https://play.google.com/store/apps/details?id=com.strava&hl=en&gl=US, 2026-10-05)
 
 ### 2.18 Tonal (cable-resistance machine with a built-in logger)
 
@@ -632,9 +632,9 @@ Snapshot. A $4,295 wall-mounted digital-weight trainer plus $59.95 per month mem
 
 **1. How a set is presented.** OBS/review: "the system automatically loads your next exercise, adjusts resistance, counts reps, and tracks your progress in the background"; intro screens list the muscle groups and accessories needed. (https://trailandkale.com/tonal-2-home-gym-review/, 2026-05-04) OBS/vendor: "Tracking can happen using the on-screen rep counter", with live stats, time under tension, total volume and set volume available. (https://knowledge.tonal.com/s/article/Free-Lift, f)
 
-**2. Set entry.** OBS/vendor: in Free Lift you press and hold the weight dial, choose a move from the library (filters by body region, muscle group, accessory and arm position), choose rep or duration goals and any Dynamic Weight Mode, then "Start Movement" or "Create Block". (https://knowledge.tonal.com/s/article/Free-Lift, f) OBS/vendor: "Tonal sets your optimal resistance in one-pound increments up to 250 pounds"; "Spotter" lowers weight if you struggle and restores it if you recover; "Drop Sets ... automatically lower weight as you fatigue"; modes such as Eccentric and Chains. (https://www.tonal.com/intelligence/, f)
+**2. Set entry.** OBS/vendor: in Free Lift you press and hold the weight dial, choose a move from the library (filters by body region, muscle group, accessory and arm position), choose rep or duration goals and any Dynamic Weight Mode, then "Start Movement" or "Create Block". (https://knowledge.tonal.com/s/article/Free-Lift, f) OBS/vendor: "Tonal sets your optimal resistance in one-pound increments up to 250 pounds"; "Spotter" lowers weight if you struggle and restores it if you recover; Drop Sets that work by "automatically lowering weight as you fatigue"; modes such as Eccentric and Chains. (https://www.tonal.com/intelligence/, f)
 
-**3. Rest and set boundaries.** OBS/vendor: "Auto-Advance: when 50%+ reps are completed after releasing the cable, a prompt asks 'next move?'", letting you continue or stay on the set; weight "-/+" buttons on the dial; pause with advance or rewind of reps ("Want to skip a rep? No problem!"). (https://knowledge.tonal.com/s/article/In-Workout-Controls, f) Custom workouts accept rest periods between sets (search summary, T4: https://tonal.com/blogs/all/build-your-own-custom-workouts, 2026-10-06). The rest screen itself is UNKNOWN.
+**3. Rest and set boundaries.** OBS/vendor: "Auto-Advance: If you turn the weight off or release the cable when 50% or more of your reps have been completed, you'll see a pop up on the screen asking “Next Move?” or “X”", where “Next Move” moves on and “X” stays on the move, and "even if Tonal moves on before you're ready, you can always tap the screen and go back to complete your set"; weight "-/+" buttons on the dial; pause and play "to advance or rewind as you wish" ("Want to skip a rep? No problem!"). (https://knowledge.tonal.com/s/article/In-Workout-Controls, f) Custom workouts accept rest periods between sets (search summary, T4: https://tonal.com/blogs/all/build-your-own-custom-workouts, 2026-10-06). The rest screen itself is UNKNOWN.
 
 **4-6. Management, finishing, resilience.** OBS/vendor: a Free Lift session can be saved as a Custom Workout in the mobile app; history is under the Activity icon; Apple Health sync. OBS/review: "video replays" through the Smart View camera and an occasional false Spotter trigger as a stated con. (https://knowledge.tonal.com/s/article/Free-Lift, f; https://trailandkale.com/tonal-2-home-gym-review/, 2026-05-04) Offline behaviour: UNKNOWN.
 
@@ -646,13 +646,13 @@ Snapshot. A $4,295 wall-mounted digital-weight trainer plus $59.95 per month mem
 
 Snapshot. Tempo Studio (42-inch display with a 3D time-of-flight sensor) and the newer Move product; membership about $39 per month at the 2022 launch review (https://www.t3.com/reviews/tempo-studio, 2022-07-07). The 3D sensor counts reps and reads the weights you pick up. One independent hands-on review was read (Garage Gym Reviews, first published 2021-09-28, page modified 2026-06-02, its text describing the July 2023 software update); a Digital Trends review returned 403, so the remaining mechanics below are vendor-documented.
 
-**1. How a set and a rest are presented.** OBS/vendor (2021): the rep counter "will continue to grow alongside your white progress bar", showing previous round rep counts for comparison; a pace ring ("fill up the half-circle... turns red if pace is too fast") for time under tension; during rest "a chart of heart rate and time spent in target zone from previous round". (https://tempo.fit/blog/the-new-metrics-system, 2021-01-12)
+**1. How a set and a rest are presented.** OBS/vendor (2021): the rep counter "will continue to grow alongside your white progress bar", showing previous round rep counts for comparison; a pace ring for time under tension ("you'll be tasked to fill up the half-circle into the middle as consistently as possible", and "If you go a bit too fast, you'll be seeing red"); and "During your rest periods, Tempo will show you a chart of your heart rate (the white line) and how long you spent in the target heart rate zone in the previous round". (https://tempo.fit/blog/the-new-metrics-system, 2021-01-12)
 
-**2. Set entry (weight recognition).** OBS/vendor: "Weight recognition works with Tempo dumbbells and weight plates that are <= 10lbs" (newer extended dumbbells detect up to 65 lb, manual adjustment capped at 52.5 lb); needs a lit room, whole dumbbells visible at the start of each set, plates loaded biggest to smallest; "Tempo will not detect weight changes if you make them mid-set"; when recognition is wrong "pause the class and adjust the weights"; it can be toggled in class. (https://support.tempo.fit/support/solutions/articles/151000154718-weight-recognition-faqs, f)
+**2. Set entry (weight recognition).** OBS/vendor: "Weight recognition works with Tempo dumbbells and weight plates that are ≤ 10lbs" (newer extended dumbbells detect up to 65 lb, manual adjustment capped at 52.5 lb); needs a lit room, whole dumbbells visible at the start of each set, plates loaded biggest to smallest; "Tempo will not detect weight changes if you make them mid-set"; when recognition is wrong "pause the class and adjust the weights"; it can be toggled in class. (https://support.tempo.fit/support/solutions/articles/151000154718-weight-recognition-faqs, f)
 
-**3. Rest.** OBS/vendor: "Dynamic Rest" automatically extends recovery "if heart rate remains elevated"; plans adapt to a daily Readiness score built from workout data and Apple Health; "Reps in Reserve" feedback. (https://tempo.fit/blog/a-new-era-for-tempo, undated, about 2023)
+**3. Rest.** OBS/vendor: "Dynamic Rest": "If we notice that your heart rate is still a bit high towards the end of your rest period, we'll automatically pause the workout for you until you're in a more optimal zone. Tap your phone to resume at any time."; plans adapt to a daily Readiness score built from workout data and Apple Health; "Reps in Reserve" feedback. (https://tempo.fit/blog/a-new-era-for-tempo, undated, about 2023)
 
-**6. Resilience and limits.** OBS/vendor: reps count only inside official classes; "at least an earnest attempt at doing the exercise for it to count"; the sensor "can have a hard time distinguishing part of your body from the background"; "Using empty dumbbells may lead to counting errors"; form cues appear "intermittently ... not designed to appear 100% of the time, as this can be demoralizing". (https://support.tempo.fit/support/solutions/articles/151000154714-3d-tempo-vision-form-feedback, f)
+**6. Resilience and limits.** OBS/vendor: reps count only inside official classes; "make an earnest attempt at doing the exercise for it to count"; the sensor "can have a hard time distinguishing part of your body from the background"; "Using empty dumbbells may lead to counting errors"; form cues appear "intermittently ... not designed to appear 100% of the time, as this can be demoralizing". (https://support.tempo.fit/support/solutions/articles/151000154714-3d-tempo-vision-form-feedback, f)
 
 **8. Independent evidence (Garage Gym Reviews, two testers, page text about the July 2023 update)**
 - OBS/review: Tempo's "3D motion sensing technology" (formally Time-of-Flight sensors) "captures your movements and provides form feedback, rep counting, and weight recommendations based on your technique". The second tester: "I noticed some missed reps every once in a while, and the form critiques felt pretty average, but it's cool technology"; the first calls the rep tracking "pretty dependable". (https://www.garagegymreviews.com/tempo-studio-review, modified 2026-06-02)
@@ -670,7 +670,7 @@ Common frame. In these products the coach writes the prescription and the client
 
 ### 2.20 TrueCoach (client app)
 
-Snapshot. App Store 4.9 from 36K ratings, free, iPhone, iPad and Mac; build 13.5.1 six days before the fetch, 13.5.0 on 23 Sep ("Edit Exercise", "Assign Program"), 13.2.0 "Voice Notes! Record and send voice messages directly in the chat"; a "900+ video exercise library" (https://apps.apple.com/app/id1439127794, f).
+Snapshot. App Store 4.9 from 36K ratings, free, iPhone, iPad and Mac; build 13.5.1 six days before the fetch, 13.5.0 on 23 Sep ("Edit Exercise", "Assign Program"), 13.2.0 (2026-02-25) "We're excited to introduce Voice Notes!" and "New Feature: Record and send voice messages directly in the chat"; a "900+ video exercise library" (https://apps.apple.com/app/id1439127794, f).
 
 **1-2. Screen and entry.** OBS/vendor: the client "will first see the entire workout at the top of the screen" (warm-up, exercises, cool-down), can "enter in results as well as upload photos to the exercise", and is prompted to "Update results for A" for each exercise. (https://help.truecoach.co/en/articles/2403707-the-truecoach-client-experience, f) Fields, keyboard and previous-value display: UNKNOWN (no source describes the result fields).
 
@@ -1644,7 +1644,7 @@ Value is my judgement of benefit to Volyume if the capability is absent today; c
 
 ## 6. Sources
 
-Every URL cited anywhere in this file, in order of first use, with the source's own date where the citation gave one (`f` = undated page, read 2026-10-06; "see text" = the date sits in the citing sentence, for example a search summary or a dated review inside the page) and the sections that cite it. 333 distinct URLs. Search-engine summaries are cited in the text as T4 and the URL listed is the page that was summarised, not a page that was read.
+Every URL cited anywhere in this file, in order of first use, with the source's own date where the citation gave one (`f` = undated page, read 2026-10-06; "see text" = the date sits in the citing sentence, for example a search summary or a dated review inside the page) and the sections that cite it. 339 distinct URLs. Search-engine summaries are cited in the text as T4 and the URL listed is the page that was summarised, not a page that was read.
 
 1. https://apps.apple.com/us/app/liftosaur-scriptable-workouts/id1661880849 | f | cited in 2.1
 2. https://github.com/astashov/liftosaur | f | cited in 2.1
@@ -1709,12 +1709,12 @@ Every URL cited anywhere in this file, in order of first use, with the source's 
 61. https://www.strengthlog.com/what-our-users-say-about-our-workout-log-app/ | f | cited in 2.3
 62. https://play.google.com/store/apps/details?id=com.styrkelabbet.Styrkelabbet&hl=en&gl=US | 2026-10-02 | cited in 2.3
 63. https://www.motra.com/what-is-new | 2026-01-07 | cited in 2.4
-64. https://apps.apple.com/app/id1548577496 | f | cited in 2.4
+64. https://apps.apple.com/app/id1548577496 | f | cited in 2.4, 5.6
 65. https://betakit.com/train-fitness-closes-2-5-million-usd-to-expand-automatic-workout-tracking-app-for-strength-training/ | 2023-06-21 | cited in 2.4
 66. https://www.motra.com/ | f | cited in 2.4
 67. https://help.motra.com/en/articles/9980535-getting-started-with-motra | f | cited in 2.4, 5.6
 68. https://help.motra.com/en/articles/9911165-customizing-apple-watch-display | f | cited in 2.4
-69. https://riven.fit/blog/best-automatic-rep-counter-apps-apple-watch | 2026 | cited in 2.4, 4, 5.6
+69. https://riven.fit/blog/best-automatic-rep-counter-apps-apple-watch | 2026-08-29 | cited in 2.4, 4
 70. https://help.motra.com/en/articles/11081434-updating-set-weight-reps-and-rest-time | f | cited in 2.4, 4
 71. https://help.motra.com/en/articles/14076038-workout-data-not-saving | f | cited in 2.4, 4, 5.5
 72. https://help.motra.com/en/collections/10026070-workouts-and-features | f | cited in 2.4
@@ -1731,24 +1731,24 @@ Every URL cited anywhere in this file, in order of first use, with the source's 
 83. https://apkmirror.com/apk/gymshark-ltd/gymshark-training-fitness-app/gymshark-training-fitness-app-2-32-0-release | see text | cited in 2.5
 84. https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563 | f | cited in 2.6
 85. https://apps.apple.com/app/id1085414909 | see text | cited in 2.6
-86. https://play.google.com/store/search?q=liftoff%20ranked%20gym%20workouts&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.6
+86. https://play.google.com/store/apps/details?id=com.gymbros.app&hl=en&gl=US | 2026-10-03 | cited in 2.6
 87. https://ventureradar.substack.com/p/this-gym-app-built-by-college-students | 2025-05-21 | cited in 2.6
 88. https://screensdesign.com/apps/liftoff-ranked-gym-workouts/?vs=261657 | f | cited in 2.6
 89. https://screensdesign.com/showcase/liftoff-ranked-gym-workouts | f | cited in 2.6
-90. https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563?see-all=reviews | f | cited in 2.6
+90. https://itunes.apple.com/us/rss/customerreviews/page=1/id=6448081563/sortby=mostrecent/json | 2026-10-06 | cited in 2.6
 91. https://mwm.ai/ko/apps/liftoff-ranked-gym-workouts/6448081563 | f | cited in 2.6
-92. https://play.google.com/store/apps/details?id=com.gymbros.app&hl=en&gl=US | 2026-10-03 | cited in 2.6
+92. https://apps.apple.com/us/app/liftoff-ranked-gym-workouts/id6448081563?see-all=reviews | f | cited in 2.6
 93. https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310 | f | cited in 2.7
 94. https://wellnessproject.ai/heavyset-for-android | 2026-09-27 | cited in 2.7, 2.37
 95. https://apps.apple.com/us/app/heavyset-gym-log-1rm-tracker/id1171500310 | f | cited in 2.7
 96. https://www.heavyset.app/ | f | cited in 2.7, 4
-97. https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310?see-all=reviews | f | cited in 2.7
+97. https://apps.apple.com/us/app/heavyset-gym-workout-log/id1171500310?see-all=reviews | 2020-09-20 | cited in 2.7
 98. https://itunes.apple.com/lookup?id=1048454034&country=us | 2026-09-27 | cited in 2.8
 99. https://play.google.com/store/search?q=GymRun%20workout%20tracker&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.8
 100. https://gymverse.app/ | f | cited in 2.8
 101. https://apps.apple.com/us/app/gymverse-gym-workout-planner/id1048454034 | f | cited in 2.8
-102. https://apps.apple.com/us/app/gymverse-gym-workout-planner/id1048454034?see-all=reviews | f | cited in 2.8
-103. https://apps.apple.com/app/id1048454034 | f | cited in 2.8
+102. https://itunes.apple.com/us/rss/customerreviews/page=3/id=1048454034/sortby=mostrecent/json | 2026-10-06 | cited in 2.8
+103. https://apps.apple.com/us/app/gymverse-gym-workout-planner/id1048454034?see-all=reviews | 2025-02-23 | cited in 2.8
 104. https://play.google.com/store/apps/details?id=com.fitness22.workout&hl=en&gl=US | 2026-09-22 | cited in 2.8
 105. https://wellnessproject.ai/gymrun-for-iphone | 2026-09-27 | cited in 2.9
 106. https://play.google.com/store/apps/details?id=com.imperon.android.gymapp&hl=en&gl=US | 2026-08-31 | cited in 2.9, 4
@@ -1767,7 +1767,7 @@ Every URL cited anywhere in this file, in order of first use, with the source's 
 119. https://itunes.apple.com/lookup?id=1090687896&country=us | 2026-09-05 | cited in 2.12
 120. https://get-strong.app/ | f | cited in 2.12
 121. https://get-strong.app/en/ | f | cited in 2.12, 4
-122. https://apps.apple.com/us/app/-/id1090687896 | f | cited in 2.12
+122. https://apps.apple.com/us/app/-/id1090687896 | 2026-09-05 | cited in 2.12
 123. https://get-strong.app/blog/wann-deload-noetig-ist | 2026-08-11 | cited in 2.12, 4
 124. https://play.google.com/store/apps/details?id=de.progression.flutter&hl=en&gl=US | 2024-08-23 | cited in 2.12
 125. https://play.google.com/store/apps/details?id=workout.progression.lite&hl=en&gl=US | 2026-06-16 | cited in 2.12
@@ -1777,205 +1777,211 @@ Every URL cited anywhere in this file, in order of first use, with the source's 
 129. https://play.google.com/store/search?q=gym%20log&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.13, 2 (group intro), 2.34, 2.40, 5.3
 130. https://apps.apple.com/us/app/-/id1602190236 | f | cited in 2.13
 131. https://play.google.com/store/apps/details?id=gymworkout.gym.gymlog.gymtrainer&hl=en&gl=US | 2026-09-20 | cited in 2.13
-132. https://www.whoop.com/us/en/thelocker/how-whoop-measures-muscular-load/ | see text | cited in 2.14
-133. https://support.whoop.com/s/article/Automatic-and-Manual-Activity-Detection | see text | cited in 2.14
-134. https://www.whoop.com/us/en/thelocker/whoop-introduces-strength-trainer-becomes-first-wearable-to-measure-muscular/ | see text | cited in 2.14
-135. https://www.community.whoop.com/t/strength-trainer-let-us-edit-sets-after-execution/1307 | 2025-05-19 | cited in 2.14, 5.5
-136. https://www.community.whoop.com/t/strength-trainer-upgrades/15744 | 2026-08-05 | cited in 2.14
-137. https://www.community.whoop.com/t/strength-trainer-feedback-rest-timer-workflow-progression-targets-notes-measurements-and-exercise-mapping/14544 | 2026-04-15 | cited in 2.14
-138. https://www.community.whoop.com/t/feature-request-dynamic-island-timer-for-strength-trainer/16274 | 2026-09-18 | cited in 2.14
-139. https://www.community.whoop.com/t/reps-tracking-and-exercise-swaps/7967 | 2025-09-08 | cited in 2.14
-140. https://www.community.whoop.com/t/api-for-strength-trainer/10517 | see text | cited in 2.14
-141. https://press.strava.com/articles/strava-overhauls-strength-experience-with-expanded-partner-ecosystem-new-workout-log-and-muscle-maps | 2026-05-21 | cited in 2.14, 2.17, 2.38, 4
-142. https://support.whoop.com/s/article/How-to-Use-the-AI-Powered-WHOOP-Coach?language=en_US | see text | cited in 2.14
-143. https://play.google.com/store/apps/details?id=com.whoop.android&hl=en&gl=US | 2026-10-02 | cited in 2.14
-144. https://apps.apple.com/gb/charts/iphone/health-fitness-apps/6013 | 2026-10-06 | cited in 2.15
-145. https://www8.garmin.com/manuals-apac/webhelp/forerunner965/EN-SG/GUID-66478414-4338-418E-9E0A-90162F21A62A-2265.html | see text | cited in 2.15
-146. https://www8.garmin.com/manuals/webhelp/GUID-0221611A-992D-495E-8DED-1DD448F7A066/EN-AU/GUID-7C8D56F5-E9F5-4825-9F66-3CC9124B2979.html | see text | cited in 2.15
-147. https://www8.garmin.com/manuals/webhelp/GUID-49EC93CF-DA3F-4514-817F-4098FC4A71AE/EN-US/GUID-49D892BF-429E-454D-B0C6-D4AE07E9D4A0.html | 2026-09 | cited in 2.15
-148. https://www8.garmin.com/manuals/webhelp/GUID-0221611A-992D-495E-8DED-1DD448F7A066/EN-US/GUID-CF2D7922-A1AC-4510-9480-E7CE8119EAF2.html | 2026-04 | cited in 2.15
-149. https://the5krunner.com/2024/06/23/new-garmin-connect-feature-heading-for-the-app-or-is-it-a-hidden-feature | 2024-06-23 | cited in 2.15
-150. https://www.techradar.com/health-fitness/fitness-trackers/garmin-investigates-disappearing-workouts-issue-thats-hitting-cirqa-owners-and-confirms-a-workaround-to-stop-it-happening-to-you | 2026-09-18 | cited in 2.15
-151. https://the5krunner.com/2026/09/26/garmin-cirqa-workouts-disappearing/ | 2026-09-26 | cited in 2.15
-152. https://digitalcommons.wku.edu/ijesab/vol14/iss3/143 | 2023 | cited in 2.15, 4
-153. https://forums.garmin.com/sports-fitness/running-multisport/f/forerunner-965/353939/strength-activity-profile-detects-the-wrong-exercise/1744119 | see text | cited in 2.15
-154. https://www.techradar.com/features/why-garmins-strength-training-mode-needs-to-be-improved-or-scrapped | 2022-06-08 | cited in 2.15, 4
-155. https://play.google.com/store/apps/details?id=com.garmin.android.apps.connectmobile&hl=en&gl=US | 2026-10-05 | cited in 2.15
-156. https://www.samsung.com/au/support/mobile-devices/record-a-workout-on-samsung-watch/ | f | cited in 2.16
-157. https://www.samsung.com/hk_en/support/apps-services/how-to-monitor-exercises-with-samsung-health/ | f | cited in 2.16
-158. https://eu.community.samsung.com/t5/wearables/custom-workout-routine-for-galaxy-watch/td-p/5325181 | see text | cited in 2.16
-159. https://us.community.samsung.com/t5/Galaxy-Watch/Watch-workout-stops-during-periods-if-rest-between-weight/td-p/2637205 | see text | cited in 2.16
-160. https://www.gsmarena.com/samsung_health_app_update_new_galaxy_watch_features-news-73127.php | 2026-06-04 | cited in 2.16
-161. https://r2.community.samsung.com/t5/Samsung-Health/Feature-Request-Optimizing-Samsung-Health-and-Watch-Ultra-for/m-p/22848226 | see text | cited in 2.16
-162. https://play.google.com/store/apps/details?id=com.sec.android.app.shealth&hl=en&gl=US | 2026-09-07 | cited in 2.16
-163. https://9to5mac.com/2026/05/21/strava-adds-dedicated-strength-training-support-for-sets-reps-weight-and-muscle-groups/ | 2026-05-21 | cited in 2.17
-164. https://apps.apple.com/us/charts/iphone/health-fitness-apps/6013 | 2026-10-06 | cited in 2.17, 2 (group intro), 2.38
-165. https://support.strava.com/en-us/articles/15401547-strength-training | f | cited in 2.17
-166. https://athletechnews.com/strava-strength-training-major-update/ | 2026-05-21 | cited in 2.17
-167. https://support.strava.com/en-us/articles/15401529-muscle-map-for-strength-activities | f | cited in 2.17
-168. https://the5krunner.com/2026/05/21/strava-strength-training/ | 2026-05-21 | cited in 2.17, 5.5
-169. https://reddit.sentinel-team.org/posts/1v39e8f/snapshots/2026-07-23T07%3A38%3A40.428Z | 2026-07-23 | cited in 2.17, 3, 4
-170. https://notebookcheck.net/Amazfit-joins-Strava-s-new-strength-training-ecosystem-new-features-free-for-everyone.1306179.0.html | see text | cited in 2.17, 2.38
-171. https://www.tour-magazin.de/en/training/strength-training-on-strava-update-with-muscle-maps-and-training-log/ | 2026-05-28 | cited in 2.17
-172. https://play.google.com/store/apps/details?id=com.strava&hl=en&gl=US | 2026-10-05 | cited in 2.17
-173. https://trailandkale.com/tonal-2-home-gym-review/ | 2026-05-04 | cited in 2.18
-174. https://knowledge.tonal.com/s/article/Free-Lift | f | cited in 2.18
-175. https://www.tonal.com/intelligence/ | f | cited in 2.18
-176. https://knowledge.tonal.com/s/article/In-Workout-Controls | f | cited in 2.18
-177. https://tonal.com/blogs/all/build-your-own-custom-workouts | 2026-10-06 | cited in 2.18
-178. https://www.t3.com/reviews/tempo-studio | 2022-07-07 | cited in 2.19
-179. https://tempo.fit/blog/the-new-metrics-system | 2021-01-12 | cited in 2.19
-180. https://support.tempo.fit/support/solutions/articles/151000154718-weight-recognition-faqs | f | cited in 2.19
-181. https://tempo.fit/blog/a-new-era-for-tempo | see text | cited in 2.19
-182. https://support.tempo.fit/support/solutions/articles/151000154714-3d-tempo-vision-form-feedback | f | cited in 2.19
-183. https://www.garagegymreviews.com/tempo-studio-review | 2026-06-02 | cited in 2.19, 4
-184. https://apps.apple.com/app/id1439127794 | f | cited in 2.20
-185. https://help.truecoach.co/en/articles/2403707-the-truecoach-client-experience | f | cited in 2.20
-186. https://apps.apple.com/app/id1439127794?see-all=reviews | f | cited in 2.20, 4
-187. https://apps.apple.com/us/app/id955074569 | f | cited in 2.21
-188. https://support.trainheroic.com/hc/en-us/articles/18156961923981-For-Athletes-Creating-Training-Sessions | see text | cited in 2.21
-189. https://www.trainheroic.com/athlete/ | f | cited in 2.21
-190. https://support.trainheroic.com/hc/en-us/articles/45097749410701 | see text | cited in 2.21
-191. https://support.trainheroic.com/hc/en-us/articles/18156558387469-For-Athletes-Using-in-app-Timers | see text | cited in 2.21
-192. https://apps.apple.com/us/app/id955074569?see-all=reviews | f | cited in 2.21, 4
-193. https://play.google.com/store/apps/details?id=com.TrainHeroic.TrainHeroic&hl=en&gl=US | 2026-10-02 | cited in 2.21, 4
-194. https://www.teambuildr.com/mobile-app | f | cited in 2.22
-195. https://www.freelapusa.com/teambuildr-the-company-and-the-tool/ | see text | cited in 2.22
-196. https://support.teambuildr.com/article/2Mz1MesIhQ-what-is-weight-room-view | f | cited in 2.22
-197. https://www.teambuildr.com/whiteboard-weight-room-tv-timing-system | see text | cited in 2.22
-198. https://blog.teambuildr.com/posts/teambuildr-4-0-is-here | 2016-05-20 | cited in 2.22
-199. https://apps.apple.com/app/id1438926364 | f | cited in 2.23
-200. https://help.everfit.io/en/articles/5829094-client-app-track-a-workout | f | cited in 2.23
-201. https://blog.everfit.io/everfit-may-2026-new-features | 2026-06-04 | cited in 2.23, 4
-202. https://help.everfit.io/en/articles/4701773-client-app-turn-on-off-rest-timer | f | cited in 2.23, 5.1
-203. https://apps.apple.com/app/id1438926364?see-all=reviews | f | cited in 2.23, 4
-204. https://help.kahunas.io/en/articles/44-what-comes-with-the-app | f | cited in 2.24
-205. https://coachway.io/articles/kahunas-review/ | 2026-10 | cited in 2.24
-206. https://kahunas.io/ | 2026-10-06 | cited in 2.24
-207. https://itunes.apple.com/lookup?id=488580022&country=us | 2026-10-05 | cited in 2.25
-208. https://stronglifts.com/app/ | f | cited in 2.25, 4
-209. https://support.stronglifts.com/article/111-apple-watch | f | cited in 2.25, 4
-210. https://play.google.com/store/apps/details?id=com.stronglifts.app&hl=en&gl=US | 2026-09-02 | cited in 2.25
-211. https://itunes.apple.com/lookup?id=1008697836&country=us | 2026-07-09 | cited in 2.26
-212. https://itunes.apple.com/lookup?id=6753924510&country=us | 2026-09-15 | cited in 2.26
-213. https://appfollow.io/android/starting-strength-official/com.shabu.startingstrength?country=us | see text | cited in 2.26
-214. https://aasgaardco.com/store/books-posters-dvd/apps/starting-strength-official-mobile-app/ | f | cited in 2.26, 4
-215. https://apps.apple.com/us/app/starting-strength-official/id6753924510?see-all=reviews | f | cited in 2.26
-216. https://apps.apple.com/us/app/starting-strength-legacy/id1008697836?see-all=reviews | f | cited in 2.26
-217. https://play.google.com/store/apps/details?id=com.shabu.startingstrength&hl=en&gl=US | 2025-03-13 | cited in 2.26
-218. https://www.boostcamp.app/best/5-3-1 | see text | cited in 2.27
-219. https://itunes.apple.com/lookup?id=1114435690&country=us | 2026-03-11 | cited in 2.27
-220. https://apps.apple.com/us/app/5-3-1-workout-logger-531/id1114435690?see-all=reviews | f | cited in 2.27
-221. https://itunes.apple.com/lookup?id=1560266240&country=us | 2025-08-01 | cited in 2.27
-222. https://itunes.apple.com/lookup?id=962162633&country=us | 2026-09-29 | cited in 2.27
-223. https://play.google.com/store/apps/details?id=com.vandersw.wenderlogbook&hl=en&gl=US | 2026-09-29 | cited in 2.27
-224. https://itunes.apple.com/lookup?id=1517032809&country=us | 2025-10-24 | cited in 2.28
-225. https://www.boostcamp.app/best/gzcl | 2026-05 | cited in 2.28
-226. https://justuseapp.com/en/app/1517032809/gzcl-method-workout-logger/reviews | f | cited in 2.28
-227. https://support.bodybuilding.com/en-US/articles/bodybuildingcom-app-225629 | f | cited in 2.29
-228. https://justuseapp.com/en/app/1389506691/bodyfit-fitness-training-coach/reviews | f | cited in 2.29, 4
-229. https://en.wikipedia.org/wiki/Bodybuilding.com | f | cited in 2.29
-230. https://itunes.apple.com/lookup?id=1389506691&country=us | 2026-08-03 | cited in 2.29
-231. https://itunes.apple.com/search?term=gym%20log&country=us&entity=software&limit=40 | 2026-10-06 | cited in 2 (group intro)
-232. https://play.google.com/store/search?q=workout%20tracker&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2 (group intro), 5.3
-233. https://play.google.com/store/search?q=workout%20log&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2 (group intro), 5.3
-234. https://itunes.apple.com/lookup?id=1621719397&country=us | 2026-09-11 | cited in 2.30
-235. https://play.google.com/store/search?q=stronger%20gym%20workout%20planner&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.30
-236. https://www.strongermobileapp.com/ | f | cited in 2.30
-237. https://www.strongermobileapp.com/blog/best-workout-tracker-apps | 2026-02-21 | cited in 2.30
-238. https://play.google.com/store/apps/details?id=com.atlassmarttech.stronger&hl=en&gl=US | 2026-04-20 | cited in 2.30
-239. https://itunes.apple.com/lookup?id=6737156524&country=us | 2026-10-03 | cited in 2.31
-240. https://macrofactor.com/workouts/ | f | cited in 2.31
-241. https://apps.apple.com/us/app/macrofactor-workouts-tracker/id6737156524?see-all=reviews | f | cited in 2.31
-242. https://itunes.apple.com/lookup?id=922744883&country=us | 2026-09-16 | cited in 2.32
-243. http://smartgymapp.com/ | f | cited in 2.32
-244. https://help.smartgymapp.com/article/59-apple-watch-app | f | cited in 2.32
-245. https://itunes.apple.com/lookup?id=696350076&country=us | 2026-03-27 | cited in 2.33
-246. https://www.fitlist.com | f | cited in 2.33
-247. https://itunes.apple.com/lookup?id=6449553638&country=us | 2026-10-02 | cited in 2.34, 4
-248. https://strive-workout.com/ | f | cited in 2.34, 4, 5.1
-249. https://apps.apple.com/us/app/gym-log-strive/id6449553638?see-all=reviews | f | cited in 2.34
-250. https://play.google.com/store/apps/details?id=com.koalasoft.gymnasium&hl=en&gl=US | 2026-10-05 | cited in 2.34
-251. https://play.google.com/store/apps/details?id=com.lealApps.pedro.gymWorkoutPlan&hl=en&gl=US | 2026-09-24 | cited in 2.35, 4
-252. https://play.google.com/store/apps/details?id=com.anthonyng.workoutapp&hl=en&gl=US | 2026-09-30 | cited in 2.35
-253. https://play.google.com/store/apps/details?id=com.kg.app.sportdiary&hl=en&gl=US | 2026-03-30 | cited in 2.35
-254. https://play.google.com/store/apps/details?id=app.pumped.workout.log.tracker.strong.gym.exercise&hl=en&gl=US | 2026-07-28 | cited in 2.35
-255. https://play.google.com/store/apps/details?id=com.fnp.fithero&hl=en&gl=US | 2026-10-04 | cited in 2.35, 4
-256. https://play.google.com/store/apps/details?id=com.yurikoshiishi.workoutwise&hl=en&gl=US | 2026-09-26 | cited in 2.35, 4
-257. https://play.google.com/store/apps/details?id=com.madmustachecompany.workoutapp&hl=en&gl=US | 2026-09-19 | cited in 2.35
-258. https://play.google.com/store/apps/details?id=com.fitnesslogbook.app&hl=en&gl=US | 2026-10-03 | cited in 2.35
-259. https://play.google.com/store/apps/details?id=com.limajuice.liftlog&hl=en&gl=US | 2026-08-30 | cited in 2.35
-260. https://play.google.com/store/apps/details?id=com.mdikcinar.workoutplanner&hl=en&gl=US | 2026-09-28 | cited in 2.35
-261. https://play.google.com/store/apps/details?id=com.dedaldev.gymdroid&hl=en&gl=US | 2026-09-02 | cited in 2.35, 4
-262. https://play.google.com/store/apps/details?id=com.kotlan.powerlog&hl=en&gl=US | 2026-09-30 | cited in 2.35
-263. https://play.google.com/store/apps/details?id=com.krsmanovic.vigor&hl=en&gl=US | 2026-10-03 | cited in 2.35
-264. https://play.google.com/store/apps/details?id=com.vikingtech.gymtrack&hl=en&gl=US | 2026-09-24 | cited in 2.35
-265. https://play.google.com/store/apps/details?id=com.gains.gains&hl=en&gl=US | 2026-09-17 | cited in 2.35
-266. https://play.google.com/store/apps/details?id=com.thebenchapp.bench&hl=en&gl=US | 2026-09-29 | cited in 2.35
-267. https://play.google.com/store/apps/details?id=com.werules.logger&hl=en&gl=US | 2026-10-05 | cited in 2.35
-268. https://play.google.com/store/apps/details?id=app.rork.gymnotes_workout_tracker&hl=en&gl=US | 2026-10-03 | cited in 2.35
-269. https://itunes.apple.com/lookup?id=1479893244&country=us | 2022-09-29 | cited in 2.35
-270. https://f-droid.org/packages/de.wger.flutter/ | 2026-10-05 | cited in 2.36
-271. https://f-droid.org/packages/com.mbosse.gymloga/ | 2026-04-25 | cited in 2.36
-272. https://github.com/GymLoga/GymLoga-Android | f | cited in 2.36, 2.37, 4
-273. https://f-droid.org/packages/com.noahjutz.gymroutines/ | 2025-04-22 | cited in 2.36
-274. https://alternativeto.net/software/hevy-workout-tracker | see text | cited in 2.36
-275. https://apps.apple.com/us/app/gym-note-plus-fitness-journal/id6746699616 | f | cited in 2.37, 4
-276. https://wellnessproject.ai/ | f | cited in 2.37
-277. https://the5krunner.com/2020/05/20/coros-strength-training-workout-builder/ | 2020-05-20 | cited in 2.38
-278. https://support.coros.com/hc/en-us/articles/48547231345684 | see text | cited in 2.38
-279. https://support.ouraring.com/hc/lv/articles/42821224955795-Record-a-Workout-with-Oura | see text | cited in 2.38
-280. https://www.sugarwod.com/athlete-features/ | f | cited in 2.39
-281. https://appfollow.io/ios/wodify-athlete/1235645130?country=us | see text | cited in 2.39
-282. https://play.google.com/store/search?q=Symmetry%20gym%20workout%20tracker%20rank&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.40
-283. https://play.google.com/store/search?q=Gravitus%20gym%20workout%20tracker&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.40
-284. https://apps.apple.com/us/app/gym-log-workout-tracker/id871239624 | 2026-10-06 | cited in 2.41, 4
-285. https://www.gymlogplus.com/press.html | f | cited in 2.41, 4
-286. https://itunes.apple.com/us/rss/customerreviews/page=2/id=871239624/sortby=mostrecent/json | 2026-10-06 | cited in 2.41
-287. https://itunes.apple.com/us/rss/customerreviews/page=1/id=871239624/sortby=mostrecent/json | 2026-10-06 | cited in 2.41, 4
-288. https://www.gymlogplus.com/ | f | cited in 2.41
-289. https://www.gymlogplus.com/apple-watch.html | f | cited in 2.41, 4
-290. https://www.gymlogplus.com/support.html | f | cited in 2.41
-291. https://www.gymlogplus.com/import-from-strong.html | f | cited in 2.41, 4
-292. https://www.gymlogplus.com/compare/hevy.html | f | cited in 2.41, 4
-293. https://play.google.com/store/apps/details?id=club.symmetry.application&hl=en&gl=US | 2026-09-28 | cited in 2.42, 4
-294. https://apps.apple.com/us/app/symmetry-gym-workout-tracker/id6474446718 | 2026-09-26 | cited in 2.42
-295. https://itunes.apple.com/us/rss/customerreviews/page=1/id=6474446718/sortby=mostrecent/json | 2026-10-06 | cited in 2.42
-296. https://apps.apple.com/us/app/gym-log-workout-tracker-gript/id6760785452 | 2026-10-06 | cited in 2.43, 4
-297. https://play.google.com/store/apps/details?id=com.gontechventures.bulkd&hl=en&gl=US | 2026-09-19 | cited in 2.43
-298. https://apps.apple.com/us/app/reps-workout-tracker-gym-log/id6766647845 | 2026-09-30 | cited in 2.43, 4
-299. https://play.google.com/store/apps/details?id=com.reps.app&hl=en&gl=US | 2026-09-30 | cited in 2.43
-300. https://apps.apple.com/us/app/gravitus-gym-workout-tracker/id965383840 | 2026-10-02 | cited in 2.43, 4
-301. https://play.google.com/store/apps/details?id=com.gravitus.app&hl=en&gl=US | 2026-09-26 | cited in 2.43
-302. https://itunes.apple.com/us/rss/customerreviews/page=1/id=965383840/sortby=mostrecent/json | 2026-10-06 | cited in 2.43, 4
-303. https://play.google.com/store/apps/details?id=com.myworkoutplan.myworkoutplan&hl=en&gl=US | 2026-02-22 | cited in 2.43, 4
-304. https://play.google.com/store/apps/details?id=com.gymus.gymus&hl=en&gl=US | 2026-09-30 | cited in 2.43, 4
-305. https://play.google.com/store/apps/details?id=th.majimesoft.workout_tracker&hl=en&gl=US | 2026-09-22 | cited in 2.43
-306. https://play.google.com/store/apps/details?id=com.sarasoftapps.com.workoutlogger&hl=en&gl=US | 2026-07-28 | cited in 2.43
-307. https://play.google.com/store/apps/details?id=app.lifthard&hl=en&gl=US | 2026-10-05 | cited in 2.43, 4
-308. https://play.google.com/store/apps/details?id=com.hvy.gymlog&hl=en&gl=US | 2025-10-22 | cited in 2.43
-309. https://apps.apple.com/us/app/weightlifting-app/id1266077653 | 2026-07-07 | cited in 2.44, 4
-310. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1266077653/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
-311. https://apps.apple.com/us/app/bolt-workout-strength-log/id1439649927 | 2026-09-17 | cited in 2.44
-312. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1439649927/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
-313. https://apps.apple.com/us/app/lift-log-1-weightlifting-log/id1078162186 | 2019-02-11 | cited in 2.44
-314. https://apps.apple.com/us/app/clank-weight-lifting/id1455163991 | 2020-06-14 | cited in 2.44
-315. https://apps.apple.com/us/app/gymatic-workout-tracker/id1036069872 | 2026-08-19 | cited in 2.44, 3
-316. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1036069872/sortby=mostrecent/json | 2026-10-06 | cited in 2.44, 4
-317. https://itunes.apple.com/us/rss/customerreviews/page=2/id=1036069872/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
-318. https://apps.apple.com/us/app/fitness-buddy-home-gym-workout/id514780106 | 2026-09-29 | cited in 2.44
-319. https://apps.apple.com/us/app/fitness-buddy-workout-trainer/id443646748 | 2024-05-20 | cited in 2.44
-320. https://apps.apple.com/us/app/fitness-ai-gym-workout-planner/id1446224156 | 2026-09-30 | cited in 2.45
-321. https://play.google.com/store/apps/details?id=com.fitnessai.android&hl=en&gl=US | 2025-10-30 | cited in 2.45
-322. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1446224156/sortby=mostrecent/json | 2026-10-06 | cited in 2.45, 4
-323. https://apps.apple.com/us/app/gymstreak-ai-personal-trainer/id1371187280 | 2026-08-27 | cited in 2.45
-324. https://play.google.com/store/apps/details?id=com.gymstreak.GymStreakAI&hl=en&gl=US | 2026-08-27 | cited in 2.45
-325. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1371187280/sortby=mostrecent/json | 2026-10-06 | cited in 2.45
-326. https://play.google.com/store/apps/details?id=com.gotokeep.keep.intl&hl=en&gl=US | 2026-08-25 | cited in 2.45
-327. https://apps.apple.com/us/app/keep-trainer-gym-workout-log/id1287964023 | 2026-06-29 | cited in 2.45
-328. https://apps.apple.com/us/app/muscle-monster-workout-planner/id6471547318 | 2026-09-08 | cited in 2.45
-329. https://play.google.com/store/apps/details?id=pro.fitgpt.fai&hl=en&gl=US | 2026-07-30 | cited in 2.45
-330. https://play.google.com/store/apps/details?id=com.gymdone.gymworkouttrainer&hl=en&gl=US | 2026-09-22 | cited in 2.45
-331. https://play.google.com/store/apps/details?id=com.axiommobile.barbell&hl=en&gl=US | 2026-08-25 | cited in 2.45
-332. https://play.google.com/store/apps/details?id=app.setgraph&hl=en&gl=US | 2026-06-10 | cited in 5.3
-333. https://play.google.com/store/apps/details?id=io.strongapp.strong&hl=en&gl=US | 2026-05-13 | cited in 5.3
+132. https://athletechnews.com/whoop-becomes-first-fitness-wearable-to-measure-strength-training/ | 2023-05-11 | cited in 2.14
+133. https://www.community.whoop.com/t/reps-tracking-and-exercise-swaps/7967 | 2025-09-14 | cited in 2.14
+134. https://www.community.whoop.com/t/strength-trainer-better-history-and-features/13043 | 2026-01-02 | cited in 2.14
+135. https://support.whoop.com/s/article/Automatic-and-Manual-Activity-Detection | see text | cited in 2.14
+136. https://www.community.whoop.com/t/strength-trainer-let-us-edit-sets-after-execution/1307 | 2025-05-19 | cited in 2.14, 5.5
+137. https://www.community.whoop.com/t/feature-request-a-much-better-strength-training-experience/15924 | 2026-08-17 | cited in 2.14
+138. https://www.whoop.com/us/en/thelocker/how-whoop-measures-muscular-load/ | see text | cited in 2.14
+139. https://www.community.whoop.com/t/strength-trainer-upgrades/15744 | 2026-08-05 | cited in 2.14
+140. https://www.community.whoop.com/t/strength-trainer-feedback-rest-timer-workflow-progression-targets-notes-measurements-and-exercise-mapping/14544 | 2026-04-15 | cited in 2.14
+141. https://www.community.whoop.com/t/feature-request-rest-time-between-sets-in-strength-trainer/14908 | 2026-05-22 | cited in 2.14
+142. https://www.community.whoop.com/t/unlock-strength-trainer-potential/1014 | 2025-06-02 | cited in 2.14
+143. https://www.community.whoop.com/t/feature-request-dynamic-island-timer-for-strength-trainer/16274 | 2026-09-18 | cited in 2.14
+144. https://www.community.whoop.com/t/strength-trainer-improvements/14992 | 2026-07-22 | cited in 2.14
+145. https://www.community.whoop.com/t/api-for-strength-trainer/10517 | 2026-03-12 | cited in 2.14
+146. https://press.strava.com/articles/strava-overhauls-strength-experience-with-expanded-partner-ecosystem-new-workout-log-and-muscle-maps | 2026-05-21 | cited in 2.14, 2.17, 2.38, 4
+147. https://support.whoop.com/s/article/How-to-Use-the-AI-Powered-WHOOP-Coach?language=en_US | see text | cited in 2.14
+148. https://play.google.com/store/apps/details?id=com.whoop.android&hl=en&gl=US | 2026-10-02 | cited in 2.14
+149. https://apps.apple.com/gb/charts/iphone/health-fitness-apps/6013 | 2026-10-06 | cited in 2.15
+150. https://www8.garmin.com/manuals-apac/webhelp/forerunner965/EN-SG/GUID-66478414-4338-418E-9E0A-90162F21A62A-2265.html | see text | cited in 2.15
+151. https://www8.garmin.com/manuals/webhelp/GUID-0221611A-992D-495E-8DED-1DD448F7A066/EN-AU/GUID-7C8D56F5-E9F5-4825-9F66-3CC9124B2979.html | see text | cited in 2.15
+152. https://www8.garmin.com/manuals/webhelp/GUID-49EC93CF-DA3F-4514-817F-4098FC4A71AE/EN-US/GUID-49D892BF-429E-454D-B0C6-D4AE07E9D4A0.html | 2026-09 | cited in 2.15
+153. https://www8.garmin.com/manuals/webhelp/GUID-0221611A-992D-495E-8DED-1DD448F7A066/EN-US/GUID-CF2D7922-A1AC-4510-9480-E7CE8119EAF2.html | 2026-04 | cited in 2.15
+154. https://the5krunner.com/2024/06/23/new-garmin-connect-feature-heading-for-the-app-or-is-it-a-hidden-feature | 2024-06-23 | cited in 2.15
+155. https://www.techradar.com/health-fitness/fitness-trackers/garmin-investigates-disappearing-workouts-issue-thats-hitting-cirqa-owners-and-confirms-a-workaround-to-stop-it-happening-to-you | 2026-09-18 | cited in 2.15
+156. https://the5krunner.com/2026/09/26/garmin-cirqa-workouts-disappearing/ | 2026-09-26 | cited in 2.15
+157. https://digitalcommons.wku.edu/ijesab/vol14/iss3/143 | 2023 | cited in 2.15, 4
+158. https://forums.garmin.com/sports-fitness/running-multisport/f/forerunner-965/353939/strength-activity-profile-detects-the-wrong-exercise/1744119 | see text | cited in 2.15
+159. https://www.techradar.com/features/why-garmins-strength-training-mode-needs-to-be-improved-or-scrapped | 2022-06-08 | cited in 2.15, 4
+160. https://play.google.com/store/apps/details?id=com.garmin.android.apps.connectmobile&hl=en&gl=US | 2026-10-05 | cited in 2.15
+161. https://www.samsung.com/au/support/mobile-devices/record-a-workout-on-samsung-watch/ | f | cited in 2.16
+162. https://www.samsung.com/hk_en/support/apps-services/how-to-monitor-exercises-with-samsung-health/ | f | cited in 2.16
+163. https://eu.community.samsung.com/t5/wearables/custom-workout-routine-for-galaxy-watch/td-p/5325181 | see text | cited in 2.16
+164. https://us.community.samsung.com/t5/Galaxy-Watch/Watch-workout-stops-during-periods-if-rest-between-weight/td-p/2637205 | see text | cited in 2.16
+165. https://www.gsmarena.com/samsung_health_app_update_new_galaxy_watch_features-news-73127.php | 2026-06-04 | cited in 2.16
+166. https://r2.community.samsung.com/t5/Samsung-Health/Feature-Request-Optimizing-Samsung-Health-and-Watch-Ultra-for/m-p/22848226 | see text | cited in 2.16
+167. https://play.google.com/store/apps/details?id=com.sec.android.app.shealth&hl=en&gl=US | 2026-09-07 | cited in 2.16
+168. https://9to5mac.com/2026/05/21/strava-adds-dedicated-strength-training-support-for-sets-reps-weight-and-muscle-groups/ | 2026-05-21 | cited in 2.17
+169. https://apps.apple.com/us/charts/iphone/health-fitness-apps/6013 | 2026-10-06 | cited in 2.17, 2 (group intro), 2.38
+170. https://support.strava.com/en-us/articles/15401547-strength-training | f | cited in 2.17
+171. https://athletechnews.com/strava-strength-training-major-update/ | 2026-05-21 | cited in 2.17
+172. https://support.strava.com/en-us/articles/15401529-muscle-map-for-strength-activities | f | cited in 2.17
+173. https://the5krunner.com/2026/05/21/strava-strength-training/ | 2026-05-21 | cited in 2.17, 5.5
+174. https://reddit.sentinel-team.org/posts/1v39e8f/snapshots/2026-07-23T07%3A38%3A40.428Z | 2026-07-23 | cited in 2.17, 3, 4
+175. https://notebookcheck.net/Amazfit-joins-Strava-s-new-strength-training-ecosystem-new-features-free-for-everyone.1306179.0.html | 2026-05-26 | cited in 2.17, 2.38
+176. https://www.tour-magazin.de/en/training/strength-training-on-strava-update-with-muscle-maps-and-training-log/ | 2026-05-28 | cited in 2.17
+177. https://play.google.com/store/apps/details?id=com.strava&hl=en&gl=US | 2026-10-05 | cited in 2.17
+178. https://trailandkale.com/tonal-2-home-gym-review/ | 2026-05-04 | cited in 2.18
+179. https://knowledge.tonal.com/s/article/Free-Lift | f | cited in 2.18
+180. https://www.tonal.com/intelligence/ | f | cited in 2.18
+181. https://knowledge.tonal.com/s/article/In-Workout-Controls | f | cited in 2.18
+182. https://tonal.com/blogs/all/build-your-own-custom-workouts | 2026-10-06 | cited in 2.18
+183. https://www.t3.com/reviews/tempo-studio | 2022-07-07 | cited in 2.19
+184. https://tempo.fit/blog/the-new-metrics-system | 2021-01-12 | cited in 2.19
+185. https://support.tempo.fit/support/solutions/articles/151000154718-weight-recognition-faqs | f | cited in 2.19
+186. https://tempo.fit/blog/a-new-era-for-tempo | see text | cited in 2.19
+187. https://support.tempo.fit/support/solutions/articles/151000154714-3d-tempo-vision-form-feedback | f | cited in 2.19
+188. https://www.garagegymreviews.com/tempo-studio-review | 2026-06-02 | cited in 2.19, 4
+189. https://apps.apple.com/app/id1439127794 | f | cited in 2.20
+190. https://help.truecoach.co/en/articles/2403707-the-truecoach-client-experience | f | cited in 2.20
+191. https://apps.apple.com/app/id1439127794?see-all=reviews | f | cited in 2.20, 4
+192. https://apps.apple.com/us/app/id955074569 | f | cited in 2.21
+193. https://support.trainheroic.com/hc/en-us/articles/18156961923981-For-Athletes-Creating-Training-Sessions | see text | cited in 2.21
+194. https://www.trainheroic.com/athlete/ | f | cited in 2.21
+195. https://support.trainheroic.com/hc/en-us/articles/45097749410701 | see text | cited in 2.21
+196. https://support.trainheroic.com/hc/en-us/articles/18156558387469-For-Athletes-Using-in-app-Timers | see text | cited in 2.21
+197. https://apps.apple.com/us/app/id955074569?see-all=reviews | f | cited in 2.21, 4
+198. https://play.google.com/store/apps/details?id=com.TrainHeroic.TrainHeroic&hl=en&gl=US | 2026-10-02 | cited in 2.21, 4
+199. https://www.teambuildr.com/mobile-app | f | cited in 2.22
+200. https://www.freelapusa.com/teambuildr-the-company-and-the-tool/ | see text | cited in 2.22
+201. https://support.teambuildr.com/article/2Mz1MesIhQ-what-is-weight-room-view | f | cited in 2.22
+202. https://www.teambuildr.com/whiteboard-weight-room-tv-timing-system | see text | cited in 2.22
+203. https://blog.teambuildr.com/posts/teambuildr-4-0-is-here | 2016-05-20 | cited in 2.22
+204. https://apps.apple.com/app/id1438926364 | f | cited in 2.23
+205. https://help.everfit.io/en/articles/5829094-client-app-track-a-workout | f | cited in 2.23
+206. https://blog.everfit.io/everfit-may-2026-new-features | 2026-06-04 | cited in 2.23, 4
+207. https://help.everfit.io/en/articles/4701773-client-app-turn-on-off-rest-timer | f | cited in 2.23, 5.1
+208. https://apps.apple.com/app/id1438926364?see-all=reviews | f | cited in 2.23, 4
+209. https://help.kahunas.io/en/articles/44-what-comes-with-the-app | f | cited in 2.24
+210. https://coachway.io/articles/kahunas-review/ | 2026-10 | cited in 2.24
+211. https://kahunas.io/ | 2026-10-06 | cited in 2.24
+212. https://itunes.apple.com/lookup?id=488580022&country=us | 2026-10-05 | cited in 2.25
+213. https://stronglifts.com/app/ | f | cited in 2.25, 4
+214. https://support.stronglifts.com/article/111-apple-watch | f | cited in 2.25, 4
+215. https://play.google.com/store/apps/details?id=com.stronglifts.app&hl=en&gl=US | 2026-09-02 | cited in 2.25
+216. https://itunes.apple.com/lookup?id=1008697836&country=us | 2026-07-09 | cited in 2.26
+217. https://itunes.apple.com/lookup?id=6753924510&country=us | 2026-09-15 | cited in 2.26
+218. https://appfollow.io/android/starting-strength-official/com.shabu.startingstrength?country=us | see text | cited in 2.26
+219. https://aasgaardco.com/store/books-posters-dvd/apps/starting-strength-official-mobile-app/ | f | cited in 2.26, 4
+220. https://apps.apple.com/us/app/starting-strength-official/id6753924510?see-all=reviews | f | cited in 2.26
+221. https://apps.apple.com/us/app/starting-strength-legacy/id1008697836?see-all=reviews | f | cited in 2.26
+222. https://play.google.com/store/apps/details?id=com.shabu.startingstrength&hl=en&gl=US | 2025-03-13 | cited in 2.26
+223. https://www.boostcamp.app/best/5-3-1 | see text | cited in 2.27
+224. https://itunes.apple.com/lookup?id=1114435690&country=us | 2026-03-11 | cited in 2.27
+225. https://apps.apple.com/us/app/5-3-1-workout-logger-531/id1114435690?see-all=reviews | f | cited in 2.27
+226. https://itunes.apple.com/lookup?id=1560266240&country=us | 2025-08-01 | cited in 2.27
+227. https://itunes.apple.com/lookup?id=962162633&country=us | 2026-09-29 | cited in 2.27
+228. https://play.google.com/store/apps/details?id=com.vandersw.wenderlogbook&hl=en&gl=US | 2026-09-29 | cited in 2.27
+229. https://itunes.apple.com/lookup?id=1517032809&country=us | 2025-10-24 | cited in 2.28
+230. https://www.boostcamp.app/best/gzcl | 2026-05 | cited in 2.28
+231. https://justuseapp.com/en/app/1517032809/gzcl-method-workout-logger/reviews | f | cited in 2.28
+232. https://support.bodybuilding.com/en-US/articles/bodybuildingcom-app-225629 | f | cited in 2.29
+233. https://justuseapp.com/en/app/1389506691/bodyfit-fitness-training-coach/reviews | f | cited in 2.29, 4
+234. https://en.wikipedia.org/wiki/Bodybuilding.com | f | cited in 2.29
+235. https://itunes.apple.com/lookup?id=1389506691&country=us | 2026-08-03 | cited in 2.29
+236. https://itunes.apple.com/search?term=gym%20log&country=us&entity=software&limit=40 | 2026-10-06 | cited in 2 (group intro)
+237. https://play.google.com/store/search?q=workout%20tracker&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2 (group intro), 5.3
+238. https://play.google.com/store/search?q=workout%20log&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2 (group intro), 5.3
+239. https://itunes.apple.com/lookup?id=1621719397&country=us | 2026-09-11 | cited in 2.30
+240. https://play.google.com/store/search?q=stronger%20gym%20workout%20planner&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.30
+241. https://www.strongermobileapp.com/ | f | cited in 2.30
+242. https://www.strongermobileapp.com/blog/best-workout-tracker-apps | 2026-02-21 | cited in 2.30
+243. https://play.google.com/store/apps/details?id=com.atlassmarttech.stronger&hl=en&gl=US | 2026-04-20 | cited in 2.30
+244. https://itunes.apple.com/lookup?id=6737156524&country=us | 2026-10-03 | cited in 2.31
+245. https://macrofactor.com/workouts/ | f | cited in 2.31
+246. https://apps.apple.com/us/app/macrofactor-workouts-tracker/id6737156524?see-all=reviews | f | cited in 2.31
+247. https://itunes.apple.com/lookup?id=922744883&country=us | 2026-09-16 | cited in 2.32
+248. http://smartgymapp.com/ | f | cited in 2.32
+249. https://help.smartgymapp.com/article/59-apple-watch-app | f | cited in 2.32
+250. https://itunes.apple.com/lookup?id=696350076&country=us | 2026-03-27 | cited in 2.33
+251. https://www.fitlist.com | f | cited in 2.33
+252. https://itunes.apple.com/lookup?id=6449553638&country=us | 2026-10-02 | cited in 2.34, 4
+253. https://strive-workout.com/ | f | cited in 2.34, 4, 5.1
+254. https://apps.apple.com/us/app/gym-log-strive/id6449553638?see-all=reviews | f | cited in 2.34
+255. https://play.google.com/store/apps/details?id=com.koalasoft.gymnasium&hl=en&gl=US | 2026-10-05 | cited in 2.34
+256. https://play.google.com/store/apps/details?id=com.lealApps.pedro.gymWorkoutPlan&hl=en&gl=US | 2026-09-24 | cited in 2.35, 4
+257. https://itunes.apple.com/lookup?id=1524374229&country=us | 2026-09-22 | cited in 2.35
+258. https://play.google.com/store/apps/details?id=com.anthonyng.workoutapp&hl=en&gl=US | 2026-09-30 | cited in 2.35
+259. https://play.google.com/store/apps/details?id=com.kg.app.sportdiary&hl=en&gl=US | 2026-03-30 | cited in 2.35
+260. https://play.google.com/store/apps/details?id=app.pumped.workout.log.tracker.strong.gym.exercise&hl=en&gl=US | 2026-07-28 | cited in 2.35
+261. https://play.google.com/store/apps/details?id=com.fnp.fithero&hl=en&gl=US | 2026-10-04 | cited in 2.35, 4
+262. https://play.google.com/store/apps/details?id=com.yurikoshiishi.workoutwise&hl=en&gl=US | 2026-09-26 | cited in 2.35, 4
+263. https://play.google.com/store/apps/details?id=com.madmustachecompany.workoutapp&hl=en&gl=US | 2026-09-19 | cited in 2.35
+264. https://play.google.com/store/apps/details?id=com.fitnesslogbook.app&hl=en&gl=US | 2026-10-03 | cited in 2.35
+265. https://play.google.com/store/apps/details?id=com.limajuice.liftlog&hl=en&gl=US | 2026-08-30 | cited in 2.35
+266. https://play.google.com/store/apps/details?id=com.mdikcinar.workoutplanner&hl=en&gl=US | 2026-09-28 | cited in 2.35
+267. https://play.google.com/store/apps/details?id=com.dedaldev.gymdroid&hl=en&gl=US | 2026-09-02 | cited in 2.35, 4
+268. https://play.google.com/store/apps/details?id=com.kotlan.powerlog&hl=en&gl=US | 2026-09-30 | cited in 2.35
+269. https://play.google.com/store/apps/details?id=com.krsmanovic.vigor&hl=en&gl=US | 2026-10-03 | cited in 2.35
+270. https://play.google.com/store/apps/details?id=com.vikingtech.gymtrack&hl=en&gl=US | 2026-09-24 | cited in 2.35
+271. https://play.google.com/store/apps/details?id=com.gains.gains&hl=en&gl=US | 2026-09-17 | cited in 2.35
+272. https://play.google.com/store/apps/details?id=com.thebenchapp.bench&hl=en&gl=US | 2026-09-29 | cited in 2.35
+273. https://play.google.com/store/apps/details?id=com.werules.logger&hl=en&gl=US | 2026-10-05 | cited in 2.35
+274. https://play.google.com/store/apps/details?id=app.rork.gymnotes_workout_tracker&hl=en&gl=US | 2026-10-03 | cited in 2.35
+275. https://itunes.apple.com/lookup?id=1479893244&country=us | 2022-09-29 | cited in 2.35
+276. https://f-droid.org/packages/de.wger.flutter/ | 2026-10-05 | cited in 2.36
+277. https://f-droid.org/packages/com.mbosse.gymloga/ | 2026-04-25 | cited in 2.36
+278. https://github.com/GymLoga/GymLoga-Android | f | cited in 2.36, 2.37, 4
+279. https://f-droid.org/packages/com.noahjutz.gymroutines/ | 2025-04-22 | cited in 2.36
+280. https://alternativeto.net/software/hevy-workout-tracker | see text | cited in 2.36
+281. https://apps.apple.com/us/app/gym-note-plus-fitness-journal/id6746699616 | f | cited in 2.37, 4
+282. https://wellnessproject.ai/ | f | cited in 2.37
+283. https://the5krunner.com/2020/05/20/coros-strength-training-workout-builder/ | 2020-05-20 | cited in 2.38
+284. https://support.coros.com/hc/en-us/articles/48547231345684 | see text | cited in 2.38
+285. https://support.ouraring.com/hc/lv/articles/42821224955795-Record-a-Workout-with-Oura | see text | cited in 2.38
+286. https://www.sugarwod.com/athlete-features/ | f | cited in 2.39
+287. https://appfollow.io/ios/wodify-athlete/1235645130?country=us | see text | cited in 2.39
+288. https://play.google.com/store/search?q=Symmetry%20gym%20workout%20tracker%20rank&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.40
+289. https://play.google.com/store/search?q=Gravitus%20gym%20workout%20tracker&c=apps&hl=en&gl=US | 2026-10-06 | cited in 2.40
+290. https://apps.apple.com/us/app/gym-log-workout-tracker/id871239624 | 2026-10-06 | cited in 2.41, 4
+291. https://www.gymlogplus.com/press.html | f | cited in 2.41, 4
+292. https://itunes.apple.com/us/rss/customerreviews/page=2/id=871239624/sortby=mostrecent/json | 2026-10-06 | cited in 2.41
+293. https://itunes.apple.com/us/rss/customerreviews/page=1/id=871239624/sortby=mostrecent/json | 2026-10-06 | cited in 2.41, 4
+294. https://www.gymlogplus.com/ | f | cited in 2.41
+295. https://www.gymlogplus.com/apple-watch.html | f | cited in 2.41, 4
+296. https://www.gymlogplus.com/support.html | f | cited in 2.41
+297. https://www.gymlogplus.com/import-from-strong.html | f | cited in 2.41, 4
+298. https://www.gymlogplus.com/compare/hevy.html | f | cited in 2.41, 4
+299. https://play.google.com/store/apps/details?id=club.symmetry.application&hl=en&gl=US | 2026-09-28 | cited in 2.42, 4
+300. https://apps.apple.com/us/app/symmetry-gym-workout-tracker/id6474446718 | 2026-09-26 | cited in 2.42
+301. https://itunes.apple.com/us/rss/customerreviews/page=1/id=6474446718/sortby=mostrecent/json | 2026-10-06 | cited in 2.42
+302. https://apps.apple.com/us/app/gym-log-workout-tracker-gript/id6760785452 | 2026-10-06 | cited in 2.43, 4
+303. https://play.google.com/store/apps/details?id=com.gontechventures.bulkd&hl=en&gl=US | 2026-09-19 | cited in 2.43
+304. https://apps.apple.com/us/app/reps-workout-tracker-gym-log/id6766647845 | 2026-09-30 | cited in 2.43, 4
+305. https://play.google.com/store/apps/details?id=com.reps.app&hl=en&gl=US | 2026-09-30 | cited in 2.43
+306. https://apps.apple.com/us/app/gravitus-gym-workout-tracker/id965383840 | 2026-10-02 | cited in 2.43, 4
+307. https://play.google.com/store/apps/details?id=com.gravitus.app&hl=en&gl=US | 2026-09-26 | cited in 2.43
+308. https://itunes.apple.com/us/rss/customerreviews/page=1/id=965383840/sortby=mostrecent/json | 2026-10-06 | cited in 2.43, 4
+309. https://play.google.com/store/apps/details?id=com.myworkoutplan.myworkoutplan&hl=en&gl=US | 2026-02-22 | cited in 2.43, 4
+310. https://play.google.com/store/apps/details?id=com.gymus.gymus&hl=en&gl=US | 2026-09-30 | cited in 2.43, 4
+311. https://play.google.com/store/apps/details?id=th.majimesoft.workout_tracker&hl=en&gl=US | 2026-09-22 | cited in 2.43
+312. https://play.google.com/store/apps/details?id=com.sarasoftapps.com.workoutlogger&hl=en&gl=US | 2026-07-28 | cited in 2.43
+313. https://play.google.com/store/apps/details?id=app.lifthard&hl=en&gl=US | 2026-10-05 | cited in 2.43, 4
+314. https://play.google.com/store/apps/details?id=com.hvy.gymlog&hl=en&gl=US | 2025-10-22 | cited in 2.43
+315. https://apps.apple.com/us/app/weightlifting-app/id1266077653 | 2026-07-07 | cited in 2.44, 4
+316. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1266077653/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
+317. https://apps.apple.com/us/app/bolt-workout-strength-log/id1439649927 | 2026-09-17 | cited in 2.44
+318. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1439649927/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
+319. https://apps.apple.com/us/app/lift-log-1-weightlifting-log/id1078162186 | 2019-02-11 | cited in 2.44
+320. https://apps.apple.com/us/app/clank-weight-lifting/id1455163991 | 2020-06-14 | cited in 2.44
+321. https://apps.apple.com/us/app/gymatic-workout-tracker/id1036069872 | 2026-08-19 | cited in 2.44, 3
+322. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1036069872/sortby=mostrecent/json | 2026-10-06 | cited in 2.44, 4
+323. https://itunes.apple.com/us/rss/customerreviews/page=2/id=1036069872/sortby=mostrecent/json | 2026-10-06 | cited in 2.44
+324. https://apps.apple.com/us/app/fitness-buddy-home-gym-workout/id514780106 | 2026-09-29 | cited in 2.44
+325. https://apps.apple.com/us/app/fitness-buddy-workout-trainer/id443646748 | 2024-05-20 | cited in 2.44
+326. https://apps.apple.com/us/app/fitness-ai-gym-workout-planner/id1446224156 | 2026-09-30 | cited in 2.45
+327. https://play.google.com/store/apps/details?id=com.fitnessai.android&hl=en&gl=US | 2025-10-30 | cited in 2.45
+328. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1446224156/sortby=mostrecent/json | 2026-10-06 | cited in 2.45, 4
+329. https://apps.apple.com/us/app/gymstreak-ai-personal-trainer/id1371187280 | 2026-08-27 | cited in 2.45
+330. https://play.google.com/store/apps/details?id=com.gymstreak.GymStreakAI&hl=en&gl=US | 2026-08-27 | cited in 2.45
+331. https://itunes.apple.com/us/rss/customerreviews/page=1/id=1371187280/sortby=mostrecent/json | 2026-10-06 | cited in 2.45
+332. https://play.google.com/store/apps/details?id=com.gotokeep.keep.intl&hl=en&gl=US | 2026-08-25 | cited in 2.45
+333. https://apps.apple.com/us/app/keep-trainer-gym-workout-log/id1287964023 | 2026-06-29 | cited in 2.45
+334. https://apps.apple.com/us/app/muscle-monster-workout-planner/id6471547318 | 2026-09-08 | cited in 2.45
+335. https://play.google.com/store/apps/details?id=pro.fitgpt.fai&hl=en&gl=US | 2026-07-30 | cited in 2.45
+336. https://play.google.com/store/apps/details?id=com.gymdone.gymworkouttrainer&hl=en&gl=US | 2026-09-22 | cited in 2.45
+337. https://play.google.com/store/apps/details?id=com.axiommobile.barbell&hl=en&gl=US | 2026-08-25 | cited in 2.45
+338. https://play.google.com/store/apps/details?id=app.setgraph&hl=en&gl=US | 2026-06-10 | cited in 5.3
+339. https://play.google.com/store/apps/details?id=io.strongapp.strong&hl=en&gl=US | 2026-05-13 | cited in 5.3

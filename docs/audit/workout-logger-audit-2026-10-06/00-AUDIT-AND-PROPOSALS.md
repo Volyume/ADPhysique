@@ -247,9 +247,84 @@ other side, Start cluster, then Next exercise or Finish workout with a
     weight for timed and distance sets; Exercise Detail prints "3/5" for a
     null quality (02 s11.3).
 
-## 5. Rulings that bind any redesign (from lane A3)
+## 5. Rulings that bind any redesign (03, plus the lead's own reading of the register and the guard tests)
 
-_To be filled from 03._
+### 5.1 Decided before, and NOT re-proposed here
+
+The founder has already ruled on three things the field has and Volyume
+does not. The register also records the founder flagging an earlier audit
+for re-surfacing already-decided removals. So these are reported as facts
+about the field (sections 6 and 7) and are not questions in section 9.
+If the founder wants any of them reopened, that is the founder's own word.
+
+| Item | The ruling, verbatim | Where | The field |
+|---|---|---|---|
+| Plate calculator | D15: "REJECTED. Moot for UK-based users; absolutely not needed. Do not re-propose." D57: "ABSOLUTELY DROPPED, never revisit." | register:15, :1116-1118 | six of twelve leading loggers (6.4) |
+| RPE or RIR input | "Treat as settled-removed. The founder flagged the audit for re-surfacing already-decided removals; the effort picker stays out." | register:19 | six of twelve, three partial (6.4) |
+| Exercise media programme | D15: "HOLD. Founder is not putting money towards it now. Do not re-propose." | register:13 | ten of twelve ship video, animation or illustration (6.4) |
+| Manrope or any typeface change | D53: "horrendous... makes the app look childish... revert." Standing law: never re-propose a typeface change unprompted | register:1044-1052 | not relevant; the options use Inter |
+
+### 5.2 Locked behaviours every option keeps (03, with the pinning tests)
+
+- D54 and D9: one reps value for both sides on a unilateral lift (the
+  divergent ask was ruled ED-adverse). Pinned by
+  `ActiveWorkoutScreen.unilateral.guard.test.js`.
+- D44: every group-driven focus change gets a cue (haptic, announcement,
+  brief banner); round-return to the first member after the last.
+- D59: the guided warm-up ramp keeps its own row (the set-type picker
+  only flips the type).
+- D63: in-session celebration is a calm top toast, never a takeover,
+  never over the inputs; calm mode and an open ED flag calm it further.
+- D87 and D150: the record callout before the set is the one place a PR is
+  announced in advance; the Log set button carries no trophy. Pinned by
+  `loggerVisualArchitecture.guard.test.js`.
+- D27: the Live Activity, the Android rest-notification actions and the
+  long-press menu on logged rows are standing law.
+- Founder device order 2026-07-27: the header's Finish is icon-only on the
+  same chrome as the close X. Pinned by `loggerHeaderFinishIconOnly.guard.test.js`.
+- Founder device orders 2026-08-17 and 18: no coloured accent stripe on
+  the active row; chromeless header actions; the outline (if it exists)
+  is a real bar, not a faint caption; rows a step smaller.
+- Phase 2B structure laws (the S22 screenshots): the active set never
+  drifts; rest is a compact strip docked outside the scroll; completed
+  rows are quiet lines; upcoming rows are light lines; no routine
+  estimated-max copy. Pinned by `loggerVisualArchitecture.guard.test.js`.
+- D193's bans, still the founder's words: no tutorial inside every set,
+  no rest shown before a log, the clock is not the hero.
+
+### 5.3 Rulings the options re-shape, named so the founder's yes is informed
+
+- **The one-exercise workspace** ("the workspace scroll hosts ONLY the
+  active exercise", `loggerVisualArchitecture.guard.test.js`): kept by A,
+  lifted by B and C and re-pinned to the new invariants (8.3, 8.4).
+- **D105 (2026-08-17): the exercise name stepped down to 16px** because it
+  overpowered the outline strip. Every option makes the name the hero
+  (A: 24px; B and C: 20px in the block). In B and C the strip is gone, so
+  the order's reason is gone; in A the segmented rule replaces the
+  strip. The founder's yes on a model is taken as the yes on this.
+- **D66 ruling 2: elapsed is data at `type.num('title')`.** Every option
+  demotes it to a caption, following the founder's later "clocks wrong"
+  (D193). Same treatment.
+- **D58: the "Last session" beat line kept as a compact row with Use.**
+  The options carry the same content in a different form: PREVIOUS on
+  every row, "Last 72.5 × 8" under the live value, a "Use last" key, the
+  first-time and recovery-week lines in the dock's position line. The
+  rationale of D58 (the row must hold a cue, a deload variant and the Use
+  affordance, which placeholders cannot) is met.
+- **D60 ruling 1: dense 36dp logged rows.** The sheet rows are 44dp with
+  the touch floor met without hitSlop; the dock's lines keep 36dp where
+  density matters. A size change, not a reversal.
+- **The outline strip (2026-08-18 and 22 device orders).** B and C remove
+  it because the sheet is the outline; A replaces it with the segmented
+  rule and the "2 of 6" tap. The orders were about making the strip
+  legible, not about keeping a strip.
+
+### 5.4 Ambiguities carried from 03
+
+- D168 against D184 on the ledger row: both were part of the September
+  redesign and were reverted with it (D193); neither binds the live app.
+- The rest timer's scale was never ruled beyond "small" and "quiet"; the
+  options keep the 44dp strip as pinned.
 
 ## 6. The field (from lanes A4, A5, A7; the dossiers and sources are in 04, 05 and 07)
 
@@ -498,7 +573,8 @@ on the evidence in section 6 and the maps in section 4.
    system keypad still rises for typing, covers the bottom chrome on
    Android, and drops a comma. The in-app pad (8.5) closes this; Q2.
 4. **Instruction media.** Ten of twelve ship video, animation or
-   illustration; Volyume has text. An asset decision, Q5.
+   illustration; Volyume has text. On hold by the founder's D15 ("not
+   putting money towards it now. Do not re-propose"). Reported only (5.1).
 5. **Correct a finished session.** Hevy, Strong, Boostcamp and JEFIT edit
    after the fact; Volyume can only delete. F9.
 6. **Write-back after in-session edits.** Both market leaders ask "update
@@ -512,9 +588,9 @@ on the evidence in section 6 and the maps in section 4.
    screen. Every option adds the exercise note in the block header (8.3)
    or the dock (8.4).
 9. **Plate calculator and available-weights rounding.** Six of twelve;
-   struck by D57. Q3, not re-proposed.
-10. **RPE or RIR.** Six of twelve; struck by D14 and D19. Q4, not re-proposed.
-11. **The wrist.** Six Apple Watch, three Wear OS; Volyume none. Q6.
+   rejected by D15 and D57 with "do not re-propose". Reported only (5.1).
+10. **RPE or RIR.** Six of twelve; settled-removed. Reported only (5.1).
+11. **The wrist.** Six Apple Watch, three Wear OS; Volyume none. Q3.
 12. **Pounds.** Three of twelve toggle units; Volyume is kg-only by an
     earlier ruling. Noted, not reopened.
 
@@ -646,7 +722,9 @@ Kept: every guided flow (clusters, per side, warm-up ramp, supersets),
 the record callout, the PR toast, the note row, the status chips (now
 one row of `Chip`s under the hero), the overflow actions.
 
-Needs from the founder: nothing reversed. Q2 (pad or steppers).
+Needs from the founder: no pinned law lifted; the re-shapes in 5.3
+(name size, elapsed as a caption, the beat line's form). Q2 (pad or
+steppers).
 Risk: lowest. Size: the smallest of the three (one screen, no new
 model); the foundation is most of the work.
 
@@ -688,7 +766,7 @@ actions move to a "…" on each block header.
 Needs from the founder: the structure law "the workspace scroll hosts
 ONLY the active exercise" lifted (the guard test re-pinned to the new
 invariants: the stage position, the single current row, the quiet
-rows, the strip). Q2.
+rows, the strip), plus the re-shapes in 5.3. Q2.
 Risk: medium; the re-pins are many, and the auto-scroll must be built
 and device-checked carefully (the September failure was a list that
 drifted; this design scrolls on purpose and must prove it). Size:
@@ -729,7 +807,7 @@ Kept: everything in A and B; the guided flows render in the dock.
 
 Needs from the founder: the same structure law lifted as B, re-pinned
 as "inputs live only in the dock; the dock is fixed; the sheet is
-read-only". Q2 is settled by the design (the pad is part of the dock;
+read-only", plus the re-shapes in 5.3. Q2 is settled by the design (the pad is part of the dock;
 steppers would not fit a dock and a sheet); if the founder keeps the
 steppers, C becomes A.
 Risk: medium; one new component family (sheet, dock, pad), a careful
@@ -788,10 +866,10 @@ is the lead's.)
 | Whole session visible | every sheet logger | behind the outline strip | B and C |
 | Fixed entry that never moves | Setgraph (swipe), Liftin' | the Now card scrolls | C |
 | In-app number pad with increments | Strong (toolbar), Setgraph, Gymaholic | steppers | 8.5, Q2 |
-| Plate calculator | Hevy, Strong (paid), Boostcamp, Alpha (paid), Setgraph, Gymaholic | struck, D57 "never revisit" | Q3: the founder's reversal or not; the audit does not re-propose it |
-| RPE or RIR per set | Hevy, Strong, Boostcamp, Alpha (paid), Juggernaut, Dr. Muscle; Fitbod, JEFIT, RP partial | struck, D14 and D19 | Q4: reversal or not; the engine already stores rir |
-| Exercise video or illustration | JEFIT, Alpha Progression (795 videos), Fitbod, Hevy | text instructions only | Q5: an asset decision (licence, size, source) |
-| Watch logging | Hevy, Strong, Gymaholic, JEFIT, Fitbod | dormant bridge, no target | Q6: a build decision outside this round |
+| Plate calculator | Hevy, Strong (paid), Boostcamp, Alpha (paid), Setgraph, Gymaholic | struck, D15 and D57 ("do not re-propose") | reported only (5.1) |
+| RPE or RIR per set | Hevy, Strong, Boostcamp, Alpha (paid), Juggernaut, Dr. Muscle; Fitbod, JEFIT, RP partial | settled-removed (register:19) | reported only (5.1) |
+| Exercise video or illustration | ten of twelve | text instructions only | on hold by D15 ("do not re-propose"); reported only (5.1) |
+| Watch logging | Hevy, Strong, Gymaholic, JEFIT, Fitbod | dormant bridge, no target | Q3: a build decision outside this round |
 | Edit a finished session | Hevy, Strong, Boostcamp, JEFIT | hard delete only | F9 |
 | Calendar history | Hevy, Strong, JEFIT, Boostcamp | list with filters | 8.6 |
 | "Update routine with today's changes" at finish | Strong, Hevy | swap scope "from now on" only | add to every option: a one-line prompt at finish when sets or loads differed |
@@ -804,31 +882,25 @@ is the lead's.)
 
 Q1. The model: A (focus, finished), B (the sheet), or C (the sheet with a
     now dock, the lead's recommendation). B and C lift one pinned
-    structure law (the one-exercise workspace); A lifts none.
+    structure law (the one-exercise workspace); A lifts none. Every
+    option re-shapes D105, D66 ruling 2 and D58 as section 5.3 says.
 Q2. The entry: the in-app number pad (8.5), or the steppers as today.
     (C assumes the pad.) The user voice says the input control is the
     change most likely to draw anger (6.5), so whichever is chosen keeps
     the increment taps; the pad has them as keys.
-Q3. The plate calculator was struck by D57 ("never revisit"). Six of the
-    twelve leading loggers document one (Hevy, Strong, Boostcamp, Alpha,
-    Setgraph, Gymaholic). Reverse, or keep struck.
-Q4. A visible RPE or RIR input was struck by D14 and D19. Six of the
-    twelve document one and three more partially; the engine already
-    stores `rir`. Reverse (as an optional per-set field, off by default),
-    or keep struck.
-Q5. Exercise media: none today. Options: licensed illustration set
-    (a dependency and an asset decision), app-drawn line illustrations
-    for the 918 exercises over time, or stay text-only.
-Q6. Watch: build the Wear OS and Apple Watch logger (large; a separate
+Q3. Watch: build the Wear OS and Apple Watch logger (large; a separate
     campaign), or not in this round.
-Q7. The summary's order (8.6): numbers first and Community after, or as
+Q4. The summary's order (8.6): numbers first and Community after, or as
     today.
-Q8. Build order once the model is chosen: foundation first (F1 to F14,
+Q5. Build order once the model is chosen: foundation first (F1 to F15,
     visible fixes within days), then the model; or the model first.
-Q9. A session cut short: offer to carry the remaining sets to a planned
+Q6. A session cut short: offer to carry the remaining sets to a planned
     workout (StrengthLog's path) and decide whether carried sets count
     toward the week's volume landmarks; or keep today's ended-early
     resolution.
+
+Not asked, by the founder's own prior words (5.1): the plate calculator,
+an RPE or RIR input, exercise media, a typeface change.
 
 ## 10. Device checklist for whichever option is chosen
 
