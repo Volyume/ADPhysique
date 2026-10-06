@@ -341,9 +341,61 @@ common, Wear OS only in Hevy, JEFIT and partly Fitbod).
 
 _Fills when lane A5 lands._
 
-### 6.6 The wider field (07)
+### 6.6 The wider field (07: forty dossiers, the Android market read on 2026-10-06)
 
-_Fills when lane A7 lands._
+Lane A7 read the loggers outside the usual list: Liftosaur, RepCount,
+StrengthLog, Motra, Gymshark Training, Liftoff, HeavySet, Gymverse,
+GymRun, Hercules, Fitlog, Progression, Workit, WHOOP, Garmin, Samsung
+Health, Strava, Tonal, Tempo, TrueCoach, TrainHeroic, TeamBuildr, Everfit,
+Kahunas, StrongLifts, Starting Strength Official, 5/3/1 and GZCLP apps,
+Bodybuilding.com, MacroFactor Workouts, SmartGym, Fitlist, Strive, Leap,
+GymLoga, Gym Note Plus, COROS, Amazfit, SugarWOD, Wodify, and the Google
+Play top results for "workout tracker", "gym log" and "workout log".
+
+What the wider field adds to the picture (07 sections 4 and 5; the lane's
+own value judgements are labelled there and re-judged here by the lead):
+
+- **Show the working (W-02).** Liftosaur shows the exact target crossed
+  out beside the rounded load and answers "why is the weight adjusted?"
+  in one tap. Volyume's resolver already carries a provenance code for
+  every served number (01 s3.2) and the founder's 2026-08-17 order put
+  explanations on demand, never standing in the card. A one-tap "why
+  this number" on the dock or the row fits both. Added to every option.
+- **Ask on the tick only when the set needs it (W-01).** Liftosaur's
+  prescription declares which sets need reps, a load or an effort typed,
+  and every other set completes in one tap. Volyume's AMRAP and cluster
+  types already carry that knowledge. Folded into the pad design: the
+  pad opens only when a value is missing or the set type asks.
+- **One edit rewrites the remaining unlogged sets, visibly and
+  reversibly (W-07).** Motra's default; its own help lists surprise
+  changes as a support topic. Volyume's resolver treats a deviation as
+  deliberate for the rest of the exercise (Law G) but does not show it.
+  Added to every option as a visible "applied to the sets below" line.
+- **A session cut short has a path (W-04).** StrengthLog offers to move
+  the remaining sets to a planned workout. Volyume records an ended-early
+  resolution and the sets are gone. A design question for the engine
+  (do carried sets count toward the week's landmarks); Q9.
+- **Import from Hevy and Strong exports (W-10).** Already in Volyume
+  (`src/lib/importExternal.js` parses both). Parity; worth saying in the
+  listing.
+- **Published progression and deload rules in plain words (W-03).**
+  Progression, StrongLifts and Starting Strength publish theirs; Volyume
+  has the Methodology screen and the deterministic engine, so the rules
+  exist; the plain-words version is a copy task, not a design one.
+- **Per-gym equipment profiles (W-12), fail-flag record semantics
+  (W-05), calendar events for gaps (W-06, Article 9 care).** Medium value;
+  noted for the backlog, not for this round.
+- **The Android rating gap (07 s5.3).** On 2026-10-06 Strong rates 4.86 on
+  the App Store and 4.3 on Google Play, JEFIT 4.76 against 4.4, Gymverse
+  4.85 against 4.3; Hevy, RepCount and Strive hold 4.8 to 4.9 on both.
+  Observed, with no cause claimed. Reading: an Android-first logger that
+  gets the timer, the keyboard and the notification right is not
+  competing against a uniformly polished Android field.
+- **Do not copy (07 s5.5).** AI coaches and AI plans (barred); rank and XP
+  loops (comparison pressure against the calm voice and the ED posture);
+  locking a set after processing (WHOOP's most-criticised choice); silent
+  deletion windows; forced re-login migrations; charging for mid-workout
+  history; a muscle map from approximate inputs presented as fact.
 
 ## 7. Gap analysis: what they have that we do not, and what brings value
 
@@ -447,6 +499,16 @@ F10. The orchestrator is split: the elapsed clock, the rest strip and
 F11. Honest copy: every string states only what the code does (defect
     10); timed and distance sets print as time and distance on every
     surface (defect 12); one word for "stay" across the confirms.
+F12. Show the working: every served load and rest carries a one-tap
+    "why this number" (the resolver's provenance, rounded to the
+    person's increment), on demand, never standing in the row (the
+    2026-08-17 order kept). From the wider field (6.6, W-02).
+F13. A change to the current set's load or reps is applied to the
+    remaining unlogged sets of that exercise, shown as one quiet line
+    ("applied to the sets below") with an undo, and never to logged
+    sets (6.6, W-07).
+F14. "Update the routine?" at finish when sets, loads or exercises
+    differed from the plan (the field's fourth agreement, 6.3).
 
 ### 8.2 Option A: "Focus, finished". The same model, rebuilt to instrument standard
 
@@ -669,8 +731,12 @@ Q6. Watch: build the Wear OS and Apple Watch logger (large; a separate
     campaign), or not in this round.
 Q7. The summary's order (8.6): numbers first and Community after, or as
     today.
-Q8. Build order once the model is chosen: foundation first (F1 to F11,
+Q8. Build order once the model is chosen: foundation first (F1 to F14,
     visible fixes within days), then the model; or the model first.
+Q9. A session cut short: offer to carry the remaining sets to a planned
+    workout (StrengthLog's path) and decide whether carried sets count
+    toward the week's volume landmarks; or keep today's ended-early
+    resolution.
 
 ## 10. Device checklist for whichever option is chosen
 
