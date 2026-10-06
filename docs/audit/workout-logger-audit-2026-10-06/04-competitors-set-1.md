@@ -17,7 +17,7 @@ Code: not read, not touched. Volyume appears only where a competitor fact needs 
 **Source tiers.**
 - T1: vendor help centre, changelog, store listing (authoritative for what the vendor says the app does).
 - T2: independent hands-on write-up, dated store review, forum or Hacker News post, vendor public feedback board.
-- T3: competitor-published page. JEFIT, Boostcamp, Alpha Progression, Setgraph, Dr. Muscle, SensAI, GymGod and RepReturn all publish comparisons that rank themselves first. A T3 page never carries a "no" on its own.
+- T3: competitor-published page. JEFIT, Boostcamp, Alpha Progression, Setgraph, Dr. Muscle, SensAI and GymGod publish comparisons that rank themselves first; RepReturn is treated as T3 because it may be a competing app (its ownership was not checked). A T3 page never carries a "no" on its own.
 - T4: aggregator or search-engine summary. The mwm.ai review analysis is machine-generated; its quotes carry rating, version and date, its theme counts are indicative only. Search-engine summaries are used only where the page itself would not load.
 
 **Limits, stated so nobody over-reads the file.**
@@ -28,7 +28,7 @@ Code: not read, not touched. Volyume appears only where a competitor fact needs 
 5. The fetch tool answers through a small model. Quotes were requested verbatim and are shown as returned; I did not re-check each string against the raw page. Where a source was only summarised I write "paraphrase".
 6. App Store version-history tables came through a converter that repeats one release note across consecutive builds. I use a row's note only where it names a feature.
 7. Ratings and prices are the US App Store unless stated.
-8. Sources published after 2026-10-06 do not exist in this file; the newest item is dated 2026-10-06.
+8. The newest dated source is the Fitbod listing build of 2026-10-06; nothing later was available.
 
 ## 1. The twelve at a glance
 
@@ -36,16 +36,16 @@ Code: not read, not touched. Volyume appears only where a competitor fact needs 
 |---|---|---|---|---|---|
 | Hevy | Logger with social layer; Pro adds a rules-based Trainer | iPhone, iPad, Android, Apple Watch, Wear OS, web [HV24 2026-10-04] | 4.92 (96,234) [HV1 2026-10-02] | Pro $2.99/mo (a $3.99 SKU also listed), $23.99/yr, $74.99 lifetime [HV1] | Unlimited logging, rest timer, RPE, plate calculator; capped at 4 routines, 7 custom exercises, 3 months of stats [HV24] |
 | Strong | Minimal logger, no coaching | iPhone, Apple Watch, Android [ST30 f, ST27 f]; Wear OS not stated | 4.86 (108,525) [ST1 2026-08-12] | PRO $4.99/mo, $29.99/yr [ST1]; "Forever" SKUs $79.99 and $99.99 [ST29 2026-04-05] | Unlimited workouts, 3 templates; plate calculator, warm-up calculator, charts, body-part measurements are PRO [ST1, ST16 f] |
-| Fitbod | Algorithmic planner plus logger | iPhone, Android, Apple Watch, Wear OS (limited) [FB11 2026-09-03, FB10 2026-01-24] | 4.81 (286,624) [FB1 2026-10-06] | $15.99/mo, $95.99/yr [FB21 2026-09-30, FB22 2026-09-08] | No permanent free tier; 7-day trial then read-only (two sources agree; a third says "3 workouts", see section 5) [FB22, FB24] |
+| Fitbod | Algorithmic planner plus logger | iPhone, Android, Apple Watch, Wear OS (limited) [FB11 2026-09-03, FB10 2026-01-24] | 4.81 (286,624) [FB1 2026-10-06] | $15.99/mo, $95.99/yr [FB21 2026-09-30, FB22 2026-09-08] | No permanent free tier; 7-day trial then read-only (two sources agree; a third says "3 workouts", see section 5) [FB22, FB21, FB24] |
 | JEFIT | Logger, 1,400-exercise library, adaptive plan | iPhone, Android, web, Apple Watch, Wear OS [JF10 2026-09-04, JF13 2026-03-16] | 4.76 (46,905) [JF1 2026-10-05] | Elite $12.99/mo, $69.99/yr [JF1] | Logging, history, library, community with ads; 7 custom exercises; watch app, analytics, video demos, ad-free are Elite [JF14 f, JF12 2026-09-16] |
 | Boostcamp | Programme library (11,000+) plus logger | iPhone, iPad, Android; Apple Watch companion only mirrors a workout [BC5 f, BC6 2026-07] | 4.85 (10,428) [BC1 2026-10-02] | Pro from $4.99/mo billed yearly ($59.99/yr), or $14.99/mo [BC5, BC8 2026-07] | Full tracker incl. RPE, RIR, plate calculator, rest timer, custom programme builder with no cap [BC1, BC5] |
 | Alpha Progression | Logger plus per-set recommender | iPhone, Android [AP4 f]; no watch app, no web logging, no social [AP7 2026-09-15, T3] | 4.92 (2,200) [AP1 2026-09-30] | Pro $12.99/mo, $79.99/yr, 14-day trial on yearly [AP1, AP8 2026-08-14] | Unlimited logging, 795 videos, rest timer, records, CSV export, no account needed [AP1] |
 | RP Hypertrophy | Mesocycle coach (Dr. Mike Israetel) | iOS app since 20 Dec 2025, web app; Android "coming soon" per vendor page [RP4 2026-05-14, RP3 f] | 4.29 (236) [RP1 2026-10-01] | $34.99/mo, $299.99/yr [RP3] | None (30-day refund, no trial per a T3 review) [RP3, RP11 2025-04-26] |
 | Juggernaut AI | AI powerlifting and powerbuilding coach | iPhone, iPad, Android [BC12 2026-07, T3]; no Apple Watch listed | 4.85 (5,655) [JA1 2026-09-24] | $34.99/mo, $349.99/yr [JA7 2026-09-04] | None; trial 7 days or 2 weeks, sources disagree [JA7, BC12] |
-| Caliber | Coaching marketplace with a logger | iPhone, Android; no Apple Watch app [CB8 f] | 4.84 (5,992) [CB1 2026-09-08] | Plus $9 to $12/mo, $36 to $72/yr across SKUs [CB10 2026-06-30]; 1-on-1 coaching about $200/mo [JF11 2026-09-14, T3] | Unlimited workout logging, 800+ exercises, Circles; supersets, swaps, custom exercises, automatic rest timer are Plus [CB1, CB5 2025-05-13] |
+| Caliber | Coaching marketplace with a logger | iPhone, Android; no Apple Watch app [CB8 2022-06-29] | 4.84 (5,992) [CB1 2026-09-08] | Plus $9 to $12/mo, $36 to $72/yr across SKUs [CB10 2026-06-30]; 1-on-1 coaching about $200/mo [JF11 2026-09-14, T3] | Unlimited workout logging, 800+ exercises, Circles; supersets, swaps, custom exercises, automatic rest timer are Plus [CB1, CB5 2025-05-13] |
 | Setgraph | Swipe-first logger, lists not routines | iPhone, Apple Watch [SG1 2026-09-18]; Android UNKNOWN | 4.72 (6,157) [SG1] | Pro $4.99/mo, $29.99/yr, $199.99 lifetime [SG10 2026-07-01] | Free tier exists; its limits are not published in anything read [SG1] |
 | Gymaholic (Workout Tracker, Devenyi Gabor) | Apple-ecosystem logger with standalone watch app | iPhone, iPad, Apple Watch, Mac, Apple TV, Vision Pro [GY1 2026-09-18]; Android UNKNOWN | 4.58 (3,464) [GY1] | $3.99/mo, $31.99/yr, plus legacy "Pro" $4.99 and "Pro Gold" $14.99 [GY6 2026-07-26] | Free version hides workout titles and 3D models, per user reviews [GY4 f] |
-| Dr. Muscle | AI personal trainer, fully automatic prescription | iPhone, Android, web [DM3 2026-10-01, DM4 2026-04-04] | 4.49 (382) [DM1 2026-10-02] | $48.99/mo, $399.99/yr [DM1] | 7-day trial, "no payment info needed" per the listing [DM1]; a T2 review says a card is required [DM7 2026-09-04] |
+| Dr. Muscle | AI personal trainer, fully automatic prescription | iPhone, Android, web [DM3 2026-10-01, DM4 2026-04-04] | 4.49 (382) [DM1 2026-10-02] | $48.99/mo, $399.99/yr [DM1] | Free trial, "No payment info needed" per the listing [DM1]; a T2 review says 7 days and a card [DM7 2026-09-04] |
 
 Kind groups. Pure loggers: Hevy, Strong, Setgraph, Gymaholic. Library plus logger: Boostcamp, JEFIT. Algorithmic prescribers that log: Fitbod, Alpha Progression, Dr. Muscle. Periodised coaches that log: RP Hypertrophy, Juggernaut AI. Human-coaching marketplace that logs: Caliber.
 
@@ -131,6 +131,7 @@ Snapshot. iOS 3.1.16, released 2 Oct 2026, 4.92 from 96,234 ratings, "Join +10 m
 - Ten widget types, and a lock-screen widget that completes sets [HV37, HV17].
 - Strava one-way sync with "a full list of exercises, sets, reps (or duration), and weight" since June 2026 [HV14 2026-07].
 - The ChatGPT and Claude hand-off from the finish screen (2 Oct 2026) [HV1].
+- Hevy's own feature index also lists a built-in routine library, custom exercises and social-media shareables [HV4 f].
 
 **10. Price and tier.** Free: unlimited logging; 4 routines, 7 custom exercises, 3 months of history; body weight and waist only. Pro: $2.99/mo ($3.99 SKU also listed), $23.99/yr, $74.99 lifetime; adds unlimited routines and custom exercises, all-time stats, set count per muscle, extra measurements, warm-up calculator, Trainer with progressive overload and progress reports [HV1, HV24 2026-10-04, HV43]. Volyume is free: Hevy gates the warm-up calculator, the Trainer, history depth and routine count.
 
@@ -487,13 +488,13 @@ Snapshot. iOS 1.7.0, released 1 Oct 2026, 4.29 from 236 ratings [RP1 2026-10-01]
 
 ### 2.8 Juggernaut AI
 
-Snapshot. iOS 3.0.12, released 24 Sep 2026, 4.85 from 5,655 ratings [JA1 2026-09-24]. Build 3.0.0 (11 Aug 2026) was a "Complete rebuild with dashboard, streamlined workouts, and analytics overhaul"; 3.0.3 (15 Aug 2026) split the "Auto timer" into main lifts versus accessories; there were twelve further builds by 24 Sep [JA2 f]. Kind: an AI-driven powerlifting and powerbuilding coach from Juggernaut Training Systems ("designed by legendary coach Chad Wesley Smith ... technology by Tim Arnold") [JA1]. Platforms: iPhone, iPad, Apple Vision and Android; no Apple Watch listed (a rival's page, T3) [BC12 2026-07]. Evidence for the set row itself is thin: the vendor help centre points to a video, and the one screen-flow capture is mostly onboarding.
+Snapshot. iOS 3.0.12, released 24 Sep 2026, 4.85 from 5,655 ratings [JA1 2026-09-24]. Build 3.0.0 (11 Aug 2026) was a "Complete rebuild with dashboard, streamlined workouts, and analytics overhaul"; 3.0.3 (15 Aug 2026) split the "Auto timer" into main lifts versus accessories; eleven further point releases are listed up to 24 Sep (3.0.1 to 3.0.12; 3.0.11 is not shown) [JA2 f]. Kind: an AI-driven powerlifting and powerbuilding coach from Juggernaut Training Systems ("designed by legendary coach Chad Wesley Smith ... technology by Tim Arnold") [JA1]. Platforms: iPhone, iPad, Apple Vision and Android; no Apple Watch listed (a rival's page, T3) [BC12 2026-07]. Evidence for the set row itself is thin: the vendor help centre points to a video, and the one screen-flow capture is mostly onboarding.
 
 **1. Active-workout screen anatomy.** Set row, top bar and bottom bar: UNKNOWN [JA6 f, JA8 f]. What is observed or reported:
 - Three main areas, from a search-engine summary of a Garage Gym Reviews write-up (T4): a Dashboard (progress through the programme, week overview), Workouts (the plan for the day) and Exercises (demo videos and written cues) [JA12 undated].
 - A training day, same summary (T4): a daily readiness check, a guided warm-up, main lifts, accessories, then session feedback (difficulty rating and notes) [JA12].
 - Vendor: the readiness rating drives changes "pre-session, intra-session, session to session, week to week, block to block, and program to program" [JA1].
-- Targets: main lifts carry an RPE target; accessories carry an RIR target [JA4 f]. A flow capture counts 46 screens: 25 onboarding, 1 paywall and a few video-player screens [JA8].
+- Targets: main lifts carry an RPE target; accessories carry an RIR target [JA4 f]. A flow capture counts 46 screens: 25 onboarding, 1 paywall, and 20 more (my subtraction) that it describes only through video-player controls [JA8].
 
 **2. Set entry mechanics**
 - RPE (main lifts): "the RPE ratings you input will adjust your weights and volume from set to set, and influence your targets for future weeks". RIR (accessories): "perform reps until you feel like you can only do 3 more reps, then stop and enter your total reps into the app"; the app "will track these numbers and make future weight suggestions" [JA4].
@@ -516,7 +517,7 @@ Snapshot. iOS 3.0.12, released 24 Sep 2026, 4.85 from 5,655 ratings [JA1 2026-09
 
 **6. Resilience**
 - No offline capability is mentioned by a September 2026 review [JA7]. Store-review themes: free-trial confusion ("charged immediately via app store"), "Missing standard features: Apple Health integrations, timers, volume summaries" (T4, undated) [JA9]. A flow capture shows Apple Health toggles for sleep, weight and workout data in onboarding, against the review's "no Apple Health" (conflict) [JA8, JA7].
-- Twelve point releases in six weeks after the 3.0.0 rebuild, each "Bug fixes" (INFERRED stabilisation churn) [JA2]. Resume after a kill: UNKNOWN.
+- Eleven listed point releases in about six weeks after the 3.0.0 rebuild, nearly all noted only as bug, UI or performance fixes (INFERRED stabilisation churn) [JA2]. Resume after a kill: UNKNOWN.
 
 **7. How it fits together**
 - Onboarding is long: authentication, Apple Health permissions, profile, training-history and recovery-factors quizzes, programme choice, preferences (nutrition goal, powerlifting versus bodybuilding, schedule, test dates, accessory selection, periodisation approach, lifting weaknesses), a generation screen, then the paywall at $34.99 a month [JA8 f].
@@ -608,7 +609,7 @@ Snapshot. iOS 26.9.2, released 18 Sep 2026, 4.72 from 6,157 ratings; the 18 Sep 
 - History of the gap: a 30 Aug 2022 reviewer asked for "a timer feature"; rest-time display arrived in 10.2.0 [SG2].
 
 **4. Mid-workout exercise management**
-- Because exercises are not welded to a routine, you log any exercise from any list; "Build and customize your own routines, or use a plan. Either way it drops straight into your workout lists" [SG1].
+- An exercise can be assigned to several lists and keeps one history [SG1]; INFERRED: any exercise can be logged from any list without a routine. "Build and customize your own routines, or use a plan. Either way it drops straight into your workout lists" [SG1].
 - Library: illustrations for start, middle and end positions are shown while browsing [SG1]. Reorder: manual sort of the exercise list [SG1]. Replace and remove mid-session: UNKNOWN.
 - History and PRs: per-exercise graphs and filters; a Personal Records tab and Share Cards (26.8.0, 18 Aug 2026); muscle recovery and muscle-group summaries (26.4.0) [SG1, SG2]. A live PR banner: UNKNOWN.
 
@@ -719,7 +720,7 @@ Snapshot. iOS 4.2609.2805, released 2 Oct 2026, 4.49 from 382 ratings; release n
 - Rest-pause as a default technique, automated deloads and light sessions after time off, DUP and "Strength Cycles" [DM4].
 - The highest price in this set: $48.99/mo and $399.99/yr [DM1].
 
-**10. Price and tier.** $48.99/mo or $399.99/yr; 7-day trial. The listing says "No payment info needed"; a review says a card is required (unresolved, section 5); the same review says there is no free tier [DM1, DM7 2026-09-04]. Volyume is free.
+**10. Price and tier.** $48.99/mo or $399.99/yr. Trial: the listing says "No payment info needed" and gives no length; a review says 7 days with a card (unresolved, section 5); the same review says there is no free tier [DM1, DM7 2026-09-04]. Volyume is free.
 
 ## 3. Cross-app feature matrix
 
@@ -745,6 +746,7 @@ Snapshot. iOS 4.2609.2805, released 2 Oct 2026, 4.49 from 382 ratings; release n
 | A14 Bodyweight, assisted, weighted | Y HV30 | Y ST1 | ? | ? | ? | Y AP1 | ? | ? | ? | ? | ? | ? |
 | A15 Weight-unit toggle, global or per exercise | Y HV6 | Y ST1 | P FB16 | ? | ? | Y AP1 | P RP8 | ? | ? | ? | ? | ? |
 | A16 Equipment or available-weights profile | P HV39 | P ST9 | Y FB16 | P JF2 | P BC10 | Y$ AP1 | N? RP8 | ? | ? | P SG4 | ? | P DM3 |
+| A17 Rest-pause, cluster or pyramid set styles | N? HV18 | N? ST8 | ? | ? | N? BC9 | ? | P RP6 | ? | ? | ? | P GY5 | Y DM4 |
 
 Row notes (3A).
 - A1: Strong's own help is silent; a rival page (T3) says previous weights are pre-loaded and store reviews praise remembering last lifts [X1, ST2]. Fitbod and Dr. Muscle show a prescription in place of last time.
@@ -757,6 +759,7 @@ Row notes (3A).
 - A11: Boostcamp has customisable warm-up templates, not a calculator; Fitbod has an automatic warm-up setting.
 - A13: Gymaholic documents HIIT interval timers only; Caliber has time targets but no free cardio logging; Dr. Muscle has timed workouts and moved Jumping Jacks to reps.
 - A16: Strong sets bar type per exercise; Boostcamp asks for equipment at onboarding; Setgraph stores named plate configurations; Dr. Muscle has a custom increment setting; Hevy has custom plates and bars plus Trainer equipment presets.
+- A17: Hevy, Strong and Boostcamp list only their warm-up, drop, failure (and work) types, so N? is inferred from a closed list; RP's rest article names "myorep match set" as a technique, which is advice, not a set type [RP6]; Gymaholic lists pyramid, tri-set and giant-set families but not rest-pause; Dr. Muscle builds rest-pause, pyramid, reverse-pyramid and back-off sets into its prescriptions [GY5, DM4].
 
 ### 3B. Rest timer and surfaces outside the app
 
@@ -770,15 +773,18 @@ Row notes (3A).
 | B6 Apple Watch logging | Y HV1 | Y ST18 | Y FB11 | Y JF1 | P BC5 | N AP7 | ? | N? BC12 | N CB8 | Y SG1 | Y GY1 | ? |
 | B7 Wear OS logging | Y HV32 | N? JF13 | P FB10 | Y JF13 | ? | N AP7 | ? | ? | ? | N? JF13 | N? JF13 | ? |
 | B8 Complete or repeat a set from lock screen or notification | Y HV17 | ? | ? | ? | ? | ? | ? | ? | ? | P SG7 | ? | ? |
+| B9 Sound or vibration at timer end | Y HV16 | Y ST5 | Y FB8 | ? | ? | Y AP5 | N? RP6 | ? | P CB7 | P SG5 | ? | ? |
 
 Row notes (3B).
 - B1: Caliber's auto-start is Plus-only (a manual timer is free); Juggernaut ships an "Auto timer" whose behaviour is unknown; Gymaholic has rest timers with auto-start not stated; Dr. Muscle sets rest from set style ("Automated Rest Management"); RP has no timer mention, INFERRED none.
 - B2: Strong also keeps separate warm-up and working defaults; Fitbod's durations are generated from lift difficulty and edits last only for that workout; JEFIT sets rest per set.
+- B3: Skip is documented for Strong (a Skip button in the expanded timer) and Hevy (the widget can "skip it altogether") [ST5, HV17].
 - B4: Strong added it on 12 Aug 2026 and Alpha on 30 Apr 2026 [ST1, AP2]; Caliber's Live Activity request has 87 votes and is Planned [CB6].
 - B5: Fitbod sends a push when the timer ends if the app is in the background; Caliber has a 682-vote request for a timer alert outside the app, status Planned.
 - B6: Boostcamp's watch app only mirrors an active workout; Fitbod's needs the iPhone to start, swap and save; Strong's is a companion with fewer features.
 - B7: Fitbod's Wear OS app logs sets but cannot start rest timers and cannot add or delete exercises; JEFIT's Wear OS claim comes from its own blog (T3); the Strong, Setgraph and Gymaholic N? cells come from JEFIT's smartwatch list (T3).
 - B8: Setgraph's "Next Set Due" notification can repeat the previous set; Hevy's widget marks sets complete and adjusts the timer.
+- B9: Hevy has five timer sounds and volume levels for its three alerts; Fitbod emits "a tone and/or vibration"; Alpha sounds an alarm; Caliber's 682-vote request for a timer ding outside the app implies an in-app alert only (INFERRED); Setgraph mentions alerts without detail [HV16, FB8, AP5, CB7, SG5].
 
 ### 3C. Mid-workout management, finishing, resilience, access
 
@@ -794,6 +800,7 @@ Row notes (3B).
 | C8 Offline logging documented | ? | ? | Y FB17 | ? | Y BC5 | Y AP1 | N? RP11 | N? JA7 | P CB2 | ? | ? | Y DM4 |
 | C9 Resume an unfinished workout after a kill | Y HV23 | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | P DM3 |
 | C10 Free logging with no time limit | Y HV24 | Y ST1 | N FB22 | Y JF14 | Y BC1 | Y AP1 | N RP3 | N JA7 | Y CB1 | P SG1 | P GY4 | N DM7 |
+| C11 Exercise instruction media (video, animation, illustration) | Y HV31 | Y ST13 | Y FB7 | P$ JF14 | Y BC9 | Y AP1 | Y RP1 | Y JA7 | Y CB9 | Y SG1 | P GY1 | ? |
 
 Row notes (3C).
 - C2: Strong shows a Replace option on the Apple Watch (6.1.1); the phone path was not in the help read. JEFIT: swap is in the three-dots menu, and a Hacker News user complains alternative exercises are paywalled [JF5]. RP: swapping resets that slot's data. Juggernaut's evidence is a 2021 forum post. Caliber: swaps are Plus.
@@ -804,6 +811,8 @@ Row notes (3C).
 - C8: RP and Juggernaut N? come from a 2025 competitor review and a September 2026 review that does not mention offline; Caliber has an offline mode with a "limited" theme (T4); Dr. Muscle's is a vendor claim.
 - C9: Dr. Muscle's evidence is a fix log ("Restore workout after swapping exercise"), not a feature statement.
 - C10: Fitbod's trial ends after 7 days; JEFIT's free tier carries ads; Setgraph's free limits are unpublished; Gymaholic's free version hides workout titles.
+- C11: JEFIT lists video demonstrations under Elite; Gymaholic's free version lacks the 3D models (user reports); Fitbod removed GIFs and has no offline video; Alpha films its own gym videos and keeps all 795 in the free tier [JF14, GY4, FB7, AP1].
+- Not tabulated: per-set notes and a post-workout feel rating. Hevy, Strong and Fitbod document exercise-level and workout-level notes only [HV25, ST11, FB7]; no vendor source read documents a post-workout feel rating, and Juggernaut's session feedback (difficulty rating and notes) is known only from a search summary (T4) [JA12].
 
 ## 4. The five things the best loggers agree on
 
@@ -822,7 +831,7 @@ Row notes (3C).
 - Pre-fill is also where complaints start: "It has a tendency to change my weights between sessions" (Setgraph, 3 stars, v26.2.2, 30 Jan 2026) [SG3 f]; Hevy added a setting to choose which history feeds the column [HV20].
 
 **3. Set type and effort are attached to the row by small, optional controls, and warm-ups stay out of the numbers.**
-- Type is set by tapping the set number in Hevy (W, D, F), Strong (Warm-up, Drop, Failure) and Boostcamp (Work, Warm-up, Drop, Failure); JEFIT tags sets warm-up, working, drop, failure [HV18 2026-10-01, ST8 f, BC9, JF1].
+- Type is set by tapping the set number in Hevy (W, D, F), Strong (Warm-up, Drop, Failure) and Boostcamp (Work, Warm-up, Drop, Failure); JEFIT tags sets warm-up, working, drop, failure, with the gesture not documented [HV18 2026-10-01, ST8 f, BC9, JF1].
 - Effort is optional or hidden until wanted: Hevy's RPE column appears only when enabled [HV27 2026-10-01]; Strong's RPE lives on a keyboard key [ST6 f]; Alpha's RIR is optional and accepts half values [AP5, AP4]; Boostcamp carries RPE and RIR on every set [BC7 2026-05]; Fitbod asks for a rating after the set [FB12 2026-09-21].
 - Warm-ups are kept out of stats: "Warm-up sets will not be included in charts or metrics" (Strong) [ST8]; Hevy has a stats toggle [HV15 2026-10-01]; RP tells users not to log them because "the app treats all sets logged as working sets" [RP5 2026-10-05].
 - Demand where it is missing: Caliber's board has Mark sets as warmups (161 votes), Logging Dropsets (248) and RPE for sets (182) [CB6 f].
@@ -863,7 +872,7 @@ Row notes (3C).
 
 **Evidence gaps (UNKNOWN stays UNKNOWN).**
 - Set-row anatomy is not established for RP, Juggernaut AI, Gymaholic (iPhone), JEFIT, and only partly for Setgraph and Caliber. For these the dossiers say so under item 1.
-- Resume-after-kill is documented only for Hevy [HV23]. Offline logging is documented for Fitbod, Boostcamp, Alpha and (as a vendor claim) Dr. Muscle only. Skipped-set handling at finish is documented only for Hevy.
+- Resume-after-kill is documented only for Hevy [HV23]. Offline logging is documented for Fitbod, Boostcamp and Alpha, indirectly for Caliber (a fix note and a "limited" review theme), and as a vendor claim for Dr. Muscle. Skipped-set handling at finish is documented only for Hevy.
 - Android: Play pages are unreadable here, so Android evidence is whatever vendor help says. The Android lock-screen route is documented for Hevy and, partly, Fitbod.
 - User voice: no Reddit; non-US storefront reviews were not read; Trustpilot was not fetched (a search summary reports Caliber at 5.0 from 922 reviews, T4, unused).
 - Garage Gym Reviews verdicts appear only through search summaries (T4) [X5, JF17, JA12].
@@ -882,4 +891,285 @@ Judgement only. No Volyume code was read in this lane, so none of these says Vol
 8. Per-muscle weekly set targets and a recovery or volume heat map. Fitbod [FB18, FB14], JEFIT [JF1], Boostcamp Pro [BC5]. Check against the ED-safety system before any recovery wording.
 9. A mid-session swap that carries weights across, plus a "similar exercises" list. Boostcamp [BC4, BC1].
 10. Interval-timer auto-log of timed sets. JEFIT 17.2.6 only [JF1]; niche.
+
+## 7. Sources
+
+Every citation tag used anywhere in this file is resolved below to its URL, the source's own date and its tier (section 0). A tag in the text can carry the date of an individual review, post, release note or changelog entry inside a page whose own date is "undated" or a range; the date in this list is the page's own date or last-updated stamp. "undated page, fetched 2026-10-06" means the page shows no date and 2026-10-06 is the day it was read. Pages the fetch tool could not read are cited only where a search-engine summary supplied the fact, and say so.
+
+### Hevy
+
+- **HV1** (2026-10-02, T1) App Store listing text, release notes, rating, in-app prices (lookup API and listing page): https://itunes.apple.com/lookup?id=1458862350&country=us ; https://apps.apple.com/us/app/hevy-workout-tracker-gym-log/id1458862350
+- **HV2** (undated page, fetched 2026-10-06, T2) App Store page: version history table and store reviews: https://apps.apple.com/us/app/id1458862350
+- **HV3** (undated page, fetched 2026-10-06, T4) mwm.ai machine review analysis; quotes carry rating, version, date: https://mwm.ai/apps/hevy-workout-tracker-gym-log/1458862350
+- **HV4** (undated page, fetched 2026-10-06, T1) Hevy features index: https://www.hevyapp.com/features/
+- **HV5** (undated page, fetched 2026-10-06, T1) Hevy rest timer feature page: https://www.hevyapp.com/features/workout-rest-timer/
+- **HV6** (undated page, fetched 2026-10-06, T1) Hevy workout settings feature page (twelve settings): https://www.hevyapp.com/features/workout-settings/
+- **HV7** (undated page, fetched 2026-10-06, T1) Hevy exercise programming options page: https://www.hevyapp.com/features/exercise-programming-options/
+- **HV8** (undated page, fetched 2026-10-06, T1) Hevy set types page: https://www.hevyapp.com/features/workout-set-types/
+- **HV9** (undated page, fetched 2026-10-06, T1) Hevy start-empty-workout page: https://www.hevyapp.com/features/start-empty-workout/
+- **HV10** (undated page, fetched 2026-10-06, T1) Hevy workout log page (finish, what is saved): https://www.hevyapp.com/features/workout-log/
+- **HV11** (undated page, fetched 2026-10-06, T1) Hevy track-workouts page (add set, three-dots menu): https://www.hevyapp.com/features/track-workouts/
+- **HV12** (undated page, fetched 2026-10-06, T1) Hevy Live Activity feature page: https://www.hevyapp.com/features/live-activity/
+- **HV13** (undated page, fetched 2026-10-06, T1) Hevy plate calculator feature page: https://www.hevyapp.com/features/weight-plate-calculator/
+- **HV14** (2026-07, T1) Hevy July 2026 community update: https://www.hevyapp.com/community-updates/july-26/
+- **HV15** (2026-10-01, T1) Help: workout settings: https://help.hevyapp.com/hc/en-us/articles/33882110558743-Workout-Settings-Preferences-Timer-Warm-up-calculator-Plate-Calculator-Smart-Superset-Scrolling
+- **HV16** (2026-10-01, T1) Help: rest timer: https://help.hevyapp.com/hc/en-us/articles/35385404949143-Rest-Timer-Default-Rest-Timer-How-to-Add-Adjust-Volume-and-Sound
+- **HV17** (2026-10-01, T1) Help: Live Activity on iOS and Android: https://help.hevyapp.com/hc/en-us/articles/35649846517399-How-to-Use-Hevy-s-Live-Activity-on-iOS-and-Android
+- **HV18** (2026-10-01, T1) Help: set types: https://help.hevyapp.com/hc/en-us/articles/34896293707927-Set-Types-in-Hevy-Explained-Drop-Sets-Warm-Up-Sets-and-More
+- **HV19** (2026-10-01, T1) Help: supersets and Smart Superset Scrolling: https://help.hevyapp.com/hc/en-us/articles/35650286563095-The-Complete-Guide-to-Supersets-and-Smart-Superset-Scrolling
+- **HV20** (2026-10-01, T1) Help: previous workout values: https://help.hevyapp.com/hc/en-us/articles/36011896355479-How-to-Use-Previous-Workout-Values-to-Improve-Performance-in-Hevy
+- **HV21** (2026-10-01, T1) Help: previous versus routine values: https://help.hevyapp.com/hc/en-us/articles/34105442929943-Previous-Workout-Values-Vs-Routine-Values-How-to-Adjust-in-Settings
+- **HV22** (2026-10-01, T1) Help: Update Routine versus Keep Original Routine: https://help.hevyapp.com/hc/en-us/articles/38387296276375-Update-Routine-vs-Keep-Original-Routine
+- **HV23** (2026-10-02, T1) Help: uninstall and reinstall, unfinished workouts: https://help.hevyapp.com/hc/en-us/articles/38223672272791-What-will-happen-to-my-information-if-I-uninstall-and-reinstall-the-Hevy-app
+- **HV24** (2026-10-04, T1) Help: features guide with free versus Pro table: https://help.hevyapp.com/hc/en-us/articles/33106320824727-Everything-You-Need-to-Know-About-the-Hevy-App-2025-Features-Guide
+- **HV25** (2026-10-03, T1) Help: exercise notes: https://help.hevyapp.com/hc/en-us/articles/34463684392983-How-do-the-exercise-notes-routine-and-workout-notes-work
+- **HV26** (2026-10-05, T1) Help: build a programme, folders, set types: https://help.hevyapp.com/hc/en-us/articles/34953606698903-Build-a-Workout-Program-Create-Organize-Routines
+- **HV27** (2026-10-01, T1) Help: RPE: https://help.hevyapp.com/hc/en-us/articles/35687721776663-How-to-Use-RPE-Rate-of-Perceived-Exertion
+- **HV28** (2026-10-01, T1) Help: PRs and set records: https://help.hevyapp.com/hc/en-us/articles/35649367857175-Personal-Records-PRs-and-Set-Records-Explained-How-They-Work-in-the-Hevy-App
+- **HV29** (2026-10-01, T1) Help: live PR notifications: https://help.hevyapp.com/hc/en-us/articles/36012016405655-Hevy-Live-PR-Notifications-Get-Instant-Updates-on-Your-Best-Lifts
+- **HV30** (2026-10-01, T1) Help: bodyweight, assisted, weighted: https://help.hevyapp.com/hc/en-us/articles/38386262243223-Bodyweight-Exercises-in-Hevy-Bodyweight-vs-Assisted-vs-Weighted
+- **HV31** (2026-10-01, T1) Help: exercise library and custom exercises: https://help.hevyapp.com/hc/en-us/articles/35688251991575-Hevy-Exercise-Library-400-Exercises-and-Custom-Exercises
+- **HV32** (2026-10-01, T1) Help: Wear OS compatibility: https://help.hevyapp.com/hc/en-us/articles/34895840771479-WearOS-Watch-Compatibility-and-Syncing-Troubleshooting
+- **HV33** (2026-10-01, T1) Help: how to log a workout: https://help.hevyapp.com/hc/en-us/articles/35361530647959-How-to-Log-a-Workout-in-the-Hevy-App-Step-by-Step-Guide
+- **HV34** (2026-10-01, T1) Help: pause and adjust duration, Save Workout screen: https://help.hevyapp.com/hc/en-us/articles/34513981310615-How-to-I-adjust-duration-and-pause-a-workout
+- **HV35** (2026-10-01, T1) Help: Hevy Trainer explained: https://help.hevyapp.com/hc/en-us/articles/38385724273047-Hevy-Trainer-Explained-How-It-Builds-Your-Workout-Program
+- **HV36** (2026-10-01, T1) Help: Trainer settings: https://help.hevyapp.com/hc/en-us/articles/43572343844247-How-Hevy-Trainer-Settings-Work
+- **HV37** (2026-10-01, T1) Help: widgets: https://help.hevyapp.com/hc/en-us/articles/36956630666647-Hevy-App-Widgets-Explained-Setup-Features-and-How-to-Use-Them
+- **HV38** (2026-10-01, T1) Help: deleting sets, workouts, routines: https://help.hevyapp.com/hc/en-us/articles/38030200802583-How-to-Delete-Comments-Sets-Workouts-Routines-Your-Hevy-Account
+- **HV39** (2026-10-01, T1) Help: plate calculator, custom plates and bars: https://help.hevyapp.com/hc/en-us/articles/34518876511383
+- **HV40** (2026-10-01, T1) Help: warm-up calculator: https://help.hevyapp.com/hc/en-us/articles/35650921359639-How-to-Use-the-Warm-Up-Calculator-for-Percentage-Based-Warm-Up-Sets
+- **HV41** (2026-10-01, T1) Help: estimated 1RM and rep-to-percentage table: https://help.hevyapp.com/hc/en-us/articles/36954464726167-Understanding-Your-Estimated-One-Rep-Max-1RM-in-Hevy
+- **HV42** (2026-10-01, T1) Help: 150-set limit (read via help-centre search excerpt): https://help.hevyapp.com/hc/en-us/articles/34896183826455-Hevy-Set-Limit-Explained-Why-Workouts-and-Routines-Have-a-150-Set-Cap
+- **HV43** (2026-10-05, T2) Independent Hevy review quoting Hevy's help centre: https://aitoolsbakery.com/?p=18424
+- **HV44** (2026-09-15, T3) SensAI (competitor) Hevy review: https://www.sensai.fit/blog/hevy-review-2026
+- **HV45** (undated, T4) Hands-on Hevy review; page returned 403, read through a search-engine summary: https://cellphoneplans.androidauthority.com/CellPhones/Guides/hevy-app-review
+- **HV46** (undated page, fetched 2026-10-06, T1) Hevy's own best-tracker page (monthly report, sharing, drawbacks list): https://www.hevyapp.com/best-workout-tracker-app/
+- **HV47** (2026-08-28, T4) APKMirror 3.1.11 entry; page returned 403, read through a search-engine summary: https://www.apkmirror.com/apk/hevy-gym-workout-tracker/hevy-gym-log-workout-tracker/hevy-gym-log-workout-tracker-3-1-11-release/
+
+### Strong
+
+- **ST1** (2026-08-12, T1) App Store listing text, release notes 6.5.0, rating: https://itunes.apple.com/lookup?id=464254577&country=us
+- **ST2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/strong-workout-tracker-gym-log/id464254577
+- **ST3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/strong-workout-tracker-gym-log/464254577
+- **ST4** (undated page, fetched 2026-10-06, T1) Help: how do I perform a workout: https://help.strongapp.io/article/229-my-first-workout
+- **ST5** (undated page, fetched 2026-10-06, T1) Help: rest timer: https://help.strongapp.io/article/231-rest-timer
+- **ST6** (undated page, fetched 2026-10-06, T1) Help: RPE: https://help.strongapp.io/article/230-about-rpe
+- **ST7** (undated page, fetched 2026-10-06, T1) Help: supersets and circuits: https://help.strongapp.io/article/98-supersets-and-circuits
+- **ST8** (undated page, fetched 2026-10-06, T1) Help: warm-up, drop and failure set tags: https://help.strongapp.io/article/166-set-tags
+- **ST9** (undated page, fetched 2026-10-06, T1) Help: plate calculator: https://help.strongapp.io/article/169-plate-calculator
+- **ST10** (undated page, fetched 2026-10-06, T1) Help: warm-up calculator: https://help.strongapp.io/article/171-warm-up-calculator
+- **ST11** (undated page, fetched 2026-10-06, T1) Help: workout notes, exercise notes, pinned notes: https://help.strongapp.io/article/134-about-notes
+- **ST12** (undated page, fetched 2026-10-06, T1) Help: Focus Metric: https://help.strongapp.io/article/226-focus-metric
+- **ST13** (undated page, fetched 2026-10-06, T1) Help: exercise detail screen: https://help.strongapp.io/article/237-about-exercise-detail
+- **ST14** (undated page, fetched 2026-10-06, T1) Help: records screen: https://help.strongapp.io/article/216-exercise-records-screen
+- **ST15** (undated page, fetched 2026-10-06, T1) Help: lost data: https://help.strongapp.io/article/217-lost-data
+- **ST16** (undated page, fetched 2026-10-06, T1) Help: what Strong PRO unlocks: https://help.strongapp.io/article/132-strong-pro
+- **ST17** (undated page, fetched 2026-10-06, T1) Help: why an account is needed: https://help.strongapp.io/article/143-strong-account
+- **ST18** (undated page, fetched 2026-10-06, T1) Help: Apple Watch app: https://help.strongapp.io/article/222-strong-for-apple-watch
+- **ST19** (undated page, fetched 2026-10-06, T1) Help: best way to train with Strong: https://help.strongapp.io/article/236-best-way-to-train
+- **ST20** (undated page, fetched 2026-10-06, T1) Help: force sync: https://help.strongapp.io/article/241-force-sync
+- **ST21** (undated page, fetched 2026-10-06, T1) Help: Session Expired prompt: https://help.strongapp.io/article/218-session-expired
+- **ST22** (undated page, fetched 2026-10-06, T1) Help: templates disappearing on iOS: https://help.strongapp.io/article/253-templates-disappearing
+- **ST23** (undated page, fetched 2026-10-06, T1) Help: templates, free limit of 3: https://help.strongapp.io/article/105-about-templates
+- **ST24** (undated page, fetched 2026-10-06, T1) Help: update-template prompt after a workout: https://help.strongapp.io/article/177-update-template
+- **ST25** (undated page, fetched 2026-10-06, T1) Help: edit a past workout: https://help.strongapp.io/article/249-how-do-i-edit-a-past-workout
+- **ST26** (undated page, fetched 2026-10-06, T1) Help centre index, category pages 131, 165, 233, 128 and a search for incomplete sets: https://help.strongapp.io/
+- **ST27** (undated page, fetched 2026-10-06, T1) Strong website feature list: https://www.strong.app/
+- **ST28** (2026-10-05, T4) unitQ quality scorecard (score and trend only): https://unitq.com/unitq-scorecards/strongworkouttracker
+- **ST29** (2026-04-05, T4) App Pricing Lab: Strong in-app purchase SKUs: https://apppricinglab.com/iap/apple/464254577
+- **ST30** (undated page, fetched 2026-10-06, T1) Help: what is Strong (platform support): https://help.strongapp.io/article/228-what-is-strong
+
+### Fitbod
+
+- **FB1** (2026-10-06, T1) App Store listing text, release notes 8.35.1, rating: https://itunes.apple.com/lookup?id=1041517543&country=us
+- **FB2** (undated page, fetched 2026-10-06, T2) App Store page: editors' note, store reviews, version history: https://apps.apple.com/us/app/id1041517543
+- **FB3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/fitbod-gym-fitness-planner/1041517543
+- **FB4** (2026-09-28, T1) Help: editing workouts (read through the help-centre API): https://help.fitbod.me/hc/en-us/articles/360006335593-Editing-Workouts-in-Fitbod
+- **FB5** (2026-08-11, T1) Help: customising today's workout: https://help.fitbod.me/hc/en-us/articles/38318585683991
+- **FB6** (2026-10-02, T1) Help: how Fitbod creates your workout: https://help.fitbod.me/hc/en-us/articles/360004429814-How-Fitbod-Creates-Your-Workout
+- **FB7** (2026-07-10, T1) Help: exercise details screen: https://help.fitbod.me/hc/en-us/articles/30721437384215-How-to-Navigate-the-Exercise-Details-Screen
+- **FB8** (2026-07-26, T1) Help: rest timer: https://help.fitbod.me/hc/en-us/articles/360006340194-Rest-Timer
+- **FB9** (2026-02-03, T1) Help: iOS widget and Live Activities: https://help.fitbod.me/hc/en-us/articles/360058341233-iOS-Widget
+- **FB10** (2026-01-24, T1) Help: Wear OS on Android: https://help.fitbod.me/hc/en-us/articles/4406074415383-WearOS-on-Android
+- **FB11** (2026-09-03, T1) Help: Apple Watch: https://help.fitbod.me/hc/en-us/articles/360006499194-Apple-Watch
+- **FB12** (2026-09-21, T1) Help: Reps in Reserve: https://help.fitbod.me/hc/en-us/articles/360033133174-Reps-in-Reserve-RiR-Formerly-Exertion-Rating-RPE
+- **FB13** (2026-10-04, T1) Help: Max Effort Day: https://help.fitbod.me/hc/en-us/articles/360033675553-Max-Effort-Day
+- **FB14** (2026-09-22, T1) Help: muscle recovery: https://help.fitbod.me/hc/en-us/articles/360006269014-Muscle-Recovery
+- **FB15** (2026-09-15, T1) Help: how sets, reps and weight are decided: https://help.fitbod.me/hc/en-us/articles/43489869175063-How-does-Fitbod-decide-my-sets-reps-and-weight
+- **FB16** (2026-09-26, T1) Help: My Plan settings: https://help.fitbod.me/hc/en-us/articles/34336407191191-My-Plan
+- **FB17** (2026-09-04, T1) Help: offline use (read via help-centre search excerpt): https://help.fitbod.me/hc/en-us/articles/360006572594-Can-I-use-Fitbod-without-an-internet-connection
+- **FB18** (2026-10-04, T1) Help: weekly set targets: https://help.fitbod.me/hc/en-us/articles/24739986755223-Weekly-Set-Targets
+- **FB19** (2026-08-30, T1) Help: getting started: https://help.fitbod.me/hc/en-us/articles/30721771750039-Getting-Started-with-Fitbod-A-New-User-s-Guide
+- **FB20** (2026-01-15, T1) Help: sharing workouts, gyms, summaries: https://help.fitbod.me/hc/en-us/articles/360006427453-Sharing-a-Workout-Gym-Location-Settings
+- **FB21** (2026-09-30, T2) Independent hands-on Fitbod review: https://fitnessdrum.com/fitbod-review/
+- **FB22** (2026-09-08, T3) SensAI (competitor) pricing comparison: https://www.sensai.fit/blog/fitness-app-pricing-free-tier-comparison
+- **FB23** (2026-03-21, T4) App Pricing Lab: Fitbod in-app purchase SKUs: https://apppricinglab.com/iap/apple/1041517543
+- **FB24** (2026-04-30, T4) SEO-style blog review; low reliability: https://www.indiehackers.com/post/fitbod-app-review-2026-honest-take-after-real-testing-45d5f07a1b
+
+### JEFIT
+
+- **JF1** (2026-10-05, T1) App Store listing text, release notes 17.2.6, rating: https://itunes.apple.com/lookup?id=449810000&country=us
+- **JF2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id449810000
+- **JF3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/jefit-workout-plan-gym-tracker/449810000
+- **JF4** (2025-07-15, T1) JEFIT 15-year story: https://www.jefit.com/our-story
+- **JF5** (2025-07-18, T2) Hacker News thread '15 Years of Building Jefit' (read through the Algolia API): https://news.ycombinator.com/item?id=44568761 ; https://hn.algolia.com/api/v1/items/44568761
+- **JF6** (2025-05-16, T1) JEFIT blog: unified workout editing screen: https://www.jefit.com/blog/meet-jefits-all-new-unified-workout-editing-screen
+- **JF7** (2023-02-23, T1) JEFIT blog: pre-fill value settings: https://www.jefit.com/blog/teach-jefit-how-you-workout-with-pre-fill-value-settings
+- **JF8** (2023-12-08, T1) JEFIT blog: revamped workout tab and logging screen: https://www.jefit.com/blog/upcoming-enhancements-revamped-workout-tab-and-improved-exercise-screens
+- **JF9** (undated page, fetched 2026-10-06, T1) JEFIT blog: progressive overload system: https://www.jefit.com/blog/the-new-era-of-jefit-the-progressive-overload-system
+- **JF10** (2026-09-04, T3) JEFIT's own JEFIT versus Strong comparison: https://www.jefit.com/blog/jefit-vs-strong
+- **JF11** (2026-09-14, T3) JEFIT's own JEFIT versus Caliber comparison: https://www.jefit.com/blog/jefit-vs-caliber
+- **JF12** (2026-09-16, T3) JEFIT's own four-app comparison: https://www.jefit.com/blog/fitbod-vs-strong-vs-jefit-vs-hevy
+- **JF13** (2026-03-16, T3) JEFIT's own smartwatch roundup: https://www.jefit.com/blog/best-apps-to-log-sets-and-reps-on-smartwatch-in-2026-top-7-tested
+- **JF14** (undated page, fetched 2026-10-06, T1) JEFIT Basic versus Elite plans: https://www.jefit.com/elite
+- **JF15** (undated page, fetched 2026-10-06, T1) JEFIT Autoplay mode page: https://www.jefit.com/download/autoplay
+- **JF17** (undated, T4) Garage Gym Reviews JEFIT verdict; page returned 404, read through a search-engine summary: https://www.garagegymreviews.com/equipment/jefit
+
+### Boostcamp
+
+- **BC1** (2026-10-02, T1) App Store listing text, release notes build 266, rating: https://itunes.apple.com/lookup?id=1529354455&country=us
+- **BC2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1529354455
+- **BC3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/boostcamp-gym-workout-fitness/1529354455
+- **BC4** (undated page, fetched 2026-10-06, T1) Boostcamp workout tracker page: https://www.boostcamp.app/workout-tracker
+- **BC5** (undated page, fetched 2026-10-06, T1) Boostcamp features page (the second URL redirects to the first): http://www.boostcamp.app/features ; https://boostcamp.app/features
+- **BC6** (2026-07, T3) Boostcamp's own workout-logging comparison: https://www.boostcamp.app/best/workout-logging
+- **BC7** (2026-05, T3) Boostcamp's own RPE and RIR comparison: https://www.boostcamp.app/best/rpe-rir
+- **BC8** (2026-07, T3) Boostcamp's own Hevy comparison: https://www.boostcamp.app/alternatives/hevy
+- **BC9** (2024-04-23, T1) Boostcamp blog: ten tips and tricks: https://www.boostcamp.app/blogs/tips-and-tricks-to-using-boostcamp-app
+- **BC10** (undated page, fetched 2026-10-06, T2) ScreensDesign UI-flow capture of the app: https://screensdesign.com/showcase/boostcamp-gym-workout-fitness
+- **BC11** (2026-06-05, T4) App Pricing Lab: Boostcamp in-app purchase SKUs: https://apppricinglab.com/iap/apple/1529354455
+- **BC12** (2026-07, T3) Boostcamp's own JuggernautAI comparison: https://www.boostcamp.app/vs/juggernautai
+
+### Alpha Progression
+
+- **AP1** (2026-09-30, T1) App Store listing text, release notes 7.6.2, rating: https://itunes.apple.com/lookup?id=1462277793&country=us
+- **AP2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1462277793
+- **AP3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/alpha-progression-gym-tracker/1462277793
+- **AP4** (undated page, fetched 2026-10-06, T1) Alpha Progression homepage: https://alphaprogression.com/en
+- **AP5** (2026-09-10, T1) Alpha Progression guide to the app: https://alphaprogression.com/en/blog/alpha-progression-guide
+- **AP6** (2026-09-28, T2) Independent hands-on Alpha Progression review: https://fitnessdrum.com/alpha-progression-app-review/
+- **AP7** (2026-09-15, T3) Alpha Progression's own Hevy comparison: https://alphaprogression.com/en/blog/alpha-progression-vs-hevy
+- **AP8** (2026-08-14, T4) App Pricing Lab: Alpha Progression in-app purchase SKUs: https://apppricinglab.com/iap/apple/1462277793
+- **AP9** (undated page, fetched 2026-10-06, T1) Alpha Progression plan-generator article (no computation detail): https://alphaprogression.com/en/blog/alpha-progression-workout-plan-generator
+
+### RP Hypertrophy
+
+- **RP1** (2026-10-01, T1) App Store listing text, release notes 1.7.0, rating: https://itunes.apple.com/lookup?id=1555614554&country=us
+- **RP2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1555614554
+- **RP3** (undated page, fetched 2026-10-06, T1) RP Hypertrophy official page (platforms, prices): https://rpstrength.com/pages/hypertrophy-app
+- **RP4** (2026-05-14, T1) Help: what's new (read through the help-centre API): https://help.rpstrength.com/hc/en-us/articles/34725726510999-RP-Hypertrophy-App-What-s-new
+- **RP5** (2026-10-05, T1) Help: warm-ups and starting weights: https://help.rpstrength.com/hc/en-us/articles/43549480893591-Warm-ups-and-Starting-Weights
+- **RP6** (2026-10-05, T1) Help: rest times: https://help.rpstrength.com/hc/en-us/articles/43549598219799-Rest-Times
+- **RP7** (2026-10-05, T1) Help: template selection: https://help.rpstrength.com/hc/en-us/articles/43549415338007-Template-Selection
+- **RP8** (2026-10-05, T1) Help: mesocycle creation: https://help.rpstrength.com/hc/en-us/articles/43746837058583-Mesocycle-Creation
+- **RP9** (2026-10-05, T1) Help: finished mesocycle: https://help.rpstrength.com/hc/en-us/articles/44019834219543-Finished-Mesocycle
+- **RP10** (2026-09-24, T1) Help: importing and exporting data (read via search excerpt): https://help.rpstrength.com/hc/en-us/articles/43551864598423-Importing-Exporting-Data
+- **RP11** (2025-04-26, T3) Dr. Muscle (competitor) review of RP Hypertrophy: https://dr-muscle.com/rp-hypertrophy-app-for-strength-training-expert-review/
+- **RP12** (2025-05, T3) Dr. Muscle (competitor) second review of RP Hypertrophy: https://dr-muscle.com/rp-hypertrophy-app-review/amp
+- **RP13** (2023-09-19, T2) Exodus Strength forum thread, user posts of 19 and 30 Sep 2023: https://www.exodus-strength.com/forum/viewtopic.php?p=327524
+- **RP15** (undated, T4) Help article not in the current help centre; read through a search-engine summary: https://help.rpstrength.com/hc/en-us/articles/30805293312407-Why-is-there-no-rest-timer
+- **RP17** (undated page, fetched 2026-10-06, T1) iTunes search result: RP Strength's apps: https://itunes.apple.com/search?term=RP+Hypertrophy&entity=software&country=us&limit=5
+
+### Juggernaut AI
+
+- **JA1** (2026-09-24, T1) App Store listing text, release notes 3.0.12, rating: https://itunes.apple.com/lookup?id=1515756471&country=us
+- **JA2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1515756471
+- **JA3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and review quotes: https://mwm.ai/apps/juggernautai/1515756471
+- **JA4** (undated page, fetched 2026-10-06, T1) Help: RPE and RIR: https://help.jtsstrength.com/en/articles/2-all-about-rpe-and-rir
+- **JA5** (undated page, fetched 2026-10-06, T1) Help: rest days, meet date, warm-up features: https://help.jtsstrength.com/en/articles/27-optimizing-training-with-juggernautai-a-guide-to-rest-days-meet-date-adjustments-and-warm-up-features
+- **JA6** (undated page, fetched 2026-10-06, T1) Help: welcome (points to a video): https://help.jtsstrength.com/en/articles/1-welcome-to-juggernautai
+- **JA7** (2026-09-04, T2) Independent JuggernautAI review: https://aitoolsbakery.com/blog/juggernautai-review/
+- **JA8** (undated page, fetched 2026-10-06, T2) ScreensDesign UI-flow capture (46 screens): https://screensdesign.com/apps/juggernautai/
+- **JA9** (undated page, fetched 2026-10-06, T4) Store-review titles and machine-summarised themes: https://justuseapp.com/en/app/1515756471/juggernautai/reviews
+- **JA10** (2021-03-24, T2) Exodus Strength forum thread, posts from 24 Mar to 1 Dec 2021: https://www.exodus-strength.com/forum/viewtopic.php?p=131379
+- **JA11** (2026-07-01, T4) App Pricing Lab: JuggernautAI in-app purchase: https://apppricinglab.com/iap/apple/1515756471
+- **JA12** (undated, T4) Garage Gym Reviews JuggernautAI review; page returned 404, read through search-engine summaries: https://www.garagegymreviews.com/juggernautai-review
+- **JA13** (undated page, fetched 2026-10-06, T1) Juggernaut help centre home: https://help.jtsstrength.com/en/
+
+### Caliber
+
+- **CB1** (2026-09-08, T1) App Store listing text, release notes 5.16.1, rating: https://itunes.apple.com/lookup?id=1482405410&country=us
+- **CB2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1482405410
+- **CB3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/caliber-strength-training/1482405410
+- **CB4** (2026-09-08, T1) Caliber announcements (changelog) board: https://feedback.caliberstrong.com/announcements
+- **CB5** (2025-05-13, T1) Caliber 5.4.0 release notes: https://feedback.caliberstrong.com/announcements/caliber-540-custom-keyboard-automatic-rest-timer-default-exercise-settings-sundaymonday-start-date-g
+- **CB6** (undated page, fetched 2026-10-06, T2) Caliber public roadmap (no per-item dates; may lag): https://feedback.caliberstrong.com/roadmap
+- **CB7** (undated page, fetched 2026-10-06, T2) Caliber feature-request board with vote counts: https://feedback.caliberstrong.com/b/7vz226vy/feature-ideas
+- **CB8** (2022-06-29, T2) Caliber Apple Watch app request (created 29 Jun 2022): https://feedback.caliberstrong.com/b/7vz226vy/feature-ideas/apple-watch-app
+- **CB9** (undated page, fetched 2026-10-06, T1) Caliber workout app page: https://caliberstrong.com/workout-app/
+- **CB10** (2026-06-30, T4) App Pricing Lab: Caliber in-app purchase SKUs: https://apppricinglab.com/iap/apple/1482405410
+
+### Setgraph
+
+- **SG1** (2026-09-18, T1) App Store listing text, release notes 26.9.2, rating: https://itunes.apple.com/lookup?id=1209781676&country=us
+- **SG2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1209781676
+- **SG3** (undated page, fetched 2026-10-06, T4) mwm.ai review analysis and 2026 review quotes: https://mwm.ai/apps/setgraph-gym-workout-tracker/1209781676
+- **SG4** (2024-11-07, T1) Setgraph article: Smart Plates: https://setgraph.app/articles/smart-plates-effortless-weight-calculation-for-lifters
+- **SG5** (2026-10-05, T1) Setgraph article: rest timer: https://setgraph.app/articles/get-the-most-out-of-setgraph-s-rest-timer
+- **SG6** (2024-10-25, T1) Setgraph article: Notepad mode: https://setgraph.app/articles/setgraph-9-41-notepad-mode-for-faster-logging
+- **SG7** (2026-08-04, T3) Setgraph's own Hevy comparison: https://setgraph.app/articles/hevy-alternative-setgraph-vs-hevy-workout-tracker
+- **SG8** (2026-10-05, T3) Setgraph's own Strong-alternatives article: https://setgraph.app/articles/best-strong-app-alternatives-(2025)
+- **SG9** (undated page, fetched 2026-10-06, T2) ScreensDesign UI-flow capture of the app: https://screensdesign.com/showcase/setgraph-workout-training-log
+- **SG10** (2026-07-01, T4) App Pricing Lab: Setgraph in-app purchase SKUs: https://apppricinglab.com/iap/apple/1209781676
+- **SG11** (undated page, fetched 2026-10-06, T1) Setgraph homepage: https://setgraph.app/
+
+### Gymaholic
+
+- **GY1** (2026-09-18, T1) App Store listing text, release notes 16.6, rating: https://itunes.apple.com/lookup?id=648518560&country=us
+- **GY2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id648518560
+- **GY3** (undated page, fetched 2026-10-06, T2) UK App Store page: UK prices, reviews, platform list: https://apps.apple.com/gb/app/gymaholic-workout-tracker/id648518560
+- **GY4** (undated page, fetched 2026-10-06, T4) Store-review titles and machine-summarised themes: https://justuseapp.com/en/app/648518560/gymaholic-workout-tracker/reviews
+- **GY5** (undated page, fetched 2026-10-06, T1) Gymaholic official site: https://www.gymaholic.app/
+- **GY6** (2026-07-26, T4) App Pricing Lab: Gymaholic in-app purchase SKUs: https://apppricinglab.com/iap/apple/648518560
+- **GY7** (undated page, fetched 2026-10-06, T4) BlueStacks page for the OTHER Gymaholic (Fitness & Nutrition) on Android: https://www.bluestacks.com/campaign/com.gymaholic.training/en
+- **GY8** (2026-10-06, T1) iTunes search result: the two Gymaholic products and their sellers: https://itunes.apple.com/search?term=Gymaholic&entity=software&country=us&limit=5
+
+### Dr. Muscle
+
+- **DM1** (2026-10-02, T1) App Store listing text, release notes, rating, prices: https://itunes.apple.com/lookup?id=1073943857&country=us
+- **DM2** (undated page, fetched 2026-10-06, T2) App Store page: store reviews and version history: https://apps.apple.com/us/app/id1073943857
+- **DM3** (2026-10-01, T1) Dr. Muscle update timeline (changelog): https://dr-muscle.com/timeline
+- **DM4** (2026-04-04, T1) Dr. Muscle feature list (27+ features): https://dr-muscle.com/what-makes-dr-muscle-different/
+- **DM5** (2025-04-26, T1) Dr. Muscle progressive-overload page (workout-screen flow): https://dr-muscle.com/progressive-overload-app-gain-muscle-strength/amp/
+- **DM6** (2025-04-26, T3) Dr. Muscle's paid review of Strong: https://dr-muscle.com/strong-app-review-alternative/
+- **DM7** (2026-09-04, T2) Independent Dr. Muscle review: https://aitoolsbakery.com/blog/dr-muscle-review/
+
+### Cross-app
+
+- **X1** (2026-03-13, T3) RepReturn Strong versus Hevy (possible competitor): https://repreturn.com/strong-app-vs-hevy/
+- **X2** (2026-01-14, T3) GymGod (competitor) Strong versus Hevy: https://gymgod.app/blog/strong-vs-hevy
+- **X3** (2025-12-24, T2) Hacker News thread on Stronk.app (read through the Algolia API): https://news.ycombinator.com/item?id=46371139 ; https://hn.algolia.com/api/v1/items/46371139
+- **X4** (2026-02-12, T2) Hacker News comment search for Hevy (comment of 12 Feb 2026): https://hn.algolia.com/api/v1/search?query=hevy%20workout%20app&tags=comment&hitsPerPage=30
+- **X5** (undated, T4) Garage Gym Reviews roundup and Strong review; pages returned 404, read through search-engine summaries: https://garagegymreviews.com/best-workout-apps
+
+### Consulted but not cited (blocked, empty, or no relevant detail)
+
+- https://www.reddit.com/r/Hevy/top/?t=year : refused by the fetch tool; reddit.com is also rejected by the search tool, so no Reddit thread was read
+- https://play.google.com/store/apps/details?id=com.hevy&hl=en_GB : Google Play listing loaded truncated (same for id=je.fit and id=com.rp.hypertrophy)
+- https://help.hevyapp.com/ : Hevy help centre HTML returns 403; articles were read through its public API instead (same for help.fitbod.me and help.rpstrength.com)
+- https://help.rpstrength.com/hc/en-us/sections/30801323964183-Navigating-the-App : 403; the RP section listing could not be read
+- https://help.rpstrength.com/hc/en-us/articles/32600173777815-Hypertrophy-App-Progressions : 403 and 404 on the API; not read
+- https://www.garagegymreviews.com/?p=170541 : 404 (also ?p=202500, ?p=209611, ?p=103278, ?p=211181, /best-workout-apps, /best-workout-tracker-apps, /boostcamp-review, /equipment/caliber-strength-training)
+- https://www.apkmirror.com/apk/strong-fitness-pte-ltd/strong-workout-tracker-gym-log : 403 (also the Hevy 3.0.12 entry)
+- https://www.whistleout.com/CellPhones/Apps/hevy-app-review : 403 (mirror of the Android Authority review cited as HV45)
+- https://www.hotelgyms.com/blog/how-to-use-alpha-progression : 403 (also /blog/?p=2368)
+- https://forums.macrumors.com/threads/gymaholic.2003247 : 403
+- https://anabolicminds.com/community/threads/hypertrophy-app.337977/ : 403
+- https://ai-fitness-engineer.com/juggernautai : 525
+- https://www.hevyapp.com/hevy-pro/ : 404 (also /community-updates/july-2026-community-update/)
+- https://alphaprogression.com/en/pricing : 404 (also /blog/how-alpha-progression-progression-recommendations-work)
+- https://alphaprogression.com/en/glossary/double-progression : read; general method only, no app-specific detail
+- https://itunes.apple.com/us/rss/customerreviews/id=1458862350/sortBy=mostRecent/xml : Apple review feed returned metadata and no review entries (also the JSON form)
+- https://apps.appfollow.io/ios/hevy-workout-tracker-gym-log/1458862350?country=us : showed only 2019 and 2020 reviews
+- https://www.caliberstrong.com/ : homepage carries no logging detail (https://www.caliberstrong.com/app/ redirects to a members page)
+- https://feedback.caliberstrong.com/b/7vz226vy/feature-ideas/supersets : page did not hold a supersets request
+- https://setgraph.app/articles : index only (also /features/workout-tracker and /articles/what-s-new-in-setgraph-workout-tracker-9-40, which carry no set-input detail)
+- https://dr-muscle.com/best-workout-app/ : mission statement, no workout-screen detail
+- https://rpstrength.com/blogs/podcasts/major-updates-to-the-rp-diet-hypertrophy-apps-rp-strength : read; Meso Builder and templates only, no logging-screen detail
+- https://github.com/WhyAsh5114/MyFit : README has no description of the RP app's logging flow
+- https://www.exodus-strength.com/forum/viewtopic.php?p=328071 : duplicate of the RP forum thread cited as RP13
+- https://mwm.ai/apps/rp-hypertrophy/1555614554 : rating only, no review analysis (also the Gymaholic and Dr. Muscle pages)
+- https://hn.algolia.com/api/v1/search?query=strong%20app%20workout%20tracker%20hevy&tags=comment&hitsPerPage=30 : Hacker News comment search for Strong; added nothing beyond JF5 and X4
+
+Counts: 207 cited source IDs (211 distinct cited URLs); 26 further URLs consulted but not cited.
 
