@@ -162,10 +162,89 @@ calm-mode and ED-flag suppression of celebration; keyboard Done logs the
 set; the single-CTA state machine with a cancellable 1.8s auto-advance;
 TalkBack announcements; the 48dp touch floor.
 
-## 4. The current logger, mapped (from lanes A1 and A2)
+## 4. The current logger, mapped (from lanes A1 and A2; the detail is in 01 and 02)
 
-_To be filled from 01 and 02 once they land: the facilities table, the
-paths, the states, and the hand-off points._
+### 4.1 The model
+
+One screen, one exercise at a time. The workspace scroll holds only the
+current exercise: its logged rows (folded behind one line from the third
+set), the active-set row (the Now card: position line, one context line,
+the "Last session" prefill, the two steppers, the record callout, the note
+row), and quiet upcoming rows. Everything else about the session is behind
+the collapsed outline strip ("Exercise 2 of 6, 2/18 sets"), which opens on
+tap and closes itself after five seconds. The bottom bar carries one
+primary slot whose label changes with state (Log set, Log warm-up, Log
+other side, Start cluster, then Next exercise or Finish workout with a
+1.8 s countdown and a secondary Log another set). The rest timer is a
+44dp strip docked above the bar, hidden when idle (01 sections 2 and 4).
+
+### 4.2 Facilities (what exists today)
+
+| Area | What the logger does today | Where |
+|---|---|---|
+| Set types | Working, Warm-up, Drop set, Myo-reps, Rest-pause, AMRAP; a sticky picker on the position line; no failure type, no RPE or RIR capture (D14, D19) | 01 s3.4 |
+| Entry | Weight and reps steppers (36dp buttons, hold to repeat, exercise-aware step), decimal pad with an iOS Done bar, Done on reps logs the set, 8 s idle dismiss; duration (mm:ss) and distance types; reps-only; per-hand, assisted and added-weight labels | 01 s3.1 |
+| Prescription | `resolveSetPrescription` over the last three sessions seeds weight and reps ghost-styled into the inputs; "Last session: 80kg x 8 - Use" for the matching set index; first-time line; recovery-week line; a logged deviation counts as a deliberate choice for the rest of the exercise | 01 s3.2 |
+| Guided flows | Clusters (myo-reps, rest-pause) with 20 s mini-rests and one merged row; per-side logging with a half rest; warm-up ramp sheet; superset, giant-set and circuit walkthroughs with forward-only jumps and no rest between members | 01 s3.7, s5.5 |
+| Records | detectPR (e1RM, heaviest, least assistance, most reps at weight) on log and re-evaluated on edit and delete; the record callout before the set; the PR toast after; first lift honest; calm mode and an open ED flag calm the toast | 01 s6 |
+| Rest | Auto-start (preference), length from the routine row or the 90 s default, plus or minus 15, skip, 3-2-1 pips and an end tone, Android foreground chronometer within 170 s, chronometer notification beyond, OS alarms for the cues, iOS Live Activity, lock-screen actions | 01 s4 |
+| Exercises mid-session | Add (picker: search, recents, chips, custom create), swap (ranked candidates, scope today or from now on), remove, reorder (drag sheet), pair or unpair superset, "I can't do this", shorten session, exercise info sheet (setup, execution, watch) | 01 s5 |
+| Editing | Tap a logged row to edit weight and reps in place; delete with confirm; Android long-press menu; no reorder of sets, no un-complete, no edit of type or note after logging | 01 s3.6 |
+| Persistence | SQLite write before the row shows; store snapshot to AsyncStorage after every mutation; draft of the typed entry per exercise; restore from the Home mount only; stale prompt after 4 h | 01 s8 |
+| Finish | Confirms by state (nothing logged, ended early, normal); one report from the database rows; writes the workout; fires consistency, widget, nudges, habit schedule, sync; replaces itself with the summary | 01 s7, 02 s2 |
+| Summary | Total lifted hero with a four-week verdict, Community strip and auto-post, stats trio, block card, exercise list, PR row, onward links, limitation line, photo prompt, weekly volume by muscle, block finished card, adjusted-today row, four ratings and two notes, save as template, share image | 02 s4 |
+| History | 50 most recent sessions as cards (View summary, Repeat, delete), search, five filter chips, a calendar; hard delete only | 02 s5 |
+| Exercise detail | Tags, estimated max, PR card, target weight, five chart lenses over four windows, last eight sessions; no swap, add or note; not linked from the logger | 02 s6 |
+| Settings | Default rest, auto-start, rest alert, rest sounds, exact alarms (Android), readiness check, calmer coaching, display and accessibility; gym units fixed to kg | 02 s7 |
+| Corpus | 918 exercises in 16 families with type, load semantics, increments, laterality, instructions; no images or video; custom exercises | 02 s8 |
+| Entry paths | 22 (Today hero and options, Train hero, saved workouts, plan day, routine detail, build, history repeat, mini bar, continue card, notifications); only Today's two show the readiness sheet | 02 s1 |
+
+### 4.3 The defects the map found (every one is a "user does not know what is happening" moment or a wrong number; each must close whatever option is chosen)
+
+1. The exercise object's shape depends on how the session started: a
+   routine-backed start lacks exerciseType, loadSemantics, incrementKg and
+   exerciseCategory, so a planned dumbbell lift says "Weight (kg)" instead
+   of "per hand", an assisted machine is judged by the wrong record rule,
+   and every planned exercise steps at the compound increment (01 s13.1).
+2. "Shorten session" and the starter session write a rest cut to a field
+   no timer reads; the estimate assumes three sets at 90 s for every
+   exercise; "Undo" restores a snapshot that drops every set logged since
+   (01 s13.3).
+3. Removing or swapping an exercise with logged sets hides those sets from
+   the session while they still count at finish; an empty session's silent
+   cancel leaves an orphan workout row; a second start from Train while a
+   session is live overwrites it and strands its sets (01 s13.4, 02 s1).
+4. The add picker and the swap sheet filter differently, picker mode is
+   chosen from the button's label string, an exercise already in the
+   session can be added again, and picker rows print raw muscle keys such
+   as "Front_delts" (01 s13.5).
+5. Three rules for "sets done" (target counter, finish report, mini bar);
+   a drop set repeats the badge number of the set before it; the
+   "Last session" index can land on a drop set; a draft is skipped once a
+   drop set is logged (01 s13.6).
+6. A comma keystroke is dropped in the weight box (fractional weights
+   cannot be typed on a comma-region keypad); the per-side banner and the
+   saved row can disagree on weight; an edit cannot change type or note
+   (01 s13.7).
+7. Android back is cancel-or-discard while iOS swipe-back leaves the
+   session live; a session started from Train or Progress returns to
+   Today on cancel; five start sites skip the readiness sheet and
+   attribute the session to the calendar week rather than the programme
+   position (02 s1, s2).
+8. After finish nothing can be edited (sets, name, date, routine): History
+   and Summary offer only a hard delete and ratings (02 s5.5).
+9. A finished session cannot show planned versus done: only the rep band
+   is stored per set (02 s3.7).
+10. Copy that states effects the code does not produce: "Rest cut by 30%",
+    "to fit the time you have left", "Full recovery, no PRs" (the
+    detector has no deload condition), "Volyume will swap it" (it opens a
+    chooser) (01 s12.3).
+11. The whole 7,170-line screen re-renders every second from the elapsed
+    clock; the memoised rows are defeated by inline closures; 54 of 200
+    style keys are dead and three are pinned by tests (01 s10.4, s13.9).
+12. The summary's exercise chips print seconds as reps and metres as
+    weight for timed and distance sets; Exercise Detail prints "3/5" for a
+    null quality (02 s11.3).
 
 ## 5. Rulings that bind any redesign (from lane A3)
 
