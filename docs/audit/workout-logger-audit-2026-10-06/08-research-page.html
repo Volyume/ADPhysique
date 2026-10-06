@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logger Design Research</title>
+<meta name="description" content="Volyume workout logger: the field measured from real screens, the legibility evidence, and the design derived from both.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&display=swap">
+<style>
+/* Page chrome: light by default, dark when the system prefers it. The phones are always the live Volyume dark theme. */
+:root{
+  --bg:#FAFAF7; --surface:#FFFFFF; --surface2:#EFEFEA; --hair:#E4E4DF; --line:#8F8F8B;
+  --fg:#1A1A18; --fg2:#555553; --fg3:#6A6A67; --amber:#8A5200; --green:#2E7D32; --red:#B3261E;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27; --hair:#2E2E2C; --line:#6E6E6E;
+    --fg:#FFFFFF; --fg2:#9E9E9E; --fg3:#9C9C9C; --amber:#F5A623; --green:#4CAF50; --red:#F44336;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27; --hair:#2E2E2C; --line:#6E6E6E;
+  --fg:#FFFFFF; --fg2:#9E9E9E; --fg3:#9C9C9C; --amber:#F5A623; --green:#4CAF50; --red:#F44336;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-optical-sizing:auto;font-size:16px;line-height:1.5;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 16px 72px}
+.col{max-width:720px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3);font-weight:600;margin:0 0 10px}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.08;font-weight:800;letter-spacing:-.02em;margin:0 0 14px;text-wrap:balance}
+h2{font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.015em;margin:64px 0 10px;text-wrap:balance}
+h3{font-size:17px;line-height:1.35;font-weight:600;margin:24px 0 6px}
+p{margin:0 0 12px;max-width:68ch;color:var(--fg2)}
+p.lede{font-size:18px;color:var(--fg)}
+ul,ol{margin:0 0 12px;padding-left:20px;max-width:68ch;color:var(--fg2)}
+li{margin:0 0 6px}
+b,strong{color:var(--fg);font-weight:600}
+.n{font-variant-numeric:tabular-nums}
+.note{border-left:3px solid var(--amber);padding:10px 14px;background:var(--surface);border-radius:0 10px 10px 0;margin:16px 0;max-width:68ch;color:var(--fg2)}
+.note b{color:var(--fg)}
+.pill{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--fg3);border:1px solid var(--hair);border-radius:999px;padding:2px 8px;vertical-align:middle}
+.pill.a{color:var(--amber);border-color:var(--amber)}
+/* gallery */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:28px 24px;margin:24px 0 8px}
+.shot{display:flex;flex-direction:column;gap:10px;min-width:0}
+.shot img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--hair);background:#111}
+.shot .t{font-size:15px;font-weight:600;color:var(--fg);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.shot .t span{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--fg3);white-space:nowrap}
+.shot .m{font-size:13px;color:var(--fg2);line-height:1.5}
+.shot .m b{font-weight:600}
+.shot .s{font-size:11px;color:var(--fg3);line-height:1.5;word-break:break-word}
+.shot .s a{color:var(--fg3)}
+/* tables */
+.scroller{overflow-x:auto;margin:0 -16px;padding:0 16px}
+table.cmp{border-collapse:collapse;width:100%;font-size:13.5px;margin:8px 0 16px;min-width:640px}
+table.cmp th,table.cmp td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--hair);vertical-align:top;color:var(--fg2)}
+table.cmp td:first-child{color:var(--fg);font-weight:600;white-space:nowrap}
+table.cmp th{color:var(--fg3);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+table.cmp td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+table.cmp tr.us td{color:var(--fg);background:var(--surface)}
+table.cmp.tight{min-width:0}
+table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
+.kv{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:8px 16px;margin:12px 0 20px;max-width:760px;font-size:14px}
+.kv .k{color:var(--fg3);font-weight:600}
+.kv .v{color:var(--fg2)}
+.kv .v b{color:var(--fg)}
+/* the drawing */
+.stage{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin:24px 0 8px}
+.phonewrap{overflow-x:auto;max-width:100%;padding-bottom:6px}
+.legend{flex:1 1 300px;min-width:280px;max-width:520px}
+.legend ol{padding-left:22px}
+.legend li{margin:0 0 10px;font-size:14px}
+.legend li b{display:block}
+.q{display:grid;grid-template-columns:40px 1fr;gap:10px 12px;margin:10px 0 18px;max-width:760px}
+.q .k{font-weight:700;color:var(--amber);font-variant-numeric:tabular-nums}
+.q .v{color:var(--fg)}
+.q .v span{color:var(--fg2)}
+.q .v ul{margin-top:6px}
+.src{font-size:13px;color:var(--fg2)}
+.src li{margin-bottom:8px;word-break:break-word}
+.src a{color:var(--fg2)}
+/* ---------- the phone: live Volyume dark tokens only ---------- */
+.ph{
+  --bg:#0D0D0D; --s:#191917; --s2:#2A2A27; --s3:#343431; --bs:#2E2E2C; --bd:#6E6E6E;
+  --t1:#FFFFFF; --t2:#9E9E9E; --t3:#9C9C9C; --td:#727272; --a:#F5A623; --ok:#4CAF50;
+  width:390px;height:844px;flex:0 0 auto;background:var(--bg);color:var(--t1);
+  border-radius:40px;border:1px solid #2E2E2C;overflow:hidden;position:relative;
+  font-family:Inter,system-ui,sans-serif;font-optical-sizing:auto;font-size:16px;line-height:1.35;
+  display:flex;flex-direction:column;padding:0;
+}
+.ph *{box-sizing:border-box}
+.ph .pad{padding:0 16px}
+.ph .n{font-variant-numeric:tabular-nums}
+.ph .ov{font-size:11px;line-height:15px;letter-spacing:.5px;text-transform:uppercase;font-weight:500;color:var(--t3)}
+.ph .lab{font-size:13px;line-height:18px;font-weight:500;color:var(--t2)}
+.ph .cap{font-size:11px;line-height:15px;color:var(--t2)}
+.ph .title{font-size:17px;line-height:23px;font-weight:500}
+.ph .h3{font-size:20px;line-height:27px;font-weight:500}
+.ph .h2{font-size:24px;line-height:32px;font-weight:600}
+.ph .sb{height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 6px;font-size:15px;font-weight:600;color:var(--t1)}
+.ph .sb .ic{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600}
+.ph .hdr{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 4px}
+.ph .hdr .tgt{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.ph .hdr .mid{display:flex;flex-direction:column;align-items:center;gap:0}
+.ph .prog{height:2px;background:var(--s3);position:relative}
+.ph .prog i{position:absolute;left:0;top:0;bottom:0;width:33%;background:var(--a)}
+.ph .strip{height:44px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bs)}
+.ph .exh{padding-top:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ph .exh .nm{display:flex;align-items:center;gap:6px;min-width:0}
+.ph .exh .acts{display:flex;align-items:center;gap:14px;padding-top:4px;flex:0 0 auto}
+.ph .tbl{display:grid;grid-template-columns:28px 1fr 72px 72px 24px;column-gap:12px;align-items:center}
+.ph .tbl.head{height:28px;margin-top:16px}
+.ph .tbl.row{height:48px}
+.ph .tbl .c{text-align:center}
+.ph .mk{width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;font-weight:600;color:var(--t2);background:var(--s2)}
+.ph .mk.pend{background:transparent;border:1px solid var(--bs);color:var(--t3)}
+.ph .mk.act{background:transparent;border:1px solid var(--a);color:var(--a)}
+.ph .val{font-size:17px;line-height:23px;font-weight:500;color:var(--t1)}
+.ph .val.dim{color:var(--t2);font-weight:400}
+.ph .last{font-size:13px;line-height:18px;color:var(--t2)}
+.ph .last.dim{color:var(--t3)}
+.ph .now{margin:8px 0;background:var(--s);border:1px solid var(--bs);border-radius:10px;padding:12px 16px 16px}
+.ph .now .l1{height:28px;display:flex;align-items:center;gap:10px}
+.ph .now .l1 .pos{font-size:13px;line-height:18px;font-weight:500;color:var(--t1);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .now .l1 .pos span{color:var(--t2);font-weight:400}
+.ph .boxes{display:grid;grid-template-columns:1fr 1fr;column-gap:12px;margin-top:12px}
+.ph .box .ov{display:block;margin-bottom:6px}
+.ph .fld{height:56px;display:flex;align-items:center;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:0 4px}
+.ph .fld .st{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--a)}
+.ph .fld .v{flex:1;text-align:center;font-size:24px;line-height:32px;font-weight:600;color:var(--t1)}
+.ph .line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.ph .line .ico{display:flex;align-items:center;gap:8px;min-width:0}
+.ph .rec{margin-top:10px;display:flex;gap:8px;align-items:flex-start}
+.ph .rec .t{font-size:13px;line-height:18px;font-weight:500;color:var(--t1)}
+.ph .rec .w{font-size:11px;line-height:15px;color:var(--t2)}
+.ph .rest{height:44px;border-top:1px solid var(--bs);display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto}
+.ph .rest .lft{display:flex;align-items:baseline;gap:8px}
+.ph .rest .rt{display:flex;align-items:center;gap:4px}
+.ph .rest .rt span{display:flex;align-items:center;justify-content:center;height:44px;padding:0 10px;font-size:13px;font-weight:500}
+.ph .bar{padding:12px 16px 0}
+.ph .btn{height:56px;border-radius:16px;background:var(--s2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:var(--t1)}
+.ph .home{height:34px;display:flex;align-items:center;justify-content:center}
+.ph .home i{display:block;width:134px;height:5px;border-radius:3px;background:var(--s3)}
+.ph svg{display:block;flex:0 0 auto}
+.callout{position:relative}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="col">
+<p class="eyebrow">Volyume · workout logger · research record · 6 October 2026</p>
+<h1>The logger, derived from the field</h1>
+<p class="lede">Twelve real active-workout screens, measured. The platform type scales and the reading-distance evidence, cited. Our logger measured the same way. Then one design whose every size and element points at a row of that evidence, drawn once in the live tokens.</p>
+<p>Nothing on this page comes from an earlier brief, blueprint or options page. Where a pinned repository law constrains the design (the guard tests that protect the logger's structure), it is named as a law, not as a design source.</p>
+
+<h2>1. Method and limits</h2>
+<p><b>What was looked at.</b> Current App Store listings (6 October 2026) for thirty apps, fetched through Apple's public lookup and search endpoints, 176 screenshots in all. From those, the twelve that show an <em>active logging screen</em> (a set being entered or just entered) were cropped and enlarged. Apps whose listings show only summaries, charts or marketing frames were not measured. Things 3 and WHOOP were kept as references for calm density outside the category and are not in the table.</p>
+<p><b>How the sizes were measured.</b> Each crop was scaled so the device mock inside the marketing frame is 390 points wide, the width the app renders at on a standard phone. Cap heights were then read against that scale and converted to a font size. The figures are rounded to the nearest point and should be read as ±2 pt: marketing screenshots are sometimes enlarged for effect (Caliber's second set, Liftin's rest pill), and where that is visible the un-enlarged element was measured instead. The conclusions below rest on medians and clusters, not on any single figure.</p>
+<p><b>Limits.</b> These are App Store (iOS) screenshots; our primary platform is Android, where the same apps ship the same screens and the point and dp units coincide. A store screenshot shows a chosen moment, not every state. Row heights were read from visible row rhythm. No app was installed; nothing here is a claim about behaviour that is not visible in the screenshot.</p>
+
+<h2>2. The twelve screens</h2>
+<p>Each caption states what is observed (sizes approximate, see method), then the layout model. Source is the exact store asset the crop was taken from.</p>
+<p class="note"><b>Repository copy.</b> This file loads each full store screenshot from Apple's image host by URL rather than carrying the crops; the published page (the artifact linked from 00 and 09) carries the enlarged crops of the active-workout region.</p>
+<div class="grid">
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/9e/20/11/9e2011c2-ef21-e716-c60a-5c2fe0b26297/a66b427f-5742-4ef6-9f1f-7fb2aeb5f927_screenshot1.png/640x1386bb.png" alt="Hevy active workout screen" loading="lazy">
+<div class="t">Hevy <span>session sheet</span></div>
+<div class="m"><b>Observed.</b> Exercise name 17 in the link blue with a 36 thumbnail. Table of rows: set number 17, previous "40kg × 7" 13 grey, kg and reps 20 bold, a 24 green check in a 28 square. Completed rows are tinted green across their width; the next row is plain with a grey check. "+ Add set" 15. Rest timer is one 13 text line under the exercise. Rows about 44 tall. Duration, volume and sets as 11 labels over 15 values in the header.</div>
+<div class="s">Hevy Studios S.L., v3.1.16, 96,308 ratings, App Store id 1458862350, screenshot 2 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/1e/11/95/1e11958f-697e-56f2-afad-aadf3b2b52b6/261be85e-403c-46b2-a7b9-fffcf72fde11_three-million-small-dis.png/640x1386bb.png" alt="Strong active workout screen" loading="lazy">
+<div class="t">Strong <span>session sheet</span></div>
+<div class="m"><b>Observed.</b> Session title 24 bold, elapsed 17 under it, a free-text note 17. Exercise name 17 blue; volume chip. Header row Set · Previous · kg · Reps · check at 15. Rows: set 17, previous 15 grey, kg and reps 17; completed rows tinted green with a 24 check; the pending row shows grey boxed cells about 36 tall with the previous values as placeholders. Finish is a filled green pill. Rows about 44.</div>
+<div class="s">Strong Fitness PTE Limited, v6.5.0, 108,527 ratings, id 464254577, screenshot 1 of 6.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/26/dc/1c/26dc1c7f-2ea9-f045-4d16-2841681ffefe/Frame_1150__U00281_U0029.png/640x1386bb.png" alt="Boostcamp active workout screen" loading="lazy">
+<div class="t">Boostcamp <span>session sheet · dark</span></div>
+<div class="m"><b>Observed.</b> Programme name 24 bold, a notes field, exercise "1 Squats (Barbell) ›" 20 in the yellow accent. Header Set · Previous · Target · Lbs at 13. Each row carries two lines (value 17 over an RPE or RIR note 13), so rows run about 64. Warm-up and failure sets wear W and F badges. The only input is a boxed Lbs cell about 48 tall, value 17 bold. Timer "12:06" 20 in a pill with pause. Add Set and Swap at 17.</div>
+<div class="s">BPM Health Co., v266, 10,428 ratings, id 1529354455, screenshot 4 of 6.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/ae/2f/00/ae2f0015-42ff-26dc-9bc3-739bff04f191/Slice_2.jpg/640x1386bb.jpg" alt="Fitbod active workout screen" loading="lazy">
+<div class="t">Fitbod <span>one exercise · dark</span></div>
+<div class="m"><b>Observed.</b> Exercise name 28 bold italic over a photo. Chips 15: 1:30 rest, History, Replace. Set markers are 24 hexagons with an 11 number. Two boxed inputs per row about 56 tall, values 24 bold, with 13 floating labels on the first row ("Reps", "Weight (lb)") and a "Per Arm" hint. Rows about 64. Add Set 17 in the pink accent. No previous values are visible in this frame.</div>
+<div class="s">Fitbod Inc., v8.35.1, 286,624 ratings, id 1041517543, screenshot 4 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/31/0d/71/310d715a-0014-2775-3cb2-15daed633928/english_2.jpg/640x1386bb.jpg" alt="Setgraph active workout screen" loading="lazy">
+<div class="t">Setgraph <span>one exercise · dark</span></div>
+<div class="m"><b>Observed.</b> Navigation title 17; segmented Sets · Analyze · 1RM at 15. A "compared to previous" grid: four 13 metrics with coloured deltas. The entry is two large values, "8 rep" and "145 lb" at about 26, with − and + at 20. Chips 13. A full-width green check button about 48 tall confirms the set. Beneath, an increment pad (1 · 2.5 · 5 · 10 · 25 · 45 · 100) in cells about 56 wide. The largest live values in the set.</div>
+<div class="s">Setgraph LLC, v26.9.2, 6,157 ratings, id 1209781676, screenshot 2 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/4d/1c/86/4d1c86bb-dd07-eb2f-d2d4-c0f0b085c9b5/03-progressive-overload-automated.png/640x1386bb.jpg" alt="Gravl active workout screen" loading="lazy">
+<div class="t">Gravl <span>one exercise · dark</span></div>
+<div class="m"><b>Observed.</b> Exercise name 20 bold under a video still; chips 13. Two sections, "Warmup sets" and "Effective sets", headed at 17 with 11 capital column labels SET · REPS · TOTAL KG. Every cell is a box about 48 tall with a 17 value; the current row's boxes are outlined in the amber accent. A small per-row slider marks the target. Rows about 52. "Start Workout" is a filled lime pill.</div>
+<div class="s">GAINS COACH PTY LTD, v1.53.4, 5,677 ratings, id 6450921637, screenshot 3 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/c8/6f/04/c86f0428-9516-3106-53c9-506893e2b80c/6.9-en-3-lbs.png/640x1386bb.jpg" alt="Alpha Progression active workout screen" loading="lazy">
+<div class="t">Alpha Progression <span>one exercise</span></div>
+<div class="m"><b>Observed.</b> A strip of exercise thumbnails, then "Squats" 22 blue bold, "Barbell · 8 reps" 15, a "3 warm-up sets" chip. Column labels # · LB · REPS · 10RM at 11 capitals. Row 1 done with a 28 green check pill; row 2 (current) sits on a blue pill fill with 17 bold blue values; row 3 plain. Rows about 46. A "Yesterday · Legs" history card repeats the columns at 11. Round timer button 56.</div>
+<div class="s">Alpha Progression GmbH, v7.6.2, 2,200 ratings, id 1462277793, screenshot 3 of 8.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/b7/54/83/b75483a7-bfde-de96-d58a-8ca4a7ced1c9/App_Store__U00281242_x_2688_U0029-3.jpg/640x1386bb.jpg" alt="Caliber active workout screen" loading="lazy">
+<div class="t">Caliber <span>one exercise card</span></div>
+<div class="m"><b>Observed.</b> Navigation title 17; tabs Track · Overview · History · Notes at 15. A card titled "Sled 45° Leg Press" 17 with "8-12 reps · 4 min rest" 13 and four 40 round icon buttons. Rows: "Set 1" 15, boxed "8 reps" and "270 lbs" at 17 bold in 40-tall cells, and "Last: 7 reps" / "Last: 270 lbs" at 11 under each box. Rows about 64. Set 2 is enlarged for the marketing frame and was not measured.</div>
+<div class="s">Caliber Fitness, Inc., v5.16.1, 5,992 ratings, id 1482405410, screenshot 4 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/aa/b9/61/aab9618a-7480-5a83-fde3-b01d70a8f4c0/04.png/640x1386bb.jpg" alt="Liftin' active workout screen" loading="lazy">
+<div class="t">Liftin' <span>one exercise · dark</span></div>
+<div class="m"><b>Observed.</b> Exercise name 20 bold, "Chest · Barbell" 13. Each set is a 60 row: a 40 coloured circle carrying the rep count at 17, "SET 1" at 10 capitals, "5 × 300 lbs" at 20 bold, "127.5 lbs / side" at 11, and a plate graphic at the right. The current set's value is in the pink accent. The rest pill "0:30 / 1:30 ×" at about 40 is a dedicated rest surface, enlarged for the frame.</div>
+<div class="s">Valter Hemmi, v53.0.4, 765 ratings, id 1445041669, screenshot 4 of 10.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/49/fb/f0/49fbf0ca-6cde-e09c-c7a7-ce3ad937ee7b/01-track-en-1320x2868.png/640x1386bb.jpg" alt="Musklr active workout screen" loading="lazy">
+<div class="t">Musklr <span>session sheet · light</span></div>
+<div class="m"><b>Observed.</b> Header stats 17 over 10 labels (volume, sets, exercises, heart rate). Exercise 17 with a 13 subtitle and 36 thumbnail; a "1m 30s" rest chip at 11. Column labels SET · PREVIOUS · KG · REPS at 10 capitals. Rows about 44: set 15, previous 13 grey, kg and reps in 32-tall boxes at 15, a 20 green check; completed rows tinted green. A five-glyph toolbar labelled at 10. "Finish Workout" filled blue.</div>
+<div class="s">Jan Sviland, v1.224, 7 ratings, id 6748942492, screenshot 1 of 7.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/7b/5a/d1/7b5ad123-d7bb-a7f1-b8e2-c474edcae515/iPhone_6.9__-_2.2_-_v2.jpg/640x1386bb.jpg" alt="RepCount active workout screen" loading="lazy">
+<div class="t">RepCount <span>session sheet · light</span></div>
+<div class="m"><b>Observed.</b> Finish as a filled teal pill 17; the date 17. Each set is a 64 row: a 28 circled number, then "Kg", "Reps", "Notes" as 11 labels above 20 bold values. "+ Add Set" 17. Supersets are lettered A · B · C in 24 circles with their exercise names at 20, and the following rows read A1, B1, C1. No previous values in the row.</div>
+<div class="s">Siper Apps AB, v10.8.1, 13,330 ratings, id 594982044, screenshot 2 of 8.</div></figure>
+
+<figure class="shot"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/fd/77/eb/fd77ebeb-6230-d771-5e14-091c840e082e/Slice_2.png/640x1386bb.jpg" alt="Gymaholic active workout screen" loading="lazy">
+<div class="t">Gymaholic <span>session sheet · light</span></div>
+<div class="m"><b>Observed.</b> Session title 24; Start, Statistics and Share as 56 round buttons. Exercise 17 bold in the orange accent with a 13 subtitle and a 36 thumbnail. Column labels SET · LAST · KG · REPS · check at 11 capitals. Rows about 50: last "53.5x12" 13 over its date 11, kg 17, reps 17, a small orange record badge. "+ Add set" 15 in the accent; a "+55%" badge on the next exercise.</div>
+<div class="s">Devenyi Gabor, v16.6, 3,464 ratings, id 648518560, screenshot 1 of 5.</div></figure>
+
+</div>
+
+<h2>3. The measurements</h2>
+<p>Font sizes in points on a 390-wide screen (±2). "Live value" is the number being entered or just entered; "row value" is a logged set's number in the list; "previous" is the last-time figure where it is shown in the row.</p>
+</div>
+<div class="scroller">
+<table class="cmp">
+<thead><tr><th>App</th><th>Model</th><th>Exercise name</th><th>Live value</th><th>Row value</th><th>Previous</th><th>Column labels</th><th>Row height</th><th>Current-set cue</th><th>Done cue</th><th>Confirm</th><th>Timer in frame</th></tr></thead>
+<tbody>
+<tr><td>Hevy</td><td>session sheet</td><td class="num">17</td><td class="num">20</td><td class="num">20</td><td class="num">13</td><td class="num">11</td><td class="num">44</td><td>first untinted row</td><td>green check, green row tint</td><td>per-row check</td><td class="num">13 text line</td></tr>
+<tr><td>Strong</td><td>session sheet</td><td class="num">17</td><td class="num">17</td><td class="num">17</td><td class="num">15</td><td class="num">15</td><td class="num">44</td><td>boxed cells on the pending row</td><td>green check, green row tint</td><td>per-row check</td><td class="num">17 elapsed</td></tr>
+<tr><td>Boostcamp</td><td>session sheet</td><td class="num">20</td><td class="num">17</td><td class="num">17</td><td class="num">17 + 13</td><td class="num">13</td><td class="num">64</td><td>input box on the row</td><td>none visible</td><td>input box</td><td class="num">20 pill</td></tr>
+<tr><td>Fitbod</td><td>one exercise</td><td class="num">28</td><td class="num">24</td><td class="num">24</td><td>not in frame</td><td class="num">13 floating</td><td class="num">64</td><td>labels on the first row</td><td>none visible</td><td>not in frame</td><td class="num">15 chip</td></tr>
+<tr><td>Setgraph</td><td>one exercise</td><td class="num">17</td><td class="num">26</td><td>grid, 13</td><td class="num">13 deltas</td><td class="num">13</td><td>n/a</td><td>the entry is the screen</td><td>green check button</td><td>48 check button</td><td>none</td></tr>
+<tr><td>Gravl</td><td>one exercise</td><td class="num">20</td><td class="num">17</td><td class="num">17</td><td>not shown</td><td class="num">11</td><td class="num">52</td><td>amber outline on boxes</td><td>none visible</td><td>boxed cells</td><td class="num">13 chip</td></tr>
+<tr><td>Alpha Progression</td><td>one exercise</td><td class="num">22</td><td class="num">17</td><td class="num">17</td><td class="num">11 card</td><td class="num">11</td><td class="num">46</td><td>blue pill fill, blue values</td><td>green check pill</td><td>per-row check</td><td>56 round button</td></tr>
+<tr><td>Caliber</td><td>one exercise</td><td class="num">17</td><td class="num">17</td><td class="num">17</td><td class="num">11 under box</td><td>inline units</td><td class="num">64</td><td>none visible (zoom is marketing)</td><td>none visible</td><td>boxed cells</td><td>icon only</td></tr>
+<tr><td>Liftin'</td><td>one exercise</td><td class="num">20</td><td class="num">20</td><td class="num">20</td><td>not shown</td><td class="num">10</td><td class="num">60</td><td>pink value, filled circle</td><td>filled circle</td><td>row tap</td><td class="num">40 rest pill</td></tr>
+<tr><td>Musklr</td><td>session sheet</td><td class="num">17</td><td class="num">15</td><td class="num">15</td><td class="num">13</td><td class="num">10</td><td class="num">44</td><td>first untinted row</td><td>green check, green row tint</td><td>per-row check</td><td class="num">11 chip</td></tr>
+<tr><td>RepCount</td><td>session sheet</td><td class="num">20</td><td class="num">20</td><td class="num">20</td><td>not shown</td><td class="num">11 above value</td><td class="num">64</td><td>none visible</td><td>none visible</td><td>row</td><td>icon only</td></tr>
+<tr><td>Gymaholic</td><td>session sheet</td><td class="num">17</td><td class="num">17</td><td class="num">17</td><td class="num">13 + 11</td><td class="num">11</td><td class="num">50</td><td>none visible</td><td>record badge</td><td>per-row check</td><td>icon only</td></tr>
+<tr class="us"><td>Volyume today</td><td>one exercise</td><td class="num">17</td><td class="num">16</td><td class="num">13</td><td class="num">11</td><td class="num">13</td><td class="num">36</td><td>a card with four nested surfaces</td><td>number badge, no check</td><td>56 bottom button</td><td class="num">16 strip, 17 elapsed</td></tr>
+</tbody></table>
+</div>
+<div class="col">
+<p><b>Medians across the twelve.</b> Exercise name 17 to 20 (28 only where a photo carries it). Live value 17, with an upper cluster at 20 to 26 (Hevy 20, Liftin' 20, RepCount 20, Fitbod 24, Setgraph 26). Row value 17. Previous 13. Column labels 11, in capitals. Row height 44 to 48 for one-line rows, 60 to 64 where a row carries two lines or boxed inputs. Nothing in the field runs a live value above 26 on the logging screen itself; sizes of 34 to 44 appear only on dedicated rest-timer surfaces (Liftin').</p>
+
+<h2>4. What the field agrees on, and where it splits</h2>
+<div class="kv">
+<div class="k">Layout model</div><div class="v"><b>Split 6 / 6.</b> Session sheet (every exercise on one scroll): Hevy, Strong, Boostcamp, Musklr, RepCount, Gymaholic. One exercise in focus: Fitbod, Setgraph, Gravl, Alpha Progression, Caliber, Liftin'. The split is not random: the six focus apps are the ones that <em>prescribe</em> the sets (Fitbod, Caliber, Gravl, Alpha, Setgraph's targets, Liftin's programmes); the sheets are free loggers. Volyume prescribes, and its one-exercise workspace is also pinned law.</div>
+<div class="k">Row grammar</div><div class="v"><b>A column table in 7 of 12</b> (Hevy, Strong, Boostcamp, Musklr, Gymaholic, Alpha, Gravl), 6 of them with the set number first and a previous or last column beside the values. Label-over-value cells in RepCount and Fitbod's first row; a sentence row ("5 × 300 lbs") only in Liftin'.</div>
+<div class="k">Previous in the row</div><div class="v"><b>7 of 12</b> put last time's figures beside this time's (Hevy, Strong, Boostcamp, Musklr, Gymaholic, Caliber under each box, Alpha as a card). Our own user-voice evidence (lane A5, 380 dated quotes) has "shows what I did last time" as the second most-praised trait of any logger, at 21.9% of delights.</div>
+<div class="k">Input shape</div><div class="v"><b>Boxed cells in 7 of 12</b> (Strong's pending row, Boostcamp, Fitbod, Gravl, Caliber, Musklr, Setgraph's value fields); plain text cells in Hevy, Alpha, RepCount, Liftin', Gymaholic. Steppers (− +) only in Setgraph; increment pads in Setgraph and Liftin's plate graphic.</div>
+<div class="k">Current-set cue</div><div class="v">A fill or outline on the row itself: Alpha (blue pill fill), Gravl (accent outline), Liftin' (filled circle, accent value), Strong (boxed cells appear on the pending row). The sheets otherwise rely on "the first row that is not green".</div>
+<div class="k">Done cue</div><div class="v"><b>A green check in 5 of 12</b> (Hevy, Strong, Musklr, Alpha, Setgraph's button), three of them also tinting the whole row green. The focus apps mostly show no done mark in these frames.</div>
+<div class="k">Confirm</div><div class="v">Per-row check in the sheets (5); boxed cells that count as logged when filled (3); one big check button (Setgraph). No app in the twelve uses a full-width bottom "log" button; Volyume's is pinned by the single-CTA contract and by the design system ("Complete set is always the largest button on the active-workout screen").</div>
+<div class="k">Rest timer</div><div class="v">In the logging frame it is small: a 13 text line (Hevy), chips at 11 to 15 (Musklr, Gravl, Fitbod), a 20 pill (Boostcamp), a round button (Alpha). It is large (34 to 44) only on a dedicated rest surface (Liftin'). Volyume's strip is pinned at 44 dp, docked outside the scroll.</div>
+<div class="k">Finish</div><div class="v">Filled pill in the sheets (Strong green, RepCount teal, Musklr blue), text in Hevy; icon-only in Caliber and Gymaholic's crops. Volyume's icon-only Finish is a founder law.</div>
+<div class="k">Imagery</div><div class="v">Exercise photos or thumbnails in 8 of 12. Volyume's exercise-media programme is held by founder ruling and is not proposed here.</div>
+<div class="k">Accent colour</div><div class="v">One accent each, used on the exercise name or the current row, never on every element. No app fills its logging button with the brand colour except Setgraph (green check) and the Finish pills.</div>
+</div>
+
+<h2>5. How big must the numbers be</h2>
+<p>Three independent sources, each quoted from the fetched page.</p>
+<h3>5a. The platform scales</h3>
+<div class="scroller">
+<table class="cmp tight">
+<thead><tr><th>Role</th><th>Material 3 (Android)</th><th>iOS default text styles</th><th>Volyume <code>type</code> roles (theme.js)</th></tr></thead>
+<tbody>
+<tr><td>Display / hero</td><td class="num">57 · 45 · 36</td><td class="num">34 large title</td><td class="num">display 40 (one per screen, max)</td></tr>
+<tr><td>Headline</td><td class="num">32 · 28 · 24</td><td class="num">28 · 22 · 20 (Title 1, 2, 3)</td><td class="num">h1 32 · h2 24 · h3 20</td></tr>
+<tr><td>Title</td><td class="num">22 · 16 · 14</td><td class="num">17 headline, 17 body</td><td class="num">title 17 · bodyStrong 16</td></tr>
+<tr><td>Body</td><td class="num">16 · 14 · 12</td><td class="num">17 body · 16 callout · 15 subhead</td><td class="num">body 16 · bodySm 13</td></tr>
+<tr><td>Label</td><td class="num">14 · 12 · 11</td><td class="num">13 footnote · 12 · 11 caption</td><td class="num">label 13 · overline 11 · caption 11 · micro 10</td></tr>
+</tbody></table>
+</div>
+<p class="src">Material 3 type scale as published on developer.android.com (fetched 6 October 2026): displayLarge 57/64, displayMedium 45/52, displaySmall 36/44, headlineLarge 32/40, headlineMedium 28/36, headlineSmall 24/32, titleLarge 22/28 Medium, titleMedium 16/24 Medium, titleSmall 14/20 Medium, bodyLarge 16/24, bodyMedium 14/20, bodySmall 12/16, labelLarge 14/20, labelMedium 12/16, labelSmall 11/16. iOS sizes from learnui.design's iOS font size guidelines (fetched): "Page titles are 34pt before scrolling, 17pt once scrolled"; body and form controls 17; secondary text 15; captions 13; tab bar 10, "Don't go any smaller than this".</p>
+
+<h3>5b. The minimums</h3>
+<p>fontfyi.com, mobile typography accessibility (fetched): "Apple's iOS Human Interface Guidelines specify a minimum text size of 11pt … with a recommended minimum of 17pt for body text in most contexts." "Google's Material Design 3 specifies 14sp … as the minimum for body text, with 16sp preferred." "At typical mobile phone holding distances (25–35cm), 16px text is at the lower edge of comfortable readability for users with normal vision." Targets: "WCAG 2.5.5 … at least 44×44 CSS pixels" (AAA) and "WCAG 2.5.8 … at least 24×24" (AA).</p>
+
+<h3>5c. Reading distance</h3>
+<p>digitalsignage.com, typography and viewing distance (fetched): "about 1 inch (25 mm) of letter height for every 10 feet (3 m) of viewing distance reads comfortably"; "1 inch for every 20 feet is the minimum". As formulas: "Comfortable letter height (in) = viewing distance (ft) × 0.1" and "Minimum letter height (in) = viewing distance (ft) × 0.05".</p>
+<p>Applied to a phone, where one dp is 1/160 inch and a capital letter in Inter is 0.73 of the font size, with the two distances that matter in a gym: the phone in the hand while the number is adjusted, and the phone on the bench or floor during the rest, glanced at.</p>
+<div class="scroller">
+<table class="cmp tight">
+<thead><tr><th>Distance</th><th>Situation</th><th>Minimum letter height</th><th>Minimum font size</th><th>Comfortable letter height</th><th>Comfortable font size</th></tr></thead>
+<tbody>
+<tr><td class="num">35 cm (1.15 ft)</td><td>in the hand, entering the set</td><td class="num">1.5 mm (9 dp)</td><td class="num">13 dp</td><td class="num">2.9 mm (18 dp)</td><td class="num">25 dp</td></tr>
+<tr><td class="num">60 cm (1.97 ft)</td><td>on the bench, a glance between sets</td><td class="num">2.5 mm (16 dp)</td><td class="num">22 dp</td><td class="num">5.0 mm (32 dp)</td><td class="num">43 dp</td></tr>
+<tr><td class="num">100 cm (3.28 ft)</td><td>on the floor by the rack, standing</td><td class="num">4.2 mm (26 dp)</td><td class="num">36 dp</td><td class="num">8.3 mm (52 dp)</td><td class="num">72 dp</td></tr>
+</tbody></table>
+</div>
+<p><b>What this does and does not justify.</b> A 24 dp value is comfortable in the hand (25) and clears the minimum for a glance from the bench (22). It also sits exactly where the field's largest live values sit (Fitbod 24, Setgraph 26) and on the house <code>h2</code> role and Material's headlineSmall. The signage rule would make 43 dp "comfortable" from the bench and 72 dp from the floor. Nothing in the field does that on the logging screen, the task at that distance is recognising a number the lifter typed seconds earlier rather than reading a sign, and a value that large has been judged on device as oversized. So the evidence supports 24 as the live value with 32 (the <code>h1</code> role, Material headlineLarge) as the one defensible step up for the glance case, and supports nothing above it.</p>
+<p>The same table says why 13 to 16 dp is the wrong size for a live value: 16 is "the lower edge of comfortable" in the hand and below the 22 minimum from the bench. It is the size our logger uses today.</p>
+
+<h2>6. Our logger today, measured the same way</h2>
+<div class="stage">
+<figure class="shot" style="width:300px;flex:0 0 auto"><img src="data:image/jpeg;base64,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TNdTtLcBodru1A7cSDqkkErhPBrVyUOml5pa+eC13iuttfQU08hbAymrpGYA1hhseTrMBGA3W5gvn+AeYb/UmBjGNyD65QNq/BVoZsNLKWlkqJb9RV9HZppY5zsoWyCokcwFwa17XNZk/O5ebK6GlsGhWjmlll0XfxbcIa2evvMUz9m8PDo3Nt8DnPIbjDdYscQ0uc0O3L4EAByAD7AmBjGBg82EH6ArhbLdcamqrdHqSG80mi9xqJOM6ajaZ5WyR7B76aEljXt8oDIBcADghfP75Vy13gft1XcNnwmp0nrpqfVjDAWGni2pa1oADdpq7gMAr5/geYefkUuqulbW0lHR1NVLLTULHR00Tj5MLXOLnBo5suJJQWtivdFwJ1kv0cklre4yRTRNBmopDyvZ5wf3mnceXlWnSG/R3MQ0Nvp+B2mjyKan5XEnlkkP7z3Y3nm5AqZEBERAREQEREBERAREQEREBERAREQEREFho7PFS6QWuonkbFFFVwve93I1oeCSfsC7Kj0i0bnddo6yio6allutNK8RPkeauITPLnYcTuAIJxjcV89RB9FuN3swdWBk1uE8lsq4drTyNcJi57NmwhkbG5wHY3Zxy8iw8IhttO270ZfazUMuLOBQUkIZLTxhp2okwBuJ1eUnJ3jcvnuVnNNLUSulmkfLI85c97i5zj5yTyoLqw362Wuz3ejrbJDX1FbGGQVDyM05wd43efB3YOQsqvSC11GjFttUdigjrKSbaTVod5VQ3J8k4Gd+RnfuxuVAiC70vvltv90ZVWuzxWmBsLYzDGRhzhnytwA8w/DeqREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERARFlEMysB5C4fzQWdHamagfUAlxGdXOMKVxdSdQ39VJVrZ9HZ71TVE0VVSwOjljgjZO4s28jw4hjXYwDhp5SByb96+fqa27G9lNQ6RioeLqTqG/qnF1J1Df1UuWJ8Mj4pWOjkY4tcxwwWkHBBHMQVItdrrb1cILdbqd9TV1DtSKJnK4pOpUb0z2FKzi6k6hv6pxdSdQ39VeWvRq73maoioaJ0rqdwZKS9rGscSQGlziBkkEAZycblGntdbS08lRPTSRRRVBpXl4wWSgaxYRyggKceL3d7t+puqzi6k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EQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERB//Z" alt="Volyume active workout screen as it renders today">
+<div class="s">The live logger, rendered from the current tree by the paper-render harness (ActiveWorkout, set 2 of 3 of Barbell Row).</div></figure>
+<div class="legend">
+<p>Read from the source (<code>SetEntry.js</code>, <code>NowCard.js</code>, <code>LoggedSetRow.js</code>, <code>RestTimer.js</code>, <code>WorkoutHeader.js</code>, <code>layout.js</code>), not estimated:</p>
+<ul>
+<li><b>Live values</b> "70" and "9" are <code>type.num('bodyStrong')</code>: <b>16</b>, inside 36 dp stepper buttons. The smallest live value of the thirteen screens on this page.</li>
+<li><b>Logged rows</b> ("1 · 70kg × 8") are <code>type.num('bodySm')</code>: <b>13</b>, with an 11 number badge, on a <b>36</b> dp minimum row. The field's row values are 17 on 44 to 48 rows; 13 is the size the field uses for the <em>previous</em> column.</li>
+<li><b>Last session</b> ("Last session: 72.5kg × 8 · Use") is <code>caption</code>: <b>11</b>. The field shows previous at 13 to 15.</li>
+<li><b>Exercise name</b> 17 (<code>title</code>); position line 16; field labels 13; record line 13 over 11; rest digits 16 in the 44 strip; elapsed 17.</li>
+<li><b>Nesting.</b> The active set is a bordered card holding a tinted last-session strip, two bordered stepper fields and a tinted record strip: four surfaces deep. The field runs one or two.</li>
+<li><b>Set states.</b> Warm-up is an amber-tinted pill, logged sets are grey lines with a number badge, the upcoming set is a bare line: three different grammars for one sequence, and no done mark.</li>
+</ul>
+<p>The design system's own rule (<code>docs/DESIGN_SYSTEM.md</code>, "Numbers are the hero — sized large, tabular, legible at a glance") is not met by the logger: no number on the screen is above 17.</p>
+</div>
+</div>
+
+<h2>7. The design, element by element</h2>
+<p>Every line names the evidence it comes from: a row of the measurement table (§3), a platform figure (§5), a pinned law (the guard tests in <code>src/screens/__tests__/loggerVisualArchitecture.guard.test.js</code>), or a live token.</p>
+<div class="scroller">
+<table class="cmp">
+<thead><tr><th>Element</th><th>Specification</th><th>Why (evidence)</th></tr></thead>
+<tbody>
+<tr><td>Model</td><td>One exercise in the workspace; the session lives in the outline sheet.</td><td>Pinned law ("the workspace scroll hosts ONLY the active exercise"). Matches the 6 prescriber apps in the field (§4). Users punish redesigns that bury controls or add taps (A5: 14.8% of complaints).</td></tr>
+<tr><td>Set table</td><td>One table for every set of the exercise: SET · LAST · KG · REPS · state. Warm-ups are rows with a W marker, not a tinted pill.</td><td>The dominant grammar, 7 of 12, 6 with the set number first and a previous column (§4). Pinned law: one continuous sequence, logged above, upcoming below.</td></tr>
+<tr><td>Column labels</td><td><code>overline</code> 11, capitals, <code>textMuted</code>.</td><td>Field 10 to 13, median 11 (§3). Material labelSmall 11; iOS caption 11; above the iOS 10 floor.</td></tr>
+<tr><td>Logged rows</td><td>48 dp quiet lines: marker 24 (<code>surface2</code>, number 11), LAST 13 <code>textSecondary</code>, KG and REPS 17 tabular <code>textPrimary</code>, a 16 <code>success</code> check. No row fill, no border, no tint.</td><td>Row value median 17 (§3) = <code>title</code> role, Material titleMedium 16 / iOS body 17. Height: field 44 to 48; the house touch minimum is 48. Green check is the field's done mark (5 of 12); the row tint is not taken because three sheets use it and it fights a one-accent dark theme. Pinned law: completed rows are quiet lines.</td></tr>
+<tr><td>Upcoming rows</td><td>Same 48 dp line in <code>textSecondary</code>: hollow marker, LAST, the prescription "70 · 6–10".</td><td>Pinned law: upcoming previews are light lines. Showing the prescription in the row is Boostcamp's Target column and Alpha's planned row (§2).</td></tr>
+<tr><td>The active row</td><td>A row of the same table, full width, <code>surface</code> fill, one uniform 1 dp <code>borderSubtle</code> edge, radius <code>md</code>. Line 1: amber-ringed marker, "Set 2 of 3 · Working · 6 to 10 reps" at 13. Line 2: two input boxes. Line 3: last session + Use. Then the record line and the note line.</td><td>Pinned law: a row, not a Card, no accent stripe, uniform border. Current-set cue by outline, as Gravl, and by a marked row, as Alpha (§4). Caliber puts the exercise's rep range and rest at 13 under the name (§2).</td></tr>
+<tr><td>Input boxes</td><td>Two boxes, 56 dp tall, <code>surface2</code> fill, 1 dp <code>border</code>, radius <code>md</code>; − and + are the pinned 36 dp stepper buttons with amber glyphs; the value is <code>type.num('h2')</code> <b>24</b> SemiBold, centred; label above in <code>overline</code> 11.</td><td>Boxed cells in 7 of 12 (§4); box height 56 as Fitbod (§2). Value 24: the field's upper cluster (Fitbod 24, Setgraph 26), <code>h2</code>, Material headlineSmall; comfortable in the hand (25) and above the bench-glance minimum (22) (§5c). Steppers stay because they are pinned at 36 with hitSlop and are the one-handed path Setgraph also uses.</td></tr>
+<tr><td>Last session</td><td>"Last session 72.5 kg × 8" at 13 <code>textSecondary</code> with "Use" at 13 in amber, one line under the boxes, and the LAST column on every other row.</td><td>Previous beside the values in 7 of 12; shown at 13 to 15 (§3); "shows what I did last time" is the second-ranked delight (A5). Caliber's "Last:" under each box is the one-exercise form of the same idea.</td></tr>
+<tr><td>Record line</td><td>Trophy glyph 16 amber + the existing record copy at 13 over 11, no strip, no tint.</td><td>Pinned: PR detection and the record line survive; the one place that says a PR is on (D150). Gymaholic's record badge is the field's only in-row record mark; a line is calmer and already exists.</td></tr>
+<tr><td>Exercise header</td><td>Name <code>h3</code> <b>20</b> Medium with the swap chevron; "3 working sets · 6 to 10 reps" at 13 under it; Help and the overflow at the right.</td><td>Focus apps name the exercise at 20 to 22 (Gravl 20, Liftin' 20, Alpha 22; Fitbod 28 only over a photo) (§3). iOS Title 3 is 20; the house <code>h3</code> is 20. No photo: media is held by founder ruling.</td></tr>
+<tr><td>Header and progress</td><td>Unchanged: close, ELAPSED over 17 tabular, icon-only Finish in amber; the amber progress hairline; the "Exercise 2 of 6 · 2/18 sets" strip at 13.</td><td>Founder laws (icon-only Finish, bare header actions). Progress-in-session is Hevy's and Musklr's header stats in a quieter form.</td></tr>
+<tr><td>Rest strip</td><td>The pinned 44 dp strip: REST at 11, remaining time <code>type.num('h2')</code> <b>24</b>, "of 2:00" at 13; −15 / +15 in amber and Skip at 13 as 44 dp targets.</td><td>Pinned law: compact 44 dp strip, docked outside the scroll, the only variant. 24 clears the bench-glance minimum (22) within a 44 row; in-frame field timers run 11 to 20 and dedicated surfaces 34 to 44 (§4), so 24 is the largest a strip can carry and larger than any in-frame timer in the field.</td></tr>
+<tr><td>Log set</td><td>The house primary button: 56 dp, <code>surface2</code> fill, 1 dp <code>border</code>, radius <code>lg</code>, "Log set" at 16 Medium, no icon.</td><td>Live <code>Button.js</code> primary variant, the same control as Start workout on Today; no amber fill anywhere in the app. Pinned: the single-CTA contract; D150 no trophy on Log set; design system: the largest button on the screen.</td></tr>
+<tr><td>Colour</td><td>Amber only on the active marker, the stepper glyphs, Use, the record glyph, the Finish glyph and the progress line. Green only on the done checks. Everything else achromatic.</td><td>Design system accent discipline; every field app runs one accent on the current row or the exercise name (§4).</td></tr>
+<tr><td>Larger text</td><td>Every size above scales ×1.2 under the accessibility setting; the active row grows and the scroll absorbs it, the 44 strip and the 56 button do not move.</td><td>Design system rule; pinned law that completing work never pushes the input away.</td></tr>
+</tbody></table>
+</div>
+
+<h2>8. The drawing</h2>
+<p>Set 2 of 3 of Barbell Row, mid-rest after set 1, drawn at 390 × 844 in the live dark tokens, Inter, with every size from §7. The numbered notes point at what each region does.</p>
+<div class="stage">
+<div class="phonewrap">
+<div class="ph" aria-label="Volyume logger, the derived design">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="pad">
+    <div class="hdr">
+      <div class="tgt"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></div>
+      <div class="mid"><span class="ov">Elapsed</span><span class="title n">12:00</span></div>
+      <div class="tgt"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+    </div>
+  </div>
+  <div class="prog"><i></i></div>
+  <div class="pad">
+    <div class="strip">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+      <span class="lab" style="color:#FFFFFF">Exercise 2 of 6</span><span class="lab n" style="color:#9C9C9C">2/18 sets</span>
+    </div>
+    <div class="exh">
+      <div class="nm"><span class="h3">Barbell Row (Bent Over)</span><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></div>
+      <div class="acts"><span class="lab">Help</span><svg width="20" height="20" viewBox="0 0 20 20" fill="#9C9C9C"><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/></svg></div>
+    </div>
+    <div class="lab" style="margin-top:4px">3 working sets · 6 to 10 reps</div>
+
+    <div class="tbl head">
+      <span class="ov c">Set</span><span class="ov">Last</span><span class="ov c">kg</span><span class="ov c">Reps</span><span></span>
+    </div>
+    <div class="tbl row">
+      <span class="mk" style="margin:0 auto">W</span>
+      <span class="last n dim">40 × 10</span>
+      <span class="val n c dim">40</span><span class="val n c dim">10</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg>
+    </div>
+    <div class="tbl row">
+      <span class="mk" style="margin:0 auto">1</span>
+      <span class="last n">72.5 × 8</span>
+      <span class="val n c">70</span><span class="val n c">8</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg>
+    </div>
+
+    <div class="now">
+      <div class="l1">
+        <span class="mk act">2</span>
+        <span class="pos">Set 2 of 3 · Working <span>· 6 to 10 reps</span></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+      </div>
+      <div class="boxes">
+        <div class="box"><span class="ov">kg</span>
+          <div class="fld"><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10"/></svg></span><span class="v n">70</span><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10M9 4v10"/></svg></span></div>
+        </div>
+        <div class="box"><span class="ov">Reps</span>
+          <div class="fld"><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10"/></svg></span><span class="v n">9</span><span class="st"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round"><path d="M4 9h10M9 4v10"/></svg></span></div>
+        </div>
+      </div>
+      <div class="line"><span class="last n">Last session 72.5 kg × 8</span><span class="lab" style="color:#F5A623">Use</span></div>
+      <div class="rec">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><path d="M5 2h6v4a3 3 0 0 1-6 0V2z"/><path d="M5 3H3v1.5A2.5 2.5 0 0 0 5.5 7M11 3h2v1.5A2.5 2.5 0 0 1 10.5 7"/><path d="M8 9v3M5.5 14h5M8 12c1.5 0 2.5.7 2.5 2h-5c0-1.3 1-2 2.5-2z"/></svg>
+        <div><div class="t">New PR if you complete this set</div><div class="w n">Most reps at 70 kg · previous best 8 reps</div></div>
+      </div>
+      <div class="line" style="justify-content:flex-start"><span class="ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10L11 2.5z"/></svg><span class="cap" style="color:#9C9C9C">Add a note</span></span></div>
+    </div>
+
+    <div class="tbl row">
+      <span class="mk pend" style="margin:0 auto">3</span>
+      <span class="last n dim">72.5 × 8</span>
+      <span class="val n c dim">70</span><span class="val n c dim">6–10</span>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="pad rest">
+    <div class="lft"><span class="ov">Rest</span><span class="h2 n">1:42</span><span class="lab n" style="color:#9C9C9C">of 2:00</span></div>
+    <div class="rt"><span class="n" style="color:#F5A623">−15</span><span class="n" style="color:#F5A623">+15</span><span style="color:#9E9E9E">Skip</span></div>
+  </div>
+  <div class="bar"><div class="btn">Log set</div></div>
+  <div class="home"><i></i></div>
+</div>
+</div>
+<div class="legend">
+<ol>
+<li><b>Header, unchanged.</b> Close, ELAPSED 11 over 12:00 at 17, the icon-only Finish in amber, the amber progress hairline, the "Exercise 2 of 6 · 2/18 sets" strip at 13.</li>
+<li><b>Exercise header.</b> Name at 20 (h3) with the swap chevron; the prescription "3 working sets · 6 to 10 reps" at 13; Help and the overflow where they are today.</li>
+<li><b>One table.</b> SET · LAST · KG · REPS · state at 11 capitals. The warm-up is a W row, not a pill. Logged rows are 48 dp quiet lines: values 17 tabular, last time at 13, a green check.</li>
+<li><b>The active row.</b> The same table's row for set 2, full width, one surface, one hairline edge, the marker ringed in amber. Position line at 13. Two 56 dp input boxes with the pinned 36 dp steppers; values at 24. Last session and Use on one line at 13. The record line at 13 over 11 with the one amber trophy. Add a note at 11, muted.</li>
+<li><b>Upcoming set 3.</b> A light line showing the prescription, 70 · 6–10, with a hollow marker.</li>
+<li><b>Rest strip.</b> The pinned 44 dp strip: REST, 1:42 at 24 tabular, of 2:00 at 13, −15 / +15 and Skip as 44 dp targets.</li>
+<li><b>Log set.</b> The house primary button, charcoal with the 1 dp border, 56 dp, label only.</li>
+</ol>
+<p>What is deliberately absent: a photo, a tinted row, a filled amber button, a trophy on the button, a plate calculator, an RPE field, a value above 24, a second accent.</p>
+</div>
+</div>
+
+<h2>9. Decisions I need from you</h2>
+<p>Each is a real fork where the evidence supports more than one answer. Reply with the letters.</p>
+<div class="q">
+<div class="k">Q1</div><div class="v">Live value size in the input boxes and the rest strip.<span> A: 24 (h2): the field's top, comfortable in the hand, clears the bench glance. B: 32 (h1): one step up for the bench glance, above every competitor, still inside the house scale. C: 24 in the boxes, 32 in the rest strip only.</span></div>
+<div class="k">Q2</div><div class="v">The LAST column on every row.<span> A: as drawn, last time's kg × reps beside every set, plus the Use line on the active row. B: the Use line only, no column (quieter, loses the 7-of-12 pattern and the row-by-row comparison).</span></div>
+<div class="k">Q3</div><div class="v">Done mark on logged rows.<span> A: the 16 green check, as drawn (field's done mark, 5 of 12). B: no mark, the quiet line alone (the green is the one semantic colour on the screen; the row order already says done).</span></div>
+<div class="k">Q4</div><div class="v">The warm-up row.<span> A: a W-marked row in the same table, as drawn (Boostcamp, Strong, Hevy). B: keep today's labelled "Warm-up" pill above the table.</span></div>
+<div class="k">Q5</div><div class="v">Log set glyph.<span> A: label only, as drawn. B: the house primary's amber glyph (a small check) beside the label, as Start workout carries one on Today.</span></div>
+<div class="k">Q6</div><div class="v">Scope of the first build.<span> A: the whole screen in §7 as one pass. B: type and rows first (the measured defects), the active row's restructure second.</span></div>
+</div>
+
+<h2>Sources</h2>
+<ul class="src">
+<li>App Store listings via Apple's lookup and search API, 6 October 2026: Hevy 1458862350, Strong 464254577, Boostcamp 1529354455, Fitbod 1041517543, Setgraph 1209781676, Gravl 6450921637, Alpha Progression 1462277793, Caliber 1482405410, Liftin' 1445041669, Musklr 6748942492, RepCount 594982044, Gymaholic 648518560. The exact screenshot each crop was taken from is recorded with its mzstatic URL in <code>docs/audit/workout-logger-audit-2026-10-06/09-design-research.md</code>.</li>
+<li>Material 3 type scale: developer.android.com/develop/ui/compose/designsystems/material3 (fetched 6 October 2026).</li>
+<li>iOS sizes: learnui.design/blog/ios-font-size-guidelines.html (fetched 6 October 2026).</li>
+<li>Minimums and reading distance: fontfyi.com/blog/mobile-typography-accessibility/ (fetched 6 October 2026).</li>
+<li>Viewing distance rule: digitalsignage.com/digital_signage/docs/guides/typography-viewing-distance/ (fetched 6 October 2026).</li>
+<li>Volyume: <code>src/styles/theme.js</code>, <code>src/styles/layout.js</code>, <code>src/components/Button.js</code>, <code>src/components/SetEntry.js</code>, <code>src/components/workout/*.js</code>, <code>src/components/RestTimer.js</code>, <code>docs/DESIGN_SYSTEM.md</code>, <code>src/screens/__tests__/loggerVisualArchitecture.guard.test.js</code>; user-voice counts from lane A5 of this audit.</li>
+</ul>
+</div>
+</div>
+</body>
+</html>

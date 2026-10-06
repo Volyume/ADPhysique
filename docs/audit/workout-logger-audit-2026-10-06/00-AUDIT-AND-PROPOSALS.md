@@ -35,7 +35,9 @@ options; the build starts only on the founder's choice.
 | 05-competitors-set-2-and-user-voice.md | A5 | Sonnet | the next set, and what users say they switch for |
 | 06-app-visual-vocabulary.md | A6 | Sonnet | what the rest of Volyume looks like today, with file:line: the primitives, chrome, data rows, amber census, motion, sheets, pickers, states, light theme, the app's best surfaces (600 lines) |
 | 07-competitors-set-3-wider-field.md | A7 | Sonnet | the wider field: hardware, coaching platforms, watch loggers, programme apps |
-| 08-options-page.html | lead | hands-on | the mockup page (the live logger beside the concepts Instrument, Ledger and Stage; the first set of three was rejected and replaced on 2026-10-06), published for the founder's phone at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC |
+| 08-research-page.html | lead | hands-on | the research page (repository copy, full store screenshots by URL): twelve measured active-workout screens, the legibility evidence, our logger measured the same way, the derived design and its drawing; published with the enlarged crops at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC (the same URL that carried the two rejected sets of concepts; both are withdrawn) |
+| 09-design-research.md | lead | hands-on | the research record: method, the exact source screenshot per app, the measurements, the pattern counts, the quoted legibility sources and the distance table, the derived design with its evidence, the questions |
+| 09-drawing.png | lead | hands-on | the derived design rendered at 2x from 08 by headless Chromium (390 x 844) |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -618,16 +620,22 @@ per-side logging, circuits with rounds; honest first-lift handling and
 calm-mode suppression of celebration; a summary that judges the week's
 volume per muscle and feeds a recovery estimate.
 
-## 8. The options
+## 8. The proposal
 
-Three ways to build the logger, written as build specifications so the
-founder chooses between finished designs rather than directions. Every
-option sits on the same foundation (8.1) and uses only the live theme:
-the dark charcoal ladder, amber as the one accent, Inter, the shipped
-primitives (`Button`, `Card`, `Chip`, `BottomSheet`, the header trio).
-No new typeface, no new palette, no new dependency. What differs is the
-MODEL: what the screen shows, where the entry lives, and how the person
-moves through a session.
+Two sets of concepts were drawn and rejected on 2026-10-06 (the first:
+"I don't like the layouts or font sizing. None of them look elite and
+elegant and stylish and world class" and "nowhere in the design on the
+app elsewhere do we have solid amber buttons"; the second: "What's the
+idea behind the ridiculously large size on the weights and reps? Where
+are you getting that as a working solution", then "Stop!! Looking at old
+things and documents and briefs!!! This is a NEW design! Stop being lazy
+and research everything properly!!"). Both are withdrawn. What stands is
+one design derived from first-hand research, recorded in
+`09-design-research.md` and shown with its evidence on the published
+page (the folder map). It sits on the functional foundation in 8.1, which
+is unchanged, and uses only the live theme: the charcoal ladder, amber as
+the one accent, Inter, the shipped primitives. No new typeface, palette
+or dependency.
 
 ### 8.1 The foundation (common to every option; not optional)
 
@@ -690,73 +698,56 @@ F15. The rest strip and the lock-screen or Live Activity card name the
     duration (6.5); auto-advance after the last set becomes a setting,
     on by default with today's cancellable countdown.
 
-### 8.2 The visual law every concept is drawn to (second set, after the founder rejected the first)
+### 8.2 The design, derived from the field (the full evidence table is 09 section 7 and the page section 7)
 
-The first set of three drawings (tables of numbers in grey boxes, an amber
-filled button, nothing above 32px) was rejected by the founder on
-2026-10-06: "I don't like the layouts or font sizing. None of them look
-elite and elegant and stylish and world class", and "nowhere in the design
-on the app elsewhere do we have solid amber buttons". The second set is
-drawn to the founder's own September law (D165, 20-DIRECTION-AND-PLAN.md
-section 4a and the direction page's rules): one loud thing per screen at
-40 to 72px, and in the logger that thing is the working weight; rows on
-the canvas separated by hairlines, no card round a set; hierarchy from
-weight and space, colour only for state; amber spent on the set you are
-on and a record, nothing else; the house button (charcoal `primary`, amber
-glyph) as on Today; the ribbon device applied to the session's exercises;
-every number beside its unit in tabular figures. Live tokens only.
+Measured: the field's row values sit at 17 on 44 to 48 dp rows, its live
+values at 17 with an upper cluster of 20 to 26 (Fitbod 24, Setgraph 26),
+previous at 13, column labels at 11 in capitals; 7 of 12 use a set table
+with a previous column; 7 of 12 box the inputs; 5 of 12 mark a done set
+with a green check; the layout model splits 6 sheets to 6 one-exercise
+focus apps, and the focus apps are the prescribers. Our logger today runs
+its live values at 16, its logged rows at 13 on 36 dp rows and its last
+session line at 11; no number on the screen is above 17. The design
+system's own rule, "Numbers are the hero", is not met by the logger.
 
-### 8.3 Concept "Instrument" (one exercise at a time; every pinned law kept)
+The design:
 
-Header: close glyph, one caps caption "UPPER A · 12:00", the amber finish
-glyph (the pinned icon-only header). Under it the exercise ribbon: six
-cells, done in ink, current in amber, upcoming muted; swipe left or right
-moves between exercises; tap "Exercise 2 of 6" for the list. Eyebrow
-"EXERCISE 2 OF 6 · BACK · BARBELL", the name at 30px ExtraBold ("Barbell
-Row"), meta at 14px ("Bent over · 3 sets of 6 to 10 · rest 1:30"). The
-hero: the working weight at 72px ExtraBold tabular with "kg" beside it,
-"×", the reps at 44px, "reps". Tap a number to change it: the increment
-glyphs appear beside it while selected (the exercise's own step), or type.
-One quiet line: "Last time 72.5 × 8 · Best 82.5 × 6 · Record at 9" (the
-record words in amber; the callout copy unchanged in spirit). The ledger:
-hairline rows W, 1, 2 (Now, amber dot), 3 (planned, muted); 48dp rows,
-tabular, done rows carry a success tick. "Next: Incline Dumbbell Press ·
-3 × 8 to 12" as the last row. The rest strip docks above the bar as pinned
-and names the next set ("then 72.5 × 8"). The bar: the house primary
-"Log set". Lifts no law; re-shapes D105 and D66 as 5.3 records.
+- One exercise in the workspace (pinned law; the field's prescribers).
+- One set table: SET, LAST, KG, REPS, state. Warm-ups are W rows.
+- Column labels `overline` 11 capitals. Logged rows 48 dp quiet lines:
+  values `type.num('title')` 17, last time 13, a 16 green check, no fill
+  or tint. Upcoming rows the same line in `textSecondary` with the
+  prescription.
+- The active row is a row of that table, full width, `surface`, one
+  uniform 1 dp `borderSubtle` edge, radius `md`: the position line at
+  13 with an amber-ringed marker; two 56 dp input boxes (`surface2`, 1 dp
+  `border`) holding the pinned 36 dp steppers and the value at
+  `type.num('h2')` 24; "Last session 72.5 kg x 8" with Use at 13; the
+  record line (13 over 11, one amber trophy); Add a note at 11.
+- Exercise header: name `h3` 20 with the swap chevron, the prescription
+  at 13 under it, Help and the overflow as today. Header, progress line
+  and the exercise strip unchanged.
+- Rest strip: the pinned 44 dp strip with REST 11, remaining time at 24
+  tabular, "of 2:00" 13, -15 / +15 and Skip as 44 dp targets.
+- Log set: the house primary button (charcoal `surface2`, 1 dp `border`,
+  radius `lg`, 56 dp, label only).
+- Amber only on the active marker, stepper glyphs, Use, the record
+  glyph, Finish and the progress line; green only on done checks.
 
-### 8.4 Concept "Ledger" (the whole session as one page; one law lifted)
+Why 24 and not larger: the fetched viewing-distance rule gives a minimum
+of 22 dp for a glance from the bench (60 cm) and a comfortable 25 dp in
+the hand (35 cm); 24 meets both, sits on the field's top live values and
+the house `h2`. The rule's "comfortable" figure from the bench is 43 dp
+and from the floor 72 dp; no logger does that on its logging screen, the
+task is recognising a self-entered number, and such sizes were judged
+oversized on device. 32 (`h1`) is the one defensible step up (Q1).
 
-The same header and ribbon. Each exercise is a section: name at 20px
-semibold with "1 of 3" right, a 13px meta line, then the set rows. The
-current set is the only loud row on the page: 84dp tall, the weight at
-44px and the reps at 30px inside it, the amber dot at its end. Completed
-exercises fold to one line of their sets with "record" in amber where one
-was set. Upcoming exercises show their first planned row so the next
-station can be prepared. The page scrolls on each log so the current row
-holds a fixed stage; a "Now" pill returns to it. One law lifted (the
-one-exercise workspace), re-pinned as one loud row, a fixed stage, quiet
-rows, the strip. Risk as recorded: the input is in a scrolling list, which
-the S22 verdict rejected; the stage scroll must be proven on device.
+### 8.3 to 8.5a: withdrawn
 
-### 8.5 Concept "Stage" (the ledger above, the instrument below; the lead's recommendation)
-
-The Ledger's page, read-only, above a fixed stage on `surface` with a top
-hairline: eyebrow "BARBELL ROW · SET 2 OF 3 · 6 TO 10 REPS", the working
-weight at 56px and the reps at 36px, the "Last time · Record" line, the
-house "Log set". The rest strip docks between the numbers and the button
-while a rest runs. Tap any upcoming row to make it the now set; tap a done
-row to edit it on the stage. Inputs live only on the stage; the stage never
-moves; the ledger never holds an input. Same law lifted as Ledger,
-re-pinned stricter. The vertical budget (stage about 230dp with the strip)
-is proven on the founder's phone before anything else is built.
-
-### 8.5a Entry control (Q3)
-
-The drawings show tap-to-change numbers with the exercise's increment as
-minus and plus glyphs beside the selected number, or typing on the system
-pad. The alternative is the boxed steppers exactly as today. Either way the
-increment taps stay (the user voice, 6.5).
+The concepts Instrument, Ledger and Stage, their shared "visual law" and
+the entry-control question of the second set are withdrawn with the
+founder's rejection and are not re-proposed. The functional items they
+carried that still stand are in 8.1, 8.6 and 8.7.
 
 ### 8.6 The surfaces around the logger (every option)
 
@@ -801,23 +792,31 @@ is the lead's.)
 | Draft that survives an app kill | few | present | keep |
 | Honest PR handling, calm-mode suppression | none | present | keep (a differentiator, not a gap) |
 
-## 9. Questions for the founder (delivered in chat; recorded here)
+## 9. Questions for the founder (delivered in chat 2026-10-06 with the research page; recorded here)
 
-Q1. The idea: Instrument (one exercise, no law lifted), Ledger (the whole
-    session, one law lifted) or Stage (ledger above, instrument below, the
-    lead's recommendation). Every idea re-shapes D105 and D66 as 5.3 says.
-Q2. The button: the app's charcoal primary with an amber glyph (drawn), or
-    the solid ink button from the September direction page.
-Q3. Entering a number: tap the big number and change it with the increment
-    glyphs or type (drawn), or the boxed steppers as today.
-Q4. Watch: build the Wear OS and Apple Watch logger (a separate campaign),
-    or not in this round.
-Q5. The summary's order (8.6): numbers first and Community after, or as today.
-Q6. Build order: foundation first (F1 to F15), then the idea; or the idea first.
-Q7. The weekday-dependent test (reported in chat): fix the one line now
-    and merge the audit record to main, or leave it for the next code lane.
-Q8. A session cut short: carry the remaining sets to a planned workout, or
-    keep today's ended-early resolution.
+Q1. Live value size in the input boxes and the rest strip: A 24 (`h2`),
+    the field's top, comfortable in the hand, clears the bench glance;
+    B 32 (`h1`), one step up for the bench glance, above every
+    competitor; C 24 in the boxes and 32 in the rest strip only.
+Q2. The LAST column on every row (A, as drawn, plus the Use line) or the
+    Use line only (B).
+Q3. Done mark on logged rows: A the 16 green check (the field's done
+    mark, 5 of 12); B none, the quiet line alone.
+Q4. The warm-up row: A a W-marked row in the same table (Boostcamp,
+    Strong, Hevy); B today's labelled "Warm-up" pill above the table.
+Q5. Log set glyph: A label only; B the house primary's amber glyph
+    beside the label, as Start workout carries one on Today.
+Q6. Scope of the first build: A the whole screen as one pass; B type and
+    rows first (the measured defects), the active row's restructure
+    second.
+
+Carried open from the first round, not re-asked on the page: the
+weekday-dependent test (`d218.reportingReaders.test.js`, fix the one line
+and merge the audit record to main, or leave it for the next code lane);
+the watch logger (a separate campaign or not this round); the summary's
+order (8.6); a session cut short (carry remaining sets to a planned
+workout or keep today's resolution); the build order against the
+functional foundation (8.1 first, or the screen first).
 
 Not asked, by the founder's own prior words (5.1): the plate calculator,
 an RPE or RIR input, exercise media, a typeface change.
