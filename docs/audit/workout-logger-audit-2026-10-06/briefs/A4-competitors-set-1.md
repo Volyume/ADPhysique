@@ -6,9 +6,13 @@ INFERRED; a marketing page is a claim, a review or a hands-on write-up is
 evidence; prefer 2025 and 2026 sources, and say when a feature's current
 state is uncertain).
 
-Apps in this set (cover ALL of them; the first five in the most depth):
+Apps in this set (cover ALL of them, each in depth; founder order,
+verbatim: "We are not accepting just hevy and strong that's lazy look at
+many more", so Hevy and Strong get no more space than the others):
 Hevy, Strong, Fitbod, JEFIT, Boostcamp, Alpha Progression, RP Hypertrophy
-(Renaissance Periodization), Juggernaut AI, Caliber, Setgraph.
+(Renaissance Periodization), Juggernaut AI, Caliber, Setgraph, Gymaholic,
+Dr. Muscle. Lanes A5 and A7 cover a further forty; their briefs sit beside
+this one, so do not duplicate their apps.
 
 Tools: WebSearch (standard first; extended when a standard result is thin
 or stale) and WebFetch (official sites, help centres and docs, App Store and

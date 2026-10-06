@@ -5,12 +5,18 @@ carries the URL and the source date; OBSERVED versus INFERRED; marketing is
 a claim, a hands-on review or a user report is evidence; prefer 2025 and
 2026 sources).
 
-Part 1, apps in this set (cover all; depth on the first six): Gymaholic,
-FitNotes, GymBook, Dr. Muscle, Liftin', Stronglifts, KeyLifts, Lyfta, Gravl,
+Part 1, apps in this set (cover all; depth on the first six): FitNotes,
+GymBook, Liftin', Fitbod-style rivals named below, Stronglifts, KeyLifts, Lyfta, Gravl,
 Gainframe, Sensai, Simple Workout Log, Stacked, Apple's own strength
 logging in the Workout app and Apple Fitness (watchOS 26 and iOS 26, if it
 logs sets), Google Fit or Fitbit strength logging, Peloton Strength+, Ladder,
-Future, Trainerize (coach-delivered logging). Use the same ten-point
+Future, Trainerize (coach-delivered logging), Fitbod's and JEFIT's
+Android-native rivals you find in Play rankings, Boostcamp's closest
+programme-first rivals, and MyFitnessPal's and Fitbit's strength logging
+(what a mass-market app settles for, as a floor).
+Founder order, verbatim: "We are not accepting just hevy and strong
+that's lazy look at many more". Breadth is the point of this lane:
+every app above gets real coverage, and Part 2 draws on all of them. Use the same ten-point
 structure as lane A4 (its brief is beside this one: briefs/A4-competitors-set-1.md;
 read it and apply the same headings per app), shorter per app where the app
 is minor, but never a bare feature list: every line with its source.
