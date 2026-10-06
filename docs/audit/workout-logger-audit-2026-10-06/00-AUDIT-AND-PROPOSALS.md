@@ -261,13 +261,282 @@ _To be filled._
 
 ## 8. The options
 
-_To be filled: each option with its model, its screens, what it keeps,
-what it changes, the rulings it needs reversed (if any), its cost, and a
-mockup in the published page._
+Three ways to build the logger, written as build specifications so the
+founder chooses between finished designs rather than directions. Every
+option sits on the same foundation (8.1) and uses only the live theme:
+the dark charcoal ladder, amber as the one accent, Inter, the shipped
+primitives (`Button`, `Card`, `Chip`, `BottomSheet`, the header trio).
+No new typeface, no new palette, no new dependency. What differs is the
+MODEL: what the screen shows, where the entry lives, and how the person
+moves through a session.
 
-## 9. Questions for the founder
+### 8.1 The foundation (common to every option; not optional)
 
-_To be filled._
+F1. One way to start. A single `startSession()` service behind every
+    start site (Today, Train hero, saved workouts, plan day, routine
+    detail, build, history repeat, widget, shortcut): it checks for a
+    live session first (Resume or Discard it, never silently overwrite),
+    shows the readiness sheet wherever the person's setting asks for it,
+    attributes the session to the programme position when the routine is
+    the plan's, and lands on the logger. Closes defects 3 and 7.
+F2. One shape of exercise. Every entry carries the full library row
+    (type, load meaning, increment, category, instructions) whatever the
+    start path. Closes defect 1.
+F3. One count. "Sets done" is one function used by the target counter,
+    the outline, the mini bar, the finish report and the summary; set
+    numbers are repaired after a delete; drop sets carry their own badge.
+    Closes defect 5.
+F4. Leaving is never destructive by accident. Android back and iOS swipe
+    both leave the session live (the mini bar and the Continue card take
+    over); Cancel is the only route to discard, with its confirm; a
+    session returns to the tab it started from. Closes defect 7.
+F5. Removing or swapping an exercise with logged sets asks what to do
+    with those sets (keep them under the old exercise, move them, or
+    delete them); no set counts invisibly. Shorten session either really
+    cuts rest or the copy stops claiming it; Undo never drops logged
+    sets. Closes defects 2 and 3.
+F6. One picker with one filter model for add and swap, no duplicate
+    adds, muscle names from the display table. Closes defect 4.
+F7. A number is a number: comma and dot both accepted everywhere, one
+    parser, one set of limits. An edit can change type and note. Closes
+    defect 6.
+F8. Planned next to done. The set row stores the planned sets, load,
+    rep band and rest it was served (additive local and cloud columns;
+    migration written, applied on the founder's phrase), so the summary,
+    history and the coach can show planned versus done. Closes defect 9.
+F9. After finish, a session can be corrected: edit a set, add a missed
+    set, rename, change the date or routine, delete one exercise, with
+    PRs and volume recomputed. Closes defect 8.
+F10. The orchestrator is split: the elapsed clock, the rest strip and
+    the sheet render independently; the logged rows are memoised with
+    stable handlers; the dead style keys and their pins go. Closes
+    defect 11.
+F11. Honest copy: every string states only what the code does (defect
+    10); timed and distance sets print as time and distance on every
+    surface (defect 12); one word for "stay" across the confirms.
+
+### 8.2 Option A: "Focus, finished". The same model, rebuilt to instrument standard
+
+The model stays one exercise at a time, which fits a prescriber (the
+engine tells you the next set, as Fitbod, Alpha Progression and Dr.
+Muscle do), and every pinned structure law is kept. What changes is
+everything the person sees.
+
+Header: close X (muted) left, the exercise count and session name
+centred as one quiet line ("Upper A · 2 of 6"), the finish tick right;
+elapsed moves to a `caption` under the session name. No overline, no
+clock as hero.
+
+Exercise hero: the exercise name at `h2` (24, semibold) with its meta
+line under it in `bodySm` (muscle · equipment · "3 × 6-10 · rest 1:30");
+a swipe left or right moves to the next or previous exercise (the
+outline list stays behind a tap on "2 of 6"); a thin six-segment
+progress rule under the hero marks the exercises done, current and to
+come. The outline strip and its five-second timer go.
+
+The set table, one for this exercise, on the canvas (no card): a header
+row SET · PREVIOUS · KG · REPS; completed rows quiet (success tick, the
+numbers in `textSecondary`); the current row carries the amber set
+badge and the two live values at `type.num('h2')`; upcoming rows show
+the prescription ghosted ("72.5 × 8" in `textMuted`). Warm-up rows wear
+a "W" badge, no colour. Previous is the matching set from the last
+session of this exercise, every row, so the comparison is a column, not
+a strip. Tapping a completed row edits it in place; tapping an upcoming
+row makes it current.
+
+Entry: the current row's cells are the inputs. Tapping one raises the
+in-app number pad in the bottom dock (8.5), with the exercise's own
+increment on its plus and minus keys and a "Use last" key; or, if the
+founder keeps the steppers (question Q2), the current row expands to
+the compact stepper pair exactly as today.
+
+Bottom: the rest strip (unchanged, pinned) and one bar: "Log set" as
+the amber `emphatic` button, the only amber action on the screen; the
+state machine (Next exercise, Finish workout, Log another set) unchanged.
+
+Next line: "Next: Incline Dumbbell Press · 3 × 8-12" as a quiet row
+under the table, tappable, so the next exercise is never a surprise.
+
+Kept: every guided flow (clusters, per side, warm-up ramp, supersets),
+the record callout, the PR toast, the note row, the status chips (now
+one row of `Chip`s under the hero), the overflow actions.
+
+Needs from the founder: nothing reversed. Q2 (pad or steppers).
+Risk: lowest. Size: the smallest of the three (one screen, no new
+model); the foundation is most of the work.
+
+### 8.3 Option B: "The sheet". The whole session on one scrolling page
+
+The model the field converged on (Strong, Hevy, Boostcamp, JEFIT,
+Setgraph, Gymaholic, Caliber): every exercise is a block on one page,
+every set a row, and the person always sees what is done, what is now
+and what is left. Volyume's version keeps what the September device
+verdict was really about: the active row never drifts, rest is a strip,
+completed work is quiet, and the way forward is visible.
+
+Header as in A. Under it, the sheet: for each exercise a block with the
+name at `h3` (20, medium), the meta line, the set table (SET · PREVIOUS
+· KG · REPS · done), an "Add set" text row, and a hairline between
+blocks. The block header is sticky while its rows scroll under it, so
+the current exercise's name is always on screen. Supersets are one
+block with two names and alternating rows (A1, B1, A2, B2) joined by a
+link glyph.
+
+The current row is the one amber-badged row on the whole page. When a
+set logs, the page scrolls so the next current row sits at the same
+screen position (the "stage", about a third down), which is how the
+"never pushes the input away" law is honoured without hiding the rest
+of the session. A "Now" pill appears when the person scrolls away, and
+tapping it returns to the stage.
+
+Entry: tapping the current row's weight or reps cell raises the number
+pad in the dock, as in A. The dock's "Log set" is the one committing
+action; the tick on a row is state, not a button, so there is one way
+to log, as today.
+
+Bottom: rest strip and bar as in A.
+
+Kept: every guided flow; the clusters and per-side flows render inside
+the current row; the status chips sit under the header; the overflow
+actions move to a "…" on each block header.
+
+Needs from the founder: the structure law "the workspace scroll hosts
+ONLY the active exercise" lifted (the guard test re-pinned to the new
+invariants: the stage position, the single current row, the quiet
+rows, the strip). Q2.
+Risk: medium; the re-pins are many, and the auto-scroll must be built
+and device-checked carefully (the September failure was a list that
+drifted; this design scrolls on purpose and must prove it). Size:
+large (the orchestrator becomes a sheet renderer).
+
+### 8.4 Option C: "The sheet with a now dock". The overview above, the instrument below (the lead's recommendation)
+
+Option B's sheet for the overview, plus a fixed "now" dock at the bottom
+that holds the entry. The sheet never contains an input; the dock never
+moves. This is the one model that satisfies every intent behind the
+pinned laws AND gives the person the whole session, and no competitor
+read in this audit does both (set 1 dossiers; Setgraph and Liftin'
+come closest).
+
+Sheet (top, scrolling): as in B, with the rows read-only: tapping any
+upcoming row makes it the now set; tapping a completed row opens the
+in-place editor in the dock. The page auto-scrolls so the now row is
+visible just above the dock.
+
+Now dock (bottom, fixed, on `surface` with a top hairline):
+- line 1: exercise name (`title`) · "Set 2 of 3 · 6-10 reps" (`label`);
+- line 2: the two values at `type.num('h1')` (32) with their units
+  under them in `caption` ("kg", "reps"); under the weight, "Last 72.5
+  × 8" in `caption`; a note glyph on the right;
+- line 3: the record callout when a record is dialled in (unchanged
+  copy), else nothing;
+- the number pad (8.5) slides in under the values when a value is
+  tapped, and slides away on Log;
+- the bar: "Log set" amber `emphatic`, full width; the state machine
+  unchanged (Next exercise, Finish workout, Log another set).
+- the rest strip docks between the values and the bar, as today.
+
+Entry never moves, never scrolls, never sits under the keyboard
+(Android has no `KeyboardAvoidingView` today; the pad makes the system
+keyboard unnecessary for weight and reps).
+
+Kept: everything in A and B; the guided flows render in the dock.
+
+Needs from the founder: the same structure law lifted as B, re-pinned
+as "inputs live only in the dock; the dock is fixed; the sheet is
+read-only". Q2 is settled by the design (the pad is part of the dock;
+steppers would not fit a dock and a sheet); if the founder keeps the
+steppers, C becomes A.
+Risk: medium; one new component family (sheet, dock, pad), a careful
+vertical budget (dock about 190dp, strip 44dp, bar 76dp: on a 780dp
+phone the sheet keeps about 420dp, nine rows), and the re-pins. Size:
+the largest, by about a fifth over B.
+
+Why C over B, and over A: A keeps the lagging feeling's root cause (the
+person cannot see the session); B fixes that but puts the input back in
+a scrolling list, which is what the founder's own S22 verdict rejected,
+and the stage trick is a mitigation, not a cure; C removes the conflict
+by construction. It is also the most distinctive: no app in the field
+reads as "the session above, the instrument below", and that reading is
+Volyume's identity (a precision instrument, numbers as the hero).
+
+### 8.5 The number pad (part of A, B and C unless Q2 keeps the steppers)
+
+A 4 × 4 in-app pad on `surface2` keys, `radius.md`, 52dp tall: digits,
+the decimal separator (comma or dot by locale, both accepted), delete;
+a right column with "−2.5", "+2.5" (the exercise's own increment, 1 for
+reps), "Use last" (fills weight and reps from the previous session's
+matching set) and "Next" (weight to reps) which becomes "Done" on reps.
+Done on reps logs the set, as the keyboard's Done does today. Hold on
+plus or minus repeats. Every key 48dp effective, labelled for
+TalkBack. No system keyboard for weight or reps; the note field keeps
+the system keyboard.
+
+### 8.6 The surfaces around the logger (every option)
+
+- Summary: numbers first. Order becomes: Total lifted hero and verdict,
+  the stats trio, the exercise list with planned versus done (F8), PRs,
+  then "Your block", then the Community strip, then the weekly volume,
+  then ratings and notes. The milestone card stays at the top only when
+  a rung fires. Everything else unchanged.
+- History: a month calendar strip at the top (a dot per session, tap to
+  jump), compact rows (date, name, duration, sets, PR count), the three
+  buttons collapse to a row tap (opens the read-only summary) and a
+  long-press menu (Repeat, Edit, Delete). Edit opens F9.
+- Exercise detail: reachable from the logger (tap the exercise name in
+  the hero or block) as a bottom sheet with the chart, best, last three
+  sessions, instructions, and the actions Swap, Add a note, Set target;
+  the full screen stays for Progress.
+- Live session on the system surfaces: the Android widget and the iOS
+  Live Activity show "Upper A · Set 5 of 18 · Bench 80 × 8" and the rest
+  countdown, and tapping them opens the logger (today they open Today).
+- The mini bar: unchanged in role, its count from F3.
+
+### 8.7 Features the field has that Volyume does not, and what this audit proposes for each
+
+(The evidence columns fill from lanes A4, A5 and A7; the proposal column
+is the lead's.)
+
+| Capability | Field | Volyume today | Proposal |
+|---|---|---|---|
+| Previous-set column on every row | Strong, Hevy, Boostcamp, JEFIT, Setgraph | one strip for the matching set | in every option (the table's PREVIOUS column) |
+| Whole session visible | every sheet logger | behind the outline strip | B and C |
+| Fixed entry that never moves | Setgraph (swipe), Liftin' | the Now card scrolls | C |
+| In-app number pad with increments | Strong (toolbar), Setgraph, Gymaholic | steppers | 8.5, Q2 |
+| Plate calculator | Hevy, Strong Pro, Boostcamp, JEFIT | struck, D57 "never revisit" | Q3: the founder's reversal or not; the audit does not re-propose it |
+| RPE or RIR per set | Hevy, Strong, Boostcamp, RP, Alpha Progression | struck, D14 and D19 | Q4: reversal or not; the engine already stores rir |
+| Exercise video or illustration | JEFIT, Alpha Progression (795 videos), Fitbod, Hevy | text instructions only | Q5: an asset decision (licence, size, source) |
+| Watch logging | Hevy, Strong, Gymaholic, JEFIT, Fitbod | dormant bridge, no target | Q6: a build decision outside this round |
+| Edit a finished session | Hevy, Strong, Boostcamp, JEFIT | hard delete only | F9 |
+| Calendar history | Hevy, Strong, JEFIT, Boostcamp | list with filters | 8.6 |
+| "Update routine with today's changes" at finish | Strong, Hevy | swap scope "from now on" only | add to every option: a one-line prompt at finish when sets or loads differed |
+| Supersets, drop sets, warm-ups, AMRAP, clusters | most | all present | keep |
+| Auto rest, lock-screen rest, Live Activity | most | present, Android deeper than most | keep; show the set in the Live Activity (8.6) |
+| Draft that survives an app kill | few | present | keep |
+| Honest PR handling, calm-mode suppression | none | present | keep (a differentiator, not a gap) |
+
+## 9. Questions for the founder (delivered in chat; recorded here)
+
+Q1. The model: A (focus, finished), B (the sheet), or C (the sheet with a
+    now dock, the lead's recommendation). B and C lift one pinned
+    structure law (the one-exercise workspace); A lifts none.
+Q2. The entry: the in-app number pad (8.5), or the steppers as today.
+    (C assumes the pad.)
+Q3. The plate calculator was struck by D57 ("never revisit"). Four of
+    the five most-used loggers carry one. Reverse, or keep struck.
+Q4. A visible RPE or RIR input was struck by D14 and D19. Five of the
+    twelve set-1 apps carry one; the engine already stores `rir`.
+    Reverse (as an optional per-set field, off by default), or keep
+    struck.
+Q5. Exercise media: none today. Options: licensed illustration set
+    (a dependency and an asset decision), app-drawn line illustrations
+    for the 918 exercises over time, or stay text-only.
+Q6. Watch: build the Wear OS and Apple Watch logger (large; a separate
+    campaign), or not in this round.
+Q7. The summary's order (8.6): numbers first and Community after, or as
+    today.
+Q8. Build order once the model is chosen: foundation first (F1 to F11,
+    visible fixes within days), then the model; or the model first.
 
 ## 10. Device checklist for whichever option is chosen
 
