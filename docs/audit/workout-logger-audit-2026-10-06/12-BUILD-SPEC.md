@@ -126,6 +126,55 @@ Props added: `ExerciseSection` gets `bests` ({ lastDateLabel, heaviest:
 line when present; `SetRow` gets `record: boolean` for the tag and `last`
 may carry `{ text, stale: boolean }`.
 
+## 2b. Founder addition, 2026-10-07: the JEFIT pattern, previous sets you can select and the PRs in full
+
+Founder, verbatim: "Ok so JeFit look at it I think you can select the
+weights you've done previously and see your PRs I'd like it like that.
+Research how they do it as it's very good for them and not just a line on
+the set you did it on."
+
+JEFIT, OBSERVED (store screenshots on both stores, the vendor's
+December 2023 logging-screen article and its images, the support notes):
+every planned set row arrives pre-filled from the last log (a setting
+chooses last time anywhere or last time in this routine); a "1RM: 62.1"
+badge sits beside the exercise name and opens a "1RM Calculator" sheet
+with tabs Current / Lifetime / 3M / 6M and a table of percentage, weight
+and reps; a Charts button in the header opens history and charts on one
+page where tapping a point shows that day's logs; the exercise page has a
+Log button listing every log; "New 3M Records!" fires as a toast. Not
+verified in any source: a tap on a previous log that copies it into
+today's row from the logging screen itself. SUGGESTS: what people value
+is that the previous numbers and the records are one tap from the row,
+with periods (lifetime, three months) rather than only the all-time best.
+
+What Volyume builds (on top of 2a):
+
+1. A history glyph button in the exercise header beside the rest button
+   (Ionicons `stats-chart-outline`), and the bests line itself, open the
+   HistorySheet.
+2. HistorySheet, segment History: previous sessions of this exercise,
+   newest first, each as a date and its sets as chips ("72.5 × 8"), the
+   session's best set ringed in amber. Tapping a chip puts that weight
+   and reps into the next row's wells (the thing the founder asked for:
+   select a weight you have done before). Source: `allTimeSets` already
+   loaded by `loadHistory`.
+3. Segment Records, with Lifetime | 3 months: heaviest set, most reps at
+   today's weight, best estimated max, best session volume, each with
+   its date; then "Best reps at each weight" for the weights done in the
+   last three months, heaviest first, every row tappable to use. The
+   estimated max belongs here, in the records sheet, not on the rows
+   (the retired routine est-max copy stays retired). Source: the record
+   system (`lib/workoutRecordLine.js`, `detectPR`, `algorithms.calculate1RM`
+   over `allTimeSets`).
+4. No percentage table and no plate figures (D15, D57); no RPE.
+5. The next row's wells still arrive filled with the coach's numbers; a
+   chip from the sheet overrides them and counts as typed
+   (`deriveEntryTyped` sees a difference from the seed).
+
+Props: `HistorySheet({ visible, onClose, exerciseName, segment, onSegment,
+history, records, repsAtWeight, onUseSet, units })`; `ExerciseSection`
+gets `onHistory`.
+
 ## 3. Components, props, tests (lane B1 and B2 build these; the lead wires them)
 
 - `SessionToolbar({ startTime, onClose, onRest, onNotes, onFinish, finishBusy })`: keeps `testID="volyume-workout-close"` and
@@ -135,7 +184,7 @@ may carry `{ text, stale: boolean }`.
 - `SetTable({ rows, onLogRemaining, onPressWell, onCheck, columnsLabel: {weight} })` and `SetRow({ marker: 'W'|'F'|number, last: { text, stale }, target: { value, rule }, wells: { weight, reps, state: 'logged'|'next'|'pending'|'editing', editingField }, check: 'logged'|'next'|'pending', record, onPressLast, onPressWell, onCheck, testIDs })` (record tag and stale last per section 2a).
   The next row carries `testID="volyume-btn-complete-set"` on its check (the existing test id of the primary), so the behaviour suites keep pressing the same id.
 - `Keypad({ field: 'weight'|'reps', value, step, unit, onKey, onStep, onClear, onNext, onDone, onSystemKeyboard })`: digits, point (weight only), backspace, −step, +step, Next, Done; TalkBack: `accessibilityRole="keyboardkey"` where available, else button with labels "Add 2.5 kilograms" etc.
-- `RestSheet`, `SessionNotesSheet`, `ExerciseRestSheet` on the house `BottomSheet`; the rest sheet reads the store's rest fields the way `RestTimer` does (RT:63-74) and calls the same adjust and skip actions.
+- `RestSheet`, `SessionNotesSheet`, `ExerciseRestSheet`, `HistorySheet` (section 2b) on the house `BottomSheet`; the rest sheet reads the store's rest fields the way `RestTimer` does (RT:63-74) and calls the same adjust and skip actions.
 
 Tests for each: render, props, every callback, accessibility labels, token-only source guard (no hex, no fontSize literal), and for `SetRow` the three states and the editing state.
 
