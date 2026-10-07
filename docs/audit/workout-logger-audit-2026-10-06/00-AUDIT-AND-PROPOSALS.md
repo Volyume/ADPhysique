@@ -41,6 +41,8 @@ options; the build starts only on the founder's choice.
 | 10-user-psychology-and-the-final-two.md | lead | hands-on | the forks weighed against the production user base (aggregates, 2026-10-07) and the behavioural literature; the final two choices; the lead's recommendation |
 | 11-boostcamp-study.md | lead | hands-on | Boostcamp's logging screen measured from its store screenshots, its users on the look, the lessons, what is taken and left, and Volyume drawn in its grammar (the build direction from 2026-10-07, pending the go-ahead) |
 | 09-drawing-bc-black.png, 09-drawing-bc-sheet.png, 09-drawing-bc-keypad.png | lead | hands-on | the Boostcamp-grammar drawings: near-black tone, sheet tone, keypad open |
+| 12-BUILD-SPEC.md | lead | hands-on | the build: architecture, visual spec, components and props, the job of every retired control, stages and lanes, re-pinned laws, device checklist, risks |
+| 12-design-reference.html | lead | hands-on | the three near-black and keypad phones as a standalone page (open in a browser) |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -853,10 +855,12 @@ keeps: the 44 dp rest strip with the full rest view behind the Rest
 tool, icon-only Finish, D150, D63, the bans. Traded: live values at 16
 in the wells rather than 24.
 
-For the go-ahead: G1 build in this grammar (yes, or what is still wrong);
-G2 tone (A near-black, B sheet); G3 the confirm (A per-row check as
-drawn, B keep the bottom bar); G4 scope (A whole logger, B this screen
-first).
+The go-ahead (founder, 2026-10-07): "Ok let's go near black tone". G1
+yes; G2 near-black; G3 and G4 ruled by the lead under D33 (per-row
+check; the whole logger in four stages with device walks after B and D).
+Register D220. Build specification `12-BUILD-SPEC.md`; design reference
+`12-design-reference.html`; lane briefs `briefs/B1-session-components.md`
+and `briefs/B2-session-sheets.md`.
 
 Record of the earlier rounds: the two concept sets (withdrawn), the
 research-derived table (withdrawn), the clean-sheet two-state design and
