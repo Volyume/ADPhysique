@@ -1,0 +1,218 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&display=swap"><style>
+.bc{--pg:#0D0D0D;--sec:#191917;--well:#0D0D0D;--wellbd:#2E2E2C;--hair:#2E2E2C;--s3:#343431;--t1:#FFFFFF;--t2:#9E9E9E;--t3:#9C9C9C;--td:#727272;--a:#F5A623;--abg:rgba(245,166,35,.14);--err:#F44336;--errbg:rgba(244,67,54,.14);--ok:#4CAF50;
+ width:390px;height:844px;flex:0 0 auto;background:var(--pg);color:var(--t1);border-radius:40px;border:1px solid #2E2E2C;overflow:hidden;position:relative;font-family:Inter,system-ui,sans-serif;font-optical-sizing:auto;font-size:16px;line-height:1.35;display:flex;flex-direction:column}
+.bc.sheet{--pg:#191917;--sec:#222220;--well:#191917;--wellbd:#343431;--hair:#343431;--s3:#343431}
+.bc *{box-sizing:border-box}
+.bc .n{font-variant-numeric:tabular-nums}
+.bc .sb{height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 6px;font-size:15px;font-weight:600}
+.bc .sb .ic{display:flex;gap:6px;align-items:center}
+.bc .tb{height:56px;display:flex;align-items:center;gap:4px;padding:0 12px 0 8px;background:var(--sec)}
+.bc .tool{width:56px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;line-height:13px;font-weight:500;color:var(--t2)}
+.bc .tool svg{display:block}
+.bc .tbdiv{width:1px;height:28px;background:var(--hair);margin:0 4px}
+.bc .pill{margin-left:auto;height:40px;padding:0 14px;display:flex;align-items:center;gap:8px;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;font-size:17px;font-weight:600}
+.bc .fin{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;margin-left:8px}
+.bc .hd{background:var(--sec);padding:12px 16px 16px}
+.bc .hd .t{font-size:24px;line-height:32px;font-weight:600}
+.bc .hd .note{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--t3)}
+.bc .band{height:10px;background:var(--pg)}
+.bc .sec{background:var(--sec)}
+.bc .xh{height:56px;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px}
+.bc .bests{padding:0 16px 10px;margin-top:-6px;font-size:13px;line-height:17px;color:var(--t2)}
+.bc .bests b{color:var(--t1);font-weight:500}
+.bc .pr{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;background:var(--abg);color:var(--a);font-size:11px;font-weight:600;margin-left:6px;vertical-align:middle}
+.bc .prt{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:17px;color:var(--t1)}
+.bc .prt .pr{margin:0}
+.bc .bests{display:flex;align-items:center;gap:6px}
+.bc .bests .sp{flex:1}
+.bc .xh .idx{font-size:17px;font-weight:500;color:var(--t2);width:14px}
+.bc .xh .nm{font-size:18px;line-height:24px;font-weight:600;color:var(--a);display:flex;align-items:center;gap:4px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc .xh .sq{margin-left:auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;flex:0 0 auto}
+.bc .xh .done{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--t2)}
+.bc .cols{display:grid;grid-template-columns:30px 80px 1fr 98px 36px;column-gap:6px;align-items:center;height:36px;padding:0 12px 0 16px;font-size:13px;color:var(--t2);border-bottom:1px solid var(--hair)}
+.bc .cols .c{text-align:center}
+.bc .row{display:grid;grid-template-columns:30px 80px 1fr 98px 36px;column-gap:6px;align-items:center;height:64px;padding:0 12px 0 16px;border-bottom:1px solid var(--hair)}
+.bc .row:last-of-type{border-bottom:0}
+.bc .mk{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--t2)}
+.bc .mk.w{background:var(--abg);color:var(--a)}
+.bc .mk.f{background:var(--errbg);color:var(--err)}
+.bc .cell .v{font-size:16px;line-height:20px;font-weight:500;color:var(--t1);text-align:center;white-space:nowrap}
+.bc .cell .s{font-size:13px;line-height:17px;color:var(--t2);text-align:center;margin-top:1px;white-space:nowrap}
+.bc .cell.dim .v{color:var(--t2);font-weight:400}
+.bc .wells{display:flex;height:44px;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;overflow:hidden}
+.bc .wells span{flex:1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--t1)}
+.bc .wells span+span{border-left:1px solid var(--wellbd)}
+.bc .wells.ph span{color:var(--td);font-weight:500}
+.bc .wells.edit{border-color:var(--a)}
+.bc .wells.edit span.on{color:var(--a)}
+.bc .chk{width:32px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--s3);margin:0 auto}
+.bc .chk.on{background:var(--a)}
+.bc .chk.next{background:transparent;border:1.5px solid var(--a)}
+.bc .ft{height:52px;display:flex;align-items:center;gap:22px;padding:0 16px;font-size:15px;font-weight:500;color:var(--t1)}
+.bc .ft span{display:flex;align-items:center;gap:8px}
+.bc .ft .more{margin-left:auto;color:var(--t2)}
+.bc .rest{margin-top:auto;height:44px;background:var(--sec);border-top:1px solid var(--hair);display:flex;align-items:center;gap:10px;padding:0 16px;position:relative}
+.bc .rest i{position:absolute;left:0;top:-1px;height:2px;width:85%;background:var(--a)}
+.bc .rest .lab{font-size:11px;letter-spacing:.5px;text-transform:uppercase;font-weight:500;color:var(--t3)}
+.bc .rest .tm{font-size:20px;font-weight:600}
+.bc .rest .of{font-size:13px;color:var(--t3)}
+.bc .rest .ctl{margin-left:auto;display:flex;gap:2px}
+.bc .rest .ctl span{height:44px;padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:500;color:var(--a)}
+.bc .rest .ctl span.g{color:var(--t2)}
+.bc .home{height:34px;display:flex;align-items:center;justify-content:center;background:var(--pg)}
+.bc .home i{display:block;width:134px;height:5px;border-radius:3px;background:var(--s3)}
+/* keypad */
+.bc .kp{margin-top:auto;background:var(--sec);border-top:1px solid var(--hair);padding:8px 12px 12px}
+.bc .kp .kt{height:44px;display:flex;align-items:center;gap:8px}
+.bc .kp .kt .ib{width:44px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--well);border:1px solid var(--wellbd);border-radius:10px}
+.bc .kp .tabs{margin-left:auto;margin-right:auto;display:flex;gap:18px;font-size:16px;font-weight:600;color:var(--t3)}
+.bc .kp .tabs b{color:var(--t1)}
+.bc .kp .clr{height:40px;padding:0 14px;display:flex;align-items:center;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;font-size:15px;font-weight:600}
+.bc .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.bc .key{height:52px;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600}
+.bc .key.sm{font-size:15px;color:var(--a)}
+.bc .key.next{color:var(--t1);font-size:16px}
+.bc .scroll{overflow:hidden;flex:1 1 auto;min-height:0}
+.bc .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.bc .sheetp{position:absolute;left:0;right:0;bottom:0;background:var(--sec);border-top-left-radius:20px;border-top-right-radius:20px;border-top:1px solid var(--bd);padding:8px 16px 0}
+.bc .hndl{width:36px;height:4px;border-radius:2px;background:var(--bd);margin:0 auto 12px}
+.bc .sh-title{font-size:17px;font-weight:500;text-align:center}
+.bc .seg{display:flex;background:var(--well);border:1px solid var(--wellbd);border-radius:10px;padding:3px;margin:12px 0 14px}
+.bc .seg span{flex:1;height:34px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--t2);border-radius:8px}
+.bc .seg span.on{background:var(--s3);color:var(--t1)}
+.bc .sess{padding:10px 0 6px}
+.bc .sess .d{font-size:13px;color:var(--t2);margin-bottom:8px;display:flex;justify-content:space-between}
+.bc .chips{display:flex;flex-wrap:wrap;gap:8px}
+.bc .chip{height:36px;padding:0 12px;border-radius:999px;background:var(--well);border:1px solid var(--wellbd);display:flex;align-items:center;font-size:15px;font-weight:500}
+.bc .chip.best{border-color:var(--a)}
+.bc .chip .pr{margin-left:6px}
+.bc .rec{display:flex;justify-content:space-between;align-items:center;height:52px;border-bottom:1px solid var(--hair)}
+.bc .rec .l{font-size:13px;color:var(--t2)}
+.bc .rec .r{text-align:right}
+.bc .rec .r b{display:block;font-size:16px;font-weight:600}
+.bc .rec .r i{font-style:normal;font-size:11px;color:var(--t3)}
+.bc .tog{display:flex;gap:8px;margin:0 0 6px}
+.bc .tog span{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--wellbd);display:flex;align-items:center;font-size:13px;color:var(--t2)}
+.bc .tog span.on{background:var(--abg);border-color:var(--a);color:var(--a)}
+
+
+html,body{margin:0;background:#0D0D0D} body{display:flex;gap:24px} .bc{border-radius:0;border:0}</style></head><body>
+
+<div class="bc" aria-label="Volyume in the Boostcamp grammar, near-black tone">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="tb">
+    <div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg>Rest</div><div class="tbdiv"></div><div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Notes</div>
+    <div class="pill n">12:06</div>
+    <div class="fin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+  </div>
+  <div class="hd"><div class="t">Upper A</div><div class="note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Add notes here</div></div>
+  <div class="band"></div>
+  <div class="sec"><div class="xh"><span class="idx n">1</span><span class="nm">Incline Dumbbell Press <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="done"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg> 3 sets</span></div></div>
+  <div class="band"></div>
+  <div class="sec">
+    <div class="xh"><span class="idx n">2</span><span class="nm">Barbell Row (Bent Over) <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq" style="margin-left:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M10 19V5M16 19v-8M22 19H2"/></svg></span><span class="sq" style="margin-left:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div>
+    <div class="bests n"><span>Last <b>6 Oct</b> · Best <b>75 × 6</b> · at 70 kg <b>8 reps</b></span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></div>
+    <div class="cols"><span class="c">Set</span><span class="c">Last</span><span class="c">Target</span><span class="c">kg · reps</span><span class="c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#727272" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></span></div>
+    <div class="row"><span class="mk w">W</span><div class="cell dim"><div class="v n">40 × 10</div></div><div class="cell dim"><div class="v n">40 × 10</div><div class="s">warm-up</div></div><div class="wells n"><span>40</span><span>10</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">1</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s n">+2.5 at 10</div></div><div class="wells n"><span>70</span><span>8</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">2</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s n"><span class="prt"><span class="pr">PR</span>70 × 9</span></div></div><div class="wells n"><span>70</span><span>9</span></div><span class="chk next"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">3</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s">last set</div></div><div class="wells n ph"><span>70</span><span>8</span></div><span class="chk"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#727272" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="ft"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add set</span><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11l-3-3M20 17H9l3 3"/></svg>Swap</span><span class="more"><svg width="20" height="20" viewBox="0 0 20 20" fill="#9E9E9E"><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/></svg></span></div>
+  </div>
+  <div class="band"></div>
+  <div class="sec"><div class="xh"><span class="idx n">3</span><span class="nm">Lat Pulldown <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div></div>
+  <div class="rest"><i></i><span class="lab">Rest</span><span class="tm n">1:42</span><span class="of n">of 2:00</span><div class="ctl"><span class="n">−15</span><span class="n">+15</span><span class="g">Skip</span></div></div>
+  <div class="home"><i></i></div>
+</div>
+
+<div class="bc sheet" aria-label="Volyume in the Boostcamp grammar, sheet tone">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="tb">
+    <div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg>Rest</div><div class="tbdiv"></div><div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Notes</div>
+    <div class="pill n">12:06</div>
+    <div class="fin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+  </div>
+  <div class="hd"><div class="t">Upper A</div><div class="note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Add notes here</div></div>
+  <div class="band"></div>
+  <div class="sec"><div class="xh"><span class="idx n">1</span><span class="nm">Incline Dumbbell Press <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="done"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg> 3 sets</span></div></div>
+  <div class="band"></div>
+  <div class="sec">
+    <div class="xh"><span class="idx n">2</span><span class="nm">Barbell Row (Bent Over) <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq" style="margin-left:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M10 19V5M16 19v-8M22 19H2"/></svg></span><span class="sq" style="margin-left:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div>
+    <div class="bests n"><span>Last <b>6 Oct</b> · Best <b>75 × 6</b> · at 70 kg <b>8 reps</b></span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></div>
+    <div class="cols"><span class="c">Set</span><span class="c">Last</span><span class="c">Target</span><span class="c">kg · reps</span><span class="c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#727272" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></span></div>
+    <div class="row"><span class="mk w">W</span><div class="cell dim"><div class="v n">40 × 10</div></div><div class="cell dim"><div class="v n">40 × 10</div><div class="s">warm-up</div></div><div class="wells n"><span>40</span><span>10</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">1</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s n">+2.5 at 10</div></div><div class="wells n"><span>70</span><span>8</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">2</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s n"><span class="prt"><span class="pr">PR</span>70 × 9</span></div></div><div class="wells n"><span>70</span><span>9</span></div><span class="chk next"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">3</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s">last set</div></div><div class="wells n ph"><span>70</span><span>8</span></div><span class="chk"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#727272" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="ft"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add set</span><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11l-3-3M20 17H9l3 3"/></svg>Swap</span><span class="more"><svg width="20" height="20" viewBox="0 0 20 20" fill="#9E9E9E"><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/></svg></span></div>
+  </div>
+  <div class="band"></div>
+  <div class="sec"><div class="xh"><span class="idx n">3</span><span class="nm">Lat Pulldown <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div></div>
+  <div class="rest"><i></i><span class="lab">Rest</span><span class="tm n">1:42</span><span class="of n">of 2:00</span><div class="ctl"><span class="n">−15</span><span class="n">+15</span><span class="g">Skip</span></div></div>
+  <div class="home"><i></i></div>
+</div>
+
+<div class="bc sheet" aria-label="Volyume in the Boostcamp grammar, keypad open">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="tb">
+    <div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg>Rest</div><div class="tbdiv"></div><div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Notes</div>
+    <div class="pill n">12:06</div>
+    <div class="fin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+  </div>
+  <div class="scroll">
+  <div class="sec">
+    <div class="xh"><span class="idx n">2</span><span class="nm">Barbell Row (Bent Over) <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq" style="margin-left:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M10 19V5M16 19v-8M22 19H2"/></svg></span><span class="sq" style="margin-left:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div>
+    <div class="bests n"><span>Last <b>6 Oct</b> · Best <b>75 × 6</b> · at 70 kg <b>8 reps</b></span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></div>
+    <div class="cols"><span class="c">Set</span><span class="c">Last</span><span class="c">Target</span><span class="c">kg · reps</span><span class="c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#727272" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></span></div>
+    <div class="row"><span class="mk w">W</span><div class="cell dim"><div class="v n">40 × 10</div></div><div class="cell dim"><div class="v n">40 × 10</div><div class="s">warm-up</div></div><div class="wells n"><span>40</span><span>10</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">1</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10<span class="pr">PR</span></div><div class="s n">+2.5 at 10</div></div><div class="wells n"><span>70</span><span>9</span></div><span class="chk on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">2</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s n"><span class="prt"><span class="pr">PR</span>70 × 10</span></div></div><div class="wells n edit"><span class="on">72.5</span><span>9</span></div><span class="chk next"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+    <div class="row"><span class="mk n">3</span><div class="cell"><div class="v n">72.5 × 8</div></div><div class="cell"><div class="v n">70 × 6–10</div><div class="s">last set</div></div><div class="wells n ph"><span>70</span><span>8</span></div><span class="chk"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#727272" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg></span></div>
+  </div>
+  </div>
+  <div class="kp">
+    <div class="kt"><span class="ib"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 9h1M11 9h1M15 9h1M7 13h10"/><path d="M12 17v3"/></svg></span><div class="tabs"><b>kg</b><span>Reps</span></div><span class="clr">Clear</span></div>
+    <div class="keys">
+      <span class="key n">1</span><span class="key n">2</span><span class="key n">3</span>
+      <span class="key n">4</span><span class="key n">5</span><span class="key n">6</span>
+      <span class="key n">7</span><span class="key n">8</span><span class="key n">9</span>
+      <span class="key sm n">−2.5</span><span class="key n">0</span><span class="key sm n">+2.5</span>
+      <span class="key n">.</span><span class="key next">Next</span><span class="key"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 6H8l-5 6 5 6h13z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></span>
+    </div>
+  </div>
+  <div class="home"><i></i></div>
+</div>
+
+<div class="bc" aria-label="History and records sheet">
+  <div class="sb"><span>9:41</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#FFF"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#FFF"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="#FFF"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#FFF"/></svg><svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#FFF" stroke-opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#FFF"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="#FFF" fill-opacity=".5"/></svg></span></div>
+  <div class="tb">
+    <div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg>Rest</div><div class="tbdiv"></div><div class="tool"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Notes</div>
+    <div class="pill n">12:06</div>
+    <div class="fin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5l4.5 4.5L15 8.5"/><path d="M11 17l9.5-9.5"/></svg></div>
+  </div>
+  <div class="hd"><div class="t">Upper A</div><div class="note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9C9C9C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 12l2 2-5 5h-2v-2l5-5z"/></svg>Add notes here</div></div>
+  <div class="band"></div>
+  <div class="sec"><div class="xh"><span class="idx n">1</span><span class="nm">Incline Dumbbell Press <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="done"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"/></svg> 3 sets</span></div></div>
+  <div class="band"></div>
+  <div class="sec">
+    <div class="xh"><span class="idx n">2</span><span class="nm">Barbell Row (Bent Over) <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></span><span class="sq" style="margin-left:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M10 19V5M16 19v-8M22 19H2"/></svg></span><span class="sq" style="margin-left:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/></svg></span></div>
+    <div class="bests n"><span>Last <b>6 Oct</b> · Best <b>75 × 6</b> · at 70 kg <b>8 reps</b></span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9C9C9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 4l4 4-4 4"/></svg></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="sheetp">
+    <div class="hndl"></div>
+    <div class="sh-title">Barbell Row (Bent Over)</div>
+    <div class="seg"><span class="on">History</span><span>Records</span></div>
+    <div class="sess"><div class="d n"><span>6 Oct · Upper A</span><span>3 sets</span></div><div class="chips n"><span class="chip best">72.5 × 8</span><span class="chip">72.5 × 8</span><span class="chip">70 × 10</span></div></div>
+    <div class="sess"><div class="d n"><span>29 Sep · Upper A</span><span>3 sets</span></div><div class="chips n"><span class="chip">70 × 10</span><span class="chip best">70 × 10</span><span class="chip">70 × 9</span></div></div>
+    <div class="sess"><div class="d n"><span>22 Sep · Upper A</span><span>3 sets</span></div><div class="chips n"><span class="chip best">75 × 6</span><span class="chip">70 × 8</span><span class="chip">70 × 8</span></div></div>
+    <div class="sess"><div class="d n"><span>15 Sep · Upper A</span><span>4 sets</span></div><div class="chips n"><span class="chip best">70 × 9</span><span class="chip">70 × 8</span><span class="chip">70 × 8</span><span class="chip">65 × 10</span></div></div>
+    <div style="height:14px"></div>
+    <div class="tog"><span class="on">Lifetime</span><span>3 months</span></div>
+    <div class="rec"><span class="l">Heaviest set</span><span class="r n"><b>75 kg × 6</b><i>22 Sep</i></span></div>
+    <div class="rec"><span class="l">Most reps at 70 kg</span><span class="r n"><b>10 reps</b><i>29 Sep</i></span></div>
+    <div class="rec"><span class="l">Best estimated max</span><span class="r n"><b>93 kg</b><i>22 Sep · 75 × 6</i></span></div>
+    <div class="home"><i></i></div>
+  </div>
+</div>
+</body></html>

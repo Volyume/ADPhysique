@@ -101,6 +101,23 @@ export const WHATS_NEW = {
     { icon: 'notifications-off-outline', text: 'Reminders stand down once you have done what they ask. A weigh-in, a logged meal or a finished session means that reminder stays quiet for the rest of the day.' },
     { icon: 'keypad-outline', text: 'The keyboard stays open while you type your morning weight.' },
   ],
+
+  // 2.7.0 (founder's word, 2026-10-06: "Please bump the version"). The privacy
+  // notice stays first, since a person updating straight from 2.5.0 sees only
+  // this entry; then the changes since 2.6.0 a person would notice without
+  // being told where to look: the plan builder rebuilt on recovery (D219), the
+  // current plan updated once, swaps for one workout or the plan, a focus
+  // muscle's sets never cut, the Volume targets editor removed, and every
+  // logged exercise listed and counted (D217, D218).
+  '2.7.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'barbell-outline', text: 'New plans are built around how quickly each muscle recovers, with your sessions in the order that suits them. Where a muscle may not be fully recovered for a session, the plan says so.' },
+    { icon: 'refresh-outline', text: 'Your current plan is updated once, the next time you open it. Your training days and your week in the block stay the same, your exercises are kept where they fit, and a card shows what changed.' },
+    { icon: 'swap-horizontal-outline', text: 'When you swap an exercise you can choose this workout only, or your plan from now on. The new exercise keeps the sets and reps of the one it replaces.' },
+    { icon: 'flag-outline', text: 'A muscle you choose to bring up keeps all of its sets. If that makes a session run long, the plan tells you.' },
+    { icon: 'options-outline', text: 'The Volume targets editor has been removed. Every screen now judges your weekly sets against your plan\'s own ranges.' },
+    { icon: 'list-outline', text: 'Every exercise you log is listed and counted after your workout, including ones that have since been renamed in the exercise library.' },
+  ],
 };
 
 export default function WhatsNewSheet() {

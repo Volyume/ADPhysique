@@ -1392,9 +1392,14 @@ describe('LOGGER: the first session states its effort target and its own words (
     // The overflow tap still retires it, once ever.
     const overflowTap = src.slice(src.indexOf("audit('workout.overflow.open'") - 500, src.indexOf("audit('workout.overflow.open'"));
     expect(overflowTap).toContain("AsyncStorage.setItem('@volyume_seen_workout_info', 'true')");
-    // And while it is live the button says what is behind it.
-    expect(src).toContain("accessibilityLabel={showInfoTipPulse ? 'Exercise options, including how logging works' : 'Exercise options'}");
-    expect(src).toMatch(/showInfoTipPulse \? \(\s*\n\s*<Text style=\{\[styles\.overflowHintLabel/);
+    // And while it is live the button says what is behind it. RE-PINNED
+    // for the logger rebuild stage A (D220): the overflow is the active
+    // ExerciseSection's footer; the screen passes the cue and the component
+    // shows the word beside the glyph and names what is behind it.
+    expect(src).toContain("moreHint={showInfoTipPulse ? 'Help' : null}");
+    const section = read('components/workout/session/ExerciseSection.js');
+    expect(section).toContain("accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}");
+    expect(section).toMatch(/\{moreHint \? <Text style=\{live\.hint\}>\{moreHint\}<\/Text> : null\}/);
   });
 
   test('the warm-up sheet helps the user with no working weight (C5-P13-04)', () => {
@@ -2219,9 +2224,14 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
     // Re-anchored 2026-08-17: the name-tap's label is "Exercise details"
     // now (founder order: the tap gained a visible chevron affordance);
     // the RC-9 behaviour pinned here is unchanged.
+    // Re-anchored for the logger rebuild stage A (D220): the details open
+    // from the section header's chevron through handleOpenExerciseDetails,
+    // which retires the cue first (retireInfoTipPulse) and then opens.
     const src = read('screens/ActiveWorkoutScreen.js');
-    const tap = src.slice(src.indexOf('accessibilityLabel="Exercise details"') - 1200, src.indexOf('accessibilityLabel="Exercise details"'));
-    expect(tap).toMatch(/@volyume_seen_workout_info/);
+    const retire = src.match(/function retireInfoTipPulse\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(retire).toMatch(/@volyume_seen_workout_info/);
+    const tap = src.match(/function handleOpenExerciseDetails\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(tap).toMatch(/retireInfoTipPulse\(\);/);
     expect(tap).toMatch(/setShowExecution\(true\)/);
   });
 });

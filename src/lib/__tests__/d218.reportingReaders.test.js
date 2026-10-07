@@ -167,7 +167,15 @@ describe('F-9 / S2: the recaps count every working set, total the loaded part on
 
 describe('F-12: the weekly record count and the best lift of the week', () => {
   const u = 'u-pr';
-  const weekStart = Date.now() - 2 * DAY;
+  // A real week start, as the screen passes one (CoachOutputScreen:
+  // localWeekStartMs()), fixed in the past. It was "now minus two days",
+  // which is not a week start: the reader ends its window at the next Monday
+  // after that day's calendar week, so on a Tuesday ("two days ago" a Sunday)
+  // every set below fell outside the window and the test failed every
+  // Tuesday (found 2026-10-06).
+  const { localWeekStartMs, localWeekEndMs } = require('../dayKey');
+  const weekStart = localWeekStartMs(new Date(2026, 8, 30, 12).getTime());
+  const weekEnd = localWeekEndMs(weekStart);
   beforeAll(() => {
     const before = weekStart - 10 * DAY;
     const old = insertWorkout(u, before);
@@ -182,13 +190,13 @@ describe('F-12: the weekly record count and the best lift of the week', () => {
   });
 
   test('none of those is a record', async () => {
-    expect(await dbm.getPRCountInWindow(u, weekStart, Date.now() + DAY)).toBe(0);
+    expect(await dbm.getPRCountInWindow(u, weekStart, weekEnd)).toBe(0);
   });
 
   test('less assistance at no fewer reps is one record', async () => {
     const w = insertWorkout(u, weekStart + DAY + 60e3);
     insertSet(u, w, 'assist-pull', { weight: 20, reps: 8, at: weekStart + DAY + 70e3 });
-    expect(await dbm.getPRCountInWindow(u, weekStart, Date.now() + DAY)).toBe(1);
+    expect(await dbm.getPRCountInWindow(u, weekStart, weekEnd)).toBe(1);
   });
 
   test('the best lift of the week is never an explosive, cluster or assisted row, and is named', async () => {

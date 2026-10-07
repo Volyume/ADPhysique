@@ -44,11 +44,14 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
     expect(fn).not.toContain('handleNextExercise');
   });
 
-  test('the outline taps into handleJumpToExercise; long-press opens the existing reorder sheet', () => {
-    // Phase 2B: the navigator is WorkoutOutline; its onSelect is the jump
-    // handler and its onReorder is the one order-changing path.
-    expect(SRC).toContain('onSelect={handleJumpToExercise}');
-    expect(SRC).toContain('onReorder={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}');
+  test('the section headers tap into handleJumpToExercise; the overflow sheet opens the existing reorder sheet', () => {
+    // RE-PINNED for the logger rebuild stage A (D220): the navigator is the
+    // session sheet's collapsed ExerciseSection headers; their tap is the
+    // jump handler, and the one order-changing path is the overflow sheet's
+    // Reorder exercises row.
+    expect(SRC).toContain('onPressHeader={() => handleJumpToExercise(i)}');
+    expect(SRC).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');
+    expect(SRC).not.toContain('<WorkoutOutline');
   });
 
   test('an armed auto-advance countdown cannot outlive a jump: the index-change backstop cancels it', () => {
@@ -65,15 +68,21 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
 });
 
 describe('one workout surface: the outline navigator keeps every exercise reachable (phase 2B)', () => {
-  test('the outline renders FIXED between header and workspace, never buried under the logger', () => {
-    // Failure 5 (founder screenshots): forward exercises must not require
-    // scrolling through the whole active logger. The outline is a sibling of
-    // the ScrollView, not content inside it.
-    const outlineIdx = SRC.indexOf('<WorkoutOutline');
+  test('every exercise is a section of the one session sheet: collapsed headers above and below the active one', () => {
+    // RE-PINNED for the logger rebuild stage A (D220): the outline strip is
+    // retired; the session sheet renders every exercise as an
+    // ExerciseSection, collapsed to its 56 dp header unless active, so each
+    // is one tap away without a separate navigator.
+    expect(SRC).toContain("import ExerciseSection from '../components/workout/session/ExerciseSection';");
+    expect(SRC).not.toContain("import WorkoutOutline from");
     const scrollIdx = SRC.indexOf('<ScrollView\n          ref={scrollRef}');
-    expect(outlineIdx).toBeGreaterThan(-1);
-    expect(scrollIdx).toBeGreaterThan(outlineIdx);
-    expect(SRC).toContain("import WorkoutOutline from '../components/workout/WorkoutOutline';");
+    const beforeIdx = SRC.indexOf('{collapsedSectionsBefore}');
+    const activeIdx = SRC.indexOf('<ExerciseSection\n            index={currentExerciseIndex + 1}');
+    const afterIdx = SRC.indexOf('{collapsedSectionsAfter}');
+    expect(scrollIdx).toBeGreaterThan(-1);
+    expect(beforeIdx).toBeGreaterThan(scrollIdx);
+    expect(activeIdx).toBeGreaterThan(beforeIdx);
+    expect(afterIdx).toBeGreaterThan(activeIdx);
     // The horizontal pill strip stays retired, and so does the phase-2
     // card-per-exercise list.
     expect(SRC).not.toContain('<ExerciseNav');

@@ -104,10 +104,12 @@ describe('privacy, consent, export and store-copy truth', () => {
   });
 
   // Both policy copies promise an in-app notice of a material change. The
-  // 2.6.0 What's new sheet carries it, first, to everyone who updates.
+  // 2.7.0 What's new sheet carries it, first, to everyone who updates (the
+  // sheet shows only the running version's notes, so a person updating
+  // straight from 2.5.0 sees only this entry).
   test('the policy change is announced in the app, as the policy promises', () => {
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
-    const entry = sheet.slice(sheet.indexOf("'2.6.0': ["), sheet.indexOf('],', sheet.indexOf("'2.6.0': [")));
+    const entry = sheet.slice(sheet.indexOf("'2.7.0': ["), sheet.indexOf('],', sheet.indexOf("'2.7.0': [")));
     const first = (entry.match(/text: '([^']*)'/) || [])[1] || '';
     expect(first).toMatch(/^Our privacy policy now covers Community/);
     expect(first).toContain('how to turn sharing off');

@@ -72,7 +72,9 @@ describe('R2-2 header: X + Finish share one chrome family', () => {
     // Ink, not shape, separates them: muted to leave, brand amber to finish.
     expect(HEADER).toMatch(/name="close"[^\n]*color=\{t\.colors\.textMuted\}/);
     expect(HEADER).toMatch(/name="checkmark-done"[^\n]*color=\{t\.colors\.primary\}/);
-    expect(ACTIVE).toContain('<WorkoutHeader');
+    // Logger rebuild stage A (D220): the logger renders SessionToolbar; the
+    // WorkoutHeader law above stays pinned on the file until its clean-up.
+    expect(ACTIVE).toContain('<SessionToolbar');
   });
 
   test('Finish matches the X chrome: small-surface radius.md and 44dp height', () => {

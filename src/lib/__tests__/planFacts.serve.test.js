@@ -580,7 +580,9 @@ describe('one number everywhere', () => {
       expect(src).toMatch(/getSessionWeeklyAllocation\(\{ workout: activeWorkout, exercises: workoutExercises \}\)/);
       expect(src).toMatch(/\.then\(\(\{ allocation, v2 \}\) => \{[\s\S]*?setPlanServedV2\(!!v2\);/);
       expect(src).toMatch(/const outlineItemsShown = planServedV2[\s\S]*?weeklyAllocation\?\.\[workoutExercises\[i\]\?\.exercise\?\.id\]/);
-      expect(src).toContain('items={outlineItemsShown}');
+      // Logger rebuild stage A (D220): the served rows feed the session
+      // sheet's section headers instead of the outline strip.
+      expect(src).toContain('const item = outlineItemsShown[i];');
       // The current exercise still reads the allocated base (the older pin, unchanged).
       expect(src).toContain('weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets');
     });
