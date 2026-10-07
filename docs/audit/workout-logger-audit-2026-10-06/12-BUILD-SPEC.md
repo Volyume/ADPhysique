@@ -111,9 +111,14 @@ record system `lib/workoutRecordLine.js` and `detectPR`):
    line (the retired routine est-max copy stays retired; the e1RM record
    lives in the PR toast and the records screens).
 3. The next row's Target rule slot carries the record threshold whenever
-   one exists for the row's weight: "9 reps beats your best" (from
-   `buildRecordLine`); otherwise the progression rule. Plain, numbers
-   first, no "you should", no "crush".
+   one exists for the row's weight, as a PR tag followed by the smallest
+   set that would be a record at that weight: "PR 70 × 9" (the best at
+   70 kg is 8, so 9 is a record); for a weight above the heaviest ever,
+   "PR 75 × 1". No sentence. Computed from the record system
+   (`buildRecordLine` and `detectPR`): the rep record at the weight, else
+   the weight record. Otherwise the slot shows the progression rule.
+   Founder, 2026-10-07: the first wording, "9 beats your best", was
+   rejected as not elegant enough; this is the replacement.
 4. A logged row that set a record shows a small "PR" tag after its values
    (`colors.primaryBg` fill, `colors.primary` text, `captionStrong`), the
    way the calm toast already marks it the moment it happens.
@@ -123,8 +128,9 @@ record system `lib/workoutRecordLine.js` and `detectPR`):
 
 Props added: `ExerciseSection` gets `bests` ({ lastDateLabel, heaviest:
 { weight, reps }, atWeight: { weight, reps } } or null) and renders the
-line when present; `SetRow` gets `record: boolean` for the tag and `last`
-may carry `{ text, stale: boolean }`.
+line when present; `SetRow` gets `record: boolean` for the tag on a logged row, `prTarget: { weight, reps } | null` for the
+threshold on the next row, and `last` may carry `{ text, stale: boolean }`. The bests line is a pressable row
+with a trailing chevron (JEFIT's 1RM badge is tappable; so is ours) and opens the HistorySheet.
 
 ## 2b. Founder addition, 2026-10-07: the JEFIT pattern, previous sets you can select and the PRs in full
 
