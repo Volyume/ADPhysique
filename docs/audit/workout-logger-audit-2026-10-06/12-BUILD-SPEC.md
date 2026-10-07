@@ -218,7 +218,7 @@ Tests for each: render, props, every callback, accessibility labels, token-only 
 - Stage B (lead with B1): `SetTable` and `SetRow` replace the logged rows, Now card and upcoming rows; the check logs; the bar retired; the record copy in the rule slot; guard tests re-pinned. Founder device walk 1. **DONE 2026-10-07 with stage C** (`64ec237` lanes C1 and C2, `2aacc12` the screen; rulings in register D220 addendum 4).
 - Stage C (lead with B1): `Keypad` replaces the steppers and the system keyboard in the active row and the editor. **DONE 2026-10-07 with stage B** (landed together so the first device walk has an input path; every exercise kind in the table; `src/lib/timeEntry.js` and `src/lib/keypadEntry.js`).
 - Stage D (lead with B2): `RestSheet`, `SessionNotesSheet`, `ExerciseRestSheet`, tick-all. Founder device walk 2. **DONE 2026-10-07** (`54e5522`: HistorySheet and the bests line from `src/lib/exerciseHistory.js` (lane D1), ExerciseRestSheet behind the header's timer well, tick-all with a confirm; RestSheet and SessionNotesSheet were wired at stage A; rulings in register D220 addendum 5).
-- REVIEW (Opus): adversarial, against this file and the drawings, after stage D.
+- REVIEW (Opus): adversarial, against this file and the drawings, after stage D. **DONE 2026-10-07**: 22 findings, every one answered in one landing (register D220 addendum 6); the retired components deleted the same day.
 
 Lanes: B1 (Sonnet) builds the components of section 3 except the sheets; B2 (Sonnet) builds the three sheets. Both: new files only under `src/components/workout/session/` and their `__tests__`; never AWS, never the guard tests, never commit. Two at a time.
 
