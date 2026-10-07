@@ -50,7 +50,10 @@ describe('EL-9 circuit model: no rest between stations, round rest only after th
 
   test('the rest fired after the last station is the group round_rest_seconds for a circuit, never restSeconds/the default', () => {
     expect(fn).toMatch(
-      /const fullRest = isCircuitGroup\s*\n\s*\? \(routineExercise\?\.roundRestSeconds \|\| defaultRestSeconds \|\| 90\)\s*\n\s*: \(routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90\);/,
+      // Stage D (D220): the non-circuit arm reads restSecondsForEntry (this
+      // session's chosen length, then the plan row's restSeconds, then the
+      // default); the circuit arm is unchanged.
+      /const fullRest = isCircuitGroup\s*\n\s*\? \(routineExercise\?\.roundRestSeconds \|\| defaultRestSeconds \|\| 90\)\s*\n\s*: restSecondsForEntry\(currentEntry\);/,
     );
   });
 

@@ -84,7 +84,11 @@ describe('unilateral logging: laterality detection never forces bilateral exerci
 describe('D9 amendment 2: rest-class behaviour is derived, never user-set (unchanged by the reversal)', () => {
   test('R4 (D64): startPerSide derives and starts the between-sides pause itself - the Log set tap IS side one done', () => {
     const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(fn).toContain('const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);');
+    // Stage D (D220): the per-exercise rest length read goes through
+    // restSecondsForEntry (this session's chosen length, then the plan row's,
+    // then the default), the same chain the single-set rest uses.
+    expect(fn).toContain('const restPlan = perSideRestPlan(exercise?.compoundIsolation, restSecondsForEntry(currentEntry));');
+    expect(ACTIVE_WORKOUT).toContain("return entry?.routineExercise?.restSeconds || defaultRestSeconds || 90;");
     expect(fn).toContain('if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);');
   });
 

@@ -47,6 +47,9 @@ import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 import SetTable from '../components/workout/session/SetTable';
 import Keypad from '../components/workout/session/Keypad';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
+import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
+import HistorySheet from '../components/workout/session/HistorySheet';
+import { buildExerciseHistory } from '../lib/exerciseHistory';
 import { applyKey, stepValue, KEY_BACKSPACE, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import { pushDigit, popDigit, bufferToSeconds, secondsToBuffer, bufferToDisplay } from '../lib/timeEntry';
 import useAppStore from '../store/useAppStore';
@@ -58,7 +61,7 @@ import {
   slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
 } from '../lib/exercise/swapCarry';
 import SegmentedControl from '../components/SegmentedControl';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
@@ -521,6 +524,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [timeBuffer, setTimeBuffer] = useState('');
   const [rowSheet, setRowSheet] = useState(null);
   const entryReplaceRef = useRef(false);
+  // Stage D (D220): the rest length behind a section header's timer well.
+  // `restOverrides` is this session's chosen length per exercise id (so a
+  // freeform slot with no plan row can still be changed); a plan row is
+  // also written so the length holds from now on. `showRestLengthFor` is
+  // the index of the exercise whose sheet is open. `tickAllRemainingRef`
+  // counts the sets the double check still has to log.
+  const [restOverrides, setRestOverrides] = useState({});
+  const [showRestLengthFor, setShowRestLengthFor] = useState(null);
+  const tickAllRemainingRef = useRef(0);
+  // Stage D (D220, 12-BUILD-SPEC section 2b): the history and records sheet
+  // behind the active section's history well and its bests line.
+  const [showHistory, setShowHistory] = useState(false);
+  const [historySegment, setHistorySegment] = useState('history');
   // 'add' opens the picker to append an exercise; 'swap' opens it to replace the
   // current one. Lets the Swap sheet fall through to the full library and the
   // custom-exercise form when the ranked suggestions aren't what the user wants.
@@ -1462,6 +1478,69 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       toast.show('Could not save your note yet. Try again.', { variant: 'error' });
     }
   }
+
+  // Stage D (D220): the rest length for one exercise. This session's choice
+  // wins, then the plan row's, then the default. Saving writes the plan row
+  // (when there is one) and the store's entry, so the next session and the
+  // rest of this one agree.
+  function restSecondsForEntry(entry) {
+    const id = entry?.exercise?.id;
+    const chosen = id != null ? restOverrides[id] : undefined;
+    if (Number.isFinite(chosen) && chosen > 0) return chosen;
+    return entry?.routineExercise?.restSeconds || defaultRestSeconds || 90;
+  }
+  async function handleSaveRestLength(seconds) {
+    const idx = showRestLengthFor;
+    const entry = idx != null ? workoutExercises[idx] : null;
+    const id = entry?.exercise?.id;
+    if (id == null || !Number.isFinite(seconds)) return;
+    setRestOverrides((prev) => ({ ...prev, [id]: seconds }));
+    audit('workout.rest.length', { exerciseId: id, seconds });
+    const rowId = entry?.routineExercise?.id;
+    if (!rowId) return;
+    try {
+      await updateRoutineExercise(rowId, { restSeconds: seconds });
+      useAppStore.getState().setWorkoutExercises((list) => list.map((e, i) => (
+        i === idx && e?.routineExercise
+          ? { ...e, routineExercise: { ...e.routineExercise, restSeconds: seconds } }
+          : e
+      )));
+    } catch (e) {
+      logError('ActiveWorkoutScreen.saveRestLength', e, { routineExerciseId: rowId });
+      toast.show('Rest length kept for this session only. It could not be saved to your plan.', { variant: 'error' });
+    }
+  }
+
+  // Stage D (D220): the double check on the column labels logs the sets
+  // still to come with the numbers shown, one after another, through the
+  // same handler as a single tap. The person confirms the count first. Each
+  // log re-seeds the entry; the effect below taps again once the previous
+  // log has landed, and stops the moment a log does not land or the
+  // exercise changes.
+  function handleLogRemaining(count) {
+    if (!(count > 0) || saving) return;
+    appAlert(
+      'Log the remaining sets?',
+      `Logs the ${count} remaining ${count === 1 ? 'set' : 'sets'} with the numbers shown, one after another.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log them',
+          onPress: () => {
+            tickAllRemainingRef.current = count;
+            handleCompleteSetPress();
+          },
+        },
+      ],
+    );
+  }
+  useEffect(() => {
+    if (tickAllRemainingRef.current <= 0) return;
+    tickAllRemainingRef.current -= 1;
+    if (tickAllRemainingRef.current > 0 && !saving) handleCompleteSetPress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedSets.length]);
+  useEffect(() => { tickAllRemainingRef.current = 0; }, [currentExerciseIndex]);
 
   function handleJumpToExercise(i) {
     if (i === currentExerciseIndex) return;
@@ -3300,7 +3379,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // rest_seconds or the global default.
         const fullRest = isCircuitGroup
           ? (routineExercise?.roundRestSeconds || defaultRestSeconds || 90)
-          : (routineExercise?.restSeconds || defaultRestSeconds || 90);
+          : restSecondsForEntry(currentEntry);
         startRestTimer(overrides.perSideCompound ? halfRestSeconds(fullRest) : fullRest);
       }
 
@@ -3762,7 +3841,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       phase: 'side2',
     });
     hapticsVocab.setLogged();
-    const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);
+    const restPlan = perSideRestPlan(exercise?.compoundIsolation, restSecondsForEntry(currentEntry));
     if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);
   }
 
@@ -4771,6 +4850,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (atWeight.length === 0) return null;
     return { weight: w, reps: Math.max(...atWeight.map(repsOf)) + 1 };
   })();
+  // Section 2b: previous sessions for the History segment (today's sets are
+  // on the table already) and the records over everything on record for the
+  // exercise, today's logged sets included (founder ruling 2026-08-23: the
+  // bar moves during the session). Weight and reps exercises only.
+  const todayWeight = parseDecimalInput(currentSet.weight);
+  const previousHistory = useMemo(() => (
+    setTableKind === 'weight_reps'
+      ? buildExerciseHistory({ sets: allTimeSets, todayWeight, units })
+      : null
+  ), [setTableKind, allTimeSets, todayWeight, units]);
+  const recordsHistory = useMemo(() => (
+    setTableKind === 'weight_reps'
+      ? buildExerciseHistory({
+        sets: [
+          ...loggedSets.map((x) => ({ ...x, workoutId: x.workoutId ?? activeWorkout?.id, createdAt: x.createdAt ?? Date.now() })),
+          ...allTimeSets,
+        ],
+        todayWeight,
+        units,
+      })
+      : null
+  ), [setTableKind, allTimeSets, loggedSets, todayWeight, units, activeWorkout?.id]);
+  const sectionBests = previousHistory?.bests
+    ? {
+      lastDateLabel: previousHistory.bests.lastDateLabel,
+      heaviest: recordsHistory?.bests?.heaviest ?? previousHistory.bests.heaviest,
+      atWeight: recordsHistory?.bests?.atWeight ?? previousHistory.bests.atWeight,
+      unit: units,
+    }
+    : null;
+  function handleUseHistorySet({ weight, reps }) {
+    hapticsVocab.setLogged();
+    audit('workout.history.use', { exerciseId: exercise?.id, setIndex: workingLogged });
+    if (editingSet) { closeEditSet(); setEditField(null); }
+    setCurrentSet((cs) => ({ ...cs, weight: String(weight ?? 0), reps: reps ?? cs.reps, isGhost: false }));
+    setShowHistory(false);
+  }
+  function openHistorySheet() {
+    setHistorySegment('history');
+    setShowHistory(true);
+  }
+
+  // Tick-all is offered only for a plain straight entry with sets still to
+  // come: never a warm-up, a cluster type, a per-side pair or a cluster in
+  // progress, and only when the entry already holds loggable numbers.
+  const pendingCount = Math.max(0, targetSets - workingLogged);
+  const tickAllCount = (
+    pendingCount > 1
+    && !isWarmupEntry && !cluster && !perSide
+    && !isClusterType(currentSet.setType)
+    && !(exercise && unilateralExercises.has(exercise.id))
+    && (setTableKind !== 'weight_reps' || parseDecimalInput(currentSet.weight) > 0)
+    && Number(currentSet.reps) > 0
+  ) ? pendingCount : 0;
   const nextCheckLabel = cluster ? 'Finish cluster'
     : perSide ? 'Log other side'
       : isWarmupEntry ? 'Log warm-up'
@@ -4934,6 +5067,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         skipped={item.skipped}
         onPressHeader={() => handleJumpToExercise(i)}
         onDetails={() => handleJumpToExercise(i)}
+        onRestLength={complete || item.skipped ? undefined : () => setShowRestLengthFor(i)}
       />
     );
     (i < currentExerciseIndex ? collapsedSectionsBefore : collapsedSectionsAfter).push(node);
@@ -5045,6 +5179,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             state="active"
             groupLabel={outlineItemsShown[currentExerciseIndex]?.groupLabel ?? null}
             onDetails={handleOpenExerciseDetails}
+            bests={sectionBests}
+            onHistory={previousHistory ? openHistorySheet : undefined}
+            onRestLength={() => setShowRestLengthFor(currentExerciseIndex)}
             onAddSet={armExtraSet}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
@@ -5364,6 +5501,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             kind={setTableKind}
             units={units}
             columnsLabel={{ weight: units }}
+            onLogRemaining={tickAllCount > 0 ? () => handleLogRemaining(tickAllCount) : undefined}
           />
 
           <View style={styles.activeBody}>
@@ -5552,6 +5690,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             (noteText, cleared on log as before); a logged row offers Edit set
             (the keypad on its weight well) and Delete set (the existing
             confirm-then-remove flow via openDeleteFromMenu). */}
+        <HistorySheet
+          visible={showHistory}
+          onClose={() => setShowHistory(false)}
+          exerciseName={exercise?.name ?? ''}
+          segment={historySegment}
+          onSegment={setHistorySegment}
+          history={previousHistory?.history ?? []}
+          records={recordsHistory?.records ?? { lifetime: null, threeMonths: null }}
+          repsAtWeight={recordsHistory?.repsAtWeight ?? []}
+          onUseSet={handleUseHistorySet}
+          units={units}
+        />
+        <ExerciseRestSheet
+          visible={showRestLengthFor != null}
+          value={showRestLengthFor != null ? restSecondsForEntry(workoutExercises[showRestLengthFor]) : 90}
+          onSave={handleSaveRestLength}
+          onClose={() => setShowRestLengthFor(null)}
+        />
         <SetRowSheet
           visible={!!rowSheet}
           onClose={() => setRowSheet(null)}
