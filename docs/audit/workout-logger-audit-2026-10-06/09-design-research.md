@@ -304,3 +304,5 @@ Carried open from the first round: the weekday-dependent test
 (`d218.reportingReaders.test.js`), the watch logger, the summary's order,
 a session cut short. Not asked, by the founder's own prior words: the
 plate calculator, an RPE or RIR input, exercise media, a typeface change.
+
+Addendum 2026-10-07: the five questions were weighed against the production base and the behavioural literature in `10-user-psychology-and-the-final-two.md`; the rep control became a windowed picker and the ruler's step follows the exercise's equipment (10 section 7). The page is version 6.

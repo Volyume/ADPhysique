@@ -38,6 +38,7 @@ options; the build starts only on the founder's choice.
 | 08-research-page.html | lead | hands-on | the research page (repository copy, full store screenshots by URL): twelve measured active-workout screens, the legibility evidence, our logger measured the same way, the redesign with its three drawings and the verdicts it re-opens; published with the enlarged crops at https://claude.ai/artifact/WUWZTZmgJqUaV7kgBsrUXC (the same URL that carried the two rejected sets of concepts; both are withdrawn) |
 | 09-design-research.md | lead | hands-on | the research record: method, the exact source screenshot per app, the measurements, the pattern counts, the quoted legibility sources and the distance table, the derived design with its evidence, the questions |
 | 09-drawing-lift.png, 09-drawing-rest.png, 09-drawing-fields.png | lead | hands-on | the redesign rendered at 2x from 08 by headless Chromium (390 x 844): the Lift state with the ruler and dots, the Rest state, and the Lift state with number fields |
+| 10-user-psychology-and-the-final-two.md | lead | hands-on | the forks weighed against the production user base (aggregates, 2026-10-07) and the behavioural literature; the final two choices; the lead's recommendation |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -828,28 +829,43 @@ is the lead's.)
 | Draft that survives an app kill | few | present | keep |
 | Honest PR handling, calm-mode suppression | none | present | keep (a differentiator, not a gap) |
 
-## 9. Questions for the founder (delivered in chat 2026-10-06 with the redesign; recorded here)
+## 9. The final two (delivered in chat 2026-10-07; the weighing is 10-user-psychology-and-the-final-two.md)
 
-Q1. The two-state model: Rest takes the screen after Log and hands back
-    to Lift. A: yes, build it (re-opens the strip and "timer small"
-    verdicts). B: no, keep rest as a small strip; the design then loses
-    its far-distance state.
-Q2. Entering a number. A: the ruler and the rep dots, with the number pad
-    behind a tap on the value for typing and accessibility (both
-    drawings together). B: the ruler and dots only. C: the two fields
-    and the number pad only.
-Q3. Sizes. A: 32 for the pair in Lift, 40 for the countdown, 24 for Next
-    (drawn). B: 24, 32, 20.
-Q4. The Log button's label. A: it names the set, "Log 70 kg x 9". B: a
-    fixed "Log set".
-Q5. Scope. A: the whole logger in one campaign: this screen, the session
-    sheet and the fifteen functional fixes of 8.1. B: this screen first,
-    the rest after a device walk.
+The founder, 2026-10-07: "use your expert knowledge and investigate the
+options against user psychology our user base and what they would enjoy
+the most then present the final two choices and then we will get the go
+ahead". The five forks of the first delivery were weighed against the
+production base (aggregates) and the behavioural literature (10,
+sections 1 to 4). Settled by the evidence: the two-state screen (three
+quarters of a session is rest; the far-distance physics; one stable
+loop), the sizes 32 / 40 / 24, the button naming the set, and the
+elimination of a ruler without a pad (12% of weights are off the grid).
+The data also changed the drawing: the rep control is a windowed picker
+centred on the target (median 15 reps, a quarter at 20 or more); the
+ruler's step follows the exercise's equipment; a warm-up line appears
+only when one is logged (1 of 610 sets).
 
-Carried open from the first round, not re-asked on the page: the
-weekday-dependent test (`d218.reportingReaders.test.js`, fix the one line
-and merge the audit record to main, or leave it for the next code lane);
-the watch logger; the summary's order (8.6); a session cut short.
+The two choices, both carrying everything settled above, the calm record
+line, Edit from Rest, every safety rule and the locked voice:
+
+- Choice A, ruler and picker (the instrument): weight on a ruler stepped
+  to the exercise's equipment with last session as an amber tick; reps on
+  a picker centred on the target with the range filled and last time
+  ringed; tap or drag with detents and 44 dp tall hit areas; the pad
+  behind a tap on either number for any value and for screen readers.
+- Choice B, fields and pad (the conventional): two quiet fields with last
+  time under each value; a tap opens the number pad.
+
+Lead's recommendation (D33, product-best): Choice A; Choice B is the
+safer build, not the better product. Scope: the whole logger in one
+campaign with the founder's device walk between the screen and the
+periphery; the cost is the founder's call. Awaiting the founder's go: A or
+B, and the scope.
+
+Carried open from the first round: the weekday-dependent test
+(`d218.reportingReaders.test.js`), the watch logger, the summary's order
+(8.6), a session cut short (9 skipped and 3 ended-early sessions in the
+cloud say the path matters).
 
 Not asked, by the founder's own prior words (5.1): the plate calculator,
 an RPE or RIR input, exercise media, a typeface change.

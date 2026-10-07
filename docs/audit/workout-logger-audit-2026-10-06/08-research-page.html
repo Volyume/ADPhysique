@@ -164,8 +164,9 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 .ph .r-big{font-size:32px;line-height:40px;font-weight:700;text-align:center;margin:4px 0 6px}
 .ph .r-rulerwrap{height:56px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
 .ph .ruler{display:block}
-.ph .dots{display:flex;justify-content:space-between;gap:3px}
-.ph .dot{width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;font-weight:500;color:var(--td);border:1px solid var(--bs);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.ph .dotwrap{-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);margin:0 -6px;padding:0 6px}
+.ph .dots{display:flex;justify-content:space-between;gap:2px}
+.ph .dot{width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;font-weight:500;color:var(--td);border:1px solid var(--bs);font-variant-numeric:tabular-nums;flex:0 0 auto}
 .ph .dot.tgt{background:var(--s2);border-color:var(--s2);color:var(--t1)}
 .ph .dot.last{border-color:var(--a);color:var(--a)}
 .ph .dot.sel{background:var(--a);border-color:var(--a);color:#0D0D0D;font-weight:600}
@@ -379,7 +380,7 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 </ol>
 
 <h2>8. The drawings</h2>
-<p>Three phones at 390 × 844 in the live dark tokens and Inter. Left: Lift, with the ruler and the rep dots. Middle: Rest, the same screen a second after Log. Right: Lift with plain number fields instead of the ruler, the conventional alternative (Q2).</p>
+<p>Three phones at 390 × 844 in the live dark tokens and Inter. Left: Lift, with the ruler and the rep picker. Middle: Rest, the same screen a second after Log. Right: Lift with plain number fields instead of the ruler, the conventional alternative.</p>
 <div class="stage">
 <div class="phonewrap">
 <div class="ph" aria-label="Lift state, ruler and dots">
@@ -406,7 +407,7 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
     <div class="r-blk">
       <div class="r-row"><span class="r-ey">Reps · target 6 to 10</span><span class="r-ey r-last"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#F5A623" stroke-width="1.5"/></svg> Last time 8</span></div>
       <div class="r-big n">9</div>
-      <div class="dots" aria-label="reps, 9 selected, target 6 to 10, last time 8"><span class="dot">1</span><span class="dot">2</span><span class="dot">3</span><span class="dot">4</span><span class="dot">5</span><span class="dot tgt">6</span><span class="dot tgt">7</span><span class="dot tgt last">8</span><span class="dot tgt sel">9</span><span class="dot tgt">10</span><span class="dot">11</span><span class="dot">12</span><span class="dot">13</span><span class="dot">14</span><span class="dot">15</span></div>
+      <div class="dotwrap"><div class="dots" aria-label="reps picker, 9 chosen, target 6 to 10, last time 8; drag or tap"><span class="dot">3</span><span class="dot">4</span><span class="dot">5</span><span class="dot tgt">6</span><span class="dot tgt">7</span><span class="dot tgt last">8</span><span class="dot tgt sel">9</span><span class="dot tgt">10</span><span class="dot">11</span><span class="dot">12</span><span class="dot">13</span><span class="dot">14</span><span class="dot">15</span></div></div>
     </div>
     <div class="r-rec"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F5A623" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px;flex:0 0 auto"><path d="M5 2h6v4a3 3 0 0 1-6 0V2z"/><path d="M5 3H3v1.5A2.5 2.5 0 0 0 5.5 7M11 3h2v1.5A2.5 2.5 0 0 1 10.5 7"/><path d="M8 9v3M5.5 14h5M8 12c1.5 0 2.5.7 2.5 2h-5c0-1.3 1-2 2.5-2z"/></svg><span>9 or more at 70 kg beats your best of 8.</span></div>
     <div class="r-sets">
@@ -448,7 +449,7 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
       <div class="r-next n">Set 3 of 3 · 70 kg × 6 to 10</div>
       <div class="r-meta">Last time 72.5 kg × 8</div>
     </div>
-    <div class="r-sets">
+    <div class="r-sets" style="margin-top:28px">
       <div class="r-set dim"><span class="k">Warm-up</span><span class="n">40 kg × 10</span></div>
       <div class="r-set"><span class="k">Set 1</span><span class="n">70 kg × 8</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg></div>
       <div class="r-set"><span class="k">Set 2</span><span class="n">70 kg × 9</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 8.5l3.2 3.2L13 5"/></svg><span class="edit">Edit</span></div>
@@ -501,8 +502,8 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 <ol>
 <li><b>Header.</b> Close, the session clock small in the centre, the icon-only Finish in amber. Under it a full-width hairline that fills amber as the session's sets are logged: this is the only progress display.</li>
 <li><b>Exercise.</b> Eyebrow "Upper A · Exercise 2 of 6" at 11, which opens the session sheet (every exercise and set, reorder, swap, add); the name at 24 with the chevron that opens exercise details; the set's prescription at 13.</li>
-<li><b>Weight.</b> The value at 32 over a ruler of 2.5 kg steps (labels every 10). Drag the ruler to change it, with a detent at each step; the white marker is the value, the amber tick is last session's 72.5. It is a weight scale, never a plate readout.</li>
-<li><b>Reps.</b> The value at 32 over fifteen dots: the target range 6 to 10 filled, last time's 8 ringed in amber, the chosen 9 amber. One tap sets the count. For more than 15, hold the last dot or tap the number.</li>
+<li><b>Weight.</b> The value at 32 over a ruler whose step is the exercise's load increment from the engine (2.5 kg for a barbell as drawn, 2 kg for a dumbbell rack, the stack's step for a machine), labels every 10. Drag the ruler with a detent per step; the white marker is the value, the amber tick is last session's 72.5. Any weight off the grid is typed on the pad behind a tap on the number. It is a weight scale, never a plate readout.</li>
+<li><b>Reps.</b> The value at 32 over a rep picker: a row of counts centred on the target (here 3 to 15 for a 6 to 10 target), the target range filled, last time's 8 ringed in amber, the chosen 9 amber. Tap a count or drag along the row with a detent per rep; the row scrolls for counts beyond the window. Each count is a 44 dp tall target. The big number and the button label repeat the choice.</li>
 <li><b>Record line.</b> One line at 13 with the one trophy glyph, in plain words. The PR itself is still the calm toast after Log.</li>
 <li><b>This exercise.</b> Warm-up, set 1 with its green check, set 3 as the plan, each a sentence line at 15, anchored above the button where the thumb is; tap a logged line to edit it. Three or more logged sets fold behind one line, as today.</li>
 <li><b>Log.</b> The house primary button, charcoal with the 1 dp border, and it names what it will record: "Log 70 kg × 9".</li>
@@ -533,15 +534,38 @@ table.cmp.tight td,table.cmp.tight th{padding:8px 8px}
 <div class="k">Workspace hosts one exercise; three or more logged sets fold</div><div class="v"><b>Kept.</b></div>
 </div>
 
-<h2>10. Decisions I need from you</h2>
-<div class="q">
-<div class="k">Q1</div><div class="v">The two-state model: Rest takes the screen after Log and hands back to Lift.<span> A: yes, build it (re-opens the strip and "timer small" verdicts). B: no, keep rest as a small strip; the design then loses its far-distance state.</span></div>
-<div class="k">Q2</div><div class="v">Entering a number.<span> A: the ruler and the rep dots, with the number pad behind a tap on the value for typing and accessibility (both drawings, together). B: the ruler and dots only. C: the two fields and the number pad only.</span></div>
-<div class="k">Q3</div><div class="v">Sizes.<span> A: 32 for the pair in Lift, 40 for the countdown, 24 for Next (drawn). B: 24, 32, 20.</span></div>
-<div class="k">Q4</div><div class="v">The Log button's label.<span> A: it names the set, "Log 70 kg × 9". B: a fixed "Log set".</span></div>
-<div class="k">Q5</div><div class="v">Scope.<span> A: the whole logger in one campaign: this screen, the session sheet and the fifteen functional fixes already specified (00 section 8.1). B: this screen first, the rest after a device walk.</span></div>
+<h2>10. Weighed against our users and their psychology: the final two</h2>
+<p>Read on 7 October from the production database as aggregates only (no row or person was read), and from the behavioural literature listed in the sources. The cloud mirrors of the logging tables are partial, so the logging figures are directional; the profile figures cover the whole base.</p>
+<h3>Who they are</h3>
+<div class="kv">
+<div class="k">Base</div><div class="v">25 profiles, 20 past first run, sign-ups July to October; 21 deletions, all user-requested (Android 15, iOS 6).</div>
+<div class="k">Who</div><div class="v">kg 25 of 25; training focus bodybuilding 25 of 25; male 18, female 1, unset 6; training age 3 to 6 years for 21 of 25; primary goal "general" 14 of 17 body profiles. Experienced lifters, not beginners.</div>
+<div class="k">Sessions</div><div class="v">27 cloud sessions from 5 users: median 53 minutes, 23 sets, 6 exercises, 3 sets per exercise; no session notes; pre-workout intent set on 22 of 27.</div>
+<div class="k">Sets</div><div class="v">610: straight 609, warm-up 1; RIR and RPE never written; reps within the prescribed range <b>87%</b>, above it 10%, below 3%; reps median 15 (a quarter are 20 or more); weight median 40 kg; on a 2.5 kg grid 75%, on 1.25 only 13%, <b>off both 12%</b> (dumbbell racks, machine stacks); edited later 8.5%.</div>
+<div class="k">Rest</div><div class="v">Median gap between sets of one exercise 107 s. At 23 sets that is about 41 of 53 minutes: <b>three quarters of a session is spent in the state the redesign calls Rest</b>, which today is a 44 dp strip with 16 pt digits.</div>
+<div class="k">Signals</div><div class="v">Sessions skipped 9, ended early 3; in-session swaps 73; the three in-app feedback entries all sit on the workout summary (two "helpful", one "love").</div>
 </div>
-
+<h3>The psychology that applies</h3>
+<ul>
+<li><b>Attention under effort.</b> Reduced prefrontal resources during and just after hard exertion (Dietrich's transient hypofrontality; the resistance-training evidence is mixed, so the claim is kept modest). One visible action; the button names what it will do.</li>
+<li><b>Defaults.</b> Meta-analysis of 58 studies: defaults move choices strongly (d = 0.68), most when they read as an endorsement by a trusted source (Jachimowicz et al. 2019). The coach's prescription pre-filled and logged by one tap is that default, and 87% of sets already take it. A wrong default is sticky too, so deviation must be one gesture away and last time visible.</li>
+<li><b>Progress.</b> Effort rises as the goal nears (goal-gradient, Kivetz et al. 2006) and visible progress raises completion (endowed progress, Nunes and Drèze 2006). The session hairline and the position eyebrow, no numeric nagging.</li>
+<li><b>Competence and autonomy.</b> Self-determination theory reviews tie adherence to competence and self-endorsed choice; mastery experiences are the strongest source of self-efficacy (Bandura). Last time and the record belong at the point of action as information; the rep range is an invitation, not a demand.</li>
+<li><b>Grip and precision.</b> 49% one-handed, 75% of interactions by thumb (Hoober 2013); finger occlusion and tremor make small targets slow and error-prone (Fitts, FFitts). The primary action at the bottom, 44 dp targets, gestures that snap to a detent.</li>
+<li><b>Habit.</b> Automaticity grows with repetition in a stable context (Lally et al. 2010). One identical loop every set.</li>
+<li><b>Memory of the session.</b> The end of a bout shapes how it is remembered (Zenko, Ekkekakis and Ariely 2016). The finish and summary are part of the logger's job, and the summary already draws positive feedback.</li>
+<li><b>What to avoid.</b> Badges and streaks give short-term gains and broken streaks demotivate; fitness tracking has been linked to eating-disorder symptoms (Simpson and Mazzeo 2017). The logger informs and never pushes; the record line states the best, the rest state shows the plan.</li>
+</ul>
+<h3>What the evidence settles</h3>
+<p><b>Two states:</b> yes. Three quarters of a session is rest, the far-distance physics stands, and one stable loop is what habit needs. <b>Sizes 32 / 40 / 24:</b> yes, the countdown is the most-read number of the session. <b>The button names the set:</b> yes, it removes a re-read under fatigue and catches a slip. <b>A ruler without a pad:</b> eliminated, 12% of weights are off the grid. <b>Scope:</b> the user-optimal answer is the whole logger in one campaign with a device walk between stages, because the finish and summary carry the memory of the session; the cost is the founder's call.</p>
+<p>Two things the data changed in the drawings: the rep control is a windowed picker centred on the target (the median set is 15 reps and a quarter are 20 or more, so fifteen fixed dots could not carry it), and the ruler's step follows the exercise's equipment with the pad behind the number for anything off the grid. A warm-up line appears only when one is logged.</p>
+<h3>The final two</h3>
+<p>Shared by both: the two-state screen, the plan filled in and logged by one tap, the button naming the set, 32 / 40 / 24, the session hairline, last time in words on every set, the calm record line, Edit from Rest, the sets as sentence lines above the house charcoal button, amber only on the live thing, every safety rule and the locked voice.</p>
+<div class="kv">
+<div class="k">Choice A<br>Ruler and picker</div><div class="v"><b>The instrument.</b> Weight on a ruler stepped to the exercise's equipment, dragged with a detent per step, last session as an amber tick. Reps on a picker centred on the target, the range filled, last time ringed; tap or drag, 44 dp tall hit areas. The pad behind a tap on either number for any value and for screen readers. <br><b>For:</b> the above-range case is one tap, a 2.5 kg step is one flick, last time is where the hand is, drag-and-snap forgives a sweaty thumb, and the detent is a small pleasure every set. <b>Against:</b> new on first use (one quiet hint), slip-prone without the tall hit area and the live readout, the heavier build. <b>Suits:</b> this base, experienced lifters making small, frequent, mostly upward adjustments.</div>
+<div class="k">Choice B<br>Fields and pad</div><div class="v"><b>The conventional.</b> Two quiet fields with last time under each value; a tap opens a number pad with 2.5 and 1.25 kg steps. Nothing else changes. <br><b>For:</b> zero learning, exact entry of anything, the fewest visible controls, the simplest accessibility, the lowest build risk. <b>Against:</b> every change costs three or four taps, paid on the 13% of sets that deviate and on every edit; last time is text only; nothing about it is tactile or distinctive. <b>Suits:</b> people who type their numbers, and a faster first device walk.</div>
+</div>
+<p><b>The lead's recommendation:</b> Choice A, on the product-best criterion: the base is experienced, adjusts by small steps and mostly upward, and spends most of the session in the state this design builds for. Choice B is the safer build, not the better product. The go-ahead is the founder's: A or B, and the scope.</p>
 <h2>Sources</h2>
 <ul class="src">
 <li>App Store listings via Apple's lookup and search API, 6 October 2026: Hevy 1458862350, Strong 464254577, Boostcamp 1529354455, Fitbod 1041517543, Setgraph 1209781676, Gravl 6450921637, Alpha Progression 1462277793, Caliber 1482405410, Liftin' 1445041669, Musklr 6748942492, RepCount 594982044, Gymaholic 648518560. The exact screenshot each crop was taken from is recorded with its mzstatic URL in <code>docs/audit/workout-logger-audit-2026-10-06/09-design-research.md</code>.</li>
