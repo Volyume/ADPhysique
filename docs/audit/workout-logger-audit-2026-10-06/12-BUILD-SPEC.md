@@ -88,13 +88,51 @@ campaign), the watch, any engine change, any ED-safety surface.
 | Keypad | panel `colors.surface` with a top hairline; keys 52 dp, well-styled, `type.num('h3')` semibold; step keys `colors.primary`; tabs `type.bodyStrong`; Clear and keyboard toggle as wells |
 | Sizes | row 64, section header 56, footer 52, columns row 36, wells 44 tall × 2 × 48 wide, check 32 |
 
+
+## 2a. Founder addition, 2026-10-07: previous weights and reps, and the PRs, on the screen
+
+Founder, verbatim: "Make sure we have previous weights and reps and maybe
+even the PRs on the screen so we can immediately go and beat them."
+
+What this adds to the design (all from data the screen already loads:
+`prevSets` and `allTimeSets` in `loadHistory`, AWS:2433-2730, and the
+record system `lib/workoutRecordLine.js` and `detectPR`):
+
+1. Every row's Last cell shows last session's set at that position
+   (weight × reps); when last session had no set at that position, the
+   most recent one at the position before it, marked with a muted dot.
+   Tapping Last on the next row fills the wells with it (the "Use" action).
+2. A bests line under the exercise name, inside the section header, at
+   `type.label` `colors.textSecondary` with the numbers in `colors.textPrimary`:
+   "Last session 6 Oct · Best 75 kg × 6 · at 70 kg: 8 reps". The three
+   facts: when the exercise was last done; the heaviest set ever (weight
+   and its reps); the most reps ever at today's working weight (the next
+   row's weight), which is the number to beat. No estimated max in this
+   line (the retired routine est-max copy stays retired; the e1RM record
+   lives in the PR toast and the records screens).
+3. The next row's Target rule slot carries the record threshold whenever
+   one exists for the row's weight: "9 reps beats your best" (from
+   `buildRecordLine`); otherwise the progression rule. Plain, numbers
+   first, no "you should", no "crush".
+4. A logged row that set a record shows a small "PR" tag after its values
+   (`colors.primaryBg` fill, `colors.primary` text, `captionStrong`), the
+   way the calm toast already marks it the moment it happens.
+5. Reps and weight that beat the best are not styled differently in the
+   wells; the tag and the toast carry it. Nothing nags: a session below
+   the best shows the facts and no comment.
+
+Props added: `ExerciseSection` gets `bests` ({ lastDateLabel, heaviest:
+{ weight, reps }, atWeight: { weight, reps } } or null) and renders the
+line when present; `SetRow` gets `record: boolean` for the tag and `last`
+may carry `{ text, stale: boolean }`.
+
 ## 3. Components, props, tests (lane B1 and B2 build these; the lead wires them)
 
 - `SessionToolbar({ startTime, onClose, onRest, onNotes, onFinish, finishBusy })`: keeps `testID="volyume-workout-close"` and
   `testID="volyume-workout-finish"` (existing tests); new `volyume-tool-rest`, `volyume-tool-notes`. Contains `SessionClock`.
 - `SessionHeader({ name, note, onNotes })`.
-- `ExerciseSection({ index, name, state: 'active'|'done'|'upcoming', doneSetCount, onPressHeader, onDetails, onRestLength, onAddSet, onSwap, onMore, children })`: active renders children (the table and any banners the screen passes); done shows a green check and "{n} sets"; upcoming shows the header only.
-- `SetTable({ rows, onLogRemaining, onPressWell, onCheck, columnsLabel: {weight} })` and `SetRow({ marker: 'W'|'F'|number, last, target: { value, rule }, wells: { weight, reps, state: 'logged'|'next'|'pending'|'editing', editingField }, check: 'logged'|'next'|'pending', onPressWell, onCheck, testIDs })`.
+- `ExerciseSection({ index, name, state: 'active'|'done'|'upcoming', doneSetCount, bests, onPressHeader, onDetails, onRestLength, onAddSet, onSwap, onMore, children })` (bests per section 2a): active renders children (the table and any banners the screen passes); done shows a green check and "{n} sets"; upcoming shows the header only.
+- `SetTable({ rows, onLogRemaining, onPressWell, onCheck, columnsLabel: {weight} })` and `SetRow({ marker: 'W'|'F'|number, last: { text, stale }, target: { value, rule }, wells: { weight, reps, state: 'logged'|'next'|'pending'|'editing', editingField }, check: 'logged'|'next'|'pending', record, onPressLast, onPressWell, onCheck, testIDs })` (record tag and stale last per section 2a).
   The next row carries `testID="volyume-btn-complete-set"` on its check (the existing test id of the primary), so the behaviour suites keep pressing the same id.
 - `Keypad({ field: 'weight'|'reps', value, step, unit, onKey, onStep, onClear, onNext, onDone, onSystemKeyboard })`: digits, point (weight only), backspace, −step, +step, Next, Done; TalkBack: `accessibilityRole="keyboardkey"` where available, else button with labels "Add 2.5 kilograms" etc.
 - `RestSheet`, `SessionNotesSheet`, `ExerciseRestSheet` on the house `BottomSheet`; the rest sheet reads the store's rest fields the way `RestTimer` does (RT:63-74) and calls the same adjust and skip actions.
