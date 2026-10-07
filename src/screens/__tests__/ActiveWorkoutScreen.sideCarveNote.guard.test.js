@@ -121,7 +121,8 @@ describe('the rendered note: generic line, always visible, positioned near the c
   test('the note sits after the StatusStrip render, before the continuous set sequence', () => {
     expect(stripEnd).toBeGreaterThan(-1);
     expect(noteIdx).toBeGreaterThan(stripEnd);
-    const setSequenceIdx = SRC.indexOf('ONE continuous set sequence (phase 2B)', noteEnd);
+    // Logger rebuild stage B (D220): the set sequence is the SetTable.
+    const setSequenceIdx = SRC.indexOf('<SetTable', noteEnd);
     expect(setSequenceIdx).toBeGreaterThan(noteEnd);
   });
 

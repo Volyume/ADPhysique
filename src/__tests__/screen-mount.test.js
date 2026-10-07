@@ -1921,9 +1921,9 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       const collapsed = collectText(tree.toJSON()).join('  ');
       expect(collapsed).toMatch(/Target met/);          // the content chip is present
       expect(collapsed).not.toMatch(/Target reached/);  // the banner stays folded
-      // The target prescription (reps range) moved INTO the card header, folded
-      // beside the orientation line, and still renders.
-      expect(collapsed).toMatch(/8\s*-\s*12\s*reps/);
+      // Stage B (D220): the target prescription (reps range) is the next
+      // row's Target cell ("60 × 8-12" over the rule), and still renders.
+      expect(collapsed).toMatch(/8\s*-\s*12/);
 
       // Expand: tap the chip; the folded banner content then appears.
       const chips = tree.root.findAll(
@@ -2050,17 +2050,33 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
     });
   }
 
-  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
-  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
-  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
-
+  // Logger rebuild stages B and C (D220): the entry is the next row's wells
+  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // the number it shows; weightInput and repsInput keep their names and
+  // return { props: { value } } so the assertions below read as before.
+  const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
+  const pressable = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onPress === 'function')[0];
+  function wellValue(tree, field) {
+    const well = host(tree, `volyume-well-${field}`);
+    if (!well) throw new Error(`no ${field} well on screen`);
+    const spoken = well.props.accessibilityValue?.text;
+    return spoken === 'empty' || spoken == null ? '' : spoken;
+  }
+  function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
+  function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
+  function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
+  async function typeOnKeypad(tree, field, value) {
+    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
+    for (const ch of String(value)) {
+      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
+      await actFlush(() => pressable(tree, id).props.onPress());
+    }
+    // Next on the weight field, Done on reps: either closes this field.
+    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+  }
   async function typeAndLog(tree, weight, reps) {
-    await actFlush(() => {
-      weightInput(tree).props.onChangeText(String(weight));
-    });
-    await actFlush(() => {
-      repsInput(tree).props.onChangeText(String(reps));
-    });
+    await typeOnKeypad(tree, 'weight', weight);
+    await typeOnKeypad(tree, 'reps', reps);
     await actFlush(() => logButton(tree).props.onPress());
   }
 
@@ -2295,13 +2311,33 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
     });
   }
 
-  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
-  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
-  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
-
+  // Logger rebuild stages B and C (D220): the entry is the next row's wells
+  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // the number it shows; weightInput and repsInput keep their names and
+  // return { props: { value } } so the assertions below read as before.
+  const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
+  const pressable = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onPress === 'function')[0];
+  function wellValue(tree, field) {
+    const well = host(tree, `volyume-well-${field}`);
+    if (!well) throw new Error(`no ${field} well on screen`);
+    const spoken = well.props.accessibilityValue?.text;
+    return spoken === 'empty' || spoken == null ? '' : spoken;
+  }
+  function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
+  function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
+  function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
+  async function typeOnKeypad(tree, field, value) {
+    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
+    for (const ch of String(value)) {
+      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
+      await actFlush(() => pressable(tree, id).props.onPress());
+    }
+    // Next on the weight field, Done on reps: either closes this field.
+    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+  }
   async function typeAndLog(tree, weight, reps) {
-    await actFlush(() => { weightInput(tree).props.onChangeText(String(weight)); });
-    await actFlush(() => { repsInput(tree).props.onChangeText(String(reps)); });
+    await typeOnKeypad(tree, 'weight', weight);
+    await typeOnKeypad(tree, 'reps', reps);
     await actFlush(() => logButton(tree).props.onPress());
   }
 
@@ -2364,18 +2400,8 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
     }
   });
 
-  // LoggedSetRow is React.memo-wrapped; react-test-renderer's findAllByType
-  // matches the memo's INNER function instance, not the outer memo object
-  // this file imports, so type-based lookup silently finds nothing. Every
-  // logged-set row (and its editor, once open) carries a distinctive prop
-  // shape (`onEdit`+`set` when closed, `isEditing`+`onSaveEdit` when open),
-  // so match on that shape instead - robust regardless of memo wrapping.
-  function findLoggedRow(tree, predicate) {
-    return tree.root.findAll(n => n.props && typeof n.props.onEdit === 'function' && n.props.set && predicate(n.props.set))[0];
-  }
-  function findEditingRow(tree) {
-    return tree.root.findAll(n => n.props && n.props.isEditing && typeof n.props.onSaveEdit === 'function')[0];
-  }
+  // Stage B (D220): a logged row is edited in place through its wells and
+  // the keypad (Done saves), and deleted through its row sheet (long-press).
 
   test('(ii) editing a logged set: the live box re-seeds from the edited value, not the pre-edit one', async () => {
     const database = require('../lib/database');
@@ -2397,17 +2423,12 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
       await typeAndLog(tree, 80, 12);
       expect(weightInput(tree).props.value).toBe('80');
 
-      // Edit that set DOWN to a genuine below-band miss (6 < repsMin 8).
-      let row = findLoggedRow(tree, (s) => s.weight === 80 && s.actualReps === 12);
-      expect(row).toBeTruthy();
-      await actFlush(() => row.props.onEdit(row.props.set));
-
-      row = findEditingRow(tree);
-      expect(row).toBeTruthy();
-      await actFlush(() => row.props.onChangeEditValue({ ...row.props.editValue, reps: 6 }));
-
-      row = findEditingRow(tree);
-      await actFlush(() => row.props.onSaveEdit());
+      // Edit that set DOWN to a genuine below-band miss (6 < repsMin 8): tap
+      // the logged row's reps well, key 6 (the first key replaces), Done.
+      await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
+      expect(wellValue(tree, 'reps-0')).toBe('12');
+      await actFlush(() => pressable(tree, 'volyume-key-6').props.onPress());
+      await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
 
       // Set 2's box (still untouched/ghost) now reflects the EDITED
       // evidence: a genuine miss drops the load by exactly one increment,
@@ -2462,15 +2483,13 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
       await typeAndLog(tree, 60, 14);
       expect(weightInput(tree).props.value).toBe('62.5');
 
-      // Delete the second (60x14, the overshoot) set: open its editor, then
-      // trigger the real confirm-then-remove flow (handleDeleteEditedSet).
-      let row = findLoggedRow(tree, (s) => s.weight === 60 && s.actualReps === 14);
+      // Delete the second (60x14, the overshoot) set: hold its row for the
+      // row sheet, then Delete set drives the real confirm-then-remove flow
+      // (openDeleteFromMenu -> handleDeleteEditedSet).
+      const row = tree.root.findAll((n) => n.props && n.props.testID === 'volyume-set-row-1' && typeof n.props.onLongPress === 'function')[0];
       expect(row).toBeTruthy();
-      await actFlush(() => row.props.onEdit(row.props.set));
-
-      row = findEditingRow(tree);
-      expect(row).toBeTruthy();
-      await actFlush(() => row.props.onDeleteEdit(row.props.set));
+      await actFlush(() => row.props.onLongPress());
+      await actFlush(() => pressable(tree, 'volyume-setrow-sheet-delete').props.onPress());
 
       // Only the 60x10 set remains logged; the next box's carry-forward
       // must read 60, never the overshoot-driven 62.5.
@@ -2537,6 +2556,20 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
 // the exercise unchanged). A second test pins the un-cancelled behaviour is
 // unchanged: leaving it alone still advances.
 describe('C3: auto-advance countdown is visible and cancellable', () => {
+  // Stage B (D220): the countdown line is decorative (no onPress), so it
+  // needs a finder that does not require a pressable.
+  function findAnyByTestID(tree, testID) {
+    const out = [];
+    function visit(node) {
+      if (!node || typeof node === 'string' || typeof node === 'number') return;
+      if (node.props?.testID === testID) out.push(node);
+      const c = node.children;
+      if (Array.isArray(c)) c.forEach(visit); else if (c && typeof c === 'object') visit(c);
+    }
+    const root = tree.toJSON();
+    if (Array.isArray(root)) root.forEach(visit); else visit(root);
+    return out;
+  }
   function findByTestID(tree, testID) {
     const out = [];
     function visit(node) {
@@ -2624,21 +2657,23 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
           for (let i = 0; i < 20; i++) await Promise.resolve();
         });
 
-        // The SAME primary slot is now the advance; the logging primary and
-        // the retired floating row are both absent.
+        // Stage B (D220): the countdown is visible as the active section's
+        // footer line; the retired floating row and the retired bar's
+        // advance button are both absent; the check stays the one primary.
         const afterLog = collectText(tree.toJSON()).join('  ');
         expect(afterLog).not.toMatch(/Next exercise in a moment/);
         expect(afterLog).not.toMatch(/Stay here/);
-        expect(findByTestID(tree, 'volyume-btn-next-exercise').length).toBe(1);
-        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBe(0);
-
-        // The explicit secondary extra-set action is present; choosing it
-        // cancels the pending advance and returns the bar to Log set.
-        const extraButtons = findByTestID(tree, 'volyume-btn-extra-set');
-        expect(extraButtons.length).toBe(1);
-        await TestRenderer.act(async () => { extraButtons[0].props.onPress(); });
-        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBe(1);
         expect(findByTestID(tree, 'volyume-btn-next-exercise').length).toBe(0);
+        expect(findAnyByTestID(tree, 'volyume-countdown-line').length).toBeGreaterThan(0);
+        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBeGreaterThan(0);
+
+        // The footer's Add set is the explicit extra-set action; choosing it
+        // cancels the pending advance (the line goes) and arms set 3.
+        const extraButtons = findByTestID(tree, 'volyume-btn-extra-set');
+        expect(extraButtons.length).toBeGreaterThan(0);
+        await TestRenderer.act(async () => { extraButtons[0].props.onPress(); });
+        expect(findAnyByTestID(tree, 'volyume-countdown-line').length).toBe(0);
+        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBeGreaterThan(0);
 
         // Advancing well past the 1800ms window must NOT move the screen
         // on: the cancelled countdown stays cancelled, and the entry is
@@ -2648,8 +2683,8 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
           await Promise.resolve();
         });
         expect(useAppStore.getState().currentExerciseIndex).toBe(0);
-        const afterWait = collectText(tree.toJSON()).join('  ');
-        expect(afterWait).toMatch(/Set 3 of 2/);
+        const check = findByTestID(tree, 'volyume-btn-complete-set').find((n) => n.props.accessibilityLabel);
+        expect(check.props.accessibilityLabel).toBe('Log set 3');
       } finally {
         jest.useRealTimers();
       }
@@ -2677,10 +2712,12 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
           for (let i = 0; i < 20; i++) await Promise.resolve();
         });
 
-        const nextButtons = findByTestID(tree, 'volyume-btn-next-exercise');
-        expect(nextButtons.length).toBe(1);
+        // Stage B (D220): the tap that moves on is the next section's header.
+        const nextHeader = tree.root.findAll((n) => n.props && typeof n.props.accessibilityLabel === 'string'
+          && n.props.accessibilityLabel.startsWith('Exercise 2,') && typeof n.props.onPress === 'function')[0];
+        expect(nextHeader).toBeTruthy();
         await TestRenderer.act(async () => {
-          nextButtons[0].props.onPress();
+          nextHeader.props.onPress();
           for (let i = 0; i < 10; i++) await Promise.resolve();
         });
         expect(useAppStore.getState().currentExerciseIndex).toBe(1);
@@ -3170,9 +3207,30 @@ describe('D219 learner data path: the logger records whether an entry was typed 
     });
   }
 
-  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
-  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
-  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
+  // Logger rebuild stages B and C (D220): the entry is the next row's wells
+  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // the number it shows; weightInput and repsInput keep their names and
+  // return { props: { value } } so the assertions below read as before.
+  const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
+  const pressable = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onPress === 'function')[0];
+  function wellValue(tree, field) {
+    const well = host(tree, `volyume-well-${field}`);
+    if (!well) throw new Error(`no ${field} well on screen`);
+    const spoken = well.props.accessibilityValue?.text;
+    return spoken === 'empty' || spoken == null ? '' : spoken;
+  }
+  function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
+  function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
+  function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
+  async function typeOnKeypad(tree, field, value) {
+    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
+    for (const ch of String(value)) {
+      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
+      await actFlush(() => pressable(tree, id).props.onPress());
+    }
+    // Next on the weight field, Done on reps: either closes this field.
+    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+  }
 
   function mkEntry({ exerciseId, repsMin = 8, repsMax = 15, sets = 4 }) {
     return {
@@ -3244,8 +3302,8 @@ describe('D219 learner data path: the logger records whether an entry was typed 
   }
 
   const tapLog = (tree) => actFlush(() => logButton(tree).props.onPress());
-  const typeWeight = (tree, value) => actFlush(() => { weightInput(tree).props.onChangeText(String(value)); });
-  const typeReps = (tree, value) => actFlush(() => { repsInput(tree).props.onChangeText(String(value)); });
+  const typeWeight = (tree, value) => typeOnKeypad(tree, 'weight', value);
+  const typeReps = (tree, value) => typeOnKeypad(tree, 'reps', value);
 
   test('a set logged with the boxes exactly as the screen filled them in stores 0, and saves the same weight and reps', async () => {
     await withMountedLogger('exET1', async ({ tree, calls }) => {

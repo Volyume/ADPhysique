@@ -38,40 +38,36 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
-const NOW_CARD = fs.readFileSync(
-  path.resolve(__dirname, '../../components/workout/NowCard.js'),
-  'utf8',
-);
 const REST_TIMER = fs.readFileSync(
   path.resolve(__dirname, '../../components/RestTimer.js'),
   'utf8',
 );
 
-// The whole prefill decision, from the recovery-week branch down to the close
-// of the `if (!isWarmupSet)` block that owns all three variants.
+// RE-ANCHORED for the logger rebuild stage B (D220): the prefill rows are
+// retired. Last session is the next row's Last cell (lastCellFor), the
+// recovery-week numbers are the row's Target cell and ghost seed, and the
+// first-time copy is the quiet line above the table (firstTimeLine). The
+// block under test is that derivation.
 const PREFILL_BLOCK = ACTIVE_WORKOUT.slice(
-  ACTIVE_WORKOUT.indexOf('let prefill = null;'),
-  ACTIVE_WORKOUT.indexOf('positionLabel={orientationLabel}'),
+  ACTIVE_WORKOUT.indexOf('const firstTimeLine = '),
+  ACTIVE_WORKOUT.indexOf('// Logger phase 2B: the outline navigator'),
 );
 
 describe('the first-time prefill line', () => {
   test('the copy exists, and never restates the range or says "Target"', () => {
-    expect(PREFILL_BLOCK).toContain("label: 'First time on this lift.',");
-    expect(PREFILL_BLOCK).toContain(
-      'Pick a weight you could lift about ${bandMax} times, with a couple in reserve. It is saved for next time.',
-    );
+    expect(PREFILL_BLOCK).toContain('First time on this lift. Pick a weight you could lift about ${band.max} times, with a couple in reserve. It is saved for next time.');
     // Band unavailable (freeform slot, no recommended reps): the same
     // instruction without a number, never a blank or a fabricated range.
     expect(PREFILL_BLOCK).toContain(
-      "'Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.'",
+      'Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.',
     );
     // The retired phrasing. "First time - Target 8-12 reps" duplicated the
     // position line; the branch that builds this row may never reintroduce
     // it. Sliced from the code (not the comment above it, which quotes the
     // retired string on purpose) to the close of the prefill object.
     const code = PREFILL_BLOCK.slice(
-      PREFILL_BLOCK.indexOf('const bandMax = currentPrescription'),
-      PREFILL_BLOCK.indexOf('return (', PREFILL_BLOCK.indexOf('const bandMax = currentPrescription')),
+      PREFILL_BLOCK.indexOf('const band = bandFor(0);'),
+      PREFILL_BLOCK.indexOf(': null;', PREFILL_BLOCK.indexOf('const band = bandFor(0);')),
     );
     expect(code).not.toMatch(/Target/);
     // Nor the range string itself - that is the position line's job.
@@ -79,37 +75,28 @@ describe('the first-time prefill line', () => {
   });
 
   test('it reads the same band the position line resolves from', () => {
-    expect(PREFILL_BLOCK).toMatch(
-      /const bandMax = currentPrescription\s*\?\s*currentPrescription\.repsBand\.max\s*:\s*\(routineExercise\?\.recommendedRepsMax \?\? null\);/,
-    );
+    // bandFor(index) reads the resolver's band for the position, else the
+    // routine row's own; the first-time line reads position 0 through it.
+    expect(PREFILL_BLOCK).toContain('const band = bandFor(0);');
+    expect(ACTIVE_WORKOUT).toMatch(/function bandFor\(index\) \{\s*const p = prescriptions\[index\];\s*if \(p\?\.repsBand\) return p\.repsBand;/);
+    expect(ACTIVE_WORKOUT).toContain('return { min: routineExercise.recommendedRepsMin, max: routineExercise.recommendedRepsMax };');
   });
 
   test('it is the last resort only: never over a real history row, never on a warm-up, and only on the first working set', () => {
-    // Order matters: recovery-week hold, then Last session, then this.
-    const recoveryAt = PREFILL_BLOCK.indexOf('SENIOR_RECOVERY_HOLD');
-    const lastSessionAt = PREFILL_BLOCK.indexOf("label: 'Last session:',");
-    const firstTimeAt = PREFILL_BLOCK.indexOf("label: 'First time on this lift.',");
-    expect(recoveryAt).toBeGreaterThan(-1);
-    expect(lastSessionAt).toBeGreaterThan(recoveryAt);
-    expect(firstTimeAt).toBeGreaterThan(lastSessionAt);
-    // The whole chain sits inside the warm-up exclusion.
-    expect(PREFILL_BLOCK).toMatch(/if \(!isWarmupSet\) \{/);
-    // One appearance per exercise per session, not a line above every set.
-    expect(PREFILL_BLOCK).toContain('} else if (workingLogged === 0) {');
+    // Gated on: not a warm-up entry, the first working set, and no previous
+    // working set at all (the Last cell would otherwise carry history).
+    expect(PREFILL_BLOCK).toContain("(!isWarmupEntry && workingLogged === 0 && prevWorkingSets.length === 0 && setTableKind === 'weight_reps')");
+    // Last session lives on the row itself now, never as a line.
+    expect(ACTIVE_WORKOUT).toContain('const nextLast = isWarmupEntry ? null : lastCellFor(workingLogged);');
   });
 
-  test('it renders through the quiet, non-tappable NowCard variant', () => {
-    // No onUse anywhere in the first-time branch: there is no history to
-    // apply, so a tap target would promise something that does not exist.
-    const branch = PREFILL_BLOCK.slice(PREFILL_BLOCK.indexOf('} else if (workingLogged === 0) {'));
-    expect(branch).not.toContain('onUse');
-    // And NowCard still routes an onUse-less prefill to the quiet row.
-    expect(NOW_CARD).toContain('prefill.onUse ? (');
-    expect(NOW_CARD).toMatch(/styles\.prefillQuiet/);
-    // The quiet row must be free to wrap: this copy is a sentence, not a
-    // number pair, and a one-line clamp would cut it.
-    const quiet = NOW_CARD.slice(NOW_CARD.indexOf('styles.prefillQuiet'), NOW_CARD.indexOf('<SetEntry'));
-    expect(quiet).not.toContain('numberOfLines');
+  test('it renders as a quiet, non-tappable line that may wrap', () => {
+    // No tap target: there is no history to apply.
+    expect(PREFILL_BLOCK).not.toContain('onPress');
+    const line = ACTIVE_WORKOUT.slice(ACTIVE_WORKOUT.indexOf('{firstTimeLine ? ('), ACTIVE_WORKOUT.indexOf(') : null}', ACTIVE_WORKOUT.indexOf('{firstTimeLine ? (')));
+    expect(line).toContain('styles.sideCarveNote');
+    expect(line).not.toContain('numberOfLines');
+    expect(line).not.toContain('onPress');
   });
 });
 

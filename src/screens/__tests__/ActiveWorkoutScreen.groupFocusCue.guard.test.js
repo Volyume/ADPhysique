@@ -128,12 +128,13 @@ describe('D44: group-driven focus change gets a cue (source guard)', () => {
     // card's context line - the screen maps groupFocusMessage to the
     // top-priority context (kind 'group'), and NowCard applies the a11y
     // hiding for exactly that kind. Both halves pinned.
-    expect(SRC).toMatch(/groupFocusMessage\s*\?\s*\{ kind: 'group', text: groupFocusMessage \}/);
-    const fs = require('fs');
-    const path = require('path');
-    const NOWCARD = fs.readFileSync(path.resolve(__dirname, '../../components/workout/NowCard.js'), 'utf8');
-    expect(NOWCARD).toMatch(/accessibilityElementsHidden=\{context\.kind === 'group'\}/);
-    expect(NOWCARD).toMatch(/importantForAccessibility=\{context\.kind === 'group' \? 'no-hide-descendants' : 'auto'\}/);
+    // RE-ANCHORED for the logger rebuild stage B (D220): the Now card is
+    // retired; the cue is the quiet line above the set table
+    // (entryContextLine), which the screen itself hides from the
+    // accessibility tree exactly while the message is the group cue.
+    expect(SRC).toMatch(/const entryContextLine = groupFocusMessage\s*\?\s*groupFocusMessage/);
+    expect(SRC).toMatch(/accessibilityElementsHidden=\{!!groupFocusMessage\}/);
+    expect(SRC).toMatch(/importantForAccessibility=\{groupFocusMessage \? 'no-hide-descendants' : 'auto'\}/);
   });
 
   test('finishPerSide (unilateral) has exactly one handleCompleteSet call site, so it inherits the cue with no separate wiring', () => {

@@ -51,7 +51,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('onFinish={handleFinishWorkout}');
     expect(ACTIVE_WORKOUT).not.toContain('<WorkoutHeader');
     expect(ACTIVE_WORKOUT).not.toContain("testID: 'volyume-btn-finish-primary'");
-    expect(ACTIVE_WORKOUT).toMatch(/\? \(isLastExercise\s*\? null/);
+    // Stage B (D220): the bottom bar is retired from the render altogether.
+    expect(ACTIVE_WORKOUT).not.toContain('<WorkoutBottomBar');
     expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-finish"');
     expect(SESSION_TOOLBAR).toContain('accessibilityLabel="Finish workout"');
   });
@@ -107,12 +108,18 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // R3: the bar's Button speaks its title (Button.js falls back
     // accessibilityLabel -> title), so the visible and spoken label are the
     // same string BY CONSTRUCTION - pin the label ternary and the fallback.
-    const label = ACTIVE_WORKOUT.match(/primaryLabel=\{[\s\S]{0,420}?\}/)?.[0] ?? '';
+    // RE-PINNED for the logger rebuild stage B (D220): the primary is the
+    // next row's check; its spoken name is the action's name (checkLabel),
+    // "Log set n" by default and the guided-flow verbs otherwise.
+    const label = ACTIVE_WORKOUT.match(/const nextCheckLabel = [\s\S]{0,420}?: undefined;/)?.[0] ?? '';
     expect(label).toContain("perSide ? 'Log other side'");
-    expect(label).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
-    expect(label).toContain("? 'Start cluster' : 'Log set'");
+    expect(label).toContain("isWarmupEntry ? 'Log warm-up'");
+    expect(label).toContain("? 'Start cluster'");
     expect(label).not.toContain('Complete set');
-    expect(BOTTOM_BAR).toContain('accessibilityLabel={primaryLabel}');
+    expect(ACTIVE_WORKOUT).toContain('checkLabel: nextCheckLabel,');
+    const SET_ROW = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SetRow.js'), 'utf8');
+    expect(SET_ROW).toContain('label={checkLabel || defaultCheckLabel(check, marker)}');
+    expect(SET_ROW).toContain('accessibilityLabel={label}');
   });
 
   test('beginner education is a named overflow row, never chrome inside the set card (founder ruling 2026-07-12)', () => {
@@ -162,7 +169,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // R3: the note UI's open/closed state lives in NowCard, collapsed by
     // its noteResetKey (exercise index + logged count) - the screen only
     // clears the text.
-    expect(ACTIVE_WORKOUT).toContain('noteResetKey={`${currentExerciseIndex}-${loggedSets.length}`}');
+    // Stage B (D220): the next set's note is noteText, edited in the row
+    // sheet; the sheet reads it live, so the cleared text is what reopens.
+    expect(ACTIVE_WORKOUT).toContain("note={rowSheet?.kind === 'next' ? noteText : (rowSheet?.set?.notes ?? null)}");
   });
 
   test('exercise changes clear stale per-exercise note UI', () => {
@@ -229,7 +238,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).not.toContain('borderLeftWidth');
     expect(NOW_CARD).not.toContain('borderLeftColor');
     expect(NOW_CARD).toContain('positionLabel');
-    expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
+    // Stage B (D220): the position line feeds the rest sheet's next-set line.
+    expect(ACTIVE_WORKOUT).toContain('return `${orientationLabel} · ${w} ${units} × ${r}`;');
     // RE-PINNED for the logger rebuild stage A (D220): the active exercise's
     // name is the ExerciseSection header (amber title role, one line); the
     // old title row and its chevron are no longer rendered. The frozen
@@ -451,7 +461,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('the in-place set editor exposes a discoverable Delete that reuses the existing delete flow', () => {
     expect(LOGGED_SET_ROW).toContain('accessibilityLabel="Delete this set"');
     expect(LOGGED_SET_ROW).toMatch(/onPress=\{\(\) => onDeleteEdit\(set\)\}/);
-    expect(ACTIVE_WORKOUT).toContain('onDeleteEdit={handleDeleteEditedSet}');
+    // Stage B (D220): the row sheet's Delete set reuses openDeleteFromMenu,
+    // which drives the SAME handleDeleteEditedSet confirm-then-remove flow.
+    expect(ACTIVE_WORKOUT).toContain("onDelete={rowSheet?.kind === 'logged' ? () => openDeleteFromMenu(rowSheet.set) : undefined}");
   });
 
   test('modal actions use the same compact logger button system', () => {
