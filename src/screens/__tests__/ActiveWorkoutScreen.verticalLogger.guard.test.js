@@ -107,25 +107,31 @@ describe('one workout surface: the outline navigator keeps every exercise reacha
 
 describe('the continuous set sequence: completed above, active entry, upcoming below - one list', () => {
   test('logged rows render ABOVE the NowCard entry, inside the expanded exercise, with no separate history heading', () => {
-    const loggedIdx = SRC.indexOf('{loggedSets.length > 0 && (');
-    const nowCardIdx = SRC.indexOf('<NowCard');
-    const upcomingIdx = SRC.indexOf('style={styles.upcomingSection}');
+    // RE-PINNED for the logger rebuild stage B (D220): one SetTable; its rows
+    // are built logged first, then the next row, then the pending rows.
+    const loggedIdx = SRC.indexOf('loggedSets.forEach((s, i) => {');
+    const nextIdx = SRC.indexOf("id: 'next',");
+    const upcomingIdx = SRC.indexOf('id: `pending-${n}`,');
     expect(loggedIdx).toBeGreaterThan(-1);
-    expect(nowCardIdx).toBeGreaterThan(loggedIdx);
-    expect(upcomingIdx).toBeGreaterThan(nowCardIdx);
+    expect(nextIdx).toBeGreaterThan(loggedIdx);
+    expect(upcomingIdx).toBeGreaterThan(nextIdx);
+    expect(SRC).toContain('rows={setTableRows}');
     // The old two-mental-models heading is gone.
     expect(SRC).not.toContain('>This workout</Text>');
   });
 
   test('in-place edit, long-press delete and PR re-evaluation survive the move verbatim', () => {
-    expect(SRC).toContain('onEdit={openEditSet}');
-    expect(SRC).toContain('onDelete={openDeleteFromMenu}');
-    expect(SRC).toContain('onDeleteEdit={handleDeleteEditedSet}');
-    expect(SRC).toContain('onSaveEdit={handleSaveEditedSet}');
+    // Stage B (D220): a logged row's well opens the same editingSet state
+    // (openEditSet inside openWell), Done saves through handleSaveEditedSet,
+    // and the row sheet's Delete set drives openDeleteFromMenu.
+    expect(SRC).toContain('onPressWell: (field) => openWell(field, s),');
+    expect(SRC).toMatch(/function openWell\(field, set = null\) \{[\s\S]{0,200}?openEditSet\(set\);/);
+    expect(SRC).toContain('if (changed) handleSaveEditedSet(); else closeEditSet();');
+    expect(SRC).toContain('openDeleteFromMenu(rowSheet.set)');
   });
 
   test('upcoming rows are read-only previews of the remaining prescribed working sets', () => {
-    expect(SRC).toContain('for (let n = workingLogged + 2; n <= targetSets; n += 1) {');
+    expect(SRC).toContain('for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {');
     // Campaign 20 Phase 2 (live set prescription resolver): the readiness-
     // trimmed computeSetTargets snapshot (displaySetTargets) is retired.
     // Upcoming previews now read the SAME reactive resolver-derived
@@ -133,10 +139,11 @@ describe('the continuous set sequence: completed above, active entry, upcoming b
     // prescriptions[n - 1].repsBand, which already carries the readiness
     // trim (applied INSIDE resolveSetPrescription, never re-applied by the
     // screen - the double-trim guard in livePrescription.js's own tests).
-    expect(SRC).toContain('const tgt = prescriptions[n - 1];');
-    // No handlers: previews cannot log, edit or navigate.
-    const upcoming = SRC.match(/for \(let n = workingLogged \+ 2[\s\S]*?return rows\.length/)?.[0] ?? '';
+    expect(SRC).toContain('const p = prescriptions[n - 1] ?? null;');
+    // No handlers: pending rows cannot log, edit or navigate.
+    const upcoming = SRC.match(/for \(let n = \(isWarmupEntry[\s\S]*?check: 'pending',/)?.[0] ?? '';
     expect(upcoming).not.toContain('onPress');
+    expect(upcoming).not.toContain('onCheck');
   });
 });
 

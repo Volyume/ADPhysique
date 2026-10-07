@@ -26,6 +26,18 @@
  *   safeBottom        optional bottom inset in dp (default 0), added under the
  *                     keys the way the old bottom bar did, so the pad clears the
  *                     gesture bar
+ *   mode              'number' (default) | 'time'. Time mode is for a timed
+ *                     field: no decimal point key (the slot stays an empty gap,
+ *                     as it does for reps), the step keys read "-5 s" and
+ *                     "+5 s" (spoken "Remove 5 seconds", "Add 5 seconds") and
+ *                     call onStep with -5 and 5 whatever `step` says. `value` is
+ *                     then the display string the screen passes
+ *                     (timeEntry.bufferToDisplay), used only for the empty
+ *                     checks. Clear, backspace, digits, Next and Done are
+ *                     unchanged.
+ *   fieldLabel        optional string that, when given, is the active tab's text
+ *                     and the spoken "Editing {fieldLabel}" instead of the unit
+ *                     or "Reps" ("Time", "Distance")
  *
  * The drawing has one key for Next, and the device checklist reads "Next moves
  * to reps; Done closes", so the one key is Next on weight and Done on reps.
@@ -56,6 +68,7 @@ const WELL_HIT_SLOP = { top: 4, bottom: 4, left: 2, right: 2 };
 const KEY_GLYPH = 22;
 const MINUS = '\u2212';
 const KEY_ROLE = 'keyboardkey';
+const TIME_STEP = 5;
 const DIGIT_ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
 function spokenUnit(unit) {
@@ -68,7 +81,7 @@ function repWord(count) {
   return Number(count) === 1 ? 'rep' : 'reps';
 }
 
-function KeyButton({ text, icon, accessibilityLabel, accessibilityHint, onPress, disabled = false, textStyle, glyphColor, live }) {
+function KeyButton({ text, icon, accessibilityLabel, accessibilityHint, onPress, disabled = false, textStyle, glyphColor, live, testID }) {
   return (
     <TouchableOpacity
       style={[styles.key, live.key, disabled && styles.keyDisabled]}
@@ -78,6 +91,7 @@ function KeyButton({ text, icon, accessibilityLabel, accessibilityHint, onPress,
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
+      testID={testID}
     >
       {icon ? (
         <Ionicons name={icon} size={KEY_GLYPH} color={glyphColor} />
@@ -100,6 +114,8 @@ export default function Keypad({
   onDone,
   onSystemKeyboard,
   safeBottom = 0,
+  mode = 'number',
+  fieldLabel,
 }) {
   const t = useTheme();
   const live = useMemo(() => {
@@ -121,15 +137,20 @@ export default function Keypad({
   const valueText = value == null ? '' : String(value);
   const isEmpty = valueText.length === 0;
   const hasPoint = valueText.includes('.');
-  const stepText = String(step);
-  const quantity = isWeight ? spokenUnit(unit) : repWord(step);
-  const editing = isWeight ? 'weight' : 'reps';
-  const spokenValue = isEmpty
-    ? 'empty'
-    : isWeight ? `${valueText} ${spokenUnit(unit)}` : `${valueText} ${repWord(valueText)}`;
+  const isTime = mode === 'time';
+  const stepSize = isTime ? TIME_STEP : step;
+  const stepText = isTime ? `${TIME_STEP} s` : String(step);
+  const spokenStep = isTime ? String(TIME_STEP) : stepText;
+  const quantity = isTime ? 'seconds' : isWeight ? spokenUnit(unit) : repWord(step);
+  const hasLabel = typeof fieldLabel === 'string' && fieldLabel.length > 0;
+  const editing = hasLabel ? fieldLabel : isWeight ? 'weight' : 'reps';
+  let spokenValue;
+  if (isEmpty) spokenValue = 'empty';
+  else if (isTime) spokenValue = valueText;
+  else spokenValue = isWeight ? `${valueText} ${spokenUnit(unit)}` : `${valueText} ${repWord(valueText)}`;
 
-  const stepDown = () => onStep && onStep(-step);
-  const stepUp = () => onStep && onStep(step);
+  const stepDown = () => onStep && onStep(-stepSize);
+  const stepUp = () => onStep && onStep(stepSize);
 
   return (
     <View style={[styles.panel, live.panel, { paddingBottom: Math.max(spacing.md, safeBottom + spacing.sm) }]}>
@@ -141,12 +162,13 @@ export default function Keypad({
           accessibilityRole="button"
           accessibilityLabel="Use the phone keyboard"
           accessibilityHint="Opens your phone's own keyboard to type the number"
+          testID="volyume-key-keyboard"
         >
           <Ionicons name="keypad-outline" size={KEY_GLYPH} color={t.colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.tabs} accessible accessibilityLabel={`Editing ${editing}, ${spokenValue}`}>
-          <Text style={isWeight ? live.tabActive : live.tabIdle}>{unit}</Text>
-          <Text style={isWeight ? live.tabIdle : live.tabActive}>Reps</Text>
+          <Text style={isWeight ? live.tabActive : live.tabIdle}>{hasLabel && isWeight ? fieldLabel : unit}</Text>
+          <Text style={isWeight ? live.tabIdle : live.tabActive}>{hasLabel && !isWeight ? fieldLabel : 'Reps'}</Text>
         </View>
         <TouchableOpacity
           style={[styles.clear, live.well, isEmpty && styles.keyDisabled]}
@@ -156,6 +178,7 @@ export default function Keypad({
           accessibilityRole="button"
           accessibilityLabel="Clear"
           accessibilityState={{ disabled: isEmpty }}
+          testID="volyume-key-clear"
         >
           <Text style={live.clearText}>Clear</Text>
         </TouchableOpacity>
@@ -169,6 +192,7 @@ export default function Keypad({
                 key={d}
                 text={d}
                 accessibilityLabel={d}
+                testID={`volyume-key-${d}`}
                 onPress={() => onKey && onKey(d)}
                 textStyle={live.digit}
                 live={live}
@@ -179,31 +203,35 @@ export default function Keypad({
         <View style={styles.keyRow}>
           <KeyButton
             text={`${MINUS}${stepText}`}
-            accessibilityLabel={`Remove ${stepText} ${quantity}`}
+            accessibilityLabel={`Remove ${spokenStep} ${quantity}`}
             onPress={stepDown}
+            testID="volyume-key-step-down"
             textStyle={live.stepText}
             live={live}
           />
           <KeyButton
             text="0"
             accessibilityLabel="0"
+            testID="volyume-key-0"
             onPress={() => onKey && onKey('0')}
             textStyle={live.digit}
             live={live}
           />
           <KeyButton
             text={`+${stepText}`}
-            accessibilityLabel={`Add ${stepText} ${quantity}`}
+            accessibilityLabel={`Add ${spokenStep} ${quantity}`}
             onPress={stepUp}
+            testID="volyume-key-step-up"
             textStyle={live.stepText}
             live={live}
           />
         </View>
         <View style={styles.keyRow}>
-          {isWeight ? (
+          {isWeight && !isTime ? (
             <KeyButton
               text={KEY_POINT}
               accessibilityLabel="Decimal point"
+              testID="volyume-key-point"
               onPress={() => onKey && onKey(KEY_POINT)}
               disabled={hasPoint}
               textStyle={live.digit}
@@ -217,12 +245,14 @@ export default function Keypad({
             accessibilityLabel={isWeight ? 'Next' : 'Done'}
             accessibilityHint={isWeight ? 'Moves to reps' : 'Closes the keypad'}
             onPress={isWeight ? onNext : onDone}
+            testID="volyume-key-action"
             textStyle={live.actionText}
             live={live}
           />
           <KeyButton
             icon="backspace-outline"
             accessibilityLabel="Delete"
+            testID="volyume-key-backspace"
             onPress={() => onKey && onKey(KEY_BACKSPACE)}
             disabled={isEmpty}
             glyphColor={t.colors.textPrimary}

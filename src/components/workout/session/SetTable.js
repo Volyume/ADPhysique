@@ -19,6 +19,15 @@
  *                   last column label; without it the glyph is not a control
  *   columnsLabel    { weight }: the weight unit, shown as "{weight} · reps".
  *                   Without a weight label the column reads "Reps"
+ *   kind            'weight_reps' (default), 'reps_only', 'duration' or
+ *                   'distance': the wells column reads "{weight} · reps",
+ *                   "Reps", "Time" or "{m|yd} · time". It is also each row's
+ *                   kind unless the row names its own
+ *   units           'kg' (default) or 'lb': metres or yards in the distance
+ *                   label, and handed to every row for its spoken distance
+ *
+ * Row props kind, units, inputField, onLongPressRow and checkLabel flow to
+ * SetRow like any other (see SetRow).
  *
  * The fold (spec section 4 and 6: "3 or more logged rows fold behind one line
  * inside the table"). The behaviour is the screen's old one (AWS fold line):
@@ -73,6 +82,8 @@ export default function SetTable({
   onPressWell,
   onCheck,
   columnsLabel,
+  kind = 'weight_reps',
+  units = 'kg',
 }) {
   const t = useTheme();
   const live = useMemo(() => ({
@@ -102,7 +113,11 @@ export default function SetTable({
   const hiddenCount = list.length - visible.length;
 
   const weightLabel = columnsLabel && columnsLabel.weight;
-  const wellsLabel = weightLabel ? `${weightLabel} ${MIDDLE_DOT} reps` : 'Reps';
+  let wellsLabel;
+  if (kind === 'reps_only') wellsLabel = 'Reps';
+  else if (kind === 'duration') wellsLabel = 'Time';
+  else if (kind === 'distance') wellsLabel = `${units === 'kg' ? 'm' : 'yd'} ${MIDDLE_DOT} time`;
+  else wellsLabel = weightLabel ? `${weightLabel} ${MIDDLE_DOT} reps` : 'Reps';
 
   return (
     <View>
@@ -114,6 +129,7 @@ export default function SetTable({
         <View style={styles.colCheck}>
           {onLogRemaining ? (
             <TouchableOpacity
+              testID="volyume-btn-log-remaining"
               style={styles.tickAll}
               onPress={() => onLogRemaining()}
               accessibilityRole="button"
@@ -141,6 +157,8 @@ export default function SetTable({
         <SetRow
           key={row.id ?? `row-${i}`}
           {...row}
+          kind={row.kind ?? kind}
+          units={row.units ?? units}
           onPressWell={onPressWell ? (field) => onPressWell(row.id, field) : row.onPressWell}
           onCheck={onCheck ? () => onCheck(row.id) : row.onCheck}
         />

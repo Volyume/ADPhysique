@@ -43,41 +43,44 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
-const BAR_START = SRC.indexOf('{cluster ? null : (\n          <WorkoutBottomBar');
-const BAR_END = SRC.indexOf('{/* Exercise Picker Modal, shared by Add and Swap', BAR_START);
-const BAR_COMPONENT = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'components', 'workout', 'WorkoutBottomBar.js'),
+// RE-PINNED for the logger rebuild stage B (D220, 12-BUILD-SPEC section
+// 4): the bottom bar is retired. The logging primary is the next row's check
+// (SetRow, volyume-btn-complete-set); the advance is the next section's
+// header or the unchanged 1.8 s auto-advance, whose countdown is the active
+// section's footer line; the extra set is the footer's Add set. The founder
+// ruling the file exists for is kept: after the set number of sets the
+// screen moves on, and extra sets stay the person's call.
+const SECTION = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'ExerciseSection.js'),
   'utf8',
 );
-const bottomBarWindow = (BAR_START >= 0 && BAR_END > BAR_START) ? SRC.slice(BAR_START, BAR_END) : '';
+const SET_ROW = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SetRow.js'),
+  'utf8',
+);
 
 describe('single primary CTA: Log set until target, then Next exercise / Finish workout in the SAME slot', () => {
   test('the advance gate is targetComplete && !extraSetArmed && !perSide, unchanged', () => {
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
-    expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
+    expect(SRC).toContain('countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}');
   });
 
   test('when advance is present it IS the primary (variant primary, pinned testIDs); the logging primary does not co-render', () => {
-    expect(bottomBarWindow).toContain("label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise'");
-    // Logger rebuild stage A (D220): Finish is the toolbar's alone; at the
-    // last exercise the advance is null and the logging primary stays.
-    expect(bottomBarWindow).not.toContain("testID: 'volyume-btn-finish-primary'");
-    expect(bottomBarWindow).toMatch(/\? \(isLastExercise\s*\? null/);
+    // Stage B (D220): there is no advance button and no second primary; the
+    // check is the one logging control, Finish is the toolbar's alone.
+    expect(SRC).not.toContain('<WorkoutBottomBar');
+    expect(SRC).not.toContain('volyume-btn-next-exercise');
+    expect(SRC).not.toContain("testID: 'volyume-btn-finish-primary'");
     expect(SRC).toContain('onFinish={handleFinishWorkout}');
-    // Inside the component: the advance branch renders the advance Button on
-    // variant="primary", and the logging Button (volyume-btn-complete-set)
-    // lives in the ELSE branch - one primary at a time by construction.
-    const advanceBranch = BAR_COMPONENT.slice(
-      BAR_COMPONENT.indexOf('{advance ? ('),
-      BAR_COMPONENT.indexOf(') : ('),
-    );
-    expect(advanceBranch).toContain('testID={advance.testID}');
-    expect(advanceBranch).toContain('variant="primary"');
-    expect(advanceBranch).not.toContain('volyume-btn-complete-set');
-    const elseBranch = BAR_COMPONENT.slice(BAR_COMPONENT.indexOf(') : ('));
-    expect(elseBranch).toContain('testID="volyume-btn-complete-set"');
+    expect(SRC).toContain('onCheck: cluster ? finishCluster : handleCompleteSetPress,');
+    expect(SET_ROW).toContain("const COMPLETE_SET_TEST_ID = 'volyume-btn-complete-set';");
+    expect(SET_ROW).toContain("testID={ids.check ?? (check === 'next' ? COMPLETE_SET_TEST_ID : undefined)}");
+    // The next section's header is the tap that moves on (the same jump the
+    // outline made), and auto-advance still goes through handleNextExercise.
+    expect(SRC).toContain('onPressHeader={() => handleJumpToExercise(i)}');
+    expect(SRC).toMatch(/autoAdvanceRef\.current = setTimeout\(\(\) => \{\s*handleNextExercise\(\);\s*\}, 1800\);/);
   });
 
   test('the 1.8s countdown renders ON the primary CTA (countdownActive), never as a separate floating row', () => {
@@ -85,14 +88,13 @@ describe('single primary CTA: Log set until target, then Next exercise / Finish 
     // floating countdown row anywhere in the screen's render.
     expect(SRC).not.toContain('accessibilityLabel="Stay on this exercise"');
     expect(SRC).not.toContain('styles.autoAdvanceRow}');
-    // The countdown is a state of the same single primary slot.
-    expect(bottomBarWindow).toContain('countdownActive={autoAdvanceArmed && targetComplete && !extraSetArmed}');
-    expect(BAR_COMPONENT).toContain('countdownMs = 1800');
-    expect(BAR_COMPONENT).toContain('duration: countdownMs');
-    // The track is decorative: hidden from assistive tech, and the button's
-    // accessibilityLabel stays the plain action label (same-string rule).
-    expect(BAR_COMPONENT).toContain('accessibilityElementsHidden');
-    expect(BAR_COMPONENT).toContain('accessibilityLabel={advance.label}');
+    // Stage B (D220): the countdown is the active section's 2 dp footer
+    // line, armed by the same gate, 1.8 s, decorative (hidden from assistive
+    // tech), static under reduce-motion.
+    expect(SRC).toContain('countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}');
+    expect(SECTION).toContain('Animated.timing(progress, { toValue: 1, duration: ms, useNativeDriver: false }).start();');
+    expect(SECTION).toContain('accessibilityElementsHidden');
+    expect(SECTION).toContain('testID="volyume-countdown-line"');
     // Screen readers hear the arm exactly once, at the arm site.
     expect(SRC).toMatch(/setAutoAdvanceArmed\(true\);\s*try \{\s*AccessibilityInfo\.announceForAccessibility\('Next exercise in a moment'\);/);
   });
@@ -112,14 +114,11 @@ describe('single primary CTA: Log set until target, then Next exercise / Finish 
 
 describe('extra sets beyond the plan stay loggable as an explicit SECONDARY action (D8: never a wall, never a second primary)', () => {
   test('the bar exposes "Log another set" as the secondary, wired to armExtraSet', () => {
-    expect(bottomBarWindow).toContain('onExtraSet={armExtraSet}');
-    expect(BAR_COMPONENT).toContain('testID="volyume-btn-extra-set"');
-    expect(BAR_COMPONENT).toContain('title="Log another set"');
-    // Visually subordinate: the secondary rides variant="secondary" and the
-    // primary keeps the larger flex share.
-    expect(BAR_COMPONENT).toContain('variant="secondary"');
-    expect(BAR_COMPONENT).toContain('primarySlot: { flex: 3');
-    expect(BAR_COMPONENT).toContain('extraSlot: { flex: 2 }');
+    // Stage B (D220): the extra set is the active section's footer action
+    // "Add set" (never a second primary: a label-and-glyph footer action).
+    expect(SRC).toContain('onAddSet={armExtraSet}');
+    expect(SECTION).toContain('testID="volyume-btn-extra-set"');
+    expect(SECTION).toContain('label="Add set"');
   });
 
   test('arming cancels the countdown and returns the bar to Log set (prepare-not-commit, CL-6.1)', () => {
@@ -129,7 +128,7 @@ describe('extra sets beyond the plan stay loggable as an explicit SECONDARY acti
     // extraSetArmed still gates the SAME advance ternary; once true only the
     // logging primary remains, and it disarms on the next logged set or any
     // exercise change (the reset effect).
-    expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
+    expect(SRC).toContain('countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}');
     expect(SRC).toContain('const [extraSetArmed, setExtraSetArmed] = useState(false);');
     expect(SRC).toMatch(/setExtraSetArmed\(false\);[\s\S]{0,120}?\}, \[currentExerciseIndex, loggedSets\.length\]\);/);
   });
@@ -150,7 +149,9 @@ describe('the advance state never shows mid-exercise, and never mid a per-side p
   });
 
   test('R4 (D64): the bar hides only for a cluster - mid per-side pair it STAYS, relabelled to commit side two', () => {
-    expect(SRC).toMatch(/\{cluster \? null : \(\s*<WorkoutBottomBar/);
+    // Stage B (D220): the check stays through a per-side pair, relabelled to
+    // commit side two; mid-cluster the check finishes the cluster.
+    expect(SRC).toContain("const nextCheckLabel = cluster ? 'Finish cluster'");
     expect(SRC).toContain('if (perSide) return finishPerSide();');
     expect(SRC).toContain("perSide ? 'Log other side'");
   });

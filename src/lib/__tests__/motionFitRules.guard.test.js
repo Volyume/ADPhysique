@@ -93,6 +93,10 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     // JS-thread cost is a single short tween mirroring RestTimer's own
     // sanctioned drain-bar pattern. Suppressed under reduce-motion.
     'components/workout/WorkoutBottomBar.js',
+    // Logger rebuild stage B (D220): the same one-shot 1.8 s auto-advance
+    // track, now the active section's 2 dp footer line (the bottom bar is
+    // retired from the render). Static under reduce-motion.
+    'components/workout/session/ExerciseSection.js',
     // components/food/MacroRings.js left this list in E15-4 (RollingNumber
     // + UI-thread ring; the Animated.Value listener is retired).
     // D148 (2026-09-04): the animated in-app splash left RootNavigator.

@@ -13,7 +13,6 @@ import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, 
 import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
 import RestTimer from '../components/RestTimer';
-import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
 import DragReorderList from '../components/DragReorderList';
@@ -40,8 +39,16 @@ import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 // with the active exercise workspace below it - replacing the phase-2
 // card-per-exercise vertical list that buried forward navigation beneath the
 // active logger on a real device.
-import NowCard from '../components/workout/NowCard';
-import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
+// Logger rebuild stages B and C (D220, 12-BUILD-SPEC sections 1.4 and 1.5):
+// the set table and its rows replace the logged rows, the Now card and the
+// upcoming previews; the row's check is the one control that logs a set; the
+// docked keypad replaces the steppers and the system keyboard; the row sheet
+// is the row's overflow (note, edit, delete).
+import SetTable from '../components/workout/session/SetTable';
+import Keypad from '../components/workout/session/Keypad';
+import SetRowSheet from '../components/workout/session/SetRowSheet';
+import { applyKey, stepValue, KEY_BACKSPACE, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
+import { pushDigit, popDigit, bufferToSeconds, secondsToBuffer, bufferToDisplay } from '../lib/timeEntry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
@@ -95,6 +102,8 @@ import {
   validateSetEntryValue,
   shouldConfirmBeforeFinish,
   deriveEntryTyped,
+  formatSeconds,
+  parseTimeToSeconds,
 } from '../lib/workoutHelpers';
 import {
   circuitRoundState,
@@ -372,6 +381,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // rest bar's amber line. Read via getState in the handler (no re-render
   // dependency) and cleared on unmount so a PR fired outside the logger
   // falls back to the toast's own safe-area offset.
+  // Stage C (D220): the published inset is the ratcheted bottom chrome (the
+  // rest strip) PLUS the keypad's live height while it is open, so the PR
+  // toast docks above whichever is on screen and drops back when the pad
+  // closes. The ratchet and its ceiling apply to the chrome part only.
+  const chromeRatchetRef = useRef(0);
+  const keypadHeightRef = useRef(0);
+  const publishBottomInset = useCallback(() => {
+    const s = useAppStore.getState();
+    const h = chromeRatchetRef.current + keypadHeightRef.current;
+    if (h !== (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
+  }, []);
+  const handleKeypadLayout = useCallback((e) => {
+    const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
+    if (h < 0) return;
+    keypadHeightRef.current = h;
+    publishBottomInset();
+  }, [publishBottomInset]);
   const handleBottomChromeLayout = useCallback((e) => {
     // Founder device report 2026-08-18 (second walk): the rest strip HIDES
     // itself when no rest is running, so a PR fired in that moment measured
@@ -389,9 +415,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // than MAX_BOTTOM_CHROME - so anything outside that range is a bad
     // measurement and is ignored rather than trusted.
     if (h <= 0 || h > MAX_BOTTOM_CHROME) return;
-    const s = useAppStore.getState();
-    if (h > (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
-  }, []);
+    if (h > chromeRatchetRef.current) {
+      chromeRatchetRef.current = h;
+      publishBottomInset();
+    }
+  }, [publishBottomInset]);
   useEffect(() => () => { useAppStore.getState().setLoggerBottomInset(0); }, []);
   // Drop assisted machine regressions from swap suggestions for anyone past
   // their first block. A true beginner keeps them. Unknown experience is treated
@@ -441,15 +469,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Flashes the SetEntry card border amber for ~700ms after a successful
   // Log set, so the tap is acknowledged visibly. Resets via a tracked
   // timeout so cycling exercises mid-flash doesn't leave it stuck on.
-  const [logFlash, setLogFlash] = useState(false);
-  const logFlashTimeoutRef = useRef(null);
   // D44: superset/giant-set group-driven focus changes (the alternation jump
   // AND the round-return) previously moved the screen with zero cue - no
   // haptic distinct from the ordinary set-logged tick, no announcement, no
   // visible sign (founder report: "seems to swap exercise when there's still
   // a set to do at times without saying anything"). This transient message
   // drives a brief banner naming the destination exercise, cleared via a
-  // tracked timeout the same way logFlash above is.
+  // tracked timeout the same way the auto-advance timer is.
   const [groupFocusMessage, setGroupFocusMessage] = useState(null);
   const groupFocusTimeoutRef = useRef(null);
   // Founder device report 2026-08-23 ("it's oddly saying I only had 1 PR
@@ -479,8 +505,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // active row - so logging more work never pushes the inputs farther down
   // the page. Tap the line to expand (edit/delete lives on the expanded
   // rows); collapses again on every exercise change.
-  const [historyExpanded, setHistoryExpanded] = useState(false);
-  useEffect(() => { setHistoryExpanded(false); }, [currentExerciseIndex]);
+  // Stage B (D220): the fold now lives inside SetTable (12-BUILD-SPEC section
+  // 6), which re-collapses on every exercise change because the table remounts
+  // with the active section. The keypad and the row sheet are stage B and C
+  // state: which well of the next row is open (`entryField`), which well of a
+  // logged row is being edited (`editField`, paired with editingSet), whether
+  // the phone keyboard was asked for instead of the pad (one edit at a time,
+  // never sticky, so there is no way to lose the pad), the digits typed into
+  // a time field (`timeBuffer`, timeEntry.js), and the row whose sheet is
+  // open. `entryReplaceRef` is the select-all-on-focus rule: the first key
+  // after a well opens replaces its value, the keys after it append.
+  const [entryField, setEntryField] = useState(null);
+  const [editField, setEditField] = useState(null);
+  const [systemKeyboard, setSystemKeyboard] = useState(false);
+  const [timeBuffer, setTimeBuffer] = useState('');
+  const [rowSheet, setRowSheet] = useState(null);
+  const entryReplaceRef = useRef(false);
   // 'add' opens the picker to append an exercise; 'swap' opens it to replace the
   // current one. Lets the Swap sheet fall through to the full library and the
   // custom-exercise form when the ranked suggestions aren't what the user wants.
@@ -2371,11 +2411,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     syncElapsed();
-    if (IS_JEST) {
-      return () => {
-        if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
-      };
-    }
+    if (IS_JEST) return undefined;
     timerRef.current = setInterval(syncElapsed, 15_000);
 
     const appStateSub = AppState.addEventListener('change', nextState => {
@@ -2391,7 +2427,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Drop any pending log-flash reset so it doesn't run on an unmounted
       // component (cancel + finish workout mid-flash would otherwise throw a
       // React warning).
-      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
       // D44: same guard for the group-focus banner reset (finish/cancel
       // within 2.5s of a superset jump would otherwise set state after
       // unmount).
@@ -3004,9 +3039,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Visual ack, flash the SetEntry card border amber for ~700 ms so the
       // user sees their tap landed. Tracked timeout so back-to-back logs
       // don't truncate the previous flash mid-frame.
-      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
-      setLogFlash(true);
-      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
 
       // P9 TalkBack: the haptic and the amber flash are silent to a screen
       // reader; speak the save so a TalkBack user knows the tap landed.
@@ -3514,9 +3546,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       updateLastActivity();
       // Visual + tactile ack consistent with the log-set flash.
       hapticsVocab.setLogged();
-      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
-      setLogFlash(true);
-      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
       // P9 TalkBack: spoken counterpart of the ack above.
       try { AccessibilityInfo.announceForAccessibility('Set updated'); } catch (_) {}
     } catch (e) {
@@ -4377,16 +4406,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // for the full root-cause note.
   const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;
   const workingLogged = countProgressSets(loggedSets);
-  // Stage A (D220): the rest sheet's "next set" line, from the same counters
-  // the bar and the notification use. Weight and reps join when the entry
-  // row holds them; the set position alone otherwise.
-  const restSheetNextLabel = (() => {
-    const position = `Set ${Math.min(workingLogged + 1, targetSets || workingLogged + 1)} of ${targetSets}`;
-    const w = currentSet?.weight;
-    const r = currentSet?.reps;
-    if (w && r) return `${position} · ${w} ${units} × ${r}`;
-    return position;
-  })();
   const targetComplete = targetSets && workingLogged >= targetSets;
 
   // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A8):
@@ -4498,6 +4517,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
     return `${pos} - ${mode}`;
   })();
+  // Stage A (D220): the rest sheet's "next set" line is the position line the
+  // Now card used to carry, with the entry's weight and reps when it holds
+  // them.
+  const restSheetNextLabel = (() => {
+    const w = currentSet?.weight;
+    const r = currentSet?.reps;
+    if (w && r) return `${orientationLabel} · ${w} ${units} × ${r}`;
+    return orientationLabel;
+  })();
 
   // stalledAdvice (the 3-session same-weight nudge with its hard-coded,
   // unit-blind +2.5 literal) is RETIRED as of Campaign 20 Phase 2 (design
@@ -4540,6 +4568,307 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
     setCurrentSet(next);
   }, [currentSet.isGhost]);
+
+  // ── Stages B and C (D220, 12-BUILD-SPEC sections 1.4, 1.5, 2a, 4) ────────
+  // The set table's rows and the keypad. Every number here is display plus a
+  // callback into the handlers above: logging is handleCompleteSetPress, the
+  // edit is openEditSet / handleSaveEditedSet, the entry writes through
+  // handleCurrentSetChange so the ghost seed and the typed provenance keep
+  // their meaning. Seconds live in `reps` and distance in `weight`, as the
+  // app always stored them (workoutHelpers.formatLoggedSet).
+  const setTableKind = ['reps_only', 'duration', 'distance'].includes(activeExerciseType)
+    ? activeExerciseType : 'weight_reps';
+  const timeField = (setTableKind === 'duration' || setTableKind === 'distance') ? 'reps' : null;
+  const isWarmupEntry = currentSet.setType === 'warmup';
+  const keypadField = editingSet ? editField : entryField;
+  const keypadSource = editingSet ? editValue : currentSet;
+  const keypadIsTime = keypadField != null && keypadField === timeField;
+  const keypadRules = keypadField === 'reps'
+    ? REPS_RULES
+    : (setTableKind === 'distance' ? DISTANCE_RULES : WEIGHT_RULES);
+  const weightStepKg = exercise?.incrementKg || exercise?.increment_kg
+    || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound');
+  const keypadStep = keypadField === 'weight' ? (setTableKind === 'distance' ? 1 : weightStepKg) : 1;
+  const keypadOpen = keypadField != null && !systemKeyboard;
+  const keypadValueText = keypadField == null
+    ? ''
+    : keypadIsTime ? bufferToDisplay(timeBuffer) : String(keypadSource?.[keypadField] ?? '');
+  // The keypad's height counts towards the PR toast's inset only while open.
+  useEffect(() => {
+    if (!keypadOpen) {
+      keypadHeightRef.current = 0;
+      publishBottomInset();
+    }
+  }, [keypadOpen, publishBottomInset]);
+  // After a set logs the next row arrives with the coach's numbers; the first
+  // key on an open well replaces them, as it did the moment the well opened.
+  useEffect(() => { entryReplaceRef.current = true; }, [loggedSets.length]);
+
+  function writeKeypadField(field, next) {
+    if (editingSet) setEditValue((v) => ({ ...(v || {}), [field]: next, isGhost: false }));
+    else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });
+  }
+  function openWell(field, set = null) {
+    hapticsVocab.selection();
+    if (set) {
+      openEditSet(set);
+      setEditField(field);
+      setEntryField(null);
+    } else {
+      if (editingSet) { closeEditSet(); setEditField(null); }
+      setEntryField(field);
+    }
+    setSystemKeyboard(false);
+    entryReplaceRef.current = true;
+    if (field === timeField) {
+      setTimeBuffer(secondsToBuffer(set ? (set.actualReps ?? set.reps) : currentSet.reps));
+    }
+  }
+  function closeKeypad() {
+    setEntryField(null);
+    setEditField(null);
+    setSystemKeyboard(false);
+    entryReplaceRef.current = false;
+  }
+  function handleKeypadKey(key) {
+    if (!keypadField) return;
+    const replace = entryReplaceRef.current;
+    entryReplaceRef.current = false;
+    if (keypadIsTime) {
+      const base = replace ? '' : timeBuffer;
+      const buf = key === KEY_BACKSPACE ? popDigit(base) : pushDigit(base, key);
+      setTimeBuffer(buf);
+      writeKeypadField('reps', bufferToSeconds(buf));
+      return;
+    }
+    const base = replace ? '' : String(keypadSource?.[keypadField] ?? '');
+    const next = applyKey(base, key, keypadRules);
+    if (keypadField === 'reps') {
+      // A typed 0 becomes 1, as the reps field always did: a 0-rep set cannot
+      // be entered.
+      writeKeypadField('reps', next === '' ? '' : Math.max(parseInt(next, 10) || 0, 1));
+    } else {
+      writeKeypadField('weight', next);
+    }
+  }
+  function handleKeypadStep(delta) {
+    if (!keypadField) return;
+    entryReplaceRef.current = false;
+    hapticsVocab.selection();
+    if (keypadIsTime) {
+      const secs = Math.min(Math.max((Number(keypadSource?.reps) || 0) + delta, 0), 5999);
+      setTimeBuffer(secondsToBuffer(secs));
+      writeKeypadField('reps', secs);
+      return;
+    }
+    if (keypadField === 'reps') {
+      writeKeypadField('reps', stepValue(keypadSource?.reps, delta, REPS_RULES, 1));
+    } else {
+      writeKeypadField('weight', String(stepValue(keypadSource?.weight, delta, keypadRules, 0)));
+    }
+  }
+  function handleKeypadClear() {
+    if (!keypadField) return;
+    if (keypadIsTime) setTimeBuffer('');
+    writeKeypadField(keypadField, '');
+  }
+  function handleKeypadNext() {
+    if (keypadField !== 'weight') return;
+    if (editingSet) setEditField('reps'); else setEntryField('reps');
+    entryReplaceRef.current = true;
+    if (timeField === 'reps') setTimeBuffer(secondsToBuffer(keypadSource?.reps));
+  }
+  function handleKeypadDone() {
+    if (editingSet) {
+      const changed = String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
+        || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
+      setEditField(null);
+      setSystemKeyboard(false);
+      if (changed) handleSaveEditedSet(); else closeEditSet();
+      return;
+    }
+    closeKeypad();
+  }
+  // The phone-keyboard path (the keypad's toggle): the open well becomes a
+  // TextInput with the SetEntry fields' own parsing, for this one edit.
+  function handleInputChange(text) {
+    if (!keypadField) return;
+    if (keypadIsTime) { writeKeypadField('reps', parseTimeToSeconds(text)); return; }
+    if (keypadField === 'reps') {
+      const n = parseInt(text, 10);
+      if (!Number.isNaN(n)) writeKeypadField('reps', Math.min(Math.max(n, 1), 200));
+      else if (text === '') writeKeypadField('reps', '');
+      return;
+    }
+    const ok = setTableKind === 'distance'
+      ? /^\d{0,5}\.?\d{0,2}$/.test(text)
+      : (/^\d{0,3}(\.\d{0,2})?$/.test(text) && (text === '' || Number(text) <= 500));
+    if (ok) writeKeypadField('weight', text);
+  }
+  const keypadInputField = systemKeyboard && keypadField ? {
+    field: keypadField,
+    value: keypadIsTime
+      ? (keypadSource?.reps === '' || keypadSource?.reps == null ? '' : formatSeconds(keypadSource.reps))
+      : String(keypadSource?.[keypadField] ?? ''),
+    onChangeText: handleInputChange,
+    keyboardType: keypadIsTime ? 'numbers-and-punctuation' : (keypadField === 'weight' ? 'decimal-pad' : 'number-pad'),
+    testID: keypadField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
+    onSubmitEditing: handleKeypadDone,
+  } : null;
+
+  // Section 2a: last session at each position (the most recent earlier one,
+  // marked stale, when last session had no set there), the coach's numbers
+  // over the coach's rule, and the smallest set that would be a record at the
+  // row's weight. Warm-ups and working sets number independently (D1 #2).
+  const prevWorkingSets = prevSets.filter(isWorkingSetRow);
+  function shortSetText(set) {
+    const reps = set.actualReps ?? set.actual_reps ?? set.reps ?? '';
+    if (setTableKind === 'reps_only') return `${reps}`;
+    if (setTableKind === 'duration') return formatSeconds(reps);
+    if (setTableKind === 'distance') return `${set.weight ?? 0} · ${formatSeconds(reps)}`;
+    return `${set.weight ?? 0} × ${reps}`;
+  }
+  function lastCellFor(workingIndex) {
+    if (prevWorkingSets.length === 0) return null;
+    const exact = prevWorkingSets[workingIndex];
+    if (exact) return { text: shortSetText(exact), stale: false, set: exact };
+    const carried = prevWorkingSets[prevWorkingSets.length - 1];
+    return { text: shortSetText(carried), stale: true, set: carried };
+  }
+  function bandFor(index) {
+    const p = prescriptions[index];
+    if (p?.repsBand) return p.repsBand;
+    if (routineExercise?.recommendedRepsMin != null) {
+      return { min: routineExercise.recommendedRepsMin, max: routineExercise.recommendedRepsMax };
+    }
+    return null;
+  }
+  function rangeText(band) {
+    if (!band) return null;
+    return band.min === band.max ? `${band.min}` : `${band.min}-${band.max}`;
+  }
+  function targetCellFor(index) {
+    const p = prescriptions[index] ?? null;
+    const band = bandFor(index);
+    const range = rangeText(band);
+    if (setTableKind === 'duration' || setTableKind === 'distance') return { value: '', rule: null };
+    if (setTableKind === 'reps_only') return { value: range ? `${range} reps` : '', rule: null };
+    const value = p?.weight != null && range ? `${p.weight} × ${range}` : (range ? `${range} reps` : '');
+    const rule = p?.weight != null && band && band.min !== band.max ? `+${weightStepKg} at ${band.max}` : null;
+    return { value, rule };
+  }
+  const prTarget = (() => {
+    if (setTableKind !== 'weight_reps' || isWarmupEntry || !recordLine) return null;
+    const w = parseDecimalInput(currentSet.weight);
+    if (!(w > 0)) return null;
+    const history = [...allTimeSets, ...loggedSets].filter(isWorkingSetRow);
+    if (history.length === 0) return null;
+    const weightOf = (x) => Number(x.weight) || 0;
+    const repsOf = (x) => Number(x.actualReps ?? x.actual_reps ?? x.reps) || 0;
+    const maxWeight = Math.max(...history.map(weightOf));
+    if (w > maxWeight) return { weight: w, reps: 1 };
+    const atWeight = history.filter((x) => weightOf(x) === w);
+    if (atWeight.length === 0) return null;
+    return { weight: w, reps: Math.max(...atWeight.map(repsOf)) + 1 };
+  })();
+  const nextCheckLabel = cluster ? 'Finish cluster'
+    : perSide ? 'Log other side'
+      : isWarmupEntry ? 'Log warm-up'
+        : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster'
+          : undefined;
+  const setTableRows = [];
+  loggedSets.forEach((s, i) => {
+    const warm = !isWorkingSetRow(s);
+    const progressNum = countProgressSets(loggedSets.slice(0, i + 1));
+    const editingThis = editingSet != null && editingSet.id === s.id;
+    const values = editingThis && editValue ? editValue : { weight: s.weight, reps: s.actualReps ?? s.reps };
+    const lc = warm ? null : lastCellFor(progressNum - 1);
+    setTableRows.push({
+      id: s.id ?? `logged-${i}`,
+      marker: warm ? 'W' : progressNum,
+      last: lc ? { text: lc.text, stale: lc.stale } : null,
+      target: warm ? { value: '', rule: null } : targetCellFor(progressNum - 1),
+      wells: {
+        weight: values.weight,
+        reps: values.reps,
+        state: editingThis ? 'editing' : 'logged',
+        editingField: editingThis ? editField : null,
+      },
+      check: 'logged',
+      record: detectedPRs.some((pr) => pr.setId === s.id),
+      inputField: editingThis ? keypadInputField : null,
+      onPressWell: (field) => openWell(field, s),
+      onLongPressRow: () => setRowSheet({ kind: 'logged', set: s, title: `${warm ? 'Warm-up' : `Set ${progressNum}`} · ${shortSetText(s)}` }),
+      testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
+    });
+  });
+  const nextLast = isWarmupEntry ? null : lastCellFor(workingLogged);
+  setTableRows.push({
+    id: 'next',
+    marker: isWarmupEntry ? 'W' : workingLogged + 1,
+    last: nextLast ? { text: nextLast.text, stale: nextLast.stale } : null,
+    target: isWarmupEntry ? { value: '', rule: null } : targetCellFor(workingLogged),
+    wells: {
+      weight: currentSet.weight,
+      reps: currentSet.reps,
+      state: entryField && !editingSet ? 'editing' : 'next',
+      editingField: !editingSet ? entryField : null,
+      ghost: !!currentSet.isGhost,
+    },
+    check: 'next',
+    prTarget,
+    checkLabel: nextCheckLabel,
+    busy: saving,
+    inputField: !editingSet ? keypadInputField : null,
+    onPressMarker: () => setShowSetTypePicker(true),
+    onPressLast: nextLast ? () => {
+      // The "Use" action: last session's set into the wells, counted as typed
+      // (Law A: history, never the target).
+      hapticsVocab.setLogged();
+      audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
+      setCurrentSet((cs) => ({ ...cs, weight: String(nextLast.set.weight ?? 0), reps: nextLast.set.actualReps ?? nextLast.set.reps ?? cs.reps, isGhost: false }));
+    } : undefined,
+    onPressWell: (field) => openWell(field),
+    onCheck: cluster ? finishCluster : handleCompleteSetPress,
+    onLongPressRow: () => setRowSheet({ kind: 'next', title: 'Next set' }),
+    testIDs: { row: 'volyume-next-set-row', marker: 'volyume-set-type-btn', last: 'volyume-last-cell', weight: 'volyume-well-weight', reps: 'volyume-well-reps' },
+  });
+  for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
+    const p = prescriptions[n - 1] ?? null;
+    const lc = lastCellFor(n - 1);
+    setTableRows.push({
+      id: `pending-${n}`,
+      marker: n,
+      last: lc ? { text: lc.text, stale: lc.stale } : null,
+      target: targetCellFor(n - 1),
+      wells: {
+        weight: (setTableKind === 'weight_reps') ? (p?.weight ?? '') : '',
+        reps: (setTableKind === 'weight_reps' || setTableKind === 'reps_only') ? (p?.repsTarget ?? '') : '',
+        state: 'pending',
+      },
+      check: 'pending',
+      testIDs: { row: `volyume-pending-row-${n}` },
+    });
+  }
+  // The quiet lines above the table: the group-focus cue (D44) names the
+  // destination for a sighted user; the warm-up line explains the W row once;
+  // the first-time line says how to choose a first load when there is no
+  // history at all (never restating the range the Target cell carries).
+  const entryContextLine = groupFocusMessage
+    ? groupFocusMessage
+    : isWarmupEntry
+      ? (warmupHintSeenRef.current
+        ? 'Warm-up - not counted in your totals.'
+        : "Warm-up - not counted in your totals. Light weight, easy reps; tap the check when you're ready to work.")
+      : null;
+  const firstTimeLine = (!isWarmupEntry && workingLogged === 0 && prevWorkingSets.length === 0 && setTableKind === 'weight_reps')
+    ? (() => {
+      const band = bandFor(0);
+      return band?.max != null
+        ? `First time on this lift. Pick a weight you could lift about ${band.max} times, with a couple in reserve. It is saved for next time.`
+        : 'First time on this lift. Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.';
+    })()
+    : null;
 
   // Logger phase 2B: the outline navigator's rows - the same done/total/
   // skipped derivation the phase-2 list (and ExerciseNav before it) used;
@@ -4720,6 +5049,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
             moreHint={showInfoTipPulse ? 'Help' : null}
+            countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}
           >
           <View style={styles.activeBody}>
 
@@ -5000,199 +5330,43 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           ) : null}
 
-          {/* ONE continuous set sequence (phase 2B): completed rows above the
-              active entry, upcoming previews below it - and, for ACTIVE-SET
-              STABILITY (screenshot failure 1), once 3+ sets are logged the
-              earlier ones fold behind a single constant-height line with
-              only the most recent set left expanded, so the inputs stop
-              drifting down the page as work accumulates. Rows keep their
-              stable-id keys, in-place editing, long-press delete and PR
-              re-evaluation exactly as before (D43 S4 / L07-F2). */}
-          {loggedSets.length > 0 && (() => {
-            const collapsed = loggedSets.length >= 3 && !historyExpanded;
-            const visible = collapsed ? loggedSets.slice(-1) : loggedSets;
-            const hiddenCount = loggedSets.length - visible.length;
-            return (
-              <View style={styles.loggedSection}>
-                {loggedSets.length >= 3 && (
-                  <TouchableOpacity
-                    style={styles.historyToggle}
-                    onPress={() => { hapticsVocab.selection(); setHistoryExpanded(v => !v); }}
-                    hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: !collapsed }}
-                    accessibilityLabel={collapsed
-                      ? `Show ${hiddenCount} earlier logged set${hiddenCount === 1 ? '' : 's'}`
-                      : 'Hide earlier logged sets'}
-                  >
-                    <Ionicons
-                      name={collapsed ? 'chevron-down' : 'chevron-up'}
-                      size={13}
-                      color={t.colors.textMuted}
-                    />
-                    <Text style={[styles.historyToggleText, live.historyToggleText]}>
-                      {collapsed
-                        ? `${hiddenCount} earlier set${hiddenCount === 1 ? '' : 's'} logged`
-                        : 'Hide earlier sets'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {visible.map((s) => {
-                  const i = loggedSets.indexOf(s);
-                  return (
-                    <AnimatedRow key={s.id ?? `row-${i}`}>
-                      <LoggedSetRow
-                        set={s}
-                        units={units}
-                        progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
-                        exerciseType={activeExerciseType}
-                        loadSemantics={exercise?.loadSemantics || 'total'}
-                        onEdit={openEditSet}
-                        onDelete={openDeleteFromMenu}
-                        isEditing={editingSet != null && editingSet.id === s.id}
-                        editValue={editingSet != null && editingSet.id === s.id ? editValue : null}
-                        onChangeEditValue={setEditValue}
-                        onSaveEdit={handleSaveEditedSet}
-                        onCancelEdit={closeEditSet}
-                        onDeleteEdit={handleDeleteEditedSet}
-                        saving={editingSet != null && editingSet.id === s.id ? saving : false}
-                        weightStepKg={exercise?.incrementKg || exercise?.increment_kg
-                          || defaultIncrement(s.weight || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
-                      />
-                    </AnimatedRow>
-                  );
-                })}
-              </View>
-            );
-          })()}
+          {/* D44: the group-focus cue is hidden from the accessibility tree
+              (the spoken announcement already covers screen readers, so this
+              avoids double narration); the warm-up line is read. */}
+          {entryContextLine ? (
+            <Text
+              style={[styles.sideCarveNote, live.sideCarveNote]}
+              accessibilityElementsHidden={!!groupFocusMessage}
+              importantForAccessibility={groupFocusMessage ? 'no-hide-descendants' : 'auto'}
+            >
+              {entryContextLine}
+            </Text>
+          ) : null}
+          {firstTimeLine ? (
+            <Text style={[styles.sideCarveNote, live.sideCarveNote]}>{firstTimeLine}</Text>
+          ) : null}
+          </View>
 
-          {/* R3 rebuild (docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md
-              section 3): the Now card. ONE context line, priority-ordered:
-              group-focus flash > warm-up > coach note - and the coach note is
-              closable plain info (founder ruling 2026-07-12: the old chevron
-              navigated to the exercise form guide). The old corner pencil (a
-              one-way latch: open only, dead after its first tap) is replaced
-              by the card's own honest note row. Beginner education left this
-              card for the overflow's "How logging works".
+          {/* Stages B and C (D220, 12-BUILD-SPEC sections 1.4 and 4): ONE
+              set table for the active exercise: logged rows, the next row,
+              pending rows. The next row's check is the only control that logs
+              a straight set (handleCompleteSetPress: validation, the SQLite
+              insert, the store, PR detection, the rest timer, auto-advance and
+              the per-side and cluster routes are unchanged behind it). A well
+              opens the docked keypad; a logged row's well edits it in place;
+              a long-press opens the row sheet (note, edit, delete). The fold
+              of three or more logged rows lives inside the table.
               Warm-ups are no longer auto-suggested (recorded decision, B8):
-              the chip auto-appeared on every exercise's first set and
-              supersets don't make sense having warm-ups between paired
-              exercises. Users who want a warm-up mark the set as Warm-up via
-              the set-type line, or pull the ramp from exercise options. */}
-          {(() => {
-            const isWarmupSet = currentSet.setType === 'warmup';
-            const currentPrescription = prescriptions[workingLogged] ?? null;
-            // Founder device order 2026-08-17: the coach-note branch of the
-            // context line is retired (see the retirement note by the old
-            // PROVENANCE_COPY site near the top of this file). Only the
-            // group-focus flash and the warm-up label remain - both
-            // functional state, not explanation.
-            const context = groupFocusMessage
-              ? { kind: 'group', text: groupFocusMessage }
-              : isWarmupSet
-                ? {
-                  kind: 'warmup',
-                  text: warmupHintSeenRef.current
-                    ? 'Warm-up - not counted in your totals.'
-                    : "Warm-up - not counted in your totals. Light weight, easy reps; tap Log warm-up when you're ready to work.",
-                }
-                : null;
+              a warm-up is chosen on the next row's marker or pulled from
+              exercise options. */}
+          <SetTable
+            rows={setTableRows}
+            kind={setTableKind}
+            units={units}
+            columnsLabel={{ weight: units }}
+          />
 
-            // Warm-ups and working sets number independently, so filter
-            // warm-ups out BEFORE indexing by workingLogged (D1 #2).
-            const prevWorking = prevSets.filter(
-              s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
-            );
-            const prev = prevWorking[workingLogged];
-            // Stage 11: the range label shows the CURRENT prescription's
-            // repsBand - unchanged visual (still the honest range, not the
-            // single repsTarget number), now resolver-derived.
-            const range = currentPrescription
-              ? (currentPrescription.repsBand.min === currentPrescription.repsBand.max
-                ? `${currentPrescription.repsBand.min}`
-                : `${currentPrescription.repsBand.min}-${currentPrescription.repsBand.max}`)
-              : (routineExercise?.recommendedRepsMin != null
-                ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
-                : null);
-            let prefill = null;
-            if (!isWarmupSet) {
-              if (isDeloadWeek && currentPrescription?.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
-                prefill = {
-                  label: 'Recovery week -',
-                  valueLabel: `${currentPrescription.weight}${units} x ${currentPrescription.repsTarget}`,
-                  onUse: () => {
-                    hapticsVocab.setLogged();
-                    audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-                    setCurrentSet(s => ({ ...s, weight: String(currentPrescription.weight ?? 0), reps: currentPrescription.repsTarget ?? s.reps, isGhost: false }));
-                  },
-                };
-              } else if (prev) {
-                prefill = {
-                  // "Last" alone read ambiguously mid-workout: it could mean
-                  // the previous SET. This is the matching set from the most
-                  // recent completed workout (getLastNWorkoutSets), so say so.
-                  // Law A (design section 16): always the factual history,
-                  // never the target - unmistakably labelled as history.
-                  label: 'Last session:',
-                  valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
-                  onUse: () => {
-                    hapticsVocab.setLogged();
-                    audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-                    setCurrentSet(s => ({ ...s, weight: String(prev.weight ?? 0), reps: prev.actualReps ?? s.reps, isGhost: false }));
-                  },
-                };
-              } else if (workingLogged === 0) {
-                // Activation ruling (first-run coherence pass): the quiet
-                // first-time line returns, rewritten. Phase 2B retired the
-                // old one because it REPEATED the range the position line
-                // already carries ("Set 1 of 6 - Working · 8-12 reps" then
-                // "First time - Target 8-12 reps" on the founder's S22
-                // shots). The repetition was the objection, not the row: a
-                // user standing at a machine with an empty weight box and no
-                // history has nothing to act on. This line never restates the
-                // range string; it says, in words, how to choose the first
-                // load and that the number is kept. Quiet (non-tappable)
-                // variant - there is no history to apply, so there is nothing
-                // to tap. Shown on the FIRST working set of the exercise only
-                // (workingLogged === 0), never on a warm-up, and never
-                // instead of the recovery-week or Last session rows above.
-                const bandMax = currentPrescription
-                  ? currentPrescription.repsBand.max
-                  : (routineExercise?.recommendedRepsMax ?? null);
-                prefill = {
-                  label: 'First time on this lift.',
-                  valueLabel: bandMax != null
-                    ? `Pick a weight you could lift about ${bandMax} times, with a couple in reserve. It is saved for next time.`
-                    : 'Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.',
-                };
-              }
-            }
-
-            return (
-              <NowCard
-                positionLabel={orientationLabel}
-                targetRangeLabel={!isWarmupSet && range ? `${range} reps` : null}
-                onPressSetType={() => setShowSetTypePicker(true)}
-                context={context}
-                prefill={prefill}
-                setValue={currentSet}
-                onSetChange={handleCurrentSetChange}
-                units={units}
-                isWarmup={isWarmupSet}
-                onSubmitComplete={handleCompleteSetPress}
-                exerciseType={activeExerciseType}
-                loadSemantics={exercise?.loadSemantics || 'total'}
-                weightStepKg={exercise?.incrementKg || exercise?.increment_kg
-                  || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
-                recordLine={recordLine}
-                noteText={noteText}
-                onNoteChange={setNoteText}
-                noteResetKey={`${currentExerciseIndex}-${loggedSets.length}`}
-                flash={logFlash}
-              />
-            );
-          })()}
-
+          <View style={styles.activeBody}>
           {/* R4 (D64): the between-sides banner. Appears only mid-pair
               (side one logged via the primary, side two pending on the same
               relabelled primary below). Cluster-banner visual class: bordered
@@ -5273,59 +5447,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* Per-side (unilateral) guided set: moved off this inline banner
-              and onto a proper WorkoutBottomSheet (see below, alongside the
-              screen's other sheets), matching the rest of the logger's
-              sheet/card idiom instead of the old plain-View banner. */}
-
-          {/* D43 S3 (blueprint 3.7): the PRIMARY action moved to the
-              bottom-pinned bar (thumb zone, stable position) and NOW STAYS
-              there permanently -- it never leaves that slot, so the scroll
-              no longer needs a promoted stand-in. The old "Log another set"
-              outline button retires: extraSetArmed still exists (see
-              handleCompleteSetPress) but arms itself the moment the
-              ever-present primary is tapped past target, in the same
-              gesture that logs the set, instead of a separate arm-then-log
-              round trip. extraSetBtnPromoted/extraSetBtnPromotedText are
-              reused below for the bar's new secondary advance action
-              (Next exercise / Finish workout), not deleted. */}
-
-          {/* C3 (re-anchored, logger redesign phase 2): the separate
-              "Next exercise in a moment / Stay here" row is DELETED
-              (founder ruling, Option B). The countdown is now a state of
-              the single primary CTA in WorkoutBottomBar (countdownActive
-              below); every existing cancellation trigger still routes
-              through cancelAutoAdvance, and logging another set via the
-              secondary "Log another set" action cancels it too. */}
-
-          {/* Upcoming prescribed sets close the continuous sequence:
-              read-only previews of the working sets still to come, so the
-              active row visibly belongs to one list with a known end. */}
-          {(() => {
-            if (currentSet.setType === 'warmup') return null;
-            const rows = [];
-            for (let n = workingLogged + 2; n <= targetSets; n += 1) {
-              // Campaign 20 Phase 2: upcoming previews read the SAME
-              // resolver-derived prescriptions array as the NowCard range
-              // (same visual, new source) - position n renders
-              // prescriptions[n - 1].repsBand.
-              const tgt = prescriptions[n - 1];
-              const range = tgt
-                ? (tgt.repsBand.min === tgt.repsBand.max ? `${tgt.repsBand.min}` : `${tgt.repsBand.min}-${tgt.repsBand.max}`)
-                : (routineExercise?.recommendedRepsMin != null
-                  ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
-                  : null);
-              rows.push(
-                <View key={`upcoming-${n}`} style={styles.upcomingSetRow}>
-                  <Text style={[styles.upcomingSetNum, live.upcomingSetNum]}>{n}</Text>
-                  <Text style={[styles.upcomingSetText, live.upcomingSetText]}>
-                    {range ? `${range} reps` : `Set ${n}`}
-                  </Text>
-                </View>,
-              );
-            }
-            return rows.length ? <View style={styles.upcomingSection}>{rows}</View> : null;
-          })()}
+          {/* Stage B (D220): the upcoming previews are the table's pending rows. */}
 
           {/* Phase 2B: the rest strip + CTA live OUTSIDE this scroll and the
               bar already absorbs safeBottom - counting it here too created
@@ -5383,31 +5505,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ) : null}
         <RestTimer />
 
-        {cluster ? null : (
-          <WorkoutBottomBar
-            primaryLabel={
-              perSide ? 'Log other side'
-                : currentSet.setType === 'warmup' ? 'Log warm-up'
-                : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
-            }
-            onPrimary={handleCompleteSetPress}
-            saving={saving}
-            safeBottom={safeBottom}
-            // Stage A (D220): Finish lives in the toolbar alone, so the bar
-            // never offers it; at the last exercise the primary stays Log set
-            // and the section footer's Add set arms another.
-            advance={(targetComplete && !extraSetArmed && !perSide)
-              ? (isLastExercise
-                ? null
-                : { label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise' })
-              : null}
-            countdownActive={autoAdvanceArmed && targetComplete && !extraSetArmed}
-            onExtraSet={armExtraSet}
-            reduceMotion={!!reduceMotion}
-            safeBottom={safeBottom}
-          />
-        )}
+        {/* Stage B (D220): the bottom bar is retired. Its jobs: Log set is the
+            next row's check; Next exercise is the next section's header or the
+            1.8 s auto-advance (its track is the active section's footer line);
+            Finish is the toolbar's; Log another set is the footer's Add set.
+            The safe-area inset the bar absorbed is a spacer here while the
+            keypad is closed; the keypad carries it while open. */}
+        {keypadOpen ? null : <View style={{ height: safeBottom }} />}
         </View>
+        {keypadOpen ? (
+          <View onLayout={handleKeypadLayout}>
+            <Keypad
+              field={keypadField}
+              value={keypadValueText}
+              step={keypadStep}
+              unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
+              mode={keypadIsTime ? 'time' : 'number'}
+              fieldLabel={keypadIsTime ? 'Time' : (setTableKind === 'distance' && keypadField === 'weight' ? 'Distance' : undefined)}
+              onKey={handleKeypadKey}
+              onStep={handleKeypadStep}
+              onClear={handleKeypadClear}
+              onNext={handleKeypadNext}
+              onDone={handleKeypadDone}
+              onSystemKeyboard={() => setSystemKeyboard(true)}
+              safeBottom={safeBottom}
+            />
+          </View>
+        ) : null}
 
         {/* Stage A (D220): the full rest view behind the toolbar's Rest tool
             (the 44 dp strip stays the always-on surface) and the session
@@ -5422,6 +5546,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           value={sessionNote}
           onSave={handleSaveSessionNote}
           onClose={() => setShowNotesSheet(false)}
+        />
+        {/* Stages B and C (D220, 12-BUILD-SPEC section 4): the row's overflow.
+            The next row's note is the one the next logged set carries
+            (noteText, cleared on log as before); a logged row offers Edit set
+            (the keypad on its weight well) and Delete set (the existing
+            confirm-then-remove flow via openDeleteFromMenu). */}
+        <SetRowSheet
+          visible={!!rowSheet}
+          onClose={() => setRowSheet(null)}
+          title={rowSheet?.title ?? ''}
+          note={rowSheet?.kind === 'next' ? noteText : (rowSheet?.set?.notes ?? null)}
+          canEditNote={rowSheet?.kind === 'next'}
+          onSaveNote={(text) => setNoteText(text)}
+          onEdit={rowSheet?.kind === 'logged' ? () => openWell('weight', rowSheet.set) : undefined}
+          onDelete={rowSheet?.kind === 'logged' ? () => openDeleteFromMenu(rowSheet.set) : undefined}
         />
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}

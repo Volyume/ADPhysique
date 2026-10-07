@@ -379,6 +379,241 @@ describe('SetRow frame', () => {
   });
 });
 
+describe('SetRow exercise kinds', () => {
+  const kindWells = (tree) => one(hosts(tree, (p) => flat(p.style).width === 98));
+  const wellButtons = (tree) => kindWells(tree).findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'button');
+  const shown = (tree, label) => words(one(byLabel(tree, label))).join('');
+
+  test('weight_reps and weighted_bodyweight render the weight and reps wells', () => {
+    ['weight_reps', 'weighted_bodyweight', undefined].forEach((kind) => {
+      const tree = render({ kind });
+      expect(wellButtons(tree)).toHaveLength(2);
+      expect(shown(tree, 'Set 2 weight')).toBe('70');
+      expect(shown(tree, 'Set 2 reps')).toBe('8');
+    });
+  });
+
+  test('reps_only: one reps well the full wells width, spoken as reps', () => {
+    const onPressWell = jest.fn();
+    const tree = render({ kind: 'reps_only', onPressWell, wells: { weight: 99, reps: 8, state: 'next' } });
+    const buttons = wellButtons(tree);
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].props.accessibilityLabel).toBe('Set 2 reps');
+    expect(buttons[0].props.accessibilityValue).toEqual({ text: '8' });
+    expect(words(tree.toJSON())).not.toContain('99');
+    expect(flat(buttons[0].props.style).borderLeftWidth).toBeUndefined();
+    press(buttons[0]);
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+  });
+
+  test('duration: one well of m:ss over the reps field, spoken in minutes and seconds', () => {
+    const onPressWell = jest.fn();
+    const tree = render({ kind: 'duration', onPressWell, wells: { weight: '', reps: 90, state: 'next' } });
+    const buttons = wellButtons(tree);
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].props.accessibilityLabel).toBe('Set 2 time');
+    expect(words(buttons[0]).join('')).toBe('1:30');
+    expect(buttons[0].props.accessibilityValue).toEqual({ text: '1 minute 30 seconds' });
+    press(buttons[0]);
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+  });
+
+  test.each([[60, '1:00', '1 minute'], [120, '2:00', '2 minutes'], [45, '0:45', '45 seconds'], [61, '1:01', '1 minute 1 second']])(
+    'duration %s seconds reads %s and is spoken as %s',
+    (seconds, shownText, spoken) => {
+      const tree = render({ kind: 'duration', wells: { reps: seconds, state: 'next' } });
+      expect(words(one(byLabel(tree, 'Set 2 time'))).join('')).toBe(shownText);
+      expect(one(byLabel(tree, 'Set 2 time')).props.accessibilityValue.text).toBe(spoken);
+    },
+  );
+
+  test('an empty time well shows nothing, not 0:00, and is spoken as empty', () => {
+    ['', null, undefined, 0].forEach((reps) => {
+      const tree = render({ kind: 'duration', wells: { reps, state: 'next' } });
+      expect(words(one(byLabel(tree, 'Set 2 time'))).join('')).toBe('');
+      expect(one(byLabel(tree, 'Set 2 time')).props.accessibilityValue).toEqual({ text: 'empty' });
+    });
+  });
+
+  test('distance: the distance well then the time well, field keys weight and reps', () => {
+    const onPressWell = jest.fn();
+    const tree = render({ kind: 'distance', onPressWell, wells: { weight: 400, reps: 95, state: 'next' } });
+    expect(wellButtons(tree)).toHaveLength(2);
+    expect(words(one(byLabel(tree, 'Set 2 distance'))).join('')).toBe('400');
+    expect(words(one(byLabel(tree, 'Set 2 time'))).join('')).toBe('1:35');
+    expect(one(byLabel(tree, 'Set 2 distance')).props.accessibilityValue).toEqual({ text: '400 metres' });
+    expect(one(byLabel(tree, 'Set 2 time')).props.accessibilityValue).toEqual({ text: '1 minute 35 seconds' });
+    press(one(byLabel(tree, 'Set 2 distance')));
+    press(one(byLabel(tree, 'Set 2 time')));
+    expect(onPressWell.mock.calls).toEqual([['weight'], ['reps']]);
+  });
+
+  test('distance is spoken in yards unless the units are kg', () => {
+    const tree = render({ kind: 'distance', units: 'lb', wells: { weight: 440, reps: 60, state: 'next' } });
+    expect(one(byLabel(tree, 'Set 2 distance')).props.accessibilityValue).toEqual({ text: '440 yards' });
+    const one1 = render({ kind: 'distance', units: 'kg', wells: { weight: 1, reps: 60, state: 'next' } });
+    expect(one(byLabel(one1, 'Set 2 distance')).props.accessibilityValue).toEqual({ text: '1 metre' });
+  });
+
+  test('an empty distance is empty; kg is the default units', () => {
+    const tree = render({ kind: 'distance', wells: { weight: '', reps: '', state: 'next' } });
+    expect(one(byLabel(tree, 'Set 2 distance')).props.accessibilityValue).toEqual({ text: 'empty' });
+    expect(one(byLabel(tree, 'Set 2 time')).props.accessibilityValue).toEqual({ text: 'empty' });
+    const full = render({ kind: 'distance', wells: { weight: 200, reps: 60, state: 'next' } });
+    expect(one(byLabel(full, 'Set 2 distance')).props.accessibilityValue.text).toBe('200 metres');
+  });
+
+  test.each([['reps_only', 'reps'], ['duration', 'time'], ['distance', 'time']])(
+    '%s: pending ink and the amber editing ink are unchanged',
+    (kind, label) => {
+      const pending = render({ kind, wells: { weight: 10, reps: 60, state: 'pending' }, check: 'pending' });
+      expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textDisabled);
+      const editing = render({ kind, wells: { weight: 10, reps: 60, state: 'editing', editingField: 'reps' } });
+      expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.primary);
+      expect(flat(wellsBox(editing).props.style).borderColor).toBe(colors.primary);
+    },
+  );
+});
+
+describe('SetRow ghost seed', () => {
+  test('ghost values read in secondary ink, not primary', () => {
+    const tree = render({ wells: { weight: 70, reps: 8, state: 'next', ghost: true } });
+    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textSecondary);
+    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textSecondary);
+    expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityValue).toEqual({ text: '70' });
+  });
+
+  test('without ghost, or with ghost false, the values stay primary', () => {
+    expect(wellText(render({}), 'Set 2 weight').color).toBe(colors.textPrimary);
+    expect(wellText(render({ wells: { weight: 70, reps: 8, state: 'next', ghost: false } }), 'Set 2 weight').color)
+      .toBe(colors.textPrimary);
+  });
+
+  test('amber editing ink wins over ghost on the field being edited only', () => {
+    const tree = render({ wells: { weight: 70, reps: 8, state: 'editing', editingField: 'weight', ghost: true } });
+    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.primary);
+    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textSecondary);
+  });
+
+  test('ghost applies to every kind', () => {
+    const tree = render({ kind: 'duration', wells: { reps: 60, state: 'next', ghost: true } });
+    expect(wellText(tree, 'Set 2 time').color).toBe(colors.textSecondary);
+  });
+});
+
+describe('SetRow long press and check name', () => {
+  const rowPressable = (tree) => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.onLongPress && n.props.delayLongPress)[0];
+
+  test('without onLongPressRow the row has no long press and no hint', () => {
+    const tree = render({ onPressMarker: () => {} });
+    expect(rowPressable(tree)).toBeUndefined();
+    expect(one(byLabel(tree, 'Set type for set 2')).props.accessibilityHint).toBeUndefined();
+  });
+
+  test('with it, a 300 ms hold on the row calls it with no arguments', () => {
+    const onLongPressRow = jest.fn();
+    const tree = render({ onLongPressRow, testIDs: { row: 'r' } });
+    const pressable = rowPressable(tree);
+    expect(pressable.props.delayLongPress).toBe(300);
+    expect(pressable.props.onPress).toBeUndefined();
+    expect(pressable.props.accessible).toBe(false);
+    expect(one(byId(tree, 'r'))).toBeTruthy();
+    act(() => { pressable.props.onLongPress(); });
+    expect(onLongPressRow).toHaveBeenCalledTimes(1);
+    expect(onLongPressRow).toHaveBeenCalledWith();
+  });
+
+  test('the marker button carries the hint; a row with no marker button still says it', () => {
+    const withButton = render({ onLongPressRow: () => {}, onPressMarker: () => {} });
+    expect(one(byLabel(withButton, 'Set type for set 2')).props.accessibilityHint).toBe('Hold for more options');
+    const without = render({ onLongPressRow: () => {} });
+    expect(one(byLabel(without, 'Set 2')).props.accessibilityHint).toBe('Hold for more options');
+  });
+
+  test('a plain press on a well or the check still reaches its own handler', () => {
+    const onPressWell = jest.fn();
+    const onCheck = jest.fn();
+    const onLongPressRow = jest.fn();
+    const tree = render({ onLongPressRow, onPressWell, onCheck });
+    press(one(byLabel(tree, 'Set 2 reps')));
+    press(one(byLabel(tree, 'Log set 2')));
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+    expect(onCheck).toHaveBeenCalledTimes(1);
+    expect(onLongPressRow).not.toHaveBeenCalled();
+  });
+
+  test('checkLabel replaces the check\'s spoken name in every state', () => {
+    ['logged', 'next', 'pending'].forEach((check) => {
+      const tree = render({ check, checkLabel: 'Log other side' });
+      expect(byLabel(tree, 'Log other side')).toHaveLength(1);
+      expect(byLabel(tree, 'Log set 2')).toHaveLength(0);
+    });
+  });
+
+  test('the default check name stays "Log set n"', () => {
+    expect(byLabel(render({}), 'Log set 2')).toHaveLength(1);
+  });
+});
+
+describe('SetRow phone-keyboard path', () => {
+  const field = (extra = {}) => ({
+    field: 'weight', value: '72.5', onChangeText: jest.fn(), keyboardType: 'decimal-pad', testID: 'volyume-input-weight', onSubmitEditing: jest.fn(), ...extra,
+  });
+  const inputs = (tree) => tree.root.findAll((n) => n.type === 'TextInput');
+
+  test('while editing, the named well is a TextInput with the house props', () => {
+    const input = field();
+    const tree = render({ inputField: input, wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    const box = one(inputs(tree));
+    expect(box.props.testID).toBe('volyume-input-weight');
+    expect(box.props.accessibilityLabel).toBe('Set 2 weight');
+    expect(box.props.value).toBe('72.5');
+    expect(box.props.keyboardType).toBe('decimal-pad');
+    expect(box.props.returnKeyType).toBe('done');
+    expect(box.props.selectTextOnFocus).toBe(true);
+    expect(box.props.autoFocus).toBe(true);
+    expect(box.props.onSubmitEditing).toBe(input.onSubmitEditing);
+    act(() => { box.props.onChangeText('80'); });
+    expect(input.onChangeText).toHaveBeenCalledWith('80');
+    const s = flat(box.props.style);
+    expect(s.color).toBe(colors.primary);
+    expect(s.fontFamily).toBe(type.w(type.num('bodyStrong'), 'semibold').fontFamily);
+    expect(s.fontSize).toBe(type.bodyStrong.fontSize);
+    expect(s.fontVariant).toEqual(['tabular-nums']);
+  });
+
+  test('the other well stays a pressable value', () => {
+    const onPressWell = jest.fn();
+    const tree = render({ onPressWell, inputField: field(), wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    // The field is its own element, not a button wrapping the input.
+    expect(byLabel(tree, 'Set 2 weight').filter((n) => n.props.accessibilityRole === 'button')).toHaveLength(0);
+    press(one(byLabel(tree, 'Set 2 reps')));
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+  });
+
+  test('the reps field takes the input in the reps well', () => {
+    const tree = render({ inputField: field({ field: 'reps', value: '8', testID: 'volyume-input-reps' }), wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'reps' } });
+    expect(one(inputs(tree)).props.accessibilityLabel).toBe('Set 2 reps');
+    expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityRole).toBe('button');
+  });
+
+  test('kinds name the field in their own words', () => {
+    const tree = render({ kind: 'duration', inputField: field({ field: 'reps', value: '90' }), wells: { reps: 90, state: 'editing', editingField: 'reps' } });
+    expect(one(inputs(tree)).props.accessibilityLabel).toBe('Set 2 time');
+  });
+
+  test.each(['next', 'logged', 'pending'])('no TextInput while the row is %s', (state) => {
+    const tree = render({ inputField: field(), wells: { weight: 72.5, reps: 8, state } });
+    expect(inputs(tree)).toHaveLength(0);
+  });
+
+  test('no TextInput without inputField, or when it is null', () => {
+    const wells = { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' };
+    expect(inputs(render({ wells }))).toHaveLength(0);
+    expect(inputs(render({ wells, inputField: null }))).toHaveLength(0);
+  });
+});
+
 describe('SetRow source guard (tokens only)', () => {
   const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'SetRow.js'), 'utf8');
   test('no hex or rgb literal', () => {

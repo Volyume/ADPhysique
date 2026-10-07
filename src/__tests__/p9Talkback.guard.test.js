@@ -55,9 +55,13 @@ describe('P9: logging a set is spoken', () => {
     // silently drop the state.
     const buttonDisabledHits = src.match(/<Button[\s\S]{0,500}?disabled=\{saving\}/g) ?? [];
     expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(1);
-    expect(src).toMatch(/<WorkoutBottomBar[\s\S]{0,900}?saving=\{saving\}/);
-    const barSrc = read('src/components/workout/WorkoutBottomBar.js');
-    expect(barSrc).toMatch(/loading=\{saving\}/);
+    // RE-ANCHORED for the logger rebuild stage B (D220): the main primary is
+    // the next row's check (SetRow), which the screen wires with
+    // `busy: saving`; the row disables the check and speaks busy while a
+    // save is in flight.
+    expect(src).toMatch(/check: 'next',[\s\S]{0,200}?busy: saving,/);
+    const rowSrc = read('src/components/workout/session/SetRow.js');
+    expect(rowSrc).toMatch(/accessibilityState=\{\{ disabled, busy: !!busy \}\}/);
     const buttonSrc = read('src/components/Button.js');
     expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });

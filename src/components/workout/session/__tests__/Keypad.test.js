@@ -248,6 +248,145 @@ describe('Keypad accessibility and sizes', () => {
   });
 });
 
+describe('Keypad time mode', () => {
+  const time = (props) => render({ mode: 'time', field: 'reps', value: '1:30', step: 1, ...props });
+
+  test('the step keys read -5 s and +5 s, are spoken in seconds, and call onStep with -5 and 5 whatever step says', () => {
+    [1, 2.5, 10].forEach((step) => {
+      const onStep = jest.fn();
+      const tree = time({ step, onStep });
+      expect(words(tree.toJSON())).toEqual(expect.arrayContaining([`${MINUS}5 s`, '+5 s']));
+      press(key(tree, 'Remove 5 seconds'));
+      press(key(tree, 'Add 5 seconds'));
+      expect(onStep.mock.calls).toEqual([[-5], [5]]);
+    });
+  });
+
+  test('the step keys stay primary ink', () => {
+    const tree = time({});
+    expect(flat(textHost(tree, '+5 s').props.style).color).toBe(colors.primary);
+    expect(flat(textHost(tree, `${MINUS}5 s`).props.style).color).toBe(colors.primary);
+  });
+
+  test('there is no decimal point key and the slot stays an empty, hidden cell', () => {
+    [time({}), time({ field: 'weight' })].forEach((tree) => {
+      expect(byLabel(tree, 'Decimal point')).toHaveLength(0);
+      const gap = hosts(tree, (p) => p.importantForAccessibility === 'no-hide-descendants');
+      expect(gap).toHaveLength(1);
+      expect(flat(gap[0].props.style).height).toBe(52);
+      expect(hosts(tree, (p) => p.accessibilityRole === 'keyboardkey')).toHaveLength(14);
+    });
+  });
+
+  test('digits, Clear, backspace and Done behave as in number mode', () => {
+    const onKey = jest.fn();
+    const onClear = jest.fn();
+    const onDone = jest.fn();
+    const tree = time({ onKey, onClear, onDone });
+    press(key(tree, '7'));
+    press(key(tree, 'Delete'));
+    press(key(tree, 'Clear'));
+    press(key(tree, 'Done'));
+    expect(onKey.mock.calls).toEqual([['7'], [KEY_BACKSPACE]]);
+    expect(onClear).toHaveBeenCalledWith();
+    expect(onDone).toHaveBeenCalledWith();
+  });
+
+  test('Clear and backspace grey out on an empty display string', () => {
+    const tree = time({ value: '' });
+    expect(key(tree, 'Clear').props.disabled).toBe(true);
+    expect(key(tree, 'Delete').props.disabled).toBe(true);
+    expect(key(time({ value: '0:05' }), 'Clear').props.disabled).toBe(false);
+  });
+
+  test('the displayed time is spoken as typed, with no unit appended', () => {
+    expect(byLabel(time({ fieldLabel: 'Time' }), 'Editing Time, 1:30')).toHaveLength(1);
+    expect(byLabel(time({ fieldLabel: 'Time', value: '' }), 'Editing Time, empty')).toHaveLength(1);
+  });
+});
+
+describe('Keypad fieldLabel', () => {
+  test('the active tab reads the label instead of Reps, and it is spoken', () => {
+    const tree = render({ mode: 'time', field: 'reps', value: '0:45', step: 1, fieldLabel: 'Time' });
+    expect(flat(textHost(tree, 'Time').props.style).color).toBe(colors.textPrimary);
+    expect(flat(textHost(tree, 'kg').props.style).color).toBe(colors.textMuted);
+    expect(words(tree.toJSON())).not.toContain('Reps');
+    expect(byLabel(tree, 'Editing Time, 0:45')).toHaveLength(1);
+  });
+
+  test('on the weight field the label replaces the unit (Distance)', () => {
+    const tree = render({ fieldLabel: 'Distance', unit: 'm', value: '400' });
+    expect(flat(textHost(tree, 'Distance').props.style).color).toBe(colors.textPrimary);
+    expect(flat(textHost(tree, 'Reps').props.style).color).toBe(colors.textMuted);
+    expect(words(tree.toJSON())).not.toContain('m');
+    expect(byLabel(tree, 'Editing Distance, 400 m')).toHaveLength(1);
+  });
+
+  test('without a label, or with an empty one, the tabs and speech are exactly as before', () => {
+    [undefined, ''].forEach((fieldLabel) => {
+      const tree = render({ fieldLabel });
+      expect(textHost(tree, 'kg')).toBeTruthy();
+      expect(textHost(tree, 'Reps')).toBeTruthy();
+      expect(byLabel(tree, 'Editing weight, 72.5 kilograms')).toHaveLength(1);
+    });
+  });
+
+  test('number mode is the default and keeps its point key and step labels', () => {
+    const tree = render({ mode: 'number' });
+    expect(byLabel(tree, 'Decimal point')).toHaveLength(1);
+    expect(byLabel(tree, 'Add 2.5 kilograms')).toHaveLength(1);
+    expect(hosts(tree, (p) => p.accessibilityRole === 'keyboardkey')).toHaveLength(15);
+  });
+});
+
+describe('Keypad test ids', () => {
+  const byId = (tree, id) => hosts(tree, (p) => p.testID === id);
+  const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  const OTHERS = [
+    'volyume-key-backspace', 'volyume-key-step-down', 'volyume-key-step-up',
+    'volyume-key-action', 'volyume-key-clear', 'volyume-key-keyboard',
+  ];
+
+  test('number mode on the weight field carries every id exactly once', () => {
+    const tree = render({});
+    [...DIGITS.map((d) => `volyume-key-${d}`), 'volyume-key-point', ...OTHERS].forEach((id) => {
+      expect(byId(tree, id)).toHaveLength(1);
+    });
+  });
+
+  test('each id drives the control it names', () => {
+    const onKey = jest.fn();
+    const onStep = jest.fn();
+    const onNext = jest.fn();
+    const onClear = jest.fn();
+    const onSystemKeyboard = jest.fn();
+    const tree = render({ onKey, onStep, onNext, onClear, onSystemKeyboard });
+    const tap = (id) => press(one(byId(tree, id)));
+    tap('volyume-key-7');
+    tap('volyume-key-point');
+    tap('volyume-key-backspace');
+    tap('volyume-key-step-down');
+    tap('volyume-key-step-up');
+    tap('volyume-key-action');
+    tap('volyume-key-clear');
+    tap('volyume-key-keyboard');
+    expect(onKey.mock.calls).toEqual([['7'], ['.'], [KEY_BACKSPACE]]);
+    expect(onStep.mock.calls).toEqual([[-2.5], [2.5]]);
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onSystemKeyboard).toHaveBeenCalledTimes(1);
+  });
+
+  test('the point id is absent in time mode and on reps; the rest stay', () => {
+    [render({ mode: 'time', field: 'reps', value: '1:30', step: 1 }), render({ field: 'reps', value: '8', step: 1 })].forEach((tree) => {
+      expect(byId(tree, 'volyume-key-point')).toHaveLength(0);
+      [...DIGITS.map((d) => `volyume-key-${d}`), ...OTHERS].forEach((id) => {
+        expect(byId(tree, id)).toHaveLength(1);
+      });
+    });
+  });
+});
+
 describe('Keypad source guard (tokens only)', () => {
   const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'Keypad.js'), 'utf8');
   test('no hex or rgb literal', () => {
