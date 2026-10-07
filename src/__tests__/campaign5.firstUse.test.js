@@ -1364,7 +1364,7 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     // gloss text stays pinned for any surface that may cite it.
     expect(read('lib/coachGlossary.js')).not.toContain('worked out from your recent sets');
     expect(read('lib/coachGlossary.js')).toContain('worked out from the weight and reps of a set');
-    const entry = read('components/SetEntry.js')
+    const entry = read('components/workout/session/SetRow.js')
       .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     expect(entry).not.toContain('Est. max');
   });

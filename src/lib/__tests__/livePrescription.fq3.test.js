@@ -65,7 +65,7 @@ describe('FQ-3: no fabricated per-set effort evidence', () => {
   });
 
   test('the per-set RIR picker stays removed (D14/D19)', () => {
-    const entry = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'SetEntry.js'), 'utf8');
+    const entry = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SetRow.js'), 'utf8');
     expect(entry).not.toMatch(/rirPicker|RIR picker|setRir\(/);
   });
 });

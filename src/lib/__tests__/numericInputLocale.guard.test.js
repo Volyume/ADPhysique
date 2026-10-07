@@ -36,7 +36,6 @@ const USER_INPUT_SURFACES = [
   'screens/RoutineDetailScreen.js',
   'components/food/QuickAddSheet.js',
   'components/ReadinessCards.js',
-  'components/SetEntry.js',
 ];
 
 /**

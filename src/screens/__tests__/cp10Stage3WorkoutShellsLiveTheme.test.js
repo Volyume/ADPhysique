@@ -119,7 +119,6 @@ import useAppStore from '../../store/useAppStore';
 // extraction, no behaviour/visual change). ActiveWorkoutScreen.js still
 // re-exports it (`export { LoggedSetRow };`), but this suite now imports the
 // real module directly.
-import { LoggedSetRow } from '../../components/workout/LoggedSetRow';
 import { StatBox } from '../WorkoutSummaryScreen';
 import * as theme from '../../styles/theme';
 
@@ -143,34 +142,6 @@ function flat(node) {
 }
 
 describe('CP-10 stage 3 (workout shells FINAL batch): flips live, no remount', () => {
-  test('ActiveWorkoutScreen/LoggedSetRow: row background and chevron ink flip live on the same mounted instance', () => {
-    setTheme('dark');
-    const set = { id: 's1', weight: 100, actualReps: 8, setType: 'straight', leftReps: null, rightReps: null };
-    let tree;
-    act(() => {
-      tree = create(
-        <LoggedSetRow set={set} units="kg" progressNum={1} exerciseType="weight_reps" onEdit={() => {}} />,
-      );
-    });
-    // Phase 2B re-anchor: the row's own surface fill is deliberately GONE
-    // (a completed set is a quiet line, not a container), so the live-flip
-    // contract is pinned on the inks that remain: the set text and the
-    // chevron. Same mounted instance, no remount.
-    const rowText = tree.root.findByProps({ numberOfLines: 1 });
-    const darkInk = flat(rowText).color;
-    expect(darkInk).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textPrimary);
-    const chevron = tree.root.findByProps({ name: 'chevron-forward' });
-    const darkChevron = chevron.props.color;
-    expect(darkChevron).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textMuted);
-
-    setTheme('light');
-    const lightInk = flat(tree.root.findByProps({ numberOfLines: 1 })).color;
-    expect(lightInk).not.toBe(darkInk);
-    expect(lightInk).toBe(theme.resolveTheme({ theme: 'light' }).colors.textPrimary);
-    const lightChevron = tree.root.findByProps({ name: 'chevron-forward' }).props.color;
-    expect(lightChevron).not.toBe(darkChevron);
-    act(() => { tree.unmount(); });
-  });
 
   test('WorkoutSummaryScreen/StatBox: icon ink and box background flip live on the same mounted instance', () => {
     setTheme('dark', { reduceMotion: true });

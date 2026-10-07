@@ -32,7 +32,6 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 
 const ACTIVE = read('../ActiveWorkoutScreen.js');
 const REST = read('../../components/RestTimer.js');
-const SETENTRY = read('../../components/SetEntry.js');
 const EMPTY = read('../../components/workout/EmptyExerciseView.js');
 
 // Pull the body of a StyleSheet key `name: { ... }` (single level, greedy to
@@ -45,77 +44,10 @@ function styleBlock(src, name) {
 }
 
 describe('R2-2 header: X + Finish share one chrome family', () => {
-  test('the header X sits in the contained icon-button chrome (headerIconBtn)', () => {
-    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the header is the
-    // WorkoutHeader component. RE-PINNED 2026-08-18 (founder device order,
-    // "they look completely out of place"): the bordered surface2 rounded
-    // SQUARE is gone - the actions are borderless DISCS now. The LAW this
-    // test exists for is unchanged and still pinned: the X and Finish share
-    // ONE geometry (a single `iconBtn` style, same token, same radius), so
-    // the two ends of the bar can never drift into two different shapes
-    // doing the same job. Colour, not shape, separates them.
-    const fsMod = require('fs');
-    const pathMod = require('path');
-    const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
-    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionTarget/);
-    // CHROMELESS (second pass, same day - the founder's verdict on the first
-    // was "absolutely the same look and style"): the container itself is the
-    // thing that read as out of place, so nothing is drawn at rest but the
-    // glyph. No fill, no border, no radius - matching the "..." overflow
-    // treatment already approved on this screen.
-    const iconBtnBlock = HEADER.match(/iconBtn: \{[^}]*\}/)?.[0] ?? '';
-    expect(iconBtnBlock).toBeTruthy();
-    expect(iconBtnBlock).not.toContain('backgroundColor');
-    expect(iconBtnBlock).not.toContain('border');
-    expect(HEADER).not.toContain('backgroundColor: t.colors.surface2');
-    expect(HEADER).not.toContain('backgroundColor: t.colors.primaryBg');
-    // Ink, not shape, separates them: muted to leave, brand amber to finish.
-    expect(HEADER).toMatch(/name="close"[^\n]*color=\{t\.colors\.textMuted\}/);
-    expect(HEADER).toMatch(/name="checkmark-done"[^\n]*color=\{t\.colors\.primary\}/);
-    // Logger rebuild stage A (D220): the logger renders SessionToolbar; the
-    // WorkoutHeader law above stays pinned on the file until its clean-up.
-    expect(ACTIVE).toContain('<SessionToolbar');
-  });
 
-  test('Finish matches the X chrome: small-surface radius.md and 44dp height', () => {
-    const b = styleBlock(ACTIVE, 'headerFinishButton');
-    expect(b).toBeTruthy();
-    expect(b).toContain('borderRadius: radius.md');
-    expect(b).toContain('minHeight: workoutLoggerSize.headerButtonMin');
-  });
 
-  test('the "..." options button is chromeless: full 44dp target, no container at rest', () => {
-    // RE-PINNED (founder device order 2026-08-17): the rounded-square
-    // container came OFF the exercise-header overflow - it made the
-    // top-right action look almost as important as the exercise name. The
-    // X and Finish keep their contained chrome (pinned above); the dots
-    // keep the full 44dp target with nothing drawn at rest.
-    const b = styleBlock(ACTIVE, 'overflowBtn');
-    expect(b).toBeTruthy();
-    expect(b).toContain('width: workoutLoggerSize.overflowButton');
-    expect(b).toContain('height: workoutLoggerSize.overflowButton');
-    expect(b).not.toContain('backgroundColor');
-    expect(b).not.toContain('border');
-  });
 });
 
-describe('R2-2 header: elapsed timer is a designed element', () => {
-  test('timer keeps tabular type.num title numerals', () => {
-    expect(ACTIVE).toContain("timerText: { ...type.num('title'), color: colors.textPrimary }");
-  });
-
-  test('timer carries the standard overline micro-label', () => {
-    // RE-ANCHORED 2026-07-12 (R3): the overline + tabular pair lives in
-    // WorkoutHeader now, same grammar as RestTimer's REST label.
-    const fsMod = require('fs');
-    const pathMod = require('path');
-    const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
-    expect(HEADER).toContain('...t.type.overline');
-    expect(HEADER).toContain('Elapsed');
-    expect(HEADER).toContain("...t.type.num('title')");
-    expect(HEADER).toContain("fontVariant: ['tabular-nums']");
-  });
-});
 
 describe('R2-2 header twin (EmptyExerciseView) stays identical', () => {
   test('the twin has the same contained X chrome + overline label', () => {
@@ -169,11 +101,6 @@ describe('R2-4 RETIRED (phase 2B): routine est-max copy is gone from the entry c
   // repeated on every surface and read as noise. R2-4's layout concern is
   // moot - the caption row it laid out no longer exists. The record system
   // (recordRow) remains the one max-adjacent surface.
-  test('no est-max caption renders in SetEntry', () => {
-    expect(SETENTRY).not.toContain('Est. max');
-    expect(SETENTRY).not.toContain('e1rmCaptionRow');
-    expect(SETENTRY).toContain('recordLine?.isRecord');
-  });
 });
 
 describe('compliance sweep: named data numerals are tabular', () => {

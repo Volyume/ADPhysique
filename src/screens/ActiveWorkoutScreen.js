@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, AccessibilityInfo } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
 import RestTimer from '../components/RestTimer';
@@ -23,7 +23,6 @@ import Card from '../components/Card';
 // section 5): LoggedSetRow and EmptyExerciseView extracted verbatim into
 // src/components/workout/. `export { LoggedSetRow }` below keeps existing
 // imports of it from this screen working.
-import { LoggedSetRow } from '../components/workout/LoggedSetRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
 import StatusStrip from '../components/workout/StatusStrip';
 // R3 (founder order 2026-07-12, full logger rebuild): the page composes from
@@ -298,7 +297,6 @@ function WorkoutBottomSheet({
 // D43 S1: LoggedSetRow moved to src/components/workout/LoggedSetRow.js
 // (imported above). Re-exported here so existing `import { LoggedSetRow }
 // from '.../ActiveWorkoutScreen'` call sites keep working unchanged.
-export { LoggedSetRow };
 
 // The logger's bottom chrome (rest strip + action bar, safe area included)
 // never legitimately exceeds this. Used to reject nonsense layout passes
@@ -854,8 +852,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
-  const infoPulseAnim = useRef(new Animated.Value(1)).current;
-  const infoPulseLoop = useRef(null);
 
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
@@ -1449,8 +1445,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // either tap, once ever, and the overflow tap is audited as before.
   function retireInfoTipPulse() {
     if (!showInfoTipPulse) return;
-    infoPulseLoop.current?.stop();
-    infoPulseAnim.setValue(1);
     setShowInfoTipPulse(false);
     AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
   }
@@ -2412,25 +2406,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, sidedRuleBearsOnThis, resolvedExercise, intentState]);
 
-  // First-use info tip: pulse the Info button until tapped. The pulse itself
-  // is suppressed under Reduce Motion (the static badge still shows so the
-  // user can find the button), only the looping animation is killed.
+  // First-use info tip (C5-P13-03, RC-9): until the exercise options have
+  // been opened once, the active section's overflow carries the word "Help".
+  // The old scaling pulse is retired with the title row (D220 addendum 3).
   useEffect(() => {
     AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
       if (val === 'true') return;
       setShowInfoTipPulse(true);
-      if (reduceMotion) return;
-      infoPulseLoop.current = Animated.loop(
-        Animated.sequence([
-          Animated.timing(infoPulseAnim, { toValue: 1.35, duration: motion.pulse, useNativeDriver: true }),
-          Animated.timing(infoPulseAnim, { toValue: 1.0,  duration: motion.pulse, useNativeDriver: true }),
-        ])
-      );
-      infoPulseLoop.current.start();
     });
-    return () => { infoPulseLoop.current?.stop(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduceMotion]);
+  }, []);
 
   // Activation ruling (first-run coherence pass), rest strip introduction.
   //
@@ -6830,13 +6814,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
         {/* D43 S4: the edit/delete logged-set MODAL is removed. Editing is
-            now in-place inside LoggedSetRow (see the "This workout" list
-            above) -- tapping a row expands it into an inline editor using
-            the same SetEntry component, Save/Cancel inline, no modal
-            round-trip. handleSaveEditedSet / handleDeleteEditedSet /
-            editingSet / editValue are unchanged (still the single source of
-            truth the row reads/writes), so the persistence + PR-reeval path
-            is byte-identical to before -- only the presentation moved. */}
+            in place: a logged row's well opens the keypad on it (D220,
+            stages B and C), Done saves through handleSaveEditedSet, and
+            Delete set lives on the row sheet with the same confirm. */}
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -6864,31 +6844,18 @@ const styles = StyleSheet.create({
   // header X and (by convergence) the "..." options button - 44dp square,
   // surface fill, subtle border, the logger's one small-surface radius.md.
   // The X, elapsed block and Finish now bookend the bar as one family.
-  headerIconBtn: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   // R5 (D66): Button variant="secondary" owns the fill/ink. R2-2: the
   // radius and height now match the X chrome (headerIconBtn) so left and
   // right bookend the bar as one family; only the width floor stays local.
-  headerFinishButton: {
-    minWidth: workoutLoggerSize.finishButtonMinWidth,
-    minHeight: workoutLoggerSize.headerButtonMin,
-    borderRadius: radius.md,
-  },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   // R2-2: the elapsed timer is a designed stat block - overline micro-label
   // (RestTimer's REST label grammar) above the type.num tabular numerals.
   headerTimerBlock: { alignItems: 'center' },
-  headerTimerLabel: { ...type.overline, color: colors.textMuted },
   headerTimerValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // R5 (D66): the elapsed timer is DATA, not brand decoration - Food's
   // rule is textPrimary for the value that is the content, tabular via
   // type.num; brand amber in the header competed with the single filled
   // Log set CTA for attention.
-  timerText: { ...type.num('title'), color: colors.textPrimary },
   // T2-06/T2-20 (D112 R5): quiet standalone lines (swapNote's exact register
   // - caption + textMuted), never a banner. Own horizontal padding since,
   // unlike starterBanner/nextTimeBanner, these have no bordered container
@@ -6939,13 +6906,11 @@ const styles = StyleSheet.create({
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.
-  exerciseHeader: { gap: spacing.xs },
   // C5-P13-01: the session effort line, quiet caption weight so it orients
   // without competing with the exercise title above it.
   // R2-4 (2026-07-11): a consistent row height (the options button's own
   // 44dp) with centre alignment so the exercise title and the "..." options
   // button share one row and align on their centres at any title length.
-  exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: workoutLoggerSize.overflowButton },
   // D43 S3: wraps the exercise name so the whole title is the "Exercise
   // info" tap target (relocated off the overflow sheet); flex: 1 lives here
   // now, exerciseName keeps its own flex: 1 so numberOfLines={2} still wraps
@@ -6956,13 +6921,6 @@ const styles = StyleSheet.create({
   // children on the same 44dp axis the dots box uses, and the name drops
   // Android's extra font padding, which floated its ink a couple of dp high
   // beside the icon.
-  exerciseNameTap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    minHeight: workoutLoggerSize.overflowButton,
-  },
   // Founder order 2026-08-17 (Campaign 27): the exercise name steps down one
   // notch, title (17) -> bodyStrong (16, same medium weight) - "ever so
   // slightly smaller", calmer against the plain header dots. flexShrink (not
@@ -6971,8 +6929,6 @@ const styles = StyleSheet.create({
   // Founder device order 2026-08-18: the active exercise name steps down
   // once more (bodyStrong 16 -> label 13, semibold) - it was overpowering
   // the outline strip; layout position and weight keep its title role.
-  exerciseName: { flexShrink: 1, minWidth: 0, ...type.label, fontWeight: fontWeight.semibold, color: colors.textPrimary, includeFontPadding: false },
-  exerciseNameChevron: { marginTop: 1 },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
     flexDirection: 'row',
@@ -7120,13 +7076,6 @@ const styles = StyleSheet.create({
   // for the bottom bar's secondary advance action (Next exercise / Finish
   // workout), which sits BESIDE the still-filled primary for the same
   // "one filled object" contrast.
-  extraSetBtnPromoted: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs,
-    borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  extraSetBtnPromotedText: { ...type.label, color: colors.textPrimary },
   // C3: quiet inline row for the auto-advance countdown, sits under the
   // "Log another set" button so it reads as one calm sentence with a
   // tappable ending, not another banner competing for attention.
@@ -7194,18 +7143,9 @@ const styles = StyleSheet.create({
   // TARGET (workoutLoggerSize.overflowButton = touchTarget.minimum) but
   // draws nothing at rest: just the muted dots, dimmed while pressed via
   // the TouchableOpacity's own feedback.
-  overflowBtn: {
-    width: workoutLoggerSize.overflowButton,
-    height: workoutLoggerSize.overflowButton,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   // C5-P13-03: the one-time hinted state. The button widens to fit the
   // label rather than cropping it inside the fixed square, and returns to
   // the plain square the moment the cue retires.
-  overflowBtnHinted: { width: 'auto', paddingHorizontal: spacing.sm },
-  overflowGlyphRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  overflowHintLabel: { ...type.captionStrong, color: colors.textSecondary },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -7219,27 +7159,12 @@ const styles = StyleSheet.create({
   // F-13 (evidence A8): the one short line under the circuit chip when
   // this station is more than a round behind the circuit.
   circuitMissedLine: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
-  loggedSection: { gap: spacing.xs2 },
   loggedTitle: { ...type.captionStrong, color: colors.textMuted },
   // Upcoming prescribed sets: quiet read-only LINES closing the continuous
   // sequence - phase 2B retired the dashed bordered cards (an unperformed
   // future set must never carry the visual mass of the active one).
-  upcomingSection: { gap: 0, marginTop: spacing.xxs },
-  upcomingSetRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
-    minHeight: 26,
-    paddingHorizontal: spacing.sm,
-  },
-  upcomingSetNum: { ...type.num('caption'), color: colors.textMuted, minWidth: 22, textAlign: 'center' },
-  upcomingSetText: { ...type.caption, color: colors.textMuted },
   // Phase 2B: the fold line for earlier completed sets (active-set
   // stability). One quiet row, constant height whatever it hides.
-  historyToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    minHeight: 28,
-    paddingHorizontal: spacing.sm,
-  },
-  historyToggleText: { ...type.caption, color: colors.textMuted },
   // D43 S1: loggedSetRow/loggedSetRowWarmup/loggedSetTextWarmup/setNumBadge/
   // setNumText/loggedSetText/loggedEst1RM (LoggedSetRow-exclusive) and
   // emptyView/emptyContent/emptyTitle/emptySubtitle/addFirstBtn/
@@ -7433,11 +7358,8 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     header: { borderBottomColor: t.colors.border },
     // R2-2: contained icon-button chrome for the header X, live-mirrored.
-    headerIconBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    headerTimerLabel: { ...t.type.overline, color: t.colors.textMuted },
     // R5 (D66): headerFinishButton no longer carries colour keys (Button's
     // secondary variant owns them live), so it needs no live override.
-    timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     omittedSessionNote: { ...t.type.caption, color: t.colors.textMuted },
     sideCarveNote: { ...t.type.caption, color: t.colors.textMuted },
     starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
@@ -7453,7 +7375,6 @@ function buildLiveStyles(t) {
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
     // fontWeight is a static token table (not theme-resolved), so the live
     // mirror reads the same import the frozen block does.
-    exerciseName: { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },
@@ -7486,8 +7407,6 @@ function buildLiveStyles(t) {
     completeBtnWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface, borderColor: t.colors.warning },
     completeBtnTextWarmup: { color: t.colors.warning },
     extraSetBtnText: { ...t.type.label, color: t.colors.textSecondary },
-    extraSetBtnPromoted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    extraSetBtnPromotedText: { ...t.type.label, color: t.colors.textPrimary },
     autoAdvanceRowText: { ...t.type.caption, color: t.colors.textMuted },
     autoAdvanceRowDot: { ...t.type.caption, color: t.colors.textMuted },
     autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -7501,7 +7420,6 @@ function buildLiveStyles(t) {
     clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
-    overflowHintLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     supersetChip: { backgroundColor: t.colors.primaryBg },
@@ -7509,9 +7427,6 @@ function buildLiveStyles(t) {
     circuitMissedLine: { ...t.type.caption, color: t.colors.textSecondary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // Phase 2B live-theme mirrors for the sequence additions.
-    upcomingSetNum: { ...t.type.num('caption'), color: t.colors.textMuted },
-    upcomingSetText: { ...t.type.caption, color: t.colors.textMuted },
-    historyToggleText: { ...t.type.caption, color: t.colors.textMuted },
     // D43 S1: LoggedSetRow-exclusive (loggedSetRow/loggedSetRowWarmup/
     // loggedSetTextWarmup/setNumBadge/setNumText/loggedSetText/loggedEst1RM)
     // and EmptyExerciseView-exclusive (emptyView/emptyTitle/emptySubtitle/

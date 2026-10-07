@@ -144,12 +144,10 @@ describe('storage invariant, rewritten: one workout_sets row, actual_reps = the 
 
   test('formatPerSide is no longer imported by the screen (new sets never produce a left/right breakdown) but stays the READ path for legacy rows elsewhere (LoggedSetRow.js)', () => {
     expect(ACTIVE_WORKOUT).not.toMatch(/import\s*\{[^}]*formatPerSide/);
-    const loggedSetRow = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'components', 'workout', 'LoggedSetRow.js'),
-      'utf8',
-    );
-    expect(loggedSetRow).toContain("import { formatPerSide } from '../../lib/unilateral';");
-    expect(loggedSetRow).toContain('formatPerSide(set.leftReps, set.rightReps)');
+    // Logger rebuild clean-up (D220): LoggedSetRow is deleted with the Now
+    // card; the read helper stays in the library for any legacy row reader.
+    const unilateral = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'unilateral.js'), 'utf8');
+    expect(unilateral).toContain('export function formatPerSide(');
   });
 });
 

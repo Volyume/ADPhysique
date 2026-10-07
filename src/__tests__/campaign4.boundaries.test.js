@@ -121,7 +121,7 @@ describe('REVERTED / REJECTED surfaces stay gone', () => {
     expect(exists('lib/plateMath.js')).toBe(false);
   });
   test('the per-set RIR picker remains removed (D14/D19)', () => {
-    expect(stripComments(read('components/SetEntry.js'))).not.toMatch(/rirPicker|RIR picker|setRir\(/);
+    expect(stripComments(read('components/workout/session/SetRow.js'))).not.toMatch(/rirPicker|RIR picker|setRir\(/);
   });
 });
 

@@ -73,7 +73,6 @@ describe('the emphatic set is curated: committing actions only', () => {
     expect(read('screens/HomeScreen.js')).not.toMatch(/variant="emphatic"[\s\S]{0,200}Start workout/);
     expect(read('screens/PlansScreen.js')).not.toMatch(/variant="emphatic"[\s\S]{0,120}title="Start next workout"/);
     expect(read('components/food/EmptyDiary.js')).not.toMatch(/variant="emphatic"/);
-    expect(read('components/workout/WorkoutBottomBar.js')).not.toMatch(/variant="emphatic"/);
   });
 });
 
