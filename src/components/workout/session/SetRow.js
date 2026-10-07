@@ -14,9 +14,34 @@
  *              (last session had no set here): muted ink and a leading dot
  *   target     { value, rule }: the coach's numbers over the coach's rule or
  *              the record threshold ("+2.5 at 10", "9 reps beats your best")
- *   wells      { weight, reps, state, editingField }. state is 'logged',
+ *   wells      { weight, reps, state, editingField, ghost }. state is 'logged',
  *              'next', 'pending' (placeholder ink) or 'editing' (amber edge,
- *              and the field named by editingField, 'weight' or 'reps', in amber)
+ *              and the field named by editingField, 'weight' or 'reps', in amber).
+ *              ghost true renders the values in secondary ink: the coach's
+ *              numbers, not yet touched (amber editing ink wins over it)
+ *   kind       'weight_reps' (default, and 'weighted_bodyweight'), 'reps_only',
+ *              'duration' or 'distance'. The screen keeps seconds in `reps` and
+ *              distance in `weight`, so the wells keep their weight and reps
+ *              keys and the kind only changes how they render: reps_only one
+ *              reps well, duration one well of m:ss, distance two wells (the
+ *              distance, then the time as m:ss). onPressWell still reports the
+ *              field key, 'weight' or 'reps', never the meaning
+ *   units      'kg' (default) or 'lb', used only for the spoken distance unit
+ *              (metres or yards)
+ *   inputField { field, value, onChangeText, keyboardType, testID,
+ *              onSubmitEditing } | null. While wells.state is 'editing', the well
+ *              named by field is a TextInput (the phone-keyboard path for screen
+ *              readers and for people who prefer typing); the other well stays a
+ *              pressable value
+ *   onLongPressRow  when given, the whole row answers a 300 ms hold with no
+ *              arguments (the marker button carries "Hold for more options");
+ *              a press on a well or the check is still a plain press
+ *   checkLabel a string that replaces the check's spoken name (the screen's
+ *              "Log warm-up", "Log other side", "Start cluster"); the spoken
+ *              name IS the action's name (R4/D64)
+ *   busy       true while the screen is saving: the check is disabled and
+ *              speaks busy (P9: every save-path control exposes its in-flight
+ *              state)
  *   check      'logged' | 'next' | 'pending'
  *   record     true shows the small "PR" tag after the Target value
  *   prTarget   { weight, reps } | null. The smallest set that would be a record
@@ -39,11 +64,12 @@
  * target: logged is an amber fill, next an amber ring, pending a raised grey.
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { circle, radius, spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
+import { formatSeconds } from '../../../lib/workoutHelpers';
 
 // The drawing's grid. SetTable lays its column labels on the same widths; the
 // Target column takes whatever is left.
@@ -67,6 +93,8 @@ const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 9, right: 9 };
 const MIDDLE_DOT = '\u00B7';
 const TIMES = '\u00D7';
 const COMPLETE_SET_TEST_ID = 'volyume-btn-complete-set';
+const LONG_PRESS_MS = 300;
+const LONG_PRESS_HINT = 'Hold for more options';
 
 function markerName(marker) {
   if (marker === 'W') return 'warm-up';
@@ -82,7 +110,7 @@ function wellText(value) {
   return value == null || value === '' ? '' : String(value);
 }
 
-function checkLabel(check, marker) {
+function defaultCheckLabel(check, marker) {
   const name = markerName(marker);
   if (check === 'next') return `Log ${name}`;
   if (check === 'logged') return `${capitalise(name)} logged`;
@@ -91,6 +119,65 @@ function checkLabel(check, marker) {
 
 function repWord(reps) {
   return Number(reps) === 1 ? 'rep' : 'reps';
+}
+
+function isEmpty(value) {
+  return value == null || value === '';
+}
+
+// Seconds as m:ss; an empty or non-positive value is an empty well, never 0:00.
+function timeText(value) {
+  if (isEmpty(value)) return '';
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return formatSeconds(n);
+}
+
+function countWord(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+// "1 minute 30 seconds", "2 minutes", "45 seconds".
+function spokenTime(value) {
+  if (timeText(value) === '') return '';
+  const whole = Math.floor(Number(value));
+  const mm = Math.floor(whole / 60);
+  const ss = whole % 60;
+  const parts = [];
+  if (mm > 0) parts.push(countWord(mm, 'minute', 'minutes'));
+  if (ss > 0) parts.push(countWord(ss, 'second', 'seconds'));
+  return parts.join(' ');
+}
+
+function spokenDistance(value, units) {
+  if (isEmpty(value)) return '';
+  const n = Number(value);
+  const word = units === 'kg' ? ['metre', 'metres'] : ['yard', 'yards'];
+  return `${value} ${n === 1 ? word[0] : word[1]}`;
+}
+
+// The wells each kind renders, in order: the field key (what onPressWell and
+// the store call it), the spoken name, and how the value reads on screen and
+// aloud. weight_reps is the default, and weighted_bodyweight shares it.
+function wellsFor(kind, units) {
+  const plainText = wellText;
+  const plainSpoken = (v) => wellText(v);
+  if (kind === 'reps_only') {
+    return [{ field: 'reps', word: 'reps', text: plainText, spoken: plainSpoken }];
+  }
+  if (kind === 'duration') {
+    return [{ field: 'reps', word: 'time', text: timeText, spoken: spokenTime }];
+  }
+  if (kind === 'distance') {
+    return [
+      { field: 'weight', word: 'distance', text: plainText, spoken: (v) => spokenDistance(v, units) },
+      { field: 'reps', word: 'time', text: timeText, spoken: spokenTime },
+    ];
+  }
+  return [
+    { field: 'weight', word: 'weight', text: plainText, spoken: plainSpoken },
+    { field: 'reps', word: 'reps', text: plainText, spoken: plainSpoken },
+  ];
 }
 
 function buildLive(t) {
@@ -114,6 +201,7 @@ function buildLive(t) {
     wellsEditing: { borderColor: c.primary },
     wellDivider: { borderLeftColor: c.borderSubtle },
     wellValue: { ...w(num('bodyStrong'), 'semibold'), color: c.textPrimary },
+    wellGhost: { color: c.textSecondary },
     wellPlaceholder: { ...num('bodyStrong'), color: c.textDisabled },
     wellActive: { color: c.primary },
     checkLogged: { backgroundColor: c.primary },
@@ -122,7 +210,7 @@ function buildLive(t) {
   };
 }
 
-function MarkerCell({ marker, onPress, testID, live }) {
+function MarkerCell({ marker, onPress, testID, hint, live }) {
   const isWarmup = marker === 'W';
   const isFailure = marker === 'F';
   const badge = (
@@ -136,6 +224,20 @@ function MarkerCell({ marker, onPress, testID, live }) {
     </View>
   );
   if (!onPress) {
+    if (hint) {
+      // Not a button, but it still has to say the row answers a hold.
+      return (
+        <View
+          style={styles.markerCol}
+          testID={testID}
+          accessible
+          accessibilityLabel={capitalise(markerName(marker))}
+          accessibilityHint={hint}
+        >
+          {badge}
+        </View>
+      );
+    }
     return <View style={styles.markerCol} testID={testID}>{badge}</View>;
   }
   return (
@@ -146,6 +248,7 @@ function MarkerCell({ marker, onPress, testID, live }) {
       hitSlop={MARKER_HIT_SLOP}
       accessibilityRole="button"
       accessibilityLabel={`Set type for ${markerName(marker)}`}
+      accessibilityHint={hint}
     >
       {badge}
     </TouchableOpacity>
@@ -226,23 +329,46 @@ function TargetCell({ target, record, prTarget, dim, live }) {
   );
 }
 
-function WellCell({ field, text, wellState, editingField, onPress, testID, name, divider, live }) {
+function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name, divider, live }) {
   const isEditingThis = wellState === 'editing' && editingField === field;
+  const dividerStyle = [divider && styles.wellDivider, divider && live.wellDivider];
+  const label = `${name} ${word}`;
+  if (input) {
+    // The well itself is the field: no stepper, no label row. A plain View, not
+    // a button, so the field is its own element for a screen reader.
+    return (
+      <View style={[styles.wellCell, ...dividerStyle]}>
+        <TextInput
+          testID={input.testID}
+          style={[live.wellValue, live.wellActive, styles.wellInput]}
+          value={input.value == null ? '' : String(input.value)}
+          onChangeText={input.onChangeText}
+          keyboardType={input.keyboardType}
+          returnKeyType="done"
+          onSubmitEditing={input.onSubmitEditing}
+          selectTextOnFocus
+          autoFocus
+          accessibilityLabel={label}
+        />
+      </View>
+    );
+  }
   return (
     <TouchableOpacity
       testID={testID}
-      style={[styles.wellCell, divider && styles.wellDivider, divider && live.wellDivider]}
+      style={[styles.wellCell, ...dividerStyle]}
       onPress={onPress}
       disabled={!onPress}
       hitSlop={WELL_HIT_SLOP}
       accessibilityRole="button"
-      accessibilityLabel={`${name} ${field}`}
-      accessibilityValue={{ text: text === '' ? 'empty' : text }}
+      accessibilityLabel={label}
+      accessibilityValue={{ text: text === '' ? 'empty' : spoken }}
       accessibilityState={{ selected: isEditingThis, disabled: !onPress }}
     >
       <Text
         style={[
           wellState === 'pending' ? live.wellPlaceholder : live.wellValue,
+          ghost && wellState !== 'pending' && live.wellGhost,
           isEditingThis && live.wellActive,
         ]}
         numberOfLines={1}
@@ -255,20 +381,21 @@ function WellCell({ field, text, wellState, editingField, onPress, testID, name,
   );
 }
 
-function CheckButton({ check, onPress, testID, label, live, colors }) {
+function CheckButton({ check, onPress, testID, label, busy, live, colors }) {
   const logged = check === 'logged';
   const next = check === 'next';
   const tick = logged ? colors.onPrimary : next ? colors.primary : colors.textDisabled;
+  const disabled = !onPress || !!busy;
   return (
     <TouchableOpacity
       testID={testID}
       style={styles.checkCol}
       onPress={onPress}
-      disabled={!onPress}
+      disabled={disabled}
       hitSlop={CHECK_HIT_SLOP}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: !onPress }}
+      accessibilityState={{ disabled, busy: !!busy }}
     >
       <View
         style={[
@@ -297,6 +424,12 @@ export default function SetRow({
   onPressMarker,
   onPressWell,
   onCheck,
+  onLongPressRow,
+  checkLabel,
+  busy = false,
+  kind = 'weight_reps',
+  units = 'kg',
+  inputField = null,
   testIDs,
 }) {
   const t = useTheme();
@@ -308,42 +441,73 @@ export default function SetRow({
   const dim = wellState === 'pending';
   const name = capitalise(markerName(marker));
 
-  return (
-    <View testID={ids.row} style={[styles.row, live.row]}>
-      <MarkerCell marker={marker} onPress={onPressMarker} testID={ids.marker} live={live} />
+  const specs = wellsFor(kind, units);
+  const editingInput = wellState === 'editing' && inputField ? inputField : null;
+  const body = (
+    <>
+      <MarkerCell
+        marker={marker}
+        onPress={onPressMarker}
+        testID={ids.marker}
+        hint={onLongPressRow ? LONG_PRESS_HINT : undefined}
+        live={live}
+      />
       <LastCell last={last} onPress={onPressLast} testID={ids.last} dim={dim} live={live} />
       <TargetCell target={target} record={record} prTarget={prTarget} dim={dim} live={live} />
       <View style={[styles.wells, live.wells, wellState === 'editing' && live.wellsEditing]}>
-        <WellCell
-          field="weight"
-          text={wellText(w.weight)}
-          wellState={wellState}
-          editingField={w.editingField}
-          onPress={onPressWell ? () => onPressWell('weight') : undefined}
-          testID={ids.weight}
-          name={name}
-          live={live}
-        />
-        <WellCell
-          field="reps"
-          text={wellText(w.reps)}
-          wellState={wellState}
-          editingField={w.editingField}
-          onPress={onPressWell ? () => onPressWell('reps') : undefined}
-          testID={ids.reps}
-          name={name}
-          divider
-          live={live}
-        />
+        {specs.map((spec, i) => {
+          const value = w[spec.field];
+          return (
+            <WellCell
+              key={spec.field}
+              field={spec.field}
+              word={spec.word}
+              text={spec.text(value)}
+              spoken={spec.spoken(value)}
+              wellState={wellState}
+              editingField={w.editingField}
+              ghost={!!w.ghost}
+              input={editingInput && editingInput.field === spec.field ? editingInput : null}
+              onPress={onPressWell ? () => onPressWell(spec.field) : undefined}
+              testID={spec.field === 'weight' ? ids.weight : ids.reps}
+              name={name}
+              divider={i > 0}
+              live={live}
+            />
+          );
+        })}
       </View>
       <CheckButton
         check={check}
         onPress={onCheck ? () => onCheck() : undefined}
         testID={ids.check ?? (check === 'next' ? COMPLETE_SET_TEST_ID : undefined)}
-        label={checkLabel(check, marker)}
+        label={checkLabel || defaultCheckLabel(check, marker)}
+        busy={busy}
         live={live}
         colors={t.colors}
       />
+    </>
+  );
+
+  if (onLongPressRow) {
+    // The hold lives on the container with no onPress of its own, so the
+    // children keep their plain presses. accessible={false} keeps the row from
+    // swallowing its own controls into one element for a screen reader.
+    return (
+      <Pressable
+        testID={ids.row}
+        style={[styles.row, live.row]}
+        onLongPress={() => onLongPressRow()}
+        delayLongPress={LONG_PRESS_MS}
+        accessible={false}
+      >
+        {body}
+      </Pressable>
+    );
+  }
+  return (
+    <View testID={ids.row} style={[styles.row, live.row]}>
+      {body}
     </View>
   );
 }
@@ -390,6 +554,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   wellCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  wellInput: { alignSelf: 'stretch', minWidth: 0, padding: 0, textAlign: 'center' },
   wellDivider: { borderLeftWidth: 1 },
   checkCol: {
     width: SET_COLUMNS.check,

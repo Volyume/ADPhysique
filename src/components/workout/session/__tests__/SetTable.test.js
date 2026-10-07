@@ -218,6 +218,56 @@ describe('SetTable fold', () => {
   });
 });
 
+describe('SetTable kinds (column labels and row pass-through)', () => {
+  test.each([
+    ['weight_reps', { weight: 'kg' }, 'kg', `kg ${DOT} reps`],
+    [undefined, { weight: 'lb' }, 'lb', `lb ${DOT} reps`],
+    ['reps_only', { weight: 'kg' }, 'kg', 'Reps'],
+    ['duration', { weight: 'kg' }, 'kg', 'Time'],
+    ['distance', { weight: 'kg' }, 'kg', `m ${DOT} time`],
+    ['distance', { weight: 'lb' }, 'lb', `yd ${DOT} time`],
+  ])('kind %s with %j and units %s labels the wells "%s"', (kind, columnsLabel, units, expected) => {
+    const tree = render({ kind, columnsLabel, units });
+    expect(words(tree.toJSON())).toContain(expected);
+    expect(flat(textHost(tree, expected).props.style).width).toBe(SET_COLUMNS.wells);
+  });
+
+  test('units default to kg for the distance label', () => {
+    expect(words(render({ kind: 'distance' }).toJSON())).toContain(`m ${DOT} time`);
+  });
+
+  test('kind, units, inputField, onLongPressRow and checkLabel reach every SetRow', () => {
+    const inputField = { field: 'weight', value: '70', onChangeText: () => {}, keyboardType: 'decimal-pad', testID: 'in' };
+    const onLongPressRow = () => {};
+    const rows = [row('a', 1, 'next', { kind: 'distance', units: 'lb', inputField, onLongPressRow, checkLabel: 'Start cluster' })];
+    const tree = render({ rows });
+    const p = rowsShown(tree)[0].props;
+    expect(p.kind).toBe('distance');
+    expect(p.units).toBe('lb');
+    expect(p.inputField).toBe(inputField);
+    expect(p.onLongPressRow).toBe(onLongPressRow);
+    expect(p.checkLabel).toBe('Start cluster');
+    expect(byLabel(tree, 'Start cluster')).toHaveLength(1);
+  });
+
+  test('rows take the table kind and units unless they name their own', () => {
+    const tree = render({
+      kind: 'duration',
+      units: 'lb',
+      rows: [row('a', 1, 'next'), row('b', 2, 'pending', { kind: 'reps_only' })],
+    });
+    const [a, b] = rowsShown(tree).map((r) => r.props);
+    expect(a.kind).toBe('duration');
+    expect(b.kind).toBe('reps_only');
+    expect(a.units).toBe('lb');
+  });
+
+  test('the tick-all control carries volyume-btn-log-remaining', () => {
+    const tree = render({ onLogRemaining: () => {} });
+    expect(one(byLabel(tree, 'Log remaining sets')).props.testID).toBe('volyume-btn-log-remaining');
+  });
+});
+
 describe('SetTable source guard (tokens only)', () => {
   const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'SetTable.js'), 'utf8');
   test('no hex or rgb literal', () => {

@@ -42,11 +42,17 @@
  * A square well renders only when its callback is given, so a stage that has
  * not wired a sheet yet shows no dead control.
  *
+ * countdown  { active, ms, reduceMotion } | null. While active, a 2 dp amber
+ *             line runs along the top edge of the footer and fills left to
+ *             right over `ms` (the auto-advance track that lived on the bottom
+ *             bar); reduceMotion draws it full at once. Decorative: hidden
+ *             from the accessibility tree, and nothing is drawn when idle
+ *
  * The section carries its own 10 dp band of page colour ABOVE it (spec section
  * 2: bands between sections), so the screen just stacks sections.
  */
-import { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { iconSize, radius, spacing } from '../../../styles/theme';
@@ -58,6 +64,7 @@ const BAND = 10;
 const HEADER_MIN_HEIGHT = 56;
 const FOOTER_MIN_HEIGHT = 52;
 const CHEVRON = 16;
+const COUNTDOWN_HEIGHT = 2;
 const REST_SQUARE = 40;
 const SQUARE_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
 // Header chevron: a 16 dp glyph, taken to a 48 dp target by its slop.
@@ -136,9 +143,42 @@ function BestsLine({ bests, onPress, live, chevronColor }) {
   );
 }
 
-function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, labelStyle }) {
+function CountdownLine({ ms, reduceMotion, color }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  // Mounted only while active, so each arming restarts the fill from empty.
+  // Reduce motion skips the animation and the line is drawn full below.
+  useEffect(() => {
+    if (reduceMotion) return undefined;
+    progress.setValue(0);
+    Animated.timing(progress, { toValue: 1, duration: ms, useNativeDriver: false }).start();
+    return () => progress.stopAnimation();
+  }, [ms, reduceMotion, progress]);
+  return (
+    <View
+      testID="volyume-countdown-line"
+      style={styles.countdown}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {reduceMotion ? (
+        <View style={[styles.countdownFill, styles.countdownFull, { backgroundColor: color }]} />
+      ) : (
+        <Animated.View
+          style={[
+            styles.countdownFill,
+            { backgroundColor: color, width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+          ]}
+        />
+      )}
+    </View>
+  );
+}
+
+function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, labelStyle, testID }) {
   return (
     <TouchableOpacity
+      testID={testID}
       style={styles.action}
       onPress={onPress}
       hitSlop={ACTION_HIT_SLOP}
@@ -167,6 +207,7 @@ export default function ExerciseSection({
   groupLabel = null,
   skipped = false,
   moreHint = null,
+  countdown = null,
   children,
 }) {
   const t = useTheme();
@@ -269,7 +310,11 @@ export default function ExerciseSection({
 
       {isActive ? (
         <View style={styles.footer}>
+          {countdown && countdown.active ? (
+            <CountdownLine ms={countdown.ms} reduceMotion={!!countdown.reduceMotion} color={t.colors.primary} />
+          ) : null}
           <FooterAction
+            testID="volyume-btn-extra-set"
             icon="add-circle-outline"
             label="Add set"
             accessibilityLabel="Add set"
@@ -287,6 +332,7 @@ export default function ExerciseSection({
           />
           <View style={styles.footerFill} />
           <TouchableOpacity
+            testID="volyume-section-more"
             style={[styles.more, moreHint ? styles.moreHinted : null]}
             onPress={onMore}
             accessibilityRole="button"
@@ -354,6 +400,9 @@ const styles = StyleSheet.create({
     // lands the glyph's right edge on the same 16 dp margin as the rows above.
     paddingRight: spacing.xxs,
   },
+  countdown: { position: 'absolute', top: 0, left: 0, right: 0, height: COUNTDOWN_HEIGHT },
+  countdownFill: { height: COUNTDOWN_HEIGHT },
+  countdownFull: { width: '100%' },
   action: {
     minHeight: touchTarget.minimum,
     flexDirection: 'row',

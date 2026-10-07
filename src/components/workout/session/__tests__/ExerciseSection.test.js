@@ -8,7 +8,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { Text } from 'react-native';
+import { Animated, Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
 import { colors, type, iconSize } from '../../../../styles/theme';
 import ExerciseSection from '../ExerciseSection';
@@ -300,6 +300,88 @@ describe('ExerciseSection surface', () => {
     expect(s.marginTop).toBe(10);
     expect(s.borderRadius).toBeUndefined();
     expect(s.borderWidth).toBeUndefined();
+  });
+});
+
+describe('ExerciseSection countdown line', () => {
+  const line = (tree) => hosts(tree, (p) => p.testID === 'volyume-countdown-line');
+  const fill = (tree) => one(line(tree)).findAll((n) => typeof n.type === 'string')[1];
+
+  test('nothing is drawn without a countdown, or while it is not active', () => {
+    expect(line(render({}))).toHaveLength(0);
+    expect(line(render({ countdown: null }))).toHaveLength(0);
+    expect(line(render({ countdown: { active: false, ms: 1800, reduceMotion: false } }))).toHaveLength(0);
+  });
+
+  test('active: a 2 dp amber line along the top edge of the footer, hidden from the accessibility tree', () => {
+    const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: false } });
+    const track = one(line(tree));
+    const s = flat(track.props.style);
+    expect(s.height).toBe(2);
+    expect(s.position).toBe('absolute');
+    expect(s.top).toBe(0);
+    expect(s.left).toBe(0);
+    expect(s.right).toBe(0);
+    expect(track.props.accessibilityElementsHidden).toBe(true);
+    expect(track.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(flat(fill(tree).props.style).backgroundColor).toBe(colors.primary);
+    expect(flat(fill(tree).props.style).height).toBe(2);
+  });
+
+  test('the line sits inside the footer, so its top edge is the footer\'s', () => {
+    const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: false } });
+    const footer = one(hosts(tree, (p) => flat(p.style).minHeight === 52));
+    expect(footer.findAll((n) => n.props && n.props.testID === 'volyume-countdown-line').length).toBeGreaterThan(0);
+  });
+
+  test('it fills over ms with the width animation, and every fresh arming restarts it', () => {
+    const timing = jest.spyOn(Animated, 'timing');
+    try {
+      const section = (countdown) => (
+        <ExerciseSection index={2} name="Row" state="active" countdown={countdown}><Text>x</Text></ExerciseSection>
+      );
+      const tree = render({ countdown: { active: true, ms: 1000, reduceMotion: false } });
+      expect(timing).toHaveBeenCalledTimes(1);
+      expect(timing.mock.calls[0][1]).toEqual({ toValue: 1, duration: 1000, useNativeDriver: false });
+      act(() => { tree.update(section({ active: false, ms: 1000, reduceMotion: false })); });
+      expect(line(tree)).toHaveLength(0);
+      act(() => { tree.update(section({ active: true, ms: 1800, reduceMotion: false })); });
+      expect(timing).toHaveBeenCalledTimes(2);
+      expect(timing.mock.calls[1][1]).toEqual({ toValue: 1, duration: 1800, useNativeDriver: false });
+    } finally {
+      timing.mockRestore();
+    }
+  });
+
+  test('reduceMotion draws the full line at once and runs no animation', () => {
+    const timing = jest.spyOn(Animated, 'timing');
+    try {
+      const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: true } });
+      expect(flat(fill(tree).props.style).width).toBe('100%');
+      expect(flat(fill(tree).props.style).height).toBe(2);
+      expect(flat(fill(tree).props.style).backgroundColor).toBe(colors.primary);
+      expect(timing).not.toHaveBeenCalled();
+    } finally {
+      timing.mockRestore();
+    }
+  });
+
+  test('it is not a control and does not take a press', () => {
+    const tree = render({ countdown: { active: true, ms: 1800, reduceMotion: false } });
+    expect(one(line(tree)).props.pointerEvents).toBe('none');
+  });
+});
+
+describe('ExerciseSection footer test ids', () => {
+  test('Add set is volyume-btn-extra-set and the overflow is volyume-section-more', () => {
+    const tree = render({});
+    expect(one(byLabel(tree, 'Add set')).props.testID).toBe('volyume-btn-extra-set');
+    expect(one(byLabel(tree, 'More options for this exercise')).props.testID).toBe('volyume-section-more');
+  });
+
+  test('neither id exists outside the active state', () => {
+    const tree = render({ state: 'upcoming' });
+    expect(hosts(tree, (p) => p.testID === 'volyume-btn-extra-set' || p.testID === 'volyume-section-more')).toHaveLength(0);
   });
 });
 
