@@ -102,8 +102,9 @@ describe('D9 amendment 2: rest-class behaviour is derived, never user-set (uncha
   });
 
   test('R4 (D64): the between-sides banner names the rest-class difference (compound rest vs isolation switch prompt)', () => {
-    expect(ACTIVE_WORKOUT).toContain("? 'Rest, switch sides, then tap Log other side.'");
-    expect(ACTIVE_WORKOUT).toContain(': "Switch sides when you\'re ready, then tap Log other side."');
+    // D220 review: the control is the row's check, so the copy names it.
+    expect(ACTIVE_WORKOUT).toContain("? 'Rest, switch sides, then tap the check to log the other side.'");
+    expect(ACTIVE_WORKOUT).toContain(': "Switch sides when you\'re ready, then tap the check to log the other side."');
   });
 });
 
@@ -144,12 +145,10 @@ describe('storage invariant, rewritten: one workout_sets row, actual_reps = the 
 
   test('formatPerSide is no longer imported by the screen (new sets never produce a left/right breakdown) but stays the READ path for legacy rows elsewhere (LoggedSetRow.js)', () => {
     expect(ACTIVE_WORKOUT).not.toMatch(/import\s*\{[^}]*formatPerSide/);
-    const loggedSetRow = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'components', 'workout', 'LoggedSetRow.js'),
-      'utf8',
-    );
-    expect(loggedSetRow).toContain("import { formatPerSide } from '../../lib/unilateral';");
-    expect(loggedSetRow).toContain('formatPerSide(set.leftReps, set.rightReps)');
+    // Logger rebuild clean-up (D220): LoggedSetRow is deleted with the Now
+    // card; the read helper stays in the library for any legacy row reader.
+    const unilateral = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'unilateral.js'), 'utf8');
+    expect(unilateral).toContain('export function formatPerSide(');
   });
 });
 
@@ -200,7 +199,7 @@ describe('one-time walkthrough fires once ever, same @volyume_seen_* convention 
 
   test('R4 (D64): the walkthrough teaches the two-tap flow and never promises a "lower side" comparison', () => {
     expect(ACTIVE_WORKOUT).not.toContain("using your lower side's reps");
-    expect(ACTIVE_WORKOUT).toContain('Do your first side, then tap Log set.');
-    expect(ACTIVE_WORKOUT).toContain('Tap Log other side - the same button, one more tap.');
+    expect(ACTIVE_WORKOUT).toContain('Do your first side, then tap the check.');
+    expect(ACTIVE_WORKOUT).toContain('Tap the check again to log the other side: one more tap on the same control.');
   });
 });

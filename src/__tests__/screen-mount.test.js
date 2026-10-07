@@ -2665,7 +2665,8 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
         expect(afterLog).not.toMatch(/Stay here/);
         expect(findByTestID(tree, 'volyume-btn-next-exercise').length).toBe(0);
         expect(findAnyByTestID(tree, 'volyume-countdown-line').length).toBeGreaterThan(0);
-        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBeGreaterThan(0);
+        // Past the target the next row waits for Add set: no check to tap.
+        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBe(0);
 
         // The footer's Add set is the explicit extra-set action; choosing it
         // cancels the pending advance (the line goes) and arms set 3.

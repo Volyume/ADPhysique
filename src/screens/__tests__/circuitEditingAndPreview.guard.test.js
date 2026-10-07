@@ -30,7 +30,6 @@ const read = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8
 const ROUTINE_DETAIL = read('..', 'RoutineDetailScreen.js');
 const PLAN_DETAIL = read('..', 'PlanDetailScreen.js');
 const MANUAL_BUILDER = read('..', 'ManualBuilderScreen.js');
-const LOGGED_SET_ROW = read('..', '..', 'components', 'workout', 'LoggedSetRow.js');
 
 describe('F-17 (g): a circuit station is edited as a circuit', () => {
   test('the sheet knows it is editing a circuit from the stored group kind', () => {
@@ -97,23 +96,8 @@ describe('F-17 (h): the plan preview names the circuit before anyone commits', (
 });
 
 describe('F-13 (c): rounds language on the logged rows and in the builder', () => {
-  test('a logged circuit set is edited as a ROUND, in the a11y label and the editor title', () => {
-    expect(LOGGED_SET_ROW).toContain(
-      "const isCircuitSet = evidenceClass === 'circuit' || evidenceClass === 'circuit_ballistic';",
-    );
-    expect(LOGGED_SET_ROW).toContain("const unitWord = isCircuitSet ? 'round' : 'set';");
-    const labels = LOGGED_SET_ROW.match(/`Edit \$\{unitWord\} \$\{progressNum\}`/g) || [];
-    expect(labels.length).toBe(2);
-  });
 
-  test('the truthful " - Circuit" suffix stays, with the round named beside it', () => {
-    expect(LOGGED_SET_ROW).toContain("evidenceClass === 'circuit' ? ' - Circuit'");
-    expect(LOGGED_SET_ROW).toContain('` - Round ${progressNum}${evidenceLabel}`');
-  });
 
-  test('a warm-up is still a warm-up, never a round', () => {
-    expect(LOGGED_SET_ROW).toContain("isWarmup ? 'Edit warm-up set'");
-  });
 
   test('the builder speaks a circuit station\'s rounds and drops the superset-pairing hint', () => {
     expect(MANUAL_BUILDER).toContain(

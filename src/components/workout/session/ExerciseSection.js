@@ -42,6 +42,9 @@
  * A square well renders only when its callback is given, so a stage that has
  * not wired a sheet yet shows no dead control.
  *
+ * totalSetCount  the exercise's served set count; with doneSetCount above
+ *             zero on an upcoming (partly done) section, the header shows
+ *             "{done} of {total} sets" under the name
  * countdown  { active, ms, reduceMotion } | null. While active, a 2 dp amber
  *             line runs along the top edge of the footer and fills left to
  *             right over `ms` (the auto-advance track that lived on the bottom
@@ -208,6 +211,7 @@ export default function ExerciseSection({
   skipped = false,
   moreHint = null,
   countdown = null,
+  totalSetCount = null,
   children,
 }) {
   const t = useTheme();
@@ -235,8 +239,9 @@ export default function ExerciseSection({
         <TouchableOpacity
           style={styles.titleTap}
           onPress={onPressHeader}
-          accessibilityRole="button"
-          accessibilityLabel={`Exercise ${index}, ${name}${groupLabel ? `, ${groupLabel.toLowerCase()}` : ''}${skipped ? ', left out for time' : ''}`}
+          disabled={!onPressHeader}
+          accessibilityRole={onPressHeader ? 'button' : 'header'}
+          accessibilityLabel={`Exercise ${index}, ${name}${groupLabel ? `, ${groupLabel.toLowerCase()}` : ''}${skipped ? ', left out for time' : ''}${!isActive && !isDone && doneCount > 0 && totalSetCount ? `, ${doneCount} of ${totalSetCount} sets done` : ''}`}
           accessibilityHint={isActive ? undefined : 'Makes this the current exercise'}
           accessibilityState={{ expanded: isActive }}
         >
@@ -244,6 +249,9 @@ export default function ExerciseSection({
           <View style={styles.nameBlock}>
             <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
             {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
+            {!isActive && !isDone && doneCount > 0 && totalSetCount ? (
+              <Text style={live.group} numberOfLines={1}>{`${doneCount} of ${totalSetCount} sets`}</Text>
+            ) : null}
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -251,7 +259,7 @@ export default function ExerciseSection({
           onPress={onDetails}
           hitSlop={CHEVRON_HIT_SLOP}
           accessibilityRole="button"
-          accessibilityLabel={`Details for ${name}`}
+          accessibilityLabel={isActive ? `Details for ${name}` : `Make ${name} current`}
         >
           <Ionicons name="chevron-forward" size={CHEVRON} color={t.colors.primary} />
         </TouchableOpacity>

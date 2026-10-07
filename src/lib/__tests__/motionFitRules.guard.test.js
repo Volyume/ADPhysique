@@ -86,13 +86,6 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'components/RestTimer.js',
     'components/Skeleton.js',
     'components/Toast.js',
-    // Logger redesign phase 2 (founder ruling Option B): the single-CTA
-    // auto-advance countdown track. A one-shot 1.8s width-percentage fill -
-    // percentage width cannot ride the native driver, and it animates at
-    // most once per exercise (never per-frame during logging), so the
-    // JS-thread cost is a single short tween mirroring RestTimer's own
-    // sanctioned drain-bar pattern. Suppressed under reduce-motion.
-    'components/workout/WorkoutBottomBar.js',
     // Logger rebuild stage B (D220): the same one-shot 1.8 s auto-advance
     // track, now the active section's 2 dp footer line (the bottom bar is
     // retired from the render). Static under reduce-motion.
@@ -100,7 +93,6 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     // components/food/MacroRings.js left this list in E15-4 (RollingNumber
     // + UI-thread ring; the Animated.Value listener is retired).
     // D148 (2026-09-04): the animated in-app splash left RootNavigator.
-    'screens/ActiveWorkoutScreen.js',
     'screens/ExerciseDetailScreen.js',
     'screens/ProOnboardingScreen.js',
     // ProSetupCompleteScreen left this list in E9 (staged Reanimated reveal).

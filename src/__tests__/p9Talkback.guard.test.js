@@ -53,8 +53,8 @@ describe('P9: logging a set is spoken', () => {
     // plain disabled it replaces. The in-screen survivor (Finish cluster)
     // keeps disabled={saving}. All three links pinned so no hand-off can
     // silently drop the state.
-    const buttonDisabledHits = src.match(/<Button[\s\S]{0,500}?disabled=\{saving\}/g) ?? [];
-    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(1);
+    // D220 review: the cluster banner's own Finish button is gone (the check
+    // is the one confirm), so the save-path control is the check alone.
     // RE-ANCHORED for the logger rebuild stage B (D220): the main primary is
     // the next row's check (SetRow), which the screen wires with
     // `busy: saving`; the row disables the check and speaks busy while a

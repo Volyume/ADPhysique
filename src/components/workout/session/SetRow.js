@@ -42,6 +42,8 @@
  *   busy       true while the screen is saving: the check is disabled and
  *              speaks busy (P9: every save-path control exposes its in-flight
  *              state)
+ *   onLayout   passed to the row's root view (the screen scrolls the row
+ *              being typed into above the keypad)
  *   check      'logged' | 'next' | 'pending'
  *   record     true shows the small "PR" tag after the Target value
  *   prTarget   { weight, reps } | null. The smallest set that would be a record
@@ -73,7 +75,7 @@ import { formatSeconds } from '../../../lib/workoutHelpers';
 
 // The drawing's grid. SetTable lays its column labels on the same widths; the
 // Target column takes whatever is left.
-export const SET_COLUMNS = Object.freeze({ marker: 30, last: 80, wells: 98, check: 36 });
+export const SET_COLUMNS = Object.freeze({ marker: 30, last: 72, wells: 98, check: 36 });
 
 // Spec section 2 sizes.
 const ROW_MIN_HEIGHT = 64;
@@ -318,12 +320,17 @@ function TargetCell({ target, record, prTarget, dim, live }) {
           accessibilityLabel={`A record at ${prTarget.weight} kilograms is ${prTarget.reps} ${repWord(prTarget.reps)}`}
         >
           <PrTag live={live} />
-          <Text style={[styles.cellText, styles.targetValue, live.prTargetText]} numberOfLines={1}>
+          <Text
+            style={[styles.cellText, styles.targetValue, live.prTargetText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={FIT_SCALE}
+          >
             {`${prTarget.weight} ${TIMES} ${prTarget.reps}`}
           </Text>
         </View>
       ) : rule ? (
-        <Text style={[styles.cellText, styles.targetValue, live.rule]} numberOfLines={1}>{rule}</Text>
+        <Text style={[styles.cellText, styles.targetValue, live.rule]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={FIT_SCALE}>{rule}</Text>
       ) : null}
     </View>
   );
@@ -381,21 +388,27 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
   );
 }
 
-function CheckButton({ check, onPress, testID, label, busy, live, colors }) {
+function CheckButton({ check, onPress, testID, label, busy, onMore, live, colors }) {
   const logged = check === 'logged';
   const next = check === 'next';
   const tick = logged ? colors.onPrimary : next ? colors.primary : colors.textDisabled;
   const disabled = !onPress || !!busy;
+  // A screen reader cannot hold a row, so the row's overflow is also an
+  // accessibility action on the check (the one control every row has).
+  const actions = onMore ? [{ name: 'longpress', label: 'More options' }] : undefined;
   return (
     <TouchableOpacity
       testID={testID}
       style={styles.checkCol}
-      onPress={onPress}
-      disabled={disabled}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled && !onMore}
       hitSlop={CHECK_HIT_SLOP}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={onMore ? LONG_PRESS_HINT : undefined}
       accessibilityState={{ disabled, busy: !!busy }}
+      accessibilityActions={actions}
+      onAccessibilityAction={onMore ? (e) => { if (e?.nativeEvent?.actionName === 'longpress') onMore(); } : undefined}
     >
       <View
         style={[
@@ -427,6 +440,7 @@ export default function SetRow({
   onLongPressRow,
   checkLabel,
   busy = false,
+  onLayout,
   kind = 'weight_reps',
   units = 'kg',
   inputField = null,
@@ -449,7 +463,7 @@ export default function SetRow({
         marker={marker}
         onPress={onPressMarker}
         testID={ids.marker}
-        hint={onLongPressRow ? LONG_PRESS_HINT : undefined}
+        hint={onLongPressRow && !onPressMarker ? LONG_PRESS_HINT : undefined}
         live={live}
       />
       <LastCell last={last} onPress={onPressLast} testID={ids.last} dim={dim} live={live} />
@@ -483,6 +497,7 @@ export default function SetRow({
         testID={ids.check ?? (check === 'next' ? COMPLETE_SET_TEST_ID : undefined)}
         label={checkLabel || defaultCheckLabel(check, marker)}
         busy={busy}
+        onMore={onLongPressRow}
         live={live}
         colors={t.colors}
       />
@@ -497,6 +512,7 @@ export default function SetRow({
       <Pressable
         testID={ids.row}
         style={[styles.row, live.row]}
+        onLayout={onLayout}
         onLongPress={() => onLongPressRow()}
         delayLongPress={LONG_PRESS_MS}
         accessible={false}
@@ -506,7 +522,7 @@ export default function SetRow({
     );
   }
   return (
-    <View testID={ids.row} style={[styles.row, live.row]}>
+    <View testID={ids.row} style={[styles.row, live.row]} onLayout={onLayout}>
       {body}
     </View>
   );

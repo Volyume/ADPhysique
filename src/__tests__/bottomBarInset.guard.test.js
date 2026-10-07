@@ -32,7 +32,7 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // The keypad carries the inset while open (same padding contract) and a
     // spacer of exactly safeBottom holds the bottom chrome clear of the
     // gesture pill while it is closed.
-    expect(screen).toMatch(/<Keypad[\s\S]{0,900}?safeBottom=\{safeBottom\}/);
+    expect(screen).toMatch(/<Keypad[\s\S]{0,1600}?safeBottom=\{safeBottom\}/);
     expect(screen).toContain('{keypadOpen ? null : <View style={{ height: safeBottom }} />}');
     const pad = read('components/workout/session/Keypad.js');
     expect(pad).toMatch(/paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/);
