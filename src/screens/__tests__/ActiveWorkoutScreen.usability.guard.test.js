@@ -34,7 +34,7 @@ const EMPTY_EXERCISE_VIEW = fs.readFileSync(
 // carried, none deleted - only the source anchor moved.
 const NOW_CARD = fs.readFileSync(path.resolve(__dirname, '../../components/workout/NowCard.js'), 'utf8');
 const BOTTOM_BAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/WorkoutBottomBar.js'), 'utf8');
-const WORKOUT_HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
+const SESSION_TOOLBAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionToolbar.js'), 'utf8');
 const STATUS_STRIP = fs.readFileSync(
   path.join(__dirname, '..', '..', 'components', 'workout', 'StatusStrip.js'),
   'utf8',
@@ -42,16 +42,18 @@ const STATUS_STRIP = fs.readFileSync(
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
   test('terminal workout completion has one primary finish control', () => {
-    // R3: the header hides Finish exactly when the bar offers it, so two
-    // finish affordances never co-exist; the header keeps layout balance
-    // with a ghost slot inside WorkoutHeader.
-    expect(ACTIVE_WORKOUT).toContain('showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}');
-    expect(ACTIVE_WORKOUT).toContain("testID: 'volyume-btn-finish-primary'");
-    // Founder device note on 2705: equal flexible side slots keep the
-    // elapsed block SCREEN-centred whatever each side holds (including a
-    // hidden Finish), replacing the fixed-width ghost.
-    expect(WORKOUT_HEADER).toMatch(/side: \{ flex: 1, alignItems: 'flex-start' \}/);
-    expect(WORKOUT_HEADER).toMatch(/sideRight: \{ alignItems: 'flex-end' \}/);
+    // R3 law: two finish affordances never co-exist. RE-PINNED for the
+    // logger rebuild stage A (D220): the toolbar's Finish is the ONE finish
+    // control, always present, so the bottom bar never offers Finish (its
+    // advance is Next exercise or nothing). WorkoutHeader is no longer
+    // rendered by the logger.
+    expect(ACTIVE_WORKOUT).toContain('<SessionToolbar');
+    expect(ACTIVE_WORKOUT).toContain('onFinish={handleFinishWorkout}');
+    expect(ACTIVE_WORKOUT).not.toContain('<WorkoutHeader');
+    expect(ACTIVE_WORKOUT).not.toContain("testID: 'volyume-btn-finish-primary'");
+    expect(ACTIVE_WORKOUT).toMatch(/\? \(isLastExercise\s*\? null/);
+    expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-finish"');
+    expect(SESSION_TOOLBAR).toContain('accessibilityLabel="Finish workout"');
   });
 
   test('finish-workout confirmation and retry copy use the same action name', () => {
@@ -228,7 +230,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).not.toContain('borderLeftColor');
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
+    // RE-PINNED for the logger rebuild stage A (D220): the active exercise's
+    // name is the ExerciseSection header (amber title role, one line); the
+    // old title row and its chevron are no longer rendered. The frozen
+    // styles below stay pinned until the stage D clean-up removes them.
+    expect(ACTIVE_WORKOUT).toContain('name={exercise.name}');
+    expect(ACTIVE_WORKOUT).toContain('onDetails={handleOpenExerciseDetails}');
     // Re-pinned (founder orders 2026-08-17, Campaign 27/28): the exercise
     // name stepped down one notch, title -> bodyStrong ("ever so slightly
     // smaller"), and the tap row gained the details chevron - the name now
@@ -240,7 +247,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // outline strip on the S22 walk. Layout facts stay pinned unchanged.
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flexShrink: 1, minWidth: 0, ...type.label, fontWeight: fontWeight.semibold, color: colors.textPrimary, includeFontPadding: false }');
     expect(ACTIVE_WORKOUT).toMatch(/exerciseNameTap: \{[\s\S]{0,220}?minHeight: workoutLoggerSize\.overflowButton,/);
-    expect(ACTIVE_WORKOUT).toContain('name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} style={styles.exerciseNameChevron}');
+    expect(ACTIVE_WORKOUT).not.toContain('style={styles.exerciseNameChevron}');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
     expect(NOW_CARD).toMatch(/prefillRow: \{[\s\S]*minHeight: 36/);
@@ -313,9 +320,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // as the full-size target token PLUS the hitSlop on both controls. The
     // container came off entirely in the second pass; the thumb size did
     // not change.
-    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionTarget,[\s\S]*height: workoutLoggerSize\.headerActionTarget/);
-    expect((WORKOUT_HEADER.match(/hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/g) || []).length).toBe(2);
-    expect(WORKOUT_HEADER).toContain('testID="volyume-workout-finish"');
+    // RE-PINNED for the logger rebuild stage A (D220): the toolbar is
+    // SessionToolbar. The GUARANTEE is the same: Cancel and Finish are each
+    // a full 48 dp target (touchTarget.minimum on both axes), Finish keeps
+    // its test id and its full spoken name.
+    expect(SESSION_TOOLBAR).toMatch(/close: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
+    expect(SESSION_TOOLBAR).toMatch(/finish: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
+    expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-close"');
+    expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-finish"');
     expect(BOTTOM_BAR).toContain('size="lg"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to

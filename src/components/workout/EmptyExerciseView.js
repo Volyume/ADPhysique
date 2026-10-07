@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, fontSize, spacing, radius, type, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import { useSessionClock, formatClock } from './session/SessionClock';
 import { workoutLoggerSize } from '../../styles/layout';
 import Button from '../Button';
 
@@ -15,7 +16,10 @@ import Button from '../Button';
 // own header + exercise-nav strip, so they are duplicated here rather than
 // deleted from ActiveWorkoutScreen.js's own `styles`/`buildLiveStyles` --
 // the screen still renders its own header/nav using those same keys.
-export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercises, setCurrentExerciseIndex, currentExerciseIndex }) {
+export default function EmptyExerciseView({ onAdd, onFinish, onCancel, startTime, workoutExercises, setCurrentExerciseIndex, currentExerciseIndex }) {
+  // Stage A of the logger rebuild (D220): the screen no longer ticks once a
+  // second, so this view keeps its own clock from the store's start time.
+  const elapsed = formatClock(useSessionClock(startTime));
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
   // file, after the frozen `styles` block -- see the comment there for why).

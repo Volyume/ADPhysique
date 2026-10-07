@@ -76,12 +76,46 @@ describe('ExerciseSection states', () => {
   });
 
   test('upcoming: the header and its two small buttons only', () => {
-    const tree = render({ state: 'upcoming', bests: BESTS });
+    const tree = render({ state: 'upcoming', bests: BESTS, onRestLength: jest.fn(), onHistory: jest.fn() });
     expect(joined(tree)).not.toContain('TABLE_CHILD');
     expect(byLabel(tree, 'Add set')).toHaveLength(0);
     expect(byLabel(tree, 'History and records')).toHaveLength(0);
     one(byLabel(tree, 'Rest length for Barbell Row (Bent Over)'));
     one(byLabel(tree, 'History and records for Barbell Row (Bent Over)'));
+  });
+
+  test('a square well renders only when its callback is given (no dead control before its sheet is wired)', () => {
+    const none = render({ state: 'upcoming' });
+    expect(byLabel(none, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
+    expect(byLabel(none, 'History and records for Barbell Row (Bent Over)')).toHaveLength(0);
+    const restOnly = render({ state: 'upcoming', onRestLength: jest.fn() });
+    one(byLabel(restOnly, 'Rest length for Barbell Row (Bent Over)'));
+    expect(byLabel(restOnly, 'History and records for Barbell Row (Bent Over)')).toHaveLength(0);
+  });
+
+  test('groupLabel is a caption under the name and in the spoken label', () => {
+    const tree = render({ state: 'upcoming', groupLabel: 'Superset' });
+    textHost(tree, 'Superset');
+    one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), superset'));
+  });
+
+  test('skipped: muted name, "Left out" in the count slot, no wells, still tappable', () => {
+    const onPressHeader = jest.fn();
+    const tree = render({ state: 'upcoming', skipped: true, onPressHeader, onRestLength: jest.fn() });
+    textHost(tree, 'Left out');
+    expect(byLabel(tree, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
+    const title = one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), left out for time'));
+    press(title);
+    expect(onPressHeader).toHaveBeenCalledTimes(1);
+    const name = textHost(tree, 'Barbell Row (Bent Over)');
+    expect(flat(name.props.style).color).toBe(colors.textMuted);
+  });
+
+  test('moreHint: the word sits beside the overflow glyph in amber and the label says what is behind it', () => {
+    const tree = render({ moreHint: 'Help' });
+    textHost(tree, 'Help');
+    one(byLabel(tree, 'More options for this exercise, including how logging works'));
+    expect(byLabel(render({}), 'More options for this exercise')).toHaveLength(1);
   });
 
   test('state defaults to upcoming', () => {

@@ -30,13 +30,16 @@ import StatusStrip from '../components/workout/StatusStrip';
 // R3 (founder order 2026-07-12, full logger rebuild): the page composes from
 // dedicated workout components; the old inline chrome is deleted. Contract:
 // docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md.
-import WorkoutHeader from '../components/workout/WorkoutHeader';
+import SessionToolbar from '../components/workout/session/SessionToolbar';
+import SessionHeader from '../components/workout/session/SessionHeader';
+import ExerciseSection from '../components/workout/session/ExerciseSection';
+import RestSheet from '../components/workout/session/RestSheet';
+import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 // Logger phase 2B (physical-device corrective redesign): the whole session
 // renders as ONE compact outline navigator under the header (WorkoutOutline)
 // with the active exercise workspace below it - replacing the phase-2
 // card-per-exercise vertical list that buried forward navigation beneath the
 // active logger on a real device.
-import WorkoutOutline from '../components/workout/WorkoutOutline';
 import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
@@ -559,6 +562,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // drag on this screen -- the single-exercise focus view stays untouched;
   // see the sheet's own render block further down for the rationale.
   const [showReorderSheet, setShowReorderSheet] = useState(false);
+  // Logger rebuild stage A (D220): the toolbar's Rest and Notes tools open
+  // the full rest view and the session note. The note is `workouts.notes`,
+  // the same column the summary screen reads and writes, seeded from the
+  // row on mount so a restored session shows the note it already has.
+  const [showRestSheet, setShowRestSheet] = useState(false);
+  const [showNotesSheet, setShowNotesSheet] = useState(false);
+  const [sessionNote, setSessionNote] = useState('');
+  // The session title follows the summary's own rule (shareSessionName): the
+  // routine's name, else the first exercises. A workout row carries no name
+  // of its own (createWorkout writes none), so the routine row is read once.
+  const [routineTitle, setRoutineTitle] = useState(null);
+  useEffect(() => {
+    const id = activeWorkout?.id;
+    if (!id) return undefined;
+    let cancelled = false;
+    getWorkoutById(id)
+      .then((w) => { if (!cancelled) setSessionNote(typeof w?.notes === 'string' ? w.notes : ''); })
+      .catch(() => {}); // best effort: a missing note reads as none
+    const routineId = activeWorkout?.routineId ?? null;
+    if (routineId) {
+      getRoutineById(routineId)
+        .then((r) => { if (!cancelled) setRoutineTitle(r?.name ?? null); })
+        .catch(() => {}); // best effort: no routine name falls back to the exercises
+    } else {
+      setRoutineTitle(null);
+    }
+    return () => { cancelled = true; };
+  }, [activeWorkout?.id, activeWorkout?.routineId]);
+  const sessionTitle = (() => {
+    const names = workoutExercises.map((e) => e?.exercise?.name).filter(Boolean);
+    if (routineTitle && routineTitle.trim()) return routineTitle.trim();
+    return names.length ? shareSessionName(null, names) : 'Workout';
+  })();
   // D35: edge auto-scroll for the reorder sheet's own scroll area
   // (WorkoutSheetScroll's ScrollView, threaded through WorkoutBottomSheet
   // below). Declared unconditionally here alongside showReorderSheet.
@@ -1325,11 +1361,73 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // SKIPPING. Nothing is marked skipped, no order changes, no programme
   // state moves; the backstop effect above cancels any armed auto-advance
   // on the index change.
+  // Stage A (D220): after the index changes, the active section is laid out
+  // at a new y; its wrapper's onLayout reports it and, when a scroll is
+  // pending, scrolls the sheet there. The timeout is the fallback for a
+  // layout that does not change (same y as before), with the last measured
+  // y. Both the jump and the advance call this.
+  const activeSectionYRef = useRef(0);
+  const pendingSectionScrollRef = useRef(null);
+  function scrollToActiveSection(animated) {
+    pendingSectionScrollRef.current = { animated: !!animated };
+    setTimeout(() => {
+      if (!pendingSectionScrollRef.current) return;
+      pendingSectionScrollRef.current = null;
+      scrollRef.current?.scrollTo({ y: Math.max(0, activeSectionYRef.current), animated: !!animated });
+    }, 120);
+  }
+  function handleActiveSectionLayout(e) {
+    const y = e?.nativeEvent?.layout?.y;
+    if (typeof y !== 'number') return;
+    activeSectionYRef.current = y;
+    const pending = pendingSectionScrollRef.current;
+    if (pending) {
+      pendingSectionScrollRef.current = null;
+      scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: pending.animated });
+    }
+  }
+
+  // Stage A (D220): the exercise details and the overflow, opened from the
+  // active section's header chevron and footer. The bodies are the title
+  // row's old handlers verbatim: RC-9 (D96) retires the novice Help cue on
+  // either tap, once ever, and the overflow tap is audited as before.
+  function retireInfoTipPulse() {
+    if (!showInfoTipPulse) return;
+    infoPulseLoop.current?.stop();
+    infoPulseAnim.setValue(1);
+    setShowInfoTipPulse(false);
+    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+  }
+  function handleOpenExerciseDetails() {
+    retireInfoTipPulse();
+    setShowExecution(true);
+  }
+  function handleOpenOverflow() {
+    retireInfoTipPulse();
+    audit('workout.overflow.open', { exerciseId: exercise?.id });
+    setShowOverflow(true);
+  }
+
+  // Stage A (D220): the toolbar's Notes tool and the note line under the
+  // session title save to the workout row; the summary screen prefills the
+  // same column, so the note typed here is the one the person sees at the end.
+  async function handleSaveSessionNote(text) {
+    const next = typeof text === 'string' ? text : '';
+    setSessionNote(next);
+    if (!activeWorkout?.id) return;
+    try {
+      await updateWorkout(activeWorkout.id, { notes: next || null });
+    } catch (e) {
+      logError('ActiveWorkoutScreen.saveSessionNote', e, { workoutId: activeWorkout.id });
+      toast.show('Could not save your note yet. Try again.', { variant: 'error' });
+    }
+  }
+
   function handleJumpToExercise(i) {
     if (i === currentExerciseIndex) return;
     audit('workout.exercise.jump', { fromIndex: currentExerciseIndex, toIndex: i });
     setCurrentExerciseIndex(i);
-    setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), 50);
+    scrollToActiveSection(false);
   }
 
   // D44: the cue for a group-driven focus change (the forward alternation
@@ -1374,7 +1472,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (next >= workoutExercises.length) return; // no non-skipped exercise ahead
     audit('workout.exercise.next', { fromIndex: currentExerciseIndex, toIndex: next });
     setCurrentExerciseIndex(next);
-    setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+    scrollToActiveSection(true);
   }
 
   function handleTogglePair() {
@@ -2261,6 +2359,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // Workout timer, always derived from workoutStartTime so backgrounding never
   // causes drift. Re-syncs on every tick and on app-foreground events.
+  // Logger rebuild stage A (D220, 12-BUILD-SPEC section 1.6): the visible
+  // clock is SessionClock, ticking on its own; this effect now ticks every
+  // 15 seconds, the throttle the lock-screen notification refresh below
+  // already applied, so the whole screen no longer re-renders once a second.
   useEffect(() => {
     if (!workoutStartTime) return;
 
@@ -2274,7 +2376,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
       };
     }
-    timerRef.current = setInterval(syncElapsed, 1000);
+    timerRef.current = setInterval(syncElapsed, 15_000);
 
     const appStateSub = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') syncElapsed();
@@ -3796,7 +3898,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Capture everything needed for the finish before the rating sheet might
     // cause a re-render that loses closure values.
     const snapshotExercises = workoutExercises;
-    const snapshotElapsed = elapsedSeconds;
+    // Stage A: the screen's own tick is coarse now, so the finish reads the
+    // clock directly.
+    const snapshotElapsed = workoutStartTime
+      ? Math.floor((Date.now() - workoutStartTime) / 1000)
+      : elapsedSeconds;
 
     let pendingSessionResolution = null;
 
@@ -4262,12 +4368,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     );
   }
 
-  const elapsed = {
-    mins: Math.floor(elapsedSeconds / 60),
-    secs: elapsedSeconds % 60,
-  };
-  const elapsedStr = `${elapsed.mins}:${elapsed.secs.toString().padStart(2, '0')}`;
-
   // COMP-015: session-adjusted working-set target, falling back to the
   // routine row's own recommendedSets (defensive - adjustedSetCount already
   // folds this in when there is no active adjustment), and finally to
@@ -4277,6 +4377,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // for the full root-cause note.
   const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;
   const workingLogged = countProgressSets(loggedSets);
+  // Stage A (D220): the rest sheet's "next set" line, from the same counters
+  // the bar and the notification use. Weight and reps join when the entry
+  // row holds them; the set position alone otherwise.
+  const restSheetNextLabel = (() => {
+    const position = `Set ${Math.min(workingLogged + 1, targetSets || workingLogged + 1)} of ${targetSets}`;
+    const w = currentSet?.weight;
+    const r = currentSet?.reps;
+    if (w && r) return `${position} · ${w} ${units} × ${r}`;
+    return position;
+  })();
   const targetComplete = targetSets && workingLogged >= targetSets;
 
   // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A8):
@@ -4468,6 +4578,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       : { ...item, total: weeklyAllocation?.[workoutExercises[i]?.exercise?.id] || item.total }))
     : outlineItems;
 
+  // Logger rebuild stage A (D220, 12-BUILD-SPEC section 1.3): the session
+  // sheet. Every exercise but the active one is a single collapsed header;
+  // tapping one is the SAME jump the outline strip made (handleJumpToExercise:
+  // jump only, never skip, reorder or programme state). The header facts come
+  // from the outline derivation above, unchanged.
+  // The sheet scrolls so the ACTIVE section's top is in view after a jump or
+  // an advance: the wrapper below measures its own y in the sheet, and a jump
+  // flags a pending scroll that the next layout honours (the old scroll to
+  // y 0 would show the title and the sections above instead).
+  const collapsedSectionsBefore = [];
+  const collapsedSectionsAfter = [];
+  workoutExercises.forEach((entry, i) => {
+    if (i === currentExerciseIndex) return;
+    const item = outlineItemsShown[i];
+    if (!item) return;
+    const complete = !item.skipped && item.total > 0 && item.done >= item.total;
+    const node = (
+      <ExerciseSection
+        key={item.key}
+        index={i + 1}
+        name={item.name}
+        state={complete ? 'done' : 'upcoming'}
+        doneSetCount={item.done}
+        groupLabel={item.groupLabel}
+        skipped={item.skipped}
+        onPressHeader={() => handleJumpToExercise(i)}
+        onDetails={() => handleJumpToExercise(i)}
+      />
+    );
+    (i < currentExerciseIndex ? collapsedSectionsBefore : collapsedSectionsAfter).push(node);
+  });
+
   if (!exercise) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]}>
@@ -4475,7 +4617,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onAdd={openAddExercisePicker}
           onFinish={handleFinishWorkout}
           onCancel={handleCancelWorkout}
-          elapsed={elapsedStr}
+          startTime={workoutStartTime}
           workoutExercises={workoutExercises}
           setCurrentExerciseIndex={setCurrentExerciseIndex}
           currentExerciseIndex={currentExerciseIndex}
@@ -4493,15 +4635,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        {/* R3 rebuild: header is the dedicated component; Finish hands off
-            to the bottom bar when the bar itself offers Finish (last
-            exercise, target met) so two finish affordances never co-exist. */}
-        <WorkoutHeader
-          elapsedStr={elapsedStr}
-          onCancel={handleCancelWorkout}
+        {/* Logger rebuild stage A (D220, 12-BUILD-SPEC section 4): the
+            toolbar replaces WorkoutHeader. Cancel and Finish keep their
+            handlers and test ids; the clock ticks inside SessionClock; Finish
+            is the ONE finish control on the screen, always present, so the
+            bottom bar no longer offers it (two finish affordances never
+            co-exist, the R3 law, now kept by construction). */}
+        <SessionToolbar
+          startTime={workoutStartTime}
+          onClose={handleCancelWorkout}
+          onRest={() => setShowRestSheet(true)}
+          onNotes={() => setShowNotesSheet(true)}
           onFinish={handleFinishWorkout}
-          timeCrunchActive={timeCrunchActive}
-          showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}
         />
 
         {/* T2-06 (D112 R5, closes audit T2-06): the session-level reduced
@@ -4519,21 +4664,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* COMP-013 starter-session banner moved into the collapsed "N notes"
             rail above the set-entry card (U-A-1). */}
 
-        {/* Phase 2B: the compact workout outline - the whole session as a
-            quiet navigator FIXED under the header, never buried beneath the
-            active logger. Every exercise is one tap away at all times
-            (failure 5); tap = jump only, long-press = the reorder sheet. */}
-        <WorkoutOutline
-          items={outlineItemsShown}
-          currentIndex={currentExerciseIndex}
-          onSelect={handleJumpToExercise}
-          onReorder={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}
-        />
-
+        {/* Stage A: the outline strip is retired from the render. The session
+            sheet below carries every exercise as a section header, so each
+            is still one tap away; reorder stays on the overflow sheet. */}
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.sessionScrollContent}
           keyboardShouldPersistTaps="handled"
           // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
           // auto-scroll that keeps the focused input visible, so the
@@ -4560,76 +4697,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // which is the defect that made the screen unusable.
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
-          {/* Exercise Title */}
-          <View style={styles.exerciseHeader}>
-            <View style={styles.exerciseNameRow}>
-              {/* D43 S3 (blueprint 3.8): "Exercise info" relocates off the
-                  overflow sheet onto the title itself -- tapping the name
-                  fires the same setShowExecution(true) handler the removed
-                  overflow row used. */}
-              <TouchableOpacity
-                onPress={() => {
-                  // RC-9 (D96, Review C): anyone opening exercise info is
-                  // not looking for "what is a set", so this tap retires
-                  // the novice Help pulse too - it otherwise animated on
-                  // every exercise of every session until the overflow
-                  // itself was opened. Novice path untouched.
-                  if (showInfoTipPulse) {
-                    infoPulseLoop.current?.stop();
-                    infoPulseAnim.setValue(1);
-                    setShowInfoTipPulse(false);
-                    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
-                  }
-                  setShowExecution(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Exercise details"
-                style={styles.exerciseNameTap}
-                hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
-              >
-                <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
-                {/* Founder order 2026-08-17: the name-tap looked like plain
-                    text, so nothing said it opens the exercise's details.
-                    A quiet chevron in the house muted ink hugs the name's
-                    end - the standard "this expands" signal, no new chrome. */}
-                <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} style={styles.exerciseNameChevron} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
-                onPress={() => {
-                  if (showInfoTipPulse) {
-                    infoPulseLoop.current?.stop();
-                    infoPulseAnim.setValue(1);
-                    setShowInfoTipPulse(false);
-                    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
-                  }
-                  audit('workout.overflow.open', { exerciseId: exercise?.id });
-                  setShowOverflow(true);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                // C5-P13-03 (D96): while the first-use cue is live the button
-                // also says what is behind it. A bare pulsing "..." labelled
-                // "Exercise options" gave a novice no reason to think it held
-                // the only definitions of "set" and "rep" in the product. One
-                // short word, one time; it goes with the pulse the first time
-                // the sheet is opened.
-                accessibilityLabel={showInfoTipPulse ? 'Exercise options, including how logging works' : 'Exercise options'}
-              >
-                <Animated.View style={[styles.overflowGlyphRow, showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null]}>
-                  {showInfoTipPulse ? (
-                    <Text style={[styles.overflowHintLabel, live.overflowHintLabel]}>Help</Text>
-                  ) : null}
-                  <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textMuted} />
-                </Animated.View>
-              </TouchableOpacity>
-            </View>
-            {/* Muscle line deleted (COMP-001): primary muscle and equipment
-                already show in the exercise info sheet. Superset chip moved
-                into the collapsed "N notes" rail (U-A-1). The C5-P13-01
-                effort line ("This week: stop N short of failure") removed on
-                the founder device order of 2026-08-17. */}
-          </View>
+          {/* Stage A (D220): the session title and its note, then the
+              session sheet: collapsed headers above, the active exercise as
+              a full section, collapsed headers below. The active section's
+              header carries the name (the tap that used to open the details
+              is its chevron) and its footer carries Add set, Swap and the
+              overflow that the title row used to hold. */}
+          <SessionHeader
+            name={sessionTitle}
+            note={sessionNote}
+            onNotes={() => setShowNotesSheet(true)}
+          />
+          {collapsedSectionsBefore}
+          <View onLayout={handleActiveSectionLayout}>
+          <ExerciseSection
+            index={currentExerciseIndex + 1}
+            name={exercise.name}
+            state="active"
+            groupLabel={outlineItemsShown[currentExerciseIndex]?.groupLabel ?? null}
+            onDetails={handleOpenExerciseDetails}
+            onAddSet={armExtraSet}
+            onSwap={handleOpenSwap}
+            onMore={handleOpenOverflow}
+            moreHint={showInfoTipPulse ? 'Help' : null}
+          >
+          <View style={styles.activeBody}>
 
           {/* D43 S2: the "N notes" accordion is retired. Content-labelled
               chips (StatusStrip) replace it -- Deload, Superset, Coach note,
@@ -5239,6 +5331,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               bar already absorbs safeBottom - counting it here too created
               the dead gap on the founder's S22 shots. A step of breathing
               room is all the scroll needs. */}
+          </View>
+          </ExerciseSection>
+          </View>
+          {collapsedSectionsAfter}
           <View style={{ height: spacing.xl }} />
         </ScrollView>
 
@@ -5297,9 +5393,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onPrimary={handleCompleteSetPress}
             saving={saving}
             safeBottom={safeBottom}
+            // Stage A (D220): Finish lives in the toolbar alone, so the bar
+            // never offers it; at the last exercise the primary stays Log set
+            // and the section footer's Add set arms another.
             advance={(targetComplete && !extraSetArmed && !perSide)
               ? (isLastExercise
-                ? { label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary' }
+                ? null
                 : { label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise' })
               : null}
             countdownActive={autoAdvanceArmed && targetComplete && !extraSetArmed}
@@ -5309,6 +5408,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
         )}
         </View>
+
+        {/* Stage A (D220): the full rest view behind the toolbar's Rest tool
+            (the 44 dp strip stays the always-on surface) and the session
+            note behind its Notes tool and the title's note line. */}
+        <RestSheet
+          visible={showRestSheet}
+          onClose={() => setShowRestSheet(false)}
+          nextLabel={restSheetNextLabel}
+        />
+        <SessionNotesSheet
+          visible={showNotesSheet}
+          value={sessionNote}
+          onSave={handleSaveSessionNote}
+          onClose={() => setShowNotesSheet(false)}
+        />
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}
         <ExercisePickerModal
@@ -6521,6 +6635,12 @@ const styles = StyleSheet.create({
   // (FOOD-DESIGN-STANDARD.md section 1); the tighter vertical rhythm
   // (sm gaps) is a deliberate density property of the logger and stays.
   scrollContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  // Stage A (D220): the session sheet is full-bleed (sections carry their own
+  // margins and band); the active section's body keeps the old scroll
+  // content's padding and gap so the rows inside it lay out as before until
+  // stage B replaces them.
+  sessionScrollContent: { paddingBottom: spacing.md },
+  activeBody: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.

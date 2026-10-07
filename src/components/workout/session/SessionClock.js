@@ -55,13 +55,12 @@ function spokenClock(elapsedMs) {
   return `${mins} ${mins === 1 ? 'minute' : 'minutes'} ${secs} ${secs === 1 ? 'second' : 'seconds'}`;
 }
 
-export default function SessionClock({ startTime }) {
-  const t = useTheme();
-  const live = useMemo(() => ({
-    pill: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
-    text: { ...t.type.w(t.type.num('title'), 'semibold'), color: t.colors.textPrimary },
-  }), [t]);
-
+/**
+ * The tick itself: elapsed ms since `startTime`, re-derived every second and
+ * on foreground. Exported so the empty-session view (EmptyExerciseView) can
+ * show the same clock in its own header without the screen ticking for it.
+ */
+export function useSessionClock(startTime) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -79,7 +78,17 @@ export default function SessionClock({ startTime }) {
     };
   }, [startTime]);
 
-  const elapsedMs = startTime ? now - startTime : 0;
+  return startTime ? now - startTime : 0;
+}
+
+export default function SessionClock({ startTime }) {
+  const t = useTheme();
+  const live = useMemo(() => ({
+    pill: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
+    text: { ...t.type.w(t.type.num('title'), 'semibold'), color: t.colors.textPrimary },
+  }), [t]);
+
+  const elapsedMs = useSessionClock(startTime);
 
   return (
     <View

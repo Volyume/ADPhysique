@@ -660,6 +660,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             for (const k of Object.keys(stored)) realFieldsRef.current.add(k);
             setFeedbackTouched(true);
           }
+          // Logger rebuild stage A (D220): a note typed during the session
+          // (the logger's Notes tool writes `workouts.notes`) prefills the
+          // field here, so the finish write below carries it forward instead
+          // of clobbering it with an empty field. Live path only: the rating
+          // reopen never writes notes (handleDone), so it never loads them.
+          if (!readOnly && typeof w.notes === 'string' && w.notes) setNotes(w.notes);
         }
       } catch (_e) {}
     })();

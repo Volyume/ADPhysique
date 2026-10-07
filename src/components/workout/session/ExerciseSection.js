@@ -33,6 +33,15 @@
  * line is a pressable row (48 dp tall, "History and records", trailing chevron)
  * that calls `onHistory`, as does the history button in the header.
  *
+ * Three more header facts the outline used to carry (stage A wiring, lead):
+ *   groupLabel  "Superset", "Giant set" or "Circuit", a caption after the name
+ *   skipped     a time-crunch skip: the name in muted ink and "Left out" in
+ *               the count slot, still tappable so the skip can be reverted
+ *   moreHint    a one-word cue beside the overflow glyph while the first-use
+ *               logging help has never been opened (C5-P13-03)
+ * A square well renders only when its callback is given, so a stage that has
+ * not wired a sheet yet shows no dead control.
+ *
  * The section carries its own 10 dp band of page colour ABOVE it (spec section
  * 2: bands between sections), so the screen just stacks sections.
  */
@@ -155,6 +164,9 @@ export default function ExerciseSection({
   onAddSet,
   onSwap,
   onMore,
+  groupLabel = null,
+  skipped = false,
+  moreHint = null,
   children,
 }) {
   const t = useTheme();
@@ -167,6 +179,9 @@ export default function ExerciseSection({
     bests: { ...t.type.label, color: t.colors.textSecondary },
     bestsNum: { ...t.type.num('label'), color: t.colors.textPrimary },
     action: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
+    nameSkipped: { color: t.colors.textMuted },
+    group: { ...t.type.caption, color: t.colors.textMuted },
+    hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
   }), [t]);
 
   const isActive = state === 'active';
@@ -180,12 +195,15 @@ export default function ExerciseSection({
           style={styles.titleTap}
           onPress={onPressHeader}
           accessibilityRole="button"
-          accessibilityLabel={`Exercise ${index}, ${name}`}
+          accessibilityLabel={`Exercise ${index}, ${name}${groupLabel ? `, ${groupLabel.toLowerCase()}` : ''}${skipped ? ', left out for time' : ''}`}
           accessibilityHint={isActive ? undefined : 'Makes this the current exercise'}
           accessibilityState={{ expanded: isActive }}
         >
           <Text style={[styles.index, live.index]}>{index}</Text>
-          <Text style={[styles.name, live.name]} numberOfLines={1}>{name}</Text>
+          <View style={styles.nameBlock}>
+            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
+            {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.chevron}
@@ -214,26 +232,32 @@ export default function ExerciseSection({
             <Ionicons name="checkmark" size={CHEVRON} color={t.colors.success} />
             <Text style={live.doneText}>{`${doneCount} ${setWord(doneCount)}`}</Text>
           </View>
+        ) : skipped ? (
+          <Text style={live.doneText} accessible accessibilityLabel="Left out for time">Left out</Text>
         ) : (
           <View style={styles.squares}>
-            <TouchableOpacity
-              style={[styles.square, live.square]}
-              onPress={onHistory}
-              hitSlop={SQUARE_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel={`History and records for ${name}`}
-            >
-              <Ionicons name="stats-chart-outline" size={iconSize.md} color={t.colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.square, live.square]}
-              onPress={onRestLength}
-              hitSlop={SQUARE_HIT_SLOP}
-              accessibilityRole="button"
-              accessibilityLabel={`Rest length for ${name}`}
-            >
-              <Ionicons name="timer-outline" size={iconSize.md} color={t.colors.textPrimary} />
-            </TouchableOpacity>
+            {onHistory ? (
+              <TouchableOpacity
+                style={[styles.square, live.square]}
+                onPress={onHistory}
+                hitSlop={SQUARE_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel={`History and records for ${name}`}
+              >
+                <Ionicons name="stats-chart-outline" size={iconSize.md} color={t.colors.textPrimary} />
+              </TouchableOpacity>
+            ) : null}
+            {onRestLength ? (
+              <TouchableOpacity
+                style={[styles.square, live.square]}
+                onPress={onRestLength}
+                hitSlop={SQUARE_HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel={`Rest length for ${name}`}
+              >
+                <Ionicons name="timer-outline" size={iconSize.md} color={t.colors.textPrimary} />
+              </TouchableOpacity>
+            ) : null}
           </View>
         )}
       </View>
@@ -263,12 +287,13 @@ export default function ExerciseSection({
           />
           <View style={styles.footerFill} />
           <TouchableOpacity
-            style={styles.more}
+            style={[styles.more, moreHint ? styles.moreHinted : null]}
             onPress={onMore}
             accessibilityRole="button"
-            accessibilityLabel="More options for this exercise"
+            accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}
           >
-            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textSecondary} />
+            {moreHint ? <Text style={live.hint}>{moreHint}</Text> : null}
+            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={moreHint ? t.colors.primary : t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       ) : null}
@@ -293,6 +318,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   index: { minWidth: spacing.lg },
+  nameBlock: { flexShrink: 1 },
   name: { flexShrink: 1 },
   chevron: { marginLeft: spacing.xs },
   headerFill: { flex: 1, alignSelf: 'stretch' },
@@ -336,9 +362,12 @@ const styles = StyleSheet.create({
   },
   footerFill: { flex: 1 },
   more: {
-    width: touchTarget.minimum,
+    minWidth: touchTarget.minimum,
     height: touchTarget.minimum,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
   },
+  moreHinted: { paddingHorizontal: spacing.sm },
 });

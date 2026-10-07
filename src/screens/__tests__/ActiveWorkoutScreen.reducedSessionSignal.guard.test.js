@@ -19,8 +19,10 @@
  *     changing) - never on the same effect's own re-run from writing
  *     workoutExercises (which would erase the count the instant after
  *     setting it - the exact bug a naive top-of-effect reset would cause).
- *  4. Rendered once, at the top of the outline area (between WorkoutHeader
- *     and WorkoutOutline), singular/plural copy exact, quiet text style
+ *  4. Rendered once, at the top of the session sheet area (between the
+ *     SessionToolbar and the sheet; stage A of the logger rebuild, D220,
+ *     replaced WorkoutHeader and WorkoutOutline), singular/plural copy
+ *     exact, quiet text style
  *     (caption + textMuted), never a bordered banner.
  *
  * ActiveWorkoutScreen.js is a huge screen with a live dependency surface;
@@ -91,13 +93,16 @@ describe('the count computation sits inside the real serve-time effect, after th
 });
 
 describe('render: once per session, at the top of the outline area, quiet text (T2-06)', () => {
-  test('sits between WorkoutHeader and WorkoutOutline', () => {
-    const headerIdx = SRC.indexOf('showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}\n        />');
+  test('sits between the SessionToolbar and the session sheet', () => {
+    // RE-PINNED for the logger rebuild stage A (D220): the toolbar replaces
+    // WorkoutHeader and the session sheet (the ScrollView) replaces the
+    // outline strip; the note keeps its slot between the two.
+    const headerIdx = SRC.indexOf('onFinish={handleFinishWorkout}\n        />');
     const noteIdx = SRC.indexOf('{omittedSessionCount > 0 ? (');
-    const outlineIdx = SRC.indexOf('<WorkoutOutline');
+    const sheetIdx = SRC.indexOf('<ScrollView\n          ref={scrollRef}');
     expect(headerIdx).toBeGreaterThan(-1);
     expect(noteIdx).toBeGreaterThan(headerIdx);
-    expect(outlineIdx).toBeGreaterThan(noteIdx);
+    expect(sheetIdx).toBeGreaterThan(noteIdx);
   });
 
   test('exact singular/plural copy', () => {

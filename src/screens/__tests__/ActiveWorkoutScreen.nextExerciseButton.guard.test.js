@@ -61,7 +61,11 @@ describe('single primary CTA: Log set until target, then Next exercise / Finish 
 
   test('when advance is present it IS the primary (variant primary, pinned testIDs); the logging primary does not co-render', () => {
     expect(bottomBarWindow).toContain("label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise'");
-    expect(bottomBarWindow).toContain("label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary'");
+    // Logger rebuild stage A (D220): Finish is the toolbar's alone; at the
+    // last exercise the advance is null and the logging primary stays.
+    expect(bottomBarWindow).not.toContain("testID: 'volyume-btn-finish-primary'");
+    expect(bottomBarWindow).toMatch(/\? \(isLastExercise\s*\? null/);
+    expect(SRC).toContain('onFinish={handleFinishWorkout}');
     // Inside the component: the advance branch renders the advance Button on
     // variant="primary", and the logging Button (volyume-btn-complete-set)
     // lives in the ELSE branch - one primary at a time by construction.
