@@ -39,6 +39,8 @@ options; the build starts only on the founder's choice.
 | 09-design-research.md | lead | hands-on | the research record: method, the exact source screenshot per app, the measurements, the pattern counts, the quoted legibility sources and the distance table, the derived design with its evidence, the questions |
 | 09-drawing-lift.png, 09-drawing-rest.png, 09-drawing-fields.png | lead | hands-on | the redesign rendered at 2x from 08 by headless Chromium (390 x 844): the Lift state with the ruler and dots, the Rest state, and the Lift state with number fields |
 | 10-user-psychology-and-the-final-two.md | lead | hands-on | the forks weighed against the production user base (aggregates, 2026-10-07) and the behavioural literature; the final two choices; the lead's recommendation |
+| 11-boostcamp-study.md | lead | hands-on | Boostcamp's logging screen measured from its store screenshots, its users on the look, the lessons, what is taken and left, and Volyume drawn in its grammar (the build direction from 2026-10-07, pending the go-ahead) |
+| 09-drawing-bc-black.png, 09-drawing-bc-sheet.png, 09-drawing-bc-keypad.png | lead | hands-on | the Boostcamp-grammar drawings: near-black tone, sheet tone, keypad open |
 | briefs/ | lead | | the lane briefs (authority, bounds, report shape) |
 
 Renders of the current screens were produced by `bash scripts/paper-render/run.sh`
@@ -829,48 +831,36 @@ is the lead's.)
 | Draft that survives an app kill | few | present | keep |
 | Honest PR handling, calm-mode suppression | none | present | keep (a differentiator, not a gap) |
 
-## 9. The final two (delivered in chat 2026-10-07; the weighing is 10-user-psychology-and-the-final-two.md)
+## 9. The direction (2026-10-07, after the final two): Boostcamp's grammar in our tokens
 
-The founder, 2026-10-07: "use your expert knowledge and investigate the
-options against user psychology our user base and what they would enjoy
-the most then present the final two choices and then we will get the go
-ahead". The five forks of the first delivery were weighed against the
-production base (aggregates) and the behavioural literature (10,
-sections 1 to 4). Settled by the evidence: the two-state screen (the screen sits between
-logs for about three quarters of a session; the far-distance physics;
-one stable loop; the field's users ask the rest screen for the next
-set's load), the sizes 32 / 40 / 24, the button naming the set, and the
-elimination of a ruler without a pad (12% of weights are off the grid).
-The data also changed the drawing: the rep control is a windowed picker
-centred on the target (median 15 reps, a quarter at 20 or more); the
-ruler's step follows the exercise's equipment; a warm-up line appears
-only when one is logged (1 of 610 sets).
+The final two (ruler and picker, or fields and pad) were put to the
+founder on 2026-10-07. The founder's reply: "I like the dark Boostcamp
+one, can we learn more from that. Our design doesn't look good." The
+Boostcamp study is `11-boostcamp-study.md` and the page's section 11:
+its screen measured from the pixels (page #1F1F1F, sections #262626,
+wells #191919, one accent, 62 pt two-line rows, joined wells, a check
+per row, a docked keypad), its users on the look (admired; the
+regressions are what people leave over), eight lessons, what is taken
+and left (no plate calculator, no RPE, no filled Finish, no
+swipe-delete), and Volyume drawn in that grammar in two tones with the
+keypad open (`09-drawing-bc-*.png`). The evidence of 09 and 10 is kept:
+the coach's numbers filled in and logged by one tap (the row's check),
+the tick-all glyph, last session beside the target, the keypad with 2.5
+kg steps, 48 dp targets, the calm record copy. What it re-opens beyond
+8.2: the bottom bar and the single-CTA contract (the row's check is the
+confirm), the one-exercise workspace (the session is one sheet). What it
+keeps: the 44 dp rest strip with the full rest view behind the Rest
+tool, icon-only Finish, D150, D63, the bans. Traded: live values at 16
+in the wells rather than 24.
 
-The two choices, both carrying everything settled above, the calm record
-line, Edit from Rest, every safety rule and the locked voice:
+For the go-ahead: G1 build in this grammar (yes, or what is still wrong);
+G2 tone (A near-black, B sheet); G3 the confirm (A per-row check as
+drawn, B keep the bottom bar); G4 scope (A whole logger, B this screen
+first).
 
-- Choice A, ruler and picker (the instrument): weight on a ruler stepped
-  to the exercise's equipment with last session as an amber tick; reps on
-  a picker centred on the target with the range filled and last time
-  ringed; tap or drag with detents and 48 dp tall hit areas; the pad
-  behind a tap on either number is first-class, for any value, for
-  people who type, and for screen readers.
-- Choice B, fields and pad (the conventional): two quiet fields with last
-  time under each value; a tap opens the number pad.
-
-Lead's recommendation (D33, product-best): Choice A; Choice B is the
-safer build, not the better product. Scope: the whole logger in one
-campaign with the founder's device walk between the screen and the
-periphery; the cost is the founder's call. Awaiting the founder's go: A or
-B, and the scope.
-
-Carried open from the first round: the weekday-dependent test
-(`d218.reportingReaders.test.js`), the watch logger, the summary's order
-(8.6), a session cut short (9 skipped and 3 ended-early sessions in the
-cloud say the path matters).
-
-Not asked, by the founder's own prior words (5.1): the plate calculator,
-an RPE or RIR input, exercise media, a typeface change.
+Record of the earlier rounds: the two concept sets (withdrawn), the
+research-derived table (withdrawn), the clean-sheet two-state design and
+its final two (10 sections 5 and 6), superseded by this direction.
 
 ## 10. Device checklist for whichever option is chosen (physical Android, EAS build; written now so the build lanes inherit it)
 
