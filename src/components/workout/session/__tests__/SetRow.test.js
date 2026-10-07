@@ -363,7 +363,7 @@ describe('SetRow frame', () => {
     expect(s.paddingLeft).toBe(16);
     expect(s.paddingRight).toBe(12);
     expect(s.gap).toBe(6);
-    expect(SET_COLUMNS).toEqual({ marker: 30, last: 80, wells: 98, check: 36 });
+    expect(SET_COLUMNS).toEqual({ marker: 30, last: 72, wells: 98, check: 36 });
   });
 
   test('cell text never widens a column: one line, shrinkable', () => {
@@ -523,9 +523,16 @@ describe('SetRow long press and check name', () => {
     expect(onLongPressRow).toHaveBeenCalledWith();
   });
 
-  test('the marker button carries the hint; a row with no marker button still says it', () => {
-    const withButton = render({ onLongPressRow: () => {}, onPressMarker: () => {} });
-    expect(one(byLabel(withButton, 'Set type for set 2')).props.accessibilityHint).toBe('Hold for more options');
+  test('the hold hint sits on the check (and on a marker that is not a button); a screen reader reaches the overflow as an action on the check', () => {
+    const onLongPressRow = jest.fn();
+    const withButton = render({ onLongPressRow, onPressMarker: () => {} });
+    // A marker that opens the set-type sheet must not promise a hold.
+    expect(one(byLabel(withButton, 'Set type for set 2')).props.accessibilityHint).toBeUndefined();
+    const check = one(byLabel(withButton, 'Log set 2'));
+    expect(check.props.accessibilityHint).toBe('Hold for more options');
+    expect(check.props.accessibilityActions).toEqual([{ name: 'longpress', label: 'More options' }]);
+    act(() => { check.props.onAccessibilityAction({ nativeEvent: { actionName: 'longpress' } }); });
+    expect(onLongPressRow).toHaveBeenCalledTimes(1);
     const without = render({ onLongPressRow: () => {} });
     expect(one(byLabel(without, 'Set 2')).props.accessibilityHint).toBe('Hold for more options');
   });

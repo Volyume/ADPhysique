@@ -2107,6 +2107,10 @@ const useAppStore = create((set, get) => ({
   // want either without the other. Defaults ON, so existing behaviour is
   // unchanged for everyone who never opens the setting.
   restSoundsEnabled: true,
+  // D220 (12-BUILD-SPEC section 1.7): open the full rest view by itself the
+  // moment a logged set starts a rest. Off by default: the 44 dp strip is
+  // the always-on surface and the Rest tool opens the view on demand.
+  openRestViewAfterLog: false,
   workoutPrefsLoaded: false,
   loadWorkoutPrefs: async () => {
     try {
@@ -2118,6 +2122,7 @@ const useAppStore = create((set, get) => ({
         if (typeof parsed.autoStartRestTimer === 'boolean') next.autoStartRestTimer = parsed.autoStartRestTimer;
         if (typeof parsed.restEndAlertEnabled === 'boolean') next.restEndAlertEnabled = parsed.restEndAlertEnabled;
         if (typeof parsed.restSoundsEnabled === 'boolean') next.restSoundsEnabled = parsed.restSoundsEnabled;
+        if (typeof parsed.openRestViewAfterLog === 'boolean') next.openRestViewAfterLog = parsed.openRestViewAfterLog;
         set({ ...next, workoutPrefsLoaded: true });
         if (next.restEndAlertEnabled === false) {
           // A rest started BEFORE this hydration ran scheduled its end-of-rest
@@ -2144,6 +2149,7 @@ const useAppStore = create((set, get) => ({
         autoStartRestTimer: get().autoStartRestTimer,
         restEndAlertEnabled: get().restEndAlertEnabled,
         restSoundsEnabled: get().restSoundsEnabled,
+        openRestViewAfterLog: get().openRestViewAfterLog,
       }));
     } catch (_) { /* offline-friendly: tolerate */ }
   },
@@ -2155,6 +2161,10 @@ const useAppStore = create((set, get) => ({
   },
   setAutoStartRestTimer: async (value) => {
     set({ autoStartRestTimer: !!value });
+    await get()._persistWorkoutPrefs();
+  },
+  setOpenRestViewAfterLog: async (value) => {
+    set({ openRestViewAfterLog: !!value });
     await get()._persistWorkoutPrefs();
   },
   // C10C: purely a mute for the in-app cues. It schedules and cancels

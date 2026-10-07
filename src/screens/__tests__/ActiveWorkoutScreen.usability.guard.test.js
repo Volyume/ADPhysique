@@ -338,7 +338,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // override appended (source: useTheme.js); frozen style byte-identical.
     expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
-    expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
+    // D220 review: the check is the one control, so the retry names it.
+    expect(ACTIVE_WORKOUT).toContain("const retryAction = 'the check';");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
     expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);
   });

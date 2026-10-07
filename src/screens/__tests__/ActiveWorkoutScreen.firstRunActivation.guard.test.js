@@ -87,7 +87,7 @@ describe('the first-time prefill line', () => {
     // working set at all (the Last cell would otherwise carry history).
     expect(PREFILL_BLOCK).toContain("(!isWarmupEntry && workingLogged === 0 && prevWorkingSets.length === 0 && setTableKind === 'weight_reps')");
     // Last session lives on the row itself now, never as a line.
-    expect(ACTIVE_WORKOUT).toContain('const nextLast = isWarmupEntry ? null : lastCellFor(workingLogged);');
+    expect(ACTIVE_WORKOUT).toContain(': lastCellFor(workingLogged);');
   });
 
   test('it renders as a quiet, non-tappable line that may wrap', () => {

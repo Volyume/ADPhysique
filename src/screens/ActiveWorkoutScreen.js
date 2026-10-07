@@ -351,6 +351,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     startRestTimer: s.startRestTimer,
     defaultRestSeconds: s.defaultRestSeconds,
     autoStartRestTimer: s.autoStartRestTimer,
+    openRestViewAfterLog: s.openRestViewAfterLog,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
     showPRCelebration: s.showPRCelebration,
@@ -367,7 +368,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
-    startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
+    startRestTimer, defaultRestSeconds, autoStartRestTimer, openRestViewAfterLog, workoutPrefsLoaded, loadWorkoutPrefs,
     showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak,
     barWeight,
@@ -388,15 +389,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // closes. The ratchet and its ceiling apply to the chrome part only.
   const chromeRatchetRef = useRef(0);
   const keypadHeightRef = useRef(0);
+  const safeBottomRef = useRef(0);
   const publishBottomInset = useCallback(() => {
     const s = useAppStore.getState();
-    const h = chromeRatchetRef.current + keypadHeightRef.current;
+    // The keypad carries the safe inset itself; the spacer does while closed.
+    const h = chromeRatchetRef.current + (keypadHeightRef.current || safeBottomRef.current);
     if (h !== (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
   }, []);
   const handleKeypadLayout = useCallback((e) => {
     const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
     if (h < 0) return;
     keypadHeightRef.current = h;
+    setKeypadHeight(h);
     publishBottomInset();
   }, [publishBottomInset]);
   const handleBottomChromeLayout = useCallback((e) => {
@@ -808,6 +812,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // can never render under the navigation buttons; devices that report
   // real insets are untouched.
   const safeBottom = insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 48 : 0);
+  safeBottomRef.current = safeBottom;
   const timerRef = useRef(null);
 
   // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED,
@@ -1420,6 +1425,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // y. Both the jump and the advance call this.
   const activeSectionYRef = useRef(0);
   const pendingSectionScrollRef = useRef(null);
+  // The table's y inside the active section and each row's y inside the
+  // table, so the row being typed into can be scrolled above the keypad.
+  const tableYRef = useRef(0);
+  const rowYRef = useRef({});
+  const scrollViewportRef = useRef(0);
+  const [keypadHeight, setKeypadHeight] = useState(0);
+  // On mount (a restore after a kill included) the sheet opens on the
+  // active section, not on the title.
+  const firstLayoutScrollRef = useRef(true);
   function scrollToActiveSection(animated) {
     pendingSectionScrollRef.current = { animated: !!animated };
     setTimeout(() => {
@@ -1432,6 +1446,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const y = e?.nativeEvent?.layout?.y;
     if (typeof y !== 'number') return;
     activeSectionYRef.current = y;
+    if (firstLayoutScrollRef.current) {
+      firstLayoutScrollRef.current = false;
+      if (currentExerciseIndex > 0) pendingSectionScrollRef.current = { animated: false };
+    }
     const pending = pendingSectionScrollRef.current;
     if (pending) {
       pendingSectionScrollRef.current = null;
@@ -1522,19 +1540,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           text: 'Log them',
           onPress: () => {
             tickAllRemainingRef.current = count;
+            tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length };
             handleCompleteSetPress();
           },
         },
       ],
     );
   }
+  const tickAllRunRef = useRef(null);
+  function clearTickAll() {
+    tickAllRemainingRef.current = 0;
+    tickAllRunRef.current = null;
+  }
   useEffect(() => {
     if (tickAllRemainingRef.current <= 0) return;
+    const run = tickAllRunRef.current;
+    // Continue only when exactly one more set landed on the SAME exercise;
+    // anything else (a delete, a group jump, a failed log) ends the run.
+    if (!run || run.exerciseId !== (exercise?.id ?? null) || loggedSets.length !== run.expectedLength + 1) {
+      clearTickAll();
+      return;
+    }
+    run.expectedLength = loggedSets.length;
     tickAllRemainingRef.current -= 1;
     if (tickAllRemainingRef.current > 0 && !saving) handleCompleteSetPress();
+    else if (tickAllRemainingRef.current <= 0) clearTickAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedSets.length]);
-  useEffect(() => { tickAllRemainingRef.current = 0; }, [currentExerciseIndex]);
+  useEffect(() => { clearTickAll(); }, [currentExerciseIndex]);
 
   function handleJumpToExercise(i) {
     if (i === currentExerciseIndex) return;
@@ -3337,7 +3370,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           : -1;
         if (pairIdx >= 0) {
           setCurrentExerciseIndex(pairIdx);
-          setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+          scrollToActiveSection(true);
           setNoteText('');
           setGhostSet(null);
           // D44: cue the jump - previously silent (no haptic distinct from
@@ -3365,6 +3398,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ? (routineExercise?.roundRestSeconds || defaultRestSeconds || 90)
           : restSecondsForEntry(currentEntry);
         startRestTimer(overrides.perSideCompound ? halfRestSeconds(fullRest) : fullRest);
+        // 12-BUILD-SPEC section 1.7: the full rest view opens by itself only
+        // when the person switched that on in Settings (off by default).
+        if (openRestViewAfterLog) setShowRestSheet(true);
       }
 
       // Auto-advance to next exercise when target sets just completed
@@ -3412,7 +3448,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const firstIdx = workoutExercises.findIndex(e => e.supersetGroupId === sgi);
         if (firstIdx >= 0 && firstIdx !== currentExerciseIndex) {
           setCurrentExerciseIndex(firstIdx);
-          setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+          scrollToActiveSection(true);
           announceGroupFocusChange(firstIdx, sgi);
         }
       }
@@ -3467,11 +3503,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         exerciseId: exercise?.id,
         setType: currentSet.setType,
       });
-      const retryAction = currentSet.setType === 'warmup'
-        ? 'Log warm-up'
-        : isClusterType(currentSet.setType)
-          ? 'Start cluster'
-          : 'Log set';
+      // The check is the one control; its spoken name is the action's name.
+      const retryAction = 'the check';
       appAlert(
         'Couldn\'t save set',
         `Your set wasn't saved. Tap ${retryAction} to try again. If it keeps happening, please contact support.`,
@@ -3514,6 +3547,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const closeEditSet = React.useCallback(() => {
     setEditingSet(null);
     setEditValue(null);
+    setEditField(null);
   }, []);
 
   // Campaign item 14 (D25): the zeego long-press menu's "Delete set" item
@@ -3605,6 +3639,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       }
 
       setEditingSet(null);
+      setEditField(null);
       setEditValue(null);
       updateLastActivity();
       // Visual + tactile ack consistent with the log-set flash.
@@ -3632,7 +3667,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       'Delete set?',
       'This set is removed and your session totals update. This cannot be undone.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => closeEditSet() },
         {
           text: 'Delete',
           style: 'destructive',
@@ -4586,6 +4621,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const restSheetNextLabel = (() => {
     const w = currentSet?.weight;
     const r = currentSet?.reps;
+    const kind = ['reps_only', 'duration', 'distance'].includes(activeExerciseType) ? activeExerciseType : 'weight_reps';
+    if (kind === 'reps_only') return r ? `${orientationLabel} · ${r} reps` : orientationLabel;
+    if (kind === 'duration') return r ? `${orientationLabel} · ${formatSeconds(r)}` : orientationLabel;
+    if (kind === 'distance') return (w || r) ? `${orientationLabel} · ${w || 0} ${units === 'kg' ? 'm' : 'yd'} · ${formatSeconds(r || 0)}` : orientationLabel;
     if (w && r) return `${orientationLabel} · ${w} ${units} × ${r}`;
     return orientationLabel;
   })();
@@ -4660,6 +4699,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!keypadOpen) {
       keypadHeightRef.current = 0;
+      setKeypadHeight(0);
       publishBottomInset();
     }
   }, [keypadOpen, publishBottomInset]);
@@ -4671,8 +4711,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (editingSet) setEditValue((v) => ({ ...(v || {}), [field]: next, isGhost: false }));
     else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });
   }
+  // An exercise change (a jump, an advance, a group jump) closes the keypad
+  // and any edit, so a pad never writes into another exercise's entry.
+  useEffect(() => {
+    setEntryField(null);
+    setEditField(null);
+    setSystemKeyboard(false);
+    setEditingSet(null);
+    setEditValue(null);
+    entryReplaceRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExerciseIndex]);
   function openWell(field, set = null) {
     hapticsVocab.selection();
+    // Typing is staying: a pending auto-advance would carry the pad away.
+    cancelAutoAdvance();
     if (set) {
       openEditSet(set);
       setEditField(field);
@@ -4683,10 +4736,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
     setSystemKeyboard(false);
     entryReplaceRef.current = true;
+    padRowRef.current = set ? (set.id ?? null) : 'next';
     if (field === timeField) {
       setTimeBuffer(secondsToBuffer(set ? (set.actualReps ?? set.reps) : currentSet.reps));
     }
   }
+  // Scroll so the row being typed into sits above the keypad. The pad's
+  // height is known once it lays out, so this runs on that layout too.
+  function scrollRowAbovePad(rowId, padHeight) {
+    const rowY = rowYRef.current[rowId];
+    const viewport = scrollViewportRef.current;
+    if (!Number.isFinite(rowY) || !viewport || !padHeight) return;
+    const top = activeSectionYRef.current + tableYRef.current + rowY;
+    const bottom = top + 64;
+    const visibleBottom = viewport - padHeight;
+    if (bottom > visibleBottom) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, bottom - visibleBottom + spacing.sm), animated: true });
+    }
+  }
+  const padRowRef = useRef(null);
+  useEffect(() => {
+    if (keypadOpen && keypadHeight > 0 && padRowRef.current) scrollRowAbovePad(padRowRef.current, keypadHeight);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keypadOpen, keypadHeight, entryField, editField]);
   function closeKeypad() {
     setEntryField(null);
     setEditField(null);
@@ -4745,8 +4817,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (editingSet) {
       const changed = String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
         || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
-      setEditField(null);
       setSystemKeyboard(false);
+      // The field stays open until the save lands (closeEditSet and the
+      // save's success path clear it), so a refused save keeps the pad.
       if (changed) handleSaveEditedSet(); else closeEditSet();
       return;
     }
@@ -4784,6 +4857,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // over the coach's rule, and the smallest set that would be a record at the
   // row's weight. Warm-ups and working sets number independently (D1 #2).
   const prevWorkingSets = prevSets.filter(isWorkingSetRow);
+  const prevWarmupSets = prevSets.filter((x) => !isWorkingSetRow(x));
+  function lastWarmupCellFor(warmIndex) {
+    const w = prevWarmupSets[warmIndex];
+    return w ? { text: shortSetText(w), stale: false, set: w } : null;
+  }
+  const WARMUP_TARGET = { value: '', rule: 'Warm-up' };
   function shortSetText(set) {
     const reps = set.actualReps ?? set.actual_reps ?? set.reps ?? '';
     if (setTableKind === 'reps_only') return `${reps}`;
@@ -4820,8 +4899,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const rule = p?.weight != null && band && band.min !== band.max ? `+${weightStepKg} at ${band.max}` : null;
     return { value, rule };
   }
+  const assistedLoad = (exercise?.loadSemantics || 'total') === 'assisted';
   const prTarget = (() => {
     if (setTableKind !== 'weight_reps' || isWarmupEntry || !recordLine) return null;
+    // Less assistance is stronger, and a cluster entry is never a record
+    // (detectPR): neither has a threshold to show.
+    if (assistedLoad || isClusterType(currentSet.setType)) return null;
     const w = parseDecimalInput(currentSet.weight);
     if (!(w > 0)) return null;
     const history = [...allTimeSets, ...loggedSets].filter(isWorkingSetRow);
@@ -4856,7 +4939,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       })
       : null
   ), [setTableKind, allTimeSets, loggedSets, todayWeight, units, activeWorkout?.id]);
-  const sectionBests = previousHistory?.bests
+  const sectionBests = previousHistory?.bests && !assistedLoad
     ? {
       lastDateLabel: previousHistory.bests.lastDateLabel,
       heaviest: recordsHistory?.bests?.heaviest ?? previousHistory.bests.heaviest,
@@ -4881,7 +4964,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // progress, and only when the entry already holds loggable numbers.
   const pendingCount = Math.max(0, targetSets - workingLogged);
   const tickAllCount = (
-    pendingCount > 1
+    nextRowShown && pendingCount > 1
+    && currentSGI == null
     && !isWarmupEntry && !cluster && !perSide
     && !isClusterType(currentSet.setType)
     && !(exercise && unilateralExercises.has(exercise.id))
@@ -4897,14 +4981,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   loggedSets.forEach((s, i) => {
     const warm = !isWorkingSetRow(s);
     const progressNum = countProgressSets(loggedSets.slice(0, i + 1));
+    const warmNum = loggedSets.slice(0, i + 1).filter((x) => !isWorkingSetRow(x)).length;
     const editingThis = editingSet != null && editingSet.id === s.id;
     const values = editingThis && editValue ? editValue : { weight: s.weight, reps: s.actualReps ?? s.reps };
-    const lc = warm ? null : lastCellFor(progressNum - 1);
+    const lc = warm ? lastWarmupCellFor(warmNum - 1) : lastCellFor(progressNum - 1);
     setTableRows.push({
       id: s.id ?? `logged-${i}`,
       marker: warm ? 'W' : progressNum,
       last: lc ? { text: lc.text, stale: lc.stale } : null,
-      target: warm ? { value: '', rule: null } : targetCellFor(progressNum - 1),
+      target: warm ? WARMUP_TARGET : targetCellFor(progressNum - 1),
       wells: {
         weight: values.weight,
         reps: values.reps,
@@ -4919,12 +5004,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
     });
   });
-  const nextLast = isWarmupEntry ? null : lastCellFor(workingLogged);
-  setTableRows.push({
+  // Past the target the next row is not shown until Add set arms one (or a
+  // per-side pair or a cluster is mid-flight on it).
+  const nextRowShown = !(targetComplete && !extraSetArmed && !perSide && !cluster && !isWarmupEntry);
+  const nextLast = isWarmupEntry
+    ? lastWarmupCellFor(loggedSets.filter((x) => !isWorkingSetRow(x)).length)
+    : lastCellFor(workingLogged);
+  if (nextRowShown) setTableRows.push({
     id: 'next',
     marker: isWarmupEntry ? 'W' : workingLogged + 1,
     last: nextLast ? { text: nextLast.text, stale: nextLast.stale } : null,
-    target: isWarmupEntry ? { value: '', rule: null } : targetCellFor(workingLogged),
+    target: isWarmupEntry ? WARMUP_TARGET : targetCellFor(workingLogged),
     wells: {
       weight: currentSet.weight,
       reps: currentSet.reps,
@@ -5047,11 +5137,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         name={item.name}
         state={complete ? 'done' : 'upcoming'}
         doneSetCount={item.done}
+        totalSetCount={item.total}
         groupLabel={item.groupLabel}
         skipped={item.skipped}
         onPressHeader={() => handleJumpToExercise(i)}
         onDetails={() => handleJumpToExercise(i)}
-        onRestLength={complete || item.skipped ? undefined : () => setShowRestLengthFor(i)}
+        onRestLength={complete || item.skipped || item.groupLabel ? undefined : () => setShowRestLengthFor(i)}
       />
     );
     (i < currentExerciseIndex ? collapsedSectionsBefore : collapsedSectionsAfter).push(node);
@@ -5117,7 +5208,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={styles.sessionScrollContent}
+          contentContainerStyle={[styles.sessionScrollContent, keypadOpen && keypadHeight > 0 ? { paddingBottom: keypadHeight } : null]}
+          onLayout={(e) => { scrollViewportRef.current = e?.nativeEvent?.layout?.height ?? 0; }}
           keyboardShouldPersistTaps="handled"
           // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
           // auto-scroll that keeps the focused input visible, so the
@@ -5156,7 +5248,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onNotes={() => setShowNotesSheet(true)}
           />
           {collapsedSectionsBefore}
-          <View onLayout={handleActiveSectionLayout}>
+          <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
           <ExerciseSection
             index={currentExerciseIndex + 1}
             name={exercise.name}
@@ -5165,7 +5257,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onDetails={handleOpenExerciseDetails}
             bests={sectionBests}
             onHistory={previousHistory ? openHistorySheet : undefined}
-            onRestLength={() => setShowRestLengthFor(currentExerciseIndex)}
+            onRestLength={currentSGI == null ? () => setShowRestLengthFor(currentExerciseIndex) : undefined}
             onAddSet={armExtraSet}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
@@ -5480,13 +5572,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               Warm-ups are no longer auto-suggested (recorded decision, B8):
               a warm-up is chosen on the next row's marker or pulled from
               exercise options. */}
+          <View onLayout={(e) => { tableYRef.current = e?.nativeEvent?.layout?.y ?? 0; }}>
           <SetTable
             rows={setTableRows}
             kind={setTableKind}
             units={units}
             columnsLabel={{ weight: units }}
             onLogRemaining={tickAllCount > 0 ? () => handleLogRemaining(tickAllCount) : undefined}
+            onRowLayout={(id, y) => { rowYRef.current[id] = y; }}
           />
+          </View>
 
           <View style={styles.activeBody}>
           {/* R4 (D64): the between-sides banner. Appears only mid-pair
@@ -5505,8 +5600,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </Text>
               <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 {exercise?.compoundIsolation === 'compound'
-                  ? 'Rest, switch sides, then tap Log other side.'
-                  : "Switch sides when you're ready, then tap Log other side."}
+                  ? 'Rest, switch sides, then tap the check to log the other side.'
+                  : "Switch sides when you're ready, then tap the check to log the other side."}
               </Text>
               <TouchableOpacity
                 onPress={cancelPerSide}
@@ -5553,16 +5648,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
                 </Button>
               </View>
-              <Button
-                variant="primary"
-                style={[styles.completeBtn, live.completeBtn]}
-                onPress={finishCluster}
-                disabled={saving}
-                accessibilityLabel="Finish cluster and log the set"
-              >
-                <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
-                <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
-              </Button>
+              {/* D220 ruling (1): the row's check is the one confirm; mid-cluster
+                  it reads "Finish cluster" and finishes it. */}
+              <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
+                Tap the check when the cluster is done.
+              </Text>
               <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
                 <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
               </TouchableOpacity>
@@ -5633,8 +5723,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             Finish is the toolbar's; Log another set is the footer's Add set.
             The safe-area inset the bar absorbed is a spacer here while the
             keypad is closed; the keypad carries it while open. */}
-        {keypadOpen ? null : <View style={{ height: safeBottom }} />}
         </View>
+        {keypadOpen ? null : <View style={{ height: safeBottom }} />}
         {keypadOpen ? (
           <View onLayout={handleKeypadLayout}>
             <Keypad
@@ -5644,6 +5734,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
               mode={keypadIsTime ? 'time' : 'number'}
               fieldLabel={keypadIsTime ? 'Time' : (setTableKind === 'distance' && keypadField === 'weight' ? 'Distance' : undefined)}
+              tabs={setTableKind === 'reps_only' ? [{ field: 'reps', label: 'Reps' }]
+                : setTableKind === 'duration' ? [{ field: 'reps', label: 'Time' }]
+                  : setTableKind === 'distance' ? [{ field: 'weight', label: 'Distance' }, { field: 'reps', label: 'Time' }]
+                    : [{ field: 'weight', label: units }, { field: 'reps', label: 'Reps' }]}
               onKey={handleKeypadKey}
               onStep={handleKeypadStep}
               onClear={handleKeypadClear}
@@ -5699,7 +5793,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           note={rowSheet?.kind === 'next' ? noteText : (rowSheet?.set?.notes ?? null)}
           canEditNote={rowSheet?.kind === 'next'}
           onSaveNote={(text) => setNoteText(text)}
-          onEdit={rowSheet?.kind === 'logged' ? () => openWell('weight', rowSheet.set) : undefined}
+          onEdit={rowSheet?.kind === 'logged' ? () => openWell((setTableKind === 'weight_reps' || setTableKind === 'distance') ? 'weight' : 'reps', rowSheet.set) : undefined}
           onDelete={rowSheet?.kind === 'logged' ? () => openDeleteFromMenu(rowSheet.set) : undefined}
         />
 
@@ -5900,7 +5994,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text style={[styles.supStepText, live.supStepText]}>Do your first side, then tap Log set.</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Do your first side, then tap the check.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
@@ -5913,7 +6007,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
                     <Text style={[styles.supStepText, live.supStepText]}>
-                      Tap Log other side - the same button, one more tap.</Text>
+                      Tap the check again to log the other side: one more tap on the same control.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
@@ -6256,7 +6350,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   setShowOverflow(false);
                   appAlert(
                     'How logging works',
-                    `${GLOSSARY.rep} ${GLOSSARY.set} Enter weight and reps, then tap Log set when done. Use exercise options for form tips, warm-ups, swaps and session settings.`,
+                    `${GLOSSARY.rep} ${GLOSSARY.set} Enter weight and reps, then tap the check when done. Use exercise options for form tips, warm-ups, swaps and session settings.`,
                   );
                 }}
                 accessibilityRole="button"

@@ -25,6 +25,8 @@
  *                   kind unless the row names its own
  *   units           'kg' (default) or 'lb': metres or yards in the distance
  *                   label, and handed to every row for its spoken distance
+ *   onRowLayout     (id, y) with each row's y inside the table, so the screen
+ *                   can scroll the row being typed into above the keypad
  *
  * Row props kind, units, inputField, onLongPressRow and checkLabel flow to
  * SetRow like any other (see SetRow).
@@ -48,6 +50,8 @@ const COLUMNS_MIN_HEIGHT = 36;
 // Three logged rows are the point at which the fold appears.
 const FOLD_AT = 3;
 const FOLD_HIT_SLOP = { top: spacing.xs2, bottom: spacing.xs2, left: 0, right: 0 };
+// The 36 dp tick-all glyph reaches 48 dp with its slop.
+const TICK_ALL_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };
 const MIDDLE_DOT = '\u00B7';
 
 function plural(count, one, many) {
@@ -84,6 +88,7 @@ export default function SetTable({
   columnsLabel,
   kind = 'weight_reps',
   units = 'kg',
+  onRowLayout,
 }) {
   const t = useTheme();
   const live = useMemo(() => ({
@@ -131,6 +136,7 @@ export default function SetTable({
             <TouchableOpacity
               testID="volyume-btn-log-remaining"
               style={styles.tickAll}
+              hitSlop={TICK_ALL_HIT_SLOP}
               onPress={() => onLogRemaining()}
               accessibilityRole="button"
               accessibilityLabel="Log remaining sets"
@@ -159,6 +165,7 @@ export default function SetTable({
           {...row}
           kind={row.kind ?? kind}
           units={row.units ?? units}
+          onLayout={onRowLayout ? (e) => onRowLayout(row.id, e?.nativeEvent?.layout?.y ?? 0) : row.onLayout}
           onPressWell={onPressWell ? (field) => onPressWell(row.id, field) : row.onPressWell}
           onCheck={onCheck ? () => onCheck(row.id) : row.onCheck}
         />

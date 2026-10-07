@@ -38,6 +38,9 @@
  *   fieldLabel        optional string that, when given, is the active tab's text
  *                     and the spoken "Editing {fieldLabel}" instead of the unit
  *                     or "Reps" ("Time", "Distance")
+ *   tabs              optional [{ field, label }]: the tabs to show, in order,
+ *                     the active one being the one whose field is `field`
+ *                     (a reps-only or timed row passes one tab)
  *
  * The drawing has one key for Next, and the device checklist reads "Next moves
  * to reps; Done closes", so the one key is Next on weight and Done on reps.
@@ -116,6 +119,7 @@ export default function Keypad({
   safeBottom = 0,
   mode = 'number',
   fieldLabel,
+  tabs,
 }) {
   const t = useTheme();
   const live = useMemo(() => {
@@ -149,6 +153,15 @@ export default function Keypad({
   else if (isTime) spokenValue = valueText;
   else spokenValue = isWeight ? `${valueText} ${spokenUnit(unit)}` : `${valueText} ${repWord(valueText)}`;
 
+  // The tabs name the fields the row has: the screen passes them per
+  // exercise kind (one tab for a reps-only or timed row); without them the
+  // pad shows the unit and Reps as before.
+  const tabList = Array.isArray(tabs) && tabs.length > 0
+    ? tabs
+    : [
+      { field: 'weight', label: hasLabel && isWeight ? fieldLabel : unit },
+      { field: 'reps', label: hasLabel && !isWeight ? fieldLabel : 'Reps' },
+    ];
   const stepDown = () => onStep && onStep(-stepSize);
   const stepUp = () => onStep && onStep(stepSize);
 
@@ -167,8 +180,9 @@ export default function Keypad({
           <Ionicons name="keypad-outline" size={KEY_GLYPH} color={t.colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.tabs} accessible accessibilityLabel={`Editing ${editing}, ${spokenValue}`}>
-          <Text style={isWeight ? live.tabActive : live.tabIdle}>{hasLabel && isWeight ? fieldLabel : unit}</Text>
-          <Text style={isWeight ? live.tabIdle : live.tabActive}>{hasLabel && !isWeight ? fieldLabel : 'Reps'}</Text>
+          {tabList.map((tab) => (
+            <Text key={tab.field} style={tab.field === field ? live.tabActive : live.tabIdle}>{tab.label}</Text>
+          ))}
         </View>
         <TouchableOpacity
           style={[styles.clear, live.well, isEmpty && styles.keyDisabled]}

@@ -42,6 +42,7 @@ export default function SettingsWorkoutScreen() {
     bodyWeightUnits, setBodyWeightUnits,
     defaultRestSeconds, setDefaultRestSeconds,
     autoStartRestTimer, setAutoStartRestTimer,
+    openRestViewAfterLog, setOpenRestViewAfterLog,
     restEndAlertEnabled, setRestEndAlertEnabled,
     restSoundsEnabled, setRestSoundsEnabled,
     workoutPrefsLoaded, loadWorkoutPrefs,
@@ -55,6 +56,8 @@ export default function SettingsWorkoutScreen() {
     setDefaultRestSeconds: s.setDefaultRestSeconds,
     autoStartRestTimer: s.autoStartRestTimer,
     setAutoStartRestTimer: s.setAutoStartRestTimer,
+    openRestViewAfterLog: s.openRestViewAfterLog,
+    setOpenRestViewAfterLog: s.setOpenRestViewAfterLog,
     restEndAlertEnabled: s.restEndAlertEnabled,
     restSoundsEnabled: s.restSoundsEnabled,
     setRestSoundsEnabled: s.setRestSoundsEnabled,
@@ -192,6 +195,24 @@ export default function SettingsWorkoutScreen() {
               onValueChange={v => { haptics.selection(); setAutoStartRestTimer(v); }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={autoStartRestTimer ? t.colors.primary : t.colors.textMuted}
+            />
+          }
+        />
+
+        {/* D220 (12-BUILD-SPEC section 1.7): the full rest view can open by
+            itself when a logged set starts a rest. Off by default; the
+            strip stays the always-on surface either way. */}
+        <SettingRow
+          icon="expand-outline"
+          label="Open the rest view after a set"
+          sub="Show the large countdown and your next set as soon as a logged set starts a rest. The small rest strip stays either way."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={!!openRestViewAfterLog}
+              onValueChange={v => { haptics.selection(); setOpenRestViewAfterLog(v); }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={openRestViewAfterLog ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
