@@ -836,9 +836,10 @@ options against user psychology our user base and what they would enjoy
 the most then present the final two choices and then we will get the go
 ahead". The five forks of the first delivery were weighed against the
 production base (aggregates) and the behavioural literature (10,
-sections 1 to 4). Settled by the evidence: the two-state screen (three
-quarters of a session is rest; the far-distance physics; one stable
-loop), the sizes 32 / 40 / 24, the button naming the set, and the
+sections 1 to 4). Settled by the evidence: the two-state screen (the screen sits between
+logs for about three quarters of a session; the far-distance physics;
+one stable loop; the field's users ask the rest screen for the next
+set's load), the sizes 32 / 40 / 24, the button naming the set, and the
 elimination of a ruler without a pad (12% of weights are off the grid).
 The data also changed the drawing: the rep control is a windowed picker
 centred on the target (median 15 reps, a quarter at 20 or more); the
@@ -851,8 +852,9 @@ line, Edit from Rest, every safety rule and the locked voice:
 - Choice A, ruler and picker (the instrument): weight on a ruler stepped
   to the exercise's equipment with last session as an amber tick; reps on
   a picker centred on the target with the range filled and last time
-  ringed; tap or drag with detents and 44 dp tall hit areas; the pad
-  behind a tap on either number for any value and for screen readers.
+  ringed; tap or drag with detents and 48 dp tall hit areas; the pad
+  behind a tap on either number is first-class, for any value, for
+  people who type, and for screen readers.
 - Choice B, fields and pad (the conventional): two quiet fields with last
   time under each value; a tap opens the number pad.
 
