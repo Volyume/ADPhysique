@@ -142,8 +142,13 @@ describe('B9 wiring guard: builder pre-fill only, runtime untouched', () => {
     // non-circuit branch is the exact pre-EL-9 formula, untouched, and it
     // still feeds straight into startRestTimer with no suggestion-table
     // involvement.
+    // Logger rebuild stage D (D220): the non-circuit arm reads
+    // restSecondsForEntry, whose chain is this session's chosen length for
+    // the exercise, then the SAME restSeconds || defaultRestSeconds || 90.
+    // Still no suggestion-table involvement.
+    expect(ACTIVE).toMatch(/: restSecondsForEntry\(currentEntry\);/);
     expect(ACTIVE).toMatch(
-      /: \(routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90\);/,
+      /return entry\?\.routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90;/,
     );
     expect(ACTIVE).toMatch(
       /startRestTimer\(overrides\.perSideCompound \? halfRestSeconds\(fullRest\) : fullRest\);/,
