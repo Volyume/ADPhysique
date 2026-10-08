@@ -108,11 +108,11 @@ describe('PostRow', () => {
 });
 
 describe('SectionHeader (SF3)', () => {
-  test('the title wraps to two lines and the header can grow past 56 dp', () => {
+  test('the title wraps to two lines and the header can grow past 44 dp', () => {
     const tree = render(<SectionHeader title="No body-shaming, no diet or calorie talk." />);
     const title = tree.root.findAll((n) => n.props?.accessibilityRole === 'header')[0];
     expect(title.props.numberOfLines).toBe(2);
-    const wrap = tree.root.findAll((n) => n.props?.style && [].concat(n.props.style).flat().some((s) => s && s.minHeight === 56))[0];
+    const wrap = tree.root.findAll((n) => n.props?.style && [].concat(n.props.style).flat().some((s) => s && s.minHeight === 44))[0];
     expect(wrap).toBeTruthy(); // a minHeight, not a fixed height
     const flatStyle = [].concat(wrap.props.style).flat().filter(Boolean).reduce((a, s) => ({ ...a, ...s }), {});
     expect(flatStyle.height).toBeUndefined();

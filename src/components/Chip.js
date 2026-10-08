@@ -24,6 +24,7 @@ export default function Chip({
   // assistive tech announces the chosen-one-of-many semantics.
   accessibilityRole = 'button',
   accessibilityLabel,
+  accessibilityHint,
   style,
   labelStyle,
   selectedLabelStyle,
@@ -61,6 +62,7 @@ export default function Chip({
       disabled={disabled}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel || label}
+      accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
       style={[
         styles.chip,

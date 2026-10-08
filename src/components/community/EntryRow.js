@@ -38,11 +38,13 @@ import PressableCard from '../PressableCard';
 import useTheme from '../../hooks/useTheme';
 import { spacing, radius, iconSize } from '../../styles/theme';
 
-const MARK = 32;
-const MARK_BIG = 44;
+const MARK = 36;
+// NavRow's glyph size (components/NavRow.js: `size={18}`).
+const NAV_ICON = 18;
+const MARK_BIG = 36; // one size, NavRow's tile
 const ROW_ONE_LINE = 56;
 const ROW_TWO_LINES = 64;
-const ROW_BIG = 88;
+const ROW_BIG = 64; // one app: a door is a NavRow, not a taller row
 const NOOP = () => {};
 
 /** True for a trailing element that is more than a line of text. */
@@ -84,15 +86,20 @@ export default function EntryRow({
           accessibilityRole={actions ? (pressable ? 'button' : 'text') : undefined}
           accessibilityLabel={actions ? label : undefined}
         >
+          {/* Founder verdict 2026-10-08 ("one app all together"): the row is
+              the house NavRow anatomy (components/NavRow.js): a 36 dp
+              surface2 tile with an 18 dp textSecondary glyph, a bodyStrong
+              label, a caption sub-line, the chevron. `big` no longer makes
+              a larger row; a door is a NavRow like every door on Coach. */}
           {leading || (icon ? (
             <View style={[styles.mark, { width: size, height: size, backgroundColor: t.colors.surface2 }]}>
-              <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={ink} />
+              <Ionicons name={icon} size={NAV_ICON} color={disabled || destructive ? ink : t.colors.textSecondary} />
             </View>
           ) : null)}
           <View style={styles.text}>
-            <Text style={[big ? t.type.title : t.type.body, { color: ink }]}>{title}</Text>
+            <Text style={[t.type.bodyStrong, { color: ink }]}>{title}</Text>
             {subtitle ? (
-              <Text style={[t.type.bodySm, { color: disabled ? t.colors.textMuted : t.colors.textSecondary }]}>{subtitle}</Text>
+              <Text style={[t.type.caption, styles.sub, { color: disabled ? t.colors.textMuted : t.colors.textSecondary }]}>{subtitle}</Text>
             ) : null}
           </View>
         </View>
@@ -105,8 +112,9 @@ export default function EntryRow({
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, justifyContent: 'center' },
-  inner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  row: { paddingHorizontal: spacing.lg, borderBottomWidth: 1, justifyContent: 'center' },
+  inner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
+  sub: { marginTop: spacing.xxs },
   group: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1 },
   mark: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },

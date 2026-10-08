@@ -15,21 +15,22 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { spacing } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
+import SectionLabel from '../SectionLabel';
 import useTheme from '../../hooks/useTheme';
 
-export const SECTION_HEADER_HEIGHT = 56;
+// Founder verdict 2026-10-08 ("one app all together"): the 56 dp bodyStrong
+// header of D221 law V2 is withdrawn. The title is the house SectionLabel
+// overline (type.overline, textSecondary, uppercase) as Today uses it for a
+// card eyebrow; the optional trailing action keeps its 48 dp target.
+export const SECTION_HEADER_HEIGHT = 44;
 
 export default function SectionHeader({ title, trailing, flush = false }) {
   const t = useTheme();
   return (
     <View style={[styles.wrap, flush && styles.flush]}>
-      <Text
-        style={[styles.title, t.type.bodyStrong, { color: t.colors.textPrimary }]}
-        numberOfLines={2}
-        accessibilityRole="header"
-      >
+      <SectionLabel style={styles.title} heading numberOfLines={2}>
         {title}
-      </Text>
+      </SectionLabel>
       {trailing ? (
         <Pressable
           onPress={trailing.onPress}
@@ -52,7 +53,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: SECTION_HEADER_HEIGHT,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },

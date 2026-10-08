@@ -136,9 +136,9 @@ describe('MenuSheet', () => {
 });
 
 describe('SectionHeader flush', () => {
-  test('drops the inline gutter, and stays 56 dp', () => {
+  test('drops the inline gutter, and stays 44 dp', () => {
     const tree = render(<SectionHeader flush title="Where" />);
-    const wrap = tree.root.findAll((n) => n.props?.style && flat(n.props.style).minHeight === 56)[0];
+    const wrap = tree.root.findAll((n) => n.props?.style && flat(n.props.style).minHeight === 44)[0];
     expect(flat(wrap.props.style).paddingHorizontal).toBe(0);
   });
 });

@@ -191,8 +191,12 @@ describe('lane 2B: the form screens follow V1, V2, V8, V9, V10', () => {
 });
 
 describe('lane 2B: the components follow the law', () => {
-  test.each(COMPONENTS.map((f) => [rel(f), f]))('%s has no SectionLabel', (r, f) => {
-    expect({ r, label: /\bSectionLabel\b/.test(read(f)) }).toEqual({ r, label: false });
+  // Founder verdict 2026-10-08 ("one app all together", D221 addendum 3):
+  // SectionHeader now RENDERS the house SectionLabel; it is the one
+  // Community component allowed to name it, and every other goes through it.
+  test.each(COMPONENTS.map((f) => [rel(f), f]))('%s has no SectionLabel of its own (SectionHeader renders the house one)', (r, f) => {
+    const expected = path.basename(f) === 'SectionHeader.js';
+    expect({ r, label: /\bSectionLabel\b/.test(read(f)) }).toEqual({ r, label: expected });
   });
 
   test('a Card survives in components only for the hero receipt and the shared-post card', () => {

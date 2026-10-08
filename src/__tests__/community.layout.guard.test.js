@@ -125,20 +125,32 @@ describe('the founder device verdict of 2026-10-08 ("boxes touching each other, 
   test('the Hub segment bar is the house SegmentedControl inside the gutter with a foot before the first band', () => {
     const hub = code(read('src/screens/CommunityHubScreen.js'));
     expect(hub).toMatch(/<SegmentedControl\s/);
-    expect(hub).not.toMatch(/<Chip\s/);
     const bar = /segmentBar: \{[^}]*\}/.exec(hub);
     expect(bar).not.toBeNull();
     expect(bar[0]).toContain('paddingHorizontal: spacing.lg');
     expect(bar[0]).toContain('paddingBottom: spacing.md');
   });
 
-  test('the feed sort is one 48 dp glyph and the scope chips scroll under a fade, never cut against a word', () => {
+  test('the scope chips and the sort are the house Chip, the chips scrolling under a fade, never cut against a word', () => {
     const hub = code(read('src/screens/CommunityHubScreen.js'));
-    expect(hub).toMatch(/name="swap-vertical-outline"/);
+    expect(hub).toMatch(/import Chip from '\.\.\/components\/Chip'/);
+    expect(hub).toMatch(/<Chip\s[\s\S]*?icon="swap-vertical-outline"/);
     expect(hub).toMatch(/<LinearGradient[\s\S]*?style=\{styles\.filterFade\}/);
-    const sortStyle = /sortControl: \{[^}]*\}/.exec(hub);
-    expect(sortStyle[0]).toContain('width: touchTarget.minimum');
-    expect(hub).not.toMatch(/\{sortLabel\}<\/Text>/);
+    expect(hub).not.toMatch(/filterChip: \{/);
+  });
+
+  test('the Hub wears the house ScreenHeader and its sections are the house grouped container (founder verdict 2026-10-08, "one app all together")', () => {
+    const hub = code(read('src/screens/CommunityHubScreen.js'));
+    expect(hub).toMatch(/<ScreenHeader\s/);
+    expect(hub).not.toMatch(/accessibilityRole="header">\s*Community/);
+    const band = code(read('src/components/community/Band.js'));
+    expect(band).toMatch(/group: \{[^}]*marginHorizontal: spacing\.lg[^}]*borderRadius: radius\.lg[^}]*borderWidth: 1/);
+    expect(band).toMatch(/gap: \{ height: spacing\.md \}/);
+    const header = code(read('src/components/community/SectionHeader.js'));
+    expect(header).toMatch(/import SectionLabel from '\.\.\/SectionLabel'/);
+    const entry = code(read('src/components/community/EntryRow.js'));
+    expect(entry).toMatch(/const MARK = 36;/);
+    expect(entry).toMatch(/const NAV_ICON = 18;/);
   });
 
   test('the You figures inside a band are spaced tiles with two-line label room', () => {
