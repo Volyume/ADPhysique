@@ -5,8 +5,9 @@
  * `docs/community-product-audit-2026-09-07/30-IMPLEMENTATION.md` section
  * 1.3)
  *
- * The scored list behind one door: profile cards with their reasons, a
- * Follow, a Connect and, once connected, a Message.
+ * The scored list behind one door: profile cards with their reasons and a
+ * Follow (D221 L6: Follow is the row's one primary action; Connect is
+ * offered on the profile and explained once on Find people).
  *
  * REASONS, NEVER PERCENTAGES (SD-24). The server scores candidates to
  * order them; the row shows the reasons in their fixed wording and no
@@ -304,7 +305,6 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
             card={item.row.card}
             reasons={item.row.reasons}
             me={me}
-            showConnect
             onPress={() => navigation.navigate('CommunityProfile', { handle: item.row.card.handle })}
             onFollowChange={(relationship) => patch({ ...item.row.card, relationship })}
             onConnect={(card) => setConnectCard(card)}

@@ -58,6 +58,7 @@ import {
   suggestHandle, readOnboardingChoice, clearOnboardingChoice, readPendingJoin, clearPendingJoin,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 // Same debounce the food search uses, for the same reason: a live check
 // per keystroke is a request per keystroke.
@@ -74,6 +75,7 @@ export const HANDLE_UNAVAILABLE_HINT = 'Could not check that username just now. 
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   handle_taken: 'That username is taken. Try another.',
   handle_invalid: HANDLE_HINT,
   content_not_allowed: 'That wording is not allowed here. Try different words.',
@@ -673,15 +675,6 @@ export default function CommunityJoinScreen({ navigation, route }) {
             })}
         </View>
 
-        <Button
-          variant="emphatic"
-          title="Create profile"
-          disabled={!canCreate}
-          loading={busy}
-          onPress={create}
-          accessibilityLabel="Create my Community profile"
-        />
-
         <Card surface="surface2" radius="md" padding="md" style={styles.block}>
           <Text style={[styles.blockTitle, { ...t.type.captionStrong, color: t.colors.textPrimary }]}>
             Four rules
@@ -700,6 +693,15 @@ export default function CommunityJoinScreen({ navigation, route }) {
           title="Community rules and contact"
           onPress={() => navigation.navigate('CommunityRules')}
           accessibilityLabel="Read the Community rules and contact"
+        />
+
+        <Button
+          variant="emphatic"
+          title="Create profile"
+          disabled={!canCreate}
+          loading={busy}
+          onPress={create}
+          accessibilityLabel="Create my Community profile"
         />
       </ScrollView>
 

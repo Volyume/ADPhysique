@@ -60,11 +60,12 @@ import { colors, spacing, type, iconSize, circle } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
-  upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
-  COMMUNITY_SETTINGS, MAX_STYLES_PER_PROFILE, DISPLAY_NAME_MAX, BIO_MAX,
+  upsertProfile, leaveCommunity, COMMUNITY_GOALS,
+  COMMUNITY_SETTINGS, DISPLAY_NAME_MAX, BIO_MAX,
   setPlace, COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS,
   MAX_DISCIPLINES_PER_PROFILE, isValidHandle, checkHandle, HANDLE_CHANGE_DAYS,
 } from '../lib/community';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const MAX_OTHER_GYMS = 3;
 
@@ -83,6 +84,7 @@ const HANDLE_UNAVAILABLE_HINT = 'Could not check that username just now. Try aga
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   handle_taken: 'That username is taken. Try another.',
   handle_invalid: 'Use 3 to 20 letters, numbers or underscores.',
   content_not_allowed: 'That wording is not allowed here. Try different words.',
@@ -266,14 +268,6 @@ export default function CommunityEditProfileScreen({ navigation }) {
     setOtherGyms((prev) => prev.filter((g) => g.id !== id));
   }
 
-  function toggleStyle(key) {
-    setStyleKeys((prev) => {
-      if (prev.includes(key)) return prev.filter((k) => k !== key);
-      if (prev.length >= MAX_STYLES_PER_PROFILE) return prev;
-      return [...prev, key];
-    });
-  }
-
   function toggleDiscipline(key) {
     setDisciplineKeys((prev) => {
       if (prev.includes(key)) return prev.filter((k) => k !== key);
@@ -419,23 +413,6 @@ export default function CommunityEditProfileScreen({ navigation }) {
         />
 
         <View style={styles.field}>
-          <SectionLabel>Training styles</SectionLabel>
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            {`Up to ${MAX_STYLES_PER_PROFILE}.`}
-          </Text>
-          <View style={styles.chips}>
-            {Object.entries(COMMUNITY_STYLE_KEYS).map(([key, label]) => (
-              <Chip
-                key={key}
-                label={label}
-                selected={styleKeys.includes(key)}
-                onPress={() => toggleStyle(key)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
           <SectionLabel>Goal</SectionLabel>
           <View style={styles.chips}>
             {Object.entries(COMMUNITY_GOALS).map(([key, label]) => (
@@ -562,11 +539,11 @@ export default function CommunityEditProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.field}>
-          <SectionLabel>What do you train for?</SectionLabel>
+          <SectionLabel>What you train for</SectionLabel>
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Optional. Helps people like you find you.
+            Optional. Pick what fits, and people who train like you can find you.
           </Text>
-          <View style={styles.chips} accessibilityLabel="What do you train for?">
+          <View style={styles.chips} accessibilityLabel="What you train for">
             {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
               <Chip
                 key={key}

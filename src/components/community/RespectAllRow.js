@@ -30,9 +30,12 @@ import useTheme from '../../hooks/useTheme';
 import { lastRespectGivenState, recordRespectGiven, respectAll } from '../../lib/community/respect';
 import { currentUserId } from '../../lib/community/profile';
 import { todayLocalKey } from '../../lib/dayKey';
+import { respectFailureLine } from '../../lib/community/restriction';
+import { useToast } from '../Toast';
 
 export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday, style }) {
   const t = useTheme();
+  const toast = useToast();
   // F14 fix: the device record is scoped by account id, so a second
   // person signing in on the same device never inherits (or overwrites)
   // this one's "already given today" state for the same scope.
@@ -42,6 +45,9 @@ export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday,
   // "given today or not" -- see `given` below (F20 fix).
   const [lastGiven, setLastGiven] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Optimistic (D221 L3): the row reads as given the moment it is tapped
+  // and reverts, with a calm toast, when the server did not take it.
+  const [optimistic, setOptimistic] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -62,19 +68,22 @@ export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday,
   // already-given on the next render (pull-to-refresh, navigating back,
   // any parent re-render), only a stale local clock ever thought so.
   const given = lastGiven && lastGiven.day === todayLocalKey() ? (Number(lastGiven.given) || 0) : null;
-  const disabled = given != null || busy;
+  const disabled = given != null || busy || optimistic;
 
   async function press() {
     if (disabled) return;
     setBusy(true);
+    setOptimistic(true);
     try {
       const out = await respectAll({ scope, scopeKey });
       const day = todayLocalKey();
       await recordRespectGiven(scope, scopeKey, day, out.given, uid);
       setLastGiven({ day, given: out.given });
-    } catch (_e) {
-      // A failed bulk Respect is not worth interrupting anyone for: the
-      // row simply stays enabled to try again.
+      setOptimistic(false);
+    } catch (e) {
+      // Revert and say so calmly: the row is enabled again.
+      setOptimistic(false);
+      toast.show(respectFailureLine(e?.code), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -82,7 +91,7 @@ export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday,
 
   const label = given != null
     ? `Respect given to ${given} ${given === 1 ? 'person' : 'people'}`
-    : (busy ? 'Sending respect' : 'Respect everyone who trained today');
+    : (optimistic ? 'Respect given' : 'Respect everyone who trained today');
 
   return (
     <Pressable
@@ -93,7 +102,7 @@ export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday,
       accessibilityState={{ disabled }}
       accessibilityLabel={label}
     >
-      <Text style={[styles.label, { ...t.type.label, color: given != null ? t.colors.textMuted : t.colors.textSecondary }]}>
+      <Text style={[styles.label, { ...t.type.label, color: (given != null || optimistic) ? t.colors.textMuted : t.colors.textSecondary }]}>
         {label}
       </Text>
     </Pressable>

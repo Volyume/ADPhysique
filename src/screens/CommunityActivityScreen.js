@@ -2,8 +2,8 @@
  * CommunityActivityScreen (blueprint sections 6, 7; SD-15)
  *
  * The in-app record of everything that happened to you in Community.
- * A push is an extra, never the record: a follow, reaction, comment or
- * programme use lands here whether or not the server was allowed to send
+ * A push is an extra, never the record: a follow, reaction or comment
+ * lands here whether or not the server was allowed to send
  * a notification (an open wellbeing check, a disabled category, quiet
  * hours).
  *
@@ -267,7 +267,7 @@ export default function CommunityActivityScreen({ navigation }) {
       title="Quiet for now"
       text="Follows, reactions and comments on your posts appear here."
       actionLabel="Find people"
-      onAction={() => navigation.navigate('CommunitySearch')}
+      onAction={() => navigation.navigate('CommunityFindPeople')}
       actionAccessibilityLabel="Find people to follow"
     />
   );

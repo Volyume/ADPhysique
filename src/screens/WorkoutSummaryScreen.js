@@ -899,7 +899,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       // decision to show -- that also needs the device-recorded seen
       // flag and a Community profile, both read async in their own
       // effect below.
-      setShareOfferEligible(totalCompleted === 1 && !suppressed);
+      // L20 (D221): the very first summary shows the share strip only;
+      // this day-level offer comes from the second completed session on
+      // (still once only, via the device-recorded seen flag).
+      setShareOfferEligible(totalCompleted >= 2 && !suppressed);
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
@@ -1392,7 +1395,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (autoSessionPost) {
       return {
         title: 'Shared to Community',
-        sub: 'People who train like you can see this session.',
+        sub: 'Your sessions are shared with everyone on Community unless you change it.',
         action: {
           title: 'Add a note',
           a11y: 'Add a note to this session',
@@ -1441,8 +1444,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       };
     }
     return {
-      title: 'People who train like you would see this one',
-      sub: 'Post it now, or share every session as you finish it.',
+      title: 'Only you can see this session',
+      sub: 'Off: only you see your sessions. Post this one now, or share every session as you finish it.',
       action: {
         title: 'Post this session',
         a11y: 'Post this session to Community',

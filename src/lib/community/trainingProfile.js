@@ -179,6 +179,23 @@ export const SESSIONS_AUDIENCE_LABELS = Object.freeze({
 // this young. "Everyone" is the default for an adult; a minor is clamped
 // to followers on the Join screen, in `ambient.js` and by the server.
 export const DEFAULT_SESSIONS_AUDIENCE = 'everyone';
+
+/**
+ * L5 (D221 spec 2.6): one truthful sentence naming the real audience of
+ * "Share what I did", used by the sharing row, the Privacy row and the
+ * session summary. The default (on, everyone) reads exactly as the spec
+ * words it; a narrower audience names itself.
+ *
+ * @param {boolean} on
+ * @param {string} [audience] one of SESSIONS_AUDIENCE_VALUES
+ * @returns {string}
+ */
+export function sessionsSharingSentence(on, audience = DEFAULT_SESSIONS_AUDIENCE) {
+  if (!on) return 'Off: only you see your sessions.';
+  if (audience === 'followers') return 'Your sessions are shared with people who follow you.';
+  if (audience === 'groups') return 'Your sessions are shared with your groups.';
+  return 'Your sessions are shared with everyone on Community unless you change it.';
+}
 /** Where a STORED value is present but not in the closed set, the reader
  * fails closed to the narrowest audience rather than to the default: a
  * corrupt value must never widen who sees a session. */

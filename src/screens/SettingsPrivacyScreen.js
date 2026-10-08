@@ -162,7 +162,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
           icon="shield-checkmark-outline"
           label={healthConsent === true ? 'Delete account and withdraw consent' : 'Health-data consent'}
           sub={healthConsent === true
-            ? 'Destructive action. This withdraws health-data consent and permanently deletes your Volyume account, cloud data and local data.'
+            ? 'Destructive action. This withdraws health-data consent and permanently deletes your Volyume account, cloud data (including your Community profile and posts) and local data.'
             : healthConsent === false
               ? 'Withdrawn. Account deletion is in progress or complete.'
               : 'Not recorded yet.'}

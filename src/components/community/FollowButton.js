@@ -21,6 +21,7 @@ import { useState } from 'react';
 import Button from '../Button';
 import { useToast } from '../Toast';
 import { follow, unfollow } from '../../lib/community';
+import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
 /** The label and variant for one relationship state. */
 export function followState(relationship) {
@@ -40,6 +41,7 @@ export function followState(relationship) {
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   blocked: 'You cannot follow this person.',
   rate_limited: 'That is a lot of follows for one day. Try again tomorrow.',
   not_found: 'This profile is no longer available.',

@@ -373,6 +373,8 @@ export default function HomeScreen({ navigation, route }) {
   // needs (handle, gymLabel), same fields the Hub's own invite reads.
   const [communityRowVisible, setCommunityRowVisible] = useState(false);
   const [communityFriendsCount, setCommunityFriendsCount] = useState(null);
+  // L10 (D221): true only when the cached own profile says following 0.
+  const [communityFollowingNone, setCommunityFollowingNone] = useState(false);
   const [communityInviteProfile, setCommunityInviteProfile] = useState(null);
   const [hytNothingSetUp, setHytNothingSetUp] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
@@ -751,6 +753,7 @@ export default function HomeScreen({ navigation, route }) {
       if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setCommunityRowVisible(false); return; }
 
       setCommunityInviteProfile({ handle: me?.profile?.handle ?? null, gymLabel: me?.profile?.gym_label ?? null });
+      setCommunityFollowingNone(me?.profile?.following_count != null && Number(me.profile.following_count) === 0);
 
       // F1 fix (fresh-eyes review, founder order 2026-09-22 item 2): the
       // row's visibility now depends on having a SAME-DAY count, cached
@@ -2595,6 +2598,11 @@ export default function HomeScreen({ navigation, route }) {
         {!initialLoading && communityRowVisible && (
           <HomeCommunityTodayRow
             count={communityFriendsCount}
+            followingNone={communityFollowingNone}
+            onFindPeople={() => {
+              haptics.selection();
+              navigateCrossTab(navigation, 'CommunityTab', 'Community', { segment: 'people' });
+            }}
             gymLabel={communityInviteProfile?.gymLabel}
             onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
             onInvite={() => {

@@ -155,3 +155,22 @@ describe('session suggestion tile', () => {
     expect(texts(tree)).toContain('Not this time');
   });
 });
+
+// L18 (D221): the long-press action is also on a visible "...".
+describe('the visible message options affordance', () => {
+  test('a message with an action shows a "..." button that runs the same action', () => {
+    const onLongPress = jest.fn();
+    const tree = render({ message: { id: 'm1', mine: false, body: 'Hi' }, onLongPress });
+    const more = find(tree, (n) => n.props?.accessibilityLabel === 'Message options: report');
+    expect(more).toHaveLength(1);
+    act(() => { more[0].props.onPress(); });
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+  });
+
+  test('your own message says delete, and a message with no action shows no "..."', () => {
+    const mine = render({ message: { id: 'm2', mine: true, body: 'Hi' }, onLongPress: jest.fn() });
+    expect(find(mine, (n) => n.props?.accessibilityLabel === 'Message options: delete')).toHaveLength(1);
+    const none = render({ message: { id: 'm3', mine: false, body: 'Hi' } });
+    expect(find(none, (n) => /Message options/.test(n.props?.accessibilityLabel ?? ''))).toHaveLength(0);
+  });
+});

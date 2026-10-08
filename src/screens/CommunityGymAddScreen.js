@@ -31,6 +31,7 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import { submit, isFullPostcode, normalisePostcode } from '../lib/gyms';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const NAME_MAX = 80;
 const ADDRESS_MAX = 120;
@@ -40,6 +41,7 @@ const OPERATOR_MAX = 60;
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   rate_limited: 'That is a lot of new gyms for one day. Try again tomorrow.',
   invalid_postcode: 'Check the postcode, then try again.',
   invalid: 'Check what you have typed, then try again.',
@@ -183,11 +185,11 @@ export default function CommunityGymAddScreen({ navigation, route }) {
               accessibilityLabel="Website"
             />
             <TextField
-              label="Operator (optional)"
+              label="Gym company (optional)"
               size="sm"
               value={operator}
               onChangeText={(v) => setOperator(v.slice(0, OPERATOR_MAX))}
-              accessibilityLabel="Operator"
+              accessibilityLabel="Gym company"
             />
 
             <Button

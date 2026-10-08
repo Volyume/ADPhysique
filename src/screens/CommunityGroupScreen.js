@@ -38,6 +38,7 @@ import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import GroupInviteSheet from '../components/community/GroupInviteSheet';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, radius, hitSlop } from '../styles/theme';
@@ -46,11 +47,13 @@ import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
   loadBoard, metricLabel, togetherLine, acceptGroupInvite,
 } from '../lib/community';
+import { RESTRICTION_REFUSALS, respectFailureLine } from '../lib/community/restriction';
 
 const PAGE = 20;
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   minor_restricted: 'Groups are not available under 18.',
   already_member: 'You are already in this group.',
   group_closed: 'This group is closed.',
@@ -153,9 +156,12 @@ export default function CommunityGroupScreen({ navigation, route }) {
       : r)));
     try {
       await reactToPost(item.post.id, on, item.author?.user_id);
-    } catch (_e) {
-      // A reaction that did not land is not worth interrupting for; the
-      // next refresh shows the truth.
+    } catch (e) {
+      // Revert with a calm toast (D221 L3).
+      setFeedRows((prev) => prev.map((r) => (r.post.id === item.post.id
+        ? { ...r, myReaction: !on, post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (on ? -1 : 1)) } }
+        : r)));
+      toast.show(respectFailureLine(e?.code), { variant: 'error' });
     }
   }
 
@@ -238,6 +244,24 @@ export default function CommunityGroupScreen({ navigation, route }) {
     }
   }
 
+  // L9 (D221): Leave and Close confirm with the house sheet. Leaving or
+  // closing never touches anyone's training data, and the copy says so.
+  function confirmLeave() {
+    setMenuOpen(false);
+    appAlert('Leave this group?', 'You stop seeing its posts. Your training is untouched, and you can join again if it is open.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Leave group', style: 'destructive', onPress: doLeave },
+    ]);
+  }
+
+  function confirmClose() {
+    setMenuOpen(false);
+    appAlert('Close this group?', 'It closes for everyone in it. Nobody loses their training or their own posts.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Close group', style: 'destructive', onPress: doClose },
+    ]);
+  }
+
   async function doLeave() {
     setMenuOpen(false);
     try {
@@ -311,11 +335,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
       },
     }, {
       icon: 'person-add-outline',
-      label: 'Invite by username',
-      onPress: () => { setMenuOpen(false); setInviteOpen(true); },
-    }, {
-      icon: 'share-outline',
-      label: 'Share invite link',
+      label: 'Invite people',
       onPress: () => { setMenuOpen(false); setInviteOpen(true); },
     }] : []),
     {
@@ -335,13 +355,13 @@ export default function CommunityGroupScreen({ navigation, route }) {
       icon: 'lock-closed-outline',
       label: 'Close group',
       tone: 'destructive',
-      onPress: doClose,
+      onPress: confirmClose,
     }] : []),
     {
       icon: 'exit-outline',
       label: 'Leave group',
       tone: 'destructive',
-      onPress: doLeave,
+      onPress: confirmLeave,
     },
   ];
 
@@ -367,7 +387,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
     // and a paragraph. The Hub and Profile say their own emptiness in one
     // quiet line; this group's own feed now does the same (blueprint
     // section 9 rule 9: one line, one action, never a paragraph -- the one
-    // action here is the "Share a workout with the group" door already at
+    // action here is the "Share your latest workout with the group" door already at
     // the top of ACTIVITY, so no button belongs on this line). The offline
     // and failed branch above keeps the full EmptyState: it carries a
     // retry, and an error is not an empty section.
@@ -484,6 +504,21 @@ export default function CommunityGroupScreen({ navigation, route }) {
                       onPress={() => openProfile(row.card)}
                     />
                   ))}
+                  {/* L9 (D221): the invite door is a visible row for an
+                      admin, so it is found on the page the group is
+                      created on and never only inside the menu. */}
+                  {isAdmin ? (
+                    <Pressable
+                      onPress={() => setInviteOpen(true)}
+                      style={styles.tertiaryRow}
+                      accessibilityRole="button"
+                      accessibilityLabel="Invite people to this group"
+                    >
+                      <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
+                        Invite people
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   {/* Phase 3 (spec section 5): "Respect everyone who
                       trained today", foot of the roster. */}
                   <RespectAllRow
@@ -498,10 +533,10 @@ export default function CommunityGroupScreen({ navigation, route }) {
                     disabled={sharingWorkout}
                     style={styles.tertiaryRow}
                     accessibilityRole="button"
-                    accessibilityLabel="Share a workout with the group"
+                    accessibilityLabel="Share your latest workout with the group"
                   >
                     <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-                      Share a workout with the group
+                      Share your latest workout with the group
                     </Text>
                   </Pressable>
                 </>
@@ -574,7 +609,7 @@ const styles = StyleSheet.create({
     height: radius.hair, borderRadius: radius.hair, overflow: 'hidden', backgroundColor: colors.primaryBg,
   },
   togetherFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
-  // Phase 3: "Share a workout with the group", top of ACTIVITY.
+  // Phase 3: "Share your latest workout with the group", top of ACTIVITY.
   tertiaryRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
   tertiaryLabel: { ...type.label, color: colors.textSecondary },
 });

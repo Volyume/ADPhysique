@@ -3,7 +3,7 @@
  * `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` sections 4,
  * 5 and 9; SD-23, SD-24, SD-28)
  *
- * Five doors and a search field. At my gym, near me, train like me,
+ * Six doors and a search field. At my gym, near me, train like me,
  * open to training together, people you might know.
  *
  * Every door is honest (SD-28). One that can work says how many are
@@ -42,7 +42,7 @@ const GLYPH = {
   gym: 'business-outline',
   area: 'location-outline',
   like_me: 'barbell-outline',
-  // Task 8: same ribbon DimensionRow.js uses for a discipline cohort.
+  // Task 8: same ribbon the discipline cohort rows use.
   same_discipline: 'ribbon-outline',
   partners: 'people-outline',
   might_know: 'git-network-outline',
@@ -98,8 +98,8 @@ function doorTitle(door) {
 /**
  * One door, as the house flat row (founder defect 2026-09-14, lead ruling
  * CR-17; `20-BLUEPRINT.md` section 9 rules 2 and 3). It used to be a
- * `Card` with its glyph in a 36 dp `circle()` chip, so five doors read as
- * five boxes on the one screen whose whole job is to hand you on to flat
+ * `Card` with its glyph in a 36 dp `circle()` chip, so six doors read as
+ * six boxes on the one screen whose whole job is to hand you on to flat
  * lists of people. The glyph keeps its meaning at `iconSize.md` in
  * `textMuted`; the circle behind it was decoration, and decoration is
  * what reads as generic. No gutter of its own: the list already pays
@@ -142,6 +142,10 @@ function DoorRow({ door, count, onPress }) {
     </PressableCard>
   );
 }
+
+/** L6 (D221): Follow and Connect, explained once, here. */
+export const FOLLOW_CONNECT_EXPLAINER =
+  'Follow to see their training. Connect to message each other.';
 
 export default function CommunityFindPeopleScreen({ navigation }) {
   const t = useTheme();
@@ -215,11 +219,11 @@ export default function CommunityFindPeopleScreen({ navigation }) {
   // (`lineFor` already answers a still-loading count with the door's
   // plain subtitle, never a blank or a spinner -- SD-28), so the only
   // true first-load gap is not yet knowing whether a profile exists at
-  // all. Five rows, the true row shape (`docs/rules/styling.md`,
+  // all. Six rows, the true row shape (`docs/rules/styling.md`,
   // "Loading states").
   const empty = meLoading ? (
     <View style={styles.skeletonStack}>
-      {[0, 1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
+      {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
     </View>
   ) : (
     <EmptyState
@@ -247,9 +251,14 @@ export default function CommunityFindPeopleScreen({ navigation }) {
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
+        ListFooterComponent={joined ? (
+          <Text style={[styles.explain, { color: t.colors.textMuted }]}>
+            {FOLLOW_CONNECT_EXPLAINER}
+          </Text>
+        ) : null}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
-        onEndReached={() => { /* five doors; there is no second page */ }}
+        onEndReached={() => { /* six doors; there is no second page */ }}
         refreshControl={(
           <RefreshControl
             refreshing={refreshing}
@@ -277,5 +286,6 @@ const styles = StyleSheet.create({
   doorBody: { flex: 1, gap: spacing.xxs },
   doorLabel: { ...type.bodyStrong, color: colors.textPrimary },
   doorLine: { ...type.bodySm, color: colors.textSecondary },
+  explain: { ...type.caption, color: colors.textMuted, marginTop: spacing.lg },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

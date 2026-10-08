@@ -26,9 +26,11 @@ import { useToast } from '../Toast';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { inviteToGroup, createGroupInviteLink, groupInviteUrl } from '../../lib/community';
+import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   not_found: 'No one with that username was found.',
   already_member: 'They are already in this group.',
   minor_restricted: 'That person is under 18 and cannot join groups.',

@@ -25,6 +25,7 @@ export {
 } from './validation';
 
 export { BLOCKED_TERMS, foldText, containsBlockedTerm, blockedTermsIn } from './keywordFilter';
+export { COMMUNITY_RESTRICTED_LINE, RESTRICTION_REFUSALS, restrictionLine, respectFailureLine } from './restriction';
 
 export {
   COMMUNITY_RULES_VERSION, COMMUNITY_DIMENSION_MIN_FOR_HUB, NEW_ACCOUNT_DAYS,
@@ -106,7 +107,7 @@ export {
   TP_DEFAULT_SHARE, TP_SHARE_KEYS, TP_WINDOW_WEEKS, TP_MAX_STAPLE_LIFTS,
   TP_MAX_TIME_BANDS, TP_DAY_SHARE, TP_DAY_MIN_SESSIONS, TP_TIME_BAND_SHARE,
   TP_SHARE_PREFIX, TP_SYNCED_PREFIX, TP_SYNC_INTERVAL_MS,
-  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS, DEFAULT_SESSIONS_AUDIENCE,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS, DEFAULT_SESSIONS_AUDIENCE, sessionsSharingSentence,
   tpShareKey, tpSyncedKey, timeBandForHour, experienceBand, sessionsBandFor,
   deriveTrainingProfile, dayListLabel, timeBandsLabel, previewLine,
   readShareSettings, writeShareSettings, shareablePayload,

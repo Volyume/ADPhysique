@@ -75,7 +75,6 @@ export function emptyMe() {
     tp_sessions_band: null,
     tp_staple_lifts: null,
     tp_experience_band: null,
-    tp_programme_key: null,
     tp_age_band: null,
   };
 }

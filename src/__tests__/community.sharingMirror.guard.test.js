@@ -43,8 +43,10 @@ describe('the profile refresh mirrors the row', () => {
 });
 
 describe('a sharing change is owed from before its publish', () => {
-  const SCREEN = read('screens/CommunityTrainingProfileScreen.js');
-  const fn = SCREEN.slice(SCREEN.indexOf('async function saveSharing('), SCREEN.indexOf('function toggleShareSessions('));
+  // L17 (D221): the save moved, unchanged, into the one setter that the
+  // Training profile row and the Privacy screen's mirrored row share.
+  const SCREEN = read('lib/community/shareSessions.js');
+  const fn = SCREEN.slice(SCREEN.indexOf('export async function saveShareSessions('), SCREEN.indexOf('export { readShareSettings }'));
 
   test('pending is set after the device write and before the publish call', () => {
     const write = fn.indexOf('await writeShareSettings(uid, clamped);');

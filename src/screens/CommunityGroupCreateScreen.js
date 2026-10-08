@@ -33,11 +33,13 @@ import {
   createGroup, updateGroup, GROUP_NAME_MAX, GROUP_BLURB_MAX, GROUP_ACCESS, GROUP_ACCESS_ORDER,
   GROUP_PURPOSE_LINE,
 } from '../lib/community';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   minor_restricted: 'Groups are not available under 18.',
-  invalid_input: 'Check the name and blurb, then try again.',
+  invalid_input: 'Check the name and the About line, then try again.',
   rate_limited: 'That is a lot of new groups for one hour. Try again later.',
   not_found: 'This group is no longer available.',
   not_admin: 'Only an admin can edit this group.',
@@ -102,12 +104,12 @@ export default function CommunityGroupCreateScreen({ navigation, route }) {
         </Text>
 
         <TextField
-          label="Blurb (optional)"
+          label="About this group (optional)"
           value={blurb}
           onChangeText={(v) => setBlurb(v.slice(0, GROUP_BLURB_MAX))}
           placeholder="What is this group about?"
           multiline
-          accessibilityLabel="Group blurb"
+          accessibilityLabel="About this group"
         />
         <Text style={[styles.counter, { ...t.type.caption, color: t.colors.textMuted }]}>
           {`${blurb.length}/${GROUP_BLURB_MAX}`}

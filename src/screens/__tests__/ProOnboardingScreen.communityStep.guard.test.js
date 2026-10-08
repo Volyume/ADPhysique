@@ -49,7 +49,7 @@ describe('the wizard has the step, in its place', () => {
     expect(SRC).toMatch(/const TOTAL_STEPS = 8;/);
     expect(SRC).toMatch(/const STEP_LABELS = \['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'\];/);
     expect(STEP5.length).toBeGreaterThan(0);
-    expect(STEP5).toMatch(/title="Where do you train\?"/);
+    expect(STEP5).toMatch(/title="Where you train, and Community"/);
   });
 
   test('Training week advances into it and it advances into Injuries', () => {

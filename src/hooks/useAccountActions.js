@@ -165,7 +165,7 @@ export default function useAccountActions() {
       'Delete account?',
       user?.isLocal
         ? 'This permanently deletes your local data on this device. Local accounts have no cloud backup. This cannot be undone.'
-        : 'This permanently deletes your account and all your training data across every device. This cannot be undone.',
+        : 'This permanently deletes your account and all your training data across every device, including your Community profile and posts. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

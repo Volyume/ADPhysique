@@ -39,7 +39,9 @@ import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
   hasProfile, setConnectFrom, CONNECT_FROM_VALUES, setShowGym, setShowPlace,
+  readShareSettings, sessionsSharingSentence,
 } from '../lib/community';
+import { saveShareSessions, SHARE_OFF_TITLE, SHARE_OFF_BODY } from '../lib/community/shareSessions';
 
 const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
   .map(([value, label]) => ({ label, value }));
@@ -58,6 +60,11 @@ export default function CommunityPrivacyScreen({ navigation }) {
   // profile read before the first `me` refresh never flashes "hidden".
   const [showGym, setShowGymLocal] = useState(true);
   const [showPlace, setShowPlaceLocal] = useState(true);
+  // L17 (D221): "Share what I did", mirrored here from the Training
+  // profile and saved through the same setter (`saveShareSessions`).
+  const [share, setShare] = useState(null);
+  const uid = profile?.user_id ?? null;
+  const isMinor = !!me?.is_minor;
   const [lists, setLists] = useState({ blocked: [], muted: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -77,6 +84,49 @@ export default function CommunityPrivacyScreen({ navigation }) {
   useEffect(() => {
     if (profile?.show_place != null) setShowPlaceLocal(!!profile.show_place);
   }, [profile?.show_place]);
+
+  useEffect(() => {
+    if (!uid) return undefined;
+    let alive = true;
+    readShareSettings(uid).then((v) => { if (alive) setShare(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, [uid]);
+
+  async function saveShareSessionsChange(next, { removeShared = false } = {}) {
+    if (!share) return;
+    const prev = share;
+    setShare(next);
+    try {
+      const out = await saveShareSessions(uid, prev, next, { removeShared, isMinor });
+      setShare(out.settings);
+      if (out.status === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else if (out.status === 'queued') {
+        toast.show(out.settings.share_sessions
+          ? 'Saved on this device. It will share when you are back online.'
+          : 'Saved on this device. It will apply when you are back online.');
+      }
+    } catch (_e) {
+      setShare(prev);
+      toast.show('Could not change that just now.', { variant: 'error' });
+    }
+  }
+
+  function toggleShareSessions(on) {
+    if (!share) return;
+    if (!on) {
+      appAlert(SHARE_OFF_TITLE, SHARE_OFF_BODY, [
+        { text: 'Keep', onPress: () => saveShareSessionsChange({ ...share, share_sessions: false }) },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => saveShareSessionsChange({ ...share, share_sessions: false }, { removeShared: true }),
+        },
+      ]);
+      return;
+    }
+    saveShareSessionsChange({ ...share, share_sessions: true });
+  }
 
   const load = useCallback(async () => {
     if (!joined) { setLoading(false); return; }
@@ -307,6 +357,23 @@ export default function CommunityPrivacyScreen({ navigation }) {
             </View>
 
             <View style={[settingsStyles.section, settings.section]}>
+              {share ? (
+                <SettingRow
+                  icon="share-social-outline"
+                  label="Share what I did"
+                  sub={sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)}
+                  rightElement={(
+                    <Switch
+                      value={!!share.share_sessions}
+                      onValueChange={toggleShareSessions}
+                      accessibilityLabel="Share what I did"
+                      trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                      thumbColor={t.colors.primary}
+                      ios_backgroundColor={t.colors.surface2}
+                    />
+                  )}
+                />
+              ) : null}
               <SettingRow
                 icon="body-outline"
                 label="Training profile"

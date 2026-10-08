@@ -330,8 +330,8 @@ describe('the once-only offer (source-pinned on WorkoutSummaryScreen.js, matchin
     expect(recordCount).toBeGreaterThanOrEqual(2);
   });
 
-  test('the offer is only eligible after the first completed workout ever, and never under calm/ED suppression', () => {
-    expect(SOURCE).toMatch(/setShareOfferEligible\(totalCompleted === 1 && !suppressed\)/);
+  test('the offer is only eligible from the second completed workout on (L20: the first summary shows the share strip only), and never under calm/ED suppression', () => {
+    expect(SOURCE).toMatch(/setShareOfferEligible\(totalCompleted >= 2 && !suppressed\)/);
   });
 
   // Lead ruling (safety verdict R3): the offer turns on "Share my
@@ -402,10 +402,15 @@ describe('F4: a pending sharing-settings publish is retried from the Hub foregro
   test('source: CommunityTrainingProfileScreen.js sets/clears the pending flag through the lib, never touches AsyncStorage itself', () => {
     const screen = fs.readFileSync(path.join(__dirname, '../screens/CommunityTrainingProfileScreen.js'), 'utf8');
     expect(screen).not.toMatch(/AsyncStorage/);
-    expect(screen).toMatch(/setSharingPublishPending\(uid, false\)/);
+    // L17 (D221): the save moved, unchanged, into the one setter both the
+    // Training profile row and the Privacy row use (shareSessions.js).
+    expect(screen).toMatch(/saveShareSessions\(uid, prevSettings, nextSettings/);
+    const lib = fs.readFileSync(path.join(__dirname, '../lib/community/shareSessions.js'), 'utf8');
+    expect(lib).not.toMatch(/AsyncStorage/);
+    expect(lib).toMatch(/setSharingPublishPending\(uid, false\)/);
     // Lead review 2026-09-11: the pending flag carries the removal intent,
     // so a failed "remove what I already shared" retries the removal too.
-    expect(screen).toMatch(/setSharingPublishPending\(uid, true, \{ removeShared \}\)/);
+    expect(lib).toMatch(/setSharingPublishPending\(uid, true, \{ removeShared \}\)/);
   });
 
   test('source: the off path\'s toast reads "will apply", never "will share"', () => {

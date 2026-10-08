@@ -34,7 +34,7 @@
 export const COMMUNITY_RULES_VERSION = 3;
 
 /**
- * SD-10: a dimension (style, programme, gym, area) is surfaced on the
+ * SD-10: a dimension (style, gym, area) is surfaced on the
  * Discover hub only once at least this many OTHER people share it. An
  * internal choice with no external evidence behind it, recorded as such
  * so nobody later reads it as research. Below the threshold the
@@ -69,7 +69,7 @@ export const PROFILE_UPSERTS_PER_DAY = 5;
  * place, and the person who followed you deserves the name to hold. */
 export const HANDLE_CHANGE_DAYS = 30;
 
-/** A post, comment or programme reaching this many distinct open reports
+/** A post or comment reaching this many distinct open reports
  * hides itself pending review. Automatic first line, never the last
  * word: a moderator can unhide. */
 export const AUTO_HIDE_REPORTS = 3;
