@@ -38,6 +38,8 @@ import useTheme from '../../hooks/useTheme';
 import { spacing, type, colors, radius } from '../../styles/theme';
 
 const BAR_MAX_HEIGHT = 24;
+// Inside a Community band (visual law V11) the bars stand 32 dp tall.
+const BAND_BAR_MAX_HEIGHT = 32;
 // A zero week is a real week with nothing in it, so it draws as a visible
 // floor rather than a hairline nobody can see (founder defect 2026-09-14).
 const BAR_MIN_HEIGHT = 2;
@@ -54,22 +56,23 @@ function Cell({ t, value, label, isLast, lead }) {
   );
 }
 
-function WeeksHistoryBars({ t, history }) {
+function WeeksHistoryBars({ t, history, band }) {
   if (!Array.isArray(history) || history.length === 0) return null;
   const values = history.map((v) => (Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0));
   const max = Math.max(0, ...values);
+  const barMax = band ? BAND_BAR_MAX_HEIGHT : BAR_MAX_HEIGHT;
   return (
     <View
-      style={[styles.footer, { borderTopColor: t.colors.borderSubtle }]}
+      style={[styles.footer, band && styles.footerBand, { borderTopColor: t.colors.borderSubtle }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
       <Text style={[styles.footerLabel, { ...t.type.caption, color: t.colors.textMuted }]}>
         Last 8 weeks
       </Text>
-      <View style={styles.barsRow}>
+      <View style={[styles.barsRow, band && styles.barsRowBand]}>
         {values.map((v, i) => {
-          const height = max > 0 ? Math.max(BAR_MIN_HEIGHT, Math.round((v / max) * BAR_MAX_HEIGHT)) : BAR_MIN_HEIGHT;
+          const height = max > 0 ? Math.max(BAR_MIN_HEIGHT, Math.round((v / max) * barMax)) : BAR_MIN_HEIGHT;
           return (
             // eslint-disable-next-line react/no-array-index-key -- fixed-length, order-stable history, no id of its own
             <View key={i} style={styles.barCol}>
@@ -82,7 +85,7 @@ function WeeksHistoryBars({ t, history }) {
   );
 }
 
-export default function ProgressStrip({ counters, onPress }) {
+export default function ProgressStrip({ counters, onPress, band = false }) {
   const t = useTheme();
   if (!counters) return null;
   const sessions = Number(counters.c_sessions_week) || 0;
@@ -110,7 +113,7 @@ export default function ProgressStrip({ counters, onPress }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.strip, { backgroundColor: t.colors.surface2 }]}
+      style={band ? null : [styles.strip, { backgroundColor: t.colors.surface2 }]}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${sessions} sessions this week, ${streak} weeks in a row, ${consistent} consistent weeks in the last 12${prsClause}${historyClause}.${suffix}`}
     >
@@ -122,7 +125,7 @@ export default function ProgressStrip({ counters, onPress }) {
           <Cell t={t} value={prs} label={prs === 1 ? 'PR in 4 weeks' : 'PRs in 4 weeks'} isLast />
         ) : null}
       </View>
-      <WeeksHistoryBars t={t} history={counters.c_weeks_history} />
+      <WeeksHistoryBars t={t} history={counters.c_weeks_history} band={band} />
     </Pressable>
   );
 }
@@ -155,6 +158,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     height: BAR_MAX_HEIGHT,
   },
+  footerBand: { paddingHorizontal: spacing.lg },
+  barsRowBand: { height: BAND_BAR_MAX_HEIGHT },
   barCol: { flex: 1, justifyContent: 'flex-end' },
   bar: { alignSelf: 'stretch', borderRadius: radius.hair },
 });

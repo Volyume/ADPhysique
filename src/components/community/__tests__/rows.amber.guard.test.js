@@ -112,14 +112,12 @@ const AMBER_COUNTS = [
   ['ConnectRequestRow.js', 0],
   ['ConnectSheet.js', 0],
   ['ConversationRow.js', 1], // the unread dot fill
-  ['DimensionRow.js', 0],
   ['FollowButton.js', 0],
   ['GroupInviteSheet.js', 0],
   ['GymDetailSheet.js', 0],
   ['GymPicker.js', 0],
   ['GymRow.js', 0],
   ['GymSummary.js', 0],
-  ['GymWeekBoard.js', 3], // the "See all" link text colour (live + its StyleSheet baseline) and the trained-today ring dot fill
   ['JoinToInteractRow.js', 0],
   ['MenuSheet.js', 0],
   ['MessageBubble.js', 1], // ComposerInput link colour passed to LinkedBody
@@ -127,11 +125,14 @@ const AMBER_COUNTS = [
   ['PeopleFiltersSheet.js', 2], // a Switch's track (at half alpha) and thumb colours
   ['PlacePicker.js', 0],
   ['PostCard.js', 0],
+  ['PostRow.js', 4], // the ring dot fill, the PR mark's fill and ink, the given-Respect heart
   ['PrivacyReceipt.js', 1], // the shield-checkmark icon colour
   ['ProfileCard.js', 0],
   ['ProfileMenuSheet.js', 0],
   ['ProgressStrip.js', 1], // the tallest of the eight weekly-history bars
   ['ReportSheet.js', 0],
+  ['SectionHeader.js', 0], // D221 V2: no amber in a section header
+  ['SkeletonPostRow.js', 0], // a placeholder carries no colour of its own
   ['SessionSheet.js', 0],
   // A placeholder in the shape of a PersonRow; it borrows the shared
   // Skeleton's own tint and carries no colour, so no amber (2026-09-14).

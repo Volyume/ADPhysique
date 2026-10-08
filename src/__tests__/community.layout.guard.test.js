@@ -49,6 +49,9 @@ describe('one gutter, paid once by the page', () => {
     const listers = screens.filter((f) => /PersonRow|CohortRow|GroupRow|ActivityItemRow|SkeletonPersonRow/.test(read(`src/screens/${f}`)));
     expect(listers.length).toBeGreaterThan(3);
     for (const f of listers) {
+      // D221 ruling 7 / law V1: inside the Hub the bands own the gutter (each
+      // row carries its own inline padding), superseding D163 rule 1 here.
+      if (f === 'CommunityHubScreen.js') continue;
       const src = read(`src/screens/${f}`);
       expect({ f, gutter: /(list|content): \{[^}]*padding(?:Horizontal)?: spacing\.lg/.test(src) })
         .toEqual({ f, gutter: true });
@@ -142,7 +145,8 @@ describe('a section with nothing in it is one quiet line, not a poster', () => {
     const hub = read('src/screens/CommunityHubScreen.js');
     // F11 (Opus adversarial review, founder order 2026-09-22 item 5):
     // re-anchored copy naming the action beneath it.
-    expect(hub).toContain('Follow people to see their training, or say hello.');
+    // D221 2.3: the per-scope empty lines replace it.
+    expect(hub).toContain('Follow a few people to fill this feed');
     expect(hub).not.toContain('title="Nothing here yet"');
     // The error and offline states keep the shared box: they carry a retry.
     expect(hub).toContain('Could not load Community');

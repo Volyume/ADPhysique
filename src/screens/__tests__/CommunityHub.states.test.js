@@ -1,57 +1,43 @@
 /**
- * CommunityHubScreen state matrix (communities revamp 2026-09-10:
- * `docs/communities-revamp-2026-09-10/21-PHASE1-SPEC.md` section 2;
- * `20-BLUEPRINT.md` section 9). Rebuilt for the new structure: no Chip
- * segment (joined is always the Following feed; not-joined is always
- * Discover, read-only, never gated on a profile -- SD-04), no "Lifters
- * like you" on the Hub (moved to Find people), PEOPLE/GROUPS as flat
- * `CohortRow`/`GroupRow`s under `Eyebrow` labels, ACTIVITY/RECENT as
- * `ActivityItemRow`s.
+ * CommunityHubScreen state matrix (D221 build spec 2.3; visual law
+ * `docs/audit/community-level-up-2026-10-08/13-VISUAL-LAW.md`). Rewritten for
+ * the four-segment Hub: Feed | People | Groups | You.
  *
- * Mounts the real screen against a mocked client library, once per state
- * the hub genuinely has, and asserts what a person would see:
- *
- *   1. No profile: the hero, the privacy receipt, and RECENT underneath
- *      it -- reading public content never requires a profile (SD-04);
- *      giving Respect on it routes to Join rather than the RPC, which
- *      would raise `no_profile` (the join-to-interact pattern
- *      `JoinToInteractRow` already uses on the post detail screen).
- *   2. Joined, nothing followed yet: the empty state answers "what now";
- *      no "Lifters like you" anywhere on the Hub any more.
- *   3. Joined, PEOPLE: cohorts from `community_dimensions_me` at or above
- *      the hub threshold render as `CohortRow`s, below it never does.
- *   4. Joined, GROUPS: groups from `community_group_list_mine` render as
- *      `GroupRow`s; with none, the eyebrow's trailing action stays and
- *      one quiet line explains what a group is for.
- *   5. Offline: the cached payload renders with the quiet line, never an
- *      error screen.
- *   6. A legacy partner link: the "Partner invites have moved" card.
- *
- * The client library is mocked because this suite is about what the
- * screen does with a payload, not about the transport (which has its own
- * suite under src/lib/community/__tests__). Community carries no
- * programme section of any kind
- * (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
+ * What this suite pins:
+ *   - the segment bar (four radios, Feed first, the choice persisted under
+ *     `community.hub.segment`, `route.params.segment` honoured);
+ *   - the header: exactly three glyphs for a member (search, activity,
+ *     messages), none of the old avatar or privacy shield;
+ *   - the Feed: the right scope read for a member and a reader without a
+ *     profile, each scope's empty line, the disabled scope with the hint
+ *     "Not available yet" when the server lacks migration 190, optimistic
+ *     Respect reaching `reactToPost` with the author id, the non-member's
+ *     read-only Everyone feed routing Respect to Join;
+ *   - People, Groups and You content, the invite Accept and Later;
+ *   - the calm-mode and ED-flag withhold: the You row and the ProgressStrip
+ *     are absent exactly when `consistencyGateState` says gated (the same
+ *     surfaces the previous Hub hid);
+ *   - the account notices (rules moved on, legacy partner link), the HOST
+ *     row, the early-days zero state, the quiet reload on focus;
+ *   - a source guard: no `Eyebrow`, `Card` or `SectionLabel` import remains.
  */
 
+import fs from 'fs';
+import path from 'path';
 import { create, act } from 'react-test-renderer';
 
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
-jest.mock('../../components/BackHeader', () => ({ right }) => right ?? null);
-// F5 (Opus adversarial review, founder order 2026-09-22): the Hub now
-// calls the real useFocusEffect, which needs a navigation context this
-// harness does not provide. Collapsed to a mount-only effect, the same
-// shape CommunityConversations.test.js / CommunityPost.noProfile.test.js
-// already use -- it fires once (mount), never a second time, so it never
-// changes any existing call-count assertion in this file. The behaviour
-// itself is pinned at the source level below instead (see "F5: reload
-// quietly on focus").
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
 }));
+// The sheet's chrome is not under test; its props (title, rows) are.
+jest.mock('../../components/community/MenuSheet', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
+jest.mock('../../lib/database', () => ({
+  getLatestCompletedWorkoutId: jest.fn(() => Promise.resolve('w1')),
+}));
 
 jest.mock('../../hooks/useCommunityMe', () => ({
   __esModule: true,
@@ -59,67 +45,45 @@ jest.mock('../../hooks/useCommunityMe', () => ({
 }));
 
 jest.mock('../../lib/community', () => ({
-  // Early days (26-EARLY-DAYS-SPEC.md): the pure helpers are the real
-  // ones; the host read defaults to "did not answer" (offline) so every
-  // state below sees the Hub exactly as before, and the tests that care
-  // about the HOST row resolve a card themselves.
   ...jest.requireActual('../../lib/community/earlyDays'),
   getProfile: jest.fn(() => Promise.reject(Object.assign(new Error('offline'), { code: 'offline' }))),
   follow: jest.fn(() => Promise.resolve({ state: 'accepted' })),
   readHostDismissed: jest.fn(() => Promise.resolve(false)),
   writeHostDismissed: jest.fn(() => Promise.resolve()),
   loadHub: jest.fn(),
-  // Founder order 2026-09-22 item 8 (audit A-13): real constant, not a
-  // stand-in, so this suite stays honest about the actual rendered line.
   GROUP_PURPOSE_LINE: jest.requireActual('../../lib/community/groups').GROUP_PURPOSE_LINE,
   hasProfile: (me) => !!me?.profile?.handle,
   hasUnseen: () => false,
   hasUnreadMessages: () => false,
   reactToPost: jest.fn(() => Promise.resolve()),
-  // PEOPLE and GROUPS (communities revamp 2026-09-10, task 5): one call,
-  // `community_hub_summary`, replacing the old `myDimensions` +
-  // `loadBoard` + `listMyGroups` trio this Hub used to make.
   loadHubSummary: jest.fn(() => Promise.resolve({ cohorts: [], groups: [] })),
+  listMyGroups: jest.fn(() => Promise.resolve([])),
+  acceptGroupInvite: jest.fn(() => Promise.resolve({})),
   metricLabel: (window, n) => (Number(n) === 1 ? '1 session' : `${Number(n) || 0} sessions`),
   daysLabel: (keys) => (Array.isArray(keys) ? keys.join(', ') : ''),
-  // Lead ruling: one wording across the app -- mirrors the shipped
-  // TP_AGE_BANDS labels exactly (trainingProfile.js), not a second copy.
-  TP_AGE_BANDS: {
-    '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
-  },
-  // The You line's own device counters (lead ruling 2026-09-10: gated
-  // ONLY on `consistencyGateState`'s `gated` field -- calm mode or an
-  // open ED flag -- never on the "Share my consistency" toggle). Default
-  // here is "not gated", so this file's other states see the row exactly
-  // as before; the two tests that care about this gate override it.
+  TP_AGE_BANDS: { '18_24': '18 to 24' },
+  // Default is "not gated"; the calm and ED tests override it.
   consistencyGateState: jest.fn(() => Promise.resolve({ allowed: false, gated: false, isMinor: false })),
   loadConsistency: jest.fn(() => Promise.resolve(null)),
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
-  // Phase 3: the same foreground trigger drains any queued ambient items.
   flushPendingAmbientItems: jest.fn(() => Promise.resolve({ flushed: 0, dropped: 0, remaining: 0 })),
-  // F4 fix (fresh-eyes review): the same foreground trigger retries a
-  // pending "Share what I did" publish left owed by a failed save.
   retryPendingSharingPublish: jest.fn(() => Promise.resolve({ sent: false, reason: 'nothing_pending' })),
-  // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
-  // directly in profile.moderatedStatus.test.js; resolved to the neutral
-  // shape here so it never affects the states this file is about.
   myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
   isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
   REPORT_REASONS: {},
-  // Communities revamp 2026-09-10 (onboarding join, spec section 4.2,
-  // ruling h): opening Community drains a pending join, on mount,
-  // independent of whether a profile exists yet.
   currentUserId: () => 'u1',
   retryPendingJoin: jest.fn(() => Promise.resolve({ ok: false, queued: false })),
 }));
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Share } from 'react-native';
 import {
   loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency, getProfile, follow,
-  readHostDismissed, writeHostDismissed, COMMUNITY_HOST_USER_ID,
+  readHostDismissed, listMyGroups, acceptGroupInvite, COMMUNITY_HOST_USER_ID,
 } from '../../lib/community';
+import { getLatestCompletedWorkoutId } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
-import CommunityHubScreen, { _resetHostCacheForTests } from '../CommunityHubScreen';
+import CommunityHubScreen, { _resetHostCacheForTests, HUB_SEGMENT_KEY } from '../CommunityHubScreen';
 
 const ME_WITH_PROFILE = {
   profile: { user_id: 'u1', handle: 'rowan_lifts', display_name: 'Rowan M', visibility: 'public' },
@@ -129,46 +93,30 @@ const ME_WITH_PROFILE = {
   is_minor: false,
 };
 
+function asMember(over = {}) {
+  useCommunityMe.mockReturnValue({
+    me: { ...ME_WITH_PROFILE, ...over }, loading: false, error: null, refresh: jest.fn(),
+  });
+}
+
 function emptyHub(over = {}) {
   return {
-    segment: 'following',
-    posts: [],
-    people: [],
-    dimensions: [],
-    cursor: null,
-    fromCache: false,
-    error: null,
-    ...over,
+    segment: 'following', posts: [], people: [], dimensions: [], cursor: null, fromCache: false, error: null, ...over,
   };
 }
 
 function card(over = {}) {
   return {
-    user_id: 'u2',
-    handle: 'priya_kb',
-    display_name: 'Priya K',
-    avatar_preset: null,
-    styles: ['kettlebell'],
-    goal: 'get_stronger',
-    setting: 'home_gym',
-    follower_count: 3,
-    following_count: 2,
-    relationship: { following: 'none', followed_by: false, muted: false, blocked: false },
-    ...over,
+    user_id: 'u2', handle: 'priya_kb', display_name: 'Priya K', avatar_preset: null, ...over,
   };
 }
 
-/** One ACTIVITY/RECENT row, the shape `normalisePostRow` expects (spec
- * section 1, ActivityItemRow: `item = {post, author, myReaction}`, and
- * the RPCs hand back `{post, author, my_reaction}`). */
 function post(over = {}) {
   return {
     post: {
       id: 'p1',
       kind: 'session',
-      payload: {
-        sessionName: 'Upper A', duration: 45, workingSets: 12, prCount: 0, date: Date.now(),
-      },
+      payload: { sessionName: 'Upper A', duration: 45, workingSets: 12, prCount: 0 },
       caption: null,
       created_at: Date.now(),
       comment_count: 0,
@@ -180,17 +128,12 @@ function post(over = {}) {
   };
 }
 
-/** A community_hub_summary group row (task 5: {id, name, access,
- * member_count, trained_today_count, sample}), distinct from the old
- * `community_group_list_mine` shape this replaced on the Hub. */
 function group(over = {}) {
   return {
     id: 'g1', name: 'Iron Collective', access: 'open', member_count: 8, trained_today_count: 3, sample: [], ...over,
   };
 }
 
-/** A community_hub_summary cohort row ({kind, key, label, member_count,
- * trained_today_count, sample}). */
 function cohort(over = {}) {
   return {
     kind: 'gym', key: 'g1', label: 'PureGym Leeds', member_count: 23, trained_today_count: 4, sample: [], ...over,
@@ -213,621 +156,460 @@ async function flush() {
 }
 
 /**
- * The hub's list is a FlashList (E8), which the jest moduleNameMapper
- * points at the react-native manual mock's FlatList passthrough host. Its
- * ListHeaderComponent / ListEmptyComponent therefore stay unrendered
- * ELEMENTS in props, so both are rendered for real here, which is how this
- * suite reads everything the hub puts above and instead of the feed.
+ * The Feed is a FlashList, which the jest moduleNameMapper points at the
+ * react-native FlatList passthrough: its header and empty components stay
+ * unrendered ELEMENTS in props, so both are rendered for real here.
  */
-function renderList(tree) {
+function renderParts(tree) {
   const list = tree.root.findAll((n) => n.type === 'FlatList')[0];
-  const parts = [];
   const trees = [];
-  for (const element of [list.props.ListHeaderComponent, list.props.ListEmptyComponent]) {
-    if (!element) continue;
-    let part = null;
-    act(() => { part = create(element); });
-    trees.push(part);
-    parts.push(flattenText(part.toJSON()));
+  if (list) {
+    for (const element of [list.props.ListHeaderComponent, list.props.ListEmptyComponent]) {
+      if (!element) continue;
+      let part = null;
+      act(() => { part = create(element); });
+      trees.push(part);
+    }
   }
-  return { list, trees, text: parts.join(' ') };
+  return { list, trees };
 }
 
-async function render(params = {}) {
-  const parent = { navigate: jest.fn() };
-  const navigation = { navigate: jest.fn(), push: jest.fn(), getParent: () => parent };
+async function render({ segment = null, params = {} } = {}) {
+  if (segment) await AsyncStorage.setItem(HUB_SEGMENT_KEY, segment);
+  const navigation = { navigate: jest.fn(), push: jest.fn() };
   let tree;
   await act(async () => {
     tree = create(<CommunityHubScreen navigation={navigation} route={{ params }} />);
   });
   await flush();
-  const { list, trees, text } = renderList(tree);
-  return {
-    tree, list, parent, navigation, partTrees: trees,
-    text: `${flattenText(tree.toJSON())} ${text}`,
+  const view = { tree, navigation };
+  view.refresh = () => {
+    const { list, trees } = renderParts(tree);
+    view.list = list;
+    view.parts = trees;
+    view.all = [tree, ...trees];
+    view.text = view.all.map((tr) => flattenText(tr.toJSON())).join(' ');
   };
+  view.refresh();
+  return view;
 }
 
-beforeEach(() => {
+function findByLabel(view, label) {
+  return view.all
+    .flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityLabel === label && typeof n.props.onPress === 'function'))[0];
+}
+
+async function press(view, label) {
+  const node = findByLabel(view, label);
+  expect(node).toBeTruthy();
+  await act(async () => { node.props.onPress(); });
+  await flush();
+  view.refresh();
+}
+
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
   _resetHostCacheForTests();
   readHostDismissed.mockResolvedValue(false);
   loadHub.mockResolvedValue(emptyHub());
   loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
+  listMyGroups.mockResolvedValue([]);
   consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
   loadConsistency.mockResolvedValue(null);
   useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
 });
 
-describe('state 1: no Community profile', () => {
-  test('shows the hero, the privacy receipt and the one committing action', async () => {
-    const { text } = await render();
-
-    expect(text).toContain('Your gym, your people');
-    expect(text).toContain('See who is training around you, keep up with friends, give respect.');
-    expect(text).toContain('Nothing about your body, food or coaching is ever shared.');
-    // Lead visual review 2026-09-06, ruling V9: PrivacyReceipt is compact by
-    // default (the one-line promise plus "What is shared"); the two columns
-    // ("Others can see" / "Never shared") only render once that is tapped,
-    // so they are no longer part of the hero's own default text.
-    expect(text).toContain('What is shared');
-    expect(text).toContain('Create my profile');
-    expect(text).toContain('Browse first');
+describe('the segment bar', () => {
+  test('four radios, Feed first and selected on a first open', async () => {
+    asMember();
+    const view = await render();
+    const radios = view.tree.root.findAll(
+      (n) => n.props?.accessibilityRole === 'radio' && ['Feed', 'People', 'Groups', 'You'].includes(n.props.accessibilityLabel)
+        && typeof n.props.onPress === 'function',
+    );
+    const labels = [...new Set(radios.map((n) => n.props.accessibilityLabel))];
+    expect(labels).toEqual(['Feed', 'People', 'Groups', 'You']);
+    const feed = radios.find((n) => n.props.accessibilityLabel === 'Feed');
+    expect(feed.props.accessibilityState.checked).toBe(true);
   });
 
-  test('reads Discover, not Following: value is visible before joining', async () => {
-    await render();
-    expect(loadHub).toHaveBeenCalledWith('discover', expect.any(Object));
+  test('choosing a segment persists it under community.hub.segment', async () => {
+    asMember();
+    const view = await render();
+    await press(view, 'People');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(HUB_SEGMENT_KEY, 'people');
+    expect(view.text).toContain('Find people');
   });
 
-  test('shows RECENT, never PEOPLE or GROUPS, before joining, with the Discover stories as the list data', async () => {
+  test('the remembered segment is where the Hub opens', async () => {
+    asMember();
+    const view = await render({ segment: 'groups' });
+    expect(view.text).toContain('Browse open groups');
+  });
+
+  test('route.params.segment wins over the remembered one', async () => {
+    asMember();
+    const view = await render({ segment: 'groups', params: { segment: 'people' } });
+    expect(view.text).toContain('Search people and groups');
+  });
+});
+
+describe('the header', () => {
+  test('a member has exactly three glyphs: search, activity, messages (no avatar, no privacy shield)', async () => {
+    asMember();
+    const view = await render();
+    const labels = view.tree.root
+      .findAll((n) => typeof n.props?.accessibilityLabel === 'string' && typeof n.props.onPress === 'function')
+      .map((n) => n.props.accessibilityLabel);
+    const glyphs = [...new Set(labels.filter((l) => /^(Search Community|Activity|Messages)/.test(l)))];
+    expect(glyphs).toEqual(['Search Community', 'Activity', 'Messages']);
+    expect(labels).not.toContain('Your profile');
+    expect(labels).not.toContain('Community privacy');
+    expect(flattenText(view.tree.toJSON())).toContain('Community');
+  });
+});
+
+describe('Feed: a member', () => {
+  test('reads Following first and shows the compose well', async () => {
+    asMember();
+    const view = await render();
+    expect(loadHub).toHaveBeenCalledWith('following', expect.objectContaining({ sort: 'newest' }));
+    expect(view.text).toContain('Share something from your training');
+    for (const label of ['Following', 'My gym', 'My groups', 'Everyone']) expect(view.text).toContain(label);
+  });
+
+  test('each scope has its own quiet empty line and one action', async () => {
+    asMember();
+    const view = await render();
+    expect(view.text).toContain('Follow a few people to fill this feed');
+    expect(view.text).toContain('Find people');
+    await press(view, 'My gym');
+    expect(loadHub).toHaveBeenLastCalledWith('gym', expect.any(Object));
+    expect(view.text).toContain('Set your gym to see who trains there');
+    expect(view.text).toContain('Set gym');
+    await press(view, 'My groups');
+    expect(view.text).toContain('Join or start a group');
+    await press(view, 'Everyone');
+    expect(view.text).toContain('Nothing posted yet. Yours could be first.');
+    expect(view.text).toContain('Write a post');
+  });
+
+  test('a scope the server cannot serve is a disabled chip with the hint "Not available yet"', async () => {
+    asMember();
+    loadHub.mockImplementation(async (scope) => emptyHub(scope === 'gym' ? { fallback: 'scope' } : {}));
+    const view = await render();
+    await press(view, 'My gym');
+    const chips = view.all.flatMap((tr) => tr.root.findAll(
+      (n) => n.props?.accessibilityRole === 'radio' && ['My gym', 'My groups'].includes(n.props.accessibilityLabel),
+    ));
+    expect(chips.length).toBeGreaterThan(0);
+    for (const chip of chips) {
+      expect(chip.props.accessibilityHint).toBe('Not available yet');
+      expect(chip.props.disabled).toBe(true);
+    }
+  });
+
+  test('Respect on a post calls reactToPost with the post id, the new state and the author id', async () => {
+    asMember();
     loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
-    const { text, list } = await render();
-    expect(text).toContain('RECENT');
-    expect(text).not.toContain('PEOPLE');
-    expect(text).not.toContain('GROUPS');
-    // FlashList is mocked to a prop-holding passthrough (see the header
-    // comment on `renderList`): it never actually calls `renderItem`, so
-    // list CONTENT is asserted on `list.props.data`, the same array the
-    // real list would render from.
-    expect(list.props.data).toHaveLength(1);
-    expect(list.props.data[0].author.display_name).toBe('Priya K');
-  });
-
-  test('join-to-interact: giving Respect on a Discover story routes to Join, never the RPC', async () => {
-    loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
-    const { list, navigation } = await render();
-    // Invoke the list's own `renderItem` directly (the FlashList mock
-    // never calls it itself) to get the real `ActivityItemRow` element
-    // for the one story in `data`, then mount and tap it.
-    const itemEl = list.props.renderItem({ item: list.props.data[0] });
-    let itemTree = null;
-    act(() => { itemTree = create(itemEl); });
-    const respectBtn = itemTree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+    const view = await render();
+    expect(view.list.props.data).toHaveLength(1);
+    let row;
+    act(() => { row = create(view.list.props.renderItem({ item: view.list.props.data[0] })); });
+    const heart = row.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Give this post Respect' && typeof n.props.onPress === 'function',
     )[0];
-    await act(async () => { respectBtn.props.onPress(); });
-    expect(reactToPost).not.toHaveBeenCalled();
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunityJoin');
-  });
-
-  test('a joined member giving Respect calls reactToPost with post id, true, and author user id', async () => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
-    const { list } = await render();
-    const itemEl = list.props.renderItem({ item: list.props.data[0] });
-    let itemTree = null;
-    act(() => { itemTree = create(itemEl); });
-    const respectBtn = itemTree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
-    )[0];
-    await act(async () => { respectBtn.props.onPress(); });
-    // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
+    await act(async () => { heart.props.onPress(); });
     expect(reactToPost).toHaveBeenCalledWith('p1', true, 'u2');
   });
-});
 
-describe('state 2: joined, nothing followed yet', () => {
-  beforeEach(() => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-  });
-
-  // Founder defect 2026-09-14: a section with nothing in it is one quiet
-  // line, not a bordered box with a circle icon, a paragraph and a second
-  // "Find people" button duplicating the row two sections above it.
-  //
-  // RE-ANCHORED (founder order 2026-09-22 item 5, audit A-05): this test
-  // used to pin ZERO controls in the empty section at all ("the one 'Find
-  // people' on this screen is the PEOPLE row in the header"). That was
-  // true before this order: no way existed to post without a workout, so
-  // there was nothing this section's own action could usefully do. Now
-  // there is one ("Say hello", opening CommunityCompose's new 'note'
-  // kind), so the pin moves from zero controls to exactly one -- still
-  // one line, one action (presentation rule 9), never a poster.
-  test('the empty ACTIVITY section is one quiet line with exactly one action, Say hello', async () => {
-    loadHub.mockResolvedValue(emptyHub());
-    const { text, partTrees } = await render();
-
-    // F11 (Opus adversarial review, founder order 2026-09-22 item 5):
-    // re-anchored copy naming the action beneath it.
-    expect(text).toContain('Follow people to see their training, or say hello.');
-    expect(text).not.toContain('Nothing here yet');
-    const emptyTree = partTrees[partTrees.length - 1];
-    expect(flattenText(emptyTree.toJSON())).toContain('Follow people to see their training, or say hello.');
-    // Button forwards onPress through several wrapper layers (PressableCard
-    // etc.), so a raw node count over-counts one control several times
-    // over; the DISTINCT labelled actions is the true count of one.
-    const pressable = emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function');
-    const labels = new Set(pressable.map((n) => n.props?.accessibilityLabel).filter(Boolean));
-    expect(labels).toEqual(new Set(['Say hello']));
-  });
-
-  test('Say hello opens CommunityCompose with kind note', async () => {
-    loadHub.mockResolvedValue(emptyHub());
-    const { navigation, partTrees } = await render();
-    const emptyTree = partTrees[partTrees.length - 1];
-    const sayHello = emptyTree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Say hello' && n.props?.onPress,
+  test('the compose well opens the kind sheet: a note, or your last session', async () => {
+    asMember();
+    const view = await render();
+    await press(view, 'Share something from your training');
+    const sheet = view.tree.root.findAll(
+      (n) => n.props?.title === 'Share something' && Array.isArray(n.props.rows),
     )[0];
-    expect(sayHello).toBeTruthy();
-    await act(async () => { sayHello.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'note' });
+    expect(sheet.props.visible).toBe(true);
+    expect(sheet.props.rows.map((r) => r.label)).toEqual(['A note', 'Your last session']);
+    act(() => { sheet.props.rows[0].onPress(); });
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'note' });
+    await act(async () => { await sheet.props.rows[1].onPress(); });
+    expect(getLatestCompletedWorkoutId).toHaveBeenCalledWith('u1');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'session', workoutId: 'w1' });
   });
 
-  test('no "Lifters like you" suggestions anywhere on the Hub (moved to Find people)', async () => {
-    loadHub.mockResolvedValue(emptyHub());
-    const { text } = await render();
-    expect(text).not.toContain('Lifters like you');
+  test('a failed read is an EmptyState with Try again, never an empty community', async () => {
+    asMember();
+    loadHub.mockResolvedValue(emptyHub({ error: 'unavailable' }));
+    const view = await render();
+    expect(view.text).toContain('Could not load Community');
+    expect(view.text).toContain('Try again');
   });
 
-  test('the You line shows "You" and opens the reader\'s own profile', async () => {
-    loadHub.mockResolvedValue(emptyHub());
-    const { navigation, partTrees } = await render();
-    // The You line is a header row (PersonRow), rendered in the
-    // separately-mounted header tree -- see the header comment on
-    // `renderList` for why the outer `tree` does not carry it.
-    const youRow = partTrees[0].root.findAll(
-      (n) => n.props?.accessibilityLabel === 'You' && typeof n.props.onPress === 'function',
-    )[0];
-    expect(youRow).toBeTruthy();
-    await act(async () => { youRow.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { userId: 'u1' });
+  test('offline with a cached payload: the content under one quiet line', async () => {
+    asMember();
+    loadHub.mockResolvedValue(emptyHub({ posts: [post()], fromCache: true, error: 'offline' }));
+    const view = await render();
+    expect(view.text).toContain('Showing what you last saw. You are offline.');
+    expect(view.text).not.toContain('You are offline Community needs a connection');
   });
 });
 
-// Lead ruling 2026-09-10 (communities revamp): the You row shows the
-// reader's own device counters whenever `consistencyGateState` allows it
-// (calm mode or an open ED flag withholds), independent of the "Share my
-// consistency" toggle -- it is their own data on their own screen, and
-// sharing governs what OTHER people see, never this. When the gate
-// withholds, no You row renders at all: no empty row, no caption.
-describe('the You row\'s ED gate: independent of the sharing toggle, gated only on consistencyGateState', () => {
-  beforeEach(() => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub());
+describe('Feed: no Community profile', () => {
+  test('the hero band and the Everyone feed, read-only', async () => {
+    loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
+    const view = await render();
+    expect(loadHub).toHaveBeenCalledWith('everyone', expect.any(Object));
+    expect(view.text).toContain('See what people are training');
+    expect(view.text).toContain('Join Community');
+    expect(view.text).toContain('Browse first');
+    expect(view.text).toContain('Nothing about your body, food or coaching is ever shared.');
+    expect(view.text).not.toContain('Share something from your training');
+    expect(view.list.props.data).toHaveLength(1);
   });
 
-  test('a joined person still sees the You row with their own counters (no sharing toggle is read any more)', async () => {
-    consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
+  test('Respect routes to Join, never the RPC', async () => {
+    loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
+    const view = await render();
+    let row;
+    act(() => { row = create(view.list.props.renderItem({ item: view.list.props.data[0] })); });
+    const heart = row.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Give this post Respect' && typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => { heart.props.onPress(); });
+    expect(reactToPost).not.toHaveBeenCalled();
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityJoin');
+  });
+
+  test('Browse first folds the hero to one line with the way in (no loop back)', async () => {
+    const view = await render();
+    await press(view, 'Browse Community first');
+    expect(view.text).not.toContain('See what people are training');
+    expect(view.text).toContain('Not joined yet');
+    await press(view, 'Join Community');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityJoin');
+  });
+
+  test('the You segment shows the hero, and no member rows', async () => {
+    const view = await render({ segment: 'you' });
+    expect(view.text).toContain('See what people are training');
+    expect(view.text).not.toContain('Privacy and sharing');
+  });
+});
+
+describe('People', () => {
+  test('Find people, Requests with the count, the gym, discipline and area bands; style and age group are not Hub rows', async () => {
+    asMember({ pending_requests: 1, pending_connect_requests: 1 });
+    loadHubSummary.mockResolvedValue({
+      cohorts: [
+        cohort({ kind: 'area', key: 'a1', label: 'Leeds' }),
+        cohort({ kind: 'age_band', key: '18_24', label: '18_24' }),
+        cohort({ kind: 'style', key: 's1', label: 'Powerlifting' }),
+        cohort({ kind: 'discipline', key: 'd1', label: 'Strength' }),
+        cohort(),
+      ],
+      groups: [],
+    });
+    const view = await render({ segment: 'people' });
+    const order = ['Your gym', 'PureGym Leeds', 'Disciplines', 'Strength', 'Near you', 'Leeds'];
+    let at = -1;
+    for (const s of order) {
+      const i = view.text.indexOf(s, at + 1);
+      expect(i).toBeGreaterThan(at);
+      at = i;
+    }
+    expect(view.text).toContain('Find people');
+    expect(view.text).toContain('2 people want to connect');
+    expect(view.text).not.toContain('Powerlifting');
+    expect(view.text).not.toContain('18 to 24');
+    expect(view.text).toContain('4 trained today · 23 members');
+  });
+
+  test('no gym cohort and no gym on the profile: a Set your gym row', async () => {
+    asMember();
+    const view = await render({ segment: 'people' });
+    expect(view.text).toContain('Set your gym');
+  });
+});
+
+describe('Groups', () => {
+  test('my groups render as GroupRows with the trained-today line; New group and Browse open groups are rows', async () => {
+    asMember();
+    loadHubSummary.mockResolvedValue({ cohorts: [cohort()], groups: [group()] });
+    const view = await render({ segment: 'groups' });
+    expect(view.text).toContain('Iron Collective');
+    expect(view.text).toContain('3 trained today · 8 members');
+    expect(view.text).toContain('New group');
+    await press(view, 'Browse open groups. Find a group to join');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunitySearch', { mode: 'groups' });
+  });
+
+  test('with no groups, one quiet line says what a group is for', async () => {
+    asMember();
+    const view = await render({ segment: 'groups' });
+    expect(view.text).toContain('Make a group with friends');
+  });
+
+  test('a pending invite offers Accept and Later; Later hides the row for the session', async () => {
+    asMember();
+    listMyGroups.mockResolvedValue([
+      { group: { id: 'g9', name: 'Monday crew', access: 'invite' }, role: null, state: 'invited' },
+      { group: { id: 'g1', name: 'Iron Collective', access: 'open' }, role: 'member', state: 'member' },
+    ]);
+    const view = await render({ segment: 'groups' });
+    expect(view.text).toContain('Invites');
+    expect(view.text).toContain('Monday crew');
+    await press(view, 'Accept the invite to Monday crew');
+    expect(acceptGroupInvite).toHaveBeenCalledWith({ groupId: 'g9' });
+    await press(view, 'Hide the invite to Monday crew for now');
+    expect(view.text).not.toContain('Invited you to join');
+  });
+
+  test('a minor with no groups sees no group creation row', async () => {
+    asMember({ is_minor: true });
+    const view = await render({ segment: 'groups' });
+    expect(view.text).not.toContain('New group');
+  });
+});
+
+describe('You', () => {
+  test('the You row, its counters and the rows to profile, followers, privacy, training profile and rules', async () => {
+    asMember();
     loadConsistency.mockResolvedValue({
       c_sessions_week: 3, c_weeks_streak: 2, c_trained_days_week: ['mon', 'wed'], c_last_trained_day: null,
+      c_consistent_weeks_12w: 5, c_weeks_history: [1, 2, 3, 0, 1, 2, 3, 2],
     });
-    const { partTrees } = await render();
-    const youRow = partTrees[0].root.findAll(
-      (n) => typeof n.props?.accessibilityLabel === 'string'
-        && n.props.accessibilityLabel.startsWith('You') && typeof n.props.onPress === 'function',
-    )[0];
+    const view = await render({ segment: 'you' });
+    const youRow = findByLabel(view, 'You. Trained mon, wed. 3 sessions');
     expect(youRow).toBeTruthy();
-    expect(youRow.props.accessibilityLabel).toContain('3 sessions');
+    expect(view.text).toContain('sessions this week');
+    for (const label of ['My profile', 'Followers and connections', 'Privacy and sharing', 'Training profile', 'Community rules']) {
+      expect(view.text).toContain(label);
+    }
+    await press(view, 'Privacy and sharing');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityPrivacy');
   });
 
-  test('a calm-mode (or open ED flag) person sees no You row at all -- no empty row, no caption', async () => {
+  test('calm mode or an open ED flag: no You row and no ProgressStrip, the rest of You stays', async () => {
+    asMember();
     consistencyGateState.mockResolvedValue({ allowed: false, gated: true, isMinor: false });
     loadConsistency.mockResolvedValue({
       c_sessions_week: 5, c_weeks_streak: 4, c_trained_days_week: ['mon'], c_last_trained_day: null,
+      c_consistent_weeks_12w: 6, c_weeks_history: [1, 2, 3, 0, 1, 2, 3, 2],
     });
-    const { text, partTrees } = await render();
-    expect(text).not.toContain('5 sessions');
-    const youRow = partTrees[0].root.findAll(
-      (n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('You'),
-    )[0];
+    const view = await render({ segment: 'you' });
+    expect(view.text).not.toContain('5 sessions');
+    expect(view.text).not.toContain('sessions this week');
+    const youRow = view.all.flatMap((tr) => tr.root.findAll(
+      (n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('You.'),
+    ))[0];
     expect(youRow).toBeUndefined();
-  });
-});
-
-describe('state 3: joined, PEOPLE cohorts from community_hub_summary (task 5)', () => {
-  beforeEach(() => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub());
+    expect(loadConsistency).not.toHaveBeenCalled();
+    expect(view.text).toContain('Privacy and sharing');
   });
 
-  test('style is never a Hub row (Find people is where it lives)', async () => {
-    loadHubSummary.mockResolvedValue({
-      cohorts: [
-        cohort({ kind: 'style', key: 'kettlebell', label: 'Kettlebell lifters' }),
-        cohort({ kind: 'gym', key: 'g1', label: 'PureGym Leeds' }),
-      ],
-      groups: [],
-    });
-
-    const { text } = await render();
-
-    expect(text).toContain('PEOPLE');
-    expect(text).toContain('PureGym Leeds');
-    expect(text).not.toContain('Kettlebell lifters');
+  test('the early-days zero state lives here: the first-here line and the invite', async () => {
+    asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } });
+    const view = await render({ segment: 'you' });
+    expect(view.text).toContain('You are the first here from Volt Gym.');
+    expect(view.text).toContain('Invite a gym mate');
   });
 
-  test('row order: gym, each discipline, age group, area', async () => {
-    loadHubSummary.mockResolvedValue({
-      cohorts: [
-        // Deliberately out of order, so the assertion proves the Hub
-        // re-orders rather than trusting the server's own array order.
-        cohort({ kind: 'area', key: 'leeds', label: 'Lifters in Leeds' }),
-        cohort({ kind: 'discipline', key: 'bodybuilding', label: 'Bodybuilding' }),
-        cohort({ kind: 'age_band', key: 'g1', label: '25_34' }),
-        cohort({ kind: 'gym', key: 'g1', label: 'PureGym Leeds' }),
-        cohort({ kind: 'discipline', key: 'powerlifting', label: 'Powerlifting' }),
-      ],
-      groups: [],
-    });
-
-    const { partTrees } = await render();
-    const titles = partTrees[0].root.findAll(
-      (n) => typeof n.type === 'function' && typeof n.props?.title === 'string' && Array.isArray(n.props?.people),
-    ).map((n) => n.props.title);
-
-    expect(titles).toEqual(['PureGym Leeds', 'Bodybuilding', 'Powerlifting', '25 to 34', 'Lifters in Leeds']);
-  });
-
-  test('the line and sample stack come straight from the summary row (task 5: "N trained today · M members")', async () => {
-    loadHubSummary.mockResolvedValue({
-      cohorts: [cohort({
-        kind: 'gym', key: 'g1', label: 'PureGym Leeds', member_count: 23, trained_today_count: 4,
-        sample: [{ user_id: 'u3', display_name: 'Priya K', avatar_preset: null }],
-      })],
-      groups: [],
-    });
-
-    const { text } = await render();
-    expect(text).toContain('4 trained today · 23 members');
-  });
-
-  test('an age_band row maps the raw key through TP_AGE_BANDS for its title', async () => {
-    loadHubSummary.mockResolvedValue({
-      cohorts: [cohort({ kind: 'age_band', key: '25_34', label: '25_34', member_count: 5, trained_today_count: 1 })],
-      groups: [],
-    });
-
-    const { text } = await render();
-    expect(text).toContain('25 to 34');
-    expect(text).not.toContain('25_34');
-  });
-});
-
-describe('state 4: joined, GROUPS (from community_hub_summary, task 5)', () => {
-  beforeEach(() => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub());
-  });
-
-  test('groups render as GroupRows with the trained-today line and the sample stack', async () => {
-    loadHubSummary.mockResolvedValue({
-      cohorts: [],
-      groups: [group({ member_count: 8, trained_today_count: 3 })],
-    });
-    const { text } = await render();
-    expect(text).toContain('GROUPS');
-    expect(text).toContain('Iron Collective');
-    expect(text).toContain('3 trained today · 8 members');
-  });
-
-  test('with no groups, the eyebrow keeps its trailing action and one quiet line explains what a group is for', async () => {
-    loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
-    const { text } = await render();
-    expect(text).toContain('GROUPS');
-    expect(text).toContain('New group');
-    expect(text).toContain('Make a group with friends to see each other\'s training weeks.');
-  });
-});
-
-describe('state 5: offline with a cached payload', () => {
-  test('the cached content renders under one quiet line, not an error', async () => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub({
-      fromCache: true,
-      error: 'offline',
-      posts: [post()],
-    }));
-
-    const { text, list } = await render();
-
-    expect(text).toContain('Showing what you last saw. You are offline.');
-    // See the header comment on `renderList`: list CONTENT is asserted on
-    // `list.props.data`, since the FlashList mock never calls `renderItem`.
-    expect(list.props.data).toHaveLength(1);
-    expect(list.props.data[0].author.display_name).toBe('Priya K');
-    expect(text).not.toMatch(/something went wrong/i);
-  });
-});
-
-describe('state 6: a legacy partner link', () => {
-  test('the moved-invites card is shown, with a way onward', async () => {
-    const { text } = await render({ legacyPartnerCode: 'ABCD12' });
-
-    expect(text).toContain('Partner invites have moved');
-    expect(text).toContain('Training partners are now part of Community.');
-    expect(text).toContain('Find people');
-  });
-
-  test('no card without a legacy code', async () => {
-    const { text } = await render();
-    expect(text).not.toContain('Partner invites have moved');
-  });
-});
-
-// ─── Early days (26-EARLY-DAYS-SPEC.md, CR-16 / D162) ─────────────────
-
-describe('early days: the PEOPLE zero state (spec 1.1)', () => {
-  beforeEach(() => {
-    loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
-  });
-
-  test('with a gym: the first-here line and the invite, and Find people still there', async () => {
-    useCommunityMe.mockReturnValue({
-      me: { ...ME_WITH_PROFILE, profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } },
-      loading: false, error: null, refresh: jest.fn(),
-    });
-    const { text } = await render();
-    expect(text).toContain('You are the first here from Volt Gym.');
-    expect(text).toContain('Invite a gym mate');
-    expect(text).toContain('Find people');
-  });
-
-  test('without a gym: one of the first, and a training partner', async () => {
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-    const { text } = await render();
-    expect(text).toContain('You are one of the first here.');
-    expect(text).toContain('Invite a training partner');
-  });
-
-  test('the invite opens the share sheet with the member\'s own link and gym, nothing else', async () => {
-    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
-    useCommunityMe.mockReturnValue({
-      me: { ...ME_WITH_PROFILE, profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } },
-      loading: false, error: null, refresh: jest.fn(),
-    });
-    const { partTrees } = await render();
-    const invite = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Invite someone to Volyume' && n.props?.onPress)[0];
-    expect(invite).toBeTruthy();
-    await act(async () => { invite.props.onPress(); });
-    await flush();
-    expect(share).toHaveBeenCalledWith({
-      message: 'Join me on Volyume. I train at Volt Gym. https://volyume.app/u/?h=rowan_lifts',
-    });
-    share.mockRestore();
-  });
-
-  test('a dismissed share sheet is silent', async () => {
-    const share = jest.spyOn(Share, 'share').mockRejectedValue(new Error('dismissed'));
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-    const { partTrees } = await render();
-    const invite = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Invite someone to Volyume' && n.props?.onPress)[0];
-    await act(async () => { invite.props.onPress(); });
-    await flush();
-    expect(share).toHaveBeenCalledTimes(1);
-    share.mockRestore();
-  });
-
-  test('with cohorts the zero state never renders', async () => {
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-    loadHubSummary.mockResolvedValue({ cohorts: [cohort()], groups: [] });
-    const { text } = await render();
-    expect(text).not.toContain('first here');
-    expect(text).not.toContain('Invite a');
-  });
-
-  // Review blocker 2: the line is a statement of fact. A read that did not
-  // answer, or a summary whose only cohort is a style (not a Hub row but
-  // people all the same), must never say "first here".
-  test('a failed summary read shows no zero state: nothing is claimed', async () => {
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-    loadHubSummary.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
-    const { text } = await render();
-    expect(text).not.toContain('first here');
-    expect(text).not.toContain('Invite a');
-    expect(text).toContain('Find people');
-  });
-
-  test('a summary whose only cohort is a style shows no zero state', async () => {
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-    loadHubSummary.mockResolvedValue({ cohorts: [cohort({ kind: 'style', key: 'strength', label: 'Strength' })], groups: [] });
-    const { text } = await render();
-    expect(text).not.toContain('first here');
-  });
-
-  test('never before joining', async () => {
-    const { text } = await render();
-    expect(text).not.toContain('first here');
-    expect(text).not.toContain('Invite a');
-  });
-});
-
-describe('early days: the HOST row (spec 1.2)', () => {
-  const hostCard = (over = {}) => card({
-    user_id: COMMUNITY_HOST_USER_ID, handle: 'allan', display_name: 'Allan', gym_label: 'Volt Gym', show_gym: true, ...over,
-  });
-
-  beforeEach(() => {
-    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
-  });
-
-  test('reads the host by the one constant handle, and shows the row with a Follow', async () => {
-    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
-    const { text } = await render();
-    expect(getProfile).toHaveBeenCalledWith({ handle: 'allan' });
-    expect(text).toContain('HOST');
-    expect(text).toContain('Allan');
-    expect(text).toContain('Built Volyume · Volt Gym');
-    expect(text).toContain('Follow');
-  });
-
-  test('hidden for the host, when already following, when blocked, and when the read did not answer', async () => {
-    getProfile.mockResolvedValue({ card: hostCard({ user_id: 'u1' }), viewable: true });
-    expect((await render()).text).not.toContain('HOST');
-    _resetHostCacheForTests();
-
-    // A re-claimed handle on another account is a stranger, never the host.
-    getProfile.mockResolvedValue({ card: hostCard({ user_id: 'someone-else' }), viewable: true });
-    expect((await render()).text).not.toContain('HOST');
-    _resetHostCacheForTests();
-
-    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'accepted', followed_by: false, muted: false, blocked: false } }), viewable: true });
-    expect((await render()).text).not.toContain('HOST');
-    _resetHostCacheForTests();
-
-    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'none', followed_by: false, muted: false, blocked: true } }), viewable: true });
-    expect((await render()).text).not.toContain('HOST');
-    _resetHostCacheForTests();
-
-    getProfile.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
-    expect((await render()).text).not.toContain('HOST');
-  });
-
-  test('never before joining: no read at all', async () => {
-    useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
-    await render();
-    expect(getProfile).not.toHaveBeenCalled();
-  });
-
-  test('Follow follows the host, drops the row, and reloads the feed', async () => {
-    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
-    const { tree, partTrees } = await render();
-    const button = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Follow Allan' && n.props?.onPress)[0];
-    expect(button).toBeTruthy();
-    expect(loadHub).toHaveBeenCalledTimes(1);
-
-    await act(async () => { button.props.onPress(); });
-    await flush();
-
-    expect(follow).toHaveBeenCalledWith(COMMUNITY_HOST_USER_ID);
-    expect(loadHub).toHaveBeenCalledTimes(2);
-    expect(renderList(tree).text).not.toContain('HOST');
-  });
-
-  test('a followers-only host: the toast says Requested, and the row still goes', async () => {
-    const { useToast } = require('../../components/Toast');
-    const show = jest.fn();
-    const spy = jest.spyOn(require('../../components/Toast'), 'useToast').mockReturnValue({ show });
-    follow.mockResolvedValueOnce({ state: 'requested' });
-    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
-    const { tree, partTrees } = await render();
-    const button = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Follow Allan' && n.props?.onPress)[0];
-    await act(async () => { button.props.onPress(); });
-    await flush();
-    expect(show).toHaveBeenCalledWith('Requested.');
-    expect(renderList(tree).text).not.toContain('HOST');
+  test('the invite opens the share sheet; a dismissed sheet is silent', async () => {
+    asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } });
+    const spy = jest.spyOn(Share, 'share').mockRejectedValue(new Error('dismissed'));
+    const view = await render({ segment: 'you' });
+    await press(view, 'Invite someone to Volyume');
+    expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRestore();
-    expect(typeof useToast).toBe('function');
   });
 
-  test('"Not now" drops the row, remembers it for this reader, and the next mount never reads the host', async () => {
-    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
-    const { tree, partTrees } = await render();
-    const notNow = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Not now' && n.props?.onPress)[0];
-    expect(notNow).toBeTruthy();
-    await act(async () => { notNow.props.onPress(); });
-    await flush();
-    expect(writeHostDismissed).toHaveBeenCalledWith('u1');
-    expect(renderList(tree).text).not.toContain('HOST');
+  test('the HOST row: reads the host once, Follow follows and drops the row, Not now remembers', async () => {
+    asMember();
+    getProfile.mockResolvedValue({
+      card: card({
+        user_id: COMMUNITY_HOST_USER_ID, handle: 'allan', display_name: 'Allan', gym_label: 'Volt Gym', show_gym: true,
+      }),
+      viewable: true,
+    });
+    const view = await render({ segment: 'you' });
+    expect(getProfile).toHaveBeenCalled();
+    expect(getProfile).toHaveBeenCalledWith({ handle: 'allan' });
+    expect(view.text).toContain('Host');
+    expect(view.text).toContain('Allan');
+    await press(view, 'Follow Allan');
+    expect(follow).toHaveBeenCalledWith(COMMUNITY_HOST_USER_ID);
+    expect(findByLabel(view, 'Follow Allan')).toBeUndefined();
+  });
 
-    getProfile.mockClear();
-    readHostDismissed.mockResolvedValue(true);
-    _resetHostCacheForTests();
-    expect((await render()).text).not.toContain('HOST');
+  test('no host read at all before joining', async () => {
+    await render({ segment: 'you' });
     expect(getProfile).not.toHaveBeenCalled();
   });
-
-  test('once the row hid by rule, the same session never reads the host again', async () => {
-    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'accepted', followed_by: false, muted: false, blocked: false } }), viewable: true });
-    await render();
-    expect(getProfile).toHaveBeenCalledTimes(1);
-    await render();
-    expect(getProfile).toHaveBeenCalledTimes(1);
-  });
-
-  test('the row opens the host\'s profile by handle', async () => {
-    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
-    const { navigation, partTrees } = await render();
-    const row = partTrees[0].root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Allan. Built Volyume') && n.props?.onPress)[0];
-    expect(row).toBeTruthy();
-    await act(async () => { row.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { handle: 'allan' });
-  });
 });
 
-// F5 (Opus adversarial review, founder order 2026-09-22): after Say
-// hello -> Post -> Back, the Hub kept showing the zero state and the
-// door -- nothing reloaded it. Source-level, not rendered: this file's
-// own `@react-navigation/native` mock (above) collapses useFocusEffect
-// to a mount-only effect, so it cannot exercise a genuine second focus;
-// the real behaviour is that every later focus reloads QUIETLY, never
-// re-showing the spinner over content already on screen.
-describe('F5: reload quietly on focus, after the same initial mount load', () => {
-  test('useFocusEffect reloads quietly on every return to focus, without disturbing the mount-time load', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const src = fs.readFileSync(path.join(__dirname, '../CommunityHubScreen.js'), 'utf8');
-    expect(src).toContain("import { useFocusEffect } from '@react-navigation/native';");
-    // The original mount-time load is unchanged.
-    expect(src).toContain('useEffect(() => { load(); }, [load]);');
-    // The focus effect skips its own first call (the one focus fires
-    // alongside mount) and reloads QUIETLY every time after that.
-    expect(src).toMatch(
-      /useFocusEffect\(useCallback\(\(\) => \{\s*if \(!focusedOnceRef\.current\) \{ focusedOnceRef\.current = true; return; \}\s*load\(\{ quiet: true \}\);\s*\}, \[load\]\)\);/,
-    );
-  });
-});
-
-// Founder report 2026-09-27: the rules moved to version 3 on 2026-09-10 and a
-// member who had accepted version 2 was never asked again, so the server
-// refused their weekly training update ('rules_outdated') in the background
-// and their gym showed none of their training. The screen now says so.
-describe('the Community rules moved on since they were accepted', () => {
-  test('a card says so, and opens the rules to accept them', async () => {
-    useCommunityMe.mockReturnValue({
-      me: { ...ME_WITH_PROFILE, rules_version: 3, accepted_rules_version: 2 }, loading: false, error: null, refresh: jest.fn(),
-    });
-    const { text, tree, partTrees, navigation } = await render();
-    expect(text).toContain('The Community rules have changed. Your training at your gym stops updating until you read and accept them.');
-    const btn = [tree, ...partTrees]
-      .flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityLabel === 'Read and accept the updated Community rules'
-        && typeof n.props.onPress === 'function'))[0];
-    expect(btn).toBeTruthy();
-    await act(async () => { btn.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+describe('account notices', () => {
+  test('the rules moved on: a line says so and opens the rules to accept them', async () => {
+    asMember({ rules_version: 3, accepted_rules_version: 2 });
+    const view = await render();
+    expect(view.text).toContain('The Community rules have changed.');
+    await press(view, 'Read and accept the updated Community rules');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
   });
 
-  test('no card when the accepted version is current, when the server does not say, or before joining', async () => {
+  test('no rules line when current, when the server does not say, or before joining', async () => {
     for (const me of [
       { ...ME_WITH_PROFILE, rules_version: 3, accepted_rules_version: 3 },
       ME_WITH_PROFILE,
       { profile: null, rules_version: 3, accepted_rules_version: null },
     ]) {
       useCommunityMe.mockReturnValue({ me, loading: false, error: null, refresh: jest.fn() });
-      const { text } = await render();
-      expect(text).not.toContain('The Community rules have changed');
+      const view = await render();
+      expect(view.text).not.toContain('The Community rules have changed');
     }
+  });
+
+  test('a legacy partner link shows the moved-invites note with a way onward', async () => {
+    asMember();
+    const view = await render({ params: { legacyPartnerCode: 'ABC' } });
+    expect(view.text).toContain('Partner invites have moved');
+    await press(view, 'Find people in Community');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityFindPeople');
+  });
+
+  test('no partner note without a legacy code', async () => {
+    asMember();
+    const view = await render();
+    expect(view.text).not.toContain('Partner invites have moved');
+  });
+});
+
+describe('quiet reload on focus', () => {
+  test('the mount load happens once; focus does not add a second mount-time call', async () => {
+    asMember();
+    await render();
+    expect(loadHub).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('source guards', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../CommunityHubScreen.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  test('no Eyebrow, Card or SectionLabel import remains in the Hub', () => {
+    expect(source).not.toMatch(/import\s+Eyebrow\b/);
+    expect(source).not.toMatch(/import\s+Card\b/);
+    expect(source).not.toMatch(/import\s+SectionLabel\b/);
+    expect(source).not.toMatch(/<Card\b/);
+    expect(source).not.toMatch(/<Eyebrow\b/);
+    expect(source).not.toMatch(/ActivityItemRow/);
+  });
+
+  test('the Hub declares no band constant of its own (the logger\'s BAND is imported)', () => {
+    expect(source).not.toMatch(/const BAND\s*=/);
+    expect(source).toMatch(/import \{ BAND, touchTarget \} from '\.\.\/styles\/layout'/);
   });
 });

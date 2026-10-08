@@ -59,11 +59,10 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { iconSize, radius, spacing } from '../../../styles/theme';
-import { touchTarget } from '../../../styles/layout';
+import { touchTarget, BAND } from '../../../styles/layout';
 
 // Spec section 2: band 10, section header 56, footer 52, chevron 16, and the
 // square rest-length button is a 40 dp well (grown to 48 by its hit slop).
-const BAND = 10;
 const HEADER_MIN_HEIGHT = 56;
 const FOOTER_MIN_HEIGHT = 52;
 const CHEVRON = 16;

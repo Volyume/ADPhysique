@@ -397,6 +397,10 @@ describe('no Community SCREEN reaches src/lib/database.js except one named, narr
   // -- never silently.
   const SCREEN_DB_EXCEPTIONS = {
     'CommunityGroupScreen.js': ['getLatestCompletedWorkoutId'],
+    // D221 build spec 2.3 (approved re-pin): the Hub's compose sheet offers
+    // "Your last session" and hands CommunityCompose the same id, read the
+    // same id-only way as the group page.
+    'CommunityHubScreen.js': ['getLatestCompletedWorkoutId'],
   };
 
   function communityScreenFiles() {
