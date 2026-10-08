@@ -1,7 +1,9 @@
 /**
- * SetTable (12-BUILD-SPEC sections 2, 3, 4 and 6, register D220). Pins: the
- * column labels over the same grid as the rows, the weight label and its
- * fallback, the table-level callbacks and their arguments, row-level callbacks
+ * SetTable (12-BUILD-SPEC sections 2, 3, 4 and 6, register D220, the row grid
+ * redrawn on the founder's render verdict, addendum 8). Pins: the column labels
+ * over the same grid as the rows (SET, LAST, then one label per well box, no
+ * TARGET column and no joined label), the weight label and its fallback, the
+ * table-level callbacks and their arguments, row-level callbacks
  * flowing through, the tick-all control, the fold of three or more logged rows
  * (copy, rules, toggle, an editing row never hidden), and the token-only
  * source guard.
@@ -20,7 +22,6 @@ function row(id, marker, check, extra = {}) {
     id,
     marker,
     last: { text: '72.5 x 8', stale: false },
-    target: { value: '70 x 6', rule: 'rule' },
     wells: { weight: 70, reps: 8, state: check === 'logged' ? 'logged' : check },
     check,
     ...extra,
@@ -52,40 +53,59 @@ function words(node) {
 }
 const rowsShown = (tree) => tree.root.findAllByType(SetRow);
 const markersShown = (tree) => rowsShown(tree).map((r) => r.props.marker);
+const wellsLabelRow = (tree) => one(hosts(tree, (p) => {
+  const s = flat(p.style);
+  return s.flex === 1 && s.minWidth === 0 && s.flexDirection === 'row' && s.gap === 8;
+}));
+// The well labels in order, as drawn (uppercased), read from the label row.
+const wellLabelsOf = (tree) => wellsLabelRow(tree).findAll((n) => n.type === 'Text').map((n) => words(n).join(''));
 const textHost = (tree, content) => one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === content));
 
 describe('SetTable column labels', () => {
-  test('SET, LAST, TARGET and the weight label over reps, uppercase at the overline role in secondary ink', () => {
+  test('SET, LAST and one label per well (KG, REPS), uppercase at the overline role in secondary ink, centred', () => {
     const tree = render({});
-    ['SET', 'LAST', 'TARGET', `KG ${DOT} REPS`].forEach((label) => {
+    ['SET', 'LAST', 'KG', 'REPS'].forEach((label) => {
       const s = flat(textHost(tree, label).props.style);
       expect(s.color).toBe(colors.textSecondary);
       expect(s.fontSize).toBe(type.overline.fontSize);
       expect(s.fontFamily).toBe(type.overline.fontFamily);
       expect(s.textTransform).toBe('uppercase');
-      // Target starts at the column's left edge, like its cells (a PR tag
-      // must never shift the value line); the others stay centred.
-      expect(s.textAlign).toBe(label === 'TARGET' ? 'left' : 'center');
+      expect(s.textAlign).toBe('center');
     });
   });
 
-  test('the label follows the unit, and falls back to Reps without one', () => {
-    expect(words(render({ columnsLabel: { weight: 'lb' } }).toJSON())).toContain(`LB ${DOT} REPS`);
-    expect(words(render({ columnsLabel: {} }).toJSON())).toContain('REPS');
-    expect(words(render({ columnsLabel: undefined }).toJSON())).toContain('REPS');
+  test('there is no TARGET label and no joined "KG . REPS" label', () => {
+    const shown = words(render({}).toJSON());
+    expect(shown).not.toContain('TARGET');
+    expect(shown).not.toContain(`KG ${DOT} REPS`);
+    expect(shown).not.toContain(`LB ${DOT} REPS`);
   });
 
-  test('the labels sit on the row grid: same widths, same gap, same padding, a hairline below', () => {
+  test('the labels follow the unit, and fall back to kg over REPS without one', () => {
+    expect(wellLabelsOf(render({ columnsLabel: { weight: 'lb' } }))).toEqual(['LB', 'REPS']);
+    expect(wellLabelsOf(render({ columnsLabel: {} }))).toEqual(['KG', 'REPS']);
+    expect(wellLabelsOf(render({ columnsLabel: undefined }))).toEqual(['KG', 'REPS']);
+  });
+
+  test('the labels sit on the row grid: same widths, an 8 dp gap, the same padding, a hairline below', () => {
     const tree = render({});
     expect(flat(textHost(tree, 'SET').props.style).width).toBe(SET_COLUMNS.marker);
     expect(flat(textHost(tree, 'LAST').props.style).width).toBe(SET_COLUMNS.last);
-    expect(flat(textHost(tree, `KG ${DOT} REPS`).props.style).width).toBe(SET_COLUMNS.wells);
-    expect(flat(textHost(tree, 'TARGET').props.style).flex).toBe(1);
+    const wells = flat(wellsLabelRow(tree).props.style);
+    expect(wells.flex).toBe(1);
+    expect(wells.minWidth).toBe(0);
+    expect(wells.flexDirection).toBe('row');
+    expect(wells.gap).toBe(8);
+    ['KG', 'REPS'].forEach((label) => {
+      const s = flat(textHost(tree, label).props.style);
+      expect(s.flex).toBe(1);
+      expect(s.minWidth).toBe(0);
+    });
     const bar = one(hosts(tree, (p) => flat(p.style).minHeight === 36 && flat(p.style).borderBottomWidth === 1));
     const s = flat(bar.props.style);
-    expect(s.gap).toBe(6);
-    expect(s.paddingLeft).toBe(16);
-    expect(s.paddingRight).toBe(12);
+    expect(s.gap).toBe(8);
+    expect(s.paddingLeft).toBe(12);
+    expect(s.paddingRight).toBe(8);
     expect(s.borderBottomColor).toBe(colors.borderSubtle);
   });
 });
@@ -203,6 +223,11 @@ describe('SetTable fold', () => {
     expect(toggle.props.hitSlop).toEqual({ top: 6, bottom: 6, left: 0, right: 0 });
   });
 
+  test('the fold line pads 12 dp each side', () => {
+    const toggle = one(byLabel(render({ rows: THREE_LOGGED }), 'Show 2 earlier logged sets'));
+    expect(flat(toggle.props.style).paddingHorizontal).toBe(12);
+  });
+
   test('a row being edited is never hidden, and the count is singular when one hides', () => {
     const rows = [
       row('a', 'W', 'logged'),
@@ -232,20 +257,23 @@ describe('SetTable fold', () => {
 
 describe('SetTable kinds (column labels and row pass-through)', () => {
   test.each([
-    ['weight_reps', { weight: 'kg' }, 'kg', `KG ${DOT} REPS`],
-    [undefined, { weight: 'lb' }, 'lb', `LB ${DOT} REPS`],
-    ['reps_only', { weight: 'kg' }, 'kg', 'REPS'],
-    ['duration', { weight: 'kg' }, 'kg', 'TIME'],
-    ['distance', { weight: 'kg' }, 'kg', `M ${DOT} TIME`],
-    ['distance', { weight: 'lb' }, 'lb', `YD ${DOT} TIME`],
-  ])('kind %s with %j and units %s labels the wells "%s"', (kind, columnsLabel, units, expected) => {
+    ['weight_reps', { weight: 'kg' }, 'kg', ['KG', 'REPS']],
+    [undefined, { weight: 'lb' }, 'lb', ['LB', 'REPS']],
+    ['reps_only', { weight: 'kg' }, 'kg', ['REPS']],
+    ['duration', { weight: 'kg' }, 'kg', ['TIME']],
+    ['distance', { weight: 'kg' }, 'kg', ['M', 'TIME']],
+    ['distance', { weight: 'lb' }, 'lb', ['YD', 'TIME']],
+  ])('kind %s with %j and units %s labels the wells %j, one label per box', (kind, columnsLabel, units, expected) => {
     const tree = render({ kind, columnsLabel, units });
-    expect(words(tree.toJSON())).toContain(expected);
-    expect(flat(textHost(tree, expected).props.style).width).toBe(SET_COLUMNS.wells);
+    expect(wellLabelsOf(tree)).toEqual(expected);
+    expect(words(tree.toJSON())).not.toContain('TARGET');
+    wellsLabelRow(tree).findAll((n) => n.type === 'Text').forEach((n) => {
+      expect(flat(n.props.style).flex).toBe(1);
+    });
   });
 
   test('units default to kg for the distance label', () => {
-    expect(words(render({ kind: 'distance' }).toJSON())).toContain(`M ${DOT} TIME`);
+    expect(wellLabelsOf(render({ kind: 'distance' }))).toEqual(['M', 'TIME']);
   });
 
   test('kind, units, inputField, onLongPressRow and checkLabel reach every SetRow', () => {

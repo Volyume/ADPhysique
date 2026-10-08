@@ -52,7 +52,6 @@ const FOLD_AT = 3;
 const FOLD_HIT_SLOP = { top: spacing.xs2, bottom: spacing.xs2, left: 0, right: 0 };
 // The 36 dp tick-all glyph reaches 48 dp with its slop.
 const TICK_ALL_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };
-const MIDDLE_DOT = '\u00B7';
 
 function plural(count, one, many) {
   return count === 1 ? one : many;
@@ -118,20 +117,24 @@ export default function SetTable({
   });
   const hiddenCount = list.length - visible.length;
 
-  const weightLabel = columnsLabel && columnsLabel.weight;
-  let wellsLabel;
-  if (kind === 'reps_only') wellsLabel = 'Reps';
-  else if (kind === 'duration') wellsLabel = 'Time';
-  else if (kind === 'distance') wellsLabel = `${units === 'kg' ? 'm' : 'yd'} ${MIDDLE_DOT} time`;
-  else wellsLabel = weightLabel ? `${weightLabel} ${MIDDLE_DOT} reps` : 'Reps';
+  // One label over each well, on the row's own grid.
+  const weightLabel = (columnsLabel && columnsLabel.weight) || 'kg';
+  let wellLabels;
+  if (kind === 'reps_only') wellLabels = ['Reps'];
+  else if (kind === 'duration') wellLabels = ['Time'];
+  else if (kind === 'distance') wellLabels = [units === 'kg' ? 'm' : 'yd', 'Time'];
+  else wellLabels = [weightLabel, 'Reps'];
 
   return (
     <View>
       <View style={[styles.columns, live.columns]}>
         <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1}>SET</Text>
         <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1}>LAST</Text>
-        <Text style={[styles.label, styles.colTarget, styles.labelStart, live.label]} numberOfLines={1}>TARGET</Text>
-        <Text style={[styles.label, styles.colWells, live.label]} numberOfLines={1}>{wellsLabel.toUpperCase()}</Text>
+        <View style={styles.colWells}>
+          {wellLabels.map((label) => (
+            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1}>{label.toUpperCase()}</Text>
+          ))}
+        </View>
         <View style={styles.colCheck}>
           {/* Founder device verdict 2026-10-08: the double check here read as
               a second Finish. The column is unlabelled unless tick-all is
@@ -181,17 +184,16 @@ const styles = StyleSheet.create({
     minHeight: COLUMNS_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs2,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.md,
+    gap: spacing.sm,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
     borderBottomWidth: 1,
   },
   label: { textAlign: 'center' },
-  labelStart: { textAlign: 'left', paddingLeft: spacing.xs },
   colMarker: { width: SET_COLUMNS.marker },
   colLast: { width: SET_COLUMNS.last },
-  colTarget: { flex: 1, minWidth: 0 },
-  colWells: { width: SET_COLUMNS.wells },
+  colWells: { flex: 1, minWidth: 0, flexDirection: 'row', gap: spacing.sm },
+  colWell: { flex: 1, minWidth: 0 },
   colCheck: { width: SET_COLUMNS.check, alignItems: 'center', justifyContent: 'center' },
   tickAll: {
     width: SET_COLUMNS.check,
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
   },
 });

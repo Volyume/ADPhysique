@@ -1,8 +1,10 @@
 /**
- * SetRow (12-BUILD-SPEC sections 2, 2a, 2b and 3, register D220). Pins: the
- * three row states and the editing state (wells and check), the markers, the
- * Last cell (plain, stale, pressable), the Target cell (value, rule, the record
- * tag, the record target), every callback and its argument, the test ids, the
+ * SetRow (12-BUILD-SPEC sections 2, 2a and 3, register D220, the row redrawn on
+ * the founder's render verdict, addendum 8). Pins: the three row states and the
+ * editing state (wells and check), the markers, the Last cell (plain, stale,
+ * pressable), the record mark (a plain "PR" under the set number, no Target
+ * column, no pill), the wells as separate flex 1 boxes with an 8 dp gap and no
+ * divider, the 28 dp check, every callback and its argument, the test ids, the
  * sizes, the accessibility labels and the token-only source guard.
  */
 import fs from 'fs';
@@ -17,7 +19,6 @@ const TIMES = String.fromCharCode(0x00d7);
 const BASE = {
   marker: 2,
   last: { text: `72.5 ${TIMES} 8`, stale: false },
-  target: { value: `70 ${TIMES} 6-10`, rule: '+2.5 at 10' },
   wells: { weight: 70, reps: 8, state: 'next' },
   check: 'next',
 };
@@ -41,20 +42,36 @@ function words(node) {
 }
 const textIn = (node) => node.findAll((n) => n.type === 'Text')[0];
 const wellText = (tree, label) => flat(textIn(one(byLabel(tree, label))).props.style);
-const wellsBox = (tree) => one(hosts(tree, (p) => flat(p.style).width === 98));
+const wellsRow = (tree) => one(hosts(tree, (p) => {
+  const s = flat(p.style);
+  return s.flex === 1 && s.flexDirection === 'row' && s.gap === 8;
+}));
+const boxOf = (tree, label) => flat(one(byLabel(tree, label)).props.style);
 const circleOf = (touchable) => touchable.findAll((n) => n.type === 'View')[0];
 const tickOf = (touchable) => touchable.findAll((n) => n.type === 'Ionicons')[0];
 
 describe('SetRow wells', () => {
-  test.each([['logged'], ['next']])('%s: primary-ink values at the regular numeric face inside the house field (surface2, 1.5 border, radius md)', (state) => {
+  test('the wells container shares the remaining width: flex 1, row, an 8 dp gap between the boxes', () => {
+    const s = flat(wellsRow(render({})).props.style);
+    expect(s.flex).toBe(1);
+    expect(s.minWidth).toBe(0);
+    expect(s.flexDirection).toBe('row');
+    expect(s.gap).toBe(spacing.sm);
+  });
+
+  test.each([['logged'], ['next']])('%s: two separate boxes in the house field (surface2, 1.5 border, radius md, 44 dp, flex 1), primary-ink values at the regular numeric face', (state) => {
     const tree = render({ wells: { weight: 70, reps: 8, state }, check: state });
-    const box = flat(wellsBox(tree).props.style);
-    expect(box.backgroundColor).toBe(colors.surface2);
-    expect(box.borderColor).toBe(colors.border);
-    expect(box.borderWidth).toBe(1.5);
-    expect(box.borderRadius).toBe(radius.md);
-    expect(box.height).toBe(44);
-    expect(box.width).toBe(98);
+    ['Set 2 weight', 'Set 2 reps'].forEach((label) => {
+      const box = flat(one(byLabel(tree, label)).props.style);
+      expect(box.backgroundColor).toBe(colors.surface2);
+      expect(box.borderColor).toBe(colors.border);
+      expect(box.borderWidth).toBe(1.5);
+      expect(box.borderRadius).toBe(radius.md);
+      expect(box.height).toBe(44);
+      expect(box.flex).toBe(1);
+      expect(box.minWidth).toBe(0);
+      expect(box.width).toBeUndefined();
+    });
     const s = wellText(tree, 'Set 2 weight');
     expect(s.color).toBe(colors.textPrimary);
     expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
@@ -64,12 +81,16 @@ describe('SetRow wells', () => {
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
   });
 
-  test('the divider between the wells is the border colour', () => {
+  test('the two wells are separate boxes with no divider between them', () => {
     const tree = render({});
+    const weight = flat(one(byLabel(tree, 'Set 2 weight')).props.style);
     const reps = flat(one(byLabel(tree, 'Set 2 reps')).props.style);
-    expect(reps.borderLeftWidth).toBe(1);
-    expect(reps.borderLeftColor).toBe(colors.border);
-    expect(flat(one(byLabel(tree, 'Set 2 weight')).props.style).borderLeftWidth).toBeUndefined();
+    [weight, reps].forEach((s) => {
+      expect(s.borderLeftWidth).toBeUndefined();
+      expect(s.borderLeftColor).toBeUndefined();
+      expect(s.borderWidth).toBe(1.5);
+    });
+    expect(one(byLabel(tree, 'Set 2 weight'))).not.toBe(one(byLabel(tree, 'Set 2 reps')));
   });
 
   test('pending: placeholder ink, the regular numeric face', () => {
@@ -80,26 +101,30 @@ describe('SetRow wells', () => {
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textDisabled);
   });
 
-  test('editing weight: primary-tint edge (the field focus edge), both values stay primary ink', () => {
+  test('editing weight: only the weight box takes the primary-tint edge, both values stay primary ink', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
-    expect(flat(wellsBox(tree).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(colors.border);
     expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(true);
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('editing reps: the reverse edge and selection, no amber text on either value', () => {
+  test('editing reps: only the reps box takes the edge, the reverse selection, no amber text on either value', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'reps' } });
-    expect(flat(wellsBox(tree).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(colors.border);
     expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(true);
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('outside editing the edge is the border colour', () => {
-    expect(flat(wellsBox(render({})).props.style).borderColor).toBe(colors.border);
+  test('outside editing every box edge is the border colour', () => {
+    const tree = render({});
+    expect(boxOf(tree, 'Set 2 weight').borderColor).toBe(colors.border);
+    expect(boxOf(tree, 'Set 2 reps').borderColor).toBe(colors.border);
   });
 
   test('values are read out; zero is a value, empty is empty', () => {
@@ -108,9 +133,10 @@ describe('SetRow wells', () => {
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityValue).toEqual({ text: 'empty' });
   });
 
-  test('each cell is 44 dp tall with a 2 dp slop for a 48 dp reach, one line, shrinks before it clips', () => {
+  test('each box is 44 dp tall with a 2 dp slop for a 48 dp reach, one line, shrinks before it clips', () => {
     const cell = one(byLabel(render({}), 'Set 2 weight'));
     expect(cell.props.hitSlop).toEqual({ top: 2, bottom: 2, left: 0, right: 0 });
+    expect(flat(cell.props.style).height).toBe(44);
     const text = textIn(cell);
     expect(text.props.numberOfLines).toBe(1);
     expect(text.props.adjustsFontSizeToFit).toBe(true);
@@ -132,47 +158,47 @@ describe('SetRow wells', () => {
 });
 
 describe('SetRow check', () => {
-  test('logged: the app\'s done mark, a 32 dp checkmark-circle in success, no filled circle view', () => {
+  test('logged: the app\'s done mark, a 28 dp checkmark-circle in success, no ring view', () => {
     const tree = render({ check: 'logged' });
     const touch = one(byLabel(tree, 'Set 2 logged'));
     const icon = tickOf(touch);
     expect(icon.props.name).toBe('checkmark-circle');
-    expect(icon.props.size).toBe(32);
+    expect(icon.props.size).toBe(28);
     expect(icon.props.color).toBe(colors.success);
     expect(touch.findAll((n) => flat(n.props.style).backgroundColor !== undefined)).toHaveLength(0);
     expect(touch.findAll((n) => flat(n.props.style).borderWidth !== undefined)).toHaveLength(0);
   });
 
-  test('next: a 32 dp ring (1.5 dp) in primary with no fill, and an 18 dp primary checkmark', () => {
+  test('next: a 28 dp ring (1.5 dp) in primary with no fill, and a 16 dp primary checkmark', () => {
     const tree = render({ check: 'next' });
     const touch = one(byLabel(tree, 'Log set 2'));
     const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(32);
+    expect(s.width).toBe(28);
     expect(s.borderWidth).toBe(1.5);
     expect(s.borderColor).toBe(colors.primary);
     expect(s.backgroundColor).toBeUndefined();
     expect(tickOf(touch).props.name).toBe('checkmark');
-    expect(tickOf(touch).props.size).toBe(18);
+    expect(tickOf(touch).props.size).toBe(16);
     expect(tickOf(touch).props.color).toBe(colors.primary);
   });
 
-  test('pending: the same 32 dp ring (1.5 dp) in borderSubtle with no glyph and no fill', () => {
+  test('pending: the same 28 dp ring (1.5 dp) in borderSubtle with no glyph and no fill', () => {
     const tree = render({ check: 'pending' });
     const touch = one(byLabel(tree, 'Set 2 not logged yet'));
     const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(32);
+    expect(s.width).toBe(28);
     expect(s.borderWidth).toBe(1.5);
     expect(s.borderColor).toBe(colors.borderSubtle);
     expect(s.backgroundColor).toBeUndefined();
     expect(tickOf(touch)).toBeUndefined();
   });
 
-  test('a 32 dp circle in a 36 by 48 target with a 6 dp side slop (48 dp reach)', () => {
+  test('a 28 dp circle in a 36 by 48 target with a 6 dp side slop (48 dp reach)', () => {
     const touch = one(byLabel(render({}), 'Log set 2'));
     const s = flat(circleOf(touch).props.style);
-    expect(s.width).toBe(32);
-    expect(s.height).toBe(32);
-    expect(s.borderRadius).toBe(16);
+    expect(s.width).toBe(28);
+    expect(s.height).toBe(28);
+    expect(s.borderRadius).toBe(14);
     const box = flat(touch.props.style);
     expect(box.width).toBe(SET_COLUMNS.check);
     expect(box.height).toBe(48);
@@ -228,7 +254,8 @@ describe('SetRow marker', () => {
     const s = flat(text.props.style);
     expect(s.color).toBe(colors.primary);
     expect(s.fontSize).toBe(type.captionStrong.fontSize);
-    const badge = one(hosts(tree, (p) => flat(p.style).width === 24));
+    // The badge, not the 24 dp marker column it sits in: the one with a height.
+    const badge = one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24));
     const b = flat(badge.props.style);
     expect(b.height).toBe(24);
     expect(b.backgroundColor).toBe(colors.primaryBg);
@@ -239,7 +266,7 @@ describe('SetRow marker', () => {
     const tree = render({ marker: 'F' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'F'));
     expect(flat(text.props.style).color).toBe(colors.error);
-    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24)).props.style);
+    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24)).props.style);
     expect(badge.backgroundColor).toBe(colors.errorBg);
     expect(badge.borderRadius).toBe(radius.full);
   });
@@ -307,127 +334,83 @@ describe('SetRow Last cell (2a)', () => {
   });
 });
 
-describe('SetRow Target cell', () => {
-  const targetText = (tree, text) => one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text));
-
-  test('the value over the rule; the value is secondary ink at the small numeric role, the rule is muted caption', () => {
-    const tree = render({});
-    const rule = targetText(tree, '+2.5 at 10');
-    const s = flat(rule.props.style);
-    expect(s.color).toBe(colors.textMuted);
-    expect(s.fontSize).toBe(type.caption.fontSize);
-    expect(s.fontFamily).toBe(type.caption.fontFamily);
-    expect(rule.props.numberOfLines).toBe(1);
-    const v = flat(targetText(tree, `70 ${TIMES} 6-10`).props.style);
-    expect(v.color).toBe(colors.textSecondary);
-    expect(v.fontSize).toBe(type.bodySm.fontSize);
-    expect(v.fontFamily).toBe(type.num('bodySm').fontFamily);
-    expect(v.fontVariant).toEqual(['tabular-nums']);
-  });
-
-  test('pending rows: values drop to secondary ink at the regular weight (spec table)', () => {
-    const tree = render({ wells: { weight: 70, reps: 8, state: 'pending' }, check: 'pending' });
-    const s = flat(targetText(tree, `70 ${TIMES} 6-10`).props.style);
-    expect(s.color).toBe(colors.textSecondary);
-    expect(s.fontFamily).toBe(type.body.fontFamily);
-    const last = flat(targetText(tree, `72.5 ${TIMES} 8`).props.style);
-    expect(last.color).toBe(colors.textSecondary);
-    expect(last.fontFamily).toBe(type.body.fontFamily);
-  });
-
-  test('no tag unless record is set', () => {
+describe('SetRow record mark', () => {
+  test('no mark unless record is set', () => {
     expect(byLabel(render({}), 'Personal record')).toHaveLength(0);
+    expect(words(render({}).toJSON())).not.toContain('PR');
   });
 
-  test('record: a PR pill after the value, 18 dp, primary tint, primary caption strong', () => {
-    const tree = render({ record: true });
+  test('record: a plain amber "PR" under the set number inside the marker column, no pill', () => {
+    const tree = render({ record: true, testIDs: { marker: 'm' } });
     const tag = one(byLabel(tree, 'Personal record'));
     expect(tag.props.accessible).toBe(true);
-    const s = flat(tag.props.style);
-    expect(s.minHeight).toBe(18);
-    expect(s.paddingHorizontal).toBe(spacing.xs2);
-    expect(s.borderRadius).toBe(radius.full);
-    expect(s.backgroundColor).toBe(colors.primaryBg);
-    const text = flat(textIn(tag).props.style);
     expect(words(tag).join('')).toBe('PR');
-    expect(text.color).toBe(colors.primary);
-    expect(text.fontSize).toBe(type.captionStrong.fontSize);
+    const s = flat(tag.props.style);
+    expect(s.color).toBe(colors.primary);
+    expect(s.fontSize).toBe(type.captionStrong.fontSize);
+    expect(s.fontFamily).toBe(type.captionStrong.fontFamily);
+    expect(s.backgroundColor).toBeUndefined();
+    expect(s.minHeight).toBeUndefined();
+    expect(s.borderRadius).toBeUndefined();
+    // Inside the marker column, after the set number (document order).
+    const texts = one(byId(tree, 'm')).findAll((n) => n.type === 'Text').map((n) => words(n).join(''));
+    expect(texts.indexOf('2')).toBeGreaterThanOrEqual(0);
+    expect(texts.indexOf('PR')).toBeGreaterThan(texts.indexOf('2'));
+    expect(tree.root.findAll((n) => flat(n.props.style).backgroundColor === colors.primaryBg)).toHaveLength(0);
   });
 
-  test('prTarget: the PR tag then the set on the second line, replacing the rule', () => {
-    const tree = render({ prTarget: { weight: 70, reps: 9 } });
-    const group = one(byLabel(tree, 'A record at 70 kilograms is 9 reps'));
-    expect(group.props.accessible).toBe(true);
-    expect(words(group).join('')).toBe(`PR70 ${TIMES} 9`);
-    const set = one(group.findAll((n) => n.type === 'Text' && words(n).join('') === `70 ${TIMES} 9`));
-    const s = flat(set.props.style);
-    expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontSize).toBe(type.bodySm.fontSize);
-    expect(s.fontFamily).toBe(type.num('bodySm').fontFamily);
-    expect(s.fontVariant).toEqual(['tabular-nums']);
-    expect(set.props.numberOfLines).toBe(1);
-    const tag = flat(one(group.findAll((n) => n.type === 'View' && flat(n.props.style).minHeight === 18)).props.style);
-    expect(tag.backgroundColor).toBe(colors.primaryBg);
-    expect(words(tree.toJSON())).not.toContain('+2.5 at 10');
-  });
-
-  test('prTarget speaks one rep in the singular', () => {
-    expect(byLabel(render({ prTarget: { weight: 75, reps: 1 } }), 'A record at 75 kilograms is 1 rep')).toHaveLength(1);
-  });
-
-  test('prTarget null shows the rule as before; record and prTarget are independent', () => {
-    const tree = render({ prTarget: null, record: true });
-    expect(words(tree.toJSON())).toContain('+2.5 at 10');
-    expect(byLabel(tree, 'Personal record')).toHaveLength(1);
-  });
-
-  test('no target at all leaves an empty cell', () => {
-    expect(() => render({ target: null })).not.toThrow();
+  test('record leaves the entry area alone: Last and the wells read the same', () => {
+    const tree = render({ record: true, testIDs: { last: 'l' } });
+    expect(words(one(byId(tree, 'l')))).toEqual([`72.5 ${TIMES} 8`]);
+    expect(words(one(byLabel(tree, 'Set 2 weight'))).join('')).toBe('70');
+    expect(words(one(byLabel(tree, 'Set 2 reps'))).join('')).toBe('8');
   });
 });
 
 describe('SetRow frame', () => {
-  test('64 dp minimum, hairline below, the drawing\'s column grid', () => {
+  test('64 dp minimum, hairline below, a row gap of 8 between every column, the drawing\'s column grid', () => {
     const root = render({ testIDs: { row: 'r' } });
     const row = one(byId(root, 'r'));
     const s = flat(row.props.style);
     expect(s.minHeight).toBe(64);
+    expect(s.flexDirection).toBe('row');
+    expect(s.alignItems).toBe('center');
     expect(s.borderBottomWidth).toBe(1);
     expect(s.borderBottomColor).toBe(colors.borderSubtle);
-    expect(s.paddingLeft).toBe(16);
-    expect(s.paddingRight).toBe(12);
-    expect(s.gap).toBe(6);
-    expect(SET_COLUMNS).toEqual({ marker: 30, last: 72, wells: 98, check: 36 });
+    // The card grid (D220 addendum 8): 12/8 dp padding and an 8 dp gap between
+    // marker, Last, the wells and the check, so nothing touches.
+    expect(s.paddingLeft).toBe(12);
+    expect(s.paddingRight).toBe(8);
+    expect(s.gap).toBe(8);
+    expect(spacing.sm).toBe(8);
+    expect(spacing.md).toBe(12);
+    expect(SET_COLUMNS).toEqual({ marker: 24, last: 68, check: 36 });
   });
 
-  test('cell text never widens a column: one line, shrinkable', () => {
-    const tree = render({ onPressLast: () => {}, record: true });
+  test('cell text never widens a column: the Last cell is one line, shrinkable', () => {
     const longText = `1000.25 ${TIMES} 100`;
     const t2 = render({ last: { text: longText, stale: false } });
     const text = one(t2.root.findAll((n) => n.type === 'Text' && words(n).join('') === longText));
     expect(text.props.numberOfLines).toBe(1);
     expect(text.props.adjustsFontSizeToFit).toBe(true);
-    const value = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === `70 ${TIMES} 6-10`));
-    expect(flat(value.props.style).flexShrink).toBe(1);
-    expect(value.props.numberOfLines).toBe(1);
   });
 });
 
 describe('SetRow exercise kinds', () => {
-  const kindWells = (tree) => one(hosts(tree, (p) => flat(p.style).width === 98));
-  const wellButtons = (tree) => kindWells(tree).findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'button');
+  const wellButtons = (tree) => wellsRow(tree).findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'button');
   const shown = (tree, label) => words(one(byLabel(tree, label))).join('');
 
-  test('weight_reps and weighted_bodyweight render the weight and reps wells', () => {
+  test('weight_reps and weighted_bodyweight render two separate boxes, weight then reps', () => {
     ['weight_reps', 'weighted_bodyweight', undefined].forEach((kind) => {
       const tree = render({ kind });
       expect(wellButtons(tree)).toHaveLength(2);
+      expect(wellButtons(tree).map((b) => b.props.accessibilityLabel)).toEqual(['Set 2 weight', 'Set 2 reps']);
       expect(shown(tree, 'Set 2 weight')).toBe('70');
       expect(shown(tree, 'Set 2 reps')).toBe('8');
     });
   });
 
-  test('reps_only: one reps well the full wells width, spoken as reps', () => {
+  test('reps_only: one reps box, flex 1 of the wells width, spoken as reps', () => {
     const onPressWell = jest.fn();
     const tree = render({ kind: 'reps_only', onPressWell, wells: { weight: 99, reps: 8, state: 'next' } });
     const buttons = wellButtons(tree);
@@ -435,12 +418,12 @@ describe('SetRow exercise kinds', () => {
     expect(buttons[0].props.accessibilityLabel).toBe('Set 2 reps');
     expect(buttons[0].props.accessibilityValue).toEqual({ text: '8' });
     expect(words(tree.toJSON())).not.toContain('99');
-    expect(flat(buttons[0].props.style).borderLeftWidth).toBeUndefined();
+    expect(flat(buttons[0].props.style).flex).toBe(1);
     press(buttons[0]);
     expect(onPressWell).toHaveBeenCalledWith('reps');
   });
 
-  test('duration: one well of m:ss over the reps field, spoken in minutes and seconds', () => {
+  test('duration: one box of m:ss over the reps field, spoken in minutes and seconds', () => {
     const onPressWell = jest.fn();
     const tree = render({ kind: 'duration', onPressWell, wells: { weight: '', reps: 90, state: 'next' } });
     const buttons = wellButtons(tree);
@@ -469,7 +452,7 @@ describe('SetRow exercise kinds', () => {
     });
   });
 
-  test('distance: the distance well then the time well, field keys weight and reps', () => {
+  test('distance: two separate boxes, the distance then the time, field keys weight and reps', () => {
     const onPressWell = jest.fn();
     const tree = render({ kind: 'distance', onPressWell, wells: { weight: 400, reps: 95, state: 'next' } });
     expect(wellButtons(tree)).toHaveLength(2);
@@ -504,7 +487,7 @@ describe('SetRow exercise kinds', () => {
       expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textDisabled);
       const editing = render({ kind, wells: { weight: 10, reps: 60, state: 'editing', editingField: 'reps' } });
       expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.textPrimary);
-      expect(flat(wellsBox(editing).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+      expect(flat(one(byLabel(editing, `Set 2 ${label}`)).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
     },
   );
 });
@@ -614,6 +597,11 @@ describe('SetRow phone-keyboard path', () => {
     expect(box.props.selectTextOnFocus).toBe(true);
     expect(box.props.autoFocus).toBe(true);
     expect(box.props.onSubmitEditing).toBe(input.onSubmitEditing);
+    // The box around the field is a plain View (not a button) carrying the editing edge.
+    const wrap = one(hosts(tree, (p) => flat(p.style).borderWidth === 1.5 && flat(p.style).borderColor === withAlpha(colors.primary, alpha.strong)));
+    expect(flat(wrap.props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(flat(wrap.props.style).flex).toBe(1);
+    expect(wrap.props.accessibilityRole).toBeUndefined();
     act(() => { box.props.onChangeText('80'); });
     expect(input.onChangeText).toHaveBeenCalledWith('80');
     const s = flat(box.props.style);

@@ -4,7 +4,7 @@
  * One exercise as a house card on the session page (12-BUILD-SPEC sections
  * 1.3, 2, 2a and 3, register D220; restyled to the app's own visual language
  * on the founder's device verdict, D220 addendum 7). Three states:
- *   active    the 56 dp header, the bests line (when `bests` is given), the
+ *   active    the 56 dp header, the
  *             children (the set table and any banners the screen passes), then
  *             the 52 dp footer: Add set, Swap and the overflow
  *   done      the header with a green check and "{n} sets"; nothing else
@@ -16,23 +16,14 @@
  *   the index and name, and the empty space after the chevron  onPressHeader
  *   the chevron after the name                                  onDetails
  *   the square timer button (active and upcoming)               onRestLength
- *   the square history button beside it, and the bests line     onHistory
+ *   the square history button beside it                          onHistory
  * onPressHeader is what makes an exercise the active one; whether it does
  * anything on the exercise that is already active is the screen's call.
  *
- * Bests line (section 2a, the founder's "previous weights and reps and the PRs
- * on the screen"). `bests` is null or
- *   { lastDateLabel, heaviest: { weight, reps } | null,
- *     atWeight: { weight, reps } | null, unit? }
- * and renders one line under the header, parts joined by a middle dot: "Last
- * session 6 Oct", "Best 75 kg (times sign) 6", "at 70 kg: 8 reps" (label role,
- * secondary ink, the numbers in primary ink on tabular figures). A null part
- * is left out with its separator; no parts means no line. There is no
- * estimated-max figure anywhere in it. `unit` is not in the spec; it defaults
- * to "kg", the only gym unit the app has. The line wraps rather than clips at
- * larger text sizes. It shows in the active state only, like the children. The
- * line is a pressable row (48 dp tall, "History and records", trailing chevron)
- * that calls `onHistory`, as does the history button in the header.
+ * The bests line of section 2a (last session, heaviest, best at today's
+ * weight) is gone (founder render verdict 2026-10-08: "looks stupid out of
+ * place"); the history button in the header opens the same history and
+ * records sheet, one tap.
  *
  * Three more header facts the outline used to carry (stage A wiring, lead):
  *   groupLabel  "Superset", "Giant set" or "Circuit", a caption after the name
@@ -73,76 +64,9 @@ const ORDER_BADGE = 32;
 // Header chevron: a 16 dp glyph, taken to a 48 dp target by its slop.
 const CHEVRON_HIT_SLOP = { top: 16, bottom: 16, left: 16, right: 16 };
 
-const MIDDLE_DOT = '\u00B7';
-const TIMES = '\u00D7';
-
-function spokenUnit(unit) {
-  if (unit === 'kg') return 'kilograms';
-  if (unit === 'lb' || unit === 'lbs') return 'pounds';
-  return unit;
-}
-
-function repWord(reps) {
-  return Number(reps) === 1 ? 'rep' : 'reps';
-}
 
 function setWord(count) {
   return count === 1 ? 'set' : 'sets';
-}
-
-function BestsLine({ bests, onPress, live, chevronColor }) {
-  const unit = bests.unit || 'kg';
-  const { lastDateLabel, heaviest, atWeight } = bests;
-  const parts = [];
-  const spoken = [];
-
-  if (lastDateLabel) {
-    parts.push(<Text key="last">{`Last session ${lastDateLabel}`}</Text>);
-    spoken.push(`Last session ${lastDateLabel}`);
-  }
-  if (heaviest) {
-    parts.push(
-      <Text key="best">
-        {'Best '}
-        <Text style={live.bestsNum}>{String(heaviest.weight)}</Text>
-        {` ${unit} ${TIMES} `}
-        <Text style={live.bestsNum}>{String(heaviest.reps)}</Text>
-      </Text>,
-    );
-    spoken.push(`Best ${heaviest.weight} ${spokenUnit(unit)} for ${heaviest.reps} ${repWord(heaviest.reps)}`);
-  }
-  if (atWeight) {
-    parts.push(
-      <Text key="at">
-        {'at '}
-        <Text style={live.bestsNum}>{String(atWeight.weight)}</Text>
-        {` ${unit}: `}
-        <Text style={live.bestsNum}>{String(atWeight.reps)}</Text>
-        {` ${repWord(atWeight.reps)}`}
-      </Text>,
-    );
-    spoken.push(`At ${atWeight.weight} ${spokenUnit(unit)}, ${atWeight.reps} ${repWord(atWeight.reps)}`);
-  }
-  if (parts.length === 0) return null;
-
-  const line = [];
-  parts.forEach((part, i) => {
-    if (i > 0) line.push(<Text key={`dot-${i}`}>{` ${MIDDLE_DOT} `}</Text>);
-    line.push(part);
-  });
-
-  return (
-    <TouchableOpacity
-      style={styles.bestsRow}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="History and records"
-      accessibilityValue={{ text: `${spoken.join('. ')}.` }}
-    >
-      <Text style={[styles.bests, live.bests]}>{line}</Text>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={chevronColor} />
-    </TouchableOpacity>
-  );
 }
 
 function CountdownLine({ ms, reduceMotion, color }) {
@@ -183,7 +107,6 @@ export default function ExerciseSection({
   name,
   state = 'upcoming',
   doneSetCount = 0,
-  bests = null,
   onPressHeader,
   onDetails,
   onRestLength,
@@ -210,8 +133,6 @@ export default function ExerciseSection({
     index: { ...t.type.w(t.type.num('label'), 'bold'), color: t.colors.textSecondary },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     doneText: { ...t.type.label, color: t.colors.textSecondary },
-    bests: { ...t.type.label, color: t.colors.textSecondary },
-    bestsNum: { ...t.type.num('label'), color: t.colors.textPrimary },
     nameSkipped: { color: t.colors.textMuted },
     group: { ...t.type.caption, color: t.colors.textMuted },
     hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
@@ -237,7 +158,7 @@ export default function ExerciseSection({
             <Text style={live.index}>{index}</Text>
           </View>
           <View style={styles.nameBlock}>
-            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={2}>{name}</Text>
             {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
             {!isActive && !isDone && doneCount > 0 && totalSetCount ? (
               <Text style={live.group} numberOfLines={1}>{`${doneCount} of ${totalSetCount} sets`}</Text>
@@ -299,9 +220,6 @@ export default function ExerciseSection({
         )}
       </View>
 
-      {isActive && bests ? (
-        <BestsLine bests={bests} onPress={onHistory} live={live} chevronColor={t.colors.textMuted} />
-      ) : null}
       {isActive ? children : null}
 
       {isActive ? (
@@ -388,14 +306,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs2,
   },
-  bestsRow: {
-    minHeight: touchTarget.minimum,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  bests: { flex: 1, minWidth: 0 },
   footer: {
     minHeight: FOOTER_MIN_HEIGHT,
     flexDirection: 'row',

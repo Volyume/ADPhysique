@@ -1921,9 +1921,11 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       const collapsed = collectText(tree.toJSON()).join('  ');
       expect(collapsed).toMatch(/Target met/);          // the content chip is present
       expect(collapsed).not.toMatch(/Target reached/);  // the banner stays folded
-      // Stage B (D220): the target prescription (reps range) is the next
-      // row's Target cell ("60 × 8-12" over the rule), and still renders.
-      expect(collapsed).toMatch(/8\s*-\s*12/);
+      // D220 addendum 8: there is no Target cell. With the target met and
+      // no pending row, the prescription reaches the screen as the coach
+      // line above the table ("Add 2.5 kg once you reach 12 reps."); a
+      // pending row would carry the range as its reps placeholder.
+      expect(collapsed).toMatch(/once you reach 12 reps/);
 
       // Expand: tap the chip; the folded banner content then appears.
       const chips = tree.root.findAll(

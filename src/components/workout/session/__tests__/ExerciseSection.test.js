@@ -1,10 +1,10 @@
 /**
- * ExerciseSection (12-BUILD-SPEC sections 1.3, 2, 2a, 2b and 3, register D220).
- * Pins: the three states (active mounts children, bests and footer; done shows
- * the green check and the count; upcoming is the header only), every callback,
- * the bests line text, its omissions, its numeric spans and its pressable row,
- * the history and rest buttons, the accessibility labels, and the token-only
- * source guard.
+ * ExerciseSection (12-BUILD-SPEC sections 1.3, 2 and 3, register D220). Pins:
+ * the three states (active mounts children and footer; done shows the green
+ * check and the count; upcoming is the header only), every callback, that the
+ * bests line is gone (the header's history button is the only way to
+ * onHistory), the history and rest buttons, the accessibility labels, and the
+ * token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
@@ -24,13 +24,6 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
-const DOT = String.fromCharCode(0x00b7);
-const TIMES = String.fromCharCode(0x00d7);
-const BESTS = {
-  lastDateLabel: '6 Oct',
-  heaviest: { weight: 75, reps: 6 },
-  atWeight: { weight: 70, reps: 8 },
-};
 
 function render(props, children) {
   let tree;
@@ -58,7 +51,6 @@ const joined = (tree) => words(tree.toJSON()).join('');
 const textHost = (tree, content) => one(tree.root.findAll(
   (n) => n.type === 'Text' && words(n).join('') === content,
 ));
-const bestsRow = (tree) => one(byLabel(tree, 'History and records'));
 
 describe('ExerciseSection states', () => {
   test('active: header, children and the footer; Swap only when onSwap is given', () => {
@@ -91,7 +83,7 @@ describe('ExerciseSection states', () => {
   });
 
   test('upcoming: the header and its two small buttons only', () => {
-    const tree = render({ state: 'upcoming', bests: BESTS, onRestLength: jest.fn(), onHistory: jest.fn() });
+    const tree = render({ state: 'upcoming', onRestLength: jest.fn(), onHistory: jest.fn() });
     expect(joined(tree)).not.toContain('TABLE_CHILD');
     expect(byLabel(tree, 'Add set')).toHaveLength(0);
     expect(byLabel(tree, 'History and records')).toHaveLength(0);
@@ -139,14 +131,15 @@ describe('ExerciseSection states', () => {
 });
 
 describe('ExerciseSection header', () => {
-  test('exercise name: bodyStrong in primary ink, one line; the index in the plan detail\'s 32 dp order badge', () => {
+  test('exercise name: bodyStrong in primary ink, up to two lines; the index in the plan detail\'s 32 dp order badge', () => {
     // The plan detail's exercise row (RoutineDetailScreen exerciseCard): the
     // name is text ink, not amber; amber is spent on the set you are on.
     const tree = render({});
     const name = textHost(tree, 'Barbell Row (Bent Over)');
     const s = flat(name.props.style);
     expect(s.color).toBe(colors.textPrimary);
-    expect(name.props.numberOfLines).toBe(1);
+    // Two lines, as the plan detail wraps a long name; never a clipped name.
+    expect(name.props.numberOfLines).toBe(2);
     expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
     expect(s.fontSize).toBe(type.bodyStrong.fontSize);
     const indexText = textHost(tree, '2');
@@ -264,74 +257,23 @@ describe('ExerciseSection footer', () => {
   });
 });
 
-describe('ExerciseSection bests line (2a, 2b)', () => {
-  test('the full line, with the numbers as their own spans', () => {
-    const tree = render({ bests: BESTS });
-    const row = bestsRow(tree);
-    expect(words(row).join('')).toBe(`Last session 6 Oct ${DOT} Best 75 kg ${TIMES} 6 ${DOT} at 70 kg: 8 reps`);
-    const nums = row.findAll((n) => n.type === 'Text' && flat(n.props.style).color === colors.textPrimary);
-    expect(nums.flatMap((n) => words(n))).toEqual(['75', '6', '70', '8']);
-    const s = flat(nums[0].props.style);
-    expect(s.fontVariant).toEqual(['tabular-nums']);
-    expect(s.fontSize).toBe(type.label.fontSize);
+describe('ExerciseSection bests line is gone', () => {
+  test('a bests prop draws nothing: no History and records row, no Last session text', () => {
+    const bests = { lastDateLabel: '6 Oct', heaviest: { weight: 75, reps: 6 }, atWeight: { weight: 70, reps: 8 } };
+    const tree = render({ bests, onHistory: jest.fn() });
+    expect(byLabel(tree, 'History and records')).toHaveLength(0);
+    expect(joined(tree)).not.toContain('Last session');
+    expect(joined(tree)).not.toContain('Best');
   });
 
-  test('the line is label role in secondary ink and may wrap', () => {
-    const row = bestsRow(render({ bests: BESTS }));
-    const line = row.findAll((n) => n.type === 'Text' && flat(n.props.style).color === colors.textSecondary)[0];
-    const s = flat(line.props.style);
-    expect(s.fontSize).toBe(type.label.fontSize);
-    expect(line.props.numberOfLines).toBeUndefined();
-  });
-
-  test('null parts are left out with their separator', () => {
-    expect(words(bestsRow(render({ bests: { ...BESTS, heaviest: null } }))).join(''))
-      .toBe(`Last session 6 Oct ${DOT} at 70 kg: 8 reps`);
-    expect(words(bestsRow(render({ bests: { ...BESTS, atWeight: null } }))).join(''))
-      .toBe(`Last session 6 Oct ${DOT} Best 75 kg ${TIMES} 6`);
-    expect(words(bestsRow(render({ bests: { lastDateLabel: null, heaviest: BESTS.heaviest, atWeight: BESTS.atWeight } }))).join(''))
-      .toBe(`Best 75 kg ${TIMES} 6 ${DOT} at 70 kg: 8 reps`);
-    expect(words(bestsRow(render({ bests: { lastDateLabel: '6 Oct', heaviest: null, atWeight: null } }))).join(''))
-      .toBe('Last session 6 Oct');
-  });
-
-  test('no parts, or bests null or absent: no line', () => {
-    expect(byLabel(render({ bests: { lastDateLabel: '', heaviest: null, atWeight: null } }), 'History and records')).toHaveLength(0);
-    expect(byLabel(render({ bests: null }), 'History and records')).toHaveLength(0);
-    expect(byLabel(render({}), 'History and records')).toHaveLength(0);
-  });
-
-  test('one rep is singular; a unit can be supplied', () => {
-    const row = bestsRow(render({ bests: { lastDateLabel: '6 Oct', heaviest: null, atWeight: { weight: 100, reps: 1 }, unit: 'lb' } }));
-    expect(words(row).join('')).toContain('at 100 lb: 1 rep');
-    expect(words(row).join('')).not.toContain('1 reps');
-  });
-
-  test('a pressable 48 dp row: History and records, spoken value, trailing muted chevron, calls onHistory', () => {
+  test('onHistory is reached only through the header history button', () => {
     const onHistory = jest.fn();
-    const row = bestsRow(render({ bests: BESTS, onHistory }));
-    expect(row.props.accessibilityRole).toBe('button');
-    expect(flat(row.props.style).minHeight).toBe(48);
-    expect(row.props.accessibilityValue.text).toBe(
-      'Last session 6 Oct. Best 75 kilograms for 6 reps. At 70 kilograms, 8 reps.',
-    );
-    const chevron = row.findAll((n) => n.type === 'Ionicons');
-    expect(chevron).toHaveLength(1);
-    expect(chevron[0].props.name).toBe('chevron-forward');
-    expect(chevron[0].props.color).toBe(colors.textMuted);
-    expect(chevron[0].props.size).toBe(iconSize.sm);
-    act(() => { row.props.onPress(); });
+    const tree = render({ onHistory });
+    const reached = hosts(tree, (p) => typeof p.onPress === 'function' && p.accessibilityLabel
+      && /history/i.test(p.accessibilityLabel));
+    expect(reached.map((n) => n.props.accessibilityLabel)).toEqual(['History and records for Barbell Row (Bent Over)']);
+    press(one(byLabel(tree, 'History and records for Barbell Row (Bent Over)')));
     expect(onHistory).toHaveBeenCalledTimes(1);
-  });
-
-  test('sits under the header and before the children', () => {
-    const text = joined(render({ bests: BESTS }));
-    expect(text.indexOf('Barbell Row')).toBeLessThan(text.indexOf('Last session'));
-    expect(text.indexOf('Last session')).toBeLessThan(text.indexOf('TABLE_CHILD'));
-  });
-
-  test('done sections do not show it', () => {
-    expect(byLabel(render({ state: 'done', bests: BESTS }), 'History and records')).toHaveLength(0);
   });
 });
 
