@@ -1,0 +1,330 @@
+<title>Community Samples</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a scrolling sheet of phone frames, grouped by decision; dark-first, the app's own tokens. */
+:root{--pg:#0D0D0D;--sec:#191917;--sec2:#222220;--well:#2A2A27;--s3:#343431;--hair:#2E2E2C;--bd:#6E6E6E;--t1:#FFFFFF;--t2:#9E9E9E;--t3:#9C9C9C;--a:#F5A623;--abg:rgba(245,166,35,.14);--ok:#4CAF50;--sheet:#0A0A0A;--sheet-fg:#E8E8E4;color-scheme:dark}
+body{background:var(--sheet);color:var(--sheet-fg);font-family:Inter,system-ui,sans-serif;margin:0;padding-block:24px;padding-inline:16px}
+h1{font-size:22px;font-weight:600;margin:0 0 6px}
+h2{font-size:17px;font-weight:600;margin:40px 0 4px;color:var(--t1)}
+p.lead{color:var(--t2);font-size:14px;line-height:20px;max-width:640px;margin:0 0 12px}
+.row{display:flex;gap:20px;overflow-x:auto;padding:8px 0 16px;scroll-snap-type:x mandatory}
+.opt{flex:0 0 auto;scroll-snap-align:start;width:360px;max-width:calc(100vw - 32px)}
+.opt h3{font-size:14px;font-weight:600;margin:0 0 2px;color:var(--t1)}
+.opt .sub{font-size:12px;color:var(--t2);line-height:17px;margin:0 0 10px;min-height:34px}
+.opt .rec{color:var(--a)}
+.ph{width:360px;max-width:100%;height:760px;background:var(--pg);color:var(--t1);border-radius:32px;border:1px solid var(--hair);overflow:hidden;position:relative;font-size:16px;line-height:22px}
+.ph *{box-sizing:border-box}
+.n{font-variant-numeric:tabular-nums}
+.sb{height:36px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 4px;font-size:13px;font-weight:600}
+.hdr{height:48px;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px}
+.hdr .t{font-size:17px;font-weight:500;flex:1}
+.hdr .g{width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--t1);position:relative}
+.hdr .g.amb{color:var(--a)}
+.hdr .g.circ{width:34px;height:34px;border-radius:17px;background:var(--well);border:1px solid var(--bd);margin:0 2px}
+.dot{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:4px;background:var(--a)}
+.ico{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.seg{height:48px;display:flex;align-items:center;gap:6px;padding:0 16px}
+.seg span{flex:1;height:36px;display:flex;align-items:center;justify-content:center;border-radius:18px;font-size:13px;font-weight:500;color:var(--t2);background:var(--well)}
+.seg span.on{background:var(--a);color:#0D0D0D}
+.chips{display:flex;gap:8px;padding:8px 16px 10px;align-items:center;overflow:hidden}
+.chips span{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--bd);font-size:13px;font-weight:500;color:var(--t2);display:flex;align-items:center;white-space:nowrap}
+.chips span.on{border-color:var(--a);color:var(--a);background:var(--abg)}
+.chips .sort{margin-left:auto;border:0;color:var(--t2);font-size:12px;padding:0}
+.band{height:10px;background:var(--pg)}
+.sec{background:var(--sec)}
+.sh{height:56px;display:flex;align-items:center;padding:0 16px;font-size:17px;font-weight:600}
+.sh .act{margin-left:auto;font-size:13px;font-weight:500;color:var(--t2)}
+.eye{height:44px;display:flex;align-items:center;padding:0 16px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);font-weight:500}
+.eye .act{margin-left:auto;text-transform:none;letter-spacing:0;font-size:13px;color:var(--t2)}
+.r{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:64px;border-bottom:1px solid var(--hair)}
+.r:last-child{border-bottom:0}
+.av{width:32px;height:32px;border-radius:16px;background:var(--s3);flex:0 0 auto;position:relative}
+.av.a36{width:36px;height:36px;border-radius:18px}
+.av.a40{width:40px;height:40px;border-radius:20px}
+.av.ring::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:5px;background:var(--a);border:2px solid var(--sec)}
+.av.sq{border-radius:8px;background:var(--well);border:1px solid var(--hair)}
+.tx{flex:1;min-width:0}
+.tx .l1{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .l2{font-size:13px;line-height:17px;color:var(--t2)}
+.chev{color:var(--t3);font-size:18px}
+.well{margin:10px 16px 12px;height:44px;border:1px solid var(--hair);border-radius:10px;display:flex;align-items:center;padding:0 14px;color:var(--t3);font-size:15px;background:var(--pg)}
+.post{padding:12px 16px 10px;border-bottom:1px solid var(--hair)}
+.post .id{display:flex;align-items:center;gap:10px}
+.post .nm{font-size:16px;font-weight:500;flex:1}
+.post .tm{font-size:11px;color:var(--t3)}
+.post .ach{font-size:16px;font-weight:600;margin-top:8px}
+.post .ach .pr{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;background:var(--abg);color:var(--a);font-size:11px;font-weight:600;margin-left:6px;vertical-align:middle}
+.post .st{font-size:13px;color:var(--t2);margin-top:2px}
+.post .note{font-size:14px;line-height:19px;color:var(--t1);margin-top:6px}
+.post .re{display:flex;gap:4px;margin:4px 0 0 -12px}
+.post .re span{height:44px;min-width:48px;display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;color:var(--t2)}
+.post .re span.on{color:var(--a)}
+.post.cur .ach{font-size:13px;font-weight:500;color:var(--t2)}
+.post.cur .nm{font-size:16px}
+.card{margin:0 16px 12px;background:var(--sec);border-radius:16px;padding:14px 16px 10px;border:0}
+.card .post{padding:0;border:0}
+.card .ach{font-size:24px;line-height:30px;font-weight:600}
+.card .re span{height:36px;border:1px solid var(--bd);border-radius:18px;padding:0 12px;margin-top:6px}
+.card .re{margin-left:0;gap:8px}
+.tab{position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--sec);border-top:1px solid var(--hair);display:flex;align-items:center;padding:0 4px}
+.tab span{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--t3);position:relative}
+.tab span.on{color:var(--a)}
+.tab .bdg{position:absolute;top:-4px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;background:var(--a);color:#0D0D0D;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.hero{margin:16px;background:var(--sec);border-radius:16px;padding:16px}
+.hero .h{font-size:20px;font-weight:500;margin-bottom:4px}
+.hero .b{font-size:14px;color:var(--t2);line-height:19px}
+.big{display:flex;align-items:center;gap:14px;padding:0 16px;min-height:88px;border-bottom:1px solid var(--hair)}
+.big .ic{width:44px;height:44px;border-radius:12px;background:var(--well);display:flex;align-items:center;justify-content:center;color:var(--t1)}
+.big .l1{font-size:17px;font-weight:600}
+.big .l2{font-size:13px;color:var(--t2)}
+.wk{display:flex;gap:6px;align-items:flex-end;height:32px;padding:0 16px;margin:6px 0 12px}
+.wk i{flex:1;background:var(--s3);border-radius:2px 2px 0 0;display:block}
+.wk i.on{background:var(--a)}
+.lab{position:absolute;left:12px;right:12px;bottom:10px;font-size:11px;color:var(--t3);text-align:center}
+.legend{font-size:12px;color:var(--t2);line-height:18px;margin:8px 0 0;max-width:640px}
+.pros{font-size:12px;color:var(--t2);line-height:17px;margin:10px 0 0;padding-left:16px}
+.pros b{color:var(--t1);font-weight:500}
+.today .r{min-height:64px}
+</style>
+
+<h1>Community level-up: samples to choose from</h1>
+<p class="lead">Drawn in the app's own tokens at phone size. Every figure and name here is an example. Swipe each row sideways. Q1 is the structure, Q2 is the look; they combine, so any structure can carry any look. The amber-marked option is the lead's recommendation.</p>
+
+<h2>Q0. Today, for comparison: the Hub as it is</h2>
+<p class="lead">One list. You, then every cohort (gym, discipline, age group, area) and every group as the same 64 dp row, the feed last and fixed to Following, no filter, no sort, no compose button, five amber header circles.</p>
+<div class="row">
+ <div class="opt">
+  <h3>As built at HEAD</h3>
+  <p class="sub">The first post sits about 637 dp down for a member with six cohorts.</p>
+  <div class="ph today">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">Community</span>
+    <span class="g circ amb"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+    <span class="g circ amb"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span>
+    <span class="g circ amb"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg></span>
+    <span class="g circ amb"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span>
+    <span class="g circ amb"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/></svg></span></div>
+   <div class="r"><span class="av ring"></span><span class="tx"><span class="l1">You</span><span class="l2">● ● ○ ● ○ ○ ○ &nbsp;3 sessions this week</span></span></div>
+   <div class="eye">People <span class="act">Find people</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">PureGym Glasgow</span><span class="l2">4 trained this week</span></span><span class="chev">›</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Strength</span><span class="l2">12 people</span></span><span class="chev">›</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Men's Physique</span><span class="l2">3 people</span></span><span class="chev">›</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">35 to 44</span><span class="l2">6 people</span></span><span class="chev">›</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Near you</span><span class="l2">9 people</span></span><span class="chev">›</span></div>
+   <div class="eye">Groups <span class="act">New group</span></div>
+   <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Monday crew</span><span class="l2">5 members</span></span><span class="chev">›</span></div>
+   <div class="eye">Activity</div>
+   <div class="post cur"><div class="id"><span class="av"></span><span class="nm">Sam</span></div><div class="ach">Upper A · 52 min · 18 sets</div><div class="re"><span>♡ 7</span><span>💬 2</span></div></div>
+   <div class="lab">The feed starts here, below the fold</div>
+  </div>
+ </div>
+</div>
+
+<h2>Q1. Structure: where Community lives</h2>
+<p class="lead">All three land on the feed, split Feed / People / Groups / You, give the feed scope chips and a sort, keep cohorts under People with the age group demoted to a filter, and always show a compose entry.</p>
+<div class="row">
+ <div class="opt">
+  <h3><span class="rec">A. A sixth bottom tab</span> (lead's view)</h3>
+  <p class="sub">Community gets its own root and badge. Today stays the default tab. Largest build.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="t" style="padding-left:4px;font-size:20px;font-weight:600">Community</span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg><span class="dot"></span></span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="seg"><span class="on">Feed</span><span>People</span><span>Groups</span><span>You</span></div>
+   <div class="chips"><span class="on">Following</span><span>My gym</span><span>My groups</span><span>Everyone</span><span class="sort">Newest ▾</span></div>
+   <div class="sec">
+    <div class="well">Share something from your training</div>
+    <div class="post"><div class="id"><span class="av a36 ring"></span><span class="nm">Sam</span><span class="tm">Today</span></div><div class="ach n">Upper A <span class="pr">PR</span></div><div class="st n">52 min · 18 sets · 4,200 kg · Bench 100 kg x 5</div><div class="re"><span class="on">♥ 7</span><span>💬 2</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Priya</span><span class="tm">Yesterday</span></div><div class="ach n">Lower B</div><div class="st n">48 min · 16 sets · 5,860 kg</div><div class="note">Knee felt fine on the box squats at last.</div><div class="re"><span>♡ 3</span><span>💬 1</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Monday crew</span><span class="tm">Mon</span></div><div class="ach n">Block 2 finished · 6 weeks</div><div class="st n">Jordan completed Build 2</div><div class="re"><span>♡ 12</span><span>💬 4</span></div></div>
+   </div>
+   <div class="tab"><span><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/></svg>Today</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg>Train</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0114 0v6H5z"/></svg>Nutrition</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-9"/></svg>Progress</span><span class="on"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M14 19c0-2 2-3.5 4-3.5s3 1.5 3 3.5"/></svg>Community<span class="bdg">3</span></span><span><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Coach</span></div>
+  </div>
+  <ul class="pros"><li><b>For:</b> a first-class place, Back always sane, badges on the tab, matches Hevy, Strava, JEFIT and Peloton.</li><li><b>Against:</b> six tabs is tight on narrow phones; navigator, deep links and push routes all move.</li></ul>
+ </div>
+
+ <div class="opt">
+  <h3>B. Segmented Hub in the Today stack</h3>
+  <p class="sub">Same screen as A but reached from Today's pill, with a Back arrow; the tab bar still shows Today. Smallest build.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">Community</span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg><span class="dot"></span></span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="seg"><span class="on">Feed</span><span>People</span><span>Groups</span><span>You</span></div>
+   <div class="chips"><span class="on">Following</span><span>My gym</span><span>My groups</span><span>Everyone</span><span class="sort">Newest ▾</span></div>
+   <div class="sec">
+    <div class="well">Share something from your training</div>
+    <div class="post"><div class="id"><span class="av a36 ring"></span><span class="nm">Sam</span><span class="tm">Today</span></div><div class="ach n">Upper A <span class="pr">PR</span></div><div class="st n">52 min · 18 sets · 4,200 kg · Bench 100 kg x 5</div><div class="re"><span class="on">♥ 7</span><span>💬 2</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Priya</span><span class="tm">Yesterday</span></div><div class="ach n">Lower B</div><div class="st n">48 min · 16 sets · 5,860 kg</div><div class="note">Knee felt fine on the box squats at last.</div><div class="re"><span>♡ 3</span><span>💬 1</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Monday crew</span><span class="tm">Mon</span></div><div class="ach n">Block 2 finished · 6 weeks</div><div class="st n">Jordan completed Build 2</div><div class="re"><span>♡ 12</span><span>💬 4</span></div></div>
+   </div>
+   <div class="tab"><span class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/></svg>Today</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg>Train</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0114 0v6H5z"/></svg>Nutrition</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-9"/></svg>Progress</span><span><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Coach</span></div>
+  </div>
+  <ul class="pros"><li><b>For:</b> fixes the complaint fastest, nothing in the navigator moves, reversible.</li><li><b>Against:</b> still two taps from Today and invisible in the tab bar; Back from Coach or Settings lands on Today.</li></ul>
+ </div>
+
+ <div class="opt">
+  <h3>C. A short home, three doors</h3>
+  <p class="sub">The Hub becomes a short page; Feed, People and Groups are each their own screen with their own controls.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">Community</span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span>
+    <span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span></div>
+   <div class="sec">
+    <div class="r" style="border:0"><span class="av a36 ring"></span><span class="tx"><span class="l1">You · 3 sessions this week</span><span class="l2 n">Week 3 of 6 · 12 weeks in a row</span></span></div>
+    <div class="wk"><i style="height:60%" class="on"></i><i style="height:80%" class="on"></i><i style="height:20%"></i><i style="height:70%" class="on"></i><i style="height:20%"></i><i style="height:20%"></i><i style="height:20%"></i></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="big"><span class="ic"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="tx"><span class="l1">Feed</span><span class="l2">4 new since yesterday · Sam set a PR</span></span><span class="chev">›</span></div>
+    <div class="big"><span class="ic"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M14 19c0-2 2-3.5 4-3.5s3 1.5 3 3.5"/></svg></span><span class="tx"><span class="l1">People</span><span class="l2">Your gym, disciplines, near you · 2 requests</span></span><span class="chev">›</span></div>
+    <div class="big" style="border:0"><span class="ic"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8"/></svg></span><span class="tx"><span class="l1">Groups</span><span class="l2">Monday crew · 1 invite</span></span><span class="chev">›</span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Messages</span><span class="l2">Priya: see you Thursday?</span></span><span class="chev">›</span></div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Write a post</span><span class="l2">A note, or your last session</span></span><span class="chev">›</span></div>
+   </div>
+   <div class="tab"><span class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/></svg>Today</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8"/></svg>Train</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0114 0v6H5z"/></svg>Nutrition</span><span><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-9"/></svg>Progress</span><span><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Coach</span></div>
+  </div>
+  <ul class="pros"><li><b>For:</b> the clearest first minute, one obvious next step per door, every screen single-purpose.</li><li><b>Against:</b> adds a level; the feed becomes a destination rather than what you land on.</li></ul>
+ </div>
+</div>
+
+<h2>Q1 detail: the People segment (same in every structure)</h2>
+<p class="lead">Cohorts stop being lumped. Each kind gets its own header; the age group leaves the list and becomes a filter on Find people.</p>
+<div class="row">
+ <div class="opt">
+  <h3>People segment</h3>
+  <p class="sub">Find people first; then places and disciplines under their own headers.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="t" style="padding-left:4px;font-size:20px;font-weight:600">Community</span><span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="seg"><span>Feed</span><span class="on">People</span><span>Groups</span><span>You</span></div>
+   <div class="sec">
+    <div class="well">Search people and groups</div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Find people</span><span class="l2">Train like you, same gym, near you, same discipline</span></span><span class="chev">›</span></div>
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Requests</span><span class="l2">2 people want to connect</span></span><span class="chev">›</span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">Your gym</div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">PureGym Glasgow</span><span class="l2 n">4 trained this week · 11 members</span></span><span class="chev">›</span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">Disciplines</div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Strength</span><span class="l2 n">12 people</span></span><span class="chev">›</span></div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Men's Physique</span><span class="l2 n">3 people</span></span><span class="chev">›</span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">Near you</div>
+    <div class="r"><span class="av sq"></span><span class="tx"><span class="l1">Glasgow</span><span class="l2 n">9 people</span></span><span class="chev">›</span></div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<h2>Q2. Look: three directions for the feed</h2>
+<p class="lead">All three share the size system: 56 dp section headers, 64 dp rows, 48 dp targets, one post anatomy (who and when, the achievement as the lead line, the stats, the note, the reactions), header glyphs in white with amber only for the dot.</p>
+<div class="row">
+ <div class="opt">
+  <h3>D1. The logger's grammar carried over</h3>
+  <p class="sub">Near-black page, full-bleed bands, wells, dense 3-line rows, one amber accent. Reads as one product with the session sheet.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="t" style="padding-left:4px;font-size:20px;font-weight:600">Community</span><span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg><span class="dot"></span></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="sec"><div class="seg"><span class="on">Feed</span><span>People</span><span>Groups</span><span>You</span></div>
+   <div class="chips"><span class="on">Following</span><span>My gym</span><span>My groups</span><span>Everyone</span><span class="sort">Newest ▾</span></div></div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="well">Share something from your training</div>
+    <div class="r" style="min-height:72px;align-items:flex-start;padding-top:10px"><span class="av"></span><span class="tx"><span class="l1">Sam <span style="font-size:11px;color:var(--t3);font-weight:400;float:right">Today</span></span><span class="l1 n" style="font-weight:600">Upper A <span style="display:inline-flex;height:18px;padding:0 6px;border-radius:5px;background:var(--abg);color:var(--a);font-size:11px;font-weight:600;align-items:center">PR</span></span><span class="l2 n">52 min · 18 sets · 4,200 kg</span><span class="l2" style="color:var(--a);margin-top:4px">♥ 7 &nbsp;&nbsp; <span style="color:var(--t2)">💬 2</span></span></span></div>
+    <div class="r" style="min-height:72px;align-items:flex-start;padding-top:10px"><span class="av"></span><span class="tx"><span class="l1">Priya <span style="font-size:11px;color:var(--t3);font-weight:400;float:right">Yesterday</span></span><span class="l1 n" style="font-weight:600">Lower B</span><span class="l2 n">48 min · 16 sets · 5,860 kg</span><span class="l2" style="color:var(--t1)">Knee felt fine on the box squats at last.</span><span class="l2" style="margin-top:4px">♡ 3 &nbsp;&nbsp; 💬 1</span></span></div>
+    <div class="r" style="min-height:72px;align-items:flex-start;padding-top:10px"><span class="av"></span><span class="tx"><span class="l1">Monday crew <span style="font-size:11px;color:var(--t3);font-weight:400;float:right">Mon</span></span><span class="l1 n" style="font-weight:600">Block 2 finished</span><span class="l2 n">Jordan completed Build 2 · 6 weeks</span><span class="l2" style="margin-top:4px">♡ 12 &nbsp;&nbsp; 💬 4</span></span></div>
+    <div class="r" style="min-height:72px;align-items:flex-start;padding-top:10px"><span class="av"></span><span class="tx"><span class="l1">Alex <span style="font-size:11px;color:var(--t3);font-weight:400;float:right">Sun</span></span><span class="l1 n" style="font-weight:600">Push</span><span class="l2 n">41 min · 14 sets · 3,100 kg</span><span class="l2" style="margin-top:4px">♡ 2 &nbsp;&nbsp; 💬 0</span></span></div>
+   </div>
+  </div>
+  <ul class="pros"><li><b>Risk:</b> can read heavy or settings-like on a social feed; reverses the one-gutter rule, guards re-pinned.</li></ul>
+ </div>
+
+ <div class="opt">
+  <h3>D2. Warmer social cards</h3>
+  <p class="sub">Post cards, 40 dp avatars, the achievement as a hero figure, reaction chips. Matches Today and Train.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="t" style="padding-left:4px;font-size:20px;font-weight:600">Community</span><span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg><span class="dot"></span></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="seg"><span class="on">Feed</span><span>People</span><span>Groups</span><span>You</span></div>
+   <div class="chips"><span class="on">Following</span><span>My gym</span><span>My groups</span><span>Everyone</span><span class="sort">Newest ▾</span></div>
+   <div class="card"><div class="post"><div class="id"><span class="av a40 ring"></span><span class="nm">Sam<br><span class="tm">Today · PureGym Glasgow</span></span></div><div class="ach n">Upper A <span class="pr">PR</span></div><div class="st n">52 min · 18 sets · 4,200 kg · Bench 100 kg x 5</div><div class="re"><span class="on">♥ 7</span><span>💬 2</span></div></div></div>
+   <div class="card"><div class="post"><div class="id"><span class="av a40"></span><span class="nm">Priya<br><span class="tm">Yesterday</span></span></div><div class="ach n">Lower B</div><div class="st n">48 min · 16 sets · 5,860 kg</div><div class="note">Knee felt fine on the box squats at last.</div><div class="re"><span>♡ 3</span><span>💬 1</span></div></div></div>
+   <div class="card"><div class="post"><div class="id"><span class="av a40"></span><span class="nm">Monday crew<br><span class="tm">Mon</span></span></div><div class="ach n">Block 2 finished</div><div class="st n">Jordan completed Build 2 · 6 weeks</div><div class="re"><span>♡ 12</span><span>💬 4</span></div></div></div>
+   <div class="lab">About 170 dp per post, 3 to a screen</div>
+  </div>
+  <ul class="pros"><li><b>Risk:</b> close to the card Hub rejected on 2026-09-14; halves feed density; 40 dp avatars need the preset badge rule changed.</li></ul>
+ </div>
+
+ <div class="opt">
+  <h3><span class="rec">D3. Hybrid</span> (lead's view)</h3>
+  <p class="sub">The logger's band structure for every page; inside the feed band the post keeps a warmer anatomy: 36 dp avatar, time top right, achievement lead line, quiet 48 dp reactions.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="t" style="padding-left:4px;font-size:20px;font-weight:600">Community</span><span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4z"/></svg><span class="dot"></span></span><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></span></div>
+   <div class="seg"><span class="on">Feed</span><span>People</span><span>Groups</span><span>You</span></div>
+   <div class="chips"><span class="on">Following</span><span>My gym</span><span>My groups</span><span>Everyone</span><span class="sort">Newest ▾</span></div>
+   <div class="sec">
+    <div class="well">Share something from your training</div>
+    <div class="post"><div class="id"><span class="av a36 ring"></span><span class="nm">Sam</span><span class="tm">Today</span></div><div class="ach n">Upper A <span class="pr">PR</span></div><div class="st n">52 min · 18 sets · 4,200 kg · Bench 100 kg x 5</div><div class="re"><span class="on">♥ 7</span><span>💬 2</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Priya</span><span class="tm">Yesterday</span></div><div class="ach n">Lower B</div><div class="st n">48 min · 16 sets · 5,860 kg</div><div class="note">Knee felt fine on the box squats at last.</div><div class="re"><span>♡ 3</span><span>💬 1</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Monday crew</span><span class="tm">Mon</span></div><div class="ach n">Block 2 finished</div><div class="st n">Jordan completed Build 2 · 6 weeks</div><div class="re"><span>♡ 12</span><span>💬 4</span></div></div>
+    <div class="post"><div class="id"><span class="av a36"></span><span class="nm">Alex</span><span class="tm">Sun</span></div><div class="ach n">Push</div><div class="st n">41 min · 14 sets · 3,100 kg</div><div class="re"><span>♡ 2</span><span>💬</span></div></div>
+   </div>
+   <div class="lab">About 110 dp per post, 5 to a screen</div>
+  </div>
+  <ul class="pros"><li><b>For:</b> one product from the session sheet to the feed, and a feed that reads as people. Smallest blast radius of the band directions.</li></ul>
+ </div>
+</div>
+
+<h2>Q2 detail: a group page in D3, with Package 3 features</h2>
+<p class="lead">The group is anchored to its week (sessions only, never load, weight or calories), with chat, a session-count challenge, and presence. Shown so you can judge 3a to 3d together.</p>
+<div class="row">
+ <div class="opt">
+  <h3>Group page (D3, with 3a, 3b, 3c)</h3>
+  <p class="sub">Presence strip, the group's week, challenge, then chat. Withheld under calm mode or an open ED flag.</p>
+  <div class="ph">
+   <div class="sb"><span>09:41</span><span>●●●</span></div>
+   <div class="hdr"><span class="g"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">Monday crew</span><span class="g"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></span></div>
+   <div class="sec">
+    <div class="r" style="border:0"><span style="display:flex"><span class="av ring" style="margin-right:-8px;border:2px solid var(--sec)"></span><span class="av ring" style="margin-right:-8px;border:2px solid var(--sec)"></span><span class="av" style="border:2px solid var(--sec)"></span></span><span class="tx"><span class="l1">2 training now · 3 trained today</span><span class="l2">Sam, Priya · 5 members</span></span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">This week <span class="act n">14 sessions</span></div>
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Sam</span><span class="l2">● ● ○ ● ○ ○ ○</span></span><span class="n" style="font-size:16px;font-weight:500">3</span></div>
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Priya</span><span class="l2">● ● ● ● ○ ○ ○</span></span><span class="n" style="font-size:16px;font-weight:500">4</span></div>
+    <div class="r"><span class="av ring"></span><span class="tx"><span class="l1">You</span><span class="l2">● ● ○ ● ○ ○ ○</span></span><span class="n" style="font-size:16px;font-weight:500">3</span></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">October challenge <span class="act">Day 8 of 31</span></div>
+    <div class="r" style="border:0"><span class="tx"><span class="l1 n">Crew total 41 of 60 sessions</span><span class="l2">Counts sessions logged. Nothing about weight.</span></span></div>
+    <div class="wk" style="height:8px;margin:0 16px 14px;gap:0"><i class="on" style="height:8px;flex:41;border-radius:4px 0 0 4px"></i><i style="height:8px;flex:19;border-radius:0 4px 4px 0"></i></div>
+   </div>
+   <div class="band"></div>
+   <div class="sec">
+    <div class="sh">Chat <span class="act">12 new</span></div>
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Priya</span><span class="l2">Thursday 6pm still on? Bringing the belt.</span></span><span class="tm" style="font-size:11px;color:var(--t3)">14:02</span></div>
+    <div class="r"><span class="av"></span><span class="tx"><span class="l1">Jordan</span><span class="l2">Block 2 done. Deload next week for me.</span></span><span class="tm" style="font-size:11px;color:var(--t3)">Mon</span></div>
+    <div class="well">Message the crew</div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<p class="legend">Reply with your choices: Q1 (A, B or C), Q2 (D1, D2 or D3), Q3 scope (all three packages, 1 and 2, or 1 only), Q4 (which of 3a presence, 3b group chat, 3c session challenges, 3d recognition, 3e privacy panel, 3f link previews), Q5 migrations held for your phrase (yes or no), Q6 plan sharing (keep retired or re-open later).</p>
