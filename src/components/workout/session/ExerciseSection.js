@@ -1,8 +1,9 @@
 /**
  * ExerciseSection
  *
- * One exercise as a full-bleed section of the session sheet (12-BUILD-SPEC
- * sections 1.3, 2, 2a and 3, register D220). Three states:
+ * One exercise as a house card on the session page (12-BUILD-SPEC sections
+ * 1.3, 2, 2a and 3, register D220; restyled to the app's own visual language
+ * on the founder's device verdict, D220 addendum 7). Three states:
  *   active    the 56 dp header, the bests line (when `bests` is given), the
  *             children (the set table and any banners the screen passes), then
  *             the 52 dp footer: Add set, Swap and the overflow
@@ -51,27 +52,26 @@
  *             bar); reduceMotion draws it full at once. Decorative: hidden
  *             from the accessibility tree, and nothing is drawn when idle
  *
- * The section carries its own 10 dp band of page colour ABOVE it (spec section
- * 2: bands between sections), so the screen just stacks sections.
+ * The card carries no band of its own: the screen's page padding and gap
+ * space the cards, as on every other list in the app.
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { iconSize, radius, spacing } from '../../../styles/theme';
-import { touchTarget, BAND } from '../../../styles/layout';
+import Button from '../../Button';
+import { circle, iconSize, radius, spacing } from '../../../styles/theme';
+import { touchTarget } from '../../../styles/layout';
 
-// Spec section 2: band 10, section header 56, footer 52, chevron 16, and the
-// square rest-length button is a 40 dp well (grown to 48 by its hit slop).
+// Section header 56, footer 52, chevron 16 (the app's disclosure size); the
+// order badge is the plan detail's 32 dp circle.
 const HEADER_MIN_HEIGHT = 56;
 const FOOTER_MIN_HEIGHT = 52;
 const CHEVRON = 16;
 const COUNTDOWN_HEIGHT = 2;
-const REST_SQUARE = 40;
-const SQUARE_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
+const ORDER_BADGE = 32;
 // Header chevron: a 16 dp glyph, taken to a 48 dp target by its slop.
 const CHEVRON_HIT_SLOP = { top: 16, bottom: 16, left: 16, right: 16 };
-const ACTION_HIT_SLOP = { top: 0, bottom: 0, left: spacing.sm, right: spacing.sm };
 
 const MIDDLE_DOT = '\u00B7';
 const TIMES = '\u00D7';
@@ -177,21 +177,6 @@ function CountdownLine({ ms, reduceMotion, color }) {
   );
 }
 
-function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, labelStyle, testID }) {
-  return (
-    <TouchableOpacity
-      testID={testID}
-      style={styles.action}
-      onPress={onPress}
-      hitSlop={ACTION_HIT_SLOP}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
-      <Text style={labelStyle}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 export default function ExerciseSection({
   index,
@@ -214,15 +199,19 @@ export default function ExerciseSection({
   children,
 }) {
   const t = useTheme();
+  // The house card (Card.js geometry: surface, radius.lg, 1 px borderSubtle)
+  // with the plan detail's exercise row inside it (RoutineDetailScreen's
+  // exerciseCard: a 32 dp surface2 order badge, bodyStrong name in primary
+  // ink). Amber is spent on nothing in the header; the set you are on and a
+  // record carry it inside.
   const live = useMemo(() => ({
-    section: { backgroundColor: t.colors.surface },
-    index: { ...t.type.num('title'), color: t.colors.textSecondary },
-    name: { ...t.type.w(t.type.title, 'semibold'), color: t.colors.primary },
-    square: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    indexBadge: { backgroundColor: t.colors.surface2 },
+    index: { ...t.type.w(t.type.num('label'), 'bold'), color: t.colors.textSecondary },
+    name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     doneText: { ...t.type.label, color: t.colors.textSecondary },
     bests: { ...t.type.label, color: t.colors.textSecondary },
     bestsNum: { ...t.type.num('label'), color: t.colors.textPrimary },
-    action: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     nameSkipped: { color: t.colors.textMuted },
     group: { ...t.type.caption, color: t.colors.textMuted },
     hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
@@ -244,7 +233,9 @@ export default function ExerciseSection({
           accessibilityHint={isActive ? undefined : 'Makes this the current exercise'}
           accessibilityState={{ expanded: isActive }}
         >
-          <Text style={[styles.index, live.index]}>{index}</Text>
+          <View style={[styles.indexBadge, live.indexBadge]}>
+            <Text style={live.index}>{index}</Text>
+          </View>
           <View style={styles.nameBlock}>
             <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
             {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
@@ -260,7 +251,7 @@ export default function ExerciseSection({
           accessibilityRole="button"
           accessibilityLabel={isActive ? `Details for ${name}` : `Make ${name} current`}
         >
-          <Ionicons name="chevron-forward" size={CHEVRON} color={t.colors.primary} />
+          <Ionicons name="chevron-forward" size={CHEVRON} color={t.colors.textMuted} />
         </TouchableOpacity>
         {/* The empty space between the chevron and the right-hand control is
             part of the header target, so the whole row activates the exercise.
@@ -277,7 +268,7 @@ export default function ExerciseSection({
             accessible
             accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}
           >
-            <Ionicons name="checkmark" size={CHEVRON} color={t.colors.success} />
+            <Ionicons name="checkmark-circle" size={CHEVRON} color={t.colors.success} />
             <Text style={live.doneText}>{`${doneCount} ${setWord(doneCount)}`}</Text>
           </View>
         ) : skipped ? (
@@ -286,24 +277,22 @@ export default function ExerciseSection({
           <View style={styles.squares}>
             {onHistory ? (
               <TouchableOpacity
-                style={[styles.square, live.square]}
+                style={styles.square}
                 onPress={onHistory}
-                hitSlop={SQUARE_HIT_SLOP}
                 accessibilityRole="button"
                 accessibilityLabel={`History and records for ${name}`}
               >
-                <Ionicons name="stats-chart-outline" size={iconSize.md} color={t.colors.textPrimary} />
+                <Ionicons name="stats-chart-outline" size={iconSize.md} color={t.colors.textSecondary} />
               </TouchableOpacity>
             ) : null}
             {onRestLength ? (
               <TouchableOpacity
-                style={[styles.square, live.square]}
+                style={styles.square}
                 onPress={onRestLength}
-                hitSlop={SQUARE_HIT_SLOP}
                 accessibilityRole="button"
                 accessibilityLabel={`Rest length for ${name}`}
               >
-                <Ionicons name="timer-outline" size={iconSize.md} color={t.colors.textPrimary} />
+                <Ionicons name="timer-outline" size={iconSize.md} color={t.colors.textSecondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -320,23 +309,27 @@ export default function ExerciseSection({
           {countdown && countdown.active ? (
             <CountdownLine ms={countdown.ms} reduceMotion={!!countdown.reduceMotion} color={t.colors.primary} />
           ) : null}
-          <FooterAction
+          <Button
             testID="volyume-btn-extra-set"
-            icon="add-circle-outline"
-            label="Add set"
-            accessibilityLabel="Add set"
+            title="Add set"
+            icon="add"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
             onPress={onAddSet}
-            glyphColor={t.colors.textPrimary}
-            labelStyle={live.action}
+            accessibilityLabel="Add set"
           />
-          <FooterAction
-            icon="swap-horizontal"
-            label="Swap"
-            accessibilityLabel="Swap exercise"
-            onPress={onSwap}
-            glyphColor={t.colors.textPrimary}
-            labelStyle={live.action}
-          />
+          {onSwap ? (
+            <Button
+              title="Swap"
+              icon="swap-horizontal"
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={onSwap}
+              accessibilityLabel="Swap exercise"
+            />
+          ) : null}
           <View style={styles.footerFill} />
           <TouchableOpacity
             testID="volyume-section-more"
@@ -355,34 +348,40 @@ export default function ExerciseSection({
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: BAND },
+  section: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
   header: {
     minHeight: HEADER_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: spacing.lg,
-    paddingRight: spacing.md,
+    paddingRight: spacing.xs,
   },
   titleTap: {
     flexShrink: 1,
     minHeight: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  index: { minWidth: spacing.lg },
+  indexBadge: {
+    width: ORDER_BADGE,
+    height: ORDER_BADGE,
+    borderRadius: circle(ORDER_BADGE),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   nameBlock: { flexShrink: 1 },
   name: { flexShrink: 1 },
   chevron: { marginLeft: spacing.xs },
   headerFill: { flex: 1, alignSelf: 'stretch' },
-  squares: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  squares: { flexDirection: 'row', alignItems: 'center' },
+  // Chromeless glyph targets, as the header's X and Finish and the "..."
+  // overflow on this screen (founder order 2026-08-18).
   square: {
-    width: REST_SQUARE,
-    height: REST_SQUARE,
+    width: touchTarget.minimum,
+    height: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
   },
   done: {
     flexDirection: 'row',
@@ -401,21 +400,14 @@ const styles = StyleSheet.create({
     minHeight: FOOTER_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xl,
+    gap: spacing.sm,
     paddingLeft: spacing.lg,
-    // The overflow glyph sits in a 48 dp target; this much trailing padding
-    // lands the glyph's right edge on the same 16 dp margin as the rows above.
-    paddingRight: spacing.xxs,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   countdown: { position: 'absolute', top: 0, left: 0, right: 0, height: COUNTDOWN_HEIGHT },
   countdownFill: { height: COUNTDOWN_HEIGHT },
   countdownFull: { width: '100%' },
-  action: {
-    minHeight: touchTarget.minimum,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   footerFill: { flex: 1 },
   more: {
     minWidth: touchTarget.minimum,

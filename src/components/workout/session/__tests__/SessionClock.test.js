@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { AppState } from 'react-native';
 import { create, act } from 'react-test-renderer';
-import { colors } from '../../../../styles/theme';
+import { colors, type } from '../../../../styles/theme';
 import SessionClock, { formatClock } from '../SessionClock';
 
 const START = 1700000000000;
@@ -30,6 +30,10 @@ function textOf(node) {
 function pill(tree) {
   return tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'timer')[0];
 }
+const texts = (tree) => tree.root.findAll((n) => n.type === 'Text');
+// The numerals sit under the "Elapsed" overline label; the value is the last Text.
+const numerals = (tree) => textOf(texts(tree)[texts(tree).length - 1]);
+const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -55,7 +59,7 @@ describe('SessionClock render', () => {
   test('shows the time since startTime and speaks it as words', () => {
     jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render(<SessionClock startTime={START} />);
-    expect(textOf(tree.toJSON())).toBe('12:06');
+    expect(numerals(tree)).toBe('12:06');
     const node = pill(tree);
     expect(node.props.accessible).toBe(true);
     expect(node.props.accessibilityLabel).toBe('Elapsed 12 minutes 6 seconds');
@@ -74,15 +78,29 @@ describe('SessionClock render', () => {
 
   test('no startTime reads 0:00', () => {
     const tree = render(<SessionClock />);
-    expect(textOf(tree.toJSON())).toBe('0:00');
+    expect(numerals(tree)).toBe('0:00');
   });
 
-  test('the pill is the well: page fill, hairline edge', () => {
+  test('no pill: a block with no fill and no edge, the Elapsed overline label above the numerals', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render(<SessionClock startTime={START} />);
-    const style = [].concat(pill(tree).props.style).filter(Boolean);
-    const merged = Object.assign({}, ...style);
-    expect(merged.backgroundColor).toBe(colors.background);
-    expect(merged.borderColor).toBe(colors.borderSubtle);
+    const merged = flat(pill(tree).props.style);
+    expect(merged.backgroundColor).toBeUndefined();
+    expect(merged.borderColor).toBeUndefined();
+    expect(merged.borderWidth).toBeUndefined();
+    const [label, value] = texts(tree);
+    expect(texts(tree)).toHaveLength(2);
+    expect(textOf(label)).toBe('Elapsed');
+    const l = flat(label.props.style);
+    expect(l.color).toBe(colors.textMuted);
+    expect(l.fontSize).toBe(type.overline.fontSize);
+    expect(l.fontFamily).toBe(type.overline.fontFamily);
+    expect(l.textTransform).toBe('uppercase');
+    const v = flat(value.props.style);
+    expect(v.color).toBe(colors.textPrimary);
+    expect(v.fontSize).toBe(type.title.fontSize);
+    expect(v.fontFamily).toBe(type.num('title').fontFamily);
+    expect(v.fontVariant).toEqual(['tabular-nums']);
   });
 });
 
@@ -110,10 +128,10 @@ describe('SessionClock interval', () => {
       const tree = render(<SessionClock startTime={START} />);
       expect(setIntervalSpy).toHaveBeenCalledTimes(1);
       expect(setIntervalSpy.mock.calls[0][1]).toBe(1000);
-      expect(textOf(tree.toJSON())).toBe('0:05');
+      expect(numerals(tree)).toBe('0:05');
       nowSpy.mockReturnValue(START + 6 * SEC);
       act(() => { setIntervalSpy.mock.calls[0][0](); });
-      expect(textOf(tree.toJSON())).toBe('0:06');
+      expect(numerals(tree)).toBe('0:06');
     });
 
     test('unmount clears the interval and the app-state subscription', () => {
@@ -140,9 +158,9 @@ describe('SessionClock interval', () => {
       const tree = render(<SessionClock startTime={START} />);
       nowSpy.mockReturnValue(START + 65 * SEC);
       act(() => { handler('background'); });
-      expect(textOf(tree.toJSON())).toBe('0:05');
+      expect(numerals(tree)).toBe('0:05');
       act(() => { handler('active'); });
-      expect(textOf(tree.toJSON())).toBe('1:05');
+      expect(numerals(tree)).toBe('1:05');
     });
 
     test('no interval without a startTime', () => {

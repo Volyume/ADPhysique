@@ -1,7 +1,8 @@
 /**
  * SessionClock
  *
- * The session's elapsed time as a well-styled pill, ticking from `startTime`
+ * The session's elapsed time, an "Elapsed" overline over tabular numerals as
+ * the approved 2026-08-18 header drew it (no pill), ticking from `startTime`
  * (epoch ms, the store's workoutStartTime) on its OWN one-second interval, so
  * the screen that hosts it stops re-rendering once a second
  * (12-BUILD-SPEC section 1.6, register D220; the old tick lived in
@@ -24,9 +25,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import useTheme from '../../../hooks/useTheme';
-import { radius, spacing } from '../../../styles/theme';
+import { spacing } from '../../../styles/theme';
 
-// Spec section 2: a well-styled pill, 40 dp tall.
+// The readout block is as tall as the header's glyph targets.
 const PILL_MIN_HEIGHT = 40;
 
 // Read when the effect runs, not at import, so a test can switch the interval
@@ -83,9 +84,11 @@ export function useSessionClock(startTime) {
 
 export default function SessionClock({ startTime }) {
   const t = useTheme();
+  // The logger header the founder approved (2026-08-18): an overline label
+  // over tabular title numerals, nothing drawn around them.
   const live = useMemo(() => ({
-    pill: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
-    text: { ...t.type.w(t.type.num('title'), 'semibold'), color: t.colors.textPrimary },
+    label: { ...t.type.overline, color: t.colors.textMuted },
+    text: { ...t.type.num('title'), color: t.colors.textPrimary },
   }), [t]);
 
   const elapsedMs = useSessionClock(startTime);
@@ -95,20 +98,14 @@ export default function SessionClock({ startTime }) {
       accessible
       accessibilityRole="timer"
       accessibilityLabel={`Elapsed ${spokenClock(elapsedMs)}`}
-      style={[styles.pill, live.pill]}
+      style={styles.block}
     >
+      <Text style={live.label}>Elapsed</Text>
       <Text style={live.text} numberOfLines={1}>{formatClock(elapsedMs)}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pill: {
-    minHeight: PILL_MIN_HEIGHT,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
-  },
+  block: { alignItems: 'center', gap: spacing.xxs, minHeight: PILL_MIN_HEIGHT, justifyContent: 'center' },
 });

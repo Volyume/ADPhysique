@@ -69,7 +69,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { circle, radius, spacing } from '../../../styles/theme';
+import { alpha, circle, radius, spacing, withAlpha } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
@@ -184,7 +184,7 @@ function wellsFor(kind, units) {
 
 function buildLive(t) {
   const c = t.colors;
-  const { num, w } = t.type;
+  const { num } = t.type;
   return {
     row: { borderBottomColor: c.borderSubtle },
     markerNumber: { ...num('label'), color: c.textSecondary },
@@ -192,23 +192,29 @@ function buildLive(t) {
     markerWarmupText: { ...t.type.captionStrong, color: c.primary },
     markerFailure: { backgroundColor: c.errorBg },
     markerFailureText: { ...t.type.captionStrong, color: c.error },
-    cell: { ...num('bodyStrong'), color: c.textPrimary },
-    cellDim: { ...num('body'), color: c.textSecondary },
+    // Facts are ink (the app's rule): Last and Target in secondary ink at the
+    // list's small numeric role; the live number in the well is the one
+    // figure at bodyStrong.
+    cell: { ...num('bodySm'), color: c.textSecondary },
+    cellDim: { ...num('bodySm'), color: c.textSecondary },
     cellStale: { color: c.textMuted },
-    rule: { ...num('label'), color: c.textSecondary },
+    rule: { ...t.type.caption, color: c.textMuted },
     prTag: { backgroundColor: c.primaryBg },
     prText: { ...t.type.captionStrong, color: c.primary },
-    prTargetText: { ...num('label'), color: c.textPrimary },
-    wells: { backgroundColor: c.background, borderColor: c.borderSubtle },
-    wellsEditing: { borderColor: c.primary },
-    wellDivider: { borderLeftColor: c.borderSubtle },
-    wellValue: { ...w(num('bodyStrong'), 'semibold'), color: c.textPrimary },
+    prTargetText: { ...num('bodySm'), color: c.textPrimary },
+    // The wells are the house field (TextField: surface2 fill, border 1.5
+    // `border`, radius.md); editing takes the field's focus edge.
+    wells: { backgroundColor: c.surface2, borderColor: c.border },
+    wellsEditing: { borderColor: withAlpha(c.primary, alpha.strong) },
+    wellDivider: { borderLeftColor: c.border },
+    wellValue: { ...num('bodyStrong'), color: c.textPrimary },
     wellGhost: { color: c.textSecondary },
     wellPlaceholder: { ...num('bodyStrong'), color: c.textDisabled },
-    wellActive: { color: c.primary },
-    checkLogged: { backgroundColor: c.primary },
+    wellActive: { color: c.textPrimary },
+    // A logged set wears the app's "done" mark (checkmark-circle in
+    // success); the set you are on is the one amber ring on the card.
     checkNext: { borderColor: c.primary },
-    checkPending: { backgroundColor: c.surface3 },
+    checkPending: { borderColor: c.borderSubtle },
   };
 }
 
@@ -391,7 +397,6 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
 function CheckButton({ check, onPress, testID, label, busy, onMore, live, colors }) {
   const logged = check === 'logged';
   const next = check === 'next';
-  const tick = logged ? colors.onPrimary : next ? colors.primary : colors.textDisabled;
   const disabled = !onPress || !!busy;
   // A screen reader cannot hold a row, so the row's overflow is also an
   // accessibility action on the check (the one control every row has).
@@ -410,17 +415,13 @@ function CheckButton({ check, onPress, testID, label, busy, onMore, live, colors
       accessibilityActions={actions}
       onAccessibilityAction={onMore ? (e) => { if (e?.nativeEvent?.actionName === 'longpress') onMore(); } : undefined}
     >
-      <View
-        style={[
-          styles.check,
-          logged && live.checkLogged,
-          next && styles.checkRing,
-          next && live.checkNext,
-          !logged && !next && live.checkPending,
-        ]}
-      >
-        <Ionicons name="checkmark" size={TICK_SIZE} color={tick} />
-      </View>
+      {logged ? (
+        <Ionicons name="checkmark-circle" size={CHECK_SIZE} color={colors.success} />
+      ) : (
+        <View style={[styles.check, styles.checkRing, next ? live.checkNext : live.checkPending]}>
+          {next ? <Ionicons name="checkmark" size={TICK_SIZE} color={colors.primary} /> : null}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -545,7 +546,7 @@ const styles = StyleSheet.create({
     height: MARKER_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   lastCol: { width: SET_COLUMNS.last, alignItems: 'center', justifyContent: 'center' },
   lastPress: { minHeight: touchTarget.minimum },
@@ -555,19 +556,20 @@ const styles = StyleSheet.create({
   targetText: { textAlign: 'left' },
   prTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
   cellText: { textAlign: 'center' },
+  // The house pill (Chip geometry) for the one amber mark a row can carry.
   prTag: {
     minHeight: PR_TAG_MIN_HEIGHT,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.xs2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   wells: {
     width: SET_COLUMNS.wells,
     height: WELL_HEIGHT,
     flexDirection: 'row',
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: radius.md,
   },
   wellCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },

@@ -61,9 +61,9 @@ describe('SessionHeader', () => {
     expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
   });
 
-  test('the surface is the section colour', () => {
+  test('no surface fill on the wrapper: it sits on the page', () => {
     const tree = render({});
-    expect(flat(tree.toJSON().props.style).backgroundColor).toBe(colors.surface);
+    expect(flat(tree.toJSON().props.style).backgroundColor).toBeUndefined();
   });
 });
 

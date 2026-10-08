@@ -7,7 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
-import { colors } from '../../../../styles/theme';
+import { colors, type } from '../../../../styles/theme';
 import SessionToolbar from '../SessionToolbar';
 
 function render(props) {
@@ -66,16 +66,48 @@ describe('SessionToolbar', () => {
     expect(words).not.toContain('Finish workout');
   });
 
-  test('Finish is the amber double check; the tools are 22 dp in primary ink', () => {
+  test('Finish is the amber double check; the tools are 22 dp in secondary ink under a caption label; Cancel is a muted X', () => {
     const tree = render({});
     const finish = glyphs(byId(tree, 'volyume-workout-finish'));
     expect(finish).toHaveLength(1);
     expect(finish[0].props.name).toBe('checkmark-done');
     expect(finish[0].props.color).toBe(colors.primary);
-    const rest = glyphs(byId(tree, 'volyume-tool-rest'))[0];
-    expect(rest.props.name).toBe('timer-outline');
-    expect(rest.props.size).toBe(22);
-    expect(rest.props.color).toBe(colors.textPrimary);
+    ['volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+      const glyph = glyphs(byId(tree, id))[0];
+      expect(glyph.props.size).toBe(22);
+      expect(glyph.props.color).toBe(colors.textSecondary);
+    });
+    expect(glyphs(byId(tree, 'volyume-tool-rest'))[0].props.name).toBe('timer-outline');
+    ['Rest', 'Notes'].forEach((word) => {
+      const label = tree.root.findAll((n) => n.type === 'Text' && allText(n).join('') === word)[0];
+      const s = Object.assign({}, ...[].concat(label.props.style).filter(Boolean));
+      expect(s.color).toBe(colors.textSecondary);
+      expect(s.fontSize).toBe(type.caption.fontSize);
+      expect(s.fontFamily).toBe(type.caption.fontFamily);
+    });
+    const close = glyphs(byId(tree, 'volyume-workout-close'))[0];
+    expect(close.props.name).toBe('close');
+    expect(close.props.color).toBe(colors.textMuted);
+  });
+
+  test('chromeless: a bottom hairline and no fill on the bar, no divider, no border or fill on Finish or the tools', () => {
+    const tree = render({});
+    const flatten = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
+    const bar = flatten(tree.toJSON().props.style);
+    expect(bar.borderBottomWidth).toBe(1);
+    expect(bar.borderBottomColor).toBe(colors.borderSubtle);
+    expect(bar.backgroundColor).toBeUndefined();
+    ['volyume-workout-finish', 'volyume-workout-close', 'volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+      const s = flatten(byId(tree, id).props.style);
+      expect(s.backgroundColor).toBeUndefined();
+      expect(s.borderWidth).toBeUndefined();
+      expect(s.borderColor).toBeUndefined();
+    });
+    // The only things with an edge are the bar's own bottom hairline.
+    const edged = tree.root.findAll((n) => typeof n.type === 'string'
+      && (flatten(n.props.style).borderLeftWidth !== undefined || flatten(n.props.style).borderRightWidth !== undefined
+        || flatten(n.props.style).width === 1));
+    expect(edged).toHaveLength(0);
   });
 
   test('contains the session clock', () => {

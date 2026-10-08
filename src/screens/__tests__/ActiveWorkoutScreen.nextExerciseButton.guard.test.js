@@ -118,7 +118,9 @@ describe('extra sets beyond the plan stay loggable as an explicit SECONDARY acti
     // "Add set" (never a second primary: a label-and-glyph footer action).
     expect(SRC).toContain('onAddSet={armExtraSet}');
     expect(SECTION).toContain('testID="volyume-btn-extra-set"');
-    expect(SECTION).toContain('label="Add set"');
+    // D220 addendum 7: the footer action is the house Button, secondary.
+    expect(SECTION).toContain('title="Add set"');
+    expect(SECTION).toMatch(/testID="volyume-btn-extra-set"\s*title="Add set"\s*icon="add"\s*variant="secondary"/);
   });
 
   test('arming cancels the countdown and returns the bar to Log set (prepare-not-commit, CL-6.1)', () => {

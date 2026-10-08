@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
-import { colors, type } from '../../../../styles/theme';
+import { alpha, colors, radius, spacing, type, withAlpha } from '../../../../styles/theme';
 import SetRow, { SET_COLUMNS } from '../SetRow';
 
 const DOT = String.fromCharCode(0x00b7);
@@ -46,20 +46,30 @@ const circleOf = (touchable) => touchable.findAll((n) => n.type === 'View')[0];
 const tickOf = (touchable) => touchable.findAll((n) => n.type === 'Ionicons')[0];
 
 describe('SetRow wells', () => {
-  test.each([['logged'], ['next']])('%s: white semibold values on the page colour inside a hairline', (state) => {
+  test.each([['logged'], ['next']])('%s: primary-ink values at the regular numeric face inside the house field (surface2, 1.5 border, radius md)', (state) => {
     const tree = render({ wells: { weight: 70, reps: 8, state }, check: state });
     const box = flat(wellsBox(tree).props.style);
-    expect(box.backgroundColor).toBe(colors.background);
-    expect(box.borderColor).toBe(colors.borderSubtle);
-    expect(box.borderWidth).toBe(1);
+    expect(box.backgroundColor).toBe(colors.surface2);
+    expect(box.borderColor).toBe(colors.border);
+    expect(box.borderWidth).toBe(1.5);
+    expect(box.borderRadius).toBe(radius.md);
     expect(box.height).toBe(44);
     expect(box.width).toBe(98);
     const s = wellText(tree, 'Set 2 weight');
     expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontFamily).toBe(type.w(type.num('bodyStrong'), 'semibold').fontFamily);
+    expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
+    expect(s.fontFamily).not.toBe(type.w(type.num('bodyStrong'), 'semibold').fontFamily);
     expect(s.fontSize).toBe(type.bodyStrong.fontSize);
     expect(s.fontVariant).toEqual(['tabular-nums']);
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
+  });
+
+  test('the divider between the wells is the border colour', () => {
+    const tree = render({});
+    const reps = flat(one(byLabel(tree, 'Set 2 reps')).props.style);
+    expect(reps.borderLeftWidth).toBe(1);
+    expect(reps.borderLeftColor).toBe(colors.border);
+    expect(flat(one(byLabel(tree, 'Set 2 weight')).props.style).borderLeftWidth).toBeUndefined();
   });
 
   test('pending: placeholder ink, the regular numeric face', () => {
@@ -70,23 +80,26 @@ describe('SetRow wells', () => {
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textDisabled);
   });
 
-  test('editing weight: amber edge, the weight in amber, reps in white', () => {
+  test('editing weight: primary-tint edge (the field focus edge), both values stay primary ink', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
-    expect(flat(wellsBox(tree).props.style).borderColor).toBe(colors.primary);
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.primary);
+    expect(flat(wellsBox(tree).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
+    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
     expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(true);
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('editing reps: the reverse', () => {
+  test('editing reps: the reverse edge and selection, no amber text on either value', () => {
     const tree = render({ wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'reps' } });
+    expect(flat(wellsBox(tree).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
     expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.primary);
+    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textPrimary);
+    expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityState.selected).toBe(true);
+    expect(one(byLabel(tree, 'Set 2 weight')).props.accessibilityState.selected).toBe(false);
   });
 
-  test('outside editing the edge is the hairline', () => {
-    expect(flat(wellsBox(render({})).props.style).borderColor).toBe(colors.borderSubtle);
+  test('outside editing the edge is the border colour', () => {
+    expect(flat(wellsBox(render({})).props.style).borderColor).toBe(colors.border);
   });
 
   test('values are read out; zero is a value, empty is empty', () => {
@@ -119,29 +132,39 @@ describe('SetRow wells', () => {
 });
 
 describe('SetRow check', () => {
-  test('logged: amber fill, onPrimary tick', () => {
+  test('logged: the app\'s done mark, a 32 dp checkmark-circle in success, no filled circle view', () => {
     const tree = render({ check: 'logged' });
     const touch = one(byLabel(tree, 'Set 2 logged'));
-    expect(flat(circleOf(touch).props.style).backgroundColor).toBe(colors.primary);
-    expect(tickOf(touch).props.color).toBe(colors.onPrimary);
-    expect(tickOf(touch).props.name).toBe('checkmark');
+    const icon = tickOf(touch);
+    expect(icon.props.name).toBe('checkmark-circle');
+    expect(icon.props.size).toBe(32);
+    expect(icon.props.color).toBe(colors.success);
+    expect(touch.findAll((n) => flat(n.props.style).backgroundColor !== undefined)).toHaveLength(0);
+    expect(touch.findAll((n) => flat(n.props.style).borderWidth !== undefined)).toHaveLength(0);
   });
 
-  test('next: a 1.5 dp amber ring with no fill, amber tick', () => {
+  test('next: a 32 dp ring (1.5 dp) in primary with no fill, and an 18 dp primary checkmark', () => {
     const tree = render({ check: 'next' });
     const touch = one(byLabel(tree, 'Log set 2'));
     const s = flat(circleOf(touch).props.style);
+    expect(s.width).toBe(32);
     expect(s.borderWidth).toBe(1.5);
     expect(s.borderColor).toBe(colors.primary);
     expect(s.backgroundColor).toBeUndefined();
+    expect(tickOf(touch).props.name).toBe('checkmark');
+    expect(tickOf(touch).props.size).toBe(18);
     expect(tickOf(touch).props.color).toBe(colors.primary);
   });
 
-  test('pending: raised grey fill, disabled-ink tick', () => {
+  test('pending: the same 32 dp ring (1.5 dp) in borderSubtle with no glyph and no fill', () => {
     const tree = render({ check: 'pending' });
     const touch = one(byLabel(tree, 'Set 2 not logged yet'));
-    expect(flat(circleOf(touch).props.style).backgroundColor).toBe(colors.surface3);
-    expect(tickOf(touch).props.color).toBe(colors.textDisabled);
+    const s = flat(circleOf(touch).props.style);
+    expect(s.width).toBe(32);
+    expect(s.borderWidth).toBe(1.5);
+    expect(s.borderColor).toBe(colors.borderSubtle);
+    expect(s.backgroundColor).toBeUndefined();
+    expect(tickOf(touch)).toBeUndefined();
   });
 
   test('a 32 dp circle in a 36 by 48 target with a 6 dp side slop (48 dp reach)', () => {
@@ -199,7 +222,7 @@ describe('SetRow marker', () => {
     expect(s.fontVariant).toEqual(['tabular-nums']);
   });
 
-  test('W is a 24 dp badge: primary tint, primary glyph, caption strong', () => {
+  test('W is a 24 dp pill badge: primary tint, primary glyph, caption strong', () => {
     const tree = render({ marker: 'W' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'W'));
     const s = flat(text.props.style);
@@ -209,14 +232,16 @@ describe('SetRow marker', () => {
     const b = flat(badge.props.style);
     expect(b.height).toBe(24);
     expect(b.backgroundColor).toBe(colors.primaryBg);
-    expect(b.borderRadius).toBe(6);
+    expect(b.borderRadius).toBe(radius.full);
   });
 
-  test('F is the error tint with the error glyph', () => {
+  test('F is a pill in the error tint with the error glyph', () => {
     const tree = render({ marker: 'F' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'F'));
     expect(flat(text.props.style).color).toBe(colors.error);
-    expect(flat(one(hosts(tree, (p) => flat(p.style).width === 24)).props.style).backgroundColor).toBe(colors.errorBg);
+    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24)).props.style);
+    expect(badge.backgroundColor).toBe(colors.errorBg);
+    expect(badge.borderRadius).toBe(radius.full);
   });
 
   test('not a control without onPressMarker; a button with it, called with no arguments', () => {
@@ -240,6 +265,8 @@ describe('SetRow Last cell (2a)', () => {
     const tree = render({});
     const s = lastText(tree, text);
     expect(s.color).toBe(colors.textSecondary);
+    expect(s.fontSize).toBe(type.bodySm.fontSize);
+    expect(s.fontFamily).toBe(type.num('bodySm').fontFamily);
     expect(s.fontVariant).toEqual(['tabular-nums']);
     expect(one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text)).props.numberOfLines).toBe(1);
   });
@@ -283,14 +310,19 @@ describe('SetRow Last cell (2a)', () => {
 describe('SetRow Target cell', () => {
   const targetText = (tree, text) => one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text));
 
-  test('the value over the rule; the rule is secondary ink at the numeric label role', () => {
+  test('the value over the rule; the value is secondary ink at the small numeric role, the rule is muted caption', () => {
     const tree = render({});
     const rule = targetText(tree, '+2.5 at 10');
     const s = flat(rule.props.style);
-    expect(s.color).toBe(colors.textSecondary);
-    expect(s.fontSize).toBe(type.label.fontSize);
+    expect(s.color).toBe(colors.textMuted);
+    expect(s.fontSize).toBe(type.caption.fontSize);
+    expect(s.fontFamily).toBe(type.caption.fontFamily);
     expect(rule.props.numberOfLines).toBe(1);
-    expect(flat(targetText(tree, `70 ${TIMES} 6-10`).props.style).color).toBe(colors.textPrimary);
+    const v = flat(targetText(tree, `70 ${TIMES} 6-10`).props.style);
+    expect(v.color).toBe(colors.textSecondary);
+    expect(v.fontSize).toBe(type.bodySm.fontSize);
+    expect(v.fontFamily).toBe(type.num('bodySm').fontFamily);
+    expect(v.fontVariant).toEqual(['tabular-nums']);
   });
 
   test('pending rows: values drop to secondary ink at the regular weight (spec table)', () => {
@@ -307,14 +339,14 @@ describe('SetRow Target cell', () => {
     expect(byLabel(render({}), 'Personal record')).toHaveLength(0);
   });
 
-  test('record: a PR tag after the value, 18 dp, primary tint, primary caption strong', () => {
+  test('record: a PR pill after the value, 18 dp, primary tint, primary caption strong', () => {
     const tree = render({ record: true });
     const tag = one(byLabel(tree, 'Personal record'));
     expect(tag.props.accessible).toBe(true);
     const s = flat(tag.props.style);
     expect(s.minHeight).toBe(18);
-    expect(s.paddingHorizontal).toBe(4);
-    expect(s.borderRadius).toBe(6);
+    expect(s.paddingHorizontal).toBe(spacing.xs2);
+    expect(s.borderRadius).toBe(radius.full);
     expect(s.backgroundColor).toBe(colors.primaryBg);
     const text = flat(textIn(tag).props.style);
     expect(words(tag).join('')).toBe('PR');
@@ -330,7 +362,8 @@ describe('SetRow Target cell', () => {
     const set = one(group.findAll((n) => n.type === 'Text' && words(n).join('') === `70 ${TIMES} 9`));
     const s = flat(set.props.style);
     expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontSize).toBe(type.label.fontSize);
+    expect(s.fontSize).toBe(type.bodySm.fontSize);
+    expect(s.fontFamily).toBe(type.num('bodySm').fontFamily);
     expect(s.fontVariant).toEqual(['tabular-nums']);
     expect(set.props.numberOfLines).toBe(1);
     const tag = flat(one(group.findAll((n) => n.type === 'View' && flat(n.props.style).minHeight === 18)).props.style);
@@ -465,13 +498,13 @@ describe('SetRow exercise kinds', () => {
   });
 
   test.each([['reps_only', 'reps'], ['duration', 'time'], ['distance', 'time']])(
-    '%s: pending ink and the amber editing ink are unchanged',
+    '%s: placeholder ink while pending; primary ink and the tinted edge while editing',
     (kind, label) => {
       const pending = render({ kind, wells: { weight: 10, reps: 60, state: 'pending' }, check: 'pending' });
       expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textDisabled);
       const editing = render({ kind, wells: { weight: 10, reps: 60, state: 'editing', editingField: 'reps' } });
-      expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.primary);
-      expect(flat(wellsBox(editing).props.style).borderColor).toBe(colors.primary);
+      expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.textPrimary);
+      expect(flat(wellsBox(editing).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
     },
   );
 });
@@ -490,9 +523,9 @@ describe('SetRow ghost seed', () => {
       .toBe(colors.textPrimary);
   });
 
-  test('amber editing ink wins over ghost on the field being edited only', () => {
+  test('primary editing ink wins over ghost on the field being edited only', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'editing', editingField: 'weight', ghost: true } });
-    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.primary);
+    expect(wellText(tree, 'Set 2 weight').color).toBe(colors.textPrimary);
     expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textSecondary);
   });
 
@@ -584,8 +617,8 @@ describe('SetRow phone-keyboard path', () => {
     act(() => { box.props.onChangeText('80'); });
     expect(input.onChangeText).toHaveBeenCalledWith('80');
     const s = flat(box.props.style);
-    expect(s.color).toBe(colors.primary);
-    expect(s.fontFamily).toBe(type.w(type.num('bodyStrong'), 'semibold').fontFamily);
+    expect(s.color).toBe(colors.textPrimary);
+    expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
     expect(s.fontSize).toBe(type.bodyStrong.fontSize);
     expect(s.fontVariant).toEqual(['tabular-nums']);
   });

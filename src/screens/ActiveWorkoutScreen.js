@@ -7013,7 +7013,9 @@ const styles = StyleSheet.create({
   // margins and band); the active section's body keeps the old scroll
   // content's padding and gap so the rows inside it lay out as before until
   // stage B replaces them.
-  sessionScrollContent: { paddingBottom: spacing.md },
+  // The page: padding lg and gap md, the stack every other screen uses
+  // (AnalyticsScreen, RecoveryScreen); the exercises are house cards on it.
+  sessionScrollContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   activeBody: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/

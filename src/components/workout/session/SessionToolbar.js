@@ -3,7 +3,9 @@
  *
  * The session sheet's top bar (12-BUILD-SPEC sections 2 to 4, register D220).
  * It replaces WorkoutHeader: a Cancel control, the Rest and Notes tools, the
- * session clock in a well and the icon-only Finish well. Presentation only:
+ * session clock and the icon-only Finish, all chromeless on the page over a
+ * bottom hairline, as the approved 2026-08-18 header was (D220 addendum 7).
+ * Presentation only:
  * every action is a callback the screen owns, so the cancel and finish
  * contracts (BEHAVIOURAL-CONTRACT sections 1 and 6) are untouched.
  *
@@ -26,7 +28,7 @@ import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { iconSize, radius, spacing } from '../../../styles/theme';
+import { iconSize, spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import SessionClock from './SessionClock';
 
@@ -34,7 +36,6 @@ import SessionClock from './SessionClock';
 const TOOL_GLYPH = 22;
 const TOOL_WIDTH = 56;
 const BAR_MIN_HEIGHT = 56;
-const DIVIDER_HEIGHT = 28;
 
 function ToolButton({ testID, icon, label, accessibilityLabel, accessibilityHint, onPress, glyphColor, labelStyle }) {
   return (
@@ -61,11 +62,11 @@ export default function SessionToolbar({
   finishBusy = false,
 }) {
   const t = useTheme();
+  // Chromeless, the logger header the founder approved (2026-08-18): nothing
+  // is drawn at rest but the glyphs; a hairline closes the bar.
   const live = useMemo(() => ({
-    bar: { backgroundColor: t.colors.surface },
-    divider: { backgroundColor: t.colors.borderSubtle },
+    bar: { borderBottomColor: t.colors.borderSubtle },
     toolLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    finish: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
   }), [t]);
   const busy = !!finishBusy;
 
@@ -88,10 +89,9 @@ export default function SessionToolbar({
         accessibilityLabel="Rest timer"
         accessibilityHint="Opens the full rest view"
         onPress={onRest}
-        glyphColor={t.colors.textPrimary}
+        glyphColor={t.colors.textSecondary}
         labelStyle={live.toolLabel}
       />
-      <View style={[styles.divider, live.divider]} />
       <ToolButton
         testID="volyume-tool-notes"
         icon="create-outline"
@@ -99,7 +99,7 @@ export default function SessionToolbar({
         accessibilityLabel="Session notes"
         accessibilityHint="Add or edit a note for this workout"
         onPress={onNotes}
-        glyphColor={t.colors.textPrimary}
+        glyphColor={t.colors.textSecondary}
         labelStyle={live.toolLabel}
       />
 
@@ -109,7 +109,7 @@ export default function SessionToolbar({
 
       <TouchableOpacity
         testID="volyume-workout-finish"
-        style={[styles.finish, live.finish]}
+        style={styles.finish}
         onPress={onFinish}
         disabled={busy}
         accessibilityRole="button"
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: BAR_MIN_HEIGHT,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
   },
   close: {
     width: touchTarget.minimum,
@@ -147,11 +147,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xxs,
   },
-  divider: {
-    width: 1,
-    height: DIVIDER_HEIGHT,
-    marginHorizontal: spacing.xs,
-  },
   gap: { flex: 1 },
   finish: {
     width: touchTarget.minimum,
@@ -159,7 +154,5 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
   },
 });

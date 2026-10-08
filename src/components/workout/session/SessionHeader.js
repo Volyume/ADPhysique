@@ -1,15 +1,15 @@
 /**
  * SessionHeader
  *
- * The session's name and its one note, on the section surface under the
- * toolbar (12-BUILD-SPEC sections 2 and 3, register D220). Tapping the note
- * line calls `onNotes`, which opens the session notes sheet, the same place
- * the toolbar's Notes tool goes.
+ * The session's name and, when one is written, its note, on the page under
+ * the toolbar (12-BUILD-SPEC sections 2 and 3, register D220). Tapping the
+ * note calls `onNotes`, which opens the session notes sheet, the same place
+ * the toolbar's Notes tool goes; the toolbar tool is the ONE way to add a
+ * note (founder device verdict 2026-10-08: no second note control here).
  *
  * Props
  *   name     the session title, at the h2 role
- *   note     the saved session note; empty, blank or absent shows the
- *            placeholder "Add notes here"
+ *   note     the saved session note; empty, blank or absent shows nothing
  *   onNotes  called with no arguments
  *
  * The note line is a full 48 dp target (the drawing's line is about 20 dp tall
@@ -26,7 +26,6 @@ import { touchTarget } from '../../../styles/layout';
 export default function SessionHeader({ name, note, onNotes }) {
   const t = useTheme();
   const live = useMemo(() => ({
-    wrap: { backgroundColor: t.colors.surface },
     title: { ...t.type.h2, color: t.colors.textPrimary },
     noteText: { ...t.type.bodySm, color: t.colors.textMuted },
   }), [t]);
@@ -35,7 +34,7 @@ export default function SessionHeader({ name, note, onNotes }) {
   const hasNote = trimmed.length > 0;
 
   return (
-    <View style={[styles.wrap, live.wrap]}>
+    <View style={styles.wrap}>
       <Text style={live.title} numberOfLines={2} accessibilityRole="header">
         {name}
       </Text>
@@ -59,11 +58,7 @@ export default function SessionHeader({ name, note, onNotes }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-    paddingHorizontal: spacing.lg,
-  },
+  wrap: { gap: spacing.xs },
   noteRow: {
     minHeight: touchTarget.minimum,
     flexDirection: 'row',
