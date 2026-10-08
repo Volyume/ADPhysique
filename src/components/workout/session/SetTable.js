@@ -129,7 +129,7 @@ export default function SetTable({
       <View style={[styles.columns, live.columns]}>
         <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1}>Set</Text>
         <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1}>Last</Text>
-        <Text style={[styles.label, styles.colTarget, live.label]} numberOfLines={1}>Target</Text>
+        <Text style={[styles.label, styles.colTarget, styles.labelStart, live.label]} numberOfLines={1}>Target</Text>
         <Text style={[styles.label, styles.colWells, live.label]} numberOfLines={1}>{wellsLabel}</Text>
         <View style={styles.colCheck}>
           {onLogRemaining ? (
@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   label: { textAlign: 'center' },
+  labelStart: { textAlign: 'left', paddingLeft: spacing.xs },
   colMarker: { width: SET_COLUMNS.marker },
   colLast: { width: SET_COLUMNS.last },
   colTarget: { flex: 1, minWidth: 0 },

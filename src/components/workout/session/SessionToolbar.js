@@ -2,16 +2,13 @@
  * SessionToolbar
  *
  * The session sheet's top bar (12-BUILD-SPEC sections 2 to 4, register D220).
- * It replaces WorkoutHeader: a Cancel control, the Rest tool, the
+ * It replaces WorkoutHeader: a Cancel control, the Rest and Notes tools, the
  * session clock in a well and the icon-only Finish well. Presentation only:
  * every action is a callback the screen owns, so the cancel and finish
  * contracts (BEHAVIOURAL-CONTRACT sections 1 and 6) are untouched.
  *
  * Test ids kept from WorkoutHeader: volyume-workout-close and
- * volyume-workout-finish. New: volyume-tool-rest. The Notes tool was
- * removed on the founder's device verdict (2026-10-08): the note line under
- * the session title, directly beneath the toolbar, already opens the same
- * sheet and shows the note once written, so two controls sat touching.
+ * volyume-workout-finish. New: volyume-tool-rest and volyume-tool-notes.
  *
  * Finish stays icon only (founder order 2026-07-27, pinned for the old header
  * in loggerHeaderFinishIconOnly.guard.test.js): the visible word is gone, so
@@ -37,6 +34,7 @@ import SessionClock from './SessionClock';
 const TOOL_GLYPH = 22;
 const TOOL_WIDTH = 56;
 const BAR_MIN_HEIGHT = 56;
+const DIVIDER_HEIGHT = 28;
 
 function ToolButton({ testID, icon, label, accessibilityLabel, accessibilityHint, onPress, glyphColor, labelStyle }) {
   return (
@@ -58,12 +56,14 @@ export default function SessionToolbar({
   startTime,
   onClose,
   onRest,
+  onNotes,
   onFinish,
   finishBusy = false,
 }) {
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.surface },
+    divider: { backgroundColor: t.colors.borderSubtle },
     toolLabel: { ...t.type.caption, color: t.colors.textSecondary },
     finish: { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
   }), [t]);
@@ -88,6 +88,17 @@ export default function SessionToolbar({
         accessibilityLabel="Rest timer"
         accessibilityHint="Opens the full rest view"
         onPress={onRest}
+        glyphColor={t.colors.textPrimary}
+        labelStyle={live.toolLabel}
+      />
+      <View style={[styles.divider, live.divider]} />
+      <ToolButton
+        testID="volyume-tool-notes"
+        icon="create-outline"
+        label="Notes"
+        accessibilityLabel="Session notes"
+        accessibilityHint="Add or edit a note for this workout"
+        onPress={onNotes}
         glyphColor={t.colors.textPrimary}
         labelStyle={live.toolLabel}
       />
@@ -135,6 +146,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xxs,
+  },
+  divider: {
+    width: 1,
+    height: DIVIDER_HEIGHT,
+    marginHorizontal: spacing.xs,
   },
   gap: { flex: 1 },
   finish: {
