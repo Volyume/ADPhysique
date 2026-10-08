@@ -21,7 +21,7 @@
 import CohortRow from './CohortRow';
 
 export default function GroupRow({
-  group, line, people, onPress, onPressWithLayout, inBand, unread,
+  group, line, people, onPress, onPressWithLayout, inBand, unread, trailing,
 }) {
   return (
     <CohortRow
@@ -32,6 +32,7 @@ export default function GroupRow({
       onPressWithLayout={onPressWithLayout}
       inBand={inBand}
       unread={unread}
+      trailing={trailing}
     />
   );
 }

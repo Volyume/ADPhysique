@@ -70,6 +70,7 @@ export default function PressableCard({
   accessibilityLabel,
   accessibilityHint,
   accessibilityState,
+  accessible,
   testID,
   hitSlop,
   // Subtle by default. Pass scale={0.94} for a more pronounced press
@@ -148,6 +149,7 @@ export default function PressableCard({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
+      accessible={accessible}
       style={[style, animatedStyle]}
     >
       {children}

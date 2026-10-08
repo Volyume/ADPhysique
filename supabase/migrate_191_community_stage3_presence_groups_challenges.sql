@@ -49,6 +49,36 @@
 --                       caller. No load, body figure or food figure exists in
 --                       any column, argument or payload below.
 --
+-- ROUND 3R ADDITIONS (2026-10-08, still UNAPPLIED, edited in place):
+--                    S1 community_group_get / community_group_list_mine carry
+--                       'active_challenge' ({id, name, starts_on, ends_on,
+--                       target_sessions} or null; active and unexpired, members
+--                       only), and the member RPC community_group_active_
+--                       challenges() lists the caller's active challenge ids.
+--                    S2 community_get_me carries 'show_training_now'.
+--                    S3 community_report accepts target_kind 'group_message'
+--                       (the message must exist, the reporter must be a
+--                       current member; the target_kind CHECK is widened).
+--                    S4 THE CHALLENGE BOARD ROWS OMIT PEOPLE THE CALLER MUTED
+--                       OR BLOCKED; the group total still counts them (a group
+--                       figure with no identity).
+--                    S5 chat reads need state = 'member' (via _community_group_
+--                       role, migrate_165), so an invited, requested, removed or
+--                       former member is refused even for a closed group; a
+--                       current member can still read a closed group's chat.
+--                    S6 the hub 'training_now' payload gains 'trained_today',
+--                       a COUNT from community_friends_trained_today's predicate.
+--                    N4 (documented, intended): turning show_training_now ON keeps
+--                       a training_since from the last 3 hours, so someone who
+--                       began a session with the switch off shows as training
+--                       from the moment it is turned on, until the 3 hours pass.
+--                    N1/N2 are resolved by S4 and S5 above.
+--                    Also REPLACED here: community_get_me() (migrate_184 body)
+--                    and community_report(text,uuid,text,text) (migrate_165
+--                    body), each plus marked additions; new internal helper
+--                    _community_active_challenge(uuid). Rollback also re-runs
+--                    those two bodies verbatim and DROPs the two new functions.
+--
 -- READ-SIDE GATE REUSED, NEVER RE-IMPLEMENTED: public._community_consistency_
 --                    withheld(uuid) (migrate_180 line 337: the open ED flag
 --                    arm, line 266, OR the calm mode arm, line 302; both fail
@@ -535,6 +565,14 @@ BEGIN
   -- migrate_191 (3a, marked addition): who the caller follows is training now;
   -- JSON null when the caller is withheld by the migrate_180 gate.
   v_training := public._community_training_now(v_uid, NULL);
+  -- migrate_191 round 3R (S6): trained_today is a COUNT of followed people
+  -- with a session today, from community_friends_trained_today's own
+  -- predicate (migrate_180: gated people, blocked, non-sharing and minors
+  -- excluded). No names. Skipped (stays JSON null) when the caller is withheld.
+  IF v_training IS NOT NULL THEN
+    v_training := v_training || jsonb_build_object(
+      'trained_today', public.community_friends_trained_today(v_today));
+  END IF;
 
   RETURN jsonb_build_object('cohorts', v_cohorts, 'groups', coalesce(v_groups, '[]'::jsonb),
     'training_now', v_training);
@@ -644,6 +682,10 @@ BEGIN
     v_training := public._community_training_now(v_uid, _group_id);
   END IF;
   v_out := v_out || jsonb_build_object('training_now', v_training);
+  -- migrate_191 round 3R (S1): the group's active, unexpired challenge, for
+  -- members only (JSON null otherwise).
+  v_out := v_out || jsonb_build_object('active_challenge',
+    CASE WHEN v_role IS NOT NULL THEN public._community_active_challenge(_group_id) END);
   RETURN v_out || jsonb_build_object('my_role', v_role, 'my_state',
     (SELECT state FROM public.community_group_members WHERE group_id = _group_id AND user_id = v_uid));
 END $$;
@@ -714,6 +756,11 @@ DECLARE
 BEGIN
   IF _group_id IS NULL THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
   PERFORM public._community_require_profile(v_uid, false);
+  -- round 3R (S5): _community_group_role answers only for state = 'member'
+  -- (migrate_165), so an invited, requested or removed person is refused, and
+  -- so is anyone once the group is closed AND they are not a current member.
+  -- A current member keeps reading a closed group's chat (sending is refused
+  -- elsewhere). Pinned by fixtures C8 to C10.
   IF public._community_group_role(_group_id, v_uid) IS NULL THEN
     RAISE EXCEPTION USING message = 'not_allowed';
   END IF;
@@ -948,7 +995,11 @@ BEGIN
                WHERE gmsg.group_id = g.id AND gmsg.author_id <> v_uid
                  AND gmsg.created_at > coalesce(m.last_read_at, m.joined_at)
                  AND public._community_group_message_visible(v_uid, gmsg.author_id)
-               LIMIT 99) u) ELSE 0 END)
+               LIMIT 99) u) ELSE 0 END,
+           -- migrate_191 round 3R (S1): the active, unexpired challenge of a
+           -- joined group (JSON null otherwise).
+           'active_challenge', CASE WHEN m.state = 'member'
+             THEN public._community_active_challenge(g.id) END)
          ORDER BY m.joined_at DESC), '[]'::jsonb)
   INTO v_out
   FROM public.community_group_members m
@@ -1161,16 +1212,23 @@ BEGIN
     JOIN public.community_profiles p ON p.user_id = gm.user_id
     WHERE gm.group_id = v_c.group_id AND gm.state = 'member'
       AND p.status = 'active' AND p.is_minor = false
-      AND (p.user_id = v_uid OR NOT public._community_is_blocked(v_uid, p.user_id))
       AND NOT public._community_consistency_withheld(p.user_id)
   )
-  SELECT coalesce(sum(sessions), 0)::int,
+  -- round 3R (S4): the group total counts every eligible member (it is a
+  -- group figure and carries no identity), but the ROWS omit anyone the
+  -- caller blocked, was blocked by, or muted.
+  SELECT coalesce((SELECT sum(sessions) FROM counted), 0)::int,
          coalesce(jsonb_agg(jsonb_build_object(
            'user_id', user_id, 'handle', handle, 'display_name', display_name,
            'avatar_preset', avatar_preset, 'sessions', sessions,
            'me', user_id = v_uid) ORDER BY sessions DESC, user_id), '[]'::jsonb)
   INTO v_total, v_members
-  FROM (SELECT * FROM counted ORDER BY sessions DESC, user_id LIMIT 100) c;
+  FROM (SELECT * FROM counted c0
+        WHERE c0.user_id = v_uid
+           OR (NOT public._community_is_blocked(v_uid, c0.user_id)
+               AND NOT EXISTS (SELECT 1 FROM public.community_mutes mu
+                               WHERE mu.muter_id = v_uid AND mu.muted_id = c0.user_id))
+        ORDER BY sessions DESC, user_id LIMIT 100) c;
 
   RETURN jsonb_build_object(
     'challenge', public._community_challenge_json(v_c),
@@ -1181,6 +1239,243 @@ END $$;
 
 REVOKE ALL ON FUNCTION public.community_challenge_board(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.community_challenge_board(uuid) TO authenticated;
+
+
+-- ─── Part 8 (round 3R): active challenge reads, get_me, report ─────────
+
+-- The group's active, unexpired challenge as {id, name, starts_on, ends_on,
+-- target_sessions}, or SQL NULL. Internal; callers gate on membership.
+CREATE OR REPLACE FUNCTION public._community_active_challenge(_gid uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT jsonb_build_object('id', c.id, 'name', c.name, 'starts_on', c.starts_on,
+                            'ends_on', c.ends_on, 'target_sessions', c.target_sessions)
+  FROM public.community_group_challenges c
+  WHERE c.group_id = _gid AND c.status = 'active'
+    AND c.ends_on >= (timezone('Europe/London', now()))::date
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public._community_active_challenge(uuid) FROM PUBLIC, anon, authenticated;
+
+-- S1: the caller's groups' active challenge ids, for the logger's finish
+-- path. Members only; ids and group ids, nothing else.
+CREATE OR REPLACE FUNCTION public.community_group_active_challenges()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid uuid := public._community_caller();
+BEGIN
+  PERFORM public._community_require_profile(v_uid, false);
+  RETURN jsonb_build_object('challenges', coalesce((
+    SELECT jsonb_agg(jsonb_build_object('id', c.id, 'group_id', c.group_id,
+                                        'starts_on', c.starts_on, 'ends_on', c.ends_on)
+                     ORDER BY c.ends_on, c.id)
+    FROM public.community_group_members m
+    JOIN public.community_groups g ON g.id = m.group_id AND g.status = 'active'
+    JOIN public.community_group_challenges c ON c.group_id = g.id
+    WHERE m.user_id = v_uid AND m.state = 'member'
+      AND c.status = 'active'
+      AND c.ends_on >= (timezone('Europe/London', now()))::date), '[]'::jsonb));
+END $$;
+
+REVOKE ALL ON FUNCTION public.community_group_active_challenges() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.community_group_active_challenges() TO authenticated;
+
+-- S2: community_get_me re-issued. migrate_184 lines 428-511 carried forward
+-- byte-for-byte; the ONE marked addition is the 'show_training_now' key.
+CREATE OR REPLACE FUNCTION public.community_get_me()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid      uuid := public._community_caller();
+  v_p        public.community_profiles%ROWTYPE;
+  v_card     jsonb;
+  v_pending  int := 0;
+  v_unseen   int := 0;
+  v_connects int := 0;
+  v_msgs     int := 0;
+BEGIN
+  v_card := public._community_profile_card(v_uid, v_uid);
+  SELECT * INTO v_p FROM public.community_profiles WHERE user_id = v_uid;
+
+  IF v_card IS NOT NULL THEN
+    SELECT count(*) INTO v_pending
+    FROM public.community_follows
+    WHERE followee_id = v_uid AND state = 'requested';
+
+    SELECT count(*) INTO v_unseen
+    FROM public.community_activity
+    WHERE user_id = v_uid AND seen_at IS NULL;
+
+    SELECT count(*) INTO v_connects
+    FROM public.community_connections c
+    WHERE c.state = 'requested' AND c.requester_id <> v_uid
+      AND (c.user_a = v_uid OR c.user_b = v_uid);
+
+    -- Unread MESSAGES, in open conversations only, from the other person
+    -- only, newer than this person's own read marker.
+    SELECT count(*) INTO v_msgs
+    FROM public.community_messages m
+    JOIN public.community_conversations c ON c.id = m.conversation_id
+    WHERE c.closed_at IS NULL
+      AND (c.user_a = v_uid OR c.user_b = v_uid)
+      AND m.sender_id <> v_uid
+      AND m.created_at > coalesce(
+        CASE WHEN c.user_a = v_uid THEN c.a_last_read_at ELSE c.b_last_read_at END,
+        '-infinity'::timestamptz)
+      AND NOT public._community_is_blocked(v_uid, m.sender_id);
+
+    -- Security review 2026-09-06 (finding 1): every hub open self-heals the
+    -- stored is_minor column from a fresh derivation, so a birthday or a
+    -- corrected date of birth is never more than one open away from being
+    -- enforced everywhere that column is read (find_people, gym summary,
+    -- the profile card).
+    UPDATE public.community_profiles
+       SET last_active_at = now(),
+           is_minor = public._community_minor(v_uid)
+     WHERE user_id = v_uid;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'profile',                 v_card,
+    'pending_requests',        v_pending,
+    'unseen_activity',         v_unseen,
+    'is_moderator',            public.community_is_moderator(),
+    'is_minor',                public._community_minor(v_uid),
+    'rules_version',           public._community_rules_version(),
+    'accepted_rules_version',  v_p.rules_version,
+    'pending_connect_requests', v_connects,
+    'unseen_messages',         v_msgs,
+    'connect_from',            coalesce(v_p.connect_from, 'anyone'),
+    'open_to_partner',         coalesce(v_p.open_to_partner, false),
+    'partner_prefs',           v_p.partner_prefs,
+    'show_programmes',         coalesce(v_p.show_programmes, true),
+    'tp_days',                 to_jsonb(v_p.tp_days),
+    'tp_time_bands',           to_jsonb(v_p.tp_time_bands),
+    'tp_sessions_band',        v_p.tp_sessions_band,
+    'tp_staple_lifts',         to_jsonb(v_p.tp_staple_lifts),
+    'tp_experience_band',      v_p.tp_experience_band,
+    'tp_programme_key',        v_p.tp_programme_key,
+    'tp_age_band',             v_p.tp_age_band,
+    -- migrate_184 (register D194 addendum 2): the row's own sharing
+    -- setting, so the device can mirror it. NULL when the caller has no
+    -- profile; the client mirrors only a boolean.
+    'share_sessions',          v_p.share_sessions,
+    'sessions_audience',       v_p.sessions_audience,
+    -- migrate_191 round 3R (S2, marked addition): the row's own presence
+    -- switch, so the device reads the server first. NULL with no profile.
+    'show_training_now',       v_p.show_training_now
+  );
+END $$;
+
+REVOKE ALL ON FUNCTION public.community_get_me() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.community_get_me() TO authenticated;
+
+-- S3: community_report accepts target_kind 'group_message'. migrate_165 lines
+-- 1399-1458 carried forward byte-for-byte; the marked additions are the new
+-- kind, its owner lookup (the message must exist and the reporter must be a
+-- current member of its group) and the widened CHECK just below.
+DO $$ BEGIN
+  ALTER TABLE public.community_reports
+    DROP CONSTRAINT IF EXISTS community_reports_target_kind_check;
+  ALTER TABLE public.community_reports
+    ADD CONSTRAINT community_reports_target_kind_check
+    CHECK (target_kind IN ('profile', 'post', 'comment', 'programme', 'message', 'group',
+                           'group_message'));
+END $$;
+
+CREATE OR REPLACE FUNCTION public.community_report(
+  _target_kind text, _target_id uuid, _reason text, _detail text DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid    uuid := public._community_caller();
+  v_owner  uuid;
+  v_detail text;
+  v_id     uuid;
+BEGIN
+  IF _target_kind NOT IN ('profile', 'post', 'comment', 'message', 'group', 'group_message') -- 191
+     OR _target_id IS NULL THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+  IF _reason NOT IN ('spam', 'harassment', 'impersonation',
+                     'harmful_body_or_eating_content', 'inappropriate', 'other') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.community_reports
+    WHERE reporter_id = v_uid AND target_kind = _target_kind
+      AND target_id = _target_id AND status = 'open'
+  ) THEN
+    RAISE EXCEPTION USING message = 'already_reported';
+  END IF;
+
+  PERFORM public._community_rate_check(v_uid, 'report', 20, 20);
+
+  v_detail := nullif(btrim(coalesce(_detail, '')), '');
+  IF v_detail IS NOT NULL AND length(v_detail) > 1000 THEN
+    v_detail := left(v_detail, 1000);
+  END IF;
+
+  IF _target_kind = 'profile' THEN
+    SELECT user_id  INTO v_owner FROM public.community_profiles   WHERE user_id = _target_id;
+  ELSIF _target_kind = 'post' THEN
+    SELECT author_id INTO v_owner FROM public.community_posts      WHERE id = _target_id;
+  ELSIF _target_kind = 'comment' THEN
+    SELECT author_id INTO v_owner FROM public.community_comments   WHERE id = _target_id;
+  ELSIF _target_kind = 'group' THEN
+    -- Design 60 §3: the group's owner is its creator.
+    SELECT created_by INTO v_owner FROM public.community_groups WHERE id = _target_id;
+  ELSIF _target_kind = 'group_message' THEN
+    -- migrate_191 round 3R (S3, marked addition): the message must exist and
+    -- the reporter must be a CURRENT member of its group; otherwise
+    -- v_owner stays NULL and the call raises not_found below.
+    SELECT gm.author_id INTO v_owner
+    FROM public.community_group_messages gm
+    WHERE gm.id = _target_id
+      AND public._community_group_role(gm.group_id, v_uid) IS NOT NULL;
+  ELSE
+    SELECT m.sender_id INTO v_owner
+    FROM public.community_messages m
+    JOIN public.community_conversations c ON c.id = m.conversation_id
+    WHERE m.id = _target_id AND (c.user_a = v_uid OR c.user_b = v_uid);
+  END IF;
+  IF v_owner IS NULL THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
+
+  INSERT INTO public.community_reports
+    (reporter_id, target_kind, target_id, target_owner_id, reason, detail, priority)
+  VALUES (v_uid, _target_kind, _target_id, v_owner, _reason, v_detail,
+          _reason = 'harmful_body_or_eating_content')
+  RETURNING id INTO v_id;
+
+  -- migrate_160's auto-hide only knows post/comment/programme; a group is
+  -- never auto-hidden (the same posture a profile already has -- suspension
+  -- is a human decision), so it is deliberately not passed through.
+  IF _target_kind IN ('post', 'comment') THEN
+    PERFORM public._community_auto_hide(_target_kind, _target_id);
+  END IF;
+
+  RETURN jsonb_build_object('id', v_id);
+END $$;
+
+REVOKE ALL ON FUNCTION public.community_report(text, uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.community_report(text, uuid, text, text) TO authenticated;
 
 -- ─── Acceptance ─────────────────────────────────────────────────────────
 -- (1) Executable, read-only catalogue check: raises on any miss.
@@ -1204,7 +1499,10 @@ BEGIN
     'public.community_challenge_board(uuid)',
     'public.community_hub_summary(text)',
     'public.community_group_get(uuid)',
-    'public.community_group_list_mine()'
+    'public.community_group_list_mine()',
+    'public.community_group_active_challenges()',
+    'public.community_get_me()',
+    'public.community_report(text, uuid, text, text)'
   ] LOOP
     IF to_regprocedure(v_fn) IS NULL THEN
       RAISE EXCEPTION 'acceptance failed: % missing', v_fn;
@@ -1294,6 +1592,16 @@ END $$;
 --      permission denied.
 --   C6 delete: the author or a group admin deletes (ok); another member gets
 --      not_found.
+--   C8 invited (not a member) cannot read the chat: not_allowed.
+--   C9 a removed or left member cannot read: not_allowed.
+--   C10 closed group: UPDATE community_groups SET status = 'closed'; a current
+--      member still reads; an invited or former member gets not_allowed.
+--   C11 group message report (S3): a member's community_report('group_message',
+--      <message id>, 'harassment') returns {id}; a non-member and an unknown id
+--      raise not_found; a second identical report raises already_reported.
+--   P8 (S2) community_get_me()->'show_training_now' reads the caller's switch.
+--   P9 (S6) hub_summary()->'training_now'->'trained_today' counts followed people
+--      with a session today (a number, no names); JSON null training_now stays null.
 -- Decline
 --   D1 B invited to X: community_group_decline_invite(X) -> {"declined":true} and
 --      the row is gone; a second call raises not_found; a 'member' row raises
@@ -1308,6 +1616,13 @@ END $$;
 --      than 2 days from the UK-local today, raises invalid_input.
 --   H4 board withheld: A gated -> community_challenge_board(c) is JSON null; a
 --      gated MEMBER is absent from every other member's board and total.
+--   H6 muted/blocked off the board (S4): A mutes B; A's board rows omit B, the
+--      group_total still counts B's sessions; B's own board still lists B.
+--   H7 active_challenge (S1): community_group_get(X) and list_mine()'s row for X
+--      carry {id,name,starts_on,ends_on,target_sessions} for a member while a
+--      challenge is active and unexpired; JSON null after community_challenge_end
+--      and for a non-member. community_group_active_challenges() lists the
+--      caller's active challenge ids (member groups only).
 --   H5 never a figure column: the acceptance DO block above proves the three new
 --      tables hold exactly the listed columns, and the board payload carries
 --      only counts.

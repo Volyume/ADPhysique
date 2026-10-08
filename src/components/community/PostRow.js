@@ -72,9 +72,14 @@ function plural(n, one, many) { return `${n} ${n === 1 ? one : many}`; }
  * The achievement line, the stats line and (for a note) the remaining note
  * text for one post. Pure.
  *
- * @returns {{achievement: string, stats: string, record: boolean, noteRest: string}}
+ * In `detail` (the post's own page, round 3R SF4) a milestone shows its figure
+ * (`heroValue` and `heroUnit`), a block its lift gains (`lifts[].deltaKg`) and
+ * a session its plan name, as `extra`; these are the same allow-listed fields
+ * the old card read. Never bodyweight, calories or a measurement.
+ *
+ * @returns {{achievement: string, stats: string, extra: string, record: boolean, noteRest: string}}
  */
-export function postRowLines(post) {
+export function postRowLines(post, { detail = false } = {}) {
   const p = post?.payload ?? {};
   const caption = typeof post?.caption === 'string' ? post.caption.trim() : '';
   const units = p.units === 'lbs' ? 'lbs' : 'kg';
@@ -84,6 +89,7 @@ export function postRowLines(post) {
       return {
         achievement: lift,
         stats: p.previousBest ? `was ${p.previousBest} ${units}` : '',
+        extra: '',
         record: true,
         noteRest: caption,
       };
@@ -99,7 +105,13 @@ export function postRowLines(post) {
         volume > 0 ? formatWithUnit(formatNumber(Math.round(volume)), units) : null,
         prCount > 0 ? plural(prCount, 'PR', 'PRs') : null,
       ].filter(Boolean).join(MIDDOT);
-      return { achievement: p.sessionName || 'Session', stats, record: prCount > 0, noteRest: caption };
+      return {
+        achievement: p.sessionName || 'Session',
+        stats,
+        extra: detail && p.planName ? `Plan: ${p.planName}` : '',
+        record: prCount > 0,
+        noteRest: caption,
+      };
     }
     case 'block': {
       const weeks = count(p.weeks);
@@ -108,21 +120,31 @@ export function postRowLines(post) {
         weeks > 0 ? plural(weeks, 'week', 'weeks') : null,
         sessions > 0 ? plural(sessions, 'session', 'sessions') : null,
       ].filter(Boolean).join(MIDDOT);
-      return { achievement: p.planName || 'Block complete', stats, record: false, noteRest: caption };
+      const lifts = detail && Array.isArray(p.lifts) ? p.lifts.slice(0, 3) : [];
+      const gains = lifts
+        .map((l) => `${l?.exerciseName ?? 'Lift'} +${l?.deltaKg ?? 0} ${l?.units === 'lbs' ? 'lbs' : 'kg'}`)
+        .join(MIDDOT);
+      return { achievement: p.planName || 'Block complete', stats, extra: gains, record: false, noteRest: caption };
     }
-    case 'milestone':
+    case 'milestone': {
+      const figure = detail
+        ? `${p.heroValue ?? ''}${p.heroUnit ? ` ${p.heroUnit}` : ''}`.trim()
+        : '';
+      const sub = typeof p.caption === 'string' ? p.caption : '';
       return {
-        achievement: p.title || 'Milestone',
-        stats: typeof p.caption === 'string' ? p.caption : '',
+        achievement: figure || p.title || 'Milestone',
+        stats: figure ? [p.title, sub].filter(Boolean).join(MIDDOT) : sub,
+        extra: '',
         record: false,
         noteRest: caption,
       };
+    }
     case 'note': {
       const [first = '', ...rest] = caption.split('\n');
-      return { achievement: first.trim(), stats: '', record: false, noteRest: rest.join('\n').trim() };
+      return { achievement: first.trim(), stats: '', extra: '', record: false, noteRest: rest.join('\n').trim() };
     }
     default:
-      return { achievement: '', stats: '', record: false, noteRest: caption };
+      return { achievement: '', stats: '', extra: '', record: false, noteRest: caption };
   }
 }
 
@@ -151,7 +173,9 @@ export default function PostRow({
   if (!post) return null;
   const author = item?.author ?? null;
   const name = author ? (author.display_name || author.handle || 'A lifter') : 'A lifter';
-  const { achievement, stats, record, noteRest } = postRowLines(post);
+  const {
+    achievement, stats, extra, record, noteRest,
+  } = postRowLines(post, { detail });
   const mine = local ? local.mine : serverMine;
   const respects = local ? local.count : serverCount;
   const comments = count(post.comment_count);
@@ -182,22 +206,32 @@ export default function PostRow({
     }
   }
 
-  const a11yLabel = [
+  const readOut = [
     `${name}, ${achievement || 'post'}`,
     stats || null,
+    extra || null,
     showNote ? noteRest : null,
     timeLabel || null,
+  ].filter(Boolean).join('. ');
+  const a11yLabel = [
+    readOut,
     `Respect ${respects}`,
     plural(comments, 'comment', 'comments'),
   ].filter(Boolean).join('. ');
+  // The post is read out as a labelled group; the avatar, heart and comment
+  // glyph are separate controls that carry their own labels (round 3R, SF2).
+  // The group is a button only when the post opens (N8: the post's own page
+  // is not a dimmed button).
+  const opens = !!(onPress || onPressWithLayout);
 
   return (
     <PressableCard
       onPress={onPress}
       onPressWithLayout={onPressWithLayout}
-      disabled={!onPress && !onPressWithLayout}
-      accessibilityRole="button"
+      disabled={!opens}
+      accessibilityRole={opens ? 'button' : 'none'}
       accessibilityLabel={a11yLabel}
+      accessible={false}
       style={{ backgroundColor: t.colors.surface }}
     >
       <View style={styles.body}>
@@ -215,13 +249,26 @@ export default function PostRow({
               <View style={[styles.ringDot, { backgroundColor: t.colors.primary, borderColor: t.colors.surface }]} />
             ) : null}
           </Pressable>
-          <Text style={[t.type.bodyStrong, styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
-            {name}
-          </Text>
-          {timeLabel ? (
-            <Text style={[t.type.caption, { color: t.colors.textMuted }]} numberOfLines={1}>{timeLabel}</Text>
-          ) : null}
+          {/* The read-out group below already says the name and the time. */}
+          <View
+            style={styles.identityText}
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+          >
+            <Text style={[t.type.bodyStrong, styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
+              {name}
+            </Text>
+            {timeLabel ? (
+              <Text style={[t.type.caption, { color: t.colors.textMuted }]} numberOfLines={1}>{timeLabel}</Text>
+            ) : null}
+          </View>
         </View>
+
+        <View
+          accessible
+          accessibilityRole={opens ? 'button' : 'text'}
+          accessibilityLabel={readOut}
+        >
 
         {achievement ? (
           <View style={styles.achievementRow}>
@@ -238,6 +285,9 @@ export default function PostRow({
         {stats ? (
           <Text style={[styles.stats, t.type.num('label'), { color: t.colors.textSecondary }]}>{stats}</Text>
         ) : null}
+        {extra ? (
+          <Text style={[styles.stats, t.type.num('label'), { color: t.colors.textSecondary }]}>{extra}</Text>
+        ) : null}
         {showNote ? (
           <Text style={[styles.note, t.type.bodySm, { color: t.colors.textPrimary }]} numberOfLines={detail ? undefined : NOTE_LINES}>
             {noteRest}
@@ -246,6 +296,7 @@ export default function PostRow({
         {showNote && noteLong && !detail ? (
           <Text style={[t.type.label, { color: t.colors.textSecondary }]}>more</Text>
         ) : null}
+        </View>
 
         <View style={styles.reactions}>
           <Pressable
@@ -292,6 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: circle(RING),
     borderWidth: 1.5,
   },
+  identityText: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   name: { flex: 1 },
   achievementRow: {
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs2, marginTop: spacing.sm,

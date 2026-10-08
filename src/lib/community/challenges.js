@@ -70,6 +70,45 @@ export async function endChallenge(id) {
  *
  * @returns {Promise<{logged: boolean, isNew: boolean}>}
  */
+/**
+ * The caller's groups' active, unexpired challenges, for the logger's finish
+ * path: `[{id, groupId, startsOn, endsOn}]`. Members' groups only.
+ *
+ * @returns {Promise<Array<{id: string, groupId: (string|null), startsOn: (string|null), endsOn: (string|null)}>>}
+ */
+export async function loadActiveChallengeIds() {
+  const data = await callCommunity('community_group_active_challenges', {});
+  return (Array.isArray(data?.challenges) ? data.challenges : [])
+    .filter((c) => c?.id)
+    .map((c) => ({
+      id: c.id, groupId: c.group_id ?? null,
+      startsOn: c.starts_on ?? null, endsOn: c.ends_on ?? null,
+    }));
+}
+
+/** Codes where the server answered and refused: retrying cannot help. */
+const DEFINITIVE = new Set(['not_found', 'not_allowed', 'invalid_input', 'forbidden',
+  'content_not_allowed', 'rules_outdated']);
+
+export const isRetryableChallengeError = (e) => !DEFINITIVE.has(e?.code);
+
+/** True once the challenge's first day has come (day keys compare as text). */
+export function challengeHasStarted(startsOn, todayKey) {
+  if (!DAY_RE.test(String(startsOn ?? ''))) return true;
+  return String(startsOn) <= String(todayKey);
+}
+
+/** "Starts tomorrow" when the first day is the next one, else "Starts 9 Oct". */
+export function challengeStartsLine(startsOn, todayKey) {
+  if (challengeHasStarted(startsOn, todayKey)) return null;
+  const next = localDayKey(addLocalCalendarDays(
+    new Date(`${todayKey}T12:00:00`).getTime(), 1).getTime());
+  if (startsOn === next) return 'Starts tomorrow';
+  const d = new Date(`${startsOn}T12:00:00`);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `Starts ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
 export async function logChallengeSession(challengeId, sessionKey, loggedOn) {
   if (!challengeId || !sessionKey || !DAY_RE.test(String(loggedOn ?? ''))) {
     throw new CommunityError('invalid_input');
@@ -124,7 +163,9 @@ export const CHALLENGE_LENGTH_CHOICES = Object.freeze([7, 14, 28]);
 export function challengeWindow({ start = 'today', days = 7, now = Date.now() } = {}) {
   const length = CHALLENGE_LENGTH_CHOICES.includes(days) ? days : 7;
   const startDate = addLocalCalendarDays(now, start === 'tomorrow' ? 1 : 0);
-  const endDate = addLocalCalendarDays(startDate, length);
+  // The server treats ends_on as INCLUSIVE (a session on ends_on counts), so a
+  // 7 day challenge ends on start + 6.
+  const endDate = addLocalCalendarDays(startDate, length - 1);
   return { startsOn: localDayKey(startDate.getTime()), endsOn: localDayKey(endDate.getTime()) };
 }
 

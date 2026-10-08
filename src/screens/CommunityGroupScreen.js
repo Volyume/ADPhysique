@@ -58,6 +58,8 @@ import {
   challengeDaysLine, challengeTotalLine, challengeFailureLine, consistencyGateState,
 } from '../lib/community';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
+import { challengeStartsLine } from '../lib/community/challenges';
+import { localDayKey } from '../lib/dayKey';
 
 const PAGE = 20;
 
@@ -108,7 +110,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const [reportOpen, setReportOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   // D221 Stage 3: chat band, challenge band, presence gate.
-  const [chat, setChat] = useState({ messages: [], unread: 0 });
+  const [chat, setChat] = useState({ messages: [], unread: 0, failed: false });
   const [challengeBoard, setChallengeBoard] = useState(null);
   const [challengeSheetOpen, setChallengeSheetOpen] = useState(false);
   const [gated, setGated] = useState(true); // fails closed until the gate answers
@@ -144,11 +146,11 @@ export default function CommunityGroupScreen({ navigation, route }) {
         // Chat band and challenge band: each its own best-effort read, so a
         // failure here never costs the page.
         Promise.all([
-          loadGroupMessages(groupId, { limit: 3 }).catch(() => ({ messages: [] })),
+          loadGroupMessages(groupId, { limit: 3 }).catch(() => ({ messages: [], failed: true })),
           listMyGroups().catch(() => []),
         ]).then(([page, mine]) => {
           const row = mine.find((r) => r.group?.id === groupId);
-          setChat({ messages: page.messages, unread: row?.unread ?? 0 });
+          setChat({ messages: page.messages, unread: row?.unread ?? 0, failed: !!page.failed });
         });
         if (g.activeChallengeId) {
           loadChallengeBoard(g.activeChallengeId).then(setChallengeBoard).catch(() => setChallengeBoard(null));
@@ -156,7 +158,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
           setChallengeBoard(null);
         }
       } else {
-        setChat({ messages: [], unread: 0 });
+        setChat({ messages: [], unread: 0, failed: false });
         setChallengeBoard(null);
         setBoard(null);
         setFeedRows([]);
@@ -583,7 +585,10 @@ export default function CommunityGroupScreen({ navigation, route }) {
           <Text key={m.id} style={[styles.chatLine, t.type.bodySm, { color: t.colors.textSecondary }]} numberOfLines={1}>
             {`${m.mine ? 'You' : (m.author?.display_name || m.author?.handle || 'Someone').split(' ')[0]}: ${m.body}`}
           </Text>
-        )) : (
+        )) : chat.failed ? (
+          // F10: a failed read is not an empty chat.
+          <BandLine text="Could not load the chat. Try again." />
+        ) : (
           <BandLine text="No messages yet. Say hello to the group." />
         )}
         {chat.unread > 0 ? (
@@ -602,7 +607,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
                 <View style={styles.chatLine}>
                   <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]}>{challenge.name}</Text>
                   <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
-                    {`${challengeDaysLine(challengeBoard.daysRemaining)} \u00b7 ${challengeTotalLine(challengeBoard.groupTotal, challenge.targetSessions)}`}
+                    {`${challengeStartsLine(challenge.startsOn, localDayKey()) ?? challengeDaysLine(challengeBoard.daysRemaining)} \u00b7 ${challengeTotalLine(challengeBoard.groupTotal, challenge.targetSessions)}`}
                   </Text>
                 </View>
                 {challengeBoard.members.map((m) => (
@@ -681,6 +686,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
           icon="barbell-outline"
           title="Share your latest workout with the group"
           onPress={sharingWorkout ? undefined : shareWorkoutWithGroup}
+          disabled={sharingWorkout}
         />
       </Band>
     </>

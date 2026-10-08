@@ -1,6 +1,7 @@
 /**
  * SectionHeader (D221 visual law V2): the one section header for Community.
- * 56 dp tall, the title in `type.bodyStrong` `textPrimary`, announced as a
+ * 56 dp tall at least (it grows when the title wraps to a second line, so a
+ * long heading survives the x1.2 text scale), the title in `type.bodyStrong` `textPrimary`, announced as a
  * header, and at most one trailing action at `type.label` `textSecondary`
  * with a 48 dp target. No amber, no uppercase. Replaces `Eyebrow` and
  * `SectionLabel` in Community.
@@ -24,7 +25,7 @@ export default function SectionHeader({ title, trailing, flush = false }) {
     <View style={[styles.wrap, flush && styles.flush]}>
       <Text
         style={[styles.title, t.type.bodyStrong, { color: t.colors.textPrimary }]}
-        numberOfLines={1}
+        numberOfLines={2}
         accessibilityRole="header"
       >
         {title}
@@ -51,6 +52,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: SECTION_HEADER_HEIGHT,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },

@@ -241,7 +241,7 @@ test('listMyGroups maps {group, role, state} rows and drops one with no group', 
   expect(callCommunity).toHaveBeenCalledWith('community_group_list_mine', {});
   expect(out).toHaveLength(1);
   expect(out[0]).toEqual({
-    group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member', unread: 0, activeChallengeId: null,
+    group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member', unread: 0, activeChallengeId: null, activeChallenge: null,
   });
 });
 
@@ -392,7 +392,7 @@ test('listMyGroups carries the chat unread count from the server (migrate_191)',
 
 test('getGroup reduces training_now and reads a withheld one as null (migrate_191)', async () => {
   callCommunity.mockResolvedValueOnce({ ...CARD, my_role: 'member', my_state: 'member', training_now: { count: 2, names: ['A', 'B'] } });
-  expect((await getGroup('g1')).trainingNow).toEqual({ count: 2, names: ['A', 'B'] });
+  expect((await getGroup('g1')).trainingNow).toEqual({ count: 2, names: ['A', 'B'], trainedToday: null });
   callCommunity.mockResolvedValueOnce({ ...CARD, my_role: 'member', my_state: 'member', training_now: null });
   expect((await getGroup('g1')).trainingNow).toBeNull();
 });
@@ -401,4 +401,16 @@ test('declineGroupInvite calls community_group_decline_invite with _group_id', a
   callCommunity.mockResolvedValueOnce({ declined: true });
   expect(await declineGroupInvite('g1')).toEqual({ declined: true });
   expect(callCommunity).toHaveBeenCalledWith('community_group_decline_invite', { _group_id: 'g1' });
+});
+
+test('listMyGroups and getGroup read the server active_challenge (round 3R, S1)', async () => {
+  const ac = { id: 'c1', name: 'October', starts_on: '2026-10-01', ends_on: '2026-10-28', target_sessions: 12 };
+  callCommunity.mockResolvedValueOnce({ groups: [{ group: CARD, role: 'member', state: 'member', unread: 0, active_challenge: ac }] });
+  const rows = await listMyGroups();
+  expect(rows[0].activeChallengeId).toBe('c1');
+  expect(rows[0].activeChallenge).toEqual({ id: 'c1', name: 'October', startsOn: '2026-10-01', endsOn: '2026-10-28', targetSessions: 12 });
+  callCommunity.mockResolvedValueOnce({ ...CARD, my_role: 'member', my_state: 'member', active_challenge: ac });
+  expect((await getGroup('g1')).activeChallengeId).toBe('c1');
+  callCommunity.mockResolvedValueOnce({ ...CARD, my_role: null, my_state: null, active_challenge: null });
+  expect((await getGroup('g1')).activeChallenge).toBeNull();
 });

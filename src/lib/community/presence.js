@@ -57,14 +57,17 @@ export function normaliseTrainingNow(raw) {
   const names = Array.isArray(raw.names)
     ? raw.names.filter((n) => typeof n === 'string' && n.length > 0).slice(0, 3)
     : [];
-  return { count, names };
+  // Round 3R (S6): the hub payload also carries `trained_today`, a count.
+  const td = Number(raw.trained_today);
+  const trainedToday = raw.trained_today != null && Number.isFinite(td) && td >= 0 ? td : null;
+  return { count, names, trainedToday };
 }
 
 /**
  * The presence band's one line: "2 training now · 3 trained today". A part
  * with nothing in it is left out, and a line with no part at all is null so
  * the band is not drawn (no "0 training now"). `trainedToday` is optional:
- * the Hub has no such count in its payload, the group page reads it from
+ * the Hub payload carries it as `trained_today`, the group page reads it from
  * the roster it already holds.
  *
  * @param {number} count

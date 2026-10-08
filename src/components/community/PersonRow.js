@@ -62,7 +62,10 @@
  *   onPressWithLayout  origin-aware open (D188): receives the measured row rect
  *   inBand        D221: pad the row's content by `spacing.lg` itself (default off)
  *   trailing      optional node (a small `Button secondary sm`, or a
- *                 glyph) rendered at the row's trailing edge
+ *                 glyph) rendered at the row's trailing edge. When present the
+ *                 row is not one accessible element (round 3R, SF2): the person
+ *                 is a labelled group and the trailing control carries its own
+ *                 label, so a screen reader can reach it.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -114,9 +117,16 @@ export default function PersonRow({
       disabled={!onPress && !onPressWithLayout}
       accessibilityRole="button"
       accessibilityLabel={a11yParts.join('. ')}
+      accessible={trailing ? false : undefined}
       style={isOwn ? [inBand ? null : styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}
     >
       <View style={[styles.row, inBand && styles.inBand]}>
+        <View
+          style={styles.group}
+          accessible={trailing ? true : undefined}
+          accessibilityRole={trailing ? (onPress || onPressWithLayout ? 'button' : 'text') : undefined}
+          accessibilityLabel={trailing ? a11yParts.join('. ') : undefined}
+        >
         <View style={styles.leading}>
           {ranked ? (
             <View style={styles.rankSlot}>
@@ -152,6 +162,7 @@ export default function PersonRow({
             {metric}
           </Text>
         ) : null}
+        </View>
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
       {/* The reader's own row is a standalone highlighted row, not a
@@ -169,6 +180,7 @@ const styles = StyleSheet.create({
   },
   // Rank column (a board only) + avatar, so the divider's inset lands
   // exactly at the text column's left edge in either shape.
+  group: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   leading: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   rankSlot: { width: RANK_COL, alignItems: 'flex-end' },
   // The reader's own row is a tinted band, not a floating grey box: the

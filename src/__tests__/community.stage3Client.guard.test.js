@@ -60,7 +60,7 @@ describe('the logger', () => {
     expect(src).toMatch(/announceTraining\(user\.id, true\)\.catch\(\(\) => \{\}\)/);
     expect(src).toMatch(/announceTraining\(user\.id, false\)\.catch\(\(\) => \{\}\)/);
     expect((src.match(/announceTraining\(user\.id, false\)/g) || []).length).toBe(2);
-    expect(src).toMatch(/logFinishedSessionToChallenges\(user\.id, activeWorkout\.id, localDayKey\(\)\)\.catch\(\(\) => \{\}\)/);
+    expect(src).toMatch(/logFinishedSessionToChallenges\(user\.id, activeWorkout\.id, localDayKey\(Number\(activeWorkout\.startedAt\) \|\| Date\.now\(\)\)\)\.catch\(\(\) => \{\}\)/);
   });
   test('the app foreground runs the stale guard', () => {
     expect(code('App.js')).toMatch(/clearStaleTrainingNow\(supabaseUserId\)\.catch/);
@@ -71,7 +71,7 @@ describe('the Hub and the group page', () => {
   const hub = code('src/screens/CommunityHubScreen.js');
   const group = code('src/screens/CommunityGroupScreen.js');
   test('both draw the band behind the consistency gate, failing closed', () => {
-    expect(hub).toMatch(/<PresenceBand trainingNow=\{summary\?\.trainingNow \?\? null\} gated=\{consistencyGated\}/);
+    expect(hub).toMatch(/<PresenceBand trainingNow=\{summary\?\.trainingNow \?\? null\} trainedToday=\{summary\?\.trainingNow\?\.trainedToday \?\? null\} gated=\{consistencyGated\}/);
     expect(hub).toMatch(/useState\(true\)/);
     expect(group).toMatch(/consistencyGateState\(meUid, true\)/);
     expect(group).toMatch(/\[gated, setGated\] = useState\(true\)/);
@@ -102,7 +102,7 @@ describe('the chat screen', () => {
     expect(chat).toMatch(/markGroupRead\(groupId\)/);
     expect(chat).toMatch(/deleteGroupMessage/);
     expect(chat).toMatch(/<ReportSheet/);
-    expect(chat).toMatch(/message\.mine \|\| isAdmin/);
+    expect(chat).toMatch(/targetKind: 'group_message'/);
   });
 });
 
@@ -133,5 +133,32 @@ describe('nothing new is about the body or food', () => {
   test.each(FILES)('%s', (rel) => {
     expect(code(rel)).not.toMatch(/bodyweight|body weight|calorie|kcal|measurement|\bweigh/i);
     expect(code(rel)).not.toMatch(/—/);
+  });
+});
+
+describe('round 3R wiring', () => {
+  const chat = code('src/screens/CommunityGroupChatScreen.js');
+  test('F1, F2: the poll merges by id, older pages are guarded and de-duplicated', () => {
+    expect(chat).toMatch(/mergeNewestPage\(prev, cursorRef\.current, page\)/);
+    expect(chat).toMatch(/olderBusyRef\.current/);
+    expect(chat).toMatch(/appendOlderPage\(prev, page\.messages\)/);
+    expect(chat).not.toMatch(/setMessages\(page\.messages\);\s*setCursor\(page\.cursor\);\s*clearUnread/);
+  });
+  test('F8: an admin gets Delete and Report on another member\'s message; F9: foreground only', () => {
+    expect(chat).toMatch(/'Report'/);
+    expect(chat).toMatch(/'Delete'/);
+    expect(chat).toMatch(/AppState\.addEventListener\('change'/);
+    expect(chat).toMatch(/if \(!activeRef\.current\) return;/);
+  });
+  test('F10: the Chat band says a failed read apart from an empty chat', () => {
+    expect(code('src/screens/CommunityGroupScreen.js')).toContain('Could not load the chat. Try again.');
+  });
+  test('F4: a challenge not yet started says so', () => {
+    expect(code('src/screens/CommunityGroupScreen.js')).toMatch(/challengeStartsLine\(challenge\.startsOn, localDayKey\(\)\)/);
+  });
+  test('C6: the privacy switch reads the server first, the device mirror only as the fallback', () => {
+    const priv = code('src/screens/CommunityPrivacyScreen.js');
+    expect(priv).toMatch(/me\?\.show_training_now \?\? profile\?\.show_training_now/);
+    expect(priv.indexOf('serverShowTraining != null')).toBeLessThan(priv.indexOf('readShowTrainingNow(uid)'));
   });
 });

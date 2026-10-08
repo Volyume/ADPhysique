@@ -59,11 +59,17 @@ test('normaliseTrainingNow: null, malformed and withheld all read as null', () =
 
 test('normaliseTrainingNow keeps count and at most three string names', () => {
   expect(normaliseTrainingNow({ count: 5, names: ['A', 'B', 'C', 'D', 7, ''] }))
-    .toEqual({ count: 5, names: ['A', 'B', 'C'] });
-  expect(normaliseTrainingNow({ count: 0, names: [] })).toEqual({ count: 0, names: [] });
-  expect(normaliseTrainingNow({ count: 2 })).toEqual({ count: 2, names: [] });
+    .toEqual({ count: 5, names: ['A', 'B', 'C'], trainedToday: null });
+  expect(normaliseTrainingNow({ count: 0, names: [] })).toEqual({ count: 0, names: [], trainedToday: null });
+  expect(normaliseTrainingNow({ count: 2 })).toEqual({ count: 2, names: [], trainedToday: null });
 });
 
 test('the stale window matches the server: 3 hours', () => {
   expect(TRAINING_NOW_STALE_MS).toBe(3 * 60 * 60 * 1000);
+});
+
+test('normaliseTrainingNow carries the hub trained_today count (round 3R, S6) and never a name list for it', () => {
+  expect(normaliseTrainingNow({ count: 1, names: ['A'], trained_today: 4 })).toEqual({ count: 1, names: ['A'], trainedToday: 4 });
+  expect(normaliseTrainingNow({ count: 0, names: [], trained_today: -1 }).trainedToday).toBeNull();
+  expect(normaliseTrainingNow({ count: 0, names: [] }).trainedToday).toBeNull();
 });

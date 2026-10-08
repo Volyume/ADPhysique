@@ -35,7 +35,7 @@ function uid() {
  * Enqueue an op for cloud sync. Caller has already written to local
  * SQLite, this is the retry-on-failure fallback for the cloud push.
  *
- * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in'
+ * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in' | 'challenge_session'
  * @param {string} entityId  the local SQLite row id we want to ship
  * @param {string} userId    supabase user.id
  * @param {object} payload   optional, extra data the worker needs (most ops
@@ -244,6 +244,26 @@ async function _runOp(supabaseClient, row) {
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
       else await r;
       return true;
+    }
+    case 'challenge_session': {
+      // Community challenge entry (round 3R): payload is only
+      // {challengeId, sessionKey, loggedOn}. Idempotent on the session key
+      // server-side. A definitive refusal (outside the window, not a member,
+      // challenge ended) drops the op; a network-shaped failure throws so
+      // the queue retries without spending its budget.
+      const payload = row.payload ? JSON.parse(row.payload) : null;
+      if (!payload?.challengeId || !payload?.sessionKey || !payload?.loggedOn) return true;
+      try {
+        // eslint-disable-next-line global-require
+        const { logChallengeSession } = require('./community/challenges');
+        await logChallengeSession(payload.challengeId, payload.sessionKey, payload.loggedOn);
+        return true;
+      } catch (e) {
+        // eslint-disable-next-line global-require
+        const { isRetryableChallengeError } = require('./community/challenges');
+        if (isRetryableChallengeError(e)) throw e;
+        return true;
+      }
     }
     default:
       logWarn('syncQueue.unknownOp', `unknown op_type=${row.op_type}`, { id: row.id });

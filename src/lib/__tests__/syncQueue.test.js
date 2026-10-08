@@ -25,6 +25,11 @@ jest.mock('../errorLog', () => ({
 
 const mockSync = {};
 jest.mock('../sync', () => mockSync);
+const mockLog = jest.fn();
+jest.mock('../community/challenges', () => ({
+  logChallengeSession: (...a) => mockLog(...a),
+  isRetryableChallengeError: (e) => !['not_found', 'not_allowed', 'invalid_input', 'forbidden'].includes(e?.code),
+}));
 
 const { drainSyncQueue, retryFailedOps } = require('../syncQueue');
 const { setSignOutWiping } = require('../sync/signOutGuard');
@@ -92,6 +97,44 @@ describe('drainSyncQueue body_metric fallback (B2)', () => {
       expect.stringMatching(/DELETE FROM pending_sync_ops/),
       ['q1'],
     );
+  });
+});
+
+describe('challenge_session op (round 3R): an offline finish is retried', () => {
+  const row = (over = {}) => ({
+    id: 'q9', op_type: 'challenge_session', entity_id: 'w1', user_id: UID,
+    payload: JSON.stringify({ challengeId: 'c1', sessionKey: 'w1', loggedOn: '2026-10-08' }),
+    created_at: 1, retries: 0, next_attempt_at: 0, last_error: null, ...over,
+  });
+  const deleted = () => mockDb.runAsync.mock.calls.some(([sql, args]) => /DELETE FROM pending_sync_ops/.test(sql) && args[0] === 'q9');
+
+  test('logs the entry from the three payload fields and drains', async () => {
+    mockLog.mockResolvedValueOnce({ logged: true, isNew: true });
+    mockDb.getAllAsync.mockResolvedValueOnce([row()]);
+    const res = await drainSyncQueue(CLIENT, UID);
+    expect(mockLog).toHaveBeenCalledWith('c1', 'w1', '2026-10-08');
+    expect(res).toMatchObject({ drained: 1, failed: 0 });
+    expect(deleted()).toBe(true);
+  });
+  test('a network failure keeps the op for another try', async () => {
+    mockLog.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
+    mockDb.getAllAsync.mockResolvedValueOnce([row()]);
+    const res = await drainSyncQueue(CLIENT, UID);
+    expect(res).toMatchObject({ drained: 0, failed: 1 });
+    expect(deleted()).toBe(false);
+  });
+  test('a definitive refusal (outside the window, not a member) drops the op', async () => {
+    mockLog.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'invalid_input' }));
+    mockDb.getAllAsync.mockResolvedValueOnce([row()]);
+    const res = await drainSyncQueue(CLIENT, UID);
+    expect(res).toMatchObject({ drained: 1, failed: 0 });
+    expect(deleted()).toBe(true);
+  });
+  test('a payload missing a field is dropped without a call', async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([row({ payload: JSON.stringify({ challengeId: 'c1' }) })]);
+    await drainSyncQueue(CLIENT, UID);
+    expect(mockLog).not.toHaveBeenCalled();
+    expect(deleted()).toBe(true);
   });
 });
 

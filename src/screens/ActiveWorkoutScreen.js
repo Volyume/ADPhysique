@@ -4137,7 +4137,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const { publishConsistency, announceTraining, logFinishedSessionToChallenges } = require('../lib/community');
         publishConsistency(user.id).catch(() => {});
         announceTraining(user.id, false).catch(() => {}); // D221 3a: finish clears presence, best effort
-        logFinishedSessionToChallenges(user.id, activeWorkout.id, localDayKey()).catch(() => {}); // D221 3c: session count only, best effort
+        // D221 3c: session count only, best effort. Dated by the workout's own START day
+        // (round 3R, F7), so a session begun late and finished after midnight counts
+        // on the day it was done, not the day it ended.
+        logFinishedSessionToChallenges(user.id, activeWorkout.id, localDayKey(Number(activeWorkout.startedAt) || Date.now())).catch(() => {});
       }
       // LB-8: the core value event. Counts + duration only, no
       // exercise names or loads.

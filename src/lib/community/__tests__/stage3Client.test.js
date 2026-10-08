@@ -31,15 +31,15 @@ jest.mock('../profile', () => ({ readCachedMe: jest.fn(), hasProfile: (me) => !!
 jest.mock('../trainingConsistency', () => ({
   consistencyGateState: jest.fn(), sessionShareGateState: jest.fn(),
 }));
-jest.mock('../groups', () => ({ listMyGroups: jest.fn() }));
 jest.mock('../feed', () => ({ createPost: jest.fn() }));
 jest.mock('../trainingProfile', () => ({ readShareSettings: jest.fn() }));
 jest.mock('../notify', () => ({ notifyCommunityEvent: jest.fn() }));
+jest.mock('../../syncQueue', () => ({ enqueueSyncOp: jest.fn(async () => {}) }));
 
 const { callCommunity } = require('../transport');
+const { enqueueSyncOp } = require('../../syncQueue');
 const { readCachedMe } = require('../profile');
 const { consistencyGateState, sessionShareGateState } = require('../trainingConsistency');
-const { listMyGroups } = require('../groups');
 const { createPost } = require('../feed');
 const { readShareSettings } = require('../trainingProfile');
 const { presenceLine, firstNamesLine } = require('../presence');
@@ -48,7 +48,7 @@ const {
   trainingNowSinceKey,
 } = require('../presenceSession');
 const {
-  challengeWindow, challengeDaysLine, challengeTotalLine,
+  challengeWindow, challengeDaysLine, challengeTotalLine, challengeStartsLine, challengeHasStarted,
 } = require('../challenges');
 const { logFinishedSessionToChallenges } = require('../challengeSession');
 const { milestonePayloadFor, publishAmbientItems, MILESTONE_SESSION_COUNTS } = require('../ambient');
@@ -63,7 +63,8 @@ beforeEach(() => {
   readCachedMe.mockResolvedValue(ME);
   consistencyGateState.mockResolvedValue({ allowed: true, gated: false, isMinor: false });
   sessionShareGateState.mockResolvedValue({ allowed: true, gated: false });
-  listMyGroups.mockResolvedValue([]);
+  callCommunity.mockReset(); callCommunity.mockImplementation(async () => ({}));
+  mockStore.clear();
   readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'followers' });
   createPost.mockResolvedValue({ id: 'p1' });
 });
@@ -153,8 +154,9 @@ describe('3c challenges on the device', () => {
     for (const start of ['today', 'tomorrow']) {
       for (const days of [7, 14, 28]) {
         const w = challengeWindow({ start, days, now });
+        // The server's ends_on is INCLUSIVE, so "7 days" ends on start + 6.
         const span = (Date.parse(w.endsOn) - Date.parse(w.startsOn)) / 86400000;
-        expect(span).toBe(days);
+        expect(span).toBe(days - 1);
         expect(span).toBeLessThanOrEqual(31);
       }
     }
@@ -166,28 +168,68 @@ describe('3c challenges on the device', () => {
     expect(challengeTotalLine(12, 30)).toBe('12 of 30 sessions');
     expect(challengeTotalLine(1)).toBe('1 session');
   });
-  test('finish logs each active challenge once with the workout uid as the key', async () => {
-    listMyGroups.mockResolvedValue([
-      { state: 'member', activeChallengeId: 'c1' },
-      { state: 'member', activeChallengeId: 'c1' },
-      { state: 'member', activeChallengeId: 'c2' },
-      { state: 'member', activeChallengeId: null },
-      { state: 'invited', activeChallengeId: 'c3' },
+  const active = (rows) => callCommunity.mockImplementation(async (fn) => (
+    fn === 'community_group_active_challenges' ? { challenges: rows } : { logged: true, new: true }));
+
+  test('finish logs each active challenge once with the workout uid as the key (ids from the server)', async () => {
+    active([
+      { id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' },
+      { id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' },
+      { id: 'c2', group_id: 'g2', starts_on: '2026-10-08', ends_on: '2026-10-20' },
     ]);
-    callCommunity.mockResolvedValue({ logged: true, new: true });
     const out = await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08');
     expect(out).toEqual({ attempted: 2, logged: 2 });
     expect(callCommunity).toHaveBeenCalledWith('community_challenge_log_session',
       { _challenge_id: 'c1', _session_key: 'w1', _logged_on: '2026-10-08' });
   });
-  test('gated, a minor or no profile logs nothing; a failed call never throws', async () => {
-    listMyGroups.mockResolvedValue([{ state: 'member', activeChallengeId: 'c1' }]);
+  test('a challenge that has not started is not logged into (F4)', async () => {
+    active([{ id: 'c1', group_id: 'g1', starts_on: '2026-10-09', ends_on: '2026-10-20' }]);
+    const out = await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08');
+    expect(out).toEqual({ attempted: 0, logged: 0 });
+    expect(callCommunity).not.toHaveBeenCalledWith('community_challenge_log_session', expect.anything());
+  });
+  test('gated, a minor or no profile logs nothing', async () => {
+    active([{ id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' }]);
     consistencyGateState.mockResolvedValueOnce({ allowed: false, gated: true, isMinor: false });
     expect((await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08')).attempted).toBe(0);
     readCachedMe.mockResolvedValueOnce({ ...ME, is_minor: true });
     expect((await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08')).attempted).toBe(0);
-    callCommunity.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'offline' }));
+    expect(enqueueSyncOp).not.toHaveBeenCalled();
+  });
+  test('an offline finish is queued as a challenge_session op carrying only the three fields', async () => {
+    callCommunity.mockImplementation(async (fn) => {
+      if (fn === 'community_group_active_challenges') return { challenges: [{ id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' }] };
+      throw Object.assign(new Error('x'), { code: 'offline' });
+    });
     await expect(logFinishedSessionToChallenges('u1', 'w1', '2026-10-08')).resolves.toEqual({ attempted: 1, logged: 0 });
+    expect(enqueueSyncOp).toHaveBeenCalledWith('challenge_session', 'w1', 'u1',
+      { challengeId: 'c1', sessionKey: 'w1', loggedOn: '2026-10-08' });
+  });
+  test('a definitive refusal is not queued', async () => {
+    callCommunity.mockImplementation(async (fn) => {
+      if (fn === 'community_group_active_challenges') return { challenges: [{ id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' }] };
+      throw Object.assign(new Error('x'), { code: 'invalid_input' });
+    });
+    await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08');
+    expect(enqueueSyncOp).not.toHaveBeenCalled();
+  });
+  test('with no network for the id read, the cached ids are used so the finish still queues', async () => {
+    active([{ id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20' }]);
+    await logFinishedSessionToChallenges('u1', 'w0', '2026-10-08'); // fills the cache
+    callCommunity.mockImplementation(async () => { throw Object.assign(new Error('x'), { code: 'offline' }); });
+    await logFinishedSessionToChallenges('u1', 'w1', '2026-10-08');
+    expect(enqueueSyncOp).toHaveBeenCalledWith('challenge_session', 'w1', 'u1',
+      { challengeId: 'c1', sessionKey: 'w1', loggedOn: '2026-10-08' });
+  });
+  test('the start line: tomorrow, a later date, or nothing once started', () => {
+    expect(challengeStartsLine('2026-10-09', '2026-10-08')).toBe('Starts tomorrow');
+    expect(challengeStartsLine('2026-10-12', '2026-10-08')).toBe('Starts 12 Oct');
+    expect(challengeStartsLine('2026-10-08', '2026-10-08')).toBeNull();
+    expect(challengeHasStarted('2026-10-08', '2026-10-09')).toBe(true);
+  });
+  test('a 7 day window runs 7 calendar days inclusive of both ends', () => {
+    const w = challengeWindow({ start: 'today', days: 7, now: new Date(2026, 9, 5, 12).getTime() });
+    expect(w).toEqual({ startsOn: '2026-10-05', endsOn: '2026-10-11' });
   });
 });
 

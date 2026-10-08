@@ -47,9 +47,10 @@ const STACK_SIZE = 24;
 const STACK_MAX = 3;
 
 export default function CohortRow({
-  title, line, people, onPress, onPressWithLayout, inBand = false, unread = 0,
+  title, line, people, onPress, onPressWithLayout, inBand = false, unread = 0, trailing,
 }) {
   const t = useTheme();
+  const label = [title, line, Number(unread) > 0 ? `${Number(unread)} unread` : null].filter(Boolean).join('. ');
   const unreadCount = Number(unread) > 0 ? Number(unread) : 0;
   return (
     <PressableCard
@@ -57,9 +58,16 @@ export default function CohortRow({
       onPressWithLayout={onPressWithLayout}
       disabled={!onPress && !onPressWithLayout}
       accessibilityRole="button"
-      accessibilityLabel={[title, line, unreadCount ? `${unreadCount} unread` : null].filter(Boolean).join('. ')}
+      accessibilityLabel={label}
+      accessible={trailing ? false : undefined}
     >
       <View style={[styles.row, inBand && styles.inBand]}>
+        <View
+          style={styles.group}
+          accessible={trailing ? true : undefined}
+          accessibilityRole={trailing ? (onPress || onPressWithLayout ? 'button' : 'text') : undefined}
+          accessibilityLabel={trailing ? label : undefined}
+        >
         <AvatarStack people={people} size={STACK_SIZE} max={STACK_MAX} />
         <View style={styles.body}>
           <Text style={[styles.title, { color: t.colors.textPrimary }]} numberOfLines={1}>
@@ -76,7 +84,10 @@ export default function CohortRow({
             {unreadCount > 99 ? '99+' : String(unreadCount)}
           </Text>
         ) : null}
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </View>
+        {trailing === undefined ? (
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        ) : trailing}
       </View>
       <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
     </PressableCard>
@@ -89,6 +100,7 @@ const styles = StyleSheet.create({
   },
   // D221 ruling 7 / law V1: the row's own content carries the gutter (default off).
   inBand: { paddingHorizontal: spacing.lg },
+  group: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   body: { flex: 1, gap: spacing.xxs },
   title: { ...type.bodyStrong, color: colors.textPrimary },
   line: { ...type.bodySm, color: colors.textSecondary },
