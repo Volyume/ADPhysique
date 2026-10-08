@@ -79,7 +79,7 @@ describe('HomeScreen gating (source-level guard)', () => {
 
   test('renders only after a session, without a ranked banner, and both actions dismiss', () => {
     expect(src).toMatch(/totalSessions > 0 && !communityIntroDismissed && shownBannerKey == null && \(\s*<HomeCommunityIntroCard/);
-    expect(src).toMatch(/onOpen=\{\(\) => \{ haptics\.selection\(\); dismissCommunityIntro\(\); navigation\.navigate\('Community'\); \}\}/);
+    expect(src).toMatch(/onOpen=\{\(\) => \{ haptics\.selection\(\); dismissCommunityIntro\(\); navigateCrossTab\(navigation, 'CommunityTab'\); \}\}/);
     expect(src).toMatch(/onDismiss=\{\(\) => \{ haptics\.selection\(\); dismissCommunityIntro\(\); \}\}/);
   });
 

@@ -498,10 +498,34 @@ function HomeStack({ navigation }) {
           AvoidedMovements (transitive closure; its only outbound link is
           HowYouTrain, already above). */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
-      {/* Community (blueprint section 1). One destination, reached from the
-          Today header glyph, the Today intro card, the You screen row and
-          the deep links below; every screen is pushed and draws its own
-          BackHeader. */}
+      {/* D221: Community is its own tab (CommunityStack below). These two are
+          deliberate duplicate registrations so the workout summary and the
+          share card compose in-stack and Back returns to the summary. */}
+      <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
+
+function CommunityStack({ navigation }) {
+  useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
+    return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
+  return (
+    <Stack.Navigator
+      initialRouteName="Community"
+      screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}
+    >
+      {/* Community (blueprint section 1). The Community tab (D221). Reached from
+          the tab bar, the Today pill, the Today intro card, the You screen
+          row and the deep links below; every screen is pushed and draws its
+          own BackHeader. */}
       <Stack.Screen name="Community" component={CommunityHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityJoin" component={CommunityJoinScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityEditProfile" component={CommunityEditProfileScreen} options={{ headerShown: false }} />
@@ -750,6 +774,7 @@ function MainTabs() {
             PlansTab: focused ? 'barbell' : 'barbell-outline',
             DiaryTab: focused ? 'nutrition' : 'nutrition-outline',
             ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
+            CommunityTab: focused ? 'people' : 'people-outline',
             ProfileTab: focused ? 'pulse' : 'pulse-outline',
           };
           return <Ionicons name={icons[route.name] || 'ellipse'} size={22} color={color} />;
@@ -758,11 +783,12 @@ function MainTabs() {
     >
       {/* Internal tab route ids are kept stable for deep links, push routing and
           cross-tab helper calls. The visible IA is Today / Train / Nutrition /
-          Progress / Coach. */}
+          Progress / Community / Coach. */}
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Today' }} />
       <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Train' }} />
       <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Nutrition' }} />
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
+      <Tab.Screen name="CommunityTab" component={CommunityStack} options={{ title: 'Community' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Coach' }} />
     </Tab.Navigator>
   );
@@ -959,6 +985,12 @@ const linking = {
           // workout" card (HomeScreen.js:2253-2258). Per the ruling: no new
           // resume mechanism is built here.
           Home: 'active-workout',
+        },
+      },
+      // D221: Community is its own tab, so every Community link resolves
+      // inside CommunityTab (never HomeTab).
+      CommunityTab: {
+        screens: {
           // Community (blueprint section 8). The three share pages use a
           // QUERY rather than a path segment (`/u/?h=`), because the site is
           // static GitHub Pages with no path rewriting -- the same shape the

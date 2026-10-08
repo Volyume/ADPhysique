@@ -46,7 +46,7 @@ async function flush() {
 }
 
 async function mount(params) {
-  const navigation = { navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn(), push: jest.fn() };
+  const navigation = { getState: () => ({ routeNames: ['CommunityJoin'] }), navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn(), push: jest.fn() };
   let tree = null;
   await act(async () => {
     tree = create(<CommunityComposeScreen navigation={navigation} route={{ params }} />);

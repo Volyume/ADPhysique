@@ -153,7 +153,7 @@ export default function SettingsScreen({ navigation }) {
           icon="people-outline"
           label="Community"
           sub="Your feed, people, groups and privacy"
-          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'HomeTab', 'Community'); }}
+          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
         />
         <SettingRow
           icon="shield-checkmark-outline"

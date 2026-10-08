@@ -2596,7 +2596,7 @@ export default function HomeScreen({ navigation, route }) {
           <HomeCommunityTodayRow
             count={communityFriendsCount}
             gymLabel={communityInviteProfile?.gymLabel}
-            onOpen={() => { haptics.selection(); navigation.navigate('Community'); }}
+            onOpen={() => { haptics.selection(); navigateCrossTab(navigation, 'CommunityTab'); }}
             onInvite={() => {
               haptics.selection();
               shareCommunityMessage(inviteMessage({
@@ -3109,7 +3109,7 @@ export default function HomeScreen({ navigation, route }) {
             no ranked banner holds the slot. Either action retires it. ── */}
         {!initialLoading && user?.id && totalSessions > 0 && !communityIntroDismissed && shownBannerKey == null && (
           <HomeCommunityIntroCard
-            onOpen={() => { haptics.selection(); dismissCommunityIntro(); navigation.navigate('Community'); }}
+            onOpen={() => { haptics.selection(); dismissCommunityIntro(); navigateCrossTab(navigation, 'CommunityTab'); }}
             onDismiss={() => { haptics.selection(); dismissCommunityIntro(); }}
           />
         )}

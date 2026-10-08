@@ -1,5 +1,10 @@
 // Edge Function: community-notify
 //
+// VERSION 5 (D221, 2026-10-08), NOT DEPLOYED: the push data now also carries
+// `kind` and, for reaction/comment, `post_id`, and for the group kinds,
+// `group_id` (ids only, no content, no new handle). Version 4 is the live
+// one; the founder gives the go for `supabase functions deploy`.
+//
 // The push half of Community activity (blueprint section 4,
 // docs/social-discovery-2026-09-06/30-BLUEPRINT.md; SD-15). The client calls
 // it with its own JWT right after a Community action it just performed; this
@@ -821,6 +826,11 @@ serve(async (req: Request) => {
           // (deep link `m`), so the id travels with the push. No content
           // ever does.
           ...(kind === 'message' ? { conversation_id: refId } : {}),
+          // D221: the client routes a tap on the kind and the id, never on
+          // content. `kind` is the precise event; the ids are the same refId.
+          kind,
+          ...(kind === 'reaction' || kind === 'comment' ? { post_id: refId } : {}),
+          ...(GROUP_KINDS.includes(kind) ? { group_id: refId } : {}),
         },
       }),
     })

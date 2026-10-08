@@ -31,6 +31,7 @@ import { useNavigation } from '@react-navigation/native';
 import { spacing, circle, fontSize, fontWeight, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import useCommunityMe from '../../hooks/useCommunityMe';
+import { navigateCrossTab } from '../../navigation/navigateCrossTab';
 import { hasUnseen, hasUnreadMessages } from '../../lib/community';
 
 // The pill's minimum height, at least the platform's 44dp touch target
@@ -54,7 +55,7 @@ export default function CommunityHeaderAction({ onPress }) {
   const unreadMessages = hasUnreadMessages(me);
   const messageCount = Number(me?.unseen_messages ?? 0);
 
-  const go = onPress ?? (() => navigation?.navigate?.('Community'));
+  const go = onPress ?? (() => navigateCrossTab(navigation, 'CommunityTab'));
 
   const label = unreadMessages
     ? `Community, ${messageCount} ${messageCount === 1 ? 'message' : 'messages'}${unseen ? ' and other activity' : ''}`

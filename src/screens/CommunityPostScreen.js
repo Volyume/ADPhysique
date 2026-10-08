@@ -16,6 +16,7 @@
  * quiet row that goes to Join and comes back.
  */
 
+import { navigateCommunity } from '../navigation/navigateCommunity';
 import { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
@@ -223,7 +224,7 @@ export default function CommunityPostScreen({ navigation, route }) {
   }
 
   const openAuthor = author?.user_id
-    ? () => navigation.navigate('CommunityProfile', { userId: author.user_id, handle: author.handle })
+    ? () => navigateCommunity(navigation, 'CommunityProfile', { userId: author.user_id, handle: author.handle })
     : undefined;
 
   const header = (
@@ -237,7 +238,7 @@ export default function CommunityPostScreen({ navigation, route }) {
         myReaction={myReaction}
         onReact={joined ? handleReact : undefined}
         onOpenAuthor={openAuthor}
-        onMessageAuthor={canMessage ? () => navigation.navigate('CommunityConversation', {
+        onMessageAuthor={canMessage ? () => navigateCommunity(navigation, 'CommunityConversation', {
           userId: author.user_id,
           ref: { kind: 'post', id },
         }) : undefined}
@@ -303,7 +304,7 @@ export default function CommunityPostScreen({ navigation, route }) {
               canDelete={!!item.mine || mine}
               onDelete={() => handleDeleteComment(item)}
               onOpenAuthor={item.author?.user_id
-                ? () => navigation.navigate('CommunityProfile', {
+                ? () => navigateCommunity(navigation, 'CommunityProfile', {
                   userId: item.author.user_id, handle: item.author.handle,
                 })
                 : undefined}
@@ -314,7 +315,7 @@ export default function CommunityPostScreen({ navigation, route }) {
             <CommentComposer onSubmit={handleAddComment} />
           ) : (
             <JoinToInteractRow
-              onPress={() => navigation.navigate('CommunityJoin', {
+              onPress={() => navigateCommunity(navigation, 'CommunityJoin', {
                 next: { screen: 'CommunityPost', params: { id } },
               })}
             />

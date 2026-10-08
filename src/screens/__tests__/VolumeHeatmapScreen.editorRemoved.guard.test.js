@@ -108,7 +108,7 @@ describe('the Coach tab no longer carries a "Volume targets" row', () => {
     for (const label of ['label="Update goal and phase"', 'label="Nutrition targets"', 'label="Coaching reminders"']) {
       expect(YOU).toContain(label);
     }
-    expect(YOU).toContain("navigateCrossTab(navigation, 'HomeTab', 'Community')");
+    expect(YOU).toContain("navigateCrossTab(navigation, 'CommunityTab')");
     expect(YOU).toMatch(/import \{ navigateCrossTab \} from '\.\.\/navigation\/navigateCrossTab';/);
   });
 });

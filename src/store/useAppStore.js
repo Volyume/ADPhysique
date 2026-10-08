@@ -864,6 +864,15 @@ const useAppStore = create((set, get) => ({
   hasUnseenCoachChange: false,
   setHasUnseenCoachChange: (value) => set({ hasUnseenCoachChange: !!value }),
 
+  // D221 / build spec 2.5: whether Community has something new for the
+  // person (activity, a request or an unread message), for the Community
+  // tab's badge dot (VolyumeTabBar). Written only by src/lib/community/
+  // unseen.js from the cached `me` payload; never reads the ED flag or tier.
+  community: { unseen: false },
+  setCommunityUnseen: (value) => set((s) => (
+    s.community?.unseen === !!value ? s : { community: { ...(s.community || {}), unseen: !!value } }
+  )),
+
   // True while restoreSessionFromCloud is in flight. The navigator
   // gates routing decisions on this so the wizard doesn't briefly
   // mount during the ~8s cloud read for returning users (the

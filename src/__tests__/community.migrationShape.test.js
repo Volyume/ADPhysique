@@ -269,3 +269,100 @@ describe('161 is registered in the tracker', () => {
     expect(README).toContain('| 161 | `migrate_161_community_connections.sql` |');
   });
 });
+
+
+// ─── migrate_190: feed scopes (spec 2.2, lane 1B) ───────────────────────
+describe('migrate_190 community_feed scopes keep the house shape', () => {
+  const F190 = path.join(ROOT, 'supabase', 'migrate_190_community_feed_scopes.sql');
+  const S190 = fs.readFileSync(F190, 'utf8');
+  const H190 = S190.slice(0, S190.indexOf('-- ─── Helper'));
+  const C190 = S190.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  const S170 = fs.readFileSync(path.join(ROOT, 'supabase', 'migrate_170_community_connection.sql'), 'utf8');
+  const start170 = S170.indexOf('CREATE OR REPLACE FUNCTION public.community_feed(');
+  const B170 = S170.slice(start170, S170.indexOf('REVOKE ALL ON FUNCTION public.community_feed', start170));
+
+  test.each([
+    ['Purpose', /^-- Purpose:/m],
+    ['Applied locally', /^-- Applied locally:/m],
+    ['Applied remotely', /^-- Applied remotely:/m],
+    ['Safe to re-run', /Safe to re-run:/],
+    ['Rollback', /^-- Rollback:/m],
+    ['GDPR note', /^-- GDPR note:/m],
+  ])('the header states %s', (_l, re) => {
+    expect(H190).toMatch(re);
+  });
+
+  test('it is UNAPPLIED and names the founder phrase and the 170 body to restore', () => {
+    expect(H190).toMatch(/Applied remotely:\s+NO \(UNAPPLIED\)/);
+    expect(H190).toContain('run against production');
+    expect(H190).toContain('migrate_170');
+    expect(H190).toContain('line 3356');
+  });
+
+  test('idempotence markers: replaced, not overloaded', () => {
+    expect(C190).toMatch(/CREATE OR REPLACE FUNCTION public\.community_feed\(/);
+    expect(C190).toMatch(/CREATE OR REPLACE FUNCTION public\._community_cursor_parts3\(/);
+    expect(C190).toMatch(/DROP FUNCTION IF EXISTS %I\.%I\(%s\)/);
+    expect(C190).toMatch(/p\.proname = 'community_feed'/);
+    expect(C190).toMatch(/_scope text DEFAULT 'following', _sort text DEFAULT 'newest'/);
+    expect(C190).toMatch(/GRANT EXECUTE ON FUNCTION public\.community_feed\(text, int, text, text\) TO authenticated/);
+    expect(C190).toMatch(/REVOKE ALL ON FUNCTION public\.community_feed\(text, int, text, text\) FROM PUBLIC, anon/);
+  });
+
+  test('unknown scope or sort raises invalid_input', () => {
+    expect(C190).toMatch(/v_scope NOT IN \('following', 'gym', 'groups', 'everyone'\)/);
+    expect(C190).toMatch(/v_sort NOT IN \('newest', 'respected'\)/);
+    expect(C190).toMatch(/message = 'invalid_input'/);
+  });
+
+  test('no withhold of migrate_170 community_feed was removed', () => {
+    const predicates = [
+      /r\.status = 'visible'/,
+      /FROM public\.community_mutes m/,
+      /m\.muter_id = v_uid AND m\.muted_id = r\.author_id/,
+      /NOT public\._community_is_blocked\(v_uid, r\.author_id\)/,
+      /ap\.status <> 'suspended'/,
+      /f\.state = 'accepted'/,
+      /gm\.state = 'member'/,
+      /public\._community_post_json\(page\.rec\)/,
+      /public\._community_profile_card\(page\.author_id, v_uid\)/,
+      /public\._community_require_profile\(v_uid, false\)/,
+    ];
+    for (const re of predicates) {
+      expect(B170).toMatch(re);
+      expect(C190).toMatch(re);
+    }
+  });
+
+  test('gym and groups require an active author who is public or accepted-followed', () => {
+    expect(C190.match(/ap2\.status = 'active'/g)).toHaveLength(2);
+    expect(C190.match(/ap2\.visibility = 'public' OR EXISTS/g)).toHaveLength(2);
+    expect(C190.match(/f2\.state = 'accepted'/g)).toHaveLength(2);
+    expect(H190).toMatch(/gym EXCLUDES minors/);
+    expect(H190).toMatch(/groups does NOT exclude minors/);
+    expect(S190).toMatch(/F: a PRIVATE profile/);
+  });
+
+  test('the discover predicates are carried by the everyone scope', () => {
+    for (const re of [/dp\.status = 'active'/, /dp\.visibility = 'public'/, /dp\.is_minor = false/, /r\.visibility = 'public'/]) {
+      expect(C190).toMatch(re);
+    }
+  });
+
+  test('the new body adds no rate check, no ED or calm logic, no tier', () => {
+    expect(C190).not.toMatch(/_community_rate_check|ed_flag|calm|tier|is_pro/i);
+  });
+
+  test('nothing destructive: no DROP TABLE, no DELETE, no UPDATE, no TRUNCATE, no INSERT', () => {
+    expect(C190).not.toMatch(/DROP TABLE/i);
+    expect(C190).not.toMatch(/\bDELETE\b/i);
+    expect(C190).not.toMatch(/\bUPDATE\b/i);
+    expect(C190).not.toMatch(/TRUNCATE|DROP COLUMN|\bINSERT\b/i);
+    const drops = C190.split('\n').filter((l) => /DROP/i.test(l));
+    for (const line of drops) expect(line).toMatch(/DROP FUNCTION IF EXISTS/i);
+  });
+
+  test('no em dash anywhere', () => {
+    expect(S190).not.toContain('\u2014');
+  });
+});

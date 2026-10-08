@@ -45,7 +45,7 @@ const { notifyCommunityEvent } = require('../notify');
 const {
   loadHub, loadFeed, listComments, clearCachedHub,
   loadHubSummary, loadDimensionRecent,
-  createPost, setPostNote, reactToPost,
+  createPost, setPostNote, reactToPost, hubCacheKey,
 } = require('../feed');
 const { loadActivity } = require('../activity');
 
@@ -329,5 +329,138 @@ describe('reactToPost: notifying (founder order 2026-09-22, item 1)', () => {
     server({ community_react: refusal('blocked') });
     await expect(reactToPost('p1', true, 'author1')).rejects.toMatchObject({ code: 'blocked' });
     expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+});
+
+// ─── migrate_190: feed scopes and sort (spec 2.2, lane 1B) ──────────────
+
+function signatureError(kind) {
+  const e = new Error(
+    kind === 'PGRST202'
+      ? 'Could not find the function public.community_feed(_cursor, _limit, _scope, _sort) in the schema cache'
+      : 'function public.community_feed(text, integer, text, text) does not exist',
+  );
+  if (kind !== 'PGRST202') e.code = kind;
+  return e;
+}
+
+describe('loadFeed sends the scope and the sort', () => {
+  test('defaults are following and newest', async () => {
+    server({ community_feed: POST_PAGE });
+    await loadFeed({});
+    expect(callCommunity).toHaveBeenCalledWith('community_feed', {
+      _cursor: null, _limit: 20, _scope: 'following', _sort: 'newest',
+    });
+  });
+
+  test('gym and respected are sent as given, with the cursor', async () => {
+    server({ community_feed: POST_PAGE });
+    await loadFeed({ cursor: '3|t|id', limit: 10, scope: 'gym', sort: 'respected' });
+    expect(callCommunity).toHaveBeenCalledWith('community_feed', {
+      _cursor: '3|t|id', _limit: 10, _scope: 'gym', _sort: 'respected',
+    });
+  });
+
+  test('an unknown scope or sort is never sent to the server', async () => {
+    server({ community_feed: POST_PAGE });
+    await loadFeed({ scope: 'x', sort: 'y' });
+    expect(callCommunity.mock.calls[0][1]).toMatchObject({ _scope: 'following', _sort: 'newest' });
+  });
+});
+
+describe('signature tolerance (migrate_190 not applied)', () => {
+  test.each(['PGRST202', '42883', 'PGRST203', '42725'])(
+    'code %s: gym falls back to following and says fallback scope', async (code) => {
+      let n = 0;
+      callCommunity.mockImplementation((name, args) => {
+        n += 1;
+        if ('_scope' in args) return Promise.reject(signatureError(code));
+        return Promise.resolve(POST_PAGE);
+      });
+      const page = await loadFeed({ scope: 'gym', cursor: 'c' });
+      expect(n).toBe(2);
+      expect(callCommunity.mock.calls[1]).toEqual(['community_feed', { _cursor: 'c', _limit: 20 }]);
+      expect(page.fallback).toBe('scope');
+      expect(page.posts).toEqual(POST_PAGE.posts);
+    },
+  );
+
+  test('groups also reports scope; scope wins over sort', async () => {
+    callCommunity.mockImplementation((n, a) => ('_scope' in a
+      ? Promise.reject(signatureError('PGRST202')) : Promise.resolve(POST_PAGE)));
+    const page = await loadFeed({ scope: 'groups', sort: 'respected' });
+    expect(page.fallback).toBe('scope');
+  });
+
+  test('respected on following falls back to newest, drops the cursor, says sort', async () => {
+    callCommunity.mockImplementation((n, a) => ('_scope' in a
+      ? Promise.reject(signatureError('42883')) : Promise.resolve(POST_PAGE)));
+    const page = await loadFeed({ sort: 'respected', cursor: '3|t|id' });
+    expect(callCommunity.mock.calls[1][1]).toEqual({ _cursor: null, _limit: 20 });
+    expect(page.fallback).toBe('sort');
+  });
+
+  test('plain following newest on an old server reports no fallback', async () => {
+    callCommunity.mockImplementation((n, a) => ('_scope' in a
+      ? Promise.reject(signatureError('PGRST202')) : Promise.resolve(POST_PAGE)));
+    const page = await loadFeed({});
+    expect(page.fallback).toBeUndefined();
+  });
+
+  test('any other error is thrown, not retried', async () => {
+    server({ community_feed: refusal('offline') });
+    await expect(loadFeed({ scope: 'gym' })).rejects.toMatchObject({ code: 'offline' });
+    expect(callCommunity).toHaveBeenCalledTimes(1);
+  });
+
+  test('loadHub carries the fallback through', async () => {
+    callCommunity.mockImplementation((n, a) => ('_scope' in a
+      ? Promise.reject(signatureError('PGRST202')) : Promise.resolve(POST_PAGE)));
+    const hub = await loadHub('gym', {});
+    expect(hub.fallback).toBe('scope');
+    expect(hub.posts).toEqual(POST_PAGE.posts);
+    expect(hub.scope).toBe('gym');
+  });
+});
+
+describe('discover maps to everyone', () => {
+  test('both names read the same Discover RPC and report scope everyone', async () => {
+    server({ community_discover_posts: POST_PAGE });
+    const a = await loadHub('discover', {});
+    const b = await loadHub('everyone', {});
+    expect(a.scope).toBe('everyone');
+    expect(b.scope).toBe('everyone');
+    expect(a.segment).toBe('discover');
+    expect(callCommunity.mock.calls.every(([n]) => n === 'community_discover_posts')).toBe(true);
+  });
+
+  test('everyone sorted by respected reads community_feed with the scope', async () => {
+    server({ community_feed: POST_PAGE });
+    await loadHub('everyone', { sort: 'respected' });
+    expect(callCommunity).toHaveBeenCalledWith('community_feed', expect.objectContaining({
+      _scope: 'everyone', _sort: 'respected',
+    }));
+  });
+});
+
+describe('the hub cache is keyed by scope and sort', () => {
+  test('keys differ by scope and by sort; the default keeps the old key', () => {
+    expect(hubCacheKey('u1')).toBe('@volyume_community_hub_u1');
+    expect(hubCacheKey('u1', 'gym', 'newest')).not.toBe(hubCacheKey('u1', 'groups', 'newest'));
+    expect(hubCacheKey('u1', 'gym', 'newest')).not.toBe(hubCacheKey('u1', 'gym', 'respected'));
+    expect(hubCacheKey('u1', 'discover')).toBe(hubCacheKey('u1', 'everyone'));
+  });
+
+  test('an offline open shows the view it asked for, not another scope', async () => {
+    server({ community_feed: POST_PAGE });
+    await loadHub('gym', {});
+    server({ community_feed: { posts: [{ post: { id: 'f' } }], cursor: null } });
+    await loadHub('following', {});
+    server({ community_feed: refusal('offline') });
+    const gym = await loadHub('gym', {});
+    expect(gym.fromCache).toBe(true);
+    expect(gym.posts).toEqual(POST_PAGE.posts);
+    const respected = await loadHub('gym', { sort: 'respected' });
+    expect(respected.fromCache).toBe(false);
   });
 });

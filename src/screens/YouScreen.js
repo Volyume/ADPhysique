@@ -306,7 +306,7 @@ export default function YouScreen({ navigation }) {
   // messaging/matching/boards/groups) and presented it as the headline.
   // Partners itself was retired on 2026-09-06 (SD-03).
   const openCommunity = useCallback(() => {
-    navigateCrossTab(navigation, 'HomeTab', 'Community');
+    navigateCrossTab(navigation, 'CommunityTab');
   }, [navigation]);
 
   return (

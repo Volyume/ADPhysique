@@ -157,9 +157,13 @@ describe('client RPC arguments match the migration signatures', () => {
   const sql165 = fs.existsSync(MIGRATION_165) ? fs.readFileSync(MIGRATION_165, 'utf8') : null;
   const sql170 = fs.existsSync(MIGRATION_170) ? fs.readFileSync(MIGRATION_170, 'utf8') : null;
   const sql173 = fs.existsSync(MIGRATION_173) ? fs.readFileSync(MIGRATION_173, 'utf8') : null;
-  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170, sql173].every((s2) => s2 === null)
+  // migrate_190 (lane 1B): community_feed gains _scope and _sort; read last so its
+  // declaration is the one the argument check sees.
+  const MIGRATION_190 = path.join(ROOT, 'supabase', 'migrate_190_community_feed_scopes.sql');
+  const sql190 = fs.existsSync(MIGRATION_190) ? fs.readFileSync(MIGRATION_190, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170, sql173, sql190].every((s2) => s2 === null)
     ? null
-    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}\n${sql173 ?? ''}`;
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}\n${sql173 ?? ''}\n${sql190 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here

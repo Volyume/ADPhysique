@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadMe, emptyMe } from '../lib/community/profile';
+import { publishCommunityUnseenFromMe } from '../lib/community/unseen';
 
 /**
  * @param {{enabled?: boolean}} [opts] pass `enabled: false` to hold off
@@ -33,6 +34,8 @@ export default function useCommunityMe({ enabled = true } = {}) {
     const out = await loadMe({ force });
     if (!mounted.current) return;
     setMe(out.me ?? emptyMe());
+    // D221 spec 2.5: keep the Community tab dot in step with every settled load.
+    if (!out.error && out.me) publishCommunityUnseenFromMe(out.me);
     setError(out.error ?? null);
     setLoading(false);
   }, [enabled]);

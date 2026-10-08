@@ -49,10 +49,16 @@ import useTheme from '../hooks/useTheme';
 // Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
 // review 2026-07-03: a pill behind only the icon left the label hanging
 // beneath the highlight and read as unfinished). Width tracks the tab cell,
-// inset each side, so the widest label ("Progress") sits comfortably inside;
+// inset each side, so the widest label sits comfortably inside;
 // the height spans the whole icon-and-label block, and a rounded-rect radius
 // (not a full stadium) suits the taller cushion.
 const PILL_H_INSET = spacing.sm; // breathing room each side of the cushion
+// D221: with six tabs a 360 dp bar gives each cell 60 dp, and "Community" (9
+// glyphs at the 11 px caption, about 50 to 56 dp) would sit wider than a
+// cushion inset by 8 dp each side (44 dp). Below this cell width the inset
+// tightens to 2 dp (cushion 56 dp) so the label still sits on the cushion.
+const NARROW_CELL = 66;
+const PILL_H_INSET_NARROW = spacing.xxs;
 const PILL_HEIGHT = 46;
 const PILL_TOP = 2;
 
@@ -88,19 +94,23 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
   // T2: unseen weekly coach review, mirrored into the store by HomeScreen and
   // cleared by CoachOutputScreen (see the header comment above).
   const hasUnseenCoachChange = useAppStore((s) => !!s.hasUnseenCoachChange);
+  // D221 (spec 2.1/2.5): the Community tab carries the same dot when
+  // `community.unseen` is true. A dot only, never a count.
+  const hasUnseenCommunity = useAppStore((s) => !!s.community?.unseen);
 
   const [barWidth, setBarWidth] = useState(0);
   const tabWidth = state.routes.length > 0 ? barWidth / state.routes.length : 0;
   // The cushion is the tab cell minus a small inset each side, so it wraps the
   // icon and the label together rather than just the icon.
-  const pillWidth = tabWidth > 0 ? Math.max(0, tabWidth - PILL_H_INSET * 2) : 0;
+  const pillInset = tabWidth > 0 && tabWidth < NARROW_CELL ? PILL_H_INSET_NARROW : PILL_H_INSET;
+  const pillWidth = tabWidth > 0 ? Math.max(0, tabWidth - pillInset * 2) : 0;
 
   const pillX = useSharedValue(0);
   useEffect(() => {
     if (!tabWidth) return;
-    const target = state.index * tabWidth + PILL_H_INSET;
+    const target = state.index * tabWidth + pillInset;
     pillX.value = reduceMotion ? target : withSpring(target, motion.springs.settle);
-  }, [state.index, tabWidth, reduceMotion, pillX]);
+  }, [state.index, tabWidth, pillInset, reduceMotion, pillX]);
   const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value }] }));
 
   // Session screen owns the full height: no tab bar, no mini-bar (you are
@@ -140,6 +150,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
           // T2: CoachOutput lives in ProfileStack only (RootNavigator), so
           // the Coach tab is the one that carries the unseen-review badge.
           const showCoachBadge = route.name === 'ProfileTab' && hasUnseenCoachChange;
+          const showCommunityBadge = route.name === 'CommunityTab' && hasUnseenCommunity;
           const accessibilityLabel = options.tabBarAccessibilityLabel ?? label;
 
           const onPress = () => {
@@ -167,7 +178,9 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
               onLongPress={onLongPress}
               accessibilityRole="tab"
               accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={showCoachBadge ? `${accessibilityLabel}, new coaching update` : accessibilityLabel}
+              accessibilityLabel={showCoachBadge
+                ? `${accessibilityLabel}, new coaching update`
+                : showCommunityBadge ? `${accessibilityLabel}, something new` : accessibilityLabel}
             >
               <View style={styles.iconWrap}>
                 <TabIcon focused={isFocused} reduceMotion={reduceMotion}>
@@ -175,7 +188,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
                     ? options.tabBarIcon({ focused: isFocused, color, size: 22 })
                     : null}
                 </TabIcon>
-                {showCoachBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
+                {showCoachBadge || showCommunityBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
               </View>
               <Text style={[styles.label, live.label, { color }]} numberOfLines={1}>{label}</Text>
             </Pressable>

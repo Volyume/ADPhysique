@@ -124,7 +124,7 @@ export function routeForNotificationType(type, data = {}) {
       // dead-ending on whatever was last open. Community is the surface
       // that replaced the pairing model, so that is where an old cheer,
       // shared-streak or joined beat now lands.
-      return { tab: 'HomeTab', screen: 'Community', params: { source: 'notification' } };
+      return { tab: 'CommunityTab', screen: 'Community', params: { source: 'notification' } };
     case 'meal_log_reminder':
       // Campaign 14 job 5: the opt-in meal-log nudge (scheduler.js
       // scheduleMealReminders, Pro-gated and ED-flag gated at both schedule
@@ -165,12 +165,22 @@ export function routeForNotificationType(type, data = {}) {
       return { tab: 'DiaryTab', screen: 'Diary' };
     case 'community_follow':
     case 'community_activity':
+      // D221: the edge function (version 5) now sends `post_id` for a
+      // reaction or comment (community_activity) and `group_id` for the group
+      // kinds (community_follow). Ids only; a push without them (older
+      // function version, or any other kind) lands on Activity as before.
+      if (type === 'community_activity' && data?.post_id) {
+        return { tab: 'CommunityTab', screen: 'CommunityPost', params: { id: data.post_id, source: 'notification' } };
+      }
+      if (type === 'community_follow' && data?.group_id) {
+        return { tab: 'CommunityTab', screen: 'CommunityGroup', params: { id: data.group_id, source: 'notification' } };
+      }
       // SD-15: both Community push categories land on the Activity screen
       // inside Community, the inbox for follows, reactions, comments and
       // programme-use beats. `source` mirrors the other notification-driven
       // entry points (e.g. the retired partner beats above) so surface-view
       // telemetry can attribute the open.
-      return { tab: 'HomeTab', screen: 'CommunityActivity', params: { source: 'notification' } };
+      return { tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' } };
     case 'community_message':
       // SD-21 (discovery blueprint §2): a message from a connected person
       // lands directly on that conversation, not the general activity inbox.
@@ -178,7 +188,7 @@ export function routeForNotificationType(type, data = {}) {
       // is read too in case a future emitter bakes the camelCase form, same
       // defensive either-shape read as elsewhere in this module.
       return {
-        tab: 'HomeTab',
+        tab: 'CommunityTab',
         screen: 'CommunityConversation',
         params: { id: data?.conversation_id ?? data?.conversationId ?? null, source: 'notification' },
       };
