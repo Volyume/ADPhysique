@@ -37,9 +37,11 @@ import { useToast } from '../Toast';
 import {
   profileUrl, blockUser, unblockUser, muteUser, unmuteUser,
 } from '../../lib/community';
+import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   no_profile: 'Create your Community profile first.',
   not_found: 'This profile is no longer available.',
 };

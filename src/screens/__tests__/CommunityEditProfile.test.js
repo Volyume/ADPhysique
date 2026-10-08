@@ -53,6 +53,8 @@ jest.mock('../../hooks/useCommunityMe', () => ({
 }));
 
 jest.mock('../../lib/community', () => ({
+  readShareSettings: jest.fn(() => Promise.resolve({ share_sessions: true, sessions_audience: 'everyone' })),
+  sessionsSharingSentence: (on) => (on ? 'Your sessions are shared with everyone on Community unless you change it.' : 'Off: only you see your sessions.'),
   upsertProfile: jest.fn(),
   leaveCommunity: jest.fn(),
   relationships: jest.fn(),
@@ -536,7 +538,7 @@ describe('the discipline picker', () => {
     return tree.root.findAll((n) => n.props?.accessibilityLabel === groupLabel)[0];
   }
   function chip(tree, chipLabel) {
-    return chipGroup(tree, 'What do you train for?').findAll(
+    return chipGroup(tree, 'What you train for').findAll(
       (n) => typeof n.type === 'function' && n.props?.label === chipLabel && n.props?.accessibilityRole === 'checkbox',
     )[0];
   }

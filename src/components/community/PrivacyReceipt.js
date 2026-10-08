@@ -40,8 +40,8 @@ import useTheme from '../../hooks/useTheme';
 const SHOWN = [
   'Your username and name',
   'Styles, goal, gym and area you type',
-  'Sessions you choose to share',
-  'Stories you post',
+  'Your sessions, shared with everyone on Community unless you change it',
+  'Posts you write',
   'Training profile: only the bands you choose',
 ];
 const NEVER = [

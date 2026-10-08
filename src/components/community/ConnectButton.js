@@ -50,6 +50,7 @@ import { spacing } from '../../styles/theme';
 import {
   connectionState, connect, withdrawConnect, respondToConnect, removeConnection,
 } from '../../lib/community';
+import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
 /**
  * The calm line for a refusal. Every code the connection RPCs raise is
@@ -59,6 +60,7 @@ import {
  */
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   no_profile: 'Create your Community profile first.',
   not_found: 'This profile is no longer available.',
   blocked: 'You cannot connect with this person.',

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
+import { useToast } from '../components/Toast';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, BackHandler, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -424,6 +425,7 @@ function capabilityBlockedNote(n) {
 }
 
 export default function ProOnboardingScreen({ navigation }) {
+  const toast = useToast();
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
     proOnboardingAccountCreated, setProOnboardingAccountCreated,
@@ -1367,6 +1369,9 @@ export default function ProOnboardingScreen({ navigation }) {
         // applies only a gym change. A queued join (offline) stays 'join'
         // so the completion fallback drains it.
         if (out?.ok && !out?.queued) setCommunityJoin('existing');
+        // L11 (D221): one confirming line once the join has fired, since
+        // the wizard has already moved on to the next step.
+        if (out?.ok) toast?.show?.(out.queued ? 'You will join Community when you are back online.' : 'You have joined Community.');
       }).catch((e) => {
         // eslint-disable-next-line global-require
         try { require('../lib/errorLog').logError('ProOnboarding.performEarlyCommunityJoin', e, { uid: user?.id }); } catch (_) {}
@@ -2700,7 +2705,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
-              title="Where do you train?"
+              title="Where you train, and Community"
               sub="Optional: pick your gym and Volyume connects you with the people who train there. Only training facts are ever shared: never your body, your food or your location."
               onBack={goBack}
             />

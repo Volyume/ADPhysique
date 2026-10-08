@@ -94,7 +94,7 @@ test('creates with the trimmed name, trimmed blurb, and selected access, then re
   const { tree, navigation } = await mount();
 
   await act(async () => { field(tree, 'Group name').props.onChangeText('  Iron Collective  '); });
-  await act(async () => { field(tree, 'Group blurb').props.onChangeText('  Monday leg day  '); });
+  await act(async () => { field(tree, 'About this group').props.onChangeText('  Monday leg day  '); });
   await act(async () => { byLabel(tree, 'Invite only').props.onPress(); });
   await act(async () => { byLabel(tree, 'Create group').props.onPress(); });
 
@@ -132,7 +132,7 @@ const EDIT_GROUP = { id: 'g1', name: 'Iron Collective', blurb: 'Monday crew', ac
 test('edit mode prefills name, blurb and access from route.params.group', async () => {
   const { tree } = await mount({ mode: 'edit', group: EDIT_GROUP });
   expect(field(tree, 'Group name').props.value).toBe('Iron Collective');
-  expect(field(tree, 'Group blurb').props.value).toBe('Monday crew');
+  expect(field(tree, 'About this group').props.value).toBe('Monday crew');
   const inviteChip = tree.root.findAll((n) => n.props?.label === 'Invite only' && n.props?.selected !== undefined)[0];
   expect(inviteChip.props.selected).toBe(true);
 });

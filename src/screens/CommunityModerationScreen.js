@@ -82,7 +82,7 @@ const ACTION_LABELS = {
 // the column's enum value.
 const TARGET_LABELS = {
   profile: 'Profile',
-  post: 'Story',
+  post: 'Post',
   comment: 'Comment',
   message: 'Message',
   group: 'Group',
@@ -336,7 +336,7 @@ export default function CommunityModerationScreen() {
                 ) : null}
                 {item.operator ? (
                   <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
-                    {`Operator: ${item.operator}`}
+                    {`Company: ${item.operator}`}
                   </Text>
                 ) : null}
                 <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>

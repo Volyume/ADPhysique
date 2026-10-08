@@ -29,6 +29,7 @@ import { colors, spacing, type } from '../styles/theme';
 import {
   listGroupMembers, approveGroupRequest, removeGroupMember, promoteGroupMember,
 } from '../lib/community';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const PAGE = 20;
 
@@ -36,6 +37,7 @@ const ROLE_LABEL = Object.freeze({ admin: 'Admin', member: 'Member' });
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   last_admin: 'Promote someone else to admin first.',
   not_found: 'This is no longer available.',
   not_allowed: 'You cannot do that here.',

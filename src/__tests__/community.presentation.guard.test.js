@@ -210,7 +210,10 @@ describe('presentation law (d): the title type role is reserved for one figure p
     '%s never uses the title role',
     (rel, full) => {
       const source = code(fs.readFileSync(full, 'utf8'));
-      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: 0 });
+      // D221 law V3: the Hub's one large entry row (Find people) is the single
+      // place a screen uses the title role.
+      const allowed = rel.endsWith('CommunityHubScreen.js') ? 1 : 0;
+      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: allowed });
     },
   );
 

@@ -91,12 +91,14 @@ import {
 import {
   report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
 } from '../lib/gyms';
+import { RESTRICTION_REFUSALS, respectFailureLine } from '../lib/community/restriction';
 
 const PAGE = 20;
 const REPORT_DETAIL_MAX = 500;
 
 const REPORT_REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   rate_limited: 'That is a lot of reports for one day. Try again tomorrow.',
   not_found: 'This gym is no longer available.',
 };
@@ -111,6 +113,7 @@ const REPORT_REFUSALS = {
 // refusal is simply spoken calmly.
 const CONFIRM_REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   rate_limited: 'That is a lot of confirmations for now. Try again shortly.',
   not_found: 'This gym is no longer available.',
   not_allowed: 'You added this gym, so someone else needs to confirm it.',
@@ -468,21 +471,24 @@ export default function CommunityDimensionScreen({ navigation, route }) {
    * `CommunityHubScreen`/`CommunityProfileScreen` already use for the
    * identical `ActivityItemRow` component. */
   async function respondRecent(item) {
+    const on = !item.myReaction;
+    const apply = (turnOn) => setRecent((prev) => prev.map((r) => {
+      if (r.post.id !== item.post.id) return r;
+      return {
+        ...r,
+        post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (turnOn ? 1 : -1)) },
+        myReaction: turnOn,
+      };
+    }));
+    apply(on);
     try {
-      await reactToPost(item.post.id, !item.myReaction, item.author?.user_id);
-      setRecent((prev) => prev.map((r) => {
-        if (r.post.id !== item.post.id) return r;
-        const on = !item.myReaction;
-        return {
-          ...r,
-          post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (on ? 1 : -1)) },
-          myReaction: on,
-        };
-      }));
-    } catch (_e) {
-      // Nothing to interrupt anyone with; the next refresh shows the truth.
+      await reactToPost(item.post.id, on, item.author?.user_id);
+    } catch (e) {
+      apply(!on);
+      toast.show(respectFailureLine(e?.code), { variant: 'error' });
     }
   }
+
 
   // Task 6: age_band's own label is the raw key server-side (no age-band
   // prose exists anywhere in the schema, by design -- the client owns

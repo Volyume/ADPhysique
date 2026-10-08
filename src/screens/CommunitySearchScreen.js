@@ -56,7 +56,8 @@ export function groupLine(group) {
 export default function CommunitySearchScreen({ navigation, route }) {
   const t = useTheme();
   const [query, setQuery] = useState(route?.params?.q ?? '');
-  const [mode, setMode] = useState('people');
+  // D221 2.3: "Browse open groups" on the Hub opens this screen on groups.
+  const [mode, setMode] = useState(route?.params?.mode === 'groups' ? 'groups' : 'people');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);

@@ -452,7 +452,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   // SD-15: Community follows/activity have no local schedule to lay or
   // cancel -- the community-notify Edge Function sends them off a live
-  // follow/reaction/comment/programme-use event and reads the projection
+  // follow/reaction/comment event and reads the projection
   // row at that moment. So there is no schedule/cancel call here, only
   // the one authority write plus an immediate projection push so an
   // opt-out takes effect before the next ordinary sync.

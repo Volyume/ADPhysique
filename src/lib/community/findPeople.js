@@ -25,7 +25,7 @@ import { callCommunity, CommunityError } from './transport';
 export const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * The five doors, in the order the screen lists them (blueprint section 4).
+ * The six doors, in the order the screen lists them (blueprint section 4).
  *
  * `requires` names the field on the caller's own profile that a door
  * needs; `requirement` is what the row says instead when it is missing,
@@ -51,7 +51,7 @@ export const FIND_MODES = Object.freeze({
   like_me: Object.freeze({
     mode: 'like_me',
     label: 'Train like me',
-    subtitle: 'Lifters like you',
+    subtitle: 'Similar days, times and level',
     requires: null,
     requirement: null,
   }),
@@ -99,7 +99,7 @@ function requirementValue(me, field) {
 }
 
 /**
- * The five door descriptors for this person.
+ * The six door descriptors for this person.
  *
  * @param {object|null} me the `community_get_me` payload
  * @returns {Array<{mode: string, label: string, subtitle: string,

@@ -42,10 +42,11 @@ import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
   loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
-  publishConsistency, publishSharingSettings, setSharingPublishPending,
-  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
+  publishConsistency,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS, sessionsSharingSentence,
   setPartner, listMyGroups,
 } from '../lib/community';
+import { saveShareSessions, SHARE_OFF_TITLE, SHARE_OFF_BODY } from '../lib/community/shareSessions';
 
 /** What a band says when there is not enough training behind it yet. */
 export const NOT_ENOUGH_LINE = 'Not enough sessions yet';
@@ -97,7 +98,7 @@ export function bandRows(bands, me) {
       key: 'share_sessions',
       label: 'Share what I did',
       value: '',
-      empty: "Turns each finished workout into an activity item for the audience you choose, automatically, with nothing to post yourself. Off by default. Turn it off any time and remove what you've already shared.",
+      empty: "Turns each finished workout into a post for the audience you choose, automatically, with nothing to post yourself. Turn it off any time and remove what you've already shared.",
     },
   ];
 }
@@ -221,35 +222,20 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
    * shape.
    */
   async function saveSharing(nextSettings, { removeShared = false } = {}) {
-    // A minor never gets an audience beyond followers, whatever the chip
-    // row shows (belt and braces: the server also forces this).
-    const clamped = isMinor ? { ...nextSettings, sessions_audience: 'followers' } : nextSettings;
     const prevSettings = share;
-    setShare(clamped);
-    await writeShareSettings(uid, clamped);
-    // D194 addendum 2: owed from BEFORE the call, not only after a failure,
-    // so a profile refresh that lands while this publish is in flight never
-    // mirrors the old row back over the change just made.
-    await setSharingPublishPending(uid, true, { removeShared });
-    const out = await publishSharingSettings(uid, clamped, { removeShared });
-    if (out?.reason === 'rules_outdated') {
-      setShare(prevSettings);
-      await writeShareSettings(uid, prevSettings);
-      await setSharingPublishPending(uid, false);
+    setShare(isMinor ? { ...nextSettings, sessions_audience: 'followers' } : nextSettings);
+    // The one setter shared with the Privacy screen's mirrored row (L17).
+    const out = await saveShareSessions(uid, prevSettings, nextSettings, { removeShared, isMinor });
+    setShare(out.settings);
+    if (out.status === 'rules_outdated') {
       navigation.navigate('CommunityRules', { mustAccept: true });
       return;
     }
-    if (out?.sent) {
-      await setSharingPublishPending(uid, false);
-      return;
+    if (out.status === 'queued') {
+      toast.show(out.settings.share_sessions
+        ? 'Saved on this device. It will share when you are back online.'
+        : 'Saved on this device. It will apply when you are back online.');
     }
-    // F4 fix: withdrawing (or granting) "Share what I did" must never be
-    // lost to one failed call -- mark it owed so the Hub's foreground
-    // effect retries `publishSharingSettings` for us (`trainingConsistency.js`).
-    await setSharingPublishPending(uid, true, { removeShared });
-    toast.show(clamped.share_sessions
-      ? 'Saved on this device. It will share when you are back online.'
-      : 'Saved on this device. It will apply when you are back online.');
   }
 
   function toggleShareSessions(next) {
@@ -257,8 +243,8 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
       // Spec section 1: turning it off asks ONCE whether to remove what
       // is already shared, then stops new items either way.
       appAlert(
-        'Remove the items already shared?',
-        'Turning this off stops new activity items straight away. You can also remove what has already been shared, or keep it as it is.',
+        SHARE_OFF_TITLE,
+        SHARE_OFF_BODY,
         [
           { text: 'Keep', onPress: () => saveSharing({ ...share, share_sessions: false }) },
           {
@@ -374,7 +360,9 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                             {row.label}
                           </Text>
                           <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                            {row.value || row.empty || NOT_ENOUGH_LINE}
+                            {isShareSessions
+                              ? sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)
+                              : (row.value || row.empty || NOT_ENOUGH_LINE)}
                           </Text>
                         </View>
                         <Switch

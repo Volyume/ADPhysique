@@ -41,7 +41,7 @@ export default function SettingsAccountScreen() {
         <SettingRow
           icon="trash-outline"
           label={deletingAccount ? 'Deleting account...' : 'Delete account'}
-          sub="Permanently removes your account and app data."
+          sub="Permanently removes your account, app data and Community profile."
           destructive
           onPress={deletingAccount ? undefined : handleDeleteAccount}
         />

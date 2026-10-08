@@ -208,8 +208,10 @@ describe('note: a first post without a workout (founder order 2026-09-22 item 5,
 });
 
 describe('F7 (lead ruling, Opus adversarial review): a note\'s visibility default', () => {
-  test('an adult composing a note defaults to Everyone', async () => {
-    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false } });
+  // L12 (D221) replaced the note-only rule with the one profile-default
+  // rule: the audience is the person's own default, for every kind.
+  test('an adult whose profile default is everyone composing a note defaults to Everyone', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false, sessions_audience: 'everyone' } });
     const { tree } = await mount({ kind: 'note' });
     expect(chip(tree, 'Everyone').props.selected).toBe(true);
     expect(chip(tree, 'Followers').props.selected).toBe(false);
@@ -264,5 +266,52 @@ describe('"Add a note" (postId present)', () => {
     await act(async () => { save.props.onPress(); });
     await flush();
     expect(setPostNote).toHaveBeenCalledWith('p1', null);
+  });
+});
+
+describe('L12 (D221): one default audience rule, said out loud', () => {
+  const { composeDefaultVisibility, composeAudienceLine } = require('../CommunityComposeScreen');
+
+  test('the rule is pure: profile default, minors and unknowns fail closed to Followers', () => {
+    expect(composeDefaultVisibility({ isMinor: false, sessionsAudience: 'everyone' })).toBe('public');
+    expect(composeDefaultVisibility({ isMinor: false, sessionsAudience: 'followers' })).toBe('followers');
+    expect(composeDefaultVisibility({ isMinor: false, sessionsAudience: 'groups' })).toBe('followers');
+    expect(composeDefaultVisibility({ isMinor: false, sessionsAudience: null })).toBe('followers');
+    expect(composeDefaultVisibility({ isMinor: true, sessionsAudience: 'everyone' })).toBe('followers');
+  });
+
+  test('a session and a note open on the same default for the same person', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false, sessions_audience: 'everyone' } });
+    const note = await mount({ kind: 'note' });
+    expect(chip(note.tree, 'Everyone').props.selected).toBe(true);
+    const session = await mount({ kind: 'session', workoutId: 'w1' });
+    expect(chip(session.tree, 'Everyone').props.selected).toBe(true);
+  });
+
+  test('the audience line states the real audience', () => {
+    expect(composeAudienceLine('public')).toMatch(/Everyone on Community/);
+    expect(composeAudienceLine('followers')).toMatch(/people who follow you/);
+    expect(composeAudienceLine('groups', 1)).toMatch(/group you chose/);
+    expect(composeAudienceLine('groups', 2)).toMatch(/groups you chose/);
+  });
+
+  test('Followers is explained when the person has none', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts', follower_count: 0 }, is_minor: false } });
+    const { tree } = await mount({ kind: 'note' });
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Nobody follows you yet');
+  });
+
+  test('group chips sit in their own labelled row, below the audience radios', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityComposeScreen.js'), 'utf8');
+    const radios = src.indexOf('accessibilityLabel="Who can see it"');
+    const groupLabel = src.indexOf('Or share with a group');
+    const groupRow = src.indexOf('accessibilityLabel="Share with a group"');
+    expect(radios).toBeGreaterThan(-1);
+    expect(groupLabel).toBeGreaterThan(radios);
+    expect(groupRow).toBeGreaterThan(groupLabel);
+    // The group chips are no longer mapped inside the radio row.
+    expect(src.slice(radios, groupLabel)).not.toContain('myGroups.map');
+    expect(src).toContain('<PrivacyReceipt />');
   });
 });

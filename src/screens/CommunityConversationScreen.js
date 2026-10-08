@@ -58,6 +58,7 @@ import {
   listConversations, listMessages, sendMessage, markRead, deleteMessage,
   placeholderFor, getProfile, blockUser, removeConnection, respondSession,
 } from '../lib/community';
+import { restrictionLine } from '../lib/community/restriction';
 
 const PAGE = 30;
 
@@ -79,6 +80,7 @@ export const MINOR_RESTRICTED_LINE = 'Messages are available to people aged 18 a
 
 /** The calm line for a send that did not go. */
 export function sendErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return CONVERSATION_OFFLINE_LINE;
   if (code === 'not_connected') return `${NOT_CONNECTED_LINE}. Send a connection request first.`;
   if (code === 'minor_restricted') return MINOR_RESTRICTED_LINE;
@@ -91,6 +93,7 @@ export function sendErrorLine(code) {
 
 /** The line for a thread that would not open at all. */
 export function threadErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return CONVERSATION_OFFLINE_LINE;
   if (code === 'not_found') return 'This conversation is no longer here.';
   if (code === 'no_profile') return 'Create your Community profile first.';

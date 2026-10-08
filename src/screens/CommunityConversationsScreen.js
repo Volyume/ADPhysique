@@ -37,6 +37,7 @@ import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing } from '../styles/theme';
 import { listConversations, markRead } from '../lib/community';
+import { restrictionLine } from '../lib/community/restriction';
 
 const PAGE = 30;
 // The row's own `minHeight` (`ConversationRow`): a 64 dp flat row, not the
@@ -47,6 +48,7 @@ export const CONVERSATIONS_OFFLINE_LINE = 'Volyume could not reach Community jus
 
 /** What went wrong, in the words that name the actual reason. */
 export function conversationsErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return CONVERSATIONS_OFFLINE_LINE;
   if (code === 'no_profile') return 'Create your Community profile first, then your messages appear here.';
   return 'Volyume could not open your messages just now. Try again in a moment.';

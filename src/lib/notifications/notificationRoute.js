@@ -176,8 +176,7 @@ export function routeForNotificationType(type, data = {}) {
         return { tab: 'CommunityTab', screen: 'CommunityGroup', params: { id: data.group_id, source: 'notification' } };
       }
       // SD-15: both Community push categories land on the Activity screen
-      // inside Community, the inbox for follows, reactions, comments and
-      // programme-use beats. `source` mirrors the other notification-driven
+      // inside Community, the inbox for follows, reactions and comments. `source` mirrors the other notification-driven
       // entry points (e.g. the retired partner beats above) so surface-view
       // telemetry can attribute the open.
       return { tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' } };

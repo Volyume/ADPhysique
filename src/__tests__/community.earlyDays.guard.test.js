@@ -122,11 +122,13 @@ describe('the honest lines come from the shared helpers', () => {
     expect(HUB).toContain('inviteMessage({ handle: me?.profile?.handle, gymLabel: me?.profile?.gym_label })');
     expect(HUB).toContain('hostRowVisible({ card, viewable: out?.viewable, uid })');
     expect(HUB).toContain('caption: hostCaption(host)');
-    expect(HUB).toContain("<Eyebrow trailing={{ label: 'Not now', onPress: dismissHost }}>HOST</Eyebrow>");
+    // D221 2.3: the HOST header is the SectionHeader (Eyebrow is retired).
+    expect(HUB).toContain("<SectionHeader title=\"Host\" trailing={{ label: 'Not now', onPress: dismissHost }} />");
     // The zero state needs a summary that answered and is empty, style
     // cohorts included (review blocker 2).
     expect(HUB).toContain('const summaryEmpty = !!summary && Array.isArray(summary.cohorts) && summary.cohorts.length === 0;');
-    expect(HUB).toContain(') : cohorts.length || !summaryEmpty ? (');
+    // D221 2.3: the zero state lives on the You segment, behind this flag.
+    expect(HUB).toContain('{summaryEmpty ? (');
   });
 
   test('the cohort page counts through cohortCountLine and gates the action on isOwnCohort', () => {

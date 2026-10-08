@@ -28,6 +28,7 @@ import SectionLabel from '../components/SectionLabel';
 import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
 import PostCard from '../components/community/PostCard';
+import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { spacing, type } from '../styles/theme';
@@ -38,6 +39,7 @@ import {
   buildPrPayload, buildSessionPayload, buildBlockPayload, buildMilestonePayload,
   CAPTION_MAX,
 } from '../lib/community';
+import { restrictionLine } from '../lib/community/restriction';
 
 // Phase 3 (spec section 3): "Followers / Everyone / one or more of my
 // groups" -- the first two behave as a radio pair, the group chips
@@ -49,7 +51,35 @@ const VISIBILITY_OPTIONS = [
   { label: 'Everyone', value: 'public' },
 ];
 
+/**
+ * L12 (D221): the ONE default audience rule for a new post. It is the
+ * person's own profile default (their "Share what I did" audience, which
+ * is Everyone unless they changed it), clamped to Followers for a minor
+ * and for a "My groups" default (a group audience needs a group chosen,
+ * so it opens on Followers until one is). A missing value is read as
+ * Followers (fail closed). Pure.
+ *
+ * @param {{isMinor?: boolean, sessionsAudience?: string|null}} input
+ * @returns {'public'|'followers'}
+ */
+export function composeDefaultVisibility({ isMinor = false, sessionsAudience = null } = {}) {
+  if (isMinor) return 'followers';
+  // Fail closed: only an explicit "everyone" widens the audience; a
+  // missing or unrecognised value opens on Followers.
+  return sessionsAudience === 'everyone' ? 'public' : 'followers';
+}
+
+/** The line that states the audience the screen is about to use. */
+export function composeAudienceLine(visibility, groupCount = 0) {
+  if (visibility === 'groups') {
+    return groupCount === 1 ? 'Only the group you chose can see this.' : 'Only the groups you chose can see this.';
+  }
+  if (visibility === 'public') return 'Everyone on Community can see this. That is your profile default.';
+  return 'Only people who follow you can see this.';
+}
+
 export function composeErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return 'Volyume could not reach Community just now. Check your connection and try again.';
   if (code === 'rate_limited') return 'That is a lot of posting for one day. Try again tomorrow.';
   if (code === 'content_not_allowed') return 'Some of that wording is not allowed in Community. Please reword it.';
@@ -102,10 +132,12 @@ export default function CommunityComposeScreen({ navigation, route }) {
   );
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState('followers');
+  const [followerCount, setFollowerCount] = useState(null);
   const [myGroups, setMyGroups] = useState([]);
   const [groupIds, setGroupIds] = useState([]);
   const [posting, setPosting] = useState(false);
   const postingRef = useRef(false);
+  const defaultVisibilityRef = useRef('followers');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,7 +161,9 @@ export default function CommunityComposeScreen({ navigation, route }) {
     // who already follow you -- while a minor stays on Followers, exactly
     // as this screen already forces for every kind (visibilityOptions
     // below). Every other kind keeps its existing 'followers' default.
-    if (kind === 'note' && !me.is_minor) setVisibility('public');
+    defaultVisibilityRef.current = composeDefaultVisibility({ isMinor: !!me.is_minor, sessionsAudience: me.sessions_audience ?? null });
+    setVisibility(defaultVisibilityRef.current);
+    setFollowerCount(Number(me.profile?.follower_count ?? 0));
     if (noteMode) {
       // The payload came from the caller (the row already exists); a
       // manual compose is the only path that needs to build one.
@@ -178,7 +212,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
     setGroupIds((prev) => {
       const has = prev.includes(id);
       const next = has ? prev.filter((x) => x !== id) : [...prev, id];
-      setVisibility(next.length ? 'groups' : 'followers');
+      setVisibility(next.length ? 'groups' : defaultVisibilityRef.current);
       return next;
     });
   }
@@ -249,7 +283,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
             icon="document-outline"
             title={noteMode ? 'Nothing to add a note to' : 'Nothing to post yet'}
             text={noteMode
-              ? 'Volyume could not find that item. Go back and try again from the summary.'
+              ? 'Volyume could not find that post. Go back and try again from the summary.'
               : 'Volyume could not read this session. Open it again from where you finished it, then post.'}
             actionLabel="Go back"
             onAction={() => navigation.goBack()}
@@ -299,16 +333,35 @@ export default function CommunityComposeScreen({ navigation, route }) {
                     accessibilityRole="radio"
                   />
                 ))}
-                {myGroups.map((group) => (
-                  <Chip
-                    key={group.id}
-                    label={group.name}
-                    selected={groupIds.includes(group.id)}
-                    onPress={() => toggleGroup(group.id)}
-                    accessibilityRole="checkbox"
-                  />
-                ))}
               </View>
+              {/* L12 (D221): the audience is said out loud, with the
+                  privacy receipt beside it, so nothing is posted to a
+                  crowd the person did not expect. */}
+              <Text style={[styles.audienceLine, { color: t.colors.textSecondary }]}>
+                {composeAudienceLine(visibility, groupIds.length)}
+              </Text>
+              {visibility === 'followers' && followerCount === 0 ? (
+                <Text style={[styles.audienceLine, { color: t.colors.textMuted }]}>
+                  Nobody follows you yet, so only you will see this until someone does.
+                </Text>
+              ) : null}
+              {myGroups.length ? (
+                <>
+                  <SectionLabel tone="muted">Or share with a group</SectionLabel>
+                  <View style={styles.chipRow} accessibilityLabel="Share with a group">
+                    {myGroups.map((group) => (
+                      <Chip
+                        key={group.id}
+                        label={group.name}
+                        selected={groupIds.includes(group.id)}
+                        onPress={() => toggleGroup(group.id)}
+                        accessibilityRole="checkbox"
+                      />
+                    ))}
+                  </View>
+                </>
+              ) : null}
+              <PrivacyReceipt />
             </View>
           ) : null}
 
@@ -332,5 +385,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   field: { gap: spacing.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  audienceLine: { ...type.caption },
   counter: { ...type.caption, textAlign: 'right' },
 });

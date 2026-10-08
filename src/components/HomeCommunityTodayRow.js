@@ -26,16 +26,23 @@ import Button from './Button';
 import { friendsTrainedTodayLine } from '../lib/community/homeFriendsRow';
 import { inviteLabel } from '../lib/community/earlyDays';
 
-export default function HomeCommunityTodayRow({ count, gymLabel, onOpen, onInvite }) {
+/** L10 (D221): the line when the member follows nobody, so "nobody you
+ * follow has trained" never greets someone with no one to follow. */
+export const FIND_PEOPLE_LINE = 'Find people to follow';
+
+export default function HomeCommunityTodayRow({
+  count, gymLabel, onOpen, onInvite, followingNone = false, onFindPeople,
+}) {
   const t = useTheme();
   const n = Math.max(0, Number(count) || 0);
-  const line = friendsTrainedTodayLine(n);
+  const findPeople = followingNone && n === 0;
+  const line = findPeople ? FIND_PEOPLE_LINE : friendsTrainedTodayLine(n);
 
   return (
     <Card
       style={styles.row}
       padding="none"
-      onPress={onOpen}
+      onPress={findPeople ? onFindPeople : onOpen}
       accessibilityRole="button"
       accessibilityLabel={line}
       testID="home-community-today-row"
@@ -46,6 +53,16 @@ export default function HomeCommunityTodayRow({ count, gymLabel, onOpen, onInvit
       </Text>
       {n > 0 ? (
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+      ) : findPeople ? (
+        <Button
+          variant="tertiary"
+          size="sm"
+          fullWidth={false}
+          title="Find people"
+          hitSlop={8}
+          onPress={(e) => { e?.stopPropagation?.(); onFindPeople?.(); }}
+          accessibilityLabel="Find people to follow"
+        />
       ) : (
         <Button
           variant="tertiary"

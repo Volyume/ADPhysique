@@ -14,6 +14,11 @@ export const touchTarget = Object.freeze({
   android: 48,
 });
 
+// The strip of page colour between two full-bleed `surface` bands (the
+// logger's section rhythm; the Community visual law V1 imports the same
+// number rather than re-declaring it).
+export const BAND = 10;
+
 export const workoutLoggerSize = Object.freeze({
   headerSide: 88,
   headerButtonMin: touchTarget.minimum,

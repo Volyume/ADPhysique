@@ -36,10 +36,11 @@
  */
 
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import PostCard from './PostCard';
 import Button from '../Button';
 import useTheme from '../../hooks/useTheme';
-import { spacing, radius, type } from '../../styles/theme';
+import { spacing, radius, type, iconSize, hitSlop } from '../../styles/theme';
 import { sessionTileLine, sessionStateLine, findHttpsLinks, openMessageLink } from '../../lib/community';
 
 /**
@@ -141,6 +142,19 @@ export default function MessageBubble({
           >
             <LinkedBody text={message.body ?? ''} color={t.colors.textPrimary} linkColor={t.colors.primary} />
           </TouchableOpacity>
+          {/* L18 (D221): the long-press is not discoverable on its own, so
+              the same action sits on a visible "..." under the bubble. */}
+          {onLongPress ? (
+            <TouchableOpacity
+              onPress={onLongPress}
+              hitSlop={hitSlop}
+              style={[styles.more, mine ? styles.moreMine : styles.moreTheirs]}
+              accessibilityRole="button"
+              accessibilityLabel={mine ? 'Message options: delete' : 'Message options: report'}
+            >
+              <Ionicons name="ellipsis-horizontal" size={iconSize.sm} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
     </View>
@@ -161,6 +175,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   body: { ...type.bodySm },
+  more: { minHeight: 32, justifyContent: 'center' },
+  moreMine: { alignSelf: 'flex-end' },
+  moreTheirs: { alignSelf: 'flex-start' },
   sessionTile: {
     borderWidth: 1,
     borderRadius: radius.lg,

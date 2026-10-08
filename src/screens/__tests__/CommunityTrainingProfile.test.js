@@ -75,6 +75,7 @@ jest.mock('../../lib/community', () => ({
   }),
   loadTrainingProfile: jest.fn(),
   readShareSettings: jest.fn(),
+  sessionsSharingSentence: (on) => (on ? 'Your sessions are shared with everyone on Community unless you change it.' : 'Off: only you see your sessions.'),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
   publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
@@ -269,7 +270,7 @@ describe('share what I did (phase 3 spec section 1)', () => {
     await flush();
 
     expect(mockAppAlert).toHaveBeenCalledWith(
-      'Remove the items already shared?',
+      'Remove the posts already shared?',
       expect.any(String),
       expect.any(Array),
     );

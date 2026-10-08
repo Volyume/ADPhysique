@@ -39,6 +39,10 @@ jest.mock('@shopify/flash-list', () => {
 const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
+// L9 (D221): Leave and Close confirm with the house sheet (appAlert).
+const mockAppAlert = jest.fn();
+jest.mock('../../components/AppAlert', () => ({ appAlert: (...args) => mockAppAlert(...args) }));
+
 jest.mock('../../hooks/useCommunityMe', () => ({ __esModule: true, default: jest.fn() }));
 
 // Phase 3's RespectAllRow has its own async device-flag lifecycle
@@ -185,6 +189,13 @@ describe('the empty feed line', () => {
   });
 });
 
+/** Press the destructive button of the last confirmation shown. */
+async function confirmLast(label) {
+  const buttons = mockAppAlert.mock.calls.slice(-1)[0][2];
+  const button = buttons.find((b) => b.text === label);
+  await act(async () => { await button.onPress(); });
+}
+
 test('Leave calls leaveGroup and goes back', async () => {
   getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
   const { tree, navigation } = await mount();
@@ -193,6 +204,10 @@ test('Leave calls leaveGroup and goes back', async () => {
   const leaveRow = findAllByLabelPrefix(tree, 'Leave group')[0]
     ?? tree.root.findAll((n) => n.props?.label === 'Leave group' && n.props?.onPress)[0];
   await act(async () => { leaveRow.props.onPress(); });
+  // L9: nothing leaves until the person confirms.
+  expect(leaveGroup).not.toHaveBeenCalled();
+  expect(mockAppAlert.mock.calls.slice(-1)[0][0]).toBe('Leave this group?');
+  await confirmLast('Leave group');
   await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
 
   expect(leaveGroup).toHaveBeenCalledWith('g1');
@@ -209,6 +224,7 @@ test('last_admin is spoken calmly and the screen does not navigate away', async 
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const leaveRow = tree.root.findAll((n) => n.props?.label === 'Leave group' && n.props?.onPress)[0];
   await act(async () => { leaveRow.props.onPress(); });
+  await confirmLast('Leave group');
   await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
 
   expect(mockToastShow).toHaveBeenCalledWith(
@@ -223,7 +239,7 @@ test('admin-only menu rows render only for an admin member', async () => {
   const { tree } = await mount();
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
-  expect(labels).toEqual(expect.arrayContaining(['Edit', 'Invite by username', 'Share invite link', 'Close group']));
+  expect(labels).toEqual(expect.arrayContaining(['Edit', 'Invite people', 'Close group']));
 });
 
 test('Edit opens CommunityGroupCreate in edit mode, prefilled', async () => {
@@ -243,7 +259,7 @@ test('a plain member sees no admin-only menu rows', async () => {
   const { tree } = await mount();
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
-  expect(labels).not.toEqual(expect.arrayContaining(['Invite by username', 'Close group']));
+  expect(labels).not.toEqual(expect.arrayContaining(['Invite people', 'Close group']));
 });
 
 // ─── Phase 3 (spec section 4): "Together this week" ─────────────────────
@@ -278,16 +294,16 @@ describe('the Together line', () => {
 });
 
 // ─── Phase 3, lead ruling: "Share a workout with the group" ─────────────
-describe('Share a workout with the group', () => {
+describe('Share your latest workout with the group', () => {
   test('renders only for a member, at the top of ACTIVITY', async () => {
     getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
     const { tree } = await mount();
-    expect(byLabel(tree, 'Share a workout with the group')).toBeTruthy();
+    expect(byLabel(tree, 'Share your latest workout with the group')).toBeTruthy();
   });
 
   test('a non-member never sees the row', async () => {
     const { tree } = await mount();
-    expect(byLabel(tree, 'Share a workout with the group')).toBeUndefined();
+    expect(byLabel(tree, 'Share your latest workout with the group')).toBeUndefined();
   });
 
   test('tapping it opens Compose on the caller\'s latest completed workout, this group preselected', async () => {
@@ -295,7 +311,7 @@ describe('Share a workout with the group', () => {
     getLatestCompletedWorkoutId.mockResolvedValue('w-new');
     const { tree, navigation } = await mount();
 
-    await act(async () => { byLabel(tree, 'Share a workout with the group').props.onPress(); });
+    await act(async () => { byLabel(tree, 'Share your latest workout with the group').props.onPress(); });
     await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
 
     expect(getLatestCompletedWorkoutId).toHaveBeenCalledWith('u1');
@@ -309,7 +325,7 @@ describe('Share a workout with the group', () => {
     getLatestCompletedWorkoutId.mockResolvedValue(null);
     const { tree, navigation } = await mount();
 
-    await act(async () => { byLabel(tree, 'Share a workout with the group').props.onPress(); });
+    await act(async () => { byLabel(tree, 'Share your latest workout with the group').props.onPress(); });
     await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
 
     expect(navigation.navigate).not.toHaveBeenCalledWith('CommunityCompose', expect.anything());
@@ -324,8 +340,40 @@ test('closeGroup fires from the menu for an admin', async () => {
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const closeRow = tree.root.findAll((n) => n.props?.label === 'Close group' && n.props?.onPress)[0];
   await act(async () => { closeRow.props.onPress(); });
+  expect(closeGroup).not.toHaveBeenCalled();
+  expect(mockAppAlert.mock.calls.slice(-1)[0][0]).toBe('Close this group?');
+  await confirmLast('Close group');
   await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
   expect(closeGroup).toHaveBeenCalledWith('g1');
+});
+
+// L9 (D221): Cancel keeps the group and the member exactly as they were,
+// and the two invite rows in the menu are one.
+test('Cancel on the Close and Leave confirmations changes nothing', async () => {
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'admin', myState: 'member' });
+  const { tree } = await mount();
+  await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
+  const closeRow = tree.root.findAll((n) => n.props?.label === 'Close group' && n.props?.onPress)[0];
+  await act(async () => { closeRow.props.onPress(); });
+  const cancel = mockAppAlert.mock.calls.slice(-1)[0][2].find((b) => b.text === 'Cancel');
+  expect(cancel.style).toBe('cancel');
+  expect(closeGroup).not.toHaveBeenCalled();
+  expect(leaveGroup).not.toHaveBeenCalled();
+});
+
+test('Invite people is a visible row for an admin and appears once in the menu', async () => {
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'admin', myState: 'member' });
+  const { tree } = await mount();
+  expect(byLabel(tree, 'Invite people to this group')).toBeTruthy();
+  await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
+  const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
+  expect(labels.filter((l) => /invite/i.test(l))).toEqual(['Invite people']);
+});
+
+test('a plain member sees no Invite people row', async () => {
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
+  const { tree } = await mount();
+  expect(byLabel(tree, 'Invite people to this group')).toBeUndefined();
 });
 
 test('a member giving Respect on a group feed item calls reactToPost with post id, true, and author user id', async () => {
@@ -355,6 +403,37 @@ test('a member giving Respect on a group feed item calls reactToPost with post i
   await act(async () => { respectBtn.props.onPress(); });
   // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
   expect(reactToPost).toHaveBeenCalledWith('p2', true, 'u3');
+});
+
+// L3 (D221): a Respect the server refused reverts and says so calmly.
+test('a refused Respect on a group feed row shows the calm line for its code', async () => {
+  const { reactToPost } = require('../../lib/community');
+  const feedItem = {
+    post: { id: 'p2', kind: 'session', payload: {}, caption: null, reaction_count: 0, comment_count: 0, created_at: Date.now() },
+    author: { user_id: 'u3', handle: 'john_doe', display_name: 'John Doe' },
+    myReaction: false,
+  };
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
+  loadGroupFeed.mockResolvedValue({ rows: [feedItem], cursor: null });
+  const { tree } = await mount();
+  let flashListProps = null;
+  tree.root.findAll((n) => { if (n.props?.renderItem && n.props?.data) flashListProps = n.props; });
+  for (const [code, line] of [
+    ['rate_limited', 'You have given a lot of Respect today. It will be back tomorrow.'],
+    ['profile_restricted', 'Your Community access is limited at the moment. See the notice on Community.'],
+    ['offline', 'Could not send that. Try again in a moment.'],
+  ]) {
+    mockToastShow.mockClear();
+    reactToPost.mockRejectedValueOnce(Object.assign(new Error(code), { code }));
+    let itemTree = null;
+    act(() => { itemTree = create(flashListProps.renderItem({ item: feedItem })); });
+    const btn = itemTree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => { btn.props.onPress(); });
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    expect(mockToastShow).toHaveBeenCalledWith(line, expect.objectContaining({ variant: 'error' }));
+  }
 });
 
 // ─── Early days (26-EARLY-DAYS-SPEC.md 1.7): the invite link's token ───

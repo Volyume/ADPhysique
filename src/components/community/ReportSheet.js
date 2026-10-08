@@ -33,9 +33,11 @@ import { useToast } from '../Toast';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { REPORT_REASONS, REPORT_DETAIL_MAX, reportContent } from '../../lib/community';
+import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
   already_reported: 'You have already reported this. A moderator is looking at it.',
   rate_limited: 'That is a lot of reports for one day. Try again tomorrow.',
   no_profile: 'Create your Community profile first.',

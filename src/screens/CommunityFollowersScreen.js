@@ -35,12 +35,14 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, circle, iconSize } from '../styles/theme';
 import { listFollowers, removeFollower } from '../lib/community';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const KEBAB = 36;
 const PAGE = 20;
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
+  ...RESTRICTION_REFUSALS,
 };
 
 export default function CommunityFollowersScreen({ navigation }) {

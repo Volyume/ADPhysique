@@ -59,6 +59,7 @@
  *   rank          number|string, shown at the row's left edge; omit to
  *                 hide it (rosters under the small-group threshold)
  *   onPress       opens the person
+ *   inBand        D221: pad the row's content by `spacing.lg` itself (default off)
  *   trailing      optional node (a small `Button secondary sm`, or a
  *                 glyph) rendered at the row's trailing edge
  */
@@ -81,7 +82,7 @@ const RANK_COL = 18;
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function PersonRow({
-  person, metric, metricRole, days, trainedToday, rank, onPress, trailing,
+  person, metric, metricRole, days, trainedToday, rank, onPress, trailing, inBand = false,
 }) {
   const t = useTheme();
   if (!person) return null;
@@ -111,9 +112,9 @@ export default function PersonRow({
       disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={a11yParts.join('. ')}
-      style={isOwn ? [styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}
+      style={isOwn ? [inBand ? null : styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}
     >
-      <View style={styles.row}>
+      <View style={[styles.row, inBand && styles.inBand]}>
         <View style={styles.leading}>
           {ranked ? (
             <View style={styles.rankSlot}>
@@ -172,6 +173,9 @@ const styles = StyleSheet.create({
   // tint bleeds to both screen edges through a negative margin, and the
   // page's gutter is paid back as padding, so the avatar stays on exactly
   // the same left edge as every other avatar on the screen.
+  // D221 ruling 7 / law V1: inside a Hub band the row's own content carries the
+  // gutter so its hairline spans the band. Default off (other screens unchanged).
+  inBand: { paddingHorizontal: spacing.lg },
   own: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg },
   rank: { ...type.label, color: colors.textMuted },
   avatarWrap: { width: AVATAR, height: AVATAR, position: 'relative' },

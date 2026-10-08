@@ -45,7 +45,7 @@ const STACK_SIZE = 24;
 const STACK_MAX = 3;
 
 export default function CohortRow({
-  title, line, people, onPress,
+  title, line, people, onPress, inBand = false,
 }) {
   const t = useTheme();
   return (
@@ -55,7 +55,7 @@ export default function CohortRow({
       accessibilityRole="button"
       accessibilityLabel={[title, line].filter(Boolean).join('. ')}
     >
-      <View style={styles.row}>
+      <View style={[styles.row, inBand && styles.inBand]}>
         <AvatarStack people={people} size={STACK_SIZE} max={STACK_MAX} />
         <View style={styles.body}>
           <Text style={[styles.title, { color: t.colors.textPrimary }]} numberOfLines={1}>
@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
+  // D221 ruling 7 / law V1: the row's own content carries the gutter (default off).
+  inBand: { paddingHorizontal: spacing.lg },
   body: { flex: 1, gap: spacing.xxs },
   title: { ...type.bodyStrong, color: colors.textPrimary },
   line: { ...type.bodySm, color: colors.textSecondary },

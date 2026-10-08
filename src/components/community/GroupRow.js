@@ -17,13 +17,16 @@
  */
 import CohortRow from './CohortRow';
 
-export default function GroupRow({ group, line, people, onPress }) {
+export default function GroupRow({
+  group, line, people, onPress, inBand,
+}) {
   return (
     <CohortRow
       title={group?.name || 'Group'}
       line={line}
       people={people}
       onPress={onPress}
+      inBand={inBand}
     />
   );
 }

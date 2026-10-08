@@ -66,6 +66,7 @@ import ConnectButton from '../components/community/ConnectButton';
 import ConnectSheet from '../components/community/ConnectSheet';
 import TrainingProfileLine from '../components/community/TrainingProfileLine';
 import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
+import { respectFailureLine } from '../lib/community/restriction';
 import ReportSheet from '../components/community/ReportSheet';
 import Eyebrow from '../components/community/Eyebrow';
 import ActivityItemRow from '../components/community/ActivityItemRow';
@@ -225,28 +226,33 @@ export default function CommunityProfileScreen({ navigation, route }) {
   }, [card, viewable]);
 
   async function react(item) {
+    const on = !item.myReaction;
+    // Optimistic with revert (D221 L3): the heart answers at once and
+    // goes back, with a calm toast, when the server did not take it.
+    const apply = (turnOn) => setData((prev) => (prev ? {
+      ...prev,
+      posts: (prev.posts ?? []).map((row) => {
+        const n = normalisePostRow(row, prev.card);
+        if (n?.post?.id !== item.post.id) return row;
+        return {
+          post: {
+            ...n.post,
+            reaction_count: Math.max(0, Number(n.post.reaction_count ?? 0) + (turnOn ? 1 : -1)),
+          },
+          author: n.author,
+          my_reaction: turnOn,
+        };
+      }),
+    } : prev));
+    apply(on);
     try {
-      await reactToPost(item.post.id, !item.myReaction, item.author?.user_id);
-      setData((prev) => (prev ? {
-        ...prev,
-        posts: (prev.posts ?? []).map((row) => {
-          const n = normalisePostRow(row, prev.card);
-          if (n?.post?.id !== item.post.id) return row;
-          const on = !item.myReaction;
-          return {
-            post: {
-              ...n.post,
-              reaction_count: Math.max(0, Number(n.post.reaction_count ?? 0) + (on ? 1 : -1)),
-            },
-            author: n.author,
-            my_reaction: on,
-          };
-        }),
-      } : prev));
-    } catch (_e) {
-      // Nothing to interrupt anyone with; the next load shows the truth.
+      await reactToPost(item.post.id, on, item.author?.user_id);
+    } catch (e) {
+      apply(!on);
+      toast.show(respectFailureLine(e?.code), { variant: 'error' });
     }
   }
+
 
   const posts = (data?.posts ?? []).map((r) => normalisePostRow(r, card)).filter(Boolean);
   const facts = card ? factLabels(card) : [];
@@ -550,7 +556,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
     // (blueprint section 9 rule 9). The error and offline states above
     // keep the full EmptyState: they carry a retry.
     <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      Follow to see their training stories.
+      Follow to see their training posts.
     </Text>
   ) : isMe ? (
     // Founder order 2026-09-22 item 5 (audit A-05): a first post without a

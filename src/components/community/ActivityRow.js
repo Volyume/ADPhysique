@@ -2,7 +2,7 @@
  * ActivityRow (blueprint sections 3, 6; SD-15)
  *
  * One line of the Community activity inbox. In-app is the record: every
- * follow, reaction, comment and programme use lands here whether or not
+ * follow, reaction and comment lands here whether or not
  * a push was allowed to leave the server, so this row never assumes a
  * notification was seen.
  *

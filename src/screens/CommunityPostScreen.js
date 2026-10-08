@@ -35,6 +35,7 @@ import PostCard from '../components/community/PostCard';
 import CommentRow, { CommentComposer } from '../components/community/CommentRow';
 import JoinToInteractRow from '../components/community/JoinToInteractRow';
 import ReportSheet from '../components/community/ReportSheet';
+import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import useAppStore from '../store/useAppStore';
@@ -46,6 +47,7 @@ import {
   getPost, reactToPost, deletePost, listComments, addComment, deleteComment,
   notifyCommunityEvent, hasProfile, connectionState,
 } from '../lib/community';
+import { restrictionLine, respectFailureLine } from '../lib/community/restriction';
 
 export const POST_OFFLINE_LINE = 'Volyume could not reach Community just now. Check your connection and try again.';
 
@@ -53,6 +55,7 @@ export const POST_OFFLINE_LINE = 'Volyume could not reach Community just now. Ch
  * Community profile is told the actual reason and what fixes it, rather
  * than "try again" for something trying again cannot fix. */
 export function postActionErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return POST_OFFLINE_LINE;
   if (code === 'no_profile') return 'Create your Community profile first, then post this.';
   if (code === 'content_not_allowed') return 'Some of that wording is not allowed in Community. Please reword it.';
@@ -61,10 +64,11 @@ export function postActionErrorLine(code) {
 }
 
 export function postErrorLine(code) {
+  if (restrictionLine(code)) return restrictionLine(code);
   if (code === 'offline') return POST_OFFLINE_LINE;
-  if (code === 'not_found') return 'This story is no longer here.';
-  if (code === 'not_allowed') return "This story is only shared with the author's followers.";
-  return 'Volyume could not open this story just now. Try again in a moment.';
+  if (code === 'not_found') return 'This post is no longer here.';
+  if (code === 'not_allowed') return "This post is only shared with the author's followers.";
+  return 'Volyume could not open this post just now. Try again in a moment.';
 }
 
 export default function CommunityPostScreen({ navigation, route }) {
@@ -86,6 +90,9 @@ export default function CommunityPostScreen({ navigation, route }) {
   // leaves the reported thing untouched and never counts toward the
   // three-reporter auto-hide, so the target travels with the sheet.
   const [reportTarget, setReportTarget] = useState(null);
+  // L18 (D221): the ellipsis opens the one profile menu (Report, Block,
+  // Mute, Share link) for the post's author, not Report alone.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) { setLoading(false); setErrorCode('not_found'); return; }
@@ -163,7 +170,7 @@ export default function CommunityPostScreen({ navigation, route }) {
       toast.show(
         _e?.code === 'no_profile'
           ? 'Create your Community profile first, then react to this.'
-          : 'That did not save. Please try again.',
+          : respectFailureLine(_e?.code),
         { variant: 'error' },
       );
     }
@@ -204,7 +211,7 @@ export default function CommunityPostScreen({ navigation, route }) {
 
   function handleDeletePost() {
     if (!post) return;
-    appAlert('Delete this story?', 'It is removed for everyone. Your training is untouched.', [
+    appAlert('Delete this post?', 'It is removed for everyone. Your training is untouched.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -212,7 +219,7 @@ export default function CommunityPostScreen({ navigation, route }) {
         onPress: async () => {
           try {
             await deletePost(post.id);
-            toast.show('Story deleted', { variant: 'success' });
+            toast.show('Post deleted', { variant: 'success' });
             navigation.goBack();
           } catch (e) {
             logError('CommunityPostScreen.handleDeletePost', e, { postId: post.id });
@@ -255,14 +262,14 @@ export default function CommunityPostScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader
-        title="Story"
+        title="Post"
         right={post ? (
           <TouchableOpacity
-            onPress={() => { haptics.selection(); if (mine) handleDeletePost(); else setReportTarget({ targetKind: 'post', targetId: post.id }); }}
+            onPress={() => { haptics.selection(); if (mine) handleDeletePost(); else if (author?.user_id) setMenuOpen(true); else setReportTarget({ targetKind: 'post', targetId: post.id }); }}
             hitSlop={hitSlop}
             style={styles.headerAction}
             accessibilityRole="button"
-            accessibilityLabel={mine ? 'Delete this story' : 'Report this story'}
+            accessibilityLabel={mine ? 'Delete this post' : 'More options for this post'}
           >
             <Ionicons
               name={mine ? 'trash-outline' : 'ellipsis-horizontal'}
@@ -322,6 +329,13 @@ export default function CommunityPostScreen({ navigation, route }) {
           )}
         />
       )}
+      <ProfileMenuSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        card={author}
+        onChanged={(relationship) => setData((prev) => (prev?.author ? { ...prev, author: { ...prev.author, relationship } } : prev))}
+        onReport={() => setReportTarget({ targetKind: 'post', targetId: post?.id })}
+      />
       <ReportSheet
         visible={!!reportTarget}
         onClose={() => setReportTarget(null)}

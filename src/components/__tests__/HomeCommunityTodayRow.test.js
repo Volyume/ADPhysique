@@ -91,3 +91,37 @@ describe('HomeCommunityTodayRow', () => {
     expect(onInvite).not.toHaveBeenCalled();
   });
 });
+
+// L10 (D221): following nobody reads "Find people to follow", with the
+// action Find people; the Invite zero line stays for someone who follows
+// people who just have not trained yet.
+describe('following nobody', () => {
+  test('shows "Find people to follow" and a Find people action that calls onFindPeople, not onOpen or onInvite', () => {
+    const onOpen = jest.fn();
+    const onInvite = jest.fn();
+    const onFindPeople = jest.fn();
+    const tree = render({ count: 0, followingNone: true, onOpen, onInvite, onFindPeople });
+
+    expect(flattenText(tree.toJSON())).toContain('Find people to follow');
+    expect(flattenText(tree.toJSON())).not.toContain('Nobody you follow has trained');
+    expect(tree.root.findAll((n) => n.props && n.props.title === 'Invite').length).toBe(0);
+
+    const action = tree.root.findAll((n) => n.props && n.props.title === 'Find people')[0];
+    act(() => { action.props.onPress({ stopPropagation() {} }); });
+    expect(onFindPeople).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onInvite).not.toHaveBeenCalled();
+  });
+
+  test('following people who have not trained keeps the honest zero line and Invite', () => {
+    const tree = render({ count: 0, followingNone: false, onOpen: jest.fn(), onInvite: jest.fn(), onFindPeople: jest.fn() });
+    expect(flattenText(tree.toJSON())).toContain('Nobody you follow has trained yet today');
+    expect(tree.root.findAll((n) => n.props && n.props.title === 'Invite').length).toBe(1);
+  });
+
+  test('HomeScreen opens the Community tab People segment', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../screens/HomeScreen.js'), 'utf8');
+    expect(src).toContain("navigateCrossTab(navigation, 'CommunityTab', 'Community', { segment: 'people' })");
+    expect(src).toMatch(/following_count != null && Number\(me\.profile\.following_count\) === 0/);
+  });
+});

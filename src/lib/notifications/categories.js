@@ -57,7 +57,7 @@ export const CATEGORY = Object.freeze({
   // Community (blueprint SD-15, 2026-09-06): the two budgeted Community
   // event categories. COMMUNITY_FOLLOW covers new follower / follow
   // request / request accepted; COMMUNITY_ACTIVITY covers reaction /
-  // comment / programme use. Both are server-sendable (community-notify
+  // comment. Both are server-sendable (community-notify
   // Edge Function), exactly like PARTNER_CHEER above.
   COMMUNITY_FOLLOW: 'community_follow',
   COMMUNITY_ACTIVITY: 'community_activity',

@@ -32,6 +32,9 @@ jest.mock('../../../lib/community/respect', () => ({
 
 jest.mock('../../../lib/community/profile', () => ({ currentUserId: jest.fn(() => 'u1') }));
 
+const mockToastShow = jest.fn();
+jest.mock('../../Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
+
 jest.mock('../../../lib/dayKey', () => ({ todayLocalKey: jest.fn(() => '2026-09-10') }));
 
 const { lastRespectGivenState, recordRespectGiven, respectAll } = require('../../../lib/community/respect');
@@ -149,5 +152,47 @@ describe('RespectAllRow', () => {
     // lastRespectGivenState is not re-fetched: this is a pure render-time
     // recomputation, not a second device read.
     expect(lastRespectGivenState).toHaveBeenCalledTimes(1);
+  });
+});
+
+// L3 (D221): optimistic with revert and the calm toast for each refusal.
+describe('RespectAllRow failure', () => {
+  async function press(tree) {
+    const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+    await act(async () => { button.props.onPress(); });
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+  }
+
+  test.each([
+    ['rate_limited', 'You have given a lot of Respect today. It will be back tomorrow.'],
+    ['offline', 'Could not send that. Try again in a moment.'],
+    ['profile_restricted', 'Your Community access is limited at the moment. See the notice on Community.'],
+    ['profile_suspended', 'Your Community access is limited at the moment. See the notice on Community.'],
+  ])('a %s refusal reverts the row, enables it again and toasts the calm line', async (code, line) => {
+    respectAll.mockRejectedValueOnce(Object.assign(new Error(code), { code }));
+    const tree = await render({});
+    await press(tree);
+    const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+    expect(button.props.accessibilityLabel).toBe('Respect everyone who trained today');
+    expect(button.props.accessibilityState).toEqual({ disabled: false });
+    expect(recordRespectGiven).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith(line, { variant: 'error' });
+  });
+
+  test('the restricted line never says try again', () => {
+    const { COMMUNITY_RESTRICTED_LINE } = require('../../../lib/community/restriction');
+    expect(COMMUNITY_RESTRICTED_LINE).not.toMatch(/try again/i);
+  });
+
+  test('the row reads as given the moment it is tapped, before the server answers', async () => {
+    let resolve;
+    respectAll.mockReturnValueOnce(new Promise((r) => { resolve = r; }));
+    const tree = await render({});
+    const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+    await act(async () => { button.props.onPress(); });
+    const during = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+    expect(during.props.accessibilityLabel).toBe('Respect given');
+    expect(during.props.accessibilityState).toEqual({ disabled: true });
+    await act(async () => { resolve({ given: 2 }); });
   });
 });
