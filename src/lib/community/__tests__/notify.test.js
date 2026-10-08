@@ -33,11 +33,24 @@ describe('COMMUNITY_NOTIFY_KINDS', () => {
       'follow', 'follow_request', 'follow_accepted', 'reaction', 'comment',
       'connect_request', 'connect_accepted', 'message',
       'group_request', 'group_accepted', 'group_invited',
+      'group_message',
     ]);
   });
 });
 
 describe('notifyCommunityEvent', () => {
+  test('group_message is the one kind that may omit the target (the server resolves recipients)', () => {
+    notifyCommunityEvent('group_message', null, 'm1');
+    expect(invokeCommunityFunction).toHaveBeenCalledTimes(1);
+    const [, body] = invokeCommunityFunction.mock.calls[0];
+    expect(body.kind).toBe('group_message');
+    expect(body.ref_id).toBe('m1');
+    expect(body.target_user_id ?? null).toBeNull();
+    invokeCommunityFunction.mockClear();
+    notifyCommunityEvent('follow', null, 'x');
+    expect(invokeCommunityFunction).not.toHaveBeenCalled();
+  });
+
   test('a known kind with a target calls the edge function with the exact payload', () => {
     notifyCommunityEvent('group_accepted', 'u2', 'g1');
     expect(invokeCommunityFunction).toHaveBeenCalledWith('community-notify', {

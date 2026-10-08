@@ -51,6 +51,9 @@ export const COMMUNITY_ERROR_CODES = Object.freeze([
   'invalid_input',
   'content_not_allowed',
   'forbidden_field',
+  // migrate_191: a minor asking for the presence switch. After
+  // forbidden_field on purpose (codeFor falls back to a substring match).
+  'forbidden',
   'rate_limited',
   'blocked',
   // Raised by the discovery RPCs (migrate_161; discovery blueprint
@@ -80,7 +83,7 @@ const KNOWN_CODES = new Set(COMMUNITY_ERROR_CODES);
 const EXPECTED_CODES = new Set([
   'sign_out_wiping', 'health_consent_unresolved', 'offline', 'not_signed_in',
   'no_profile', 'handle_taken', 'handle_invalid', 'invalid_input',
-  'content_not_allowed', 'forbidden_field', 'rate_limited', 'blocked',
+  'content_not_allowed', 'forbidden_field', 'forbidden', 'rate_limited', 'blocked',
   'not_found', 'not_allowed', 'already_reported', 'not_moderator',
   'profile_restricted', 'profile_suspended',
   'not_connected', 'connect_not_allowed', 'minor_restricted', 'rules_outdated',

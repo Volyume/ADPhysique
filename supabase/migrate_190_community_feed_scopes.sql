@@ -408,7 +408,7 @@ GRANT EXECUTE ON FUNCTION public.community_feed(text, int, text, text) TO authen
 --   following -> exactly B's post (and A's own)           : expect {B}
 --   gym       -> exactly C's post (and A's own), never G  : expect {C}
 --   groups    -> exactly D's post (and A's own)           : expect {D}
---   everyone  -> B, C, D public posts, never E (blocked)  : expect {B,C,D}
+--   everyone  -> A (own), B, C, D public posts, never E (blocked) : expect {A,B,C,D} (proved, 16-HARNESS-190-191.md)
 --
 -- SELECT jsonb_path_query_array(
 --          public.community_feed(NULL, 20, 'following', 'newest'),

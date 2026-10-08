@@ -24,6 +24,21 @@
 //   ?kind=programme&id=<uuid>
 //   ?kind=post&id=<uuid>
 //   ?kind=profile&h=<handle>
+//   ?kind=group&id=<uuid>            (Stage 3, 3f; NOT DEPLOYED)
+//
+// Link previews (Stage 3, spec 3f, D221; NOT DEPLOYED until the founder's
+// go): the profile, post and group responses each carry a `preview` of
+// `{ title, description }` for the /u, /s and /g pages' meta tags. Built
+// ONLY by the three preview* functions below, from an explicit allow-list:
+//   u  display name, handle, and the self-declared discipline labels
+//   s  the author's display name and the post kind's fixed headline; the
+//      description may add a number of sessions or sets, and nothing else.
+//      NEVER the note or caption, never a load, bodyweight, food figure,
+//      exercise name or any other number
+//   g  the group's name and its member count, for an OPEN, ACTIVE group only
+// Nothing at all for a private profile, a minor, a restricted or suspended
+// account, or a hidden post: those 404 exactly as they did before, and the
+// page shows its generic preview.
 //
 // Response: { ok: true, kind, ... } or { ok: false, error: 'not_found' } 404.
 // Headers: Cache-Control: public, max-age=300; CORS * for GET.
@@ -74,6 +89,7 @@ interface ProfileRow {
   visibility: string
   status: string
   is_minor: boolean
+  discipline_keys: string[] | null
 }
 
 // The ONLY shape a creator ever takes on a public page.
@@ -89,9 +105,83 @@ function publiclyVisible(p: ProfileRow | null): p is ProfileRow {
   return !!p && p.status === 'active' && p.visibility === 'public' && p.is_minor === false
 }
 
+// ─── Link previews (Stage 3, 3f) ───────────────────────────────────────
+// Every string below is built from these allow-lists. A function here never
+// receives a caption, a note, a payload object or a figure other than the
+// two small integers documented on previewPost.
+
+const DISCIPLINE_LABELS: Record<string, string> = {
+  bodybuilding: 'Bodybuilding',
+  mens_physique: 'Men\'s physique',
+  classic_physique: 'Classic physique',
+  womens_physique: 'Women\'s physique',
+  figure: 'Figure',
+  bikini: 'Bikini',
+  wellness: 'Wellness',
+  powerlifting: 'Powerlifting',
+  olympic_weightlifting: 'Olympic weightlifting',
+  strongman: 'Strongman and strongwoman',
+  crossfit_functional: 'CrossFit and functional fitness',
+  calisthenics: 'Calisthenics',
+  hybrid: 'Hybrid (lifting and endurance)',
+  sport_sc: 'Sport strength and conditioning',
+  general_strength: 'General strength and fitness',
+}
+
+const POST_HEADLINES: Record<string, string> = {
+  pr: 'a personal best',
+  session: 'a training session',
+  block: 'a finished training block',
+  milestone: 'a training milestone',
+  note: 'a post',
+}
+
+interface Preview { title: string; description: string }
+
+const GENERIC_PREVIEW: Preview = {
+  title: 'Volyume',
+  description: 'Strength training, planned and tracked. Shared on Volyume.',
+}
+
+function smallCount(n: unknown): number | null {
+  const v = Number(n)
+  return Number.isFinite(v) && v >= 0 && v <= 9999 ? Math.round(v) : null
+}
+
+function previewProfile(displayName: string, handle: string, disciplineKeys: string[] | null): Preview {
+  const labels = (disciplineKeys ?? [])
+    .map((k) => DISCIPLINE_LABELS[k])
+    .filter((l): l is string => typeof l === 'string')
+    .slice(0, 2)
+  return {
+    title: `${displayName} (@${handle}) on Volyume`,
+    description: labels.length > 0
+      ? `${labels.join(' and ')}. Training on Volyume.`
+      : 'Training on Volyume.',
+  }
+}
+
+function previewPost(displayName: string, postKind: string, sessionsOrSets: { sessions?: unknown; sets?: unknown }): Preview {
+  const headline = POST_HEADLINES[postKind]
+  if (!headline) return GENERIC_PREVIEW
+  const sets = smallCount(sessionsOrSets.sets)
+  const sessions = smallCount(sessionsOrSets.sessions)
+  let description = 'Shared on Volyume.'
+  if (postKind === 'session' && sets !== null) description = `${sets} sets. Shared on Volyume.`
+  if (postKind === 'block' && sessions !== null) description = `${sessions} sessions. Shared on Volyume.`
+  return { title: `${displayName} shared ${headline}`, description }
+}
+
+function previewGroup(name: string, memberCount: number): Preview {
+  return {
+    title: `${name} on Volyume`,
+    description: memberCount === 1 ? '1 member training together.' : `${memberCount} members training together.`,
+  }
+}
+
 const PROFILE_COLUMNS =
   'user_id, handle, display_name, avatar_preset, bio, styles, goal, setting, '
-  + 'area_label, gym_label, follower_count, visibility, status, is_minor'
+  + 'area_label, gym_label, follower_count, visibility, status, is_minor, discipline_keys'
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -148,6 +238,16 @@ serve(async (req: Request) => {
           created_at: row.created_at,
           author: creatorCard(author as ProfileRow),
         },
+        preview: previewPost(
+          (author as ProfileRow).display_name,
+          String(row.kind ?? ''),
+          // Only the two counts the spec allows. The payload object itself
+          // is never handed on.
+          {
+            sets: (row.payload as Record<string, unknown> | null)?.workingSets,
+            sessions: (row.payload as Record<string, unknown> | null)?.sessions,
+          },
+        ),
       }, 200)
     }
 
@@ -180,6 +280,7 @@ serve(async (req: Request) => {
       return jsonResponse({
         ok: true,
         kind: 'profile',
+        preview: previewProfile(p.display_name, p.handle, p.discipline_keys),
         profile: {
           handle: p.handle,
           display_name: p.display_name,
@@ -214,6 +315,37 @@ serve(async (req: Request) => {
             }
           }),
         },
+      }, 200)
+    }
+
+    if (kind === 'group') {
+      if (!UUID_RE.test(id)) return notFound()
+      const { data: grp } = await admin
+        .from('community_groups')
+        .select('id, name, access, status')
+        .eq('id', id)
+        .maybeSingle()
+      const g = grp as { id: string; name: string; access: string; status: string } | null
+      // Open and active only: an invite-only or closed group is the generic page.
+      if (!g || g.access !== 'open' || g.status !== 'active') return notFound()
+
+      // Members counted on the in-app predicate: joined, active, not a minor.
+      const { data: roster } = await admin
+        .from('community_group_members')
+        .select('user_id, community_profiles!inner(status, is_minor)')
+        .eq('group_id', g.id)
+        .eq('state', 'member')
+        .limit(1000)
+      const memberCount = (roster ?? []).filter((r) => {
+        const prof = (r as { community_profiles?: { status?: string; is_minor?: boolean } }).community_profiles
+        return prof?.status === 'active' && prof?.is_minor === false
+      }).length
+
+      return jsonResponse({
+        ok: true,
+        kind: 'group',
+        group: { name: g.name, member_count: memberCount },
+        preview: previewGroup(g.name, memberCount),
       }, 200)
     }
   } catch (e) {

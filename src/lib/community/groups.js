@@ -15,6 +15,7 @@
 
 import { callCommunity } from './transport';
 import { notifyCommunityEvent } from './notify';
+import { normaliseTrainingNow } from './presence';
 
 export const GROUP_NAME_MAX = 40;
 export const GROUP_BLURB_MAX = 140;
@@ -195,7 +196,17 @@ export async function acceptGroupInvite({ token = null, groupId = null } = {}) {
   return normaliseGroup(data);
 }
 
-/** The caller's own groups, most recently joined first. */
+/**
+ * Decline an invite (migrate_191): removes the caller's 'invited' row.
+ * `not_found` when there is no such invite.
+ */
+export async function declineGroupInvite(groupId) {
+  const data = await callCommunity('community_group_decline_invite', { _group_id: groupId });
+  return { declined: !!data?.declined };
+}
+
+/** The caller's own groups, most recently joined first. `unread` is the chat
+ * unread count (migrate_191), 0 for a group not yet joined. */
 export async function listMyGroups() {
   const data = await callCommunity('community_group_list_mine', {});
   const rows = Array.isArray(data?.groups) ? data.groups : [];
@@ -203,6 +214,7 @@ export async function listMyGroups() {
     group: normaliseGroup(row.group),
     role: row.role ?? null,
     state: row.state ?? null,
+    unread: Number.isFinite(Number(row.unread)) ? Number(row.unread) : 0,
   })).filter((row) => !!row.group);
 }
 
@@ -218,6 +230,8 @@ export async function getGroup(groupId) {
     ...normaliseGroup(data),
     myRole: data.my_role ?? null,
     myState: data.my_state ?? null,
+    // migrate_191 (3a): {count, names} or null when withheld / not a member.
+    trainingNow: normaliseTrainingNow(data.training_now),
   };
 }
 

@@ -4,6 +4,18 @@
 // `kind` and, for reaction/comment, `post_id`, and for the group kinds,
 // `group_id` (ids only, no content, no new handle). Version 4 is the live
 // one; the founder gives the go for `supabase functions deploy`.
+// Version 5 also adds (Stage 3, spec 3b, lane 3S) the kind `group_message`.
+// ONE call from the sender's client (target_user_id omitted, ref_id = the
+// message id) and the SERVER fans out: the service-role-only RPC
+// `community_group_message_recipients` (migrate_191) returns the group's
+// current members except the sender, minus anyone who blocked or muted the
+// sender, minus anyone the migrate_180 gate withholds. The caller must be the
+// message's author and the message under ten minutes old. Per recipient, as
+// for a DM: the `community_message` toggle, quiet hours, the fail-closed ED
+// check, and ONE push per group per recipient per fifteen minutes while
+// unread (`community_group_members.last_push_at`, stamped after the send).
+// Body "New messages in {group name}", data `kind` and `group_id` only: never
+// content, never a handle. Needs migrate_191 applied first.
 //
 // The push half of Community activity (blueprint section 4,
 // docs/social-discovery-2026-09-06/30-BLUEPRINT.md; SD-15). The client calls
@@ -126,6 +138,7 @@ type Kind =
   | 'reaction' | 'comment'
   | 'connect_request' | 'connect_accepted' | 'message'
   | 'group_request' | 'group_accepted' | 'group_invited'
+  | 'group_message'
 
 // A connection request and its acceptance are relationship events, so they
 // share the follow category and its budget; a message has its own category
@@ -139,13 +152,13 @@ const FOLLOW_KINDS: Kind[] = [
 const CONNECT_KINDS: Kind[] = ['connect_request', 'connect_accepted']
 const GROUP_KINDS: Kind[] = ['group_request', 'group_accepted', 'group_invited']
 const ALL_KINDS: Kind[] = [
-  ...FOLLOW_KINDS, 'reaction', 'comment', 'message',
+  ...FOLLOW_KINDS, 'reaction', 'comment', 'message', 'group_message',
 ]
 
 // The kinds a mute silences. A mute hides someone's stories and silences
 // their message pushes; it is not a block, so the conversation still works
 // and nothing else changes (discovery blueprint section 1).
-const MUTE_SILENCED_KINDS: Kind[] = [...CONNECT_KINDS, 'message']
+const MUTE_SILENCED_KINDS: Kind[] = [...CONNECT_KINDS, 'message', 'group_message']
 
 // Every kind that proves itself with a community_activity row rather than a
 // conversation (security review 2026-09-06, finding 4). `message` is excluded:
@@ -194,7 +207,9 @@ function ukLocalDayKey(at: Date = new Date()): string {
 // British English, calm voice, no clipped commands, no em dash (CLAUDE.md
 // section 3). The handle is the only identity in a Community push: never a
 // first name, never a display name pulled from anywhere else.
-function pushCopy(kind: Kind, handle: string, reactionPostKind: string | null = null): { title: string; body: string } {
+function pushCopy(
+  kind: Kind, handle: string, reactionPostKind: string | null = null, groupName: string | null = null,
+): { title: string; body: string } {
   switch (kind) {
     case 'follow':
       return { title: 'Community', body: `@${handle} followed you` }
@@ -225,6 +240,10 @@ function pushCopy(kind: Kind, handle: string, reactionPostKind: string | null = 
       // NEVER the content. A locked screen must not leak a conversation
       // (blueprint section 2, SD-31).
       return { title: 'Community', body: `New message from @${handle}` }
+    case 'group_message':
+      // Stage 3 (3b): NEVER the content and never a handle; the group name
+      // is the only thing named.
+      return { title: 'Community', body: `New messages in ${groupName ?? 'your group'}` }
     case 'group_request':
       return { title: 'Community', body: `@${handle} asked to join your group` }
     case 'group_accepted':
@@ -239,8 +258,109 @@ function pushCopy(kind: Kind, handle: string, reactionPostKind: string | null = 
 }
 
 function categoryFor(kind: Kind): 'community_follow' | 'community_activity' | 'community_message' {
-  if (kind === 'message') return 'community_message'
+  if (kind === 'message' || kind === 'group_message') return 'community_message'
   return (FOLLOW_KINDS as string[]).includes(kind) ? 'community_follow' : 'community_activity'
+}
+
+// Stage 3 (3b): fan a group message out to the members the server resolves.
+// Every check the single-recipient flow applies is applied per recipient;
+// any doubt (a failed read, an open ED flag) is in-app only for THAT
+// recipient and never stops the others.
+// deno-lint-ignore no-explicit-any
+async function fanOutGroupMessage(admin: any, supabaseUrl: string, serviceRoleKey: string, actorId: string, messageId: string): Promise<Response> {
+  const { data: resolved, error: resErr } = await admin.rpc('community_group_message_recipients', {
+    _message_id: messageId,
+  })
+  if (resErr || !resolved) {
+    return jsonResponse({ ok: false, error: 'not_verified' }, 403)
+  }
+  const info = resolved as {
+    group_id?: string; group_name?: string; author_id?: string
+    created_at?: string; recipients?: string[]
+  }
+  const createdMs = info.created_at ? Date.parse(info.created_at) : NaN
+  if (info.author_id !== actorId || !info.group_id
+      || !Number.isFinite(createdMs) || createdMs < Date.now() - 10 * 60 * 1000) {
+    return jsonResponse({ ok: false, error: 'not_verified' }, 403)
+  }
+  const groupId = info.group_id
+  const groupName = info.group_name ?? null
+  const recipients = (info.recipients ?? []).filter((r) => UUID_RE.test(r) && r !== actorId).slice(0, 200)
+  let pushed = 0
+
+  for (const targetUserId of recipients) {
+    try {
+      const { data: pref, error: prefErr } = await admin
+        .from('notification_preferences').select('enabled')
+        .eq('user_id', targetUserId).eq('category', 'community_message').maybeSingle()
+      if (prefErr || (pref && (pref as { enabled?: boolean }).enabled === false)) continue
+
+      const { data: quiet } = await admin
+        .from('notification_preferences').select('quiet_start, quiet_end, tz')
+        .eq('user_id', targetUserId).eq('category', 'quiet_hours').maybeSingle()
+      const q = quiet as { quiet_start?: number | null; quiet_end?: number | null; tz?: string | null } | null
+      if (q?.quiet_start != null && q?.quiet_end != null && q?.tz) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: q.tz, hour: '2-digit', minute: '2-digit', hour12: false,
+          }).formatToParts(new Date())
+          const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 'NaN')
+          const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 'NaN')
+          if (Number.isFinite(hour) && Number.isFinite(minute)) {
+            const nowMin = hour * 60 + minute
+            const inWindow = q.quiet_start <= q.quiet_end
+              ? nowMin >= q.quiet_start && nowMin < q.quiet_end
+              : nowMin >= q.quiet_start || nowMin < q.quiet_end
+            if (inWindow) continue
+          }
+        } catch (e) {
+          console.error('[community-notify] quiet-hours projection failed', e)
+        }
+      }
+
+      // The ED flag: fail CLOSED, in-app only.
+      const { data: openFlag, error: flagErr } = await admin
+        .from('ed_pattern_flags').select('id')
+        .eq('user_id', targetUserId).is('cleared_at', null).is('deleted_at', null)
+        .limit(1).maybeSingle()
+      if (flagErr || openFlag) continue
+
+      // One push per group per recipient per fifteen minutes while unread.
+      const { data: mrow, error: mErr } = await admin
+        .from('community_group_members').select('last_read_at, last_push_at')
+        .eq('group_id', groupId).eq('user_id', targetUserId).eq('state', 'member').maybeSingle()
+      if (mErr || !mrow) continue
+      const m = mrow as { last_read_at: string | null; last_push_at: string | null }
+      if (m.last_push_at) {
+        const pushedMs = Date.parse(m.last_push_at)
+        const readMs = m.last_read_at ? Date.parse(m.last_read_at) : 0
+        const withinWindow = Number.isFinite(pushedMs) && Date.now() - pushedMs < MESSAGE_PUSH_COLLAPSE_MS
+        const stillUnread = !Number.isFinite(readMs) || readMs < pushedMs
+        if (withinWindow && stillUnread) continue
+      }
+
+      const copy = pushCopy('group_message', '', null, groupName)
+      await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceRoleKey}` },
+        body: JSON.stringify({
+          user_id: targetUserId,
+          title: copy.title,
+          body: copy.body,
+          data: { type: 'community_message', ref_id: groupId, kind: 'group_message', group_id: groupId },
+        }),
+      })
+      pushed += 1
+      const { error: stampErr } = await admin
+        .from('community_group_members')
+        .update({ last_push_at: new Date().toISOString() })
+        .eq('group_id', groupId).eq('user_id', targetUserId)
+      if (stampErr) console.error('[community-notify] group push stamp failed', stampErr)
+    } catch (e) {
+      console.error('[community-notify] group fan-out failed for one recipient', e)
+    }
+  }
+  return jsonResponse({ ok: true, delivered: pushed > 0 ? 'push' : 'in_app', pushed }, 200)
 }
 
 serve(async (req: Request) => {
@@ -274,7 +394,8 @@ serve(async (req: Request) => {
   if (!ALL_KINDS.includes(kind)) {
     return jsonResponse({ ok: false, error: 'valid kind is required' }, 400)
   }
-  if (!UUID_RE.test(targetUserId)) {
+  // A group message names no single recipient: the server resolves the list.
+  if (kind !== 'group_message' && !UUID_RE.test(targetUserId)) {
     return jsonResponse({ ok: false, error: 'valid target_user_id is required' }, 400)
   }
   // The connection kinds are proved by the connection row itself, so they
@@ -303,6 +424,10 @@ serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+
+  if (kind === 'group_message') {
+    return await fanOutGroupMessage(admin, supabaseUrl, serviceRoleKey, actorId, refId)
+  }
 
   const sinceMs = Date.now() - 10 * 60 * 1000
   const sinceIso = new Date(sinceMs).toISOString()
