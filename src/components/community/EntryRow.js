@@ -24,7 +24,14 @@
  *   disabled    dimmed to `textMuted`, a no-op press, the accessibility state
  *               `disabled` (a row that is not available yet)
  *   accessibilityLabel  overrides the composed "title. subtitle"
+ *   trailingActions  true when `trailing` holds a button (round 3R, SF2). It is
+ *               detected for any trailing element that is not plain `Text`;
+ *               pass it to force or to switch it off. The row is then NOT one
+ *               accessible element: its text is a labelled group and each inner
+ *               control carries its own label, so VoiceOver and TalkBack can
+ *               reach "Accept", "Decline", "Change" and the like.
  */
+import { Children, isValidElement } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from '../PressableCard';
@@ -38,11 +45,20 @@ const ROW_TWO_LINES = 64;
 const ROW_BIG = 88;
 const NOOP = () => {};
 
+/** True for a trailing element that is more than a line of text. */
+export function hasInteractiveTrailing(trailing) {
+  if (trailing === undefined || trailing === null || trailing === false) return false;
+  return Children.toArray(trailing).some((c) => isValidElement(c) && c.type !== Text);
+}
+
 export default function EntryRow({
-  icon, leading, title, subtitle, trailing, onPress, onPressWithLayout, big = false, destructive = false, disabled = false, accessibilityLabel,
+  icon, leading, title, subtitle, trailing, onPress, onPressWithLayout, big = false, destructive = false, disabled = false, accessibilityLabel, trailingActions,
 }) {
   const t = useTheme();
   const size = big ? MARK_BIG : MARK;
+  const actions = trailingActions ?? hasInteractiveTrailing(trailing);
+  const label = accessibilityLabel || [title, subtitle].filter(Boolean).join('. ');
+  const pressable = !disabled && !!(onPress || onPressWithLayout);
   const ink = disabled ? t.colors.textMuted : (destructive ? t.colors.error : t.colors.textPrimary);
   return (
     <PressableCard
@@ -51,7 +67,8 @@ export default function EntryRow({
       disabled={disabled || (!onPress && !onPressWithLayout)}
       accessibilityRole="button"
       accessibilityState={disabled ? { disabled: true } : undefined}
-      accessibilityLabel={accessibilityLabel || [title, subtitle].filter(Boolean).join('. ')}
+      accessibilityLabel={label}
+      accessible={actions ? false : undefined}
       style={[
         styles.row,
         {
@@ -61,16 +78,23 @@ export default function EntryRow({
       ]}
     >
       <View style={styles.inner}>
-        {leading || (icon ? (
-          <View style={[styles.mark, { width: size, height: size, backgroundColor: t.colors.surface2 }]}>
-            <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={ink} />
+        <View
+          style={styles.group}
+          accessible={actions ? true : undefined}
+          accessibilityRole={actions ? (pressable ? 'button' : 'text') : undefined}
+          accessibilityLabel={actions ? label : undefined}
+        >
+          {leading || (icon ? (
+            <View style={[styles.mark, { width: size, height: size, backgroundColor: t.colors.surface2 }]}>
+              <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={ink} />
+            </View>
+          ) : null)}
+          <View style={styles.text}>
+            <Text style={[big ? t.type.title : t.type.body, { color: ink }]}>{title}</Text>
+            {subtitle ? (
+              <Text style={[t.type.bodySm, { color: disabled ? t.colors.textMuted : t.colors.textSecondary }]}>{subtitle}</Text>
+            ) : null}
           </View>
-        ) : null)}
-        <View style={styles.text}>
-          <Text style={[big ? t.type.title : t.type.body, { color: ink }]}>{title}</Text>
-          {subtitle ? (
-            <Text style={[t.type.bodySm, { color: disabled ? t.colors.textMuted : t.colors.textSecondary }]}>{subtitle}</Text>
-          ) : null}
         </View>
         {trailing === undefined ? (
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -83,6 +107,7 @@ export default function EntryRow({
 const styles = StyleSheet.create({
   row: { paddingHorizontal: spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, justifyContent: 'center' },
   inner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  group: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1 },
   mark: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });

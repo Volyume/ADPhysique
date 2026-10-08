@@ -17,7 +17,7 @@
  * Props:
  *   visible      controlled, like every sheet in the app
  *   onClose      close without reporting
- *   targetKind   'profile' | 'post' | 'comment' | 'message' | 'group'
+ *   targetKind   'profile' | 'post' | 'comment' | 'message' | 'group' | 'group_message'
  *   targetId     the row being reported
  *   onReported   called after the report is filed
  */

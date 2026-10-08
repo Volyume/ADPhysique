@@ -11,15 +11,20 @@
  * the DM thread is. `markGroupRead` runs on open and whenever a newer message
  * arrives, so the unread count on the Groups row clears.
  *
- * Long-press (and the visible "..."): the author, or a group admin, gets the
- * house delete confirm; anyone else reports. Report files against the author's
- * profile, because the server's report does not resolve a group message id yet.
+ * Long-press (and the visible "..."): the author gets the house delete confirm;
+ * anyone else reports the message (kind `group_message`); an admin on another
+ * member's message chooses Delete or Report.
+ *
+ * Round 3R: the poll and the post-send refresh MERGE the newest page into the
+ * list by id and keep the cursor (older pages the person scrolled to stay);
+ * older pages load behind an in-flight guard and are de-duplicated by id;
+ * the poll and `markGroupRead` run only while the app is in the foreground.
  *
  * Route params: { id: groupId, name? }.
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, AppState } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,6 +45,7 @@ import {
   GROUP_MESSAGE_MAX, GROUP_CHAT_PAGE_SIZE,
 } from '../lib/community';
 import { restrictionLine } from '../lib/community/restriction';
+import { mergeNewestPage, appendOlderPage } from '../lib/community/groupChatState';
 
 /** Re-read cadence while the chat is in front (the DM thread's own). */
 export const GROUP_CHAT_POLL_MS = 20000;
@@ -88,8 +94,12 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
   const [errorCode, setErrorCode] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
   const newestRef = useRef(null);
+  const cursorRef = useRef(null);
+  const olderBusyRef = useRef(false);
+  const activeRef = useRef(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
 
   const clearUnread = useCallback((rows) => {
+    if (!activeRef.current) return; // F9: never mark unseen messages as read
     const newest = rows[0]?.id ?? null;
     if (newest === newestRef.current) return;
     newestRef.current = newest;
@@ -108,6 +118,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
       setIsAdmin(group?.myRole === 'admin');
       setMessages(page.messages);
       setCursor(page.cursor);
+      cursorRef.current = page.cursor;
       setErrorCode(null);
       clearUnread(page.messages);
     } catch (e) {
@@ -120,10 +131,15 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
   /** The quiet re-read: no spinner, and what is on screen stays if it fails. */
   const poll = useCallback(async () => {
     if (!groupId) return;
+    if (!activeRef.current) return;
     try {
       const page = await loadGroupMessages(groupId, { limit: GROUP_CHAT_PAGE_SIZE });
-      setMessages(page.messages);
-      setCursor(page.cursor);
+      setMessages((prev) => {
+        const merged = mergeNewestPage(prev, cursorRef.current, page);
+        cursorRef.current = merged.cursor;
+        setCursor(merged.cursor);
+        return merged.messages;
+      });
       clearUnread(page.messages);
     } catch (_e) { /* best effort */ }
   }, [groupId, clearUnread]);
@@ -131,16 +147,24 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
   useFocusEffect(useCallback(() => {
     load();
     const timer = setInterval(() => { poll(); }, GROUP_CHAT_POLL_MS);
-    return () => clearInterval(timer);
+    const sub = AppState.addEventListener('change', (next) => {
+      activeRef.current = next === 'active';
+      if (next === 'active') poll(); // catches up, and marks read now it is seen
+    });
+    return () => { clearInterval(timer); sub?.remove?.(); };
   }, [load, poll]));
 
   const loadOlder = useCallback(async () => {
-    if (!cursor || !groupId) return;
+    if (!cursor || !groupId || olderBusyRef.current) return;
+    olderBusyRef.current = true; // F2: one page request in flight at a time
     try {
       const page = await loadGroupMessages(groupId, { cursor, limit: GROUP_CHAT_PAGE_SIZE });
-      setMessages((prev) => [...prev, ...page.messages]);
+      setMessages((prev) => appendOlderPage(prev, page.messages));
+      cursorRef.current = page.cursor;
       setCursor(page.cursor);
-    } catch (_e) { setCursor(null); }
+    } catch (_e) { setCursor(null); cursorRef.current = null; } finally {
+      olderBusyRef.current = false;
+    }
   }, [cursor, groupId]);
 
   async function handleSend(body) {
@@ -179,10 +203,17 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
 
   function onMessageOptions(message) {
     haptics.selection();
-    if (message.mine || isAdmin) {
+    const report = () => setReportTarget({ targetKind: 'group_message', targetId: message.id });
+    if (message.mine) {
       confirmDelete(message);
-    } else if (message.author?.user_id) {
-      setReportTarget({ targetKind: 'profile', targetId: message.author.user_id });
+    } else if (isAdmin) {
+      appAlert('This message', 'You can remove it for everyone, or report it to the moderators.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Report', onPress: report },
+        { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(message) },
+      ]);
+    } else {
+      report();
     }
   }
 

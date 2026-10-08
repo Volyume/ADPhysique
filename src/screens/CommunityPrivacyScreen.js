@@ -103,15 +103,17 @@ export default function CommunityPrivacyScreen({ navigation }) {
     return () => { alive = false; };
   }, [uid]);
 
-  // The switch's state is mirrored on this device (the server's `me` does not
-  // carry it); a card that does carry it wins.
+  // The server's `me` carries the switch (migrate_191 round 3R, S2); it wins
+  // when present. The device mirror is only the fallback for an older server
+  // payload (`me.show_training_now`, or `me.profile.show_training_now`).
+  const serverShowTraining = me?.show_training_now ?? profile?.show_training_now ?? null;
   useEffect(() => {
-    if (profile?.show_training_now != null) { setShowTraining(!!profile.show_training_now); return undefined; }
+    if (serverShowTraining != null) { setShowTraining(!!serverShowTraining); return undefined; }
     if (!uid) return undefined;
     let alive = true;
     readShowTrainingNow(uid).then((v) => { if (alive) setShowTraining(v); }).catch(() => {});
     return () => { alive = false; };
-  }, [uid, profile?.show_training_now]);
+  }, [uid, serverShowTraining]);
 
   async function changeShowTraining(next) {
     const previous = showTraining;

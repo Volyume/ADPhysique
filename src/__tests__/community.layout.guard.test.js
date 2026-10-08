@@ -80,6 +80,35 @@ describe('one gutter, paid once by the page', () => {
   });
 });
 
+describe('every converted screen: the scroll container pays no gutter and a Band is drawn (round 3R, SF5)', () => {
+  /** The style names a scroll container is given, from `style=` or `contentContainerStyle=`. */
+  function scrollStyleNames(src) {
+    const names = [];
+    const tags = src.match(/<(?:Animated\.)?(?:ScrollView|FlatList|FlashList|SectionList|KeyboardAwareScrollView|KeyboardAvoidingView)\b[^>]*>/g) || [];
+    for (const tag of tags) {
+      if (/\bhorizontal\b/.test(tag)) continue; // a chip strip is not the page scroller
+      for (const m of tag.matchAll(/(?:contentContainerStyle|style)=\{(?:\[)?\s*styles\.(\w+)/g)) names.push(m[1]);
+    }
+    return [...new Set(names)];
+  }
+
+  test.each(BANDED)('%s', (name) => {
+    const src = code(read(`src/screens/${name}`));
+    const named = scrollStyleNames(src);
+    for (const key of named) {
+      const block = new RegExp(`\\b${key}: \\{[^}]*\\}`).exec(src);
+      if (!block) continue;
+      expect({ name, key, gutter: /padding(Horizontal|Left|Right)\b/.test(block[0]) })
+        .toEqual({ name, key, gutter: false });
+    }
+    // A message thread is bubbles and a composer, with no rows to band; it is
+    // the one converted screen that draws no Band (reported to the lead).
+    if (name !== 'CommunityConversationScreen.js') {
+      expect({ name, band: /<Band[\s>]/.test(src) }).toEqual({ name, band: true });
+    }
+  });
+});
+
 describe('the Hub band sections (D221 ruling 7)', () => {
   test('bands pay the gutter once and the Hub scroll container pays none', () => {
     const band = code(read('src/components/community/Band.js'));

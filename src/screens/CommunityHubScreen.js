@@ -957,7 +957,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           (null) and, as a second check, while the consistency gate (calm
           mode or an open ED flag) withholds; `consistencyGated` fails closed. */}
       {joined ? (
-        <PresenceBand trainingNow={summary?.trainingNow ?? null} gated={consistencyGated} gapAfter />
+        <PresenceBand trainingNow={summary?.trainingNow ?? null} trainedToday={summary?.trainingNow?.trainedToday ?? null} gated={consistencyGated} gapAfter />
       ) : null}
       <Band>
         {joined ? (
@@ -1172,6 +1172,9 @@ export default function CommunityHubScreen({ navigation, route }) {
                   people={Array.isArray(g.sample) ? g.sample : []}
                   unread={unreadById[g.id] ?? 0}
                   onPress={() => navigation.navigate('CommunityGroup', { id: g.id })}
+                  onPressWithLayout={(rect) => navigation.navigate('CommunityGroup', {
+                    id: g.id, __heroOrigin: rect || undefined,
+                  })}
                 />
               ))
             ) : (

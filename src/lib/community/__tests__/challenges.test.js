@@ -105,3 +105,14 @@ test('loadChallengeBoard answers null when the server withheld it', async () => 
   expect(await loadChallengeBoard('c1')).toBeNull();
   await expect(loadChallengeBoard(null)).rejects.toMatchObject({ code: 'invalid_input' });
 });
+
+test('loadActiveChallengeIds reads the member RPC and keeps only ids, groups and the window (round 3R, S1)', async () => {
+  const { loadActiveChallengeIds } = require('../challenges');
+  callCommunity.mockResolvedValueOnce({ challenges: [
+    { id: 'c1', group_id: 'g1', starts_on: '2026-10-01', ends_on: '2026-10-20', secret: 'x' }, { group_id: 'g2' },
+  ] });
+  expect(await loadActiveChallengeIds()).toEqual([
+    { id: 'c1', groupId: 'g1', startsOn: '2026-10-01', endsOn: '2026-10-20' },
+  ]);
+  expect(callCommunity).toHaveBeenCalledWith('community_group_active_challenges', {});
+});

@@ -35,7 +35,7 @@ export const MODERATION_ACTIONS = Object.freeze([
 // dead story kind is retired in `posts.js`/`validation.js`). The SQL
 // CHECK constraint keeps the value for old rows -- this list only
 // narrows what the client will ever SEND, never what the server accepts.
-export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'message', 'group']);
+export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'message', 'group', 'group_message']);
 
 /**
  * File a report.

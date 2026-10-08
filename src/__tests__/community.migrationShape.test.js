@@ -468,7 +468,8 @@ describe('migrate_191 Stage 3 keeps the house shape', () => {
   test('every RPC is revoked from PUBLIC and anon and granted to authenticated only (one service-role-only exception)', () => {
     const rpcs = (C191.match(/CREATE OR REPLACE FUNCTION public\.(community_[a-z_0-9]+)\(/g) ?? [])
       .map((l) => l.match(/public\.(community_[a-z_0-9]+)/)[1]);
-    expect(rpcs).toHaveLength(15);
+    // 15 from lane 3S plus round 3R: community_group_active_challenges, community_get_me, community_report.
+    expect(rpcs).toHaveLength(18);
     for (const name of rpcs.filter((n) => n !== 'community_group_message_recipients')) {
       expect(C191).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^)]*\\) FROM PUBLIC, anon;`));
       expect(C191).toMatch(new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^)]*\\) TO authenticated;`));
@@ -543,7 +544,9 @@ describe('migrate_191 Stage 3 keeps the house shape', () => {
     const hub191 = collapse(blockOf(S191, 'community_hub_summary'))
       .replace(' v_training jsonb; -- migrate_191 (3a)', '')
       .replace(' v_training := public._community_training_now(v_uid, NULL);', '')
-      .replace(", 'training_now', v_training);", ');');
+      .replace(", 'training_now', v_training);", ');')
+      // Round 3R (S6): the one added block, the trained_today count.
+      .replace(" IF v_training IS NOT NULL THEN v_training := v_training || jsonb_build_object( 'trained_today', public.community_friends_trained_today(v_today)); END IF;", '');
     expect(hub191).toBe(collapse(blockOf(l180.join('\n'), 'community_hub_summary')));
 
     const gg191 = blockOf(S191, 'community_group_get');
@@ -557,6 +560,26 @@ describe('migrate_191 Stage 3 keeps the house shape', () => {
     }
     expect(lm191).toContain("'unread', CASE WHEN m.state = 'member'");
     expect(lm191).toContain("AND g.status = 'active'");
+  });
+
+  test('round 3R: S1 to S6 are in the file, each with its stated rule', () => {
+    // S1: active_challenge on group_get and list_mine, and the member RPC.
+    expect(C191).toMatch(/'active_challenge', CASE WHEN m\.state = 'member'/);
+    expect(C191).toMatch(/v_out := v_out \|\| jsonb_build_object\('active_challenge'/);
+    expect(C191).toMatch(/c\.status = 'active'\s+AND c\.ends_on >= /);
+    expect(C191).toMatch(/REVOKE ALL ON FUNCTION public\.community_group_active_challenges\(\) FROM PUBLIC, anon;/);
+    // S2: get_me carries the switch.
+    expect(C191).toMatch(/'show_training_now',\s+v_p\.show_training_now/);
+    // S3: the new report kind, with member-only resolution, and the widened CHECK.
+    expect(C191).toMatch(/_target_kind = 'group_message' THEN[\s\S]*?_community_group_role\(gm\.group_id, v_uid\) IS NOT NULL/);
+    expect(C191).toMatch(/CHECK \(target_kind IN \([^)]*'group_message'\)\)/);
+    // S4: the board rows omit a muted or blocked person; the total does not.
+    expect(C191).toMatch(/SELECT sum\(sessions\) FROM counted/);
+    expect(C191).toMatch(/mu\.muter_id = v_uid AND mu\.muted_id = c0\.user_id/);
+    // S5: chat reads need a current member (state = 'member' via the role helper).
+    expect(C191).toMatch(/_community_group_role\(_group_id, v_uid\) IS NULL THEN\s+RAISE EXCEPTION USING message = 'not_allowed'/);
+    // S6: trained_today reuses the friends-trained-today predicate.
+    expect(C191).toMatch(/public\.community_friends_trained_today\(v_today\)/);
   });
 
   test('no column or string anywhere in the code names a body figure, food figure or load', () => {

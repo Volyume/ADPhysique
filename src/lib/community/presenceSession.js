@@ -11,9 +11,9 @@
  * switching the setting off mid-session, or a gate arriving, never leaves a
  * stale marker behind.
  *
- * The server's `me` payload does not carry `show_training_now`, so the
- * switch is mirrored on this device (written by the privacy panel's setter,
- * `saveShowTrainingNow`). Every call is best effort and never throws:
+ * The server's `me` payload carries `show_training_now` (round 3R); the
+ * device mirror (written by the privacy panel's setter, `saveShowTrainingNow`)
+ * is what the logger reads at session start and the fallback for the panel. Every call is best effort and never throws:
  * presence is a convenience, never part of logging a session.
  */
 

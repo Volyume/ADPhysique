@@ -28,6 +28,23 @@ export const GROUP_ACCESS_ORDER = Object.freeze(['open', 'invite']);
 // across both, CommunityHubScreen.js and CommunityGroupCreateScreen.js).
 export const GROUP_PURPOSE_LINE = 'Make a group with friends to see each other\'s training weeks.';
 
+/**
+ * The server's `active_challenge` ({id, name, starts_on, ends_on,
+ * target_sessions}) or null: the group's active, unexpired challenge, for a
+ * member only (migrate_191 round 3R, S1).
+ */
+export function normaliseActiveChallenge(c) {
+  if (!c?.id) return null;
+  return {
+    id: c.id,
+    name: c.name ?? '',
+    startsOn: c.starts_on ?? null,
+    endsOn: c.ends_on ?? null,
+    targetSessions: Number.isFinite(Number(c.target_sessions)) && c.target_sessions !== null
+      ? Number(c.target_sessions) : null,
+  };
+}
+
 /** One row's card, as `_community_group_card` returns it. */
 function normaliseGroup(g) {
   if (!g?.id) return null;
@@ -210,15 +227,19 @@ export async function declineGroupInvite(groupId) {
 export async function listMyGroups() {
   const data = await callCommunity('community_group_list_mine', {});
   const rows = Array.isArray(data?.groups) ? data.groups : [];
-  return rows.map((row) => ({
+  return rows.map((row) => {
+    const activeChallenge = normaliseActiveChallenge(row.active_challenge);
+    return {
     group: normaliseGroup(row.group),
     role: row.role ?? null,
     state: row.state ?? null,
     unread: Number.isFinite(Number(row.unread)) ? Number(row.unread) : 0,
-    // D221 3c: the group's active challenge id when the server names it
-    // (`active_challenge_id`); null otherwise, and then nothing is logged.
-    activeChallengeId: row.active_challenge_id ?? row.group?.active_challenge_id ?? null,
-  })).filter((row) => !!row.group);
+    // D221 3c: the group's active, unexpired challenge (server `active_challenge`).
+    activeChallenge,
+    activeChallengeId: activeChallenge?.id ?? row.active_challenge_id
+      ?? row.group?.active_challenge_id ?? null,
+    };
+  }).filter((row) => !!row.group);
 }
 
 /**
@@ -235,9 +256,9 @@ export async function getGroup(groupId) {
     myState: data.my_state ?? null,
     // migrate_191 (3a): {count, names} or null when withheld / not a member.
     trainingNow: normaliseTrainingNow(data.training_now),
-    // D221 3c: the active challenge's id when the server names it
-    // (`active_challenge_id`, or an `active_challenge` object); else null.
-    activeChallengeId: data.active_challenge_id ?? data.active_challenge?.id ?? null,
+    // D221 3c: the active, unexpired challenge (members only), else null.
+    activeChallenge: normaliseActiveChallenge(data.active_challenge),
+    activeChallengeId: data.active_challenge?.id ?? data.active_challenge_id ?? null,
   };
 }
 

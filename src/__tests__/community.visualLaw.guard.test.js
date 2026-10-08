@@ -125,8 +125,8 @@ describe('the converted screens follow V1, V2, V8, V10', () => {
 
   test.each(names)('%s rows are inBand', (name) => {
     const src = read(convertedPath(name));
-    const rows = /<(PersonRow|GroupRow|ProfileCard|ActivityRow|ConversationRow|ConnectRequestRow)\b/.test(src);
-    if (rows && name !== 'CommunityPostScreen.js' && name !== 'CommunityProfileScreen.js') expect({ name, inBand: /\binBand\b/.test(src) }).toEqual({ name, inBand: true });
+    // Round 3R (SF5): the bare "inBand appears" check is retired; the layout guard now
+    // asserts, per converted screen, no gutter on the scroll container and a Band drawn.
     // The post and its comments sit in bands of their own (PostRow, CommentRow).
     if (name === 'CommunityPostScreen.js') expect(src).toMatch(/<Band>\s*<CommentRow/);
   });

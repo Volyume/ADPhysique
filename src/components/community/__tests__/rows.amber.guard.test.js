@@ -135,7 +135,7 @@ const AMBER_COUNTS = [
   ['SessionSheet.js', 0],
   ['SkeletonFormBand.js', 0], // a placeholder carries no colour of its own
   ['SkeletonReportRow.js', 0], // a placeholder carries no colour of its own
-  ['SwitchRow.js', 2], // D221 lane 2B: a Switch's track (at half alpha) and thumb colours
+  ['SwitchRow.js', 2], // D221 lane 2B: a Switch's track (at half alpha) and thumb colours; ruled a SELECTED state under V7 (round 3R lead ruling: the on switch), no change
   // A placeholder in the shape of a PersonRow; it borrows the shared
   // Skeleton's own tint and carries no colour, so no amber (2026-09-14).
   ['SkeletonPersonRow.js', 0],
