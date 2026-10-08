@@ -148,7 +148,7 @@ describe('the rendered note: generic line, always visible, positioned near the c
 describe('style: quiet caption + textMuted (swapNote\'s register), never a banner', () => {
   test('sideCarveNote carries no background/border - it is text, not a chip or a banner', () => {
     expect(SRC).toContain(
-      "sideCarveNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxs },",
+      "sideCarveNote: { ...type.caption, color: colors.textMuted, paddingTop: spacing.xs, paddingBottom: spacing.xxs },",
     );
     expect(SRC).toContain('sideCarveNote: { ...t.type.caption, color: t.colors.textMuted },');
     const styleLine = SRC.split('\n').find((l) => l.trim().startsWith('sideCarveNote: { ...type.caption'));

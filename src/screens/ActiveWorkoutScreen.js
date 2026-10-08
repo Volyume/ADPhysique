@@ -4880,7 +4880,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const w = prevWarmupSets[warmIndex];
     return w ? { text: shortSetText(w), stale: false, set: w } : null;
   }
-  const WARMUP_TARGET = { value: '', rule: 'Warm-up' };
   function shortSetText(set) {
     const reps = set.actualReps ?? set.actual_reps ?? set.reps ?? '';
     if (setTableKind === 'reps_only') return `${reps}`;
@@ -4907,15 +4906,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!band) return null;
     return band.min === band.max ? `${band.min}` : `${band.min}-${band.max}`;
   }
-  function targetCellFor(index) {
+  // The coach's progression rule for the set you are on, said once above the
+  // table rather than in a column of its own (D220 addendum 8): "Add 2.5 kg
+  // once you reach 10 reps."
+  function progressionLineFor(index) {
     const p = prescriptions[index] ?? null;
     const band = bandFor(index);
-    const range = rangeText(band);
-    if (setTableKind === 'duration' || setTableKind === 'distance') return { value: '', rule: null };
-    if (setTableKind === 'reps_only') return { value: range ? `${range} reps` : '', rule: null };
-    const value = p?.weight != null && range ? `${p.weight} × ${range}` : (range ? `${range} reps` : '');
-    const rule = p?.weight != null && band && band.min !== band.max ? `+${weightStepKg} at ${band.max}` : null;
-    return { value, rule };
+    if (setTableKind !== 'weight_reps') return null;
+    if (p?.weight == null || !band || band.min === band.max) return null;
+    return `Add ${weightStepKg} ${units} once you reach ${band.max} reps.`;
   }
   const assistedLoad = (exercise?.loadSemantics || 'total') === 'assisted';
   const prTarget = (() => {
@@ -4934,6 +4933,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const atWeight = history.filter((x) => weightOf(x) === w);
     if (atWeight.length === 0) return null;
     return { weight: w, reps: Math.max(...atWeight.map(repsOf)) + 1 };
+  })();
+  // One quiet line above the table (the first-time line's slot): the coach's
+  // rule for this set, then the record threshold at the weight dialled in, so
+  // neither squeezes the row (founder render verdict 2026-10-08, D220
+  // addendum 8). Nothing on a warm-up.
+  const coachLine = (() => {
+    if (isWarmupEntry) return null;
+    const parts = [];
+    const rule = progressionLineFor(workingLogged);
+    if (rule) parts.push(rule);
+    if (prTarget) parts.push(`A record at ${prTarget.weight} ${units} is ${prTarget.reps} ${prTarget.reps === 1 ? 'rep' : 'reps'}.`);
+    return parts.length ? parts.join(' ') : null;
   })();
   // Section 2b: previous sessions for the History segment (today's sets are
   // on the table already) and the records over everything on record for the
@@ -4957,14 +4968,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       })
       : null
   ), [setTableKind, allTimeSets, loggedSets, todayWeight, units, activeWorkout?.id]);
-  const sectionBests = previousHistory?.bests && !assistedLoad
-    ? {
-      lastDateLabel: previousHistory.bests.lastDateLabel,
-      heaviest: recordsHistory?.bests?.heaviest ?? previousHistory.bests.heaviest,
-      atWeight: recordsHistory?.bests?.atWeight ?? previousHistory.bests.atWeight,
-      unit: units,
-    }
-    : null;
   function handleUseHistorySet({ weight, reps }) {
     hapticsVocab.setLogged();
     audit('workout.history.use', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -5007,7 +5010,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       id: s.id ?? `logged-${i}`,
       marker: warm ? 'W' : progressNum,
       last: lc ? { text: lc.text, stale: lc.stale } : null,
-      target: warm ? WARMUP_TARGET : targetCellFor(progressNum - 1),
       wells: {
         weight: values.weight,
         reps: values.reps,
@@ -5032,7 +5034,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     id: 'next',
     marker: isWarmupEntry ? 'W' : workingLogged + 1,
     last: nextLast ? { text: nextLast.text, stale: nextLast.stale } : null,
-    target: isWarmupEntry ? WARMUP_TARGET : targetCellFor(workingLogged),
     wells: {
       weight: currentSet.weight,
       reps: currentSet.reps,
@@ -5041,7 +5042,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       ghost: !!currentSet.isGhost,
     },
     check: 'next',
-    prTarget,
     checkLabel: nextCheckLabel,
     busy: saving,
     inputField: !editingSet ? keypadInputField : null,
@@ -5061,14 +5061,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
     const p = prescriptions[n - 1] ?? null;
     const lc = lastCellFor(n - 1);
+    // A pending row's wells are the coach's numbers as placeholders: the
+    // weight, and the rep range ("6-10") rather than one rep count, so the
+    // target reads in the row with no column of its own (D220 addendum 8).
+    const range = rangeText(bandFor(n - 1));
     setTableRows.push({
       id: `pending-${n}`,
       marker: n,
       last: lc ? { text: lc.text, stale: lc.stale } : null,
-      target: targetCellFor(n - 1),
       wells: {
         weight: (setTableKind === 'weight_reps') ? (p?.weight ?? '') : '',
-        reps: (setTableKind === 'weight_reps' || setTableKind === 'reps_only') ? (p?.repsTarget ?? '') : '',
+        reps: (setTableKind === 'weight_reps' || setTableKind === 'reps_only') ? (range ?? p?.repsTarget ?? '') : '',
         state: 'pending',
       },
       check: 'pending',
@@ -5273,7 +5276,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             state="active"
             groupLabel={null}
             onDetails={handleOpenExerciseDetails}
-            bests={sectionBests}
             onHistory={previousHistory ? openHistorySheet : undefined}
             onRestLength={currentSGI == null ? () => setShowRestLengthFor(currentExerciseIndex) : undefined}
             onAddSet={armExtraSet}
@@ -5575,6 +5577,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
           {firstTimeLine ? (
             <Text style={[styles.sideCarveNote, live.sideCarveNote]}>{firstTimeLine}</Text>
+          ) : null}
+          {coachLine ? (
+            <Text style={[styles.sideCarveNote, live.sideCarveNote]} testID="volyume-coach-line">{coachLine}</Text>
           ) : null}
           </View>
 
@@ -6973,7 +6978,9 @@ const styles = StyleSheet.create({
   // unlike starterBanner/nextTimeBanner, these have no bordered container
   // of their own to inset them.
   omittedSessionNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxs },
-  sideCarveNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxs },
+  // No side padding of its own: every quiet line sits inside the padded
+  // active body (a second gutter indented it past the table's labels).
+  sideCarveNote: { ...type.caption, color: colors.textMuted, paddingTop: spacing.xs, paddingBottom: spacing.xxs },
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,

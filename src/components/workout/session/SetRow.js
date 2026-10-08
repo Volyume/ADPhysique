@@ -2,18 +2,20 @@
  * SetRow
  *
  * One set of the active exercise as a 64 dp row of the set table
- * (12-BUILD-SPEC sections 2, 2a and 3, register D220). Columns, left to right:
- * marker, Last, Target, the joined weight and reps wells, the check. The row
- * is display plus callbacks: every number arrives formatted or raw from the
- * screen, and nothing here validates, logs or stores.
+ * (12-BUILD-SPEC sections 2, 2a and 3, register D220; the row redrawn on the
+ * founder's render verdict, D220 addendum 8). Columns, left to right: marker,
+ * Last, the weight and reps wells as two separate boxes, the check. There is
+ * no Target column: a pending row's wells carry the coach's weight and rep
+ * range as placeholders, and the coach's rule and the record threshold are one
+ * quiet line above the table (the screen's). The row is display plus
+ * callbacks: every number arrives formatted or raw from the screen, and
+ * nothing here validates, logs or stores.
  *
  * Props
  *   marker     'W' (warm-up), 'F' (failure set) or the set number
  *   last       { text, stale } | null. Last session's set at this position as
  *              "72.5 x 8". `stale` marks one carried from an earlier session
  *              (last session had no set here): muted ink and a leading dot
- *   target     { value, rule }: the coach's numbers over the coach's rule or
- *              the record threshold ("+2.5 at 10", "9 reps beats your best")
  *   wells      { weight, reps, state, editingField, ghost }. state is 'logged',
  *              'next', 'pending' (placeholder ink) or 'editing' (amber edge,
  *              and the field named by editingField, 'weight' or 'reps', in amber).
@@ -45,13 +47,9 @@
  *   onLayout   passed to the row's root view (the screen scrolls the row
  *              being typed into above the keypad)
  *   check      'logged' | 'next' | 'pending'
- *   record     true shows the small "PR" tag on the Target cell's second
- *              line, in the rule's slot (a logged set has no rule to show; a
- *              tag beside the value squeezed it, founder verdict 2026-10-08)
- *   prTarget   { weight, reps } | null. The smallest set that would be a record
- *              at this row's weight. When present, the Target cell's second
- *              line is the "PR" tag then the set ("PR 70 x 9", no sentence) and
- *              replaces target.rule; null shows target.rule as before
+ *   record     true marks the row a personal record: a small amber "PR" under
+ *              the set number, out of the entry area (founder verdict
+ *              2026-10-08: nothing but the numbers lives beside the wells)
  *   onPressLast    makes the Last cell a 48 dp button, "Use last session's set"
  *   onPressMarker  (added, section 4 says the marker opens the set type sheet
  *                  but section 3 lists no callback) makes the marker a button
@@ -61,11 +59,12 @@
  *                  next row defaults to "volyume-btn-complete-set", the primary
  *                  control's existing id, unless testIDs.check overrides it
  *
- * Ink (spec section 2): cell values are primary ink on tabular figures; on a
- * pending row they drop to secondary ink at the regular weight. Wells are the
- * page colour inside a hairline, 44 tall, two 48 wide cells; values are
- * semibold, placeholders disabled ink. The check is a 32 dp circle in a 48 dp
- * target: logged is an amber fill, next an amber ring, pending a raised grey.
+ * Ink: the Last fact is secondary ink on tabular figures; the live number in a
+ * well is the one figure at bodyStrong, a placeholder in disabled ink. Each
+ * well is the house field (surface2, 1.5 border, radius md) and only the well
+ * being edited takes the amber edge. The check is a 28 dp mark in a 36 by 48
+ * target: logged is the app's success checkmark-circle, next the one amber
+ * ring on the card, pending a subtle ring.
  */
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -75,22 +74,20 @@ import { alpha, circle, radius, spacing, withAlpha } from '../../../styles/theme
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
-// The grid, sized for the house card (D220 addendum 7: a 360 dp phone's card
-// is 326 dp inside its border, 34 dp less than the full-bleed band the drawing
-// assumed). Marker 24, Last 64, the wells 98, the check 36; no gap between
-// columns (Last and the check centre inside their widths) and 12/8 dp row
-// padding, so the Target column keeps about 84 dp for its value, its rule and
-// the record tag. SetTable lays its column labels on the same widths.
-export const SET_COLUMNS = Object.freeze({ marker: 24, last: 64, wells: 98, check: 36 });
+// The grid, sized for the house card (a 360 dp phone's card is 326 dp inside
+// its border). Marker 24, Last 68 and the check 36 are fixed; the two wells
+// share what is left as equal boxes with an 8 dp gap between every column, so
+// nothing touches (founder render verdict 2026-10-08, D220 addendum 8).
+// SetTable lays its column labels on the same widths.
+export const SET_COLUMNS = Object.freeze({ marker: 24, last: 68, check: 36 });
 
 // Spec section 2 sizes.
 const ROW_MIN_HEIGHT = 64;
 const MARKER_SIZE = 24;
 const WELL_HEIGHT = 44;
-const CHECK_SIZE = 32;
-const TICK_SIZE = 18;
+const CHECK_SIZE = 28;
+const TICK_SIZE = 16;
 const RING_WIDTH = 1.5;
-const PR_TAG_MIN_HEIGHT = 18;
 // Dense numeric cells shrink a little before they would wrap or clip.
 const FIT_SCALE = 0.75;
 // 44 dp wells and a 24 dp marker column are taken to 48 dp by their slop.
@@ -99,7 +96,6 @@ const CHECK_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 12, right: 12 };
 
 const MIDDLE_DOT = '\u00B7';
-const TIMES = '\u00D7';
 const COMPLETE_SET_TEST_ID = 'volyume-btn-complete-set';
 const LONG_PRESS_MS = 300;
 const LONG_PRESS_HINT = 'Hold for more options';
@@ -123,10 +119,6 @@ function defaultCheckLabel(check, marker) {
   if (check === 'next') return `Log ${name}`;
   if (check === 'logged') return `${capitalise(name)} logged`;
   return `${capitalise(name)} not logged yet`;
-}
-
-function repWord(reps) {
-  return Number(reps) === 1 ? 'rep' : 'reps';
 }
 
 function isEmpty(value) {
@@ -198,21 +190,16 @@ function buildLive(t) {
     markerWarmupText: { ...t.type.captionStrong, color: c.primary },
     markerFailure: { backgroundColor: c.errorBg },
     markerFailureText: { ...t.type.captionStrong, color: c.error },
-    // Facts are ink (the app's rule): Last and Target in secondary ink at the
-    // list's small numeric role; the live number in the well is the one
-    // figure at bodyStrong.
-    cell: { ...num('bodySm'), color: c.textSecondary },
+    // Facts are ink (the app's rule): Last in secondary ink at the list's
+    // small numeric role; the live number in the well is the one figure at
+    // bodyStrong.
     cellDim: { ...num('bodySm'), color: c.textSecondary },
     cellStale: { color: c.textMuted },
-    rule: { ...t.type.caption, color: c.textMuted },
-    prTag: { backgroundColor: c.primaryBg },
     prText: { ...t.type.captionStrong, color: c.primary },
-    prTargetText: { ...num('bodySm'), color: c.textPrimary },
-    // The wells are the house field (TextField: surface2 fill, border 1.5
-    // `border`, radius.md); editing takes the field's focus edge.
-    wells: { backgroundColor: c.surface2, borderColor: c.border },
-    wellsEditing: { borderColor: withAlpha(c.primary, alpha.strong) },
-    wellDivider: { borderLeftColor: c.border },
+    // Each well is the house field (TextField: surface2 fill, border 1.5
+    // `border`, radius.md); the one being edited takes the field's focus edge.
+    well: { backgroundColor: c.surface2, borderColor: c.border },
+    wellEditing: { borderColor: withAlpha(c.primary, alpha.strong) },
     wellValue: { ...num('bodyStrong'), color: c.textPrimary },
     wellGhost: { color: c.textSecondary },
     wellPlaceholder: { ...num('bodyStrong'), color: c.textDisabled },
@@ -224,17 +211,22 @@ function buildLive(t) {
   };
 }
 
-function MarkerCell({ marker, onPress, testID, hint, live }) {
+function MarkerCell({ marker, record, onPress, testID, hint, live }) {
   const isWarmup = marker === 'W';
   const isFailure = marker === 'F';
   const badge = (
-    <View style={[styles.marker, isWarmup && live.markerWarmup, isFailure && live.markerFailure]}>
-      <Text
-        style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : live.markerNumber}
-        numberOfLines={1}
-      >
-        {String(marker)}
-      </Text>
+    <View style={styles.markerStack}>
+      <View style={[styles.marker, isWarmup && live.markerWarmup, isFailure && live.markerFailure]}>
+        <Text
+          style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : live.markerNumber}
+          numberOfLines={1}
+        >
+          {String(marker)}
+        </Text>
+      </View>
+      {record ? (
+        <Text style={live.prText} accessible accessibilityLabel="Personal record" numberOfLines={1}>PR</Text>
+      ) : null}
     </View>
   );
   if (!onPress) {
@@ -301,65 +293,15 @@ function LastCell({ last, onPress, testID, live }) {
   );
 }
 
-function PrTag({ live, label }) {
-  return (
-    <View style={[styles.prTag, live.prTag]} accessible={!!label} accessibilityLabel={label}>
-      <Text style={live.prText}>PR</Text>
-    </View>
-  );
-}
-
-function TargetCell({ target, record, prTarget, dim, live }) {
-  const value = target && target.value != null ? String(target.value) : '';
-  const rule = target && target.rule ? String(target.rule) : '';
-  return (
-    <View style={styles.targetCol}>
-      <View style={styles.targetValueRow}>
-        <Text
-          style={[styles.cellText, styles.targetValue, styles.targetText, dim ? live.cellDim : live.cell]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={FIT_SCALE}
-        >
-          {value}
-        </Text>
-      </View>
-      {record ? (
-        <View style={styles.prTargetRow}>
-          <PrTag live={live} label="Personal record" />
-        </View>
-      ) : prTarget ? (
-        <View
-          style={styles.prTargetRow}
-          accessible
-          accessibilityLabel={`A record at ${prTarget.weight} kilograms is ${prTarget.reps} ${repWord(prTarget.reps)}`}
-        >
-          <PrTag live={live} />
-          <Text
-            style={[styles.cellText, styles.targetValue, styles.targetText, live.prTargetText]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={FIT_SCALE}
-          >
-            {`${prTarget.weight} ${TIMES} ${prTarget.reps}`}
-          </Text>
-        </View>
-      ) : rule ? (
-        <Text style={[styles.cellText, styles.targetValue, styles.targetText, live.rule]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={FIT_SCALE}>{rule}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name, divider, live }) {
+function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name, live }) {
   const isEditingThis = wellState === 'editing' && editingField === field;
-  const dividerStyle = [divider && styles.wellDivider, divider && live.wellDivider];
+  const box = [styles.well, live.well, isEditingThis && live.wellEditing];
   const label = `${name} ${word}`;
   if (input) {
     // The well itself is the field: no stepper, no label row. A plain View, not
     // a button, so the field is its own element for a screen reader.
     return (
-      <View style={[styles.wellCell, ...dividerStyle]}>
+      <View style={box}>
         <TextInput
           testID={input.testID}
           style={[live.wellValue, live.wellActive, styles.wellInput]}
@@ -378,7 +320,7 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
   return (
     <TouchableOpacity
       testID={testID}
-      style={[styles.wellCell, ...dividerStyle]}
+      style={box}
       onPress={onPress}
       disabled={!onPress}
       hitSlop={WELL_HIT_SLOP}
@@ -438,11 +380,9 @@ function CheckButton({ check, onPress, testID, label, busy, onMore, live, colors
 export default function SetRow({
   marker,
   last,
-  target,
   wells,
   check = 'pending',
   record = false,
-  prTarget = null,
   onPressLast,
   onPressMarker,
   onPressWell,
@@ -461,8 +401,6 @@ export default function SetRow({
   const ids = testIDs || {};
   const w = wells || {};
   const wellState = w.state || 'pending';
-  // Spec section 2: pending rows read in secondary ink at the regular weight.
-  const dim = wellState === 'pending';
   const name = capitalise(markerName(marker));
 
   const specs = wellsFor(kind, units);
@@ -471,15 +409,15 @@ export default function SetRow({
     <>
       <MarkerCell
         marker={marker}
+        record={record}
         onPress={onPressMarker}
         testID={ids.marker}
         hint={onLongPressRow && !onPressMarker ? LONG_PRESS_HINT : undefined}
         live={live}
       />
       <LastCell last={last} onPress={onPressLast} testID={ids.last} live={live} />
-      <TargetCell target={target} record={record} prTarget={prTarget} dim={dim} live={live} />
-      <View style={[styles.wells, live.wells, wellState === 'editing' && live.wellsEditing]}>
-        {specs.map((spec, i) => {
+      <View style={styles.wells}>
+        {specs.map((spec) => {
           const value = w[spec.field];
           return (
             <WellCell
@@ -495,7 +433,6 @@ export default function SetRow({
               onPress={onPressWell ? () => onPressWell(spec.field) : undefined}
               testID={spec.field === 'weight' ? ids.weight : ids.reps}
               name={name}
-              divider={i > 0}
               live={live}
             />
           );
@@ -543,12 +480,14 @@ const styles = StyleSheet.create({
     minHeight: ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
     paddingLeft: spacing.md,
     paddingRight: spacing.sm,
     borderBottomWidth: 1,
   },
-  markerCol: { width: SET_COLUMNS.marker },
+  markerCol: { width: SET_COLUMNS.marker, alignItems: 'center' },
   markerPress: { minHeight: touchTarget.minimum, justifyContent: 'center' },
+  markerStack: { alignItems: 'center' },
   marker: {
     width: MARKER_SIZE,
     height: MARKER_SIZE,
@@ -558,31 +497,20 @@ const styles = StyleSheet.create({
   },
   lastCol: { width: SET_COLUMNS.last, alignItems: 'center', justifyContent: 'center' },
   lastPress: { minHeight: touchTarget.minimum },
-  targetCol: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', paddingLeft: spacing.xs, paddingRight: spacing.xs },
-  targetValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
-  targetValue: { flexShrink: 1 },
-  targetText: { textAlign: 'left' },
-  prTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
   cellText: { textAlign: 'center' },
-  // The house pill (Chip geometry) for the one amber mark a row can carry.
-  prTag: {
-    minHeight: PR_TAG_MIN_HEIGHT,
-    paddingHorizontal: spacing.xs2,
+  // The wells share the row's remaining width as equal boxes with the row gap
+  // between them.
+  wells: { flex: 1, minWidth: 0, flexDirection: 'row', gap: spacing.sm },
+  well: {
+    flex: 1,
+    minWidth: 0,
+    height: WELL_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.full,
-  },
-  wells: {
-    width: SET_COLUMNS.wells,
-    height: WELL_HEIGHT,
-    flexDirection: 'row',
-    overflow: 'hidden',
     borderWidth: 1.5,
     borderRadius: radius.md,
   },
-  wellCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wellInput: { alignSelf: 'stretch', minWidth: 0, padding: 0, textAlign: 'center' },
-  wellDivider: { borderLeftWidth: 1 },
   checkCol: {
     width: SET_COLUMNS.check,
     height: touchTarget.minimum,
