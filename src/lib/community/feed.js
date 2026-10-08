@@ -26,14 +26,35 @@ import { notifyCommunityEvent } from './notify';
 export const HUB_CACHE_PREFIX = '@volyume_community_hub_';
 export const DEFAULT_PAGE_SIZE = 20;
 
-export function hubCacheKey(uid) {
-  return `${HUB_CACHE_PREFIX}${uid ?? 'unknown'}`;
+export const FEED_SCOPES = ['following', 'gym', 'groups', 'everyone'];
+export const FEED_SORTS = ['newest', 'respected'];
+
+/** The legacy `segment` vocabulary: 'discover' IS scope 'everyone'. */
+function normaliseScope(scope) {
+  if (scope === 'discover') return 'everyone';
+  return FEED_SCOPES.includes(scope) ? scope : 'following';
 }
 
-async function readCachedHub(uid) {
+function normaliseSort(sort) {
+  return FEED_SORTS.includes(sort) ? sort : 'newest';
+}
+
+/**
+ * The default key (following, newest) stays the pre-190 key, so a cache
+ * written by an older build is still read; any other scope or sort is
+ * suffixed so two views never overwrite each other.
+ */
+export function hubCacheKey(uid, scope = 'following', sort = 'newest') {
+  const base = `${HUB_CACHE_PREFIX}${uid ?? 'unknown'}`;
+  const sc = normaliseScope(scope);
+  const so = normaliseSort(sort);
+  return sc === 'following' && so === 'newest' ? base : `${base}:${sc}:${so}`;
+}
+
+async function readCachedHub(uid, scope, sort) {
   if (!uid) return null;
   try {
-    const raw = await AsyncStorage.getItem(hubCacheKey(uid));
+    const raw = await AsyncStorage.getItem(hubCacheKey(uid, scope, sort));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : null;
@@ -42,17 +63,22 @@ async function readCachedHub(uid) {
   }
 }
 
-async function writeCachedHub(uid, payload) {
+async function writeCachedHub(uid, payload, scope, sort) {
   if (!uid) return;
   try {
-    await AsyncStorage.setItem(hubCacheKey(uid), JSON.stringify(payload));
+    await AsyncStorage.setItem(hubCacheKey(uid, scope, sort), JSON.stringify(payload));
   } catch (_e) { /* best effort: the cache is a convenience, never truth */ }
 }
 
+/** Clears every scope and sort view for the user. */
 export async function clearCachedHub(uid) {
   if (!uid) return;
   try {
-    await AsyncStorage.removeItem(hubCacheKey(uid));
+    const keys = [];
+    for (const sc of FEED_SCOPES) {
+      for (const so of FEED_SORTS) keys.push(hubCacheKey(uid, sc, so));
+    }
+    await Promise.all(keys.map((k) => AsyncStorage.removeItem(k)));
   } catch (_e) { /* best effort */ }
 }
 
@@ -76,82 +102,126 @@ function listPage(data, key) {
 }
 
 /**
- * Load one half of the hub.
+ * Load one scope of the hub feed.
  *
- * Discover is readable without a Community profile (SD-04), so the
- * section that is ABOUT the reader's own profile — the dimensions they
- * share — is only asked for once there is one: it raises `no_profile`
- * otherwise. The reads are settled independently too, so one section
- * failing leaves the rest of Discover standing rather than emptying the
- * screen.
+ * The first argument was `segment` ('following' | 'discover'); it is now
+ * the feed scope (spec 2.2, lane 1B). `'discover'` is still accepted and
+ * means scope `'everyone'`, so existing callers keep working unchanged.
+ *
+ * Discover (`everyone`, newest) is readable without a Community profile
+ * (SD-04) and still reads `community_discover_posts`, which exists before
+ * migrate_190 is applied; paging it pages the training stories. The other
+ * scopes and the `respected` sort read `community_feed` with `_scope` and
+ * `_sort`.
  *
  * `people` (once `community_suggested_people`, spec 1.3): the hub never
- * rendered this section, so the read is no longer made here at all. The
- * RPC itself, and `suggestedPeople` below, stay exactly as they were for
- * compatibility (a future surface may still want them); `hub.people`
- * simply stays the empty array `empty` already answers.
+ * rendered this section, so the read is no longer made here at all;
+ * `hub.people` stays the empty array.
  *
- * @param {'following'|'discover'} segment
+ * @param {'following'|'gym'|'groups'|'everyone'|'discover'} scope
  * @param {{cursor?: string|null, limit?: number, userId?: string,
- *   joined?: boolean}} [opts]
- * @returns {Promise<{segment: string, posts: Array,
- *   people: Array, dimensions: Array, cursor: (string|null),
- *   fromCache: boolean, error: (string|null)}>} never throws.
+ *   sort?: 'newest'|'respected'}} [opts]
+ * @returns {Promise<{segment: string, scope: string, sort: string,
+ *   posts: Array, people: Array, dimensions: Array, cursor: (string|null),
+ *   fromCache: boolean, error: (string|null), fallback?: string}>}
+ *   never throws. `segment` echoes the argument as given.
  */
-export async function loadHub(segment = 'following', {
-  cursor = null, limit = DEFAULT_PAGE_SIZE, userId = null,
+export async function loadHub(scope = 'following', {
+  cursor = null, limit = DEFAULT_PAGE_SIZE, userId = null, sort = 'newest',
 } = {}) {
   const uid = userId ?? currentUserId();
+  const segment = scope;
+  const sc = normaliseScope(scope);
+  const so = normaliseSort(sort);
   const empty = {
-    segment, posts: [], people: [], dimensions: [], cursor: null,
+    segment, scope: sc, sort: so, posts: [], people: [], dimensions: [], cursor: null,
     fromCache: false, error: null,
   };
   try {
-    if (segment === 'discover') {
-      // Paging Discover pages the training stories: they are the list. The
-      // sections above them are a header, read once per open.
+    if (sc === 'everyone' && so === 'newest') {
+      // Paging Discover pages the training stories: they are the list.
       if (cursor) {
         const page = await loadDiscoverPosts({ cursor, limit });
         return { ...empty, posts: page.posts, cursor: page.cursor };
       }
-      const settled = await Promise.allSettled([
-        loadDiscoverPosts({ limit }),
-        // F18 fix (fresh-eyes review): this used to read `myDimensions()`
-        // when `joined` was true, but the one real caller
-        // (`CommunityHubScreen.js`) always ties `segment: 'discover'` to
-        // `joined: false` (they come from the same ternary) -- so that
-        // branch needed `loadHub('discover', { joined: true })`, a
-        // combination nothing ever requested. `community_hub_summary`
-        // is the Hub's own cohort read now; Discover is posts only.
-        Promise.resolve({ dimensions: [] }),
-      ]);
-      const [posts, dimensions] = settled;
-      // Discover IS the stories. If the read did not answer there is
-      // nothing to show, so fall through to the cache.
-      if (posts.status === 'rejected') throw posts.reason;
+      const posts = await loadDiscoverPosts({ limit });
       const payload = {
         ...empty,
-        posts: posts.value?.posts ?? [],
-        dimensions: dimensions.value?.dimensions ?? [],
-        cursor: posts.value?.cursor ?? null,
+        posts: posts?.posts ?? [],
+        dimensions: [],
+        cursor: posts?.cursor ?? null,
       };
-      await writeCachedHub(uid, payload);
+      await writeCachedHub(uid, payload, sc, so);
       return payload;
     }
-    const page = await loadFeed({ cursor, limit });
+    const page = await loadFeed({ cursor, limit, scope: sc, sort: so });
     const payload = { ...empty, posts: page.posts, cursor: page.cursor };
-    if (!cursor) await writeCachedHub(uid, payload);
+    if (page.fallback) payload.fallback = page.fallback;
+    if (!cursor) await writeCachedHub(uid, payload, sc, so);
     return payload;
   } catch (e) {
-    const cached = cursor ? null : await readCachedHub(uid);
+    const cached = cursor ? null : await readCachedHub(uid, sc, so);
     if (cached && cached.segment === segment) return { ...cached, fromCache: true, error: e?.code ?? 'unavailable' };
     return { ...empty, error: e?.code ?? 'unavailable' };
   }
 }
 
-/** @returns {Promise<{posts: Array, cursor: (string|null)}>} */
-export async function loadFeed({ cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
-  return listPage(await callCommunity('community_feed', { _cursor: cursor, _limit: limit }), 'posts');
+/**
+ * True when an RPC error says the function or one of its named arguments
+ * is unknown, i.e. migrate_190 is not applied yet. Matched (the transport
+ * keeps the message but not the raw code, so both are checked):
+ *  - PostgREST `PGRST202` ("Could not find the function public.x(...) in
+ *    the schema cache", the usual answer for an unknown argument name);
+ *  - PostgreSQL `42883` (undefined_function), `42725` (ambiguous_function)
+ *    and `PGRST203` (PostgREST: more than one candidate function);
+ *  - the message text "could not find the function" / "function ... does
+ *    not exist" / "no function matches".
+ */
+export function isFeedSignatureError(e) {
+  const code = String(e?.code ?? e?.cause?.code ?? '');
+  if (['PGRST202', 'PGRST203', '42883', '42725'].includes(code)) return true;
+  const text = [e?.message, e?.details, e?.hint, e?.cause?.message]
+    .filter(Boolean).join(' ').toLowerCase();
+  return text.includes('pgrst202') || text.includes('pgrst203')
+    || text.includes('could not find the function')
+    || text.includes('no function matches')
+    || (text.includes('function') && text.includes('does not exist'));
+}
+
+/**
+ * The feed, by scope and sort (migrate_190). When the server does not know
+ * the new arguments yet (the migration is unapplied) it is asked once more
+ * in the old shape: gym and groups read `following`, respected reads
+ * `newest`, and the result carries `fallback: 'scope'` or `'sort'` (scope
+ * wins when both changed). Any other error is thrown as it came.
+ *
+ * @param {{cursor?: (string|null), limit?: number,
+ *   scope?: string, sort?: string}} [opts]
+ * @returns {Promise<{posts: Array, cursor: (string|null),
+ *   fallback?: ('scope'|'sort')}>}
+ */
+export async function loadFeed({
+  cursor = null, limit = DEFAULT_PAGE_SIZE, scope = 'following', sort = 'newest',
+} = {}) {
+  const sc = normaliseScope(scope);
+  const so = normaliseSort(sort);
+  try {
+    return listPage(await callCommunity('community_feed', {
+      _cursor: cursor, _limit: limit, _scope: sc, _sort: so,
+    }), 'posts');
+  } catch (e) {
+    if (!isFeedSignatureError(e)) throw e;
+    // A cursor minted for another sort is not ours to reuse.
+    const oldScope = sc === 'gym' || sc === 'groups' ? 'following' : sc;
+    const fallback = oldScope !== sc ? 'scope' : (so !== 'newest' ? 'sort' : null);
+    const oldCursor = so === 'newest' ? cursor : null;
+    const page = oldScope === 'everyone'
+      ? await loadDiscoverPosts({ cursor: oldCursor, limit })
+      : listPage(await callCommunity('community_feed', {
+        _cursor: oldCursor, _limit: limit,
+      }), 'posts');
+    return { ...page, ...(fallback ? { fallback } : {}) };
+  }
 }
 
 /** @returns {Promise<{posts: Array, cursor: (string|null)}>} */
