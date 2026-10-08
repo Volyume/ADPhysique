@@ -121,6 +121,34 @@ describe('the Hub band sections (D221 ruling 7)', () => {
   });
 });
 
+describe('the founder device verdict of 2026-10-08 ("boxes touching each other, navigation not fitting"; D221 addendum 2)', () => {
+  test('the Hub segment bar is the house SegmentedControl inside the gutter with a foot before the first band', () => {
+    const hub = code(read('src/screens/CommunityHubScreen.js'));
+    expect(hub).toMatch(/<SegmentedControl\s/);
+    expect(hub).not.toMatch(/<Chip\s/);
+    const bar = /segmentBar: \{[^}]*\}/.exec(hub);
+    expect(bar).not.toBeNull();
+    expect(bar[0]).toContain('paddingHorizontal: spacing.lg');
+    expect(bar[0]).toContain('paddingBottom: spacing.md');
+  });
+
+  test('the feed sort is one 48 dp glyph and the scope chips scroll under a fade, never cut against a word', () => {
+    const hub = code(read('src/screens/CommunityHubScreen.js'));
+    expect(hub).toMatch(/name="swap-vertical-outline"/);
+    expect(hub).toMatch(/<LinearGradient[\s\S]*?style=\{styles\.filterFade\}/);
+    const sortStyle = /sortControl: \{[^}]*\}/.exec(hub);
+    expect(sortStyle[0]).toContain('width: touchTarget.minimum');
+    expect(hub).not.toMatch(/\{sortLabel\}<\/Text>/);
+  });
+
+  test('the You figures inside a band are spaced tiles with two-line label room', () => {
+    const strip = code(read('src/components/community/ProgressStrip.js'));
+    expect(strip).toMatch(/cellsRowBand: \{[^}]*gap: spacing\.sm[^}]*paddingHorizontal: spacing\.lg/);
+    expect(strip).toMatch(/labelBand: \{ minHeight: type\.caption\.lineHeight \* 2 \}/);
+    expect(strip).toMatch(/numberOfLines=\{2\}>\{label\}/);
+  });
+});
+
 describe('the house divider: a borderSubtle hairline spanning the row', () => {
   test.each(ROW_FILES.slice(0, 2))('%s draws borderSubtle, never the bright border', (rel) => {
     const src = code(read(rel));
