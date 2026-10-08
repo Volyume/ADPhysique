@@ -39,6 +39,8 @@ function doneFeedback() {
   } catch (_) { /* haptics are best-effort */ }
 }
 
+const WELL_HEIGHT = 44;
+
 const TextField = forwardRef(function TextField({
   label,
   value,
@@ -69,6 +71,10 @@ const TextField = forwardRef(function TextField({
   labelNumberOfLines,
   fieldStyle,
   inputStyle,
+  // D221 V9 (Community visual law): the well. `background` fill, a 1 dp
+  // `borderSubtle` edge, `radius.md`, 44 dp tall, and a 1 dp `primary` ring
+  // while focused. Additive: absent, the field is unchanged for every caller.
+  well = false,
   editable = true,
   multiline = false,
   onFocus,
@@ -143,8 +149,9 @@ const TextField = forwardRef(function TextField({
             backgroundColor: surfaceColor,
             borderColor: t.colors.border,
           },
+          well && { minHeight: WELL_HEIGHT, backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle, borderWidth: 1, borderRadius: radius.md },
           multiline && styles.fieldMultiline,
-          focused && { borderColor: withAlpha(t.colors.primary, alpha.strong) },
+          focused && (well ? { borderColor: t.colors.primary } : { borderColor: withAlpha(t.colors.primary, alpha.strong) }),
           error ? { borderColor: t.colors.error } : null,
           disabled && styles.disabled,
           fieldStyle,

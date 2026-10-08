@@ -593,3 +593,46 @@ describe('the discipline picker', () => {
     expect(chip(tree, 'Hybrid').props.selected).toBe(false);
   });
 });
+
+describe('D221 lane 2B: the form is bands of wells', () => {
+  async function mountWith(params) {
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), popToTop: jest.fn() };
+    let tree;
+    await act(async () => {
+      tree = create(<CommunityEditProfileScreen navigation={navigation} route={{ params }} />);
+    });
+    await flush();
+    return tree;
+  }
+
+  test('route.params.openGymPicker opens the gym picker on arrival (Stage 1 review)', async () => {
+    const closed = await mountWith({});
+    expect(closed.root.findAll((n) => n.props?.accessibilityLabel === 'Gym, town or postcode')).toHaveLength(0);
+    const open = await mountWith({ openGymPicker: true });
+    expect(open.root.findAll((n) => n.props?.accessibilityLabel === 'Gym, town or postcode').length).toBeGreaterThan(0);
+  });
+
+  test('the sections carry header roles and the fields are wells', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+    const headers = tree.root
+      .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+      .map((n) => n.props.children);
+    expect(headers).toEqual(expect.arrayContaining(['Avatar', 'About you', 'Goal', 'Trains at', 'Who can follow you']));
+    const wells = tree.root.findAll((n) => n.props?.well === true && n.props?.label);
+    expect(wells.length).toBeGreaterThanOrEqual(3);
+  });
+
+  test('while the profile loads it previews the bands, not square rows', async () => {
+    useCommunityMe.mockReturnValue({ me: null, loading: true, error: null, refresh: jest.fn() });
+    const { tree } = await mount(CommunityEditProfileScreen);
+    expect(tree.root.findAll((n) => n.props?.height === 44).length).toBeGreaterThan(0);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Save profile')).toHaveLength(0);
+  });
+
+  test('the avatar picker targets are 48 dp', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+    const radios = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'radio' && n.props?.accessibilityState && 'checked' in n.props.accessibilityState && n.props.accessibilityLabel);
+    const avatar = radios.find((n) => [].concat(n.props.style).flat().some((st) => st && st.minHeight === 48));
+    expect(avatar).toBeTruthy();
+  });
+});

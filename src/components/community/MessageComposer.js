@@ -11,6 +11,8 @@
  * on screen from the first letter reads as a limit being policed; at
  * 900 of 1,000 it is simply useful.
  *
+ * D221 V9 (lane 2B): the field is a well on a `surface` band.
+ *
  * Props:
  *   placeholder  from `placeholderFor(ref)` in the client library
  *   onSend       (body: string) => Promise<boolean>, true clears the field
@@ -52,11 +54,12 @@ export default function MessageComposer({
 
   return (
     <View style={[styles.composer, {
-      borderTopColor: t.colors.borderSubtle, backgroundColor: t.colors.background,
+      borderTopColor: t.colors.borderSubtle, backgroundColor: t.colors.surface,
     }]}
     >
       <View style={styles.field}>
         <ComposerInput
+          well
           value={body}
           onChangeText={(v) => setBody(v.slice(0, MESSAGE_MAX))}
           placeholder={placeholder}
@@ -89,8 +92,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    padding: spacing.lg,
-    borderTopWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   field: { flex: 1, gap: spacing.xxs },
   count: { ...type.caption, textAlign: 'right' },

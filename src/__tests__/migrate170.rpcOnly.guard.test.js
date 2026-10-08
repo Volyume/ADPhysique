@@ -1496,10 +1496,15 @@ describe('PART B review: the daily digest collapses even under a burst', () => {
     const claim = NOTIFY_FN.indexOf(
       ".insert({ recipient: targetUserId, day: notifyDailyDay, count: 1 })",
     );
-    const send = NOTIFY_FN.indexOf('functions/v1/send-push');
+    // D221 Stage 3: the group_message fan-out (one send per recipient,
+    // collapsed per group, not per day) sits earlier in the file and has
+    // no daily claim, so the send under review is the one that FOLLOWS
+    // the claim: the reaction digest's.
+    const send = NOTIFY_FN.indexOf('functions/v1/send-push', claim);
     expect(claim).toBeGreaterThan(-1);
     expect(send).toBeGreaterThan(-1);
     expect(claim).toBeLessThan(send);
+
   });
 
   test('a duplicate key is the collapse signal, not an error to log and push through', () => {

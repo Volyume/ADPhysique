@@ -36,7 +36,7 @@ const { notifyCommunityEvent } = require('../notify');
 const {
   createGroup, updateGroup, closeGroup, leaveGroup, joinGroup,
   approveGroupRequest, removeGroupMember, promoteGroupMember,
-  inviteToGroup, createGroupInviteLink, acceptGroupInvite,
+  inviteToGroup, createGroupInviteLink, acceptGroupInvite, declineGroupInvite,
   listMyGroups, getGroup, listGroupMembers, searchGroups, loadGroupFeed,
   togetherLine,
 } = require('../groups');
@@ -240,7 +240,9 @@ test('listMyGroups maps {group, role, state} rows and drops one with no group', 
   const out = await listMyGroups();
   expect(callCommunity).toHaveBeenCalledWith('community_group_list_mine', {});
   expect(out).toHaveLength(1);
-  expect(out[0]).toEqual({ group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member' });
+  expect(out[0]).toEqual({
+    group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member', unread: 0,
+  });
 });
 
 test('listMyGroups answers an empty array when the server sends nothing', async () => {
@@ -379,4 +381,24 @@ describe('togetherLine', () => {
       togetherSessionsWeek: 1, togetherPlannedWeek: 0, sharingMembers: 1, memberCount: 2,
     })).toBe('Together: 1 session this week · 1 of 2 sharing');
   });
+});
+
+test('listMyGroups carries the chat unread count from the server (migrate_191)', async () => {
+  callCommunity.mockResolvedValueOnce({
+    groups: [{ group: CARD, role: 'member', state: 'member', unread: 3 }],
+  });
+  expect((await listMyGroups())[0].unread).toBe(3);
+});
+
+test('getGroup reduces training_now and reads a withheld one as null (migrate_191)', async () => {
+  callCommunity.mockResolvedValueOnce({ ...CARD, my_role: 'member', my_state: 'member', training_now: { count: 2, names: ['A', 'B'] } });
+  expect((await getGroup('g1')).trainingNow).toEqual({ count: 2, names: ['A', 'B'] });
+  callCommunity.mockResolvedValueOnce({ ...CARD, my_role: 'member', my_state: 'member', training_now: null });
+  expect((await getGroup('g1')).trainingNow).toBeNull();
+});
+
+test('declineGroupInvite calls community_group_decline_invite with _group_id', async () => {
+  callCommunity.mockResolvedValueOnce({ declined: true });
+  expect(await declineGroupInvite('g1')).toEqual({ declined: true });
+  expect(callCommunity).toHaveBeenCalledWith('community_group_decline_invite', { _group_id: 'g1' });
 });

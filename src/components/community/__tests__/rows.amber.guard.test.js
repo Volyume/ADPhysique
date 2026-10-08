@@ -91,11 +91,6 @@ const AMBER_COUNTS = [
   ['CohortRow.js', 0],
   // Same anatomy as CohortRow, same answer.
   ['GroupRow.js', 0],
-  // The "is this today" ring dot's live colour (once) plus its static
-  // frozen-style baseline (once), the PR mark's live colour (once), and
-  // the given-Respect heart's live colour when `myReaction` is true
-  // (once): four total.
-  ['ActivityItemRow.js', 4],
   // F15: "Respect everyone who trained today" -- quiet by design, never
   // a committing action (its own header comment says so): no amber.
   ['RespectAllRow.js', 0],
@@ -103,7 +98,7 @@ const AMBER_COUNTS = [
   // ─── Every other file in the folder (F15 extension: a coverage net
   // against silent drift, not a rule-7 compliance ruling on each --
   // borderline ones named in the lane report) ───────────────────────────
-  ['ActivityRow.js', 1], // the unread dot fill (legacy feed row, pre-dates PostCard's replacement by ActivityItemRow)
+  ['ActivityRow.js', 1], // the unread dot fill (the activity inbox row)
   ['CommentRow.js', 1], // D221 V9: the comment well's focused ring (1 dp primary)
   ['Band.js', 0],
   ['EntryRow.js', 0],
@@ -128,7 +123,7 @@ const AMBER_COUNTS = [
   ['PlacePicker.js', 0],
   ['PostCard.js', 0],
   ['PostRow.js', 4], // the ring dot fill, the PR mark's fill and ink, the given-Respect heart
-  ['PrivacyReceipt.js', 1], // the shield-checkmark icon colour
+  ['PrivacyReceipt.js', 0], // D221 V7 (lane 2B): the shield glyph is textPrimary, not a permanent amber glyph
   ['ProfileCard.js', 0],
   ['ProfileMenuSheet.js', 0],
   ['ProgressStrip.js', 1], // the tallest of the eight weekly-history bars
@@ -136,6 +131,9 @@ const AMBER_COUNTS = [
   ['SectionHeader.js', 0], // D221 V2: no amber in a section header
   ['SkeletonPostRow.js', 0], // a placeholder carries no colour of its own
   ['SessionSheet.js', 0],
+  ['SkeletonFormBand.js', 0], // a placeholder carries no colour of its own
+  ['SkeletonReportRow.js', 0], // a placeholder carries no colour of its own
+  ['SwitchRow.js', 2], // D221 lane 2B: a Switch's track (at half alpha) and thumb colours
   // A placeholder in the shape of a PersonRow; it borrows the shared
   // Skeleton's own tint and carries no colour, so no amber (2026-09-14).
   ['SkeletonPersonRow.js', 0],

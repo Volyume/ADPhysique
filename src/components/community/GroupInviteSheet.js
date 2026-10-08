@@ -17,14 +17,14 @@
  */
 
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Share } from 'react-native';
+import { View, StyleSheet, Share } from 'react-native';
 import BottomSheet from '../BottomSheet';
 import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import TextField from '../TextField';
+import SectionHeader from './SectionHeader';
 import { useToast } from '../Toast';
-import { spacing, type, colors } from '../../styles/theme';
-import useTheme from '../../hooks/useTheme';
+import { spacing } from '../../styles/theme';
 import { inviteToGroup, createGroupInviteLink, groupInviteUrl } from '../../lib/community';
 import { RESTRICTION_REFUSALS } from '../../lib/community/restriction';
 
@@ -40,7 +40,6 @@ const REFUSALS = {
 };
 
 export default function GroupInviteSheet({ visible, onClose, groupId, groupName }) {
-  const t = useTheme();
   const toast = useToast();
   const [handle, setHandle] = useState('');
   const [busy, setBusy] = useState(false);
@@ -87,13 +86,12 @@ export default function GroupInviteSheet({ visible, onClose, groupId, groupName 
         <ModalHeader title="Invite" onClose={onClose} />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
-          By username
-        </Text>
+        <SectionHeader flush title="By username" />
         <TextField
           value={handle}
           onChangeText={setHandle}
           placeholder="username"
+          well
           autoCapitalize="none"
           autoCorrect={false}
           accessibilityLabel="Username to invite"
@@ -108,9 +106,7 @@ export default function GroupInviteSheet({ visible, onClose, groupId, groupName 
           onPress={sendInvite}
           accessibilityLabel="Send invite"
         />
-        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
-          Or share a link
-        </Text>
+        <SectionHeader flush title="Or share a link" />
         <Button
           variant="secondary"
           size="sm"
@@ -128,5 +124,4 @@ export default function GroupInviteSheet({ visible, onClose, groupId, groupName 
 const styles = StyleSheet.create({
   headerBleed: { marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
   body: { gap: spacing.sm, paddingBottom: spacing.md },
-  label: { ...type.captionStrong, color: colors.textSecondary, marginTop: spacing.xs },
 });

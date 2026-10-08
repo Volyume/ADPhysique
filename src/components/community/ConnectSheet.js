@@ -36,7 +36,7 @@ import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import Chip from '../Chip';
 import TextField from '../TextField';
-import SectionLabel from '../SectionLabel';
+import SectionHeader from './SectionHeader';
 import { useToast } from '../Toast';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -131,7 +131,7 @@ export default function ConnectSheet({
         </Text>
 
         <View style={styles.field}>
-          <SectionLabel>Why</SectionLabel>
+          <SectionHeader flush title="Why" />
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
             {`Up to ${MAX_CONNECT_REASONS}. Optional.`}
           </Text>
@@ -150,6 +150,7 @@ export default function ConnectSheet({
         <View style={styles.field}>
           <TextField
             label="Note"
+            well
             value={note}
             onChangeText={(v) => setNote(v.slice(0, CONNECT_NOTE_MAX))}
             multiline

@@ -20,6 +20,9 @@
  *   trailing    a node in place of the chevron; `null` for nothing
  *   onPress, onPressWithLayout  the open handlers (the latter is D188)
  *   big         the large entry row
+ *   destructive the title and icon in `error` (Leave Community, Delete)
+ *   disabled    dimmed to `textMuted`, a no-op press, the accessibility state
+ *               `disabled` (a row that is not available yet)
  *   accessibilityLabel  overrides the composed "title. subtitle"
  */
 import { View, Text, StyleSheet } from 'react-native';
@@ -33,18 +36,21 @@ const MARK_BIG = 44;
 const ROW_ONE_LINE = 56;
 const ROW_TWO_LINES = 64;
 const ROW_BIG = 88;
+const NOOP = () => {};
 
 export default function EntryRow({
-  icon, leading, title, subtitle, trailing, onPress, onPressWithLayout, big = false, accessibilityLabel,
+  icon, leading, title, subtitle, trailing, onPress, onPressWithLayout, big = false, destructive = false, disabled = false, accessibilityLabel,
 }) {
   const t = useTheme();
   const size = big ? MARK_BIG : MARK;
+  const ink = disabled ? t.colors.textMuted : (destructive ? t.colors.error : t.colors.textPrimary);
   return (
     <PressableCard
-      onPress={onPress}
-      onPressWithLayout={onPressWithLayout}
-      disabled={!onPress && !onPressWithLayout}
+      onPress={disabled ? NOOP : onPress}
+      onPressWithLayout={disabled ? undefined : onPressWithLayout}
+      disabled={disabled || (!onPress && !onPressWithLayout)}
       accessibilityRole="button"
+      accessibilityState={disabled ? { disabled: true } : undefined}
       accessibilityLabel={accessibilityLabel || [title, subtitle].filter(Boolean).join('. ')}
       style={[
         styles.row,
@@ -57,13 +63,13 @@ export default function EntryRow({
       <View style={styles.inner}>
         {leading || (icon ? (
           <View style={[styles.mark, { width: size, height: size, backgroundColor: t.colors.surface2 }]}>
-            <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={t.colors.textPrimary} />
+            <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={ink} />
           </View>
         ) : null)}
         <View style={styles.text}>
-          <Text style={[big ? t.type.title : t.type.body, { color: t.colors.textPrimary }]}>{title}</Text>
+          <Text style={[big ? t.type.title : t.type.body, { color: ink }]}>{title}</Text>
           {subtitle ? (
-            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>{subtitle}</Text>
+            <Text style={[t.type.bodySm, { color: disabled ? t.colors.textMuted : t.colors.textSecondary }]}>{subtitle}</Text>
           ) : null}
         </View>
         {trailing === undefined ? (

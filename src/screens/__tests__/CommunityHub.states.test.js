@@ -376,6 +376,11 @@ describe('Feed: a member', () => {
     const row = sheet.props.rows.find((r) => r.label === 'Most respected');
     expect(row).toBeTruthy();
     expect(row.sub).toBe('Not available yet');
+    // D221 lane 2B: the row carries the menu's `disabled` option, so it is
+    // dimmed, does nothing and reports the disabled state.
+    expect(row.disabled).toBe(true);
+    const live = sheet.props.rows.find((r) => r.label === 'Newest');
+    expect(live.disabled).toBeFalsy();
   });
 
   test('a scope the server cannot serve is a disabled chip with the hint "Not available yet"', async () => {

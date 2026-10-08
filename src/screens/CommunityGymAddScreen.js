@@ -24,12 +24,13 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, type } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import { submit, isFullPostcode, normalisePostcode } from '../lib/gyms';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
@@ -106,100 +107,129 @@ export default function CommunityGymAddScreen({ navigation, route }) {
       <BackHeader title="Add your gym" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {duplicate ? (
-          <Card style={styles.block}>
-            <Text style={[styles.blockTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-              {`Did you mean ${duplicate.displayName}?`}
-            </Text>
-            <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              This looks like a gym already in the directory.
-            </Text>
-            <View style={styles.cardActions}>
-              <Button
-                variant="primary"
-                size="sm"
-                fullWidth={false}
-                title="Use this gym"
-                onPress={() => selectVenue(duplicate.id)}
-                accessibilityLabel={`Use ${duplicate.displayName}`}
-              />
-              <Button
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                title="Add it anyway"
-                onPress={() => setDuplicate(null)}
-                accessibilityLabel="Add a new gym anyway"
-              />
-            </View>
-          </Card>
+          <Band>
+            <SectionHeader title="Already in the directory" />
+            <BandBody>
+              <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]}>
+                {`Did you mean ${duplicate.displayName}?`}
+              </Text>
+              <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                This looks like a gym already in the directory.
+              </Text>
+              <View style={styles.cardActions}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Use this gym"
+                  onPress={() => selectVenue(duplicate.id)}
+                  accessibilityLabel={`Use ${duplicate.displayName}`}
+                />
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Add it anyway"
+                  onPress={() => setDuplicate(null)}
+                  accessibilityLabel="Add a new gym anyway"
+                />
+              </View>
+            </BandBody>
+          </Band>
         ) : (
           <>
-            <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              Only you can see it as soon as you add it. It shows for everyone once a second person
-              confirms it, or a moderator verifies it.
-            </Text>
-
-            <TextField
-              label="Gym name"
-              size="sm"
-              value={name}
-              onChangeText={(v) => setName(v.slice(0, NAME_MAX))}
-              accessibilityLabel="Gym name"
-            />
-            <TextField
-              label="Address line"
-              size="sm"
-              value={addressLine}
-              onChangeText={(v) => setAddressLine(v.slice(0, ADDRESS_MAX))}
-              accessibilityLabel="Address line"
-            />
-            <TextField
-              label="Town"
-              size="sm"
-              value={town}
-              onChangeText={(v) => setTown(v.slice(0, TOWN_MAX))}
-              accessibilityLabel="Town"
-            />
-            <View style={styles.field}>
-              <TextField
-                label="Postcode"
-                size="sm"
-                value={postcode}
-                onChangeText={(v) => setPostcode(v.toUpperCase())}
-                autoCapitalize="characters"
-                accessibilityLabel="Postcode"
-              />
-              {postcode.trim().length > 0 && !postcodeValid ? (
-                <Text style={[styles.error, { ...t.type.caption, color: t.colors.error }]}>
-                  That does not look like a UK postcode.
+            <Band>
+              <BandBody style={styles.introBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  Only you can see it as soon as you add it. It shows for everyone once a second person
+                  confirms it, or a moderator verifies it.
                 </Text>
-              ) : null}
-            </View>
-            <TextField
-              label="Website (optional)"
-              size="sm"
-              value={website}
-              onChangeText={(v) => setWebsite(v.slice(0, WEBSITE_MAX))}
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Website"
-            />
-            <TextField
-              label="Gym company (optional)"
-              size="sm"
-              value={operator}
-              onChangeText={(v) => setOperator(v.slice(0, OPERATOR_MAX))}
-              accessibilityLabel="Gym company"
-            />
+              </BandBody>
+            </Band>
+            <BandGap />
 
-            <Button
-              variant="primary"
-              title="Add gym"
-              disabled={!canSubmit}
-              loading={busy}
-              onPress={send}
-              accessibilityLabel="Add this gym"
-            />
+            <Band>
+              <SectionHeader title="The gym" />
+              <BandBody>
+                <TextField
+                  label="Gym name"
+                  size="sm"
+                  well
+                  value={name}
+                  onChangeText={(v) => setName(v.slice(0, NAME_MAX))}
+                  accessibilityLabel="Gym name"
+                />
+                <TextField
+                  label="Address line"
+                  size="sm"
+                  well
+                  value={addressLine}
+                  onChangeText={(v) => setAddressLine(v.slice(0, ADDRESS_MAX))}
+                  accessibilityLabel="Address line"
+                />
+                <TextField
+                  label="Town"
+                  size="sm"
+                  well
+                  value={town}
+                  onChangeText={(v) => setTown(v.slice(0, TOWN_MAX))}
+                  accessibilityLabel="Town"
+                />
+                <TextField
+                  label="Postcode"
+                  size="sm"
+                  well
+                  value={postcode}
+                  onChangeText={(v) => setPostcode(v.toUpperCase())}
+                  autoCapitalize="characters"
+                  accessibilityLabel="Postcode"
+                />
+                {postcode.trim().length > 0 && !postcodeValid ? (
+                  <Text style={[t.type.caption, { color: t.colors.error }]}>
+                    That does not look like a UK postcode.
+                  </Text>
+                ) : null}
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <SectionHeader title="Optional" />
+              <BandBody>
+                <TextField
+                  label="Website (optional)"
+                  size="sm"
+                  well
+                  value={website}
+                  onChangeText={(v) => setWebsite(v.slice(0, WEBSITE_MAX))}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  accessibilityLabel="Website"
+                />
+                <TextField
+                  label="Gym company (optional)"
+                  size="sm"
+                  well
+                  value={operator}
+                  onChangeText={(v) => setOperator(v.slice(0, OPERATOR_MAX))}
+                  accessibilityLabel="Gym company"
+                />
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <BandBody style={styles.submitBody}>
+                <Button
+                  variant="primary"
+                  title="Add gym"
+                  disabled={!canSubmit}
+                  loading={busy}
+                  onPress={send}
+                  accessibilityLabel="Add this gym"
+                />
+              </BandBody>
+            </Band>
           </>
         )}
       </ScrollView>
@@ -208,12 +238,9 @@ export default function CommunityGymAddScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  block: { gap: spacing.sm },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
+  introBody: { paddingTop: spacing.md },
+  submitBody: { paddingTop: spacing.md },
   cardActions: { flexDirection: 'row', gap: spacing.sm },
-  blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  hint: { ...type.bodySm, color: colors.textSecondary },
-  field: { gap: spacing.xs },
-  error: { ...type.caption, color: colors.error },
 });

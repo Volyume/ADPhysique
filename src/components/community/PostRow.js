@@ -26,6 +26,9 @@
  *   onRespectBlocked called instead of onRespect (a reader without a profile)
  *   onRespected      (next: boolean) => void after the call landed
  *   onOpenPerson     (author) opens the author's profile
+ *   detail           the post's own page (D221 lane 2B, additive): the word
+ *                    "Respect" beside the count, the whole note untruncated
+ *                    (no "more"), the comment glyph with its count
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -129,7 +132,7 @@ function isToday(createdAt) {
 }
 
 export default function PostRow({
-  item, onPress, onPressWithLayout, onRespect, onRespectBlocked, onRespected, onOpenPerson,
+  item, onPress, onPressWithLayout, onRespect, onRespectBlocked, onRespected, onOpenPerson, detail = false,
 }) {
   const t = useTheme();
   const toast = useToast();
@@ -236,11 +239,11 @@ export default function PostRow({
           <Text style={[styles.stats, t.type.num('label'), { color: t.colors.textSecondary }]}>{stats}</Text>
         ) : null}
         {showNote ? (
-          <Text style={[styles.note, t.type.bodySm, { color: t.colors.textPrimary }]} numberOfLines={NOTE_LINES}>
+          <Text style={[styles.note, t.type.bodySm, { color: t.colors.textPrimary }]} numberOfLines={detail ? undefined : NOTE_LINES}>
             {noteRest}
           </Text>
         ) : null}
-        {showNote && noteLong ? (
+        {showNote && noteLong && !detail ? (
           <Text style={[t.type.label, { color: t.colors.textSecondary }]}>more</Text>
         ) : null}
 
@@ -257,6 +260,7 @@ export default function PostRow({
               <Ionicons name={mine ? 'heart' : 'heart-outline'} size={iconSize.md} color={mine ? t.colors.primary : t.colors.textMuted} />
             </Reanimated.View>
             <Text style={[t.type.num('label'), { color: t.colors.textMuted }]}>{respects}</Text>
+            {detail ? <Text style={[t.type.label, { color: t.colors.textMuted }]}>Respect</Text> : null}
           </Pressable>
           <Pressable
             onPress={onPress}

@@ -161,9 +161,17 @@ describe('client RPC arguments match the migration signatures', () => {
   // declaration is the one the argument check sees.
   const MIGRATION_190 = path.join(ROOT, 'supabase', 'migrate_190_community_feed_scopes.sql');
   const sql190 = fs.existsSync(MIGRATION_190) ? fs.readFileSync(MIGRATION_190, 'utf8') : null;
-  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170, sql173, sql190].every((s2) => s2 === null)
+  // migrate_191 (Stage 3, lane 3S): presence, group chat, the invite decline and
+  // challenges. Read after 190 so its declarations (including the re-issued
+  // community_hub_summary / community_group_get / community_group_list_mine,
+  // signatures unchanged) are the ones the argument check sees. The RPC names
+  // it adds are checked against the client wrappers presence.js, groupChat.js,
+  // challenges.js and groups.js (declineGroupInvite).
+  const MIGRATION_191 = path.join(ROOT, 'supabase', 'migrate_191_community_stage3_presence_groups_challenges.sql');
+  const sql191 = fs.existsSync(MIGRATION_191) ? fs.readFileSync(MIGRATION_191, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170, sql173, sql190, sql191].every((s2) => s2 === null)
     ? null
-    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}\n${sql173 ?? ''}\n${sql190 ?? ''}`;
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}\n${sql173 ?? ''}\n${sql190 ?? ''}\n${sql191 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here
@@ -222,6 +230,7 @@ describe('client RPC arguments match the migration signatures', () => {
   const NAMES_163 = sql163 ? namesIn(sql163) : new Set();
   const NAMES_170 = sql170 ? namesIn(sql170) : new Set();
   const NAMES_173 = sql173 ? namesIn(sql173) : new Set();
+  const NAMES_191 = sql191 ? namesIn(sql191) : new Set();
 
   /** name -> Set of declared parameter names, from the SQL. */
   function declaredParams() {
@@ -332,6 +341,29 @@ describe('client RPC arguments match the migration signatures', () => {
     expect({ unexpected }).toEqual({ unexpected: [] });
   });
 
+  test('migrate_191 declares each Stage 3 RPC with the exact parameters the wrappers send', () => {
+    expect(sql191).not.toBeNull();
+    const declared = declaredParams();
+    const EXPECT_191 = {
+      community_set_training_now: ['_on'],
+      community_set_show_training_now: ['_on'],
+      community_group_messages: ['_group_id', '_cursor', '_limit'],
+      community_group_send_message: ['_group_id', '_body'],
+      community_group_message_delete: ['_id'],
+      community_group_mark_read: ['_group_id'],
+      community_group_decline_invite: ['_group_id'],
+      community_challenge_create: ['_group_id', '_name', '_starts_on', '_ends_on', '_target'],
+      community_challenge_end: ['_id'],
+      community_challenge_log_session: ['_challenge_id', '_session_key', '_logged_on'],
+      community_challenge_board: ['_challenge_id'],
+    };
+    for (const [name, params] of Object.entries(EXPECT_191)) {
+      expect({ name, params: [...(declared.get(name) ?? [])].sort() })
+        .toEqual({ name, params: [...params].sort() });
+      expect(NAMES_191.has(name)).toBe(true);
+    }
+  });
+
   test('every discovery RPC the client calls is one the blueprint named', () => {
     // The other direction, and the one that catches a client typo: a
     // `community_*` call that no migration declares must at least be a
@@ -340,6 +372,7 @@ describe('client RPC arguments match the migration signatures', () => {
     const called = [...new Set(callSites().map((s2) => s2.name))];
     const unaccounted = called.filter((name) => !NAMES_160.has(name) && !NAMES_161.has(name)
       && !NAMES_162.has(name) && !NAMES_163.has(name) && !NAMES_170.has(name) && !NAMES_173.has(name)
+      && !NAMES_191.has(name)
       && !RPCS_161.includes(name));
     expect({ unaccounted }).toEqual({ unaccounted: [] });
   });

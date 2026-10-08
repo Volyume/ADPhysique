@@ -230,6 +230,7 @@ export default function CommunityPostScreen({ navigation, route }) {
       <Band>
         <PostRow
           key={post?.id}
+          detail
           item={post ? { post, author, myReaction } : null}
           onRespect={joined ? respond : undefined}
           onRespected={respected}

@@ -23,7 +23,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Card from '../Card';
 import Button from '../Button';
 import TextField from '../TextField';
 import useTheme from '../../hooks/useTheme';
@@ -102,6 +101,7 @@ export default function PlacePicker({
             value={query}
             onChangeText={setQuery}
             size="sm"
+            well
             placeholder="Town or postcode district"
             accessibilityLabel={accessibilityLabel}
           />
@@ -123,8 +123,8 @@ export default function PlacePicker({
             </Text>
           ) : null}
           {!error && preview ? (
-            <Card padding="md" radius="md" style={styles.previewRow}>
-              <Text style={[styles.previewLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+            <View style={styles.previewRow}>
+              <Text style={[styles.previewLabel, t.type.body, { color: t.colors.textPrimary }]}>
                 {`In ${preview.label}`}
               </Text>
               <Button
@@ -136,7 +136,7 @@ export default function PlacePicker({
                 onPress={useThisPlace}
                 accessibilityLabel="Use this place"
               />
-            </Card>
+            </View>
           ) : null}
           {!error && !preview && query.trim().length >= MIN_QUERY && !loading ? (
             <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
@@ -145,8 +145,8 @@ export default function PlacePicker({
           ) : null}
         </>
       ) : (
-        <Card padding="md" radius="md" style={styles.previewRow}>
-          <Text style={[styles.previewLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+        <View style={styles.previewRow}>
+          <Text style={[styles.previewLabel, t.type.body, { color: t.colors.textPrimary }]}>
             {`In ${label}`}
           </Text>
           <Button
@@ -157,7 +157,7 @@ export default function PlacePicker({
             onPress={() => setEditing(true)}
             accessibilityLabel="Change place"
           />
-        </Card>
+        </View>
       )}
       <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>{HINT}</Text>
       {!editing && label ? (
@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   error: { ...type.bodySm },
   hint: { ...type.caption },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  previewLabel: { ...type.body },
+  // D221 V1: a result line in the band, not a card.
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 56 },
+  previewLabel: { flex: 1 },
 });

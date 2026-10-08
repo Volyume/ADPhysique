@@ -17,21 +17,24 @@
 import { navigateCommunity } from '../navigation/navigateCommunity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
 import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
-import PostCard from '../components/community/PostCard';
+import PostRow from '../components/community/PostRow';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPostRow from '../components/community/SkeletonPostRow';
+import SkeletonFormBand from '../components/community/SkeletonFormBand';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
-import { spacing, type } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
@@ -276,7 +279,13 @@ export default function CommunityComposeScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={noteMode ? 'Add a note' : 'Post to Community'} />
       {loading ? (
-        <View style={styles.centre}><ActivityIndicator color={t.colors.primary} /></View>
+        // D221 V10: the screen's true shape while it reads the session or
+        // the post: the preview row, then the caption and audience bands.
+        <View>
+          <SkeletonPostRow />
+          <BandGap />
+          <SkeletonFormBand bands={2} wells={1} />
+        </View>
       ) : !previewPost ? (
         <View style={styles.centre}>
           <EmptyState
@@ -291,88 +300,110 @@ export default function CommunityComposeScreen({ navigation, route }) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <SectionLabel tone="muted">Preview</SectionLabel>
-          <PostCard post={previewPost} author={profile} myReaction={false} />
+          <Band>
+            <SectionHeader title="Preview" />
+            <PostRow item={{ post: previewPost, author: profile, myReaction: false }} />
+          </Band>
+          <BandGap />
 
-          <View style={styles.field}>
+          <Band>
             {/* F11 (Opus adversarial review, founder order 2026-09-22
                 item 5): a note's field label reads "Your note" -- it IS
                 the whole post, not a caption on something else. Every
                 other kind's label is unchanged. */}
-            <SectionLabel tone="muted">{kind === 'note' ? 'Your note' : 'Caption'}</SectionLabel>
-            <ComposerInput
-              value={caption}
-              onChangeText={setCaption}
-              maxLength={CAPTION_MAX}
-              minHeight={96}
-              placeholder={
-                kind === 'note'
-                  ? 'Say hello, or something about your training.'
-                  : 'Say something about the training, if you want to.'
-              }
-              accessibilityLabel={kind === 'note' ? 'Your note' : 'Caption'}
-            />
-            <Text style={[styles.counter, { color: t.colors.textMuted }]}>
-              {`${caption.length} of ${CAPTION_MAX}`}
-            </Text>
-          </View>
+            <SectionHeader title={kind === 'note' ? 'Your note' : 'Caption'} />
+            <BandBody>
+              <ComposerInput
+                well
+                value={caption}
+                onChangeText={setCaption}
+                maxLength={CAPTION_MAX}
+                minHeight={96}
+                placeholder={
+                  kind === 'note'
+                    ? 'Say hello, or something about your training.'
+                    : 'Say something about the training, if you want to.'
+                }
+                accessibilityLabel={kind === 'note' ? 'Your note' : 'Caption'}
+              />
+              <Text style={[t.type.caption, styles.counter, { color: t.colors.textMuted }]}>
+                {`${caption.length} of ${CAPTION_MAX}`}
+              </Text>
+            </BandBody>
+          </Band>
+          <BandGap />
 
           {/* Phase 3 (spec section 3): the audience chooser, manual posts
               only -- a note edits an existing item whose audience was
               already set at creation. */}
           {!noteMode ? (
-            <View style={styles.field}>
-              <SectionLabel tone="muted">Who can see it</SectionLabel>
-              <View style={styles.chipRow} accessibilityLabel="Who can see it">
-                {visibilityOptions.map((opt) => (
-                  <Chip
-                    key={opt.value}
-                    label={opt.label}
-                    selected={visibility === opt.value}
-                    onPress={() => pickVisibility(opt.value)}
-                    accessibilityRole="radio"
-                  />
-                ))}
-              </View>
-              {/* L12 (D221): the audience is said out loud, with the
-                  privacy receipt beside it, so nothing is posted to a
-                  crowd the person did not expect. */}
-              <Text style={[styles.audienceLine, { color: t.colors.textSecondary }]}>
-                {composeAudienceLine(visibility, groupIds.length)}
-              </Text>
-              {visibility === 'followers' && followerCount === 0 ? (
-                <Text style={[styles.audienceLine, { color: t.colors.textMuted }]}>
-                  Nobody follows you yet, so only you will see this until someone does.
-                </Text>
-              ) : null}
-              {myGroups.length ? (
-                <>
-                  <SectionLabel tone="muted">Or share with a group</SectionLabel>
-                  <View style={styles.chipRow} accessibilityLabel="Share with a group">
-                    {myGroups.map((group) => (
+            <>
+              <Band>
+                <SectionHeader title="Who can see it" />
+                <BandBody>
+                  <View style={styles.chipRow} accessibilityLabel="Who can see it">
+                    {visibilityOptions.map((opt) => (
                       <Chip
-                        key={group.id}
-                        label={group.name}
-                        selected={groupIds.includes(group.id)}
-                        onPress={() => toggleGroup(group.id)}
-                        accessibilityRole="checkbox"
+                        key={opt.value}
+                        label={opt.label}
+                        selected={visibility === opt.value}
+                        onPress={() => pickVisibility(opt.value)}
+                        accessibilityRole="radio"
                       />
                     ))}
                   </View>
+                  {/* L12 (D221): the audience is said out loud, with the
+                      privacy receipt beside it, so nothing is posted to a
+                      crowd the person did not expect. */}
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                    {composeAudienceLine(visibility, groupIds.length)}
+                  </Text>
+                  {visibility === 'followers' && followerCount === 0 ? (
+                    <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                      Nobody follows you yet, so only you will see this until someone does.
+                    </Text>
+                  ) : null}
+                </BandBody>
+              </Band>
+              <BandGap />
+              {myGroups.length ? (
+                <>
+                  <Band>
+                    <SectionHeader title="Or share with a group" />
+                    <BandBody>
+                      <View style={styles.chipRow} accessibilityLabel="Share with a group">
+                        {myGroups.map((group) => (
+                          <Chip
+                            key={group.id}
+                            label={group.name}
+                            selected={groupIds.includes(group.id)}
+                            onPress={() => toggleGroup(group.id)}
+                            accessibilityRole="checkbox"
+                          />
+                        ))}
+                      </View>
+                    </BandBody>
+                  </Band>
+                  <BandGap />
                 </>
               ) : null}
-              <PrivacyReceipt />
-            </View>
+              <PrivacyReceipt inBand />
+              <BandGap />
+            </>
           ) : null}
 
-          <Button
-            variant="emphatic"
-            title={noteMode ? 'Save' : 'Post'}
-            size="lg"
-            onPress={handlePost}
-            loading={posting}
-            disabled={postDisabled}
-          />
+          <Band>
+            <BandBody style={styles.postBody}>
+              <Button
+                variant="emphatic"
+                title={noteMode ? 'Save' : 'Post'}
+                size="lg"
+                onPress={handlePost}
+                loading={posting}
+                disabled={postDisabled}
+              />
+            </BandBody>
+          </Band>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -382,9 +413,8 @@ export default function CommunityComposeScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  field: { gap: spacing.sm },
+  content: { paddingBottom: spacing.xxl },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  audienceLine: { ...type.caption },
-  counter: { ...type.caption, textAlign: 'right' },
+  counter: { textAlign: 'right' },
+  postBody: { paddingTop: spacing.md },
 });

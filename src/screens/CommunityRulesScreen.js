@@ -26,12 +26,12 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
 import Button from '../components/Button';
-import SectionLabel from '../components/SectionLabel';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, type } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import { COMMUNITY_RULES_VERSION, acceptRules, loadMe, rulesTextBehindServer } from '../lib/community';
 import { publishConsistency } from '../lib/community/trainingConsistency';
 
@@ -219,123 +219,145 @@ export default function CommunityRulesScreen({ navigation, route }) {
       <BackHeader title={text.title} />
       <ScrollView contentContainerStyle={styles.content}>
         {mustAccept && !accepted && behindServer ? (
-          <Card style={styles.block}>
-            <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-              {RULES_UPDATE_APP_HEADING}
-            </Text>
-            <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              {RULES_UPDATE_APP_LINE}
-            </Text>
-          </Card>
+          <>
+            <Band>
+              <SectionHeader title={RULES_UPDATE_APP_HEADING} />
+              <BandBody>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  {RULES_UPDATE_APP_LINE}
+                </Text>
+              </BandBody>
+            </Band>
+            <BandGap />
+          </>
         ) : null}
         {mustAccept && !accepted && serverAnswered && !behindServer ? (
-          <Card style={styles.block}>
-            <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-              The rules have changed
-            </Text>
-            <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              {RULES_OUTDATED_LINE}
-            </Text>
-            <View style={styles.cardActions}>
-              <Button
-                variant="emphatic"
-                size="sm"
-                fullWidth={false}
-                title={ACCEPT_UPDATED_RULES_LABEL}
-                loading={busy}
-                onPress={accept}
-                accessibilityLabel={ACCEPT_UPDATED_RULES_LABEL}
-              />
-            </View>
-          </Card>
+          <>
+            <Band>
+              <SectionHeader title="The rules have changed" />
+              <BandBody>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  {RULES_OUTDATED_LINE}
+                </Text>
+                <View style={styles.actions}>
+                  <Button
+                    variant="emphatic"
+                    size="sm"
+                    fullWidth={false}
+                    title={ACCEPT_UPDATED_RULES_LABEL}
+                    loading={busy}
+                    onPress={accept}
+                    accessibilityLabel={ACCEPT_UPDATED_RULES_LABEL}
+                  />
+                </View>
+              </BandBody>
+            </Band>
+            <BandGap />
+          </>
         ) : null}
 
-        <Text style={[styles.body, { ...t.type.body, color: t.colors.textSecondary }]}>
-          {text.intro}
-        </Text>
+        <Band>
+          <BandBody style={styles.introBody}>
+            <Text style={[t.type.body, { color: t.colors.textSecondary }]}>
+              {text.intro}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
 
-        <Card style={styles.block}>
+        <Band>
           {text.rules.map((rule) => (
-            <View key={rule.heading} style={styles.rule}>
-              <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-                {rule.heading}
-              </Text>
-              <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                {rule.body}
-              </Text>
+            <View key={rule.heading}>
+              <SectionHeader title={rule.heading} />
+              <BandBody style={styles.ruleBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  {rule.body}
+                </Text>
+              </BandBody>
             </View>
           ))}
-        </Card>
+        </Band>
+        <BandGap />
 
-        <View style={styles.section}>
-          <SectionLabel tone="muted">{text.privacy.heading}</SectionLabel>
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.privacy.intro}
-          </Text>
-          {text.privacy.neverShown.map((line) => (
-            <Text key={line} style={[styles.bullet, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
-              {line}
+        <Band>
+          <SectionHeader title={text.privacy.heading} />
+          <BandBody>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.privacy.intro}
             </Text>
-          ))}
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.privacy.note}
-          </Text>
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.privacy.trainingProfileNote}
-          </Text>
-        </View>
+            {text.privacy.neverShown.map((line) => (
+              <Text key={line} style={[t.type.bodySm, { color: t.colors.textPrimary }]}>
+                {line}
+              </Text>
+            ))}
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.privacy.note}
+            </Text>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.privacy.trainingProfileNote}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
 
-        <View style={styles.section}>
-          <SectionLabel tone="muted">{text.reporting.heading}</SectionLabel>
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.reporting.body}
-          </Text>
-        </View>
+        <Band>
+          <SectionHeader title={text.reporting.heading} />
+          <BandBody>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.reporting.body}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
 
-        <View style={styles.section}>
-          <SectionLabel tone="muted">{text.moderatorActions.heading}</SectionLabel>
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.moderatorActions.body}
-          </Text>
-        </View>
+        <Band>
+          <SectionHeader title={text.moderatorActions.heading} />
+          <BandBody>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.moderatorActions.body}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
 
-        <View style={styles.section}>
-          <SectionLabel tone="muted">{text.contact.heading}</SectionLabel>
-          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {text.contact.body}
-          </Text>
-          <Button
-            variant="secondary"
-            size="sm"
-            fullWidth={false}
-            title={text.contact.address}
-            onPress={() => Linking.openURL(`mailto:${text.contact.address}`).catch(() => {})}
-            accessibilityLabel={`Email ${text.contact.address}`}
-          />
-        </View>
+        <Band>
+          <SectionHeader title={text.contact.heading} />
+          <BandBody>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {text.contact.body}
+            </Text>
+            <Button
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              title={text.contact.address}
+              onPress={() => Linking.openURL(`mailto:${text.contact.address}`).catch(() => {})}
+              accessibilityLabel={`Email ${text.contact.address}`}
+            />
+          </BandBody>
+        </Band>
+        <BandGap />
 
-        <View style={styles.section}>
-          <Text style={[styles.version, { ...t.type.caption, color: t.colors.textMuted }]}>
-            {text.version.label}
-          </Text>
-          <Text style={[styles.version, { ...t.type.caption, color: t.colors.textMuted }]}>
-            {text.version.changeNote}
-          </Text>
-        </View>
+        <Band>
+          <BandBody style={styles.versionBody}>
+            <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+              {text.version.label}
+            </Text>
+            <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+              {text.version.changeNote}
+            </Text>
+          </BandBody>
+        </Band>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  block: { gap: spacing.md },
-  cardActions: { flexDirection: 'row' },
-  rule: { gap: spacing.xxs },
-  ruleHeading: { ...type.bodyStrong, color: colors.textPrimary },
-  section: { gap: spacing.sm },
-  body: { ...type.bodySm, color: colors.textSecondary },
-  bullet: { ...type.bodySm, color: colors.textPrimary },
-  version: { ...type.caption, color: colors.textMuted },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
+  actions: { flexDirection: 'row' },
+  introBody: { paddingTop: spacing.md },
+  ruleBody: { paddingBottom: spacing.md },
+  versionBody: { paddingTop: spacing.md },
 });

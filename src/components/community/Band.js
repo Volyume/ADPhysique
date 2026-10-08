@@ -8,7 +8,12 @@
  * `BandLine` is the section-empty state (V10): one `bodySm` `textMuted` line
  * in a band, with at most one tertiary action beneath it.
  *
+ * `BandBody` is the padded body of a form band: the `spacing.lg` gutter the
+ * band's rows would carry, a `spacing.sm` rhythm between its fields, and a
+ * `spacing.lg` foot (D221, lane 2B).
+ *
  * Props (Band): children, style.
+ * Props (BandBody): children, style.
  * Props (BandLine): text, action { label, onPress, accessibilityLabel? }.
  */
 import { View, Text, StyleSheet } from 'react-native';
@@ -25,6 +30,11 @@ export default function Band({ children, style }) {
 /** The strip of page colour between two bands. */
 export function BandGap() {
   return <View style={styles.gap} />;
+}
+
+/** The padded body of a form band: fields, hints and notes under a header. */
+export function BandBody({ children, style }) {
+  return <View style={[styles.body, style]}>{children}</View>;
 }
 
 /** A quiet section-empty line, with at most one tertiary action. */
@@ -49,6 +59,11 @@ export function BandLine({ text, action }) {
 
 const styles = StyleSheet.create({
   gap: { height: BAND },
+  body: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
   line: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,

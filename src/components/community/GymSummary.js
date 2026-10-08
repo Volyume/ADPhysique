@@ -13,13 +13,15 @@
  * an observation about a person (SD-31). The phrase itself is built
  * server-side so every surface says it the same way.
  *
+ * D221 V1 (lane 2B): plain content for the band the page puts it in, not a
+ * card.
+ *
  * Props:
  *   summary  the payload from `gymSummary(key)`
  *   label    fallback label when the summary has none yet
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import Card from '../Card';
 import Chip from '../Chip';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -61,7 +63,7 @@ export default function GymSummary({ summary, label = null, countLine = null }) 
     .filter((row) => row?.label && Number(row.count) > 0);
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <Text style={[styles.title, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
         {title}
       </Text>
@@ -87,7 +89,7 @@ export default function GymSummary({ summary, label = null, countLine = null }) 
           ))}
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 

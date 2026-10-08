@@ -376,3 +376,196 @@ describe('migrate_190 community_feed scopes keep the house shape', () => {
     expect(S190).not.toContain('\u2014');
   });
 });
+
+// ─── migrate_191: Stage 3 presence, group chat, challenges (lane 3S) ────
+describe('migrate_191 Stage 3 keeps the house shape', () => {
+  const F191 = path.join(ROOT, 'supabase', 'migrate_191_community_stage3_presence_groups_challenges.sql');
+  const S191 = fs.readFileSync(F191, 'utf8');
+  const H191 = S191.slice(0, S191.indexOf('-- ─── Part 0'));
+  const C191 = S191.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  // Everything outside a $$ ... $$ body: the file's own top-level statements.
+  const TOP191 = C191.replace(/\$\$[\s\S]*?\$\$/g, '$$$$').replace(/ON DELETE (CASCADE|RESTRICT)/g, '');
+  const BODIES191 = C191.match(/\$\$[\s\S]*?\$\$/g) ?? [];
+
+  test.each([
+    ['Purpose', /^-- Purpose:/m],
+    ['Applied locally', /^-- Applied locally:/m],
+    ['Applied remotely', /^-- Applied remotely:/m],
+    ['Safe to re-run', /^-- Safe to re-run:/m],
+    ['Additive and idempotent', /^-- Additive and idempotent:/m],
+    ['Rollback', /^-- Rollback:/m],
+    ['GDPR note', /^-- GDPR note:/m],
+  ])('the header states %s', (_l, re) => {
+    expect(H191).toMatch(re);
+  });
+
+  test('it is UNAPPLIED, names the founder phrase and the helper lines it reuses', () => {
+    expect(H191).toMatch(/Applied remotely:\s+NO \(UNAPPLIED\)/);
+    expect(H191).toContain('run against production: 191');
+    expect(H191).toContain('migrate_180 line 337');
+    expect(H191).toContain('migrate_160 line 869');
+    expect(H191).toContain('migrate_164 line 1431');
+    expect(H191).toContain('migrate_178');
+  });
+
+  test('idempotence markers: IF NOT EXISTS, duplicate_object handlers, CREATE OR REPLACE', () => {
+    expect(C191).toMatch(/ADD COLUMN IF NOT EXISTS training_since timestamptz/);
+    expect(C191).toMatch(/ADD COLUMN IF NOT EXISTS show_training_now boolean NOT NULL DEFAULT false/);
+    expect(C191).toMatch(/ADD COLUMN IF NOT EXISTS last_read_at timestamptz/);
+    expect(C191).toMatch(/ADD COLUMN IF NOT EXISTS last_push_at timestamptz/);
+    expect(C191.match(/CREATE TABLE IF NOT EXISTS/g)).toHaveLength(3);
+    expect(C191).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS community_group_challenges_one_active_idx[\s\S]*?WHERE status = 'active'/);
+    expect(C191.match(/EXCEPTION WHEN duplicate_object THEN NULL/g).length).toBeGreaterThanOrEqual(6);
+    // No plain CREATE FUNCTION / CREATE TABLE without the idempotent form.
+    expect(C191).not.toMatch(/CREATE FUNCTION/);
+    expect(C191).not.toMatch(/CREATE TABLE (?!IF NOT EXISTS)/);
+  });
+
+  test('nothing destructive at file level: no DROP, DELETE, UPDATE, INSERT or TRUNCATE outside a function body', () => {
+    expect(TOP191).not.toMatch(/\bDROP\b/i);
+    expect(TOP191).not.toMatch(/\bDELETE\b/i);
+    expect(TOP191).not.toMatch(/\bUPDATE\b/i);
+    expect(TOP191).not.toMatch(/\bINSERT\b/i);
+    expect(TOP191).not.toMatch(/TRUNCATE/i);
+    expect(C191).not.toMatch(/DROP TABLE|DROP COLUMN|TRUNCATE|DROP FUNCTION|DROP POLICY/i);
+  });
+
+  test('the only DELETEs in a body are the invite decline and the message delete, scoped by key', () => {
+    const deletes = BODIES191.join('\n').match(/DELETE FROM[^;]*;/gi) ?? [];
+    expect(deletes).toHaveLength(2);
+    expect(deletes.some((d) => /community_group_members[\s\S]*state = 'invited'/.test(d)
+      && /user_id = v_uid/.test(d))).toBe(true);
+    expect(deletes.some((d) => /community_group_messages WHERE id = _id/.test(d))).toBe(true);
+  });
+
+  test('the only UPDATEs are own-row presence, own read clock, ending a challenge', () => {
+    const updates = BODIES191.join('\n').match(/UPDATE public\.[a-z_]+/gi) ?? [];
+    expect([...new Set(updates)].sort()).toEqual([
+      'UPDATE public.community_group_challenges',
+      'UPDATE public.community_group_members',
+      'UPDATE public.community_profiles',
+    ]);
+    // Presence writes only the caller's own row.
+    expect(C191).toMatch(/SET training_since = CASE WHEN _on THEN now\(\) ELSE NULL END\s+WHERE user_id = v_uid/);
+    expect(C191).toMatch(/SET show_training_now = _on,[\s\S]*?WHERE user_id = v_uid/);
+    expect(C191).toMatch(/SET last_read_at = now\(\)\s+WHERE group_id = _group_id AND user_id = v_uid/);
+  });
+
+  test('every new table: RLS on, all grants revoked, RPC-only', () => {
+    expect(C191).toMatch(/'community_group_messages', 'community_group_challenges', 'community_challenge_entries'/);
+    expect(C191).toMatch(/ENABLE ROW LEVEL SECURITY/);
+    expect(C191).toMatch(/REVOKE ALL ON public\.%I FROM anon, authenticated/);
+    expect(C191).not.toMatch(/CREATE POLICY/i);
+  });
+
+  test('every function is SECURITY DEFINER with a pinned search_path', () => {
+    const fns = C191.match(/CREATE OR REPLACE FUNCTION public\.[a-z_0-9]+/g) ?? [];
+    expect(fns.length).toBeGreaterThanOrEqual(18);
+    expect(C191.match(/SECURITY DEFINER/g)).toHaveLength(fns.length);
+    expect(C191.match(/SET search_path = public, pg_temp/g)).toHaveLength(fns.length);
+  });
+
+  test('every RPC is revoked from PUBLIC and anon and granted to authenticated only (one service-role-only exception)', () => {
+    const rpcs = (C191.match(/CREATE OR REPLACE FUNCTION public\.(community_[a-z_0-9]+)\(/g) ?? [])
+      .map((l) => l.match(/public\.(community_[a-z_0-9]+)/)[1]);
+    expect(rpcs).toHaveLength(15);
+    for (const name of rpcs.filter((n) => n !== 'community_group_message_recipients')) {
+      expect(C191).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^)]*\\) FROM PUBLIC, anon;`));
+      expect(C191).toMatch(new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^)]*\\) TO authenticated;`));
+    }
+    // The recipients RPC is service role only, as migrate_177's precedent.
+    expect(C191).toMatch(/REVOKE ALL ON FUNCTION public\.community_group_message_recipients\(uuid, uuid\) FROM PUBLIC, anon, authenticated;/);
+    expect(C191).toMatch(/GRANT EXECUTE ON FUNCTION public\.community_group_message_recipients\(uuid, uuid\) TO service_role;/);
+    expect(C191).not.toMatch(/community_group_message_recipients\(uuid, uuid\) TO authenticated/);
+    // Helpers are revoked from authenticated too.
+    for (const h of ['_community_training_now', '_community_group_message_visible',
+      '_community_group_message_json', '_community_challenge_json']) {
+      expect(C191).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${h}\\([^)]*\\) FROM PUBLIC, anon, authenticated;`));
+    }
+    expect(C191).not.toMatch(/TO anon|TO PUBLIC/);
+  });
+
+  test('the migration 180 gate is reused, never re-implemented', () => {
+    expect(C191).toMatch(/public\._community_consistency_withheld\(_viewer\)/);
+    expect(C191).toMatch(/public\._community_consistency_withheld\(p\.user_id\)/);
+    expect(C191).toMatch(/public\._community_consistency_withheld\(v_uid\)/);
+    expect(C191).toMatch(/AND NOT public\._community_consistency_withheld\(gm\.user_id\)/);
+    expect(C191).not.toMatch(/ed_pattern_flags|user_prefs|wellbeing_mode/);
+    expect(C191).not.toMatch(/FUNCTION public\._community_(ed_flag_open|calm_mode_on|consistency_withheld)/);
+  });
+
+  test('presence: minors are refused and never listed; 3 hours; 3 names; withheld is null', () => {
+    expect(C191).toMatch(/IF public\._community_caller_is_minor\(v_uid\) THEN\s+RAISE EXCEPTION USING message = 'forbidden'/);
+    expect(C191).toMatch(/p\.training_since > now\(\) - interval '3 hours'/);
+    expect(C191).toMatch(/p\.is_minor = false/);
+    expect(C191).toMatch(/p\.show_training_now = true/);
+    expect(C191).toMatch(/LIMIT 3\)/);
+    expect(C191).toMatch(/IF public\._community_consistency_withheld\(_viewer\) THEN\s+RETURN NULL;/);
+    expect(C191).toMatch(/'training_now', v_training/);
+  });
+
+  test('chat: member only, 500 cap, keyword filter, DM rate rail, author or admin delete', () => {
+    expect(C191).toMatch(/char_length\(body\) BETWEEN 1 AND 500/);
+    expect(C191).toMatch(/v_body := public\._community_clean_text\(v_body\)/);
+    expect(C191).toMatch(/_community_rate_check\(v_uid, 'group_message', 20, 60, interval '1 hour'\)/);
+    expect(C191).toMatch(/public\._community_group_message_visible\(v_uid, m\.author_id\)/);
+    expect(C191).toMatch(/v_m\.author_id <> v_uid AND NOT public\._community_group_is_admin/);
+    expect(C191).toMatch(/message = 'not_allowed'/);
+    expect(C191).toMatch(/_community_is_blocked\(_viewer, _author\)/);
+    expect(C191).toMatch(/mu\.muter_id = _viewer AND mu\.muted_id = _author/);
+  });
+
+  test('challenges: window, target, 2-day, idempotence, one active', () => {
+    expect(C191).toMatch(/CHECK \(ends_on > starts_on AND ends_on <= starts_on \+ 31\)/);
+    expect(C191).toMatch(/target_sessions IS NULL OR target_sessions BETWEEN 1 AND 200/);
+    expect(C191).toMatch(/char_length\(name\) BETWEEN 1 AND 40/);
+    expect(C191).toMatch(/PRIMARY KEY \(challenge_id, user_id, session_key\)/);
+    expect(C191).toMatch(/ON CONFLICT \(challenge_id, user_id, session_key\) DO NOTHING/);
+    expect(C191).toMatch(/_logged_on < v_c\.starts_on OR _logged_on > v_c\.ends_on\s+OR abs\(_logged_on - v_today\) > 2/);
+    expect(C191).toMatch(/Europe\/London/);
+  });
+
+  test('the decline removes only an invited row', () => {
+    expect(C191).toMatch(/WHERE group_id = _group_id AND user_id = v_uid AND state = 'invited'/);
+  });
+
+  test('the re-issued bodies change nothing but the marked additions', () => {
+    const l180 = fs.readFileSync(path.join(ROOT, 'supabase', 'migrate_180_community_consistency_server_gate.sql'), 'utf8').split('\n');
+    const l176 = fs.readFileSync(path.join(ROOT, 'supabase', 'migrate_176_community_closed_groups_out_of_lists.sql'), 'utf8').split('\n');
+    const strip = (t) => t.split('\n')
+      .filter((l) => !l.trim().startsWith('--') && l.trim() !== '').join('\n');
+    const blockOf = (src, name) => {
+      const at = src.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+      const end = src.indexOf('TO authenticated;', at) + 'TO authenticated;'.length;
+      return strip(src.slice(at, end));
+    };
+    const collapse = (t) => t.replace(/\s+/g, ' ');
+    const hub191 = collapse(blockOf(S191, 'community_hub_summary'))
+      .replace(' v_training jsonb; -- migrate_191 (3a)', '')
+      .replace(' v_training := public._community_training_now(v_uid, NULL);', '')
+      .replace(", 'training_now', v_training);", ');');
+    expect(hub191).toBe(collapse(blockOf(l180.join('\n'), 'community_hub_summary')));
+
+    const gg191 = blockOf(S191, 'community_group_get');
+    const gg180 = blockOf(l180.join('\n'), 'community_group_get');
+    for (const line of gg180.split('\n')) expect(gg191).toContain(line);
+    const lm191 = blockOf(S191, 'community_group_list_mine');
+    const lm176 = blockOf(l176.join('\n'), 'community_group_list_mine');
+    for (const line of lm176.split('\n')) {
+      if (line.includes("'group', public._community_group_card(g)")) continue; // the one line extended
+      expect(lm191).toContain(line);
+    }
+    expect(lm191).toContain("'unread', CASE WHEN m.state = 'member'");
+    expect(lm191).toContain("AND g.status = 'active'");
+  });
+
+  test('no column or string anywhere in the code names a body figure, food figure or load', () => {
+    expect(C191).not.toMatch(/weight|calorie|kcal|bodyweight|measurement/i);
+    // Columns of the three new tables: exactly the allow-list (counts only).
+    expect(C191).toContain("'community_challenge_entries.challenge_id,community_challenge_entries.created_at");
+  });
+
+  test('no em dash anywhere', () => {
+    expect(S191).not.toContain('—');
+  });
+});

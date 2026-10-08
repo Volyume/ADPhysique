@@ -38,6 +38,12 @@ export const COMMUNITY_NOTIFY_KINDS = Object.freeze([
   // one. All three ride the community_follow category budget, same as the
   // connection kinds above (index.ts categoryFor).
   'group_request', 'group_accepted', 'group_invited',
+  // Stage 3 (3b): ONE call from the sender, target null, ref = the message id.
+  // The server resolves the recipients (migrate_191
+  // community_group_message_recipients, service role only) and applies the
+  // toggle, quiet hours, ED check and the 15-minute collapse per recipient.
+  // No content ever travels: "New messages in {group}".
+  'group_message',
 ]);
 
 /**
@@ -47,9 +53,11 @@ export const COMMUNITY_NOTIFY_KINDS = Object.freeze([
  * @returns {void} deliberately not awaited by callers
  */
 export function notifyCommunityEvent(kind, targetUserId, refId = null) {
-  if (!COMMUNITY_NOTIFY_KINDS.includes(kind) || !targetUserId) return;
+  if (!COMMUNITY_NOTIFY_KINDS.includes(kind)) return;
+  // Only a group message may omit the target: the server picks the people.
+  if (!targetUserId && kind !== 'group_message') return;
   invokeCommunityFunction('community-notify', {
-    kind, target_user_id: targetUserId, ref_id: refId,
+    kind, target_user_id: targetUserId ?? undefined, ref_id: refId,
   }).catch(() => {
     // Best effort by design: the in-app activity row is the record, and
     // the server is the only thing allowed to decide whether a push may

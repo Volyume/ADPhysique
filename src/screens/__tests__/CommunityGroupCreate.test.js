@@ -148,3 +148,23 @@ test('edit mode Save calls updateGroup with the group id and replaces back to it
   expect(createGroup).not.toHaveBeenCalled();
   expect(navigation.replace).toHaveBeenCalledWith('CommunityGroup', { id: 'g1' });
 });
+
+function headerTitles(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+    .map((n) => n.props.children);
+}
+
+describe('D221 lane 2B: bands of wells', () => {
+  test('sections carry header roles and both fields are wells', async () => {
+    const { tree } = await mount();
+    expect(headerTitles(tree)).toEqual(expect.arrayContaining(['The group', 'Who can join']));
+    expect(field(tree, 'Group name').props.well).toBe(true);
+    expect(field(tree, 'About this group').props.well).toBe(true);
+  });
+
+  test('source: no SectionLabel', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityGroupCreateScreen.js'), 'utf8');
+    expect(src).not.toMatch(/SectionLabel/);
+  });
+});

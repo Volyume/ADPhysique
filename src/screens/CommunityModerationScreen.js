@@ -33,17 +33,19 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
-import Card from '../components/Card';
+import PressableCard from '../components/PressableCard';
 import Chip from '../components/Chip';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import { SkeletonCard } from '../components/Skeleton';
+import Band, { BandGap } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonReportRow from '../components/community/SkeletonReportRow';
 import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import { calendarRelativeLabel } from '../lib/workoutDate';
 import {
   moderationQueue, moderate, MODERATION_ACTIONS, REPORT_REASONS,
@@ -275,7 +277,7 @@ export default function CommunityModerationScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Moderation" />
-      <View style={styles.controls}>
+      <Band style={styles.controls}>
         <View style={styles.chipRow} accessibilityLabel="Queue">
           <Chip label="Open" selected={status === 'open'} onPress={() => setStatus('open')} accessibilityRole="radio" />
           {/* This tab IS the audit view the blueprint asks for: it is what
@@ -291,7 +293,8 @@ export default function CommunityModerationScreen() {
               before this; this is the minimal queue that closes it. */}
           <Chip label="Gyms" selected={status === 'gyms'} onPress={() => setStatus('gyms')} accessibilityRole="radio" />
         </View>
-      </View>
+      </Band>
+      <BandGap />
       {status === 'gyms' ? (
         <ScrollView
           contentContainerStyle={styles.gymsList}
@@ -307,124 +310,121 @@ export default function CommunityModerationScreen() {
             />
           )}
         >
-          <Text style={[styles.gymsHeading, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Gym submissions
-          </Text>
-          {gymsLoading ? (
-            <View style={styles.skeleton}>
-              <SkeletonCard height={116} />
-            </View>
-          ) : gymSubmissions.length === 0 ? (
-            <EmptyState
-              icon="business-outline"
-              title="No gym submissions waiting."
-              compact
-            />
-          ) : (
-            gymSubmissions.map((item) => (
-              <Card key={item.id} style={styles.report} accessibilityLabel={`Gym submission: ${item.name}`}>
-                <Text style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
-                  {item.name}
-                </Text>
-                <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
-                  {[item.address_line, item.town, item.postcode].filter(Boolean).join(', ')}
-                </Text>
-                {item.website ? (
-                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
-                    {item.website}
+          <Band>
+            <SectionHeader title="Gym submissions" />
+            {gymsLoading ? (
+              <SkeletonReportRow />
+            ) : gymSubmissions.length === 0 ? (
+              <EmptyState
+                icon="business-outline"
+                title="No gym submissions waiting."
+                compact
+              />
+            ) : (
+              gymSubmissions.map((item) => (
+                <ReportBlock key={item.id} accessibilityLabel={`Gym submission: ${item.name}`}>
+                  <Text style={[t.type.body, { color: t.colors.textPrimary }]}>
+                    {item.name}
                   </Text>
-                ) : null}
-                {item.operator ? (
-                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
-                    {`Company: ${item.operator}`}
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                    {[item.address_line, item.town, item.postcode].filter(Boolean).join(', ')}
                   </Text>
-                ) : null}
-                <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
-                  {[
-                    confirmationCountLabel(item.confirmation_count),
-                    whenLabel(item.created_at),
-                  ].filter(Boolean).join(' · ')}
-                </Text>
-                <View style={styles.actions}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Reject"
-                    disabled={gymBusy}
-                    onPress={() => confirmRejectSubmission(item)}
-                    accessibilityLabel={`Reject ${item.name}`}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Approve"
-                    disabled={gymBusy}
-                    onPress={() => approveSubmission(item)}
-                    accessibilityLabel={`Approve ${item.name}`}
-                  />
-                </View>
-              </Card>
-            ))
-          )}
+                  {item.website ? (
+                    <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                      {item.website}
+                    </Text>
+                  ) : null}
+                  {item.operator ? (
+                    <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                      {`Company: ${item.operator}`}
+                    </Text>
+                  ) : null}
+                  <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+                    {[
+                      confirmationCountLabel(item.confirmation_count),
+                      whenLabel(item.created_at),
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                  <View style={styles.actions}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Reject"
+                      disabled={gymBusy}
+                      onPress={() => confirmRejectSubmission(item)}
+                      accessibilityLabel={`Reject ${item.name}`}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Approve"
+                      disabled={gymBusy}
+                      onPress={() => approveSubmission(item)}
+                      accessibilityLabel={`Approve ${item.name}`}
+                    />
+                  </View>
+                </ReportBlock>
+              ))
+            )}
+          </Band>
+          <BandGap />
 
-          <Text style={[styles.gymsHeading, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Gym reports
-          </Text>
-          {gymsLoading ? (
-            <View style={styles.skeleton}>
-              <SkeletonCard height={116} />
-            </View>
-          ) : gymReports.length === 0 ? (
-            <EmptyState
-              icon="flag-outline"
-              title="No gym reports waiting."
-              compact
-            />
-          ) : (
-            gymReports.map((item) => (
-              <Card key={item.id} style={styles.report} accessibilityLabel={`Gym report: ${item.venue_name}`}>
-                <View style={styles.reportTop}>
-                  <Chip label={REPORT_KINDS[item.reason] ?? item.reason} accessibilityRole="text" />
-                </View>
-                <Text style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
-                  {item.venue_name}
-                </Text>
-                {item.detail ? (
-                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={3}>
-                    {item.detail}
+          <Band>
+            <SectionHeader title="Gym reports" />
+            {gymsLoading ? (
+              <SkeletonReportRow />
+            ) : gymReports.length === 0 ? (
+              <EmptyState
+                icon="flag-outline"
+                title="No gym reports waiting."
+                compact
+              />
+            ) : (
+              gymReports.map((item) => (
+                <ReportBlock key={item.id} accessibilityLabel={`Gym report: ${item.venue_name}`}>
+                  <View style={styles.reportTop}>
+                    <Chip label={REPORT_KINDS[item.reason] ?? item.reason} accessibilityRole="text" />
+                  </View>
+                  <Text style={[t.type.body, { color: t.colors.textPrimary }]}>
+                    {item.venue_name}
                   </Text>
-                ) : null}
-                <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
-                  {[
-                    item.reporter_count ? reportCountLabel(item.reporter_count) : null,
-                    whenLabel(item.created_at),
-                  ].filter(Boolean).join(' · ')}
-                </Text>
-                <View style={styles.actions}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Dismiss"
-                    disabled={gymBusy}
-                    onPress={() => dismissReport(item)}
-                    accessibilityLabel={`Dismiss report on ${item.venue_name}`}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Resolve"
-                    disabled={gymBusy}
-                    onPress={() => resolveReport(item)}
-                    accessibilityLabel={`Resolve report on ${item.venue_name}`}
-                  />
-                </View>
-              </Card>
-            ))
-          )}
+                  {item.detail ? (
+                    <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]} numberOfLines={3}>
+                      {item.detail}
+                    </Text>
+                  ) : null}
+                  <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+                    {[
+                      item.reporter_count ? reportCountLabel(item.reporter_count) : null,
+                      whenLabel(item.created_at),
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                  <View style={styles.actions}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Dismiss"
+                      disabled={gymBusy}
+                      onPress={() => dismissReport(item)}
+                      accessibilityLabel={`Dismiss report on ${item.venue_name}`}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Resolve"
+                      disabled={gymBusy}
+                      onPress={() => resolveReport(item)}
+                      accessibilityLabel={`Resolve report on ${item.venue_name}`}
+                    />
+                  </View>
+                </ReportBlock>
+              ))
+            )}
+          </Band>
         </ScrollView>
       ) : (
       <FlashList
@@ -447,57 +447,61 @@ export default function CommunityModerationScreen() {
             ?? item.content?.name
             ?? null;
           return (
-          <Card
-            style={styles.report}
-            onPress={status === 'open' ? () => setActive(item) : undefined}
-            accessibilityLabel={`Report: ${REPORT_REASONS[item.reason] ?? item.reason}`}
-          >
-              <View style={styles.reportTop}>
-                <Chip label={REPORT_REASONS[item.reason] ?? item.reason} accessibilityRole="text" />
-                {item.priority ? <Chip label="Priority" selected accessibilityRole="text" /> : null}
-                <Chip label={TARGET_LABELS[item.target_kind] ?? 'Content'} accessibilityRole="text" />
-              </View>
-              {preview ? (
-                <Text
-                  style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}
-                  numberOfLines={4}
-                >
-                  {preview}
+            <Band>
+              <ReportBlock
+                onPress={status === 'open' ? () => setActive(item) : undefined}
+                accessibilityLabel={`Report: ${REPORT_REASONS[item.reason] ?? item.reason}`}
+              >
+                <View style={styles.reportTop}>
+                  <Chip label={REPORT_REASONS[item.reason] ?? item.reason} accessibilityRole="text" />
+                  {item.priority ? <Chip label="Priority" selected accessibilityRole="text" /> : null}
+                  <Chip label={TARGET_LABELS[item.target_kind] ?? 'Content'} accessibilityRole="text" />
+                </View>
+                {preview ? (
+                  <Text
+                    style={[t.type.bodySm, { color: t.colors.textPrimary }]}
+                    numberOfLines={4}
+                  >
+                    {preview}
+                  </Text>
+                ) : null}
+                {item.detail ? (
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]} numberOfLines={3}>
+                    {item.detail}
+                  </Text>
+                ) : null}
+                <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+                  {[
+                    item.report_count ? reportCountLabel(item.report_count) : null,
+                    whenLabel(item.created_at),
+                    item.resolution ? `Resolution: ${ACTION_LABELS[item.resolution] ?? item.resolution}` : null,
+                    // The moderator and the note are rendered when the row
+                    // carries them, under the column names the audit log
+                    // itself uses (`community_moderation_log.moderator_id` /
+                    // `.note`). `community_moderation_queue` does not return
+                    // either today, so nothing is invented here: the tab
+                    // shows them the moment the queue does.
+                    item.moderator_handle ? `by @${item.moderator_handle}` : null,
+                  ].filter(Boolean).join(' · ')}
                 </Text>
-              ) : null}
-              {item.detail ? (
-                <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={3}>
-                  {item.detail}
-                </Text>
-              ) : null}
-              <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
-                {[
-                  item.report_count ? reportCountLabel(item.report_count) : null,
-                  whenLabel(item.created_at),
-                  item.resolution ? `Resolution: ${ACTION_LABELS[item.resolution] ?? item.resolution}` : null,
-                  // The moderator and the note are rendered when the row
-                  // carries them, under the column names the audit log
-                  // itself uses (`community_moderation_log.moderator_id` /
-                  // `.note`). `community_moderation_queue` does not return
-                  // either today, so nothing is invented here: the tab
-                  // shows them the moment the queue does.
-                  item.moderator_handle ? `by @${item.moderator_handle}` : null,
-                ].filter(Boolean).join(' · ')}
-              </Text>
-              {item.note ? (
-                <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
-                  {`Note: ${item.note}`}
-                </Text>
-              ) : null}
-          </Card>
+                {item.note ? (
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                    {`Note: ${item.note}`}
+                  </Text>
+                ) : null}
+              </ReportBlock>
+            </Band>
           );
         }}
+        ListHeaderComponent={rows.length ? (
+          <Band><SectionHeader title={status === 'open' ? 'Open reports' : 'Actioned reports'} /></Band>
+        ) : null}
         ListEmptyComponent={loading ? (
-          <View style={styles.skeleton}>
-            <SkeletonCard height={116} />
-            <SkeletonCard height={116} />
-            <SkeletonCard height={116} />
-          </View>
+          <Band>
+            <SkeletonReportRow />
+            <SkeletonReportRow />
+            <SkeletonReportRow />
+          </Band>
         ) : (
           <EmptyState
             icon="checkmark-circle-outline"
@@ -507,7 +511,6 @@ export default function CommunityModerationScreen() {
               : 'Reports you have acted on appear here with what was done.'}
           />
         )}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={() => { /* the queue is one page; act on it rather than paging past it */ }}
@@ -535,10 +538,11 @@ export default function CommunityModerationScreen() {
           onClose={() => { setActive(null); setNote(''); }}
         />
         <View style={styles.sheet}>
-          <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
+          <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
             Every action is recorded with who did it, when, and the note you leave here.
           </Text>
           <ComposerInput
+            well
             value={note}
             onChangeText={setNote}
             maxLength={MODERATION_NOTE_MAX}
@@ -566,21 +570,34 @@ export default function CommunityModerationScreen() {
   );
 }
 
+/** One moderation item as a block in a band (D221 V1): the content stacked
+ * with the band's gutter and a hairline below. A report is tappable while it
+ * is open; the pressable carries the house press feedback. */
+function ReportBlock({ children, onPress, accessibilityLabel }) {
+  const t = useTheme();
+  return (
+    <PressableCard
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <View style={styles.block}>{children}</View>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1 },
   content: { padding: spacing.lg },
-  controls: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  controls: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  gymsList: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  gymsHeading: { marginTop: spacing.sm, marginBottom: spacing.xs },
-  report: { gap: spacing.sm },
+  list: { paddingBottom: spacing.xxl },
+  gymsList: { paddingBottom: spacing.xxl },
+  block: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  divider: { height: StyleSheet.hairlineWidth },
   reportTop: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  preview: { ...type.bodySm, color: colors.textPrimary },
-  detail: { ...type.caption, color: colors.textSecondary },
-  meta: { ...type.caption, color: colors.textMuted },
-  loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.md },
   sheet: { gap: spacing.sm, paddingBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

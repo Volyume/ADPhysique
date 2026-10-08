@@ -183,6 +183,23 @@ describe('presentation law (c): SectionLabel is retired from the four revamped s
   });
 });
 
+// RE-PINNED (D221 ruling 7, lane 2B): the form, staff and reading screens are
+// converted to bands, so SectionLabel and <Card are retired from them too.
+describe('presentation law (e): the lane 2B screens are bands, not cards', () => {
+  const LANE_2B = [
+    'CommunityJoinScreen.js', 'CommunityEditProfileScreen.js', 'CommunityTrainingProfileScreen.js',
+    'CommunityComposeScreen.js', 'CommunityGroupCreateScreen.js', 'CommunityPrivacyScreen.js',
+    'CommunityRulesScreen.js', 'CommunityConversationScreen.js', 'CommunityModerationScreen.js',
+    'CommunityGymAddScreen.js',
+  ];
+
+  test.each(LANE_2B)('%s imports no SectionLabel and uses no <Card', (name) => {
+    const source = code(fs.readFileSync(path.join(SCREENS_DIR, name), 'utf8'));
+    expect({ name, label: /from ['"][^'"]*\/SectionLabel['"]/.test(source) }).toEqual({ name, label: false });
+    expect({ name, card: /<Card\b/.test(source) }).toEqual({ name, card: false });
+  });
+});
+
 // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8, Q6
 // recommendation, Part E): rule (d), the `title` type role's own cap.
 describe('presentation law (d): the title type role is reserved for one figure per screen', () => {
@@ -212,10 +229,10 @@ describe('presentation law (d): the title type role is reserved for one figure p
     '%s never uses the title role',
     (rel, full) => {
       const source = code(fs.readFileSync(full, 'utf8'));
-      // D221 law V3: the Hub's one large entry row (Find people) is the single
-      // place a screen uses the title role.
-      const allowed = rel.endsWith('CommunityHubScreen.js') ? 1 : 0;
-      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: allowed });
+      // D221 law V3: the large entry row (Find people) is the single place the
+      // title role is used, and since lane 2B (ruling 7) it lives in EntryRow,
+      // which the Hub now uses; no screen carries a copy of it.
+      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: 0 });
     },
   );
 

@@ -26,7 +26,7 @@ import BottomSheet from '../BottomSheet';
 import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import Chip from '../Chip';
-import SectionLabel from '../SectionLabel';
+import SectionHeader from './SectionHeader';
 import { useToast } from '../Toast';
 import { spacing, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -81,7 +81,7 @@ export default function SessionSheet({
         </Text>
 
         <View style={styles.field}>
-          <SectionLabel>Day</SectionLabel>
+          <SectionHeader flush title="Day" />
           <View style={styles.chips}>
             {SESSION_DAYS.map((d) => (
               <Chip key={d.key} label={d.label} selected={day === d.key} onPress={() => setDay(d.key)} />
@@ -90,7 +90,7 @@ export default function SessionSheet({
         </View>
 
         <View style={styles.field}>
-          <SectionLabel>Time</SectionLabel>
+          <SectionHeader flush title="Time" />
           <View style={styles.chips}>
             {SESSION_TIME_BANDS.map((b) => (
               <Chip key={b.key} label={b.label} selected={band === b.key} onPress={() => setBand(b.key)} />
@@ -99,7 +99,7 @@ export default function SessionSheet({
         </View>
 
         <View style={styles.field}>
-          <SectionLabel>Where</SectionLabel>
+          <SectionHeader flush title="Where" />
           <View style={styles.chips}>
             {gymChips.map((g) => (
               <Chip key={g.id} label={g.label} selected={gymId === g.id} onPress={() => setGymId(g.id)} />

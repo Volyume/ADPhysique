@@ -18,7 +18,7 @@ import { create, act } from 'react-test-renderer';
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => (props) => props?.title ?? null);
-jest.mock('../../components/community/PostCard', () => () => null);
+jest.mock('../../components/community/PostRow', () => () => null);
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
@@ -312,6 +312,18 @@ describe('L12 (D221): one default audience rule, said out loud', () => {
     expect(groupRow).toBeGreaterThan(groupLabel);
     // The group chips are no longer mapped inside the radio row.
     expect(src.slice(radios, groupLabel)).not.toContain('myGroups.map');
-    expect(src).toContain('<PrivacyReceipt />');
+    // D221 lane 2B: the receipt is a band of plain text on this screen.
+    expect(src).toContain('<PrivacyReceipt inBand />');
+  });
+
+  test('D221 lane 2B: bands with section headers, the caption is a well, the preview is a PostRow', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityComposeScreen.js'), 'utf8');
+    expect(src).not.toMatch(/SectionLabel|ActivityIndicator|PostCard/);
+    expect(src).toMatch(/<SectionHeader title="Preview"/);
+    expect(src).toMatch(/<SectionHeader title="Who can see it"/);
+    expect(src).toMatch(/<ComposerInput\s+well/);
+    expect(src).toMatch(/<PostRow item=/);
+    // The first load is the screen's true shape, not a spinner.
+    expect(src).toMatch(/<SkeletonPostRow \/>/);
   });
 });

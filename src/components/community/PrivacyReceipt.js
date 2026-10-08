@@ -13,7 +13,8 @@
  * glyph in amber, one `caption` line, and a `tertiary` sm "What is shared"
  * that expands the full "Others can see" / "Never shared" columns in
  * place. Nothing in the list is removed; it is only collapsed until asked
- * for. On a narrow width the expanded columns stack rather than truncate.
+ * for. `inBand` (D221 V1, lane 2B) renders it as a band of plain text for
+ * the Community screens. On a narrow width the expanded columns stack rather than truncate.
  */
 
 import { useState } from 'react';
@@ -21,7 +22,7 @@ import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import Button from '../Button';
-import SectionLabel from '../SectionLabel';
+import Band from './Band';
 import {
   colors, spacing, type, iconSize, withAlpha, alpha,
 } from '../../styles/theme';
@@ -59,16 +60,26 @@ export const PRIVACY_RECEIPT_LINE = 'Nothing about your body, food or coaching i
 // PartnerPrivacyReceipt: below this the columns stack so no line truncates.
 const STACK_BELOW = 360;
 
-export default function PrivacyReceipt() {
+/** A small column title inside the receipt (D221 V2: no uppercase, no amber). */
+function ColumnTitle({ children }) {
+  const t = useTheme();
+  return (
+    <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]} accessibilityRole="header">
+      {children}
+    </Text>
+  );
+}
+
+export default function PrivacyReceipt({ inBand = false }) {
   const t = useTheme();
   const { width } = useWindowDimensions();
   const stack = width < STACK_BELOW;
   const [expanded, setExpanded] = useState(false);
 
-  return (
-    <Card surface="surface2" radius="md" padding="md" style={styles.card}>
+  const body = (
+    <>
       <View style={styles.compact}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.primary} />
+        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.textPrimary} />
         <Text style={[styles.line, { ...t.type.caption, color: t.colors.textPrimary }]}>
           {PRIVACY_RECEIPT_LINE}
         </Text>
@@ -85,7 +96,7 @@ export default function PrivacyReceipt() {
       ) : (
         <View style={[styles.columns, stack && styles.columnsStack]}>
           <View style={styles.col}>
-            <SectionLabel>Others can see</SectionLabel>
+            <ColumnTitle>Others can see</ColumnTitle>
             {SHOWN.map((line) => (
               <Text key={line} style={[styles.itemLine, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
                 {line}
@@ -98,7 +109,7 @@ export default function PrivacyReceipt() {
             : <View style={[styles.ruleV, { backgroundColor: withAlpha(t.colors.border, alpha.strong) }]} />}
 
           <View style={styles.col}>
-            <SectionLabel>Never shared</SectionLabel>
+            <ColumnTitle>Never shared</ColumnTitle>
             {NEVER.map((line) => (
               <View key={line} style={styles.neverRow}>
                 <Ionicons
@@ -115,12 +126,23 @@ export default function PrivacyReceipt() {
           </View>
         </View>
       )}
+    </>
+  );
+
+  // D221 V1 (lane 2B): on a Community screen the receipt is a band of plain
+  // text; the card form stays for the hero and the onboarding step, which
+  // sit on a surface of their own.
+  if (inBand) return <Band style={styles.band}>{body}</Band>;
+  return (
+    <Card surface="surface2" radius="md" padding="md" style={styles.card}>
+      {body}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
+  band: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   compact: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   line: { ...type.caption, color: colors.textPrimary, flex: 1 },
   columns: { flexDirection: 'row', alignItems: 'flex-start' },

@@ -175,7 +175,23 @@ export {
   GROUP_PURPOSE_LINE,
   createGroup, updateGroup, closeGroup, leaveGroup, joinGroup,
   approveGroupRequest, removeGroupMember, promoteGroupMember,
-  inviteToGroup, createGroupInviteLink, acceptGroupInvite,
+  inviteToGroup, createGroupInviteLink, acceptGroupInvite, declineGroupInvite,
   listMyGroups, getGroup, listGroupMembers, searchGroups, loadGroupFeed,
   togetherLine,
 } from './groups';
+
+// ─── Stage 3: presence, group chat, challenges (D221 ruling 4) ──────────
+
+export {
+  TRAINING_NOW_STALE_MS, setTrainingNow, setShowTrainingNow, normaliseTrainingNow,
+} from './presence';
+
+export {
+  GROUP_MESSAGE_MAX, GROUP_CHAT_PAGE_SIZE,
+  loadGroupMessages, sendGroupMessage, deleteGroupMessage, markGroupRead,
+} from './groupChat';
+
+export {
+  CHALLENGE_NAME_MAX, CHALLENGE_MAX_DAYS, CHALLENGE_TARGET_MAX,
+  createChallenge, endChallenge, logChallengeSession, loadChallengeBoard,
+} from './challenges';

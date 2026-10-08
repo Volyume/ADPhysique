@@ -131,3 +131,24 @@ test('Followers and Connections rows navigate to their screens', async () => {
   await act(async () => { byLabel(tree, 'See and manage your connections').props.onPress(); });
   expect(navigation.navigate).toHaveBeenCalledWith('CommunityConnections');
 });
+const stripped = (f) => require('fs').readFileSync(require('path').join(__dirname, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+function headerTitles(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+    .map((n) => n.props.children);
+}
+
+test('D221 lane 2B: sections carry header roles, rows are 48 dp targets, the screen is bands', async () => {
+  const { tree } = await mount();
+  expect(headerTitles(tree)).toEqual(expect.arrayContaining([
+    'Who can follow you', 'Who can send you connection requests', 'Blocked', 'Muted',
+  ]));
+  const src = stripped('../CommunityPrivacyScreen.js');
+  expect(src).not.toMatch(/SectionLabel|SettingRow|SkeletonRow|<Switch[\s>]/);
+  expect(src).toContain('<PrivacyReceipt inBand />');
+  // A section with nothing in it is one quiet line.
+  const text = JSON.stringify(tree.toJSON());
+  expect(text).toContain('You have not blocked anyone.');
+  expect(text).toContain('You have not muted anyone.');
+});

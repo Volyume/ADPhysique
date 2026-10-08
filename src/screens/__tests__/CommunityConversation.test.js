@@ -361,3 +361,25 @@ describe('a conversation that can no longer take a message', () => {
     act(() => { tree.unmount(); });
   });
 });
+
+describe('D221 lane 2B: the header glyph and the composer well', () => {
+  test('the menu is one bare header glyph, a 48 dp target, never a circle', async () => {
+    const { tree } = await mount({ userId: 'u2' });
+    const glyph = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Conversation options')[0];
+    expect(glyph).toBeTruthy();
+    const style = [].concat(glyph.props.style).flat().filter(Boolean).reduce((a, st) => ({ ...a, ...st }), {});
+    expect(style.width).toBe(48);
+    expect(style.height).toBe(48);
+    expect(style.borderRadius).toBeUndefined();
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityConversationScreen.js'), 'utf8');
+    expect(src).toMatch(/<HeaderGlyph/);
+    expect(src).not.toMatch(/styles\.headerAction/);
+  });
+
+  test('the message field is a well on a surface band', async () => {
+    const { tree } = await mount({ userId: 'u2' });
+    expect(field(tree).props.well).toBeUndefined();
+    const composer = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Message' && n.props?.well === true);
+    expect(composer.length).toBeGreaterThan(0);
+  });
+});
