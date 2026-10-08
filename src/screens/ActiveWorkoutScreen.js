@@ -5201,7 +5201,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           startTime={workoutStartTime}
           onClose={handleCancelWorkout}
           onRest={() => setShowRestSheet(true)}
-          onNotes={() => setShowNotesSheet(true)}
           onFinish={handleFinishWorkout}
         />
 
@@ -5271,7 +5270,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             index={currentExerciseIndex + 1}
             name={exercise.name}
             state="active"
-            groupLabel={outlineItemsShown[currentExerciseIndex]?.groupLabel ?? null}
+            groupLabel={null}
             onDetails={handleOpenExerciseDetails}
             bests={sectionBests}
             onHistory={previousHistory ? openHistorySheet : undefined}
