@@ -214,7 +214,7 @@ describe('loadHubSummary (community_hub_summary)', () => {
   test('a payload of the wrong shape leaves arrays behind, never undefined', async () => {
     server({ community_hub_summary: null });
     const summary = await loadHubSummary();
-    expect(summary).toEqual({ cohorts: [], groups: [] });
+    expect(summary).toEqual({ cohorts: [], groups: [], trainingNow: null });
   });
 });
 

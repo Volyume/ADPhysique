@@ -751,6 +751,10 @@ export default function App() {
           // eslint-disable-next-line global-require
           const { drainSyncQueue } = require('./src/lib/syncQueue');
           drainSyncQueue(sb, supabaseUserId).catch(() => {});
+          // Community presence stale guard (D221 3a): a "training now" marker
+          // raised more than three hours ago is cleared. Best effort.
+          // eslint-disable-next-line global-require
+          require('./src/lib/community/presenceSession').clearStaleTrainingNow(supabaseUserId).catch(() => {});
         }
         // Error log shipping is now Sentry's job (initialised below).
         // The SDK has its own offline buffer + transport, so we don't

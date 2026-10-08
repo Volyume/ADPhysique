@@ -215,6 +215,9 @@ export async function listMyGroups() {
     role: row.role ?? null,
     state: row.state ?? null,
     unread: Number.isFinite(Number(row.unread)) ? Number(row.unread) : 0,
+    // D221 3c: the group's active challenge id when the server names it
+    // (`active_challenge_id`); null otherwise, and then nothing is logged.
+    activeChallengeId: row.active_challenge_id ?? row.group?.active_challenge_id ?? null,
   })).filter((row) => !!row.group);
 }
 
@@ -232,6 +235,9 @@ export async function getGroup(groupId) {
     myState: data.my_state ?? null,
     // migrate_191 (3a): {count, names} or null when withheld / not a member.
     trainingNow: normaliseTrainingNow(data.training_now),
+    // D221 3c: the active challenge's id when the server names it
+    // (`active_challenge_id`, or an `active_challenge` object); else null.
+    activeChallengeId: data.active_challenge_id ?? data.active_challenge?.id ?? null,
   };
 }
 

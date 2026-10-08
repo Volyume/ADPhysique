@@ -22,6 +22,7 @@ import { callCommunity } from './transport';
 import { currentUserId } from './profile';
 import { localDayKey } from '../dayKey';
 import { notifyCommunityEvent } from './notify';
+import { normaliseTrainingNow } from './presence';
 
 export const HUB_CACHE_PREFIX = '@volyume_community_hub_';
 export const DEFAULT_PAGE_SIZE = 20;
@@ -262,6 +263,8 @@ export async function loadHubSummary() {
   return {
     cohorts: Array.isArray(data?.cohorts) ? data.cohorts : [],
     groups: Array.isArray(data?.groups) ? data.groups : [],
+    // migrate_191 (3a): {count, names} or null when withheld.
+    trainingNow: normaliseTrainingNow(data?.training_now),
   };
 }
 

@@ -102,3 +102,20 @@ Finalised from 04 section 3, items marked [A] and [band], as the law for all 24 
 13. Calm mode on (Settings): the You row and the ProgressStrip are hidden as before; nothing new appears. ED case: with an open flag the same hides hold and no weight-adjacent copy appears anywhere in Community.
 14. Non-member: the Community tab shows the hero and the Everyone feed in read-only; Join works; "Browse first" leaves you reading.
 15. Larger text (x1.2): post rows grow, nothing clips, targets stay tappable.
+
+### Stage 3 (client lane 3C, physical Android, EAS build; needs migration 191 applied)
+1. Privacy and sharing: "Show when I am training" is off. Switch it on. Expected: it stays on after leaving and reopening the panel. As a minor account the switch, consistency and age group rows are absent.
+2. With the switch on, start a workout. On a second phone that follows you, the Hub Feed shows a band "1 training now" with your first name. Finish the workout: the band is gone within a refresh.
+3. Start a workout, then discard it: the band clears. Start one and leave the app for over 3 hours: it is gone on return to the app.
+4. Switch off, start a workout: nothing shows for anyone.
+5. Group page: the same band shows "N training now · M trained today" for members training.
+6. Group page Chat band: the latest three messages and the unread count. Tap Open chat: bubbles with a first name above others' messages; send one (calm line on a refused word); the Groups row unread count clears on return.
+7. Long-press (or "...") your own message: Delete with the confirm. As admin, the same on anyone's. On another member's message: report.
+8. A group chat push opens that group's chat.
+9. Invites on the Groups segment: Accept and Decline. Decline removes the row for good. On the group page of an invite the same two buttons.
+10. Admin: Start a challenge (name, start, 1, 2 or 4 weeks, optional target). The Challenge band shows days left, the group total against the target and each member's session count, yours first. End challenge asks first.
+11. Finish a workout while a challenge is active: your count goes up by one. Finish a second the same day: up by one again. (A finish made offline is not retried: the count catches up only for a session logged while online.)
+12. Reach your 10th, 25th, 50th, 100th or 250th completed session with sharing on: one "N sessions" milestone post appears once, never again for that count.
+13. A profile with 2 or more weeks in a row shows "N weeks in a row" under the facts; 0 or 1 shows nothing.
+14. Privacy panel: every switch (sessions and audience, consistency, age group, gym, place, who can follow, who can message, show when training) matches the Training profile screen and changes there appear here.
+15. ED and calm cases: with calm mode on, or an open ED flag, the presence band, the Challenge band and the weeks-in-a-row mark are absent on Hub, group page and profile, and finishing a workout sends no presence or challenge log. Nothing in any new line mentions weight, calories, bodyweight or measurements.

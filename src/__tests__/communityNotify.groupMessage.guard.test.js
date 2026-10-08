@@ -76,7 +76,7 @@ describe('community-notify: group_message (3b)', () => {
   test('copy is "New messages in {name}" and carries no content or handle', () => {
     expect(code).toMatch(/case 'group_message':[\s\S]*?body: `New messages in \$\{groupName \?\? 'your group'\}`/);
     const fn = code.slice(code.indexOf('async function fanOutGroupMessage'), code.indexOf('serve(async'));
-    expect(fn).toMatch(/data: \{ type: 'community_message', ref_id: groupId, kind: 'group_message', group_id: groupId \}/);
+    expect(fn).toMatch(/data: \{ type: 'community_group_message', ref_id: groupId, kind: 'group_message', group_id: groupId \}/);
     expect(fn).not.toMatch(/actor_handle|handle|select\('[^']*\bbody\b/);
   });
 

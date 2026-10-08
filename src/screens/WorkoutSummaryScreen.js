@@ -429,8 +429,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           previousBest: p.type === 'heaviest_weight' ? (p.previousValue ?? null) : null,
           date: startedAt ?? endedAt ?? Date.now(),
         }));
+        // D221 3d: the completed-session count (this one included) decides
+        // whether a milestone follows; a failed read just means none.
+        let completedCount = null;
+        try {
+          // eslint-disable-next-line global-require
+          completedCount = await require('../lib/database').getCompletedWorkoutCount(user.id);
+        } catch (_e) { /* no milestone this time */ }
         const out = await publishAmbientItems({
-          userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg',
+          userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg', completedCount,
         });
         setAmbientOutcome(out ?? { created: 0, queued: 0, skipped: 'failed' });
         if (out?.sessionPostId) {

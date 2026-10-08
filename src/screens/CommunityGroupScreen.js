@@ -17,6 +17,10 @@
  * link, Close group), Leave and Report stay exactly in the existing
  * `MenuSheet`.
  *
+ * D221 Stage 3 adds the presence band, the Chat band (latest three messages,
+ * unread count, Open chat), the Challenge band (admins start and end it) and
+ * Decline on an invite.
+ *
  * Route params: { id: groupId } (also reached via the `g/?id=` deep link,
  * RootNavigator's linking config).
  */
@@ -37,6 +41,8 @@ import HeaderGlyph from '../components/community/HeaderGlyph';
 import PersonRow from '../components/community/PersonRow';
 import PostRow from '../components/community/PostRow';
 import RespectAllRow from '../components/community/RespectAllRow';
+import PresenceBand from '../components/community/PresenceBand';
+import ChallengeSheet from '../components/community/ChallengeSheet';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import GroupInviteSheet from '../components/community/GroupInviteSheet';
@@ -47,7 +53,9 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, radius } from '../styles/theme';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
-  loadBoard, metricLabel, togetherLine, acceptGroupInvite,
+  loadBoard, metricLabel, togetherLine, acceptGroupInvite, declineGroupInvite,
+  loadGroupMessages, listMyGroups, loadChallengeBoard, createChallenge, endChallenge,
+  challengeDaysLine, challengeTotalLine, challengeFailureLine, consistencyGateState,
 } from '../lib/community';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
@@ -99,6 +107,24 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // D221 Stage 3: chat band, challenge band, presence gate.
+  const [chat, setChat] = useState({ messages: [], unread: 0 });
+  const [challengeBoard, setChallengeBoard] = useState(null);
+  const [challengeSheetOpen, setChallengeSheetOpen] = useState(false);
+  const [gated, setGated] = useState(true); // fails closed until the gate answers
+  const [declining, setDeclining] = useState(false);
+  const meUid = me?.profile?.user_id ?? null;
+
+  // Calm mode or an open ED flag hides presence and the challenge (the server
+  // withholds both too; both checks must agree to show).
+  useEffect(() => {
+    if (!meUid) { setGated(true); return undefined; }
+    let alive = true;
+    consistencyGateState(meUid, true)
+      .then(({ gated: g }) => { if (alive) setGated(g); })
+      .catch(() => { if (alive) setGated(true); });
+    return () => { alive = false; };
+  }, [meUid]);
 
   const load = useCallback(async () => {
     if (!groupId) return;
@@ -115,7 +141,23 @@ export default function CommunityGroupScreen({ navigation, route }) {
         setBoard(b);
         setFeedRows(feed.rows);
         setCursor(feed.cursor);
+        // Chat band and challenge band: each its own best-effort read, so a
+        // failure here never costs the page.
+        Promise.all([
+          loadGroupMessages(groupId, { limit: 3 }).catch(() => ({ messages: [] })),
+          listMyGroups().catch(() => []),
+        ]).then(([page, mine]) => {
+          const row = mine.find((r) => r.group?.id === groupId);
+          setChat({ messages: page.messages, unread: row?.unread ?? 0 });
+        });
+        if (g.activeChallengeId) {
+          loadChallengeBoard(g.activeChallengeId).then(setChallengeBoard).catch(() => setChallengeBoard(null));
+        } else {
+          setChallengeBoard(null);
+        }
       } else {
+        setChat({ messages: [], unread: 0 });
+        setChallengeBoard(null);
         setBoard(null);
         setFeedRows([]);
         setCursor(null);
@@ -189,6 +231,53 @@ export default function CommunityGroupScreen({ navigation, route }) {
     } finally {
       setSharingWorkout(false);
     }
+  }
+
+  // Decline an invite (D221 3b), on the page an invited person lands on.
+  async function doDecline() {
+    if (declining) return;
+    setDeclining(true);
+    try {
+      await declineGroupInvite(groupId);
+      toast.show('Invite declined.');
+      navigation.goBack();
+    } catch (e) {
+      if (e?.code === 'not_found') navigation.goBack();
+      else toast.show(REFUSALS[e?.code] ?? 'Could not decline that invite just now.', { variant: 'error' });
+    } finally {
+      setDeclining(false);
+    }
+  }
+
+  async function doCreateChallenge(input) {
+    try {
+      await createChallenge(groupId, input);
+      toast.show('Challenge started.');
+      await load();
+      return true;
+    } catch (e) {
+      toast.show(RESTRICTION_REFUSALS[e?.code] ?? challengeFailureLine(e?.code), { variant: 'error' });
+      return false;
+    }
+  }
+
+  function confirmEndChallenge() {
+    appAlert('End this challenge?', 'It ends for everyone in the group. Nobody loses their sessions.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'End challenge',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await endChallenge(challengeBoard?.challenge?.id);
+            toast.show('Challenge ended.');
+            await load();
+          } catch (e) {
+            toast.show(challengeFailureLine(e?.code), { variant: 'error' });
+          }
+        },
+      },
+    ]);
   }
 
   async function doJoin() {
@@ -427,7 +516,35 @@ export default function CommunityGroupScreen({ navigation, route }) {
           />
         </>
       ) : null}
-      {!isMember && !isMinor && (!inviteToken || isRequested) ? (
+      {group?.myState === 'invited' && !isMinor && !inviteToken ? (
+        <View style={styles.inviteRow}>
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth={false}
+            title="Accept invite"
+            loading={accepting}
+            disabled={accepting || declining}
+            onPress={async () => {
+              setAccepting(true);
+              try { await acceptGroupInvite({ groupId }); toast.show('Joined.'); await load(); } catch (e) {
+                toast.show(REFUSALS[e?.code] ?? 'Could not accept that invite just now.', { variant: 'error' });
+              } finally { setAccepting(false); }
+            }}
+            accessibilityLabel="Accept the invite to this group"
+          />
+          <Button
+            variant="tertiary"
+            size="sm"
+            fullWidth={false}
+            title="Decline"
+            disabled={accepting || declining}
+            onPress={doDecline}
+            accessibilityLabel="Decline the invite to this group"
+          />
+        </View>
+      ) : null}
+      {!isMember && !isMinor && group?.myState !== 'invited' && (!inviteToken || isRequested) ? (
         <Button
           variant="primary"
           size="sm"
@@ -443,8 +560,77 @@ export default function CommunityGroupScreen({ navigation, route }) {
     </Band>
   );
 
+  const trainedTodayCount = (board?.rows ?? []).filter((r) => r.trainedToday).length;
+  const chatLines = chat.messages.slice(0, 3);
+  const challenge = challengeBoard?.challenge ?? null;
   const memberBands = isMember ? (
     <>
+      <PresenceBand
+        trainingNow={group?.trainingNow ?? null}
+        trainedToday={trainedTodayCount}
+        gated={gated}
+        gapAfter
+      />
+      <Band>
+        <SectionHeader
+          title="Chat"
+          trailing={{
+            label: 'Open chat',
+            onPress: () => navigation.navigate('CommunityGroupChat', { id: groupId, name: group?.name }),
+          }}
+        />
+        {chatLines.length ? chatLines.map((m) => (
+          <Text key={m.id} style={[styles.chatLine, t.type.bodySm, { color: t.colors.textSecondary }]} numberOfLines={1}>
+            {`${m.mine ? 'You' : (m.author?.display_name || m.author?.handle || 'Someone').split(' ')[0]}: ${m.body}`}
+          </Text>
+        )) : (
+          <BandLine text="No messages yet. Say hello to the group." />
+        )}
+        {chat.unread > 0 ? (
+          <Text style={[styles.chatLine, t.type.caption, { color: t.colors.textMuted }]}>
+            {`${chat.unread} unread`}
+          </Text>
+        ) : null}
+      </Band>
+      {!gated && (challenge || isAdmin) ? (
+        <>
+          <BandGap />
+          <Band>
+            <SectionHeader title="Challenge" />
+            {challenge ? (
+              <>
+                <View style={styles.chatLine}>
+                  <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]}>{challenge.name}</Text>
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                    {`${challengeDaysLine(challengeBoard.daysRemaining)} \u00b7 ${challengeTotalLine(challengeBoard.groupTotal, challenge.targetSessions)}`}
+                  </Text>
+                </View>
+                {challengeBoard.members.map((m) => (
+                  <PersonRow
+                    key={m.userId}
+                    inBand
+                    person={{
+                      user_id: m.userId, handle: m.handle, display_name: m.displayName, avatar_preset: m.avatarPreset, isYou: m.me,
+                    }}
+                    metric={`${m.sessions} ${m.sessions === 1 ? 'session' : 'sessions'}`}
+                    onPress={() => openProfile({ handle: m.handle })}
+                  />
+                ))}
+                {isAdmin ? (
+                  <EntryRow icon="stop-circle-outline" title="End challenge" onPress={confirmEndChallenge} />
+                ) : null}
+              </>
+            ) : (
+              <EntryRow
+                icon="trophy-outline"
+                title="Start a challenge"
+                subtitle="Count the group's sessions over a few weeks"
+                onPress={() => setChallengeSheetOpen(true)}
+              />
+            )}
+          </Band>
+        </>
+      ) : null}
       <BandGap />
       <Band>
         <SectionHeader
@@ -563,6 +749,11 @@ export default function CommunityGroupScreen({ navigation, route }) {
         targetKind="group"
         targetId={groupId}
       />
+      <ChallengeSheet
+        visible={challengeSheetOpen}
+        onClose={() => setChallengeSheetOpen(false)}
+        onCreate={doCreateChallenge}
+      />
       <GroupInviteSheet
         visible={inviteOpen}
         onClose={() => setInviteOpen(false)}
@@ -580,6 +771,8 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: spacing.lg },
   summary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   bandPad: { paddingHorizontal: spacing.lg },
+  chatLine: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
+  inviteRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
   togetherWrap: { gap: spacing.xxs },
   togetherTrack: { height: radius.hair, borderRadius: radius.hair, overflow: 'hidden' },

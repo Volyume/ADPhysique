@@ -52,6 +52,8 @@ jest.mock('../../hooks/useCommunityMe', () => ({
   default: jest.fn(),
 }));
 
+jest.mock('../../lib/community/bandShare', () => ({ saveBandToggle: jest.fn() }));
+
 jest.mock('../../lib/community', () => ({
   readShareSettings: jest.fn(() => Promise.resolve({ share_sessions: true, sessions_audience: 'everyone' })),
   sessionsSharingSentence: (on) => (on ? 'Your sessions are shared with everyone on Community unless you change it.' : 'Off: only you see your sessions.'),
@@ -86,6 +88,12 @@ jest.mock('../../lib/community', () => ({
   isValidHandle: (h) => /^[a-z0-9_]{3,20}$/.test(h) && !h.startsWith('_') && !h.endsWith('_'),
   checkHandle: jest.fn(),
   HANDLE_CHANGE_DAYS: 30,
+  // D221 Stage 3 (3e): the privacy panel's added switches.
+  SESSIONS_AUDIENCE_VALUES: ['followers', 'groups', 'everyone'],
+  SESSIONS_AUDIENCE_LABELS: { followers: 'Followers', groups: 'My groups', everyone: 'Everyone' },
+  readShowTrainingNow: jest.fn(() => Promise.resolve(false)),
+  saveShowTrainingNow: jest.fn(),
+  presenceFailureLine: () => 'Could not change that just now.',
 }));
 
 // GD-14 (gym database blueprint `docs/gym-database-2026-09-06/

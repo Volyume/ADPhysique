@@ -38,3 +38,23 @@ export function respectFailureLine(code) {
   if (code === 'rate_limited') return 'You have given a lot of Respect today. It will be back tomorrow.';
   return 'Could not send that. Try again in a moment.';
 }
+
+/** The calm line for the "Show when I am training" switch refused for a
+ * minor (`forbidden`, migrate_191). The switch is hidden for a minor, so
+ * this is the backstop for a stale cache. */
+export const TRAINING_NOW_MINOR_LINE =
+  'Showing when you are training is available to people aged 18 and over.';
+
+/**
+ * The calm toast for a presence switch that did not save (D221 Stage 3, 3a).
+ *
+ * @param {string|null|undefined} code a CommunityError code
+ * @returns {string}
+ */
+export function presenceFailureLine(code) {
+  const restricted = restrictionLine(code);
+  if (restricted) return restricted;
+  if (code === 'forbidden') return TRAINING_NOW_MINOR_LINE;
+  if (code === 'offline') return 'You are offline. Try again when you have a connection.';
+  return 'Could not change that just now.';
+}

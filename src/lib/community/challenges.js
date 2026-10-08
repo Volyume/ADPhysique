@@ -10,6 +10,7 @@
  */
 
 import { callCommunity, CommunityError } from './transport';
+import { localDayKey, addLocalCalendarDays } from '../dayKey';
 
 export const CHALLENGE_NAME_MAX = 40;
 export const CHALLENGE_MAX_DAYS = 31;
@@ -106,4 +107,46 @@ export async function loadChallengeBoard(challengeId) {
     daysRemaining: Number(data.days_remaining) || 0,
     members,
   };
+}
+
+/** The lengths the create sheet offers, in days. All are inside the 31-day cap. */
+export const CHALLENGE_LENGTH_CHOICES = Object.freeze([7, 14, 28]);
+
+/**
+ * The window a create-sheet choice means, as local-day keys: a start of
+ * 'today' or 'tomorrow' and a length in days (7, 14 or 28). Pure given `now`.
+ * The server needs `ends_on` after `starts_on` and at most 31 days on; every
+ * choice here is.
+ *
+ * @param {{start?: ('today'|'tomorrow'), days?: number, now?: number}} [opts]
+ * @returns {{startsOn: string, endsOn: string}}
+ */
+export function challengeWindow({ start = 'today', days = 7, now = Date.now() } = {}) {
+  const length = CHALLENGE_LENGTH_CHOICES.includes(days) ? days : 7;
+  const startDate = addLocalCalendarDays(now, start === 'tomorrow' ? 1 : 0);
+  const endDate = addLocalCalendarDays(startDate, length);
+  return { startsOn: localDayKey(startDate.getTime()), endsOn: localDayKey(endDate.getTime()) };
+}
+
+/** "5 days left", "Last day", "Ends today" never needed: 0 left reads as the last day. */
+export function challengeDaysLine(daysRemaining) {
+  const n = Number(daysRemaining) || 0;
+  if (n <= 0) return 'Last day';
+  return n === 1 ? '1 day left' : `${n} days left`;
+}
+
+/** "12 of 30 sessions" with a target, "12 sessions" without. Sessions only. */
+export function challengeTotalLine(total, target = null) {
+  const n = Number(total) || 0;
+  const noun = n === 1 ? 'session' : 'sessions';
+  return target ? `${n} of ${target} sessions` : `${n} ${noun}`;
+}
+
+/** The calm line for a challenge write that did not land. */
+export function challengeFailureLine(code) {
+  if (code === 'offline') return 'You are offline. Try again when you have a connection.';
+  if (code === 'not_allowed') return 'Only a group admin can do that, and a group has one challenge at a time.';
+  if (code === 'content_not_allowed') return 'Some of that wording is not allowed in Community. Please reword it.';
+  if (code === 'invalid_input') return 'Check the name and the number of sessions, then try again.';
+  return 'Could not do that just now.';
 }

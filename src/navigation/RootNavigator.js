@@ -181,6 +181,7 @@ const CommunityPeopleListScreen = lazyScreen(() => require('../screens/Community
 const CommunityTrainingProfileScreen = lazyScreen(() => require('../screens/CommunityTrainingProfileScreen').default);
 const CommunityConversationsScreen = lazyScreen(() => require('../screens/CommunityConversationsScreen').default);
 const CommunityConversationScreen = lazyScreen(() => require('../screens/CommunityConversationScreen').default);
+const CommunityGroupChatScreen = lazyScreen(() => require('../screens/CommunityGroupChatScreen').default);
 const CommunityFollowersScreen = lazyScreen(() => require('../screens/CommunityFollowersScreen').default);
 const CommunityConnectionsScreen = lazyScreen(() => require('../screens/CommunityConnectionsScreen').default);
 // Dormant billing surfaces (founder decision: Volyume is fully free, no
@@ -555,6 +556,8 @@ function CommunityStack({ navigation }) {
       <Stack.Screen name="CommunityTrainingProfile" component={CommunityTrainingProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityConversations" component={CommunityConversationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityConversation" component={CommunityConversationScreen} options={{ headerShown: false }} />
+      {/* D221 3b: the group's chat, reached from the group page's Chat band and the group_message push. */}
+      <Stack.Screen name="CommunityGroupChat" component={CommunityGroupChatScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityFollowers" component={CommunityFollowersScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityConnections" component={CommunityConnectionsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>

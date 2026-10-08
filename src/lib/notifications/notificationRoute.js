@@ -191,6 +191,12 @@ export function routeForNotificationType(type, data = {}) {
         screen: 'CommunityConversation',
         params: { id: data?.conversation_id ?? data?.conversationId ?? null, source: 'notification' },
       };
+    case 'community_group_message':
+      // D221 3b: the group chat push (`kind: 'group_message'`, ids only) lands
+      // on that group's chat. Without a group id it lands on Activity.
+      return data?.group_id
+        ? { tab: 'CommunityTab', screen: 'CommunityGroupChat', params: { id: data.group_id, source: 'notification' } }
+        : { tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' } };
     case 'diary_day':
       // §15 item 8 (deep-link expansion): the general-purpose target for any
       // notification that references ONE specific diary day rather than

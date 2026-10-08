@@ -29,6 +29,8 @@
  * Props:
  *   message           { id, mine, body, ref_kind, ref, created_at }
  *   dayLabel          optional day heading drawn above this message
+ *   senderName        optional first name above a message that is not yours
+ *                     (a group chat, D221 3b); nothing when absent
  *   onLongPress       () => void, offered for your own messages (Delete)
  *   onOpenRef         () => void, opens the referenced story
  *   onRespondSession  (accept: boolean) => void, offered to the
@@ -108,7 +110,7 @@ function SessionTile({ sessionRef, mine, onRespondSession, t }) {
 }
 
 export default function MessageBubble({
-  message, dayLabel = null, onLongPress, onOpenRef, onRespondSession,
+  message, dayLabel = null, senderName = null, onLongPress, onOpenRef, onRespondSession,
 }) {
   const t = useTheme();
   if (!message) return null;
@@ -123,6 +125,9 @@ export default function MessageBubble({
       ) : null}
       <View style={[styles.line, mine ? styles.lineMine : styles.lineTheirs]}>
         <View style={styles.column}>
+          {senderName && !mine ? (
+            <Text style={[styles.sender, { color: t.colors.textMuted }]}>{senderName}</Text>
+          ) : null}
           {ref && kind === 'post' ? (
             <PostCard post={ref} author={ref.author ?? null} onPress={onOpenRef} />
           ) : null}
@@ -164,6 +169,7 @@ export default function MessageBubble({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
   day: { ...type.caption, textAlign: 'center', paddingVertical: spacing.xs },
+  sender: { ...type.caption },
   line: { flexDirection: 'row' },
   lineMine: { justifyContent: 'flex-end' },
   lineTheirs: { justifyContent: 'flex-start' },

@@ -17,6 +17,7 @@
  *   placeholder  from `placeholderFor(ref)` in the client library
  *   onSend       (body: string) => Promise<boolean>, true clears the field
  *   disabled     the thread cannot take a message just now
+ *   maxLength    the ceiling; defaults to the DM ceiling, a group chat passes 500
  */
 
 import { useState } from 'react';
@@ -32,13 +33,13 @@ import { MESSAGE_MAX } from '../../lib/community';
 export const MESSAGE_COUNTER_FROM = 900;
 
 export default function MessageComposer({
-  placeholder = 'Write a message', onSend, disabled = false,
+  placeholder = 'Write a message', onSend, disabled = false, maxLength = MESSAGE_MAX,
 }) {
   const t = useTheme();
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const trimmed = body.trim();
-  const showCount = body.length >= MESSAGE_COUNTER_FROM;
+  const showCount = body.length >= Math.min(MESSAGE_COUNTER_FROM, Math.floor(maxLength * 0.9));
 
   async function send() {
     if (!trimmed || sending || disabled) return;
@@ -61,16 +62,16 @@ export default function MessageComposer({
         <ComposerInput
           well
           value={body}
-          onChangeText={(v) => setBody(v.slice(0, MESSAGE_MAX))}
+          onChangeText={(v) => setBody(v.slice(0, maxLength))}
           placeholder={placeholder}
-          maxLength={MESSAGE_MAX}
+          maxLength={maxLength}
           minHeight={touchTarget.minimum}
           editable={!disabled}
           accessibilityLabel="Message"
         />
         {showCount ? (
           <Text style={[styles.count, { color: t.colors.textMuted }]}>
-            {`${body.length} of ${MESSAGE_MAX}`}
+            {`${body.length} of ${maxLength}`}
           </Text>
         ) : null}
       </View>

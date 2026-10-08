@@ -42,11 +42,11 @@ import { spacing } from '../styles/theme';
 import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
-  loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
-  publishConsistency,
+  loadTrainingProfile, readShareSettings, syncTrainingProfile,
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS, sessionsSharingSentence,
   setPartner, listMyGroups,
 } from '../lib/community';
+import { saveBandToggle } from '../lib/community/bandShare';
 import { saveShareSessions, SHARE_OFF_TITLE, SHARE_OFF_BODY } from '../lib/community/shareSessions';
 
 /** What a band says when there is not enough training behind it yet. */
@@ -191,25 +191,14 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
 
   async function toggleBand(key, next) {
     const prevSettings = share;
-    const settings = { ...share, [key]: next };
-    setShare(settings);
-    await writeShareSettings(uid, settings);
-    // `force`: the person has just changed a toggle and expects it to take.
-    // Flipping `consistency` itself needs `publishConsistency`, the only
-    // path that actually computes and merges the counters into the call;
-    // `syncTrainingProfile` alone would send `share_consistency: true`
-    // with every counter null until the next natural refresh.
-    const out = key === 'consistency'
-      ? await publishConsistency(uid)
-      : await syncTrainingProfile(uid, { force: true });
-    if (out?.reason === 'rules_outdated') {
-      // The rules text moved with this campaign, not the connection: the
-      // toggle reverts and the person reads and accepts before it is
-      // shared, rather than being told (wrongly) that it is offline.
-      setShare(prevSettings);
-      await writeShareSettings(uid, prevSettings);
+    setShare({ ...share, [key]: next });
+    // The one setter shared with the privacy panel (D221 3e).
+    const out = await saveBandToggle(uid, prevSettings, key, next);
+    setShare(out.settings);
+    if (out.status === 'rules_outdated') {
+      // The rules text moved, not the connection: read and accept first.
       navigation.navigate('CommunityRules', { mustAccept: true });
-    } else if (!out?.sent) {
+    } else if (out.status === 'queued') {
       toast.show('Saved on this device. It will share when you are back online.');
     }
   }

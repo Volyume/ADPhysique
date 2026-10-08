@@ -126,6 +126,8 @@ const AMBER_COUNTS = [
   ['PrivacyReceipt.js', 0], // D221 V7 (lane 2B): the shield glyph is textPrimary, not a permanent amber glyph
   ['ProfileCard.js', 0],
   ['ProfileMenuSheet.js', 0],
+  ['PresenceBand.js', 0],
+  ['ChallengeSheet.js', 0],
   ['ProgressStrip.js', 1], // the tallest of the eight weekly-history bars
   ['ReportSheet.js', 0],
   ['SectionHeader.js', 0], // D221 V2: no amber in a section header

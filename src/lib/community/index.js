@@ -25,7 +25,10 @@ export {
 } from './validation';
 
 export { BLOCKED_TERMS, foldText, containsBlockedTerm, blockedTermsIn } from './keywordFilter';
-export { COMMUNITY_RESTRICTED_LINE, RESTRICTION_REFUSALS, restrictionLine, respectFailureLine } from './restriction';
+export {
+  COMMUNITY_RESTRICTED_LINE, RESTRICTION_REFUSALS, restrictionLine, respectFailureLine,
+  TRAINING_NOW_MINOR_LINE, presenceFailureLine,
+} from './restriction';
 
 export {
   COMMUNITY_RULES_VERSION, COMMUNITY_DIMENSION_MIN_FOR_HUB, NEW_ACCOUNT_DAYS,
@@ -123,7 +126,7 @@ export {
 } from './trainingConsistency';
 
 export {
-  PENDING_ITEMS_KEY, MAX_AUTO_PRS, publishAmbientItems, flushPendingAmbientItems,
+  PENDING_ITEMS_KEY, MAX_AUTO_PRS, MILESTONE_SESSION_COUNTS, milestonePayloadFor, publishAmbientItems, flushPendingAmbientItems,
   clearPendingAmbientItems, shareOfferSeenKey, hasSeenSessionShareOffer,
   recordSessionShareOfferSeen,
 } from './ambient';
@@ -184,7 +187,12 @@ export {
 
 export {
   TRAINING_NOW_STALE_MS, setTrainingNow, setShowTrainingNow, normaliseTrainingNow,
+  presenceLine, firstNamesLine,
 } from './presence';
+
+export {
+  readShowTrainingNow, saveShowTrainingNow, announceTraining, clearStaleTrainingNow,
+} from './presenceSession';
 
 export {
   GROUP_MESSAGE_MAX, GROUP_CHAT_PAGE_SIZE,
@@ -193,5 +201,8 @@ export {
 
 export {
   CHALLENGE_NAME_MAX, CHALLENGE_MAX_DAYS, CHALLENGE_TARGET_MAX,
+  CHALLENGE_LENGTH_CHOICES, challengeWindow, challengeDaysLine, challengeTotalLine, challengeFailureLine,
   createChallenge, endChallenge, logChallengeSession, loadChallengeBoard,
 } from './challenges';
+
+export { logFinishedSessionToChallenges } from './challengeSession';
