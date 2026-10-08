@@ -35,39 +35,30 @@ describe('SessionHeader', () => {
     expect(s.color).toBe(colors.textPrimary);
   });
 
-  test.each([[undefined], [null], [''], ['   ']])('no note (%p) shows the placeholder', (note) => {
+  // Founder device verdict 2026-10-08: no "Add notes here" control under the
+  // title (the toolbar's Notes tool is the one way in); a written note shows
+  // quietly and opens the same sheet.
+  test.each([[undefined], [null], [''], ['   ']])('no note (%p) shows nothing under the title', (note) => {
     const tree = render({ note });
-    expect(allText(tree.toJSON())).toContain('Add notes here');
-    expect(noteButton(tree).props.accessibilityLabel).toBe('Add a session note');
-  });
-
-  test('a note replaces the placeholder and is spoken', () => {
-    const tree = render({ note: '  Shoulder felt tight  ' });
-    expect(allText(tree.toJSON())).toContain('Shoulder felt tight');
     expect(allText(tree.toJSON())).not.toContain('Add notes here');
-    expect(noteButton(tree).props.accessibilityLabel).toBe('Session note: Shoulder felt tight');
+    expect(hosts(tree, (p) => p.accessibilityRole === 'button')).toHaveLength(0);
   });
 
-  test('the note line is a 48 dp button and calls onNotes with no arguments', () => {
+  test('a written note shows, is spoken, and is a 48 dp button that calls onNotes with no arguments', () => {
     const onNotes = jest.fn();
-    const tree = render({ onNotes });
+    const tree = render({ note: '  Shoulder felt tight  ', onNotes });
+    expect(allText(tree.toJSON())).toContain('Shoulder felt tight');
     const button = noteButton(tree);
+    expect(button.props.accessibilityLabel).toBe('Session note: Shoulder felt tight');
     expect(flat(button.props.style).minHeight).toBe(48);
     act(() => { button.props.onPress(); });
     expect(onNotes).toHaveBeenCalledTimes(1);
     expect(onNotes).toHaveBeenCalledWith();
-  });
-
-  test('the note glyph is 18 dp in muted ink, the text bodySm in muted ink', () => {
-    const tree = render({});
-    const glyph = tree.root.findAll((n) => n.type === 'Ionicons')[0];
-    expect(glyph.props.name).toBe('create-outline');
-    expect(glyph.props.size).toBe(18);
-    expect(glyph.props.color).toBe(colors.textMuted);
     const text = hosts(tree, (p) => p.numberOfLines === 2 && p.accessibilityRole !== 'header')[0];
     const s = flat(text.props.style);
     expect(s.color).toBe(colors.textMuted);
     expect(s.fontSize).toBe(type.bodySm.fontSize);
+    expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
   });
 
   test('the surface is the section colour', () => {

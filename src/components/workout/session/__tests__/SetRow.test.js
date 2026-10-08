@@ -233,12 +233,13 @@ describe('SetRow marker', () => {
 describe('SetRow Last cell (2a)', () => {
   const lastText = (tree, text) => flat(one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text)).props.style);
 
-  test('plain: the set in primary ink at the numeric strong role, one line', () => {
+  test('plain: the set in secondary ink (history, not the live number), one line', () => {
+    // Founder device verdict 2026-10-08: a bold white Last value read as the
+    // live number beside the wells; history is quiet.
     const text = `72.5 ${TIMES} 8`;
     const tree = render({});
     const s = lastText(tree, text);
-    expect(s.color).toBe(colors.textPrimary);
-    expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
+    expect(s.color).toBe(colors.textSecondary);
     expect(s.fontVariant).toEqual(['tabular-nums']);
     expect(one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === text)).props.numberOfLines).toBe(1);
   });

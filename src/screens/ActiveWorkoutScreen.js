@@ -5201,6 +5201,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           startTime={workoutStartTime}
           onClose={handleCancelWorkout}
           onRest={() => setShowRestSheet(true)}
+          onNotes={() => setShowNotesSheet(true)}
           onFinish={handleFinishWorkout}
         />
 

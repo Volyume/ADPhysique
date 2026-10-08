@@ -257,14 +257,14 @@ function MarkerCell({ marker, onPress, testID, hint, live }) {
   );
 }
 
-function LastCell({ last, onPress, testID, dim, live }) {
+function LastCell({ last, onPress, testID, live }) {
   if (!last || !last.text) {
     return <View style={styles.lastCol} testID={testID} />;
   }
   const text = last.stale ? `${MIDDLE_DOT} ${last.text}` : last.text;
   const content = (
     <Text
-      style={[styles.cellText, dim ? live.cellDim : live.cell, last.stale && live.cellStale]}
+      style={[styles.cellText, live.cellDim, last.stale && live.cellStale]}
       numberOfLines={1}
       adjustsFontSizeToFit
       minimumFontScale={FIT_SCALE}
@@ -304,7 +304,7 @@ function TargetCell({ target, record, prTarget, dim, live }) {
     <View style={styles.targetCol}>
       <View style={styles.targetValueRow}>
         <Text
-          style={[styles.cellText, styles.targetValue, dim ? live.cellDim : live.cell]}
+          style={[styles.cellText, styles.targetValue, styles.targetText, dim ? live.cellDim : live.cell]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={FIT_SCALE}
@@ -321,7 +321,7 @@ function TargetCell({ target, record, prTarget, dim, live }) {
         >
           <PrTag live={live} />
           <Text
-            style={[styles.cellText, styles.targetValue, live.prTargetText]}
+            style={[styles.cellText, styles.targetValue, styles.targetText, live.prTargetText]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={FIT_SCALE}
@@ -330,7 +330,7 @@ function TargetCell({ target, record, prTarget, dim, live }) {
           </Text>
         </View>
       ) : rule ? (
-        <Text style={[styles.cellText, styles.targetValue, live.rule]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={FIT_SCALE}>{rule}</Text>
+        <Text style={[styles.cellText, styles.targetValue, styles.targetText, live.rule]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={FIT_SCALE}>{rule}</Text>
       ) : null}
     </View>
   );
@@ -466,7 +466,7 @@ export default function SetRow({
         hint={onLongPressRow && !onPressMarker ? LONG_PRESS_HINT : undefined}
         live={live}
       />
-      <LastCell last={last} onPress={onPressLast} testID={ids.last} dim={dim} live={live} />
+      <LastCell last={last} onPress={onPressLast} testID={ids.last} live={live} />
       <TargetCell target={target} record={record} prTarget={prTarget} dim={dim} live={live} />
       <View style={[styles.wells, live.wells, wellState === 'editing' && live.wellsEditing]}>
         {specs.map((spec, i) => {
@@ -549,9 +549,10 @@ const styles = StyleSheet.create({
   },
   lastCol: { width: SET_COLUMNS.last, alignItems: 'center', justifyContent: 'center' },
   lastPress: { minHeight: touchTarget.minimum },
-  targetCol: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' },
-  targetValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  targetCol: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', paddingLeft: spacing.xs },
+  targetValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
   targetValue: { flexShrink: 1 },
+  targetText: { textAlign: 'left' },
   prTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
   cellText: { textAlign: 'center' },
   prTag: {

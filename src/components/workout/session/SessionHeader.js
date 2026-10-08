@@ -18,14 +18,10 @@
  */
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
-// Spec section 2: the note glyph is 18.
-const NOTE_GLYPH = 18;
-const PLACEHOLDER = 'Add notes here';
 
 export default function SessionHeader({ name, note, onNotes }) {
   const t = useTheme();
@@ -43,18 +39,21 @@ export default function SessionHeader({ name, note, onNotes }) {
       <Text style={live.title} numberOfLines={2} accessibilityRole="header">
         {name}
       </Text>
-      <TouchableOpacity
-        style={styles.noteRow}
-        onPress={onNotes}
-        accessibilityRole="button"
-        accessibilityLabel={hasNote ? `Session note: ${trimmed}` : 'Add a session note'}
-        accessibilityHint="Opens the session notes"
-      >
-        <Ionicons name="create-outline" size={NOTE_GLYPH} color={t.colors.textMuted} />
-        <Text style={[styles.noteText, live.noteText]} numberOfLines={2}>
-          {hasNote ? trimmed : PLACEHOLDER}
-        </Text>
-      </TouchableOpacity>
+      {/* Founder device verdict 2026-10-08: the "Add notes here" control under
+          the title sat out of place beside the toolbar's Notes tool, which is
+          the one way in. A note already written still shows here, quietly,
+          and tapping it opens the same sheet. */}
+      {hasNote ? (
+        <TouchableOpacity
+          style={styles.noteRow}
+          onPress={onNotes}
+          accessibilityRole="button"
+          accessibilityLabel={`Session note: ${trimmed}`}
+          accessibilityHint="Opens the session notes"
+        >
+          <Text style={[styles.noteText, live.noteText]} numberOfLines={2}>{trimmed}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

@@ -61,7 +61,9 @@ describe('SetTable column labels', () => {
       const s = flat(textHost(tree, label).props.style);
       expect(s.color).toBe(colors.textSecondary);
       expect(s.fontSize).toBe(type.label.fontSize);
-      expect(s.textAlign).toBe('center');
+      // Target starts at the column's left edge, like its cells (a PR tag
+      // must never shift the value line); the others stay centred.
+      expect(s.textAlign).toBe(label === 'Target' ? 'left' : 'center');
     });
   });
 
