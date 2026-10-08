@@ -98,8 +98,15 @@
 --
 -- Applied locally:   N/A (Community adds no local SQLite table; the client
 --                    is src/lib/community/feed.js).
--- Applied remotely:  NO (UNAPPLIED). STATUS: UNAPPLIED, written 2026-10-08
---                    by lane 1B. Apply only on the founder's exact phrase
+-- Applied remotely:  YES. STATUS: APPLIED 2026-10-08 10:45:59 UTC under the
+--                    founder's "Deploy all and run all migrations remaining
+--                    against production" (2026-10-08), Claude-run through the
+--                    Supabase connector under the checksum protocol (file md5
+--                    7915a13dab4d2139b20514d09a438be4, 22,132 bytes; tracking
+--                    row in claude_schema_migrations). Verified read-only: one
+--                    community_feed(text, integer, text, text) signature,
+--                    executable by authenticated and not by anon.
+--                    Written 2026-10-08 by lane 1B. Applied only on the founder's exact phrase
 --                    "run against production: 190" (CLAUDE.md section 2,
 --                    "Database schema"); the app never runs it and the
 --                    deploy workflow is manual-dispatch only. The route is

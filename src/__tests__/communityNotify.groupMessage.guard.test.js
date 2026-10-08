@@ -1,7 +1,7 @@
 /**
  * communityNotify.groupMessage.guard.test.js - Stage 3 spec 3b (D221): the
  * `group_message` kind of `supabase/functions/community-notify/index.ts`
- * (NOT DEPLOYED; version note stays 5).
+ * (DEPLOYED 2026-10-08; version note stays 5).
  *
  * WHAT THIS SUITE PINS, source-level (a Deno function Jest cannot run):
  * the kind exists under the existing `community_message` category; it is
@@ -24,7 +24,8 @@ const code = SOURCE.split('\n').filter((l) => !l.trim().startsWith('//')).join('
 
 describe('community-notify: group_message (3b)', () => {
   test('the version note stays 5 and lists the addition', () => {
-    expect(SOURCE).toMatch(/VERSION 5 \(D221, 2026-10-08\), NOT DEPLOYED/);
+    expect(SOURCE).toMatch(/VERSION 5 \(D221, 2026-10-08\), DEPLOYED 2026-10-08 11:23:10 UTC/);
+    expect(SOURCE).not.toMatch(/NOT DEPLOYED/);
     expect(SOURCE).toMatch(/Version 5 also adds \(Stage 3, spec 3b, lane 3S\) the kind `group_message`/);
     expect(SOURCE).not.toMatch(/VERSION 6/);
   });

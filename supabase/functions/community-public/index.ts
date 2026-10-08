@@ -24,10 +24,12 @@
 //   ?kind=programme&id=<uuid>
 //   ?kind=post&id=<uuid>
 //   ?kind=profile&h=<handle>
-//   ?kind=group&id=<uuid>            (Stage 3, 3f; NOT DEPLOYED)
+//   ?kind=group&id=<uuid>            (Stage 3, 3f; DEPLOYED 2026-10-08)
 //
-// Link previews (Stage 3, spec 3f, D221; NOT DEPLOYED until the founder's
-// go): the profile, post and group responses each carry a `preview` of
+// Link previews (Stage 3, spec 3f, D221; DEPLOYED 2026-10-08 11:25:37 UTC as
+// version 4 under the founder's "Deploy all and run all migrations remaining
+// against production", verify_jwt off as before): the profile, post and
+// group responses each carry a `preview` of
 // `{ title, description }` for the /u, /s and /g pages' meta tags. Built
 // ONLY by the three preview* functions below, from an explicit allow-list:
 //   u  display name, handle, and the self-declared discipline labels

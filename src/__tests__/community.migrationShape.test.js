@@ -292,8 +292,9 @@ describe('migrate_190 community_feed scopes keep the house shape', () => {
     expect(H190).toMatch(re);
   });
 
-  test('it is UNAPPLIED and names the founder phrase and the 170 body to restore', () => {
-    expect(H190).toMatch(/Applied remotely:\s+NO \(UNAPPLIED\)/);
+  test('it is APPLIED (2026-10-08) and names the founder phrase and the 170 body to restore', () => {
+    expect(H190).toMatch(/Applied remotely:\s+YES\. STATUS: APPLIED 2026-10-08 10:45:59 UTC/);
+    expect(H190).not.toMatch(/STATUS: UNAPPLIED/);
     expect(H190).toContain('run against production');
     expect(H190).toContain('migrate_170');
     expect(H190).toContain('line 3356');
@@ -399,8 +400,9 @@ describe('migrate_191 Stage 3 keeps the house shape', () => {
     expect(H191).toMatch(re);
   });
 
-  test('it is UNAPPLIED, names the founder phrase and the helper lines it reuses', () => {
-    expect(H191).toMatch(/Applied remotely:\s+NO \(UNAPPLIED\)/);
+  test('it is APPLIED (2026-10-08), names the founder phrase and the helper lines it reuses', () => {
+    expect(H191).toMatch(/Applied remotely:\s+YES\. STATUS: APPLIED 2026-10-08 11:16:42 UTC/);
+    expect(H191).not.toMatch(/STATUS: UNAPPLIED/);
     expect(H191).toContain('run against production: 191');
     expect(H191).toContain('migrate_180 line 337');
     expect(H191).toContain('migrate_160 line 869');
