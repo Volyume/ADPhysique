@@ -154,7 +154,7 @@ function isToday(createdAt) {
 }
 
 export default function PostRow({
-  item, onPress, onPressWithLayout, onRespect, onRespectBlocked, onRespected, onOpenPerson, detail = false,
+  item, onPress, onPressWithLayout, onRespect, onRespectBlocked, onRespected, onOpenPerson, detail = false, last = false,
 }) {
   const t = useTheme();
   const toast = useToast();
@@ -325,7 +325,7 @@ export default function PostRow({
           </Pressable>
         </View>
       </View>
-      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+      {last ? null : <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />}
     </PressableCard>
   );
 }

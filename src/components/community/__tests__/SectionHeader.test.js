@@ -23,11 +23,11 @@ describe('SectionHeader', () => {
     expect(header.props.children).toBe('Your gym');
   });
 
-  test('56 dp tall', () => {
-    expect(SECTION_HEADER_HEIGHT).toBe(56);
+  test('44 dp tall (the house SectionLabel eyebrow, founder verdict 2026-10-08)', () => {
+    expect(SECTION_HEADER_HEIGHT).toBe(44);
     const tree = render({ title: 'Groups' });
     const flat = [].concat(...tree.root.findAll((n) => n.props?.style).map((n) => [].concat(n.props.style)));
-    expect(flat.some((s) => s && s.minHeight === 56)).toBe(true);
+    expect(flat.some((s) => s && s.minHeight === 44)).toBe(true);
   });
 
   test('the trailing action is a button, 48 dp, and fires', () => {

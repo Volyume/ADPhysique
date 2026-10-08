@@ -703,8 +703,9 @@ describe('source guards', () => {
     expect(source).not.toMatch(/ActivityItemRow/);
   });
 
-  test('the Hub declares no band constant of its own (the logger\'s BAND is imported)', () => {
+  test('the Hub declares no band of its own: Band and BandGap come from the shared component (founder verdict 2026-10-08)', () => {
     expect(source).not.toMatch(/const BAND\s*=/);
-    expect(source).toMatch(/import \{ BAND, touchTarget \} from '\.\.\/styles\/layout'/);
+    expect(source).not.toMatch(/function Band\b/);
+    expect(source).toMatch(/import Band, \{ BandGap \} from '\.\.\/components\/community\/Band'/);
   });
 });

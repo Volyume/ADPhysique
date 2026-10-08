@@ -48,6 +48,9 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 import SegmentedControl from '../components/SegmentedControl';
+import ScreenHeader from '../components/ScreenHeader';
+import Chip from '../components/Chip';
+import Band, { BandGap } from '../components/community/Band';
 import { LinearGradient } from 'expo-linear-gradient';
 import EmptyState from '../components/EmptyState';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -71,7 +74,7 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import {
   colors, spacing, circle, radius, iconSize, withAlpha,
 } from '../styles/theme';
-import { BAND, touchTarget } from '../styles/layout';
+import { touchTarget } from '../styles/layout';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
   loadHubSummary, metricLabel, loadConsistency, consistencyGateState,
@@ -103,10 +106,10 @@ const SCOPES = Object.freeze([
 ]);
 const SORT_LABELS = Object.freeze({ newest: 'Newest', respected: 'Most respected' });
 
-const HEADER_HEIGHT = 48;
+// The Coach tab's header glyph (YouScreen `settingsGear`): 34 dp box, 20 dp glyph.
+const HEADER_GLYPH_BOX = 34;
+const HEADER_GLYPH = 20;
 const WELL_HEIGHT = 44;
-const FILTER_CHIP_HEIGHT = 32;
-const FILTER_HIT_SLOP = { top: 8, bottom: 8, left: 4, right: 4 };
 const MARK = 32;
 
 // The HOST row's read (26-EARLY-DAYS-SPEC.md 1.2) happens once per app
@@ -156,18 +159,6 @@ export function normalisePostRow(row) {
   };
 }
 
-/** A full-bleed `surface` band: no radius, no border; the rows inside carry
- * the gutter (visual law V1). */
-function Band({ children, style }) {
-  const t = useTheme();
-  return <View style={[{ backgroundColor: t.colors.surface }, style]}>{children}</View>;
-}
-
-/** The strip of page colour between two bands: the logger's `BAND`. */
-function BandGap() {
-  return <View style={styles.bandGap} />;
-}
-
 /** An input-shaped entry: the search and compose wells (visual law V9). */
 function Well({
   icon, text, onPress, accessibilityLabel,
@@ -189,40 +180,27 @@ function Well({
   );
 }
 
-/** A 32 dp filter chip with a 48 dp hit area (visual law V9). */
+/** A scope chip: the house Chip (components/Chip.js), as a radio. Founder
+ * verdict 2026-10-08: Community uses the app's own chip, not its own. */
 function FilterChip({
   label, selected, disabled, onPress,
 }) {
-  const t = useTheme();
   return (
-    <Pressable
-      onPress={onPress}
+    <Chip
+      label={label}
+      selected={selected}
       disabled={disabled}
-      hitSlop={FILTER_HIT_SLOP}
+      onPress={onPress}
       accessibilityRole="radio"
       accessibilityLabel={label}
       accessibilityHint={disabled ? 'Not available yet' : undefined}
-      accessibilityState={{ checked: !!selected, disabled: !!disabled }}
-      style={[
-        styles.filterChip,
-        { borderColor: t.colors.border },
-        selected && { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-      ]}
-    >
-      <Text
-        style={[
-          t.type.label,
-          { color: disabled ? t.colors.textMuted : (selected ? t.colors.primary : t.colors.textSecondary) },
-        ]}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-    </Pressable>
+      numberOfLines={1}
+    />
   );
 }
 
-/** A header glyph: 48 dp target, `textPrimary`, no container (visual law V8). */
+/** A header glyph in the Coach tab's shape (YouScreen `settingsGear`): a
+ * 34 dp `surface2` square at `radius.md`, a 20 dp `textPrimary` glyph. */
 function HeaderGlyph({
   icon, label, onPress, children,
 }) {
@@ -230,11 +208,12 @@ function HeaderGlyph({
   return (
     <Pressable
       onPress={onPress}
-      style={styles.glyph}
+      hitSlop={10}
+      style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={iconSize.lg} color={t.colors.textPrimary} />
+      <Ionicons name={icon} size={HEADER_GLYPH} color={t.colors.textPrimary} />
       {children}
     </Pressable>
   );
@@ -717,41 +696,48 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const chrome = (
     <AnimatedEntrance>
+      {/* Founder verdict 2026-10-08 ("one app all together"): the house
+          ScreenHeader every tab root uses (h1 title), its right slot the
+          Coach tab's glyph shape, three of them. */}
       <View style={styles.header}>
-        <Text style={[styles.title, t.type.h3, { color: t.colors.textPrimary }]} accessibilityRole="header">
-          Community
-        </Text>
-        <HeaderGlyph
-          icon="search-outline"
-          label="Search Community"
-          onPress={() => navigation.navigate('CommunitySearch')}
+        <ScreenHeader
+          title="Community"
+          right={(
+            <View style={styles.glyphs}>
+              <HeaderGlyph
+                icon="search-outline"
+                label="Search Community"
+                onPress={() => navigation.navigate('CommunitySearch')}
+              />
+              {joined ? (
+                <HeaderGlyph
+                  icon="notifications-outline"
+                  label={hasUnseen(me) ? 'Activity, new activity' : 'Activity'}
+                  onPress={() => navigation.navigate('CommunityActivity')}
+                >
+                  {hasUnseen(me) ? (
+                    <View style={[styles.dot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
+                  ) : null}
+                </HeaderGlyph>
+              ) : null}
+              {joined ? (
+                <HeaderGlyph
+                  icon="chatbubbles-outline"
+                  label={hasUnreadMessages(me) ? `Messages, ${unseenCount} unread` : 'Messages'}
+                  onPress={() => navigation.navigate('CommunityConversations')}
+                >
+                  {hasUnreadMessages(me) ? (
+                    <View style={[styles.badge, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]}>
+                      <Text style={[t.type.captionStrong, { color: t.colors.onPrimary }]}>
+                        {unseenCount > 9 ? '9+' : String(unseenCount)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </HeaderGlyph>
+              ) : null}
+            </View>
+          )}
         />
-        {joined ? (
-          <HeaderGlyph
-            icon="notifications-outline"
-            label={hasUnseen(me) ? 'Activity, new activity' : 'Activity'}
-            onPress={() => navigation.navigate('CommunityActivity')}
-          >
-            {hasUnseen(me) ? (
-              <View style={[styles.dot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
-            ) : null}
-          </HeaderGlyph>
-        ) : null}
-        {joined ? (
-          <HeaderGlyph
-            icon="chatbubbles-outline"
-            label={hasUnreadMessages(me) ? `Messages, ${unseenCount} unread` : 'Messages'}
-            onPress={() => navigation.navigate('CommunityConversations')}
-          >
-            {hasUnreadMessages(me) ? (
-              <View style={[styles.badge, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]}>
-                <Text style={[t.type.captionStrong, { color: t.colors.onPrimary }]}>
-                  {unseenCount > 9 ? '9+' : String(unseenCount)}
-                </Text>
-              </View>
-            ) : null}
-          </HeaderGlyph>
-        ) : null}
       </View>
       {/* Founder device verdict 2026-10-08 ("boxes touching each other,
           navigation not fitting"): the four outlined pills are replaced by
@@ -947,19 +933,16 @@ export default function CommunityHubScreen({ navigation, route }) {
               style={styles.filterFade}
             />
           </View>
-          <Pressable
-            onPress={() => setSortOpen(true)}
-            style={styles.sortControl}
-            accessibilityRole="button"
-            accessibilityLabel={`Sort: ${sortLabel}`}
-            accessibilityHint="Opens the sort choices"
-          >
-            <Ionicons
-              name="swap-vertical-outline"
-              size={iconSize.lg}
-              color={sort === 'respected' ? t.colors.primary : t.colors.textPrimary}
+          <View style={styles.sortControl}>
+            <Chip
+              icon="swap-vertical-outline"
+              label={sortLabel}
+              selected={sort === 'respected'}
+              onPress={() => setSortOpen(true)}
+              accessibilityLabel={`Sort: ${sortLabel}`}
+              numberOfLines={1}
             />
-          </Pressable>
+          </View>
         </View>
       ) : null}
       {offline ? (
@@ -1057,14 +1040,19 @@ export default function CommunityHubScreen({ navigation, route }) {
       data={posts}
       keyExtractor={(item) => item.post.id}
       renderItem={({ item }) => (
-        <PostRow
-          item={item}
+        // One app: a post is a Card as a saved workout is on Train
+        // (PlansScreen: one Card per item, spacing.md between).
+        <Band style={styles.postCard}>
+          <PostRow
+            last
+            item={item}
           onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
           onRespect={joined ? (next) => reactToPost(item.post.id, next, item.author?.user_id) : undefined}
           onRespectBlocked={joined ? undefined : () => navigation.navigate('CommunityJoin')}
           onRespected={(next) => applyRespect(item.post.id, next)}
           onOpenPerson={(author) => openProfile(author)}
-        />
+          />
+        </Band>
       )}
       ListHeaderComponent={feedHeader}
       ListEmptyComponent={feedEmpty}
@@ -1447,23 +1435,21 @@ export default function CommunityHubScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  bandGap: { height: BAND },
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
-  header: {
-    flexDirection: 'row', alignItems: 'center', minHeight: HEADER_HEIGHT, paddingLeft: spacing.lg, paddingRight: spacing.xs,
-  },
-  title: { flex: 1, color: colors.textPrimary },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  glyphs: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   glyph: {
-    width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center',
+    width: HEADER_GLYPH_BOX, height: HEADER_GLYPH_BOX, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center',
   },
+  postCard: { marginBottom: spacing.md },
   dot: {
-    position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: circle(8), borderWidth: 1,
+    position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: circle(8), borderWidth: 1,
   },
   badge: {
     position: 'absolute',
-    top: 6,
-    right: 4,
+    top: -4,
+    right: -4,
     minWidth: 16,
     height: 16,
     borderRadius: circle(16),
@@ -1473,23 +1459,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   segmentBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.md },
-  filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingRight: spacing.xs },
+  filterRow: { flexDirection: 'row', alignItems: 'center', paddingBottom: spacing.md, paddingRight: spacing.lg },
   filterScroll: { flex: 1 },
   filterFade: {
     position: 'absolute', top: 0, bottom: 0, right: 0, width: spacing.xl,
   },
   filterContent: { paddingLeft: spacing.lg, paddingRight: spacing.xl, gap: spacing.sm, alignItems: 'center' },
-  filterChip: {
-    height: FILTER_CHIP_HEIGHT,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sortControl: {
-    width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center',
-  },
+  sortControl: { marginLeft: spacing.sm },
   notice: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   noticeLink: { minHeight: touchTarget.minimum, justifyContent: 'center' },
   noticeActions: { flexDirection: 'row', gap: spacing.sm },

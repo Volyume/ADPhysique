@@ -236,11 +236,12 @@ describe('presentation law (d): the title type role is reserved for one figure p
     },
   );
 
-  // RE-PINNED (D221 ruling 7, law V3, lane 2A): EntryRow is the large entry
-  // row (a door, 88 dp, `type.title`), one use.
-  test('EntryRow.js uses the title role exactly once (the large entry row)', () => {
+  // RE-PINNED (founder verdict 2026-10-08, "one app all together"): EntryRow
+  // is the house NavRow anatomy (bodyStrong label), so it never uses the
+  // title role.
+  test('EntryRow.js never uses the title role (it is the house NavRow anatomy)', () => {
     const source = code(fs.readFileSync(path.join(COMPONENTS_COMMUNITY_DIR, 'EntryRow.js'), 'utf8'));
-    expect(titleRoleCount(source)).toBe(1);
+    expect(titleRoleCount(source)).toBe(0);
   });
 
   test.each(
