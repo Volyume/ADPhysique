@@ -77,7 +77,7 @@ describe('routeForNotificationType', () => {
     'a retired %s beat lands on Community, never a dead route',
     (type) => {
       expect(routeForNotificationType(type)).toEqual({
-        tab: 'HomeTab', screen: 'Community', params: { source: 'notification' },
+        tab: 'CommunityTab', screen: 'Community', params: { source: 'notification' },
       });
     },
   );
@@ -90,26 +90,26 @@ describe('routeForNotificationType', () => {
 
   test('SD-15: community_follow and community_activity land on the Community Activity screen', () => {
     expect(routeForNotificationType('community_follow')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityActivity', params: { source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
     });
     expect(routeForNotificationType('community_activity')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityActivity', params: { source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
     });
   });
 
   test('SD-21: community_message lands on the conversation it names, not the general inbox', () => {
     expect(routeForNotificationType('community_message', { conversation_id: 'conv-1' })).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: 'conv-1', source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: 'conv-1', source: 'notification' },
     });
     // The camelCase field is read too, defensively, same either-shape pattern
     // as the rest of this module.
     expect(routeForNotificationType('community_message', { conversationId: 'conv-2' })).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: 'conv-2', source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: 'conv-2', source: 'notification' },
     });
     // A missing id never throws; it routes with a null id rather than
     // dead-ending on the general activity inbox.
     expect(routeForNotificationType('community_message')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: null, source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: null, source: 'notification' },
     });
   });
 
@@ -184,5 +184,29 @@ describe('routeForNotificationType', () => {
     expect(routeForNotificationType('weekly_coach_ready')).toEqual({
       tab: 'ProfileTab', screen: 'CoachOutput',
     });
+  });
+});
+
+describe('D221: community pushes carrying ids', () => {
+  test('community_activity with post_id lands on the post', () => {
+    expect(routeForNotificationType('community_activity', { post_id: 'p1' })).toEqual({
+      tab: 'CommunityTab', screen: 'CommunityPost', params: { id: 'p1', source: 'notification' },
+    });
+  });
+  test('community_follow with group_id lands on the group', () => {
+    expect(routeForNotificationType('community_follow', { group_id: 'g1' })).toEqual({
+      tab: 'CommunityTab', screen: 'CommunityGroup', params: { id: 'g1', source: 'notification' },
+    });
+  });
+  test('without ids both land on Activity', () => {
+    for (const type of ['community_activity', 'community_follow']) {
+      expect(routeForNotificationType(type, {})).toEqual({
+        tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
+      });
+    }
+  });
+  test('a follow push never lands on a post and an activity push never on a group', () => {
+    expect(routeForNotificationType('community_follow', { post_id: 'p1' }).screen).toBe('CommunityActivity');
+    expect(routeForNotificationType('community_activity', { group_id: 'g1' }).screen).toBe('CommunityActivity');
   });
 });

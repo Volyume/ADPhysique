@@ -1424,7 +1424,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         link: {
           title: 'Check sharing settings',
           a11y: 'Open your Community sharing settings',
-          onPress: () => navigation.navigate('CommunityTrainingProfile'),
+          onPress: () => navigateCrossTab(navigation, 'CommunityTab', 'CommunityTrainingProfile'),
         },
       };
     }
@@ -1451,7 +1451,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       link: {
         title: 'Share every session',
         a11y: 'Share every session from your training profile',
-        onPress: () => navigation.navigate('CommunityTrainingProfile'),
+        onPress: () => navigateCrossTab(navigation, 'CommunityTab', 'CommunityTrainingProfile'),
       },
     };
   })();
@@ -1697,7 +1697,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 />
               </View>
               <TouchableOpacity
-                onPress={() => navigation.navigate('CommunityTrainingProfile')}
+                onPress={() => navigateCrossTab(navigation, 'CommunityTab', 'CommunityTrainingProfile')}
                 accessibilityRole="button"
                 accessibilityLabel="Share your workouts from your training profile"
               >

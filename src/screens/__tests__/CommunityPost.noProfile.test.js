@@ -92,7 +92,7 @@ async function flush() {
 }
 
 async function mount() {
-  const navigation = { navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn() };
+  const navigation = { getState: () => ({ routeNames: ['CommunityJoin', 'CommunityProfile', 'CommunityConversation'] }), navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn() };
   let tree = null;
   await act(async () => {
     tree = create(

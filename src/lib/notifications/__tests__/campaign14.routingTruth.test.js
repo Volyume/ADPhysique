@@ -184,7 +184,7 @@ const DECISIONS = {
   // the live inventory with the local scheduler that emitted them; their
   // `case` labels stay in notificationRoute.js for anything still in a tray.
   partner_cheer: {
-    tab: 'HomeTab', screen: 'Community',
+    tab: 'CommunityTab', screen: 'Community',
     file: 'src/screens/CommunityHubScreen.js', marker: /[Pp]artner/,
   },
   planned_meal_confirm: {
@@ -344,12 +344,12 @@ describe('(20) the retired partner beats still resolve, on Community', () => {
 
   test.each(PARTNER_TYPES)('%s lands on Community', (type) => {
     expect(routeForNotificationType(type, SAMPLE_DATA[type] ?? {})).toEqual({
-      tab: 'HomeTab', screen: 'Community', params: { source: 'notification' },
+      tab: 'CommunityTab', screen: 'Community', params: { source: 'notification' },
     });
   });
 
-  test('Community is registered in HomeStack, so the tap is never a dead route', () => {
-    expect([...screensIn(TAB_TO_STACK.HomeTab)]).toContain('Community');
+  test('Community is registered in CommunityStack, so the tap is never a dead route', () => {
+    expect([...screensIn(TAB_TO_STACK.CommunityTab)]).toContain('Community');
   });
 
   test('the Partner route and screen are gone with the feature', () => {

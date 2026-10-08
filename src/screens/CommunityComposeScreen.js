@@ -14,6 +14,7 @@
  * hands over to Join and asks it to come back here afterwards.
  */
 
+import { navigateCommunity } from '../navigation/navigateCommunity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
@@ -115,9 +116,9 @@ export default function CommunityComposeScreen({ navigation, route }) {
       // push here would leave this half-loaded Compose underneath the one
       // the reader ends up on, and backing out of the posting flow would
       // land on "Nothing to post yet" (product review 2026-09-06, item 12).
-      navigation.replace('CommunityJoin', {
+      navigateCommunity(navigation, 'CommunityJoin', {
         next: { screen: 'CommunityCompose', params },
-      });
+      }, { replace: true });
       return;
     }
     setProfile(me.profile);

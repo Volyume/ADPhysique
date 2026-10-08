@@ -71,13 +71,13 @@ describe('SD-15/SD-21: all three are budgeted, after PARTNER_CHEER', () => {
 describe('SD-15: COMMUNITY_FOLLOW and COMMUNITY_ACTIVITY route to the Community Activity screen', () => {
   test('community_follow', () => {
     expect(routeForNotificationType('community_follow')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityActivity', params: { source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
     });
   });
 
   test('community_activity', () => {
     expect(routeForNotificationType('community_activity')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityActivity', params: { source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
     });
   });
 });
@@ -85,19 +85,19 @@ describe('SD-15: COMMUNITY_FOLLOW and COMMUNITY_ACTIVITY route to the Community 
 describe('SD-21: COMMUNITY_MESSAGE routes to the conversation it names', () => {
   test('community_message with conversation_id', () => {
     expect(routeForNotificationType('community_message', { conversation_id: 'conv-1' })).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: 'conv-1', source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: 'conv-1', source: 'notification' },
     });
   });
 
   test('community_message reads the camelCase field too', () => {
     expect(routeForNotificationType('community_message', { conversationId: 'conv-2' })).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: 'conv-2', source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: 'conv-2', source: 'notification' },
     });
   });
 
   test('community_message with no id data still routes, with a null id rather than throwing', () => {
     expect(routeForNotificationType('community_message')).toEqual({
-      tab: 'HomeTab', screen: 'CommunityConversation', params: { id: null, source: 'notification' },
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: null, source: 'notification' },
     });
   });
 });

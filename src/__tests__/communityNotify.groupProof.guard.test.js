@@ -110,3 +110,15 @@ describe('community-notify: the three group proof branches (R-02)', () => {
     expect(SOURCE.match(/const sinceIso = /g)).toHaveLength(1);
   });
 });
+
+describe('D221: the push payload carries routing ids and no content', () => {
+  test('kind, post_id and group_id ride in the data block', () => {
+    expect(SOURCE).toMatch(/^\s*kind,\s*$/m);
+    expect(SOURCE).toMatch(/kind === 'reaction' \|\| kind === 'comment' \? \{ post_id: refId \}/);
+    expect(SOURCE).toMatch(/GROUP_KINDS\.includes\(kind\) \? \{ group_id: refId \}/);
+  });
+  test('a reaction still carries no handle and no message body is sent', () => {
+    expect(SOURCE).toMatch(/kind === 'reaction' \? \{\} : \{ actor_handle: handle \}/);
+    expect(SOURCE).not.toMatch(/data:\s*\{[^}]*\b(body_text|message_body|content)\b/);
+  });
+});

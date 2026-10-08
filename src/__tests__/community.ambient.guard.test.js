@@ -350,7 +350,7 @@ describe('the once-only offer (source-pinned on WorkoutSummaryScreen.js, matchin
   });
 
   test('the offer carries a tertiary link to the Training profile screen, where the fuller toggle lives', () => {
-    expect(SOURCE).toMatch(/navigation\.navigate\('CommunityTrainingProfile'\)/);
+    expect(SOURCE).toMatch(/navigateCrossTab\(navigation, 'CommunityTab', 'CommunityTrainingProfile'\)/);
   });
 
   test('the offer copy never claims to show more than day-level facts', () => {

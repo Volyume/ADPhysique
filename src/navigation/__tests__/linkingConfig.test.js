@@ -150,9 +150,9 @@ describe('linking config — legacy partner invite links now open Community', ()
   test.each([
     'volyume://partner/ABCD12',
     'https://volyume.app/partner/ABCD12',
-  ])('%s opens Community in the Home tab with the legacy code', (url) => {
+  ])('%s opens Community in the Community tab with the legacy code', (url) => {
     expect(routeFor(url)).toEqual({
-      tab: 'HomeTab',
+      tab: 'CommunityTab',
       name: 'Community',
       params: { legacyPartnerCode: 'ABCD12' },
     });
@@ -172,7 +172,7 @@ describe('linking config — legacy partner invite links now open Community', ()
 
   test('a bare partner link still resolves, to Community with no code', () => {
     expect(routeFor('volyume://partner')).toMatchObject({
-      tab: 'HomeTab',
+      tab: 'CommunityTab',
       name: 'Community',
     });
   });
@@ -188,7 +188,7 @@ describe('linking config — legacy partner invite links now open Community', ()
 describe('linking config — Community share links (blueprint section 8)', () => {
   test('volyume://community opens the hub', () => {
     expect(routeFor('volyume://community')).toMatchObject({
-      tab: 'HomeTab',
+      tab: 'CommunityTab',
       name: 'Community',
     });
   });
@@ -197,7 +197,7 @@ describe('linking config — Community share links (blueprint section 8)', () =>
     ['https://volyume.app/u/?h=rowan_lifts', 'CommunityProfile', { h: 'rowan_lifts' }],
     ['https://volyume.app/s/?id=post-1', 'CommunityPost', { id: 'post-1' }],
   ])('%s opens %s with its query param', (url, name, params) => {
-    expect(routeFor(url)).toMatchObject({ tab: 'HomeTab', name, params });
+    expect(routeFor(url)).toMatchObject({ tab: 'CommunityTab', name, params });
   });
 
   test('the app-scheme forms resolve the same way', () => {
@@ -248,9 +248,9 @@ describe('linking config — existing paths still resolve', () => {
   // caught here, at the source.
   test('the config was actually parsed out of RootNavigator.js', () => {
     expect(Object.keys(config.screens).sort())
-      .toEqual(['DiaryTab', 'HomeTab', 'PlansTab', 'ProfileTab', 'ProgressTab']);
+      .toEqual(['CommunityTab', 'DiaryTab', 'HomeTab', 'PlansTab', 'ProfileTab', 'ProgressTab']);
     expect(config.screens.HomeTab.screens.Home).toBe('active-workout');
-    expect(config.screens.HomeTab.screens.Community).toBe('community');
+    expect(config.screens.CommunityTab.screens.Community).toBe('community');
   });
 
   // Same vacuity guard, for the rewrite: an extraction that stopped matching
@@ -281,7 +281,7 @@ describe('linking config — the exact app-scheme forms links.js builds', () => 
     [appStoryUrl('post-1'), 'CommunityPost', { id: 'post-1' }],
   ])('%s resolves to %s with its param', (url, name, params) => {
     expect(url).toContain('/?');
-    expect(routeFor(url)).toMatchObject({ tab: 'HomeTab', name, params });
+    expect(routeFor(url)).toMatchObject({ tab: 'CommunityTab', name, params });
   });
 });
 
@@ -299,9 +299,9 @@ describe('linking config — the conversation deep link (discovery section 10)',
   test.each([
     'volyume://m/?id=conv-1',
     'https://volyume.app/m/?id=conv-1',
-  ])('%s opens the conversation in the Home tab', (url) => {
+  ])('%s opens the conversation in the Community tab', (url) => {
     expect(routeFor(url)).toMatchObject({
-      tab: 'HomeTab',
+      tab: 'CommunityTab',
       name: 'CommunityConversation',
       params: { id: 'conv-1' },
     });
@@ -315,6 +315,6 @@ describe('linking config — the conversation deep link (discovery section 10)',
   });
 
   test('the path was actually read out of RootNavigator.js', () => {
-    expect(config.screens.HomeTab.screens.CommunityConversation).toBe('m');
+    expect(config.screens.CommunityTab.screens.CommunityConversation).toBe('m');
   });
 });

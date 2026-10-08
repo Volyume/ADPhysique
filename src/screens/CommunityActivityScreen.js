@@ -37,6 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // blueprint's own list contract (keyExtractor, onEndReached paging,
 // pull-to-refresh, an empty state); the list underneath recycles.
 import { FlashList } from '@shopify/flash-list';
+import { setCommunityUnseen } from '../lib/community/unseen';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
@@ -123,7 +124,9 @@ export default function CommunityActivityScreen({ navigation }) {
   // Seen is a side effect of arriving, not of reading each row.
   useEffect(() => {
     markActivitySeen()
-      .then(() => refreshMe(true))
+      // Optimistic clear of the tab dot; refreshMe republishes the truth
+      // (a pending request still counts, as on the Today header dot).
+      .then(() => { setCommunityUnseen(false); return refreshMe(true); })
       .catch(() => { /* the dot clears on the next load */ });
   }, [refreshMe]);
 
