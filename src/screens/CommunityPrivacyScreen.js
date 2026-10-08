@@ -12,6 +12,12 @@
  * screen also answers "what would Community share" with the same
  * receipt the Join screen carries, before there is anything to change.
  *
+ * D221 Stage 3 (3e): this is the one panel for every sharing switch, with its
+ * live state: sessions and their audience, consistency, gym and place, age
+ * group, who can follow, who can message, and show when training. Each goes
+ * through the setter the Training profile screen uses (`saveShareSessions`,
+ * `saveBandToggle`, `setShowGym`, `setShowPlace`, `saveShowTrainingNow`).
+ *
  * It is also the route to the screens that have no other home: the
  * profile editor, the training profile, and (for a moderator only, from
  * `community_get_me`) the moderation queue.
@@ -42,7 +48,10 @@ import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
   hasProfile, setConnectFrom, CONNECT_FROM_VALUES, setShowGym, setShowPlace,
   readShareSettings, sessionsSharingSentence,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
+  readShowTrainingNow, saveShowTrainingNow, presenceFailureLine,
 } from '../lib/community';
+import { saveBandToggle } from '../lib/community/bandShare';
 import { saveShareSessions, SHARE_OFF_TITLE, SHARE_OFF_BODY } from '../lib/community/shareSessions';
 
 const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
@@ -64,6 +73,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
   // L17 (D221): "Share what I did", mirrored here from the Training
   // profile and saved through the same setter (`saveShareSessions`).
   const [share, setShare] = useState(null);
+  const [showTraining, setShowTraining] = useState(false);
   const uid = profile?.user_id ?? null;
   const isMinor = !!me?.is_minor;
   const [lists, setLists] = useState({ blocked: [], muted: [] });
@@ -92,6 +102,43 @@ export default function CommunityPrivacyScreen({ navigation }) {
     readShareSettings(uid).then((v) => { if (alive) setShare(v); }).catch(() => {});
     return () => { alive = false; };
   }, [uid]);
+
+  // The switch's state is mirrored on this device (the server's `me` does not
+  // carry it); a card that does carry it wins.
+  useEffect(() => {
+    if (profile?.show_training_now != null) { setShowTraining(!!profile.show_training_now); return undefined; }
+    if (!uid) return undefined;
+    let alive = true;
+    readShowTrainingNow(uid).then((v) => { if (alive) setShowTraining(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, [uid, profile?.show_training_now]);
+
+  async function changeShowTraining(next) {
+    const previous = showTraining;
+    setShowTraining(next);
+    try {
+      setShowTraining(await saveShowTrainingNow(uid, next));
+    } catch (e) {
+      setShowTraining(previous);
+      if (e?.code === 'rules_outdated') navigation.navigate('CommunityRules', { mustAccept: true });
+      else toast.show(presenceFailureLine(e?.code), { variant: 'error' });
+    }
+  }
+
+  async function changeBand(key, next) {
+    if (!share) return;
+    const prev = share;
+    setShare({ ...share, [key]: next });
+    try {
+      const out = await saveBandToggle(uid, prev, key, next);
+      setShare(out.settings);
+      if (out.status === 'rules_outdated') navigation.navigate('CommunityRules', { mustAccept: true });
+      else if (out.status === 'queued') toast.show('Saved on this device. It will share when you are back online.');
+    } catch (_e) {
+      setShare(prev);
+      toast.show('Could not change that just now.', { variant: 'error' });
+    }
+  }
 
   async function saveShareSessionsChange(next, { removeShared = false } = {}) {
     if (!share) return;
@@ -358,6 +405,52 @@ export default function CommunityPrivacyScreen({ navigation }) {
                   value={!!share.share_sessions}
                   onValueChange={toggleShareSessions}
                 />
+              ) : null}
+              {share && share.share_sessions ? (
+                isMinor ? (
+                  <BandBody>
+                    <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>Shared with people who follow you.</Text>
+                  </BandBody>
+                ) : (
+                  <BandBody>
+                    <View style={styles.chipRow} accessibilityLabel="Who sees what you did">
+                      {SESSIONS_AUDIENCE_VALUES.map((value) => (
+                        <Chip
+                          key={value}
+                          label={SESSIONS_AUDIENCE_LABELS[value]}
+                          selected={share.sessions_audience === value}
+                          onPress={() => saveShareSessionsChange({ ...share, sessions_audience: value })}
+                          accessibilityRole="radio"
+                        />
+                      ))}
+                    </View>
+                  </BandBody>
+                )
+              ) : null}
+              {share && !isMinor ? (
+                <>
+                  <SwitchRow
+                    icon="calendar-outline"
+                    title="Share my consistency"
+                    subtitle="Your sessions this week, this month and your weeks in a row. Never your weight or food."
+                    value={!!share.consistency}
+                    onValueChange={(v) => changeBand('consistency', v)}
+                  />
+                  <SwitchRow
+                    icon="person-outline"
+                    title="Share my age group"
+                    subtitle="Worked out from your date of birth when this is on."
+                    value={!!share.age_band}
+                    onValueChange={(v) => changeBand('age_band', v)}
+                  />
+                  <SwitchRow
+                    icon="pulse-outline"
+                    title="Show when I am training"
+                    subtitle="People who follow you, and your groups, see that you are training while a session is open. It clears when you finish."
+                    value={showTraining}
+                    onValueChange={changeShowTraining}
+                  />
+                </>
               ) : null}
               <EntryRow
                 icon="body-outline"

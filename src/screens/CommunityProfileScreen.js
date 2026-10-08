@@ -344,6 +344,14 @@ export default function CommunityProfileScreen({ navigation, route }) {
             </Text>
           ) : null}
 
+          {/* D221 3d: the weeks-in-a-row mark, from the card's gated
+              counter, only at 2 or more. */}
+          {Number(card.c_weeks_streak) >= 2 ? (
+            <Text style={[{ ...t.type.caption, color: t.colors.textSecondary }]}>
+              {`${Number(card.c_weeks_streak)} weeks in a row`}
+            </Text>
+          ) : null}
+
           <TrainingProfileLine card={card} />
         </View>
       </View>

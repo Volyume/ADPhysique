@@ -241,7 +241,7 @@ test('listMyGroups maps {group, role, state} rows and drops one with no group', 
   expect(callCommunity).toHaveBeenCalledWith('community_group_list_mine', {});
   expect(out).toHaveLength(1);
   expect(out[0]).toEqual({
-    group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member', unread: 0,
+    group: expect.objectContaining({ id: 'g1' }), role: 'admin', state: 'member', unread: 0, activeChallengeId: null,
   });
 });
 

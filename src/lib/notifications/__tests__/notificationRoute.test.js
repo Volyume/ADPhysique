@@ -113,6 +113,18 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('D221 3b: community_group_message lands on the group chat, community_message is unchanged', () => {
+    expect(routeForNotificationType('community_group_message', { kind: 'group_message', group_id: 'grp-1' })).toEqual({
+      tab: 'CommunityTab', screen: 'CommunityGroupChat', params: { id: 'grp-1', source: 'notification' },
+    });
+    expect(routeForNotificationType('community_group_message', {})).toEqual({
+      tab: 'CommunityTab', screen: 'CommunityActivity', params: { source: 'notification' },
+    });
+    expect(routeForNotificationType('community_message', { conversation_id: 'conv-1', group_id: 'grp-1' })).toEqual({
+      tab: 'CommunityTab', screen: 'CommunityConversation', params: { id: 'conv-1', source: 'notification' },
+    });
+  });
+
   test('§15 item 8: diary_day with a valid local day-key opens that exact diary day', () => {
     expect(routeForNotificationType('diary_day', { date: '2026-07-05' })).toEqual({
       tab: 'DiaryTab', screen: 'Diary', params: { date: '2026-07-05' },

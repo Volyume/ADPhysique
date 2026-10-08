@@ -16,8 +16,8 @@
  * - People: search, Find people, Requests, then the gym, discipline and area
  *   rows from `community_hub_summary` (the age group is a Find people filter
  *   now, not a Hub row).
- * - Groups: my groups, pending invites (Accept, or Later to hide the row for
- *   this session), New group and Browse open groups.
+ * - Groups: my groups (each with its chat unread count), pending invites
+ *   (Accept, or Decline, which removes the invite), New group and Browse open groups.
  * - You: the You row and ProgressStrip (withheld under calm mode or an open
  *   ED flag by `consistencyGateState`, exactly as before), the HOST and
  *   early-days rows, and the rows to profile, followers, privacy, training
@@ -61,6 +61,7 @@ import CohortRow from '../components/community/CohortRow';
 import GroupRow from '../components/community/GroupRow';
 import PostRow from '../components/community/PostRow';
 import ProgressStrip from '../components/community/ProgressStrip';
+import PresenceBand from '../components/community/PresenceBand';
 import MenuSheet from '../components/community/MenuSheet';
 import JoinToInteractRow from '../components/community/JoinToInteractRow';
 import { useToast } from '../components/Toast';
@@ -76,7 +77,7 @@ import {
   myStatus, isModeratedStatus, REPORT_REASONS,
   getProfile, follow, COMMUNITY_HOST_HANDLE, inviteMessage, inviteLabel, firstHereLine,
   hostRowVisible, hostCaption, readHostDismissed, writeHostDismissed, GROUP_PURPOSE_LINE,
-  listMyGroups, acceptGroupInvite,
+  listMyGroups, acceptGroupInvite, declineGroupInvite,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
 import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
@@ -277,8 +278,9 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [status, setStatus] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteBusy, setInviteBusy] = useState(null);
-  // "Later" hides an invite row for this session only; nothing is sent.
-  const [laterIds, setLaterIds] = useState([]);
+  // Chat unread counts by group id (D221 3b), from the same `listMyGroups`
+  // read the invites use.
+  const [unreadById, setUnreadById] = useState({});
   // Early days (26-EARLY-DAYS-SPEC.md 1.2): the founder's real profile,
   // shown as the host while the reader is not yet following them.
   const [host, setHost] = useState(null);
@@ -370,8 +372,12 @@ export default function CommunityHubScreen({ navigation, route }) {
     try {
       const rows = await listMyGroups();
       setInvites(rows.filter((r) => r.state === 'invited').map((r) => r.group));
+      setUnreadById(Object.fromEntries(
+        rows.filter((r) => r.state === 'member' && r.unread > 0).map((r) => [r.group.id, r.unread]),
+      ));
     } catch (_e) {
       setInvites([]);
+      setUnreadById({});
     }
   }, []);
 
@@ -586,6 +592,28 @@ export default function CommunityHubScreen({ navigation, route }) {
     }
   }, [inviteBusy, loadInvites, loadSummary, toast]);
 
+  // Decline (D221 3b) removes the invite on the server; it replaces "Later".
+  const declineInvite = useCallback(async (group) => {
+    if (!group?.id || inviteBusy) return;
+    setInviteBusy(group.id);
+    try {
+      await declineGroupInvite(group.id);
+      toast.show('Invite declined.');
+      await loadInvites();
+    } catch (e) {
+      // `not_found`: the invite is already gone, so the list simply refreshes.
+      if (e?.code === 'not_found') {
+        await loadInvites();
+      } else {
+        toast.show(e?.code === 'offline'
+          ? 'You are offline. Try again when you have a connection.'
+          : 'Could not decline that invite just now.', { variant: 'error' });
+      }
+    } finally {
+      setInviteBusy(null);
+    }
+  }, [inviteBusy, loadInvites, toast]);
+
   const selectScope = useCallback((key) => {
     if (key === scopeRef.current) return;
     setScope(key);
@@ -649,7 +677,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   // member of a full gym that they are the first here.
   const summaryEmpty = !!summary && Array.isArray(summary.cohorts) && summary.cohorts.length === 0;
   const requestCount = (Number(me?.pending_requests) || 0) + (Number(me?.pending_connect_requests) || 0);
-  const visibleInvites = invites.filter((g) => !laterIds.includes(g.id));
+  const visibleInvites = invites;
 
   const youPerson = joined ? {
     user_id: uid,
@@ -925,6 +953,12 @@ export default function CommunityHubScreen({ navigation, route }) {
           Showing what you last saw. You are offline.
         </Text>
       ) : null}
+      {/* D221 3a: who is training now. Hidden when the server withheld it
+          (null) and, as a second check, while the consistency gate (calm
+          mode or an open ED flag) withholds; `consistencyGated` fails closed. */}
+      {joined ? (
+        <PresenceBand trainingNow={summary?.trainingNow ?? null} gated={consistencyGated} gapAfter />
+      ) : null}
       <Band>
         {joined ? (
           <Well
@@ -1136,6 +1170,7 @@ export default function CommunityHubScreen({ navigation, route }) {
                   group={g}
                   line={trainedTodayLine(g.member_count, g.trained_today_count)}
                   people={Array.isArray(g.sample) ? g.sample : []}
+                  unread={unreadById[g.id] ?? 0}
                   onPress={() => navigation.navigate('CommunityGroup', { id: g.id })}
                 />
               ))
@@ -1165,10 +1200,10 @@ export default function CommunityHubScreen({ navigation, route }) {
                       variant="tertiary"
                       size="sm"
                       fullWidth={false}
-                      title="Later"
-                      disabled={inviteBusy === g.id}
-                      onPress={() => setLaterIds((prev) => [...prev, g.id])}
-                      accessibilityLabel={`Hide the invite to ${g.name || 'the group'} for now`}
+                      title="Decline"
+                      disabled={!!inviteBusy}
+                      onPress={() => declineInvite(g)}
+                      accessibilityLabel={`Decline the invite to ${g.name || 'the group'}`}
                     />
                     <Button
                       variant="secondary"

@@ -83,6 +83,19 @@ jest.mock('../../lib/community', () => ({
   groupInviteUrl: (id, t) => `https://volyume.app/g/?id=${id}&t=${t}`,
   // Early days (26-EARLY-DAYS-SPEC.md 1.7): the invite link's token.
   acceptGroupInvite: jest.fn(),
+  // D221 Stage 3: the chat, challenge and presence reads. The gate answers
+  // gated, so the presence and challenge bands are not drawn in this suite;
+  // `CommunityGroup.stage3.test.js` owns those.
+  declineGroupInvite: jest.fn(),
+  loadGroupMessages: jest.fn(() => Promise.resolve({ messages: [], cursor: null })),
+  listMyGroups: jest.fn(() => Promise.resolve([])),
+  loadChallengeBoard: jest.fn(() => Promise.resolve(null)),
+  createChallenge: jest.fn(),
+  endChallenge: jest.fn(),
+  challengeDaysLine: () => '',
+  challengeTotalLine: () => '',
+  challengeFailureLine: () => '',
+  consistencyGateState: jest.fn(() => Promise.resolve({ allowed: false, gated: true, isMinor: false })),
 }));
 
 import {

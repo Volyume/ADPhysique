@@ -25,13 +25,31 @@ import { readShareSettings } from './trainingProfile';
 import { sessionShareGateState } from './trainingConsistency';
 import { readCachedMe } from './profile';
 import { listMyGroups } from './groups';
-import { buildSessionPayload, buildPrPayload } from './posts';
+import { buildSessionPayload, buildPrPayload, buildMilestonePayload } from './posts';
 
 export const PENDING_ITEMS_KEY = 'community.pendingItems';
 
 /** At most three PR moments per workout (spec section 2): "the rest stay
  * inside the session's PR count". */
 export const MAX_AUTO_PRS = 3;
+
+/** Session counts that earn one milestone post (D221 Stage 3, 3d). */
+export const MILESTONE_SESSION_COUNTS = Object.freeze([10, 25, 50, 100, 250]);
+
+/** The milestone payload for a count, or null when it is not a milestone. A
+ * count of sessions and nothing else: no load, no body figure. */
+export function milestonePayloadFor(count) {
+  const n = Number(count);
+  if (!MILESTONE_SESSION_COUNTS.includes(n)) return null;
+  return buildMilestonePayload({
+    eyebrow: 'Milestone',
+    title: `${n} sessions`,
+    heroValue: String(n),
+    heroUnit: 'sessions',
+    caption: `${n} sessions logged on Volyume.`,
+    stats: [],
+  });
+}
 
 /**
  * Failures worth retrying on the next foreground or reconnect: the call
@@ -118,6 +136,9 @@ async function sendAutoItem(item) {
  *   date?: (number|null)}>} [input.prList] already-detected PRs for this
  *   workout, in the shape the summary screen already holds them
  * @param {string|null} [input.units]
+ * @param {number|null} [input.completedCount] the person's completed-session
+ *   count including this one, read by the caller; at 10, 25, 50, 100 or 250
+ *   one milestone item follows the session item, behind the same gates
  * @returns {Promise<{created: number, queued: number, skipped: (string|null),
  *   sessionPostId: (string|null), sessionPayload: (object|null)}>}
  *   never throws: a background convenience off the back of a completed
@@ -129,7 +150,7 @@ async function sendAutoItem(item) {
  *   skipped item that has no id yet.
  */
 export async function publishAmbientItems({
-  userId, workoutId, prList = [], units = null,
+  userId, workoutId, prList = [], units = null, completedCount = null,
 } = {}) {
   const empty = {
     created: 0, queued: 0, skipped: null, sessionPostId: null, sessionPayload: null,
@@ -197,6 +218,18 @@ export async function publishAmbientItems({
       kind: 'pr', payload, visibility, clientRef: `${workoutId}:${pr.exerciseId}`, groupIds,
     };
     // eslint-disable-next-line no-await-in-loop
+    const out = await sendAutoItem(item);
+    if (out.ok) created += 1;
+    else if (RETRYABLE_CODES.has(out.code)) { await queueItem(item); queued += 1; }
+  }
+
+  // D221 3d: the milestone, once only (`client_ref` `milestone:<n>` makes a
+  // repeat or a retry return the same row). Same gate, same audience.
+  const milestone = milestonePayloadFor(completedCount);
+  if (milestone) {
+    const item = {
+      kind: 'milestone', payload: milestone, visibility, clientRef: `milestone:${Number(completedCount)}`, groupIds,
+    };
     const out = await sendAutoItem(item);
     if (out.ok) created += 1;
     else if (RETRYABLE_CODES.has(out.code)) { await queueItem(item); queued += 1; }

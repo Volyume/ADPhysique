@@ -13,7 +13,7 @@
  *     "Not available yet" when the server lacks migration 190, optimistic
  *     Respect reaching `reactToPost` with the author id, the non-member's
  *     read-only Everyone feed routing Respect to Join;
- *   - People, Groups and You content, the invite Accept and Later;
+ *   - People, Groups and You content, the invite Accept and Decline;
  *   - the calm-mode and ED-flag withhold: the You row and the ProgressStrip
  *     are absent exactly when `consistencyGateState` says gated (the same
  *     surfaces the previous Hub hid);
@@ -59,6 +59,7 @@ jest.mock('../../lib/community', () => ({
   loadHubSummary: jest.fn(() => Promise.resolve({ cohorts: [], groups: [] })),
   listMyGroups: jest.fn(() => Promise.resolve([])),
   acceptGroupInvite: jest.fn(() => Promise.resolve({})),
+  declineGroupInvite: jest.fn(() => Promise.resolve({ declined: true })),
   metricLabel: (window, n) => (Number(n) === 1 ? '1 session' : `${Number(n) || 0} sessions`),
   daysLabel: (keys) => (Array.isArray(keys) ? keys.join(', ') : ''),
   TP_AGE_BANDS: { '18_24': '18 to 24' },
@@ -79,7 +80,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Share } from 'react-native';
 import {
   loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency, getProfile, follow,
-  readHostDismissed, listMyGroups, acceptGroupInvite, COMMUNITY_HOST_USER_ID,
+  readHostDismissed, listMyGroups, acceptGroupInvite, declineGroupInvite, COMMUNITY_HOST_USER_ID,
 } from '../../lib/community';
 import { getLatestCompletedWorkoutId } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -542,18 +543,22 @@ describe('Groups', () => {
     expect(view.text).toContain('Make a group with friends');
   });
 
-  test('a pending invite offers Accept and Later; Later hides the row for the session', async () => {
+  test('a pending invite offers Accept and Decline; Decline removes the invite on the server', async () => {
     asMember();
     listMyGroups.mockResolvedValue([
       { group: { id: 'g9', name: 'Monday crew', access: 'invite' }, role: null, state: 'invited' },
-      { group: { id: 'g1', name: 'Iron Collective', access: 'open' }, role: 'member', state: 'member' },
+      { group: { id: 'g1', name: 'Iron Collective', access: 'open' }, role: 'member', state: 'member', unread: 3 },
     ]);
     const view = await render({ segment: 'groups' });
     expect(view.text).toContain('Invites');
     expect(view.text).toContain('Monday crew');
     await press(view, 'Accept the invite to Monday crew');
     expect(acceptGroupInvite).toHaveBeenCalledWith({ groupId: 'g9' });
-    await press(view, 'Hide the invite to Monday crew for now');
+    listMyGroups.mockResolvedValue([
+      { group: { id: 'g1', name: 'Iron Collective', access: 'open' }, role: 'member', state: 'member', unread: 3 },
+    ]);
+    await press(view, 'Decline the invite to Monday crew');
+    expect(declineGroupInvite).toHaveBeenCalledWith('g9');
     expect(view.text).not.toContain('Invited you to join');
   });
 

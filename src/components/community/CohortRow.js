@@ -30,6 +30,8 @@
  *             not yet known for this cohort, section 5)
  *   people   profile cards for `AvatarStack` (see its own props)
  *   onPress  opens the cohort page
+ *   unread   optional chat unread count (D221 3b), a figure in `num('label')`
+ *            before the chevron; nothing when 0 or absent
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -45,16 +47,17 @@ const STACK_SIZE = 24;
 const STACK_MAX = 3;
 
 export default function CohortRow({
-  title, line, people, onPress, onPressWithLayout, inBand = false,
+  title, line, people, onPress, onPressWithLayout, inBand = false, unread = 0,
 }) {
   const t = useTheme();
+  const unreadCount = Number(unread) > 0 ? Number(unread) : 0;
   return (
     <PressableCard
       onPress={onPress}
       onPressWithLayout={onPressWithLayout}
       disabled={!onPress && !onPressWithLayout}
       accessibilityRole="button"
-      accessibilityLabel={[title, line].filter(Boolean).join('. ')}
+      accessibilityLabel={[title, line, unreadCount ? `${unreadCount} unread` : null].filter(Boolean).join('. ')}
     >
       <View style={[styles.row, inBand && styles.inBand]}>
         <AvatarStack people={people} size={STACK_SIZE} max={STACK_MAX} />
@@ -68,6 +71,11 @@ export default function CohortRow({
             </Text>
           ) : null}
         </View>
+        {unreadCount ? (
+          <Text style={[t.type.num('label'), { color: t.colors.textPrimary }]}>
+            {unreadCount > 99 ? '99+' : String(unreadCount)}
+          </Text>
+        ) : null}
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
       <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />

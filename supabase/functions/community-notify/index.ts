@@ -347,7 +347,10 @@ async function fanOutGroupMessage(admin: any, supabaseUrl: string, serviceRoleKe
           user_id: targetUserId,
           title: copy.title,
           body: copy.body,
-          data: { type: 'community_message', ref_id: groupId, kind: 'group_message', group_id: groupId },
+          // Stage 2 review SF1: a type of its own, so a build without the group
+          // chat route opens the app (router default null) instead of an
+          // empty conversation; the toggle stays the community_message one.
+          data: { type: 'community_group_message', ref_id: groupId, kind: 'group_message', group_id: groupId },
         }),
       })
       pushed += 1

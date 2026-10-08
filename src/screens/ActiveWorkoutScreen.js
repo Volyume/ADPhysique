@@ -62,6 +62,7 @@ import {
 import SegmentedControl from '../components/SegmentedControl';
 import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
+import { localDayKey } from '../lib/dayKey';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
   loadExerciseIntentState, rankPersonalised, movementFamilyOf, isFamilyBlocked,
@@ -780,6 +781,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const sessionSetsRef = useRef([]);   // tracks sets in this session, used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
+  // D221 3a: the session start. Tell Community once per workout id; the helper
+  // acts only with a profile, the switch on and the gate clear. Best effort.
+  const presenceStartedRef = useRef(null);
+  useEffect(() => {
+    if (!activeWorkout?.id || !user?.id || presenceStartedRef.current === activeWorkout.id) return;
+    presenceStartedRef.current = activeWorkout.id;
+    // eslint-disable-next-line global-require
+    require('../lib/community').announceTraining(user.id, true).catch(() => {});
+  }, [activeWorkout?.id, user?.id]);
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
   // D32 (2026-07-10, campaign item 20): workoutExercises entries carry no
   // stable id of their own AS ENTRIES (since rounds 11-13 every slot's
@@ -2212,6 +2222,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         useAppStore.getState().stopRestTimer();
       }
       endWorkout();
+      // D221 3a: a discard clears presence. Best effort.
+      // eslint-disable-next-line global-require
+      if (user?.id) require('../lib/community').announceTraining(user.id, false).catch(() => {});
       navigation.goBack();
     } catch (e) {
       logError(errorSource, e, { workoutId: discardId });
@@ -4121,8 +4134,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // itself gates on the toggle, calm mode/ED flag and minor status.
       if (user?.id) {
         // eslint-disable-next-line global-require
-        const { publishConsistency } = require('../lib/community');
+        const { publishConsistency, announceTraining, logFinishedSessionToChallenges } = require('../lib/community');
         publishConsistency(user.id).catch(() => {});
+        announceTraining(user.id, false).catch(() => {}); // D221 3a: finish clears presence, best effort
+        logFinishedSessionToChallenges(user.id, activeWorkout.id, localDayKey()).catch(() => {}); // D221 3c: session count only, best effort
       }
       // LB-8: the core value event. Counts + duration only, no
       // exercise names or loads.

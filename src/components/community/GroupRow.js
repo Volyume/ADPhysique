@@ -16,11 +16,12 @@
  *   onPress  opens the group
  *   onPressWithLayout  origin-aware open (D188)
  *   inBand   D221: the row carries the band's gutter itself
+ *   unread   D221 3b: the group chat's unread count
  */
 import CohortRow from './CohortRow';
 
 export default function GroupRow({
-  group, line, people, onPress, onPressWithLayout, inBand,
+  group, line, people, onPress, onPressWithLayout, inBand, unread,
 }) {
   return (
     <CohortRow
@@ -30,6 +31,7 @@ export default function GroupRow({
       onPress={onPress}
       onPressWithLayout={onPressWithLayout}
       inBand={inBand}
+      unread={unread}
     />
   );
 }
