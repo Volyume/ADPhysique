@@ -447,8 +447,8 @@ export default function CommunityGroupScreen({ navigation, route }) {
 
   const empty = loading ? (
     <View>
-      <SkeletonPostRow />
-      <SkeletonPostRow />
+      <Band style={styles.postCard}><SkeletonPostRow /></Band>
+      <Band style={styles.postCard}><SkeletonPostRow /></Band>
     </View>
   ) : error ? (
     <EmptyState
@@ -703,24 +703,27 @@ export default function CommunityGroupScreen({ navigation, route }) {
             <SkeletonPersonRow />
           </Band>
           <BandGap />
-          <SkeletonPostRow />
-          <SkeletonPostRow />
+          <Band style={styles.postCard}><SkeletonPostRow /></Band>
+          <Band style={styles.postCard}><SkeletonPostRow /></Band>
         </View>
       ) : error && !group ? empty : (
         <FlashList
           data={isMember ? feedRows : []}
           keyExtractor={(item) => item.post.id}
           renderItem={({ item }) => (
-            <PostRow
-              item={item}
-              onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-              onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
-                id: item.post.id, __heroOrigin: rect || undefined,
-              })}
-              onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
-              onRespected={(next) => applyRespect(item.post.id, next)}
-              onOpenPerson={(author) => openProfile(author)}
-            />
+            <Band style={styles.postCard}>
+              <PostRow
+                last
+                item={item}
+                onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
+                onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+                  id: item.post.id, __heroOrigin: rect || undefined,
+                })}
+                onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
+                onRespected={(next) => applyRespect(item.post.id, next)}
+                onOpenPerson={(author) => openProfile(author)}
+              />
+            </Band>
           )}
           ListHeaderComponent={(
             <View>
@@ -773,6 +776,8 @@ export default function CommunityGroupScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
+  // One app (founder verdict 2026-10-08): a post is a Card, spacing.md apart.
+  postCard: { marginBottom: spacing.md },
   skeletonScreen: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
   summary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
