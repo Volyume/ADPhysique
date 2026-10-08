@@ -47,7 +47,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
-import Chip from '../components/Chip';
+import SegmentedControl from '../components/SegmentedControl';
+import { LinearGradient } from 'expo-linear-gradient';
 import EmptyState from '../components/EmptyState';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
@@ -68,7 +69,7 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import {
-  colors, spacing, circle, radius, iconSize,
+  colors, spacing, circle, radius, iconSize, withAlpha,
 } from '../styles/theme';
 import { BAND, touchTarget } from '../styles/layout';
 import {
@@ -752,22 +753,18 @@ export default function CommunityHubScreen({ navigation, route }) {
           </HeaderGlyph>
         ) : null}
       </View>
-      <View style={styles.segmentBar} accessibilityRole="radiogroup" accessibilityLabel="Community sections">
-        {SEGMENTS.map((s) => {
-          const selected = segment === s.key;
-          return (
-            <Chip
-              key={s.key}
-              label={s.label}
-              selected={selected}
-              accessibilityRole="radio"
-              onPress={() => chooseSegment(s.key)}
-              style={[styles.segmentChip, selected && { backgroundColor: t.colors.primary, borderColor: t.colors.primary }]}
-              labelStyle={styles.segmentLabel}
-              selectedLabelStyle={{ color: t.colors.onPrimary }}
-            />
-          );
-        })}
+      {/* Founder device verdict 2026-10-08 ("boxes touching each other,
+          navigation not fitting"): the four outlined pills are replaced by
+          the house SegmentedControl (the track the onboarding wizard, Body
+          metrics and the logger use), inside the page gutter, with a
+          spacing.md foot so the first band never touches it (V9, amended). */}
+      <View style={styles.segmentBar}>
+        <SegmentedControl
+          options={SEGMENTS.map((s) => ({ label: s.label, value: s.key }))}
+          value={segment}
+          onChange={chooseSegment}
+          accessibilityLabel="Community sections"
+        />
       </View>
     </AnimatedEntrance>
   );
@@ -919,32 +916,49 @@ export default function CommunityHubScreen({ navigation, route }) {
       {hero}
       {joined ? (
         <View style={styles.filterRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScroll}
-            contentContainerStyle={styles.filterContent}
-            accessibilityRole="radiogroup"
-            accessibilityLabel="Feed"
-          >
-            {SCOPES.map((s) => (
-              <FilterChip
-                key={s.key}
-                label={s.label}
-                selected={scope === s.key}
-                disabled={scopeUnavailable && (s.key === 'gym' || s.key === 'groups')}
-                onPress={() => selectScope(s.key)}
-              />
-            ))}
-          </ScrollView>
+          {/* Founder device verdict 2026-10-08: the chips scroll under a
+              fade at the right edge, so a chip that does not fit reads as
+              "more", never as cut off; the sort is a 48 dp glyph (amber only
+              while a sort other than Newest is chosen, a selected state
+              under V7), named in full for assistive tech and in the sheet. */}
+          <View style={styles.filterScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContent}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Feed"
+            >
+              {SCOPES.map((s) => (
+                <FilterChip
+                  key={s.key}
+                  label={s.label}
+                  selected={scope === s.key}
+                  disabled={scopeUnavailable && (s.key === 'gym' || s.key === 'groups')}
+                  onPress={() => selectScope(s.key)}
+                />
+              ))}
+            </ScrollView>
+            <LinearGradient
+              pointerEvents="none"
+              colors={[withAlpha(t.colors.background, 0), t.colors.background]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.filterFade}
+            />
+          </View>
           <Pressable
             onPress={() => setSortOpen(true)}
             style={styles.sortControl}
             accessibilityRole="button"
             accessibilityLabel={`Sort: ${sortLabel}`}
+            accessibilityHint="Opens the sort choices"
           >
-            <Text style={[t.type.label, { color: t.colors.textSecondary }]}>{sortLabel}</Text>
-            <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textSecondary} />
+            <Ionicons
+              name="swap-vertical-outline"
+              size={iconSize.lg}
+              color={sort === 'respected' ? t.colors.primary : t.colors.textPrimary}
+            />
           </Pressable>
         </View>
       ) : null}
@@ -1458,14 +1472,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  segmentBar: {
-    flexDirection: 'row', alignItems: 'center', minHeight: touchTarget.minimum, gap: spacing.xs2, paddingHorizontal: spacing.lg,
-  },
-  segmentChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center' },
-  segmentLabel: { textAlign: 'center' },
-  filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
+  segmentBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.md },
+  filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingRight: spacing.xs },
   filterScroll: { flex: 1 },
-  filterContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
+  filterFade: {
+    position: 'absolute', top: 0, bottom: 0, right: 0, width: spacing.xl,
+  },
+  filterContent: { paddingLeft: spacing.lg, paddingRight: spacing.xl, gap: spacing.sm, alignItems: 'center' },
   filterChip: {
     height: FILTER_CHIP_HEIGHT,
     paddingHorizontal: spacing.md,
@@ -1475,11 +1488,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sortControl: {
-    minHeight: touchTarget.minimum,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
+    width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center',
   },
   notice: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   noticeLink: { minHeight: touchTarget.minimum, justifyContent: 'center' },

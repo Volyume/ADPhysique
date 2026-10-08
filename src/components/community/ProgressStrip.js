@@ -44,14 +44,27 @@ const BAND_BAR_MAX_HEIGHT = 32;
 // floor rather than a hairline nobody can see (founder defect 2026-09-14).
 const BAR_MIN_HEIGHT = 2;
 
-function Cell({ t, value, label, isLast, lead }) {
+function Cell({
+  t, value, label, isLast, lead, band,
+}) {
+  // Founder device verdict 2026-10-08 ("boxes touching each other"): inside
+  // a band the cells are four quiet tiles on `surface2` with a spacing.sm
+  // gap, not four hairlined columns edge to edge; every label is given the
+  // same two-line room, so a label that wraps ("consistent in 12 weeks")
+  // no longer makes its tile taller than its neighbours.
   return (
-    <View style={[styles.cell, !isLast && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: t.colors.borderSubtle }]}>
+    <View
+      style={[
+        styles.cell,
+        band ? [styles.cellBand, { backgroundColor: t.colors.surface2 }] : null,
+        !band && !isLast && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: t.colors.borderSubtle },
+      ]}
+    >
       {/* Q6 recommendation, founder order 2026-09-22 item 8: the ONE
           figure that steps up on this strip is sessions this week, the
           screen's own result, so only the leading cell passes `lead`. */}
       <Text style={[styles.value, t.type.num(lead ? 'title' : 'label'), { color: t.colors.textPrimary }]}>{value}</Text>
-      <Text style={[styles.label, { ...t.type.caption, color: t.colors.textMuted }]}>{label}</Text>
+      <Text style={[styles.label, band && styles.labelBand, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={2}>{label}</Text>
     </View>
   );
 }
@@ -117,12 +130,12 @@ export default function ProgressStrip({ counters, onPress, band = false }) {
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${sessions} sessions this week, ${streak} weeks in a row, ${consistent} consistent weeks in the last 12${prsClause}${historyClause}.${suffix}`}
     >
-      <View style={styles.cellsRow}>
-        <Cell t={t} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} lead />
-        <Cell t={t} value={streak} label={streak === 1 ? 'week in a row' : 'weeks in a row'} />
-        <Cell t={t} value={consistent} label="consistent in 12 weeks" isLast={!hasPrs} />
+      <View style={[styles.cellsRow, band && styles.cellsRowBand]}>
+        <Cell t={t} band={band} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} lead />
+        <Cell t={t} band={band} value={streak} label={streak === 1 ? 'week in a row' : 'weeks in a row'} />
+        <Cell t={t} band={band} value={consistent} label="consistent in 12 weeks" isLast={!hasPrs} />
         {hasPrs ? (
-          <Cell t={t} value={prs} label={prs === 1 ? 'PR in 4 weeks' : 'PRs in 4 weeks'} isLast />
+          <Cell t={t} band={band} value={prs} label={prs === 1 ? 'PR in 4 weeks' : 'PRs in 4 weeks'} isLast />
         ) : null}
       </View>
       <WeeksHistoryBars t={t} history={counters.c_weeks_history} band={band} />
@@ -136,9 +149,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cellsRow: { flexDirection: 'row' },
+  cellsRowBand: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   cell: {
     flex: 1, alignItems: 'center', gap: spacing.xxs, paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
   },
+  cellBand: { borderRadius: radius.md, paddingHorizontal: spacing.sm, justifyContent: 'flex-start' },
+  // Two caption lines of room for every label, so the tiles stay level.
+  labelBand: { minHeight: type.caption.lineHeight * 2 },
   value: { color: colors.textPrimary },
   label: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   // The bars are a footer band of the whole strip, not of one cell: a
