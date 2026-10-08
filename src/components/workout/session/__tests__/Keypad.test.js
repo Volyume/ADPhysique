@@ -9,7 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
-import { colors, type } from '../../../../styles/theme';
+import { colors, radius, type } from '../../../../styles/theme';
 import Keypad, { KEY_BACKSPACE } from '../Keypad';
 
 const MINUS = String.fromCharCode(0x2212);
@@ -94,15 +94,25 @@ describe('Keypad step keys', () => {
     expect(byLabel(render({ unit: 'lb', step: 5 }), 'Add 5 pounds')).toHaveLength(1);
   });
 
-  test('step keys are primary ink; digits are not', () => {
+  test('step keys are primary ink at the numeric bodyStrong role; digits are primary text at the regular numeric h3 role; the action key is bodyStrong text', () => {
     const tree = render({});
-    expect(flat(textHost(tree, '+2.5').props.style).color).toBe(colors.primary);
-    expect(flat(textHost(tree, `${MINUS}2.5`).props.style).color).toBe(colors.primary);
+    ['+2.5', `${MINUS}2.5`].forEach((label) => {
+      const step = flat(textHost(tree, label).props.style);
+      expect(step.color).toBe(colors.primary);
+      expect(step.fontSize).toBe(type.bodyStrong.fontSize);
+      expect(step.fontFamily).toBe(type.num('bodyStrong').fontFamily);
+      expect(step.fontVariant).toEqual(['tabular-nums']);
+    });
     const digit = flat(textHost(tree, '7').props.style);
     expect(digit.color).toBe(colors.textPrimary);
     expect(digit.fontSize).toBe(type.h3.fontSize);
-    expect(digit.fontFamily).toBe(type.w(type.num('h3'), 'semibold').fontFamily);
+    expect(digit.fontFamily).toBe(type.num('h3').fontFamily);
+    expect(digit.fontFamily).not.toBe(type.w(type.num('h3'), 'semibold').fontFamily);
     expect(digit.fontVariant).toEqual(['tabular-nums']);
+    const action = flat(textHost(tree, 'Next').props.style);
+    expect(action.color).toBe(colors.textPrimary);
+    expect(action.fontSize).toBe(type.bodyStrong.fontSize);
+    expect(action.fontFamily).toBe(type.bodyStrong.fontFamily);
   });
 });
 
@@ -147,24 +157,31 @@ describe('Keypad top row', () => {
     expect(key(tree, 'Use the phone keyboard').props.accessibilityRole).toBe('button');
   });
 
-  test('both are wells with a 48 dp reach', () => {
+  test('both are surface2 wells with a border hairline and a 48 dp reach', () => {
     const tree = render({});
     ['Clear', 'Use the phone keyboard'].forEach((label) => {
       const node = key(tree, label);
       const s = flat(node.props.style);
-      expect(s.backgroundColor).toBe(colors.background);
-      expect(s.borderColor).toBe(colors.borderSubtle);
-      expect(s.borderRadius).toBe(10);
+      expect(s.backgroundColor).toBe(colors.surface2);
+      expect(s.borderColor).toBe(colors.border);
+      expect(s.borderWidth).toBe(1);
+      expect(s.borderRadius).toBe(radius.md);
       expect(node.props.hitSlop).toEqual({ top: 4, bottom: 4, left: 2, right: 2 });
     });
     expect(flat(key(tree, 'Use the phone keyboard').props.style)).toMatchObject({ width: 44, height: 40 });
   });
 
-  test('tabs: the unit and Reps, the field being edited in primary ink, the other muted', () => {
+  test('tabs at the label role: the unit and Reps, the field being edited in primary text, the other muted; Clear is label text', () => {
     const weight = render({});
     expect(flat(textHost(weight, 'kg').props.style).color).toBe(colors.textPrimary);
     expect(flat(textHost(weight, 'Reps').props.style).color).toBe(colors.textMuted);
-    expect(flat(textHost(weight, 'kg').props.style).fontSize).toBe(type.bodyStrong.fontSize);
+    expect(flat(textHost(weight, 'kg').props.style).fontSize).toBe(type.label.fontSize);
+    expect(flat(textHost(weight, 'kg').props.style).fontFamily).toBe(type.label.fontFamily);
+    expect(flat(textHost(weight, 'Reps').props.style).fontFamily).toBe(type.label.fontFamily);
+    const clear = flat(textHost(weight, 'Clear').props.style);
+    expect(clear.color).toBe(colors.textPrimary);
+    expect(clear.fontSize).toBe(type.label.fontSize);
+    expect(clear.fontFamily).toBe(type.label.fontFamily);
     const reps = render({ field: 'reps', value: '8', step: 1 });
     expect(flat(textHost(reps, 'kg').props.style).color).toBe(colors.textMuted);
     expect(flat(textHost(reps, 'Reps').props.style).color).toBe(colors.textPrimary);
@@ -216,18 +233,18 @@ describe('Keypad accessibility and sizes', () => {
     keys.forEach((k) => expect(typeof k.props.accessibilityLabel).toBe('string'));
   });
 
-  test('keys are 52 dp wells on the page colour with a hairline, radius md', () => {
+  test('keys are 52 dp surface2 wells with a border hairline, radius md', () => {
     const s = flat(key(render({}), '1').props.style);
     expect(s.height).toBe(52);
-    expect(s.backgroundColor).toBe(colors.background);
-    expect(s.borderColor).toBe(colors.borderSubtle);
+    expect(s.backgroundColor).toBe(colors.surface2);
+    expect(s.borderColor).toBe(colors.border);
     expect(s.borderWidth).toBe(1);
-    expect(s.borderRadius).toBe(10);
+    expect(s.borderRadius).toBe(radius.md);
   });
 
-  test('the panel is the section colour under a top hairline', () => {
+  test('the panel is the raised band (surfaceElevated) under a top hairline', () => {
     const s = flat(render({}).toJSON().props.style);
-    expect(s.backgroundColor).toBe(colors.surface);
+    expect(s.backgroundColor).toBe(colors.surfaceElevated);
     expect(s.borderTopWidth).toBe(1);
     expect(s.borderTopColor).toBe(colors.borderSubtle);
   });

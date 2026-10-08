@@ -55,30 +55,32 @@ const markersShown = (tree) => rowsShown(tree).map((r) => r.props.marker);
 const textHost = (tree, content) => one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === content));
 
 describe('SetTable column labels', () => {
-  test('Set, Last, Target and the weight label over reps, in sentence case', () => {
+  test('SET, LAST, TARGET and the weight label over reps, uppercase at the overline role in secondary ink', () => {
     const tree = render({});
-    ['Set', 'Last', 'Target', `kg ${DOT} reps`].forEach((label) => {
+    ['SET', 'LAST', 'TARGET', `KG ${DOT} REPS`].forEach((label) => {
       const s = flat(textHost(tree, label).props.style);
       expect(s.color).toBe(colors.textSecondary);
-      expect(s.fontSize).toBe(type.label.fontSize);
+      expect(s.fontSize).toBe(type.overline.fontSize);
+      expect(s.fontFamily).toBe(type.overline.fontFamily);
+      expect(s.textTransform).toBe('uppercase');
       // Target starts at the column's left edge, like its cells (a PR tag
       // must never shift the value line); the others stay centred.
-      expect(s.textAlign).toBe(label === 'Target' ? 'left' : 'center');
+      expect(s.textAlign).toBe(label === 'TARGET' ? 'left' : 'center');
     });
   });
 
   test('the label follows the unit, and falls back to Reps without one', () => {
-    expect(words(render({ columnsLabel: { weight: 'lb' } }).toJSON())).toContain(`lb ${DOT} reps`);
-    expect(words(render({ columnsLabel: {} }).toJSON())).toContain('Reps');
-    expect(words(render({ columnsLabel: undefined }).toJSON())).toContain('Reps');
+    expect(words(render({ columnsLabel: { weight: 'lb' } }).toJSON())).toContain(`LB ${DOT} REPS`);
+    expect(words(render({ columnsLabel: {} }).toJSON())).toContain('REPS');
+    expect(words(render({ columnsLabel: undefined }).toJSON())).toContain('REPS');
   });
 
   test('the labels sit on the row grid: same widths, same gap, same padding, a hairline below', () => {
     const tree = render({});
-    expect(flat(textHost(tree, 'Set').props.style).width).toBe(SET_COLUMNS.marker);
-    expect(flat(textHost(tree, 'Last').props.style).width).toBe(SET_COLUMNS.last);
-    expect(flat(textHost(tree, `kg ${DOT} reps`).props.style).width).toBe(SET_COLUMNS.wells);
-    expect(flat(textHost(tree, 'Target').props.style).flex).toBe(1);
+    expect(flat(textHost(tree, 'SET').props.style).width).toBe(SET_COLUMNS.marker);
+    expect(flat(textHost(tree, 'LAST').props.style).width).toBe(SET_COLUMNS.last);
+    expect(flat(textHost(tree, `KG ${DOT} REPS`).props.style).width).toBe(SET_COLUMNS.wells);
+    expect(flat(textHost(tree, 'TARGET').props.style).flex).toBe(1);
     const bar = one(hosts(tree, (p) => flat(p.style).minHeight === 36 && flat(p.style).borderBottomWidth === 1));
     const s = flat(bar.props.style);
     expect(s.gap).toBe(6);
@@ -89,18 +91,26 @@ describe('SetTable column labels', () => {
 });
 
 describe('SetTable tick-all', () => {
-  test('without onLogRemaining the double check is a plain glyph in disabled ink', () => {
+  test('without onLogRemaining the check column is empty: no glyph, no word, no control', () => {
     const tree = render({});
     expect(byLabel(tree, 'Log remaining sets')).toHaveLength(0);
-    const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'checkmark-done');
-    expect(glyph).toHaveLength(1);
-    expect(glyph[0].props.color).toBe(colors.textDisabled);
+    expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
+    expect(words(tree.toJSON())).not.toContain('ALL');
   });
 
-  test('with onLogRemaining it is a button that calls it with no arguments', () => {
+  test('with onLogRemaining it is the word ALL in the column label style, a button that calls it with no arguments', () => {
     const onLogRemaining = jest.fn();
-    const button = one(byLabel(render({ onLogRemaining }), 'Log remaining sets'));
+    const tree = render({ onLogRemaining });
+    const button = one(byLabel(tree, 'Log remaining sets'));
     expect(button.props.accessibilityRole).toBe('button');
+    expect(button.props.hitSlop).toEqual({ top: 6, bottom: 6, left: 6, right: 6 });
+    expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
+    const all = flat(textHost(tree, 'ALL').props.style);
+    expect(all.color).toBe(colors.textSecondary);
+    expect(all.fontSize).toBe(type.overline.fontSize);
+    expect(all.fontFamily).toBe(type.overline.fontFamily);
+    expect(all.textTransform).toBe('uppercase');
+    expect(all.textAlign).toBe('center');
     press(button);
     expect(onLogRemaining).toHaveBeenCalledTimes(1);
     expect(onLogRemaining).toHaveBeenCalledWith();
@@ -222,12 +232,12 @@ describe('SetTable fold', () => {
 
 describe('SetTable kinds (column labels and row pass-through)', () => {
   test.each([
-    ['weight_reps', { weight: 'kg' }, 'kg', `kg ${DOT} reps`],
-    [undefined, { weight: 'lb' }, 'lb', `lb ${DOT} reps`],
-    ['reps_only', { weight: 'kg' }, 'kg', 'Reps'],
-    ['duration', { weight: 'kg' }, 'kg', 'Time'],
-    ['distance', { weight: 'kg' }, 'kg', `m ${DOT} time`],
-    ['distance', { weight: 'lb' }, 'lb', `yd ${DOT} time`],
+    ['weight_reps', { weight: 'kg' }, 'kg', `KG ${DOT} REPS`],
+    [undefined, { weight: 'lb' }, 'lb', `LB ${DOT} REPS`],
+    ['reps_only', { weight: 'kg' }, 'kg', 'REPS'],
+    ['duration', { weight: 'kg' }, 'kg', 'TIME'],
+    ['distance', { weight: 'kg' }, 'kg', `M ${DOT} TIME`],
+    ['distance', { weight: 'lb' }, 'lb', `YD ${DOT} TIME`],
   ])('kind %s with %j and units %s labels the wells "%s"', (kind, columnsLabel, units, expected) => {
     const tree = render({ kind, columnsLabel, units });
     expect(words(tree.toJSON())).toContain(expected);
@@ -235,7 +245,7 @@ describe('SetTable kinds (column labels and row pass-through)', () => {
   });
 
   test('units default to kg for the distance label', () => {
-    expect(words(render({ kind: 'distance' }).toJSON())).toContain(`m ${DOT} time`);
+    expect(words(render({ kind: 'distance' }).toJSON())).toContain(`M ${DOT} TIME`);
   });
 
   test('kind, units, inputField, onLongPressRow and checkLabel reach every SetRow', () => {

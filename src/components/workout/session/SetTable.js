@@ -93,7 +93,8 @@ export default function SetTable({
   const t = useTheme();
   const live = useMemo(() => ({
     columns: { borderBottomColor: t.colors.borderSubtle },
-    label: { ...t.type.label, color: t.colors.textSecondary },
+    // Column labels in the house overline (SectionLabel grammar).
+    label: { ...t.type.overline, color: t.colors.textSecondary },
     fold: { borderBottomColor: t.colors.borderSubtle },
     foldText: { ...t.type.label, color: t.colors.textSecondary },
   }), [t]);
@@ -127,11 +128,14 @@ export default function SetTable({
   return (
     <View>
       <View style={[styles.columns, live.columns]}>
-        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1}>Set</Text>
-        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1}>Last</Text>
-        <Text style={[styles.label, styles.colTarget, styles.labelStart, live.label]} numberOfLines={1}>Target</Text>
-        <Text style={[styles.label, styles.colWells, live.label]} numberOfLines={1}>{wellsLabel}</Text>
+        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1}>SET</Text>
+        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1}>LAST</Text>
+        <Text style={[styles.label, styles.colTarget, styles.labelStart, live.label]} numberOfLines={1}>TARGET</Text>
+        <Text style={[styles.label, styles.colWells, live.label]} numberOfLines={1}>{wellsLabel.toUpperCase()}</Text>
         <View style={styles.colCheck}>
+          {/* Founder device verdict 2026-10-08: the double check here read as
+              a second Finish. The column is unlabelled unless tick-all is
+              wired, and then it is a plain word. */}
           {onLogRemaining ? (
             <TouchableOpacity
               testID="volyume-btn-log-remaining"
@@ -141,11 +145,9 @@ export default function SetTable({
               accessibilityRole="button"
               accessibilityLabel="Log remaining sets"
             >
-              <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.textDisabled} />
+              <Text style={[styles.label, live.label]} numberOfLines={1}>ALL</Text>
             </TouchableOpacity>
-          ) : (
-            <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.textDisabled} />
-          )}
+          ) : null}
         </View>
       </View>
 

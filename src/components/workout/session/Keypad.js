@@ -125,15 +125,18 @@ export default function Keypad({
   const live = useMemo(() => {
     const c = t.colors;
     return {
-      panel: { backgroundColor: c.surface, borderTopColor: c.borderSubtle },
-      well: { backgroundColor: c.background, borderColor: c.borderSubtle },
-      key: { backgroundColor: c.background, borderColor: c.borderSubtle },
-      digit: { ...t.type.w(t.type.num('h3'), 'semibold'), color: c.textPrimary },
-      stepText: { ...t.type.w(t.type.num('bodyStrong'), 'semibold'), color: c.primary },
-      actionText: { ...t.type.w(t.type.bodyStrong, 'semibold'), color: c.textPrimary },
-      tabActive: { ...t.type.bodyStrong, color: c.textPrimary },
-      tabIdle: { ...t.type.bodyStrong, color: c.textMuted },
-      clearText: { ...t.type.w(t.type.label, 'semibold'), color: c.textPrimary },
+      // The panel is the app's raised band (the tab bar's surfaceElevated with
+      // a hairline); every key is the house control (Button primary chrome:
+      // surface2 fill, 1 px `border`, radius.md). Amber only on the step keys.
+      panel: { backgroundColor: c.surfaceElevated, borderTopColor: c.borderSubtle },
+      well: { backgroundColor: c.surface2, borderColor: c.border },
+      key: { backgroundColor: c.surface2, borderColor: c.border },
+      digit: { ...t.type.num('h3'), color: c.textPrimary },
+      stepText: { ...t.type.num('bodyStrong'), color: c.primary },
+      actionText: { ...t.type.bodyStrong, color: c.textPrimary },
+      tabActive: { ...t.type.label, color: c.textPrimary },
+      tabIdle: { ...t.type.label, color: c.textMuted },
+      clearText: { ...t.type.label, color: c.textPrimary },
     };
   }, [t]);
 

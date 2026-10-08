@@ -10,8 +10,19 @@ import fs from 'fs';
 import path from 'path';
 import { Animated, Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
-import { colors, type, iconSize } from '../../../../styles/theme';
+import { colors, type, iconSize, radius } from '../../../../styles/theme';
+import { touchTarget } from '../../../../styles/layout';
 import ExerciseSection from '../ExerciseSection';
+
+// The footer's Add set is the house Button, which reaches expo-haptics
+// through lib/haptics; the native module is not present under Jest.
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
 
 const DOT = String.fromCharCode(0x00b7);
 const TIMES = String.fromCharCode(0x00d7);
@@ -50,20 +61,24 @@ const textHost = (tree, content) => one(tree.root.findAll(
 const bestsRow = (tree) => one(byLabel(tree, 'History and records'));
 
 describe('ExerciseSection states', () => {
-  test('active: header, children and the footer', () => {
+  test('active: header, children and the footer; Swap only when onSwap is given', () => {
     const tree = render({});
     expect(joined(tree)).toContain('TABLE_CHILD');
-    expect(words(tree.toJSON())).toEqual(expect.arrayContaining(['2', 'Barbell Row (Bent Over)', 'Add set', 'Swap']));
+    expect(words(tree.toJSON())).toEqual(expect.arrayContaining(['2', 'Barbell Row (Bent Over)', 'Add set']));
     one(byLabel(tree, 'Add set'));
-    one(byLabel(tree, 'Swap exercise'));
+    expect(byLabel(tree, 'Swap exercise')).toHaveLength(0);
     one(byLabel(tree, 'More options for this exercise'));
+    const withSwap = render({ onSwap: jest.fn() });
+    expect(words(withSwap.toJSON())).toContain('Swap');
+    one(byLabel(withSwap, 'Swap exercise'));
   });
 
   test('done: green check and the count, nothing else', () => {
     const tree = render({ state: 'done', doneSetCount: 3 });
     expect(joined(tree)).not.toContain('TABLE_CHILD');
     expect(words(tree.toJSON())).toContain('3 sets');
-    const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'checkmark');
+    // The app's "done" mark: the filled success check, as the plan detail.
+    const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'checkmark-circle');
     expect(glyph).toHaveLength(1);
     expect(glyph[0].props.color).toBe(colors.success);
     expect(byLabel(tree, 'Add set')).toHaveLength(0);
@@ -124,25 +139,34 @@ describe('ExerciseSection states', () => {
 });
 
 describe('ExerciseSection header', () => {
-  test('exercise name: semibold role in primary ink, one line; index in secondary ink', () => {
+  test('exercise name: bodyStrong in primary ink, one line; the index in the plan detail\'s 32 dp order badge', () => {
+    // The plan detail's exercise row (RoutineDetailScreen exerciseCard): the
+    // name is text ink, not amber; amber is spent on the set you are on.
     const tree = render({});
     const name = textHost(tree, 'Barbell Row (Bent Over)');
     const s = flat(name.props.style);
-    expect(s.color).toBe(colors.primary);
+    expect(s.color).toBe(colors.textPrimary);
     expect(name.props.numberOfLines).toBe(1);
-    expect(s.fontFamily).toBe(type.w(type.title, 'semibold').fontFamily);
-    expect(s.fontSize).toBe(type.title.fontSize);
-    const index = flat(textHost(tree, '2').props.style);
+    expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
+    expect(s.fontSize).toBe(type.bodyStrong.fontSize);
+    const indexText = textHost(tree, '2');
+    const index = flat(indexText.props.style);
     expect(index.color).toBe(colors.textSecondary);
     expect(index.fontVariant).toEqual(['tabular-nums']);
-    expect(index.fontSize).toBe(type.title.fontSize);
+    expect(index.fontSize).toBe(type.label.fontSize);
+    expect(index.fontFamily).toBe(type.w(type.label, 'bold').fontFamily);
+    const badge = flat(one(hosts(tree, (p) => flat(p.style).borderRadius === 16 && flat(p.style).width === 32)).props.style);
+    expect(badge.width).toBe(32);
+    expect(badge.height).toBe(32);
+    expect(badge.borderRadius).toBe(16);
+    expect(badge.backgroundColor).toBe(colors.surface2);
   });
 
-  test('chevron is a 16 dp amber glyph', () => {
+  test('chevron is the app\'s 16 dp muted disclosure glyph', () => {
     const tree = render({});
     const chevron = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'chevron-forward')[0];
     expect(chevron.props.size).toBe(16);
-    expect(chevron.props.color).toBe(colors.primary);
+    expect(chevron.props.color).toBe(colors.textMuted);
   });
 
   test('title button names the exercise, carries the accordion state and a hint when inactive', () => {
@@ -174,7 +198,9 @@ describe('ExerciseSection header', () => {
     expect(onPressHeader).not.toHaveBeenCalled();
   });
 
-  test('rest and history buttons are 40 dp wells with 48 dp reach; onRestLength and onHistory fire', () => {
+  test('rest and history buttons are chromeless 48 dp glyph targets in secondary ink; onRestLength and onHistory fire', () => {
+    // As the header's X and Finish and the "..." overflow on this screen: a
+    // glyph on the surface, no well, no border (founder order 2026-08-18).
     const onRestLength = jest.fn();
     const onHistory = jest.fn();
     const tree = render({ onRestLength, onHistory });
@@ -182,16 +208,19 @@ describe('ExerciseSection header', () => {
     const history = one(byLabel(tree, 'History and records for Barbell Row (Bent Over)'));
     [rest, history].forEach((node) => {
       const s = flat(node.props.style);
-      expect(s.width).toBe(40);
-      expect(s.height).toBe(40);
-      expect(s.backgroundColor).toBe(colors.background);
-      expect(s.borderColor).toBe(colors.borderSubtle);
-      expect(node.props.hitSlop).toEqual({ top: 4, bottom: 4, left: 4, right: 4 });
+      expect(s.width).toBe(touchTarget.minimum);
+      expect(s.height).toBe(touchTarget.minimum);
+      expect(s.backgroundColor).toBeUndefined();
+      expect(s.borderWidth).toBeUndefined();
+      expect(s.borderColor).toBeUndefined();
     });
-    expect(tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'timer-outline')).toHaveLength(1);
+    const timer = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'timer-outline');
+    expect(timer).toHaveLength(1);
+    expect(timer[0].props.color).toBe(colors.textSecondary);
     const stats = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'stats-chart-outline');
     expect(stats).toHaveLength(1);
     expect(stats[0].props.size).toBe(iconSize.md);
+    expect(stats[0].props.color).toBe(colors.textSecondary);
     press(rest);
     press(history);
     expect(onRestLength).toHaveBeenCalledTimes(1);
@@ -209,15 +238,29 @@ describe('ExerciseSection footer', () => {
     Object.values(cb).forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
   });
 
-  test('footer glyphs are 20 dp; the labels are semibold label role in primary ink', () => {
-    const tree = render({});
-    const add = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'add-circle-outline')[0];
-    expect(add.props.size).toBe(20);
-    expect(add.props.color).toBe(colors.textPrimary);
+  test('Add set and Swap are the house Button (secondary, small, leading glyph); the overflow stays a chromeless glyph', () => {
+    // Button secondary: surface fill, 1 px border, textSecondary label and
+    // glyph; the sm size carries a 16 dp glyph. Never a second primary (D8).
+    const tree = render({ onSwap: jest.fn() });
+    const add = one(hosts(tree, (p) => p.testID === 'volyume-btn-extra-set'));
+    const addStyle = flat(add.props.style);
+    expect(addStyle.backgroundColor).toBe(colors.surface);
+    expect(addStyle.borderColor).toBe(colors.border);
+    expect(addStyle.borderWidth).toBe(1);
+    const addGlyph = add.findAll((n) => n.type === 'Ionicons' && n.props.name === 'add');
+    expect(addGlyph).toHaveLength(1);
+    expect(addGlyph[0].props.size).toBe(16);
+    expect(addGlyph[0].props.color).toBe(colors.textSecondary);
     const label = flat(textHost(tree, 'Add set').props.style);
-    expect(label.color).toBe(colors.textPrimary);
-    expect(label.fontSize).toBe(type.label.fontSize);
+    expect(label.color).toBe(colors.textSecondary);
     expect(label.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
+    const swap = one(byLabel(tree, 'Swap exercise'));
+    expect(swap.findAll((n) => n.type === 'Ionicons' && n.props.name === 'swap-horizontal')).toHaveLength(1);
+    const more = one(hosts(tree, (p) => p.testID === 'volyume-section-more'));
+    const moreStyle = flat(more.props.style);
+    expect(moreStyle.backgroundColor).toBeUndefined();
+    expect(moreStyle.borderWidth).toBeUndefined();
+    expect(moreStyle.height).toBe(touchTarget.minimum);
   });
 });
 
@@ -293,13 +336,17 @@ describe('ExerciseSection bests line (2a, 2b)', () => {
 });
 
 describe('ExerciseSection surface', () => {
-  test('full-bleed section colour with a 10 dp band above, no radius or border', () => {
+  test('the house card: surface fill, radius.lg, 1 px borderSubtle, no band of its own', () => {
+    // Card.js geometry, so the section sits in the page gap like every other
+    // card in the app rather than a full-bleed band of its own.
     const root = render({}).toJSON();
     const s = flat(root.props.style);
     expect(s.backgroundColor).toBe(colors.surface);
-    expect(s.marginTop).toBe(10);
-    expect(s.borderRadius).toBeUndefined();
-    expect(s.borderWidth).toBeUndefined();
+    expect(s.borderRadius).toBe(radius.lg);
+    expect(s.borderWidth).toBe(1);
+    expect(s.borderColor).toBe(colors.borderSubtle);
+    expect(s.overflow).toBe('hidden');
+    expect(s.marginTop).toBeUndefined();
   });
 });
 

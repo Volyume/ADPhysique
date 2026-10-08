@@ -215,8 +215,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // bodyStrong -> label + semibold, after the 16px name overpowered the
     // outline strip on the S22 walk. Layout facts stay pinned unchanged.
     // Clean-up (D220): the title row's frozen styles are deleted with it;
-    // the exercise name is ExerciseSection's amber title, one line.
-    expect(SECTION).toContain("name: { ...t.type.w(t.type.title, 'semibold'), color: t.colors.primary },");
+    // the exercise name is ExerciseSection's title, one line. Re-pinned
+    // (founder device verdict 2026-10-08, D220 addendum 7): the plan
+    // detail's exercise row, bodyStrong in primary ink, not amber.
+    expect(SECTION).toContain('name: { ...t.type.bodyStrong, color: t.colors.textPrimary },');
     expect(SECTION).toContain('<Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>');
     // The title tap is the section header's 48 dp row.
     expect(SECTION).toMatch(/titleTap: \{[\s\S]{0,120}?minHeight: touchTarget\.minimum,/);
@@ -236,9 +238,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // textPrimary - it is data, not decoration, and the header amber
     // competed with the single filled Log set CTA. Same type.num role.
     // Clean-up (D220): the clock is SessionClock, tabular title numerals in
-    // primary ink.
+    // primary ink. Re-pinned (D220 addendum 7): the approved 2026-08-18
+    // header's "Elapsed" overline over the numerals, no pill, no bold.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.w(t.type.num('title'), 'semibold'), color: t.colors.textPrimary },");
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textPrimary },");
+    expect(CLOCK).toContain('label: { ...t.type.overline, color: t.colors.textMuted },');
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
