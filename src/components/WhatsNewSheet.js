@@ -118,6 +118,23 @@ export const WHATS_NEW = {
     { icon: 'options-outline', text: 'The Volume targets editor has been removed. Every screen now judges your weekly sets against your plan\'s own ranges.' },
     { icon: 'list-outline', text: 'Every exercise you log is listed and counted after your workout, including ones that have since been renamed in the exercise library.' },
   ],
+
+  // 2.8.0 (founder's word, 2026-10-08: "Please bump the version number"). The
+  // privacy notice stays first, since the sheet shows only the running
+  // version's notes; then the changes since 2.7.0 a person would notice: the
+  // workout logger rebuilt (D220: the set table, the row check, the keypad,
+  // last session beside every row) and Community as its own tab (D221: the
+  // Hub, scopes and sort, training now, group chat, challenges, link
+  // previews, the privacy panel).
+  '2.8.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'barbell-outline', text: 'Logging a workout has been rebuilt. Each exercise is a table of sets with last session beside every row, the coach\'s numbers filled in, and one tap on the row\'s tick to log it.' },
+    { icon: 'keypad-outline', text: 'A keypad sits at the bottom of the logger for weight, reps, time and distance, so your sets are typed without the phone keyboard covering the screen.' },
+    { icon: 'trophy-outline', text: 'The smallest set that would be a record is marked on the row before you lift it, and your history and best reps at each weight are one tap away on the exercise.' },
+    { icon: 'people-outline', text: 'Community is now its own tab, with Feed, People, Groups and You. Choose whose training you see: people you follow, your gym, your groups or everyone, newest first or most respected.' },
+    { icon: 'pulse-outline', text: 'Message your groups and set a sessions challenge with them. Showing that you are training right now is off until you turn it on in Community, under You.' },
+    { icon: 'link-outline', text: 'A link to a profile, a post or an open group now shows a short preview outside the app. Never a note, a weight or a measurement.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
