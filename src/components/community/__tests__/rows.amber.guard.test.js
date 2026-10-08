@@ -77,7 +77,6 @@ const AMBER_COUNTS = [
   // ─── The seven new row components (rule-7 narrative preserved) ───────
   // No avatar, no ring, no figures, no Respect: a section label carries
   // no amber at all.
-  ['Eyebrow.js', 0],
   // Decorative only ("Nothing interactive; the row is the target",
   // spec): presence, not respect or a PR, so no amber either.
   ['AvatarStack.js', 0],
@@ -105,7 +104,10 @@ const AMBER_COUNTS = [
   // against silent drift, not a rule-7 compliance ruling on each --
   // borderline ones named in the lane report) ───────────────────────────
   ['ActivityRow.js', 1], // the unread dot fill (legacy feed row, pre-dates PostCard's replacement by ActivityItemRow)
-  ['CommentRow.js', 0],
+  ['CommentRow.js', 1], // D221 V9: the comment well's focused ring (1 dp primary)
+  ['Band.js', 0],
+  ['EntryRow.js', 0],
+  ['HeaderGlyph.js', 0],
   ['CommunityHeaderAction.js', 3], // the header glyph's icon colour, the unread-message-count badge fill, the plain "unseen" dot fill
   ['ComposerInput.js', 0],
   ['ConnectButton.js', 0],

@@ -374,7 +374,8 @@ const heroZoomTransition = {
 };
 
 // Origin-aware screen options for hero-zoom destinations that CAN receive a
-// tapped-card origin (currently ExerciseDetail). Reads the destination
+// tapped-card origin (ExerciseDetail and, D188 / D221 V12, CommunityProfile,
+// CommunityGroup and CommunityPost). Reads the destination
 // route's __heroOrigin and builds the growing interpolator; with no origin
 // present it produces the identical centre zoom, so this is a safe drop-in
 // for any hero-zoom registration.
@@ -502,7 +503,7 @@ function HomeStack({ navigation }) {
           deliberate duplicate registrations so the workout summary and the
           share card compose in-stack and Back returns to the summary. */}
       <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={heroZoomOptions({ headerShown: false })} />
     </Stack.Navigator>
   );
 }
@@ -529,19 +530,19 @@ function CommunityStack({ navigation }) {
       <Stack.Screen name="Community" component={CommunityHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityJoin" component={CommunityJoinScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityEditProfile" component={CommunityEditProfileScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="CommunitySearch" component={CommunitySearchScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityActivity" component={CommunityActivityScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityDimension" component={CommunityDimensionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityBoard" component={CommunityBoardScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityGroup" component={CommunityGroupScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityGroup" component={CommunityGroupScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="CommunityGroupCreate" component={CommunityGroupCreateScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityGroupMembers" component={CommunityGroupMembersScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityRules" component={CommunityRulesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPrivacy" component={CommunityPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityModeration" component={CommunityModerationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={heroZoomOptions({ headerShown: false })} />
       {/* Gym directory (gym database blueprint 20-BLUEPRINT.md, "## App"). */}
       <Stack.Screen name="CommunityGymAdd" component={CommunityGymAddScreen} options={{ headerShown: false }} />
       {/* Discovery, connections and messaging (discovery blueprint section

@@ -14,11 +14,13 @@
  *   line     the secondary line, already composed by the caller
  *   people   up to three members for the avatar stack (may be empty)
  *   onPress  opens the group
+ *   onPressWithLayout  origin-aware open (D188)
+ *   inBand   D221: the row carries the band's gutter itself
  */
 import CohortRow from './CohortRow';
 
 export default function GroupRow({
-  group, line, people, onPress, inBand,
+  group, line, people, onPress, onPressWithLayout, inBand,
 }) {
   return (
     <CohortRow
@@ -26,6 +28,7 @@ export default function GroupRow({
       line={line}
       people={people}
       onPress={onPress}
+      onPressWithLayout={onPressWithLayout}
       inBand={inBand}
     />
   );

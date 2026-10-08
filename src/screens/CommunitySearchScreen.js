@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -33,12 +33,14 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import SectionHeader from '../components/community/SectionHeader';
+import Band, { BandGap } from '../components/community/Band';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import GroupRow from '../components/community/GroupRow';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing } from '../styles/theme';
 import {
   searchPeople, searchGroups, GROUP_ACCESS,
   rankPeople, loadRecentPeopleSearches, recordPeopleSearch, clearRecentPeopleSearches,
@@ -117,11 +119,11 @@ export default function CommunitySearchScreen({ navigation, route }) {
     // Content-shaped placeholder for the results the query is about to
     // return, rather than a blank list (styling.md "Loading states"; the
     // same pattern FoodSearchScreen's own results loading uses).
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : !query.trim() ? (
     <View>
       <EmptyState
@@ -130,27 +132,21 @@ export default function CommunitySearchScreen({ navigation, route }) {
         text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
       />
       {mode === 'people' && recent.length > 0 ? (
-        <View style={styles.recentBlock}>
-          <View style={styles.recentHeader}>
-            <Text style={[styles.recentTitle, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
-              Recent searches
-            </Text>
-            <TouchableOpacity
-              onPress={() => { clearRecentPeopleSearches().then(() => setRecent([])).catch(() => {}); }}
-              accessibilityRole="button"
-              accessibilityLabel="Clear recent searches"
-            >
-              <Text style={[styles.recentClear, { ...t.type.captionStrong, color: t.colors.primary }]}>
-                Clear
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <Band>
+          <SectionHeader
+            title="Recent searches"
+            trailing={{
+              label: 'Clear',
+              accessibilityLabel: 'Clear recent searches',
+              onPress: () => { clearRecentPeopleSearches().then(() => setRecent([])).catch(() => {}); },
+            }}
+          />
           <View style={styles.recentRow}>
             {recent.map((r) => (
               <Chip key={r} label={r} onPress={() => setQuery(r)} accessibilityLabel={`Search for ${r} again`} />
             ))}
           </View>
-        </View>
+        </Band>
       ) : null}
     </View>
   ) : error ? (
@@ -181,7 +177,7 @@ export default function CommunitySearchScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Search" />
-      <View style={styles.controls}>
+      <Band style={styles.controls}>
         <SearchBar
           value={query}
           onChangeText={setQuery}
@@ -194,23 +190,36 @@ export default function CommunitySearchScreen({ navigation, route }) {
           <Chip label="People" selected={mode === 'people'} accessibilityRole="radio" onPress={() => setMode('people')} />
           <Chip label="Groups" selected={mode === 'groups'} accessibilityRole="radio" onPress={() => setMode('groups')} />
         </View>
-      </View>
+      </Band>
+      <BandGap />
       <FlashList
         data={results}
         keyExtractor={(item) => (mode === 'groups' ? item.id : (item.card ?? item).user_id)}
-        renderItem={({ item }) => (mode === 'groups' ? (
-          <GroupRow
-            group={item}
-            line={groupLine(item)}
-            people={[]}
-            onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
-          />
-        ) : (
-          <ProfileCard
-            card={item.card ?? item}
-            onPress={() => navigation.navigate('CommunityProfile', { handle: (item.card ?? item).handle })}
-          />
-        ))}
+        renderItem={({ item }) => (
+          <Band>
+            {mode === 'groups' ? (
+              <GroupRow
+                inBand
+                group={item}
+                line={groupLine(item)}
+                people={[]}
+                onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
+                onPressWithLayout={(rect) => navigation.navigate('CommunityGroup', {
+                  id: item.id, __heroOrigin: rect || undefined,
+                })}
+              />
+            ) : (
+              <ProfileCard
+                inBand
+                card={item.card ?? item}
+                onPress={() => navigation.navigate('CommunityProfile', { handle: (item.card ?? item).handle })}
+                onPressWithLayout={(rect) => navigation.navigate('CommunityProfile', {
+                  handle: (item.card ?? item).handle, __heroOrigin: rect || undefined,
+                })}
+              />
+            )}
+          </Band>
+        )}
         ListEmptyComponent={empty}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
@@ -232,16 +241,12 @@ export default function CommunitySearchScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  controls: { padding: spacing.lg, gap: spacing.md },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  skeleton: { gap: spacing.sm },
-  modeRow: { flexDirection: 'row', gap: spacing.xs2 },
-  // No gutter of its own: the list's own `contentContainerStyle` already
-  // pays `spacing.lg`, and paying it twice put these chips at 32 while the
-  // empty state above them sat at 16 (founder defect 2026-09-14).
-  recentBlock: { marginTop: -spacing.md, gap: spacing.sm },
-  recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  recentTitle: { ...type.captionStrong },
-  recentClear: { ...type.captionStrong },
-  recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  // The search field and its mode chips are the first band (D221 V1, V9).
+  controls: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md },
+  list: { paddingBottom: spacing.xxl },
+  skeleton: { paddingHorizontal: spacing.lg },
+  modeRow: { flexDirection: 'row', gap: spacing.sm },
+  recentRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+  },
 });

@@ -45,13 +45,14 @@ const STACK_SIZE = 24;
 const STACK_MAX = 3;
 
 export default function CohortRow({
-  title, line, people, onPress, inBand = false,
+  title, line, people, onPress, onPressWithLayout, inBand = false,
 }) {
   const t = useTheme();
   return (
     <PressableCard
       onPress={onPress}
-      disabled={!onPress}
+      onPressWithLayout={onPressWithLayout}
+      disabled={!onPress && !onPressWithLayout}
       accessibilityRole="button"
       accessibilityLabel={[title, line].filter(Boolean).join('. ')}
     >

@@ -37,24 +37,25 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Share, TouchableOpacity,
+  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList.
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import SectionHeader from '../components/community/SectionHeader';
+import HeaderGlyph from '../components/community/HeaderGlyph';
+import Band, { BandGap } from '../components/community/Band';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import ConnectSheet from '../components/community/ConnectSheet';
 import PeopleFiltersSheet from '../components/community/PeopleFiltersSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize, hitSlop } from '../styles/theme';
-import { touchTarget } from '../styles/layout';
+import { colors, spacing } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import {
   findPeople, doorsFor, doorZeroState, profileUrl,
@@ -201,36 +202,39 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   const countLine = peopleCountLine(count, countTruncated);
 
   const listHeader = (chips.length || countLine) ? (
-    <View style={styles.listHeader}>
-      {countLine ? (
-        <Text style={[styles.countLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          {countLine}
-        </Text>
-      ) : null}
-      {chips.length ? (
-        <View style={styles.chips} accessibilityLabel="Applied filters">
-          {chips.map((chip) => (
-            <Chip
-              key={chip.key}
-              label={chip.label}
-              selected
-              icon="close-outline"
-              accessibilityLabel={`Remove filter: ${chip.label}`}
-              onPress={() => setFilters((prev) => removeFilterChip(prev, chip.key))}
-            />
-          ))}
-        </View>
-      ) : null}
+    <View>
+      <Band style={styles.listHeader}>
+        {countLine ? (
+          <Text style={[styles.countLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+            {countLine}
+          </Text>
+        ) : null}
+        {chips.length ? (
+          <View style={styles.chips} accessibilityLabel="Applied filters">
+            {chips.map((chip) => (
+              <Chip
+                key={chip.key}
+                label={chip.label}
+                selected
+                icon="close-outline"
+                accessibilityLabel={`Remove filter: ${chip.label}`}
+                onPress={() => setFilters((prev) => removeFilterChip(prev, chip.key))}
+              />
+            ))}
+          </View>
+        ) : null}
+      </Band>
+      <BandGap />
     </View>
   ) : null;
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -270,19 +274,13 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
       <BackHeader
         title={label}
         right={filterable ? (
-          <TouchableOpacity
+          // D221 V8: one bare 48 dp glyph in `textPrimary`; an applied
+          // filter is the filled glyph, never a colour.
+          <HeaderGlyph
+            icon={filters ? 'options' : 'options-outline'}
+            label="Filters"
             onPress={() => { haptics.selection(); setFiltersOpen(true); }}
-            hitSlop={hitSlop}
-            style={styles.headerAction}
-            accessibilityRole="button"
-            accessibilityLabel="Filters"
-          >
-            <Ionicons
-              name={filters ? 'options' : 'options-outline'}
-              size={iconSize.md}
-              color={filters ? t.colors.primary : t.colors.textSecondary}
-            />
-          </TouchableOpacity>
+          />
         ) : null}
       />
       {/* No ItemSeparatorComponent: every person row closes with its own
@@ -293,25 +291,29 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
         data={listItems}
         keyExtractor={(item) => item.key}
         renderItem={({ item }) => (item.type === 'divider' ? (
-          <View style={styles.divider} accessibilityRole="header">
-            <View style={[styles.dividerLine, { backgroundColor: t.colors.borderSubtle }]} />
-            <Text style={[styles.dividerLabel, { ...t.type.caption, color: t.colors.textMuted }]}>
-              More people on Volyume
-            </Text>
-            <View style={[styles.dividerLine, { backgroundColor: t.colors.borderSubtle }]} />
+          // The fallback rows are a second band under their own header (V1, V2).
+          <View>
+            <BandGap />
+            <Band><SectionHeader title="More people on Volyume" /></Band>
           </View>
         ) : (
-          <ProfileCard
-            card={item.row.card}
-            reasons={item.row.reasons}
-            me={me}
-            onPress={() => navigation.navigate('CommunityProfile', { handle: item.row.card.handle })}
-            onFollowChange={(relationship) => patch({ ...item.row.card, relationship })}
-            onConnect={(card) => setConnectCard(card)}
-            onConnectChange={patch}
-            onMessage={(card) => navigation.navigate('CommunityConversation', { userId: card.user_id })}
-            onRulesOutdated={openRules}
-          />
+          <Band>
+            <ProfileCard
+              inBand
+              card={item.row.card}
+              reasons={item.row.reasons}
+              me={me}
+              onPress={() => navigation.navigate('CommunityProfile', { handle: item.row.card.handle })}
+              onPressWithLayout={(rect) => navigation.navigate('CommunityProfile', {
+                handle: item.row.card.handle, __heroOrigin: rect || undefined,
+              })}
+              onFollowChange={(relationship) => patch({ ...item.row.card, relationship })}
+              onConnect={(card) => setConnectCard(card)}
+              onConnectChange={patch}
+              onMessage={(card) => navigation.navigate('CommunityConversation', { userId: card.user_id })}
+              onRulesOutdated={openRules}
+            />
+          </Band>
         ))}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={empty}
@@ -360,22 +362,11 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  list: { paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
-  headerAction: {
-    width: touchTarget.minimum,
-    height: touchTarget.minimum,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  listHeader: { gap: spacing.sm, marginBottom: spacing.md },
-  countLine: { ...type.bodySm, color: colors.textSecondary },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  divider: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg,
-  },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
-  dividerLabel: { ...type.caption, color: colors.textMuted },
+  listHeader: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  countLine: {},
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

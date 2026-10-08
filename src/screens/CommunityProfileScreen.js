@@ -7,7 +7,7 @@
  * see below), one `bodySm` line of shared facts (gym, place, styles --
  * only what the card carries and the person shows), the own progress
  * strip exactly as today (others' strips are phase 2), the existing
- * Follow / Connect / Message row, `Eyebrow` ACTIVITY with
+ * Follow / Connect / Message row, Activity (`SectionHeader`) with
  * `ActivityItemRow`s. No cards.
  *
  * Lead ruling 2026-09-10: the bio is running text, and presentation rule
@@ -51,14 +51,16 @@ import { useFocusEffect } from '@react-navigation/native';
 // blueprint's own list contract (keyExtractor, onEndReached paging,
 // pull-to-refresh, an empty state); the list underneath recycles.
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import { Skeleton } from '../components/Skeleton';
-import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import SkeletonPostRow from '../components/community/SkeletonPostRow';
+import SectionHeader from '../components/community/SectionHeader';
+import HeaderGlyph from '../components/community/HeaderGlyph';
+import Band, { BandGap, BandLine } from '../components/community/Band';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import ProfileCard from '../components/community/ProfileCard';
 import FollowButton from '../components/community/FollowButton';
@@ -66,15 +68,14 @@ import ConnectButton from '../components/community/ConnectButton';
 import ConnectSheet from '../components/community/ConnectSheet';
 import TrainingProfileLine from '../components/community/TrainingProfileLine';
 import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
-import { respectFailureLine } from '../lib/community/restriction';
 import ReportSheet from '../components/community/ReportSheet';
-import Eyebrow from '../components/community/Eyebrow';
-import ActivityItemRow from '../components/community/ActivityItemRow';
+import PostRow from '../components/community/PostRow';
 import { factLabels, placeLine } from '../components/community/ProfileCard';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, circle } from '../styles/theme';
+import { colors, spacing, circle } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import ProgressStrip from '../components/community/ProgressStrip';
 import {
   getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships, connectionState,
@@ -225,34 +226,23 @@ export default function CommunityProfileScreen({ navigation, route }) {
     }
   }, [card, viewable]);
 
-  async function react(item) {
-    const on = !item.myReaction;
-    // Optimistic with revert (D221 L3): the heart answers at once and
-    // goes back, with a calm toast, when the server did not take it.
-    const apply = (turnOn) => setData((prev) => (prev ? {
-      ...prev,
-      posts: (prev.posts ?? []).map((row) => {
-        const n = normalisePostRow(row, prev.card);
-        if (n?.post?.id !== item.post.id) return row;
-        return {
-          post: {
-            ...n.post,
-            reaction_count: Math.max(0, Number(n.post.reaction_count ?? 0) + (turnOn ? 1 : -1)),
-          },
-          author: n.author,
-          my_reaction: turnOn,
-        };
-      }),
-    } : prev));
-    apply(on);
-    try {
-      await reactToPost(item.post.id, on, item.author?.user_id);
-    } catch (e) {
-      apply(!on);
-      toast.show(respectFailureLine(e?.code), { variant: 'error' });
-    }
-  }
-
+  // The heart is `PostRow`'s (optimistic, reverts with a calm toast); this
+  // keeps the page's own copy of the count in step once the call landed.
+  const applyRespect = (postId, turnOn) => setData((prev) => (prev ? {
+    ...prev,
+    posts: (prev.posts ?? []).map((row) => {
+      const n = normalisePostRow(row, prev.card);
+      if (n?.post?.id !== postId) return row;
+      return {
+        post: {
+          ...n.post,
+          reaction_count: Math.max(0, Number(n.post.reaction_count ?? 0) + (turnOn ? 1 : -1)),
+        },
+        author: n.author,
+        my_reaction: turnOn,
+      };
+    }),
+  } : prev));
 
   const posts = (data?.posts ?? []).map((r) => normalisePostRow(r, card)).filter(Boolean);
   const facts = card ? factLabels(card) : [];
@@ -292,19 +282,14 @@ export default function CommunityProfileScreen({ navigation, route }) {
       : prev));
   }
 
+  // D221 V8: one bare 48 dp glyph in `textPrimary`, no container.
   const headerRight = card && !isMe ? (
-    <Pressable
-      onPress={() => setMenuOpen(true)}
-      hitSlop={spacing.sm}
-      style={[styles.headerBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
-      accessibilityRole="button"
-      accessibilityLabel="Profile options"
-    >
-      <Ionicons name="ellipsis-horizontal" size={18} color={t.colors.textPrimary} />
-    </Pressable>
+    <HeaderGlyph icon="ellipsis-horizontal" label="Profile options" onPress={() => setMenuOpen(true)} />
   ) : null;
 
   const hero = card ? (
+    <View>
+    <Band>
     <View style={styles.hero}>
       <View style={styles.heroRow}>
         <ProfileAvatarMark
@@ -319,10 +304,10 @@ export default function CommunityProfileScreen({ navigation, route }) {
             facts and the training-profile line. Everything below the
             header (strip, counts, actions) spans the page. */}
         <View style={styles.heroBody}>
-          <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+          <Text style={[{ ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
             {card.display_name || card.handle}
           </Text>
-          <Text style={[styles.handle, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+          <Text style={[{ ...t.type.bodySm, color: t.colors.textMuted }]}>
             {`@${card.handle}`}
           </Text>
 
@@ -332,13 +317,13 @@ export default function CommunityProfileScreen({ navigation, route }) {
               size), so the bio is restored at `bodySm`, capped to three
               lines, under the handle and above the facts line. */}
           {card.bio ? (
-            <Text style={[styles.bio, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={3}>
+            <Text style={[{ ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={3}>
               {card.bio}
             </Text>
           ) : null}
 
           {sharedFactsLine ? (
-            <Text style={[styles.facts, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+            <Text style={[{ ...t.type.bodySm, color: t.colors.textSecondary }]}>
               {sharedFactsLine}
             </Text>
           ) : null}
@@ -349,12 +334,12 @@ export default function CommunityProfileScreen({ navigation, route }) {
               own card, so this can never render for anyone else's
               profile. */}
           {isMe && card.gym_label && card.show_gym === false ? (
-            <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+            <Text style={[{ ...t.type.caption, color: t.colors.textMuted }]}>
               Hidden from others
             </Text>
           ) : null}
           {isMe && (card.place_label || card.area_label) && card.show_place === false ? (
-            <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+            <Text style={[{ ...t.type.caption, color: t.colors.textMuted }]}>
               Hidden from others
             </Text>
           ) : null}
@@ -363,8 +348,11 @@ export default function CommunityProfileScreen({ navigation, route }) {
         </View>
       </View>
 
+    </View>
+
       {isMe && progress ? (
         <ProgressStrip
+          band
           counters={progress}
           onPress={() => navigation.navigate('CommunityBoard', { scope: 'following', window: 'week' })}
         />
@@ -373,9 +361,10 @@ export default function CommunityProfileScreen({ navigation, route }) {
         // "the strip for others shows only what the card carries").
         // There is no per-person board scope to open, so this row is
         // presentational only, unlike the own-profile strip above.
-        <ProgressStrip counters={othersCounters} />
+        <ProgressStrip band counters={othersCounters} />
       ) : null}
 
+    <View style={styles.hero}>
       <View style={styles.counts}>
         <Pressable
           // Spec C (40-GAP-CLOSURE.md §1 "Follow management"): the owner's
@@ -481,7 +470,10 @@ export default function CommunityProfileScreen({ navigation, route }) {
         </View>
       )}
 
-      <Eyebrow>ACTIVITY</Eyebrow>
+    </View>
+    </Band>
+    <BandGap />
+    <Band><SectionHeader title="Activity" /></Band>
     </View>
   ) : null;
 
@@ -498,16 +490,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
   }
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <View style={styles.skeletonHero}>
+    <View>
+      <Band style={styles.skeletonHero}>
         <Skeleton width={56} height={56} radius={circle(56)} />
         <View style={styles.skeletonHeroLines}>
           <Skeleton width="55%" height={18} />
           <Skeleton width="35%" height={13} style={styles.skeletonHandle} />
         </View>
-      </View>
-      <SkeletonPersonRow />
-      <SkeletonPersonRow />
+      </Band>
+      <BandGap />
+      <SkeletonPostRow />
+      <SkeletonPostRow />
     </View>
   ) : blockedCard ? (
     <EmptyState
@@ -555,36 +548,27 @@ export default function CommunityProfileScreen({ navigation, route }) {
     // quiet line, not a bordered box with a circle icon and a paragraph
     // (blueprint section 9 rule 9). The error and offline states above
     // keep the full EmptyState: they carry a retry.
-    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      Follow to see their training posts.
-    </Text>
+    <Band><BandLine text="Follow to see their training posts." /></Band>
   ) : isMe ? (
     // Founder order 2026-09-22 item 5 (audit A-05): a first post without a
     // workout. One quiet line, one action (presentation rule 9) -- "Say
     // hello" opens CommunityCompose's new 'note' kind; no other door on
     // this screen offers it, and it never appears on someone else's
     // profile, where posting as them is not a thing.
-    <View style={styles.activityEmptyWrap}>
-      <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-        {/* F11 (Opus adversarial review, founder order 2026-09-22 item 5):
-            names every kind this screen's own empty ACTIVITY can show,
-            note included. */}
-        Your sessions, personal bests and notes show up here.
-      </Text>
-      <Button
-        variant="tertiary"
-        size="sm"
-        fullWidth={false}
-        icon="chatbubble-outline"
-        title="Say hello"
-        onPress={() => navigation.navigate('CommunityCompose', { kind: 'note' })}
-        accessibilityLabel="Say hello"
+    <Band>
+      {/* F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+          names every kind this screen's own empty ACTIVITY can show,
+          note included. */}
+      <BandLine
+        text="Your sessions, personal bests and notes show up here."
+        action={{
+          label: 'Say hello',
+          onPress: () => navigation.navigate('CommunityCompose', { kind: 'note' }),
+        }}
       />
-    </View>
+    </Band>
   ) : (
-    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      Their sessions and personal bests show up here.
-    </Text>
+    <Band><BandLine text="Their sessions and personal bests show up here." /></Band>
   );
 
   return (
@@ -594,10 +578,14 @@ export default function CommunityProfileScreen({ navigation, route }) {
         data={listData}
         keyExtractor={(item) => item.post.id}
         renderItem={({ item }) => (
-          <ActivityItemRow
+          <PostRow
             item={item}
             onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-            onRespect={() => react(item)}
+            onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+              id: item.post.id, __heroOrigin: rect || undefined,
+            })}
+            onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
+            onRespected={(next) => applyRespect(item.post.id, next)}
           />
         )}
         ListHeaderComponent={hero}
@@ -686,33 +674,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  hero: { gap: spacing.md, marginBottom: spacing.sm },
+  list: { paddingBottom: spacing.xxl },
+  hero: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },
-  name: { ...type.bodyStrong, color: colors.textPrimary },
-  handle: { ...type.bodySm, color: colors.textMuted },
-  bio: { ...type.bodySm, color: colors.textSecondary },
-  facts: { ...type.bodySm, color: colors.textSecondary },
-  hiddenNote: { ...type.caption, color: colors.textMuted },
-  sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
-  // Founder order 2026-09-22 item 5: no vertical padding of its own --
-  // sectionEmpty already pays paddingVertical: spacing.sm on its own Text.
-  activityEmptyWrap: { gap: spacing.sm },
   counts: { flexDirection: 'row', gap: spacing.lg },
-  count: { ...type.bodySm, color: colors.textSecondary },
+  count: { minHeight: touchTarget.minimum, textAlignVertical: 'center', lineHeight: touchTarget.minimum },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  headerBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: circle(34),
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.md },
-  skeletonHero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  skeletonHero: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
   skeletonHeroLines: { flex: 1, gap: spacing.xxs },
   skeletonHandle: { marginTop: spacing.xs },
   sheet: { gap: spacing.md, paddingBottom: spacing.md },

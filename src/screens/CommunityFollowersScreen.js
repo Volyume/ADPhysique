@@ -27,17 +27,18 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import Band from '../components/community/Band';
 import ProfileCard from '../components/community/ProfileCard';
 import MenuSheet from '../components/community/MenuSheet';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, circle, iconSize } from '../styles/theme';
+import { colors, spacing, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import { listFollowers, removeFollower } from '../lib/community';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
-const KEBAB = 36;
 const PAGE = 20;
 
 const REFUSALS = {
@@ -133,12 +134,12 @@ export default function CommunityFollowersScreen({ navigation }) {
   }] : [];
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -165,23 +166,29 @@ export default function CommunityFollowersScreen({ navigation }) {
         renderItem={({ item }) => {
           const card = cardOf(item);
           return (
-            <ProfileCard
-              card={card}
-              showFollow={false}
-              compact
-              onPress={() => navigation.navigate('CommunityProfile', { userId: card.user_id })}
-              trailing={(
-                <Pressable
-                  onPress={() => setMenuCard(card)}
-                  hitSlop={spacing.sm}
-                  style={[styles.kebab, { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Options for @${card.handle}`}
-                >
-                  <Ionicons name="ellipsis-horizontal" size={iconSize.sm} color={t.colors.textSecondary} />
-                </Pressable>
-              )}
-            />
+            <Band>
+              <ProfileCard
+                card={card}
+                inBand
+                showFollow={false}
+                compact
+                onPress={() => navigation.navigate('CommunityProfile', { userId: card.user_id })}
+                onPressWithLayout={(rect) => navigation.navigate('CommunityProfile', {
+                  userId: card.user_id, __heroOrigin: rect || undefined,
+                })}
+                trailing={(
+                  // D221 V8: a bare 48 dp glyph, no container behind it.
+                  <Pressable
+                    onPress={() => setMenuCard(card)}
+                    style={styles.kebab}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Options for @${card.handle}`}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textPrimary} />
+                  </Pressable>
+                )}
+              />
+            </Band>
           );
         }}
         contentContainerStyle={styles.content}
@@ -207,12 +214,12 @@ export default function CommunityFollowersScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  content: { paddingBottom: spacing.xxl },
   loading: { paddingTop: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg, alignItems: 'center' },
   kebab: {
-    width: KEBAB, height: KEBAB, borderRadius: circle(KEBAB), borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center', justifyContent: 'center',
+    width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center',
+    marginRight: -spacing.sm,
   },
 });

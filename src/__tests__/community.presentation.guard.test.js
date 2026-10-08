@@ -175,9 +175,11 @@ describe('presentation law (c): SectionLabel is retired from the four revamped s
     },
   );
 
-  test('CommunityBoardScreen.js still imports SectionLabel (unchanged by this phase)', () => {
+  // RE-PINNED (D221 ruling 7, lane 2A): the Board is converted to bands and
+  // `SectionHeader`; no converted screen imports SectionLabel any more.
+  test('CommunityBoardScreen.js no longer imports SectionLabel (D221 ruling 7)', () => {
     const source = code(fs.readFileSync(path.join(SCREENS_DIR, 'CommunityBoardScreen.js'), 'utf8'));
-    expect(SECTION_LABEL_IMPORT.test(source)).toBe(true);
+    expect(SECTION_LABEL_IMPORT.test(source)).toBe(false);
   });
 });
 
@@ -217,9 +219,16 @@ describe('presentation law (d): the title type role is reserved for one figure p
     },
   );
 
+  // RE-PINNED (D221 ruling 7, law V3, lane 2A): EntryRow is the large entry
+  // row (a door, 88 dp, `type.title`), one use.
+  test('EntryRow.js uses the title role exactly once (the large entry row)', () => {
+    const source = code(fs.readFileSync(path.join(COMPONENTS_COMMUNITY_DIR, 'EntryRow.js'), 'utf8'));
+    expect(titleRoleCount(source)).toBe(1);
+  });
+
   test.each(
     communityComponentFiles()
-      .filter((f) => f !== PERSON_ROW && f !== PROGRESS_STRIP)
+      .filter((f) => f !== PERSON_ROW && f !== PROGRESS_STRIP && path.basename(f) !== 'EntryRow.js')
       .map((f) => [path.relative(ROOT, f), f]),
   )(
     '%s never uses the title role',

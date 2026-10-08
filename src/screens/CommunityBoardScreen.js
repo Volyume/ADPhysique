@@ -28,15 +28,18 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import {
+  View, StyleSheet, RefreshControl, ActivityIndicator, ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList.
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonRow } from '../components/Skeleton';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import Band, { BandGap } from '../components/community/Band';
 import Chip from '../components/Chip';
 import PersonRow from '../components/community/PersonRow';
 import useTheme from '../hooks/useTheme';
@@ -55,14 +58,18 @@ const PAGE = 20;
  * header comment); a card with no handle simply has nothing to open. */
 function BoardRow({ row, window, onOpenPerson }) {
   return (
+    <Band>
     <PersonRow
+      inBand
       person={{ ...row.card, isYou: row.isYou }}
       metric={metricLabel(window, row.metric)}
       days={row.trainedDays}
       trainedToday={row.trainedToday}
       rank={row.rank}
       onPress={row.card?.handle ? () => onOpenPerson(row.card) : undefined}
+      onPressWithLayout={row.card?.handle ? (rect) => onOpenPerson(row.card, rect) : undefined}
     />
+    </Band>
   );
 }
 
@@ -170,60 +177,78 @@ export default function CommunityBoardScreen({ navigation, route }) {
   const scopeChips = BOARD_SCOPE_ORDER;
   const boardLabel = label || BOARD_SCOPES[scope] || 'Board';
 
-  function openProfile(card) {
-    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  function openProfile(card, rect) {
+    if (card?.handle) {
+      navigation.navigate('CommunityProfile', { handle: card.handle, __heroOrigin: rect || undefined });
+    }
   }
 
+  // D221 V1/V2/V9: the controls and the section title are one band, the
+  // ranked rows beneath it are the next. Chips are one row each, scrolling
+  // sideways when they overflow.
   const listHeader = (
-    <View style={styles.headerBlock}>
-      <SectionLabel tone="muted">{boardLabel}</SectionLabel>
-      {!isGroup ? (
-        <View style={styles.chipRow} accessibilityLabel="Scope">
-          {scopeChips.map((key) => (
+    <View>
+      <Band>
+        <SectionHeader title={boardLabel} />
+        {!isGroup ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+            accessibilityLabel="Scope"
+          >
+            {scopeChips.map((key) => (
+              <Chip
+                key={key}
+                label={BOARD_SCOPES[key]}
+                selected={scope === key}
+                accessibilityRole="radio"
+                onPress={() => (key !== scope
+                  ? navigation.setParams({ scope: key, scopeKey: null, label: null })
+                  : null)}
+              />
+            ))}
+            {arrivingCohort ? (
+              <Chip
+                label={arrivingCohort.label}
+                selected={scope === arrivingCohort.scope && scopeKey === arrivingCohort.scopeKey}
+                accessibilityRole="radio"
+                onPress={() => navigation.setParams({
+                  scope: arrivingCohort.scope, scopeKey: arrivingCohort.scopeKey, label: arrivingCohort.label,
+                })}
+              />
+            ) : null}
+          </ScrollView>
+        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+          accessibilityLabel="Window"
+        >
+          {BOARD_WINDOW_ORDER.map((key) => (
             <Chip
               key={key}
-              label={BOARD_SCOPES[key]}
-              selected={scope === key}
+              label={BOARD_WINDOWS[key]}
+              selected={window === key}
               accessibilityRole="radio"
-              onPress={() => (key !== scope
-                ? navigation.setParams({ scope: key, scopeKey: null, label: null })
-                : null)}
+              onPress={() => setWindow(key)}
             />
           ))}
-          {arrivingCohort ? (
-            <Chip
-              label={arrivingCohort.label}
-              selected={scope === arrivingCohort.scope && scopeKey === arrivingCohort.scopeKey}
-              accessibilityRole="radio"
-              onPress={() => navigation.setParams({
-                scope: arrivingCohort.scope, scopeKey: arrivingCohort.scopeKey, label: arrivingCohort.label,
-              })}
-            />
-          ) : null}
-        </View>
-      ) : null}
-      <View style={styles.chipRow} accessibilityLabel="Window">
-        {BOARD_WINDOW_ORDER.map((key) => (
-          <Chip
-            key={key}
-            label={BOARD_WINDOWS[key]}
-            selected={window === key}
-            accessibilityRole="radio"
-            onPress={() => setWindow(key)}
-          />
-        ))}
-      </View>
+        </ScrollView>
+      </Band>
+      <BandGap />
     </View>
   );
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -283,10 +308,11 @@ export default function CommunityBoardScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  headerBlock: { gap: spacing.md, marginBottom: spacing.md },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  list: { paddingBottom: spacing.xxl },
+  chipRow: {
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm, alignItems: 'center',
+  },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
 });

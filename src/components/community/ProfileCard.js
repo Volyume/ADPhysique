@@ -67,6 +67,8 @@
  *              gym_label, follower_count, relationship, ...)
  *   reasons    string[] from `suggestedPeople`, rendered as the line
  *   onPress    opens the profile
+ *   onPressWithLayout  origin-aware open (D188), passed to the row
+ *   inBand     D221 V1: the row carries the band's gutter itself
  *   showFollow render the FollowButton (default true; pass false on your
  *              own card and inside a picker); only takes effect when
  *              Connect is not offered here (V8a)
@@ -180,6 +182,8 @@ export default function ProfileCard({
   card,
   reasons = [],
   onPress,
+  onPressWithLayout,
+  inBand = false,
   showFollow = true,
   onFollowChange,
   compact = false,
@@ -234,6 +238,8 @@ export default function ProfileCard({
     <PersonRow
       person={{ ...card, caption: personLine(card, reasons, compact, denyLine) }}
       onPress={onPress}
+      onPressWithLayout={onPressWithLayout}
+      inBand={inBand}
       trailing={trailing ?? (showAction ? action : null)}
     />
   );

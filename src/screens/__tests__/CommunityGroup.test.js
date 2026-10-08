@@ -398,7 +398,7 @@ test('a member giving Respect on a group feed item calls reactToPost with post i
   let itemTree = null;
   act(() => { itemTree = create(itemEl); });
   const respectBtn = itemTree.root.findAll(
-    (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+    (n) => n.props?.accessibilityLabel === 'Give this post Respect' && typeof n.props.onPress === 'function',
   )[0];
   await act(async () => { respectBtn.props.onPress(); });
   // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
@@ -428,7 +428,7 @@ test('a refused Respect on a group feed row shows the calm line for its code', a
     let itemTree = null;
     act(() => { itemTree = create(flashListProps.renderItem({ item: feedItem })); });
     const btn = itemTree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+      (n) => n.props?.accessibilityLabel === 'Give this post Respect' && typeof n.props.onPress === 'function',
     )[0];
     await act(async () => { btn.props.onPress(); });
     await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
@@ -529,5 +529,26 @@ describe('an invite link into the group', () => {
     const { tree } = await mount();
     expect(byLabel(tree, 'Join group')).toBeTruthy();
     expect(texts(tree.toJSON())).not.toContain('You have been invited');
+  });
+});
+
+// D221 visual law (lane 2A): the render is bands, the section header is the
+// shared one, the first load is the true-shape skeleton, and the header
+// carries no more than two bare glyphs. Source-level, comments stripped.
+describe('D221 visual law: CommunityGroupScreen', () => {
+  const stripped = require('fs')
+    .readFileSync(require('path').join(__dirname, '..', 'CommunityGroupScreen.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  test('is built from bands, never the square skeleton, SectionLabel or Eyebrow', () => {
+    expect(stripped).toContain("components/community/Band'");
+    expect(stripped).not.toMatch(/\bSkeletonRow\b|\bSectionLabel\b|\bEyebrow\b/);
+    expect(stripped).toMatch(/Skeleton(Person|Post)Row/);
+  });
+
+  test('has at most two header glyphs, with no circular container', () => {
+    expect((stripped.match(/<HeaderGlyph\b/g) || []).length).toBeLessThanOrEqual(2);
+    expect(stripped).not.toMatch(/headerBtn/);
   });
 });

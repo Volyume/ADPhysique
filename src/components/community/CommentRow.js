@@ -20,19 +20,28 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity, TextInput,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../Button';
-import ComposerInput from './ComposerInput';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import useTheme from '../../hooks/useTheme';
-import { spacing, type, hitSlop, iconSize } from '../../styles/theme';
+import { spacing, radius, iconSize } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import { COMMENT_MAX } from '../../lib/community/validation';
 import { postDayLabel } from './PostCard';
 
+const WELL_HEIGHT = 44;
+const WELL_MAX_HEIGHT = 120;
+const AVATAR = 32;
+
 /**
- * The comment field and its send action.
+ * The comment field and its send action, docked under the thread as a well
+ * (D221 law V9): `background` fill, a 1 dp `borderSubtle` edge, `radius.md`,
+ * 44 dp tall, a 1 dp `primary` ring while focused. It sits in a `surface`
+ * strip with a hairline above, so it reads as part of the page's chrome, not
+ * as one more row.
  *
  * Props:
  *   onSubmit     (body: string) => Promise<boolean>, true clears the field
@@ -42,6 +51,7 @@ export function CommentComposer({ onSubmit, placeholder = 'Add a comment' }) {
   const t = useTheme();
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [focused, setFocused] = useState(false);
   const trimmed = body.trim();
 
   async function send() {
@@ -53,17 +63,29 @@ export function CommentComposer({ onSubmit, placeholder = 'Add a comment' }) {
   }
 
   return (
-    <View style={[styles.composer, { borderTopColor: t.colors.borderSubtle }]}>
-      <View style={styles.composerField}>
-        <ComposerInput
-          value={body}
-          onChangeText={setBody}
-          placeholder={placeholder}
-          maxLength={COMMENT_MAX}
-          minHeight={touchTarget.minimum}
-          accessibilityLabel="Comment"
-        />
-      </View>
+    <View
+      style={[styles.composer, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}
+    >
+      <TextInput
+        value={body}
+        onChangeText={setBody}
+        placeholder={placeholder}
+        placeholderTextColor={t.colors.textMuted}
+        maxLength={COMMENT_MAX}
+        multiline
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        accessibilityLabel="Comment"
+        style={[
+          styles.well,
+          t.type.body,
+          {
+            color: t.colors.textPrimary,
+            backgroundColor: t.colors.background,
+            borderColor: focused ? t.colors.primary : t.colors.borderSubtle,
+          },
+        ]}
+      />
       <Button
         title="Send"
         size="sm"
@@ -85,29 +107,31 @@ export default function CommentRow({
   const day = postDayLabel(comment?.created_at);
 
   return (
+    <View>
     <View style={styles.row}>
       <TouchableOpacity
         onPress={onOpenAuthor}
         disabled={!onOpenAuthor}
+        hitSlop={spacing.md}
         accessibilityRole="button"
         accessibilityLabel={author?.display_name ? `Open ${author.display_name}'s profile` : 'Open profile'}
       >
         <ProfileAvatarMark
           presetKey={author?.avatar_preset ?? null}
           displayName={author?.display_name ?? ''}
-          size={32}
+          size={AVATAR}
         />
       </TouchableOpacity>
       <View style={styles.main}>
-        <Text style={[styles.meta, { color: t.colors.textSecondary }]} numberOfLines={1}>
+        <Text style={[t.type.caption, { color: t.colors.textMuted }]} numberOfLines={1}>
           {[author?.display_name ?? 'A lifter', handle, day].filter(Boolean).join(' · ')}
         </Text>
-        <Text style={[styles.body, { color: t.colors.textPrimary }]}>{comment?.body ?? ''}</Text>
+        <Text style={[t.type.bodySm, { color: t.colors.textPrimary }]}>{comment?.body ?? ''}</Text>
       </View>
       {canDelete && onDelete ? (
         <TouchableOpacity
           onPress={onDelete}
-          hitSlop={hitSlop}
+          style={styles.action}
           accessibilityRole="button"
           accessibilityLabel="Delete this comment"
         >
@@ -117,7 +141,7 @@ export default function CommentRow({
       {onReport ? (
         <TouchableOpacity
           onPress={onReport}
-          hitSlop={hitSlop}
+          style={styles.action}
           accessibilityRole="button"
           accessibilityLabel="Report this comment"
         >
@@ -125,17 +149,45 @@ export default function CommentRow({
         </TouchableOpacity>
       ) : null}
     </View>
+    <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.sm },
-  main: { flex: 1, gap: spacing.xxs },
-  meta: { ...type.caption },
-  body: { ...type.bodySm },
-  composer: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
-    paddingTop: spacing.md, marginTop: spacing.sm, borderTopWidth: 1,
+  // A row in a `surface` band (D221 V1, V3): the row carries the gutter, a
+  // hairline spans the band below it.
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  composerField: { flex: 1 },
+  main: { flex: 1, gap: spacing.xxs },
+  action: {
+    minWidth: touchTarget.minimum,
+    minHeight: touchTarget.minimum,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -spacing.md,
+  },
+  divider: { height: StyleSheet.hairlineWidth },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  well: {
+    flex: 1,
+    minHeight: WELL_HEIGHT,
+    maxHeight: WELL_MAX_HEIGHT,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+  },
 });

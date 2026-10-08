@@ -272,7 +272,7 @@ describe('RECENT (task 6, closing the phase 1 gap)', () => {
     let itemTree = null;
     act(() => { itemTree = create(list.props.renderItem({ item })); });
     const respectBtn = itemTree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+      (n) => n.props?.accessibilityLabel === 'Give this post Respect' && typeof n.props.onPress === 'function',
     )[0];
     await act(async () => { respectBtn.props.onPress(); });
     // RE-ANCHORED 2026-09-22 (founder order item 1, "wire the pushes"):
@@ -309,8 +309,8 @@ describe('the seven physique-division pages: the Beat row and the calm-mode rest
 
     expect(text).toContain('Support with eating and body image: Beat');
     expect(text).toContain('This page is resting just now.');
-    expect(text).not.toContain('TRAINED THIS WEEK');
-    expect(text).not.toContain('RECENT');
+    expect(text).not.toContain('Trained this week');
+    expect(text).not.toContain('Recent');
     expect(text).not.toContain('This month and consistency');
   });
 
@@ -341,7 +341,7 @@ describe('the seven physique-division pages: the Beat row and the calm-mode rest
     const { tree } = await mount({ kind: 'discipline', key: 'bodybuilding', label: 'Bodybuilding' });
     const text = texts(renderHeader(tree).toJSON());
     expect(text).toContain('Support with eating and body image: Beat');
-    expect(text).toContain('TRAINED THIS WEEK');
+    expect(text).toContain('Trained this week');
     expect(loadDimension).toHaveBeenCalledWith('discipline', 'bodybuilding', expect.any(Object));
     expect(loadBoard).toHaveBeenCalled();
     expect(loadDimensionRecent).toHaveBeenCalled();
@@ -444,5 +444,26 @@ describe('early days: the honest count line and the one action', () => {
     await flush();
     expect(share).toHaveBeenCalledWith({ message: 'Join me on Volyume. I train at PureGym Leeds. https://volyume.app/u/?h=rowan' });
     share.mockRestore();
+  });
+});
+
+// D221 visual law (lane 2A): the render is bands, the section header is the
+// shared one, the first load is the true-shape skeleton, and the header
+// carries no more than two bare glyphs. Source-level, comments stripped.
+describe('D221 visual law: CommunityDimensionScreen', () => {
+  const stripped = require('fs')
+    .readFileSync(require('path').join(__dirname, '..', 'CommunityDimensionScreen.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  test('is built from bands, never the square skeleton, SectionLabel or Eyebrow', () => {
+    expect(stripped).toContain("components/community/Band'");
+    expect(stripped).not.toMatch(/\bSkeletonRow\b|\bSectionLabel\b|\bEyebrow\b/);
+    expect(stripped).toMatch(/Skeleton(Person|Post)Row/);
+  });
+
+  test('has at most two header glyphs, with no circular container', () => {
+    expect((stripped.match(/<HeaderGlyph\b/g) || []).length).toBeLessThanOrEqual(2);
+    expect(stripped).not.toMatch(/headerBtn/);
   });
 });
