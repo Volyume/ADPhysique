@@ -12,7 +12,13 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_188` (188 applied 2026-10-05 11:14 UTC under the founder's "run
+> `migrate_191` (189, 190 and 191 applied 2026-10-08, 10:40, 10:45 and
+> 11:16 UTC, under the founder's "Deploy all and run all migrations
+> remaining against production": `workout_sets.entry_typed` with
+> ENTRY_TYPED_PUSH now on, the Community feed scopes and sort, and the
+> Stage 3 presence, group chat and challenges; `community-notify` version
+> 5 and `community-public` version 4 deployed the same hour; 188 applied
+> 2026-10-05 11:14 UTC under the founder's "run
 > against production: 188": `programmes.plan_facts jsonb`, the new planner's
 > plan facts, and the app's push of it is on; 187 applied 2026-09-27 15:59
 > UTC under the founder's "run
@@ -61,7 +67,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_189`, applied through 188 except 049 HELD; 189 written 2026-10-05, UNAPPLIED; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_191`, applied through 191 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

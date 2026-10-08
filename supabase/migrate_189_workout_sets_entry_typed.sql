@@ -54,9 +54,17 @@
 -- Applied locally:   YES (database.js SCHEMA_MIGRATIONS: one ALTER TABLE ADD
 --                    COLUMN on workout_sets, entry_typed INTEGER, no backfill;
 --                    every existing row is correctly NULL = unknown).
--- Applied remotely:  NO (UNAPPLIED; apply only on the founder's
---                    "run against production: 189"). STATUS: UNAPPLIED,
---                    written 2026-10-05 by D219 lane LR2. Applied only on the
+-- Applied remotely:  YES. STATUS: APPLIED 2026-10-08 10:40:23 UTC under the
+--                    founder's "Deploy all and run all migrations remaining
+--                    against production" (2026-10-08, the batch form of the
+--                    gate phrase "run against production: 189"), Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol (file md5
+--                    721101238d32e6655f0d17b2299fe0f5, 6,598 bytes; tracking
+--                    row in claude_schema_migrations). Verified read-only:
+--                    workout_sets.entry_typed is boolean, nullable, no
+--                    default. ENTRY_TYPED_PUSH flipped on in this landing.
+--                    Written 2026-10-05 by D219 lane LR2. Applied only on the
 --                    founder's exact phrase "run against production"
 --                    (CLAUDE.md section 2, "Database schema"); the app never
 --                    runs it and the deploy workflow is manual-dispatch only.

@@ -1,9 +1,12 @@
 // Edge Function: community-notify
 //
-// VERSION 5 (D221, 2026-10-08), NOT DEPLOYED: the push data now also carries
+// VERSION 5 (D221, 2026-10-08), DEPLOYED 2026-10-08 11:23:10 UTC under the
+// founder's "Deploy all and run all migrations remaining against production"
+// (through the connector's deploy tool; the live source fetched back and
+// md5-identical to this file): the push data now also carries
 // `kind` and, for reaction/comment, `post_id`, and for the group kinds,
-// `group_id` (ids only, no content, no new handle). Version 4 is the live
-// one; the founder gives the go for `supabase functions deploy`.
+// `group_id` (ids only, no content, no new handle). Version 4 was the live
+// one from 2026-09-24 to this deploy.
 // Version 5 also adds (Stage 3, spec 3b, lane 3S) the kind `group_message`.
 // ONE call from the sender's client (target_user_id omitted, ref_id = the
 // message id) and the SERVER fans out: the service-role-only RPC

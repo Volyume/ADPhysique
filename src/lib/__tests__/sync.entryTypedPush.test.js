@@ -112,9 +112,9 @@ const requests = () => captured.workout_sets ?? [];
 const hasKey = (row) => Object.prototype.hasOwnProperty.call(row, 'entry_typed');
 
 describe('the flag', () => {
-  test('ENTRY_TYPED_PUSH ships OFF in featureFlags.js, until migrate_189 is applied and verified', () => {
+  test('ENTRY_TYPED_PUSH is ON in featureFlags.js, flipped in the landing after migrate_189 was applied and verified', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'sync', 'featureFlags.js'), 'utf8');
-    expect(src).toMatch(/^export const ENTRY_TYPED_PUSH = false;$/m);
+    expect(src).toMatch(/^export const ENTRY_TYPED_PUSH = true;$/m);
     expect(src).toContain('migrate_189');
     expect(src).toContain('run against production: 189');
   });
@@ -254,15 +254,14 @@ describe('the cloud migration file', () => {
     expect(sql).toContain('Additive, not destructive');
   });
 
-  test('its header says UNAPPLIED, and that only the founder\'s "run against production: 189" applies it', () => {
+  test('its header says APPLIED 2026-10-08, and that only the founder\'s "run against production: 189" applied it', () => {
     const sql = readSql();
-    expect(sql).toMatch(/Applied remotely:\s+NO \(UNAPPLIED; apply only on the founder's/);
-    expect(sql).toMatch(/STATUS: UNAPPLIED/);
+    expect(sql).toMatch(/Applied remotely:\s+YES\. STATUS: APPLIED 2026-10-08 10:40:23 UTC/);
     expect(sql).toContain('"run against production: 189"');
-    expect(sql).not.toMatch(/STATUS: APPLIED/);
-    // This guard pins the written-not-applied state. At the apply, edit the
-    // header, the README ledger row and this guard together, and flip
-    // ENTRY_TYPED_PUSH in the same landing.
+    expect(sql).not.toMatch(/STATUS: UNAPPLIED/);
+    // This guard pinned the written-not-applied state until the apply
+    // (2026-10-08); the header, the README ledger row, this guard and
+    // ENTRY_TYPED_PUSH were edited together in that landing.
   });
 
   test('the flag may be ON only once the header says APPLIED', () => {
@@ -282,14 +281,14 @@ describe('the cloud migration file', () => {
     expect(numbers.filter((n) => n === 189)).toHaveLength(1);
   });
 
-  test('the README ledger carries its row, marked UNAPPLIED, after migration 188', () => {
+  test('the README ledger carries its row, marked APPLIED, after migration 188', () => {
     const lines = fs.readFileSync(path.join(ROOT, 'supabase', 'README.md'), 'utf8').split('\n');
     const row = lines.findIndex((l) => l.startsWith('| 189 | `migrate_189_workout_sets_entry_typed.sql`'));
     const previous = lines.findIndex((l) => l.startsWith('| 188 | `migrate_188_programmes_plan_facts.sql`'));
     expect(row).toBeGreaterThan(-1);
     expect(row).toBeGreaterThan(previous);
-    expect(lines[row]).toContain('**UNAPPLIED**');
-    expect(lines[row]).not.toContain('**APPLIED');
+    expect(lines[row]).toContain('**APPLIED 2026-10-08');
+    expect(lines[row]).not.toContain('**UNAPPLIED**');
     expect(lines[row]).toContain('ENTRY_TYPED_PUSH');
   });
 });

@@ -39,7 +39,7 @@ describe('community-public previews (3f)', () => {
   const group = fnBody('previewGroup');
 
   test('the exclusions are written into the file header', () => {
-    for (const re of [/NEVER the note or caption/, /private profile, a minor, a restricted or suspended/, /OPEN, ACTIVE group only/, /NOT DEPLOYED/]) {
+    for (const re of [/NEVER the note or caption/, /private profile, a minor, a restricted or suspended/, /OPEN, ACTIVE group only/, /DEPLOYED 2026-10-08/]) {
       expect(SOURCE).toMatch(re);
     }
   });

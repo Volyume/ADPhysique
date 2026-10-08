@@ -49,7 +49,7 @@
 --                       caller. No load, body figure or food figure exists in
 --                       any column, argument or payload below.
 --
--- ROUND 3R ADDITIONS (2026-10-08, still UNAPPLIED, edited in place):
+-- ROUND 3R ADDITIONS (2026-10-08, before the apply, edited in place):
 --                    S1 community_group_get / community_group_list_mine carry
 --                       'active_challenge' ({id, name, starts_on, ends_on,
 --                       target_sessions} or null; active and unexpired, members
@@ -112,8 +112,19 @@
 --
 -- Applied locally:   N/A (Community adds no local SQLite table; the client is
 --                    src/lib/community/{presence,groupChat,challenges,groups}.js).
--- Applied remotely:  NO (UNAPPLIED). STATUS: UNAPPLIED, written 2026-10-08 by
---                    lane 3S. Apply only on the founder's exact phrase
+-- Applied remotely:  YES. STATUS: APPLIED 2026-10-08 11:16:42 UTC under the
+--                    founder's "Deploy all and run all migrations remaining
+--                    against production" (2026-10-08), Claude-run through the
+--                    Supabase connector under the checksum protocol (file md5
+--                    46e31818ef08b26fd159efe37efe58e2, 78,096 bytes; the
+--                    acceptance block at the foot passed in the apply;
+--                    tracking row in claude_schema_migrations). Verified
+--                    read-only: the three new tables with RLS on, four new
+--                    columns, community_group_message_recipients executable
+--                    by service_role only, 194 community functions all
+--                    SECURITY DEFINER with the pinned search_path, none
+--                    executable by anon.
+--                    Written 2026-10-08 by lane 3S. Applied only on the founder's exact phrase
 --                    "run against production: 191" (CLAUDE.md section 2,
 --                    "Database schema"); the app never runs it and the deploy
 --                    workflow is manual-dispatch only. The route is the Claude
