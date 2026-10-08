@@ -1,6 +1,11 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-08 — COMMUNITY LEVEL-UP AUDIT: PROPOSALS DELIVERED, WAITING ON THE FOUNDER ★
+
+Founder order 2026-10-08: a complete picture of Community, a competitor study, then proposals and options before any build ("a huge level up ... better than all competitors"), with the added focus "sizes of areas boxes, graphs, texts ... groups, age groups feeds are all lumped together, no filtering". Folder `docs/audit/community-level-up-2026-10-08/`: 01 current picture, 02 competitors (15 apps), 03 flow audit (26 lost moments, IA options), 04 look-and-feel audit (size census, visual law draft, three directions), 10 PROPOSALS (the lead's three decisions and six questions). All on branch `ccr-63ff003f-555gwv`, docs only. Nothing built. Resume: read 10-PROPOSALS.md section 4 and the founder's answers in chat, then write the build spec for the chosen options (the lead), with lanes per D185.
+
+===============================================================================
 ## ★ 2026-10-07 — THE WORKOUT LOGGER REBUILD (D220): GO GIVEN, NEAR-BLACK TONE; BUILDING IN FOUR STAGES ★
 
 
