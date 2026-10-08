@@ -228,7 +228,8 @@ describe('SetRow marker', () => {
     const s = flat(text.props.style);
     expect(s.color).toBe(colors.primary);
     expect(s.fontSize).toBe(type.captionStrong.fontSize);
-    const badge = one(hosts(tree, (p) => flat(p.style).width === 24));
+    // The badge, not the 24 dp marker column it sits in: the one with a height.
+    const badge = one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24));
     const b = flat(badge.props.style);
     expect(b.height).toBe(24);
     expect(b.backgroundColor).toBe(colors.primaryBg);
@@ -239,7 +240,7 @@ describe('SetRow marker', () => {
     const tree = render({ marker: 'F' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'F'));
     expect(flat(text.props.style).color).toBe(colors.error);
-    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24)).props.style);
+    const badge = flat(one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24)).props.style);
     expect(badge.backgroundColor).toBe(colors.errorBg);
     expect(badge.borderRadius).toBe(radius.full);
   });
@@ -339,7 +340,7 @@ describe('SetRow Target cell', () => {
     expect(byLabel(render({}), 'Personal record')).toHaveLength(0);
   });
 
-  test('record: a PR pill after the value, 18 dp, primary tint, primary caption strong', () => {
+  test('record: a PR pill under the value in the rule slot, 18 dp, primary tint, primary caption strong', () => {
     const tree = render({ record: true });
     const tag = one(byLabel(tree, 'Personal record'));
     expect(tag.props.accessible).toBe(true);
@@ -375,9 +376,10 @@ describe('SetRow Target cell', () => {
     expect(byLabel(render({ prTarget: { weight: 75, reps: 1 } }), 'A record at 75 kilograms is 1 rep')).toHaveLength(1);
   });
 
-  test('prTarget null shows the rule as before; record and prTarget are independent', () => {
+  test('prTarget null shows the rule; a record takes the rule slot (a logged set has no rule to act on)', () => {
+    expect(words(render({ prTarget: null }).toJSON())).toContain('+2.5 at 10');
     const tree = render({ prTarget: null, record: true });
-    expect(words(tree.toJSON())).toContain('+2.5 at 10');
+    expect(words(tree.toJSON())).not.toContain('+2.5 at 10');
     expect(byLabel(tree, 'Personal record')).toHaveLength(1);
   });
 
@@ -394,10 +396,12 @@ describe('SetRow frame', () => {
     expect(s.minHeight).toBe(64);
     expect(s.borderBottomWidth).toBe(1);
     expect(s.borderBottomColor).toBe(colors.borderSubtle);
-    expect(s.paddingLeft).toBe(16);
-    expect(s.paddingRight).toBe(12);
-    expect(s.gap).toBe(6);
-    expect(SET_COLUMNS).toEqual({ marker: 30, last: 72, wells: 98, check: 36 });
+    // The card grid (D220 addendum 7): 12/8 dp padding, no column gap, so the
+    // Target column keeps room for its value, rule and record tag at 326 dp.
+    expect(s.paddingLeft).toBe(12);
+    expect(s.paddingRight).toBe(8);
+    expect(s.gap).toBeUndefined();
+    expect(SET_COLUMNS).toEqual({ marker: 24, last: 64, wells: 98, check: 36 });
   });
 
   test('cell text never widens a column: one line, shrinkable', () => {

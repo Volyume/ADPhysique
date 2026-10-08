@@ -237,7 +237,7 @@ export default function ExerciseSection({
             <Text style={live.index}>{index}</Text>
           </View>
           <View style={styles.nameBlock}>
-            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={2}>{name}</Text>
             {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
             {!isActive && !isDone && doneCount > 0 && totalSetCount ? (
               <Text style={live.group} numberOfLines={1}>{`${doneCount} of ${totalSetCount} sets`}</Text>

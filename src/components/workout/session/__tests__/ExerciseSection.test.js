@@ -139,14 +139,15 @@ describe('ExerciseSection states', () => {
 });
 
 describe('ExerciseSection header', () => {
-  test('exercise name: bodyStrong in primary ink, one line; the index in the plan detail\'s 32 dp order badge', () => {
+  test('exercise name: bodyStrong in primary ink, up to two lines; the index in the plan detail\'s 32 dp order badge', () => {
     // The plan detail's exercise row (RoutineDetailScreen exerciseCard): the
     // name is text ink, not amber; amber is spent on the set you are on.
     const tree = render({});
     const name = textHost(tree, 'Barbell Row (Bent Over)');
     const s = flat(name.props.style);
     expect(s.color).toBe(colors.textPrimary);
-    expect(name.props.numberOfLines).toBe(1);
+    // Two lines, as the plan detail wraps a long name; never a clipped name.
+    expect(name.props.numberOfLines).toBe(2);
     expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
     expect(s.fontSize).toBe(type.bodyStrong.fontSize);
     const indexText = textHost(tree, '2');

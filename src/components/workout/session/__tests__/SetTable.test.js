@@ -83,9 +83,9 @@ describe('SetTable column labels', () => {
     expect(flat(textHost(tree, 'TARGET').props.style).flex).toBe(1);
     const bar = one(hosts(tree, (p) => flat(p.style).minHeight === 36 && flat(p.style).borderBottomWidth === 1));
     const s = flat(bar.props.style);
-    expect(s.gap).toBe(6);
-    expect(s.paddingLeft).toBe(16);
-    expect(s.paddingRight).toBe(12);
+    expect(s.gap).toBeUndefined();
+    expect(s.paddingLeft).toBe(12);
+    expect(s.paddingRight).toBe(8);
     expect(s.borderBottomColor).toBe(colors.borderSubtle);
   });
 });

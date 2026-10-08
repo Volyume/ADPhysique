@@ -45,7 +45,9 @@
  *   onLayout   passed to the row's root view (the screen scrolls the row
  *              being typed into above the keypad)
  *   check      'logged' | 'next' | 'pending'
- *   record     true shows the small "PR" tag after the Target value
+ *   record     true shows the small "PR" tag on the Target cell's second
+ *              line, in the rule's slot (a logged set has no rule to show; a
+ *              tag beside the value squeezed it, founder verdict 2026-10-08)
  *   prTarget   { weight, reps } | null. The smallest set that would be a record
  *              at this row's weight. When present, the Target cell's second
  *              line is the "PR" tag then the set ("PR 70 x 9", no sentence) and
@@ -73,9 +75,13 @@ import { alpha, circle, radius, spacing, withAlpha } from '../../../styles/theme
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
-// The drawing's grid. SetTable lays its column labels on the same widths; the
-// Target column takes whatever is left.
-export const SET_COLUMNS = Object.freeze({ marker: 30, last: 72, wells: 98, check: 36 });
+// The grid, sized for the house card (D220 addendum 7: a 360 dp phone's card
+// is 326 dp inside its border, 34 dp less than the full-bleed band the drawing
+// assumed). Marker 24, Last 64, the wells 98, the check 36; no gap between
+// columns (Last and the check centre inside their widths) and 12/8 dp row
+// padding, so the Target column keeps about 84 dp for its value, its rule and
+// the record tag. SetTable lays its column labels on the same widths.
+export const SET_COLUMNS = Object.freeze({ marker: 24, last: 64, wells: 98, check: 36 });
 
 // Spec section 2 sizes.
 const ROW_MIN_HEIGHT = 64;
@@ -87,10 +93,10 @@ const RING_WIDTH = 1.5;
 const PR_TAG_MIN_HEIGHT = 18;
 // Dense numeric cells shrink a little before they would wrap or clip.
 const FIT_SCALE = 0.75;
-// 44 dp wells and a 30 dp marker column are taken to 48 dp by their slop.
+// 44 dp wells and a 24 dp marker column are taken to 48 dp by their slop.
 const WELL_HIT_SLOP = { top: 2, bottom: 2, left: 0, right: 0 };
 const CHECK_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
-const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 9, right: 9 };
+const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 12, right: 12 };
 
 const MIDDLE_DOT = '\u00B7';
 const TIMES = '\u00D7';
@@ -317,9 +323,12 @@ function TargetCell({ target, record, prTarget, dim, live }) {
         >
           {value}
         </Text>
-        {record ? <PrTag live={live} label="Personal record" /> : null}
       </View>
-      {prTarget ? (
+      {record ? (
+        <View style={styles.prTargetRow}>
+          <PrTag live={live} label="Personal record" />
+        </View>
+      ) : prTarget ? (
         <View
           style={styles.prTargetRow}
           accessible
@@ -534,9 +543,8 @@ const styles = StyleSheet.create({
     minHeight: ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs2,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
     borderBottomWidth: 1,
   },
   markerCol: { width: SET_COLUMNS.marker },
@@ -550,7 +558,7 @@ const styles = StyleSheet.create({
   },
   lastCol: { width: SET_COLUMNS.last, alignItems: 'center', justifyContent: 'center' },
   lastPress: { minHeight: touchTarget.minimum },
-  targetCol: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', paddingLeft: spacing.xs },
+  targetCol: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', paddingLeft: spacing.xs, paddingRight: spacing.xs },
   targetValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '100%' },
   targetValue: { flexShrink: 1 },
   targetText: { textAlign: 'left' },
