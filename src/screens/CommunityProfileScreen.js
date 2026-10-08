@@ -507,8 +507,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
         </View>
       </Band>
       <BandGap />
-      <SkeletonPostRow />
-      <SkeletonPostRow />
+      <Band style={styles.postCard}><SkeletonPostRow /></Band>
+      <Band style={styles.postCard}><SkeletonPostRow /></Band>
     </View>
   ) : blockedCard ? (
     <EmptyState
@@ -586,15 +586,18 @@ export default function CommunityProfileScreen({ navigation, route }) {
         data={listData}
         keyExtractor={(item) => item.post.id}
         renderItem={({ item }) => (
-          <PostRow
-            item={item}
-            onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-            onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
-              id: item.post.id, __heroOrigin: rect || undefined,
-            })}
-            onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
-            onRespected={(next) => applyRespect(item.post.id, next)}
-          />
+          <Band style={styles.postCard}>
+            <PostRow
+              last
+              item={item}
+              onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
+              onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+                id: item.post.id, __heroOrigin: rect || undefined,
+              })}
+              onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
+              onRespected={(next) => applyRespect(item.post.id, next)}
+            />
+          </Band>
         )}
         ListHeaderComponent={hero}
         ListEmptyComponent={empty}
@@ -683,6 +686,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
+  // One app (founder verdict 2026-10-08): a post is a Card, spacing.md apart.
+  postCard: { marginBottom: spacing.md },
   hero: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },

@@ -709,16 +709,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
           }
           if (item.type === 'recent') {
             return (
-              <PostRow
-                item={item.row}
-                onPress={() => navigation.navigate('CommunityPost', { id: item.row.post.id })}
-                onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
-                  id: item.row.post.id, __heroOrigin: rect || undefined,
-                })}
-                onRespect={(next) => reactToPost(item.row.post.id, next, item.row.author?.user_id)}
-                onRespected={(next) => applyRecent(item.row.post.id, next)}
-                onOpenPerson={(author) => openProfile(author)}
-              />
+              <Band style={styles.postCard}>
+                <PostRow
+                  last
+                  item={item.row}
+                  onPress={() => navigation.navigate('CommunityPost', { id: item.row.post.id })}
+                  onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+                    id: item.row.post.id, __heroOrigin: rect || undefined,
+                  })}
+                  onRespect={(next) => reactToPost(item.row.post.id, next, item.row.author?.user_id)}
+                  onRespected={(next) => applyRecent(item.row.post.id, next)}
+                  onOpenPerson={(author) => openProfile(author)}
+                />
+              </Band>
             );
           }
           const card = item.row.card ?? item.row;
@@ -780,6 +783,8 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
+  // One app (founder verdict 2026-10-08): a post is a Card, spacing.md apart.
+  postCard: { marginBottom: spacing.md },
   header: { gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   reportLink: { textDecorationLine: 'underline' },
   reportTarget: { minHeight: 48, justifyContent: 'center' },
