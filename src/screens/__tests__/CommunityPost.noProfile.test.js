@@ -136,15 +136,22 @@ beforeEach(() => {
   withProfile();
 });
 
+/** The post's row: `PostRow` is handed `onRespect` only when a Respect is
+ * offered at all. */
+function postRowOf(rendered) {
+  return rendered.root.findAll(
+    (n) => typeof n.type === 'function' && n.props && n.props.item && 'onRespect' in n.props,
+  )[0];
+}
+
 describe('a reader with no Community profile', () => {
   test('is offered one quiet row to Join, in place of the composer', async () => {
     withoutProfile();
     const { tree, navigation } = await mount();
-    const footer = part(tree, 'ListFooterComponent');
 
-    expect(texts(footer)).toContain('Create your Community profile to react and comment');
+    expect(texts(tree)).toContain('Create your Community profile to react and comment');
 
-    const row = footer.root.findAll(
+    const row = tree.root.findAll(
       (n) => n.props?.accessibilityLabel === 'Create your Community profile to react and comment'
         && 'onPress' in n.props,
     )[0];
@@ -153,7 +160,7 @@ describe('a reader with no Community profile', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityJoin', {
       next: { screen: 'CommunityPost', params: { id: 'post1' } },
     });
-    act(() => { footer.unmount(); tree.unmount(); });
+    act(() => { tree.unmount(); });
   });
 
   test('the Respect tap is not offered either: it would only be refused', async () => {
@@ -161,11 +168,9 @@ describe('a reader with no Community profile', () => {
     const { tree } = await mount();
     const header = part(tree, 'ListHeaderComponent');
 
-    // PostCard disables the tap when it is handed no onReact.
-    const card = header.root.findAll(
-      (n) => typeof n.type === 'function' && n.props && 'myReaction' in n.props,
-    )[0];
-    expect(card.props.onReact).toBeUndefined();
+    // PostRow disables the heart when it is handed no onRespect.
+    const row = postRowOf(header);
+    expect(row.props.onRespect).toBeUndefined();
     // The story itself still reads, profile or not (SD-04).
     expect(texts(header)).toContain('Good session.');
     act(() => { header.unmount(); tree.unmount(); });
@@ -175,16 +180,14 @@ describe('a reader with no Community profile', () => {
 describe('a reader with a Community profile', () => {
   test('gets the composer and a live Respect tap', async () => {
     const { tree } = await mount();
-    const footer = part(tree, 'ListFooterComponent');
     const header = part(tree, 'ListHeaderComponent');
 
-    expect(texts(footer)).not.toContain('Create your Community profile to react and comment');
+    expect(texts(tree)).not.toContain('Create your Community profile to react and comment');
+    // D221: the composer is docked under the list, not in its footer.
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Comment').length).toBeGreaterThan(0);
 
-    const card = header.root.findAll(
-      (n) => typeof n.type === 'function' && n.props && 'myReaction' in n.props,
-    )[0];
-    expect(typeof card.props.onReact).toBe('function');
-    act(() => { footer.unmount(); header.unmount(); tree.unmount(); });
+    expect(typeof postRowOf(header).props.onRespect).toBe('function');
+    act(() => { header.unmount(); tree.unmount(); });
   });
 
   test('tapping Respect calls reactToPost with post id, true, and author user id', async () => {
@@ -192,13 +195,48 @@ describe('a reader with a Community profile', () => {
     const { tree } = await mount();
     const header = part(tree, 'ListHeaderComponent');
 
-    const card = header.root.findAll(
-      (n) => typeof n.type === 'function' && n.props && 'myReaction' in n.props,
-    )[0];
-    expect(typeof card.props.onReact).toBe('function');
-    await act(async () => { card.props.onReact(true); });
+    const row = postRowOf(header);
+    expect(typeof row.props.onRespect).toBe('function');
+    await act(async () => { row.props.onRespect(true); });
     // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
     expect(reactToPost).toHaveBeenCalledWith('post1', true, 'u2');
     act(() => { header.unmount(); tree.unmount(); });
+  });
+});
+
+describe('a new comment pushes with the COMMENT id (Stage 1 review should-fix 1)', () => {
+  async function submit(created) {
+    const { addComment, notifyCommunityEvent } = require('../../lib/community');
+    addComment.mockResolvedValueOnce(created);
+    const { tree } = await mount();
+    const composer = tree.root.findAll((n) => typeof n.props?.onSubmit === 'function')[0];
+    await act(async () => { await composer.props.onSubmit('Nice one'); });
+    act(() => { tree.unmount(); });
+    return notifyCommunityEvent;
+  }
+
+  test('the created comment id is the push ref, never the post id', async () => {
+    const notify = await submit('comment9');
+    expect(notify).toHaveBeenCalledWith('comment', 'u2', 'comment9');
+    expect(notify).not.toHaveBeenCalledWith('comment', 'u2', 'post1');
+  });
+
+  test('without a created id there is nothing to name, so nothing is sent', async () => {
+    const notify = await submit(null);
+    expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('D221 visual law on the Post screen (source guard)', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'CommunityPostScreen.js'), 'utf8');
+  test('the post is a PostRow in a band, the thread a second band, no PostCard', () => {
+    expect(src).toContain("import PostRow from '../components/community/PostRow'");
+    expect(src).not.toMatch(/import PostCard/);
+    expect(src).toContain('<SectionHeader title="Comments" />');
+    expect(src).toContain('<Band>');
+    expect(src).not.toMatch(/SkeletonRow\b/);
+  });
+  test('one header glyph', () => {
+    expect((src.match(/<HeaderGlyph/g) || []).length).toBe(1);
   });
 });

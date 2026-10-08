@@ -18,20 +18,21 @@
 
 import { navigateCommunity } from '../navigation/navigateCommunity';
 import { useCallback, useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPostRow from '../components/community/SkeletonPostRow';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import Band, { BandGap, BandLine } from '../components/community/Band';
+import EntryRow from '../components/community/EntryRow';
+import HeaderGlyph from '../components/community/HeaderGlyph';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
-import PostCard from '../components/community/PostCard';
+import PostRow from '../components/community/PostRow';
 import CommentRow, { CommentComposer } from '../components/community/CommentRow';
 import JoinToInteractRow from '../components/community/JoinToInteractRow';
 import ReportSheet from '../components/community/ReportSheet';
@@ -39,15 +40,14 @@ import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import useAppStore from '../store/useAppStore';
-import { spacing, type, hitSlop, iconSize } from '../styles/theme';
-import { touchTarget } from '../styles/layout';
+import { spacing } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
   getPost, reactToPost, deletePost, listComments, addComment, deleteComment,
   notifyCommunityEvent, hasProfile, connectionState,
 } from '../lib/community';
-import { restrictionLine, respectFailureLine } from '../lib/community/restriction';
+import { restrictionLine } from '../lib/community/restriction';
 
 export const POST_OFFLINE_LINE = 'Volyume could not reach Community just now. Check your connection and try again.';
 
@@ -138,13 +138,19 @@ export default function CommunityPostScreen({ navigation, route }) {
   // refused for, and never on your own story.
   const canMessage = !mine && !!author?.user_id && connectionState(author) === 'connected';
 
-  async function handleReact(next) {
+  // The heart itself is `PostRow`'s (optimistic, reverts with a calm toast on
+  // a failure); this is the call it makes and the page's own copy of the
+  // answer, so the count here and the row's never disagree.
+  async function respond(next) {
     if (!post) return;
     haptics.selection();
-    // Optimistic: a Respect is a single tap and the count is the only thing
-    // that moves. A failure puts it straight back rather than leaving the
-    // reader looking at a state the server never accepted.
-    const previous = myReaction;
+    // The notify call for a Respect tap lives inside reactToPost itself
+    // (feed.js), the one place every Respect surface shares (founder order
+    // 2026-09-22, item 1).
+    await reactToPost(post.id, next, post.author_id);
+  }
+
+  function respected(next) {
     setMyReaction(next);
     setData((prev) => (prev ? {
       ...prev,
@@ -153,34 +159,15 @@ export default function CommunityPostScreen({ navigation, route }) {
         reaction_count: Math.max(0, Number(prev.post.reaction_count ?? 0) + (next ? 1 : -1)),
       },
     } : prev));
-    try {
-      // The notify call for a Respect tap now lives inside reactToPost
-      // itself (feed.js), the one place every Respect surface shares, so
-      // it is not repeated here (founder order 2026-09-22, item 1).
-      await reactToPost(post.id, next, post.author_id);
-    } catch (_e) {
-      setMyReaction(previous);
-      setData((prev) => (prev ? {
-        ...prev,
-        post: {
-          ...prev.post,
-          reaction_count: Math.max(0, Number(prev.post.reaction_count ?? 0) + (next ? -1 : 1)),
-        },
-      } : prev));
-      toast.show(
-        _e?.code === 'no_profile'
-          ? 'Create your Community profile first, then react to this.'
-          : respectFailureLine(_e?.code),
-        { variant: 'error' },
-      );
-    }
   }
 
   async function handleAddComment(body) {
     if (!post) return false;
     try {
-      await addComment('post', post.id, body);
-      notifyCommunityEvent('comment', post.author_id, post.id);
+      const commentId = await addComment('post', post.id, body);
+      // The push names the COMMENT it is about (Stage 1 review should-fix 1);
+      // without an id there is nothing to name, so nothing is sent.
+      if (commentId) notifyCommunityEvent('comment', post.author_id, commentId);
       const page = await listComments('post', post.id);
       setComments(Array.isArray(page?.comments) ? page.comments : []);
       setCursor(page?.cursor ?? null);
@@ -234,28 +221,38 @@ export default function CommunityPostScreen({ navigation, route }) {
     ? () => navigateCommunity(navigation, 'CommunityProfile', { userId: author.user_id, handle: author.handle })
     : undefined;
 
+  // D221 V1/V4: the post is the top band, rendered by `PostRow`; the comments
+  // are a second band; the composer is docked under the list as a well.
+  // No profile, no Respect: `community_react` raises `no_profile`, so the tap
+  // is not offered and the row below says what to do about it.
   const header = (
-    <View style={styles.header}>
-      {/* No profile, no Respect: `community_react` raises `no_profile`, so
-          the tap is not offered and the row below says what to do about
-          it (product review 2026-09-06, item 16). */}
-      <PostCard
-        post={post}
-        author={author}
-        myReaction={myReaction}
-        onReact={joined ? handleReact : undefined}
-        onOpenAuthor={openAuthor}
-        onMessageAuthor={canMessage ? () => navigateCommunity(navigation, 'CommunityConversation', {
-          userId: author.user_id,
-          ref: { kind: 'post', id },
-        }) : undefined}
-      />
-      <SectionLabel tone="muted" style={styles.commentsLabel}>Comments</SectionLabel>
-      {comments.length === 0 ? (
-        <Text style={[styles.noComments, { color: t.colors.textMuted }]}>
-          No comments yet. Anything useful about the training is welcome here.
-        </Text>
-      ) : null}
+    <View>
+      <Band>
+        <PostRow
+          key={post?.id}
+          item={post ? { post, author, myReaction } : null}
+          onRespect={joined ? respond : undefined}
+          onRespected={respected}
+          onOpenPerson={openAuthor ? () => openAuthor() : undefined}
+        />
+        {canMessage ? (
+          <EntryRow
+            icon="chatbubble-outline"
+            title={`Message @${author.handle}`}
+            onPress={() => navigateCommunity(navigation, 'CommunityConversation', {
+              userId: author.user_id,
+              ref: { kind: 'post', id },
+            })}
+          />
+        ) : null}
+      </Band>
+      <BandGap />
+      <Band>
+        <SectionHeader title="Comments" />
+        {comments.length === 0 ? (
+          <BandLine text="No comments yet. Anything useful about the training is welcome here." />
+        ) : null}
+      </Band>
     </View>
   );
 
@@ -264,26 +261,21 @@ export default function CommunityPostScreen({ navigation, route }) {
       <BackHeader
         title="Post"
         right={post ? (
-          <TouchableOpacity
+          <HeaderGlyph
+            icon={mine ? 'trash-outline' : 'ellipsis-horizontal'}
+            label={mine ? 'Delete this post' : 'More options for this post'}
             onPress={() => { haptics.selection(); if (mine) handleDeletePost(); else if (author?.user_id) setMenuOpen(true); else setReportTarget({ targetKind: 'post', targetId: post.id }); }}
-            hitSlop={hitSlop}
-            style={styles.headerAction}
-            accessibilityRole="button"
-            accessibilityLabel={mine ? 'Delete this post' : 'More options for this post'}
-          >
-            <Ionicons
-              name={mine ? 'trash-outline' : 'ellipsis-horizontal'}
-              size={iconSize.md}
-              color={t.colors.textSecondary}
-            />
-          </TouchableOpacity>
+          />
         ) : null}
       />
       {loading ? (
-        <View style={styles.skeleton}>
-          <SkeletonCard height={130} />
-          <SkeletonRow />
-          <SkeletonRow />
+        <View>
+          <SkeletonPostRow />
+          <BandGap />
+          <Band style={styles.skeletonRows}>
+            <SkeletonPersonRow />
+            <SkeletonPersonRow />
+          </Band>
         </View>
       ) : !post ? (
         <View style={styles.centre}>
@@ -296,38 +288,45 @@ export default function CommunityPostScreen({ navigation, route }) {
           />
         </View>
       ) : (
-        <FlashList
-          data={comments}
-          keyExtractor={(item) => String(item.id)}
-          estimatedItemSize={88}
-          ListHeaderComponent={header}
-          contentContainerStyle={styles.content}
-          onEndReachedThreshold={0.4}
-          onEndReached={loadMoreComments}
-          renderItem={({ item }) => (
-            <CommentRow
-              comment={item}
-              author={item.author}
-              canDelete={!!item.mine || mine}
-              onDelete={() => handleDeleteComment(item)}
-              onOpenAuthor={item.author?.user_id
-                ? () => navigateCommunity(navigation, 'CommunityProfile', {
-                  userId: item.author.user_id, handle: item.author.handle,
-                })
-                : undefined}
-              onReport={item.mine ? undefined : () => setReportTarget({ targetKind: 'comment', targetId: item.id })}
-            />
-          )}
-          ListFooterComponent={joined ? (
+        <>
+          <FlashList
+            data={comments}
+            keyExtractor={(item) => String(item.id)}
+            estimatedItemSize={88}
+            ListHeaderComponent={header}
+            contentContainerStyle={styles.content}
+            onEndReachedThreshold={0.4}
+            onEndReached={loadMoreComments}
+            renderItem={({ item }) => (
+              <Band>
+                <CommentRow
+                  comment={item}
+                  author={item.author}
+                  canDelete={!!item.mine || mine}
+                  onDelete={() => handleDeleteComment(item)}
+                  onOpenAuthor={item.author?.user_id
+                    ? () => navigateCommunity(navigation, 'CommunityProfile', {
+                      userId: item.author.user_id, handle: item.author.handle,
+                    })
+                    : undefined}
+                  onReport={item.mine ? undefined : () => setReportTarget({ targetKind: 'comment', targetId: item.id })}
+                />
+              </Band>
+            )}
+          />
+          {joined ? (
             <CommentComposer onSubmit={handleAddComment} />
           ) : (
-            <JoinToInteractRow
-              onPress={() => navigateCommunity(navigation, 'CommunityJoin', {
-                next: { screen: 'CommunityPost', params: { id } },
-              })}
-            />
+            <Band>
+              <JoinToInteractRow
+                inBand
+                onPress={() => navigateCommunity(navigation, 'CommunityJoin', {
+                  next: { screen: 'CommunityPost', params: { id } },
+                })}
+              />
+            </Band>
           )}
-        />
+        </>
       )}
       <ProfileMenuSheet
         visible={menuOpen}
@@ -349,13 +348,6 @@ export default function CommunityPostScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
-  skeleton: { padding: spacing.lg, gap: spacing.md },
-  content: { padding: spacing.lg, paddingBottom: spacing.xl },
-  header: { gap: spacing.md, marginBottom: spacing.md },
-  commentsLabel: { marginTop: spacing.lg },
-  noComments: { ...type.caption },
-  headerAction: {
-    width: touchTarget.minimum, height: touchTarget.minimum,
-    alignItems: 'flex-end', justifyContent: 'center',
-  },
+  content: { paddingBottom: spacing.xl },
+  skeletonRows: { paddingHorizontal: spacing.lg },
 });

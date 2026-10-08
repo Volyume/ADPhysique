@@ -827,9 +827,14 @@ serve(async (req: Request) => {
           // ever does.
           ...(kind === 'message' ? { conversation_id: refId } : {}),
           // D221: the client routes a tap on the kind and the id, never on
-          // content. `kind` is the precise event; the ids are the same refId.
+          // content. `kind` is the precise event. post_id is the POST's id:
+          // for a reaction refId is the post; for a comment refId is the
+          // comment, so the post is the comment row's target_id (read at
+          // verification), and only when the comment is on a post.
           kind,
-          ...(kind === 'reaction' || kind === 'comment' ? { post_id: refId } : {}),
+          ...((kind === 'reaction' || kind === 'comment')
+            && activityTargetKind === 'post' && activityTargetId
+            ? { post_id: activityTargetId } : {}),
           ...(GROUP_KINDS.includes(kind) ? { group_id: refId } : {}),
         },
       }),

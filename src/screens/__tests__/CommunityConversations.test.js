@@ -220,3 +220,24 @@ describe('paging', () => {
     act(() => { tree.unmount(); });
   });
 });
+
+// D221 visual law (lane 2A): the render is bands, the section header is the
+// shared one, the first load is the true-shape skeleton, and the header
+// carries no more than two bare glyphs. Source-level, comments stripped.
+describe('D221 visual law: CommunityConversationsScreen', () => {
+  const stripped = require('fs')
+    .readFileSync(require('path').join(__dirname, '..', 'CommunityConversationsScreen.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  test('is built from bands, never the square skeleton, SectionLabel or Eyebrow', () => {
+    expect(stripped).toContain("components/community/Band'");
+    expect(stripped).not.toMatch(/\bSkeletonRow\b|\bSectionLabel\b|\bEyebrow\b/);
+    expect(stripped).toMatch(/Skeleton(Person|Post)Row/);
+  });
+
+  test('has at most two header glyphs, with no circular container', () => {
+    expect((stripped.match(/<HeaderGlyph\b/g) || []).length).toBeLessThanOrEqual(2);
+    expect(stripped).not.toMatch(/headerBtn/);
+  });
+});

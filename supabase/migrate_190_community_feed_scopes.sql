@@ -15,27 +15,33 @@
 --                      following  today's body (migrate_170 part B8, line
 --                                 3356): the caller's own posts and posts
 --                                 by authors the caller follows (accepted).
---                      gym        authors whose community_profiles.place_key
---                                 equals the caller's own, non-null
---                                 place_key; the caller's own posts
---                                 included. An author the caller does not
+--                      gym        authors who train at the caller's gym:
+--                                 author.gym_id = caller.gym_id, or the
+--                                 caller's gym_id is in the author's
+--                                 other_gym_ids (uuid[], migrate_162 line
+--                                 449), AND the author's show_gym is on
+--                                 (migrate_164 Part 1, written by
+--                                 community_set_show_gym), AND the author is
+--                                 not a minor (gym EXCLUDES minors: a shared
+--                                 gym is not a relationship, D212; is_minor = false). The
+--                                 caller's own posts are included. place_key
+--                                 is an outward code or town (migrate_163
+--                                 CHECK), never a gym, so it is NOT used.
+--                                 An author the caller does not
 --                                 follow is shown only the posts the
 --                                 current visibility rules allow: public,
 --                                 followers-only if the caller has an
 --                                 accepted follow, groups-only if the
 --                                 caller shares one of the post's groups.
---                                 A minor's profile (is_minor) is never
---                                 reached through a place match alone
---                                 (gym EXCLUDES minors: a shared place is
---                                 not a relationship, D212). An author
---                                 other than the caller must also be
+--                                 An author other than the caller must also be
 --                                 status 'active' and either have a public
 --                                 profile or be followed (accepted): a
 --                                 private profile chose that nobody reads
 --                                 it without an accepted follow, and
 --                                 sharing a gym or group must not undo
 --                                 that (data minimisation).
---                                 A caller with no place_key sees no rows.
+--                                 A caller with a NULL gym_id sees only
+--                                 their own posts.
 --                      groups     authors who share at least one group with
 --                                 the caller (both community_group_members
 --                                 rows state = 'member'), the caller's own
@@ -189,7 +195,7 @@ DECLARE
   v_lim   int  := public._community_limit(_limit);
   v_scope text := coalesce(_scope, 'following');
   v_sort  text := coalesce(_sort, 'newest');
-  v_place text;
+  v_gym   uuid;
   v_ts    timestamptz;
   v_id    uuid;
   v_n     int;
@@ -218,7 +224,7 @@ BEGIN
   END IF;
 
   IF v_scope = 'gym' THEN
-    SELECT me.place_key INTO v_place
+    SELECT me.gym_id INTO v_gym
     FROM public.community_profiles me WHERE me.user_id = v_uid;
   END IF;
 
@@ -246,15 +252,17 @@ BEGIN
               JOIN public.community_group_members gm ON gm.group_id = pg.group_id
               WHERE pg.post_id = r.id AND gm.user_id = v_uid AND gm.state = 'member')
           ))
-        -- gym: same non-null place_key as the caller, plus the caller's own.
+        -- gym: same gym_id (main or other) as the caller, show_gym on, plus own.
         OR (v_scope = 'gym'
           AND (
             r.author_id = v_uid
             OR (
-              v_place IS NOT NULL
+              v_gym IS NOT NULL
               AND EXISTS (
                 SELECT 1 FROM public.community_profiles gp
-                WHERE gp.user_id = r.author_id AND gp.place_key = v_place
+                WHERE gp.user_id = r.author_id
+                  AND (gp.gym_id = v_gym OR v_gym = ANY (gp.other_gym_ids))
+                  AND gp.show_gym = true
                   AND gp.is_minor = false)
             )
           )
@@ -386,19 +394,19 @@ GRANT EXECUTE ON FUNCTION public.community_feed(text, int, text, text) TO authen
 --   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 --  WHERE n.nspname = 'public' AND p.proname = 'community_feed';
 --
--- Also F: a PRIVATE profile (visibility <> 'public') with the same place_key
+-- Also F: a PRIVATE profile (visibility <> 'public') with the same gym_id
 -- as A, one public post, not followed by A: never returned by gym; returned
 -- by gym once A's follow of F is accepted.
 --
 -- Behaviour fixture, run on a STAGING copy or inside a transaction that is
--- rolled back (never leave the fixture rows behind). Four profiles plus the
--- caller: A (caller) follows B (accepted); A and C share place_key
--- 'town:test'; A and D are 'member' of one group; E is blocked by A. Each
+-- rolled back (never leave the fixture rows behind). Profiles plus the
+-- caller: A (caller) follows B (accepted); A, C and G share gym_id
+-- (G has show_gym off); A and D are 'member' of one group; E is blocked by A. Each
 -- of B, C, D, E has one public visible post. Impersonate A with
 -- set_config('request.jwt.claims', '{"sub":"<A uuid>","role":"authenticated"}', true).
 --
 --   following -> exactly B's post (and A's own)           : expect {B}
---   gym       -> exactly C's post (and A's own)           : expect {C}
+--   gym       -> exactly C's post (and A's own), never G  : expect {C}
 --   groups    -> exactly D's post (and A's own)           : expect {D}
 --   everyone  -> B, C, D public posts, never E (blocked)  : expect {B,C,D}
 --

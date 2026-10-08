@@ -34,6 +34,15 @@ const ROW_FILES = [
   'src/components/community/SkeletonPersonRow.js',
 ];
 
+// D221 ruling 7 / law V1, lane 2A: screens converted to bands.
+const BANDED = [
+  'CommunityProfileScreen.js', 'CommunityPostScreen.js', 'CommunityGroupScreen.js',
+  'CommunityDimensionScreen.js', 'CommunityActivityScreen.js', 'CommunityBoardScreen.js',
+  'CommunityFollowersScreen.js', 'CommunityConnectionsScreen.js', 'CommunityConversationsScreen.js',
+  'CommunitySearchScreen.js', 'CommunityPeopleListScreen.js', 'CommunityFindPeopleScreen.js',
+  'CommunityGroupMembersScreen.js',
+];
+
 describe('one gutter, paid once by the page', () => {
   test.each(ROW_FILES)('%s pays no horizontal gutter of its own', (rel) => {
     const src = code(read(rel));
@@ -49,13 +58,31 @@ describe('one gutter, paid once by the page', () => {
     const listers = screens.filter((f) => /PersonRow|CohortRow|GroupRow|ActivityItemRow|SkeletonPersonRow/.test(read(`src/screens/${f}`)));
     expect(listers.length).toBeGreaterThan(3);
     for (const f of listers) {
-      // D221 ruling 7 / law V1: inside the Hub the bands own the gutter (each
-      // row carries its own inline padding), superseding D163 rule 1 here.
-      if (f === 'CommunityHubScreen.js') continue;
+      // D221 ruling 7 / law V1: inside the Hub the BAND sections own the
+      // gutter (each row carries its own inline padding), superseding D163
+      // rule 1 for those sections only. The skip is asserted positively in
+      // the Hub test below, not by leaving the whole file unchecked.
+      // Lane 2A converts the rest of the list and detail screens to bands
+      // under the same ruling; the page container of every screen in
+      // BANDED pays nothing and the rows carry `inBand` (pinned by
+      // community.visualLaw.guard).
+      if (f === 'CommunityHubScreen.js' || BANDED.includes(f)) continue;
       const src = read(`src/screens/${f}`);
       expect({ f, gutter: /(list|content): \{[^}]*padding(?:Horizontal)?: spacing\.lg/.test(src) })
         .toEqual({ f, gutter: true });
     }
+  });
+});
+
+describe('the Hub band sections (D221 ruling 7)', () => {
+  test('bands pay the gutter once and the Hub scroll container pays none', () => {
+    const band = code(read('src/components/community/Band.js'));
+    expect(band).toMatch(/paddingHorizontal: spacing\.lg/);
+    const hub = code(read('src/screens/CommunityHubScreen.js'));
+    const listStyle = /\blist: \{[^}]*\}/.exec(hub);
+    expect(listStyle).not.toBeNull();
+    expect(/padding(Horizontal|Left|Right)\b/.test(listStyle[0])).toBe(false);
+    expect(/<Band[\s>]/.test(hub)).toBe(true);
   });
 });
 
@@ -132,10 +159,12 @@ describe('a skeleton stands in the shape of the row it replaces', () => {
     const skel = read('src/components/community/SkeletonPersonRow.js');
     expect(skel).toContain('const AVATAR = 32;');
     expect(skel).toContain('radius={circle(AVATAR)}');
+    // D221 ruling 7 / V10: a feed-shaped screen uses SkeletonPostRow, a roster
+    // SkeletonPersonRow; either way never the square one.
     for (const f of ['CommunityHubScreen', 'CommunityDimensionScreen', 'CommunityGroupScreen', 'CommunityProfileScreen']) {
       const src = read(`src/screens/${f}.js`);
       expect({ f, shared: /\bSkeletonRow\b/.test(src) }).toEqual({ f, shared: false });
-      expect({ f, own: src.includes('SkeletonPersonRow') }).toEqual({ f, own: true });
+      expect({ f, own: /SkeletonPersonRow|SkeletonPostRow/.test(src) }).toEqual({ f, own: true });
     }
   });
 });

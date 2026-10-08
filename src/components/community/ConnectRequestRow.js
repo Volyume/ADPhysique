@@ -44,6 +44,7 @@
  *   onAccept  accept the request
  *   onDecline decline it
  *   busy      this row's answer is in flight
+ *   inBand    D221 V1: the block carries the band's gutter itself
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -64,7 +65,9 @@ export function reasonsLine(reasons) {
     .join(' · ');
 }
 
-export default function ConnectRequestRow({ request, onPress, onAccept, onDecline, busy = false }) {
+export default function ConnectRequestRow({
+  request, onPress, onAccept, onDecline, busy = false, inBand = false,
+}) {
   const t = useTheme();
   const card = request?.requester ?? request?.card ?? null;
   if (!card) return null;
@@ -75,7 +78,8 @@ export default function ConnectRequestRow({ request, onPress, onAccept, onDeclin
   const note = typeof request?.note === 'string' ? request.note.trim() : '';
 
   return (
-    <View style={styles.block}>
+    <View>
+      <View style={[styles.block, inBand && styles.inBand]}>
       <PressableCard
         onPress={onPress}
         disabled={!onPress}
@@ -123,6 +127,7 @@ export default function ConnectRequestRow({ request, onPress, onAccept, onDeclin
           accessibilityLabel={`Decline the connection request from @${card.handle}`}
         />
       </View>
+      </View>
       <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
     </View>
   );
@@ -130,6 +135,9 @@ export default function ConnectRequestRow({ request, onPress, onAccept, onDeclin
 
 const styles = StyleSheet.create({
   block: { gap: spacing.sm },
+  // D221 ruling 7 / law V1: inside a band the block carries the gutter itself,
+  // so the closing hairline below it spans the band.
+  inBand: { paddingHorizontal: spacing.lg },
   row: {
     flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },

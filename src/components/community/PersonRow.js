@@ -59,6 +59,7 @@
  *   rank          number|string, shown at the row's left edge; omit to
  *                 hide it (rosters under the small-group threshold)
  *   onPress       opens the person
+ *   onPressWithLayout  origin-aware open (D188): receives the measured row rect
  *   inBand        D221: pad the row's content by `spacing.lg` itself (default off)
  *   trailing      optional node (a small `Button secondary sm`, or a
  *                 glyph) rendered at the row's trailing edge
@@ -82,7 +83,7 @@ const RANK_COL = 18;
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function PersonRow({
-  person, metric, metricRole, days, trainedToday, rank, onPress, trailing, inBand = false,
+  person, metric, metricRole, days, trainedToday, rank, onPress, onPressWithLayout, trailing, inBand = false,
 }) {
   const t = useTheme();
   if (!person) return null;
@@ -109,7 +110,8 @@ export default function PersonRow({
   return (
     <PressableCard
       onPress={onPress}
-      disabled={!onPress}
+      onPressWithLayout={onPressWithLayout}
+      disabled={!onPress && !onPressWithLayout}
       accessibilityRole="button"
       accessibilityLabel={a11yParts.join('. ')}
       style={isOwn ? [inBand ? null : styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}

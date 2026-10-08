@@ -176,7 +176,7 @@ function renderParts(tree) {
 
 async function render({ segment = null, params = {} } = {}) {
   if (segment) await AsyncStorage.setItem(HUB_SEGMENT_KEY, segment);
-  const navigation = { navigate: jest.fn(), push: jest.fn() };
+  const navigation = { navigate: jest.fn(), push: jest.fn(), setParams: jest.fn() };
   let tree;
   await act(async () => {
     tree = create(<CommunityHubScreen navigation={navigation} route={{ params }} />);
@@ -255,6 +255,46 @@ describe('the segment bar', () => {
   });
 });
 
+describe('the segment param (SF3) and an early tap (F8)', () => {
+  test('a segment param is applied on focus and then consumed, so the same one lands again', async () => {
+    asMember();
+    const view = await render({ params: { segment: 'people' } });
+    expect(view.text).toContain('Search people and groups');
+    expect(view.navigation.setParams).toHaveBeenCalledWith({ segment: undefined });
+    // The person goes back to Feed, leaves, and Today sends the same param again.
+    await press(view, 'Feed');
+    expect(view.text).toContain('Follow a few people to fill this feed');
+    let tree2;
+    const nav2 = { navigate: jest.fn(), push: jest.fn(), setParams: jest.fn() };
+    await act(async () => {
+      tree2 = create(<CommunityHubScreen navigation={nav2} route={{ params: { segment: 'people' } }} />);
+    });
+    await flush();
+    expect(flattenText(tree2.toJSON())).toContain('Find people');
+    expect(nav2.setParams).toHaveBeenCalledWith({ segment: undefined });
+  });
+
+  test('a segment tapped before the remembered one loads is not overwritten', async () => {
+    asMember();
+    let release;
+    AsyncStorage.getItem.mockImplementationOnce(
+      () => new Promise((resolve) => { release = () => resolve('groups'); }),
+    );
+    const navigation = { navigate: jest.fn(), push: jest.fn(), setParams: jest.fn() };
+    let tree;
+    await act(async () => { tree = create(<CommunityHubScreen navigation={navigation} route={{ params: {} }} />); });
+    // The person taps People while the remembered segment is still loading.
+    const radio = tree.root.findAll((n) => n.props?.accessibilityLabel === 'People' && n.props.accessibilityRole === 'radio'
+      && typeof n.props.onPress === 'function')[0];
+    await act(async () => { radio.props.onPress(); });
+    await act(async () => { release(); });
+    await flush();
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Find people');
+    expect(text).not.toContain('Browse open groups');
+  });
+});
+
 describe('the header', () => {
   test('a member has exactly three glyphs: search, activity, messages (no avatar, no privacy shield)', async () => {
     asMember();
@@ -295,6 +335,49 @@ describe('Feed: a member', () => {
     expect(view.text).toContain('Write a post');
   });
 
+  test('My gym with no gym_id asks to set one, opening the gym picker; with a gym it says nobody has posted', async () => {
+    asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_label: 'PureGym', place_key: 'town:leeds', gym_id: null } });
+    let view = await render();
+    await press(view, 'My gym');
+    expect(view.text).toContain('Set your gym to see who trains there');
+    await press(view, 'Set gym');
+    expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityEditProfile', { openGymPicker: true });
+    asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_id: 'gym-1' } });
+    view = await render();
+    await press(view, 'My gym');
+    expect(view.text).toContain('Nobody at your gym has posted yet.');
+  });
+
+  test('paging de-duplicates posts by id for every sort (SF4)', async () => {
+    asMember();
+    const a = post({ post: { ...post().post, id: 'pa' } });
+    const b = post({ post: { ...post().post, id: 'pb' } });
+    const c = post({ post: { ...post().post, id: 'pc' } });
+    loadHub
+      .mockResolvedValueOnce(emptyHub({ posts: [a, b], cursor: 'k1' }))
+      .mockResolvedValueOnce(emptyHub({ posts: [b, c], cursor: null }));
+    const view = await render();
+    await act(async () => { await view.list.props.onEndReached(); });
+    await flush();
+    view.refresh();
+    const ids = view.list.props.data.map((row) => row.post.id);
+    expect(ids).toEqual(['pa', 'pb', 'pc']);
+  });
+
+  test('Most respected stays in the sort sheet, disabled with the hint, when the server lacks it (F7)', async () => {
+    asMember();
+    loadHub.mockImplementation(async (scope, opts) => emptyHub(opts?.sort === 'respected' ? { fallback: 'sort' } : {}));
+    const view = await render();
+    await press(view, 'Sort: Newest');
+    const sheet0 = view.tree.root.findAll((n) => n.props?.title === 'Sort posts' && Array.isArray(n.props.rows))[0];
+    await act(async () => { sheet0.props.rows[1].onPress(); });
+    await flush();
+    const sheet = view.tree.root.findAll((n) => n.props?.title === 'Sort posts' && Array.isArray(n.props.rows))[0];
+    const row = sheet.props.rows.find((r) => r.label === 'Most respected');
+    expect(row).toBeTruthy();
+    expect(row.sub).toBe('Not available yet');
+  });
+
   test('a scope the server cannot serve is a disabled chip with the hint "Not available yet"', async () => {
     asMember();
     loadHub.mockImplementation(async (scope) => emptyHub(scope === 'gym' ? { fallback: 'scope' } : {}));
@@ -333,6 +416,8 @@ describe('Feed: a member', () => {
     )[0];
     expect(sheet.props.visible).toBe(true);
     expect(sheet.props.rows.map((r) => r.label)).toEqual(['A note', 'Your last session']);
+    // F10: the sub states the person's real default audience (adult default: Everyone).
+    expect(sheet.props.rows[0].sub).toMatch(/Everyone on Community can see this|Only people who follow you/);
     act(() => { sheet.props.rows[0].onPress(); });
     expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'note' });
     await act(async () => { await sheet.props.rows[1].onPress(); });

@@ -40,8 +40,9 @@ import { FlashList } from '@shopify/flash-list';
 import { setCommunityUnseen } from '../lib/community/unseen';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonRow } from '../components/Skeleton';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import Band, { BandGap } from '../components/community/Band';
 import ActivityRow from '../components/community/ActivityRow';
 import ProfileCard from '../components/community/ProfileCard';
 import ConnectRequestRow from '../components/community/ConnectRequestRow';
@@ -182,74 +183,97 @@ export default function CommunityActivityScreen({ navigation }) {
     }
   }
 
-  const header = connectRequests.length || requests.length ? (
-    <View style={styles.requests}>
+  // A request is ANSWERED above, so its own row is not repeated in the list
+  // beneath (the same rule follow requests already follow).
+  const activityRows = rows.filter((r) => r.kind !== 'follow_request' && r.kind !== 'connect_request');
+
+  // D221 V1: each section is a band; the requests answered above the list are
+  // two bands of their own, the activity list is the third.
+  const header = (
+    <View>
       {connectRequests.length ? (
         <>
-          <SectionLabel tone="muted" style={styles.sectionLabel}>Connection requests</SectionLabel>
-          {connectRequests.map((row) => {
-            const card = row.requester ?? row.card ?? row;
-            return (
-              <ConnectRequestRow
-                key={card.user_id}
-                request={{ ...row, requester: card }}
-                busy={busyId === card.user_id}
-                onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
-                onAccept={() => respondConnect(card, true)}
-                onDecline={() => respondConnect(card, false)}
-              />
-            );
-          })}
+          <Band>
+            <SectionHeader title="Connection requests" />
+            {connectRequests.map((row) => {
+              const card = row.requester ?? row.card ?? row;
+              return (
+                <ConnectRequestRow
+                  key={card.user_id}
+                  inBand
+                  request={{ ...row, requester: card }}
+                  busy={busyId === card.user_id}
+                  onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
+                  onAccept={() => respondConnect(card, true)}
+                  onDecline={() => respondConnect(card, false)}
+                />
+              );
+            })}
+          </Band>
+          <BandGap />
         </>
       ) : null}
       {requests.length ? (
-        <SectionLabel tone="muted" style={styles.sectionLabel}>Follow requests</SectionLabel>
+        <>
+          <Band>
+            <SectionHeader title="Follow requests" />
+            {requests.map((row) => {
+              const card = row.card ?? row;
+              return (
+                <ProfileCard
+                  key={card.user_id}
+                  card={card}
+                  inBand
+                  showFollow={false}
+                  compact
+                  onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
+                  onPressWithLayout={(rect) => navigation.navigate('CommunityProfile', {
+                    handle: card.handle, __heroOrigin: rect || undefined,
+                  })}
+                  trailing={(
+                    <View style={styles.requestActions}>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        fullWidth={false}
+                        title="Accept"
+                        loading={busyId === card.user_id}
+                        onPress={() => respond(card, true)}
+                        accessibilityLabel={`Accept the follow request from @${card.handle}`}
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth={false}
+                        title="Decline"
+                        disabled={busyId === card.user_id}
+                        onPress={() => respond(card, false)}
+                        accessibilityLabel={`Decline the follow request from @${card.handle}`}
+                      />
+                    </View>
+                  )}
+                />
+              );
+            })}
+          </Band>
+          <BandGap />
+        </>
       ) : null}
-      {requests.map((row) => {
-        const card = row.card ?? row;
-        return (
-          <ProfileCard
-            key={card.user_id}
-            card={card}
-            showFollow={false}
-            compact
-            onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
-            trailing={(
-              <View style={styles.requestActions}>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth={false}
-                  title="Accept"
-                  loading={busyId === card.user_id}
-                  onPress={() => respond(card, true)}
-                  accessibilityLabel={`Accept the follow request from @${card.handle}`}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  title="Decline"
-                  disabled={busyId === card.user_id}
-                  onPress={() => respond(card, false)}
-                  accessibilityLabel={`Decline the follow request from @${card.handle}`}
-                />
-              </View>
-            )}
-          />
-        );
-      })}
-      <SectionLabel tone="muted" style={styles.sectionLabel}>Activity</SectionLabel>
+      {activityRows.length ? (
+        <Band>
+          <SectionHeader title="Activity" />
+        </Band>
+      ) : null}
     </View>
-  ) : null;
+  );
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -291,11 +315,13 @@ export default function CommunityActivityScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Activity" />
       <FlashList
-        // A request is ANSWERED above, so its own row is not repeated in
-        // the list beneath (the same rule follow requests already follow).
-        data={rows.filter((r) => r.kind !== 'follow_request' && r.kind !== 'connect_request')}
+        data={activityRows}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ActivityRow item={item} onPress={() => open(item)} />}
+        renderItem={({ item }) => (
+          <Band>
+            <ActivityRow inBand item={item} onPress={() => open(item)} />
+          </Band>
+        )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={paging ? (
@@ -322,14 +348,9 @@ export default function CommunityActivityScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  requests: { marginBottom: spacing.sm },
-  // Blueprint rule 3's section rhythm, on the label this screen already
-  // uses (`SectionLabel` stays here: `Eyebrow` replaces it on the four
-  // revamped screens only, pinned by `community.presentation.guard`).
-  sectionLabel: { paddingTop: spacing.xl, paddingBottom: spacing.sm },
+  list: { paddingBottom: spacing.xxl },
   requestActions: { flexDirection: 'row', gap: spacing.sm },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
 });

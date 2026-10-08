@@ -221,6 +221,14 @@ describe('loadHubSummary (community_hub_summary)', () => {
 // ─── Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md`
 // section 2; `22-MIGRATION-170A-CONTRACT.md` Part B): createPost's three
 // new trailing parameters, and the new community_post_set_note wrapper.
+describe('addComment (SF1)', () => {
+  test('answers the created comment id so the notify ref can be the comment', async () => {
+    callCommunity.mockResolvedValueOnce({ id: 'c-1' });
+    const out = await require('../feed').addComment('post', 'p-1', 'hi');
+    expect(out.id).toBe('c-1');
+  });
+});
+
 describe('createPost: auto, client_ref and group_ids', () => {
   test('a plain manual post still sends the original five parameters, with the new three defaulted', async () => {
     server({ community_create_post: { id: 'p1' } });
@@ -420,6 +428,18 @@ describe('signature tolerance (migrate_190 not applied)', () => {
     expect(hub.fallback).toBe('scope');
     expect(hub.posts).toEqual(POST_PAGE.posts);
     expect(hub.scope).toBe('gym');
+  });
+});
+
+describe('the fallback page is cached under the effective key only (F5)', () => {
+  test('a gym request that fell back never writes the gym key', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    callCommunity.mockImplementation((n, a) => ('_scope' in a
+      ? Promise.reject(signatureError('PGRST202')) : Promise.resolve(POST_PAGE)));
+    await loadHub('gym', {});
+    const keys = AsyncStorage.setItem.mock.calls.map((c) => c[0]);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.some((k) => k.includes('gym'))).toBe(false);
   });
 });
 

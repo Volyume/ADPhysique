@@ -54,20 +54,26 @@ describe('L7: restricted and suspended are never "try again"', () => {
   });
 });
 
-describe('L3: Respect is optimistic with revert on Profile, Group and Dimension', () => {
-  test.each([
-    ['screens/CommunityProfileScreen.js', 'async function react('],
-    ['screens/CommunityGroupScreen.js', 'async function react('],
-    ['screens/CommunityDimensionScreen.js', 'async function respondRecent('],
-  ])('%s toasts the calm line on a refused Respect and no longer swallows it', (file, marker) => {
-    const src = read(file);
-    const fn = src.slice(src.indexOf(marker), src.indexOf(marker) + 1800);
-    expect(fn).toMatch(/toast\.show\(respectFailureLine\(e\?\.code\), \{ variant: 'error' \}\)/);
-    expect(fn).not.toMatch(/Nothing to interrupt anyone with|not worth interrupting/);
+// RE-ANCHORED (D221 ruling 7, lane 2A): Profile, Group, Dimension and Post
+// now render `PostRow`, which owns the optimistic heart and toasts the calm
+// line on a refused Respect itself; the screens only make the call.
+describe('L3: Respect is optimistic with revert on Profile, Group, Dimension and Post', () => {
+  test('PostRow reverts and toasts the calm line, never swallowing a refusal', () => {
+    const src = read('components/community/PostRow.js');
+    expect(src).toMatch(/toast\.show\(respectFailureLine\(e\?\.code\), \{ variant: 'error' \}\)/);
+    expect(src).toContain('setLocal(null);');
   });
 
-  test('the Post screen uses the same Respect line, not "try again" copy', () => {
-    expect(read('screens/CommunityPostScreen.js')).toContain(': respectFailureLine(_e?.code)');
+  test.each([
+    'screens/CommunityProfileScreen.js',
+    'screens/CommunityGroupScreen.js',
+    'screens/CommunityDimensionScreen.js',
+    'screens/CommunityPostScreen.js',
+  ])('%s renders PostRow and passes the author id to reactToPost', (file) => {
+    const src = read(file);
+    expect(src).toContain('<PostRow');
+    expect(src).toMatch(/reactToPost\([^)]*author/);
+    expect(src).not.toMatch(/Nothing to interrupt anyone with|not worth interrupting/);
   });
 });
 

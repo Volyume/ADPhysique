@@ -56,7 +56,6 @@ import {
   View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Linking, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
 // blueprint's own list contract (keyExtractor, onEndReached paging,
@@ -65,9 +64,11 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
-import Eyebrow from '../components/community/Eyebrow';
+import SectionHeader from '../components/community/SectionHeader';
+import Band, { BandGap } from '../components/community/Band';
+import EntryRow from '../components/community/EntryRow';
 import PersonRow from '../components/community/PersonRow';
-import ActivityItemRow from '../components/community/ActivityItemRow';
+import PostRow from '../components/community/PostRow';
 import RespectAllRow from '../components/community/RespectAllRow';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
@@ -81,7 +82,7 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { readEdOrCalmSuppressed } from '../hooks/usePhotoSuppression';
 import { getEdSupportLink } from '../lib/whyThisTemplates';
 import {
-  colors, spacing, type, iconSize, circle,
+  colors, spacing,
 } from '../styles/theme';
 import {
   loadDimension, loadDimensionRecent, gymSummary, loadBoard, metricLabel, reactToPost,
@@ -91,7 +92,7 @@ import {
 import {
   report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
 } from '../lib/gyms';
-import { RESTRICTION_REFUSALS, respectFailureLine } from '../lib/community/restriction';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const PAGE = 20;
 const REPORT_DETAIL_MAX = 500;
@@ -160,7 +161,6 @@ function normalisePostRow(row) {
  * US-locale device for a UK-built signpost.
  */
 function BeatSignpostRow() {
-  const t = useTheme();
   async function open() {
     const link = getEdSupportLink(
       (() => {
@@ -170,20 +170,12 @@ function BeatSignpostRow() {
     try { await Linking.openURL(link.url); } catch (_e) { /* nothing to do if it did not open */ }
   }
   return (
-    <Pressable
+    <EntryRow
+      icon="heart-outline"
+      title="Support with eating and body image: Beat"
       onPress={open}
-      style={styles.beatRow}
-      accessibilityRole="button"
       accessibilityLabel="Support with eating and body image: Beat"
-    >
-      <View style={[styles.beatIcon, { backgroundColor: t.colors.surface2 }]}>
-        <Ionicons name="heart-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-      </View>
-      <Text style={[styles.beatLabel, { ...t.type.bodySm, color: t.colors.textPrimary }]} numberOfLines={2}>
-        Support with eating and body image: Beat
-      </Text>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-    </Pressable>
+    />
   );
 }
 
@@ -470,25 +462,18 @@ export default function CommunityDimensionScreen({ navigation, route }) {
   /** One Respect tap on a RECENT row, the same optimistic-update shape
    * `CommunityHubScreen`/`CommunityProfileScreen` already use for the
    * identical `ActivityItemRow` component. */
-  async function respondRecent(item) {
-    const on = !item.myReaction;
-    const apply = (turnOn) => setRecent((prev) => prev.map((r) => {
-      if (r.post.id !== item.post.id) return r;
+  // The heart is `PostRow`'s (optimistic, reverts with a calm toast); this
+  // keeps the page's own copy of the count in step once the call landed.
+  function applyRecent(postId, turnOn) {
+    setRecent((prev) => prev.map((r) => {
+      if (r.post.id !== postId) return r;
       return {
         ...r,
         post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (turnOn ? 1 : -1)) },
         myReaction: turnOn,
       };
     }));
-    apply(on);
-    try {
-      await reactToPost(item.post.id, on, item.author?.user_id);
-    } catch (e) {
-      apply(!on);
-      toast.show(respectFailureLine(e?.code), { variant: 'error' });
-    }
   }
-
 
   // Task 6: age_band's own label is the raw key server-side (no age-band
   // prose exists anywhere in the schema, by design -- the client owns
@@ -497,8 +482,10 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     ? (data?.label ? (TP_AGE_BANDS[data.label] ?? data.label) : paramLabel)
     : (data?.label || paramLabel);
 
-  function openProfile(card) {
-    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  function openProfile(card, rect) {
+    if (card?.handle) {
+      navigation.navigate('CommunityProfile', { handle: card.handle, __heroOrigin: rect || undefined });
+    }
   }
 
   // Rules of Hooks: every hook below must run on every render, so the
@@ -552,21 +539,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
         <BackHeader title={paramLabel || 'Your age group'} />
-        <View style={styles.gateWrap}>
+        <Band style={styles.gateWrap}>
           <Text style={[styles.gateLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             Share your age group in your training profile to see people your age.
           </Text>
-          <Pressable
+        </Band>
+        <Band>
+          <EntryRow
+            icon="options-outline"
+            title="Training profile"
             onPress={() => navigation.navigate('CommunityTrainingProfile')}
-            style={styles.tertiaryRow}
-            accessibilityRole="button"
             accessibilityLabel="Open Training profile"
-          >
-            <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-              Training profile
-            </Text>
-          </Pressable>
-        </View>
+          />
+        </Band>
       </SafeAreaView>
     );
   }
@@ -577,69 +562,75 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
         <BackHeader title={label || 'Community'} />
-        <View style={styles.gateWrap}>
+        <Band>
           <BeatSignpostRow />
-          <Text style={[styles.gateLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          <Text style={[styles.gateLine, styles.gateWrap, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             This page is resting just now.
           </Text>
-        </View>
+        </Band>
       </SafeAreaView>
     );
   }
 
+  // D221 V1: the summary is one band, the people another.
   const header = (
-    <View style={styles.header}>
-      {isPhysique ? <BeatSignpostRow /> : null}
-      {isGym && summary && !rosterMode ? (
-        <GymSummary
-          summary={summary}
-          label={label}
-          countLine={ownCohort ? cohortCountLine({ own: true, others: summary.count }) : null}
-        />
-      ) : (
-        <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
-          {cohortCountLine({
-            own: ownCohort,
-            others: memberCount,
-            rosterMode,
-            trainedToday: displayRows.filter((r) => r.trainedToday).length,
-          })}
-        </Text>
-      )}
-      {venueId && isPendingVenue(venue) ? (
-        <Button
-          variant="tertiary"
-          size="sm"
-          fullWidth={false}
-          title="Is this gym real? Confirm it"
-          onPress={confirmVenue}
-          disabled={confirmBusy}
-          accessibilityLabel="Is this gym real? Confirm it"
-        />
-      ) : null}
-      {venueId ? (
-        <Pressable
-          onPress={() => setReportOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Report a problem with this gym"
-        >
-          <Text style={[styles.reportLink, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-            Report a problem with this gym
+    <View>
+      {isPhysique ? <Band><BeatSignpostRow /></Band> : null}
+      {isPhysique ? <BandGap /> : null}
+      <Band style={styles.header}>
+        {isGym && summary && !rosterMode ? (
+          <GymSummary
+            summary={summary}
+            label={label}
+            countLine={ownCohort ? cohortCountLine({ own: true, others: summary.count }) : null}
+          />
+        ) : (
+          <Text style={[t.type.label, { color: t.colors.textSecondary }]}>
+            {cohortCountLine({
+              own: ownCohort,
+              others: memberCount,
+              rosterMode,
+              trainedToday: displayRows.filter((r) => r.trainedToday).length,
+            })}
           </Text>
-        </Pressable>
-      ) : null}
-      <Eyebrow>{rosterMode ? 'TRAINED THIS WEEK' : 'PEOPLE'}</Eyebrow>
+        )}
+        {venueId && isPendingVenue(venue) ? (
+          <Button
+            variant="tertiary"
+            size="sm"
+            fullWidth={false}
+            title="Is this gym real? Confirm it"
+            onPress={confirmVenue}
+            disabled={confirmBusy}
+            accessibilityLabel="Is this gym real? Confirm it"
+          />
+        ) : null}
+        {venueId ? (
+          <Pressable
+            onPress={() => setReportOpen(true)}
+            style={styles.reportTarget}
+            accessibilityRole="button"
+            accessibilityLabel="Report a problem with this gym"
+          >
+            <Text style={[styles.reportLink, t.type.bodySm, { color: t.colors.textMuted }]}>
+              Report a problem with this gym
+            </Text>
+          </Pressable>
+        ) : null}
+      </Band>
+      <BandGap />
+      <Band><SectionHeader title={rosterMode ? 'Trained this week' : 'People'} /></Band>
     </View>
   );
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
+    <Band style={styles.skeleton}>
       <SkeletonPersonRow />
       <SkeletonPersonRow />
       <SkeletonPersonRow />
       <SkeletonPersonRow />
       <SkeletonPersonRow />
-    </View>
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -671,77 +662,88 @@ export default function CommunityDimensionScreen({ navigation, route }) {
         renderItem={({ item }) => {
           if (item.type === 'sectionBreak') {
             return (
-              <View style={styles.sectionBreak}>
-                {rosterThin ? (
-                  <Text style={[styles.coldStart, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                    No one else here is sharing yet.
-                  </Text>
-                ) : null}
-                {/* Early days (spec 1.4): the one action beside the honest
-                    line, only on a cohort the reader belongs to. */}
-                {rosterThin && ownCohort ? (
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    fullWidth={false}
-                    icon="person-add-outline"
-                    title={inviteLabel({ gymLabel: isGym ? label : null, ownGymPage: isGym })}
-                    onPress={invite}
-                    accessibilityLabel="Invite someone to Volyume"
+              <View>
+                <Band>
+                  {rosterThin ? (
+                    <Text style={[styles.coldStart, t.type.bodySm, { color: t.colors.textSecondary }]}>
+                      No one else here is sharing yet.
+                    </Text>
+                  ) : null}
+                  {/* Early days (spec 1.4): the one action beside the honest
+                      line, only on a cohort the reader belongs to. */}
+                  {rosterThin && ownCohort ? (
+                    <View style={styles.bandAction}>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        fullWidth={false}
+                        icon="person-add-outline"
+                        title={inviteLabel({ gymLabel: isGym ? label : null, ownGymPage: isGym })}
+                        onPress={invite}
+                        accessibilityLabel="Invite someone to Volyume"
+                      />
+                    </View>
+                  ) : null}
+                  {/* Phase 3 (spec section 5): "Respect everyone who trained
+                      today", roster scopes only. */}
+                  {rosterMode ? (
+                    <RespectAllRow
+                      style={styles.bandAction}
+                      scope={kind}
+                      scopeKey={boardScopeKey}
+                      hasTrainedToday={displayRows.some((row) => row.trainedToday && !row.isYou)}
+                    />
+                  ) : null}
+                  <EntryRow
+                    title="This month and consistency"
+                    onPress={() => navigation.navigate('CommunityBoard', {
+                      scope: kind, scopeKey: boardScopeKey, window: 'month', label,
+                    })}
+                    accessibilityLabel="This month and consistency"
                   />
-                ) : null}
-                {/* Phase 3 (spec section 5), landing where phase 1 reserved
-                    the spot: "Respect everyone who trained today", roster
-                    scopes only (gym/area/style/discipline/age_band all
-                    share community_board's own scope names, so `kind`
-                    and `boardScopeKey` pass straight through). */}
-                {rosterMode ? (
-                  <RespectAllRow
-                    scope={kind}
-                    scopeKey={boardScopeKey}
-                    hasTrainedToday={displayRows.some((row) => row.trainedToday && !row.isYou)}
-                  />
-                ) : null}
-                <Pressable
-                  onPress={() => navigation.navigate('CommunityBoard', {
-                    scope: kind, scopeKey: boardScopeKey, window: 'month', label,
-                  })}
-                  style={styles.tertiaryRow}
-                  accessibilityRole="button"
-                  accessibilityLabel="This month and consistency"
-                >
-                  <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-                    This month and consistency
-                  </Text>
-                </Pressable>
-                <Eyebrow>RECENT</Eyebrow>
+                </Band>
+                <BandGap />
+                <Band><SectionHeader title="Recent" /></Band>
               </View>
             );
           }
           if (item.type === 'recent') {
             return (
-              <ActivityItemRow
+              <PostRow
                 item={item.row}
                 onPress={() => navigation.navigate('CommunityPost', { id: item.row.post.id })}
-                onRespect={() => respondRecent(item.row)}
+                onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+                  id: item.row.post.id, __heroOrigin: rect || undefined,
+                })}
+                onRespect={(next) => reactToPost(item.row.post.id, next, item.row.author?.user_id)}
+                onRespected={(next) => applyRecent(item.row.post.id, next)}
                 onOpenPerson={(author) => openProfile(author)}
               />
             );
           }
-          return rosterMode ? (
-            <PersonRow
-              person={{ ...item.row.card, isYou: item.row.isYou }}
-              metric={metricLabel('week', item.row.metric)}
-              days={item.row.trainedDays}
-              trainedToday={item.row.trainedToday}
-              rank={board.thresholdMet ? item.row.rank : null}
-              onPress={() => openProfile(item.row.card)}
-            />
-          ) : (
-            <PersonRow
-              person={{ ...(item.row.card ?? item.row), caption: personCaption(item.row.card ?? item.row) }}
-              onPress={() => openProfile(item.row.card ?? item.row)}
-            />
+          const card = item.row.card ?? item.row;
+          return (
+            <Band>
+              {rosterMode ? (
+                <PersonRow
+                  inBand
+                  person={{ ...item.row.card, isYou: item.row.isYou }}
+                  metric={metricLabel('week', item.row.metric)}
+                  days={item.row.trainedDays}
+                  trainedToday={item.row.trainedToday}
+                  rank={board.thresholdMet ? item.row.rank : null}
+                  onPress={() => openProfile(item.row.card)}
+                  onPressWithLayout={(rect) => openProfile(item.row.card, rect)}
+                />
+              ) : (
+                <PersonRow
+                  inBand
+                  person={{ ...card, caption: personCaption(card) }}
+                  onPress={() => openProfile(card)}
+                  onPressWithLayout={(rect) => openProfile(card, rect)}
+                />
+              )}
+            </Band>
           );
         }}
         ListHeaderComponent={header}
@@ -777,31 +779,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  header: { gap: spacing.xs, marginBottom: spacing.sm },
-  label: { ...type.label, color: colors.textSecondary },
-  reportLink: { textDecorationLine: 'underline', marginTop: spacing.xxs },
-  sectionBreak: { gap: spacing.sm, marginTop: spacing.md },
-  coldStart: { ...type.bodySm, color: colors.textSecondary, paddingVertical: spacing.sm },
-  tertiaryRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
-  tertiaryLabel: { ...type.label, color: colors.textSecondary },
+  list: { paddingBottom: spacing.xxl },
+  header: { gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  reportLink: { textDecorationLine: 'underline' },
+  reportTarget: { minHeight: 48, justifyContent: 'center' },
+  coldStart: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  bandAction: { paddingHorizontal: spacing.lg, alignItems: 'flex-start' },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   pagingFooter: { paddingVertical: spacing.lg },
   reportBody: { gap: spacing.md, paddingBottom: spacing.md },
   reportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  // Task 6(a): a SettingRow-shaped row (icon chip, bodySm label, chevron)
-  // at bodySm rather than SettingsPrimitives.js's own `SettingRow` (whose
-  // label is a fixed `body`), matching the brief's explicit type role.
-  beatRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 48, paddingVertical: spacing.sm,
-  },
-  beatIcon: {
-    width: 34, height: 34, borderRadius: circle(34), alignItems: 'center', justifyContent: 'center',
-  },
-  beatLabel: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   // The age-band lock and the calm-mode resting state (task 6): one line,
   // never a paragraph (presentation rule 9).
-  gateWrap: { padding: spacing.lg, gap: spacing.md },
-  gateLine: { ...type.bodySm, color: colors.textSecondary },
+  gateWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  gateLine: { color: colors.textSecondary },
 });

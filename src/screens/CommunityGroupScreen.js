@@ -9,8 +9,8 @@
  * ("8 members . invite only"; the Together line is phase 3), the blurb
  * when present (`bodySm`, up to two lines -- restored by lead ruling
  * 2026-09-10, running text was never banned by presentation rule 1),
- * `Eyebrow` MEMBERS with `PersonRow`s from the group's week board and a
- * trailing "See all" to `CommunityGroupMembers`, `Eyebrow` ACTIVITY with
+ * Members (`SectionHeader`) with `PersonRow`s from the group's week board and a
+ * trailing "See all" to `CommunityGroupMembers`, Activity (`SectionHeader`) with
  * the members' stories as `ActivityItemRow`s. A non-member sees the Join
  * or Request `Button` in place of both (the board and feed reads are
  * member-only, unchanged from before). Admin actions (Edit, Invite, Share
@@ -22,17 +22,20 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import Button from '../components/Button';
-import Eyebrow from '../components/community/Eyebrow';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPostRow from '../components/community/SkeletonPostRow';
+import Band, { BandGap, BandLine } from '../components/community/Band';
+import EntryRow from '../components/community/EntryRow';
+import HeaderGlyph from '../components/community/HeaderGlyph';
 import PersonRow from '../components/community/PersonRow';
-import ActivityItemRow from '../components/community/ActivityItemRow';
+import PostRow from '../components/community/PostRow';
 import RespectAllRow from '../components/community/RespectAllRow';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
@@ -41,13 +44,12 @@ import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, radius, hitSlop } from '../styles/theme';
-import { touchTarget } from '../styles/layout';
+import { colors, spacing, radius } from '../styles/theme';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
   loadBoard, metricLabel, togetherLine, acceptGroupInvite,
 } from '../lib/community';
-import { RESTRICTION_REFUSALS, respectFailureLine } from '../lib/community/restriction';
+import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
 
 const PAGE = 20;
 
@@ -145,24 +147,18 @@ export default function CommunityGroupScreen({ navigation, route }) {
     }
   }, [cursor, feedRows.length, group?.myState, groupId, paging]);
 
-  function openProfile(card) {
-    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  function openProfile(card, rect) {
+    if (card?.handle) {
+      navigation.navigate('CommunityProfile', { handle: card.handle, __heroOrigin: rect || undefined });
+    }
   }
 
-  async function react(item) {
-    const on = !item.myReaction;
-    setFeedRows((prev) => prev.map((r) => (r.post.id === item.post.id
+  // The heart is `PostRow`'s (optimistic, reverts with a calm toast); this
+  // keeps the page's own copy of the count in step once the call landed.
+  function applyRespect(postId, on) {
+    setFeedRows((prev) => prev.map((r) => (r.post.id === postId
       ? { ...r, myReaction: on, post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (on ? 1 : -1)) } }
       : r)));
-    try {
-      await reactToPost(item.post.id, on, item.author?.user_id);
-    } catch (e) {
-      // Revert with a calm toast (D221 L3).
-      setFeedRows((prev) => prev.map((r) => (r.post.id === item.post.id
-        ? { ...r, myReaction: !on, post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (on ? -1 : 1)) } }
-        : r)));
-      toast.show(respectFailureLine(e?.code), { variant: 'error' });
-    }
   }
 
   // Phase 3 (blueprint section 9's group page; lead ruling): "Share a
@@ -310,16 +306,9 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const isAdmin = group?.myRole === 'admin';
   const isRequested = group?.myState === 'requested';
 
+  // D221 V8: one bare 48 dp glyph in `textPrimary`.
   const headerAction = isMember ? (
-    <Pressable
-      onPress={() => setMenuOpen(true)}
-      hitSlop={hitSlop}
-      style={styles.headerAction}
-      accessibilityRole="button"
-      accessibilityLabel="Group menu"
-    >
-      <Ionicons name="ellipsis-horizontal" size={22} color={t.colors.textPrimary} />
-    </Pressable>
+    <HeaderGlyph icon="ellipsis-horizontal" label="Group menu" onPress={() => setMenuOpen(true)} />
   ) : null;
 
   const menuRows = [
@@ -366,9 +355,9 @@ export default function CommunityGroupScreen({ navigation, route }) {
   ];
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonPersonRow />
-      <SkeletonPersonRow />
+    <View>
+      <SkeletonPostRow />
+      <SkeletonPostRow />
     </View>
   ) : error ? (
     <EmptyState
@@ -382,165 +371,169 @@ export default function CommunityGroupScreen({ navigation, route }) {
       actionAccessibilityLabel="Try loading this group again"
     />
   ) : isMember ? (
-    // Founder defect 2026-09-14 ("it looks rubbish"): a section with
-    // nothing in it was a bordered box with a 52 dp circle icon, a title
-    // and a paragraph. The Hub and Profile say their own emptiness in one
-    // quiet line; this group's own feed now does the same (blueprint
-    // section 9 rule 9: one line, one action, never a paragraph -- the one
-    // action here is the "Share your latest workout with the group" door already at
-    // the top of ACTIVITY, so no button belongs on this line). The offline
-    // and failed branch above keeps the full EmptyState: it carries a
-    // retry, and an error is not an empty section.
-    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      Nothing here yet from this group's members.
-    </Text>
+    // A section with nothing in it is one quiet line (V10). The offline and
+    // failed branch above keeps the full EmptyState: it carries a retry.
+    <Band><BandLine text="Nothing here yet from this group's members." /></Band>
+  ) : null;
+
+  const together = togetherLine(group);
+  const summaryBand = (
+    <Band style={styles.summary}>
+      <Text style={[t.type.label, { color: t.colors.textSecondary }]}>
+        {groupLine(group)}
+      </Text>
+      {/* Lead ruling 2026-09-10 (communities revamp): restored, bodySm,
+          capped to two lines, under the label line. */}
+      {group?.blurb ? (
+        <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]} numberOfLines={2}>
+          {group.blurb}
+        </Text>
+      ) : null}
+      {/* "Together this week": a label line plus a 2 dp bar. Null (a
+          non-member of an invite-only group) renders no line at all. The
+          bar is neutral: amber is not one of the sanctioned uses (V7). */}
+      {together ? (
+        <View style={styles.togetherWrap}>
+          <Text style={[t.type.label, { color: t.colors.textSecondary }]}>
+            {together}
+          </Text>
+          {group.togetherPlannedWeek > 0 ? (
+            <View style={[styles.togetherTrack, { backgroundColor: t.colors.surface2 }]}>
+              <View
+                style={[styles.togetherFill, {
+                  backgroundColor: t.colors.textSecondary,
+                  width: `${Math.round(Math.min(1, group.togetherSessionsWeek / group.togetherPlannedWeek) * 100)}%`,
+                }]}
+              />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {!isMember && !isMinor && inviteToken && !isRequested ? (
+        <>
+          <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+            You have been invited to this group.
+          </Text>
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth={false}
+            title="Accept invite"
+            loading={accepting}
+            disabled={accepting}
+            onPress={doAccept}
+            accessibilityLabel="Accept the invite to this group"
+            style={styles.joinBtn}
+          />
+        </>
+      ) : null}
+      {!isMember && !isMinor && (!inviteToken || isRequested) ? (
+        <Button
+          variant="primary"
+          size="sm"
+          fullWidth={false}
+          title={isRequested ? 'Requested' : 'Join'}
+          disabled={isRequested}
+          loading={joining}
+          onPress={doJoin}
+          accessibilityLabel={isRequested ? 'Join requested' : 'Join group'}
+          style={styles.joinBtn}
+        />
+      ) : null}
+    </Band>
+  );
+
+  const memberBands = isMember ? (
+    <>
+      <BandGap />
+      <Band>
+        <SectionHeader
+          title="Members"
+          trailing={{
+            label: 'See all',
+            onPress: () => navigation.navigate('CommunityGroupMembers', { id: groupId, name: group?.name, myRole: group?.myRole }),
+          }}
+        />
+        {displayMembers.map((row) => (
+          <PersonRow
+            key={row.card.user_id}
+            inBand
+            person={{ ...row.card, isYou: row.isYou }}
+            metric={metricLabel('week', row.metric)}
+            days={row.trainedDays}
+            trainedToday={row.trainedToday}
+            rank={board?.thresholdMet ? row.rank : null}
+            onPress={() => openProfile(row.card)}
+            onPressWithLayout={(rect) => openProfile(row.card, rect)}
+          />
+        ))}
+        {/* L9 (D221): the invite door is a visible row for an admin, so it
+            is found on the page the group is created on and never only
+            inside the menu. */}
+        {isAdmin ? (
+          <EntryRow
+            icon="person-add-outline"
+            title="Invite people"
+            onPress={() => setInviteOpen(true)}
+            accessibilityLabel="Invite people to this group"
+          />
+        ) : null}
+        {/* Phase 3 (spec section 5): "Respect everyone who trained today",
+            foot of the roster. */}
+        <RespectAllRow
+          style={styles.bandPad}
+          scope="group"
+          scopeKey={groupId}
+          hasTrainedToday={displayMembers.some((row) => row.trainedToday && !row.isYou)}
+        />
+      </Band>
+      <BandGap />
+      <Band>
+        <SectionHeader title="Activity" />
+        {/* Phase 3, lead ruling: top of ACTIVITY, members only. */}
+        <EntryRow
+          icon="barbell-outline"
+          title="Share your latest workout with the group"
+          onPress={sharingWorkout ? undefined : shareWorkoutWithGroup}
+        />
+      </Band>
+    </>
   ) : null;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={group?.name || 'Group'} right={headerAction} />
       {loading && !group ? (
-        <View style={styles.skeletonScreen}>
-          <SkeletonPersonRow />
-          <SkeletonPersonRow />
-          <SkeletonPersonRow />
-          <SkeletonPersonRow />
-          <SkeletonPersonRow />
+        <View>
+          <Band style={styles.skeletonScreen}>
+            <SkeletonPersonRow />
+            <SkeletonPersonRow />
+            <SkeletonPersonRow />
+          </Band>
+          <BandGap />
+          <SkeletonPostRow />
+          <SkeletonPostRow />
         </View>
       ) : error && !group ? empty : (
         <FlashList
           data={isMember ? feedRows : []}
           keyExtractor={(item) => item.post.id}
           renderItem={({ item }) => (
-            <ActivityItemRow
+            <PostRow
               item={item}
               onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-              onRespect={() => react(item)}
+              onPressWithLayout={(rect) => navigation.navigate('CommunityPost', {
+                id: item.post.id, __heroOrigin: rect || undefined,
+              })}
+              onRespect={(next) => reactToPost(item.post.id, next, item.author?.user_id)}
+              onRespected={(next) => applyRespect(item.post.id, next)}
               onOpenPerson={(author) => openProfile(author)}
             />
           )}
           ListHeaderComponent={(
-            <View style={styles.header}>
-              <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
-                {groupLine(group)}
-              </Text>
-              {/* Lead ruling 2026-09-10 (communities revamp): restored,
-                  bodySm, capped to two lines, under the label line. */}
-              {group?.blurb ? (
-                <Text style={[styles.blurb, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={2}>
-                  {group.blurb}
-                </Text>
-              ) : null}
-              {/* Phase 3 (spec section 4): "Together this week", a label
-                  line plus a 2 dp bar. Null (a non-member of an invite-
-                  only group) renders no line at all -- togetherLine's own
-                  data-driven check, not an isMember gate, since an OPEN
-                  group's non-member browsing still gets a real line. */}
-              {togetherLine(group) ? (
-                <View style={styles.togetherWrap}>
-                  <Text style={[styles.together, { ...t.type.label, color: t.colors.textSecondary }]}>
-                    {togetherLine(group)}
-                  </Text>
-                  {group.togetherPlannedWeek > 0 ? (
-                    <View style={[styles.togetherTrack, { backgroundColor: t.colors.primaryBg }]}>
-                      <View
-                        style={[styles.togetherFill, {
-                          backgroundColor: t.colors.primary,
-                          width: `${Math.round(Math.min(1, group.togetherSessionsWeek / group.togetherPlannedWeek) * 100)}%`,
-                        }]}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-              {!isMember && !isMinor && inviteToken && !isRequested ? (
-                <>
-                  <Text style={[styles.invited, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                    You have been invited to this group.
-                  </Text>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Accept invite"
-                    loading={accepting}
-                    disabled={accepting}
-                    onPress={doAccept}
-                    accessibilityLabel="Accept the invite to this group"
-                    style={styles.joinBtn}
-                  />
-                </>
-              ) : null}
-              {!isMember && !isMinor && (!inviteToken || isRequested) ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth={false}
-                  title={isRequested ? 'Requested' : 'Join'}
-                  disabled={isRequested}
-                  loading={joining}
-                  onPress={doJoin}
-                  accessibilityLabel={isRequested ? 'Join requested' : 'Join group'}
-                  style={styles.joinBtn}
-                />
-              ) : null}
-              {isMember ? (
-                <>
-                  <Eyebrow trailing={{
-                    label: 'See all',
-                    onPress: () => navigation.navigate('CommunityGroupMembers', { id: groupId, name: group?.name, myRole: group?.myRole }),
-                  }}
-                  >
-                    MEMBERS
-                  </Eyebrow>
-                  {displayMembers.map((row) => (
-                    <PersonRow
-                      key={row.card.user_id}
-                      person={{ ...row.card, isYou: row.isYou }}
-                      metric={metricLabel('week', row.metric)}
-                      days={row.trainedDays}
-                      trainedToday={row.trainedToday}
-                      rank={board?.thresholdMet ? row.rank : null}
-                      onPress={() => openProfile(row.card)}
-                    />
-                  ))}
-                  {/* L9 (D221): the invite door is a visible row for an
-                      admin, so it is found on the page the group is
-                      created on and never only inside the menu. */}
-                  {isAdmin ? (
-                    <Pressable
-                      onPress={() => setInviteOpen(true)}
-                      style={styles.tertiaryRow}
-                      accessibilityRole="button"
-                      accessibilityLabel="Invite people to this group"
-                    >
-                      <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-                        Invite people
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                  {/* Phase 3 (spec section 5): "Respect everyone who
-                      trained today", foot of the roster. */}
-                  <RespectAllRow
-                    scope="group"
-                    scopeKey={groupId}
-                    hasTrainedToday={displayMembers.some((row) => row.trainedToday && !row.isYou)}
-                  />
-                  <Eyebrow>ACTIVITY</Eyebrow>
-                  {/* Phase 3, lead ruling: top of ACTIVITY, members only. */}
-                  <Pressable
-                    onPress={shareWorkoutWithGroup}
-                    disabled={sharingWorkout}
-                    style={styles.tertiaryRow}
-                    accessibilityRole="button"
-                    accessibilityLabel="Share your latest workout with the group"
-                  >
-                    <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-                      Share your latest workout with the group
-                    </Text>
-                  </Pressable>
-                </>
-              ) : null}
+            <View>
+              {summaryBand}
+              {memberBands}
             </View>
           )}
           ListEmptyComponent={empty}
@@ -582,34 +575,13 @@ export default function CommunityGroupScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
-  skeletonScreen: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
+  list: { paddingBottom: spacing.xxl },
+  skeletonScreen: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
-  // Matches CommunityConversationScreen's header kebab: a fixed 48dp box so
-  // the glyph clears the platform touch-target floor regardless of its own
-  // visual size (Community accessibility pass, CLAUDE.md styling.md).
-  headerAction: {
-    width: touchTarget.minimum,
-    height: touchTarget.minimum,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: { gap: spacing.xs, marginBottom: spacing.sm },
-  label: { ...type.label, color: colors.textSecondary },
-  blurb: { ...type.bodySm, color: colors.textSecondary },
-  sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
+  summary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
+  bandPad: { paddingHorizontal: spacing.lg },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
-  invited: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
-  // Phase 3: "Together this week" (spec section 4).
   togetherWrap: { gap: spacing.xxs },
-  together: { ...type.label, color: colors.textSecondary },
-  togetherTrack: {
-    height: radius.hair, borderRadius: radius.hair, overflow: 'hidden', backgroundColor: colors.primaryBg,
-  },
-  togetherFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
-  // Phase 3: "Share your latest workout with the group", top of ACTIVITY.
-  tertiaryRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
-  tertiaryLabel: { ...type.label, color: colors.textSecondary },
+  togetherTrack: { height: radius.hair, borderRadius: radius.hair, overflow: 'hidden' },
+  togetherFill: { height: '100%', borderRadius: radius.hair },
 });

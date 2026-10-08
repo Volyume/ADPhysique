@@ -24,15 +24,15 @@ import { spacing, type, colors, iconSize } from '../../styles/theme';
 
 export const JOIN_TO_INTERACT_LINE = 'Create your Community profile to react and comment';
 
-export default function JoinToInteractRow({ onPress }) {
+export default function JoinToInteractRow({ onPress, inBand = false }) {
   const t = useTheme();
   return (
     <PressableCard
       onPress={onPress}
-      style={styles.wrap}
+      style={inBand ? undefined : styles.wrap}
       accessibilityLabel={JOIN_TO_INTERACT_LINE}
     >
-      <View style={styles.row}>
+      <View style={[styles.row, inBand && styles.inBand]}>
         <Text style={[styles.line, { color: t.colors.textSecondary }]}>
           {JOIN_TO_INTERACT_LINE}
         </Text>
@@ -48,6 +48,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: spacing.sm,
   },
+  // D221 law V1: inside a band the row carries the gutter itself.
+  inBand: { paddingHorizontal: spacing.lg },
   line: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

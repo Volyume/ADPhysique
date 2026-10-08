@@ -24,14 +24,15 @@
  */
 
 import { useCallback, useState } from 'react';
-import { View, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list renders through FlashList.
 import { FlashList } from '@shopify/flash-list';
 import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import Band from '../components/community/Band';
 import ConversationRow from '../components/community/ConversationRow';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -113,12 +114,12 @@ export default function CommunityConversationsScreen({ navigation }) {
   }, [navigation, refreshMe]);
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : errorCode ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -147,7 +148,9 @@ export default function CommunityConversationsScreen({ navigation }) {
         keyExtractor={(item) => String(item.id)}
         estimatedItemSize={ROW_HEIGHT}
         renderItem={({ item }) => (
-          <ConversationRow conversation={item} onPress={() => open(item)} />
+          <Band>
+            <ConversationRow inBand conversation={item} onPress={() => open(item)} />
+          </Band>
         )}
         ListEmptyComponent={empty}
         ListFooterComponent={paging ? (
@@ -174,8 +177,8 @@ export default function CommunityConversationsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  list: { paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
 });

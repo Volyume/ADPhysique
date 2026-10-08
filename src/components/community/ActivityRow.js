@@ -29,6 +29,7 @@
  *   item        {id, kind, actor, target_kind, target_id, preview,
  *                created_at, seen}
  *   onPress     opens whatever the activity is about
+ *   inBand      D221 V1: the row carries the band's gutter itself
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -76,7 +77,7 @@ function whenLabel(createdAt) {
   return Number.isFinite(ms) ? calendarRelativeLabel(ms) : '';
 }
 
-export default function ActivityRow({ item, onPress }) {
+export default function ActivityRow({ item, onPress, inBand = false }) {
   const t = useTheme();
   if (!item) return null;
   const line = activityLine(item);
@@ -88,7 +89,7 @@ export default function ActivityRow({ item, onPress }) {
       onPress={onPress}
       accessibilityLabel={when ? `${line}. ${when}` : line}
     >
-      <View style={styles.row}>
+      <View style={[styles.row, inBand && styles.inBand]}>
         <ProfileAvatarMark
           presetKey={item.actor?.avatar_preset}
           displayName={item.actor?.display_name || item.actor?.handle}
@@ -117,6 +118,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
+  // D221 ruling 7 / law V1: inside a band the row carries the gutter itself.
+  inBand: { paddingHorizontal: spacing.lg },
   body: { flex: 1, gap: spacing.xxs },
   line: { ...type.body, color: colors.textPrimary },
   sub: { ...type.bodySm, color: colors.textSecondary },

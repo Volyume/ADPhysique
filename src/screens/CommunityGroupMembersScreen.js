@@ -13,19 +13,24 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  StyleSheet, ActivityIndicator, RefreshControl, Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonRow } from '../components/Skeleton';
-import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import SectionHeader from '../components/community/SectionHeader';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import PersonRow from '../components/community/PersonRow';
+import Band from '../components/community/Band';
 import Button from '../components/Button';
 import MenuSheet from '../components/community/MenuSheet';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import {
   listGroupMembers, approveGroupRequest, removeGroupMember, promoteGroupMember,
 } from '../lib/community';
@@ -43,51 +48,42 @@ const REFUSALS = {
   not_allowed: 'You cannot do that here.',
 };
 
-function MemberRow({ t, row, myRole, isFirst, isLast, onOpenMenu, onApprove, busy }) {
+/** One member: the shared roster row (D221 V3) with the role as its second
+ * line and the admin's one action at the trailing edge. */
+function MemberRow({ t, row, myRole, onOpenMenu, onApprove, busy }) {
   const card = row.card;
   const name = card.display_name || card.handle || 'Athlete';
   const isRequest = row.state === 'requested';
+  const caption = isRequest ? 'Requested to join' : (ROLE_LABEL[row.role] ?? 'Member');
+  let trailing = null;
+  if (isRequest) {
+    trailing = (
+      <Button
+        variant="primary"
+        size="sm"
+        fullWidth={false}
+        title="Approve"
+        loading={busy}
+        onPress={() => onApprove(card.user_id)}
+        accessibilityLabel={`Approve ${name}`}
+      />
+    );
+  } else if (myRole === 'admin') {
+    trailing = (
+      <Pressable
+        onPress={() => onOpenMenu(row)}
+        style={styles.action}
+        accessibilityRole="button"
+        accessibilityLabel={`More actions for ${name}`}
+      >
+        <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textPrimary} />
+      </Pressable>
+    );
+  }
   return (
-    <View
-      style={[
-        styles.row,
-        { backgroundColor: t.colors.surface },
-        isFirst && styles.rowFirst,
-        isLast && styles.rowLast,
-        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
-      ]}
-    >
-      <ProfileAvatarMark presetKey={card.avatar_preset} displayName={name} size={32} />
-      <View style={styles.nameCol}>
-        <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-          {name}
-        </Text>
-        <Text style={[styles.caption, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-          {isRequest ? 'Requested to join' : (ROLE_LABEL[row.role] ?? 'Member')}
-        </Text>
-      </View>
-      {isRequest ? (
-        <Button
-          variant="primary"
-          size="sm"
-          fullWidth={false}
-          title="Approve"
-          loading={busy}
-          onPress={() => onApprove(card.user_id)}
-          accessibilityLabel={`Approve ${name}`}
-        />
-      ) : myRole === 'admin' ? (
-        <Button
-          variant="tertiary"
-          size="sm"
-          fullWidth={false}
-          icon="ellipsis-horizontal"
-          title=""
-          onPress={() => onOpenMenu(row)}
-          accessibilityLabel={`More actions for ${name}`}
-        />
-      ) : null}
-    </View>
+    <Band>
+      <PersonRow inBand person={{ ...card, caption }} trailing={trailing} />
+    </Band>
   );
 }
 
@@ -190,12 +186,12 @@ export default function CommunityGroupMembersScreen({ route }) {
   ] : [];
 
   const empty = loading ? (
-    <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
+    <Band style={styles.skeleton}>
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+    </Band>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -208,7 +204,7 @@ export default function CommunityGroupMembersScreen({ route }) {
       actionAccessibilityLabel="Try loading members again"
     />
   ) : (
-    <EmptyState icon="people-outline" title="No members yet" text="" />
+    <EmptyState icon="people-outline" title="No members yet" text="Members appear here once they join." />
   );
 
   return (
@@ -217,19 +213,17 @@ export default function CommunityGroupMembersScreen({ route }) {
       <FlashList
         data={rows}
         keyExtractor={(item) => item.card.user_id}
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <MemberRow
             t={t}
             row={item}
             myRole={myRole}
-            isFirst={index === 0}
-            isLast={index === rows.length - 1}
             onOpenMenu={setMenuRow}
             onApprove={approve}
             busy={busyId === item.card.user_id}
           />
         )}
-        ListHeaderComponent={<SectionLabel tone="muted">Members</SectionLabel>}
+        ListHeaderComponent={rows.length ? <Band><SectionHeader title="Members" /></Band> : null}
         ListEmptyComponent={empty}
         ListFooterComponent={paging ? (
           <ActivityIndicator color={t.colors.primary} style={styles.footer} />
@@ -261,17 +255,12 @@ export default function CommunityGroupMembersScreen({ route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  list: { paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.sm },
+  skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  action: {
+    width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center',
+    marginRight: -spacing.sm,
   },
-  rowFirst: { marginTop: spacing.sm },
-  rowLast: {},
-  nameCol: { flex: 1, gap: spacing.xxs },
-  name: { ...type.bodyStrong, color: colors.textPrimary },
-  caption: { ...type.caption, color: colors.textMuted },
 });

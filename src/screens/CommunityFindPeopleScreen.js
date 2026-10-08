@@ -24,15 +24,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList.
 import { FlashList } from '@shopify/flash-list';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
-import PressableCard from '../components/PressableCard';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
+import EntryRow from '../components/community/EntryRow';
+import Band, { BandGap } from '../components/community/Band';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize } from '../styles/theme';
+import { colors, spacing } from '../styles/theme';
 import {
   doorsFor, doorLine, doorZeroState, findPeople, hasProfile, COMMUNITY_DISCIPLINE_LABELS,
 } from '../lib/community';
@@ -96,50 +96,26 @@ function doorTitle(door) {
 }
 
 /**
- * One door, as the house flat row (founder defect 2026-09-14, lead ruling
- * CR-17; `20-BLUEPRINT.md` section 9 rules 2 and 3). It used to be a
- * `Card` with its glyph in a 36 dp `circle()` chip, so six doors read as
- * six boxes on the one screen whose whole job is to hand you on to flat
- * lists of people. The glyph keeps its meaning at `iconSize.md` in
- * `textMuted`; the circle behind it was decoration, and decoration is
- * what reads as generic. No gutter of its own: the list already pays
- * `spacing.lg`.
+ * One door, as a large entry row in a band (D221 law V3): 88 dp, a 44 dp
+ * icon tile in `surface2`, the title at `type.title`, the line at
+ * `type.bodySm`, a chevron and a hairline across the band. The line is not
+ * truncated: a door that cannot work yet answers with a whole sentence
+ * ("Add your gym to see who trains there") and hiding a requirement hides
+ * the one thing that opens the door.
  */
 function DoorRow({ door, count, onPress }) {
-  const t = useTheme();
   const line = lineFor(door, count);
   const title = doorTitle(door);
 
   return (
-    <PressableCard
+    <EntryRow
+      big
+      icon={GLYPH[door.mode] ?? 'people-outline'}
+      title={title}
+      subtitle={line}
       onPress={onPress}
       accessibilityLabel={`${title}. ${line}`}
-    >
-      <View style={styles.door}>
-        <Ionicons
-          name={GLYPH[door.mode] ?? 'people-outline'}
-          size={iconSize.md}
-          color={t.colors.textMuted}
-        />
-        <View style={styles.doorBody}>
-          <Text
-            style={[styles.doorLabel, { color: t.colors.textPrimary }]}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-          {/* No `numberOfLines`: a door that cannot work yet answers with a
-              whole sentence ("Add your gym to see who trains there"), and
-              truncating a requirement hides the one thing that opens the
-              door. The row grows instead. */}
-          <Text style={[styles.doorLine, { color: t.colors.textSecondary }]}>
-            {line}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-      </View>
-      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
-    </PressableCard>
+    />
   );
 }
 
@@ -201,7 +177,8 @@ export default function CommunityFindPeopleScreen({ navigation }) {
   }
 
   const header = (
-    <View style={styles.header}>
+    <View>
+      <Band style={styles.header}>
       <SearchBar
         value={query}
         onChangeText={setQuery}
@@ -212,6 +189,8 @@ export default function CommunityFindPeopleScreen({ navigation }) {
           if (q) navigation.navigate('CommunitySearch', { q });
         }}
       />
+      </Band>
+      <BandGap />
     </View>
   );
 
@@ -222,9 +201,9 @@ export default function CommunityFindPeopleScreen({ navigation }) {
   // all. Six rows, the true row shape (`docs/rules/styling.md`,
   // "Loading states").
   const empty = meLoading ? (
-    <View style={styles.skeletonStack}>
-      {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)}
-    </View>
+    <Band style={styles.skeletonStack}>
+      {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonPersonRow key={i} />)}
+    </Band>
   ) : (
     <EmptyState
       icon="people-outline"
@@ -243,16 +222,18 @@ export default function CommunityFindPeopleScreen({ navigation }) {
         data={joined ? doors : []}
         keyExtractor={(item) => item.mode}
         renderItem={({ item }) => (
-          <DoorRow
-            door={item}
-            count={counts[item.mode] ?? null}
-            onPress={() => openDoor(item)}
-          />
+          <Band>
+            <DoorRow
+              door={item}
+              count={counts[item.mode] ?? null}
+              onPress={() => openDoor(item)}
+            />
+          </Band>
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={joined ? (
-          <Text style={[styles.explain, { color: t.colors.textMuted }]}>
+          <Text style={[styles.explain, t.type.caption, { color: t.colors.textMuted }]}>
             {FOLLOW_CONNECT_EXPLAINER}
           </Text>
         ) : null}
@@ -277,15 +258,8 @@ export default function CommunityFindPeopleScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  header: { gap: spacing.md, marginBottom: spacing.md },
-  skeletonStack: { gap: spacing.sm },
-  door: {
-    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
-  },
-  doorBody: { flex: 1, gap: spacing.xxs },
-  doorLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  doorLine: { ...type.bodySm, color: colors.textSecondary },
-  explain: { ...type.caption, color: colors.textMuted, marginTop: spacing.lg },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
+  list: { paddingBottom: spacing.xxl },
+  header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  skeletonStack: { paddingHorizontal: spacing.lg },
+  explain: { marginTop: spacing.lg, paddingHorizontal: spacing.lg },
 });

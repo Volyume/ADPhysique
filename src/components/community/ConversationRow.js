@@ -27,6 +27,7 @@
  *   conversation  {id, other, unread, preview, ref_kind, last_message_at,
  *                  created_at}
  *   onPress       opens the conversation
+ *   inBand        D221 V1: the row carries the band's gutter itself
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -54,7 +55,7 @@ export function conversationLine(conversation) {
   return 'No messages yet';
 }
 
-export default function ConversationRow({ conversation, onPress }) {
+export default function ConversationRow({ conversation, onPress, inBand = false }) {
   const t = useTheme();
   if (!conversation) return null;
   const other = conversation.other?.card ?? conversation.other ?? null;
@@ -72,7 +73,7 @@ export default function ConversationRow({ conversation, onPress }) {
         `Conversation with ${name}`, handle, line, day, unread ? 'Unread' : null,
       ].filter(Boolean).join('. ')}
     >
-      <View style={styles.row}>
+      <View style={[styles.row, inBand && styles.inBand]}>
         <ProfileAvatarMark
           presetKey={other?.avatar_preset}
           displayName={name}
@@ -107,6 +108,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
+  // D221 ruling 7 / law V1: inside a band the row carries the gutter itself.
+  inBand: { paddingHorizontal: spacing.lg },
   body: { flex: 1, gap: spacing.xxs },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   sub: { ...type.bodySm, color: colors.textSecondary },
