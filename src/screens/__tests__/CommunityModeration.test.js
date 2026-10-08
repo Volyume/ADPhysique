@@ -397,3 +397,32 @@ describe('the guard', () => {
     act(() => { tree.unmount(); });
   });
 });
+
+function headerTitles(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+    .map((n) => n.props.children);
+}
+
+describe('D221 lane 2B: bands, blocks and the true-shape skeleton', () => {
+  test('the open queue sits under a section header, and a report is a block in a band, not a card', async () => {
+    const tree = await mount();
+    const list = tree.root.findAll((n) => n.type === 'FlatList')[0];
+    let header = null;
+    act(() => { header = create(list.props.ListHeaderComponent); });
+    expect(texts(header)).toContain('Open reports');
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityModerationScreen.js'), 'utf8');
+    expect(src).not.toMatch(/<Card\b|SkeletonCard/);
+    expect(src).toMatch(/SkeletonReportRow/);
+    act(() => { header.unmount(); tree.unmount(); });
+  });
+
+  test('the Gyms tab has its two section headers and the note is a well', async () => {
+    const tree = await mount();
+    await openGyms(tree);
+    expect(headerTitles(tree)).toEqual(expect.arrayContaining(['Gym submissions', 'Gym reports']));
+    act(() => { tree.unmount(); });
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../CommunityModerationScreen.js'), 'utf8');
+    expect(src).toMatch(/<ComposerInput\s+well/);
+  });
+});

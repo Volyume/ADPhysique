@@ -42,21 +42,23 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import GymPicker from '../components/community/GymPicker';
 import GymDetailSheet from '../components/community/GymDetailSheet';
 import PlacePicker from '../components/community/PlacePicker';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
+import EntryRow from '../components/community/EntryRow';
+import SkeletonFormBand from '../components/community/SkeletonFormBand';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize, circle } from '../styles/theme';
+import { spacing, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
@@ -93,7 +95,7 @@ const REFUSALS = {
   not_allowed: NOT_ALLOWED_HINT,
 };
 
-export default function CommunityEditProfileScreen({ navigation }) {
+export default function CommunityEditProfileScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
   const { me, loading: meLoading, refresh } = useCommunityMe();
@@ -129,7 +131,9 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [primaryGym, setPrimaryGym] = useState(null);
   const [otherGyms, setOtherGyms] = useState([]);
   const [legacyGymLabel, setLegacyGymLabel] = useState(null);
-  const [editingPrimaryGym, setEditingPrimaryGym] = useState(false);
+  // Stage 1 review: a deep link from "Set gym" (the Hub) opens the gym
+  // picker on arrival instead of leaving the person to find it.
+  const [editingPrimaryGym, setEditingPrimaryGym] = useState(!!route?.params?.openGymPicker);
   const [addingOtherGym, setAddingOtherGym] = useState(false);
   // Community product audit 2026-09-07 (gym finder brief): every tapped
   // gym row opens GymDetailSheet before it is ever selected (same pattern
@@ -351,267 +355,288 @@ export default function CommunityEditProfileScreen({ navigation }) {
         {meLoading ? (
           // First paint: nothing below can render honestly until `me`
           // resolves (the form otherwise flashes its empty defaults,
-          // then pops to the real values) -- the real shape is a field
-          // stack, so that is what previews it
-          // (`docs/rules/styling.md`, "Loading states").
-          <View style={styles.skeletonStack}>
-            <SkeletonRow />
-            {[0, 1, 2, 3, 4].map((i) => <SkeletonCard key={i} height={56} />)}
-          </View>
+          // then pops to the real values) -- the real shape is a stack of
+          // bands of wells, so that is what previews it (D221 V10).
+          <SkeletonFormBand bands={4} wells={2} />
         ) : (
           <>
-        <View style={styles.field}>
-          <SectionLabel>Avatar</SectionLabel>
-          <View style={styles.presets}>
-            {AVATAR_PRESETS.map((p) => (
-              <Pressable
-                key={p.key}
-                onPress={() => setPreset(p.key)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: preset === p.key }}
-                accessibilityLabel={p.label}
-              >
-                <ProfileAvatarMark
-                  presetKey={p.key}
-                  displayName={displayName || 'Athlete'}
-                  size={40}
-                  selected={preset === p.key}
+            <Band>
+              <SectionHeader title="Avatar" />
+              <BandBody>
+                <View style={styles.presets}>
+                  {AVATAR_PRESETS.map((p) => (
+                    <Pressable
+                      key={p.key}
+                      onPress={() => setPreset(p.key)}
+                      style={styles.preset}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: preset === p.key }}
+                      accessibilityLabel={p.label}
+                    >
+                      <ProfileAvatarMark
+                        presetKey={p.key}
+                        displayName={displayName || 'Athlete'}
+                        size={AVATAR_PICK}
+                        selected={preset === p.key}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <SectionHeader title="About you" />
+              <BandBody>
+                <TextField
+                  label="Username"
+                  value={handle}
+                  onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  size="sm"
+                  well
+                  accessibilityLabel="Username"
                 />
-              </Pressable>
-            ))}
-          </View>
-        </View>
+                <Text style={[t.type.caption, { color: handleTone }]}>{handleLine}</Text>
+                <TextField
+                  label="Name"
+                  value={displayName}
+                  onChangeText={(v) => setDisplayName(v.slice(0, DISPLAY_NAME_MAX))}
+                  size="sm"
+                  well
+                  accessibilityLabel="Display name"
+                />
+                <TextField
+                  label="Bio"
+                  value={bio}
+                  onChangeText={(v) => setBio(v.slice(0, BIO_MAX))}
+                  multiline
+                  size="sm"
+                  well
+                  accessibilityLabel="Bio"
+                />
+              </BandBody>
+            </Band>
+            <BandGap />
 
-        <View style={styles.field}>
-          <TextField
-            label="Username"
-            value={handle}
-            onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
-            autoCapitalize="none"
-            autoCorrect={false}
-            size="sm"
-            accessibilityLabel="Username"
-          />
-          <Text style={[styles.hint, { ...t.type.caption, color: handleTone }]}>{handleLine}</Text>
-        </View>
+            <Band>
+              <SectionHeader title="Goal" />
+              <BandBody>
+                <View style={styles.chips}>
+                  {Object.entries(COMMUNITY_GOALS).map(([key, label]) => (
+                    <Chip
+                      key={key}
+                      label={label}
+                      selected={goal === key}
+                      accessibilityRole="radio"
+                      onPress={() => setGoal(goal === key ? null : key)}
+                    />
+                  ))}
+                </View>
+              </BandBody>
+            </Band>
+            <BandGap />
 
-        <TextField
-          label="Name"
-          value={displayName}
-          onChangeText={(v) => setDisplayName(v.slice(0, DISPLAY_NAME_MAX))}
-          size="sm"
-          accessibilityLabel="Display name"
-        />
+            <Band>
+              <SectionHeader title="Where you train" />
+              <BandBody>
+                <View style={styles.chips}>
+                  {Object.entries(COMMUNITY_SETTINGS).map(([key, label]) => (
+                    <Chip
+                      key={key}
+                      label={label}
+                      selected={setting === key}
+                      accessibilityRole="radio"
+                      onPress={() => setSetting(setting === key ? null : key)}
+                    />
+                  ))}
+                </View>
+              </BandBody>
+            </Band>
+            <BandGap />
 
-        <TextField
-          label="Bio"
-          value={bio}
-          onChangeText={(v) => setBio(v.slice(0, BIO_MAX))}
-          multiline
-          size="sm"
-          accessibilityLabel="Bio"
-        />
+            <Band>
+              <SectionHeader title="Place" />
+              <BandBody>
+                <PlacePicker
+                  label={placeLabel}
+                  gymTown={primaryGym?.town ?? null}
+                  onChange={(place) => {
+                    setPlaceLabel(place?.label ?? null);
+                    setPlaceQuery(place ? place.label : '');
+                    setPlaceDirty(true);
+                  }}
+                />
+              </BandBody>
+            </Band>
+            <BandGap />
 
-        <View style={styles.field}>
-          <SectionLabel>Goal</SectionLabel>
-          <View style={styles.chips}>
-            {Object.entries(COMMUNITY_GOALS).map(([key, label]) => (
-              <Chip
-                key={key}
-                label={label}
-                selected={goal === key}
-                accessibilityRole="radio"
-                onPress={() => setGoal(goal === key ? null : key)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <SectionLabel>Where you train</SectionLabel>
-          <View style={styles.chips}>
-            {Object.entries(COMMUNITY_SETTINGS).map(([key, label]) => (
-              <Chip
-                key={key}
-                label={label}
-                selected={setting === key}
-                accessibilityRole="radio"
-                onPress={() => setSetting(setting === key ? null : key)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <SectionLabel>Place</SectionLabel>
-          <PlacePicker
-            label={placeLabel}
-            gymTown={primaryGym?.town ?? null}
-            onChange={(place) => {
-              setPlaceLabel(place?.label ?? null);
-              setPlaceQuery(place ? place.label : '');
-              setPlaceDirty(true);
-            }}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <SectionLabel>Trains at</SectionLabel>
-          {editingPrimaryGym || (!primaryGym && !legacyGymLabel) ? (
-            <GymPicker
-              navigation={navigation}
-              onSelect={(venue) => requestGymConfirm(venue, (v) => {
-                setPrimaryGym(v); setLegacyGymLabel(null); setEditingPrimaryGym(false);
-              })}
-            />
-          ) : (
-            <Card padding="md" radius="md" style={styles.gymRow}>
-              <View style={[styles.gymGlyph, { backgroundColor: t.colors.surface2 }]}>
-                <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-              </View>
-              <View style={styles.gymBody}>
-                <Text style={[styles.linkLabel, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
-                  {primaryGym ? venueLine(primaryGym).primary : legacyGymLabel}
+            <Band>
+              <SectionHeader title="Trains at" />
+              {editingPrimaryGym || (!primaryGym && !legacyGymLabel) ? (
+                <BandBody>
+                  <GymPicker
+                    navigation={navigation}
+                    onSelect={(venue) => requestGymConfirm(venue, (v) => {
+                      setPrimaryGym(v); setLegacyGymLabel(null); setEditingPrimaryGym(false);
+                    })}
+                  />
+                </BandBody>
+              ) : (
+                <EntryRow
+                  icon="business-outline"
+                  title={primaryGym ? venueLine(primaryGym).primary : legacyGymLabel}
+                  subtitle={!primaryGym && legacyGymLabel ? 'Not yet linked to the directory.' : undefined}
+                  accessibilityLabel={`Trains at ${primaryGym ? venueLine(primaryGym).primary : legacyGymLabel}`}
+                  trailing={(
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Change"
+                      onPress={() => setEditingPrimaryGym(true)}
+                      accessibilityLabel="Change gym"
+                    />
+                  )}
+                />
+              )}
+              <BandBody style={styles.noteBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  Only the gym you choose. Never your location.
                 </Text>
-                {!primaryGym && legacyGymLabel ? (
-                  <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-                    Not yet linked to the directory.
-                  </Text>
-                ) : null}
-              </View>
-              <Button
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                title="Change"
-                onPress={() => setEditingPrimaryGym(true)}
-                accessibilityLabel="Change gym"
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <SectionHeader title="Other gyms" />
+              <BandBody style={styles.noteBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  {`Up to ${MAX_OTHER_GYMS} more gyms you train at.`}
+                </Text>
+              </BandBody>
+              {otherGyms.map((venue) => (
+                <EntryRow
+                  key={venue.id}
+                  icon="business-outline"
+                  title={venueLine(venue).primary}
+                  trailing={(
+                    <Pressable
+                      onPress={() => removeOtherGym(venue.id)}
+                      style={styles.removeGym}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${venueLine(venue).primary}`}
+                    >
+                      <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
+                    </Pressable>
+                  )}
+                />
+              ))}
+              {otherGyms.length < MAX_OTHER_GYMS ? (
+                <BandBody style={styles.noteBody}>
+                  {addingOtherGym ? (
+                    <GymPicker
+                      navigation={navigation}
+                      onSelect={(venue) => requestGymConfirm(venue, (v) => {
+                        setOtherGyms((prev) => (prev.some((g) => g.id === v.id) ? prev : [...prev, v]));
+                        setAddingOtherGym(false);
+                      })}
+                    />
+                  ) : (
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Add another gym"
+                      onPress={() => setAddingOtherGym(true)}
+                      accessibilityLabel="Add another gym"
+                    />
+                  )}
+                </BandBody>
+              ) : null}
+            </Band>
+            <BandGap />
+
+            <Band>
+              <SectionHeader title="What you train for" />
+              <BandBody>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  Optional. Pick what fits, and people who train like you can find you.
+                </Text>
+                <View style={styles.chips} accessibilityLabel="What you train for">
+                  {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
+                    <Chip
+                      key={key}
+                      label={COMMUNITY_DISCIPLINE_LABELS[key]}
+                      selected={disciplineKeys.includes(key)}
+                      accessibilityRole="checkbox"
+                      onPress={() => toggleDiscipline(key)}
+                    />
+                  ))}
+                </View>
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <EntryRow
+                icon="body-outline"
+                title="Training profile"
+                subtitle="The bands worked out from your training, and what you share of them."
+                accessibilityLabel="Training profile"
+                onPress={() => navigation.navigate('CommunityTrainingProfile')}
               />
-            </Card>
-          )}
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Only the gym you choose. Never your location.
-          </Text>
-        </View>
+            </Band>
+            <BandGap />
 
-        <View style={styles.field}>
-          <SectionLabel>Other gyms</SectionLabel>
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            {`Up to ${MAX_OTHER_GYMS} more gyms you train at.`}
-          </Text>
-          {otherGyms.map((venue) => (
-            <Card key={venue.id} padding="md" radius="md" style={styles.gymRow}>
-              <View style={[styles.gymGlyph, { backgroundColor: t.colors.surface2 }]}>
-                <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-              </View>
-              <Text style={[styles.linkLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]} numberOfLines={1}>
-                {venueLine(venue).primary}
-              </Text>
-              <Pressable
-                onPress={() => removeOtherGym(venue.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${venueLine(venue).primary}`}
-              >
-                <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
-              </Pressable>
-            </Card>
-          ))}
-          {otherGyms.length < MAX_OTHER_GYMS ? (
-            addingOtherGym ? (
-              <GymPicker
-                navigation={navigation}
-                onSelect={(venue) => requestGymConfirm(venue, (v) => {
-                  setOtherGyms((prev) => (prev.some((g) => g.id === v.id) ? prev : [...prev, v]));
-                  setAddingOtherGym(false);
-                })}
-              />
-            ) : (
-              <Button
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                title="Add another gym"
-                onPress={() => setAddingOtherGym(true)}
-                accessibilityLabel="Add another gym"
-              />
-            )
-          ) : null}
-        </View>
+            <Band>
+              <SectionHeader title="Who can follow you" />
+              <BandBody>
+                <View style={styles.chips} accessibilityLabel="Who can follow you">
+                  <Chip
+                    label="Anyone"
+                    selected={visibility === 'public'}
+                    onPress={() => setVisibility('public')}
+                    accessibilityRole="radio"
+                  />
+                  <Chip
+                    label="People I approve"
+                    selected={visibility === 'followers'}
+                    onPress={() => setVisibility('followers')}
+                    accessibilityRole="radio"
+                  />
+                </View>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  {visibility === 'public'
+                    ? 'Anyone signed in can follow you and see what you post.'
+                    : 'You approve every follower before they see what you post.'}
+                </Text>
+              </BandBody>
+            </Band>
+            <BandGap />
 
-        <View style={styles.field}>
-          <SectionLabel>What you train for</SectionLabel>
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Optional. Pick what fits, and people who train like you can find you.
-          </Text>
-          <View style={styles.chips} accessibilityLabel="What you train for">
-            {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
-              <Chip
-                key={key}
-                label={COMMUNITY_DISCIPLINE_LABELS[key]}
-                selected={disciplineKeys.includes(key)}
-                accessibilityRole="checkbox"
-                onPress={() => toggleDiscipline(key)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <Card
-          onPress={() => navigation.navigate('CommunityTrainingProfile')}
-          style={styles.linkRow}
-          accessibilityLabel="Training profile"
-        >
-          <View style={styles.linkBody}>
-            <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-              Training profile
-            </Text>
-            <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              The bands worked out from your training, and what you share of them.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </Card>
-
-        <View style={styles.field}>
-          <SectionLabel>Who can follow you</SectionLabel>
-          <View style={styles.chips} accessibilityLabel="Who can follow you">
-            <Chip
-              label="Anyone"
-              selected={visibility === 'public'}
-              onPress={() => setVisibility('public')}
-              accessibilityRole="radio"
-            />
-            <Chip
-              label="People I approve"
-              selected={visibility === 'followers'}
-              onPress={() => setVisibility('followers')}
-              accessibilityRole="radio"
-            />
-          </View>
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            {visibility === 'public'
-              ? 'Anyone signed in can follow you and see what you post.'
-              : 'You approve every follower before they see what you post.'}
-          </Text>
-        </View>
-
-        <Button
-          variant="primary"
-          title="Save"
-          disabled={handleBlocksSave}
-          loading={busy}
-          onPress={save}
-          accessibilityLabel="Save profile"
-        />
-
-        <Button
-          variant="destructive"
-          size="sm"
-          fullWidth={false}
-          title="Leave Community"
-          onPress={confirmLeave}
-          accessibilityLabel="Leave Community"
-        />
+            <Band>
+              <BandBody style={styles.actionsBody}>
+                <Button
+                  variant="primary"
+                  title="Save"
+                  disabled={handleBlocksSave}
+                  loading={busy}
+                  onPress={save}
+                  accessibilityLabel="Save profile"
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  fullWidth={false}
+                  title="Leave Community"
+                  onPress={confirmLeave}
+                  accessibilityLabel="Leave Community"
+                />
+              </BandBody>
+            </Band>
           </>
         )}
       </ScrollView>
@@ -626,24 +651,17 @@ export default function CommunityEditProfileScreen({ navigation }) {
   );
 }
 
+// D221 V5: the avatar picker sits at the profile hero size, with a 48 dp
+// target around each mark.
+const AVATAR_PICK = 56;
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  skeletonStack: { gap: spacing.md },
-  field: { gap: spacing.sm },
-  hint: { ...type.caption, color: colors.textMuted },
-  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  gymGlyph: {
-    width: 36,
-    height: 36,
-    borderRadius: circle(36),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gymBody: { flex: 1, gap: spacing.xxs },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
-  linkBody: { flex: 1, gap: spacing.xxs },
-  linkLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  preset: { minHeight: touchTarget.minimum, minWidth: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
+  noteBody: { paddingBottom: spacing.md, paddingTop: spacing.xs },
+  actionsBody: { paddingTop: spacing.md },
+  removeGym: { minHeight: touchTarget.minimum, minWidth: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
 });

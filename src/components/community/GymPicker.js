@@ -50,7 +50,6 @@ import SearchBar from '../SearchBar';
 import Chip from '../Chip';
 import Button from '../Button';
 import EmptyState from '../EmptyState';
-import SectionLabel from '../SectionLabel';
 import GymRow from './GymRow';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type } from '../../styles/theme';
@@ -60,6 +59,8 @@ import {
 } from '../../lib/gyms';
 import * as deviceLocation from '../../lib/deviceLocation';
 
+// D221 V9: the search field is a well, 44 dp tall.
+const WELL_HEIGHT = 44;
 const DEBOUNCE_MS = 250;
 const MIN_QUERY = 2;
 const NEAR_LIMIT = 40;
@@ -280,10 +281,10 @@ export default function GymPicker({
     <View style={styles.wrap}>
       {header ? (
         <View style={styles.header}>
-          {/* V19: section titles inside Community content stay
-              SectionLabel, never h1/h2/h3 - "Where do you train?" reads
-              as a field-group title, not a hero. */}
-          <SectionLabel>Where do you train?</SectionLabel>
+          {/* V2/V6: a field-group title, `bodyStrong`, never h1/h2/h3. */}
+          <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]} accessibilityRole="header">
+            Where do you train?
+          </Text>
           <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             Choose your main gym so you can find people who train there and discover relevant local
             connections.
@@ -320,6 +321,7 @@ export default function GymPicker({
         placeholder={placeholder}
         accessibilityLabel={accessibilityLabel}
         loading={loading}
+        style={{ minHeight: WELL_HEIGHT, backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle }}
       />
       {postcodeHit && postcodeHit.kind !== 'none' ? (
         <Chip

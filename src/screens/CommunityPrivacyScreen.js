@@ -19,15 +19,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Switch,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonRow } from '../components/Skeleton';
-import { SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
+import Band, { BandGap, BandBody, BandLine } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
+import EntryRow from '../components/community/EntryRow';
+import SwitchRow from '../components/community/SwitchRow';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import EmptyState from '../components/EmptyState';
 import ProfileCard from '../components/community/ProfileCard';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
@@ -35,7 +37,7 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
   hasProfile, setConnectFrom, CONNECT_FROM_VALUES, setShowGym, setShowPlace,
@@ -48,7 +50,6 @@ const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
 
 export default function CommunityPrivacyScreen({ navigation }) {
   const t = useTheme();
-  const settings = useSettingsStyles();
   const toast = useToast();
   const { me, refresh } = useCommunityMe();
   const joined = hasProfile(me);
@@ -263,7 +264,8 @@ export default function CommunityPrivacyScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Community" />
       <ScrollView contentContainerStyle={styles.content}>
-        <PrivacyReceipt />
+        <PrivacyReceipt inBand />
+        <BandGap />
 
         {!joined ? (
           <EmptyState
@@ -276,119 +278,102 @@ export default function CommunityPrivacyScreen({ navigation }) {
           />
         ) : (
           <>
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Who can follow you</SectionLabel>
-              <View style={styles.chipRow} accessibilityLabel="Who can follow you">
-                <Chip
-                  label="Anyone"
-                  selected={visibility === 'public'}
-                  disabled={busy}
-                  onPress={() => changeVisibility('public')}
-                  accessibilityRole="radio"
-                />
-                <Chip
-                  label="People I approve"
-                  selected={visibility === 'followers'}
-                  disabled={busy}
-                  onPress={() => changeVisibility('followers')}
-                  accessibilityRole="radio"
-                />
-              </View>
-              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                {visibility === 'public'
-                  ? 'Anyone signed in can follow you and see what you post.'
-                  : 'You approve every follower before they see what you post.'}
-              </Text>
-            </View>
-
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Who can send you connection requests</SectionLabel>
-              <View style={styles.chipRow} accessibilityLabel="Who can send you connection requests">
-                {CONNECT_FROM_OPTIONS.map((opt) => (
+            <Band>
+              <SectionHeader title="Who can follow you" />
+              <BandBody>
+                <View style={styles.chipRow} accessibilityLabel="Who can follow you">
                   <Chip
-                    key={opt.value}
-                    label={opt.label}
-                    selected={connectFrom === opt.value}
-                    onPress={() => changeConnectFrom(opt.value)}
+                    label="Anyone"
+                    selected={visibility === 'public'}
+                    disabled={busy}
+                    onPress={() => changeVisibility('public')}
                     accessibilityRole="radio"
                   />
-                ))}
-              </View>
-              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                {{
-                  anyone: 'Anyone can send you a request to connect.',
-                  followers: 'Only people who already follow you can send you a request.',
-                  nobody: 'Nobody can send you a request to connect.',
-                }[connectFrom]}
-              </Text>
-            </View>
-
-            <View style={[settingsStyles.section, settings.section]}>
-              <SettingRow
-                icon="business-outline"
-                label="Show my gym"
-                sub="Others can see the gym you train at. You always see it yourself."
-                rightElement={(
-                  <Switch
-                    value={showGym}
-                    onValueChange={changeShowGym}
-                    accessibilityLabel="Show my gym"
-                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                    thumbColor={t.colors.primary}
-                    ios_backgroundColor={t.colors.surface2}
+                  <Chip
+                    label="People I approve"
+                    selected={visibility === 'followers'}
+                    disabled={busy}
+                    onPress={() => changeVisibility('followers')}
+                    accessibilityRole="radio"
                   />
-                )}
-              />
-              <SettingRow
-                icon="location-outline"
-                label="Show my place"
-                sub="Others can see your town or postcode district. You always see it yourself."
-                rightElement={(
-                  <Switch
-                    value={showPlace}
-                    onValueChange={changeShowPlace}
-                    accessibilityLabel="Show my place"
-                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                    thumbColor={t.colors.primary}
-                    ios_backgroundColor={t.colors.surface2}
-                  />
-                )}
-              />
-            </View>
+                </View>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  {visibility === 'public'
+                    ? 'Anyone signed in can follow you and see what you post.'
+                    : 'You approve every follower before they see what you post.'}
+                </Text>
+              </BandBody>
+            </Band>
+            <BandGap />
 
-            <View style={[settingsStyles.section, settings.section]}>
-              {share ? (
-                <SettingRow
-                  icon="share-social-outline"
-                  label="Share what I did"
-                  sub={sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)}
-                  rightElement={(
-                    <Switch
-                      value={!!share.share_sessions}
-                      onValueChange={toggleShareSessions}
-                      accessibilityLabel="Share what I did"
-                      trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                      thumbColor={t.colors.primary}
-                      ios_backgroundColor={t.colors.surface2}
+            <Band>
+              <SectionHeader title="Who can send you connection requests" />
+              <BandBody>
+                <View style={styles.chipRow} accessibilityLabel="Who can send you connection requests">
+                  {CONNECT_FROM_OPTIONS.map((opt) => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      selected={connectFrom === opt.value}
+                      onPress={() => changeConnectFrom(opt.value)}
+                      accessibilityRole="radio"
                     />
-                  )}
+                  ))}
+                </View>
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  {{
+                    anyone: 'Anyone can send you a request to connect.',
+                    followers: 'Only people who already follow you can send you a request.',
+                    nobody: 'Nobody can send you a request to connect.',
+                  }[connectFrom]}
+                </Text>
+              </BandBody>
+            </Band>
+            <BandGap />
+
+            <Band>
+              <SwitchRow
+                icon="business-outline"
+                title="Show my gym"
+                subtitle="Others can see the gym you train at. You always see it yourself."
+                value={showGym}
+                onValueChange={changeShowGym}
+              />
+              <SwitchRow
+                icon="location-outline"
+                title="Show my place"
+                subtitle="Others can see your town or postcode district. You always see it yourself."
+                value={showPlace}
+                onValueChange={changeShowPlace}
+              />
+            </Band>
+            <BandGap />
+
+            <Band>
+              {share ? (
+                <SwitchRow
+                  icon="share-social-outline"
+                  title="Share what I did"
+                  subtitle={sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)}
+                  value={!!share.share_sessions}
+                  onValueChange={toggleShareSessions}
                 />
               ) : null}
-              <SettingRow
+              <EntryRow
                 icon="body-outline"
-                label="Training profile"
-                sub="The bands worked out from your training, and what you share of them."
+                title="Training profile"
+                subtitle="The bands worked out from your training, and what you share of them."
+                accessibilityLabel="Training profile"
                 onPress={() => navigation.navigate('CommunityTrainingProfile')}
               />
-            </View>
+            </Band>
+            <BandGap />
 
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Blocked</SectionLabel>
-              {loading ? <SkeletonRow /> : null}
+            <Band>
+              <SectionHeader title="Blocked" />
+              {loading ? <SkeletonPersonRow /> : null}
               {!loading && !lists.blocked.length ? (
-                <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                  You have not blocked anyone.
-                </Text>
+                <BandLine text="You have not blocked anyone." />
               ) : null}
               {lists.blocked.map((row) => {
                 const card = row.card ?? row;
@@ -398,6 +383,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
                     card={card}
                     showFollow={false}
                     compact
+                    inBand
                     trailing={(
                       <Button
                         variant="secondary"
@@ -411,15 +397,14 @@ export default function CommunityPrivacyScreen({ navigation }) {
                   />
                 );
               })}
-            </View>
+            </Band>
+            <BandGap />
 
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Muted</SectionLabel>
-              {loading ? <SkeletonRow /> : null}
+            <Band>
+              <SectionHeader title="Muted" />
+              {loading ? <SkeletonPersonRow /> : null}
               {!loading && !lists.muted.length ? (
-                <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                  You have not muted anyone.
-                </Text>
+                <BandLine text="You have not muted anyone." />
               ) : null}
               {lists.muted.map((row) => {
                 const card = row.card ?? row;
@@ -429,6 +414,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
                     card={card}
                     showFollow={false}
                     compact
+                    inBand
                     trailing={(
                       <Button
                         variant="secondary"
@@ -442,49 +428,50 @@ export default function CommunityPrivacyScreen({ navigation }) {
                   />
                 );
               })}
-            </View>
+            </Band>
+            <BandGap />
 
-            <View style={[settingsStyles.section, settings.section]}>
-              <SettingRow
+            <Band>
+              <EntryRow
                 icon="create-outline"
-                label="Edit profile"
+                title="Edit profile"
                 onPress={() => navigation.navigate('CommunityEditProfile')}
                 accessibilityLabel="Edit my Community profile"
               />
-              <SettingRow
+              <EntryRow
                 icon="people-outline"
-                label="Followers"
+                title="Followers"
                 onPress={() => navigation.navigate('CommunityFollowers')}
                 accessibilityLabel="See and manage your followers"
               />
-              <SettingRow
+              <EntryRow
                 icon="link-outline"
-                label="Connections"
+                title="Connections"
                 onPress={() => navigation.navigate('CommunityConnections')}
                 accessibilityLabel="See and manage your connections"
               />
               {me?.is_moderator ? (
-                <SettingRow
+                <EntryRow
                   icon="shield-outline"
-                  label="Moderation queue"
+                  title="Moderation queue"
                   onPress={() => navigation.navigate('CommunityModeration')}
                   accessibilityLabel="Open the moderation queue"
                 />
               ) : null}
-              <SettingRow
+              <EntryRow
                 icon="document-text-outline"
-                label="Community rules"
+                title="Community rules"
                 onPress={() => navigation.navigate('CommunityRules')}
                 accessibilityLabel="Read the Community rules"
               />
-              <SettingRow
+              <EntryRow
                 icon="exit-outline"
-                label="Leave Community"
+                title="Leave Community"
                 destructive
                 onPress={confirmLeave}
                 accessibilityLabel="Leave Community"
               />
-            </View>
+            </Band>
           </>
         )}
       </ScrollView>
@@ -493,9 +480,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  section: { gap: spacing.sm },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  hint: { ...type.caption, color: colors.textMuted },
 });

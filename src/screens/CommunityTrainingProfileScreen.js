@@ -25,19 +25,20 @@
  */
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
+import SwitchRow from '../components/community/SwitchRow';
+import SkeletonFormBand from '../components/community/SkeletonFormBand';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
@@ -312,40 +313,37 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     };
   }
 
-  const switchColours = {
-    trackColor: { false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) },
-    thumbColor: t.colors.primary,
-    ios_backgroundColor: t.colors.surface2,
-  };
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Training profile" />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.intro, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          These are worked out on your phone from the last twelve weeks of finished sessions. Only the ones you switch on are shared, and never anything more detailed than a band.
-        </Text>
+        <Band>
+          <BandBody style={styles.introBody}>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              These are worked out on your phone from the last twelve weeks of finished sessions. Only the ones you switch on are shared, and never anything more detailed than a band.
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
 
         {loading ? (
-          // First paint: the real shape below is a preview card and a
-          // stack of band rows, so that is what previews it
-          // (`docs/rules/styling.md`, "Loading states") rather than a
-          // bare spinner sitting above content that has not loaded yet.
-          <View style={styles.skeletonStack}>
-            <SkeletonCard height={64} />
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => <SkeletonRow key={i} />)}
-          </View>
+          // First paint: the real shape below is a preview band and a band
+          // of switch rows, so that is what previews it (D221 V10).
+          <SkeletonFormBand bands={2} wells={3} />
         ) : (
           <>
-            <Card style={styles.preview}>
-              <SectionLabel tone="muted">What other people see</SectionLabel>
-              <Text style={[styles.previewLine, { ...t.type.body, color: t.colors.textPrimary }]}>
-                {preview || NOTHING_SHARED_LINE}
-              </Text>
-            </Card>
+            <Band>
+              <SectionHeader title="What other people see" />
+              <BandBody>
+                <Text style={[t.type.body, { color: t.colors.textPrimary }]}>
+                  {preview || NOTHING_SHARED_LINE}
+                </Text>
+              </BandBody>
+            </Band>
+            <BandGap />
 
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Your bands</SectionLabel>
+            <Band>
+              <SectionHeader title="Your bands" />
               {/* SD-32: the age band never appears for a minor, exactly as
                   Join filters the same row (CommunityJoinScreen.js). */}
               {bandRows(bands, me)
@@ -354,24 +352,15 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                   const isShareSessions = row.key === 'share_sessions';
                   return (
                     <Fragment key={row.key}>
-                      <View style={styles.bandRow}>
-                        <View style={styles.bandBody}>
-                          <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                            {row.label}
-                          </Text>
-                          <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                            {isShareSessions
-                              ? sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)
-                              : (row.value || row.empty || NOT_ENOUGH_LINE)}
-                          </Text>
-                        </View>
-                        <Switch
-                          value={!!share[row.key]}
-                          onValueChange={(next) => (isShareSessions ? toggleShareSessions(next) : toggleBand(row.key, next))}
-                          accessibilityLabel={`Share ${row.label.toLowerCase()}`}
-                          {...switchColours}
-                        />
-                      </View>
+                      <SwitchRow
+                        title={row.label}
+                        subtitle={isShareSessions
+                          ? sessionsSharingSentence(!!share.share_sessions, share.sessions_audience)
+                          : (row.value || row.empty || NOT_ENOUGH_LINE)}
+                        value={!!share[row.key]}
+                        onValueChange={(next) => (isShareSessions ? toggleShareSessions(next) : toggleBand(row.key, next))}
+                        accessibilityLabel={`Share ${row.label.toLowerCase()}`}
+                      />
                       {/* Spec section 1: the audience Chip radio row under
                           "Share what I did", only while it is on. A minor
                           never gets more than followers (HARD BOUND), so
@@ -380,11 +369,13 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                           minor treatment elsewhere on this screen. */}
                       {isShareSessions && share.share_sessions ? (
                         isMinor ? (
-                          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                            Shared with people who follow you.
-                          </Text>
+                          <BandBody style={styles.noteBody}>
+                            <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                              Shared with people who follow you.
+                            </Text>
+                          </BandBody>
                         ) : (
-                          <>
+                          <BandBody style={styles.noteBody}>
                             <View style={styles.chips} accessibilityLabel="Who sees what you did">
                               {SESSIONS_AUDIENCE_VALUES.map((value) => (
                                 <Chip
@@ -401,26 +392,28 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                                 is a doomed, silent choice -- say so rather
                                 than letting it look like a working option. */}
                             {hasGroups ? null : (
-                              <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+                              <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
                                 You are not in any groups yet.
                               </Text>
                             )}
-                          </>
+                          </BandBody>
                         )
                       ) : null}
                     </Fragment>
                   );
                 })}
-              <Button
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                title="Recalculate"
-                loading={busy}
-                onPress={recalculate}
-                accessibilityLabel="Work out my training profile again"
-              />
-            </View>
+              <BandBody style={styles.noteBody}>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Recalculate"
+                  loading={busy}
+                  onPress={recalculate}
+                  accessibilityLabel="Work out my training profile again"
+                />
+              </BandBody>
+            </Band>
           </>
         )}
 
@@ -429,25 +422,25 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
             otherwise flash the "opens at 18" copy at an adult on first
             render. */}
         {meLoading ? null : isMinor ? (
-          <View style={styles.section}>
-            <SectionLabel tone="muted">Open to training together</SectionLabel>
-            <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              Training partner matching opens at 18.
-            </Text>
-          </View>
+          <>
+            <BandGap />
+            <Band>
+              <SectionHeader title="Open to training together" />
+              <BandBody>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  Training partner matching opens at 18.
+                </Text>
+              </BandBody>
+            </Band>
+          </>
         ) : (
-          <View style={styles.section}>
-            <SectionLabel tone="muted">Open to training together</SectionLabel>
-            <View style={styles.bandRow}>
-              <View style={styles.bandBody}>
-                <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                  Open to training together
-                </Text>
-                <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                  Your profile shows this, and you appear to people looking for someone to train with.
-                </Text>
-              </View>
-              <Switch
+          <>
+            <BandGap />
+            <Band>
+              <SectionHeader title="Training together" />
+              <SwitchRow
+                title="Open to training together"
+                subtitle="Your profile shows this, and you appear to people looking for someone to train with."
                 value={partnerOpen}
                 onValueChange={(next) => {
                   const prev = partnerOpen;
@@ -455,61 +448,56 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                   savePartner(partnerState({ open: next }), () => setPartnerOpen(prev));
                 }}
                 accessibilityLabel="Open to training together"
-                {...switchColours}
               />
-            </View>
 
-            {partnerOpen ? (
-              <>
-                <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                  Days that suit you
-                </Text>
-                <View style={styles.chips}>
-                  {Object.entries(TP_DAYS).map(([key, label]) => (
-                    <Chip
-                      key={key}
-                      label={label}
-                      selected={partnerDays.includes(key)}
-                      onPress={() => {
-                        const prev = partnerDays;
-                        const next = partnerDays.includes(key)
-                          ? partnerDays.filter((k) => k !== key)
-                          : [...partnerDays, key];
-                        setPartnerDays(next);
-                        savePartner(partnerState({ days: next }), () => setPartnerDays(prev));
-                      }}
-                    />
-                  ))}
-                </View>
-
-                <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                  Times that suit you
-                </Text>
-                <View style={styles.chips}>
-                  {Object.keys(TP_TIME_BANDS).map((key) => (
-                    <Chip
-                      key={key}
-                      label={PARTNER_TIME_LABELS[key]}
-                      selected={partnerBands.includes(key)}
-                      onPress={() => {
-                        const prev = partnerBands;
-                        const next = partnerBands.includes(key)
-                          ? partnerBands.filter((k) => k !== key)
-                          : [...partnerBands, key];
-                        setPartnerBands(next);
-                        savePartner(partnerState({ time_bands: next }), () => setPartnerBands(prev));
-                      }}
-                    />
-                  ))}
-                </View>
-
-                <View style={styles.bandRow}>
-                  <View style={styles.bandBody}>
-                    <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                      Same gym only
+              {partnerOpen ? (
+                <>
+                  <BandBody style={styles.noteBody}>
+                    <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                      Days that suit you
                     </Text>
-                  </View>
-                  <Switch
+                    <View style={styles.chips}>
+                      {Object.entries(TP_DAYS).map(([key, label]) => (
+                        <Chip
+                          key={key}
+                          label={label}
+                          selected={partnerDays.includes(key)}
+                          onPress={() => {
+                            const prev = partnerDays;
+                            const next = partnerDays.includes(key)
+                              ? partnerDays.filter((k) => k !== key)
+                              : [...partnerDays, key];
+                            setPartnerDays(next);
+                            savePartner(partnerState({ days: next }), () => setPartnerDays(prev));
+                          }}
+                        />
+                      ))}
+                    </View>
+
+                    <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                      Times that suit you
+                    </Text>
+                    <View style={styles.chips}>
+                      {Object.keys(TP_TIME_BANDS).map((key) => (
+                        <Chip
+                          key={key}
+                          label={PARTNER_TIME_LABELS[key]}
+                          selected={partnerBands.includes(key)}
+                          onPress={() => {
+                            const prev = partnerBands;
+                            const next = partnerBands.includes(key)
+                              ? partnerBands.filter((k) => k !== key)
+                              : [...partnerBands, key];
+                            setPartnerBands(next);
+                            savePartner(partnerState({ time_bands: next }), () => setPartnerBands(prev));
+                          }}
+                        />
+                      ))}
+                    </View>
+                  </BandBody>
+
+                  <SwitchRow
+                    title="Same gym only"
                     value={sameGymOnly}
                     onValueChange={(next) => {
                       const prev = sameGymOnly;
@@ -517,16 +505,17 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                       savePartner(partnerState({ same_gym_only: next }), () => setSameGymOnly(prev));
                     }}
                     accessibilityLabel="Same gym only"
-                    {...switchColours}
                   />
-                </View>
-              </>
-            ) : null}
+                </>
+              ) : null}
 
-            <Text style={[styles.safety, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              {PARTNER_SAFETY_LINE}
-            </Text>
-          </View>
+              <BandBody style={styles.noteBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                  {PARTNER_SAFETY_LINE}
+                </Text>
+              </BandBody>
+            </Band>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -534,18 +523,9 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  intro: { ...type.bodySm, color: colors.textSecondary },
-  skeletonStack: { gap: spacing.sm },
-  preview: { gap: spacing.xs },
-  previewLine: { ...type.body, color: colors.textPrimary },
-  section: { gap: spacing.md },
-  bandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  bandBody: { flex: 1, gap: spacing.xxs },
-  bandLabel: { ...type.body, color: colors.textPrimary },
-  bandValue: { ...type.bodySm, color: colors.textSecondary },
-  hint: { ...type.caption, color: colors.textMuted },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
+  introBody: { paddingTop: spacing.md },
+  noteBody: { paddingTop: spacing.sm, paddingBottom: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  safety: { ...type.bodySm, color: colors.textSecondary },
 });

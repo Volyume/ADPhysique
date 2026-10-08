@@ -68,16 +68,9 @@ describe('the law holds across Community', () => {
     expect(COMPONENTS.length).toBeGreaterThan(30);
   });
 
-  // Screens owned by lane 2B (do-not-touch in lane 2A): their square
-  // SkeletonRow is converted there, and this entry is then deleted.
-  const PENDING_2B = [
-    'CommunityEditProfileScreen.js', 'CommunityPrivacyScreen.js', 'CommunityTrainingProfileScreen.js',
-  ];
-
   test.each(ALL.map((f) => [rel(f), f]))('%s has no Eyebrow and no square SkeletonRow', (r, f) => {
     const src = read(f);
     expect({ r, eyebrow: /\bEyebrow\b/.test(src) }).toEqual({ r, eyebrow: false });
-    if (PENDING_2B.includes(path.basename(f))) return;
     expect({ r, square: /\bSkeletonRow\b/.test(src) }).toEqual({ r, square: false });
   });
 
@@ -136,6 +129,95 @@ describe('the converted screens follow V1, V2, V8, V10', () => {
     if (rows && name !== 'CommunityPostScreen.js' && name !== 'CommunityProfileScreen.js') expect({ name, inBand: /\binBand\b/.test(src) }).toEqual({ name, inBand: true });
     // The post and its comments sit in bands of their own (PostRow, CommentRow).
     if (name === 'CommunityPostScreen.js') expect(src).toMatch(/<Band>\s*<CommentRow/);
+  });
+});
+
+// Lane 2B: the form, staff and reading screens converted to bands, and the
+// section titles each must carry. `wells` marks the screens with a text field.
+const FORMS = {
+  'CommunityJoinScreen.js': { titles: ['About you', 'Avatar', 'Your training profile', 'Four rules'], wells: true },
+  'CommunityEditProfileScreen.js': { titles: ['Avatar', 'About you', 'Goal', 'Trains at', 'Who can follow you'], wells: true },
+  'CommunityTrainingProfileScreen.js': { titles: ['What other people see', 'Your bands'], wells: false },
+  'CommunityComposeScreen.js': { titles: ['Preview', 'Who can see it'], wells: true },
+  'CommunityGroupCreateScreen.js': { titles: ['The group', 'Who can join'], wells: true },
+  'CommunityPrivacyScreen.js': { titles: ['Who can follow you', 'Blocked', 'Muted'], wells: false },
+  'CommunityRulesScreen.js': { titles: [], wells: false },
+  'CommunityConversationScreen.js': { titles: [], wells: false },
+  'CommunityModerationScreen.js': { titles: ['Gym submissions', 'Gym reports'], wells: false },
+  'CommunityGymAddScreen.js': { titles: ['The gym', 'Optional'], wells: true },
+};
+
+describe('lane 2B: the form screens follow V1, V2, V8, V9, V10', () => {
+  const names = Object.keys(FORMS);
+
+  test.each(names)('%s has no SectionLabel, no Card, and builds on Band', (name) => {
+    const src = read(convertedPath(name));
+    expect({ name, label: /\bSectionLabel\b/.test(src) }).toEqual({ name, label: false });
+    expect({ name, card: /<Card\b/.test(src) }).toEqual({ name, card: false });
+    if (name !== 'CommunityConversationScreen.js') {
+      expect({ name, band: /from '\.\.\/components\/community\/Band'/.test(src) }).toEqual({ name, band: true });
+    }
+  });
+
+  test.each(names)('%s carries a SectionHeader for each section', (name) => {
+    const src = read(convertedPath(name));
+    for (const title of FORMS[name].titles) {
+      const hit = new RegExp(`<SectionHeader[^>]*title="${title}"`).test(src);
+      expect({ name, title, hit }).toEqual({ name, title, hit: true });
+    }
+  });
+
+  test.each(names)('%s has at most two header glyphs and no circle behind one', (name) => {
+    const src = read(convertedPath(name));
+    expect((src.match(/<HeaderGlyph\b/g) || []).length).toBeLessThanOrEqual(2);
+    expect({ name, circle: /headerBtn|styles\.headerAction/.test(src) }).toEqual({ name, circle: false });
+  });
+
+  test.each(names.filter((n) => FORMS[n].wells))('%s inputs are wells (V9)', (name) => {
+    const src = read(convertedPath(name));
+    const fields = src.match(/<(TextField|ComposerInput)\b[\s\S]*?\/>/g) || [];
+    expect(fields.length).toBeGreaterThan(0);
+    for (const field of fields) expect({ name, field: field.slice(0, 40), well: /\bwell\b/.test(field) }).toEqual({ name, field: field.slice(0, 40), well: true });
+  });
+
+  test('the well is the house input extended, not a hand-rolled one', () => {
+    const field = read(path.join(ROOT, 'src/components/TextField.js'));
+    expect(field).toMatch(/well = false/);
+    expect(field).toMatch(/t\.colors\.background/);
+    expect(field).toMatch(/borderColor: t\.colors\.borderSubtle/);
+    expect(field).toMatch(/WELL_HEIGHT = 44/);
+    expect(read(path.join(COMPONENTS_DIR, 'ComposerInput.js'))).toMatch(/well = false/);
+  });
+});
+
+describe('lane 2B: the components follow the law', () => {
+  test.each(COMPONENTS.map((f) => [rel(f), f]))('%s has no SectionLabel', (r, f) => {
+    expect({ r, label: /\bSectionLabel\b/.test(read(f)) }).toEqual({ r, label: false });
+  });
+
+  test('a Card survives in components only for the hero receipt and the shared-post card', () => {
+    const withCard = COMPONENTS.filter((f) => /<Card\b/.test(read(f))).map((f) => path.basename(f)).sort();
+    expect(withCard).toEqual(['PostCard.js', 'PrivacyReceipt.js']);
+  });
+
+  test('the retired files are gone', () => {
+    expect(fs.existsSync(path.join(COMPONENTS_DIR, 'ActivityItemRow.js'))).toBe(false);
+  });
+
+  test('the privacy receipt renders as a band of plain text on the Community screens', () => {
+    for (const name of ['CommunityJoinScreen.js', 'CommunityPrivacyScreen.js', 'CommunityComposeScreen.js']) {
+      expect(read(convertedPath(name))).toMatch(/<PrivacyReceipt inBand \/>/);
+    }
+  });
+
+  test('every sheet section title is a SectionHeader, and a menu row can be disabled', () => {
+    for (const f of ['ConnectSheet.js', 'SessionSheet.js', 'PeopleFiltersSheet.js', 'GroupInviteSheet.js']) {
+      expect(read(path.join(COMPONENTS_DIR, f))).toMatch(/<SectionHeader flush/);
+    }
+    const menu = read(path.join(COMPONENTS_DIR, 'MenuSheet.js'));
+    expect(menu).toMatch(/disabled=\{!!row\.disabled\}/);
+    expect(menu).toMatch(/<EntryRow/);
+    expect(menu).not.toMatch(/SettingRow/);
   });
 });
 

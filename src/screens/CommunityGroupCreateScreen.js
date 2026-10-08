@@ -24,11 +24,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
-import SectionLabel from '../components/SectionLabel';
+import Band, { BandGap, BandBody } from '../components/community/Band';
+import SectionHeader from '../components/community/SectionHeader';
 import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing, type } from '../styles/theme';
+import { spacing } from '../styles/theme';
 import {
   createGroup, updateGroup, GROUP_NAME_MAX, GROUP_BLURB_MAX, GROUP_ACCESS, GROUP_ACCESS_ORDER,
   GROUP_PURPOSE_LINE,
@@ -90,67 +91,92 @@ export default function CommunityGroupCreateScreen({ navigation, route }) {
             register with the Hub's own empty-groups line
             (CommunityHubScreen.js). */}
         {!editing ? (
-          <Text style={[styles.purpose, { ...t.type.bodySm, color: t.colors.textSecondary }]}>{GROUP_PURPOSE_LINE}</Text>
+          <>
+            <Band>
+              <BandBody style={styles.purposeBody}>
+                <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>{GROUP_PURPOSE_LINE}</Text>
+              </BandBody>
+            </Band>
+            <BandGap />
+          </>
         ) : null}
-        <TextField
-          label="Group name"
-          value={name}
-          onChangeText={(v) => setName(v.slice(0, GROUP_NAME_MAX))}
-          placeholder="e.g. Monday leg day crew"
-          accessibilityLabel="Group name"
-        />
-        <Text style={[styles.counter, { ...t.type.caption, color: t.colors.textMuted }]}>
-          {`${name.length}/${GROUP_NAME_MAX}`}
-        </Text>
 
-        <TextField
-          label="About this group (optional)"
-          value={blurb}
-          onChangeText={(v) => setBlurb(v.slice(0, GROUP_BLURB_MAX))}
-          placeholder="What is this group about?"
-          multiline
-          accessibilityLabel="About this group"
-        />
-        <Text style={[styles.counter, { ...t.type.caption, color: t.colors.textMuted }]}>
-          {`${blurb.length}/${GROUP_BLURB_MAX}`}
-        </Text>
-
-        <SectionLabel>Who can join</SectionLabel>
-        <View style={styles.chipRow} accessibilityLabel="Access">
-          {GROUP_ACCESS_ORDER.map((key) => (
-            <Chip
-              key={key}
-              label={GROUP_ACCESS[key]}
-              selected={access === key}
-              accessibilityRole="radio"
-              onPress={() => setAccess(key)}
+        <Band>
+          <SectionHeader title="The group" />
+          <BandBody>
+            <TextField
+              label="Group name"
+              value={name}
+              onChangeText={(v) => setName(v.slice(0, GROUP_NAME_MAX))}
+              placeholder="e.g. Monday leg day crew"
+              well
+              accessibilityLabel="Group name"
             />
-          ))}
-        </View>
-        <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          {access === 'open'
-            ? 'Anyone can join straight away.'
-            : 'People request to join and an admin approves them.'}
-        </Text>
+            <Text style={[t.type.caption, styles.counter, { color: t.colors.textMuted }]}>
+              {`${name.length}/${GROUP_NAME_MAX}`}
+            </Text>
 
-        <Button
-          variant="primary"
-          title={editing ? 'Save' : 'Create'}
-          disabled={!canSubmit}
-          loading={busy}
-          onPress={send}
-          accessibilityLabel={editing ? 'Save group' : 'Create group'}
-        />
+            <TextField
+              label="About this group (optional)"
+              value={blurb}
+              onChangeText={(v) => setBlurb(v.slice(0, GROUP_BLURB_MAX))}
+              placeholder="What is this group about?"
+              multiline
+              well
+              accessibilityLabel="About this group"
+            />
+            <Text style={[t.type.caption, styles.counter, { color: t.colors.textMuted }]}>
+              {`${blurb.length}/${GROUP_BLURB_MAX}`}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
+
+        <Band>
+          <SectionHeader title="Who can join" />
+          <BandBody>
+            <View style={styles.chipRow} accessibilityLabel="Access">
+              {GROUP_ACCESS_ORDER.map((key) => (
+                <Chip
+                  key={key}
+                  label={GROUP_ACCESS[key]}
+                  selected={access === key}
+                  accessibilityRole="radio"
+                  onPress={() => setAccess(key)}
+                />
+              ))}
+            </View>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {access === 'open'
+                ? 'Anyone can join straight away.'
+                : 'People request to join and an admin approves them.'}
+            </Text>
+          </BandBody>
+        </Band>
+        <BandGap />
+
+        <Band>
+          <BandBody style={styles.submitBody}>
+            <Button
+              variant="primary"
+              title={editing ? 'Save' : 'Create'}
+              disabled={!canSubmit}
+              loading={busy}
+              onPress={send}
+              accessibilityLabel={editing ? 'Save group' : 'Create group'}
+            />
+          </BandBody>
+        </Band>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
-  purpose: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
-  counter: { ...type.caption, color: colors.textMuted, textAlign: 'right', marginTop: -spacing.xs },
+  safe: { flex: 1 },
+  content: { paddingBottom: spacing.xxl },
+  purposeBody: { paddingTop: spacing.md },
+  submitBody: { paddingTop: spacing.md },
+  counter: { textAlign: 'right' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  hint: { ...type.bodySm, color: colors.textSecondary },
 });

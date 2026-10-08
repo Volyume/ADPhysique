@@ -8,6 +8,8 @@
  * Props:
  *   title     the section's name
  *   trailing  optional { label, onPress, accessibilityLabel? }
+ *   flush     drop the inline gutter, for a header inside a sheet or a body
+ *             that already pays it (D221 lane 2B); additive
  */
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { spacing } from '../../styles/theme';
@@ -16,10 +18,10 @@ import useTheme from '../../hooks/useTheme';
 
 export const SECTION_HEADER_HEIGHT = 56;
 
-export default function SectionHeader({ title, trailing }) {
+export default function SectionHeader({ title, trailing, flush = false }) {
   const t = useTheme();
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, flush && styles.flush]}>
       <Text
         style={[styles.title, t.type.bodyStrong, { color: t.colors.textPrimary }]}
         numberOfLines={1}
@@ -52,6 +54,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
+  flush: { paddingHorizontal: 0 },
   title: { flexShrink: 1 },
   action: {
     minHeight: touchTarget.minimum,

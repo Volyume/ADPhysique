@@ -27,10 +27,11 @@ function code(source) {
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 }
 
+// D221 ruling 7, lane 2B: `ActivityItemRow.js` is retired (no importer
+// remained once `PostRow` took the feed), so it leaves this list.
 const ROW_FILES = [
   'src/components/community/PersonRow.js',
   'src/components/community/CohortRow.js',
-  'src/components/community/ActivityItemRow.js',
   'src/components/community/SkeletonPersonRow.js',
 ];
 
@@ -41,6 +42,11 @@ const BANDED = [
   'CommunityFollowersScreen.js', 'CommunityConnectionsScreen.js', 'CommunityConversationsScreen.js',
   'CommunitySearchScreen.js', 'CommunityPeopleListScreen.js', 'CommunityFindPeopleScreen.js',
   'CommunityGroupMembersScreen.js',
+  // D221 ruling 7, lane 2B: the form, staff and reading screens.
+  'CommunityJoinScreen.js', 'CommunityEditProfileScreen.js', 'CommunityTrainingProfileScreen.js',
+  'CommunityComposeScreen.js', 'CommunityGroupCreateScreen.js', 'CommunityPrivacyScreen.js',
+  'CommunityRulesScreen.js', 'CommunityConversationScreen.js', 'CommunityModerationScreen.js',
+  'CommunityGymAddScreen.js',
 ];
 
 describe('one gutter, paid once by the page', () => {
@@ -55,7 +61,7 @@ describe('one gutter, paid once by the page', () => {
   test('every Community screen that lists rows pays the house gutter on its list', () => {
     const screens = fs.readdirSync(path.join(ROOT, 'src/screens'))
       .filter((f) => /^Community.*\.js$/.test(f));
-    const listers = screens.filter((f) => /PersonRow|CohortRow|GroupRow|ActivityItemRow|SkeletonPersonRow/.test(read(`src/screens/${f}`)));
+    const listers = screens.filter((f) => /PersonRow|CohortRow|GroupRow|SkeletonPersonRow/.test(read(`src/screens/${f}`)));
     expect(listers.length).toBeGreaterThan(3);
     for (const f of listers) {
       // D221 ruling 7 / law V1: inside the Hub the BAND sections own the
@@ -87,14 +93,14 @@ describe('the Hub band sections (D221 ruling 7)', () => {
 });
 
 describe('the house divider: a borderSubtle hairline spanning the row', () => {
-  test.each(ROW_FILES.slice(0, 3))('%s draws borderSubtle, never the bright border', (rel) => {
+  test.each(ROW_FILES.slice(0, 2))('%s draws borderSubtle, never the bright border', (rel) => {
     const src = code(read(rel));
     expect({ rel, subtle: /divider.*borderSubtle|borderSubtle.*divider/s.test(src) }).toEqual({ rel, subtle: true });
     expect({ rel, bright: /styles\.divider, \{ backgroundColor: t\.colors\.border \}/.test(src) })
       .toEqual({ rel, bright: false });
   });
 
-  test.each(ROW_FILES.slice(0, 3))('%s gives its divider no left inset', (rel) => {
+  test.each(ROW_FILES.slice(0, 2))('%s gives its divider no left inset', (rel) => {
     const src = code(read(rel));
     const divider = /divider: \{[^}]*\}/.exec(src);
     expect({ rel, found: !!divider }).toEqual({ rel, found: true });

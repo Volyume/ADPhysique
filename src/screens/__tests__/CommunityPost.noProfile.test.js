@@ -236,6 +236,9 @@ describe('D221 visual law on the Post screen (source guard)', () => {
     expect(src).toContain('<Band>');
     expect(src).not.toMatch(/SkeletonRow\b/);
   });
+  test('lane 2B: the post renders in detail mode (Respect word, whole note, comment count)', () => {
+    expect(src).toMatch(/<PostRow\s+key=\{post\?\.id\}\s+detail\b/);
+  });
   test('one header glyph', () => {
     expect((src.match(/<HeaderGlyph/g) || []).length).toBe(1);
   });

@@ -42,7 +42,7 @@ import BottomSheet from '../BottomSheet';
 import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import Chip from '../Chip';
-import SectionLabel from '../SectionLabel';
+import SectionHeader from './SectionHeader';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type, colors, withAlpha, alpha } from '../../styles/theme';
 import {
@@ -132,7 +132,7 @@ export default function PeopleFiltersSheet({
       </View>
 
       <View style={styles.section}>
-        <SectionLabel tone="muted">Where</SectionLabel>
+        <SectionHeader flush title="Where" />
         <View style={styles.chips} accessibilityLabel="Where">
           <Chip
             label={FILTER_SCOPES.gym}
@@ -173,7 +173,7 @@ export default function PeopleFiltersSheet({
       </View>
 
       <View style={styles.section}>
-        <SectionLabel tone="muted">When</SectionLabel>
+        <SectionHeader flush title="When" />
         <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>Days</Text>
         <View style={styles.chips} accessibilityLabel="Days">
           {Object.entries(TP_DAYS).map(([key, label]) => (
@@ -199,7 +199,7 @@ export default function PeopleFiltersSheet({
       </View>
 
       <View style={styles.section}>
-        <SectionLabel tone="muted">Training</SectionLabel>
+        <SectionHeader flush title="Training" />
         <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>Styles</Text>
         <View style={styles.chips} accessibilityLabel="Training styles">
           {Object.entries(COMMUNITY_STYLE_KEYS).map(([key, label]) => (
@@ -277,7 +277,7 @@ export default function PeopleFiltersSheet({
           nothing here to filter candidates by either. */}
       {ownAgeBand ? (
         <View style={styles.section}>
-          <SectionLabel tone="muted">Age group</SectionLabel>
+          <SectionHeader flush title="Age group" />
           <View style={styles.chips} accessibilityLabel="Age group">
             {Object.entries(TP_AGE_BANDS).map(([key, label]) => (
               <Chip
@@ -317,7 +317,10 @@ const styles = StyleSheet.create({
   section: { gap: spacing.xs2, marginBottom: spacing.lg },
   hint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  // D221 V3: a one-line row is 56 dp, the switch a 48 dp target.
+  switchRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, minHeight: 56,
+  },
   switchLabel: { ...type.body, color: colors.textPrimary },
   footer: { gap: spacing.sm, paddingBottom: spacing.md },
 });

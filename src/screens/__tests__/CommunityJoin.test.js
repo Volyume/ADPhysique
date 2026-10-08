@@ -874,3 +874,37 @@ describe('a pending join pre-fills instead, and supersedes the queue', () => {
     expect(clearPendingJoin).toHaveBeenCalledWith('u1');
   });
 });
+const stripped = (f) => require('fs').readFileSync(require('path').join(__dirname, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+function headerTitles(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+    .map((n) => n.props.children);
+}
+
+describe('D221 lane 2B: the form is bands of wells', () => {
+  test('sections carry header roles; the username and name are wells', async () => {
+    const { tree } = await mount();
+    expect(headerTitles(tree)).toEqual(expect.arrayContaining([
+      'About you', 'Avatar', 'What do you train for?', 'Who can follow you', 'Your training profile', 'Four rules',
+    ]));
+    for (const label of ['Username', 'Display name']) expect(field(tree, label).props.well).toBe(true);
+  });
+
+  test('the avatar picker is 56 dp marks in 48 dp targets', async () => {
+    const { tree } = await mount();
+    const radios = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'radio' && n.props?.accessibilityState);
+    const targets = radios.filter((r) => {
+      const style = [].concat(r.props.style).flat().filter(Boolean).reduce((a, st) => ({ ...a, ...st }), {});
+      return style.minHeight === 48 && style.minWidth === 48;
+    });
+    expect(targets.length).toBeGreaterThanOrEqual(6);
+  });
+
+  test('the switches are SwitchRows in a band and "Create profile" sits in its own band after the rules', async () => {
+    const src = stripped('../CommunityJoinScreen.js');
+    expect(src).not.toMatch(/SectionLabel|<Card|<Switch[\s>]/);
+    expect(src.indexOf('title="Four rules"')).toBeLessThan(src.indexOf('title="Create profile"'));
+    expect(src).toContain('<PrivacyReceipt inBand />');
+  });
+});

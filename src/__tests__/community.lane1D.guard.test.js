@@ -144,8 +144,10 @@ describe('L15: the empty Activity state opens Find people', () => {
 describe('L16: one training picker ("What you train for"; D152 bans the words "how you train" in user-facing strings) on Edit profile', () => {
   test('the styles row is out of the form; the data is still sent unchanged', () => {
     const src = read('screens/CommunityEditProfileScreen.js');
-    expect(src).not.toContain('<SectionLabel>Training styles</SectionLabel>');
-    expect(src).toContain('<SectionLabel>What you train for</SectionLabel>');
+    // Re-pinned (D221 ruling 7, lane 2B): the section title is a SectionHeader
+    // now that SectionLabel is retired from Community; the rule is unchanged.
+    expect(src).not.toContain('title="Training styles"');
+    expect(src).toContain('<SectionHeader title="What you train for" />');
     expect(src).toContain('styles: styleKeys,'); // stored styles are carried through, not erased
     expect(src).toContain('discipline_keys: disciplineKeys,');
   });
@@ -154,7 +156,8 @@ describe('L16: one training picker ("What you train for"; D152 bans the words "h
 describe('L17: the Privacy screen mirrors "Share what I did" through the same setter', () => {
   test('one row, one setter', () => {
     const privacy = read('screens/CommunityPrivacyScreen.js');
-    expect(privacy).toContain('label="Share what I did"');
+    // Re-pinned (D221 ruling 7, lane 2B): the row is a SwitchRow with a title.
+    expect(privacy).toContain('title="Share what I did"');
     expect(privacy).toContain('saveShareSessions(uid, prev, next');
     expect(read('screens/CommunityTrainingProfileScreen.js')).toContain('saveShareSessions(uid, prevSettings, nextSettings');
     // Turning it off keeps the same one-time "remove what is shared" choice.

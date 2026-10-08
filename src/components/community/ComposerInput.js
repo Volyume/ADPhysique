@@ -16,6 +16,8 @@
  *                      own multiline minimum when omitted
  *   accessibilityLabel spoken label
  *   autoFocus          optional, focuses the field on mount
+ *   well               D221 V9: render as a well (`background` fill, hairline
+ *                      `borderSubtle`, focused `primary` ring); additive
  *
  * Any other native TextInput prop a caller still needs (an existing
  * `editable`, say) passes straight through to `TextField` unchanged.
@@ -32,6 +34,7 @@ export default function ComposerInput({
   minHeight,
   accessibilityLabel,
   autoFocus = false,
+  well = false,
   ...rest
 }) {
   return (
@@ -44,6 +47,7 @@ export default function ComposerInput({
       autoFocus={autoFocus}
       multiline
       surface="surface2"
+      well={well}
       inputStyle={[styles.input, minHeight ? { minHeight } : null]}
       {...rest}
     />

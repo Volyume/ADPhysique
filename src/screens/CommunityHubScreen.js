@@ -49,11 +49,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
-import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import SectionHeader from '../components/community/SectionHeader';
+import EntryRow from '../components/community/EntryRow';
 import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import SkeletonPostRow from '../components/community/SkeletonPostRow';
 import PersonRow from '../components/community/PersonRow';
@@ -106,10 +106,6 @@ const WELL_HEIGHT = 44;
 const FILTER_CHIP_HEIGHT = 32;
 const FILTER_HIT_SLOP = { top: 8, bottom: 8, left: 4, right: 4 };
 const MARK = 32;
-const MARK_BIG = 44;
-const ROW_ONE_LINE = 56;
-const ROW_TWO_LINES = 64;
-const ROW_BIG = 88;
 
 // The HOST row's read (26-EARLY-DAYS-SPEC.md 1.2) happens once per app
 // session per reader once its answer is "no row": the reader is the host,
@@ -168,51 +164,6 @@ function Band({ children, style }) {
 /** The strip of page colour between two bands: the logger's `BAND`. */
 function BandGap() {
   return <View style={styles.bandGap} />;
-}
-
-/**
- * One row in a band (visual law V3): a roster row is 64 dp with two lines and
- * 56 dp with one; a large entry row (a door such as Find people) is 88 dp
- * with a 44 dp icon tile. A hairline below, a chevron or a caller's trailing
- * node, a 48 dp minimum target through `PressableCard`.
- */
-function HubRow({
-  icon, leading, title, subtitle, trailing, onPress, big = false, accessibilityLabel,
-}) {
-  const t = useTheme();
-  const size = big ? MARK_BIG : MARK;
-  return (
-    <PressableCard
-      onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || [title, subtitle].filter(Boolean).join('. ')}
-      style={[
-        styles.row,
-        {
-          minHeight: big ? ROW_BIG : (subtitle ? ROW_TWO_LINES : ROW_ONE_LINE),
-          borderBottomColor: t.colors.borderSubtle,
-        },
-      ]}
-    >
-      <View style={styles.rowInner}>
-        {leading || (icon ? (
-          <View style={[styles.mark, { width: size, height: size, backgroundColor: t.colors.surface2 }]}>
-            <Ionicons name={icon} size={big ? iconSize.lg : iconSize.md} color={t.colors.textPrimary} />
-          </View>
-        ) : null)}
-        <View style={styles.rowText}>
-          <Text style={[big ? t.type.title : t.type.body, { color: t.colors.textPrimary }]}>{title}</Text>
-          {subtitle ? (
-            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>{subtitle}</Text>
-          ) : null}
-        </View>
-        {trailing === undefined ? (
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        ) : trailing}
-      </View>
-    </PressableCard>
-  );
 }
 
 /** An input-shaped entry: the search and compose wells (visual law V9). */
@@ -1109,14 +1060,14 @@ export default function CommunityHubScreen({ navigation, route }) {
           text="Search people and groups"
           onPress={() => navigation.navigate('CommunitySearch')}
         />
-        <HubRow
+        <EntryRow
           big
           icon="people-outline"
           title="Find people"
           subtitle="Train like you, same gym, near you, same discipline"
           onPress={() => navigation.navigate('CommunityFindPeople')}
         />
-        <HubRow
+        <EntryRow
           icon="person-add-outline"
           title="Requests"
           subtitle={requestCount > 0
@@ -1136,7 +1087,7 @@ export default function CommunityHubScreen({ navigation, route }) {
         ) : gymCohort ? (
           cohortRow(gymCohort)
         ) : !me?.profile?.gym_label ? (
-          <HubRow
+          <EntryRow
             icon="location-outline"
             title="Set your gym"
             subtitle="See who trains there"
@@ -1202,7 +1153,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           <Band>
             <SectionHeader title="Invites" />
             {visibleInvites.map((g) => (
-              <HubRow
+              <EntryRow
                 key={g.id}
                 icon="mail-outline"
                 title={g.name || 'Group'}
@@ -1239,14 +1190,14 @@ export default function CommunityHubScreen({ navigation, route }) {
       ) : null}
       <Band>
         {!isMinor ? (
-          <HubRow
+          <EntryRow
             icon="add-circle-outline"
             title="New group"
             subtitle="Train together and see each other's weeks"
             onPress={() => navigation.navigate('CommunityGroupCreate')}
           />
         ) : null}
-        <HubRow
+        <EntryRow
           icon="search-outline"
           title="Browse open groups"
           subtitle="Find a group to join"
@@ -1331,7 +1282,7 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
       <Band>
-        <HubRow
+        <EntryRow
           leading={(
             <ProfileAvatarMark
               presetKey={me?.profile?.avatar_preset ?? null}
@@ -1343,22 +1294,22 @@ export default function CommunityHubScreen({ navigation, route }) {
           subtitle={me?.profile?.handle ? `@${me.profile.handle}` : undefined}
           onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
         />
-        <HubRow
+        <EntryRow
           icon="people-outline"
           title="Followers and connections"
           onPress={() => navigation.navigate('CommunityFollowers')}
         />
-        <HubRow
+        <EntryRow
           icon="shield-checkmark-outline"
           title="Privacy and sharing"
           onPress={() => navigation.navigate('CommunityPrivacy')}
         />
-        <HubRow
+        <EntryRow
           icon="barbell-outline"
           title="Training profile"
           onPress={() => navigation.navigate('CommunityTrainingProfile')}
         />
-        <HubRow
+        <EntryRow
           icon="document-text-outline"
           title="Community rules"
           onPress={() => navigation.navigate('CommunityRules')}
@@ -1412,6 +1363,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             label: 'Most respected',
             sub: sortUnavailable ? 'Not available yet' : 'The last two weeks, most Respect first',
             accessibilityLabel: sortUnavailable ? 'Most respected, not available yet' : undefined,
+            disabled: sortUnavailable,
             onPress: sortUnavailable ? () => {} : () => selectSort('respected'),
           },
         ]}
@@ -1443,9 +1395,9 @@ export default function CommunityHubScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  bandGap: { height: BAND },
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
-  bandGap: { height: BAND },
   header: {
     flexDirection: 'row', alignItems: 'center', minHeight: HEADER_HEIGHT, paddingLeft: spacing.lg, paddingRight: spacing.xs,
   },
@@ -1513,10 +1465,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   wellText: { flex: 1 },
-  row: { paddingHorizontal: spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, justifyContent: 'center' },
-  rowInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
-  rowText: { flex: 1 },
-  mark: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   skeletonRow: { paddingHorizontal: spacing.lg },
   sectionEmpty: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, alignItems: 'flex-start', gap: spacing.xs,

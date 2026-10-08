@@ -552,3 +552,26 @@ describe('open to training together (SD-25)', () => {
     );
   });
 });
+const stripped = (f) => require('fs').readFileSync(require('path').join(__dirname, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+function headerTitles(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.props?.accessibilityRole === 'header')
+    .map((n) => n.props.children);
+}
+
+describe('D221 lane 2B: bands and switch rows', () => {
+  test('sections carry header roles', async () => {
+    const { tree } = await mount();
+    expect(headerTitles(tree)).toEqual(expect.arrayContaining(['What other people see', 'Your bands']));
+  });
+
+  test('every band is a switch carrying its own label, and nothing is a card or a raw Switch', async () => {
+    const { tree } = await mount();
+    const switches = tree.root.findAll((n) => typeof n.props?.onValueChange === 'function' && /^Share /.test(n.props?.accessibilityLabel ?? ''));
+    expect(switches.length).toBeGreaterThan(2);
+    const src = stripped('../CommunityTrainingProfileScreen.js');
+    expect(src).not.toMatch(/SectionLabel|<Card|<Switch[\s>]|SkeletonRow|SkeletonCard/);
+    expect(src).toMatch(/<SkeletonFormBand/);
+  });
+});

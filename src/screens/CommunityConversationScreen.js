@@ -33,7 +33,6 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
@@ -44,13 +43,14 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import MessageBubble from '../components/community/MessageBubble';
 import MessageComposer from '../components/community/MessageComposer';
+import HeaderGlyph from '../components/community/HeaderGlyph';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import SessionSheet from '../components/community/SessionSheet';
 import Chip from '../components/Chip';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { spacing, radius, type, colors, hitSlop, iconSize } from '../styles/theme';
+import { spacing, radius, type, colors } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import * as haptics from '../lib/haptics';
 import { postDayLabel } from '../components/community/PostCard';
@@ -386,7 +386,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
   const canCompose = !closed && !errorCode && !sendCode;
 
   const notice = sendCode === 'not_connected' ? (
-    <View style={[styles.notice, { borderColor: t.colors.borderSubtle }]}>
+    <View style={[styles.notice, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
       <Text style={[styles.noticeLine, { color: t.colors.textPrimary }]}>
         {NOT_CONNECTED_LINE}
       </Text>
@@ -400,7 +400,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
       />
     </View>
   ) : sendCode ? (
-    <View style={[styles.notice, { borderColor: t.colors.borderSubtle }]}>
+    <View style={[styles.notice, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
       <Text style={[styles.noticeLine, { color: t.colors.textPrimary }]}>
         {sendErrorLine(sendCode)}
       </Text>
@@ -412,15 +412,11 @@ export default function CommunityConversationScreen({ navigation, route }) {
       <BackHeader
         title={name}
         right={other ? (
-          <TouchableOpacity
+          <HeaderGlyph
+            icon="ellipsis-horizontal"
+            label="Conversation options"
             onPress={() => { haptics.selection(); setMenuOpen(true); }}
-            hitSlop={hitSlop}
-            style={styles.headerAction}
-            accessibilityRole="button"
-            accessibilityLabel="Conversation options"
-          >
-            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textSecondary} />
-          </TouchableOpacity>
+          />
         ) : null}
       />
 
@@ -435,7 +431,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
           <ProfileAvatarMark
             presetKey={other.avatar_preset}
             displayName={name}
-            size={28}
+            size={32}
           />
           <Text style={[styles.identityHandle, { color: t.colors.textSecondary }]} numberOfLines={1}>
             {handle}
@@ -592,31 +588,25 @@ const styles = StyleSheet.create({
   bubbleRight: { alignSelf: 'flex-end' },
   list: { padding: spacing.lg },
   sessionChipRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  headerAction: {
-    width: touchTarget.minimum,
-    height: touchTarget.minimum,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
   identity: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
+    minHeight: touchTarget.minimum,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   identityHandle: { ...type.caption },
   emptyLine: { ...type.caption, textAlign: 'center', paddingVertical: spacing.xl },
+  // D221 V1: a notice is a band of plain text, not a bordered box.
   notice: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    margin: spacing.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   noticeLine: { ...type.bodySm, flex: 1 },
   closedLine: {

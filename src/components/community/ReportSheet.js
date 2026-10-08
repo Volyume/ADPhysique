@@ -94,6 +94,7 @@ export default function ReportSheet({ visible, onClose, targetKind, targetId, on
         </View>
         <TextField
           label="Anything else we should know (optional)"
+          well
           value={detail}
           onChangeText={(v) => setDetail(v.slice(0, REPORT_DETAIL_MAX))}
           multiline
