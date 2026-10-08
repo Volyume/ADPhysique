@@ -31,18 +31,20 @@ function allText(node) {
 const glyphs = (node) => (node.root || node).findAll((n) => n.type === 'Ionicons');
 
 describe('SessionToolbar', () => {
-  test('carries the four test ids', () => {
+  test('carries the three test ids', () => {
     const tree = render({});
-    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes']
+    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest']
       .forEach((id) => byId(tree, id));
+    // The Notes tool was removed (founder device verdict 2026-10-08): the
+    // note line under the title is the one way into the session note.
+    expect(tree.root.findAll((n) => n.props && n.props.testID === 'volyume-tool-notes')).toHaveLength(0);
   });
 
   test('every callback fires once', () => {
-    const cb = { onClose: jest.fn(), onRest: jest.fn(), onNotes: jest.fn(), onFinish: jest.fn() };
+    const cb = { onClose: jest.fn(), onRest: jest.fn(), onFinish: jest.fn() };
     const tree = render(cb);
     press(byId(tree, 'volyume-workout-close'));
     press(byId(tree, 'volyume-tool-rest'));
-    press(byId(tree, 'volyume-tool-notes'));
     press(byId(tree, 'volyume-workout-finish'));
     Object.values(cb).forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
   });
@@ -52,8 +54,7 @@ describe('SessionToolbar', () => {
     expect(byId(tree, 'volyume-workout-close').props.accessibilityLabel).toBe('Cancel workout');
     expect(byId(tree, 'volyume-workout-finish').props.accessibilityLabel).toBe('Finish workout');
     expect(byId(tree, 'volyume-tool-rest').props.accessibilityLabel).toBe('Rest timer');
-    expect(byId(tree, 'volyume-tool-notes').props.accessibilityLabel).toBe('Session notes');
-    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes']
+    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest']
       .forEach((id) => expect(byId(tree, id).props.accessibilityRole).toBe('button'));
   });
 
@@ -61,7 +62,7 @@ describe('SessionToolbar', () => {
     const tree = render({});
     const words = allText(tree.toJSON());
     expect(words).toContain('Rest');
-    expect(words).toContain('Notes');
+    expect(words).not.toContain('Notes');
     expect(words).not.toContain('Finish');
     expect(words).not.toContain('Finish workout');
   });
@@ -112,7 +113,7 @@ describe('SessionToolbar', () => {
       expect(s.width).toBe(48);
       expect(s.height).toBe(48);
     });
-    ['volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+    ['volyume-tool-rest'].forEach((id) => {
       const s = flat(byId(tree, id).props.style);
       expect(s.width).toBe(56);
       expect(s.minHeight).toBe(48);
