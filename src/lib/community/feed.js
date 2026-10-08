@@ -157,7 +157,13 @@ export async function loadHub(scope = 'following', {
     const page = await loadFeed({ cursor, limit, scope: sc, sort: so });
     const payload = { ...empty, posts: page.posts, cursor: page.cursor };
     if (page.fallback) payload.fallback = page.fallback;
-    if (!cursor) await writeCachedHub(uid, payload, sc, so);
+    if (!cursor) {
+      // F5: a fallback page is the old shape (Following, Newest). It is
+      // cached under that effective key only, never under the requested one.
+      if (!page.fallback) await writeCachedHub(uid, payload, sc, so);
+      else if (page.fallback === 'scope') await writeCachedHub(uid, payload, 'following', 'newest');
+      else await writeCachedHub(uid, payload, sc, 'newest');
+    }
     return payload;
   } catch (e) {
     const cached = cursor ? null : await readCachedHub(uid, sc, so);
@@ -374,6 +380,11 @@ export async function reactToPost(postId, on, authorId = null) {
   return out;
 }
 
+/**
+ * Add a comment. The server answers `{ id }`, the new comment's id (what the
+ * notify call needs as its ref).
+ * @returns {Promise<{id: string}>}
+ */
 export async function addComment(targetKind, targetId, body) {
   return callCommunity('community_comment', {
     _target_kind: targetKind, _target_id: targetId, _body: body,

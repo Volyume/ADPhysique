@@ -756,6 +756,8 @@ const useAppStore = create((set, get) => ({
       healthConsent: null,
       healthConsentChecked: false,
       proOnboardingAccountCreated: false,
+      // D221 F11: the Community tab dot belongs to the signed-out account.
+      community: { unseen: false },
       activeWorkout: null,
       workoutExercises: [],
       currentExerciseIndex: 0,

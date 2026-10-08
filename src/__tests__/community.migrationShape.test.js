@@ -343,6 +343,16 @@ describe('migrate_190 community_feed scopes keep the house shape', () => {
     expect(S190).toMatch(/F: a PRIVATE profile/);
   });
 
+  test('gym matches gym_id or other_gym_ids with show_gym on, never place_key', () => {
+    expect(C190).toMatch(/me\.gym_id INTO v_gym/);
+    expect(C190).toMatch(/gp\.gym_id = v_gym OR v_gym = ANY \(gp\.other_gym_ids\)/);
+    expect(C190).toMatch(/gp\.show_gym = true/);
+    expect(C190).toMatch(/gp\.is_minor = false/);
+    expect(C190).toMatch(/v_gym IS NOT NULL/);
+    expect(C190).not.toMatch(/place_key/);
+    expect(S190).toMatch(/G has show_gym off/);
+  });
+
   test('the discover predicates are carried by the everyone scope', () => {
     for (const re of [/dp\.status = 'active'/, /dp\.visibility = 'public'/, /dp\.is_minor = false/, /r\.visibility = 'public'/]) {
       expect(C190).toMatch(re);

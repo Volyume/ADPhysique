@@ -114,7 +114,9 @@ describe('community-notify: the three group proof branches (R-02)', () => {
 describe('D221: the push payload carries routing ids and no content', () => {
   test('kind, post_id and group_id ride in the data block', () => {
     expect(SOURCE).toMatch(/^\s*kind,\s*$/m);
-    expect(SOURCE).toMatch(/kind === 'reaction' \|\| kind === 'comment' \? \{ post_id: refId \}/);
+    // SF1: post_id is the POST's id (the comment row's target_id for a comment), never refId.
+    expect(SOURCE).toMatch(/activityTargetKind === 'post' && activityTargetId\s*\? \{ post_id: activityTargetId \}/);
+    expect(SOURCE).not.toMatch(/post_id: refId/);
     expect(SOURCE).toMatch(/GROUP_KINDS\.includes\(kind\) \? \{ group_id: refId \}/);
   });
   test('a reaction still carries no handle and no message body is sent', () => {

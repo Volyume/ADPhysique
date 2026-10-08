@@ -79,6 +79,7 @@ import {
   listMyGroups, acceptGroupInvite,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
+import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
 
 const PAGE = 20;
 
@@ -342,25 +343,34 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   // The remembered segment (build spec 2.3): first open lands on Feed; a
   // failed read is simply Feed.
+  const pickedRef = useRef(false);
   useEffect(() => {
     let alive = true;
     AsyncStorage.getItem(HUB_SEGMENT_KEY)
-      .then((value) => { if (alive && SEGMENT_KEYS.includes(value)) setSegmentState(value); })
+      // A segment the person tapped before this read landed wins (F8).
+      .then((value) => {
+        if (alive && !pickedRef.current && SEGMENT_KEYS.includes(value)) setSegmentState(value);
+      })
       .catch(() => { /* a remembered tab is a convenience: Feed it is */ })
       .finally(() => { if (alive) setSegmentReady(true); });
     return () => { alive = false; };
   }, []);
 
   const chooseSegment = useCallback((key) => {
+    pickedRef.current = true;
     setSegmentState(key);
     AsyncStorage.setItem(HUB_SEGMENT_KEY, key).catch(() => { /* best effort */ });
   }, []);
 
   // A caller that wants a segment (the Today row sends 'people') says so in
-  // the route params; it wins over the remembered one.
-  useEffect(() => {
-    if (segmentReady && SEGMENT_KEYS.includes(segmentParam)) chooseSegment(segmentParam);
-  }, [segmentReady, segmentParam, chooseSegment]);
+  // the route params; it wins over the remembered one. Applied on EVERY
+  // focus and then consumed (SF3): the same param sent twice must still
+  // land, and a stale one must not override a later choice.
+  useFocusEffect(useCallback(() => {
+    if (!segmentReady || !SEGMENT_KEYS.includes(segmentParam)) return;
+    chooseSegment(segmentParam);
+    navigation?.setParams?.({ segment: undefined });
+  }, [segmentReady, segmentParam, chooseSegment, navigation]));
 
   // The You line's own device counters (lead ruling 2026-09-10): shown
   // whenever the ED gate allows, independent of the "Share my consistency"
@@ -549,11 +559,19 @@ export default function CommunityHubScreen({ navigation, route }) {
         cursor: hub.cursor, limit: PAGE, joined, sort: sortRef.current,
       });
       if (id !== requestRef.current) return;
-      setHub((prev) => (prev ? {
-        ...prev,
-        posts: [...(prev.posts ?? []), ...(next.posts ?? [])],
-        cursor: next.cursor,
-      } : next));
+      // SF4: a Respect-sorted cursor can re-serve a post; one row per id.
+      setHub((prev) => {
+        if (!prev) return next;
+        const seen = new Set((prev.posts ?? []).map((row) => row?.post?.id));
+        const fresh = (next.posts ?? []).filter((row) => {
+          const pid = row?.post?.id;
+          if (pid == null) return true;
+          if (seen.has(pid)) return false;
+          seen.add(pid);
+          return true;
+        });
+        return { ...prev, posts: [...(prev.posts ?? []), ...fresh], cursor: next.cursor };
+      });
     } finally {
       setPaging(false);
     }
@@ -979,12 +997,14 @@ export default function CommunityHubScreen({ navigation, route }) {
       };
     }
     if (scope === 'gym') {
-      return me?.profile?.gym_label
+      // The server matches on gym_id (migrate_190), which the self card
+      // carries as me.profile.gym_id; gym_label and place_key are not it.
+      return me?.profile?.gym_id
         ? { line: 'Nobody at your gym has posted yet.', label: null, onPress: null }
         : {
           line: 'Set your gym to see who trains there',
           label: 'Set gym',
-          onPress: () => navigation.navigate('CommunityEditProfile'),
+          onPress: () => navigation.navigate('CommunityEditProfile', { openGymPicker: true }),
         };
     }
     if (scope === 'groups') {
@@ -1385,12 +1405,15 @@ export default function CommunityHubScreen({ navigation, route }) {
           {
             icon: 'time-outline', label: 'Newest', sub: 'The latest posts first', onPress: () => selectSort('newest'),
           },
-          ...(sortUnavailable ? [] : [{
+          // F7: never silently removed. Until the server can serve it, the row
+          // stays, says why, and does nothing.
+          {
             icon: 'heart-outline',
             label: 'Most respected',
-            sub: 'The last two weeks, most Respect first',
-            onPress: () => selectSort('respected'),
-          }]),
+            sub: sortUnavailable ? 'Not available yet' : 'The last two weeks, most Respect first',
+            accessibilityLabel: sortUnavailable ? 'Most respected, not available yet' : undefined,
+            onPress: sortUnavailable ? () => {} : () => selectSort('respected'),
+          },
         ]}
       />
       <MenuSheet
@@ -1401,7 +1424,10 @@ export default function CommunityHubScreen({ navigation, route }) {
           {
             icon: 'create-outline',
             label: 'A note',
-            sub: 'A few words for the people who follow you',
+            sub: composeAudienceLine(
+              composeDefaultVisibility({ isMinor, sessionsAudience: me?.sessions_audience ?? null }),
+              0,
+            ),
             onPress: () => { setComposeOpen(false); navigation.navigate('CommunityCompose', { kind: 'note' }); },
           },
           {
