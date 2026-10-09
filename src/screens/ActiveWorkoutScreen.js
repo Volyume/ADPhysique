@@ -5132,7 +5132,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             bottom bar no longer offers it (two finish affordances never
             co-exist, the R3 law, now kept by construction). */}
         <SessionToolbar
-          startTime={workoutStartTime}
           onClose={handleCancelWorkout}
           onRest={() => setShowRestSheet(true)}
           onNotes={() => setShowNotesSheet(true)}
@@ -5195,7 +5194,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               header carries the name (the tap that used to open the details
               is its chevron) and its footer carries Add set, Swap and the
               overflow that the title row used to hold. */}
-          <SessionHeader name={sessionTitle} />
+          <SessionHeader name={sessionTitle} startTime={workoutStartTime} />
           {collapsedSectionsBefore}
           <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
           <ExerciseSection

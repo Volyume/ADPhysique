@@ -3,13 +3,23 @@
  * at the title role (semibold; a label over the cards, not an h2 page heading,
  * founder render verdict 2026-10-09), a name-only prop surface (a note prop
  * draws nothing: the note lives behind the toolbar's Notes tool, D220 addendum
- * 10), no button, no glyph, and the token-only source guard.
+ * 10), no button, no glyph, the session clock at the end of the title's line
+ * when startTime is given (one secondary-ink timer Text spoken as Elapsed, D220
+ * addendum 12) and absent without it, and the token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
 import { colors, type } from '../../../../styles/theme';
 import SessionHeader from '../SessionHeader';
+
+const START = 1700000000000;
+const MIN = 60 * 1000;
+const SEC = 1000;
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 function render(props) {
   let tree;
@@ -45,6 +55,41 @@ describe('SessionHeader', () => {
     expect(hosts(tree, (p) => p.accessibilityRole === 'button')).toHaveLength(0);
     expect(hosts(tree, (p) => typeof p.onPress === 'function')).toHaveLength(0);
     expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
+  });
+
+  test('with startTime the clock sits after the title on the same row, in secondary ink, spoken as Elapsed', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
+    const tree = render({ startTime: START });
+    const clocks = hosts(tree, (p) => p.accessibilityRole === 'timer');
+    expect(clocks).toHaveLength(1);
+    const clock = clocks[0];
+    expect(clock.props.accessibilityLabel).toMatch(/^Elapsed/);
+    expect(allText(clock)).toEqual(['12:06']);
+    const s = flat(clock.props.style);
+    expect(s.color).toBe(colors.textSecondary);
+    expect(s.fontSize).toBe(type.title.fontSize);
+    expect(s.fontVariant).toEqual(['tabular-nums']);
+    // Same row: the wrapper is a centred row, the title then the clock are its two children.
+    const wrap = tree.toJSON();
+    const row = flat(wrap.props.style);
+    expect(row.flexDirection).toBe('row');
+    expect(row.alignItems).toBe('center');
+    expect(row.gap).toBe(12);
+    expect(wrap.children).toHaveLength(2);
+    expect(wrap.children[0].props.accessibilityRole).toBe('header');
+    expect(wrap.children[1].props.accessibilityRole).toBe('timer');
+    // The title yields to the clock: it flexes and may shrink below its content.
+    const title = flat(wrap.children[0].props.style);
+    expect(title.flex).toBe(1);
+    expect(title.minWidth).toBe(0);
+    expect(tree.root.findAll((n) => n.type === 'Text')).toHaveLength(2);
+  });
+
+  test('without startTime no clock', () => {
+    const tree = render({});
+    expect(hosts(tree, (p) => p.accessibilityRole === 'timer')).toHaveLength(0);
+    expect(tree.toJSON().children).toHaveLength(1);
+    expect(allText(tree.toJSON())).toEqual(['Upper A']);
   });
 
   test('the title is capped at two lines', () => {

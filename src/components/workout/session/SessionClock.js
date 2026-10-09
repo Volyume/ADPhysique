@@ -1,9 +1,10 @@
 /**
  * SessionClock
  *
- * The session's elapsed time as a toolbar tool: tabular numerals over an
- * "Elapsed" caption, the grammar of the bar's other tools (no pill, no
- * overline; founder render verdict 2026-10-09), ticking from `startTime`
+ * The session's elapsed time as tabular title numerals in secondary ink,
+ * placed by SessionHeader on the session title's line (the founder's render
+ * verdicts 2026-10-09, D220 addendum 12: not in the toolbar), ticking from
+ * `startTime`
  * (epoch ms, the store's workoutStartTime) on its OWN one-second interval, so
  * the screen that hosts it stops re-rendering once a second
  * (12-BUILD-SPEC section 1.6, register D220; the old tick lived in
@@ -24,15 +25,10 @@
  * rule, pinned for the rest timer in p9Talkback.guard.test.js).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, Text } from 'react-native';
 import useTheme from '../../../hooks/useTheme';
-import { spacing } from '../../../styles/theme';
 
 // The readout block is as tall as the header's glyph targets.
-// The tool's height, as the toolbar's other tools (48 dp); the numerals take
-// the tools' 22 dp glyph line so every caption in the bar shares a baseline.
-const TOOL_MIN_HEIGHT = 48;
-const GLYPH_LINE = 22;
 
 // Read when the effect runs, not at import, so a test can switch the interval
 // on to prove the tick and the cleanup.
@@ -88,30 +84,22 @@ export function useSessionClock(startTime) {
 
 export default function SessionClock({ startTime }) {
   const t = useTheme();
-  // A tool in the toolbar's own grammar (founder render verdict 2026-10-09,
-  // D220 addendum 11): the tabular title numerals sit where a tool's glyph
-  // sits, with "Elapsed" as the caption beneath, the same caption the other
-  // tools wear; nothing drawn around them.
+  // A fact beside the session name: the numerals in secondary ink, nothing
+  // drawn around them, no caption (a running clock says what it is).
   const live = useMemo(() => ({
-    text: { ...t.type.num('title'), lineHeight: GLYPH_LINE, color: t.colors.textPrimary },
-    label: { ...t.type.caption, color: t.colors.textSecondary },
+    text: { ...t.type.num('title'), color: t.colors.textSecondary },
   }), [t]);
 
   const elapsedMs = useSessionClock(startTime);
 
   return (
-    <View
-      accessible
+    <Text
       accessibilityRole="timer"
       accessibilityLabel={`Elapsed ${spokenClock(elapsedMs)}`}
-      style={styles.block}
+      style={live.text}
+      numberOfLines={1}
     >
-      <Text style={live.text} numberOfLines={1}>{formatClock(elapsedMs)}</Text>
-      <Text style={live.label} numberOfLines={1}>Elapsed</Text>
-    </View>
+      {formatClock(elapsedMs)}
+    </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  block: { alignItems: 'center', gap: spacing.xxs, minHeight: TOOL_MIN_HEIGHT, justifyContent: 'center', paddingHorizontal: spacing.xs },
-});

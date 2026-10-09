@@ -27,12 +27,13 @@ function textOf(node) {
   if (Array.isArray(node)) return node.map(textOf).join('');
   return textOf(node.children);
 }
+// The clock is ONE Text: the timer node is the Text itself, so its children
+// are the numerals.
 function pill(tree) {
   return tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'timer')[0];
 }
 const texts = (tree) => tree.root.findAll((n) => n.type === 'Text');
-// The numerals sit over the "Elapsed" caption; the value is the first Text.
-const numerals = (tree) => textOf(texts(tree)[0]);
+const numerals = (tree) => textOf(pill(tree));
 const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
 
 afterEach(() => {
@@ -61,7 +62,7 @@ describe('SessionClock render', () => {
     const tree = render(<SessionClock startTime={START} />);
     expect(numerals(tree)).toBe('12:06');
     const node = pill(tree);
-    expect(node.props.accessible).toBe(true);
+    expect(node.props.accessibilityRole).toBe('timer');
     expect(node.props.accessibilityLabel).toBe('Elapsed 12 minutes 6 seconds');
   });
 
@@ -81,27 +82,23 @@ describe('SessionClock render', () => {
     expect(numerals(tree)).toBe('0:00');
   });
 
-  test('no pill: a block with no fill and no edge; the numerals over an "Elapsed" caption, the toolbar tool grammar', () => {
+  test('one Text only: no Elapsed caption, secondary ink at the tabular title numerals, no fill, no edge, no minHeight', () => {
     jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render(<SessionClock startTime={START} />);
-    const merged = flat(pill(tree).props.style);
-    expect(merged.backgroundColor).toBeUndefined();
-    expect(merged.borderColor).toBeUndefined();
-    expect(merged.borderWidth).toBeUndefined();
-    const [value, label] = texts(tree);
-    expect(texts(tree)).toHaveLength(2);
-    expect(textOf(label)).toBe('Elapsed');
-    const l = flat(label.props.style);
-    expect(l.color).toBe(colors.textSecondary);
-    expect(l.fontSize).toBe(type.caption.fontSize);
-    expect(l.fontFamily).toBe(type.caption.fontFamily);
-    expect(l.textTransform).toBeUndefined();
-    expect(merged.minHeight).toBe(48);
-    const v = flat(value.props.style);
-    expect(v.color).toBe(colors.textPrimary);
+    expect(texts(tree)).toHaveLength(1);
+    expect(tree.root.findAll((n) => n.type === 'View')).toHaveLength(0);
+    expect(textOf(tree.toJSON())).not.toContain('Elapsed');
+    const node = pill(tree);
+    expect(node.props.numberOfLines).toBe(1);
+    const v = flat(node.props.style);
+    expect(v.color).toBe(colors.textSecondary);
     expect(v.fontSize).toBe(type.title.fontSize);
     expect(v.fontFamily).toBe(type.num('title').fontFamily);
     expect(v.fontVariant).toEqual(['tabular-nums']);
+    expect(v.backgroundColor).toBeUndefined();
+    expect(v.borderColor).toBeUndefined();
+    expect(v.borderWidth).toBeUndefined();
+    expect(v.minHeight).toBeUndefined();
   });
 });
 
