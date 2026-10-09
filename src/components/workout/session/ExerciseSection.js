@@ -53,7 +53,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import Button from '../../Button';
 import { circle, iconSize, radius, spacing } from '../../../styles/theme';
 import { SET_COLUMNS } from './SetRow';
 import { touchTarget } from '../../../styles/layout';
@@ -73,6 +72,24 @@ const MORE_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 
 function setWord(count) {
   return count === 1 ? 'set' : 'sets';
+}
+
+// A footer action is a label and a glyph, never a boxed button (D8: never a
+// second primary; the founder's ruling against pill buttons, D220 addendum
+// 15): 20 dp glyph, semibold label, a 48 dp target.
+function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, labelStyle, testID }) {
+  return (
+    <TouchableOpacity
+      testID={testID}
+      style={styles.action}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
+      <Text style={labelStyle}>{label}</Text>
+    </TouchableOpacity>
+  );
 }
 
 function CountdownLine({ ms, reduceMotion, color }) {
@@ -136,6 +153,7 @@ export default function ExerciseSection({
     index: { ...t.type.w(t.type.num('label'), 'bold'), color: t.colors.textSecondary },
     name: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     doneText: { ...t.type.caption, color: t.colors.textSecondary },
+    action: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     nameSkipped: { color: t.colors.textMuted },
     group: { ...t.type.caption, color: t.colors.textMuted },
     hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
@@ -192,25 +210,23 @@ export default function ExerciseSection({
           {countdown && countdown.active ? (
             <CountdownLine ms={countdown.ms} reduceMotion={!!countdown.reduceMotion} color={t.colors.primary} />
           ) : null}
-          <Button
+          <FooterAction
             testID="volyume-btn-extra-set"
-            title="Add set"
             icon="add"
-            variant="secondary"
-            size="sm"
-            fullWidth={false}
-            onPress={onAddSet}
+            label="Add set"
             accessibilityLabel="Add set"
+            onPress={onAddSet}
+            glyphColor={t.colors.textPrimary}
+            labelStyle={live.action}
           />
           {onSwap ? (
-            <Button
-              title="Swap"
+            <FooterAction
               icon="swap-horizontal"
-              variant="secondary"
-              size="sm"
-              fullWidth={false}
-              onPress={onSwap}
+              label="Swap"
               accessibilityLabel="Swap exercise"
+              onPress={onSwap}
+              glyphColor={t.colors.textPrimary}
+              labelStyle={live.action}
             />
           ) : null}
           <View style={styles.footerFill} />
@@ -264,6 +280,13 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
     paddingRight: spacing.sm,
     paddingVertical: spacing.sm,
+  },
+  action: {
+    minHeight: touchTarget.minimum,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingRight: spacing.sm,
   },
   countdown: { position: 'absolute', top: 0, left: 0, right: 0, height: COUNTDOWN_HEIGHT },
   countdownFill: { height: COUNTDOWN_HEIGHT },

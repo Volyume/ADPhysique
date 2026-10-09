@@ -29,6 +29,7 @@ import StatusStrip from '../components/workout/StatusStrip';
 // dedicated workout components; the old inline chrome is deleted. Contract:
 // docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md.
 import SessionToolbar from '../components/workout/session/SessionToolbar';
+import SessionHeader from '../components/workout/session/SessionHeader';
 import ExerciseSection from '../components/workout/session/ExerciseSection';
 import RestSheet from '../components/workout/session/RestSheet';
 import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
@@ -5131,9 +5132,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             bottom bar no longer offers it (two finish affordances never
             co-exist, the R3 law, now kept by construction). */}
         <SessionToolbar
-          title={sessionTitle}
-          startTime={workoutStartTime}
           onClose={handleCancelWorkout}
+          onRest={() => setShowRestSheet(true)}
+          onNotes={() => setShowNotesSheet(true)}
           onHistory={openHistorySheet}
           onFinish={handleFinishWorkout}
         />
@@ -5193,6 +5194,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               header carries the name (the tap that used to open the details
               is its chevron) and its footer carries Add set, Swap and the
               overflow that the title row used to hold. */}
+          <SessionHeader name={sessionTitle} startTime={workoutStartTime} />
           {collapsedSectionsBefore}
           <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
           <ExerciseSection
@@ -6339,31 +6341,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               </TouchableOpacity>
               )}
-              {/* D220 addendum 14: the session's own tools live here rather
-                  than on the header (one language: the header is the modal
-                  chrome, the sheet is where every other action lives). */}
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); setShowNotesSheet(true); }}
-                accessibilityRole="button"
-                accessibilityLabel="Session notes"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
-                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Session notes</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); setShowRestSheet(true); }}
-                accessibilityRole="button"
-                accessibilityLabel="Rest timer"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="timer-outline" size={18} color={t.colors.textSecondary} />
-                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Rest timer</Text>
-                </View>
-              </TouchableOpacity>
               {/* R3 rebuild: notes live on the Now card's own note row
                   (the corner pencil is deleted). "Exercise info" row DELETED --
                   tapping the exercise title (exerciseNameTap above, same

@@ -14,12 +14,12 @@ import fs from 'fs';
 import path from 'path';
 import { Animated, Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
-import { colors, type, radius, spacing } from '../../../../styles/theme';
+import { colors, type, radius, spacing, iconSize } from '../../../../styles/theme';
 import { touchTarget } from '../../../../styles/layout';
 import ExerciseSection from '../ExerciseSection';
 
-// The footer's Add set is the house Button, which reaches expo-haptics
-// through lib/haptics; the native module is not present under Jest.
+// Kept from when the footer's Add set was the house Button (expo-haptics is
+// not present under Jest); harmless now that the footer actions are chromeless.
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
   notificationAsync: jest.fn(() => Promise.resolve()),
@@ -286,24 +286,43 @@ describe('ExerciseSection footer', () => {
     Object.values(cb).forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
   });
 
-  test('Add set and Swap are the house Button (secondary, small, leading glyph); the overflow stays a chromeless glyph', () => {
-    // Button secondary: surface fill, 1 px border, textSecondary label and
-    // glyph; the sm size carries a 16 dp glyph. Never a second primary (D8).
+  test('Add set and Swap are chromeless actions (no fill, no border, 20 dp glyph and semibold label in primary ink); the overflow stays a chromeless glyph', () => {
+    // A FooterAction is a TouchableOpacity holding a glyph and a label, never
+    // a boxed Button (D220 addendum 15). Never a second primary (D8).
     const tree = render({ onSwap: jest.fn() });
     const add = one(hosts(tree, (p) => p.testID === 'volyume-btn-extra-set'));
     const addStyle = flat(add.props.style);
-    expect(addStyle.backgroundColor).toBe(colors.surface);
-    expect(addStyle.borderColor).toBe(colors.border);
-    expect(addStyle.borderWidth).toBe(1);
+    expect(addStyle.backgroundColor).toBeUndefined();
+    expect(addStyle.borderWidth).toBeUndefined();
+    expect(addStyle.borderColor).toBeUndefined();
+    expect(addStyle.borderRadius).toBeUndefined();
+    expect(addStyle.minHeight).toBe(touchTarget.minimum);
+    expect(addStyle.flexDirection).toBe('row');
+    expect(addStyle.alignItems).toBe('center');
+    expect(addStyle.gap).toBe(spacing.xs);
+    expect(addStyle.paddingRight).toBe(spacing.sm);
+    expect(add.props.accessibilityRole).toBe('button');
     const addGlyph = add.findAll((n) => n.type === 'Ionicons' && n.props.name === 'add');
     expect(addGlyph).toHaveLength(1);
-    expect(addGlyph[0].props.size).toBe(16);
-    expect(addGlyph[0].props.color).toBe(colors.textSecondary);
+    expect(addGlyph[0].props.size).toBe(iconSize.md);
+    expect(addGlyph[0].props.size).toBe(20);
+    expect(addGlyph[0].props.color).toBe(colors.textPrimary);
     const label = flat(textHost(tree, 'Add set').props.style);
-    expect(label.color).toBe(colors.textSecondary);
+    expect(label.color).toBe(colors.textPrimary);
     expect(label.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
+    expect(label.fontSize).toBe(type.label.fontSize);
     const swap = one(byLabel(tree, 'Swap exercise'));
-    expect(swap.findAll((n) => n.type === 'Ionicons' && n.props.name === 'swap-horizontal')).toHaveLength(1);
+    const swapStyle = flat(swap.props.style);
+    expect(swapStyle.backgroundColor).toBeUndefined();
+    expect(swapStyle.borderWidth).toBeUndefined();
+    expect(swapStyle.minHeight).toBe(touchTarget.minimum);
+    const swapGlyph = swap.findAll((n) => n.type === 'Ionicons' && n.props.name === 'swap-horizontal');
+    expect(swapGlyph).toHaveLength(1);
+    expect(swapGlyph[0].props.size).toBe(20);
+    expect(swapGlyph[0].props.color).toBe(colors.textPrimary);
+    const swapLabel = flat(textHost(tree, 'Swap').props.style);
+    expect(swapLabel.color).toBe(colors.textPrimary);
+    expect(swapLabel.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
     const more = one(hosts(tree, (p) => p.testID === 'volyume-section-more'));
     const moreStyle = flat(more.props.style);
     expect(moreStyle.backgroundColor).toBeUndefined();

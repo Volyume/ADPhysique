@@ -243,14 +243,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // textPrimary - it is data, not decoration, and the header amber
     // competed with the single filled Log set CTA. Same type.num role.
     // Clean-up (D220): the clock is SessionClock, tabular title numerals in
-    // Re-pinned (D220 addendum 14): the logger header is the app's modal
-    // chrome; the clock is its subtitle, tabular numerals at the bodySm
-    // muted role (the subtitle role every house header shares).
+    // Re-pinned (D220 addendum 12): the clock sits on the session title's
+    // line (SessionHeader), tabular title numerals in secondary ink, no pill,
+    // no caption, and the toolbar no longer hosts it.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.num('bodySm'), color: t.colors.textMuted },");
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textSecondary },");
+    const HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionHeader.js'), 'utf8');
+    expect(HEADER).toContain('{startTime ? <SessionClock startTime={startTime} /> : null}');
     const TOOLBAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionToolbar.js'), 'utf8');
-    expect(TOOLBAR).toContain("import ModalHeader from '../../ModalHeader';");
-    expect(TOOLBAR).toContain('subtitle={startTime ? <SessionClock startTime={startTime} /> : null}');
+    expect(TOOLBAR).not.toContain('SessionClock');
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
@@ -296,13 +297,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // SessionToolbar. The GUARANTEE is the same: Cancel and Finish are each
     // a full 48 dp target (touchTarget.minimum on both axes), Finish keeps
     // its test id and its full spoken name.
-    // Addendum 14: the close control is ModalHeader's own 48 dp box
-    // (styles.side), so the logger shares every modal screen's X.
-    const MODAL = fs.readFileSync(path.resolve(__dirname, '../../components/ModalHeader.js'), 'utf8');
-    expect(MODAL).toMatch(/side: \{\s*width: touchTarget\.minimum,\s*minHeight: touchTarget\.minimum/);
-    expect(SESSION_TOOLBAR).toContain('closeTestID="volyume-workout-close"');
-    expect(SESSION_TOOLBAR).toMatch(/finish: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
-    expect(SESSION_TOOLBAR).toContain('closeTestID="volyume-workout-close"');
+    // Addendum 15: one control style for all five (close, the tools and
+    // Finish): a 48 dp target each, evenly spaced across the bar.
+    expect(SESSION_TOOLBAR).toMatch(/control: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
+    expect(SESSION_TOOLBAR).toContain("justifyContent: 'space-between',");
+    expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-close"');
     expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-finish"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to

@@ -1,9 +1,10 @@
 /**
  * SessionClock
  *
- * The session's elapsed time as the header's subtitle: tabular numerals at
- * the bodySm muted role under the session name, the subtitle role every
- * house header shares (D220 addendum 14), ticking from `startTime`
+ * The session's elapsed time as tabular title numerals in secondary ink,
+ * placed by SessionHeader on the session title's line (the founder's render
+ * verdicts 2026-10-09, D220 addendum 12: not in the toolbar), ticking from
+ * `startTime`
  * (epoch ms, the store's workoutStartTime) on its OWN one-second interval, so
  * the screen that hosts it stops re-rendering once a second
  * (12-BUILD-SPEC section 1.6, register D220; the old tick lived in
@@ -83,10 +84,10 @@ export function useSessionClock(startTime) {
 
 export default function SessionClock({ startTime }) {
   const t = useTheme();
-  // The subtitle role (ScreenHeader, ModalHeader): bodySm in muted ink,
-  // tabular so the digits never jitter.
+  // A fact beside the session name: the numerals in secondary ink, nothing
+  // drawn around them, no caption (a running clock says what it is).
   const live = useMemo(() => ({
-    text: { ...t.type.num('bodySm'), color: t.colors.textMuted },
+    text: { ...t.type.num('title'), color: t.colors.textSecondary },
   }), [t]);
 
   const elapsedMs = useSessionClock(startTime);

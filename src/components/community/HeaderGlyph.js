@@ -9,7 +9,6 @@
  *   icon     Ionicons name
  *   label    the accessibility label
  *   onPress
- *   testID   optional
  */
 import { Pressable, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -17,11 +16,10 @@ import useTheme from '../../hooks/useTheme';
 import { iconSize } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 
-export default function HeaderGlyph({ icon, label, onPress, testID }) {
+export default function HeaderGlyph({ icon, label, onPress }) {
   const t = useTheme();
   return (
     <Pressable
-      testID={testID}
       onPress={onPress}
       style={styles.glyph}
       accessibilityRole="button"

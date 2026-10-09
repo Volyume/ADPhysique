@@ -37,17 +37,14 @@ const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$
 describe('the session sheet: every exercise a section, only the active one mounts rows', () => {
   test('one ScrollView hosts the title and the sections; collapsed headers above and below the active section', () => {
     const scrollIdx = SRC.indexOf('<ScrollView\n          ref={scrollRef}');
-    // D220 addendum 14: the session name and clock are the modal header's
-    // title and subtitle (SessionToolbar), above the scroll, not in it.
-    const headerIdx = SRC.indexOf('<SessionToolbar');
+    const headerIdx = SRC.indexOf('<SessionHeader');
     const beforeIdx = SRC.indexOf('{collapsedSectionsBefore}');
     const activeIdx = SRC.indexOf('<ExerciseSection\n            index={currentExerciseIndex + 1}');
     const tableIdx = SRC.indexOf('<SetTable');
     const afterIdx = SRC.indexOf('{collapsedSectionsAfter}');
-    expect(headerIdx).toBeGreaterThan(-1);
-    expect(scrollIdx).toBeGreaterThan(headerIdx);
-    expect(SRC).toContain('title={sessionTitle}');
-    expect(beforeIdx).toBeGreaterThan(scrollIdx);
+    expect(scrollIdx).toBeGreaterThan(-1);
+    expect(headerIdx).toBeGreaterThan(scrollIdx);
+    expect(beforeIdx).toBeGreaterThan(headerIdx);
     expect(activeIdx).toBeGreaterThan(beforeIdx);
     expect(tableIdx).toBeGreaterThan(activeIdx);
     expect(afterIdx).toBeGreaterThan(tableIdx);
