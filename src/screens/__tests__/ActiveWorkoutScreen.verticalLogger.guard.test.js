@@ -133,7 +133,7 @@ describe('the continuous set sequence: completed above, active entry, upcoming b
     // D220 addendum 28 (3b): openWell asks first when an edit holds an unsaved
     // change, then hands to openWellNow, which opens the edit as before.
     expect(SRC).toMatch(/function openWell\(field, set = null\) \{[\s\S]{0,700}?openWellNow\(field, set\);/);
-    expect(SRC).toMatch(/function openWellNow\(field, set = null\) \{[\s\S]{0,200}?openEditSet\(set\);/);
+    expect(SRC).toMatch(/function openWellNow\(field, set = null\) \{[\s\S]{0,700}?openEditSet\(set\);/);
     expect(SRC).toContain('if (changed) handleSaveEditedSet(); else closeEditSet();');
     expect(SRC).toContain('openDeleteFromMenu(rowSheet.set)');
   });

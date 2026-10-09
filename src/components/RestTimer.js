@@ -431,10 +431,17 @@ export default function RestTimer({ controlsHidden = false } = {}) {
   // animating.
   const drain = useRef(new Animated.Value(1)).current;
   const drainWidth = useRef(drain.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })).current;
+  const wasActiveRef = useRef(false);
   useEffect(() => {
-    if (!restTimerActive) return;
+    if (!restTimerActive) { wasActiveRef.current = false; return; }
     const total = Math.max(1, Number(restTimerDuration) || 90);
     const frac = Math.max(0, Math.min(1, restTimerRemaining / total));
+    // A new rest starts from where it is (full), never sweeping up from
+    // wherever the last rest's drain stopped (audit P1).
+    if (!wasActiveRef.current) {
+      wasActiveRef.current = true;
+      drain.setValue(frac);
+    }
     if (reduceMotion) {
       drain.setValue(frac);
       return;

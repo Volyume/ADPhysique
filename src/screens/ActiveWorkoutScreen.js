@@ -90,7 +90,7 @@ import {
 import {
   PROVENANCE,
   resolveSetPrescription,
-  resolveLoadIncrement,
+  resolveBarLoadStep,
   assembleEvidencePacket,
   detectLoadOverride,
   detectRepsOverride,
@@ -2261,13 +2261,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // (2026-10-09 audit C7).
   const handleCancelWorkoutRef = useRef(null);
   handleCancelWorkoutRef.current = handleCancelWorkout;
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleCancelWorkoutRef.current?.();
-      return true;
-    });
-    return () => sub.remove();
-  }, []);
+  // Registered only while the logger is FOCUSED (audit blocker 1): the
+  // logger stays mounted under a pushed screen (How you train from "I can't
+  // do this") and under the other tabs, and a listener that always answered
+  // true ran the cancel flow from any of them: with nothing logged the
+  // session was discarded from under that screen; with sets logged the
+  // discard dialog appeared there and the back press never navigated.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleCancelWorkoutRef.current?.();
+        return true;
+      });
+      return () => sub.remove();
+    }, [])
+  );
 
   // D9: load the per-exercise "log per side" preferences once - which
   // exercises are ON, which have already been asked about (so the
@@ -2995,9 +3003,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         await loadHistoryReads();
       } catch (e) {
         logError('ActiveWorkoutScreen.loadHistory', e, { exerciseId: exercise?.id });
+      } finally {
+        // The draft may save from here on (audit D1b); see the draft effect.
+        if (!cancelled) draftArmedRef.current = true;
       }
     }
 
+    draftArmedRef.current = false;
     loadHistory();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3011,16 +3023,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // restores onto the same set (see loadHistory). An empty weight clears it.
   const draftSaveTimer = useRef(null);
   const draftRef = useRef(null);
+  const draftArmedRef = useRef(false);
   useEffect(() => {
     if (!activeWorkout?.id || !exercise?.id) { draftRef.current = null; return undefined; }
+    // Not before this exercise's load has had its chance to restore (audit
+    // D1b): on mount the entry is the default set, and a save or a clear
+    // from that state raced the restore's read and could delete the typed
+    // draft the restore exists for (or save the default reps over it).
+    if (!draftArmedRef.current) return undefined;
     const key = `@volyume_setdraft_${activeWorkout.id}_${exercise.id}`;
     const workingCount = countProgressSets(loggedSets);
     const w = currentSet?.weight;
     const r = currentSet?.reps;
     // A reps-only or timed exercise never holds a weight, so its draft is
     // its reps (D220 addendum 30, audit C15).
-    const noWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
-    const hasValue = noWeight ? (r !== '' && r != null) : (w !== '' && w != null);
+    const kindNow = exercise?.exerciseType;
+    const noWeight = kindNow === 'reps_only' || kindNow === 'duration';
+    // Only typed work is a draft (audit D1a): the app's own untouched seed
+    // saved as a draft came back on every revisit as if it were typed, in
+    // primary ink, and the ghost re-seed stopped following edits.
+    const hasValue = !currentSet?.isGhost && (noWeight ? (r !== '' && r != null) : (w !== '' && w != null));
     const payload = !hasValue ? null
       : { workingCount, weight: currentSet.weight, reps: currentSet.reps, rir: currentSet.rir, setType: currentSet.setType };
     draftRef.current = { key, payload }; // mirror for the immediate background flush
@@ -3030,7 +3052,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       else AsyncStorage.removeItem(key).catch(() => {});
     }, 250);
     return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
-  }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id, setTableKind]);
+  }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id, exercise?.exerciseType]);
 
   // Flush the draft the INSTANT the app backgrounds, so a quick type-then-switch
   // (faster than the debounce above) still persists before iOS may kill the JS.
@@ -3149,6 +3171,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         rpe: null,
         leftReps: null,
         rightReps: null,
+        // The note the row was stored with (a cluster's breakdown included),
+        // so the row sheet opens on it instead of empty (audit D5).
+        notes: effectiveNotes ?? null,
         // D218 (founder order 2026-10-03, audit F-10): the same evidence
         // class the database row was stamped with above (EL-7), so the record
         // judged on log, the session's record list, the share image and the
@@ -3186,11 +3211,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // reader; speak the save so a TalkBack user knows the tap landed.
       // announceForAccessibility is a no-op when no screen reader runs.
       try {
-        const spokenWeight = setData.weight > 0 ? `, ${setData.weight} ${units}` : '';
+        // By the exercise's kind (audit D12): a plank is a time, a run is a
+        // distance and a time, never "45 reps" or "500 kg".
+        const kindNow = exercise?.exerciseType || 'weight_reps';
+        const spokenFacts = kindNow === 'duration'
+          ? `, ${formatSeconds(effectiveReps)}`
+          : kindNow === 'distance'
+            ? `, ${setData.weight} ${units === 'kg' ? 'metres' : 'yards'}, ${formatSeconds(effectiveReps)}`
+            : kindNow === 'reps_only'
+              ? `, ${effectiveReps} reps`
+              : `${setData.weight > 0 ? `, ${setData.weight} ${units}` : ''}, ${effectiveReps} reps`;
         AccessibilityInfo.announceForAccessibility(
           isWarmupSet
             ? 'Warm-up set logged'
-            : `Set ${setNumber} logged${spokenWeight}, ${effectiveReps} reps`,
+            : `Set ${setNumber} logged${spokenFacts}`,
         );
       } catch (_) { /* announcement is best-effort */ }
 
@@ -3604,10 +3638,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // reflects that id, so the user sees the existing "Delete set?" confirm —
   // no new deletion path, no bypassed confirmation.
   const menuDeleteTargetIdRef = useRef(null);
-  const openDeleteFromMenu = React.useCallback((set) => {
+  function openDeleteFromMenu(set) {
+    // Already the row being edited: editingSet will not change, so the
+    // effect below would never fire and the armed delete would surprise
+    // the next tap on that row (audit D3). Confirm directly instead.
+    if (editingSet && editingSet.id === set.id) {
+      menuDeleteTargetIdRef.current = null;
+      handleDeleteEditedSet();
+      return;
+    }
     menuDeleteTargetIdRef.current = set.id;
     openEditSet(set);
-  }, [openEditSet]);
+  }
   useEffect(() => {
     if (menuDeleteTargetIdRef.current != null && editingSet && editingSet.id === menuDeleteTargetIdRef.current) {
       menuDeleteTargetIdRef.current = null;
@@ -3746,6 +3788,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               setEditingSet(null);
               setEditValue(null);
               updateLastActivity();
+              // Spoken like a log and an edit are (audit P5).
+              try { AccessibilityInfo.announceForAccessibility('Set deleted'); } catch (_) { /* best-effort */ }
             } catch (e) {
               logError('ActiveWorkoutScreen.handleDeleteEditedSet', e, {
                 userId: user?.id,
@@ -3818,7 +3862,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   // Keep the ref pointed at the latest closure so the rest-notification
   // "Log set" action listener (installed once) always calls current state.
-  handleCompleteSetPressRef.current = handleCompleteSetPress;
+  // Mid-cluster the action is Finish, as the bar's and the row's are (audit
+  // unsure 2): handleCompleteSetPress would start the cluster over.
+  handleCompleteSetPressRef.current = cluster ? finishCluster : handleCompleteSetPress;
   // Mirror the current set's ghost flag for that same listener's guard.
   currentSetGhostRef.current = !!currentSet?.isGhost;
 
@@ -3836,7 +3882,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function finishCluster() {
     if (!cluster) return;
-    const summary = summariseCluster(cluster.setType, cluster.reps);
+    // A mini-set typed but not yet added is still a mini-set done (audit
+    // D6): it folds into the cluster rather than being dropped silently.
+    const pending = parseInt(clusterReps, 10);
+    const reps = Number.isFinite(pending) && pending > 0 ? [...cluster.reps, pending] : cluster.reps;
+    const summary = summariseCluster(cluster.setType, reps);
     if (!summary) { setCluster(null); setClusterReps(''); return; }
     const notes = mergeClusterNote(noteText, summary.notes);
     await handleCompleteSet({ actualReps: summary.totalReps, notes });
@@ -4052,6 +4102,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       });
     }
 
+    // The cut the message promises must reach the timer (audit D13): the
+    // timer reads restSecondsForEntry, never exercise.restSec, so the
+    // reduction is written as the session's own rest choice for every
+    // remaining exercise.
+    setRestOverrides((prev) => {
+      const next = { ...prev };
+      for (let i = currentExerciseIndex; i < workoutExercises.length; i++) {
+        const entry = workoutExercises[i];
+        const id = entry?.exercise?.id;
+        if (id == null || droppedNames.has(entry?.exercise?.name ?? '')) continue;
+        next[id] = Math.max(15, Math.round(restSecondsForEntry(entry) * (1 - restReduction)));
+      }
+      return next;
+    });
     setTimeCrunchActive(true);
     setTimeCrunchMsg(msg);
     hapticsVocab.error();
@@ -4642,7 +4706,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const lastWorking = [...loggedSets].reverse().find(isWorkingSetRow) || null;
     const carriedWeight = lastWorking && lastWorking.weight != null && lastWorking.weight !== '' ? lastWorking.weight : null;
     const w = live.prefill ? (live.weight ?? carriedWeight ?? '') : (carriedWeight ?? '');
-    const r = live.repsTarget != null ? live.repsTarget : DEFAULT_SET.reps;
+    const carriedReps = lastWorking ? (lastWorking.actualReps ?? lastWorking.reps ?? null) : null;
+    const r = live.repsTarget != null ? live.repsTarget : (carriedReps ?? DEFAULT_SET.reps);
     if (String(w) === String(currentSet.weight) && r === currentSet.reps) return;
     setCurrentSet(cs => ({ ...cs, weight: w, reps: r, isGhost: live.prefill && live.weight != null }));
     seededEntryRef.current = { weight: w, reps: r };
@@ -4666,6 +4731,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         : `Round ${circuitRound.round}`;
       return `${pos} - Circuit`;
     }
+    // Past the target with no extra set armed there is no "set 4 of 3"
+    // (audit D10): the line says the target is met.
+    if (targetSets && workingLogged >= targetSets && !extraSetArmed) {
+      return `All ${targetSets} sets done`;
+    }
     const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
@@ -4679,6 +4749,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // declared below, it read undefined and every kind fell to weight_reps).
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
   const restSheetNextLabel = (() => {
+    if (targetSets && workingLogged >= targetSets && !extraSetArmed) return orientationLabel;
     const w = currentSet?.weight;
     const r = currentSet?.reps;
     const kind = ['reps_only', 'duration', 'distance'].includes(activeExerciseType) ? activeExerciseType : 'weight_reps';
@@ -4724,12 +4795,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // The bar steps by the ONE increment rule the coach uses (D220 addendum
   // 34, audit D11): a dumbbell steps to the next bell on the rack, a
   // kettlebell to the next bell on the shelf, a barbell by the plate.
-  const weightStepKg = resolveLoadIncrement(parseDecimalInput(activeSource?.weight ?? currentSet.weight) || 0, {
+  // D220 addendum 37 (audit D7): the bar's step is the coach's increment
+  // (resolveLoadIncrement) floored at a loadable step, so a 20 kg bar never
+  // steps to 21 kg; a bell steps up to the next bell and DOWN to the
+  // previous one, which is its own gap (12 kg steps down to 10, not to 8).
+  const barLoadOpts = {
     incrementKg: exercise?.incrementKg ?? exercise?.increment_kg ?? null,
     units,
     category: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
     equipmentCategory: exercise?.equipmentCategory ?? exercise?.equipment_category ?? exercise?.equipment ?? null,
-  });
+  };
+  const barLoadBase = parseDecimalInput(activeSource?.weight ?? currentSet.weight) || 0;
+  const weightStepKg = resolveBarLoadStep(barLoadBase, barLoadOpts, 'up');
+  const weightStepDownKg = resolveBarLoadStep(barLoadBase, barLoadOpts, 'down');
   // The reps well gets no step keys (D220 addendum 24): a rep count is typed,
   // and "- 1 / + 1" beside the keyboard read as nothing. Weight steps by the
   // plate; a time well steps by 5 s inside the bar.
@@ -4747,14 +4825,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   // An exercise change (a jump, an advance, a group jump) closes the keypad
   // and any edit, so a pad never writes into another exercise's entry.
+  // Keyed on the exercise id as well as the index (audit D15): a swap and a
+  // removal change the exercise without changing the index, and the new
+  // exercise inherited the extra pending rows, the open well and the edit.
+  // The row sheet closes too (audit D4): left open across an advance, its
+  // Delete removed the set from the database and then filtered the NEW
+  // exercise's sets in the store.
   useEffect(() => {
     setEntryField(null);
     setEditField(null);
     setEditingSet(null);
     setEditValue(null);
     setExtraTargetSets(0);
+    setRowSheet(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentExerciseIndex]);
+  }, [currentExerciseIndex, exercise?.id]);
   function editIsDirty() {
     if (!editingSet) return false;
     return String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
@@ -4777,7 +4862,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.selection();
     // Typing is staying: a pending auto-advance would carry the pad away.
     cancelAutoAdvance();
-    if (set) {
+    if (set && editingSet && set.id === editingSet.id) {
+      // The row already being edited: only the field moves, the typed
+      // values stay (audit D2: re-opening the edit re-seeded them from the
+      // saved set, so tapping the reps well threw the typed weight away).
+      setEditField(field);
+      setEntryField(null);
+    } else if (set) {
       openEditSet(set);
       setEditField(field);
       setEntryField(null);
@@ -4852,6 +4943,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (activeField === 'reps') {
       writeActiveField('reps', stepValue(activeSource?.reps, delta, REPS_RULES, 1));
     } else {
+      // The step down is its own size on a bell (see weightStepDownKg).
+      if (delta < 0 && setTableKind !== 'distance') delta = -weightStepDownKg;
       writeActiveField('weight', String(stepValue(activeSource?.weight, delta, activeRules, 0)));
     }
   }
@@ -4867,6 +4960,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the same press handler the row's tick uses runs, so typing the reps and
   // pressing Log is the whole set. An edit of a logged set keeps Done.
   function handleInputLog() {
+    // A straight set that would be refused keeps the keyboard up for the
+    // correction (audit P10): the press handler shows the refusal itself.
+    if (!cluster && !perSide && !validateSetEntryValue({ value: currentSet, exercise, units }).ok) {
+      handleCompleteSetPress();
+      return;
+    }
     closeInput();
     // The same action as the row's check: mid-cluster that is Finish cluster
     // (2026-10-09 audit B3: handleCompleteSetPress would restart the cluster).
@@ -4933,7 +5032,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       ? (timeDraft != null ? timeDraft : (activeSource?.reps === '' || activeSource?.reps == null ? '' : formatSeconds(activeSource.reps)))
       : String(activeSource?.[activeField] ?? ''),
     onChangeText: handleInputChange,
-    keyboardType: activeIsTime ? 'numbers-and-punctuation' : (activeField === 'weight' ? 'decimal-pad' : 'number-pad'),
+    // 'numbers-and-punctuation' is an iOS keyboard; Android has no mapping
+    // for it and opened the letters keyboard on every time well (audit D8).
+    // Android's number pad has no colon: a plain number is seconds
+    // (parseTimeToSeconds), so 90 is 1:30.
+    keyboardType: activeIsTime
+      ? (Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric')
+      : (activeField === 'weight' ? 'decimal-pad' : 'number-pad'),
     testID: activeField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
     returnKeyType: iosPad ? undefined : (activeField === 'weight' && timeField !== 'weight' ? 'next' : 'done'),
     inputAccessoryViewID: Platform.OS === 'ios' ? barAccessoryId : undefined,
@@ -5006,6 +5111,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.setLogged();
     audit('workout.history.use', { exerciseId: exercise?.id, setIndex: workingLogged });
     if (editingSet) { closeEditSet(); setEditField(null); }
+    // Past the target the next row is hidden: using a set arms the extra
+    // set so the row appears with it (audit D14), instead of writing into
+    // a row nobody can see.
+    if (targetComplete && !extraSetArmed) { cancelAutoAdvance(); setExtraSetArmed(true); }
     // A reps-only or timed set has no weight to use (D220 addendum 34).
     const noWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
     setCurrentSet((cs) => ({ ...cs, weight: noWeight ? '' : String(weight ?? 0), reps: reps ?? cs.reps, isGhost: false }));
@@ -5031,6 +5140,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     && currentSGI == null
     && !isWarmupEntry && !cluster && !perSide
     && !isClusterType(currentSet.setType)
+    && countProgressSets([{ setType: currentSet.setType }]) > 0
     && !(exercise && unilateralExercises.has(exercise.id))
     && (setTableKind !== 'weight_reps' || parseDecimalInput(currentSet.weight) > 0)
     && Number(currentSet.reps) > 0
@@ -5067,7 +5177,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       record: detectedPRs.some((pr) => pr.setId === s.id),
       inputField: editingThis ? activeInputField : null,
       onPressWell: (field) => openWell(field, s),
-      onLongPressRow: () => setRowSheet({ kind: 'logged', set: s, title: `${warm ? 'Warm-up' : `Set ${progressNum}`} · ${shortSetText(s)}` }),
+      // A hold is the person staying on this exercise: it cancels a pending
+      // auto-advance (audit D4). The title names a typed set by its type
+      // (audit P7: a drop set after set 2 was titled "Set 2").
+      onLongPressRow: () => { cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
       testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
     });
   });
@@ -5095,7 +5208,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // (Law A: history, never the target).
       hapticsVocab.setLogged();
       audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-      setCurrentSet((cs) => ({ ...cs, weight: String(nextLast.set.weight ?? 0), reps: nextLast.set.actualReps ?? nextLast.set.reps ?? cs.reps, isGhost: false }));
+      // No weight for reps-only or timed work (audit P8), as History's Use.
+      const lastNoWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
+      setCurrentSet((cs) => ({ ...cs, weight: lastNoWeight ? '' : String(nextLast.set.weight ?? 0), reps: nextLast.set.actualReps ?? nextLast.set.reps ?? cs.reps, isGhost: false }));
     } : undefined,
     onPressWell: (field) => openWell(field),
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
@@ -5135,6 +5250,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const recordKey = exerciseRecord ? `${exerciseRecord.type}|${recordText(exerciseRecord)}` : null;
   const celebrateRecord = recordKey != null && celebrateRef.current === recordKey;
   useEffect(() => { celebrateRef.current = null; });
+  function rowSheetTitleFor(set, warm, progressNum) {
+    if (warm) return 'Warm-up';
+    const type = set.setType ?? set.set_type ?? 'straight';
+    if (type === 'straight') return `Set ${progressNum}`;
+    const label = SET_TYPE_OPTIONS.find((o) => o.value === type)?.label;
+    return label ? `${label} · Set ${progressNum}` : `Set ${progressNum}`;
+  }
   // The quiet lines above the table: the group-focus cue (D44) names the
   // destination for a sighted user; the warm-up line explains the W row once;
   // the first-time line says how to choose a first load when there is no
@@ -5364,7 +5486,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 icon: 'flash-outline',
                 content: (
                   <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
-                    <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
+                    <Ionicons name="flash-outline" size={16} color={t.colors.textSecondary} />
                     <Text style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
                     <TouchableOpacity
                       style={[styles.inlineActionPill, live.inlineActionPill]}
@@ -5497,7 +5619,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 icon: 'bulb-outline',
                 content: (
                   <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
-                    <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
+                    <Ionicons name="bulb-outline" size={16} color={t.colors.textSecondary} style={{ marginTop: spacing.hair }} />
                     <View style={styles.nextTimeBannerBody}>
                       <Text
                         style={[styles.nextTimeBannerText, live.nextTimeBannerText]}
@@ -5732,7 +5854,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   onPress={addMiniSet}
                   accessibilityLabel="Add mini-set"
                 >
-                  <Ionicons name="add" size={20} color={t.colors.primary} />
+                  <Ionicons name="add" size={20} color={t.colors.textPrimary} />
                   <Text style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
                 </Button>
               </View>
@@ -5741,7 +5863,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 Tap the check when the cluster is done.
               </Text>
-              <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
+              <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityRole="button" accessibilityLabel="Cancel cluster">
                 <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
               </TouchableOpacity>
             </View>
@@ -5821,6 +5943,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View onLayout={handleBarLayout}>
               <KeyboardBar
                 step={activeStep}
+                stepDown={activeField === 'weight' && setTableKind !== 'distance' ? weightStepDownKg : undefined}
                 unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
                 mode={activeIsTime ? 'time' : 'number'}
                 onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
@@ -5836,6 +5959,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View onLayout={handleBarLayout}>
             <KeyboardBar
               step={activeStep}
+              stepDown={activeField === 'weight' && setTableKind !== 'distance' ? weightStepDownKg : undefined}
               unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
               mode={activeIsTime ? 'time' : 'number'}
               onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
@@ -5896,8 +6020,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             // D15); the next set's note is the entry's draft as before.
             if (rowSheet?.kind === 'logged' && rowSheet.set?.id) {
               const notes = text || null;
-              updateWorkoutSet(rowSheet.set.id, { notes }).catch((e) => logError('ActiveWorkoutScreen.saveSetNote', e, { setId: rowSheet.set.id }));
-              updateSetInCurrentExercise(rowSheet.set.id, { notes });
+              const id = rowSheet.set.id;
+              updateWorkoutSet(id, { notes }).catch((e) => logError('ActiveWorkoutScreen.saveSetNote', e, { setId: id }));
+              updateSetInCurrentExercise(id, { notes });
+              // The session's own row too, so the sheet reopens on the saved
+              // note (audit D5).
+              setLoggedSets((prev) => prev.map((row) => (row.id === id ? { ...row, notes } : row)));
               return;
             }
             setNoteText(text);
@@ -7066,9 +7194,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    // Amber is for the set you are on, a record, Finish and the drain line
+    // (addendum 30); a quiet-line action wears the border, at the label role
+    // (audit P2, P3: the 11 sp caption on a button is the class addendum 26
+    // retired).
+    borderColor: colors.border,
   },
-  inlineActionPillText: { ...type.caption, color: colors.textPrimary },
+  inlineActionPillText: { ...type.w(type.label, 'semibold'), color: colors.textPrimary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: workoutLoggerSize.exerciseNavMaxHeight },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
   navTab: { minHeight: workoutLoggerSize.exerciseTabMinHeight, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface2 },
@@ -7548,8 +7680,8 @@ function buildLiveStyles(t) {
     sideCarveNote: { ...t.type.caption, color: t.colors.textMuted },
     starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
     starterBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    inlineActionPill: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    inlineActionPillText: { ...t.type.caption, color: t.colors.textPrimary },
+    inlineActionPill: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    inlineActionPillText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     exerciseNav: { borderBottomColor: t.colors.border },
     navTab: { backgroundColor: t.colors.surface2 },
     navTabActive: { backgroundColor: t.colors.primaryBg },

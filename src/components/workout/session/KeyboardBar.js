@@ -72,7 +72,7 @@ function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }
   );
 }
 
-export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', onStep, onNext, onDone, doneLabel = 'Done', safeBottom = 0 }) {
+export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mode = 'number', onStep, onNext, onDone, doneLabel = 'Done', safeBottom = 0 }) {
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
@@ -80,8 +80,13 @@ export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', on
   }), [t]);
   const isTime = mode === 'time';
   const delta = isTime ? TIME_STEP : step;
+  // The step down can differ from the step up (a bell steps down to the
+  // previous bell on the shelf; D220 addendum 37); it reads as its own number.
+  const downDelta = isTime ? TIME_STEP : (stepDown != null ? stepDown : step);
   const stepText = isTime ? `${TIME_STEP} s` : String(step);
+  const stepDownText = isTime ? `${TIME_STEP} s` : String(downDelta);
   const stepSpoken = isTime ? `${TIME_STEP} seconds` : `${step} ${spokenUnit(unit)}`;
+  const stepDownSpoken = isTime ? `${TIME_STEP} seconds` : `${downDelta} ${spokenUnit(unit)}`;
   const ink = t.colors.textPrimary;
 
   return (
@@ -90,9 +95,9 @@ export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', on
         <Action
           testID="volyume-bar-step-down"
           icon="remove"
-          label={stepText}
-          spoken={`Remove ${stepSpoken}`}
-          onPress={() => onStep(-delta)}
+          label={stepDownText}
+          spoken={`Remove ${stepDownSpoken}`}
+          onPress={() => onStep(-downDelta)}
           glyphColor={ink}
           labelStyle={live.label}
         />

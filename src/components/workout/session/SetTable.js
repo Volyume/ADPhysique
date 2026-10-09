@@ -129,11 +129,11 @@ export default function SetTable({
   return (
     <View>
       <View style={[styles.columns, live.columns]}>
-        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>SET</Text>
-        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>LAST</Text>
+        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>SET</Text>
+        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>LAST</Text>
         <View style={styles.colWells}>
           {wellLabels.map((label) => (
-            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label.toUpperCase()}</Text>
+            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>{label.toUpperCase()}</Text>
           ))}
         </View>
         <View style={styles.colCheck}>
