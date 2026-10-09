@@ -49,9 +49,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 import SegmentedControl from '../components/SegmentedControl';
 import ScreenHeader from '../components/ScreenHeader';
-import Chip from '../components/Chip';
 import Band, { BandGap } from '../components/community/Band';
-import { LinearGradient } from 'expo-linear-gradient';
 import EmptyState from '../components/EmptyState';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
@@ -72,7 +70,7 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import {
-  colors, spacing, circle, radius, iconSize, withAlpha,
+  colors, spacing, circle, radius, iconSize,
 } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import {
@@ -177,25 +175,6 @@ function Well({
       {icon ? <Ionicons name={icon} size={iconSize.md} color={t.colors.textMuted} /> : null}
       <Text style={[t.type.body, styles.wellText, { color: t.colors.textMuted }]} numberOfLines={1}>{text}</Text>
     </Pressable>
-  );
-}
-
-/** A scope chip: the house Chip (components/Chip.js), as a radio. Founder
- * verdict 2026-10-08: Community uses the app's own chip, not its own. */
-function FilterChip({
-  label, selected, disabled, onPress,
-}) {
-  return (
-    <Chip
-      label={label}
-      selected={selected}
-      disabled={disabled}
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityLabel={label}
-      accessibilityHint={disabled ? 'Not available yet' : undefined}
-      numberOfLines={1}
-    />
   );
 }
 
@@ -895,56 +874,12 @@ export default function CommunityHubScreen({ navigation, route }) {
   // ─── Feed ───────────────────────────────────────────────────────────
 
   const sortLabel = SORT_LABELS[sort] ?? SORT_LABELS.newest;
+  const scopeLabel = (SCOPES.find((x) => x.key === scope) ?? SCOPES[0]).label;
 
   const feedHeader = (
     <View>
       {notices}
       {hero}
-      {joined ? (
-        <View style={styles.filterRow}>
-          {/* Founder device verdict 2026-10-08: the chips scroll under a
-              fade at the right edge, so a chip that does not fit reads as
-              "more", never as cut off; the sort is a 48 dp glyph (amber only
-              while a sort other than Newest is chosen, a selected state
-              under V7), named in full for assistive tech and in the sheet. */}
-          <View style={styles.filterScroll}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterContent}
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Feed"
-            >
-              {SCOPES.map((s) => (
-                <FilterChip
-                  key={s.key}
-                  label={s.label}
-                  selected={scope === s.key}
-                  disabled={scopeUnavailable && (s.key === 'gym' || s.key === 'groups')}
-                  onPress={() => selectScope(s.key)}
-                />
-              ))}
-            </ScrollView>
-            <LinearGradient
-              pointerEvents="none"
-              colors={[withAlpha(t.colors.background, 0), t.colors.background]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.filterFade}
-            />
-          </View>
-          <View style={styles.sortControl}>
-            <Chip
-              icon="swap-vertical-outline"
-              label={sortLabel}
-              selected={sort === 'respected'}
-              onPress={() => setSortOpen(true)}
-              accessibilityLabel={`Sort: ${sortLabel}`}
-              numberOfLines={1}
-            />
-          </View>
-        </View>
-      ) : null}
       {offline ? (
         <Text style={[styles.offline, t.type.caption, { color: t.colors.textMuted }]}>
           Showing what you last saw. You are offline.
@@ -956,13 +891,26 @@ export default function CommunityHubScreen({ navigation, route }) {
       {joined ? (
         <PresenceBand trainingNow={summary?.trainingNow ?? null} trainedToday={summary?.trainingNow?.trainedToday ?? null} gated={consistencyGated} gapAfter />
       ) : null}
-      <Band>
+      {/* Founder verdict 2026-10-09 ("no pills, like the rest of the app"):
+          what the feed shows is ONE house row, as every setting on Coach is,
+          opening the house MenuSheet with the four scopes and the two sorts.
+          No chip row, no sort pill. */}
+      <Band style={styles.postCard}>
         {joined ? (
-          <Well
-            text="Share something from your training"
-            onPress={() => setComposeOpen(true)}
-            accessibilityLabel="Share something from your training"
-          />
+          <>
+            <EntryRow
+              icon="options-outline"
+              title={scopeLabel}
+              subtitle={`${sortLabel} first`}
+              onPress={() => setSortOpen(true)}
+              accessibilityLabel={`Showing ${scopeLabel}, ${sortLabel.toLowerCase()} first. Change what you see`}
+            />
+            <Well
+              text="Share something from your training"
+              onPress={() => setComposeOpen(true)}
+              accessibilityLabel="Share something from your training"
+            />
+          </>
         ) : (
           <JoinToInteractRow onPress={() => navigation.navigate('CommunityJoin')} />
         )}
@@ -1391,8 +1339,19 @@ export default function CommunityHubScreen({ navigation, route }) {
       <MenuSheet
         visible={sortOpen}
         onClose={() => setSortOpen(false)}
-        title="Sort posts"
+        title="What you see"
         rows={[
+          ...SCOPES.map((x) => {
+            const unavailable = scopeUnavailable && (x.key === 'gym' || x.key === 'groups');
+            return {
+              icon: x.key === 'following' ? 'people-outline' : x.key === 'gym' ? 'location-outline' : x.key === 'groups' ? 'people-circle-outline' : 'globe-outline',
+              label: x.label,
+              sub: unavailable ? 'Not available yet' : (scope === x.key ? 'Showing now' : undefined),
+              accessibilityLabel: unavailable ? `${x.label}, not available yet` : undefined,
+              disabled: unavailable,
+              onPress: unavailable ? () => {} : () => { setSortOpen(false); selectScope(x.key); },
+            };
+          }),
           {
             icon: 'time-outline', label: 'Newest', sub: 'The latest posts first', onPress: () => selectSort('newest'),
           },
@@ -1459,13 +1418,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   segmentBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.md },
-  filterRow: { flexDirection: 'row', alignItems: 'center', paddingBottom: spacing.md, paddingRight: spacing.lg },
-  filterScroll: { flex: 1 },
-  filterFade: {
-    position: 'absolute', top: 0, bottom: 0, right: 0, width: spacing.xl,
-  },
-  filterContent: { paddingLeft: spacing.lg, paddingRight: spacing.xl, gap: spacing.sm, alignItems: 'center' },
-  sortControl: { marginLeft: spacing.sm },
   notice: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   noticeLink: { minHeight: touchTarget.minimum, justifyContent: 'center' },
   noticeActions: { flexDirection: 'row', gap: spacing.sm },

@@ -203,7 +203,7 @@ describe('the progress strip on someone else\'s profile', () => {
     getProfile.mockResolvedValue({ card: { ...OTHER_CARD, ...COUNTERS }, viewable: true, posts: [] });
     const { text } = await mount();
 
-    expect(text).toContain('sessions this week');
+    expect(text).toContain('Sessions this week');
   });
 
   test('nothing renders when the card carries no counters (owner does not share)', async () => {
@@ -220,7 +220,7 @@ describe('the progress strip on someone else\'s profile', () => {
     getProfile.mockResolvedValue({ card: { ...OTHER_CARD, ...COUNTERS, c_prs_4w: 3 }, viewable: true, posts: [] });
     const { text } = await mount();
 
-    expect(text).toContain('PRs in 4 weeks');
+    expect(text).toContain('PRs in the last 4 weeks');
   });
 
   test('no PR cell when the card carries the other counters but not c_prs_4w (share_sessions off)', async () => {
@@ -264,7 +264,7 @@ describe('the owner\'s own profile keeps the device path', () => {
     const { text } = await mount();
 
     expect(loadConsistency).toHaveBeenCalledWith('u1');
-    expect(text).toContain('sessions this week');
+    expect(text).toContain('Sessions this week');
   });
 
   // migrate_172: the PR figure alone needs "Share what I did" too, even on
@@ -281,7 +281,7 @@ describe('the owner\'s own profile keeps the device path', () => {
 
     const { text } = await mount();
 
-    expect(text).toContain('PRs in 4 weeks');
+    expect(text).toContain('PRs in the last 4 weeks');
   });
 
   test('the PR count is hidden on the owner\'s own profile when they share consistency but not what they did', async () => {
@@ -295,7 +295,7 @@ describe('the owner\'s own profile keeps the device path', () => {
     const { text } = await mount();
 
     expect(text).not.toContain('PR');
-    expect(text).toContain('sessions this week');
+    expect(text).toContain('Sessions this week');
   });
 });
 

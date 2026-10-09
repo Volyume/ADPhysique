@@ -131,12 +131,13 @@ describe('the founder device verdict of 2026-10-08 ("boxes touching each other, 
     expect(bar[0]).toContain('paddingBottom: spacing.md');
   });
 
-  test('the scope chips and the sort are the house Chip, the chips scrolling under a fade, never cut against a word', () => {
+  test('no pills on the feed (founder verdict 2026-10-09): what you see is one house row opening the house sheet', () => {
     const hub = code(read('src/screens/CommunityHubScreen.js'));
-    expect(hub).toMatch(/import Chip from '\.\.\/components\/Chip'/);
-    expect(hub).toMatch(/<Chip\s[\s\S]*?icon="swap-vertical-outline"/);
-    expect(hub).toMatch(/<LinearGradient[\s\S]*?style=\{styles\.filterFade\}/);
-    expect(hub).not.toMatch(/filterChip: \{/);
+    expect(hub).not.toMatch(/import Chip from/);
+    expect(hub).not.toMatch(/<Chip\s/);
+    expect(hub).not.toMatch(/filterRow|filterChip|sortControl|LinearGradient/);
+    expect(hub).toMatch(/title="What you see"/);
+    expect(hub).toMatch(/icon="options-outline"[\s\S]*?title=\{scopeLabel\}/);
   });
 
   test('the Hub wears the house ScreenHeader and its sections are the house grouped container (founder verdict 2026-10-08, "one app all together")', () => {
@@ -153,11 +154,11 @@ describe('the founder device verdict of 2026-10-08 ("boxes touching each other, 
     expect(entry).toMatch(/const NAV_ICON = 18;/);
   });
 
-  test('the You figures inside a band are spaced tiles with two-line label room', () => {
+  test('the You figures inside a band are label-and-figure rows, never tiles (founder verdict 2026-10-09)', () => {
     const strip = code(read('src/components/community/ProgressStrip.js'));
-    expect(strip).toMatch(/cellsRowBand: \{[^}]*gap: spacing\.sm[^}]*paddingHorizontal: spacing\.lg/);
-    expect(strip).toMatch(/labelBand: \{ minHeight: type\.caption\.lineHeight \* 2 \}/);
-    expect(strip).toMatch(/numberOfLines=\{2\}>\{label\}/);
+    expect(strip).toMatch(/function FigureRow\(/);
+    expect(strip).toMatch(/figureRow: \{[\s\S]*?paddingHorizontal: spacing\.lg/);
+    expect(strip).not.toMatch(/cellBand|labelBand|cellsRowBand/);
   });
 });
 
