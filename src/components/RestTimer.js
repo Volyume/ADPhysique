@@ -87,13 +87,16 @@ export default function RestTimer() {
   const t = useTheme();
   const live = {
     container: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    timeText: { color: t.colors.textPrimary },
+    // One language with the logger page (D220 addendum 16): the readout at
+    // the title numeral role, its label the table's overline, and the three
+    // controls the footer's glyph-and-label role in text ink; the amber on
+    // this strip is the drain line alone.
+    timeText: { ...t.type.num('title'), color: t.colors.textPrimary },
     almostDone: { color: t.colors.warning },
     countdownNum: { color: t.colors.warning },
-    label: { ...t.type.overline, color: t.colors.textMuted },
-    skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.primary },
-    adjBtnTextNeg: { color: t.colors.textSecondary },
+    label: { ...t.type.overline, color: t.colors.textSecondary },
+    skipText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
+    adjBtnText: { ...t.type.w(t.type.num('label'), 'semibold'), color: t.colors.textPrimary },
     drainTrack: { backgroundColor: t.colors.surface3 },
     drainFill: { backgroundColor: t.colors.primaryFill },
     drainFillWarm: { backgroundColor: t.colors.warning },
@@ -495,6 +498,7 @@ export default function RestTimer() {
         </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
+          // One role for every control on the strip (D220 addendum 16).
           return (
             <TouchableOpacity
               key={delta}
@@ -507,7 +511,7 @@ export default function RestTimer() {
               accessibilityRole="button"
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
-              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
+              <Text style={[styles.adjBtnText, live.adjBtnText]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -557,7 +561,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   timeText: {
-    ...type.num('bodyStrong'),
+    ...type.num('title'),
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
     // Stable footprint so 9:59 -> 0:03 (or the 3-2-1 single digits) never
@@ -570,7 +574,7 @@ const styles = StyleSheet.create({
   // overline role - named once in theme.js, used here by name.
   label: {
     ...type.overline,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   // Quiet text controls (phase 2B): the bordered pill chrome is retired -
   // the strip's affordances are its labels. Full 44dp tap height retained.
@@ -580,7 +584,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
-  skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  skipText: { ...type.w(type.label, 'semibold'), color: colors.textPrimary },
   adjBtn: {
     minHeight: touchTarget.minimum,
     minWidth: touchTarget.minimum,
@@ -590,12 +594,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   adjBtnText: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.primary,
-    fontVariant: ['tabular-nums'],
+    ...type.w(type.num('label'), 'semibold'),
+    color: colors.textPrimary,
   },
-  adjBtnTextNeg: { color: colors.textSecondary },
   drainTrack: {
     height: 2,
     backgroundColor: colors.surface3,
