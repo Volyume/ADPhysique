@@ -1921,11 +1921,11 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       const collapsed = collectText(tree.toJSON()).join('  ');
       expect(collapsed).toMatch(/Target met/);          // the content chip is present
       expect(collapsed).not.toMatch(/Target reached/);  // the banner stays folded
-      // D220 addendum 8: there is no Target cell. With the target met and
-      // no pending row, the prescription reaches the screen as the coach
-      // line above the table ("Add 2.5 kg once you reach 12 reps."); a
-      // pending row would carry the range as its reps placeholder.
-      expect(collapsed).toMatch(/once you reach 12 reps/);
+      // D220 addendum 9: no Target cell and no coach sentence on the logger.
+      // A pending row carries the range as its reps placeholder; with the
+      // target met there is no pending row, so no prescription text at all.
+      expect(collapsed).not.toMatch(/8\s*-\s*12/);
+      expect(collapsed).not.toMatch(/once you reach/);
 
       // Expand: tap the chip; the folded banner content then appears.
       const chips = tree.root.findAll(

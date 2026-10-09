@@ -204,7 +204,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // old title row and its chevron are no longer rendered. The frozen
     // styles below stay pinned until the stage D clean-up removes them.
     expect(ACTIVE_WORKOUT).toContain('name={exercise.name}');
-    expect(ACTIVE_WORKOUT).toContain('onDetails={handleOpenExerciseDetails}');
+    // D220 addendum 10: the guide is behind the active header's name tap.
+    expect(ACTIVE_WORKOUT).toContain('onPressHeader={handleOpenExerciseDetails}');
     // Re-pinned (founder orders 2026-08-17, Campaign 27/28): the exercise
     // name stepped down one notch, title -> bodyStrong ("ever so slightly
     // smaller"), and the tap row gained the details chevron - the name now
@@ -218,10 +219,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // the exercise name is ExerciseSection's title, one line. Re-pinned
     // (founder device verdict 2026-10-08, D220 addendum 7): the plan
     // detail's exercise row, bodyStrong in primary ink, not amber.
-    expect(SECTION).toContain('name: { ...t.type.bodyStrong, color: t.colors.textPrimary },');
-    expect(SECTION).toContain('<Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={2}>{name}</Text>');
-    // The title tap is the section header's 48 dp row.
-    expect(SECTION).toMatch(/titleTap: \{[\s\S]{0,120}?minHeight: touchTarget\.minimum,/);
+    // Addendum 10: the name is back at the founder's 2026-08-18 size, label
+    // semibold, so every library name holds one line across the header.
+    expect(SECTION).toContain("name: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },");
+    // D220 addendum 9 (founder render verdict): the name holds ONE line and
+    // the whole header is the tap, a 56 dp row.
+    expect(SECTION).toMatch(/style=\{\[styles\.name, live\.name, skipped && live\.nameSkipped\]\}\s*numberOfLines=\{1\}\s*adjustsFontSizeToFit\s*minimumFontScale=\{NAME_MIN_SCALE\}/);
+    expect(SECTION).toMatch(/header: \{[\s\S]{0,120}?minHeight: HEADER_MIN_HEIGHT,/);
+    expect(SECTION).toContain('const HEADER_MIN_HEIGHT = 56;');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.exerciseNameChevron}');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');

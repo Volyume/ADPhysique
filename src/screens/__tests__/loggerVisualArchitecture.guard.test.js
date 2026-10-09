@@ -165,13 +165,15 @@ describe('estimated-max/PR split (failure 7): record system intact, routine copy
     }
   });
 
-  test('PR detection and the record line survive; the record threshold is the coach line above the table and a record marks its row; no trophy on a log control (D150)', () => {
+  test('PR detection survives; a record marks its row and nothing else about records sits on the table; no trophy on a log control (D150)', () => {
     expect(SRC).toContain('detectPR');
-    expect(SRC).toContain('buildRecordLine');
-    // D220 addendum 8: the threshold is a sentence in the quiet line, never
-    // a cell beside the wells; a record is the small mark under the set number.
-    expect(SRC).toContain('if (prTarget) parts.push(`A record at ${prTarget.weight} ${units} is ${prTarget.reps} ${prTarget.reps === 1 ? \'rep\' : \'reps\'}.`);');
-    expect(SRC).toContain('testID="volyume-coach-line"');
+    // D220 addendum 9 (founder render verdict): no record threshold line,
+    // no Target cell, no coach sentence on the logger. A record is the small
+    // mark under the set number; the records sheet carries the bests.
+    expect(SRC).not.toContain('prTarget');
+    expect(SRC).not.toContain('const coachLine');
+    expect(SRC).not.toContain('volyume-coach-line');
+    expect(SRC).not.toContain("from '../lib/workoutRecordLine'");
     expect(SRC).not.toContain('target:');
     expect(SRC).toContain("record: detectedPRs.some((pr) => pr.setId === s.id),");
     expect(SRC).not.toMatch(/primaryIcon=\{[^}]*trophy/);

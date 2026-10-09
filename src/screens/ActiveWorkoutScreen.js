@@ -93,7 +93,6 @@ import {
   detectLoadOverride,
   detectRepsOverride,
 } from '../lib/livePrescription';
-import { buildRecordLine } from '../lib/workoutRecordLine';
 import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
 } from '../lib/recoveryState';
@@ -4657,32 +4656,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // carries the written why on demand.
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
-  // D87: the live record line under the steppers. Pure derivation from data
-  // already in memory -- allTimeSets (every past set for this exercise,
-  // excluding this workout) plus loggedSets (this session's sets for it),
-  // which is the same history shape handleCompleteSet assembles as prHistory
-  // before calling detectPR. buildRecordLine calls that same detectPR, so the
-  // flag and the celebration can only ever agree. No query, no engine change.
-  const recordLine = useMemo(() => buildRecordLine({
-    weight: currentSet.weight,
-    reps: currentSet.reps,
-    // C5-P15-01 (D96): the D87 agreement contract requires this history to
-    // be the SAME shape handleCompleteSet assembles as prHistory, so the
-    // line can never promise a record the log then withholds, nor stay dark
-    // on a set the log celebrates. Both exclude warm-ups, and both include
-    // today's earlier sets (founder ruling 2026-08-23).
-    historySets: [...allTimeSets, ...loggedSets].filter(isWorkingSetRow),
-    units,
-    isWarmup: currentSet.setType === 'warmup',
-    exerciseType: activeExerciseType,
-    // D107-2: the assisted inversion must run on BOTH sides of the D87
-    // agreement contract (this line and the on-log detectPR call).
-    loadSemantics: exercise?.loadSemantics ?? 'total',
-    // EL-7: same agreement contract - detectPR (algorithms.js) already
-    // excludes a ballistic set via isE1rmEligibleRow, so this live line
-    // must too, or it could promise a record the log then withholds.
-    evidenceClass: currentEvidenceClass,
-  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics, currentEvidenceClass]);
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
@@ -4906,46 +4879,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!band) return null;
     return band.min === band.max ? `${band.min}` : `${band.min}-${band.max}`;
   }
-  // The coach's progression rule for the set you are on, said once above the
-  // table rather than in a column of its own (D220 addendum 8): "Add 2.5 kg
-  // once you reach 10 reps."
-  function progressionLineFor(index) {
-    const p = prescriptions[index] ?? null;
-    const band = bandFor(index);
-    if (setTableKind !== 'weight_reps') return null;
-    if (p?.weight == null || !band || band.min === band.max) return null;
-    return `Add ${weightStepKg} ${units} once you reach ${band.max} reps.`;
-  }
-  const assistedLoad = (exercise?.loadSemantics || 'total') === 'assisted';
-  const prTarget = (() => {
-    if (setTableKind !== 'weight_reps' || isWarmupEntry || !recordLine) return null;
-    // Less assistance is stronger, and a cluster entry is never a record
-    // (detectPR): neither has a threshold to show.
-    if (assistedLoad || isClusterType(currentSet.setType)) return null;
-    const w = parseDecimalInput(currentSet.weight);
-    if (!(w > 0)) return null;
-    const history = [...allTimeSets, ...loggedSets].filter(isWorkingSetRow);
-    if (history.length === 0) return null;
-    const weightOf = (x) => Number(x.weight) || 0;
-    const repsOf = (x) => Number(x.actualReps ?? x.actual_reps ?? x.reps) || 0;
-    const maxWeight = Math.max(...history.map(weightOf));
-    if (w > maxWeight) return { weight: w, reps: 1 };
-    const atWeight = history.filter((x) => weightOf(x) === w);
-    if (atWeight.length === 0) return null;
-    return { weight: w, reps: Math.max(...atWeight.map(repsOf)) + 1 };
-  })();
-  // One quiet line above the table (the first-time line's slot): the coach's
-  // rule for this set, then the record threshold at the weight dialled in, so
-  // neither squeezes the row (founder render verdict 2026-10-08, D220
-  // addendum 8). Nothing on a warm-up.
-  const coachLine = (() => {
-    if (isWarmupEntry) return null;
-    const parts = [];
-    const rule = progressionLineFor(workingLogged);
-    if (rule) parts.push(rule);
-    if (prTarget) parts.push(`A record at ${prTarget.weight} ${units} is ${prTarget.reps} ${prTarget.reps === 1 ? 'rep' : 'reps'}.`);
-    return parts.length ? parts.join(' ') : null;
-  })();
   // Section 2b: previous sessions for the History segment (today's sets are
   // on the table already) and the records over everything on record for the
   // exercise, today's logged sets included (founder ruling 2026-08-23: the
@@ -5162,8 +5095,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         groupLabel={item.groupLabel}
         skipped={item.skipped}
         onPressHeader={() => handleJumpToExercise(i)}
-        onDetails={() => handleJumpToExercise(i)}
-        onRestLength={complete || item.skipped || item.groupLabel ? undefined : () => setShowRestLengthFor(i)}
       />
     );
     (i < currentExerciseIndex ? collapsedSectionsBefore : collapsedSectionsAfter).push(node);
@@ -5205,6 +5136,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={handleCancelWorkout}
           onRest={() => setShowRestSheet(true)}
           onNotes={() => setShowNotesSheet(true)}
+          onHistory={openHistorySheet}
           onFinish={handleFinishWorkout}
         />
 
@@ -5263,11 +5195,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               header carries the name (the tap that used to open the details
               is its chevron) and its footer carries Add set, Swap and the
               overflow that the title row used to hold. */}
-          <SessionHeader
-            name={sessionTitle}
-            note={sessionNote}
-            onNotes={() => setShowNotesSheet(true)}
-          />
+          <SessionHeader name={sessionTitle} />
           {collapsedSectionsBefore}
           <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
           <ExerciseSection
@@ -5275,9 +5203,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             name={exercise.name}
             state="active"
             groupLabel={null}
-            onDetails={handleOpenExerciseDetails}
-            onHistory={previousHistory ? openHistorySheet : undefined}
-            onRestLength={currentSGI == null ? () => setShowRestLengthFor(currentExerciseIndex) : undefined}
+            onPressHeader={handleOpenExerciseDetails}
             onAddSet={armExtraSet}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
@@ -5577,9 +5503,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
           {firstTimeLine ? (
             <Text style={[styles.sideCarveNote, live.sideCarveNote]}>{firstTimeLine}</Text>
-          ) : null}
-          {coachLine ? (
-            <Text style={[styles.sideCarveNote, live.sideCarveNote]} testID="volyume-coach-line">{coachLine}</Text>
           ) : null}
           </View>
 
@@ -6391,6 +6314,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   removed as genuinely dead code (grepped: no other caller).
                   Re-pinned in ActiveWorkoutScreen.reorder.guard.test.js
                   (D43 S3). */}
+              {/* D220 addendum 10: the exercise's rest length lives here,
+                  off the card (a grouped station rests by the group). */}
+              {currentSGI == null ? (
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => { setShowOverflow(false); setShowRestLengthFor(currentExerciseIndex); }}
+                accessibilityRole="button"
+                accessibilityLabel={`Rest length for ${exercise?.name ?? 'this exercise'}`}
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="timer-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Rest length</Text>
+                </View>
+              </TouchableOpacity>
+              ) : null}
               {workoutExercises.length > 1 && (
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
@@ -7023,7 +6961,9 @@ const styles = StyleSheet.create({
   // The page: padding lg and gap md, the stack every other screen uses
   // (AnalyticsScreen, RecoveryScreen); the exercises are house cards on it.
   sessionScrollContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
-  activeBody: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  // No top padding: the header above is 56 dp and centred, so an empty
+  // body adds only its bottom gap (D220 addendum 10, the page fit).
+  activeBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.

@@ -10,7 +10,10 @@
  * contracts (BEHAVIOURAL-CONTRACT sections 1 and 6) are untouched.
  *
  * Test ids kept from WorkoutHeader: volyume-workout-close and
- * volyume-workout-finish. New: volyume-tool-rest and volyume-tool-notes.
+ * volyume-workout-finish. New: volyume-tool-rest, volyume-tool-notes and
+ * volyume-tool-history (the founder's 2026-10-09 ruling, D220 addendum 10:
+ * "the buttons for previous lifts ... at the top and just go to whatever
+ * exercise it is"; it renders only when onHistory is given).
  *
  * Finish stays icon only (founder order 2026-07-27, pinned for the old header
  * in loggerHeaderFinishIconOnly.guard.test.js): the visible word is gone, so
@@ -34,7 +37,8 @@ import SessionClock from './SessionClock';
 
 // Spec section 2: tool glyph 22 over a caption, 56 wide by 48 tall; bar 56.
 const TOOL_GLYPH = 22;
-const TOOL_WIDTH = 56;
+// 52 wide so four tools, the clock and Finish fit a 360 dp phone with air.
+const TOOL_WIDTH = 52;
 const BAR_MIN_HEIGHT = 56;
 
 function ToolButton({ testID, icon, label, accessibilityLabel, accessibilityHint, onPress, glyphColor, labelStyle }) {
@@ -58,6 +62,7 @@ export default function SessionToolbar({
   onClose,
   onRest,
   onNotes,
+  onHistory,
   onFinish,
   finishBusy = false,
 }) {
@@ -102,6 +107,18 @@ export default function SessionToolbar({
         glyphColor={t.colors.textSecondary}
         labelStyle={live.toolLabel}
       />
+      {onHistory ? (
+        <ToolButton
+          testID="volyume-tool-history"
+          icon="stats-chart-outline"
+          label="History"
+          accessibilityLabel="History and records"
+          accessibilityHint="Previous sessions and records for the current exercise"
+          onPress={onHistory}
+          glyphColor={t.colors.textSecondary}
+          labelStyle={live.toolLabel}
+        />
+      ) : null}
 
       <View style={styles.gap} />
 
