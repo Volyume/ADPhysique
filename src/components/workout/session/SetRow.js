@@ -30,10 +30,10 @@
  *              field key, 'weight' or 'reps', never the meaning
  *   units      'kg' (default) or 'lb', used only for the spoken distance unit
  *              (metres or yards)
- *   inputField { field, value, onChangeText, keyboardType, testID,
- *              onSubmitEditing } | null. While wells.state is 'editing', the well
- *              named by field is a TextInput (the phone-keyboard path for screen
- *              readers and for people who prefer typing); the other well stays a
+ *   inputField { field, value, onChangeText, keyboardType, returnKeyType,
+ *              testID, onSubmitEditing } | null. While wells.state is 'editing',
+ *              the well named by field is a TextInput on the phone's keyboard
+ *              (D220 addendum 18: the one input path); the other well stays a
  *              pressable value
  *   onLongPressRow  when given, the whole row answers a 300 ms hold with no
  *              arguments (the marker button carries "Hold for more options");
@@ -308,7 +308,7 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           value={input.value == null ? '' : String(input.value)}
           onChangeText={input.onChangeText}
           keyboardType={input.keyboardType}
-          returnKeyType="done"
+          returnKeyType={input.returnKeyType || 'done'}
           onSubmitEditing={input.onSubmitEditing}
           selectTextOnFocus
           autoFocus

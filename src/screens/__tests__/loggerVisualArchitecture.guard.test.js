@@ -89,10 +89,10 @@ describe('active-set stability: completing work never pushes the input away (har
 });
 
 describe('rest is a compact strip docked outside the workspace scroll (failure 2)', () => {
-  test('the strip renders after the ScrollView, before the keypad, never inside the scroll', () => {
+  test('the strip renders after the ScrollView, before the keyboard step bar, never inside the scroll', () => {
     const scrollClose = SRC.indexOf('</ScrollView>');
     const restIdx = SRC.indexOf('<RestTimer />');
-    const keypadIdx = SRC.indexOf('<Keypad');
+    const keypadIdx = SRC.indexOf('<KeyboardBar');
     expect(scrollClose).toBeGreaterThan(-1);
     expect(restIdx).toBeGreaterThan(scrollClose);
     expect(keypadIdx).toBeGreaterThan(restIdx);
@@ -104,7 +104,7 @@ describe('rest is a compact strip docked outside the workspace scroll (failure 2
     expect(REST).not.toMatch(/container: \{[^}]*borderRadius/s);
     expect(REST).not.toMatch(/minHeight: 64/);
     expect(REST).not.toMatch(/fontSize: 26/);
-    expect(REST).toMatch(/row: \{[\s\S]{0,200}?minHeight: touchTarget\.minimum/);
+    expect(REST).toMatch(/row: \{[\s\S]{0,360}?minHeight: touchTarget\.minimum/);
     expect(REST).toMatch(/drainTrack: \{\s*\n?\s*height: 2,/);
     for (const label of ['Remove 15 seconds', 'Add 15 seconds', 'Skip rest timer']) {
       expect(REST).toContain(label);
@@ -140,20 +140,24 @@ describe('the check is the one control that logs a set; the bar is gone', () => 
   });
 });
 
-describe('the keypad replaces the steppers and the system keyboard (stage C)', () => {
+describe('the phone\'s keyboard is the input, with the step bar above it (D220 addendum 18)', () => {
   test('the entry and the in-place edit write through the existing handlers', () => {
-    expect(SRC).toMatch(/function writeKeypadField\(field, next\) \{\s*if \(editingSet\) setEditValue/);
+    expect(SRC).toMatch(/function writeActiveField\(field, next\) \{\s*if \(editingSet\) setEditValue/);
     expect(SRC).toContain('else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });');
     expect(SRC).toContain('if (changed) handleSaveEditedSet(); else closeEditSet();');
-    // The keyboard toggle restores a TextInput path for this one edit only.
-    expect(SRC).toContain('onSystemKeyboard={() => setSystemKeyboard(true)}');
-    expect(SRC).toContain('const keypadOpen = keypadField != null && !systemKeyboard;');
+    // The open well is a TextInput on the phone's keyboard, the one path.
+    expect(SRC).toContain('const inputOpen = activeField != null;');
+    expect(SRC).toContain('const activeInputField = activeField ? {');
+    expect(SRC).not.toContain('systemKeyboard');
+    expect(SRC).not.toContain('<Keypad');
     expect(SET_ROW).toContain('<TextInput');
+    expect(SET_ROW).toContain("returnKeyType={input.returnKeyType || 'done'}");
   });
 
-  test('the keypad can never produce a number the typed fields refused', () => {
+  test('the step bar can never produce a number the typed fields refused', () => {
     expect(SRC).toContain("from '../lib/keypadEntry'");
-    expect(SRC).toContain('const next = applyKey(base, key, keypadRules);');
+    expect(SRC).toContain("writeActiveField('weight', String(stepValue(activeSource?.weight, delta, activeRules, 0)));");
+    expect(SRC).toContain("writeActiveField('reps', stepValue(activeSource?.reps, delta, REPS_RULES, 1));");
   });
 });
 

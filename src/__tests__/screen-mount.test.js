@@ -2053,7 +2053,7 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
   }
 
   // Logger rebuild stages B and C (D220): the entry is the next row's wells
-  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // and the phone's numeric keyboard with its bar (SetTable, SetRow, KeyboardBar). A well's spoken value is
   // the number it shows; weightInput and repsInput keep their names and
   // return { props: { value } } so the assertions below read as before.
   const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
@@ -2067,18 +2067,23 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
   function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
   function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
   function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
-  async function typeOnKeypad(tree, field, value) {
-    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
-    for (const ch of String(value)) {
-      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
-      await actFlush(() => pressable(tree, id).props.onPress());
+  // The open well is a TextInput on the phone's numeric keyboard. Its
+  // onChangeText is the screen's handleInputChange; the bar's Next (weight)
+  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
+  async function typeOnKeyboard(tree, field, value) {
+    const inputId = `volyume-${field}-input`;
+    // Weight: press its well. Reps: it is already open after Next, otherwise press its well.
+    if (!textInput(tree, inputId)) {
+      await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
+    await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
     // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
   }
   async function typeAndLog(tree, weight, reps) {
-    await typeOnKeypad(tree, 'weight', weight);
-    await typeOnKeypad(tree, 'reps', reps);
+    await typeOnKeyboard(tree, 'weight', weight);
+    await typeOnKeyboard(tree, 'reps', reps);
     await actFlush(() => logButton(tree).props.onPress());
   }
 
@@ -2314,7 +2319,7 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
   }
 
   // Logger rebuild stages B and C (D220): the entry is the next row's wells
-  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // and the phone's numeric keyboard with its bar (SetTable, SetRow, KeyboardBar). A well's spoken value is
   // the number it shows; weightInput and repsInput keep their names and
   // return { props: { value } } so the assertions below read as before.
   const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
@@ -2328,18 +2333,23 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
   function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
   function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
   function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
-  async function typeOnKeypad(tree, field, value) {
-    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
-    for (const ch of String(value)) {
-      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
-      await actFlush(() => pressable(tree, id).props.onPress());
+  // The open well is a TextInput on the phone's numeric keyboard. Its
+  // onChangeText is the screen's handleInputChange; the bar's Next (weight)
+  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
+  async function typeOnKeyboard(tree, field, value) {
+    const inputId = `volyume-${field}-input`;
+    // Weight: press its well. Reps: it is already open after Next, otherwise press its well.
+    if (!textInput(tree, inputId)) {
+      await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
+    await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
     // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
   }
   async function typeAndLog(tree, weight, reps) {
-    await typeOnKeypad(tree, 'weight', weight);
-    await typeOnKeypad(tree, 'reps', reps);
+    await typeOnKeyboard(tree, 'weight', weight);
+    await typeOnKeyboard(tree, 'reps', reps);
     await actFlush(() => logButton(tree).props.onPress());
   }
 
@@ -2403,7 +2413,7 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
   });
 
   // Stage B (D220): a logged row is edited in place through its wells and
-  // the keypad (Done saves), and deleted through its row sheet (long-press).
+  // the phone's keyboard (Done saves), and deleted through its row sheet (long-press).
 
   test('(ii) editing a logged set: the live box re-seeds from the edited value, not the pre-edit one', async () => {
     const database = require('../lib/database');
@@ -2426,11 +2436,11 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
       expect(weightInput(tree).props.value).toBe('80');
 
       // Edit that set DOWN to a genuine below-band miss (6 < repsMin 8): tap
-      // the logged row's reps well, key 6 (the first key replaces), Done.
+      // the logged row's reps well, type 6 into its input, bar Done.
       await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
-      expect(wellValue(tree, 'reps-0')).toBe('12');
-      await actFlush(() => pressable(tree, 'volyume-key-6').props.onPress());
-      await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+      expect(String(textInput(tree, 'volyume-reps-input').props.value)).toBe('12');
+      await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText('6'));
+      await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
 
       // Set 2's box (still untouched/ghost) now reflects the EDITED
       // evidence: a genuine miss drops the load by exactly one increment,
@@ -3211,7 +3221,7 @@ describe('D219 learner data path: the logger records whether an entry was typed 
   }
 
   // Logger rebuild stages B and C (D220): the entry is the next row's wells
-  // and the docked keypad (SetTable, SetRow, Keypad). A well's spoken value is
+  // and the phone's numeric keyboard with its bar (SetTable, SetRow, KeyboardBar). A well's spoken value is
   // the number it shows; weightInput and repsInput keep their names and
   // return { props: { value } } so the assertions below read as before.
   const host = (tree, id) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === id)[0];
@@ -3225,14 +3235,19 @@ describe('D219 learner data path: the logger records whether an entry was typed 
   function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
   function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
   function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
-  async function typeOnKeypad(tree, field, value) {
-    await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
-    for (const ch of String(value)) {
-      const id = ch === '.' ? 'volyume-key-point' : `volyume-key-${ch}`;
-      await actFlush(() => pressable(tree, id).props.onPress());
+  // The open well is a TextInput on the phone's numeric keyboard. Its
+  // onChangeText is the screen's handleInputChange; the bar's Next (weight)
+  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
+  async function typeOnKeyboard(tree, field, value) {
+    const inputId = `volyume-${field}-input`;
+    // Weight: press its well. Reps: it is already open after Next, otherwise press its well.
+    if (!textInput(tree, inputId)) {
+      await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
+    await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
     // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, 'volyume-key-action').props.onPress());
+    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
   }
 
   function mkEntry({ exerciseId, repsMin = 8, repsMax = 15, sets = 4 }) {
@@ -3305,8 +3320,8 @@ describe('D219 learner data path: the logger records whether an entry was typed 
   }
 
   const tapLog = (tree) => actFlush(() => logButton(tree).props.onPress());
-  const typeWeight = (tree, value) => typeOnKeypad(tree, 'weight', value);
-  const typeReps = (tree, value) => typeOnKeypad(tree, 'reps', value);
+  const typeWeight = (tree, value) => typeOnKeyboard(tree, 'weight', value);
+  const typeReps = (tree, value) => typeOnKeyboard(tree, 'reps', value);
 
   test('a set logged with the boxes exactly as the screen filled them in stores 0, and saves the same weight and reps', async () => {
     await withMountedLogger('exET1', async ({ tree, calls }) => {

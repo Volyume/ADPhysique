@@ -1,52 +1,15 @@
 /**
- * keypadEntry: the keypad can never produce a number the typed fields refused
- * (12-BUILD-SPEC section 1.5). Pins the whole-digit, decimal and ceiling
- * rules per field, backspace and the point key, and the step clamp.
+ * keypadEntry: the step bar can never produce a number the typed fields refused
+ * (12-BUILD-SPEC section 1.5; D220 addendum 18). Pins the field rules and the
+ * step clamp.
  */
-const {
-  applyKey, stepValue, KEY_BACKSPACE, KEY_POINT, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES,
-} = require('../keypadEntry');
+const { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } = require('../keypadEntry');
 
-describe('applyKey: weight', () => {
-  test('digits append; a leading zero is replaced by the next digit', () => {
-    expect(applyKey('', '7', WEIGHT_RULES)).toBe('7');
-    expect(applyKey('7', '2', WEIGHT_RULES)).toBe('72');
-    expect(applyKey('0', '5', WEIGHT_RULES)).toBe('5');
-  });
-  test('three whole digits at most, never above 500', () => {
-    expect(applyKey('123', '4', WEIGHT_RULES)).toBe('123');
-    expect(applyKey('50', '1', WEIGHT_RULES)).toBe('50');
-    expect(applyKey('49', '9', WEIGHT_RULES)).toBe('499');
-    expect(applyKey('50', '0', WEIGHT_RULES)).toBe('500');
-  });
-  test('the point once, with two decimals at most; an empty field gets "0."', () => {
-    expect(applyKey('', KEY_POINT, WEIGHT_RULES)).toBe('0.');
-    expect(applyKey('72', KEY_POINT, WEIGHT_RULES)).toBe('72.');
-    expect(applyKey('72.', KEY_POINT, WEIGHT_RULES)).toBe('72.');
-    expect(applyKey('72.5', '5', WEIGHT_RULES)).toBe('72.55');
-    expect(applyKey('72.55', '5', WEIGHT_RULES)).toBe('72.55');
-  });
-  test('backspace removes the last character and leaves empty alone', () => {
-    expect(applyKey('72.5', KEY_BACKSPACE, WEIGHT_RULES)).toBe('72.');
-    expect(applyKey('', KEY_BACKSPACE, WEIGHT_RULES)).toBe('');
-  });
-  test('an unknown key and a null text are safe', () => {
-    expect(applyKey('72', 'x', WEIGHT_RULES)).toBe('72');
-    expect(applyKey(null, '3', WEIGHT_RULES)).toBe('3');
-  });
-});
-
-describe('applyKey: reps and distance', () => {
-  test('reps take no point, three digits, never above 200', () => {
-    expect(applyKey('8', KEY_POINT, REPS_RULES)).toBe('8');
-    expect(applyKey('20', '1', REPS_RULES)).toBe('20');
-    expect(applyKey('19', '9', REPS_RULES)).toBe('199');
-    expect(applyKey('199', '9', REPS_RULES)).toBe('199');
-  });
-  test('distance takes five whole digits and two decimals with no ceiling', () => {
-    expect(applyKey('1234', '5', DISTANCE_RULES)).toBe('12345');
-    expect(applyKey('12345', '6', DISTANCE_RULES)).toBe('12345');
-    expect(applyKey('400.5', '5', DISTANCE_RULES)).toBe('400.55');
+describe('the field rules', () => {
+  test('weight, distance and reps keep the typed fields\' limits', () => {
+    expect(WEIGHT_RULES).toEqual({ maxWhole: 3, maxDecimals: 2, max: 500 });
+    expect(DISTANCE_RULES).toEqual({ maxWhole: 5, maxDecimals: 2, max: null });
+    expect(REPS_RULES).toEqual({ maxWhole: 3, maxDecimals: 0, max: 200 });
   });
 });
 

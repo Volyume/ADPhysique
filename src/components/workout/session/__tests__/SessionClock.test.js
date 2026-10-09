@@ -82,7 +82,7 @@ describe('SessionClock render', () => {
     expect(numerals(tree)).toBe('0:00');
   });
 
-  test('one Text only: no Elapsed caption, secondary ink at the tabular title numerals, no fill, no edge, no minHeight', () => {
+  test('one Text only: no Elapsed caption, primary ink at the tabular title numerals, no fill, no edge, no minHeight', () => {
     jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render(<SessionClock startTime={START} />);
     expect(texts(tree)).toHaveLength(1);
@@ -91,7 +91,7 @@ describe('SessionClock render', () => {
     const node = pill(tree);
     expect(node.props.numberOfLines).toBe(1);
     const v = flat(node.props.style);
-    expect(v.color).toBe(colors.textSecondary);
+    expect(v.color).toBe(colors.textPrimary);
     expect(v.fontSize).toBe(type.title.fontSize);
     expect(v.fontFamily).toBe(type.num('title').fontFamily);
     expect(v.fontVariant).toEqual(['tabular-nums']);

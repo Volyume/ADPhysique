@@ -247,7 +247,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // line (SessionHeader), tabular title numerals in secondary ink, no pill,
     // no caption, and the toolbar no longer hosts it.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textSecondary },");
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textPrimary },");
     const HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionHeader.js'), 'utf8');
     expect(HEADER).toContain('{startTime ? <SessionClock startTime={startTime} /> : null}');
     const TOOLBAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionToolbar.js'), 'utf8');
@@ -270,7 +270,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('menu and secondary actions are plain under fatigue', () => {
     expect(ACTIVE_WORKOUT).toContain("import { workoutLoggerSize } from '../styles/layout';");
     // Clean-up (D220): the overflow is the section footer's 48 dp target.
-    expect(SECTION).toMatch(/more: \{\s*minWidth: touchTarget\.minimum,\s*height: touchTarget\.minimum,/);
+    // Addendum 13: the overflow sits in the 36 dp check column, taken to
+    // 48 dp by its slop, so its glyph shares the row checks' centre line.
+    expect(SECTION).toMatch(/more: \{\s*minWidth: SET_COLUMNS\.check,\s*height: touchTarget\.minimum,/);
+    expect(SECTION).toContain('hitSlop={MORE_HIT_SLOP}');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.swapBtn}');
     expect(ACTIVE_WORKOUT).not.toContain('swapBtnText');
     // R3 rebuild: the header's finish control and the bar's actions moved
@@ -294,8 +297,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // SessionToolbar. The GUARANTEE is the same: Cancel and Finish are each
     // a full 48 dp target (touchTarget.minimum on both axes), Finish keeps
     // its test id and its full spoken name.
-    expect(SESSION_TOOLBAR).toMatch(/close: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
-    expect(SESSION_TOOLBAR).toMatch(/finish: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
+    // Addendum 15: one control style for all five (close, the tools and
+    // Finish): a 48 dp target each, evenly spaced across the bar.
+    expect(SESSION_TOOLBAR).toMatch(/control: \{\s*width: touchTarget\.minimum,\s*height: touchTarget\.minimum/);
+    expect(SESSION_TOOLBAR).toContain("justifyContent: 'space-between',");
     expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-close"');
     expect(SESSION_TOOLBAR).toContain('testID="volyume-workout-finish"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
