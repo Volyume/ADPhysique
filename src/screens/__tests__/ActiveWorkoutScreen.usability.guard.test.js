@@ -352,9 +352,16 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');
     expect(ACTIVE_WORKOUT).not.toContain('secondaryActions: {');
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
-    // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
+    // D220 addendum 26 (2026-10-09): the discard confirm is the app's own
+    // dialog (appAlert), not a hand-rolled modal whose destructive action
+    // sat at the 13 dp label role. Keep training is the cancel; Discard
+    // workout is the destructive action; the X and the stale sheet share it.
+    expect(ACTIVE_WORKOUT).toContain("{ text: 'Keep training', style: 'cancel' }");
+    expect(ACTIVE_WORKOUT).toContain("{ text: 'Discard workout', style: 'destructive', onPress: () => discardWorkout(source) }");
+    expect(ACTIVE_WORKOUT).toContain("confirmDiscard('ActiveWorkoutScreen.discardModal')");
+    expect(ACTIVE_WORKOUT).toContain("confirmDiscard('ActiveWorkoutScreen.discardStale')");
+    expect(ACTIVE_WORKOUT).not.toContain('showDiscardModal');
+    expect(ACTIVE_WORKOUT).not.toContain('discardConfirmBtnText');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     // D220 review: the check is the one control, so the retry names it.
     expect(ACTIVE_WORKOUT).toContain("const retryAction = 'the check';");
@@ -390,7 +397,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('supSheetScroll');
     expect(ACTIVE_WORKOUT).toContain('supSheetContent');
     expect(ACTIVE_WORKOUT).toMatch(/staleSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
-    expect(ACTIVE_WORKOUT).toMatch(/discardSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    // The discard confirm is AppAlert's own dialog now (D220 addendum 26),
+    // which carries its own 88% cap.
   });
 
   // D43 S4 (docs/ux-world-class-audit-2026-07-09/D43-LOGGER-REDESIGN-BLUEPRINT.md
@@ -422,9 +430,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('modal actions use the same compact logger button system', () => {
     expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    // keepTrainingBtn left with the hand-rolled discard modal (D220 addendum 26).
     expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('staleResumeText: { fontSize: fontSize.md');
     expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
