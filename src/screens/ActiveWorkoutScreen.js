@@ -2984,8 +2984,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const raw = await AsyncStorage.getItem(`@volyume_setdraft_${activeWorkout.id}_${exercise.id}`);
         if (!cancelled && raw) {
           const draft = JSON.parse(raw);
-          const nextCount = (workoutExercises[currentExerciseIndex]?.sets || []).filter(s => s.setType !== 'warmup').length;
-          if (draft && draft.workingCount === nextCount && draft.weight !== '' && draft.weight != null) {
+          // The same count the save uses (countProgressSets), and a draft with
+          // reps alone restores too (D220 addendum 30, audit C15).
+          const nextCount = countProgressSets(workoutExercises[currentExerciseIndex]?.sets || []);
+          const draftHasValue = draft && ((draft.weight !== '' && draft.weight != null) || (draft.reps !== '' && draft.reps != null));
+          if (draft && draft.workingCount === nextCount && draftHasValue) {
             setCurrentSet(cs => ({
               ...cs,
               weight: draft.weight,
@@ -3033,7 +3036,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const key = `@volyume_setdraft_${activeWorkout.id}_${exercise.id}`;
     const workingCount = countProgressSets(loggedSets);
     const w = currentSet?.weight;
-    const payload = (w === '' || w == null) ? null
+    const r = currentSet?.reps;
+    // A reps-only or timed exercise never holds a weight, so its draft is
+    // its reps (D220 addendum 30, audit C15).
+    const noWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
+    const hasValue = noWeight ? (r !== '' && r != null) : (w !== '' && w != null);
+    const payload = !hasValue ? null
       : { workingCount, weight: currentSet.weight, reps: currentSet.reps, rir: currentSet.rir, setType: currentSet.setType };
     draftRef.current = { key, payload }; // mirror for the immediate background flush
     if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
@@ -3042,7 +3050,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       else AsyncStorage.removeItem(key).catch(() => {});
     }, 250);
     return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
-  }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id]);
+  }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id, setTableKind]);
 
   // Flush the draft the INSTANT the app backgrounds, so a quick type-then-switch
   // (faster than the debounce above) still persists before iOS may kill the JS.
@@ -4071,10 +4079,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.error();
   }
 
+  // Finish's in-flight state for the toolbar (D220 addendum 30, audit D10:
+  // the toolbar's spinner was never driven). Mirrors finishingRef.
+  const [finishing, setFinishing] = useState(false);
+  function setFinishingFlag(v) { finishingRef.current = v; setFinishing(v); }
   async function handleFinishWorkout() {
     if (!activeWorkout) { navigation.goBack(); return; }
     if (finishingRef.current) return; // double-tap guard
-    finishingRef.current = true;
+    setFinishingFlag(true);
     audit('workout.finish.tap', {
       workoutId: activeWorkout?.id ?? null,
       loggedSetCount: loggedSets.length,
@@ -4416,7 +4428,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // Reset the double-tap guard so the user can retry. On the
         // happy path the guard stays set forever because we've
         // already navigated away from this screen.
-        finishingRef.current = false;
+        setFinishingFlag(false);
         appAlert(
           'Couldn\'t finish workout',
           'Your sets are still saved, but the workout did not close on your device, so tap Finish workout again.',
@@ -4482,7 +4494,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         copy.title,
         `${copy.body}${inProgressNote}`,
         [
-          { text: copy.cancel, style: 'cancel', onPress: () => { finishingRef.current = false; } },
+          { text: copy.cancel, style: 'cancel', onPress: () => { setFinishingFlag(false); } },
           {
             text: copy.confirm,
             onPress: async () => {
@@ -4529,11 +4541,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         'Nothing logged yet',
         `This workout has no sets logged, so there is nothing to save.${typedSetNote}`,
         [
-          { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
+          { text: 'Keep going', style: 'cancel', onPress: () => { setFinishingFlag(false); } },
           {
             text: 'Discard workout',
             style: 'destructive',
-            onPress: () => { finishingRef.current = false; discardWorkout('ActiveWorkoutScreen.finishWithNothingLogged'); },
+            onPress: () => { setFinishingFlag(false); discardWorkout('ActiveWorkoutScreen.finishWithNothingLogged'); },
           },
         ],
       );
@@ -4552,7 +4564,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       'Finish workout?',
       `${confirmCountLine}${inProgressNote}`,
       [
-        { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
+        { text: 'Keep going', style: 'cancel', onPress: () => { setFinishingFlag(false); } },
         { text: 'Finish workout', onPress: () => runFinish() },
       ],
     );
@@ -5247,6 +5259,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onNotes={() => setShowNotesSheet(true)}
           onHistory={openHistorySheet}
           onFinish={handleFinishWorkout}
+          finishBusy={finishing}
         />
 
         {/* T2-06 (D112 R5, closes audit T2-06): the session-level reduced
@@ -5347,7 +5360,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'starter',
                 label: 'Starter session',
                 icon: 'flash-outline',
-                iconColor: t.colors.primary,
                 content: (
                   <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
                     <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
@@ -5378,11 +5390,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'circuit',
                 label: 'Circuit',
                 icon: 'repeat',
-                iconColor: t.colors.primary,
                 content: (
                   <React.Fragment key="circuit">
                     <View style={[styles.supersetChip, live.supersetChip]}>
-                      <Ionicons name="repeat" size={iconSize.sm} color={t.colors.primary} />
+                      <Ionicons name="repeat" size={iconSize.sm} color={t.colors.textSecondary} />
                       <Text style={[styles.supersetChipText, live.supersetChipText]}>
                         Circuit · Round {roundNum} of {targetSets} · with {partnerNamesText}
                       </Text>
@@ -5400,10 +5411,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'superset',
                 label: 'Superset',
                 icon: 'link',
-                iconColor: t.colors.primary,
                 content: (
                   <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
-                    <Ionicons name="link" size={iconSize.sm} color={t.colors.primary} />
+                    <Ionicons name="link" size={iconSize.sm} color={t.colors.textSecondary} />
                     <Text style={[styles.supersetChipText, live.supersetChipText]}>
                       Superset - alternates with {partnerNamesText}
                     </Text>
@@ -5483,7 +5493,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: `note-${note.id}`,
                 label: 'Coach note',
                 icon: 'bulb-outline',
-                iconColor: t.colors.primary,
                 content: (
                   <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
                     <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
@@ -5786,7 +5795,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onDismiss={dismissRestHint}
           />
         ) : null}
-        <RestTimer />
+        <RestTimer controlsHidden={inputOpen} />
 
         {/* Stage B (D220): the bottom bar is retired. Its jobs: Log set is the
             next row's check; Next exercise is the next section's header or the
@@ -6665,7 +6674,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           // its group kind here too, with the same repeat icon
                           // the live chip and the builder use.
                           <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
-                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={iconSize.sm} color={t.colors.primary} />
+                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={iconSize.sm} color={t.colors.textSecondary} />
                             <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}</Text>
                           </View>
                         )}
@@ -7278,10 +7287,10 @@ const styles = StyleSheet.create({
   // the whole width exactly as it did before this row wrapper existed).
   bottomBarRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   clusterBanner: {
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.half), borderRadius: radius.lg,
-    backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    backgroundColor: colors.surface2, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
-  clusterTitle: { ...type.label, color: colors.primary },
+  clusterTitle: { ...type.label, color: colors.textPrimary },
   // R2 numerals sweep: the cluster rep tally is data -> tabular figures.
   clusterReps: { ...type.num('bodyStrong'), color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -7292,7 +7301,7 @@ const styles = StyleSheet.create({
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.half), borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     // Explicit transparent: the Button `tertiary` variant this now renders
     // as (components/Button.js) fills with colors.primaryBg by default;
@@ -7300,7 +7309,7 @@ const styles = StyleSheet.create({
     // treatment for the mini-set add action, so it must override that.
     backgroundColor: 'transparent',
   },
-  clusterAddBtnText: { ...type.label, color: colors.primary },
+  clusterAddBtnText: { ...type.label, color: colors.textPrimary },
   // R2 compliance (2026-07-11): control -> the logger's one small-surface radius.md.
   clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   clusterCancelText: { ...type.label, color: colors.textPrimary },
@@ -7319,10 +7328,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     // R2 compliance: chip container -> radius.md (standard section 4).
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    backgroundColor: colors.surface2, borderRadius: radius.md,
     marginTop: spacing.xs,
   },
-  supersetChipText: { ...type.captionStrong, color: colors.primary },
+  supersetChipText: { ...type.captionStrong, color: colors.textSecondary },
   // F-13 (evidence A8): the one short line under the circuit chip when
   // this station is more than a round behind the circuit.
   circuitMissedLine: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -7362,9 +7371,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
     // R2 compliance: chip container -> radius.md.
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.md,
-    backgroundColor: colors.primaryBg, alignSelf: 'flex-start', marginTop: spacing.xxs,
+    backgroundColor: colors.surface2, alignSelf: 'flex-start', marginTop: spacing.xxs,
   },
-  reorderSheetSupersetChipText: { ...type.captionStrong, color: colors.primary },
+  reorderSheetSupersetChipText: { ...type.captionStrong, color: colors.textSecondary },
   reorderSheetChevrons: { flexDirection: 'column', alignItems: 'center', gap: spacing.xxs },
   reorderSheetChevronBtn: {
     // R2 compliance: icon button -> radius.md.
@@ -7414,8 +7423,8 @@ const styles = StyleSheet.create({
   // success (this isn't a completion, just a navigation notice), and the
   // primary-on-primaryBg combination already used by navTabActive/
   // navTabTextActive elsewhere in this file.
-  groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.primary, marginBottom: spacing.sm },
-  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
+  groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface2, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
+  groupFocusBannerText: { ...type.w(type.label, 'semibold'), color: colors.textPrimary, flex: 1 },
   // Superset heads-up modal (shared with the unilateral-suggest modal below
   // -- both use supOverlay/supSheet/supSheetContent). D36a (item 17 modal
   // tails, 2026-07-10): this stays a raw Modal (education moment with its
@@ -7466,11 +7475,11 @@ const styles = StyleSheet.create({
   // carries its own equivalent house-idiom styles local to the row.
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.borderSubtle,
   },
   nextTimeBannerText: {
     ...type.bodySm,
@@ -7571,18 +7580,21 @@ function buildLiveStyles(t) {
     autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     autoAdvanceRowAction: { ...t.type.captionStrong, color: t.colors.textPrimary },
     bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    clusterBanner: { borderColor: withAlpha(t.colors.primary, alpha.half), backgroundColor: t.colors.primaryBg },
-    clusterTitle: { ...t.type.label, color: t.colors.primary },
+    clusterBanner: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    clusterTitle: { ...t.type.label, color: t.colors.textPrimary },
     clusterReps: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },
-    clusterAddBtn: { borderColor: withAlpha(t.colors.primary, alpha.half) },
-    clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
+    clusterAddBtn: { borderColor: t.colors.border },
+    clusterAddBtnText: { ...t.type.label, color: t.colors.textPrimary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    supersetChip: { backgroundColor: t.colors.primaryBg },
-    supersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
+    // Amber is for the set you are on, a record, Finish and the drain line
+    // (D220 addendum 30, audit D2): the group chips and the banners sit on
+    // surface2 in the text inks.
+    supersetChip: { backgroundColor: t.colors.surface2 },
+    supersetChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     circuitMissedLine: { ...t.type.caption, color: t.colors.textSecondary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // Phase 2B live-theme mirrors for the sequence additions.
@@ -7601,8 +7613,8 @@ function buildLiveStyles(t) {
     reorderSheetRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     reorderSheetRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     reorderSheetRowMeta: { ...t.type.caption, color: t.colors.textMuted },
-    reorderSheetSupersetChip: { backgroundColor: t.colors.primaryBg },
-    reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
+    reorderSheetSupersetChip: { backgroundColor: t.colors.surface2 },
+    reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     reorderSheetChevronBtn: { backgroundColor: t.colors.surface2 },
     infoTarget: { ...t.type.label, color: t.colors.primary },
     infoMuscle: { ...t.type.caption, color: t.colors.textSecondary },
@@ -7615,8 +7627,8 @@ function buildLiveStyles(t) {
     adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     targetBanner: { backgroundColor: t.colors.successBg, borderColor: t.colors.success },
     targetBannerText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.onSuccessBg },
-    groupFocusBanner: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-    groupFocusBannerText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    groupFocusBanner: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    groupFocusBannerText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     supOverlay: { backgroundColor: t.colors.scrim },
     supSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     supTitle: { ...t.type.h3, color: t.colors.textPrimary },
@@ -7642,9 +7654,9 @@ function buildLiveStyles(t) {
     staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
     staleDiscardText: { ...t.type.label, color: t.colors.error },
-    nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    nextTimeBanner: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    nextTimeMoreToggleText: { ...t.type.label, color: t.colors.primary },
+    nextTimeMoreToggleText: { ...t.type.label, color: t.colors.textSecondary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
     deloadBannerTitle: { ...t.type.w(t.type.label, 'bold'), color: t.colors.warning },
     deloadBannerSub: { ...t.type.caption, color: t.colors.textMuted },

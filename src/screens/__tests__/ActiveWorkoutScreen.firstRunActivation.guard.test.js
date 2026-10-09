@@ -113,7 +113,7 @@ describe('the rest timer introduction and its one permission ask', () => {
     expect(ACTIVE_WORKOUT).toMatch(/<HintCaption\s+text="Rest started because[\s\S]{0,120}onDismiss=\{dismissRestHint\}/);
     // Directly above the strip it explains.
     const captionAt = ACTIVE_WORKOUT.indexOf('text="Rest started because');
-    const stripAt = ACTIVE_WORKOUT.indexOf('<RestTimer />');
+    const stripAt = ACTIVE_WORKOUT.indexOf('<RestTimer controlsHidden={inputOpen} />');
     expect(captionAt).toBeGreaterThan(-1);
     expect(stripAt).toBeGreaterThan(captionAt);
   });

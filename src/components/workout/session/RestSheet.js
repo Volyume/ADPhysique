@@ -46,12 +46,13 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import BottomSheet from '../../BottomSheet';
 import Button from '../../Button';
 import useAppStore from '../../../store/useAppStore';
 import useTheme from '../../../hooks/useTheme';
-import { spacing } from '../../../styles/theme';
+import { spacing, iconSize } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { clampRestDelta } from '../../../lib/restTimerMath';
 import { formatSeconds } from '../../../lib/workoutHelpers';
@@ -62,13 +63,13 @@ import { selection as hapticSelection } from '../../../lib/haptics';
 const ADJUSTMENTS = [
   {
     delta: -15,
-    label: '−15',
+    label: '15',
     accessibilityLabel: 'Remove 15 seconds',
     testID: 'volyume-rest-sheet-remove',
   },
   {
     delta: 15,
-    label: '+15',
+    label: '15',
     accessibilityLabel: 'Add 15 seconds',
     testID: 'volyume-rest-sheet-add',
   },
@@ -108,9 +109,9 @@ function RestSheetBody({ onClose, nextLabel, lastLabel }) {
     of: { ...t.type.label, color: t.colors.textSecondary },
     next: { ...t.type.num('h2'), color: t.colors.textPrimary },
     last: { ...t.type.label, color: t.colors.textSecondary },
-    controlText: { ...t.type.num('bodyStrong') },
-    controlAdjust: { color: t.colors.primary },
-    controlSkip: { color: t.colors.textSecondary },
+    // The strip's own grammar for every control (D220 addendum 30, audit
+    // D4): a 20 dp glyph and a semibold label in primary ink, no amber.
+    controlText: { ...t.type.w(t.type.num('label'), 'semibold'), color: t.colors.textPrimary },
     idle: { ...t.type.title, color: t.colors.textSecondary },
   }), [t]);
 
@@ -203,7 +204,8 @@ function RestSheetBody({ onClose, nextLabel, lastLabel }) {
             accessibilityLabel={accessibilityLabel}
             testID={testID}
           >
-            <Text style={[live.controlText, live.controlAdjust]}>{label}</Text>
+            <Ionicons name={delta < 0 ? 'remove' : 'add'} size={iconSize.md} color={t.colors.textPrimary} />
+            <Text style={live.controlText}>{label}</Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity
@@ -213,7 +215,8 @@ function RestSheetBody({ onClose, nextLabel, lastLabel }) {
           accessibilityLabel="Skip rest timer"
           testID="volyume-rest-sheet-skip"
         >
-          <Text style={[live.controlText, live.controlSkip]}>Skip</Text>
+          <Ionicons name="play-skip-forward-outline" size={iconSize.md} color={t.colors.textPrimary} />
+          <Text style={live.controlText}>Skip</Text>
         </TouchableOpacity>
       </View>
 
@@ -245,6 +248,8 @@ const styles = StyleSheet.create({
   control: {
     flex: 1,
     minHeight: touchTarget.minimum,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
   },

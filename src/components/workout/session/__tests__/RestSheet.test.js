@@ -49,7 +49,6 @@ jest.mock('../../../../lib/haptics', () => ({ selection: jest.fn(), commit: jest
 import * as haptics from '../../../../lib/haptics';
 import RestSheet from '../RestSheet';
 
-const MINUS = '−';
 const NEXT = 'Set 3 of 3 · 70 kg × 6 to 10';
 const LAST = 'Last time 72.5 kg × 8';
 
@@ -101,8 +100,9 @@ describe('RestSheet, a rest is running', () => {
     const tree = render();
     const text = allText(tree);
     expect(text).toEqual(expect.arrayContaining(['Rest', '1:42', 'of 2:00', NEXT, LAST]));
-    expect(text).toContain(`${MINUS}15`);
-    expect(text).toContain('+15');
+    // D220 addendum 30 (audit D4): the steps read "15" beside a remove or add
+    // glyph, the strip's grammar.
+    expect(text.filter((x) => x === '15')).toHaveLength(2);
     expect(text).toContain('Skip');
     expect(text).toContain('Back to the workout');
   });

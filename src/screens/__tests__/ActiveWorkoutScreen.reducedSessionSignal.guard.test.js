@@ -97,7 +97,8 @@ describe('render: once per session, at the top of the outline area, quiet text (
     // RE-PINNED for the logger rebuild stage A (D220): the toolbar replaces
     // WorkoutHeader and the session sheet (the ScrollView) replaces the
     // outline strip; the note keeps its slot between the two.
-    const headerIdx = SRC.indexOf('onFinish={handleFinishWorkout}\n        />');
+    // D220 addendum 30 (audit D10): the toolbar takes finishBusy after onFinish.
+    const headerIdx = SRC.indexOf('onFinish={handleFinishWorkout}\n          finishBusy={finishing}\n        />');
     const noteIdx = SRC.indexOf('{omittedSessionCount > 0 ? (');
     const sheetIdx = SRC.indexOf('<ScrollView\n          ref={scrollRef}');
     expect(headerIdx).toBeGreaterThan(-1);

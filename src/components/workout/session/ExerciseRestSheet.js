@@ -30,13 +30,13 @@
  */
 
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../../BottomSheet';
 import Button from '../../Button';
 import Chip from '../../Chip';
-import PressableCard from '../../PressableCard';
 import useTheme from '../../../hooks/useTheme';
-import { spacing, radius } from '../../../styles/theme';
+import { spacing, iconSize } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 import { formatRoundRestWords } from '../../../lib/circuitRound';
@@ -58,28 +58,25 @@ function seedSeconds(value) {
   return clampSeconds(n);
 }
 
-// A 48 dp well that steps the length. The glyph is U+2212 for the minus, the
-// same minus the rest strip draws.
-function StepButton({ label, accessibilityLabel, disabled, onPress, testID }) {
+// A 48 dp step in the rest strip's grammar (D220 addendum 30, audit D4): a
+// 20 dp remove or add glyph and the step as a semibold label, primary ink,
+// no box and no amber.
+function StepButton({ icon, label, accessibilityLabel, disabled, onPress, testID }) {
   const t = useTheme();
+  const ink = disabled ? t.colors.textDisabled : t.colors.textPrimary;
   return (
-    <PressableCard
+    <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       testID={testID}
-      style={[
-        styles.step,
-        { backgroundColor: t.colors.background, borderColor: t.colors.borderSubtle },
-        disabled && styles.stepDisabled,
-      ]}
+      style={[styles.step, disabled && styles.stepDisabled]}
     >
-      <Text style={{ ...t.type.num('bodyStrong'), color: disabled ? t.colors.textDisabled : t.colors.primary }}>
-        {label}
-      </Text>
-    </PressableCard>
+      <Ionicons name={icon} size={iconSize.md} color={ink} />
+      <Text style={{ ...t.type.w(t.type.num('label'), 'semibold'), color: ink }}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -128,7 +125,8 @@ export default function ExerciseRestSheet({ visible, value, onSave, onClose }) {
 
         <View style={styles.stepRow}>
           <StepButton
-            label="−15"
+            icon="remove"
+            label="15"
             accessibilityLabel="Remove 15 seconds"
             disabled={atMin}
             onPress={() => nudge(-STEP_SECONDS)}
@@ -142,7 +140,8 @@ export default function ExerciseRestSheet({ visible, value, onSave, onClose }) {
             {formatSeconds(seconds)}
           </Text>
           <StepButton
-            label="+15"
+            icon="add"
+            label="15"
             accessibilityLabel="Add 15 seconds"
             disabled={atMax}
             onPress={() => nudge(STEP_SECONDS)}
@@ -199,10 +198,10 @@ const styles = StyleSheet.create({
     minWidth: touchTarget.minimum + spacing.lg,
     minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
   },
   stepDisabled: { opacity: 0.5 },
   readout: { flex: 1 },
