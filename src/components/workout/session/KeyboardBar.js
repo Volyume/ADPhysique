@@ -15,17 +15,27 @@
  *   unit        the weight unit for the spoken step ("kg", "lb", "m", "yd")
  *   mode        'number' (default) | 'time'
  *   onStep      called with the signed step (-step or +step; -5 or +5 in
- *               time mode)
+ *               time mode). When omitted the step keys are not drawn: the
+ *               reps well has nothing to step (founder, 2026-10-09: "What's
+ *               the -1 and +1? It makes no sense at all"); the weight well
+ *               steps by the plate, the time well by 5 s (D220 addendum 24)
  *   onNext      when given, a Next action moves the keyboard to the next
  *               well
- *   onDone      the Done action
+ *   onDone      the last action; it reads "Done" unless `doneLabel` says
+ *               otherwise
+ *   doneLabel   'Done' (default) | 'Log'. On the next set the last action
+ *               LOGS the set (founder, 2026-10-09: "too many clicks"), so
+ *               typing the reps and pressing it is the whole set; on an
+ *               edit of a logged set it stays Done
  *   safeBottom  optional bottom inset in dp (default 0) under the row, for
  *               the gesture bar when the keyboard is not covering it
  *
  * On Android the window resizes for the keyboard (the Expo default), so a
  * bar at the bottom of the screen's column sits straight above it; on iOS
- * the screen's KeyboardAvoidingView lifts it. Nothing here measures the
- * keyboard.
+ * the screen renders it inside an InputAccessoryView named by the open
+ * well, so the system docks it on the keyboard (D220 addendum 23, the
+ * mechanism every numeric TextField in the app uses). Nothing here measures
+ * the keyboard.
  */
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -59,7 +69,7 @@ function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }
   );
 }
 
-export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', onStep, onNext, onDone, safeBottom = 0 }) {
+export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', onStep, onNext, onDone, doneLabel = 'Done', safeBottom = 0 }) {
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
@@ -73,24 +83,28 @@ export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', on
 
   return (
     <View style={[styles.bar, live.bar, { paddingBottom: Math.max(0, safeBottom) }]}>
-      <Action
-        testID="volyume-bar-step-down"
-        icon="remove"
-        label={stepText}
-        spoken={`Remove ${stepSpoken}`}
-        onPress={() => onStep && onStep(-delta)}
-        glyphColor={ink}
-        labelStyle={live.label}
-      />
-      <Action
-        testID="volyume-bar-step-up"
-        icon="add"
-        label={stepText}
-        spoken={`Add ${stepSpoken}`}
-        onPress={() => onStep && onStep(delta)}
-        glyphColor={ink}
-        labelStyle={live.label}
-      />
+      {onStep ? (
+        <Action
+          testID="volyume-bar-step-down"
+          icon="remove"
+          label={stepText}
+          spoken={`Remove ${stepSpoken}`}
+          onPress={() => onStep(-delta)}
+          glyphColor={ink}
+          labelStyle={live.label}
+        />
+      ) : null}
+      {onStep ? (
+        <Action
+          testID="volyume-bar-step-up"
+          icon="add"
+          label={stepText}
+          spoken={`Add ${stepSpoken}`}
+          onPress={() => onStep(delta)}
+          glyphColor={ink}
+          labelStyle={live.label}
+        />
+      ) : null}
       <View style={styles.gap} />
       {onNext ? (
         <Action
@@ -106,8 +120,8 @@ export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', on
       <Action
         testID="volyume-bar-done"
         icon="checkmark"
-        label="Done"
-        spoken="Done"
+        label={doneLabel === 'Log' ? 'Log' : 'Done'}
+        spoken={doneLabel === 'Log' ? 'Log set' : 'Done'}
         onPress={onDone}
         glyphColor={ink}
         labelStyle={live.label}

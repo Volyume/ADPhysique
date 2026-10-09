@@ -31,10 +31,15 @@
  *   units      'kg' (default) or 'lb', used only for the spoken distance unit
  *              (metres or yards)
  *   inputField { field, value, onChangeText, keyboardType, returnKeyType,
- *              testID, onSubmitEditing } | null. While wells.state is 'editing',
- *              the well named by field is a TextInput on the phone's keyboard
- *              (D220 addendum 18: the one input path); the other well stays a
- *              pressable value
+ *              inputAccessoryViewID, testID, onSubmitEditing } | null. While
+ *              wells.state is 'editing', the well named by field is a TextInput
+ *              on the phone's keyboard (D220 addendum 18: the one input path);
+ *              the other well stays a pressable value. returnKeyType and
+ *              inputAccessoryViewID pass through as given, undefined included:
+ *              the screen leaves the return key unset on an iOS number pad so
+ *              the system draws no return-key capsule of its own, and names
+ *              the keyboard bar as the input's accessory there (D220 addendum
+ *              23)
  *   onLongPressRow  when given, the whole row answers a 300 ms hold with no
  *              arguments (the marker button carries "Hold for more options");
  *              a press on a well or the check is still a plain press
@@ -60,7 +65,9 @@
  *                  control's existing id, unless testIDs.check overrides it
  *
  * Ink: the Last fact is secondary ink on tabular figures; the live number in a
- * well is the one figure at bodyStrong, a placeholder in disabled ink. Each
+ * well is the one figure at bodyStrong, a placeholder in disabled ink. No text
+ * on the row fit-scales (adjustsFontSizeToFit): the columns are sized for
+ * their longest content instead (D220 addendum 22). Each
  * well is the house field (surface2, 1.5 border, radius md) and only the well
  * being edited takes the amber edge. The check is a 28 dp mark in a 36 by 48
  * target: logged is the app's success checkmark-circle, next the one amber
@@ -75,11 +82,16 @@ import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
 // The grid, sized for the house card (a 360 dp phone's card is 326 dp inside
-// its border). Marker 24, Last 68 and the check 36 are fixed; the two wells
+// its border). Marker 24, Last 80 and the check 36 are fixed; the two wells
 // share what is left as equal boxes with an 8 dp gap between every column, so
 // nothing touches (founder render verdict 2026-10-08, D220 addendum 8).
-// SetTable lays its column labels on the same widths.
-export const SET_COLUMNS = Object.freeze({ marker: 24, last: 68, check: 36 });
+// SetTable lays its column labels on the same widths. Last is 80 so the
+// longest fact it carries ("· 137.5 × 15", a stale three-digit weight with a half,
+// 76.7 dp at bodySm in Inter) fits with no font fitting at all: on
+// the founder's iPhone every fit-scaled text on the row being typed into
+// collapsed far below its declared floor (D220 addendum 22), so nothing on
+// the row scales at runtime any more.
+export const SET_COLUMNS = Object.freeze({ marker: 24, last: 80, check: 36 });
 
 // Spec section 2 sizes.
 const ROW_MIN_HEIGHT = 64;
@@ -88,8 +100,6 @@ const WELL_HEIGHT = 44;
 const CHECK_SIZE = 28;
 const TICK_SIZE = 16;
 const RING_WIDTH = 1.5;
-// Dense numeric cells shrink a little before they would wrap or clip.
-const FIT_SCALE = 0.75;
 // 44 dp wells and a 24 dp marker column are taken to 48 dp by their slop.
 const WELL_HIT_SLOP = { top: 2, bottom: 2, left: 0, right: 0 };
 const CHECK_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
@@ -267,12 +277,7 @@ function LastCell({ last, onPress, testID, live }) {
   }
   const text = last.stale ? `${MIDDLE_DOT} ${last.text}` : last.text;
   const content = (
-    <Text
-      style={[styles.cellText, live.cellDim, last.stale && live.cellStale]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={FIT_SCALE}
-    >
+    <Text style={[styles.cellText, live.cellDim, last.stale && live.cellStale]} numberOfLines={1}>
       {text}
     </Text>
   );
@@ -308,7 +313,8 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           value={input.value == null ? '' : String(input.value)}
           onChangeText={input.onChangeText}
           keyboardType={input.keyboardType}
-          returnKeyType={input.returnKeyType || 'done'}
+          returnKeyType={input.returnKeyType}
+          inputAccessoryViewID={input.inputAccessoryViewID}
           onSubmitEditing={input.onSubmitEditing}
           selectTextOnFocus
           autoFocus
@@ -336,8 +342,6 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           isEditingThis && live.wellActive,
         ]}
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={FIT_SCALE}
       >
         {text}
       </Text>

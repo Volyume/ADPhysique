@@ -133,13 +133,17 @@ describe('SetRow wells', () => {
     expect(one(byLabel(tree, 'Set 2 reps')).props.accessibilityValue).toEqual({ text: 'empty' });
   });
 
-  test('each box is 44 dp tall with a 2 dp slop for a 48 dp reach, one line, shrinks before it clips', () => {
+  test('each box is 44 dp tall with a 2 dp slop for a 48 dp reach, one line, never fit-scaled', () => {
+    // D220 addendum 22: on the founder's iPhone every fit-scaled text on the
+    // row being typed into collapsed far below its declared floor, so no text
+    // on the row carries adjustsFontSizeToFit; the columns fit their content.
     const cell = one(byLabel(render({}), 'Set 2 weight'));
     expect(cell.props.hitSlop).toEqual({ top: 2, bottom: 2, left: 0, right: 0 });
     expect(flat(cell.props.style).height).toBe(44);
     const text = textIn(cell);
     expect(text.props.numberOfLines).toBe(1);
-    expect(text.props.adjustsFontSizeToFit).toBe(true);
+    expect(text.props.adjustsFontSizeToFit).toBeUndefined();
+    expect(text.props.minimumFontScale).toBeUndefined();
   });
 
   test('onPressWell is called with the field', () => {
@@ -384,15 +388,24 @@ describe('SetRow frame', () => {
     expect(s.gap).toBe(8);
     expect(spacing.sm).toBe(8);
     expect(spacing.md).toBe(12);
-    expect(SET_COLUMNS).toEqual({ marker: 24, last: 68, check: 36 });
+    // Last is 80 so "· 137.5 × 15" (76.7 dp at bodySm in Inter) fits with no
+    // font fitting (D220 addendum 22).
+    expect(SET_COLUMNS).toEqual({ marker: 24, last: 80, check: 36 });
   });
 
-  test('cell text never widens a column: the Last cell is one line, shrinkable', () => {
+  test('cell text never widens a column: the Last cell is one line and never fit-scaled', () => {
     const longText = `1000.25 ${TIMES} 100`;
     const t2 = render({ last: { text: longText, stale: false } });
     const text = one(t2.root.findAll((n) => n.type === 'Text' && words(n).join('') === longText));
     expect(text.props.numberOfLines).toBe(1);
-    expect(text.props.adjustsFontSizeToFit).toBe(true);
+    expect(text.props.adjustsFontSizeToFit).toBeUndefined();
+    expect(text.props.minimumFontScale).toBeUndefined();
+  });
+
+  test('no text on the row fit-scales at runtime (source guard, D220 addendum 22)', () => {
+    const src = require('fs').readFileSync(require.resolve('../SetRow.js'), 'utf8');
+    expect(src).not.toMatch(/^\s*adjustsFontSizeToFit/m);
+    expect(src).not.toMatch(/minimumFontScale=/);
   });
 });
 
@@ -585,6 +598,21 @@ describe('SetRow phone-keyboard path', () => {
   });
   const inputs = (tree) => tree.root.findAll((n) => n.type === 'TextInput');
 
+  test('the return key and the accessory id pass through as given, undefined included (D220 addendum 23)', () => {
+    // An iOS number pad has no return key; the screen leaves returnKeyType
+    // unset there so the system draws no return-key capsule, and names the
+    // keyboard bar as the input's accessory. The row must not substitute a
+    // default of its own.
+    const bare = { ...field(), returnKeyType: undefined, inputAccessoryViewID: undefined };
+    const t1 = render({ inputField: bare, wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    expect(one(inputs(t1)).props.returnKeyType).toBeUndefined();
+    expect(one(inputs(t1)).props.inputAccessoryViewID).toBeUndefined();
+    const named = { ...field(), returnKeyType: 'next', inputAccessoryViewID: 'volyume-logger-keyboard-bar' };
+    const t2 = render({ inputField: named, wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    expect(one(inputs(t2)).props.returnKeyType).toBe('next');
+    expect(one(inputs(t2)).props.inputAccessoryViewID).toBe('volyume-logger-keyboard-bar');
+  });
+
   test('while editing, the named well is a TextInput with the house props', () => {
     const input = field();
     const tree = render({ inputField: input, wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
@@ -593,7 +621,7 @@ describe('SetRow phone-keyboard path', () => {
     expect(box.props.accessibilityLabel).toBe('Set 2 weight');
     expect(box.props.value).toBe('72.5');
     expect(box.props.keyboardType).toBe('decimal-pad');
-    expect(box.props.returnKeyType).toBe('done');
+    expect(box.props.returnKeyType).toBe(input.returnKeyType);
     expect(box.props.selectTextOnFocus).toBe(true);
     expect(box.props.autoFocus).toBe(true);
     expect(box.props.onSubmitEditing).toBe(input.onSubmitEditing);

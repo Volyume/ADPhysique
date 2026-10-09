@@ -2066,10 +2066,12 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
   }
   function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
   function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
-  function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
   // The open well is a TextInput on the phone's numeric keyboard. Its
   // onChangeText is the screen's handleInputChange; the bar's Next (weight)
-  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  // is the same handler the keyboard's own return key calls. The bar's last
+  // action on the next row is Log (D220 addendum 21): it LOGS the set, so
+  // typing the reps here only sets the value and leaves the input open; the
+  // caller then presses the bar's Log once (typeAndLog) or the row's tick.
   const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
   async function typeOnKeyboard(tree, field, value) {
     const inputId = `volyume-${field}-input`;
@@ -2078,13 +2080,16 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
     await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
-    // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
+    // Weight: Next moves to reps. Reps: leave the input open and unlogged.
+    if (field === 'weight') {
+      await actFlush(() => pressable(tree, 'volyume-bar-next').props.onPress());
+    }
   }
   async function typeAndLog(tree, weight, reps) {
     await typeOnKeyboard(tree, 'weight', weight);
     await typeOnKeyboard(tree, 'reps', reps);
-    await actFlush(() => logButton(tree).props.onPress());
+    // The bar's last action on the next row reads Log and logs the set once.
+    await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
   }
 
   function mkEntry({ exerciseId, repsMin, repsMax, sets = 3 }) {
@@ -2150,6 +2155,49 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       // MATCH_LOAD_ADD_REP, not a fabricated number and not the raw
       // ordinal echo of whichever set the old getBestAnchorSet preferred.
       expect(weightInput(tree).props.value).toBe('80');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  // D220 addendum 21: on the next row the bar's last action is Log and logs
+  // the set; on a logged row's edit it stays Done.
+  test('(a2) the bar\'s last action is Log on the next row (logs the set once) and Done on a logged row\'s edit', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    database.createWorkoutSet = jest.fn(async (data) => ({ id: `set-a2-${Date.now()}`, ...data, createdAt: Date.now(), updatedAt: Date.now() }));
+    const barText = (tree) => host(tree, 'volyume-bar-done')
+      .findAll((n) => n.type === 'Text')
+      .map((n) => [].concat(n.props.children).join(''))
+      .join('');
+    const loggedCount = () => (useAppStore.getState().workoutExercises[0].sets || []).length;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exA2', repsMin: 8, repsMax: 15 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      await typeOnKeyboard(tree, 'weight', 60);
+      await typeOnKeyboard(tree, 'reps', 10); // reps input open, nothing logged yet
+      expect(loggedCount()).toBe(0);
+      expect(host(tree, 'volyume-bar-done').props.accessibilityLabel).toBe('Log set');
+      expect(barText(tree)).toBe('Log');
+
+      await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
+      expect(loggedCount()).toBe(1); // one more logged row, no second log
+      expect(database.createWorkoutSet).toHaveBeenCalledTimes(1);
+      expect(textInput(tree, 'volyume-reps-input')).toBeUndefined(); // the input closed
+      expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
+
+      // Editing the logged row: the same action reads Done.
+      await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
+      expect(host(tree, 'volyume-bar-done').props.accessibilityLabel).toBe('Done');
+      expect(barText(tree)).toBe('Done');
+      expect(loggedCount()).toBe(1);
     } finally {
       unmountTree(tree);
       Object.assign(database, orig);
@@ -2332,10 +2380,12 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
   }
   function weightInput(tree) { return { props: { value: wellValue(tree, 'weight') } }; }
   function repsInput(tree) { return { props: { value: wellValue(tree, 'reps') } }; }
-  function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
   // The open well is a TextInput on the phone's numeric keyboard. Its
   // onChangeText is the screen's handleInputChange; the bar's Next (weight)
-  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  // is the same handler the keyboard's own return key calls. The bar's last
+  // action on the next row is Log (D220 addendum 21): it LOGS the set, so
+  // typing the reps here only sets the value and leaves the input open; the
+  // caller then presses the bar's Log once (typeAndLog) or the row's tick.
   const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
   async function typeOnKeyboard(tree, field, value) {
     const inputId = `volyume-${field}-input`;
@@ -2344,13 +2394,16 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
       await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
     await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
-    // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
+    // Weight: Next moves to reps. Reps: leave the input open and unlogged.
+    if (field === 'weight') {
+      await actFlush(() => pressable(tree, 'volyume-bar-next').props.onPress());
+    }
   }
   async function typeAndLog(tree, weight, reps) {
     await typeOnKeyboard(tree, 'weight', weight);
     await typeOnKeyboard(tree, 'reps', reps);
-    await actFlush(() => logButton(tree).props.onPress());
+    // The bar's last action on the next row reads Log and logs the set once.
+    await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
   }
 
   function mkEntry({ exerciseId, repsMin, repsMax, sets = 3, loggedSets = [] }) {
@@ -3237,7 +3290,10 @@ describe('D219 learner data path: the logger records whether an entry was typed 
   function logButton(tree) { return pressable(tree, 'volyume-btn-complete-set'); }
   // The open well is a TextInput on the phone's numeric keyboard. Its
   // onChangeText is the screen's handleInputChange; the bar's Next (weight)
-  // and Done (reps) are the same handlers the keyboard's own return key calls.
+  // is the same handler the keyboard's own return key calls. The bar's last
+  // action on the next row is Log (D220 addendum 21): it LOGS the set, so
+  // typing the reps here only sets the value and leaves the input open; the
+  // caller then presses the bar's Log once (typeAndLog) or the row's tick.
   const textInput = (tree, id) => tree.root.findAll((n) => n.props && n.props.testID === id && typeof n.props.onChangeText === 'function')[0];
   async function typeOnKeyboard(tree, field, value) {
     const inputId = `volyume-${field}-input`;
@@ -3246,8 +3302,10 @@ describe('D219 learner data path: the logger records whether an entry was typed 
       await actFlush(() => pressable(tree, `volyume-well-${field}`).props.onPress());
     }
     await actFlush(() => textInput(tree, inputId).props.onChangeText(String(value)));
-    // Next on the weight field, Done on reps: either closes this field.
-    await actFlush(() => pressable(tree, field === 'weight' ? 'volyume-bar-next' : 'volyume-bar-done').props.onPress());
+    // Weight: Next moves to reps. Reps: leave the input open and unlogged.
+    if (field === 'weight') {
+      await actFlush(() => pressable(tree, 'volyume-bar-next').props.onPress());
+    }
   }
 
   function mkEntry({ exerciseId, repsMin = 8, repsMax = 15, sets = 4 }) {

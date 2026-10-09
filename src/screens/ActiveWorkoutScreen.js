@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, AccessibilityInfo, InputAccessoryView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -224,6 +224,10 @@ const REST_NOTIF_ASKED_KEY = '@volyume_rest_notif_asked';
 // mounted instances would trade one hold and blur ordering would decide who
 // wins.
 const KEEP_AWAKE_TAG = 'volyume-active-workout';
+// D220 addendum 23: on iOS the keyboard step bar is the open well's input
+// accessory, docked on the keyboard by the system (the house mechanism every
+// numeric TextField uses), never placed by a measured keyboard height.
+const LOGGER_BAR_ACCESSORY_ID = 'volyume-logger-keyboard-bar';
 let keepAwakeSeq = 0;
 const IS_JEST = typeof process !== 'undefined'
   && process.env
@@ -4678,6 +4682,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     : (setTableKind === 'distance' ? DISTANCE_RULES : WEIGHT_RULES);
   const weightStepKg = exercise?.incrementKg || exercise?.increment_kg
     || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound');
+  // The reps well gets no step keys (D220 addendum 24): a rep count is typed,
+  // and "- 1 / + 1" beside the keyboard read as nothing. Weight steps by the
+  // plate; a time well steps by 5 s inside the bar.
   const activeStep = activeField === 'weight' ? (setTableKind === 'distance' ? 1 : weightStepKg) : 1;
   const inputOpen = activeField != null;
   // The bar's height counts towards the PR toast's inset only while open.
@@ -4755,6 +4762,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (activeField !== 'weight') return;
     if (editingSet) setEditField('reps'); else setEntryField('reps');
   }
+  // On the next row the keyboard's last action LOGS the set (founder,
+  // 2026-10-09: "you have to press the sets and reps button to allow you to
+  // then press complete a set, it's too many clicks"): the input closes and
+  // the same press handler the row's tick uses runs, so typing the reps and
+  // pressing Log is the whole set. An edit of a logged set keeps Done.
+  function handleInputLog() {
+    closeInput();
+    handleCompleteSetPress();
+  }
   function handleInputDone() {
     if (editingSet) {
       const changed = String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
@@ -4783,6 +4799,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       : (/^\d{0,3}(\.\d{0,2})?$/.test(text) && (text === '' || Number(text) <= 500));
     if (ok) writeActiveField('weight', text);
   }
+  // An iOS number pad has no return key. Left typed as 'next' or 'done', the
+  // founder's iPhone drew a floating return-key capsule over the keypad that
+  // duplicated the bar's own Next and Log and opened a band of space between
+  // the two (2.9.0 screenshots, D220 addendum 23), so on an iOS pad the
+  // return key type is left unset and the bar is the input's accessory. The
+  // time keyboard has a real return key and keeps its type; Android's action
+  // key keeps its type.
+  const iosPad = Platform.OS === 'ios' && !activeIsTime;
   const activeInputField = activeField ? {
     field: activeField,
     value: activeIsTime
@@ -4791,8 +4815,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     onChangeText: handleInputChange,
     keyboardType: activeIsTime ? 'numbers-and-punctuation' : (activeField === 'weight' ? 'decimal-pad' : 'number-pad'),
     testID: activeField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
-    returnKeyType: activeField === 'weight' && timeField !== 'weight' ? 'next' : 'done',
-    onSubmitEditing: activeField === 'weight' ? handleInputNext : handleInputDone,
+    returnKeyType: iosPad ? undefined : (activeField === 'weight' && timeField !== 'weight' ? 'next' : 'done'),
+    inputAccessoryViewID: iosPad ? LOGGER_BAR_ACCESSORY_ID : undefined,
+    onSubmitEditing: activeField === 'weight' ? handleInputNext : (editingSet ? handleInputDone : handleInputLog),
   } : null;
 
   // Section 2a: last session at each position (the most recent earlier one,
@@ -5622,15 +5647,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             well is open; the keyboard's step bar carries it while one is. */}
         </View>
         {inputOpen ? null : <View style={{ height: safeBottom }} />}
-        {inputOpen ? (
+        {/* D220 addendum 23: on iOS the bar rides the keyboard as the open
+            well's input accessory (the keyboard covers the gesture bar, so no
+            safe inset); on Android the window resizes for the keyboard and
+            the bar sits at the bottom of this column, straight above it. */}
+        {inputOpen && Platform.OS === 'ios' ? (
+          <InputAccessoryView nativeID={LOGGER_BAR_ACCESSORY_ID}>
+            <View onLayout={handleBarLayout}>
+              <KeyboardBar
+                step={activeStep}
+                unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
+                mode={activeIsTime ? 'time' : 'number'}
+                onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
+                onNext={activeField === 'weight' ? handleInputNext : undefined}
+                onDone={editingSet ? handleInputDone : handleInputLog}
+                doneLabel={editingSet ? 'Done' : 'Log'}
+                safeBottom={0}
+              />
+            </View>
+          </InputAccessoryView>
+        ) : null}
+        {inputOpen && Platform.OS !== 'ios' ? (
           <View onLayout={handleBarLayout}>
             <KeyboardBar
               step={activeStep}
               unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
               mode={activeIsTime ? 'time' : 'number'}
-              onStep={handleInputStep}
+              onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
               onNext={activeField === 'weight' ? handleInputNext : undefined}
-              onDone={handleInputDone}
+              onDone={editingSet ? handleInputDone : handleInputLog}
+              doneLabel={editingSet ? 'Done' : 'Log'}
               safeBottom={safeBottom}
             />
           </View>
