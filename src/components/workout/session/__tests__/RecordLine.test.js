@@ -73,6 +73,10 @@ describe('the record is a line of the card, not a floating surface', () => {
     expect(style.top).toBeUndefined();
     expect(style.bottom).toBeUndefined();
     expect(style.flexDirection).toBe('row');
+    // Centred in its band, both ways, as a row of the table.
+    expect(style.alignItems).toBe('center');
+    expect(style.justifyContent).toBe('center');
+    expect(style.borderBottomWidth).toBe(1);
     // The logger's own grammar ("72.5 kg × 8"), never detectPR's summary label.
     const texts = tree.root.findAll((n) => typeof n.props.children === 'string' && n.props.children === RECORD_TEXT);
     expect(texts.length).toBeGreaterThan(0);

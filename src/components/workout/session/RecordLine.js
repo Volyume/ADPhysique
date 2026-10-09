@@ -8,12 +8,15 @@
  * Not moving it to be ON TOP of other data").
  *
  * No floating surface of any kind. A record is a fact about a set, so it
- * lives where the set lives: one line inside the card, directly under the
- * set table and above the footer, in the card's own grammar (the quiet
- * lines' left edge, the list's small glyph, the body-small role). It stays
- * for as long as the exercise is open, covers nothing, and the card grows
- * by the one line. The row that earned it carries its small amber PR under
- * the set number (SetRow); this line names the record.
+ * lives where the set lives: one row of the card, directly under the set
+ * table's last row and above the footer, drawn as a row of the table (the
+ * same hairline under it, a 48 dp band) with the glyph and the text
+ * centred in it, horizontally and vertically (founder render verdict
+ * 2026-10-09: "it's not central vertically ... Central horizontal and
+ * vertical might be worth a try"). It stays for as long as the exercise is
+ * open, covers nothing, and the card grows by the one row. The row that
+ * earned it carries its small amber PR under the set number (SetRow); this
+ * row names the record.
  *
  * Enter: the line fades in and settles down 4 dp on the house decelerate
  * curve (fade only under reduce-motion), the record haptic ladder plays
@@ -31,7 +34,7 @@
  *   reduceMotion  the accessibility preference.
  */
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, AccessibilityInfo } from 'react-native';
+import { Animated, StyleSheet, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
@@ -126,21 +129,20 @@ export default function RecordLine({ record, celebrate = false, reduceMotion = f
   if (!record) return null;
 
   const live = {
+    band: { borderBottomColor: t.colors.borderSubtle },
     text: { ...t.type.bodySm, color: isFirstLift ? t.colors.textSecondary : t.colors.textPrimary },
     glyph: isFirstLift ? t.colors.textMuted : t.colors.gold,
   };
 
   return (
     <Animated.View
-      style={[styles.line, { opacity, transform: [{ translateY: shift }] }]}
+      style={[styles.band, live.band, { opacity, transform: [{ translateY: shift }] }]}
       accessible
       accessibilityRole="text"
       accessibilityLabel={isFirstLift ? text : `Personal record. ${text}`}
       testID="volyume-record-line"
     >
-      <View style={styles.glyph}>
-        <Ionicons name={recordGlyph(record.type)} size={iconSize.sm} color={live.glyph} />
-      </View>
+      <Ionicons name={recordGlyph(record.type)} size={iconSize.sm} color={live.glyph} />
       <Text style={[styles.text, live.text]} maxFontSizeMultiplier={fontScaleCaps.reading}>
         {text}
       </Text>
@@ -148,17 +150,22 @@ export default function RecordLine({ record, celebrate = false, reduceMotion = f
   );
 }
 
+// A row of the table: taller than the column labels (36), shorter than a
+// set row (64), with the table's hairline under it so the footer's spacing
+// below is the card's normal spacing.
+const BAND_MIN_HEIGHT = 48;
+
 const styles = StyleSheet.create({
-  // The quiet lines' slot: no gutter of its own (the padded active body
-  // insets it to the table's left edge); the glyph sits on the first line's
-  // centre, the text wraps beside it and never truncates.
-  line: {
+  band: {
+    minHeight: BAND_MIN_HEIGHT,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.xxs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
   },
-  glyph: { paddingTop: 2 },
-  text: { flex: 1, minWidth: 0 },
+  // Centred as a pair with the glyph; wraps when it must and never truncates.
+  text: { flexShrink: 1, textAlign: 'center' },
 });

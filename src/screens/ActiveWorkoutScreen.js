@@ -5661,14 +5661,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onRowLayout={(id, y) => { rowYRef.current[id] = y; }}
           />
           </View>
-
-          <View style={styles.activeBody}>
-          {/* D220 addendum 36: the record, as a line of the card under the
-              rows it belongs to. No floating surface; the card grows by the
-              line and nothing is covered. */}
+          {/* D220 addendum 36: the record, as a row of the table under the
+              rows it belongs to, centred in its band. No floating surface;
+              the card grows by the row and nothing is covered. */}
           {exerciseRecord ? (
             <RecordLine record={exerciseRecord} celebrate={celebrateRecord} reduceMotion={!!reduceMotion} />
           ) : null}
+
+          <View style={styles.activeBody}>
           {/* R4 (D64): the between-sides banner. Appears only mid-pair
               (side one logged via the primary, side two pending on the same
               relabelled primary below). Cluster-banner visual class: bordered
