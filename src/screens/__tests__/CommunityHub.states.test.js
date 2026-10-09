@@ -200,6 +200,17 @@ function findByLabel(view, label) {
     .flatMap((tr) => tr.root.findAll((n) => n.props?.accessibilityLabel === label && typeof n.props.onPress === 'function'))[0];
 }
 
+// Founder verdict 2026-10-09: scopes and sorts live in the one "What you see"
+// sheet, so a scope is chosen through the sheet's row, not a chip.
+async function chooseInSheet(view, label) {
+  const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
+  const row = sheet.props.rows.find((r) => r.label === label);
+  expect(row).toBeTruthy();
+  await act(async () => { row.onPress(); });
+  await flush();
+  view.refresh();
+}
+
 async function press(view, label) {
   const node = findByLabel(view, label);
   expect(node).toBeTruthy();
@@ -317,7 +328,14 @@ describe('Feed: a member', () => {
     const view = await render();
     expect(loadHub).toHaveBeenCalledWith('following', expect.objectContaining({ sort: 'newest' }));
     expect(view.text).toContain('Share something from your training');
-    for (const label of ['Following', 'My gym', 'My groups', 'Everyone']) expect(view.text).toContain(label);
+    // Founder verdict 2026-10-09: no chip row; the four scopes live in the
+    // "What you see" sheet, and the feed names the one showing.
+    expect(view.text).toContain('Following');
+    expect(view.text).toContain('Newest first');
+    const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
+    for (const label of ['Following', 'My gym', 'My groups', 'Everyone', 'Newest', 'Most respected']) {
+      expect(sheet.props.rows.some((r) => r.label === label)).toBe(true);
+    }
   });
 
   test('each scope has its own quiet empty line and one action', async () => {
@@ -325,13 +343,13 @@ describe('Feed: a member', () => {
     const view = await render();
     expect(view.text).toContain('Follow a few people to fill this feed');
     expect(view.text).toContain('Find people');
-    await press(view, 'My gym');
+    await chooseInSheet(view, 'My gym');
     expect(loadHub).toHaveBeenLastCalledWith('gym', expect.any(Object));
     expect(view.text).toContain('Set your gym to see who trains there');
     expect(view.text).toContain('Set gym');
-    await press(view, 'My groups');
+    await chooseInSheet(view, 'My groups');
     expect(view.text).toContain('Join or start a group');
-    await press(view, 'Everyone');
+    await chooseInSheet(view, 'Everyone');
     expect(view.text).toContain('Nothing posted yet. Yours could be first.');
     expect(view.text).toContain('Write a post');
   });
@@ -339,13 +357,13 @@ describe('Feed: a member', () => {
   test('My gym with no gym_id asks to set one, opening the gym picker; with a gym it says nobody has posted', async () => {
     asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_label: 'PureGym', place_key: 'town:leeds', gym_id: null } });
     let view = await render();
-    await press(view, 'My gym');
+    await chooseInSheet(view, 'My gym');
     expect(view.text).toContain('Set your gym to see who trains there');
     await press(view, 'Set gym');
     expect(view.navigation.navigate).toHaveBeenCalledWith('CommunityEditProfile', { openGymPicker: true });
     asMember({ profile: { ...ME_WITH_PROFILE.profile, gym_id: 'gym-1' } });
     view = await render();
-    await press(view, 'My gym');
+    await chooseInSheet(view, 'My gym');
     expect(view.text).toContain('Nobody at your gym has posted yet.');
   });
 
@@ -369,11 +387,11 @@ describe('Feed: a member', () => {
     asMember();
     loadHub.mockImplementation(async (scope, opts) => emptyHub(opts?.sort === 'respected' ? { fallback: 'sort' } : {}));
     const view = await render();
-    await press(view, 'Sort: Newest');
-    const sheet0 = view.tree.root.findAll((n) => n.props?.title === 'Sort posts' && Array.isArray(n.props.rows))[0];
-    await act(async () => { sheet0.props.rows[1].onPress(); });
+    await press(view, 'Showing Following, newest first. Change what you see');
+    const sheet0 = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
+    await act(async () => { sheet0.props.rows.find((r) => r.label === 'Most respected').onPress(); });
     await flush();
-    const sheet = view.tree.root.findAll((n) => n.props?.title === 'Sort posts' && Array.isArray(n.props.rows))[0];
+    const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
     const row = sheet.props.rows.find((r) => r.label === 'Most respected');
     expect(row).toBeTruthy();
     expect(row.sub).toBe('Not available yet');
@@ -384,18 +402,16 @@ describe('Feed: a member', () => {
     expect(live.disabled).toBeFalsy();
   });
 
-  test('a scope the server cannot serve is a disabled chip with the hint "Not available yet"', async () => {
+  test('a scope the server cannot serve is a disabled sheet row saying "Not available yet"', async () => {
     asMember();
     loadHub.mockImplementation(async (scope) => emptyHub(scope === 'gym' ? { fallback: 'scope' } : {}));
     const view = await render();
-    await press(view, 'My gym');
-    const chips = view.all.flatMap((tr) => tr.root.findAll(
-      (n) => n.props?.accessibilityRole === 'radio' && ['My gym', 'My groups'].includes(n.props.accessibilityLabel),
-    ));
-    expect(chips.length).toBeGreaterThan(0);
-    for (const chip of chips) {
-      expect(chip.props.accessibilityHint).toBe('Not available yet');
-      expect(chip.props.disabled).toBe(true);
+    await chooseInSheet(view, 'My gym');
+    const sheet = view.tree.root.findAll((n) => n.props?.title === 'What you see' && Array.isArray(n.props.rows))[0];
+    for (const label of ['My gym', 'My groups']) {
+      const row = sheet.props.rows.find((r) => r.label === label);
+      expect(row.sub).toBe('Not available yet');
+      expect(row.disabled).toBe(true);
     }
   });
 
@@ -579,7 +595,7 @@ describe('You', () => {
     const view = await render({ segment: 'you' });
     const youRow = findByLabel(view, 'You. Trained mon, wed. 3 sessions');
     expect(youRow).toBeTruthy();
-    expect(view.text).toContain('sessions this week');
+    expect(view.text).toContain('Sessions this week');
     for (const label of ['My profile', 'Followers and connections', 'Privacy and sharing', 'Training profile', 'Community rules']) {
       expect(view.text).toContain(label);
     }
