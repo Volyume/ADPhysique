@@ -2163,6 +2163,29 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
 
   // D220 addendum 21: on the next row the bar's last action is Log and logs
   // the set; on a logged row's edit it stays Done.
+  test('(c1) tick-all renders once the next row holds loggable numbers and more than one set remains (audit C1)', async () => {
+    // tick-all read nextRowShown before it was declared, so ALL never rendered.
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exC1', repsMin: 8, repsMax: 15, sets: 3 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree.root.findAll((n) => n.props?.testID === 'volyume-btn-log-remaining')).toHaveLength(0); // no weight yet
+      await typeOnKeyboard(tree, 'weight', 60);
+      await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress()); // logs set 1 of 3 at 60 x 8
+      // Set 2 of 3 is next, seeded with 60 x 8: two remain, ALL is offered.
+      expect(host(tree, 'volyume-btn-log-remaining')).toBeTruthy();
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
   test('(a3) the first keystroke into a freshly opened well replaces what it held; the second appends (D220 addendum 25)', async () => {
     // On the founder's iPhone selectTextOnFocus did not select the seed under
     // autoFocus, so the phone's keyboard appended the typed digit to it. The

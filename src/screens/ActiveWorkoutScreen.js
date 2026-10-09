@@ -4646,6 +4646,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Stage A (D220): the rest sheet's "next set" line is the position line the
   // Now card used to carry, with the entry's weight and reps when it holds
   // them.
+  // Declared ABOVE restSheetNextLabel, which reads it (2026-10-09 audit C2:
+  // declared below, it read undefined and every kind fell to weight_reps).
+  const activeExerciseType = exercise?.exerciseType || 'weight_reps';
   const restSheetNextLabel = (() => {
     const w = currentSet?.weight;
     const r = currentSet?.reps;
@@ -4665,7 +4668,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // The B2 readiness line for the coach slot retired with the in-card coach
   // line (founder device order 2026-08-17); the readiness sheet still
   // carries the written why on demand.
-  const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
 
   const handleCurrentSetChange = useCallback((next) => {
@@ -4732,6 +4734,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
     inputRowRef.current = set ? (set.id ?? null) : 'next';
     replaceOnFirstKeyRef.current = true;
+    setTimeDraft(null);
   }
   // Scroll so the row being typed into sits above the keypad. The pad's
   // height is known once it lays out, so this runs on that layout too.
@@ -4747,6 +4750,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }
   const inputRowRef = useRef(null);
+  // The keyboard going away on its own (Android back, an iOS drag-down)
+  // closes the well too (2026-10-09 audit C6), unless another input already
+  // holds focus: moving between wells can hide and re-show the keyboard.
+  const inputOpenRef = useRef(false);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidHide', () => {
+      if (!inputOpenRef.current) return;
+      if (TextInput.State.currentlyFocusedInput()) return;
+      setEntryField(null);
+      setEditField(null);
+      setTimeDraft(null);
+    });
+    return () => sub.remove();
+  }, []);
   // D220 addendum 25: the first keystroke into a freshly opened well REPLACES
   // what the well held, as the retired keypad did. selectTextOnFocus is kept,
   // but on the founder's iPhone it did not select the seed under autoFocus
@@ -4756,6 +4773,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // next well, and spent by the first change or step.
   const replaceOnFirstKeyRef = useRef(false);
   const activeInputValueRef = useRef('');
+  // A time well's input shows what was typed, not a re-format of it on every
+  // keystroke (2026-10-09 audit C9: "1:30" became 2:10 and a backspace from
+  // 1:00 stuck). The draft is the text; the seconds are written beside it.
+  const [timeDraft, setTimeDraft] = useState(null);
   useEffect(() => {
     if (inputOpen && barHeight > 0 && inputRowRef.current) scrollRowAboveBar(inputRowRef.current, barHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4763,6 +4784,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function closeInput() {
     setEntryField(null);
     setEditField(null);
+    setTimeDraft(null);
   }
   function handleInputStep(delta) {
     if (!activeField) return;
@@ -4771,6 +4793,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (activeIsTime) {
       const secs = Math.min(Math.max((Number(activeSource?.reps) || 0) + delta, 0), 5999);
       writeActiveField('reps', secs);
+      setTimeDraft(null);
       return;
     }
     if (activeField === 'reps') {
@@ -4783,6 +4806,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (activeField !== 'weight') return;
     if (editingSet) setEditField('reps'); else setEntryField('reps');
     replaceOnFirstKeyRef.current = true;
+    setTimeDraft(null);
   }
   // On the next row the keyboard's last action LOGS the set (founder,
   // 2026-10-09: "you have to press the sets and reps button to allow you to
@@ -4791,7 +4815,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // pressing Log is the whole set. An edit of a logged set keeps Done.
   function handleInputLog() {
     closeInput();
-    handleCompleteSetPress();
+    // The same action as the row's check: mid-cluster that is Finish cluster
+    // (2026-10-09 audit B3: handleCompleteSetPress would restart the cluster).
+    if (cluster) finishCluster(); else handleCompleteSetPress();
   }
   function handleInputDone() {
     if (editingSet) {
@@ -4818,7 +4844,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // through unchanged).
       if (held !== '' && text.length === held.length + 1 && text.startsWith(held)) text = text.slice(held.length);
     }
-    if (activeIsTime) { writeActiveField('reps', parseTimeToSeconds(text)); return; }
+    if (activeIsTime) { setTimeDraft(text); writeActiveField('reps', parseTimeToSeconds(text)); return; }
+    // A comma is a decimal point (audit C8; the house parseDecimalInput rule).
+    text = text.replace(/,/g, '.');
     if (activeField === 'reps') {
       const n = parseInt(text, 10);
       if (!Number.isNaN(n)) writeActiveField('reps', Math.min(Math.max(n, 1), 200));
@@ -4838,19 +4866,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // time keyboard has a real return key and keeps its type; Android's action
   // key keeps its type.
   const iosPad = Platform.OS === 'ios' && !activeIsTime;
+  // One accessory per input (2026-10-09 audit B1): React Native attaches an
+  // InputAccessoryView to the input it finds ONCE, when the accessory enters
+  // the window, so a bar shared across the weight and reps inputs stayed on
+  // the first. The id names the field and the row, and the accessory is
+  // keyed by it, so every open well mounts its own. Every iOS well gets one,
+  // the time well included (audit B2).
+  const barAccessoryId = activeField ? `${LOGGER_BAR_ACCESSORY_ID}-${activeField}-${editingSet ? editingSet.id : 'next'}` : null;
   const activeInputField = activeField ? {
     field: activeField,
     value: activeIsTime
-      ? (activeSource?.reps === '' || activeSource?.reps == null ? '' : formatSeconds(activeSource.reps))
+      ? (timeDraft != null ? timeDraft : (activeSource?.reps === '' || activeSource?.reps == null ? '' : formatSeconds(activeSource.reps)))
       : String(activeSource?.[activeField] ?? ''),
     onChangeText: handleInputChange,
     keyboardType: activeIsTime ? 'numbers-and-punctuation' : (activeField === 'weight' ? 'decimal-pad' : 'number-pad'),
     testID: activeField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
     returnKeyType: iosPad ? undefined : (activeField === 'weight' && timeField !== 'weight' ? 'next' : 'done'),
-    inputAccessoryViewID: iosPad ? LOGGER_BAR_ACCESSORY_ID : undefined,
+    inputAccessoryViewID: Platform.OS === 'ios' ? barAccessoryId : undefined,
     onSubmitEditing: activeField === 'weight' ? handleInputNext : (editingSet ? handleInputDone : handleInputLog),
   } : null;
   activeInputValueRef.current = activeInputField ? activeInputField.value : '';
+  inputOpenRef.current = inputOpen;
 
   // Section 2a: last session at each position (the most recent earlier one,
   // marked stale, when last session had no set there), the coach's numbers
@@ -4926,6 +4962,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // come: never a warm-up, a cluster type, a per-side pair or a cluster in
   // progress, and only when the entry already holds loggable numbers.
   const pendingCount = Math.max(0, targetSets - workingLogged);
+  // Past the target the next row is not shown until Add set arms one (or a
+  // per-side pair or a cluster is mid-flight on it). Declared here, ABOVE
+  // tickAllCount: it was declared below it (2026-10-09 audit C1), the
+  // transform turned the const into a var, and tick-all read undefined, so
+  // ALL never rendered.
+  const nextRowShown = !(targetComplete && !extraSetArmed && !perSide && !cluster && !isWarmupEntry);
   const tickAllCount = (
     nextRowShown && pendingCount > 1
     && currentSGI == null
@@ -4935,6 +4977,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     && (setTableKind !== 'weight_reps' || parseDecimalInput(currentSet.weight) > 0)
     && Number(currentSet.reps) > 0
   ) ? pendingCount : 0;
+  // The bar's last action on the next row names what it does (audit C11).
+  const barLogLabel = cluster ? 'Finish'
+    : perSide ? 'Other side'
+      : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start'
+        : 'Log';
   const nextCheckLabel = cluster ? 'Finish cluster'
     : perSide ? 'Log other side'
       : isWarmupEntry ? 'Log warm-up'
@@ -4966,9 +5013,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
     });
   });
-  // Past the target the next row is not shown until Add set arms one (or a
-  // per-side pair or a cluster is mid-flight on it).
-  const nextRowShown = !(targetComplete && !extraSetArmed && !perSide && !cluster && !isWarmupEntry);
   const nextLast = isWarmupEntry
     ? lastWarmupCellFor(loggedSets.filter((x) => !isWorkingSetRow(x)).length)
     : lastCellFor(workingLogged);
@@ -5680,11 +5724,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </View>
         {inputOpen ? null : <View style={{ height: safeBottom }} />}
         {/* D220 addendum 23: on iOS the bar rides the keyboard as the open
-            well's input accessory (the keyboard covers the gesture bar, so no
-            safe inset); on Android the window resizes for the keyboard and
-            the bar sits at the bottom of this column, straight above it. */}
+            well's input accessory; on Android the window resizes for the
+            keyboard and the bar sits at the bottom of this column, straight
+            above it. Neither carries a safe inset: the keyboard covers the
+            gesture bar (2026-10-09 audit C5: the Android fallback inset of
+            48 dp was a band of space between the bar and the keypad). */}
         {inputOpen && Platform.OS === 'ios' ? (
-          <InputAccessoryView nativeID={LOGGER_BAR_ACCESSORY_ID}>
+          <InputAccessoryView key={barAccessoryId} nativeID={barAccessoryId}>
             <View onLayout={handleBarLayout}>
               <KeyboardBar
                 step={activeStep}
@@ -5693,7 +5739,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
                 onNext={activeField === 'weight' ? handleInputNext : undefined}
                 onDone={editingSet ? handleInputDone : handleInputLog}
-                doneLabel={editingSet ? 'Done' : 'Log'}
+                doneLabel={editingSet ? 'Done' : barLogLabel}
                 safeBottom={0}
               />
             </View>
@@ -5708,8 +5754,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onStep={activeField === 'reps' && !activeIsTime ? undefined : handleInputStep}
               onNext={activeField === 'weight' ? handleInputNext : undefined}
               onDone={editingSet ? handleInputDone : handleInputLog}
-              doneLabel={editingSet ? 'Done' : 'Log'}
-              safeBottom={safeBottom}
+              doneLabel={editingSet ? 'Done' : barLogLabel}
+              safeBottom={0}
             />
           </View>
         ) : null}
@@ -6948,7 +6994,9 @@ const styles = StyleSheet.create({
   sessionScrollContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
   // No top padding: the header above is 56 dp and centred, so an empty
   // body adds only its bottom gap (D220 addendum 10, the page fit).
-  activeBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
+  // The card grid (12/8), so the strip, the banners and the lines start on
+  // the set numbers' edge (2026-10-09 audit D1: 16 left them 4 dp out).
+  activeBody: { paddingLeft: spacing.md, paddingRight: spacing.sm, paddingBottom: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.

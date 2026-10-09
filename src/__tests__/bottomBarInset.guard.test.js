@@ -32,7 +32,13 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // keyboard step bar carries the inset while a well is open (same padding
     // contract) and a spacer of exactly safeBottom holds the bottom chrome
     // clear of the gesture pill while none is.
-    expect(screen).toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{safeBottom\}/);
+    // RE-ANCHORED for D220 addendum 27 (audit C5, 2026-10-09): a bar that
+    // sits on the keyboard carries NO inset (the keyboard covers the gesture
+    // area; the 48 dp fallback was a band of space between the bar and the
+    // keypad on Android). The spacer alone holds the inset while no well is
+    // open.
+    expect(screen).not.toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{safeBottom\}/);
+    expect(screen).toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{0\}/);
     expect(screen).toContain('{inputOpen ? null : <View style={{ height: safeBottom }} />}');
     const bar = read('components/workout/session/KeyboardBar.js');
     expect(bar).toContain('{ paddingBottom: Math.max(0, safeBottom) }');
