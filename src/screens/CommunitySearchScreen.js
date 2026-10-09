@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   // The search field and its mode chips are the first band (D221 V1, V9).
   controls: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   skeleton: { paddingHorizontal: spacing.lg },
   modeRow: { flexDirection: 'row', gap: spacing.sm },
   recentRow: {

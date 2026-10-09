@@ -1396,12 +1396,18 @@ export default function CommunityHubScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { paddingBottom: spacing.xxl },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  // Founder verdict 2026-10-09 ("no space between the heading and the nav,
+  // boxes still touching"): the rhythm is the Coach tab's, exactly
+  // (YouScreen `content`: padding spacing.lg, gap spacing.lg): the title
+  // sits spacing.lg below the safe area, spacing.lg between it and the
+  // track, spacing.lg between the track and the first card, spacing.lg
+  // between cards.
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   glyphs: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   glyph: {
     width: HEADER_GLYPH_BOX, height: HEADER_GLYPH_BOX, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center',
   },
-  postCard: { marginBottom: spacing.md },
+  postCard: { marginBottom: spacing.lg },
   dot: {
     position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: circle(8), borderWidth: 1,
   },
@@ -1417,7 +1423,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  segmentBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.md },
+  segmentBar: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.lg },
   notice: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   noticeLink: { minHeight: touchTarget.minimum, justifyContent: 'center' },
   noticeActions: { flexDirection: 'row', gap: spacing.sm },

@@ -128,7 +128,8 @@ describe('the founder device verdict of 2026-10-08 ("boxes touching each other, 
     const bar = /segmentBar: \{[^}]*\}/.exec(hub);
     expect(bar).not.toBeNull();
     expect(bar[0]).toContain('paddingHorizontal: spacing.lg');
-    expect(bar[0]).toContain('paddingBottom: spacing.md');
+    expect(bar[0]).toContain('paddingTop: spacing.lg');
+    expect(bar[0]).toContain('paddingBottom: spacing.lg');
   });
 
   test('no pills on the feed (founder verdict 2026-10-09): what you see is one house row opening the house sheet', () => {
@@ -146,7 +147,9 @@ describe('the founder device verdict of 2026-10-08 ("boxes touching each other, 
     expect(hub).not.toMatch(/accessibilityRole="header">\s*Community/);
     const band = code(read('src/components/community/Band.js'));
     expect(band).toMatch(/group: \{[^}]*marginHorizontal: spacing\.lg[^}]*borderRadius: radius\.lg[^}]*borderWidth: 1/);
-    expect(band).toMatch(/gap: \{ height: spacing\.md \}/);
+    expect(band).toMatch(/gap: \{ height: spacing\.lg \}/);
+    expect(hub).toMatch(/header: \{ paddingHorizontal: spacing\.lg, paddingTop: spacing\.lg \}/);
+    expect(hub).toMatch(/postCard: \{ marginBottom: spacing\.lg \}/);
     const header = code(read('src/components/community/SectionHeader.js'));
     expect(header).toMatch(/import SectionLabel from '\.\.\/SectionLabel'/);
     const entry = code(read('src/components/community/EntryRow.js'));

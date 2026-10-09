@@ -308,7 +308,7 @@ export default function CommunityBoardScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   chipRow: {
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm, alignItems: 'center',
   },

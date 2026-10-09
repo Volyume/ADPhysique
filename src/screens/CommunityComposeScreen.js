@@ -413,7 +413,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   counter: { textAlign: 'right' },
   postBody: { paddingTop: spacing.md },

@@ -657,7 +657,7 @@ const AVATAR_PICK = 56;
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   preset: { minHeight: touchTarget.minimum, minWidth: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },

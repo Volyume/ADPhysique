@@ -7,8 +7,8 @@
  * `surface`, `radius.lg`, a 1 dp `borderSubtle` border, clipped corners,
  * inside the page's `spacing.lg` gutter. The rows inside keep the
  * `spacing.lg` gutter themselves (`inBand`), so their hairlines span the
- * group as NavRow's do. BandGap is the page rhythm Progress and Coach use
- * between sections (`spacing.md`), not the logger's strip.
+ * group as NavRow's do. BandGap is the page rhythm the Coach tab uses
+ * between blocks (`spacing.lg`), not the logger's strip.
  *
  * `BandLine` is the section-empty state (V10): one `bodySm` `textMuted` line
  * in a band, with at most one tertiary action beneath it.
@@ -74,7 +74,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  gap: { height: spacing.md },
+  // The Coach tab's gap between blocks (YouScreen `content`: gap spacing.lg).
+  gap: { height: spacing.lg },
   body: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,

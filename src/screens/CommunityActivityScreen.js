@@ -348,7 +348,7 @@ export default function CommunityActivityScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   requestActions: { flexDirection: 'row', gap: spacing.sm },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { paddingHorizontal: spacing.lg },

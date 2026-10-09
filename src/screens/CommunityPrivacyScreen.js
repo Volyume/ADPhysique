@@ -576,6 +576,6 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

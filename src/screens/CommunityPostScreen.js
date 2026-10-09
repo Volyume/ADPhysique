@@ -349,6 +349,6 @@ export default function CommunityPostScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
-  content: { paddingBottom: spacing.xl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xl },
   skeletonRows: { paddingHorizontal: spacing.lg },
 });
