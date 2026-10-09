@@ -210,11 +210,11 @@ export function resolveBarLoadStep(baseWeight, opts = {}, direction = 'up') {
   const down = direction === 'down';
   if (units !== 'lbs' && isKettlebell(equipmentCategory)) {
     const bell = down ? prevKettlebellLoadKg(w) : nextKettlebellLoadKg(w);
-    if (bell != null) return Math.abs(w - bell);
+    if (bell != null) return Math.round(Math.abs(w - bell) * 100) / 100;
   }
   if (units !== 'lbs' && isDumbbell(equipmentCategory)) {
     const bell = down ? prevDumbbellLoadKg(w) : nextDumbbellLoadKg(w);
-    if (bell != null) return Math.abs(w - bell);
+    if (bell != null) return Math.round(Math.abs(w - bell) * 100) / 100;
   }
   const floor = units === 'lbs' ? LOADABLE_STEP_LBS : LOADABLE_STEP_KG;
   return Math.max(resolveLoadIncrement(w, opts), floor);

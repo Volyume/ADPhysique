@@ -89,7 +89,9 @@ export function isLoggableWeight(weightRaw, isBodyweight) {
 // "1:30" -> 90, "90" -> 90, "" -> '' (kept blank so the field can be cleared).
 export function parseTimeToSeconds(text) {
   if (text == null || text === '') return '';
-  const t = String(text).trim();
+  // Android's number pad has no colon (D220 addendum 37): the first dot or
+  // comma typed is the minute separator, so 1.30 is 1:30, never 1 second.
+  const t = String(text).trim().replace(/[.,]/, ':');
   if (t.includes(':')) {
     const [m, s] = t.split(':');
     const mm = parseInt(m, 10);

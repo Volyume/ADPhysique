@@ -66,6 +66,20 @@ describe('KeyboardBar actions', () => {
     expect(up.props.accessibilityLabel).toBe('Add 2.5 kilograms');
   });
 
+  test('number mode: stepDown is its own key: label, spoken and the signed delta (D220 addendum 37)', () => {
+    const onStep = jest.fn();
+    const tree = render({ step: 4, stepDown: 2, unit: 'kg', onStep, onDone: jest.fn() });
+    const down = one(byId(tree, 'volyume-bar-step-down'));
+    const up = one(byId(tree, 'volyume-bar-step-up'));
+    expect(labelOf(down)).toBe('2');
+    expect(labelOf(up)).toBe('4');
+    expect(down.props.accessibilityLabel).toBe('Remove 2 kilograms');
+    press(down);
+    press(up);
+    expect(onStep).toHaveBeenNthCalledWith(1, -2);
+    expect(onStep).toHaveBeenNthCalledWith(2, 4);
+  });
+
   test('number mode: onStep gets -step and +step', () => {
     const onStep = jest.fn();
     const tree = render({ step: 2.5, unit: 'kg', onStep, onDone: jest.fn() });

@@ -19,22 +19,22 @@
  * row names the record.
  *
  * Enter: the line fades in and settles down 4 dp on the house decelerate
- * curve (fade only under reduce-motion), the record haptic ladder plays
- * (the light tick for a first lift, under reduce-motion or in calm mode)
- * and the record is announced to a screen reader. All of that happens ONCE,
- * on the log that earned it (`celebrate`), never again on a remount or a
- * jump back to the exercise.
+ * curve (fade only under reduce-motion), ONCE, on the first render of that
+ * record on its own exercise (`celebrate`), never again on a remount or a
+ * jump back. The record haptic ladder and the screen-reader announcement
+ * are `celebrateRecord` below, which the screen calls the moment the record
+ * is earned, whatever exercise is on screen then (a superset's log lands on
+ * the partner exercise, and the feedback must not wait for the return).
  *
  * Props
  *   record     detectPR's record ({ type, weight, reps, value, label }) plus
  *              units, or { type: 'first_lift', weight, reps, units } for the
  *              honest starting point. Null renders nothing.
- *   celebrate  true on the render that follows the log that earned the
- *              record: plays the haptic, announces, animates in.
+ *   celebrate  true on the render that first shows this record: animates in.
  *   reduceMotion  the accessibility preference.
  */
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, AccessibilityInfo } from 'react-native';
+import { Animated, Easing, StyleSheet, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
@@ -86,6 +86,37 @@ export function recordGlyph(type) {
       : type === 'heaviest_weight' ? 'barbell' : 'flash';
 }
 
+/**
+ * The feedback for a record the moment it is earned: the screen-reader
+ * announcement (P9/E11: announced, not just shown; a first lift is never
+ * announced as a record) and the haptic weight (calm mode, reduce-motion
+ * and a first lift get the light tick; a real record keeps the PR ladder,
+ * the vocabulary's). Called by the screen from the log or edit that earned
+ * the record, so a superset's forward jump never swallows it.
+ */
+export function celebrateRecord(record, { reduceMotion = false } = {}) {
+  if (!record) return;
+  const isFirstLift = record.type === 'first_lift';
+  const text = recordText(record);
+  try {
+    AccessibilityInfo.announceForAccessibility(
+      isFirstLift ? `First lift logged. ${text}.` : `Personal record. ${text}.`,
+    );
+  } catch (_) { /* best-effort */ }
+  if (isFirstLift || reduceMotion) {
+    haptics.selection();
+    return;
+  }
+  getWellbeingMode()
+    .then((m) => (isCalm(m) ? haptics.selection() : haptics.prAchieved()))
+    .catch(() => { haptics.selection(); }); // a failed read keeps the light tick
+}
+
+// The theme stores the curve as its four control points; Animated needs the
+// function (the array threw "easing is not a function" on the native driver
+// the moment the first record animated; pre-build review 2026-10-09).
+const EASE_DECELERATE = Easing.bezier(...motion.easeDecelerate);
+
 export default function RecordLine({ record, celebrate = false, reduceMotion = false }) {
   const t = useTheme();
   const isFirstLift = record?.type === 'first_lift';
@@ -96,27 +127,11 @@ export default function RecordLine({ record, celebrate = false, reduceMotion = f
 
   useEffect(() => {
     if (!record || !celebrate) return undefined;
-    // P9/E11: announced, not just shown. A first lift is never announced as
-    // a record: it is the honest first, nothing more.
-    try {
-      AccessibilityInfo.announceForAccessibility(
-        isFirstLift ? `First lift logged. ${text}.` : `Personal record. ${text}.`,
-      );
-    } catch (_) { /* best-effort */ }
-    // The haptic weight: calm mode, reduce-motion and a first lift get the
-    // light tick; a real record keeps the PR ladder (the vocabulary's).
-    if (isFirstLift || reduceMotion) {
-      haptics.selection();
-    } else {
-      getWellbeingMode()
-        .then((m) => (isCalm(m) ? haptics.selection() : haptics.prAchieved()))
-        .catch(() => { haptics.selection(); }); // a failed read keeps the light tick
-    }
     opacity.setValue(0);
     shift.setValue(reduceMotion ? 0 : -SETTLE);
     const anim = Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: motion.exit, useNativeDriver: true }),
-      Animated.timing(shift, { toValue: 0, duration: motion.exit, easing: motion.easeDecelerate, useNativeDriver: true }),
+      Animated.timing(shift, { toValue: 0, duration: motion.exit, easing: EASE_DECELERATE, useNativeDriver: true }),
     ]);
     anim.start();
     return () => anim.stop();
