@@ -23,12 +23,12 @@ const path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'Chip.js'), 'utf8');
 
 describe('Chip meets the 44dp minimum touch target and never reintroduces a default text-scaling cap (AX-05)', () => {
-  test('maxFontSizeMultiplier has no default value (no blanket cap smuggled back in via a JS default param)', () => {
-    // Matches "maxFontSizeMultiplier = <number>," but not a bare
-    // "maxFontSizeMultiplier," (no default) or "maxFontSizeMultiplier,"
-    // followed by another destructured prop.
+  test('maxFontSizeMultiplier defaults to the theme table\'s chrome cap, never a numeric literal (D104-1)', () => {
+    // D104-1 (Campaign 27 phase 2b): chips are chrome; the default comes from
+    // theme.js's one table. A numeric default here would be the scattered
+    // policy EP-14 removed coming back.
     expect(src).not.toMatch(/maxFontSizeMultiplier\s*=\s*[\d.]+/);
-    expect(src).toMatch(/^\s*maxFontSizeMultiplier,\s*$/m);
+    expect(src).toMatch(/^\s*maxFontSizeMultiplier = fontScaleCaps\.chrome,\s*$/m);
   });
 
   test('no blanket 1.3x JSX-prop cap either (belt and braces alongside the app-wide guard)', () => {

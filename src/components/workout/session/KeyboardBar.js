@@ -43,7 +43,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { iconSize, spacing } from '../../../styles/theme';
+import { iconSize, spacing, fontScaleCaps } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
 const TIME_STEP = 5;
@@ -66,7 +66,7 @@ function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }
       accessibilityLabel={spoken}
     >
       <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
-      <Text style={labelStyle} numberOfLines={1}>{label}</Text>
+      <Text style={labelStyle} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
     </TouchableOpacity>
   );
 }

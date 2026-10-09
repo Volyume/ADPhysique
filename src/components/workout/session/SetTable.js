@@ -42,7 +42,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { iconSize, spacing } from '../../../styles/theme';
+import { iconSize, spacing, fontScaleCaps } from '../../../styles/theme';
 import SetRow, { SET_COLUMNS } from './SetRow';
 
 // Spec section 2: the column-label row is 36 dp.
@@ -74,7 +74,7 @@ function FoldLine({ collapsed, hiddenCount, onPress, live, glyphColor }) {
       accessibilityState={{ expanded: !collapsed }}
     >
       <Ionicons name={collapsed ? 'chevron-down' : 'chevron-up'} size={iconSize.sm} color={glyphColor} />
-      <Text style={live.foldText}>{label}</Text>
+      <Text style={live.foldText} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -128,11 +128,11 @@ export default function SetTable({
   return (
     <View>
       <View style={[styles.columns, live.columns]}>
-        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1}>SET</Text>
-        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1}>LAST</Text>
+        <Text style={[styles.label, styles.colMarker, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>SET</Text>
+        <Text style={[styles.label, styles.colLast, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>LAST</Text>
         <View style={styles.colWells}>
           {wellLabels.map((label) => (
-            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1}>{label.toUpperCase()}</Text>
+            <Text key={label} style={[styles.label, styles.colWell, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label.toUpperCase()}</Text>
           ))}
         </View>
         <View style={styles.colCheck}>
@@ -148,7 +148,7 @@ export default function SetTable({
               accessibilityRole="button"
               accessibilityLabel="Log remaining sets"
             >
-              <Text style={[styles.label, live.label]} numberOfLines={1}>ALL</Text>
+              <Text style={[styles.label, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>ALL</Text>
             </TouchableOpacity>
           ) : null}
         </View>

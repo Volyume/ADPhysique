@@ -27,6 +27,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Text } from 'react-native';
 import useTheme from '../../../hooks/useTheme';
+import { fontScaleCaps } from '../../../styles/theme';
 
 // The readout block is as tall as the header's glyph targets.
 
@@ -100,7 +101,8 @@ export default function SessionClock({ startTime }) {
       accessibilityLabel={`Elapsed ${spokenClock(elapsedMs)}`}
       style={live.text}
       numberOfLines={1}
-    >
+      maxFontSizeMultiplier={fontScaleCaps.numeral}
+      >
       {formatClock(elapsedMs)}
     </Text>
   );

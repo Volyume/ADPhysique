@@ -10,7 +10,7 @@ import SearchBar from '../SearchBar';
 import TextField from '../TextField';
 import Chip from '../Chip';
 import Stepper from '../Stepper';
-import { colors } from '../../styles/theme';
+import { colors, fontScaleCaps } from '../../styles/theme';
 import { fontFamily } from '../../styles/fontFamily';
 
 describe('SearchBar', () => {
@@ -202,14 +202,14 @@ describe('Chip', () => {
     expect(flat.minHeight).toBeGreaterThanOrEqual(44);
   });
 
-  test('label carries no maxFontSizeMultiplier cap, even at a long label a large system text size would wrap further', () => {
+  test('label carries the chrome cap from the theme table (D104-1), and still wraps at a long label', () => {
     let tree;
     const longLabel = 'A longer chip label than usual, the kind Dynamic Type at 200% produces';
     act(() => { tree = create(<Chip label={longLabel} onPress={() => {}} />); });
     const label = tree.root.findByProps({ children: longLabel });
-    // No cap: RN's own (uncapped) system font scaling applies, matching
-    // every other Text in the app since EP-14.
-    expect(label.props.maxFontSizeMultiplier).toBeUndefined();
+    // D104-1 (Campaign 27 phase 2b): a chip is chrome, capped at the table's
+    // chrome value, never an inline literal; a caller may pass its own.
+    expect(label.props.maxFontSizeMultiplier).toBe(fontScaleCaps.chrome);
     // No forced numberOfLines either: the label is free to wrap/grow at a
     // large multiplier instead of being clipped/truncated.
     expect(label.props.numberOfLines).toBeUndefined();

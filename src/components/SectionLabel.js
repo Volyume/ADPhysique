@@ -1,5 +1,5 @@
 import { Text, StyleSheet } from 'react-native';
-import { colors, type } from '../styles/theme';
+import { colors, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // AX-07 (launch accessibility audit, 2026-07-12): SectionLabel covers both
@@ -30,7 +30,8 @@ export default function SectionLabel({
         tone === 'primary' && [styles.primary, live.primary],
         style,
       ]}
-    >
+      maxFontSizeMultiplier={fontScaleCaps.chrome}
+      >
       {children}
     </Text>
   );
