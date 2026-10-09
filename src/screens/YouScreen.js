@@ -312,7 +312,7 @@ export default function YouScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, live.content]}>
         <ScreenHeader
           title="Coach"
           subtitle="Weekly coaching based on what you log."
@@ -643,6 +643,7 @@ const styles = StyleSheet.create({
 // AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     settingsGear: { backgroundColor: t.colors.surface2 },
     profileName: { ...t.type.h3, color: t.colors.textPrimary },

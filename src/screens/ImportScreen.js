@@ -189,7 +189,7 @@ export default function ImportScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Import history" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
         {/* The BackHeader title already reads "Import history"; the body copy
             below explains the flow rather than repeating a second heading. */}
         <Text style={[styles.body, live.body]}>

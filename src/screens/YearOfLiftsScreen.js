@@ -472,7 +472,7 @@ function StoryCard({ card, width }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
-    <View style={[styles.cardWrap, { width }]}>
+    <View style={[styles.cardWrap, live.cardWrap, { width }]}>
       <GradientCard
         tone={card.tone || 'primary'}
         intensity={0.28}
@@ -710,7 +710,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {/* Progress pips at the top, one per card. The current card's pip fills
           over its on-screen time (Instagram-story timer). */}
-      <View style={styles.pipsRow}>
+      <View style={[styles.pipsRow, live.pipsRow]}>
         {cards.map((_, i) => (
           <View key={i} style={[styles.pip, live.pip]}>
             {i < index ? <View style={[styles.pipFillFull, live.pipFillFull]} /> : null}
@@ -1006,6 +1006,8 @@ const styles = StyleSheet.create({
 // unfreeze for them.
 function buildLiveStyles(t) {
   return {
+    pipsRow: { paddingHorizontal: t.screenPadding },
+    cardWrap: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     pip: { backgroundColor: t.colors.border },
     pipFill: { backgroundColor: t.colors.primary },

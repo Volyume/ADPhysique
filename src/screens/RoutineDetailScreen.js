@@ -1161,7 +1161,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Edit workout" />
-        <View style={styles.list}>
+        <View style={[styles.list, live.list]}>
           <Skeleton width={'100%'} height={48} radius={radius.md} />
           <Skeleton width={'60%'} height={14} style={{ marginTop: spacing.sm }} />
           <SkeletonCard height={64} />
@@ -1468,7 +1468,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           onScroll={onScroll}
           onContentSizeChange={onContentSizeChange}
           scrollEventThrottle={16}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, live.list]}
           keyboardShouldPersistTaps="handled"
         >
           {listHeader}
@@ -1497,7 +1497,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         <FlashList
           data={exercises}
           keyExtractor={item => item.routineExercise.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, live.list]}
           ListHeaderComponent={listHeader}
           renderItem={renderExerciseRow}
           ListFooterComponent={addExerciseFooter}
@@ -2027,6 +2027,7 @@ const tagStyles = StyleSheet.create({
 // Same pattern as AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    list: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     exerciseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     exerciseCardUnresolved: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg },

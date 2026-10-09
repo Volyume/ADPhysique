@@ -2222,7 +2222,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-1" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Set up your account safely"
@@ -2270,7 +2270,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-2" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Set your starting baseline"
@@ -2501,7 +2501,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-3" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Add your starting body composition"
@@ -2592,7 +2592,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-4" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Shape your training week"
@@ -2703,7 +2703,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Where you train, and Community"
@@ -2899,7 +2899,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 6) {
     return (
       <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+        <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step} skipGym={skipGymStep}
             title="Anything Volyume should build around?"
@@ -2953,7 +2953,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-7-goal" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Set your training focus"
@@ -3124,7 +3124,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
       return (
         <SafeAreaView key="step-8-fit" style={[styles.safe, live.safe]}>
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Plan fit"
@@ -3306,7 +3306,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     return (
       <SafeAreaView key="step-8" style={[styles.safe, live.safe]}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+        <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step} skipGym={skipGymStep}
             title="Recovery and reminders"
@@ -3813,6 +3813,7 @@ const styles = StyleSheet.create({
 // only.
 function buildLiveStyles(t) {
   return {
+    scroll: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     gymRow: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     gymRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },

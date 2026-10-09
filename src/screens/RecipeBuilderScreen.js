@@ -350,13 +350,13 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       />
 
       {loading ? (
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: t.screenPadding, paddingTop: spacing.lg }}>
           <SkeletonRow />
           <SkeletonRow />
           <SkeletonRow />
         </View>
       ) : loadError ? (
-        <View style={styles.loadError}>
+        <View style={[styles.loadError, live.loadError]}>
           <EmptyState
             icon="restaurant-outline"
             title="Couldn't load this recipe"
@@ -372,7 +372,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
          ModalHeader above (not a fixed footer under this scroll). */
       <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
       <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-        <View style={styles.section}>
+        <View style={[styles.section, live.section]}>
           <View style={styles.importRow}>
             <TextField
               label="Import from web"
@@ -403,7 +403,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </Text>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, live.section]}>
           <TextField
             label="Name"
             value={name}
@@ -417,8 +417,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           />
         </View>
 
-        <View style={styles.row2}>
-          <View style={[styles.section, { flex: 1, marginRight: spacing.md }]}>
+        <View style={[styles.row2, live.row2]}>
+          <View style={[styles.section, live.section, { flex: 1, marginRight: spacing.md }]}>
             <TextField
               label="Total servings"
               value={totalServings}
@@ -433,7 +433,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, live.section]}>
           <TextField
             label="Notes"
             value={notes}
@@ -448,7 +448,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, live.section]}>
           <View style={styles.ingHeader}>
             <Text style={[styles.label, live.label]}>Ingredients</Text>
             <Button
@@ -604,6 +604,9 @@ const styles = StyleSheet.create({
 // as AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    section: { paddingHorizontal: t.screenPadding },
+    row2: { paddingHorizontal: t.screenPadding },
+    loadError: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     label: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     importHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
@@ -615,7 +618,7 @@ function buildLiveStyles(t) {
     ingBrand: { color: t.colors.textMuted, ...t.type.caption },
     qtyInput: { fontSize: t.fontSize.md },
     qtyUnit: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    macros: { backgroundColor: t.colors.surface },
+    macros: { marginHorizontal: t.screenPadding, backgroundColor: t.colors.surface },
     macrosSub: { color: t.colors.textMuted, ...t.type.num('caption') },
     pill: { backgroundColor: t.colors.background },
     pillVal: { color: t.colors.textPrimary, ...t.type.num('bodyStrong') },

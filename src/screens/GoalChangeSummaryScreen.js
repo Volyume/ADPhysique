@@ -235,7 +235,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           BlockReflectionScreen) via BackHeader, not a ModalHeader X-close. */}
       <BackHeader title="Here's what changed" onBack={handleDone} />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         <Card tone="success" style={styles.heroCard}>
           <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
           <View style={{ flex: 1 }}>

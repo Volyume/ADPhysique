@@ -1042,7 +1042,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         data={filteredWorkouts}
         keyExtractor={item => item.workout.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, live.list]}
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
         refreshControl={
@@ -1425,6 +1425,7 @@ const styles = StyleSheet.create({
 // as WorkoutSummaryScreen.js's buildLiveStyles (lines 2018-2100+).
 function buildLiveStyles(t) {
   return {
+    list: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     topBarTitle: { ...t.type.label, color: t.colors.textMuted },
     toggleBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },

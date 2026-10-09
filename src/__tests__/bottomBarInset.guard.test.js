@@ -88,7 +88,8 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // is independent of the footer's height. The phantom footerHeight
     // clearance (which left ~85-100dp of dead space above the buttons) and
     // the onLayout measurement plumbing are removed.
-    expect(summary).toMatch(/contentContainerStyle=\{styles\.content\}/);
+    // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding.
+    expect(summary).toMatch(/contentContainerStyle=\{\[styles\.content, live\.content\]\}/);
     // No footerHeight state or measurement remains (mentions in the
     // explanatory comments describing the removed plumbing are fine).
     expect(summary).not.toMatch(/\[footerHeight, setFooterHeight\]/);

@@ -271,7 +271,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.narrow ? spacing.lg : spacing.xl }]} showsVerticalScrollIndicator={false}>
         <View style={styles.mainBlock}>
           {/* Same header furniture as the wizard steps, so this reads as the
               last beat of that flow rather than a different screen: brand row,

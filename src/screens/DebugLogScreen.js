@@ -103,7 +103,7 @@ export default function DebugLogScreen() {
         )}
       />
 
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { paddingHorizontal: t.screenPadding }]}>
         {['all', 'error', 'warn', 'info'].map(level => {
           const on = filter === level;
           const count = level === 'all' ? entries.length : (counts[level] || 0);
@@ -120,7 +120,7 @@ export default function DebugLogScreen() {
         })}
       </View>
 
-      <View style={styles.actionsRow}>
+      <View style={[styles.actionsRow, { paddingHorizontal: t.screenPadding }]}>
         <TouchableOpacity style={[styles.actionBtn, live.actionBtn]} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
           <Ionicons name="share-outline" size={16} color={t.colors.primary} />
           <Text style={[styles.actionLabel, live.actionLabel, { color: t.colors.primary }]}>Share</Text>
@@ -135,7 +135,7 @@ export default function DebugLogScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}>
         {crash && (
           <View style={[styles.crashCard, live.crashCard]}>
             <Text style={[styles.crashTitle, live.crashTitle]}>Most recent fatal crash</Text>

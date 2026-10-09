@@ -175,7 +175,7 @@ export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Coaching history" />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.intro, live.intro]}>
           Every weekly coaching decision, what changed, what stayed the same, and why.
         </Text>

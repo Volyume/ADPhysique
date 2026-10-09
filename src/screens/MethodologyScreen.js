@@ -166,7 +166,7 @@ export default function MethodologyScreen({ route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="How Precision Coaching works" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.intro, live.intro]}>{INTRO}</Text>
 
         {SECTIONS.map(s => (

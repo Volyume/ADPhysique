@@ -325,7 +325,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           standard KeyboardAvoidingView (same behavior prop as PlansScreen /
           ManualBuilderScreen) keeps the footer above the keyboard. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
         <Text style={[styles.subtitle, live.subtitle]}>Start blank and add whatever you want to do today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
         {exercises.map((item, index) => (
@@ -473,7 +473,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
 
-      <View style={[styles.footer, live.footer]}>
+      <View style={[styles.footer, live.footer, { paddingHorizontal: t.screenPadding }]}>
         {exercises.length === 0 ? (
           <Button
             testID="volyume-btn-start-empty"

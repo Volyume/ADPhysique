@@ -71,7 +71,7 @@ export default function QuizScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, live.topBar]}>
         {/* NAV-8: the flow had no way back (headerless stack screen), and the
             headline promised eight questions while rendering six. */}
         <TouchableOpacity
@@ -98,7 +98,7 @@ export default function QuizScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, live.content]}>
         <Text style={[styles.h1, live.h1]}>A few quick questions.</Text>
         <Text style={[styles.lede, live.lede]}>Your plan takes shape as you answer.</Text>
 
@@ -220,6 +220,8 @@ const styles = StyleSheet.create({
 // (batch D).
 function buildLiveStyles(t) {
   return {
+    topBar: { paddingHorizontal: t.screenPadding },
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     dot: { backgroundColor: t.colors.border },
     dotActive: { backgroundColor: t.colors.primary },
@@ -227,7 +229,7 @@ function buildLiveStyles(t) {
     lede: { ...t.type.body, color: t.colors.textSecondary },
     section: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },
     q: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
-    footer: { borderTopColor: t.colors.borderSubtle },
+    footer: { paddingHorizontal: t.screenPadding, borderTopColor: t.colors.borderSubtle },
     cta: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     ctaText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
   };

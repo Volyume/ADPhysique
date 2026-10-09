@@ -306,7 +306,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       />
 
       {loading ? (
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <View style={{ paddingHorizontal: t.screenPadding }}>
           <SkeletonRow />
           <SkeletonRow />
           <SkeletonRow />
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    row: { borderBottomColor: t.colors.borderSubtle },
+    row: { paddingHorizontal: t.screenPadding, borderBottomColor: t.colors.borderSubtle },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     meta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     logPill: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },

@@ -508,7 +508,7 @@ export default function PlanDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title={plan?.name || 'Plan'} />
-        <View style={styles.content}>
+        <View style={[styles.content, live.content]}>
           <Skeleton width={'55%'} height={28} />
           <Skeleton width={'80%'} height={14} />
           <SkeletonCard height={48} />
@@ -530,7 +530,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         onScroll={onScroll}
         onContentSizeChange={onContentSizeChange}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, live.content]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* D219 lane C1b: the one-time note of what changed after the plan was
@@ -947,6 +947,7 @@ const styles = StyleSheet.create({
 // AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     libraryBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     libraryBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },

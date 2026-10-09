@@ -42,7 +42,7 @@ export default function CreditsScreen() {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <BackHeader title="Credits" />
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]}>
 
         <Text style={[styles.intro, live.intro]}>
           The food data Volyume uses comes from open datasets and APIs published by the people and organisations below. Where their licence calls for it, the required attribution is shown verbatim.

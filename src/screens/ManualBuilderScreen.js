@@ -1106,7 +1106,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Edit plan" />
-        <View style={styles.page2Content}>
+        <View style={[styles.page2Content, { paddingHorizontal: t.screenPadding }]}>
           <Skeleton width="55%" height={24} />
           <SkeletonCard height={140} />
           <SkeletonCard height={140} />
@@ -1123,7 +1123,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         <BackHeader title="Create a plan" />
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
-            contentContainerStyle={styles.page1Content}
+            contentContainerStyle={[styles.page1Content, { paddingHorizontal: t.screenPadding }]}
             keyboardShouldPersistTaps="handled"
           >
             <Text style={[styles.subtitle, live.subtitle]}>
@@ -1219,7 +1219,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         onScroll={onScroll}
         onContentSizeChange={onContentSizeChange}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.page2Content}
+        contentContainerStyle={[styles.page2Content, { paddingHorizontal: t.screenPadding }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* Editable plan name */}

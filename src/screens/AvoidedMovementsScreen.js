@@ -110,7 +110,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
           capability lane instead, so this quiet line points there. */}
       <TouchableOpacity
         onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-        style={styles.crossLaneRow}
+        style={[styles.crossLaneRow, { paddingHorizontal: t.screenPadding }]}
         accessibilityRole="button"
         accessibilityLabel="Injuries, pain, conditions and disabilities live under Injuries & limitations"
       >
@@ -120,7 +120,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
         <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
       </TouchableOpacity>
       {unavailable ? (
-        <View style={styles.noticeRow}>
+        <View style={[styles.noticeRow, { paddingHorizontal: t.screenPadding }]}>
           <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
           <Text style={[styles.noticeText, live.noticeText]}>
             Some avoided movements may not be shown right now. Nothing has been removed or changed.
@@ -131,7 +131,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
           long list simply ran off the bottom of the screen with no way to
           reach it. It scrolls now, on the same content padding the Settings
           family uses. */}
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingHorizontal: t.screenPadding }]}>
         {loading ? (
           <>
             <Skeleton height={64} radius={radius.lg} />

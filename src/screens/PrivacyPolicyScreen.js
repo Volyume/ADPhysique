@@ -18,7 +18,7 @@ export default function PrivacyPolicyScreen() {
     <SafeAreaView style={[styles.safe, live.safe]}>
       <BackHeader title="Privacy policy" />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, live.content]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.updated, live.updated]}>Last updated {LAST_UPDATED}</Text>
 
         <Section title="What Volyume collects">
@@ -266,6 +266,7 @@ const styles = StyleSheet.create({
 // as AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     updated: { ...t.type.caption, color: t.colors.textMuted },
     sectionTitle: { ...t.type.label, color: t.colors.textPrimary },

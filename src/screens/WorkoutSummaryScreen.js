@@ -1495,7 +1495,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         // manages the keyboard inset itself (bottomOffset), and the footer,
         // being a sibling, can never cover a focused notes field - so the
         // footerHeight measurement plumbing is gone entirely.
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, live.content]}
         bottomOffset={24}
         keyboardShouldPersistTaps="handled"
       >
@@ -2867,6 +2867,7 @@ const styles = StyleSheet.create({
 // untouched -- there is nothing for it to unfreeze.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
     completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },

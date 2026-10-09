@@ -349,7 +349,7 @@ export default function CoachReviewScreen() {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Training review" />
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingHorizontal: t.screenPadding, gap: spacing.md }}>
           <SkeletonCard height={96} />
           <SkeletonCard height={180} />
           <SkeletonCard height={140} />
@@ -364,7 +364,7 @@ export default function CoachReviewScreen() {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Training review" />
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingHorizontal: t.screenPadding, gap: spacing.md }}>
           <EmptyState
             icon="warning-outline"
             title="Couldn't load your review"
@@ -382,7 +382,7 @@ export default function CoachReviewScreen() {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Training review" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
 
         {/* Date range subline, relocated here now the BackHeader carries the
             page title (previously duplicated as an in-body "Training review"

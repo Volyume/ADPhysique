@@ -779,7 +779,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, live.content]}
           keyboardShouldPersistTaps="handled"
           // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
           // auto-scroll that keeps the focused input visible, so the keyboard
@@ -2621,6 +2621,7 @@ const styles = StyleSheet.create({
 // colors.success target-met bar fill (batch E part 1).
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     planReviewTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     planReviewLine: { ...t.type.body, color: t.colors.textSecondary },

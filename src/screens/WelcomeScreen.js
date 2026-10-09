@@ -105,7 +105,7 @@ export default function WelcomeScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <View style={styles.page} onLayout={(e) => setPageH(Math.round(e.nativeEvent.layout.height))}>
+      <View style={[styles.page, { paddingHorizontal: t.narrow ? spacing.lg : spacing.xl }]} onLayout={(e) => setPageH(Math.round(e.nativeEvent.layout.height))}>
         <View style={styles.words} onLayout={(e) => setWordsH(Math.round(e.nativeEvent.layout.height))}>
           <VolyumeMark size={24} />
           <Text style={[styles.headline, live.headline]} accessibilityRole="header">
@@ -118,7 +118,7 @@ export default function WelcomeScreen({ navigation, route }) {
 
         <View style={styles.spacer} />
         <Animated.View
-          style={[styles.hero, { height: heroH, opacity: heroOpacity, transform: [{ translateY: heroY }] }]}
+          style={[styles.hero, { marginHorizontal: t.narrow ? -spacing.lg : -spacing.xl, height: heroH, opacity: heroOpacity, transform: [{ translateY: heroY }] }]}
           accessible
           accessibilityRole="image"
           accessibilityLabel="Three screens from the app: today's session, a set being logged, and the day's nutrition"

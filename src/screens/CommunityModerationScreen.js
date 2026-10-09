@@ -264,7 +264,7 @@ export default function CommunityModerationScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
         <BackHeader title="Moderation" />
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingHorizontal: t.screenPadding }]}>
           <EmptyState
             icon="shield-outline"
             title="Not available"

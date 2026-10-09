@@ -1074,7 +1074,7 @@ export default function MealPlanScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
       {loading ? (
-        <View style={styles.scroll}>
+        <View style={[styles.scroll, { paddingHorizontal: t.screenPadding }]}>
           <SkeletonCard height={80} />
           <SkeletonCard height={140} />
           <SkeletonCard height={140} />
@@ -1152,7 +1152,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </Card>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomScrollPadding }]}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding, paddingBottom: bottomScrollPadding }]}>
           {/* Day picker, only for a multi-day (week) plan; a "Plan my day"
               plan is a single day with no picker. */}
           {!isDayPlan ? (

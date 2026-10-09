@@ -121,7 +121,7 @@ export default function PersonRow({
       accessible={trailing ? false : undefined}
       style={isOwn ? [inBand ? null : styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}
     >
-      <View style={[styles.row, inBand && styles.inBand]}>
+      <View style={[styles.row, inBand && styles.inBand, inBand && { paddingHorizontal: t.screenPadding }]}>
         <View
           style={styles.group}
           accessible={trailing ? true : undefined}

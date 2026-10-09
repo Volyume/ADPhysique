@@ -429,7 +429,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           here with the keyboard-controller equivalent — proper avoidance
           plus interactive dismiss, no fixed footer below this scroll. */}
       <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
-      <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]} keyboardShouldPersistTaps="handled">
         <Text style={[styles.contextLabel, live.contextLabel]}>
           {isEditMode ? 'Edit this food\'s details.' : 'Save this food, then add it to your diary.'}
         </Text>

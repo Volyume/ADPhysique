@@ -27,7 +27,7 @@ export default function RecoveryScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top', 'bottom']}>
       <BackHeader title="Recovery" />
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
         <ReadinessCards
           userId={user?.id}
           sections="recovery"

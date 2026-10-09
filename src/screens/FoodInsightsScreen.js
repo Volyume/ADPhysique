@@ -369,7 +369,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
           visible while the cards scroll. Segmented pill convention from PrefRow. */}
-      <View style={styles.windowBar} accessibilityRole="radiogroup">
+      <View style={[styles.windowBar, { paddingHorizontal: t.screenPadding }]} accessibilityRole="radiogroup">
         {WINDOWS.map((n) => {
           const selected = n === windowDays;
           return (
@@ -389,7 +389,7 @@ export default function FoodInsightsScreen({ navigation }) {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}>
         {loading ? (
           <View style={styles.loadingStack} accessibilityLabel="Loading nutrition insights">
             <SkeletonCard height={120} />

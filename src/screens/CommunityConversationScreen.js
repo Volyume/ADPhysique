@@ -387,7 +387,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
   const canCompose = !closed && !errorCode && !sendCode;
 
   const notice = sendCode === 'not_connected' ? (
-    <View style={[styles.notice, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
+    <View style={[styles.notice, { paddingHorizontal: t.screenPadding }, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
       <Text style={[styles.noticeLine, { color: t.colors.textPrimary }]}>
         {NOT_CONNECTED_LINE}
       </Text>
@@ -401,7 +401,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
       />
     </View>
   ) : sendCode ? (
-    <View style={[styles.notice, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
+    <View style={[styles.notice, { paddingHorizontal: t.screenPadding }, { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle }]}>
       <Text style={[styles.noticeLine, { color: t.colors.textPrimary }]}>
         {sendErrorLine(sendCode)}
       </Text>
@@ -423,7 +423,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
 
       {other ? (
         <TouchableOpacity
-          style={[styles.identity, { borderBottomColor: t.colors.borderSubtle }]}
+          style={[styles.identity, { paddingHorizontal: t.screenPadding }, { borderBottomColor: t.colors.borderSubtle }]}
           onPress={openProfile}
           disabled={!openProfile}
           accessibilityRole="button"
@@ -448,14 +448,14 @@ export default function CommunityConversationScreen({ navigation, route }) {
           // Bubble-shaped placeholders in the real slot messages occupy
           // (the thread is inverted, newest at the bottom), rather than a
           // bare spinner (styling.md "Loading states").
-          <View style={styles.skeletonThread}>
+          <View style={[styles.skeletonThread, { paddingHorizontal: t.screenPadding }]}>
             <Skeleton width="52%" height={40} radius={radius.lg} style={styles.bubbleLeft} />
             <Skeleton width={96} height={28} radius={radius.lg} style={styles.bubbleRight} />
             <Skeleton width="60%" height={52} radius={radius.lg} style={styles.bubbleLeft} />
             <Skeleton width="38%" height={28} radius={radius.lg} style={styles.bubbleRight} />
           </View>
         ) : errorCode ? (
-          <View style={styles.centre}>
+          <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
             <EmptyState
               icon="cloud-offline-outline"
               title="Not available"
@@ -471,7 +471,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
             data={messages}
             keyExtractor={(item) => String(item.id)}
             estimatedItemSize={72}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingHorizontal: t.screenPadding }]}
             onEndReachedThreshold={0.4}
             onEndReached={loadOlder}
             ListEmptyComponent={(
@@ -508,7 +508,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
         {notice}
 
         {closed && !errorCode ? (
-          <Text style={[styles.closedLine, {
+          <Text style={[styles.closedLine, { paddingHorizontal: t.screenPadding }, {
             color: t.colors.textMuted, borderTopColor: t.colors.borderSubtle,
           }]}
           >
@@ -517,7 +517,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
         ) : null}
 
         {canCompose && !isMinor ? (
-          <View style={styles.sessionChipRow}>
+          <View style={[styles.sessionChipRow, { paddingHorizontal: t.screenPadding }]}>
             <Chip
               label="Suggest a session"
               icon="calendar-outline"

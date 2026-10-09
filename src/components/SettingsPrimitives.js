@@ -96,6 +96,8 @@ export function SettingsPage({ title, children, scrollRef }) {
   // theme change instead of staying on the frozen boot-time colour while its
   // own (now-migrated) content flips live.
   const live = useSettingsStyles();
+  // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding.
+  const t = useTheme();
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={title ? ['top', 'bottom'] : ['bottom']}>
       {title ? <BackHeader title={title} /> : null}
@@ -106,7 +108,7 @@ export function SettingsPage({ title, children, scrollRef }) {
           every SettingsPage sub-page consistently. A no-op for sub-pages
           with no text input. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>{children}</ScrollView>
+        <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>{children}</ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

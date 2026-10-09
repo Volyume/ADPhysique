@@ -522,7 +522,7 @@ export default function HowYouTrainAddScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top', 'bottom']}>
         <BackHeader title={screenTitle} onBack={confirmLeave} />
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingHorizontal: t.screenPadding }]}>
           {libraryStatus === 'failed' ? (
             <>
               <Card>
@@ -562,7 +562,7 @@ export default function HowYouTrainAddScreen() {
       {/* Where you are. Numbered up to the save; the two post-save steps
           are named instead, because the check step has already said they
           may come. */}
-      <View style={styles.progressWrap} accessibilityRole="progressbar" accessibilityLabel={pos.index ? `Step ${pos.index} of ${pos.total}` : stepTitle}>
+      <View style={[styles.progressWrap, { paddingHorizontal: t.screenPadding }]} accessibilityRole="progressbar" accessibilityLabel={pos.index ? `Step ${pos.index} of ${pos.total}` : stepTitle}>
         {pos.index ? (
           <View style={styles.segments}>
             {Array.from({ length: pos.total }).map((_, i) => (
@@ -575,7 +575,7 @@ export default function HowYouTrainAddScreen() {
         </Text>
       </View>
 
-      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} keyboardShouldPersistTaps="handled">
         {draft.from && step === planSteps(draft, ctx)[0] ? (
           <View style={[styles.fromRow, { backgroundColor: t.colors.primaryBg }]}>
             <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.primary} />

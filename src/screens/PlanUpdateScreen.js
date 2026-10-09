@@ -467,7 +467,7 @@ export default function PlanUpdateScreen({ navigation }) {
       <BackHeader title="Adjust training" />
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, live.scroll]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -679,6 +679,7 @@ const styles = StyleSheet.create({
 // as DebugLogScreen.js's buildLiveStyles (batch F).
 function buildLiveStyles(t) {
   return {
+    scroll: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
     circuitNotice: { ...t.type.captionTight, color: t.colors.textMuted },

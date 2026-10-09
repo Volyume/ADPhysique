@@ -1393,7 +1393,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   function renderStudioHeader() {
     return (
       <>
-        <Card padding="none" style={styles.studioHero}>
+        <Card padding="none" style={[styles.studioHero, live.studioHero]}>
           <View style={[styles.heroTextHeader, live.heroTextHeader]}>
             <View style={styles.heroTitleRow}>
               <View style={[styles.heroIcon, live.heroIcon]}>
@@ -1565,7 +1565,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         ) : null}
 
         {showShareAction ? (
-          <View style={styles.actionRow}>
+          <View style={[styles.actionRow, live.actionRow]}>
             <Button
               title={scanShareItems.length >= 2 ? 'Share comparison' : 'Share photos'}
               variant="outline"
@@ -1653,8 +1653,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         }}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
-        contentContainerStyle={styles.grid}
-        ListHeaderComponent={<View style={styles.listHeaderBleed}>{renderStudioHeader()}</View>}
+        contentContainerStyle={[styles.grid, live.grid]}
+        ListHeaderComponent={<View style={[styles.listHeaderBleed, live.listHeaderBleed]}>{renderStudioHeader()}</View>}
         ListEmptyComponent={renderTimelineEmpty}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
@@ -2498,13 +2498,17 @@ const styles = StyleSheet.create({
 // untouched -- colours only.
 function buildLiveStyles(t) {
   return {
+    listHeaderBleed: { marginHorizontal: -t.screenPadding },
+    grid: { paddingHorizontal: t.screenPadding },
+    actionRow: { paddingHorizontal: t.screenPadding },
+    studioHero: { marginHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     scanReviewSafe: { backgroundColor: t.colors.background },
-    scanReviewHeader: { borderBottomColor: t.colors.border },
+    scanReviewHeader: { paddingHorizontal: t.screenPadding, borderBottomColor: t.colors.border },
     scanReviewEyebrow: { ...t.type.caption, color: t.colors.primary },
     scanReviewTitle: { ...t.type.title, color: t.colors.textPrimary },
-    scanReviewImageWrap: { backgroundColor: t.colors.camera },
-    scanReviewFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
+    scanReviewImageWrap: { marginHorizontal: t.screenPadding, backgroundColor: t.colors.camera },
+    scanReviewFooter: { paddingHorizontal: t.screenPadding, borderTopColor: t.colors.border, backgroundColor: t.colors.background },
     scanReviewCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
     heroTextHeader: { backgroundColor: t.colors.surface },
     heroIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
@@ -2513,11 +2517,11 @@ function buildLiveStyles(t) {
     heroPrivacyPill: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     heroPrivacyText: { ...t.type.caption, color: t.colors.textSecondary },
     heroTextSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
-    loadErrorCard: { borderColor: t.colors.warning },
+    loadErrorCard: { marginHorizontal: t.screenPadding, borderColor: t.colors.warning },
     loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loadErrorBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     libraryTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    libraryControls: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    libraryControls: { marginHorizontal: t.screenPadding, borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     segmentTrack: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.background },
     segmentActive: { backgroundColor: t.colors.surfaceElevated },
     segmentText: { ...t.type.label, color: t.colors.textMuted },

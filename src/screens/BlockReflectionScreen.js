@@ -210,7 +210,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
         ) : null}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         {loading && (
           <View style={{ gap: spacing.md }}>
             <SkeletonCard height={100} />
