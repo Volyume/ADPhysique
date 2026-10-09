@@ -245,7 +245,8 @@ describe('SetRowSheet, Edit set and Delete set', () => {
     expect(allText(onlyDelete)).not.toContain('Edit set');
   });
 
-  test('the rows are 48 dp buttons with spoken labels and an 18 dp Ionicons glyph', () => {
+  test('the rows are 48 dp buttons with spoken labels and a 20 dp (iconSize.md) Ionicons glyph', () => {
+    // Re-pinned: D220 addendum 27 (audit D7), the off-scale 18 moved to the token.
     const tree = render();
     [['volyume-setrow-sheet-edit', 'Edit set', 'create-outline'], ['volyume-setrow-sheet-delete', 'Delete set', 'trash-outline']]
       .forEach(([id, label, glyph]) => {
@@ -255,7 +256,7 @@ describe('SetRowSheet, Edit set and Delete set', () => {
         expect(flat(row.props.style).minHeight).toBe(48);
         const icon = row.findAll((n) => n.type === 'Ionicons')[0];
         expect(icon.props.name).toBe(glyph);
-        expect(icon.props.size).toBe(18);
+        expect(icon.props.size).toBe(20);
       });
   });
 

@@ -36,10 +36,10 @@ import BottomSheet from '../../BottomSheet';
 import Button from '../../Button';
 import TextField from '../../TextField';
 import useTheme from '../../../hooks/useTheme';
-import { spacing } from '../../../styles/theme';
+import { spacing, iconSize } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
-const ROW_GLYPH = 18;
+const ROW_GLYPH = iconSize.md;
 
 export default function SetRowSheet({
   visible,

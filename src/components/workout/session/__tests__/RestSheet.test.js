@@ -9,7 +9,8 @@
  *   - the layout the spec names: "Rest" overline, the time at display, "of
  *     m:ss" at label, the next set line at h2 and the last session line at
  *     label from props, then -15, +15 and Skip as 48 dp targets, then a
- *     house primary "Start next set" that only closes the sheet;
+ *     house primary "Back to the workout" that only closes the sheet (it read
+ *     "Start next set" until D220 addendum 29, audit C21: it did not do that);
  *   - with no rest running it shows "No rest running" and the Start button
  *     only;
  *   - the strip's accessibility labels, word for word, and no live region;
@@ -103,7 +104,7 @@ describe('RestSheet, a rest is running', () => {
     expect(text).toContain(`${MINUS}15`);
     expect(text).toContain('+15');
     expect(text).toContain('Skip');
-    expect(text).toContain('Start next set');
+    expect(text).toContain('Back to the workout');
   });
 
   test('type roles: overline, display time, label, h2 next line, label last line', () => {
@@ -189,11 +190,11 @@ describe('RestSheet, a rest is running', () => {
     }
   });
 
-  test('Start next set is a house primary Button and only closes the sheet', () => {
+  test('Back to the workout is a house primary Button and only closes the sheet', () => {
     const onClose = jest.fn();
     const tree = render({ onClose });
     const start = byTestId(tree, 'volyume-rest-sheet-start');
-    expect(start.props.accessibilityLabel).toBe('Start next set');
+    expect(start.props.accessibilityLabel).toBe('Back to the workout');
     expect(start.props.accessibilityRole).toBe('button');
     act(() => start.props.onPress());
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -294,7 +295,7 @@ describe('RestSheet, no rest running', () => {
     const tree = render();
     const text = allText(tree);
     expect(text).toContain('No rest running');
-    expect(text).toContain('Start next set');
+    expect(text).toContain('Back to the workout');
     // Nothing from the running state: no overline, time, controls or set lines.
     expect(text).not.toContain('Rest');
     expect(text).not.toContain('0:00');

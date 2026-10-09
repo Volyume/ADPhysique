@@ -30,8 +30,10 @@
  * Props
  *   visible    controls the sheet (the BottomSheet contract)
  *   onClose    called by the backdrop, a swipe down, hardware back and the
- *              Start next set button. That button only closes the sheet: the
- *              rest keeps running in the strip.
+ *              "Back to the workout" button. That button only closes the
+ *              sheet, and says so: the rest keeps running in the strip
+ *              (2026-10-09 audit C21: it read "Start next set", which it
+ *              did not do).
  *   nextLabel  the next set line, e.g. "Set 3 of 3 · 70 kg × 6 to 10"
  *   lastLabel  the last session line, optional
  *
@@ -151,7 +153,7 @@ function RestSheetBody({ onClose, nextLabel, lastLabel }) {
       <View style={styles.content}>
         <Text style={[styles.center, live.idle]} testID="volyume-rest-sheet-idle">No rest running</Text>
         <Button
-          title="Start next set"
+          title="Back to the workout"
           onPress={() => onClose?.()}
           testID="volyume-rest-sheet-start"
         />
@@ -216,7 +218,7 @@ function RestSheetBody({ onClose, nextLabel, lastLabel }) {
       </View>
 
       <Button
-        title="Start next set"
+        title="Back to the workout"
         onPress={() => onClose?.()}
         testID="volyume-rest-sheet-start"
       />
