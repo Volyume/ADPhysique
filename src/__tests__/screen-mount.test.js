@@ -2186,6 +2186,97 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
     }
   });
 
+  test('(r1) re-entering an exercise with a logged set seeds the next set from it, never an empty well (D220 addendum 28, 1)', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    database.createWorkoutSet = jest.fn(async (data) => ({ id: `set-r1-${Date.now()}`, ...data, createdAt: Date.now(), updatedAt: Date.now() }));
+    let tree = null;
+    try {
+      // A ballistic exercise: the resolver's type gate gives it history only
+      // (no weight, prefill false) at every position, so without the ruling
+      // the re-entry seed is an empty well beside set 1's figure.
+      const a = mkEntry({ exerciseId: 'exR1A', repsMin: 8, repsMax: 15 });
+      a.exercise = { ...a.exercise, loadCharacter: 'ballistic' };
+      const b = mkEntry({ exerciseId: 'exR1B', repsMin: 8, repsMax: 15 });
+      useAppStore.setState({ ...baseState(a), workoutExercises: [a, b] });
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      await typeAndLog(tree, 60, 8); // set 1 of A at 60 x 8
+      expect((useAppStore.getState().workoutExercises[0].sets || []).length).toBe(1);
+      // Away to B and back to A: the seed path runs again for A.
+      await actFlush(() => useAppStore.setState({ currentExerciseIndex: 1 }));
+      await actFlush();
+      await actFlush(() => useAppStore.setState({ currentExerciseIndex: 0 }));
+      await actFlush();
+      await actFlush();
+      expect(host(tree, 'volyume-well-weight').props.accessibilityValue.text).toBe('60');
+      expect(host(tree, 'volyume-well-reps').props.accessibilityValue.text).toBe('8');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(r2) Add set before the target adds a pending row to this session (D220 addendum 28, 2a)', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exR2', repsMin: 8, repsMax: 15, sets: 3 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(host(tree, 'volyume-pending-row-3')).toBeTruthy();
+      expect(host(tree, 'volyume-pending-row-4')).toBeUndefined();
+      await actFlush(() => pressable(tree, 'volyume-btn-extra-set').props.onPress());
+      expect(host(tree, 'volyume-pending-row-4')).toBeTruthy();
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(r3) opening another well with an unsaved edit asks first; Discard proceeds and keeps the logged set (D220 addendum 28, 3b)', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    database.createWorkoutSet = jest.fn(async (data) => ({ id: `set-r3-${Date.now()}`, ...data, createdAt: Date.now(), updatedAt: Date.now() }));
+    const alerts = require('../components/AppAlert');
+    const spy = jest.spyOn(alerts, 'appAlert').mockImplementation(() => {});
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exR3', repsMin: 8, repsMax: 15 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      await typeAndLog(tree, 60, 8);
+      // Edit the logged row's reps without saving, then tap the next row's weight.
+      await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText('9'));
+      spy.mockClear();
+      await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][0]).toBe('Discard changes?');
+      const buttons = spy.mock.calls[0][2];
+      expect(buttons.map((b) => b.text)).toEqual(['Keep editing', 'Discard']);
+      // Nothing moved yet: the edit is still open.
+      expect(textInput(tree, 'volyume-reps-input')).toBeTruthy();
+      await actFlush(() => buttons[1].onPress());
+      expect(textInput(tree, 'volyume-weight-input')).toBeTruthy(); // the next row's well opened
+      expect((useAppStore.getState().workoutExercises[0].sets || [])[0].actualReps ?? (useAppStore.getState().workoutExercises[0].sets || [])[0].reps).toBe(8);
+    } finally {
+      spy.mockRestore();
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
   test('(a3) the first keystroke into a freshly opened well replaces what it held; the second appends (D220 addendum 25)', async () => {
     // On the founder's iPhone selectTextOnFocus did not select the seed under
     // autoFocus, so the phone's keyboard appended the typed digit to it. The

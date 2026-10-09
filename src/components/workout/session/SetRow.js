@@ -110,10 +110,13 @@ const COMPLETE_SET_TEST_ID = 'volyume-btn-complete-set';
 const LONG_PRESS_MS = 300;
 const LONG_PRESS_HINT = 'Hold for more options';
 
+// The marker letters (D220 addendum 28): the screen stamps a letter for
+// every set type but a working set, which carries its number.
+const MARKER_NAMES = Object.freeze({
+  W: 'warm-up', F: 'failure set', D: 'drop set', M: 'myo-reps set', R: 'rest-pause set', A: 'AMRAP set',
+});
 function markerName(marker) {
-  if (marker === 'W') return 'warm-up';
-  if (marker === 'F') return 'failure set';
-  return `set ${marker}`;
+  return MARKER_NAMES[marker] ?? `set ${marker}`;
 }
 
 function capitalise(text) {
@@ -200,6 +203,10 @@ function buildLive(t) {
     markerWarmupText: { ...t.type.captionStrong, color: c.primary },
     markerFailure: { backgroundColor: c.errorBg },
     markerFailureText: { ...t.type.captionStrong, color: c.error },
+    // A typed set (drop, myo-reps, rest-pause, AMRAP) wears its letter on
+    // the quiet badge, in the number's ink.
+    markerTyped: { backgroundColor: c.surface2 },
+    markerTypedText: { ...t.type.captionStrong, color: c.textSecondary },
     // Facts are ink (the app's rule): Last in secondary ink at the list's
     // small numeric role; the live number in the well is the one figure at
     // bodyStrong.
@@ -226,11 +233,12 @@ function buildLive(t) {
 function MarkerCell({ marker, record, onPress, testID, hint, live }) {
   const isWarmup = marker === 'W';
   const isFailure = marker === 'F';
+  const isTyped = typeof marker === 'string' && !isWarmup && !isFailure;
   const badge = (
     <View style={styles.markerStack}>
-      <View style={[styles.marker, isWarmup && live.markerWarmup, isFailure && live.markerFailure]}>
+      <View style={[styles.marker, isWarmup && live.markerWarmup, isFailure && live.markerFailure, isTyped && live.markerTyped]}>
         <Text
-          style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : live.markerNumber}
+          style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : isTyped ? live.markerTypedText : live.markerNumber}
           numberOfLines={1}
         >
           {String(marker)}

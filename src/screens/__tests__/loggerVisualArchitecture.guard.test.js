@@ -172,6 +172,12 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     // a bar that sits on the keyboard (audit C5).
     expect(SRC).toContain("Keyboard.addListener('keyboardDidHide'");
     expect(SRC).not.toContain('safeBottom={safeBottom}');
+    // D220 addendum 28: the row's marker names the set type (4a); Add set
+    // before the target adds a pending row (2a); a dirty edit asks first (3b).
+    expect(SRC).toContain("const SET_TYPE_MARKERS = Object.freeze({ warmup: 'W', dropset: 'D', myo_reps: 'M', rest_pause: 'R', amrap: 'A' });");
+    expect((SRC.match(/marker: markerForSet\(/g) || []).length).toBe(2);
+    expect(SRC).toContain('if (!targetComplete) { setExtraTargetSets((n) => n + 1); return; }');
+    expect(SRC).toContain("appAlert('Discard changes?', 'Your change to this set is not saved.', [");
   });
 
   test('the step bar can never produce a number the typed fields refused', () => {

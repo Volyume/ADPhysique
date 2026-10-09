@@ -220,6 +220,11 @@ describe('SetRow check', () => {
   test('labels name the set kind', () => {
     expect(byLabel(render({ marker: 'W' }), 'Log warm-up')).toHaveLength(1);
     expect(byLabel(render({ marker: 'F' }), 'Log failure set')).toHaveLength(1);
+    // D220 addendum 28: the typed sets' letters are named.
+    expect(byLabel(render({ marker: 'D' }), 'Log drop set')).toHaveLength(1);
+    expect(byLabel(render({ marker: 'M' }), 'Log myo-reps set')).toHaveLength(1);
+    expect(byLabel(render({ marker: 'R' }), 'Log rest-pause set')).toHaveLength(1);
+    expect(byLabel(render({ marker: 'A' }), 'Log AMRAP set')).toHaveLength(1);
   });
 });
 
