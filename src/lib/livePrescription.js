@@ -155,6 +155,71 @@ function isDumbbell(equipmentCategory) {
   return String(equipmentCategory || '').toLowerCase().includes('dumbbell');
 }
 
+/**
+ * PURE. The bell one step DOWN the ladder from `current` (the largest bell
+ * strictly below it), or null when there is none. The keyboard bar's "-"
+ * key needs this: stepping down by the gap to the NEXT bell up skipped
+ * bells (12 kg minus the 4 kg gap to 16 gave 8 kg, past the 10 on the
+ * shelf; D220 addendum 37, audit D7).
+ */
+export function prevKettlebellLoadKg(current) {
+  const w = Number(current);
+  if (!Number.isFinite(w) || w <= 0) return null;
+  let prev = null;
+  for (const bell of KETTLEBELL_LADDER_KG) {
+    if (bell < w) prev = bell;
+  }
+  return prev;
+}
+
+/**
+ * PURE. The dumbbell one step down the rack from `current`, by the same
+ * rack rule nextDumbbellLoadKg reads upward: at or below 10 kg the rack
+ * steps by 1 kg; above 10 kg a load on the 2.5 grid steps 2.5 and a load on
+ * the even grid steps 2; a load on neither drops to the 2.5 grid below.
+ * Null at or below 1 kg, or for a non-finite load.
+ */
+export function prevDumbbellLoadKg(current) {
+  const w = Number(current);
+  if (!Number.isFinite(w) || w <= 1) return null;
+  if (w <= 10) return Math.ceil(w) - 1;
+  const onHalfGrid = Math.abs(w / 2.5 - Math.round(w / 2.5)) < 1e-9;
+  if (onHalfGrid) return w - 2.5;
+  const onEvenGrid = Math.abs(w / 2 - Math.round(w / 2)) < 1e-9;
+  if (onEvenGrid) return w - 2;
+  return Math.floor(w / 2.5) * 2.5;
+}
+
+// The smallest load a bar or a stack can change by: a pair of 1.25 kg
+// plates, or 5 lb. The coach's progression increment can be smaller than
+// this (it is capped at 5% of the load, so 20 kg progresses by 1 kg), which
+// is right for a prescription and wrong for a key the thumb presses: a step
+// to 21 kg on a barbell is a load no one can put on (audit D7).
+const LOADABLE_STEP_KG = 2.5;
+const LOADABLE_STEP_LBS = 5;
+
+/**
+ * PURE. The keyboard bar's weight step in `direction` ('up' or 'down'): on
+ * a bell, the gap to the next or the previous bell on the ladder or rack
+ * (kg only, as the ladders are); otherwise the coach's own increment
+ * (resolveLoadIncrement), floored at the loadable step. Always positive.
+ */
+export function resolveBarLoadStep(baseWeight, opts = {}, direction = 'up') {
+  const w = Number.isFinite(baseWeight) ? baseWeight : 0;
+  const { units = 'kg', equipmentCategory = null } = opts;
+  const down = direction === 'down';
+  if (units !== 'lbs' && isKettlebell(equipmentCategory)) {
+    const bell = down ? prevKettlebellLoadKg(w) : nextKettlebellLoadKg(w);
+    if (bell != null) return Math.abs(w - bell);
+  }
+  if (units !== 'lbs' && isDumbbell(equipmentCategory)) {
+    const bell = down ? prevDumbbellLoadKg(w) : nextDumbbellLoadKg(w);
+    if (bell != null) return Math.abs(w - bell);
+  }
+  const floor = units === 'lbs' ? LOADABLE_STEP_LBS : LOADABLE_STEP_KG;
+  return Math.max(resolveLoadIncrement(w, opts), floor);
+}
+
 // The one place the packet's exercise row is read for its equipment, so a
 // caller may supply any of the three shapes the data layer produces.
 function readEquipmentCategory(exercise) {

@@ -127,6 +127,15 @@ export function validateSetEntryValue({
   const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
   const skipWeightCheck = exerciseType === 'reps_only' || exerciseType === 'duration';
   if (!skipWeightCheck && !isLoggableWeight(value?.weight, isBodyweight)) {
+    // A distance exercise keeps its distance in the weight field, so its
+    // refusal names the distance, never a weight (audit D11).
+    if (exerciseType === 'distance') {
+      return {
+        ok: false,
+        title: 'Enter distance',
+        message: `Enter the distance covered before ${weightAction}.`,
+      };
+    }
     return {
       ok: false,
       title: 'Enter weight',

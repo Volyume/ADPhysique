@@ -156,9 +156,11 @@ describe('validateSetEntryValue', () => {
       exercise: { exerciseType: 'distance', equipment: 'cardio' },
       units: 'kg',
     })).toEqual({
+      // A distance exercise names the distance it needs, never a weight
+      // (D220 addendum 37, audit D11).
       ok: false,
-      title: 'Enter weight',
-      message: 'Enter the weight used (in kg) before completing this set.',
+      title: 'Enter distance',
+      message: 'Enter the distance covered before completing this set.',
     });
   });
 

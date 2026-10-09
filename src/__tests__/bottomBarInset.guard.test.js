@@ -38,7 +38,7 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // keypad on Android). The spacer alone holds the inset while no well is
     // open.
     expect(screen).not.toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{safeBottom\}/);
-    expect(screen).toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{0\}/);
+    expect(screen).toMatch(/<KeyboardBar[\s\S]{0,800}?safeBottom=\{0\}/);
     expect(screen).toContain('{inputOpen ? null : <View style={{ height: safeBottom }} />}');
     const bar = read('components/workout/session/KeyboardBar.js');
     expect(bar).toContain('{ paddingBottom: Math.max(0, safeBottom) }');

@@ -347,6 +347,10 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           selectTextOnFocus
           submitBehavior="submit"
           accessibilityLabel={label}
+          // The same cap the number at rest wears: the house TextInput's
+          // reading cap (2.0) let a typed 137.5 outgrow its 64 dp well at the
+          // phone's largest text (audit D9).
+          maxFontSizeMultiplier={fontScaleCaps.numeral}
         />
       </View>
     );
