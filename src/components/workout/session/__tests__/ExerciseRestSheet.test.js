@@ -64,6 +64,17 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+// D104-2 (Campaign 27 phase 2c, 2026-10-09): useTheme steps the display
+// sizes down below 390 dp and the jest React Native mock reports a narrow
+// window. This suite pins the readout against the static type table, so it
+// runs at a wide window; the bucket is pinned in styles/__tests__/narrowBucket.
+const RNForWidth = require('react-native');
+let windowSpy;
+beforeAll(() => {
+  windowSpy = jest.spyOn(RNForWidth, 'useWindowDimensions').mockReturnValue({ width: 393, height: 852, scale: 3, fontScale: 1 });
+});
+afterAll(() => { windowSpy.mockRestore(); });
+
 describe('ExerciseRestSheet, rendering', () => {
   test('renders nothing while it is closed', () => {
     expect(render({ visible: false }).toJSON()).toBeNull();
