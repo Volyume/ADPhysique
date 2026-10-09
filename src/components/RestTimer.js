@@ -416,9 +416,16 @@ export default function RestTimer() {
   useEffect(() => () => stopRepeat(), []);
 
   // D2: a thin draining fill under the row so remaining rest reads at a
-  // glance without parsing the numeral. UI-thread scaleX (native driver);
-  // under reduce-motion the fill steps statically instead of animating.
+  // glance without parsing the numeral. The fill's WIDTH is the fraction of
+  // the rest left (0 to 1, interpolated to a percentage), driven on the JS
+  // thread: a 2 dp line needs no more than one layout a second, and a width
+  // cannot misread the way a native-driven scale with a transform origin
+  // could (founder device report 2026-10-09, D220 addendum 20: the line
+  // drained in about half a second on the 2.9.0 build while the numerals
+  // were right). Under reduce-motion the fill steps statically instead of
+  // animating.
   const drain = useRef(new Animated.Value(1)).current;
+  const drainWidth = useRef(drain.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })).current;
   useEffect(() => {
     if (!restTimerActive) return;
     const total = Math.max(1, Number(restTimerDuration) || 90);
@@ -434,7 +441,8 @@ export default function RestTimer() {
       toValue: Math.max(0, Math.min(1, (restTimerRemaining - 1) / total)),
       duration: 1000,
       easing: Easing.linear,
-      useNativeDriver: true,
+      // A width is a layout prop: JS-driven by design (see above).
+      useNativeDriver: false,
     }).start();
     // drain is a stable ref; keying on the tick + settings is deliberate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -472,7 +480,7 @@ export default function RestTimer() {
           style={[
             styles.drainFill,
             live.drainFill,
-            { transform: [{ scaleX: drain }] },
+            { width: drainWidth },
             isAlmostDone && [styles.drainFillWarm, live.drainFillWarm],
           ]}
         />
@@ -612,9 +620,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   drainFill: {
-    flex: 1,
+    height: 2,
+    alignSelf: 'flex-start',
     backgroundColor: colors.primaryFill,
-    transformOrigin: 'left',
   },
   drainFillWarm: { backgroundColor: colors.warning },
   doneContainer: {
