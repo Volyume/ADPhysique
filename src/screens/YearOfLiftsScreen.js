@@ -18,8 +18,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, useWindowDimensions, StatusBar, Animated,
+  View, StyleSheet, FlatList, Pressable, TouchableOpacity, useWindowDimensions, StatusBar, Animated,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha, fontFamily } from '../styles/theme';

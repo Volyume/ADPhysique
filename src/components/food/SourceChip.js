@@ -22,7 +22,8 @@
  * existing verified visual treatment (checkmark + tinted border); the other
  * sources gain only the InfoTooltip, no visual change to the chip itself.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, spacing, radius, withAlpha, alpha } from '../../styles/theme';

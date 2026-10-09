@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, Modal,
+  View, StyleSheet, Modal,
   TouchableOpacity, ScrollView, AccessibilityInfo,
 } from 'react-native';
+import Text from './Text';
 // Campaign item 14 (D25): react-native-keyboard-controller outside sheets
 // (this is a plain RN Modal, not a gorhom BottomSheet). Used only for the
 // inline "New exercise" create form below — the horizontal filter-chip

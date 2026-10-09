@@ -42,14 +42,15 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import Text from './Text';
 import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-import { spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
+import { spacing, radius, motion, withAlpha, alpha, lineHeight, fontScaleCaps } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
 import { touchTarget } from '../styles/layout';
 
@@ -208,7 +209,7 @@ export default function Button({
     <>
       <Ionicons name="checkmark" size={s.icon} color={v.fg} />
       {successLabel ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]} maxFontSizeMultiplier={fontScaleCaps.chrome}>
           {successLabel}
         </Text>
       ) : null}
@@ -222,7 +223,8 @@ export default function Button({
           adjustsFontSizeToFit={singleLine}
           minimumFontScale={singleLine ? 0.8 : undefined}
           style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}
-        >
+          maxFontSizeMultiplier={fontScaleCaps.chrome}
+          >
           {title}
         </Text>
       ) : null}

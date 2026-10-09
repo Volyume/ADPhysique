@@ -12,7 +12,8 @@
  * is in flight, whether the last attempt failed) lives in
  * src/lib/biometricLock.js's useAppLockGate hook.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, circle, type, fontFamily } from '../styles/theme';

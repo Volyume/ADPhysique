@@ -16,9 +16,10 @@
  *              without it no clock renders
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
-import { spacing } from '../../../styles/theme';
+import { spacing, fontScaleCaps } from '../../../styles/theme';
 import SessionClock from './SessionClock';
 
 export default function SessionHeader({ name, startTime }) {
@@ -31,7 +32,7 @@ export default function SessionHeader({ name, startTime }) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.title, live.title]} numberOfLines={2} accessibilityRole="header">
+      <Text style={[styles.title, live.title]} numberOfLines={2} accessibilityRole="header" maxFontSizeMultiplier={fontScaleCaps.chrome}>
         {name}
       </Text>
       {startTime ? <SessionClock startTime={startTime} /> : null}

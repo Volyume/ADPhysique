@@ -176,7 +176,8 @@ describe('ImportScreen screen-reader focus-move wiring (source guard)', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'ImportScreen.js'), 'utf8');
 
   test('a best-effort findNodeHandle + setAccessibilityFocus move targets the error node, guarded like InfoTooltip\'s AX-01 fix', () => {
-    expect(src).toMatch(/import \{\s*\n?\s*View, Text, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,/);
+    // D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+    expect(src).toMatch(/import \{\s*\n?\s*View, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,/);
     expect(src).toContain('const errorRef = useRef(null);');
     expect(src).toMatch(/const node = findNodeHandle\(errorRef\.current\);\s*\n\s*if \(node != null\) AccessibilityInfo\.setAccessibilityFocus\(node\);/);
     expect(src).toContain('ref={errorRef}');

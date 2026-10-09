@@ -21,7 +21,8 @@
  * Props (BandBody): children, style.
  * Props (BandLine): text, action { label, onPress, accessibilityLabel? }.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Button from '../Button';
 import useTheme from '../../hooks/useTheme';
 import { spacing } from '../../styles/theme';

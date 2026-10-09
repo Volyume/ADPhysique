@@ -21,7 +21,8 @@
  * on a flush row that has another row directly below it in that shared
  * list -- never a full border, so the list still reads as one card.
  */
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';

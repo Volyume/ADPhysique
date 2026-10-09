@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, Animated, Easing, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, AppState, Platform, Animated, Easing, AccessibilityInfo } from 'react-native';
+import Text from './Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, iconSize, spacing, type } from '../styles/theme';
+import { colors, iconSize, spacing, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -465,7 +466,7 @@ export default function RestTimer({ controlsHidden = false } = {}) {
     return (
       <View style={[styles.doneContainer, live.doneContainer]}>
         <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
-        <Text style={[styles.doneText, live.doneText]}>Start next set</Text>
+        <Text style={[styles.doneText, live.doneText]} maxFontSizeMultiplier={fontScaleCaps.chrome}>Start next set</Text>
       </View>
     );
   }
@@ -503,11 +504,11 @@ export default function RestTimer({ controlsHidden = false } = {}) {
             ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
             : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
         >
-          <Text style={[styles.label, live.label]} numberOfLines={1}>Rest</Text>
+          <Text style={[styles.label, live.label]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>Rest</Text>
           {isCountdown ? (
-            <Text style={[styles.timeText, styles.countdownNum, live.countdownNum]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
+            <Text style={[styles.timeText, styles.countdownNum, live.countdownNum]} maxFontSizeMultiplier={fontScaleCaps.numeral}>{restTimerRemaining}</Text>
           ) : (
-            <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
+            <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={fontScaleCaps.numeral}>{timeStr}</Text>
           )}
         </View>
         {controlsHidden ? null : TIME_ADJUSTMENTS.map(({ delta, icon, label }) => {
@@ -526,7 +527,7 @@ export default function RestTimer({ controlsHidden = false } = {}) {
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
               <Ionicons name={icon} size={iconSize.md} color={t.colors.textPrimary} />
-              <Text style={[styles.adjBtnText, live.adjBtnText]}>{label}</Text>
+              <Text style={[styles.adjBtnText, live.adjBtnText]} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -539,7 +540,7 @@ export default function RestTimer({ controlsHidden = false } = {}) {
           accessibilityRole="button"
         >
           <Ionicons name="play-skip-forward-outline" size={iconSize.md} color={t.colors.textPrimary} />
-          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
+          <Text style={[styles.skipText, live.skipText]} maxFontSizeMultiplier={fontScaleCaps.chrome}>Skip</Text>
         </TouchableOpacity>
         )}
       </View>

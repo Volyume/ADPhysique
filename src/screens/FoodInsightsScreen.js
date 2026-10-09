@@ -18,8 +18,9 @@
  */
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
+  View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';

@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Animated,
   TouchableOpacity,
   AccessibilityInfo,
   useWindowDimensions,
 } from 'react-native';
+import Text from './Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';

@@ -11,7 +11,8 @@
  * reads the current version's entry).
  */
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import Ionicons from '@expo/vector-icons/Ionicons';

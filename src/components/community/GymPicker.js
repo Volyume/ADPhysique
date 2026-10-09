@@ -42,7 +42,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 // E8 (founder decision 2026-07-02): every list in the app renders through
 // FlashList, never an unrecycled FlatList.
 import { FlashList } from '@shopify/flash-list';

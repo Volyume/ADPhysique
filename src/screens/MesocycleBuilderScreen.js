@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet,
+  View, StyleSheet,
 } from 'react-native';
+import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';

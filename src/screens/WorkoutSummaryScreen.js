@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import Text from '../components/Text';
 // Campaign item 14 (D25): react-native-keyboard-controller for the main
 // content scroll's inline notes fields (which previously had NO keyboard
 // avoidance at all). KeyboardAwareScrollView replaces the main content
@@ -15,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, motion, iconSize, fontFamily, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -2488,7 +2489,7 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
   if (hero) {
     return (
       <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
-        {numeral(styles.heroValue, live.heroValue, 1.3)}
+        {numeral(styles.heroValue, live.heroValue, fontScaleCaps.chrome)}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
           <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}

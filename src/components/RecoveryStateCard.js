@@ -22,7 +22,8 @@
  *
  * No streaks, no countdown, no badge, no guilt. Voice rules: CLAUDE.md.
  */
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   colors, spacing, radius, fontWeight, type, withAlpha, iconSize, alpha,

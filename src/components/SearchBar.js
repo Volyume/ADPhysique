@@ -10,7 +10,8 @@
  * onChangeText(''). Input font is >=16 so iOS doesn't zoom on focus.
  */
 
-import { ActivityIndicator, View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, TouchableOpacity, StyleSheet } from 'react-native';
+import TextInput from './TextInput';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, iconSize, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

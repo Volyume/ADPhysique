@@ -11,7 +11,8 @@
  * moment anything is set up. The gating lives in HomeScreen.js; this file
  * renders only the card's content, on the shared Card and Button.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, type, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

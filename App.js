@@ -20,7 +20,9 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // (unaffected by this provider); this complements that fix outside sheets.
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform, AccessibilityInfo } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform, AccessibilityInfo } from 'react-native';
+// D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+import Text from './src/components/Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';

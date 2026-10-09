@@ -32,7 +32,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import Text from '../Text';
 // UI-thread scale for the Respect tap (motion fit rule 4: no JS-thread Animated).
 import Reanimated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';

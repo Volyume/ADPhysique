@@ -6,7 +6,8 @@
  * account wall ("Save your plan", never "sign up to continue"). No calories or
  * macros, the honesty note says they come after, with permission.
  */
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight, type, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

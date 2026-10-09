@@ -24,7 +24,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Text, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { lastRespectGivenState, recordRespectGiven, respectAll } from '../../lib/community/respect';

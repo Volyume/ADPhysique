@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';

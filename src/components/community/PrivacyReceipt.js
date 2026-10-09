@@ -18,7 +18,8 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import Button from '../Button';

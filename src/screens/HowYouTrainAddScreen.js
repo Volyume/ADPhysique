@@ -27,8 +27,9 @@
  */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Switch, AccessibilityInfo, findNodeHandle,
+  View, StyleSheet, ScrollView, Switch, AccessibilityInfo, findNodeHandle,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';

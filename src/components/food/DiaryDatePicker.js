@@ -21,8 +21,9 @@
  */
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
-  View, Text, StyleSheet, Modal, Platform,
+  View, StyleSheet, Modal, Platform,
 } from 'react-native';
+import Text from '../Text';
 import Button from '../Button';
 import useAppStore from '../../store/useAppStore';
 import { parseLocalDay } from '../../lib/dayKey';

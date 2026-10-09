@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import Text from '../Text';
 import { colors, fontSize, fontWeight, spacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import BottomSheet from '../BottomSheet';

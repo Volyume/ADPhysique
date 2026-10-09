@@ -8,10 +8,11 @@
  * Pass `selected` + `onPress`. `icon` is an optional leading Ionicons name.
  */
 
-import { Platform, Text, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { spacing, radius } from '../styles/theme';
+import { spacing, radius, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 export default function Chip({
@@ -36,7 +37,9 @@ export default function Chip({
   // default now -- the label scales with the system like every other Text.
   // A caller with a genuinely fixed-geometry need may still pass its own
   // value; none currently do.
-  maxFontSizeMultiplier,
+  // D104-1 (phase 2b): a chip is chrome, capped at the table's chrome value
+  // unless a caller passes its own.
+  maxFontSizeMultiplier = fontScaleCaps.chrome,
   testID,
 }) {
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static

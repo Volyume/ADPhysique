@@ -38,8 +38,9 @@ import {
   useImperativeHandle, useRef, useState, useEffect, useCallback, forwardRef, createContext, useContext,
 } from 'react';
 import {
-  View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback, Platform,
+  View, StyleSheet, Keyboard, TouchableWithoutFeedback, Platform,
 } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';

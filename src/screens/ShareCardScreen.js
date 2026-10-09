@@ -12,9 +12,10 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
+  View, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
   useWindowDimensions,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';

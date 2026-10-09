@@ -22,7 +22,8 @@
  * one of its ~61 call sites, so VoiceOver/TalkBack heading navigation can
  * land on it directly instead of scanning plain text.
  */
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { spacing, hitSlop } from '../styles/theme';

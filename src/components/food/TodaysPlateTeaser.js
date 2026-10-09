@@ -13,7 +13,8 @@
  * back behind the paywall (the Strava lesson).
  */
 import { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';

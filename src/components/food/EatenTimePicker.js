@@ -15,7 +15,8 @@
  * caller keeps only hours/minutes against the entry's existing day).
  */
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { View, Text, StyleSheet, Modal, Platform } from 'react-native';
+import { View, StyleSheet, Modal, Platform } from 'react-native';
+import Text from '../Text';
 import Button from '../Button';
 import useAppStore from '../../store/useAppStore';
 import { colors, spacing, radius, type } from '../../styles/theme';

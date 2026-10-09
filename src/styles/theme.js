@@ -763,6 +763,19 @@ export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 //   mid    — accent borders (the Card tone border)
 //   strong — heavy tinted borders / focus edges
 //   half   — 50% (scrims layered on colour)
+// Per-surface font-scale caps (D104-1, Campaign 27 phase 2b, built
+// 2026-10-09 under D220 addendum 31). The ONE table every cap comes from;
+// no inline literal anywhere else (accessibilityDesign.guard enforces it).
+//   reading  body copy, coach lines, explainers: the OS multiplier honoured
+//            up to 2.0x, Apple's own "at least 200%" bar. The house Text and
+//            TextInput primitives (components/Text.js, components/TextInput.js)
+//            carry it by default.
+//   chrome   chips, tab labels, stat tiles, section labels, buttons, column
+//            labels: 1.3x, through the shared primitives.
+//   numeral  numerals in fixed geometry (the rest readout, the session clock,
+//            the set wells, the kcal ring, share heroes): 1.15x.
+export const fontScaleCaps = Object.freeze({ reading: 2.0, chrome: 1.3, numeral: 1.15 });
+
 export const alpha = Object.freeze({
   ghost: 0.08,
   tint: 0.12,

@@ -35,7 +35,8 @@
  * calm coach-update treatment rather than reading as an alarm.
  */
 import { useEffect, useState } from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import Text from './Text';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withSequence,
 } from 'react-native-reanimated';
@@ -43,7 +44,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
-import { colors, radius, spacing, motion, type } from '../styles/theme';
+import { colors, radius, spacing, motion, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
@@ -190,7 +191,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
                 </TabIcon>
                 {showCoachBadge || showCommunityBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
               </View>
-              <Text style={[styles.label, live.label, { color }]} numberOfLines={1}>{label}</Text>
+              <Text style={[styles.label, live.label, { color }]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
             </Pressable>
           );
         })}

@@ -30,7 +30,8 @@
  * navigation can land on it directly.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import { spacing, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from './BrandMark';

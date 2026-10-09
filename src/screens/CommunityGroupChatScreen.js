@@ -24,7 +24,8 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, AppState } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, AppState } from 'react-native';
+import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';

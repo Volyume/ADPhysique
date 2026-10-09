@@ -52,7 +52,8 @@
 import {
   useImperativeHandle, useRef, useState, useCallback, forwardRef,
 } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

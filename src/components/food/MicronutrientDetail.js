@@ -34,7 +34,8 @@
  * column label" placement); shown only when the grid itself renders.
  */
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import CollapsibleSection from '../CollapsibleSection';

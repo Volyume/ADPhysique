@@ -22,8 +22,9 @@ import { todayLocalKey } from '../lib/dayKey';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, StyleSheet, TouchableOpacity,
 } from 'react-native';
+import Text from '../components/Text';
 // Campaign item 14 (D25): react-native-keyboard-controller outside sheets.
 // KeyboardAwareScrollView replaces the ScrollView + KeyboardAvoidingView
 // pair below; KeyboardGestureArea adds cross-platform interactive

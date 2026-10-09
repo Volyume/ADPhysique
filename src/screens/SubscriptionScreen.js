@@ -12,7 +12,8 @@
  * locked_in_price_tier, complete_trial_ends_at, pro_trial_ends_at).
  */
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

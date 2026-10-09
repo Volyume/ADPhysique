@@ -5,7 +5,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 import { safeGetStateFromPath } from './safeGetStateFromPath';
 export const navigationRef = createNavigationContainerRef();
-import { View, Text, StyleSheet, AppState } from 'react-native';
+import { View, StyleSheet, AppState } from 'react-native';
+import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 

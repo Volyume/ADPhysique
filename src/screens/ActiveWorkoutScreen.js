@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, AccessibilityInfo, InputAccessoryView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, AccessibilityInfo, InputAccessoryView } from 'react-native';
+import Text from '../components/Text';
+import TextInput from '../components/TextInput';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';

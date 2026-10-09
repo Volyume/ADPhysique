@@ -37,8 +37,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, ScrollView, Share,
+  View, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, ScrollView, Share,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';

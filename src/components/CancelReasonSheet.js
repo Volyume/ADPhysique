@@ -17,7 +17,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import Text from './Text';
 import { colors, spacing, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';

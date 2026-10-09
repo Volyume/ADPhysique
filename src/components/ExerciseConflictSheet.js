@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Modal } from 'react-native';
+import Text from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, type, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

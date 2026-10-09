@@ -17,7 +17,8 @@
  *   gated         true while the consistency gate withholds (default true:
  *                 fail closed until the screen has an answer)
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Band, { BandGap } from './Band';
 import AvatarStack from './AvatarStack';
 import useTheme from '../../hooks/useTheme';

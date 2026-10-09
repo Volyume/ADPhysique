@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';

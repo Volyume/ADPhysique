@@ -30,7 +30,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Keyboard, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Keyboard, TouchableOpacity } from 'react-native';
+import Text from '../../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../../BottomSheet';
 import Button from '../../Button';

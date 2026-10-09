@@ -47,7 +47,8 @@
  *   inBand    D221 V1: the block carries the band's gutter itself
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Button from '../Button';
 import PressableCard from '../PressableCard';
 import ProfileAvatarMark from '../ProfileAvatarMark';

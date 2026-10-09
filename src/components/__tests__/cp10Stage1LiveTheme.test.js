@@ -16,7 +16,9 @@
  * CP-10 stage 1 completion notes).
  */
 import { create, act } from 'react-test-renderer';
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+// D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+import Text from '../Text';
 import useAppStore from '../../store/useAppStore';
 import Button from '../Button';
 import TextField from '../TextField';

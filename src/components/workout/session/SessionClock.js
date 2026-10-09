@@ -25,8 +25,10 @@
  * rule, pinned for the rest timer in p9Talkback.guard.test.js).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { AppState, Text } from 'react-native';
+import { AppState } from 'react-native';
+import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
+import { fontScaleCaps } from '../../../styles/theme';
 
 // The readout block is as tall as the header's glyph targets.
 
@@ -100,7 +102,8 @@ export default function SessionClock({ startTime }) {
       accessibilityLabel={`Elapsed ${spokenClock(elapsedMs)}`}
       style={live.text}
       numberOfLines={1}
-    >
+      maxFontSizeMultiplier={fontScaleCaps.numeral}
+      >
       {formatClock(elapsedMs)}
     </Text>
   );

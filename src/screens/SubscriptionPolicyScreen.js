@@ -10,7 +10,8 @@
  *
  * Linked from Settings > Account and ProUpgradeScreen.
  */
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, fontFamily } from '../styles/theme';

@@ -22,7 +22,8 @@
  *   style  optional style merged onto the Text
  */
 
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Text from '../Text';
 import { type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { previewLine } from '../../lib/community';

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView,
+  View, StyleSheet, TouchableOpacity, Modal, ScrollView,
 } from 'react-native';
+import Text from '../components/Text';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';

@@ -28,9 +28,10 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  View, StyleSheet, TouchableOpacity, ActivityIndicator,
   Linking, AppState, useWindowDimensions,
 } from 'react-native';
+import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';

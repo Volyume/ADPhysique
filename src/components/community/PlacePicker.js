@@ -22,7 +22,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Button from '../Button';
 import TextField from '../TextField';
 import useTheme from '../../hooks/useTheme';

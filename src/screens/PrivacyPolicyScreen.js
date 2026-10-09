@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

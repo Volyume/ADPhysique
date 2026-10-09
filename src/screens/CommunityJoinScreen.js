@@ -27,8 +27,9 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable,
+  View, StyleSheet, ScrollView, Pressable,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';

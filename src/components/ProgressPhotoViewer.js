@@ -41,10 +41,11 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal,
+  View, StyleSheet, TouchableOpacity, Modal,
   ScrollView, useWindowDimensions, KeyboardAvoidingView, Platform, Pressable,
   InputAccessoryView, Keyboard,
 } from 'react-native';
+import Text from './Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {

@@ -12,7 +12,8 @@
  * Voice: British English, plain, no "cheat day"/"binge"/"save up" language.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';

@@ -33,7 +33,8 @@
  * never a table" -- a count only, no exercise, no weight, no reps).
  */
 
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Text from '../Text';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type, colors, radius } from '../../styles/theme';
 

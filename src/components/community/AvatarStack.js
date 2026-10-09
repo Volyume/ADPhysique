@@ -30,7 +30,8 @@
  *           (default 3)
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';

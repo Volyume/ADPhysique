@@ -74,10 +74,12 @@
  * ring on the card, pending a subtle ring.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
+import TextInput from '../../TextInput';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { alpha, circle, radius, spacing, withAlpha } from '../../../styles/theme';
+import { alpha, circle, radius, spacing, withAlpha, fontScaleCaps } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 import { formatSeconds } from '../../../lib/workoutHelpers';
 
@@ -242,12 +244,13 @@ function MarkerCell({ marker, record, onPress, testID, hint, live }) {
         <Text
           style={isWarmup ? live.markerWarmupText : isFailure ? live.markerFailureText : isTyped ? live.markerTypedText : live.markerNumber}
           numberOfLines={1}
-        >
+          maxFontSizeMultiplier={fontScaleCaps.numeral}
+          >
           {String(marker)}
         </Text>
       </View>
       {record ? (
-        <Text style={live.prText} accessible accessibilityLabel="Personal record" numberOfLines={1}>PR</Text>
+        <Text style={live.prText} accessible accessibilityLabel="Personal record" numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>PR</Text>
       ) : null}
     </View>
   );
@@ -289,7 +292,7 @@ function LastCell({ last, onPress, testID, live }) {
   }
   const text = last.stale ? `${MIDDLE_DOT} ${last.text}` : last.text;
   const content = (
-    <Text style={[styles.cellText, live.cellDim, last.stale && live.cellStale]} numberOfLines={1}>
+    <Text style={[styles.cellText, live.cellDim, last.stale && live.cellStale]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.numeral}>
       {text}
     </Text>
   );
@@ -367,7 +370,8 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           isEditingThis && live.wellActive,
         ]}
         numberOfLines={1}
-      >
+        maxFontSizeMultiplier={fontScaleCaps.numeral}
+        >
         {text}
       </Text>
     </TouchableOpacity>

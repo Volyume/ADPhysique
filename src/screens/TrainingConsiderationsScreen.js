@@ -27,7 +27,8 @@
  * exists to protect. No logic, routing, copy law or persistence changed.
  */
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, AccessibilityInfo } from 'react-native';
+import Text from '../components/Text';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../hooks/useTheme';

@@ -17,7 +17,8 @@
  * tree's frozen-plus-live pattern).
  */
 import { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

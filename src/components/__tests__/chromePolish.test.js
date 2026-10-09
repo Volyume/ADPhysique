@@ -1,5 +1,6 @@
 import { create, act } from 'react-test-renderer';
-import { Text } from 'react-native';
+// D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+import Text from '../Text';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn() }),

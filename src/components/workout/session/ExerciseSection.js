@@ -50,10 +50,11 @@
  * space the cards, as on every other list in the app.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
-import { circle, iconSize, radius, spacing } from '../../../styles/theme';
+import { circle, iconSize, radius, spacing, fontScaleCaps } from '../../../styles/theme';
 import { SET_COLUMNS } from './SetRow';
 import { touchTarget } from '../../../styles/layout';
 
@@ -87,7 +88,7 @@ function FooterAction({ icon, label, accessibilityLabel, onPress, glyphColor, la
       accessibilityLabel={accessibilityLabel}
     >
       <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
-      <Text style={labelStyle}>{label}</Text>
+      <Text style={labelStyle} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -175,7 +176,7 @@ export default function ExerciseSection({
         accessibilityState={{ expanded: isActive }}
       >
         <View style={[styles.indexBadge, live.indexBadge]}>
-          <Text style={live.index}>{index}</Text>
+          <Text style={live.index} maxFontSizeMultiplier={fontScaleCaps.chrome}>{index}</Text>
         </View>
         <View style={styles.nameBlock}>
           <Text
@@ -183,10 +184,11 @@ export default function ExerciseSection({
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={NAME_MIN_SCALE}
-          >
+            maxFontSizeMultiplier={fontScaleCaps.chrome}
+            >
             {name}
           </Text>
-          {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
+          {groupLabel ? <Text style={live.group} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{groupLabel}</Text> : null}
         </View>
         {isDone ? (
           <View style={styles.state} accessible accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}>
@@ -194,11 +196,11 @@ export default function ExerciseSection({
           </View>
         ) : skipped ? (
           <View style={styles.state}>
-            <Text style={live.doneText} accessible accessibilityLabel="Left out for time">Left out</Text>
+            <Text style={live.doneText} accessible accessibilityLabel="Left out for time" maxFontSizeMultiplier={fontScaleCaps.chrome}>Left out</Text>
           </View>
         ) : !isActive && doneCount > 0 && totalSetCount ? (
           <View style={styles.state}>
-            <Text style={live.doneText} numberOfLines={1}>{`${doneCount} of ${totalSetCount}`}</Text>
+            <Text style={live.doneText} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{`${doneCount} of ${totalSetCount}`}</Text>
           </View>
         ) : null}
       </TouchableOpacity>
@@ -238,7 +240,7 @@ export default function ExerciseSection({
             accessibilityRole="button"
             accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}
           >
-            {moreHint ? <Text style={live.hint}>{moreHint}</Text> : null}
+            {moreHint ? <Text style={live.hint} maxFontSizeMultiplier={fontScaleCaps.chrome}>{moreHint}</Text> : null}
             <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={moreHint ? t.colors.textPrimary : t.colors.textSecondary} />
           </TouchableOpacity>
         </View>

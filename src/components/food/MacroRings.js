@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../Text';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
-import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily, fontScaleCaps } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -16,7 +17,7 @@ const KCAL_STROKE = 14;
 // most-viewed screen in the app. RollingNumber's maxFontSizeMultiplier prop
 // exists for exactly this (see its header comment); it stayed optional
 // (D6) rather than becoming required, so it is capped here at the call sites.
-const KCAL_MAX_FONT_SCALE = 1.3;
+const KCAL_MAX_FONT_SCALE = fontScaleCaps.chrome; // the kcal ring's fixed geometry (D104-1: its cap stays 1.3, now from the table)
 
 // Adherence-neutral ring colour (founder decision 2026-05-29, reversing the
 // earlier amber/green/amber three-band). The ring shows progress in the brand

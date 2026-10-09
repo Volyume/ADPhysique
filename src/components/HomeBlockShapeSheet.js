@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
+import Text from './Text';
 import { colors, fontSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BlockShapeCard from './BlockShapeCard';

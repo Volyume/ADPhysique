@@ -25,7 +25,8 @@
  * screen reader hears the same distinction a sighted person sees.
  */
 
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { spacing, circle, fontSize, fontWeight, type } from '../../styles/theme';
