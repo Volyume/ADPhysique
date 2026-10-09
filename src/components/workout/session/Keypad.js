@@ -284,7 +284,8 @@ export default function Keypad({
 const styles = StyleSheet.create({
   panel: {
     paddingTop: spacing.sm,
-    paddingHorizontal: spacing.md,
+    // The keys share the page's 16 dp margins (D220 addendum 13).
+    paddingHorizontal: spacing.lg,
     borderTopWidth: 1,
   },
   top: {

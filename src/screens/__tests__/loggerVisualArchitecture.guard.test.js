@@ -104,7 +104,7 @@ describe('rest is a compact strip docked outside the workspace scroll (failure 2
     expect(REST).not.toMatch(/container: \{[^}]*borderRadius/s);
     expect(REST).not.toMatch(/minHeight: 64/);
     expect(REST).not.toMatch(/fontSize: 26/);
-    expect(REST).toMatch(/row: \{[\s\S]{0,200}?minHeight: touchTarget\.minimum/);
+    expect(REST).toMatch(/row: \{[\s\S]{0,360}?minHeight: touchTarget\.minimum/);
     expect(REST).toMatch(/drainTrack: \{\s*\n?\s*height: 2,/);
     for (const label of ['Remove 15 seconds', 'Add 15 seconds', 'Skip rest timer']) {
       expect(REST).toContain(label);

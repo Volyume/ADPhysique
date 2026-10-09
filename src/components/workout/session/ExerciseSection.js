@@ -55,6 +55,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import Button from '../../Button';
 import { circle, iconSize, radius, spacing } from '../../../styles/theme';
+import { SET_COLUMNS } from './SetRow';
 import { touchTarget } from '../../../styles/layout';
 
 // Section header 56, footer 52; the done mark 16 (the list's small glyph);
@@ -67,6 +68,7 @@ const DONE_GLYPH = 16;
 const NAME_MIN_SCALE = 0.75;
 const COUNTDOWN_HEIGHT = 2;
 const ORDER_BADGE = 24;
+const MORE_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 
 
 function setWord(count) {
@@ -169,13 +171,17 @@ export default function ExerciseSection({
           {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
         </View>
         {isDone ? (
-          <View style={styles.done} accessible accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}>
+          <View style={styles.state} accessible accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}>
             <Ionicons name="checkmark-circle" size={DONE_GLYPH} color={t.colors.success} />
           </View>
         ) : skipped ? (
-          <Text style={live.doneText} accessible accessibilityLabel="Left out for time">Left out</Text>
+          <View style={styles.state}>
+            <Text style={live.doneText} accessible accessibilityLabel="Left out for time">Left out</Text>
+          </View>
         ) : !isActive && doneCount > 0 && totalSetCount ? (
-          <Text style={live.doneText} numberOfLines={1}>{`${doneCount} of ${totalSetCount}`}</Text>
+          <View style={styles.state}>
+            <Text style={live.doneText} numberOfLines={1}>{`${doneCount} of ${totalSetCount}`}</Text>
+          </View>
         ) : null}
       </TouchableOpacity>
 
@@ -212,6 +218,7 @@ export default function ExerciseSection({
             testID="volyume-section-more"
             style={[styles.more, moreHint ? styles.moreHinted : null]}
             onPress={onMore}
+            hitSlop={MORE_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}
           >
@@ -226,13 +233,20 @@ export default function ExerciseSection({
 
 const styles = StyleSheet.create({
   section: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  // The card grid (D220 addendum 13, the alignment pass): the header, the
+  // table and the footer share one left edge (12 dp in) and one right-hand
+  // column (the 36 dp check column, 8 dp in), so the order badge sits on the
+  // set numbers' axis, the name starts where LAST starts, and the done check,
+  // the row checks and the overflow glyph share one centre line.
   header: {
     minHeight: HEADER_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
   },
+  state: { minWidth: SET_COLUMNS.check, alignItems: 'center', justifyContent: 'center' },
   indexBadge: {
     width: ORDER_BADGE,
     height: ORDER_BADGE,
@@ -242,26 +256,22 @@ const styles = StyleSheet.create({
   },
   nameBlock: { flex: 1, minWidth: 0 },
   name: { flexShrink: 1 },
-  done: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs2,
-  },
   footer: {
     minHeight: FOOTER_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.xs,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
     paddingVertical: spacing.sm,
   },
   countdown: { position: 'absolute', top: 0, left: 0, right: 0, height: COUNTDOWN_HEIGHT },
   countdownFill: { height: COUNTDOWN_HEIGHT },
   countdownFull: { width: '100%' },
   footerFill: { flex: 1 },
+  // The overflow sits in the check column's 36 dp, taken to 48 by its slop.
   more: {
-    minWidth: touchTarget.minimum,
+    minWidth: SET_COLUMNS.check,
     height: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',

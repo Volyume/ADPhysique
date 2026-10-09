@@ -215,7 +215,12 @@ describe('ExerciseSection header', () => {
     expect(s.alignItems).toBe('center');
     expect(s.gap).toBe(spacing.sm);
     expect(s.gap).toBe(8);
-    expect(s.paddingHorizontal).toBe(spacing.lg);
+    // The card grid (addendum 13): the table's 12 dp left inset and the
+    // check column's 8 dp right inset, so the badge sits on the set numbers'
+    // axis and the trailing state on the check column.
+    expect(s.paddingLeft).toBe(spacing.md);
+    expect(s.paddingRight).toBe(spacing.sm);
+    expect(s.paddingHorizontal).toBeUndefined();
     // Badge, then the name block, then the trailing count.
     expect(words(header)).toEqual(['2', 'Barbell Row (Bent Over)', '1 of 3']);
     const nameBlock = one(hosts(tree, (p) => flat(p.style).flex === 1 && flat(p.style).minWidth === 0));

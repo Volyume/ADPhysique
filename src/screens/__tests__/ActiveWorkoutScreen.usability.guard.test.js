@@ -270,7 +270,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('menu and secondary actions are plain under fatigue', () => {
     expect(ACTIVE_WORKOUT).toContain("import { workoutLoggerSize } from '../styles/layout';");
     // Clean-up (D220): the overflow is the section footer's 48 dp target.
-    expect(SECTION).toMatch(/more: \{\s*minWidth: touchTarget\.minimum,\s*height: touchTarget\.minimum,/);
+    // Addendum 13: the overflow sits in the 36 dp check column, taken to
+    // 48 dp by its slop, so its glyph shares the row checks' centre line.
+    expect(SECTION).toMatch(/more: \{\s*minWidth: SET_COLUMNS\.check,\s*height: touchTarget\.minimum,/);
+    expect(SECTION).toContain('hitSlop={MORE_HIT_SLOP}');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.swapBtn}');
     expect(ACTIVE_WORKOUT).not.toContain('swapBtnText');
     // R3 rebuild: the header's finish control and the bar's actions moved

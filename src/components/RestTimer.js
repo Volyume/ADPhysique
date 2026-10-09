@@ -539,7 +539,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.lg,
+    // 8 dp, so Skip's own 8 dp padding puts its word on the page's 16 dp
+    // right margin (D220 addendum 13, the alignment pass).
+    paddingRight: spacing.sm,
     gap: spacing.md,
     minHeight: touchTarget.minimum,
   },

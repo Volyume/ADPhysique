@@ -81,7 +81,7 @@ export default function SessionToolbar({
         accessibilityRole="button"
         accessibilityLabel="Cancel workout"
       >
-        <Ionicons name="close" size={iconSize.md} color={t.colors.textMuted} />
+        <Ionicons name="close" size={iconSize.lg} color={t.colors.textMuted} />
       </TouchableOpacity>
 
       <ToolButton
@@ -143,7 +143,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: BAR_MIN_HEIGHT,
-    paddingHorizontal: spacing.sm,
+    // 4 dp in, so the 24 dp glyphs of the 48 dp X and Finish targets sit on
+    // the page's 16 dp margins (D220 addendum 13, the alignment pass).
+    paddingHorizontal: spacing.xs,
     borderBottomWidth: 1,
   },
   close: {
