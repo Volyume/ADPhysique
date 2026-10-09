@@ -31,8 +31,8 @@ function pill(tree) {
   return tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityRole === 'timer')[0];
 }
 const texts = (tree) => tree.root.findAll((n) => n.type === 'Text');
-// The numerals sit under the "Elapsed" overline label; the value is the last Text.
-const numerals = (tree) => textOf(texts(tree)[texts(tree).length - 1]);
+// The numerals sit over the "Elapsed" caption; the value is the first Text.
+const numerals = (tree) => textOf(texts(tree)[0]);
 const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
 
 afterEach(() => {
@@ -81,21 +81,22 @@ describe('SessionClock render', () => {
     expect(numerals(tree)).toBe('0:00');
   });
 
-  test('no pill: a block with no fill and no edge, the Elapsed overline label above the numerals', () => {
+  test('no pill: a block with no fill and no edge; the numerals over an "Elapsed" caption, the toolbar tool grammar', () => {
     jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render(<SessionClock startTime={START} />);
     const merged = flat(pill(tree).props.style);
     expect(merged.backgroundColor).toBeUndefined();
     expect(merged.borderColor).toBeUndefined();
     expect(merged.borderWidth).toBeUndefined();
-    const [label, value] = texts(tree);
+    const [value, label] = texts(tree);
     expect(texts(tree)).toHaveLength(2);
     expect(textOf(label)).toBe('Elapsed');
     const l = flat(label.props.style);
-    expect(l.color).toBe(colors.textMuted);
-    expect(l.fontSize).toBe(type.overline.fontSize);
-    expect(l.fontFamily).toBe(type.overline.fontFamily);
-    expect(l.textTransform).toBe('uppercase');
+    expect(l.color).toBe(colors.textSecondary);
+    expect(l.fontSize).toBe(type.caption.fontSize);
+    expect(l.fontFamily).toBe(type.caption.fontFamily);
+    expect(l.textTransform).toBeUndefined();
+    expect(merged.minHeight).toBe(48);
     const v = flat(value.props.style);
     expect(v.color).toBe(colors.textPrimary);
     expect(v.fontSize).toBe(type.title.fontSize);

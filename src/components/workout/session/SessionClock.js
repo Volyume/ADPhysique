@@ -1,8 +1,9 @@
 /**
  * SessionClock
  *
- * The session's elapsed time, an "Elapsed" overline over tabular numerals as
- * the approved 2026-08-18 header drew it (no pill), ticking from `startTime`
+ * The session's elapsed time as a toolbar tool: tabular numerals over an
+ * "Elapsed" caption, the grammar of the bar's other tools (no pill, no
+ * overline; founder render verdict 2026-10-09), ticking from `startTime`
  * (epoch ms, the store's workoutStartTime) on its OWN one-second interval, so
  * the screen that hosts it stops re-rendering once a second
  * (12-BUILD-SPEC section 1.6, register D220; the old tick lived in
@@ -28,7 +29,10 @@ import useTheme from '../../../hooks/useTheme';
 import { spacing } from '../../../styles/theme';
 
 // The readout block is as tall as the header's glyph targets.
-const PILL_MIN_HEIGHT = 40;
+// The tool's height, as the toolbar's other tools (48 dp); the numerals take
+// the tools' 22 dp glyph line so every caption in the bar shares a baseline.
+const TOOL_MIN_HEIGHT = 48;
+const GLYPH_LINE = 22;
 
 // Read when the effect runs, not at import, so a test can switch the interval
 // on to prove the tick and the cleanup.
@@ -84,11 +88,13 @@ export function useSessionClock(startTime) {
 
 export default function SessionClock({ startTime }) {
   const t = useTheme();
-  // The logger header the founder approved (2026-08-18): an overline label
-  // over tabular title numerals, nothing drawn around them.
+  // A tool in the toolbar's own grammar (founder render verdict 2026-10-09,
+  // D220 addendum 11): the tabular title numerals sit where a tool's glyph
+  // sits, with "Elapsed" as the caption beneath, the same caption the other
+  // tools wear; nothing drawn around them.
   const live = useMemo(() => ({
-    label: { ...t.type.overline, color: t.colors.textMuted },
-    text: { ...t.type.num('title'), color: t.colors.textPrimary },
+    text: { ...t.type.num('title'), lineHeight: GLYPH_LINE, color: t.colors.textPrimary },
+    label: { ...t.type.caption, color: t.colors.textSecondary },
   }), [t]);
 
   const elapsedMs = useSessionClock(startTime);
@@ -100,12 +106,12 @@ export default function SessionClock({ startTime }) {
       accessibilityLabel={`Elapsed ${spokenClock(elapsedMs)}`}
       style={styles.block}
     >
-      <Text style={live.label}>Elapsed</Text>
       <Text style={live.text} numberOfLines={1}>{formatClock(elapsedMs)}</Text>
+      <Text style={live.label} numberOfLines={1}>Elapsed</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  block: { alignItems: 'center', gap: spacing.xxs, minHeight: PILL_MIN_HEIGHT, justifyContent: 'center' },
+  block: { alignItems: 'center', gap: spacing.xxs, minHeight: TOOL_MIN_HEIGHT, justifyContent: 'center', paddingHorizontal: spacing.xs },
 });

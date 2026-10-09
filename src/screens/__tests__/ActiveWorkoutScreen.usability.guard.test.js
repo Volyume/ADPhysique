@@ -243,11 +243,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // textPrimary - it is data, not decoration, and the header amber
     // competed with the single filled Log set CTA. Same type.num role.
     // Clean-up (D220): the clock is SessionClock, tabular title numerals in
-    // primary ink. Re-pinned (D220 addendum 7): the approved 2026-08-18
-    // header's "Elapsed" overline over the numerals, no pill, no bold.
+    // primary ink. Re-pinned (D220 addendum 11): the clock is a toolbar
+    // tool, the numerals over an "Elapsed" caption in the tools' caption
+    // style, no pill, no bold, no overline.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textPrimary },");
-    expect(CLOCK).toContain('label: { ...t.type.overline, color: t.colors.textMuted },');
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), lineHeight: GLYPH_LINE, color: t.colors.textPrimary },");
+    expect(CLOCK).toContain('label: { ...t.type.caption, color: t.colors.textSecondary },');
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
