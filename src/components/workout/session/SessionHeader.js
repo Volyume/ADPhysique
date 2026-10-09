@@ -8,7 +8,7 @@
  * note (founder device verdict 2026-10-08: no second note control here).
  *
  * Props
- *   name     the session title, at the h2 role
+ *   name     the session title, at the title role (semibold)
  *   note     the saved session note; empty, blank or absent shows nothing
  *   onNotes  called with no arguments
  *
@@ -26,7 +26,9 @@ import { touchTarget } from '../../../styles/layout';
 export default function SessionHeader({ name, note, onNotes }) {
   const t = useTheme();
   const live = useMemo(() => ({
-    title: { ...t.type.h2, color: t.colors.textPrimary },
+    // The session name is a label over the cards, not a page heading
+    // (founder render verdict 2026-10-09: h2 was too big).
+    title: { ...t.type.w(t.type.title, 'semibold'), color: t.colors.textPrimary },
     noteText: { ...t.type.bodySm, color: t.colors.textMuted },
   }), [t]);
 

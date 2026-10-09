@@ -1,7 +1,8 @@
 /**
  * SessionHeader (12-BUILD-SPEC sections 2 and 3, register D220). Pins: the title
- * at the h2 role, the placeholder and the real note, the note line as a 48 dp
- * button that calls onNotes, the glyph, and the token-only source guard.
+ * at the title role (semibold; a label over the cards, not an h2 page heading,
+ * founder render verdict 2026-10-09), no placeholder, the real note as a 48 dp
+ * button that calls onNotes, no glyph, and the token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
@@ -25,13 +26,13 @@ function allText(node) {
 const noteButton = (tree) => hosts(tree, (p) => p.accessibilityRole === 'button')[0];
 
 describe('SessionHeader', () => {
-  test('the title is a header at the h2 role in primary ink', () => {
+  test('the title is a header at the title role, semibold, in primary ink', () => {
     const tree = render({});
     const title = hosts(tree, (p) => p.accessibilityRole === 'header')[0];
     expect(allText(title)).toEqual(['Upper A']);
     const s = flat(title.props.style);
-    expect(s.fontSize).toBe(type.h2.fontSize);
-    expect(s.fontFamily).toBe(type.h2.fontFamily);
+    expect(s.fontSize).toBe(type.title.fontSize);
+    expect(s.fontFamily).toBe(type.w(type.title, 'semibold').fontFamily);
     expect(s.color).toBe(colors.textPrimary);
   });
 

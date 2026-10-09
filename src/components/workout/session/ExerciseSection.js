@@ -3,22 +3,28 @@
  *
  * One exercise as a house card on the session page (12-BUILD-SPEC sections
  * 1.3, 2, 2a and 3, register D220; restyled to the app's own visual language
- * on the founder's device verdict, D220 addendum 7). Three states:
- *   active    the 56 dp header, the
- *             children (the set table and any banners the screen passes), then
- *             the 52 dp footer: Add set, Swap and the overflow
+ * on the founder's device verdict, D220 addendum 7; the header redrawn on the
+ * render verdict, addendum 9). Three states:
+ *   active    the 56 dp header, then the tools row (Guide, History, Rest
+ *             length: glyph over caption, the toolbar's own grammar), the
+ *             children (the set table and any banners the screen passes),
+ *             then the 52 dp footer: Add set, Swap and the overflow
  *   done      the header with a green check and "{n} sets"; nothing else
- *   upcoming  the header and its rest-length button; nothing else
+ *   upcoming  the header alone (with "{done} of {total} sets" once partly
+ *             done); nothing else
  * Only the active section mounts its children, so a session of six exercises
- * is one table and five headers.
+ * is one table and five headers. The header is the order badge and the name
+ * on ONE line, the whole width; nothing sits after the name but the state.
  *
- * Header controls, one callback each (nothing is inferred from the state):
- *   the index and name, and the empty space after the chevron  onPressHeader
- *   the chevron after the name                                  onDetails
- *   the square timer button (active and upcoming)               onRestLength
- *   the square history button beside it                          onHistory
- * onPressHeader is what makes an exercise the active one; whether it does
- * anything on the exercise that is already active is the screen's call.
+ * Callbacks, one each (nothing is inferred from the state):
+ *   the whole header                        onPressHeader
+ *   the Guide tool (the exercise's guide)   onDetails
+ *   the Rest length tool                    onRestLength
+ *   the History tool                        onHistory
+ * A tool renders only when its callback is given, and only on the active
+ * section. onPressHeader is what makes an exercise the active one; whether
+ * it does anything on the exercise that is already active is the screen's
+ * call.
  *
  * The bests line of section 2a (last session, heaviest, best at today's
  * weight) is gone (founder render verdict 2026-10-08: "looks stupid out of
@@ -54,19 +60,34 @@ import Button from '../../Button';
 import { circle, iconSize, radius, spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
-// Section header 56, footer 52, chevron 16 (the app's disclosure size); the
-// order badge is the plan detail's 32 dp circle.
+// Section header 56, footer 52; the done mark 16 (the list's small glyph);
+// the order badge is the plan detail's 32 dp circle; a tool is the toolbar's
+// 22 dp glyph over a caption, 48 dp tall.
 const HEADER_MIN_HEIGHT = 56;
 const FOOTER_MIN_HEIGHT = 52;
-const CHEVRON = 16;
+const DONE_GLYPH = 16;
+const TOOL_GLYPH = 22;
 const COUNTDOWN_HEIGHT = 2;
 const ORDER_BADGE = 32;
-// Header chevron: a 16 dp glyph, taken to a 48 dp target by its slop.
-const CHEVRON_HIT_SLOP = { top: 16, bottom: 16, left: 16, right: 16 };
+const TOOL_WIDTH = 56;
 
 
 function setWord(count) {
   return count === 1 ? 'set' : 'sets';
+}
+
+function Tool({ icon, label, spoken, onPress, live, glyphColor }) {
+  return (
+    <TouchableOpacity
+      style={styles.tool}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={spoken}
+    >
+      <Ionicons name={icon} size={TOOL_GLYPH} color={glyphColor} />
+      <Text style={live.toolLabel} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
 }
 
 function CountdownLine({ ms, reduceMotion, color }) {
@@ -133,6 +154,7 @@ export default function ExerciseSection({
     index: { ...t.type.w(t.type.num('label'), 'bold'), color: t.colors.textSecondary },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     doneText: { ...t.type.label, color: t.colors.textSecondary },
+    toolLabel: { ...t.type.caption, color: t.colors.textSecondary },
     nameSkipped: { color: t.colors.textMuted },
     group: { ...t.type.caption, color: t.colors.textMuted },
     hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
@@ -144,81 +166,50 @@ export default function ExerciseSection({
 
   return (
     <View style={[styles.section, live.section]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.titleTap}
-          onPress={onPressHeader}
-          disabled={!onPressHeader}
-          accessibilityRole={onPressHeader ? 'button' : 'header'}
-          accessibilityLabel={`Exercise ${index}, ${name}${groupLabel ? `, ${groupLabel.toLowerCase()}` : ''}${skipped ? ', left out for time' : ''}${!isActive && !isDone && doneCount > 0 && totalSetCount ? `, ${doneCount} of ${totalSetCount} sets done` : ''}`}
-          accessibilityHint={isActive ? undefined : 'Makes this the current exercise'}
-          accessibilityState={{ expanded: isActive }}
-        >
-          <View style={[styles.indexBadge, live.indexBadge]}>
-            <Text style={live.index}>{index}</Text>
-          </View>
-          <View style={styles.nameBlock}>
-            <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={2}>{name}</Text>
-            {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
-            {!isActive && !isDone && doneCount > 0 && totalSetCount ? (
-              <Text style={live.group} numberOfLines={1}>{`${doneCount} of ${totalSetCount} sets`}</Text>
-            ) : null}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.chevron}
-          onPress={onDetails}
-          hitSlop={CHEVRON_HIT_SLOP}
-          accessibilityRole="button"
-          accessibilityLabel={isActive ? `Details for ${name}` : `Make ${name} current`}
-        >
-          <Ionicons name="chevron-forward" size={CHEVRON} color={t.colors.textMuted} />
-        </TouchableOpacity>
-        {/* The empty space between the chevron and the right-hand control is
-            part of the header target, so the whole row activates the exercise.
-            It carries no label of its own: the title button already names it. */}
-        <TouchableOpacity
-          style={styles.headerFill}
-          onPress={onPressHeader}
-          accessible={false}
-          importantForAccessibility="no"
-        />
+      <TouchableOpacity
+        style={styles.header}
+        onPress={onPressHeader}
+        disabled={!onPressHeader}
+        accessibilityRole={onPressHeader ? 'button' : 'header'}
+        accessibilityLabel={`Exercise ${index}, ${name}${groupLabel ? `, ${groupLabel.toLowerCase()}` : ''}${skipped ? ', left out for time' : ''}${!isActive && !isDone && doneCount > 0 && totalSetCount ? `, ${doneCount} of ${totalSetCount} sets done` : ''}`}
+        accessibilityHint={isActive ? undefined : 'Makes this the current exercise'}
+        accessibilityState={{ expanded: isActive }}
+      >
+        <View style={[styles.indexBadge, live.indexBadge]}>
+          <Text style={live.index}>{index}</Text>
+        </View>
+        <View style={styles.nameBlock}>
+          <Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>
+          {groupLabel ? <Text style={live.group} numberOfLines={1}>{groupLabel}</Text> : null}
+        </View>
         {isDone ? (
-          <View
-            style={styles.done}
-            accessible
-            accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}
-          >
-            <Ionicons name="checkmark-circle" size={CHEVRON} color={t.colors.success} />
+          <View style={styles.done} accessible accessibilityLabel={`${doneCount} ${setWord(doneCount)} done`}>
+            <Ionicons name="checkmark-circle" size={DONE_GLYPH} color={t.colors.success} />
             <Text style={live.doneText}>{`${doneCount} ${setWord(doneCount)}`}</Text>
           </View>
         ) : skipped ? (
           <Text style={live.doneText} accessible accessibilityLabel="Left out for time">Left out</Text>
-        ) : (
-          <View style={styles.squares}>
-            {onHistory ? (
-              <TouchableOpacity
-                style={styles.square}
-                onPress={onHistory}
-                accessibilityRole="button"
-                accessibilityLabel={`History and records for ${name}`}
-              >
-                <Ionicons name="stats-chart-outline" size={iconSize.md} color={t.colors.textSecondary} />
-              </TouchableOpacity>
-            ) : null}
-            {onRestLength ? (
-              <TouchableOpacity
-                style={styles.square}
-                onPress={onRestLength}
-                accessibilityRole="button"
-                accessibilityLabel={`Rest length for ${name}`}
-              >
-                <Ionicons name="timer-outline" size={iconSize.md} color={t.colors.textSecondary} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        )}
-      </View>
+        ) : !isActive && doneCount > 0 && totalSetCount ? (
+          <Text style={live.doneText} numberOfLines={1}>{`${doneCount} of ${totalSetCount} sets`}</Text>
+        ) : null}
+      </TouchableOpacity>
+
+      {/* The tools, the toolbar's grammar (glyph over caption, chromeless):
+          each says what it is, where a bare chevron did not (founder render
+          verdict 2026-10-09). */}
+      {isActive && (onDetails || onHistory || onRestLength) ? (
+        <View style={styles.tools}>
+          {onDetails ? (
+            <Tool icon="information-circle-outline" label="Guide" spoken={`Guide for ${name}`} onPress={onDetails} live={live} glyphColor={t.colors.textSecondary} />
+          ) : null}
+          {onHistory ? (
+            <Tool icon="stats-chart-outline" label="History" spoken={`History and records for ${name}`} onPress={onHistory} live={live} glyphColor={t.colors.textSecondary} />
+          ) : null}
+          {onRestLength ? (
+            <Tool icon="timer-outline" label="Rest length" spoken={`Rest length for ${name}`} onPress={onRestLength} live={live} glyphColor={t.colors.textSecondary} />
+          ) : null}
+        </View>
+      ) : null}
 
       {isActive ? children : null}
 
@@ -271,15 +262,8 @@ const styles = StyleSheet.create({
     minHeight: HEADER_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.xs,
-  },
-  titleTap: {
-    flexShrink: 1,
-    minHeight: touchTarget.minimum,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   indexBadge: {
     width: ORDER_BADGE,
@@ -288,18 +272,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nameBlock: { flexShrink: 1 },
+  nameBlock: { flex: 1, minWidth: 0 },
   name: { flexShrink: 1 },
-  chevron: { marginLeft: spacing.xs },
-  headerFill: { flex: 1, alignSelf: 'stretch' },
-  squares: { flexDirection: 'row', alignItems: 'center' },
-  // Chromeless glyph targets, as the header's X and Finish and the "..."
-  // overflow on this screen (founder order 2026-08-18).
-  square: {
-    width: touchTarget.minimum,
-    height: touchTarget.minimum,
+  // The tools row: the toolbar's tools, left-aligned under the name.
+  tools: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  tool: {
+    minWidth: TOOL_WIDTH,
+    minHeight: touchTarget.minimum,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xxs,
   },
   done: {
     flexDirection: 'row',

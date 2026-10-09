@@ -219,9 +219,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // (founder device verdict 2026-10-08, D220 addendum 7): the plan
     // detail's exercise row, bodyStrong in primary ink, not amber.
     expect(SECTION).toContain('name: { ...t.type.bodyStrong, color: t.colors.textPrimary },');
-    expect(SECTION).toContain('<Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={2}>{name}</Text>');
-    // The title tap is the section header's 48 dp row.
-    expect(SECTION).toMatch(/titleTap: \{[\s\S]{0,120}?minHeight: touchTarget\.minimum,/);
+    // D220 addendum 9 (founder render verdict): the name holds ONE line and
+    // the whole header is the tap, a 56 dp row.
+    expect(SECTION).toContain('<Text style={[styles.name, live.name, skipped && live.nameSkipped]} numberOfLines={1}>{name}</Text>');
+    expect(SECTION).toMatch(/header: \{[\s\S]{0,120}?minHeight: HEADER_MIN_HEIGHT,/);
+    expect(SECTION).toContain('const HEADER_MIN_HEIGHT = 56;');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.exerciseNameChevron}');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
