@@ -21,8 +21,9 @@
 // library-wide evidence surface. No behaviour change here.
 import { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, type, iconSize } from '../styles/theme';

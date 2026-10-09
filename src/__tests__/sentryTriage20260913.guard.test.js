@@ -122,7 +122,8 @@ describe('VOLYUME-2G / 2J: a deferred database stands sync down quietly', () => 
 
   test('the navigator treats a deferred open as not yet, never as the failure screen, and re-attempts on foreground', () => {
     const NAV = read('src/navigation/RootNavigator.js');
-    expect(NAV).toMatch(/import \{ View, Text, StyleSheet, AppState \} from 'react-native';/);
+    // D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+    expect(NAV).toMatch(/import \{ View, StyleSheet, AppState \} from 'react-native';/);
     const attempt = NAV.slice(NAV.indexOf('const attemptDbInit = useCallback(async () => {'), NAV.indexOf('const attemptDbInitRef = useRef(null);'));
     const deferred = attempt.indexOf('if (e?.dbCryptoDeferred === true) {');
     const failed = attempt.indexOf('setDbInitFailed(true);');

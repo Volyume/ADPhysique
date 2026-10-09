@@ -42,8 +42,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, Pressable, Share,
+  View, StyleSheet, RefreshControl, Pressable, Share,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 // E8 (founder decision 2026-07-02): every list in the app renders

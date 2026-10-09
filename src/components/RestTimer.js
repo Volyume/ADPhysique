@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, Animated, Easing, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, AppState, Platform, Animated, Easing, AccessibilityInfo } from 'react-native';
+import Text from './Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';

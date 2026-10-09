@@ -38,8 +38,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions,
+  View, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions,
 } from 'react-native';
+import Text from './Text';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
 } from 'react-native-reanimated';

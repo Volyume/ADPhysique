@@ -33,7 +33,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   Pressable,
   PanResponder,
   Platform,
@@ -41,6 +40,7 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
+import Text from './Text';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';

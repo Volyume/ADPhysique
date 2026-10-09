@@ -38,7 +38,8 @@
  *
  * Live theme (`useTheme`): the frozen block holds layout only.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import Card from './Card';
 import DayDots from './community/DayDots';
 import { spacing } from '../styles/theme';

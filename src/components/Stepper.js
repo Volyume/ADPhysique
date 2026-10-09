@@ -10,7 +10,8 @@
  * `unit`); pass `formatValue` to override the display.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import { colors, fontWeight, spacing, radius, fontFamily } from '../styles/theme';

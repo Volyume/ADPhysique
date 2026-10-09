@@ -24,7 +24,8 @@
  * module — display layer only).
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import Card from '../Card';

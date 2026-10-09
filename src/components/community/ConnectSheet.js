@@ -30,7 +30,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import BottomSheet from '../BottomSheet';
 import ModalHeader from '../ModalHeader';
 import Button from '../Button';

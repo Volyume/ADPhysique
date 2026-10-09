@@ -42,7 +42,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import Text from './Text';
 import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';

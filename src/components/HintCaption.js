@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import Text from './Text';
 import { colors, spacing, type, fontWeight } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 

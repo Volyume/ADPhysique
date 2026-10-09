@@ -5,7 +5,8 @@
  * unchanged for every other caller (surface2, 1.5 dp `border`, 50 dp).
  */
 import { create, act } from 'react-test-renderer';
-import { TextInput } from 'react-native';
+// D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+import TextInput from '../TextInput';
 
 import TextField from '../TextField';
 import ComposerInput from '../community/ComposerInput';

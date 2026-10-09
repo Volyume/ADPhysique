@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from './Text';
 import { colors, fontSize, fontWeight, spacing, radius, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { annualSavingsPct } from '../lib/payments/catalogue';

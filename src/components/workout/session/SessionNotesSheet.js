@@ -26,7 +26,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Keyboard } from 'react-native';
+import { View, StyleSheet, Keyboard } from 'react-native';
+import Text from '../../Text';
 import BottomSheet from '../../BottomSheet';
 import Button from '../../Button';
 import TextField from '../../TextField';

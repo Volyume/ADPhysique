@@ -39,7 +39,8 @@
  * row being edited is never hidden. The open or closed state lives here.
  */
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { iconSize, spacing, fontScaleCaps } from '../../../styles/theme';

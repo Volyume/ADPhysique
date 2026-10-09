@@ -35,9 +35,10 @@ import {
   useState, useEffect, useMemo, useCallback, useRef,
 } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform,
+  View, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform,
   useWindowDimensions,
 } from 'react-native';
+import Text from './Text';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';

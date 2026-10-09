@@ -74,7 +74,9 @@
  * ring on the card, pending a subtle ring.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
+import TextInput from '../../TextInput';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { alpha, circle, radius, spacing, withAlpha, fontScaleCaps } from '../../../styles/theme';

@@ -13,7 +13,8 @@
  * a label and an onPress the caller supplies. CommunityHeaderAction
  * itself is untouched.
  */
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, circle, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

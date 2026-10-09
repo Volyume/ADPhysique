@@ -14,7 +14,8 @@
  * learning - those campaigns arrive later; this screen manages state.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, AccessibilityInfo } from 'react-native';
+import Text from '../components/Text';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';

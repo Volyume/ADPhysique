@@ -1,7 +1,8 @@
 import { useRef, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, Animated, Easing, Image, TouchableOpacity, useWindowDimensions,
+  View, StyleSheet, Animated, Easing, Image, TouchableOpacity, useWindowDimensions,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fontSize, spacing, radius, type, motion, withAlpha } from '../styles/theme';

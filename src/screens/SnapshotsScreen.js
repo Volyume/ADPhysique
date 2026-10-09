@@ -8,7 +8,8 @@
 // handleRestoreBackup: it replaces all current data and cannot be undone.
 
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';

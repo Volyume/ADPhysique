@@ -25,7 +25,8 @@
 //     read).
 
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
+import Text from './Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fontWeight, spacing, radius, motion, letterSpacing, fontFamily } from '../styles/theme';

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  View, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';

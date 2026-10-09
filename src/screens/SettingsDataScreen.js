@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, Switch } from 'react-native';
+import { View, Switch } from 'react-native';
+import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import * as FileSystem from 'expo-file-system/legacy';

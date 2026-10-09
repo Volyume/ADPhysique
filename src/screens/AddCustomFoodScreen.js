@@ -10,7 +10,8 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../components/Text';
 // Campaign item 14 (D25): react-native-keyboard-controller outside sheets.
 // KeyboardAwareScrollView replaces the ScrollView + KeyboardAvoidingView
 // pair below (proper avoidance, auto-scroll to the focused field);

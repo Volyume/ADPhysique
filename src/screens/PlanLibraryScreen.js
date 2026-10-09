@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import Text from '../components/Text';
 // E8 perf: the vertical plans list recycles via FlashList; the small
 // horizontal category chip row stays a FlatList (tiny, no gain).
 import { FlashList } from '@shopify/flash-list';

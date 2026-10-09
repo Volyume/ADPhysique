@@ -40,7 +40,8 @@
  * the keyboard.
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { iconSize, spacing, fontScaleCaps } from '../../../styles/theme';

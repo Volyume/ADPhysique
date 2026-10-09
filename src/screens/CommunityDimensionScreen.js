@@ -53,8 +53,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Linking, Share,
+  View, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Linking, Share,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../Text';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';

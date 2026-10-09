@@ -34,7 +34,8 @@
  *              recoveryLearningCopy)
  */
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, radius, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

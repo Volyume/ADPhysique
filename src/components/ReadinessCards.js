@@ -43,7 +43,8 @@
 import {
   useState, useCallback, useEffect, useMemo, useRef,
 } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, spacing, radius, type } from '../styles/theme';

@@ -1,5 +1,7 @@
 import { forwardRef, useState, useContext, useId } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
+import Text from './Text';
+import TextInput from './TextInput';
 import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import FieldError from './FieldError';

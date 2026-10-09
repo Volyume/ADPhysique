@@ -4,7 +4,8 @@
 // data dependencies, no personalised state; "Understood" is the only action.
 // The caller owns the seen/dismiss persistence (progressScanPreferences.js)
 // and mounts this only while it should show; it never blocks any other flow.
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from './Button';
 import { colors, spacing, type } from '../styles/theme';

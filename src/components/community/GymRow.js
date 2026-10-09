@@ -18,7 +18,8 @@
  * stays a pill: it is a state, not decoration.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from '../PressableCard';
 import { spacing, type, iconSize, radius, colors } from '../../styles/theme';

@@ -10,7 +10,8 @@
  * handlers, so it can wire capture + button-enable state however it needs.
  */
 
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Text from './Text';
 import { colors, spacing, fontSize, fontWeight, radius, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { selection as hapticSelection } from '../lib/haptics';

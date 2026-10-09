@@ -37,7 +37,8 @@
  *                     recipient of an unanswered session suggestion only
  */
 
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PostCard from './PostCard';
 import Button from '../Button';

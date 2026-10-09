@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';

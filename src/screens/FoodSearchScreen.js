@@ -19,9 +19,10 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, StyleSheet, TouchableOpacity,
   ActivityIndicator, ScrollView,
 } from 'react-native';
+import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';

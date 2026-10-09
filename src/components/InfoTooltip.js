@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, AccessibilityInfo, findNodeHandle,
+  View, StyleSheet, TouchableOpacity, Modal, AccessibilityInfo, findNodeHandle,
 } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type } from '../styles/theme';

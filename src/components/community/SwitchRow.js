@@ -15,7 +15,8 @@
  *   onValueChange, disabled
  *   accessibilityLabel  overrides the title as the switch's label
  */
-import { View, Text, Switch, StyleSheet } from 'react-native';
+import { View, Switch, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../hooks/useTheme';
 import { spacing, radius, iconSize, withAlpha, alpha } from '../../styles/theme';

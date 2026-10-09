@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Switch, StyleSheet, Platform } from 'react-native';
+import { View, Switch, StyleSheet, Platform } from 'react-native';
+import Text from '../components/Text';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import Ionicons from '@expo/vector-icons/Ionicons';

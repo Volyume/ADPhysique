@@ -14,7 +14,8 @@
  * banner/handlers are untouched; only the collapsed/expanded shell moves).
  */
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, radius, type, iconSize, fontScaleCaps } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';

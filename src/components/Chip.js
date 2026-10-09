@@ -8,7 +8,8 @@
  * Pass `selected` + `onPress`. `icon` is an optional leading Ionicons name.
  */
 
-import { Platform, Text, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import { spacing, radius, fontScaleCaps } from '../styles/theme';

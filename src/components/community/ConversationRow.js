@@ -30,7 +30,8 @@
  *   inBand        D221 V1: the row carries the band's gutter itself
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import PressableCard from '../PressableCard';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import { spacing, type, colors, circle } from '../../styles/theme';

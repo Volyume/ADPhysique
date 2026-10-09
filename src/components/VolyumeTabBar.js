@@ -35,7 +35,8 @@
  * calm coach-update treatment rather than reading as an alarm.
  */
 import { useEffect, useState } from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import Text from './Text';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withSequence,
 } from 'react-native-reanimated';

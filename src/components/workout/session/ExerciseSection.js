@@ -50,7 +50,8 @@
  * space the cards, as on every other list in the app.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Text from '../../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { circle, iconSize, radius, spacing, fontScaleCaps } from '../../../styles/theme';

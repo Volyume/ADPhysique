@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
+import Text from '../components/Text';
 import Constants from 'expo-constants';
 import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

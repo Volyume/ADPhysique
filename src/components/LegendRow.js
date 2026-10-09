@@ -36,7 +36,8 @@
  * restart. No amber: a legend names a state, it is never the thing to do.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from './Text';
 import { spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 

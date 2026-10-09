@@ -13,7 +13,8 @@
 // non-component code (lib/*), exactly like Alert.alert. Mount <AppAlertHost />
 // once near the app root.
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Modal, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import Text from './Text';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, Switch, StyleSheet } from 'react-native';
+import { View, Switch, StyleSheet } from 'react-native';
+import Text from '../components/Text';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, withAlpha, alpha, spacing, radius, type } from '../styles/theme';

@@ -22,7 +22,8 @@
  * weight/food-adjacent number, so no suppression applies.
  */
 import { useEffect, useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, {
   SlideInDown, SlideOutDown,

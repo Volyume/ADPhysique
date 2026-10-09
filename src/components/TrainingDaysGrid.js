@@ -39,7 +39,8 @@
  * Live theme (`useTheme`): the frozen block holds layout only.
  */
 
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import Text from './Text';
 import { spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import LegendRow from './LegendRow';

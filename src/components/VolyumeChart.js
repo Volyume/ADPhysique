@@ -42,7 +42,8 @@
 // folds "Personal record" into the scrub announcement for a marked point.
 
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
+import { View, StyleSheet, AccessibilityInfo } from 'react-native';
+import Text from './Text';
 import Svg, {
   Path, Line, Circle, Rect, Text as SvgText, Defs, LinearGradient, Stop,
 } from 'react-native-svg';

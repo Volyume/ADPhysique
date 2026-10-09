@@ -54,7 +54,8 @@
  *             assistive tech.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { spacing, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { daysLabel } from '../../lib/community';

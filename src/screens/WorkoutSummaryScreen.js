@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import Text from '../components/Text';
 // Campaign item 14 (D25): react-native-keyboard-controller for the main
 // content scroll's inline notes fields (which previously had NO keyboard
 // avoidance at all). KeyboardAwareScrollView replaces the main content

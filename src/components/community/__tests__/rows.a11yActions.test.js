@@ -6,7 +6,9 @@
  * and a label on every inner control.
  */
 import { create, act } from 'react-test-renderer';
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
+// D104-1 phase 2b (2026-10-09): Text/TextInput are the house primitives
+import Text from '../../Text';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 const mockToast = { show: jest.fn() };

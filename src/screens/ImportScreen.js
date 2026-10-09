@@ -13,8 +13,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,
+  View, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';

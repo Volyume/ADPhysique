@@ -30,7 +30,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../../Text';
 import BottomSheet from '../../BottomSheet';
 import Chip from '../../Chip';
 import SegmentedControl from '../../SegmentedControl';

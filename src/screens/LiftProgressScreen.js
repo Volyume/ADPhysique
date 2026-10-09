@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, RefreshControl,
+  View, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import Text from '../components/Text';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';

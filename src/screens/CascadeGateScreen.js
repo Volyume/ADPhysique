@@ -24,9 +24,10 @@
  */
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet,
+  View, StyleSheet,
   ScrollView,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

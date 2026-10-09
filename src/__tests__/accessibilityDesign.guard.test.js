@@ -68,6 +68,37 @@ describe('accessibility and design consistency guardrails', () => {
     expect(display).not.toContain('Volyume respects it too.');
   });
 
+  test('every Text and TextInput is the house primitive (D104-1, phase 2b)', () => {
+    // D104-1 (Campaign 27 phase 2b stage 2, 2026-10-09): React 19's runtime
+    // dropped Text.defaultProps, so the reading cap only reaches a piece of
+    // copy if it renders through src/components/Text.js or TextInput.js.
+    // Any other file importing Text or TextInput from 'react-native' (in any
+    // form, aliased or not) silently opts out of the cap. The two
+    // primitives wrap the real ones, and the allowlist below is the only
+    // other place allowed to; each entry carries its reason.
+    const RN_TEXT_IMPORT_ALLOWLIST = {
+      'src/components/Text.js': 'the primitive itself wraps the real Text',
+      'src/components/TextInput.js': 'the primitive itself wraps the real TextInput',
+      'src/styles/fonts.js': 'patches the real Text and TextInput defaultProps (house font family), so it needs the originals',
+    };
+    const importRe = /import\s*\{([^}]*)\}\s*from\s*['"]react-native['"]/g;
+    const offences = [];
+    for (const file of listJsFiles(SRC)) {
+      const rel = relative(file);
+      if (/(^|\/)__mocks__(\/|$)/.test(rel)) continue;
+      if (Object.prototype.hasOwnProperty.call(RN_TEXT_IMPORT_ALLOWLIST, rel)) continue;
+      const text = fs.readFileSync(file, 'utf8');
+      for (const match of text.matchAll(importRe)) {
+        const names = match[1].split(',').map((n) => n.trim().split(/\s+as\s+/)[0]);
+        if (names.includes('Text') || names.includes('TextInput')) {
+          offences.push(rel);
+          break;
+        }
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+
   test('no screen re-introduces the blanket 1.3x text-scaling cap (EP-14)', () => {
     // EP-14 (end-user-polish audit 2026-07-12, founder-ruled real fix):
     // ~2,200 Text/TextInput elements hard-capped system text scaling at 1.3x

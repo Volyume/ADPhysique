@@ -12,7 +12,8 @@
  *   flush     drop the inline gutter, for a header inside a sheet or a body
  *             that already pays it (D221 lane 2B); additive
  */
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import Text from '../Text';
 import { spacing } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import SectionLabel from '../SectionLabel';

@@ -12,8 +12,9 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, Share,
+  View, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, Share,
 } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';

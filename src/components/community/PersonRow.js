@@ -68,7 +68,8 @@
  *                 label, so a screen reader can reach it.
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import PressableCard from '../PressableCard';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import DayDots, { currentDayKey } from './DayDots';

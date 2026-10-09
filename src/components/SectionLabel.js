@@ -1,4 +1,5 @@
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Text from './Text';
 import { colors, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 

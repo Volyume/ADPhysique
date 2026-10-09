@@ -21,8 +21,10 @@
 
 import { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  View, StyleSheet, TouchableOpacity,
 } from 'react-native';
+import Text from '../Text';
+import TextInput from '../TextInput';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../Button';
 import ProfileAvatarMark from '../ProfileAvatarMark';

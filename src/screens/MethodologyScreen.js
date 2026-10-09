@@ -19,7 +19,8 @@
 // re-reviewed against weeklyCoach.js / nutritionEngine.js.
 
 import { useState, useEffect } from 'react';
-import { Text, StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

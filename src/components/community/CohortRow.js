@@ -34,7 +34,8 @@
  *            before the chevron; nothing when 0 or absent
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from '../PressableCard';
 import AvatarStack from './AvatarStack';

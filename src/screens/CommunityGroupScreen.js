@@ -26,7 +26,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import Text from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';

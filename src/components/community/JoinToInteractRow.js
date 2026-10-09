@@ -16,7 +16,8 @@
  * screen's content already pays `spacing.lg`).
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from '../PressableCard';
 import useTheme from '../../hooks/useTheme';

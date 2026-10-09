@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../Text';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';

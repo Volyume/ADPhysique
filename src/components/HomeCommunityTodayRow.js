@@ -17,7 +17,8 @@
  * HomeLastSessionCard already uses for a slim full-bleed row (no new
  * card pattern, no new amber).
  */
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';

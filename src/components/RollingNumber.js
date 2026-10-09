@@ -14,7 +14,8 @@
  * Reduce Motion renders the final value instantly as a plain Text.
  */
 import { useEffect } from 'react';
-import { TextInput, Text } from 'react-native';
+import Text from './Text';
+import TextInput from './TextInput';
 import Animated, {
   useSharedValue, useAnimatedProps, withDelay, withTiming, Easing,
 } from 'react-native-reanimated';

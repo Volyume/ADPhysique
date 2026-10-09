@@ -21,8 +21,9 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView,
+  View, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView,
 } from 'react-native';
+import Text from './Text';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';

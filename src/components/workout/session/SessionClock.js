@@ -25,7 +25,8 @@
  * rule, pinned for the rest timer in p9Talkback.guard.test.js).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { AppState, Text } from 'react-native';
+import { AppState } from 'react-native';
+import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
 import { fontScaleCaps } from '../../../styles/theme';
 
