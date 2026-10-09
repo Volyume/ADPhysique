@@ -8,8 +8,10 @@
  * caption, no container; the glyphs are text ink, and Finish alone is amber
  * (the one action). The X sits on the page's left margin and Finish on its
  * right, the three tools evenly between them, so nothing crowds and nothing
- * gaps. The session name and the clock are NOT here: they sit on the page's
- * title line (SessionHeader), the founder's ruling.
+ * gaps. A 2 dp amber line closes the bar, the same mark as the rest strip's
+ * drain line (founder, 2026-10-09). The session name and the clock are NOT
+ * here: they sit on the page's title line (SessionHeader), the founder's
+ * ruling.
  *
  * Presentation only: every action is a callback the screen owns, so the
  * cancel and finish contracts (BEHAVIOURAL-CONTRACT sections 1 and 6) are
@@ -30,6 +32,8 @@ import { iconSize, spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
 const BAR_MIN_HEIGHT = 56;
+// The rest strip's drain line is 2 dp; the bar's closing line matches it.
+const RULE_HEIGHT = 2;
 
 function Control({ testID, icon, accessibilityLabel, accessibilityHint, onPress, color, disabled, busy, spinnerColor }) {
   return (
@@ -57,8 +61,10 @@ export default function SessionToolbar({
   finishBusy = false,
 }) {
   const t = useTheme();
+  // The bar closes with a 2 dp amber line, the rest strip's drain line in
+  // its full state (founder, 2026-10-09): the same mark top and bottom.
   const live = useMemo(() => ({
-    bar: { borderBottomColor: t.colors.borderSubtle },
+    bar: { borderBottomColor: t.colors.primaryFill },
   }), [t]);
   const busy = !!finishBusy;
   const ink = t.colors.textPrimary;
@@ -115,7 +121,7 @@ const styles = StyleSheet.create({
     // 4 dp in, so the 24 dp glyphs of the 48 dp end targets sit on the
     // page's 16 dp margins (D220 addendum 13).
     paddingHorizontal: spacing.xs,
-    borderBottomWidth: 1,
+    borderBottomWidth: RULE_HEIGHT,
   },
   control: {
     width: touchTarget.minimum,
