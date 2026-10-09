@@ -481,6 +481,11 @@ const narrowFontSize = Object.freeze({ xxl: 22, xxxl: 29, display: 36 });
 export function resolveTheme(prefs) {
   const themeName = resolveThemeChoice(prefs);
   const narrow = !!prefs?.narrow;
+  // D220 addendum 34: the row's facts take a compact form when text is scaled
+  // (the app's Larger text, or the phone's own size above 1.05x), so a fixed
+  // column never truncates them.
+  const fontScale = Number(prefs?.fontScale);
+  const textScaled = !!prefs?.largerText || (Number.isFinite(fontScale) && fontScale > 1.05);
   const isLight = themeName === 'light';
 
   const resolvedColors = { ...baseColors };
@@ -533,6 +538,7 @@ export function resolveTheme(prefs) {
     // D104-2: the bucket and the screen padding it sets (lg, md when narrow).
     narrow,
     screenPadding: narrow ? spacing.md : spacing.lg,
+    textScaled,
     type: buildTypeRoles(resolvedFontSize),
   };
 }

@@ -38,8 +38,13 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
     expect(fn).toContain('setCurrentExerciseIndex(i);');
     expect(fn).toContain("audit('workout.exercise.jump'");
     // Nothing else: no skip flag, no order mutation, no set writes.
-    expect(fn).not.toContain('_timeCrunchSkipped');
-    expect(fn).not.toContain('setWorkoutExercises');
+    // D220 addendum 34 (2026-10-09, founder delegation): the ONE exception
+    // to "a jump never writes _timeCrunchSkipped" is a tap on a slot Time
+    // Crunch left out, which brings that slot back (an explicit choice to
+    // train it). Nothing else is reordered or skipped.
+    expect(fn).toContain("audit('workout.exercise.unskip'");
+    expect(fn).toMatch(/idx === i && e\?\._timeCrunchSkipped \? \{ \.\.\.e, _timeCrunchSkipped: false \} : e/);
+    expect(fn).not.toMatch(/_timeCrunchSkipped: true/);
     expect(fn).not.toContain('handleCompleteSet');
     expect(fn).not.toContain('handleNextExercise');
   });
