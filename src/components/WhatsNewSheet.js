@@ -142,7 +142,7 @@ export const WHATS_NEW = {
   // notice the policy promises rides inside the Community line, since the
   // sheet shows only the running version's notes.
   '2.9.0': [
-    { icon: 'barbell-outline', text: 'Logging your workout is simpler. Each exercise shows your sets, with what you lifted last time next to each one. Type the weight and reps with your phone\'s keyboard, then tap the tick to save the set.' },
+    { icon: 'barbell-outline', text: 'The workout logger has been completely redesigned. It is cleaner, faster and easier to read: every exercise and set on one screen, what you lifted last time next to each set, your records marked as you beat them, and your phone\'s keyboard to type the numbers. Tap the tick to save a set.' },
     { icon: 'people-outline', text: 'Community has its own tab now. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],
 };
