@@ -28,14 +28,14 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // WorkoutBottomBar component; the screen passes safeBottom down and the
     // component applies the SAME padding contract. Both halves pinned so
     // neither side of the hand-off can drop the inset alone.
-    // RE-ANCHORED for the logger rebuild stage C (D220): the bar is retired.
-    // The keypad carries the inset while open (same padding contract) and a
-    // spacer of exactly safeBottom holds the bottom chrome clear of the
-    // gesture pill while it is closed.
-    expect(screen).toMatch(/<Keypad[\s\S]{0,1600}?safeBottom=\{safeBottom\}/);
-    expect(screen).toContain('{keypadOpen ? null : <View style={{ height: safeBottom }} />}');
-    const pad = read('components/workout/session/Keypad.js');
-    expect(pad).toMatch(/paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/);
+    // RE-ANCHORED for D220 addendum 18: the invented keypad is retired; the
+    // keyboard step bar carries the inset while a well is open (same padding
+    // contract) and a spacer of exactly safeBottom holds the bottom chrome
+    // clear of the gesture pill while none is.
+    expect(screen).toMatch(/<KeyboardBar[\s\S]{0,600}?safeBottom=\{safeBottom\}/);
+    expect(screen).toContain('{inputOpen ? null : <View style={{ height: safeBottom }} />}');
+    const bar = read('components/workout/session/KeyboardBar.js');
+    expect(bar).toContain('{ paddingBottom: Math.max(0, safeBottom) }');
   });
 
   test('the SafeAreaProvider actually receives initial metrics (R2 root cause)', () => {

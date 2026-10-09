@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, iconSize, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -50,9 +50,11 @@ const EXACT_ALARM_PROMPTED_KEY = '@volyume_exact_alarm_prompted';
 
 // Two deltas only (COMP-001): the −30/+30 pair added visual weight without
 // covering anything long-press-repeat can't. Holding ±15 repeats at 200 ms.
+// Drawn as the footer actions are (D220 addendum 16, option 2): a glyph and
+// the number, never a bare sign.
 const TIME_ADJUSTMENTS = [
-  { delta: -15, label: '−15' },
-  { delta: 15,  label: '+15' },
+  { delta: -15, icon: 'remove', label: '15' },
+  { delta: 15,  icon: 'add', label: '15' },
 ];
 
 export default function RestTimer() {
@@ -496,7 +498,7 @@ export default function RestTimer() {
             <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
         </View>
-        {TIME_ADJUSTMENTS.map(({ delta, label }) => {
+        {TIME_ADJUSTMENTS.map(({ delta, icon, label }) => {
           const isNeg = delta < 0;
           // One role for every control on the strip (D220 addendum 16).
           return (
@@ -511,6 +513,7 @@ export default function RestTimer() {
               accessibilityRole="button"
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
+              <Ionicons name={icon} size={iconSize.md} color={t.colors.textPrimary} />
               <Text style={[styles.adjBtnText, live.adjBtnText]}>{label}</Text>
             </TouchableOpacity>
           );
@@ -522,6 +525,7 @@ export default function RestTimer() {
           accessibilityLabel="Skip rest timer"
           accessibilityRole="button"
         >
+          <Ionicons name="play-skip-forward-outline" size={iconSize.md} color={t.colors.textPrimary} />
           <Text style={[styles.skipText, live.skipText]}>Skip</Text>
         </TouchableOpacity>
       </View>
@@ -581,6 +585,9 @@ const styles = StyleSheet.create({
   skipBtn: {
     minHeight: touchTarget.minimum,
     flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
@@ -589,7 +596,9 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum,
     minWidth: touchTarget.minimum,
     flexShrink: 0,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },

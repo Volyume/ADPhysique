@@ -44,13 +44,12 @@ import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 // docked keypad replaces the steppers and the system keyboard; the row sheet
 // is the row's overflow (note, edit, delete).
 import SetTable from '../components/workout/session/SetTable';
-import Keypad from '../components/workout/session/Keypad';
+import KeyboardBar from '../components/workout/session/KeyboardBar';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
 import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
 import { buildExerciseHistory } from '../lib/exerciseHistory';
-import { applyKey, stepValue, KEY_BACKSPACE, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
-import { pushDigit, popDigit, bufferToSeconds, secondsToBuffer, bufferToDisplay } from '../lib/timeEntry';
+import { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
@@ -384,23 +383,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // dependency) and cleared on unmount so a PR fired outside the logger
   // falls back to the toast's own safe-area offset.
   // Stage C (D220): the published inset is the ratcheted bottom chrome (the
-  // rest strip) PLUS the keypad's live height while it is open, so the PR
-  // toast docks above whichever is on screen and drops back when the pad
-  // closes. The ratchet and its ceiling apply to the chrome part only.
+  // rest strip) PLUS the keyboard step bar's live height while a well is
+  // open (D220 addendum 18), so the PR toast docks above whichever is on
+  // screen and drops back when the bar closes. The ratchet and its ceiling
+  // apply to the chrome part only.
   const chromeRatchetRef = useRef(0);
-  const keypadHeightRef = useRef(0);
+  const barHeightRef = useRef(0);
   const safeBottomRef = useRef(0);
   const publishBottomInset = useCallback(() => {
     const s = useAppStore.getState();
-    // The keypad carries the safe inset itself; the spacer does while closed.
-    const h = chromeRatchetRef.current + (keypadHeightRef.current || safeBottomRef.current);
+    // The step bar carries the safe inset itself; the spacer does while closed.
+    const h = chromeRatchetRef.current + (barHeightRef.current || safeBottomRef.current);
     if (h !== (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
   }, []);
-  const handleKeypadLayout = useCallback((e) => {
+  const handleBarLayout = useCallback((e) => {
     const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
     if (h < 0) return;
-    keypadHeightRef.current = h;
-    setKeypadHeight(h);
+    barHeightRef.current = h;
+    setBarHeight(h);
     publishBottomInset();
   }, [publishBottomInset]);
   const handleBottomChromeLayout = useCallback((e) => {
@@ -522,10 +522,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // after a well opens replaces its value, the keys after it append.
   const [entryField, setEntryField] = useState(null);
   const [editField, setEditField] = useState(null);
-  const [systemKeyboard, setSystemKeyboard] = useState(false);
-  const [timeBuffer, setTimeBuffer] = useState('');
   const [rowSheet, setRowSheet] = useState(null);
-  const entryReplaceRef = useRef(false);
   // Stage D (D220): the rest length behind a section header's timer well.
   // `restOverrides` is this session's chosen length per exercise id (so a
   // freeform slot with no plan row can still be changed); a plan row is
@@ -1439,7 +1436,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const tableYRef = useRef(0);
   const rowYRef = useRef({});
   const scrollViewportRef = useRef(0);
-  const [keypadHeight, setKeypadHeight] = useState(0);
+  const [barHeight, setBarHeight] = useState(0);
   // On mount (a restore after a kill included) the sheet opens on the
   // active section, not on the title.
   const firstLayoutScrollRef = useRef(true);
@@ -4673,32 +4670,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? activeExerciseType : 'weight_reps';
   const timeField = (setTableKind === 'duration' || setTableKind === 'distance') ? 'reps' : null;
   const isWarmupEntry = currentSet.setType === 'warmup';
-  const keypadField = editingSet ? editField : entryField;
-  const keypadSource = editingSet ? editValue : currentSet;
-  const keypadIsTime = keypadField != null && keypadField === timeField;
-  const keypadRules = keypadField === 'reps'
+  const activeField = editingSet ? editField : entryField;
+  const activeSource = editingSet ? editValue : currentSet;
+  const activeIsTime = activeField != null && activeField === timeField;
+  const activeRules = activeField === 'reps'
     ? REPS_RULES
     : (setTableKind === 'distance' ? DISTANCE_RULES : WEIGHT_RULES);
   const weightStepKg = exercise?.incrementKg || exercise?.increment_kg
     || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound');
-  const keypadStep = keypadField === 'weight' ? (setTableKind === 'distance' ? 1 : weightStepKg) : 1;
-  const keypadOpen = keypadField != null && !systemKeyboard;
-  const keypadValueText = keypadField == null
-    ? ''
-    : keypadIsTime ? bufferToDisplay(timeBuffer) : String(keypadSource?.[keypadField] ?? '');
-  // The keypad's height counts towards the PR toast's inset only while open.
+  const activeStep = activeField === 'weight' ? (setTableKind === 'distance' ? 1 : weightStepKg) : 1;
+  const inputOpen = activeField != null;
+  // The bar's height counts towards the PR toast's inset only while open.
   useEffect(() => {
-    if (!keypadOpen) {
-      keypadHeightRef.current = 0;
-      setKeypadHeight(0);
+    if (!inputOpen) {
+      barHeightRef.current = 0;
+      setBarHeight(0);
       publishBottomInset();
     }
-  }, [keypadOpen, publishBottomInset]);
-  // After a set logs the next row arrives with the coach's numbers; the first
-  // key on an open well replaces them, as it did the moment the well opened.
-  useEffect(() => { entryReplaceRef.current = true; }, [loggedSets.length]);
-
-  function writeKeypadField(field, next) {
+  }, [inputOpen, publishBottomInset]);
+  function writeActiveField(field, next) {
     if (editingSet) setEditValue((v) => ({ ...(v || {}), [field]: next, isGhost: false }));
     else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });
   }
@@ -4707,10 +4697,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     setEntryField(null);
     setEditField(null);
-    setSystemKeyboard(false);
     setEditingSet(null);
     setEditValue(null);
-    entryReplaceRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExerciseIndex]);
   function openWell(field, set = null) {
@@ -4725,16 +4713,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (editingSet) { closeEditSet(); setEditField(null); }
       setEntryField(field);
     }
-    setSystemKeyboard(false);
-    entryReplaceRef.current = true;
-    padRowRef.current = set ? (set.id ?? null) : 'next';
-    if (field === timeField) {
-      setTimeBuffer(secondsToBuffer(set ? (set.actualReps ?? set.reps) : currentSet.reps));
-    }
+    inputRowRef.current = set ? (set.id ?? null) : 'next';
   }
   // Scroll so the row being typed into sits above the keypad. The pad's
   // height is known once it lays out, so this runs on that layout too.
-  function scrollRowAbovePad(rowId, padHeight) {
+  function scrollRowAboveBar(rowId, padHeight) {
     const rowY = rowYRef.current[rowId];
     const viewport = scrollViewportRef.current;
     if (!Number.isFinite(rowY) || !viewport || !padHeight) return;
@@ -4745,102 +4728,71 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       scrollRef.current?.scrollTo({ y: Math.max(0, bottom - visibleBottom + spacing.sm), animated: true });
     }
   }
-  const padRowRef = useRef(null);
+  const inputRowRef = useRef(null);
   useEffect(() => {
-    if (keypadOpen && keypadHeight > 0 && padRowRef.current) scrollRowAbovePad(padRowRef.current, keypadHeight);
+    if (inputOpen && barHeight > 0 && inputRowRef.current) scrollRowAboveBar(inputRowRef.current, barHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keypadOpen, keypadHeight, entryField, editField]);
-  function closeKeypad() {
+  }, [inputOpen, barHeight, entryField, editField]);
+  function closeInput() {
     setEntryField(null);
     setEditField(null);
-    setSystemKeyboard(false);
-    entryReplaceRef.current = false;
   }
-  function handleKeypadKey(key) {
-    if (!keypadField) return;
-    const replace = entryReplaceRef.current;
-    entryReplaceRef.current = false;
-    if (keypadIsTime) {
-      const base = replace ? '' : timeBuffer;
-      const buf = key === KEY_BACKSPACE ? popDigit(base) : pushDigit(base, key);
-      setTimeBuffer(buf);
-      writeKeypadField('reps', bufferToSeconds(buf));
-      return;
-    }
-    const base = replace ? '' : String(keypadSource?.[keypadField] ?? '');
-    const next = applyKey(base, key, keypadRules);
-    if (keypadField === 'reps') {
-      // A typed 0 becomes 1, as the reps field always did: a 0-rep set cannot
-      // be entered.
-      writeKeypadField('reps', next === '' ? '' : Math.max(parseInt(next, 10) || 0, 1));
-    } else {
-      writeKeypadField('weight', next);
-    }
-  }
-  function handleKeypadStep(delta) {
-    if (!keypadField) return;
-    entryReplaceRef.current = false;
+  function handleInputStep(delta) {
+    if (!activeField) return;
     hapticsVocab.selection();
-    if (keypadIsTime) {
-      const secs = Math.min(Math.max((Number(keypadSource?.reps) || 0) + delta, 0), 5999);
-      setTimeBuffer(secondsToBuffer(secs));
-      writeKeypadField('reps', secs);
+    if (activeIsTime) {
+      const secs = Math.min(Math.max((Number(activeSource?.reps) || 0) + delta, 0), 5999);
+      writeActiveField('reps', secs);
       return;
     }
-    if (keypadField === 'reps') {
-      writeKeypadField('reps', stepValue(keypadSource?.reps, delta, REPS_RULES, 1));
+    if (activeField === 'reps') {
+      writeActiveField('reps', stepValue(activeSource?.reps, delta, REPS_RULES, 1));
     } else {
-      writeKeypadField('weight', String(stepValue(keypadSource?.weight, delta, keypadRules, 0)));
+      writeActiveField('weight', String(stepValue(activeSource?.weight, delta, activeRules, 0)));
     }
   }
-  function handleKeypadClear() {
-    if (!keypadField) return;
-    if (keypadIsTime) setTimeBuffer('');
-    writeKeypadField(keypadField, '');
-  }
-  function handleKeypadNext() {
-    if (keypadField !== 'weight') return;
+  function handleInputNext() {
+    if (activeField !== 'weight') return;
     if (editingSet) setEditField('reps'); else setEntryField('reps');
-    entryReplaceRef.current = true;
-    if (timeField === 'reps') setTimeBuffer(secondsToBuffer(keypadSource?.reps));
   }
-  function handleKeypadDone() {
+  function handleInputDone() {
     if (editingSet) {
       const changed = String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
         || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
-      setSystemKeyboard(false);
       // The field stays open until the save lands (closeEditSet and the
       // save's success path clear it), so a refused save keeps the pad.
       if (changed) handleSaveEditedSet(); else closeEditSet();
       return;
     }
-    closeKeypad();
+    closeInput();
   }
-  // The phone-keyboard path (the keypad's toggle): the open well becomes a
-  // TextInput with the SetEntry fields' own parsing, for this one edit.
+  // The one input path (D220 addendum 18): the open well is a TextInput on
+  // the phone's numeric keyboard, with the SetEntry fields' own parsing;
+  // the step bar above the keyboard carries the steps, Next and Done.
   function handleInputChange(text) {
-    if (!keypadField) return;
-    if (keypadIsTime) { writeKeypadField('reps', parseTimeToSeconds(text)); return; }
-    if (keypadField === 'reps') {
+    if (!activeField) return;
+    if (activeIsTime) { writeActiveField('reps', parseTimeToSeconds(text)); return; }
+    if (activeField === 'reps') {
       const n = parseInt(text, 10);
-      if (!Number.isNaN(n)) writeKeypadField('reps', Math.min(Math.max(n, 1), 200));
-      else if (text === '') writeKeypadField('reps', '');
+      if (!Number.isNaN(n)) writeActiveField('reps', Math.min(Math.max(n, 1), 200));
+      else if (text === '') writeActiveField('reps', '');
       return;
     }
     const ok = setTableKind === 'distance'
       ? /^\d{0,5}\.?\d{0,2}$/.test(text)
       : (/^\d{0,3}(\.\d{0,2})?$/.test(text) && (text === '' || Number(text) <= 500));
-    if (ok) writeKeypadField('weight', text);
+    if (ok) writeActiveField('weight', text);
   }
-  const keypadInputField = systemKeyboard && keypadField ? {
-    field: keypadField,
-    value: keypadIsTime
-      ? (keypadSource?.reps === '' || keypadSource?.reps == null ? '' : formatSeconds(keypadSource.reps))
-      : String(keypadSource?.[keypadField] ?? ''),
+  const activeInputField = activeField ? {
+    field: activeField,
+    value: activeIsTime
+      ? (activeSource?.reps === '' || activeSource?.reps == null ? '' : formatSeconds(activeSource.reps))
+      : String(activeSource?.[activeField] ?? ''),
     onChangeText: handleInputChange,
-    keyboardType: keypadIsTime ? 'numbers-and-punctuation' : (keypadField === 'weight' ? 'decimal-pad' : 'number-pad'),
-    testID: keypadField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
-    onSubmitEditing: handleKeypadDone,
+    keyboardType: activeIsTime ? 'numbers-and-punctuation' : (activeField === 'weight' ? 'decimal-pad' : 'number-pad'),
+    testID: activeField === 'weight' ? 'volyume-weight-input' : 'volyume-reps-input',
+    returnKeyType: activeField === 'weight' && timeField !== 'weight' ? 'next' : 'done',
+    onSubmitEditing: activeField === 'weight' ? handleInputNext : handleInputDone,
   } : null;
 
   // Section 2a: last session at each position (the most recent earlier one,
@@ -4951,7 +4903,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       },
       check: 'logged',
       record: detectedPRs.some((pr) => pr.setId === s.id),
-      inputField: editingThis ? keypadInputField : null,
+      inputField: editingThis ? activeInputField : null,
       onPressWell: (field) => openWell(field, s),
       onLongPressRow: () => setRowSheet({ kind: 'logged', set: s, title: `${warm ? 'Warm-up' : `Set ${progressNum}`} · ${shortSetText(s)}` }),
       testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
@@ -4977,7 +4929,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     check: 'next',
     checkLabel: nextCheckLabel,
     busy: saving,
-    inputField: !editingSet ? keypadInputField : null,
+    inputField: !editingSet ? activeInputField : null,
     onPressMarker: () => setShowSetTypePicker(true),
     onPressLast: nextLast ? () => {
       // The "Use" action: last session's set into the wells, counted as typed
@@ -5160,7 +5112,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={[styles.sessionScrollContent, keypadOpen && keypadHeight > 0 ? { paddingBottom: keypadHeight } : null]}
+          contentContainerStyle={[styles.sessionScrollContent, inputOpen && barHeight > 0 ? { paddingBottom: barHeight } : null]}
           onLayout={(e) => { scrollViewportRef.current = e?.nativeEvent?.layout?.height ?? 0; }}
           keyboardShouldPersistTaps="handled"
           // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
@@ -5666,29 +5618,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             next row's check; Next exercise is the next section's header or the
             1.8 s auto-advance (its track is the active section's footer line);
             Finish is the toolbar's; Log another set is the footer's Add set.
-            The safe-area inset the bar absorbed is a spacer here while the
-            keypad is closed; the keypad carries it while open. */}
+            The safe-area inset the bar absorbed is a spacer here while no
+            well is open; the keyboard's step bar carries it while one is. */}
         </View>
-        {keypadOpen ? null : <View style={{ height: safeBottom }} />}
-        {keypadOpen ? (
-          <View onLayout={handleKeypadLayout}>
-            <Keypad
-              field={keypadField}
-              value={keypadValueText}
-              step={keypadStep}
+        {inputOpen ? null : <View style={{ height: safeBottom }} />}
+        {inputOpen ? (
+          <View onLayout={handleBarLayout}>
+            <KeyboardBar
+              step={activeStep}
               unit={setTableKind === 'distance' ? (units === 'kg' ? 'm' : 'yd') : units}
-              mode={keypadIsTime ? 'time' : 'number'}
-              fieldLabel={keypadIsTime ? 'Time' : (setTableKind === 'distance' && keypadField === 'weight' ? 'Distance' : undefined)}
-              tabs={setTableKind === 'reps_only' ? [{ field: 'reps', label: 'Reps' }]
-                : setTableKind === 'duration' ? [{ field: 'reps', label: 'Time' }]
-                  : setTableKind === 'distance' ? [{ field: 'weight', label: 'Distance' }, { field: 'reps', label: 'Time' }]
-                    : [{ field: 'weight', label: units }, { field: 'reps', label: 'Reps' }]}
-              onKey={handleKeypadKey}
-              onStep={handleKeypadStep}
-              onClear={handleKeypadClear}
-              onNext={handleKeypadNext}
-              onDone={handleKeypadDone}
-              onSystemKeyboard={() => setSystemKeyboard(true)}
+              mode={activeIsTime ? 'time' : 'number'}
+              onStep={handleInputStep}
+              onNext={activeField === 'weight' ? handleInputNext : undefined}
+              onDone={handleInputDone}
               safeBottom={safeBottom}
             />
           </View>
