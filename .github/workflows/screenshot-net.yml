@@ -1,0 +1,353 @@
+# Campaign 27 phase 2d (D104-3, Pillar D; built 2026-10-09, register D220
+# addendum 33): the screenshot regression net. Pre-release cadence, MANUAL
+# DISPATCH ONLY, never per-PR; it costs emulator and (optionally) macOS
+# runner minutes, and the founder runs builds and release checks.
+#
+# Fixed matrix (the proposal's): an Android emulator window at 360 dp wide
+# with the system text size raised to 1.3x (android-360-font130), and a large
+# iPhone simulator (ios-large). The Android APK comes from a
+# "Build Android (APK + AAB, signed)" run, exactly as maestro-e2e.yml takes
+# it (x86_64 libs needed: dispatch that build with architectures
+# "arm64-v8a,x86_64"). The iOS leg runs only when a simulator build URL is
+# passed (an EAS build on the e2e-simulator profile; the founder runs it).
+#
+# mode=capture writes the screenshots as an artifact (the first run of a
+# matrix, or after an intended redesign): download them and commit them to
+# .maestro/baselines/<matrix>/ to make them the baseline. mode=assert also
+# compares every screen with its committed baseline and fails on drift.
+name: Screenshot net (pre-release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'capture (write screenshots only) or assert (compare with the committed baselines)'
+        required: true
+        default: 'assert'
+        type: choice
+        options:
+          - capture
+          - assert
+      build_run_id:
+        description: 'build-android.yml run id to take the APK from (blank = latest successful on this branch)'
+        required: false
+        default: ''
+      ios_simulator_build_url:
+        description: 'URL of an EAS iOS simulator build (.tar.gz of the .app, profile e2e-simulator). Blank skips the iOS leg.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: screenshot-net-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    if: github.ref == 'refs/heads/main'
+    name: Android 360 dp at 1.3x text (emulator + Maestro)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MATRIX: android-360-font130
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check E2E secrets are configured
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          missing=""
+          for v in E2E_SUPABASE_URL E2E_SUPABASE_ANON_KEY E2E_USER_EMAIL E2E_USER_PASSWORD; do
+            [ -n "$(eval echo \$$v)" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. See .maestro/README.md (one-time founder setup)."
+            exit 1
+          fi
+
+      - name: Check the baselines exist for assert mode
+        if: inputs.mode == 'assert'
+        run: |
+          for s in today nutrition progress train logger; do
+            if [ ! -f ".maestro/baselines/$MATRIX/$s.png" ]; then
+              echo "::error::No baseline .maestro/baselines/$MATRIX/$s.png. Run this workflow with mode=capture first and commit the screenshots it produces."
+              exit 1
+            fi
+          done
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Resolve the build run to take the APK from
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="${{ inputs.build_run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list -R "${{ github.repository }}" \
+              --workflow build-android.yml --branch "$GITHUB_REF_NAME" \
+              --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful build-android.yml run found on $GITHUB_REF_NAME. Dispatch that workflow first (architectures: arm64-v8a,x86_64) or pass build_run_id."
+            exit 1
+          fi
+          echo "Using build run $RUN_ID"
+          echo "BUILD_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: volyume-release-apk-*
+          run-id: ${{ env.BUILD_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: apk
+          merge-multiple: true
+
+      - name: Locate APK
+        run: |
+          APK=$(find apk -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK found in the downloaded artifact."
+            exit 1
+          fi
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+          if ! unzip -l "$APK" | grep -q 'lib/x86_64/'; then
+            echo "::warning::APK carries no x86_64 native libs (an ARM-only build); the x86_64 emulator will rely on ARM translation."
+          fi
+
+      - name: Mint an E2E session (password grant)
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          RESP=$(curl -sS -X POST "$E2E_SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $E2E_SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg e "$E2E_USER_EMAIL" --arg p "$E2E_USER_PASSWORD" '{email: $e, password: $p}')")
+          ACCESS=$(echo "$RESP" | jq -r '.access_token // empty')
+          REFRESH=$(echo "$RESP" | jq -r '.refresh_token // empty')
+          if [ -z "$ACCESS" ] || [ -z "$REFRESH" ]; then
+            echo "::error::Could not mint a session for the E2E user. Response code/kind: $(echo "$RESP" | jq -r '.error_code // .error // "unknown"')"
+            exit 1
+          fi
+          echo "::add-mask::$ACCESS"
+          echo "::add-mask::$REFRESH"
+          echo "E2E_ACCESS_TOKEN=$ACCESS" >> "$GITHUB_ENV"
+          echo "E2E_REFRESH_TOKEN=$REFRESH" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Cache AVD snapshot
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-x86_64-google_apis
+
+      - name: Create AVD snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      # The matrix is set at runtime on the cached AVD: a 1080 x 2340 window
+      # at 480 dpi is 360 x 780 dp (the S22 class), the system text size at
+      # 1.3x, and the status bar in demo mode so its clock never drifts a
+      # screenshot.
+      - name: Run the screenshot flow
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot-save
+          disable-animations: true
+          script: |
+            adb shell wm size 1080x2340
+            adb shell wm density 480
+            adb shell settings put system font_scale 1.3
+            adb shell settings put global sysui_demo_allowed 1
+            adb shell am broadcast -a com.android.systemui.demo -e command enter
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1000
+            adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
+            adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+            adb install -r "$APK_PATH"
+            adb shell pm grant app.volyume android.permission.POST_NOTIFICATIONS || true
+            maestro test .maestro/flows/10-screenshot-net.yaml \
+              -e E2E_ACCESS_TOKEN="$E2E_ACCESS_TOKEN" \
+              -e E2E_REFRESH_TOKEN="$E2E_REFRESH_TOKEN" \
+              -e MATRIX="$MATRIX" \
+              -e MODE="${{ inputs.mode }}" \
+              --debug-output maestro-debug
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: screenshots-${{ env.MATRIX }}-${{ github.run_number }}
+          path: screenshots
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Maestro debug output
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: maestro-debug-screenshots-${{ github.run_number }}
+          path: maestro-debug
+          retention-days: 14
+          if-no-files-found: ignore
+
+  ios:
+    if: github.ref == 'refs/heads/main' && inputs.ios_simulator_build_url != ''
+    name: Large iPhone simulator (Maestro)
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      MATRIX: ios-large
+      DEVICE: iPhone 16 Pro Max
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check E2E secrets are configured
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          missing=""
+          for v in E2E_SUPABASE_URL E2E_SUPABASE_ANON_KEY E2E_USER_EMAIL E2E_USER_PASSWORD; do
+            [ -n "$(eval echo \$$v)" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. See .maestro/README.md (one-time founder setup)."
+            exit 1
+          fi
+
+      - name: Check the baselines exist for assert mode
+        if: inputs.mode == 'assert'
+        run: |
+          for s in today nutrition progress train logger; do
+            if [ ! -f ".maestro/baselines/$MATRIX/$s.png" ]; then
+              echo "::error::No baseline .maestro/baselines/$MATRIX/$s.png. Run this workflow with mode=capture first and commit the screenshots it produces."
+              exit 1
+            fi
+          done
+
+      - name: Mint an E2E session (password grant)
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          RESP=$(curl -sS -X POST "$E2E_SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $E2E_SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg e "$E2E_USER_EMAIL" --arg p "$E2E_USER_PASSWORD" '{email: $e, password: $p}')")
+          ACCESS=$(echo "$RESP" | jq -r '.access_token // empty')
+          REFRESH=$(echo "$RESP" | jq -r '.refresh_token // empty')
+          if [ -z "$ACCESS" ] || [ -z "$REFRESH" ]; then
+            echo "::error::Could not mint a session for the E2E user."
+            exit 1
+          fi
+          echo "::add-mask::$ACCESS"
+          echo "::add-mask::$REFRESH"
+          echo "E2E_ACCESS_TOKEN=$ACCESS" >> "$GITHUB_ENV"
+          echo "E2E_REFRESH_TOKEN=$REFRESH" >> "$GITHUB_ENV"
+
+      - name: Download and unpack the simulator build
+        run: |
+          curl -sSL -o build.tar.gz "${{ inputs.ios_simulator_build_url }}"
+          mkdir -p sim-app && tar -xzf build.tar.gz -C sim-app
+          APP=$(find sim-app -maxdepth 3 -name '*.app' | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::No .app found in the simulator build archive."
+            exit 1
+          fi
+          echo "APP_PATH=$APP" >> "$GITHUB_ENV"
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Boot the simulator, fix its status bar, install the app
+        run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r --arg d "$DEVICE" '.devices[] | .[] | select(.name == $d) | .udid' | head -1)
+          if [ -z "$UDID" ]; then
+            echo "::error::No available simulator named $DEVICE on this runner."
+            exit 1
+          fi
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "10:00" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
+          xcrun simctl install "$UDID" "$APP_PATH"
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Run the screenshot flow
+        run: |
+          maestro --udid "$UDID" test .maestro/flows/10-screenshot-net.yaml \
+            -e E2E_ACCESS_TOKEN="$E2E_ACCESS_TOKEN" \
+            -e E2E_REFRESH_TOKEN="$E2E_REFRESH_TOKEN" \
+            -e MATRIX="$MATRIX" \
+            -e MODE="${{ inputs.mode }}" \
+            --debug-output maestro-debug
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: screenshots-${{ env.MATRIX }}-${{ github.run_number }}
+          path: screenshots
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Maestro debug output
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: maestro-debug-screenshots-ios-${{ github.run_number }}
+          path: maestro-debug
+          retention-days: 14
+          if-no-files-found: ignore

@@ -40,6 +40,19 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "e2e-simulator": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "preview"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

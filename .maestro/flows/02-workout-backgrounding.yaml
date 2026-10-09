@@ -101,7 +101,8 @@ tags:
       visible: "Skip rest timer"
     commands:
       - tapOn: "Skip rest timer"
-- assertVisible: "Edit set 1"
+# D220 (2026-10-09): the rebuilt logger names a logged row "Set 1 logged".
+- assertVisible: "Set 1 logged"
 
 # Background, kill the process, cold relaunch (launchApp stops the app by
 # default; no clearState, so local SQLite + the session draft survive).
@@ -117,7 +118,8 @@ tags:
 - extendedWaitUntil:
     visible: "Finish workout"
     timeout: 30000
-- assertVisible: "Edit set 1"
+# D220 (2026-10-09): the rebuilt logger names a logged row "Set 1 logged".
+- assertVisible: "Set 1 logged"
 
 # Log set 2 after the restore, then finish through the confirm dialog.
 - tapOn:
