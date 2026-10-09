@@ -82,8 +82,21 @@ describe('the second logger audit stays fixed', () => {
     expect(SRC).toContain('if (targetSets && workingLogged >= targetSets && !extraSetArmed) return orientationLabel;');
   });
 
-  test('D13: the Time Crunch rest cut is written as the session rest choice', () => {
+  test('D13: the Time Crunch rest cut is written as the session rest choice, and Undo restores it', () => {
     expect(SRC).toMatch(/setRestOverrides\(\(prev\) => \{[\s\S]{0,500}?restSecondsForEntry\(entry\) \* \(1 - restReduction\)/);
+    expect(SRC).toMatch(/setPreCrunchRestOverrides\(restOverrides\);\s*setRestOverrides\(\(prev\) => \{/);
+    expect(SRC).toMatch(/function handleRevertTimeCrunch\(\) \{[\s\S]{0,300}?if \(preCrunchRestOverrides\) setRestOverrides\(preCrunchRestOverrides\);/);
+  });
+
+  test('the record feedback fires at the log, the animation on the exercise that earned it', () => {
+    // A superset's log jumps to the partner in the same batch; the haptic
+    // and the announcement must not wait for the return (pre-build review).
+    expect(SRC).toMatch(/celebrateRef\.current = \{ exerciseId, key: `\$\{record\.type\}\|\$\{recordText\(record\)\}` \};\s*setExerciseRecords[^\n]*\n\s*celebrateRecord\(record, \{ reduceMotion: !!reduceMotion \}\);/);
+    expect(SRC).toMatch(/celebrateRef\.current\?\.exerciseId === exercise\?\.id/);
+    expect(SRC).toContain('useEffect(() => { if (animateRecord) celebrateRef.current = null; }, [animateRecord]);');
+    // An edit that takes the record set below record clears the line; a
+    // first lift's line follows the edit.
+    expect(SRC).toMatch(/if \(cur\.type === 'first_lift'\) return \{ \.\.\.prev, \[exercise\.id\]: \{ \.\.\.cur, weight, reps: actualReps \} \};/);
   });
 
   test('D14, P8: Use arms the extra set past the target and never invents a weight', () => {

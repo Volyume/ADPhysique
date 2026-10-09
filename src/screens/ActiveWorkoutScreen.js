@@ -50,7 +50,7 @@ import KeyboardBar from '../components/workout/session/KeyboardBar';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
 import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
-import RecordLine, { recordText } from '../components/workout/session/RecordLine';
+import RecordLine, { recordText, celebrateRecord } from '../components/workout/session/RecordLine';
 import { buildExerciseHistory } from '../lib/exerciseHistory';
 import { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import useAppStore from '../store/useAppStore';
@@ -497,17 +497,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // set table (RecordLine), never a floating surface. Per exercise id, the
   // latest record earned this session (or the honest first-lift line); the
   // set that earned it must still be logged for the line to show, so a
-  // delete clears it by itself. celebrateRef holds the key of the record the
-  // next render must celebrate (haptic, announcement, enter animation), set
-  // only on the log or edit that earned it, so a jump back or a remount
-  // never celebrates twice.
+  // delete clears it by itself. The haptic and the announcement fire HERE,
+  // the moment the record is earned, whatever exercise the next render
+  // shows (a superset's log jumps to the partner; the feedback must not
+  // wait for the return). celebrateRef holds the exercise and the key of
+  // the record whose line still has its enter animation to play, consumed
+  // by the first render that shows that line on its own exercise, so a jump
+  // back or a remount never animates it twice.
   const [exerciseRecords, setExerciseRecords] = useState({});
   const celebrateRef = useRef(null);
   const noteRecord = useCallback((exerciseId, record) => {
     if (!exerciseId || !record) return;
-    celebrateRef.current = `${record.type}|${recordText(record)}`;
+    celebrateRef.current = { exerciseId, key: `${record.type}|${recordText(record)}` };
     setExerciseRecords((prev) => ({ ...prev, [exerciseId]: record }));
-  }, []);
+    celebrateRecord(record, { reduceMotion: !!reduceMotion });
+  }, [reduceMotion]);
   // Stage D (D220): the rest length behind a section header's timer well.
   // `restOverrides` is this session's chosen length per exercise id (so a
   // freeform slot with no plan row can still be changed); a plan row is
@@ -691,6 +695,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
+  // The rest choices as they were before Time Crunch cut them, so Undo
+  // restores the rest as well as the exercises (pre-build review 2026-10-09).
+  const [preCrunchRestOverrides, setPreCrunchRestOverrides] = useState(null);
   // COMP-013: a starter session is a one-tap 15-minute subset of Day 1, applied
   // once at session start. It reuses the time-crunch machinery (snapshot +
   // revert) but caps sets and exercise count via the starter options.
@@ -3713,6 +3720,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ? detectPR({ weight, actualReps, setType: editedType, evidenceClass: editedEvidenceClass }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
           noteRecord(exercise.id, { ...editedPrs[0], units, setId: editingSet.id });
+        } else {
+          // The edited set earned the line and is no longer a record (pre-
+          // build review 2026-10-09): a record's line goes; a first lift's
+          // line follows the edited numbers, quietly.
+          setExerciseRecords((prev) => {
+            const cur = prev[exercise.id];
+            if (!cur || cur.setId !== editingSet.id) return prev;
+            if (cur.type === 'first_lift') return { ...prev, [exercise.id]: { ...cur, weight, reps: actualReps } };
+            const next = { ...prev };
+            delete next[exercise.id];
+            return next;
+          });
         }
         setDetectedPRs(prev => {
           const withoutThisSet = prev.filter(p => p.setId !== editingSet.id);
@@ -3983,6 +4002,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleRevertTimeCrunch() {
     if (!preCrunchSnapshot) return;
     store.setWorkoutExercises(preCrunchSnapshot);
+    if (preCrunchRestOverrides) setRestOverrides(preCrunchRestOverrides);
+    setPreCrunchRestOverrides(null);
     setTimeCrunchActive(false);
     setStarterActive(false);
     setTimeCrunchMsg('');
@@ -4106,6 +4127,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // timer reads restSecondsForEntry, never exercise.restSec, so the
     // reduction is written as the session's own rest choice for every
     // remaining exercise.
+    setPreCrunchRestOverrides(restOverrides);
     setRestOverrides((prev) => {
       const next = { ...prev };
       for (let i = currentExerciseIndex; i < workoutExercises.length; i++) {
@@ -5248,8 +5270,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return r;
   })();
   const recordKey = exerciseRecord ? `${exerciseRecord.type}|${recordText(exerciseRecord)}` : null;
-  const celebrateRecord = recordKey != null && celebrateRef.current === recordKey;
-  useEffect(() => { celebrateRef.current = null; });
+  const animateRecord = recordKey != null
+    && celebrateRef.current?.exerciseId === exercise?.id
+    && celebrateRef.current?.key === recordKey;
+  // Consumed only once that line has rendered (RecordLine's own effect runs
+  // first, as a child's does), never by a render of another exercise.
+  useEffect(() => { if (animateRecord) celebrateRef.current = null; }, [animateRecord]);
   function rowSheetTitleFor(set, warm, progressNum) {
     if (warm) return 'Warm-up';
     const type = set.setType ?? set.set_type ?? 'straight';
@@ -5787,7 +5813,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               rows it belongs to, centred in its band. No floating surface;
               the card grows by the row and nothing is covered. */}
           {exerciseRecord ? (
-            <RecordLine record={exerciseRecord} celebrate={celebrateRecord} reduceMotion={!!reduceMotion} />
+            <RecordLine record={exerciseRecord} celebrate={animateRecord} reduceMotion={!!reduceMotion} />
           ) : null}
 
           <View style={styles.activeBody}>

@@ -9,12 +9,14 @@
  * and nothing floats:
  *   - it renders in flow (no absolute position, no top/bottom offset) with
  *     the record's own label, and nothing without a record;
- *   - on the render that earns it (celebrate) it is announced as a record
- *     and the record haptic ladder plays; a first lift is announced as the
- *     honest first with the light tick and no record wording;
- *   - the same record re-rendered without celebrate announces nothing (a
- *     jump back or a remount never celebrates twice);
- *   - reduce-motion keeps the light tick and no slide;
+ *   - celebrateRecord (called by the screen the moment a record is earned)
+ *     announces it as a record and plays the record haptic ladder; a first
+ *     lift is announced as the honest first with the light tick and no
+ *     record wording; calm mode and reduce-motion keep the light tick;
+ *   - the component itself never announces or buzzes (a jump back or a
+ *     remount never celebrates twice);
+ *   - the enter animation's easing is a FUNCTION (the theme's control-point
+ *     array threw on the native driver; pre-build review 2026-10-09);
  *   - the glyph is gold for a record and muted for a first lift.
  */
 import { create, act } from 'react-test-renderer';
@@ -42,6 +44,7 @@ const haptics = require('../../../../lib/haptics');
 const wellbeing = require('../../../../lib/wellbeing');
 const { colors } = require('../../../../styles/theme');
 const RecordLine = require('../RecordLine').default;
+const { celebrateRecord } = require('../RecordLine');
 
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
@@ -94,24 +97,26 @@ describe('the record is a line of the card, not a floating surface', () => {
     act(() => { tree.unmount(); });
   });
 
-  test('celebrates once: announced as a record with the PR ladder, then silent on re-render', async () => {
-    let tree;
-    act(() => { tree = create(<RecordLine record={RECORD} celebrate />); });
+  test('celebrateRecord: announced as a record with the PR ladder', async () => {
+    celebrateRecord(RECORD, { reduceMotion: false });
     await flush();
     expect(announce).toHaveBeenCalledWith(`Personal record. ${RECORD_TEXT}.`);
     expect(haptics.prAchieved).toHaveBeenCalledTimes(1);
     expect(haptics.selection).not.toHaveBeenCalled();
-    announce.mockClear();
-    haptics.prAchieved.mockClear();
-    act(() => { tree.update(<RecordLine record={RECORD} celebrate={false} />); });
+    const better = { type: '1rm_estimate', weight: 80, reps: 8, value: 95.04, units: 'kg', label: 'New estimated max: 95.0kg', setId: 's3' };
+    celebrateRecord(better, { reduceMotion: false });
     await flush();
-    expect(announce).not.toHaveBeenCalled();
-    expect(haptics.prAchieved).not.toHaveBeenCalled();
-    act(() => { tree.unmount(); });
+    expect(announce).toHaveBeenLastCalledWith('Personal record. New estimated max \u00B7 95 kg.');
+    expect(haptics.prAchieved).toHaveBeenCalledTimes(2);
   });
 
-  test('a remount without celebrate never celebrates (a jump back to the exercise)', async () => {
+  test('the component itself never announces or buzzes, celebrating or not', async () => {
     let tree;
+    act(() => { tree = create(<RecordLine record={RECORD} celebrate />); });
+    await flush();
+    act(() => { tree.update(<RecordLine record={RECORD} celebrate={false} />); });
+    await flush();
+    act(() => { tree.unmount(); });
     act(() => { tree = create(<RecordLine record={RECORD} celebrate={false} />); });
     await flush();
     expect(announce).not.toHaveBeenCalled();
@@ -120,27 +125,41 @@ describe('the record is a line of the card, not a floating surface', () => {
     act(() => { tree.unmount(); });
   });
 
-  test('a better record on the same exercise celebrates again', async () => {
+  test('the enter animation passes Animated a real easing function', () => {
+    // The Jest react-native mock stubs Easing (every curve is a number), so
+    // the proof is in two halves: the component builds its curve through
+    // Easing.bezier from the theme's control points (source), and the REAL
+    // Easing module turns those points into a function (the production
+    // value). The raw control-point array is what threw on the device.
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'RecordLine.js'), 'utf8');
+    expect(src).toContain('const EASE_DECELERATE = Easing.bezier(...motion.easeDecelerate);');
+    expect(src).toMatch(/easing: EASE_DECELERATE, useNativeDriver: true/);
+    expect(src).not.toMatch(/easing: motion\./);
+    const RealEasing = jest.requireActual('react-native/Libraries/Animated/Easing').default;
+    const { motion } = require('../../../../styles/theme');
+    expect(typeof RealEasing.bezier(...motion.easeDecelerate)).toBe('function');
+    // And the timings that run are native-driver timings with that curve.
+    const timing = jest.spyOn(ReactNative.Animated, 'timing');
     let tree;
     act(() => { tree = create(<RecordLine record={RECORD} celebrate />); });
-    await flush();
-    expect(haptics.prAchieved).toHaveBeenCalledTimes(1);
-    const better = { type: '1rm_estimate', weight: 80, reps: 8, value: 95.04, units: 'kg', label: 'New estimated max: 95.0kg', setId: 's3' };
-    act(() => { tree.update(<RecordLine record={better} celebrate />); });
-    await flush();
-    expect(haptics.prAchieved).toHaveBeenCalledTimes(2);
-    expect(announce).toHaveBeenLastCalledWith('Personal record. New estimated max \u00B7 95 kg.');
+    const configs = timing.mock.calls.map((c) => c[1]);
+    expect(configs.length).toBeGreaterThanOrEqual(2);
+    for (const c of configs) expect(c.useNativeDriver).toBe(true);
+    timing.mockRestore();
     act(() => { tree.unmount(); });
   });
 
   test('a first lift is the honest first: muted glyph, light tick, no record wording', async () => {
-    let tree;
-    act(() => { tree = create(<RecordLine record={FIRST} celebrate />); });
+    celebrateRecord(FIRST, { reduceMotion: false });
     await flush();
     expect(announce).toHaveBeenCalledWith(`First lift logged. ${FIRST_TEXT}.`);
     expect(announce.mock.calls.join(' ')).not.toMatch(/record/i);
     expect(haptics.selection).toHaveBeenCalledTimes(1);
     expect(haptics.prAchieved).not.toHaveBeenCalled();
+    let tree;
+    act(() => { tree = create(<RecordLine record={FIRST} celebrate />); });
     const glyph = tree.root.findByType('Ionicons');
     expect(glyph.props.name).toBe('barbell-outline');
     expect(glyph.props.color).not.toBe(colors.gold);
@@ -151,20 +170,17 @@ describe('the record is a line of the card, not a floating surface', () => {
 
   test('calm mode and reduce-motion keep the light tick for a real record', async () => {
     wellbeing.getWellbeingMode.mockImplementation(() => Promise.resolve('calm'));
-    let tree;
-    act(() => { tree = create(<RecordLine record={RECORD} celebrate />); });
+    celebrateRecord(RECORD, { reduceMotion: false });
     await flush();
     expect(haptics.selection).toHaveBeenCalledTimes(1);
     expect(haptics.prAchieved).not.toHaveBeenCalled();
-    act(() => { tree.unmount(); });
     haptics.selection.mockClear();
     wellbeing.getWellbeingMode.mockClear();
     wellbeing.getWellbeingMode.mockImplementation(() => Promise.resolve('standard'));
-    act(() => { tree = create(<RecordLine record={RECORD} celebrate reduceMotion />); });
+    celebrateRecord(RECORD, { reduceMotion: true });
     await flush();
     expect(haptics.selection).toHaveBeenCalledTimes(1);
     expect(haptics.prAchieved).not.toHaveBeenCalled();
     expect(wellbeing.getWellbeingMode).not.toHaveBeenCalled();
-    act(() => { tree.unmount(); });
   });
 });

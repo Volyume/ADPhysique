@@ -213,7 +213,7 @@ describe('estimated-max/PR split (failure 7): record system intact, routine copy
     // EARNED is a line of the card under the table (RecordLine), never a
     // floating surface; the threshold line above stays banned.
     expect(SRC).toContain('noteRecord(exercise.id');
-    expect(SRC).toContain('<RecordLine record={exerciseRecord} celebrate={celebrateRecord}');
+    expect(SRC).toContain('<RecordLine record={exerciseRecord} celebrate={animateRecord}');
     expect(SRC).not.toContain('showPRCelebration');
     expect(SRC).not.toContain('loggerNoticeTop');
     expect(SRC).not.toContain('loggerBottomInset');
