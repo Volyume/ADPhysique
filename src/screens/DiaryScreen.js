@@ -1425,7 +1425,7 @@ export default function DiaryScreen({ navigation, route }) {
     [bottomInset, t],
   );
   const selectionBarStyle = useMemo(
-    () => [styles.selectionBar, live.selectionBar, { paddingBottom: spacing.xl + bottomInset }],
+    () => [styles.selectionBar, live.selectionBar, { paddingHorizontal: t.screenPadding, paddingBottom: spacing.xl + bottomInset }],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bottomInset, t],
   );
@@ -1441,7 +1441,7 @@ export default function DiaryScreen({ navigation, route }) {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: t.screenPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.primary} />}
       >
         {/* Founder order 2026-09-22/23: "Trends" moved out of the day-tools

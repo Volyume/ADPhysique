@@ -288,7 +288,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
           <SkeletonFormBand bands={2} wells={1} />
         </View>
       ) : !previewPost ? (
-        <View style={styles.centre}>
+        <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
           <EmptyState
             icon="document-outline"
             title={noteMode ? 'Nothing to add a note to' : 'Nothing to post yet'}

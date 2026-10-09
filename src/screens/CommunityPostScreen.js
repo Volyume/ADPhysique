@@ -279,7 +279,7 @@ export default function CommunityPostScreen({ navigation, route }) {
           </Band>
         </View>
       ) : !post ? (
-        <View style={styles.centre}>
+        <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
           <EmptyState
             icon="cloud-offline-outline"
             title="Not available"

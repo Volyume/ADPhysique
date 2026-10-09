@@ -91,7 +91,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Goal lock" />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]}>
         <Text style={[styles.title, live.title]}>A note on aggressive cuts</Text>
         {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
             Precision Coaching named as the decider, signals named plainly,

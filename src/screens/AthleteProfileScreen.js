@@ -459,7 +459,7 @@ export default function AthleteProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Athlete profile" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
         <Card style={styles.hero}>
           <TouchableOpacity
             style={styles.avatar}

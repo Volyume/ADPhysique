@@ -926,7 +926,7 @@ export default function BodyMetricsScreen() {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Body metrics" />
-        <ScrollView contentContainerStyle={styles.optInContent}>
+        <ScrollView contentContainerStyle={[styles.optInContent, { paddingHorizontal: t.screenPadding }]}>
           <View style={[styles.confirmCard, live.confirmCard]}>
             <Ionicons name="leaf-outline" size={32} color={t.colors.textSecondary} />
             <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle pause</Text>
@@ -1571,7 +1571,7 @@ export default function BodyMetricsScreen() {
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}
           // A2 (pre-release sweep 2026-07-27): without this, a tap on a button
           // while a field is focused only dismisses the keyboard.
           keyboardShouldPersistTaps="handled"

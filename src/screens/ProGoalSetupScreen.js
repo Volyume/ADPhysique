@@ -730,7 +730,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           found below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, live.scroll]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -1087,6 +1087,7 @@ const styles = StyleSheet.create({
 // coaching-engine or nutrition-calc logic touched -- colours only.
 function buildLiveStyles(t) {
   return {
+    scroll: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
     optionalTag: { ...t.type.caption, color: t.colors.textMuted },

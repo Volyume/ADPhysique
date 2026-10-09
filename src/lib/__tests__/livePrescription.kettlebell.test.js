@@ -124,9 +124,15 @@ describe('resolveLoadIncrement on kettlebell equipment', () => {
     expect(kb(16, { units: 'lbs' })).toBe(0.75); // 5% cap over 2.5 on the 0.25 grid, as before
   });
 
-  test('non-kettlebell equipment is untouched', () => {
+  test('non-kettlebell, non-dumbbell equipment is untouched', () => {
+    // D220 addendum 34 (2026-10-09): a dumbbell now steps to the next bell on
+    // the rack (16 kg on the even grid steps 2); a barbell and an unknown
+    // equipment keep the 5%-capped plate step.
     expect(resolveLoadIncrement(16, {
       incrementKg: 2.5, units: 'kg', category: 'compound', equipmentCategory: 'dumbbell',
+    })).toBe(2);
+    expect(resolveLoadIncrement(16, {
+      incrementKg: 2.5, units: 'kg', category: 'compound', equipmentCategory: 'barbell',
     })).toBe(0.75);
     expect(resolveLoadIncrement(16, {
       incrementKg: 2.5, units: 'kg', category: 'compound',
@@ -185,7 +191,7 @@ describe('kettlebell prefill through resolveSetPrescription (A1)', () => {
     expect(p.prefill).toBe(true);
   });
 
-  test('the same history on a dumbbell row keeps the ordinary 5%-capped step', () => {
+  test('the same history on a dumbbell row steps to the next bell on the rack (D220 addendum 34)', () => {
     const packet = assembleEvidencePacket({
       exercise: {
         id: 'kb-goblet',
@@ -201,7 +207,8 @@ describe('kettlebell prefill through resolveSetPrescription (A1)', () => {
       rawToday: [],
       now: NOW,
     });
-    expect(resolveSetPrescription(packet, 1).weight).toBe(16.75); // 16 + 0.75 (5% cap, 0.25 grid)
+    // 16 kg sits on the even rack grid, so the next bell is 18, never 16.75.
+    expect(resolveSetPrescription(packet, 1).weight).toBe(18);
   });
 
   test('assembleEvidencePacket carries the equipment category onto the packet', () => {

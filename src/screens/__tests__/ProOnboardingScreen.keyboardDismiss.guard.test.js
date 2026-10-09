@@ -44,7 +44,8 @@ describe('ProOnboardingScreen puts the keyboard away on its own', () => {
   });
 
   test('every wizard scroll view carries the platform-split dismiss mode', () => {
-    const scrollViews = SRC.match(/<ScrollView ref=\{scrollRef\} contentContainerStyle=\{styles\.scroll\}[^>]*>/g) || [];
+    // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
+    const scrollViews = SRC.match(/<ScrollView ref=\{scrollRef\} contentContainerStyle=\{\[styles\.scroll, live\.scroll\]\}[^>]*>/g) || [];
     expect(scrollViews.length).toBeGreaterThanOrEqual(6);
     for (const sv of scrollViews) {
       expect(sv).toContain("keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}");

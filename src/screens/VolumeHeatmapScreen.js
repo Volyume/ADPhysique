@@ -651,7 +651,7 @@ export default function VolumeHeatmapScreen({ route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Volume heatmap" />
-        <View style={styles.loadingStack} accessibilityLabel="Loading volume heatmap">
+        <View style={[styles.loadingStack, live.loadingStack]} accessibilityLabel="Loading volume heatmap">
           <SkeletonCard height={220} />
           <SkeletonCard height={92} />
           <SkeletonCard height={160} />
@@ -664,7 +664,7 @@ export default function VolumeHeatmapScreen({ route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Volume heatmap" />
-        <View style={styles.content}>
+        <View style={[styles.content, live.content]}>
           <EmptyState
             icon="warning-outline"
             title="Couldn't load volume heatmap"
@@ -682,7 +682,7 @@ export default function VolumeHeatmapScreen({ route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Volume heatmap" />
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, live.content]}>
         {/* The window control sits ABOVE the figure it changes (VH-7). */}
         <WindowChips
           windows={WINDOW_OPTIONS}
@@ -1072,6 +1072,8 @@ const styles = StyleSheet.create({
 // WorkoutSummaryScreen.js's buildLiveStyles.
 function buildLiveStyles(t) {
   return {
+    loadingStack: { paddingHorizontal: t.screenPadding },
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     noteText: { ...t.type.bodySm, color: t.colors.textMuted },
     summaryText: { ...t.type.bodyStrong, color: t.colors.textPrimary },

@@ -966,7 +966,7 @@ export default function ShareCardScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
       <GestureDetector gesture={scrollGesture}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, live.content]}>
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -1742,6 +1742,7 @@ const styles = StyleSheet.create({
 // AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     templateTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },

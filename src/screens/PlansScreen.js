@@ -1236,7 +1236,7 @@ export default function PlansScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, live.content]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         <ScreenHeader title="Train" />
@@ -2566,6 +2566,7 @@ const styles = StyleSheet.create({
 // WorkoutSummaryScreen.js's buildLiveStyles.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     sectionSubtitle: { ...t.type.caption, color: t.colors.textMuted },
     folderBlock: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },

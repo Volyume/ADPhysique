@@ -508,7 +508,7 @@ export default function LiftProgressScreen({ navigation }) {
       <FlashList
         data={data}
         keyExtractor={r => String(r.exerciseId)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingHorizontal: t.screenPadding }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />
         }

@@ -2566,7 +2566,7 @@ export default function HomeScreen({ navigation, route }) {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}
         // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
         // auto-scroll that keeps the focused input visible, so the keyboard
         // dropped after one keystroke (founder device report 2026-07-13).

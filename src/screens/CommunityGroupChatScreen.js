@@ -228,14 +228,14 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {loading && !messages.length ? (
-          <View style={styles.skeletonThread}>
+          <View style={[styles.skeletonThread, { paddingHorizontal: t.screenPadding }]}>
             <Skeleton width="52%" height={40} radius={radius.lg} style={styles.bubbleLeft} />
             <Skeleton width={96} height={28} radius={radius.lg} style={styles.bubbleRight} />
             <Skeleton width="60%" height={52} radius={radius.lg} style={styles.bubbleLeft} />
             <Skeleton width="38%" height={28} radius={radius.lg} style={styles.bubbleRight} />
           </View>
         ) : errorCode ? (
-          <View style={styles.centre}>
+          <View style={[styles.centre, { paddingHorizontal: t.screenPadding }]}>
             <EmptyState
               icon="cloud-offline-outline"
               title="Not available"
@@ -251,7 +251,7 @@ export default function CommunityGroupChatScreen({ navigation, route }) {
             data={messages}
             keyExtractor={(item) => String(item.id)}
             estimatedItemSize={72}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingHorizontal: t.screenPadding }]}
             onEndReachedThreshold={0.4}
             onEndReached={loadOlder}
             ListEmptyComponent={(

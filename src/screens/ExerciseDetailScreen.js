@@ -644,7 +644,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Exercise" />
-        <View style={styles.loadErrorWrap}>
+        <View style={[styles.loadErrorWrap, { paddingHorizontal: t.screenPadding }]}>
           <Card padding="xl" style={styles.loadErrorCard} accessibilityRole="alert" accessibilityLabel="Exercise details could not be loaded">
             <View style={[styles.loadErrorIcon, live.loadErrorIcon]}>
               <Ionicons name="alert-circle-outline" size={22} color={t.colors.warning} />
@@ -789,7 +789,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title={exercise.name} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
         {/* Overview. A stand-in (D218, F-5: sets logged on an exercise the
             library cannot resolve) has no muscle, equipment or ratings to show,
             so it carries one muted line saying why instead of invented

@@ -204,7 +204,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
         // in the header; "All blocks" is the archive of past blocks.
         data={mesocycles.filter(m => !(m.isActive === 1 || m.isActive === true))}
         keyExtractor={m => m.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingHorizontal: t.screenPadding }]}
         ListHeaderComponent={
           <>
             {/* ── Active plan (coach / manual built) ───── */}

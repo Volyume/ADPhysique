@@ -31,7 +31,7 @@ import { radius } from '../../styles/theme';
 export default function Band({ children, style }) {
   const t = useTheme();
   return (
-    <View style={[styles.group, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }, style]}>
+    <View style={[styles.group, { marginHorizontal: t.screenPadding, backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }, style]}>
       {children}
     </View>
   );
@@ -44,14 +44,16 @@ export function BandGap() {
 
 /** The padded body of a form band: fields, hints and notes under a header. */
 export function BandBody({ children, style }) {
-  return <View style={[styles.body, style]}>{children}</View>;
+  const t = useTheme();
+  // // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
+  return <View style={[styles.body, { paddingHorizontal: t.screenPadding }, style]}>{children}</View>;
 }
 
 /** A quiet section-empty line, with at most one tertiary action. */
 export function BandLine({ text, action }) {
   const t = useTheme();
   return (
-    <View style={styles.line}>
+    <View style={[styles.line, { paddingHorizontal: t.screenPadding }]}>
       <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>{text}</Text>
       {action ? (
         <Button

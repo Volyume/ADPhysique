@@ -721,7 +721,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
         data={filtered}
         keyExtractor={p => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, live.listContent]}
         ItemSeparatorComponent={() => <View style={styles.planSeparator} />}
         ListHeaderComponent={
           <>
@@ -1199,11 +1199,12 @@ const styles = StyleSheet.create({
 // buildLiveStyles.
 function buildLiveStyles(t) {
   return {
+    listContent: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
-    filterPanel: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
+    filterPanel: { paddingHorizontal: t.screenPadding, backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
     collectionChipText: { ...t.type.label, color: t.colors.textSecondary },
     collectionChipTextActive: { color: t.colors.primary },
-    divisionSection: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
+    divisionSection: { paddingHorizontal: t.screenPadding, backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
     divisionGroupLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     divisionIntroDesc: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     divisionChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },

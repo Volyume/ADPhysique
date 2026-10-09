@@ -49,7 +49,17 @@ function formatDateLabel(ms, now) {
 }
 
 /** Normalise one stored row, or null for a warm-up or a non-object. */
-function normaliseRow(row, index) {
+// What makes a row count, by exercise kind (D220 addendum 34): a weight
+// exercise needs a weight and reps; a reps-only or timed exercise needs its
+// reps (seconds, for timed work); a distance exercise needs its distance,
+// which the screen keeps in `weight`.
+function isValidForKind(kind, weight, reps) {
+  if (kind === 'reps_only' || kind === 'duration') return isPositive(reps);
+  if (kind === 'distance') return isPositive(weight);
+  return isPositive(weight) && isPositive(reps);
+}
+
+function normaliseRow(row, index, kind = 'weight_reps') {
   if (!row || typeof row !== 'object') return null;
   const setType = row.setType ?? row.set_type ?? 'straight';
   if (setType === 'warmup') return null;
@@ -62,7 +72,7 @@ function normaliseRow(row, index) {
     sessionKey: workoutId === undefined || workoutId === null ? '__none__' : String(workoutId),
     weight: Number.isFinite(weight) ? weight : 0,
     reps: Number.isFinite(reps) ? reps : 0,
-    valid: isPositive(weight) && isPositive(reps),
+    valid: isValidForKind(kind, weight, reps),
     // A cluster row's reps are a summed total and a ballistic row is not a
     // strength effort: neither may feed an estimated max (the same rule the
     // record system applies, algorithms.isE1rmEligibleRow).
@@ -163,15 +173,82 @@ function computeRecords(rows, todayWeight, now) {
  *   bests: null | { lastDateLabel: string, heaviest: null | { weight: number, reps: number }, atWeight: null | { weight: number, reps: number } },
  * }}
  */
-export function buildExerciseHistory({ sets, todayWeight, now, units = 'kg' } = {}) {
+/**
+ * Records for the kinds that have no weight (D220 addendum 34): a reps-only
+ * exercise keeps its most reps in a set and its most reps in a session; a
+ * timed exercise its longest set and its longest session (seconds); a
+ * distance exercise its farthest set (distance and time) and its farthest
+ * session. Each record carries its date label, as the weight records do.
+ */
+function computeKindRecords(kind, rows, now) {
+  const valid = rows.filter((r) => r.valid);
+  const empty = emptyKindRecords(kind);
+  if (valid.length === 0) return empty;
+  const sessions = groupBySession(valid);
+  const bestSession = (sum) => {
+    let b = null;
+    for (const g of sessions) {
+      const value = g.rows.reduce((acc, s) => acc + sum(s), 0);
+      if (!b || value > b.value || (value === b.value && g.latest > b.latest)) b = { value, latest: g.latest };
+    }
+    return b ? { value: Math.round(b.value * 10) / 10, dateLabel: formatDateLabel(b.latest, now) } : null;
+  };
+  if (kind === 'reps_only') {
+    let m = null;
+    for (const s of valid) if (!m || s.reps > m.reps || (s.reps === m.reps && s.createdAt > m.createdAt)) m = s;
+    return {
+      mostReps: { reps: m.reps, dateLabel: formatDateLabel(m.createdAt, now) },
+      bestSessionReps: bestSession((s) => s.reps),
+    };
+  }
+  if (kind === 'duration') {
+    let m = null;
+    for (const s of valid) if (!m || s.reps > m.reps || (s.reps === m.reps && s.createdAt > m.createdAt)) m = s;
+    return {
+      longestSet: { reps: m.reps, dateLabel: formatDateLabel(m.createdAt, now) },
+      longestSession: bestSession((s) => s.reps),
+    };
+  }
+  // distance: the farthest set, ties to the faster one, then the latest.
+  let f = null;
+  for (const s of valid) {
+    if (!f || s.weight > f.weight || (s.weight === f.weight && (s.reps < f.reps || (s.reps === f.reps && s.createdAt > f.createdAt)))) f = s;
+  }
+  return {
+    farthestSet: { weight: f.weight, reps: f.reps, dateLabel: formatDateLabel(f.createdAt, now) },
+    bestSessionDistance: bestSession((s) => s.weight),
+  };
+}
+
+function emptyKindRecords(kind) {
+  if (kind === 'reps_only') return { mostReps: null, bestSessionReps: null };
+  if (kind === 'duration') return { longestSet: null, longestSession: null };
+  return { farthestSet: null, bestSessionDistance: null };
+}
+
+/** The session's best valid set for a kind without a weight (D220 addendum 34). */
+function pickBestOfSessionForKind(kind, ordered) {
+  let best = null;
+  for (const s of ordered) {
+    if (!s.valid) continue;
+    if (!best) { best = s; continue; }
+    if (kind === 'distance') {
+      if (s.weight > best.weight || (s.weight === best.weight && s.reps < best.reps)) best = s;
+    } else if (s.reps > best.reps) best = s;
+  }
+  return best;
+}
+
+export function buildExerciseHistory({ sets, todayWeight, now, units = 'kg', kind = 'weight_reps' } = {}) {
   void units; // kept for the signature; the numbers are unit-free
   const nowMs = Number.isFinite(now) ? now : Date.now();
-  const emptyRecords = () => ({
+  const weightKind = kind !== 'reps_only' && kind !== 'duration' && kind !== 'distance';
+  const emptyRecords = () => (weightKind ? {
     heaviest: null,
     mostRepsAtWeight: null,
     bestEstimatedMax: null,
     bestSessionVolume: null,
-  });
+  } : emptyKindRecords(kind));
   const empty = {
     history: [],
     records: { lifetime: emptyRecords(), threeMonths: emptyRecords() },
@@ -182,7 +259,7 @@ export function buildExerciseHistory({ sets, todayWeight, now, units = 'kg' } = 
 
   const rows = [];
   sets.forEach((raw, i) => {
-    const r = normaliseRow(raw, i);
+    const r = normaliseRow(raw, i, weightKind ? 'weight_reps' : kind);
     if (r) rows.push(r);
   });
   if (rows.length === 0) return empty;
@@ -195,7 +272,7 @@ export function buildExerciseHistory({ sets, todayWeight, now, units = 'kg' } = 
   const sessions = groupBySession(rows).sort((a, b) => b.latest - a.latest);
   const history = sessions.map((g) => {
     const ordered = loggedOrder(g.rows);
-    const best = pickBestOfSession(ordered);
+    const best = weightKind ? pickBestOfSession(ordered) : pickBestOfSessionForKind(kind, ordered);
     return {
       dateLabel: formatDateLabel(g.latest, nowMs),
       sets: ordered.map((s) => ({ weight: s.weight, reps: s.reps, isBest: s === best })),
@@ -204,6 +281,16 @@ export function buildExerciseHistory({ sets, todayWeight, now, units = 'kg' } = 
 
   const cutoff = nowMs - THREE_MONTHS_MS;
   const recent = rows.filter((r) => r.createdAt >= cutoff);
+  if (!weightKind) {
+    // No weight: no reps-at-weight table and no bests line; the records are
+    // the kind's own (D220 addendum 34).
+    return {
+      history,
+      records: { lifetime: computeKindRecords(kind, rows, nowMs), threeMonths: computeKindRecords(kind, recent, nowMs) },
+      repsAtWeight: [],
+      bests: null,
+    };
+  }
   const lifetime = computeRecords(rows, today, nowMs);
   const threeMonths = computeRecords(recent, today, nowMs);
 

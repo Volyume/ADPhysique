@@ -50,6 +50,16 @@ function flattenText(node) {
   return flattenText(node.children);
 }
 
+// D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows
+// t.screenPadding, and the jest React Native mock reports a narrow window
+// (12 dp). These pins measure the 16 dp gutter, so they run at a wide window.
+const RNForWidth = require('react-native');
+let windowSpy;
+beforeAll(() => {
+  windowSpy = jest.spyOn(RNForWidth, 'useWindowDimensions').mockReturnValue({ width: 393, height: 852, scale: 3, fontScale: 1 });
+});
+afterAll(() => { windowSpy.mockRestore(); });
+
 describe('SwitchRow', () => {
   test('56 dp on one line, 64 dp with a subtitle', () => {
     const one = render(<SwitchRow title="Show my gym" value onValueChange={() => {}} />);

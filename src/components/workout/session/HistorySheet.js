@@ -36,10 +36,12 @@ import BottomSheet from '../../BottomSheet';
 import Chip from '../../Chip';
 import SegmentedControl from '../../SegmentedControl';
 import useTheme from '../../../hooks/useTheme';
+import { formatSeconds } from '../../../lib/workoutHelpers';
 import { spacing } from '../../../styles/theme';
 import { touchTarget } from '../../../styles/layout';
 
 const TIMES = '×';
+const MIDDLE_DOT = '\u00B7';
 const EMPTY_TEXT = 'No sets logged yet for this exercise.';
 const EMPTY_RECENT_TEXT = 'No sets in the last three months.';
 const NONE_TEXT = 'None yet';
@@ -70,12 +72,53 @@ function figure(value) {
   return (Math.round(n * 10) / 10).toLocaleString('en-GB');
 }
 
-function setText(set, units) {
+// The set, by exercise kind (D220 addendum 34): reps alone, a time, a
+// distance with its time, or the weight and reps.
+function setText(set, units, kind = 'weight_reps') {
+  if (kind === 'reps_only') return `${set.reps} ${Number(set.reps) === 1 ? 'rep' : 'reps'}`;
+  if (kind === 'duration') return formatSeconds(set.reps);
+  if (kind === 'distance') return `${figure(set.weight)} ${distanceWord(units)} ${MIDDLE_DOT} ${formatSeconds(set.reps)}`;
   return `${figure(set.weight)} ${units} ${TIMES} ${set.reps}`;
 }
 
-function recordRows(period, units) {
+function distanceWord(units) {
+  return units === 'kg' ? 'm' : 'yd';
+}
+
+function chipLabel(set, units, kind) {
+  if (kind === 'reps_only') return String(set.reps);
+  if (kind === 'duration') return formatSeconds(set.reps);
+  if (kind === 'distance') return `${figure(set.weight)} ${MIDDLE_DOT} ${formatSeconds(set.reps)}`;
+  return `${figure(set.weight)} ${TIMES} ${set.reps}`;
+}
+
+function chipSpoken(set, units, kind) {
+  if (kind === 'reps_only') return `Use ${set.reps} ${Number(set.reps) === 1 ? 'rep' : 'reps'}`;
+  if (kind === 'duration') return `Use ${formatSeconds(set.reps)}`;
+  if (kind === 'distance') return `Use ${figure(set.weight)} ${units === 'kg' ? 'metres' : 'yards'} in ${formatSeconds(set.reps)}`;
+  return pressLabel(figure(set.weight), set.reps, units);
+}
+
+function recordRows(period, units, kind = 'weight_reps') {
   const p = period || {};
+  if (kind === 'reps_only') {
+    return [
+      { key: 'mostReps', label: 'Most reps in a set', record: p.mostReps, value: (r) => setText(r, units, kind) },
+      { key: 'bestSessionReps', label: 'Most reps in a session', record: p.bestSessionReps, value: (r) => `${figure(r.value)} reps` },
+    ];
+  }
+  if (kind === 'duration') {
+    return [
+      { key: 'longestSet', label: 'Longest set', record: p.longestSet, value: (r) => formatSeconds(r.reps) },
+      { key: 'longestSession', label: 'Longest session', record: p.longestSession, value: (r) => formatSeconds(r.value) },
+    ];
+  }
+  if (kind === 'distance') {
+    return [
+      { key: 'farthestSet', label: 'Farthest set', record: p.farthestSet, value: (r) => setText(r, units, kind) },
+      { key: 'bestSessionDistance', label: 'Farthest session', record: p.bestSessionDistance, value: (r) => `${figure(r.value)} ${distanceWord(units)}` },
+    ];
+  }
   return [
     {
       key: 'heaviest',
@@ -110,7 +153,7 @@ function hasAnyRecord(records) {
 
 export default function HistorySheet({
   visible, onClose, exerciseName, segment, onSegment,
-  history, records, repsAtWeight, onUseSet, units = 'kg',
+  history, records, repsAtWeight, onUseSet, units = 'kg', kind = 'weight_reps',
 }) {
   const t = useTheme();
   const live = useMemo(() => ({
@@ -155,9 +198,9 @@ export default function HistorySheet({
           {(session.sets || []).map((set, j) => (
             <Chip
               key={j}
-              label={`${figure(set.weight)} ${TIMES} ${set.reps}`}
+              label={chipLabel(set, units, kind)}
               onPress={() => use(set.weight, set.reps)}
-              accessibilityLabel={pressLabel(figure(set.weight), set.reps, units)}
+              accessibilityLabel={chipSpoken(set, units, kind)}
               style={set.isBest ? live.bestChip : undefined}
               testID={`volyume-history-chip-${i}-${j}`}
             />
@@ -171,7 +214,7 @@ export default function HistorySheet({
     if (!hasAnyRecord(records) && recent.length === 0) {
       return <Text style={live.empty} testID="volyume-records-empty">{EMPTY_TEXT}</Text>;
     }
-    const rows = recordRows(records?.[period], units);
+    const rows = recordRows(records?.[period], units, kind);
     return (
       <>
         <View style={styles.chips} accessibilityRole="radiogroup">
@@ -207,6 +250,9 @@ export default function HistorySheet({
           ))}
         </View>
 
+        {/* The reps-at-weight table is a weight exercise's (D220 addendum 34). */}
+        {kind === 'weight_reps' ? (
+          <>
         <Text style={live.heading} accessibilityRole="header">Best reps at each weight</Text>
         {recent.length === 0 ? (
           <Text style={live.empty} testID="volyume-records-table-empty">{EMPTY_RECENT_TEXT}</Text>
@@ -233,6 +279,8 @@ export default function HistorySheet({
             ))}
           </View>
         )}
+          </>
+        ) : null}
       </>
     );
   }

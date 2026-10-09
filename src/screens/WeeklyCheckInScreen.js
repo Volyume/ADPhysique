@@ -1555,7 +1555,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   if (loading || gateState === 'loading') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingHorizontal: t.screenPadding }}>
           <SkeletonCard height={72} />
           <SkeletonCard height={160} />
           <SkeletonCard height={120} />
@@ -1576,7 +1576,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             own useNavigation() resolves. Empty card style below mirrors the
             BodyMetrics empty state for visual consistency. */}
         <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.gateScroll}>
+        <ScrollView contentContainerStyle={[styles.gateScroll, live.gateScroll]}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
             <Text style={[styles.gateTitle, live.gateTitle]}>Come back on {dayName}</Text>
@@ -1621,7 +1621,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             navigation prop the old handler used, not whatever BackHeader's
             own useNavigation() resolves. */}
         <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.gateScroll}>
+        <ScrollView contentContainerStyle={[styles.gateScroll, live.gateScroll]}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="checkmark-circle-outline" size={40} color={t.colors.success} />
             <Text style={[styles.gateTitle, live.gateTitle]}>You&apos;re all caught up</Text>
@@ -1654,7 +1654,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             navigation prop the old handler used, not whatever BackHeader's
             own useNavigation() resolves. */}
         <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
-        <ScrollView contentContainerStyle={styles.gateScroll}>
+        <ScrollView contentContainerStyle={[styles.gateScroll, live.gateScroll]}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
             <Text style={[styles.gateTitle, live.gateTitle]}>Your check-in day was {dayName}</Text>
@@ -1857,7 +1857,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       >
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, live.scrollContent]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -2311,12 +2311,14 @@ const styles = StyleSheet.create({
 // unfreeze.
 function buildLiveStyles(t) {
   return {
+    scrollContent: { paddingHorizontal: t.screenPadding },
+    gateScroll: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     gateIconWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateTitle: { ...t.type.title, color: t.colors.textSecondary },
     gateBody: { ...t.type.bodySm, color: t.colors.textMuted },
-    headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
+    headerBar: { paddingHorizontal: t.screenPadding, borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
     headerTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     stepDot: { backgroundColor: t.colors.surface3 },
     stepDotDone: { backgroundColor: withAlpha(t.colors.primary, alpha.strong) },

@@ -205,7 +205,7 @@ export default function Article9ConsentScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, live.title]}>Health and nutrition data consent</Text>
 
         <Text style={[styles.body, live.body]}>

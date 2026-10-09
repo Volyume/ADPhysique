@@ -32,7 +32,7 @@ export default function PlanPreviewScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, live.content]}>
         <Text style={[styles.kicker, live.kicker]}>YOUR PLAN</Text>
         <Text style={[styles.h1, live.h1]}>{p.headline}</Text>
         <Card style={styles.card}>
@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
 // nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     kicker: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     h1: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
@@ -90,7 +91,7 @@ function buildLiveStyles(t) {
     structure: { ...t.type.body, color: t.colors.textPrimary },
     phase: { ...t.type.body, color: t.colors.textSecondary },
     note: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
-    footer: { borderTopColor: t.colors.borderSubtle },
+    footer: { paddingHorizontal: t.screenPadding, borderTopColor: t.colors.borderSubtle },
     cta: { backgroundColor: t.colors.primaryFill },
     ctaText: { color: t.colors.onPrimary, fontSize: t.fontSize.md },
   };

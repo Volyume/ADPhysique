@@ -28,7 +28,7 @@ export default function NutritionEducationScreen() {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Nutrition basics" />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, live.content]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.intro, live.intro]}>
           If you've never tracked calories or macros, this is the 5-minute
           version of why they matter and how to use them without it taking
@@ -335,6 +335,7 @@ const styles = StyleSheet.create({
 // frozen. Every word of copy is untouched -- colours only.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.body, color: t.colors.textSecondary },
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },

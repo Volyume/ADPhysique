@@ -105,7 +105,7 @@ export default function WellbeingCheckScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Wellbeing check" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, live.content]} keyboardShouldPersistTaps="handled">
 
         <Text style={[styles.intro, live.intro]}>
           Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how Volyume approaches you.
@@ -258,6 +258,7 @@ const styles = StyleSheet.create({
 // comment at the useTheme() call site above.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textSecondary },
     item: { backgroundColor: t.colors.surface, borderColor: t.colors.border },

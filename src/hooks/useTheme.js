@@ -53,10 +53,10 @@ export function useTheme() {
   // themed-style consumer downstream can memoize on `t` without recomputing
   // on unrelated re-renders (risk register #8 in the CP-10 plan).
   // D104-2 (phase 2c): the narrow-device bucket from the live window width.
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const narrow = width < NARROW_WIDTH_DP;
   return useMemo(
-    () => resolveTheme({ ...prefs, narrow }),
+    () => resolveTheme({ ...prefs, narrow, fontScale }),
     // Deliberately the four raw preference VALUES, not `prefs` itself: the
     // object reference already changes only when one of them does (the
     // useShallow selector above), but listing the primitives here is the
@@ -64,7 +64,7 @@ export function useTheme() {
     // survives even if that upstream stabilisation ever changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [prefs.theme, prefs.largerText, prefs.higherContrast, prefs.colorBlindSafe, narrow],
+    [prefs.theme, prefs.largerText, prefs.higherContrast, prefs.colorBlindSafe, narrow, fontScale],
   );
 }
 

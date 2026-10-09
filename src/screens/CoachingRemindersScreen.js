@@ -380,7 +380,7 @@ export default function CoachingRemindersScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Coaching reminders" />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]}>
         <Text style={[styles.intro, live.intro]}>
           These reminders help your coach make accurate decisions each week. Pick times that fit your normal routine.
         </Text>

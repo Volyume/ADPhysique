@@ -43,6 +43,13 @@ describe('D104-2 narrow-device bucket', () => {
     expect(resolveTheme({ theme: 'dark', narrow: true }).narrow).toBe(true);
   });
 
+  test('textScaled reports Larger text or a phone text size above 1.05x (D220 addendum 34)', () => {
+    expect(resolveTheme({ theme: 'dark' }).textScaled).toBe(false);
+    expect(resolveTheme({ theme: 'dark', fontScale: 1 }).textScaled).toBe(false);
+    expect(resolveTheme({ theme: 'dark', fontScale: 1.3 }).textScaled).toBe(true);
+    expect(resolveTheme({ theme: 'dark', largerText: true }).textScaled).toBe(true);
+  });
+
   test('useTheme reads the bucket from the live window width', () => {
     const RN = require('react-native');
     const spy = jest.spyOn(RN, 'useWindowDimensions');

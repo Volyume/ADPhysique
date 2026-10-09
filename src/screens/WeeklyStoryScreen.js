@@ -116,7 +116,7 @@ export default function WeeklyStoryScreen() {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Your week" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, live.content]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.intro, live.intro]}>
           {story.weekLabel ? `The week of ${story.weekLabel}, in one place.` : 'This week, in one place.'}
         </Text>
@@ -189,6 +189,7 @@ const styles = StyleSheet.create({
 // there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textMuted },
     chapterCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },

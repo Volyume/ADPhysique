@@ -130,6 +130,31 @@ function isKettlebell(equipmentCategory) {
   return String(equipmentCategory || '').toLowerCase().includes('kettlebell');
 }
 
+/**
+ * Dumbbell racks are discrete too (D220 addendum 34, 2026-10-09, the logger
+ * audit's D11: the 5%-capped plate increment put a 22 kg bell at 23 kg,
+ * which no rack has). The next bell up from `current`, in kg: below 10 kg
+ * racks step by 1 kg; from 10 kg a rack steps by 2.5 kg or by 2 kg, and the
+ * load the person is already lifting says which rack they are on (a load on
+ * the 2.5 grid steps 2.5; a load on the even grid steps 2; a load on
+ * neither rounds up to the 2.5 grid). Null for a non-positive or non-finite
+ * load, so the caller keeps its ordinary increment.
+ */
+export function nextDumbbellLoadKg(current) {
+  const w = Number(current);
+  if (!Number.isFinite(w) || w <= 0) return null;
+  if (w < 10) return Math.floor(w) + 1;
+  const onHalfGrid = Math.abs(w / 2.5 - Math.round(w / 2.5)) < 1e-9;
+  if (onHalfGrid) return w + 2.5;
+  const onEvenGrid = Math.abs(w / 2 - Math.round(w / 2)) < 1e-9;
+  if (onEvenGrid) return w + 2;
+  return Math.ceil(w / 2.5) * 2.5;
+}
+
+function isDumbbell(equipmentCategory) {
+  return String(equipmentCategory || '').toLowerCase().includes('dumbbell');
+}
+
 // The one place the packet's exercise row is read for its equipment, so a
 // caller may supply any of the three shapes the data layer produces.
 function readEquipmentCategory(exercise) {
@@ -180,6 +205,12 @@ export function resolveLoadIncrement(baseWeight, {
   // bells just as surely as +2.5 kg did.
   if (units !== 'lbs' && isKettlebell(equipmentCategory)) {
     const nextBell = nextKettlebellLoadKg(w);
+    if (nextBell != null) return nextBell - w;
+  }
+  // The same early return for a dumbbell rack (addendum 34): the step is the
+  // gap to the next bell, above the 5% cap and the 0.25 grid.
+  if (units !== 'lbs' && isDumbbell(equipmentCategory)) {
+    const nextBell = nextDumbbellLoadKg(w);
     if (nextBell != null) return nextBell - w;
   }
   const raw = incrementKg != null && Number.isFinite(Number(incrementKg))

@@ -80,8 +80,7 @@ import {
   bestPRPerExercise,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
-  defaultIncrement,
-} from '../lib/algorithms';
+  } from '../lib/algorithms';
 // Campaign 20 Phase 2 (docs/live-prescription-campaign-20-2026-08-16/
 // CAMPAIGN-20-PHASE-1-DESIGN.md, FOUNDER-RULINGS-2026-08-16.md): the single
 // authoritative live set prescription resolver, replacing the fragmented
@@ -90,6 +89,7 @@ import {
 import {
   PROVENANCE,
   resolveSetPrescription,
+  resolveLoadIncrement,
   assembleEvidencePacket,
   detectLoadOverride,
   detectRepsOverride,
@@ -402,12 +402,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const chromeRatchetRef = useRef(0);
   const barHeightRef = useRef(0);
   const safeBottomRef = useRef(0);
+  // On iOS the keyboard (with the bar riding it as its accessory) covers the
+  // bottom of the screen, so the toast docks above the keyboard's frame
+  // (D220 addendum 34, audit D13); on Android the window resizes and the
+  // bar's own height is the inset.
+  const keyboardHeightRef = useRef(0);
   const publishBottomInset = useCallback(() => {
     const s = useAppStore.getState();
-    // The step bar carries the safe inset itself; the spacer does while closed.
-    const h = chromeRatchetRef.current + (barHeightRef.current || safeBottomRef.current);
+    const bottom = Platform.OS === 'ios' && keyboardHeightRef.current > 0
+      ? keyboardHeightRef.current
+      : (barHeightRef.current || safeBottomRef.current);
+    const h = chromeRatchetRef.current + bottom;
     if (h !== (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
   }, []);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      keyboardHeightRef.current = Math.round(e?.endCoordinates?.height ?? 0);
+      publishBottomInset();
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardHeightRef.current = 0;
+      publishBottomInset();
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, [publishBottomInset]);
   const handleBarLayout = useCallback((e) => {
     const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
     if (h < 0) return;
@@ -1595,6 +1613,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleJumpToExercise(i) {
     if (i === currentExerciseIndex) return;
     audit('workout.exercise.jump', { fromIndex: currentExerciseIndex, toIndex: i });
+    // A slot Time Crunch left out comes back when the person taps it (D220
+    // addendum 34, ruled under the founder's delegation of 2026-10-09): the
+    // tap is an explicit choice to train it, and a slot that is active but
+    // still skipped by the advance was the audit's C14. Jumping to a kept
+    // slot is still only a jump: nothing else is reordered or skipped.
+    if (workoutExercises[i]?._timeCrunchSkipped) {
+      audit('workout.exercise.unskip', { index: i });
+      useAppStore.getState().setWorkoutExercises((list) => list.map((e, idx) => (
+        idx === i && e?._timeCrunchSkipped ? { ...e, _timeCrunchSkipped: false } : e
+      )));
+    }
     setCurrentExerciseIndex(i);
     scrollToActiveSection(false);
   }
@@ -4745,8 +4774,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const activeRules = activeField === 'reps'
     ? REPS_RULES
     : (setTableKind === 'distance' ? DISTANCE_RULES : WEIGHT_RULES);
-  const weightStepKg = exercise?.incrementKg || exercise?.increment_kg
-    || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound');
+  // The bar steps by the ONE increment rule the coach uses (D220 addendum
+  // 34, audit D11): a dumbbell steps to the next bell on the rack, a
+  // kettlebell to the next bell on the shelf, a barbell by the plate.
+  const weightStepKg = resolveLoadIncrement(parseDecimalInput(activeSource?.weight ?? currentSet.weight) || 0, {
+    incrementKg: exercise?.incrementKg ?? exercise?.increment_kg ?? null,
+    units,
+    category: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
+    equipmentCategory: exercise?.equipmentCategory ?? exercise?.equipment_category ?? exercise?.equipment ?? null,
+  });
   // The reps well gets no step keys (D220 addendum 24): a rep count is typed,
   // and "- 1 / + 1" beside the keyboard read as nothing. Weight steps by the
   // plate; a time well steps by 5 s inside the bar.
@@ -4920,7 +4956,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     text = text.replace(/,/g, '.');
     if (activeField === 'reps') {
       const n = parseInt(text, 10);
-      if (!Number.isNaN(n)) writeActiveField('reps', Math.min(Math.max(n, 1), 200));
+      // 1 to 200 reps; a keystroke that leaves that range is refused, never
+      // clamped silently (D220 addendum 34, audit D14).
+      if (!Number.isNaN(n)) { if (n >= 1 && n <= 200) writeActiveField('reps', n); }
       else if (text === '') writeActiveField('reps', '');
       return;
     }
@@ -4971,10 +5009,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function shortSetText(set) {
     const reps = set.actualReps ?? set.actual_reps ?? set.reps ?? '';
+    // Under scaled text the fact drops its spaces (D220 addendum 34, audit
+    // C18): the Last column is a fixed 80 dp and nothing on the row
+    // fit-scales, so "137.5×15" at 1.15x fits where "137.5 × 15" would not.
+    const times = t.textScaled ? '×' : ' × ';
+    const dot = t.textScaled ? '·' : ' · ';
     if (setTableKind === 'reps_only') return `${reps}`;
     if (setTableKind === 'duration') return formatSeconds(reps);
-    if (setTableKind === 'distance') return `${set.weight ?? 0} · ${formatSeconds(reps)}`;
-    return `${set.weight ?? 0} × ${reps}`;
+    if (setTableKind === 'distance') return `${set.weight ?? 0}${dot}${formatSeconds(reps)}`;
+    return `${set.weight ?? 0}${times}${reps}`;
   }
   function lastCellFor(workingIndex) {
     if (prevWorkingSets.length === 0) return null;
@@ -5000,28 +5043,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercise, today's logged sets included (founder ruling 2026-08-23: the
   // bar moves during the session). Weight and reps exercises only.
   const todayWeight = parseDecimalInput(currentSet.weight);
+  // Every kind has a history and records (D220 addendum 34, audit C16).
   const previousHistory = useMemo(() => (
-    setTableKind === 'weight_reps'
-      ? buildExerciseHistory({ sets: allTimeSets, todayWeight, units })
-      : null
+    buildExerciseHistory({ sets: allTimeSets, todayWeight, units, kind: setTableKind })
   ), [setTableKind, allTimeSets, todayWeight, units]);
   const recordsHistory = useMemo(() => (
-    setTableKind === 'weight_reps'
-      ? buildExerciseHistory({
+    buildExerciseHistory({
         sets: [
           ...loggedSets.map((x) => ({ ...x, workoutId: x.workoutId ?? activeWorkout?.id, createdAt: x.createdAt ?? Date.now() })),
           ...allTimeSets,
         ],
         todayWeight,
-        units,
+        units, kind: setTableKind,
       })
-      : null
   ), [setTableKind, allTimeSets, loggedSets, todayWeight, units, activeWorkout?.id]);
   function handleUseHistorySet({ weight, reps }) {
     hapticsVocab.setLogged();
     audit('workout.history.use', { exerciseId: exercise?.id, setIndex: workingLogged });
     if (editingSet) { closeEditSet(); setEditField(null); }
-    setCurrentSet((cs) => ({ ...cs, weight: String(weight ?? 0), reps: reps ?? cs.reps, isGhost: false }));
+    // A reps-only or timed set has no weight to use (D220 addendum 34).
+    const noWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
+    setCurrentSet((cs) => ({ ...cs, weight: noWeight ? '' : String(weight ?? 0), reps: reps ?? cs.reps, isGhost: false }));
     setShowHistory(false);
   }
   function openHistorySheet() {
@@ -5874,6 +5916,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           repsAtWeight={recordsHistory?.repsAtWeight ?? []}
           onUseSet={handleUseHistorySet}
           units={units}
+          kind={setTableKind}
         />
         <ExerciseRestSheet
           visible={showRestLengthFor != null}
@@ -5886,8 +5929,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={() => setRowSheet(null)}
           title={rowSheet?.title ?? ''}
           note={rowSheet?.kind === 'next' ? noteText : (rowSheet?.set?.notes ?? null)}
-          canEditNote={rowSheet?.kind === 'next'}
-          onSaveNote={(text) => setNoteText(text)}
+          canEditNote
+          onSaveNote={(text) => {
+            // A logged set's note saves to the set (D220 addendum 34, audit
+            // D15); the next set's note is the entry's draft as before.
+            if (rowSheet?.kind === 'logged' && rowSheet.set?.id) {
+              const notes = text || null;
+              updateWorkoutSet(rowSheet.set.id, { notes }).catch((e) => logError('ActiveWorkoutScreen.saveSetNote', e, { setId: rowSheet.set.id }));
+              updateSetInCurrentExercise(rowSheet.set.id, { notes });
+              return;
+            }
+            setNoteText(text);
+          }}
           onEdit={rowSheet?.kind === 'logged' ? () => openWell((setTableKind === 'weight_reps' || setTableKind === 'distance') ? 'weight' : 'reps', rowSheet.set) : undefined}
           onDelete={rowSheet?.kind === 'logged' ? () => openDeleteFromMenu(rowSheet.set) : undefined}
         />

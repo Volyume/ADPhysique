@@ -28,7 +28,7 @@ export const SECTION_HEADER_HEIGHT = 44;
 export default function SectionHeader({ title, trailing, flush = false }) {
   const t = useTheme();
   return (
-    <View style={[styles.wrap, flush && styles.flush]}>
+    <View style={[styles.wrap, { paddingHorizontal: t.screenPadding }, flush && styles.flush]}>
       <SectionLabel style={styles.title} heading numberOfLines={2}>
         {title}
       </SectionLabel>

@@ -676,14 +676,14 @@ export default function NotificationSettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Notifications" />
-      <View style={styles.subtitleWrap}>
+      <View style={[styles.subtitleWrap, live.subtitleWrap]}>
         <Text style={[styles.subtitle, live.subtitle]}>
           Volyume uses local notifications only, never marketing.
         </Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, live.content]}
         showsVerticalScrollIndicator={false}
       >
         {/* Permission banner. F8 (discoverability audit 2026-08-10): "enable
@@ -1252,6 +1252,8 @@ const styles = StyleSheet.create({
 // notification-scheduling logic touched -- colours only.
 function buildLiveStyles(t) {
   return {
+    subtitleWrap: { paddingHorizontal: t.screenPadding },
+    content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     subtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
     permissionBanner: { backgroundColor: withAlpha(t.colors.warning, alpha.tint), borderColor: withAlpha(t.colors.warning, 0.35) },

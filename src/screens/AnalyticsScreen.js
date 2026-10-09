@@ -392,7 +392,7 @@ export default function AnalyticsScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -810,8 +810,9 @@ function RapidLossCorrectedBlock({ decision, energyUnit }) {
 // ─── Screens ──────────────────────────────────────────────────────────────────
 
 function LoadingView() {
+  const t = useTheme();
   return (
-    <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+    <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingHorizontal: t.screenPadding, gap: spacing.md }}>
       <SkeletonCard height={72} />
       <SkeletonCard height={140} />
       <SkeletonCard height={180} />
@@ -827,7 +828,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
       <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
           <Ionicons name="time-outline" size={32} color={t.colors.primary} />
@@ -875,12 +876,13 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
 // Distinct from InsufficientDataView so a transient error never masquerades as
 // "you haven't logged enough", it offers a retry instead of a dead end.
 function LoadErrorView({ onRetry, onClose }) {
+  const t = useTheme();
   // D1 sweep (DD5): routed through the shared EmptyState primitive, the
   // same 'transient load failure, your data is safe' shape CoachReviewScreen.js
   // and BlockReflectionScreen.js already use, instead of a hand-built
   // Card/icon/title/body/Button/quiet-link layout.
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}>
       <EmptyState
         icon="cloud-offline-outline"
         title="Couldn't load your coach."
@@ -3013,7 +3015,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Coaching decision" onBack={handleClose} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]}
         showsVerticalScrollIndicator={false}
       >
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once

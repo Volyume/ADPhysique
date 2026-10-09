@@ -128,7 +128,8 @@ describe('WorkoutSummary footer/tab-band layout model (R2-5/R2-6, source)', () =
   test('the summary owns only the top edge; scroll padding is footer-independent', () => {
     expect(summary).toMatch(/edges=\{\['top'\]\}/);
     expect(summary).not.toMatch(/edges=\{\['top', 'bottom'\]\}/);
-    expect(summary).toMatch(/contentContainerStyle=\{styles\.content\}/);
+    // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
+    expect(summary).toMatch(/contentContainerStyle=\{\[styles\.content, live\.content\]\}/);
     expect(summary).not.toMatch(/\[footerHeight, setFooterHeight\]/);
     expect(summary).not.toMatch(/setFooterHeight\(/);
   });
