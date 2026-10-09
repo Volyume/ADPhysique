@@ -61,7 +61,10 @@ const SET_ROW = fs.readFileSync(
 
 describe('single primary CTA: Log set until target, then Next exercise / Finish workout in the SAME slot', () => {
   test('the advance gate is targetComplete && !extraSetArmed && !perSide, unchanged', () => {
-    expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
+    // D220 addendum 28 (2a): Add set before the target adds to this session's
+    // target (extraTargetSets, reset on an exercise change); the fallback
+    // chain inside the brackets is unchanged.
+    expect(SRC).toContain('const targetSets = (adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS) + extraTargetSets;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
     expect(SRC).toContain('countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}');
@@ -206,7 +209,10 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
 
   test('a slot with no routineExercise at all falls back to DEFAULT_FREEFORM_TARGET_SETS, never to undefined', () => {
     expect(SRC).toContain('const DEFAULT_FREEFORM_TARGET_SETS = 3;');
-    expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
+    // D220 addendum 28 (2a): Add set before the target adds to this session's
+    // target (extraTargetSets, reset on an exercise change); the fallback
+    // chain inside the brackets is unchanged.
+    expect(SRC).toContain('const targetSets = (adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS) + extraTargetSets;');
     expect(SRC).toContain('const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;');
   });
 

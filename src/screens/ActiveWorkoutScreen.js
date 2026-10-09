@@ -150,6 +150,12 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 // either side of a comparison. Tolerates both the camelCase session shape
 // and the snake_case rows getAllCompletedSetsForExercise returns.
 const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
+// Founder ruling 2026-10-09 (D220 addendum 28, 4a): a set's type shows on
+// its row. The marker is the set number for a working set and a letter for
+// every other type: W warm-up, D drop set (which never takes a number, so
+// no number repeats), M myo-reps, R rest-pause, A AMRAP.
+const SET_TYPE_MARKERS = Object.freeze({ warmup: 'W', dropset: 'D', myo_reps: 'M', rest_pause: 'R', amrap: 'A' });
+const markerForSet = (setType, number) => SET_TYPE_MARKERS[setType ?? 'straight'] ?? number;
 
 // Founder device order 2026-08-17: the in-card coach line is RETIRED. The
 // Campaign 20 Stage 11 provenance copy bank (PROVENANCE_COPY /
@@ -504,6 +510,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // commit happens on that confirm, never on the arm tap. Disarms after
   // the set logs or when the exercise changes.
   const [extraSetArmed, setExtraSetArmed] = useState(false);
+  // Founder ruling 2026-10-09 (D220 addendum 28, 2a): Add set BEFORE the
+  // target is met adds a pending row to this session's target for the
+  // exercise (it did nothing visible until the target was met). Reset on
+  // an exercise change.
+  const [extraTargetSets, setExtraTargetSets] = useState(0);
   useEffect(() => {
     setExtraSetArmed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1419,6 +1430,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function armExtraSet() {
     cancelAutoAdvance();
     hapticsVocab.selection();
+    if (!targetComplete) { setExtraTargetSets((n) => n + 1); return; }
     setExtraSetArmed(true);
   }
 
@@ -2933,8 +2945,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // confidence branch is needed here. C5-P14-02: the resolver's
       // FIRST_TIME_BAND reps target is band.min, so a genuinely blank-weight
       // first exposure still seeds reps at the bottom of the band.
-      const seededWeight = seedPrescription.prefill ? (seedPrescription.weight ?? '') : '';
-      const seededReps = seedPrescription.repsTarget != null ? seedPrescription.repsTarget : DEFAULT_SET.reps;
+      // Founder ruling 2026-10-09 (D220 addendum 28): when the resolver has
+      // no weight, the next set repeats the last working set logged this
+      // session for the exercise ("it had a weight from set 1 ... it should
+      // take the weight from set 1 and repeat it"), never an empty well
+      // beside a Last figure. A first set with no history stays blank.
+      const lastWorking = [...allLoggedForExercise].reverse().find(isWorkingSetRow) || null;
+      const carriedWeight = lastWorking && lastWorking.weight != null && lastWorking.weight !== '' ? lastWorking.weight : null;
+      const carriedReps = lastWorking ? (lastWorking.actualReps ?? lastWorking.reps ?? null) : null;
+      const seededWeight = seedPrescription.prefill ? (seedPrescription.weight ?? carriedWeight ?? '') : (carriedWeight ?? '');
+      const seededReps = seedPrescription.repsTarget != null ? seedPrescription.repsTarget : (carriedReps ?? DEFAULT_SET.reps);
       const seeded = {
         weight: seededWeight,
         reps: seededReps,
@@ -4530,7 +4550,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // (blank workout, or an exercise added mid-session) still resolves to a
   // real number instead of undefined. See DEFAULT_FREEFORM_TARGET_SETS above
   // for the full root-cause note.
-  const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;
+  const targetSets = (adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS) + extraTargetSets;
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
@@ -4612,7 +4632,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!currentSet.isGhost) return;
     const live = prescriptions[workingLogged];
     if (!live) return;
-    const w = live.prefill ? (live.weight ?? '') : '';
+    // The same fallback as the seed (D220 addendum 28): a re-seed never
+    // blanks a well the last working set can fill.
+    const lastWorking = [...loggedSets].reverse().find(isWorkingSetRow) || null;
+    const carriedWeight = lastWorking && lastWorking.weight != null && lastWorking.weight !== '' ? lastWorking.weight : null;
+    const w = live.prefill ? (live.weight ?? carriedWeight ?? '') : (carriedWeight ?? '');
     const r = live.repsTarget != null ? live.repsTarget : DEFAULT_SET.reps;
     if (String(w) === String(currentSet.weight) && r === currentSet.reps) return;
     setCurrentSet(cs => ({ ...cs, weight: w, reps: r, isGhost: live.prefill && live.weight != null }));
@@ -4718,9 +4742,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setEditField(null);
     setEditingSet(null);
     setEditValue(null);
+    setExtraTargetSets(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExerciseIndex]);
+  function editIsDirty() {
+    if (!editingSet) return false;
+    return String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
+      || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
+  }
+  // Founder ruling 2026-10-09 (D220 addendum 28, 3b): opening another well
+  // while an edit holds an unsaved change asks first, in the app's own
+  // dialog, instead of discarding the change silently.
   function openWell(field, set = null) {
+    if (editingSet && editIsDirty() && (set?.id ?? null) !== editingSet.id) {
+      appAlert('Discard changes?', 'Your change to this set is not saved.', [
+        { text: 'Keep editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => { closeEditSet(); setEditField(null); openWellNow(field, set); } },
+      ]);
+      return;
+    }
+    openWellNow(field, set);
+  }
+  function openWellNow(field, set = null) {
     hapticsVocab.selection();
     // Typing is staying: a pending auto-advance would carry the pad away.
     cancelAutoAdvance();
@@ -4821,8 +4864,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function handleInputDone() {
     if (editingSet) {
-      const changed = String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
-        || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
+      const changed = editIsDirty();
       // The field stays open until the save lands (closeEditSet and the
       // save's success path clear it), so a refused save keeps the pad.
       if (changed) handleSaveEditedSet(); else closeEditSet();
@@ -4997,7 +5039,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const lc = warm ? lastWarmupCellFor(warmNum - 1) : lastCellFor(progressNum - 1);
     setTableRows.push({
       id: s.id ?? `logged-${i}`,
-      marker: warm ? 'W' : progressNum,
+      marker: markerForSet(s.setType ?? s.set_type, progressNum),
       last: lc ? { text: lc.text, stale: lc.stale } : null,
       wells: {
         weight: values.weight,
@@ -5018,7 +5060,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     : lastCellFor(workingLogged);
   if (nextRowShown) setTableRows.push({
     id: 'next',
-    marker: isWarmupEntry ? 'W' : workingLogged + 1,
+    marker: markerForSet(currentSet.setType, workingLogged + 1),
     last: nextLast ? { text: nextLast.text, stale: nextLast.stale } : null,
     wells: {
       weight: currentSet.weight,
