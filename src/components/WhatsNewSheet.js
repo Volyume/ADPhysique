@@ -135,6 +135,22 @@ export const WHATS_NEW = {
     { icon: 'pulse-outline', text: 'Message your groups and set a sessions challenge with them. Showing that you are training right now is off until you turn it on in Community, under You.' },
     { icon: 'link-outline', text: 'A link to a profile, a post or an open group now shows a short preview outside the app. Never a note, a weight or a measurement.' },
   ],
+
+  // 2.9.0 (founder's word, 2026-10-09: "Bump the version number"). The
+  // privacy notice stays first (the sheet shows only the running version's
+  // notes, so a person updating past 2.8.0 still sees it); then the logger
+  // redrawn on the founder's device walk (D220 addenda 7 to 18): one grid in
+  // the app's own look, the phone's keyboard with a step bar in place of the
+  // invented keypad, the toolbar's five controls, History on the bar, the
+  // record mark, and the rest strip in the same language.
+  '2.9.0': [
+    { icon: 'shield-checkmark-outline', text: 'Our privacy policy now covers Community: what a shared workout shows, who can see it, and how to turn sharing off. Read it in Settings, under Privacy and legal.' },
+    { icon: 'barbell-outline', text: 'The workout logger now looks like the rest of Volyume: each exercise is a card, every set is a row of two boxes with last session beside it, and the tick on the row logs it.' },
+    { icon: 'keypad-outline', text: 'Your phone\'s own number keyboard types the weight and reps, with a thin bar above it to step the weight, move to reps and finish. The built-in keypad is gone.' },
+    { icon: 'stats-chart-outline', text: 'History sits on the logger\'s top bar and opens the current exercise\'s past sessions and records. Tap the exercise name for its guide, and find its rest length under the three dots.' },
+    { icon: 'trophy-outline', text: 'A record set is marked beside its number as you log it, and the elapsed time and the rest countdown now read in the same type.' },
+    { icon: 'people-outline', text: 'Community now wears the app\'s own look: the same header, grouped lists and section labels as every other screen.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
