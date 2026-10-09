@@ -43,6 +43,19 @@ function setAccessibility(overrides) {
   });
 }
 
+// D104-2 (Campaign 27 phase 2c, 2026-10-09): useTheme now reads the window
+// width for the narrow-device bucket, and the jest React Native mock reports
+// a narrow window. These suites pin the FOUR preferences against
+// resolveTheme() and the legacy applyAccessibility() path (which has no
+// bucket), so they run at a wide window; the bucket itself is pinned in
+// src/styles/__tests__/narrowBucket.test.js.
+const RNForWidth = require('react-native');
+let windowSpy;
+beforeAll(() => {
+  windowSpy = jest.spyOn(RNForWidth, 'useWindowDimensions').mockReturnValue({ width: 393, height: 852, scale: 3, fontScale: 1 });
+});
+afterAll(() => { windowSpy.mockRestore(); });
+
 describe('useTheme: derives from the store and matches resolveTheme()', () => {
   const COMBINATIONS = [
     { theme: 'dark' },

@@ -467,8 +467,20 @@ export const fontSize = { ...baseFontSize };
 // different palettes for the same preferences — the token TABLES
 // (baseColors, lightColors, the HC/CVD modifier tables, baseFontSize) stay
 // exactly as they are; only this read/derive mechanism is new.
+// D104-2 (Campaign 27 phase 2c, built 2026-10-09, D220 addendum 32): below
+// NARROW_WIDTH_DP of window width (the S22 class and everything smaller) the
+// three display sizes step down one notch (display 40 to 36, xxxl 32 to 29,
+// xxl 24 to 22; body stays 16) and the screen padding drops one step (lg to
+// md). A discrete device-class bucket, as both platform vendors ramp type;
+// never a continuous scale. useTheme passes `narrow` from the live window
+// width, so every migrated surface gets it for free; the Larger text 1.2x
+// then applies on top of the stepped sizes.
+export const NARROW_WIDTH_DP = 390;
+const narrowFontSize = Object.freeze({ xxl: 22, xxxl: 29, display: 36 });
+
 export function resolveTheme(prefs) {
   const themeName = resolveThemeChoice(prefs);
+  const narrow = !!prefs?.narrow;
   const isLight = themeName === 'light';
 
   const resolvedColors = { ...baseColors };
@@ -476,18 +488,19 @@ export function resolveTheme(prefs) {
   if (prefs?.higherContrast) Object.assign(resolvedColors, isLight ? lightHC : darkHC);
   if (prefs?.colorBlindSafe) Object.assign(resolvedColors, isLight ? lightCVD : darkCVD);
 
-  const resolvedFontSize = { ...baseFontSize };
+  const sized = narrow ? { ...baseFontSize, ...narrowFontSize } : baseFontSize;
+  const resolvedFontSize = { ...sized };
   if (prefs?.largerText) {
     Object.assign(resolvedFontSize, {
-      micro:   Math.round(baseFontSize.micro   * 1.2),
-      xs:      Math.round(baseFontSize.xs      * 1.2),
-      sm:      Math.round(baseFontSize.sm      * 1.2),
-      md:      Math.round(baseFontSize.md      * 1.2),
-      lg:      Math.round(baseFontSize.lg      * 1.2),
-      xl:      Math.round(baseFontSize.xl      * 1.2),
-      xxl:     Math.round(baseFontSize.xxl     * 1.2),
-      xxxl:    Math.round(baseFontSize.xxxl    * 1.2),
-      display: Math.round(baseFontSize.display * 1.2),
+      micro:   Math.round(sized.micro   * 1.2),
+      xs:      Math.round(sized.xs      * 1.2),
+      sm:      Math.round(sized.sm      * 1.2),
+      md:      Math.round(sized.md      * 1.2),
+      lg:      Math.round(sized.lg      * 1.2),
+      xl:      Math.round(sized.xl      * 1.2),
+      xxl:     Math.round(sized.xxl     * 1.2),
+      xxxl:    Math.round(sized.xxxl    * 1.2),
+      display: Math.round(sized.display * 1.2),
     });
   }
 
@@ -517,6 +530,9 @@ export function resolveTheme(prefs) {
     fontSize: resolvedFontSize,
     shadow: resolvedShadow,
     resolvedTheme: themeName,
+    // D104-2: the bucket and the screen padding it sets (lg, md when narrow).
+    narrow,
+    screenPadding: narrow ? spacing.md : spacing.lg,
     type: buildTypeRoles(resolvedFontSize),
   };
 }

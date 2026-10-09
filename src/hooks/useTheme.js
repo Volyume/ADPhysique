@@ -31,9 +31,10 @@
  *   // frozen at import time.
  */
 import { useMemo } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { resolveTheme } from '../styles/theme';
+import { resolveTheme, NARROW_WIDTH_DP } from '../styles/theme';
 
 export function useTheme() {
   // Select ONLY the four raw preferences that feed resolveTheme(), so this
@@ -51,15 +52,19 @@ export function useTheme() {
   // means this survives even if that stabilisation ever changes) so a
   // themed-style consumer downstream can memoize on `t` without recomputing
   // on unrelated re-renders (risk register #8 in the CP-10 plan).
+  // D104-2 (phase 2c): the narrow-device bucket from the live window width.
+  const { width } = useWindowDimensions();
+  const narrow = width < NARROW_WIDTH_DP;
   return useMemo(
-    () => resolveTheme(prefs),
+    () => resolveTheme({ ...prefs, narrow }),
     // Deliberately the four raw preference VALUES, not `prefs` itself: the
     // object reference already changes only when one of them does (the
     // useShallow selector above), but listing the primitives here is the
     // real reactive contract (resolveTheme only reads these four keys) and
     // survives even if that upstream stabilisation ever changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [prefs.theme, prefs.largerText, prefs.higherContrast, prefs.colorBlindSafe],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prefs.theme, prefs.largerText, prefs.higherContrast, prefs.colorBlindSafe, narrow],
   );
 }
 
