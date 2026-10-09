@@ -90,6 +90,10 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     // track, now the active section's 2 dp footer line (the bottom bar is
     // retired from the render). Static under reduce-motion.
     'components/workout/session/ExerciseSection.js',
+    // D220 addendum 36: the record line of the exercise card enters once
+    // with a native-driver fade and a 4 dp settle (fade only under
+    // reduce-motion); the floating record toast it replaces is gone.
+    'components/workout/session/RecordLine.js',
     // components/food/MacroRings.js left this list in E15-4 (RollingNumber
     // + UI-thread ring; the Animated.Value listener is retired).
     // D148 (2026-09-04): the animated in-app splash left RootNavigator.

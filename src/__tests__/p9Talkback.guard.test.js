@@ -69,8 +69,9 @@ describe('P9: logging a set is spoken', () => {
 
 describe('P9/E11: the PR celebration is announced, not just shown', () => {
   test('announceForAccessibility fires on mount, before the subdued branch', () => {
-    const src = read('src/components/PRCelebration.js');
-    expect(src).toMatch(/announceForAccessibility\([\s\S]{0,40}`Personal record\./);
+    // D220 addendum 36: the record is a line of the card (RecordLine).
+    const src = read('src/components/workout/session/RecordLine.js');
+    expect(src).toMatch(/announceForAccessibility\([\s\S]{0,160}`Personal record\./);
   });
 });
 

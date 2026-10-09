@@ -165,14 +165,13 @@ Notifications.setNotificationHandler({
   },
 });
 
-// RootNavigator and PRCelebration are deliberately lazy-required from inside
-// the gated render below. They (transitively) trigger every screen's
+// RootNavigator is deliberately lazy-required from inside
+// the gated render below. It (transitively) triggers every screen's
 // StyleSheet.create, and we need accessibility prefs applied to the theme
 // tokens BEFORE that happens — otherwise Larger Text / Higher Contrast /
 // Colour-Blind Safe never take effect because the styles are frozen with
 // the default palette at module-evaluation time.
 import useAppStore from './src/store/useAppStore';
-import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
 import { applyAccessibility, resolvedTheme } from './src/styles/theme';
 import { appFonts, installTextDefaults } from './src/styles/fonts';
@@ -458,15 +457,11 @@ function CrashRecoveryToast({ priorCrash }) {
 }
 
 export default function App() {
-  const prCelebration = useAppStore(s => s.prCelebration);
-  const hidePRCelebration = useAppStore(s => s.hidePRCelebration);
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
   const setSystemReduceMotion = useAppStore(s => s.setSystemReduceMotion);
   const privacyLoaded = useAppStore(s => s.privacyLoaded);
   const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
-  const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
   // CP-10 stage 2: drives the StatusBar below live. Reads the existing
   // accessibility slice (see src/hooks/useTheme.js) — cheap even before
@@ -561,10 +556,6 @@ export default function App() {
   // mealSlotLabel reads, before the diary renders its meal headers. Device-local
   // + cosmetic; empty by default so existing users see the standard labels.
   useEffect(() => { loadMealLabelOverrides(); }, []);
-
-  useEffect(() => {
-    if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
-  }, [prCelebration]);
 
   // End any iOS Live Activity left over from a previous launch. If the
   // app was force-closed mid-rest or crashed during a workout, the
@@ -1061,8 +1052,6 @@ export default function App() {
   // here guarantees every StyleSheet.create sees the post-a11y tokens.
   // eslint-disable-next-line global-require
   const RootNavigator = require('./src/navigation/RootNavigator').default;
-  // eslint-disable-next-line global-require
-  const PRCelebration = require('./src/components/PRCelebration').default;
 
   // eslint-disable-next-line global-require
   const { ToastProvider } = require('./src/components/Toast');
@@ -1102,21 +1091,6 @@ export default function App() {
             <ToastProvider>
               <FeedbackProvider>
                 <RootNavigator />
-                {prCelebration && (
-                  <PRCelebration
-                    // Keyed per celebration: the auto-dismiss timer runs on
-                    // mount only, so a queued PR popping into an unkeyed
-                    // component would sit on screen forever (founder device
-                    // report 2026-07-13).
-                    key={prCelebration._seq ?? 'pr'}
-                    pr={prCelebration}
-                    onDismiss={hidePRCelebration}
-                    // Honour either calm-mode (wellbeing preference) OR the
-                    // accessibility "reduce motion" pref. Both should suppress
-                    // particles + heavy spring animations.
-                    subdued={calm || reduceMotion}
-                  />
-                )}
                 <CrashRecoveryToast priorCrash={priorCrash} />
                 <AppAlertHost />
                 <PostLapseSheetHost />

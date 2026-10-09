@@ -35,7 +35,7 @@ describe('A1 contract 1: detectPR engine behaviour is unchanged', () => {
 describe('A1 contract 2: the celebration layer treats a first honestly', () => {
   const ROOT = path.resolve(__dirname, '..', '..');
   const screen = fs.readFileSync(path.join(ROOT, 'screens', 'ActiveWorkoutScreen.js'), 'utf8');
-  const celebration = fs.readFileSync(path.join(ROOT, 'components', 'PRCelebration.js'), 'utf8');
+  const celebration = fs.readFileSync(path.join(ROOT, 'components', 'workout', 'session', 'RecordLine.js'), 'utf8');
 
   test('the first set on record routes to first_lift and skips the PR list', () => {
     // Founder ruling 2026-08-23 retired FQ-7's prior-exposure gate, which
@@ -51,11 +51,13 @@ describe('A1 contract 2: the celebration layer treats a first honestly', () => {
     expect(branch).not.toMatch(/setDetectedPRs/);
   });
 
-  test('PRCelebration forces the quiet variant for first_lift', () => {
-    expect(celebration).toMatch(/isFirstLift = pr\?\.type === 'first_lift'/);
-    expect(celebration).toMatch(/subdued \|\| !!reduceMotion \|\| isFirstLift/);
+  test('RecordLine forces the quiet variant for first_lift', () => {
+    // D220 addendum 36: the record is a line of the card (RecordLine), and
+    // a first lift keeps its quiet dress there: muted glyph, secondary ink,
+    // the light tick, never the record ladder or the record announcement.
+    expect(celebration).toMatch(/isFirstLift = record\?\.type === 'first_lift'/);
+    expect(celebration).toMatch(/if \(isFirstLift \|\| reduceMotion\) \{\s*haptics\.selection\(\);/);
     expect(celebration).toMatch(/'First lift logged'/);
-    // The record announcement never fires for a first lift.
-    expect(celebration).toMatch(/pr\?\.type === 'first_lift'[\s\S]{0,200}First lift logged/);
+    expect(celebration).toMatch(/isFirstLift\s*\?\s*`First lift logged/);
   });
 });

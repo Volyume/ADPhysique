@@ -89,8 +89,6 @@ describe('clearAuthStateForSignOut', () => {
       workoutExercises: [{ exercise: { id: 'e1' }, sets: [] }],
       currentExerciseIndex: 0,
       restTimerActive: true,
-      prCelebration: { type: '1rm_estimate' },
-      prCelebrationQueue: [{ type: 'heaviest_weight' }],
     });
 
     await useAppStore.getState().clearAuthStateForSignOut();
@@ -112,8 +110,6 @@ describe('clearAuthStateForSignOut', () => {
     expect(s.workoutExercises).toEqual([]);
     expect(s.currentExerciseIndex).toBe(0);
     expect(s.restTimerActive).toBe(false);
-    expect(s.prCelebration).toBeNull();
-    expect(s.prCelebrationQueue).toEqual([]);
   });
 
   test('an unverifiable AsyncStorage wipe ABORTS sign-out (P1 cross-account isolation)', async () => {
