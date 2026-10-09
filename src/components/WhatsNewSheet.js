@@ -142,8 +142,8 @@ export const WHATS_NEW = {
   // notice the policy promises rides inside the Community line, since the
   // sheet shows only the running version's notes.
   '2.9.0': [
-    { icon: 'barbell-outline', text: 'Logging a workout has been rebuilt: each exercise is a card, every set a row with last session beside it, one tap on the row\'s tick to log it, and your phone\'s own keyboard for the numbers.' },
-    { icon: 'people-outline', text: 'Community is now its own tab: Feed, People, Groups and You, with group chat and challenges. Our privacy policy now covers Community, including how to turn sharing off: read it in Settings, under Privacy and legal.' },
+    { icon: 'barbell-outline', text: 'Logging your workout is simpler. Each exercise shows your sets, with what you lifted last time next to each one. Type the weight and reps with your phone\'s keyboard, then tap the tick to save the set.' },
+    { icon: 'people-outline', text: 'Community has its own tab now. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],
 };
 
