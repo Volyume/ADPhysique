@@ -69,8 +69,9 @@ describe('SessionToolbar', () => {
     expect(bar.minHeight).toBe(56);
     expect(bar.paddingHorizontal).toBe(spacing.xs);
     expect(bar.paddingHorizontal).toBe(4);
-    expect(bar.borderBottomWidth).toBe(1);
-    expect(bar.borderBottomColor).toBe(colors.borderSubtle);
+    // Founder, 2026-10-09: a 2 dp amber line, the rest strip's drain line.
+    expect(bar.borderBottomWidth).toBe(2);
+    expect(bar.borderBottomColor).toBe(colors.primaryFill);
     expect(bar.backgroundColor).toBeUndefined();
   });
 
