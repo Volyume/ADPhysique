@@ -261,13 +261,15 @@ describe('SetRow marker', () => {
     const tree = render({ marker: 'W' });
     const text = one(tree.root.findAll((n) => n.type === 'Text' && words(n).join('') === 'W'));
     const s = flat(text.props.style);
-    expect(s.color).toBe(colors.primary);
+    // D220 addendum 30 (audit D2): no amber on a warm-up; the W sits on the
+    // quiet badge in secondary ink.
+    expect(s.color).toBe(colors.textSecondary);
     expect(s.fontSize).toBe(type.captionStrong.fontSize);
     // The badge, not the 24 dp marker column it sits in: the one with a height.
     const badge = one(hosts(tree, (p) => flat(p.style).width === 24 && flat(p.style).height === 24));
     const b = flat(badge.props.style);
     expect(b.height).toBe(24);
-    expect(b.backgroundColor).toBe(colors.primaryBg);
+    expect(b.backgroundColor).toBe(colors.surface2);
     expect(b.borderRadius).toBe(radius.full);
   });
 

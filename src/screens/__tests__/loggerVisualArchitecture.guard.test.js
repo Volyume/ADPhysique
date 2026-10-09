@@ -91,13 +91,14 @@ describe('active-set stability: completing work never pushes the input away (har
 describe('rest is a compact strip docked outside the workspace scroll (failure 2)', () => {
   test('the strip renders after the ScrollView, before the keyboard step bar, never inside the scroll', () => {
     const scrollClose = SRC.indexOf('</ScrollView>');
-    const restIdx = SRC.indexOf('<RestTimer />');
+    const restIdx = SRC.indexOf('<RestTimer controlsHidden={inputOpen} />');
     const keypadIdx = SRC.indexOf('<KeyboardBar');
     expect(scrollClose).toBeGreaterThan(-1);
     expect(restIdx).toBeGreaterThan(scrollClose);
     expect(keypadIdx).toBeGreaterThan(restIdx);
     // Exactly one render site.
-    expect(SRC.match(/<RestTimer \/>/g)?.length).toBe(1);
+    // D220 addendum 30 (audit D5): the strip hides its controls while a well is open.
+    expect(SRC.match(/<RestTimer controlsHidden=\{inputOpen\} \/>/g)?.length).toBe(1);
   });
 
   test('the compact strip IS the default and only variant: no card chrome, one 44dp row', () => {

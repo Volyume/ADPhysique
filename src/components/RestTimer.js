@@ -57,7 +57,11 @@ const TIME_ADJUSTMENTS = [
   { delta: 15,  icon: 'add', label: '15' },
 ];
 
-export default function RestTimer() {
+// controlsHidden: while a well is being typed into the keyboard bar sits
+// directly under the strip, so the strip keeps its readout and its drain
+// line and hides its three controls (D220 addendum 30, audit D5: two rows
+// of controls stacked, a thumb aimed at one hit the other).
+export default function RestTimer({ controlsHidden = false } = {}) {
   // Subscribe to only the fields this component needs; using
   // `useAppStore()` without a selector re-renders this on every store
   // mutation (PR celebrations, set saves, profile updates, etc.) which
@@ -506,7 +510,7 @@ export default function RestTimer() {
             <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
         </View>
-        {TIME_ADJUSTMENTS.map(({ delta, icon, label }) => {
+        {controlsHidden ? null : TIME_ADJUSTMENTS.map(({ delta, icon, label }) => {
           const isNeg = delta < 0;
           // One role for every control on the strip (D220 addendum 16).
           return (
@@ -526,6 +530,7 @@ export default function RestTimer() {
             </TouchableOpacity>
           );
         })}
+        {controlsHidden ? null : (
         <TouchableOpacity
           onPress={stopRestTimer}
           style={styles.skipBtn}
@@ -536,6 +541,7 @@ export default function RestTimer() {
           <Ionicons name="play-skip-forward-outline" size={iconSize.md} color={t.colors.textPrimary} />
           <Text style={[styles.skipText, live.skipText]}>Skip</Text>
         </TouchableOpacity>
+        )}
       </View>
     </View>
   );

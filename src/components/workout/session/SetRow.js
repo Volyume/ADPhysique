@@ -199,8 +199,10 @@ function buildLive(t) {
   return {
     row: { borderBottomColor: c.borderSubtle },
     markerNumber: { ...num('label'), color: c.textSecondary },
-    markerWarmup: { backgroundColor: c.primaryBg },
-    markerWarmupText: { ...t.type.captionStrong, color: c.primary },
+    // Amber is for the set you are on, a record, Finish and the drain line
+    // (D220 addendum 30, audit D2): a warm-up wears its W on the quiet badge.
+    markerWarmup: { backgroundColor: c.surface2 },
+    markerWarmupText: { ...t.type.captionStrong, color: c.textSecondary },
     markerFailure: { backgroundColor: c.errorBg },
     markerFailureText: { ...t.type.captionStrong, color: c.error },
     // A typed set (drop, myo-reps, rest-pause, AMRAP) wears its letter on

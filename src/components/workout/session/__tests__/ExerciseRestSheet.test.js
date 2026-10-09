@@ -21,7 +21,7 @@
  */
 import { create, act } from 'react-test-renderer';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { colors, radius, type } from '../../../../styles/theme';
+import { colors, type } from '../../../../styles/theme';
 
 const mockState = { accessibility: { reduceMotion: true } };
 jest.mock('../../../../store/useAppStore', () => {
@@ -34,7 +34,6 @@ jest.mock('../../../../lib/haptics', () => ({ selection: jest.fn(), commit: jest
 import * as haptics from '../../../../lib/haptics';
 import ExerciseRestSheet from '../ExerciseRestSheet';
 
-const MINUS = '−';
 
 const hostText = (node) => node.children.map((c) => (typeof c === 'string' ? c : hostText(c))).join('');
 const hosts = (tree, kind) => tree.root.findAll((n) => n.type === kind);
@@ -81,7 +80,10 @@ describe('ExerciseRestSheet, rendering', () => {
     expect(text).toContain('Rest between sets');
     expect(readout(tree)).toBe('1:30');
     expect(text).toEqual(expect.arrayContaining(['1:00', '1:30', '2:00', '3:00']));
-    expect(text).toEqual(expect.arrayContaining([`${MINUS}15`, '+15', 'Cancel', 'Save']));
+    // D220 addendum 30 (audit D4): the steps read "15" beside a remove or add
+    // glyph, the rest strip's grammar.
+    expect(text).toEqual(expect.arrayContaining(['15', 'Cancel', 'Save']));
+    expect(text.filter((x) => x === '15')).toHaveLength(2);
   });
 
   test('the title is a header for the screen reader', () => {
@@ -101,21 +103,23 @@ describe('ExerciseRestSheet, rendering', () => {
       .toBe('Rest 2 minutes 30 seconds');
   });
 
-  test('the step controls are 48 dp wells with the strip labels', () => {
+  test('the step controls are 48 dp glyph-and-label targets in the strip\'s grammar, no box, no amber (D220 addendum 30)', () => {
     const tree = render();
     const remove = byTestId(tree, 'volyume-exercise-rest-remove');
     const add = byTestId(tree, 'volyume-exercise-rest-add');
     expect(remove.props.accessibilityLabel).toBe('Remove 15 seconds');
     expect(add.props.accessibilityLabel).toBe('Add 15 seconds');
-    for (const node of [remove, add]) {
+    for (const [node, icon] of [[remove, 'remove'], [add, 'add']]) {
       expect(node.props.accessibilityRole).toBe('button');
-      expect(flat(node)).toMatchObject({
-        backgroundColor: colors.background,
-        borderColor: colors.borderSubtle,
-        borderWidth: 1,
-        borderRadius: radius.md,
-      });
+      expect(flat(node).borderWidth).toBeUndefined();
+      expect(flat(node).backgroundColor).toBeUndefined();
       expect(flat(node).minHeight).toBeGreaterThanOrEqual(48);
+      const glyph = node.findAll((n) => n.props && n.props.name === icon);
+      expect(glyph.length).toBeGreaterThanOrEqual(1);
+      expect(glyph[0].props.size).toBe(20);
+      expect(glyph[0].props.color).toBe(colors.textPrimary);
+      const label = node.findAll((n) => n.type === 'Text')[0];
+      expect(flat(label).color).toBe(colors.textPrimary);
     }
   });
 

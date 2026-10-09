@@ -156,7 +156,7 @@ export default function ExerciseSection({
     action: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.textPrimary },
     nameSkipped: { color: t.colors.textMuted },
     group: { ...t.type.caption, color: t.colors.textMuted },
-    hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.primary },
+    hint: { ...t.type.w(t.type.caption, 'semibold'), color: t.colors.textSecondary },
   }), [t]);
 
   const isActive = state === 'active';
@@ -239,7 +239,7 @@ export default function ExerciseSection({
             accessibilityLabel={moreHint ? 'More options for this exercise, including how logging works' : 'More options for this exercise'}
           >
             {moreHint ? <Text style={live.hint}>{moreHint}</Text> : null}
-            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={moreHint ? t.colors.primary : t.colors.textSecondary} />
+            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={moreHint ? t.colors.textPrimary : t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       ) : null}
