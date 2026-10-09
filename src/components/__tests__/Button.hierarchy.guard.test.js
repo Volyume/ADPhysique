@@ -84,7 +84,9 @@ describe('the hand-rolled fills on the reviewed screens follow the same rule', (
   });
   test('the workout logger primaries are raised surfaces with white labels', () => {
     const aw = read('screens/ActiveWorkoutScreen.js');
-    for (const k of ['completeBtn', 'supPrimaryBtn', 'staleResume', 'keepTrainingBtn']) {
+    // keepTrainingBtn left with the hand-rolled discard modal (D220 addendum
+    // 26, 2026-10-09): the discard confirm is AppAlert's own dialog now.
+    for (const k of ['completeBtn', 'supPrimaryBtn', 'staleResume']) {
       expect(aw).toMatch(new RegExp(`  ${k}: \\{[^\\n]*backgroundColor: colors\\.surface2, borderWidth: 1, borderColor: colors\\.border`));
     }
     expect(aw).not.toMatch(/completeBtnText: \{[^}]*onPrimary/);

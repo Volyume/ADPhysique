@@ -707,7 +707,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // silently rewritten": nothing here changes the plan, it only surfaces
   // the fact with a Swap shortcut.
   const [intentState, setIntentState] = useState(null);
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
@@ -2249,8 +2248,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
       navigation.goBack();
     } else {
-      setShowDiscardModal(true);
+      confirmDiscard('ActiveWorkoutScreen.discardModal');
     }
+  }
+  // The one discard confirm, the app's own dialog (AppAlert: the house card,
+  // a muted Keep training, the destructive action in the dialog's own red
+  // action role). The hand-rolled modal it replaces drew "Discard workout"
+  // at the 13 dp label role, which the founder could barely read (2026-10-09,
+  // D220 addendum 26). Shared by the X and the stale-session sheet.
+  function confirmDiscard(source) {
+    appAlert('Discard workout?', 'This will delete the current workout session. Your plan will not advance.', [
+      { text: 'Keep training', style: 'cancel' },
+      { text: 'Discard workout', style: 'destructive', onPress: () => discardWorkout(source) },
+    ]);
   }
 
   // Hardware back → cancel flow
@@ -4721,6 +4731,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setEntryField(field);
     }
     inputRowRef.current = set ? (set.id ?? null) : 'next';
+    replaceOnFirstKeyRef.current = true;
   }
   // Scroll so the row being typed into sits above the keypad. The pad's
   // height is known once it lays out, so this runs on that layout too.
@@ -4736,6 +4747,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }
   const inputRowRef = useRef(null);
+  // D220 addendum 25: the first keystroke into a freshly opened well REPLACES
+  // what the well held, as the retired keypad did. selectTextOnFocus is kept,
+  // but on the founder's iPhone it did not select the seed under autoFocus
+  // (the 2.9.0 screenshots show the caret after "63" and after "9", nothing
+  // selected), so a typed digit appended to the seed instead of replacing
+  // it. The flag is armed whenever a well opens or the keyboard moves to the
+  // next well, and spent by the first change or step.
+  const replaceOnFirstKeyRef = useRef(false);
+  const activeInputValueRef = useRef('');
   useEffect(() => {
     if (inputOpen && barHeight > 0 && inputRowRef.current) scrollRowAboveBar(inputRowRef.current, barHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4746,6 +4766,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function handleInputStep(delta) {
     if (!activeField) return;
+    replaceOnFirstKeyRef.current = false;
     hapticsVocab.selection();
     if (activeIsTime) {
       const secs = Math.min(Math.max((Number(activeSource?.reps) || 0) + delta, 0), 5999);
@@ -4761,6 +4782,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleInputNext() {
     if (activeField !== 'weight') return;
     if (editingSet) setEditField('reps'); else setEntryField('reps');
+    replaceOnFirstKeyRef.current = true;
   }
   // On the next row the keyboard's last action LOGS the set (founder,
   // 2026-10-09: "you have to press the sets and reps button to allow you to
@@ -4785,8 +4807,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // The one input path (D220 addendum 18): the open well is a TextInput on
   // the phone's numeric keyboard, with the SetEntry fields' own parsing;
   // the step bar above the keyboard carries the steps, Next and Done.
-  function handleInputChange(text) {
+  function handleInputChange(raw) {
     if (!activeField) return;
+    let text = raw;
+    if (replaceOnFirstKeyRef.current) {
+      replaceOnFirstKeyRef.current = false;
+      const held = String(activeInputValueRef.current ?? '');
+      // The new text is the held value plus one typed character: the one
+      // character is the value (a deletion or a selection-replace passes
+      // through unchanged).
+      if (held !== '' && text.length === held.length + 1 && text.startsWith(held)) text = text.slice(held.length);
+    }
     if (activeIsTime) { writeActiveField('reps', parseTimeToSeconds(text)); return; }
     if (activeField === 'reps') {
       const n = parseInt(text, 10);
@@ -4819,6 +4850,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     inputAccessoryViewID: iosPad ? LOGGER_BAR_ACCESSORY_ID : undefined,
     onSubmitEditing: activeField === 'weight' ? handleInputNext : (editingSet ? handleInputDone : handleInputLog),
   } : null;
+  activeInputValueRef.current = activeInputField ? activeInputField.value : '';
 
   // Section 2a: last session at each position (the most recent earlier one,
   // marked stale, when last session had no set there), the coach's numbers
@@ -6007,14 +6039,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 textStyle={[styles.staleFinishText, live.staleFinishText]}
               />
               <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
-                appAlert('Discard workout?', 'All logged sets will be lost.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Discard',
-                    style: 'destructive',
-                    onPress: () => discardWorkout('ActiveWorkoutScreen.discardStale'),
-                  },
-                ]);
+                confirmDiscard('ActiveWorkoutScreen.discardStale');
               }}>
                 <Text style={[styles.staleDiscardText, live.staleDiscardText]}>Discard</Text>
               </TouchableOpacity>
@@ -6825,35 +6850,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </>
           ) : null}
         </Modal>
-        {/* Discard Workout Modal */}
-        <Modal visible={showDiscardModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowDiscardModal(false)}>
-          {showDiscardModal ? (
-          <View style={[styles.discardOverlay, live.discardOverlay]}>
-            <View style={[styles.discardSheet, live.discardSheet]}>
-              <Text style={[styles.discardTitle, live.discardTitle]}>Discard workout?</Text>
-              <Text style={[styles.discardBody, live.discardBody]}>
-                This will delete the current workout session. Your plan will not advance.
-              </Text>
-              <Button
-                variant="primary"
-                style={[styles.keepTrainingBtn, live.keepTrainingBtn]}
-                onPress={() => setShowDiscardModal(false)}
-                accessibilityLabel="Keep training"
-              >
-                <Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>
-              </Button>
-              <TouchableOpacity
-                style={styles.discardConfirmBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Discard workout"
-                onPress={() => discardWorkout('ActiveWorkoutScreen.discardModal')}
-              >
-                <Text style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          ) : null}
-        </Modal>
+        {/* The discard confirm is the app's own dialog (confirmDiscard, D220
+            addendum 26); the hand-rolled modal that lived here is gone. */}
 
         {/* D43 S4: the edit/delete logged-set MODAL is removed. Editing is
             in place: a logged row's well opens the keypad on it (D220,
@@ -7340,14 +7338,6 @@ const styles = StyleSheet.create({
   staleFinishText: { ...type.label, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
   staleDiscardText: { ...type.label, color: colors.error },
-  discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary },
-  discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  discardConfirmBtnText: { ...type.label, color: colors.error },
   // D43 S4: the "edit set" modal's own style block (keyboard wrapper,
   // overlay, sheet, save/cancel/delete rows) is removed -- that modal is
   // gone, replaced by LoggedSetRow's inline editor (src/components/workout/
@@ -7531,13 +7521,6 @@ function buildLiveStyles(t) {
     staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
     staleDiscardText: { ...t.type.label, color: t.colors.error },
-    discardOverlay: { backgroundColor: t.colors.scrim },
-    discardSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    discardTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    discardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    keepTrainingBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
     nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     nextTimeMoreToggleText: { ...t.type.label, color: t.colors.primary },

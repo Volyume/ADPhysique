@@ -2163,6 +2163,50 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
 
   // D220 addendum 21: on the next row the bar's last action is Log and logs
   // the set; on a logged row's edit it stays Done.
+  test('(a3) the first keystroke into a freshly opened well replaces what it held; the second appends (D220 addendum 25)', async () => {
+    // On the founder's iPhone selectTextOnFocus did not select the seed under
+    // autoFocus, so the phone's keyboard appended the typed digit to it. The
+    // screen treats "held value plus one character" on the first change as
+    // the one character; later changes pass through, as does a deletion.
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exA3', repsMin: 8, repsMax: 15 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // Reps: the well opens holding the seed (the band's floor, 8).
+      await actFlush(() => pressable(tree, 'volyume-well-reps').props.onPress());
+      const held = textInput(tree, 'volyume-reps-input').props.value;
+      expect(held).toBe('8');
+      await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText(`${held}1`)); // the phone appended "1"
+      expect(textInput(tree, 'volyume-reps-input').props.value).toBe('1');
+      await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText('12')); // the second keystroke appends
+      expect(textInput(tree, 'volyume-reps-input').props.value).toBe('12');
+
+      // Weight: a typed value, then re-opening the well arms the replace again.
+      await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-weight-input').props.onChangeText('60'));
+      expect(textInput(tree, 'volyume-weight-input').props.value).toBe('60');
+      await actFlush(() => pressable(tree, 'volyume-well-reps').props.onPress());
+      await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-weight-input').props.onChangeText('607'));
+      expect(textInput(tree, 'volyume-weight-input').props.value).toBe('7');
+      // A deletion on the first change passes through unchanged.
+      await actFlush(() => pressable(tree, 'volyume-well-reps').props.onPress());
+      await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-weight-input').props.onChangeText(''));
+      expect(textInput(tree, 'volyume-weight-input').props.value).toBe('');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
   test('(a2) the bar\'s last action is Log on the next row (logs the set once) and Done on a logged row\'s edit', async () => {
     const database = require('../lib/database');
     const orig = { ...database };
