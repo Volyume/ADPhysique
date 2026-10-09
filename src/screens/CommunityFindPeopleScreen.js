@@ -259,7 +259,7 @@ export default function CommunityFindPeopleScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   skeletonStack: { paddingHorizontal: spacing.lg },
   explain: { marginTop: spacing.lg, paddingHorizontal: spacing.lg },

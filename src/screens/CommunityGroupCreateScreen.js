@@ -175,7 +175,7 @@ export default function CommunityGroupCreateScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   purposeBody: { paddingTop: spacing.md },
   submitBody: { paddingTop: spacing.md },
   counter: { textAlign: 'right' },

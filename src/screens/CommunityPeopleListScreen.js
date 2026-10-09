@@ -363,7 +363,7 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },

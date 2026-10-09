@@ -356,7 +356,7 @@ export default function CommunityRulesScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   actions: { flexDirection: 'row' },
   introBody: { paddingTop: spacing.md },
   ruleBody: { paddingBottom: spacing.md },

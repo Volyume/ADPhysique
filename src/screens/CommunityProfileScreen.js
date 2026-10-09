@@ -686,9 +686,9 @@ export default function CommunityProfileScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   // One app (founder verdict 2026-10-08): a post is a Card, spacing.md apart.
-  postCard: { marginBottom: spacing.md },
+  postCard: { marginBottom: spacing.lg },
   hero: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },

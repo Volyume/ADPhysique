@@ -514,7 +514,7 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   introBody: { paddingTop: spacing.md },
   noteBody: { paddingTop: spacing.sm, paddingBottom: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },

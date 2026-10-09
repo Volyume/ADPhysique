@@ -776,9 +776,9 @@ export default function CommunityGroupScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   // One app (founder verdict 2026-10-08): a post is a Card, spacing.md apart.
-  postCard: { marginBottom: spacing.md },
+  postCard: { marginBottom: spacing.lg },
   skeletonScreen: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg },
   summary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },

@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg },
   controls: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  list: { paddingBottom: spacing.xxl },
+  list: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   gymsList: { paddingBottom: spacing.xxl },
   block: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   divider: { height: StyleSheet.hairlineWidth },

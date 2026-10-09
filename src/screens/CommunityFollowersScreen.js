@@ -214,7 +214,7 @@ export default function CommunityFollowersScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingTop: spacing.xxl, alignItems: 'center' },
   skeleton: { paddingHorizontal: spacing.lg },
   footer: { paddingVertical: spacing.lg, alignItems: 'center' },
