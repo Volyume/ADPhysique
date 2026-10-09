@@ -107,15 +107,16 @@ describe('privacy, consent, export and store-copy truth', () => {
   // What's new sheet carries it, first, in every version since 2.8.0 (the
   // sheet shows only the running version's notes, so a person updating
   // straight from 2.5.0 to the running version sees only that entry).
+  // 2.8.0 leads with it; 2.9.0 (trimmed to two entries on the founder's
+  // word) carries it inside the Community line.
   test.each(['2.8.0', '2.9.0'])('the policy change is announced in the app in %s, as the policy promises', (version) => {
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
     const start = sheet.indexOf(`'${version}': [`);
     expect(start).toBeGreaterThan(-1);
     const entry = sheet.slice(start, sheet.indexOf('],', start));
-    const first = (entry.match(/text: '([^']*)'/) || [])[1] || '';
-    expect(first).toMatch(/^Our privacy policy now covers Community/);
-    expect(first).toContain('how to turn sharing off');
-    expect(first).toContain('Settings, under Privacy and legal');
+    expect(entry).toContain('Our privacy policy now covers Community');
+    expect(entry).toContain('how to turn sharing off');
+    expect(entry).toContain('Settings, under Privacy and legal');
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));
