@@ -142,7 +142,7 @@ export const WHATS_NEW = {
   // notice the policy promises rides inside the Community line, since the
   // sheet shows only the running version's notes.
   '2.9.0': [
-    { icon: 'barbell-outline', text: 'The workout logger has been completely redesigned. Your whole session is on one screen now, not one exercise at a time: every exercise and every set, with what you lifted last time beside each one. Tap any set to change it, tap the tick to save it, and the exercise\'s history and records are one tap away. It now looks and feels like the rest of Volyume.' },
+    { icon: 'barbell-outline', text: 'The workout logger has been completely redesigned. Your whole session is on one screen now, not one exercise at a time: every exercise and every set, with what you lifted last time beside each one. Tap any set to change it, tap the tick to save it, and the exercise\'s history and records are one tap away.' },
     { icon: 'people-outline', text: 'Community has its own tab now. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],
 };
