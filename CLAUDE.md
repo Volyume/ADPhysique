@@ -365,7 +365,9 @@ test checklist written for a physical Android device using an EAS build (or
 Expo Go only where no native module is involved — this app has custom native
 modules, so assume EAS build). Checklist format: numbered steps, expected
 result per step, plus the ED-safety cases whenever the change is
-weight/food/notification-adjacent. The founder device-walks new flows from
+weight/food/notification-adjacent, plus one pass at the phone's maximum
+accessibility text size for any change that touches a screen (D104-3,
+Pillar D, 2026-10-09). The founder device-walks new flows from
 green builds.
 
 **Agents (build operating model, founder 2026-06-12).** Claude builds the

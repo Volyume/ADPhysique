@@ -1,0 +1,166 @@
+# Campaign 27 phase 2d (D104-3, Pillar D; built 2026-10-09, register D220
+# addendum 33): the screenshot regression net. One flow walks the five
+# surfaces the proposal names (Today, Nutrition, the logger, Progress, Train)
+# and takes one screenshot of each. Run in MODE=capture it only writes the
+# screenshots (the first run of a matrix, or after an intended redesign);
+# in MODE=assert it also compares each against the committed baseline for
+# the matrix under .maestro/baselines/<MATRIX>/ and fails the run when a
+# screen drifts past the threshold. The fixed matrix is the workflow's
+# (.github/workflows/screenshot-net.yml): an Android profile at 360 dp with
+# the system text size raised, and a large iPhone simulator.
+#
+# Inputs (maestro test -e): E2E_ACCESS_TOKEN, E2E_REFRESH_TOKEN (the test
+# user's session, minted by the workflow), MATRIX (the baseline folder name),
+# MODE (capture | assert).
+#
+# Self-sufficient like flow 02: injects the session and clears the Article 9
+# gate if it appears. The logger shot comes from a blank session with one
+# exercise and one logged set; the session is DISCARDED at the end so the
+# test user is left as it was. Guardrails in .maestro/README.md apply.
+appId: app.volyume
+name: 10 Screenshot net (Today, Nutrition, logger, Progress, Train)
+tags:
+  - screenshots
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- extendedWaitUntil:
+    visible: "Continue with Google"
+    timeout: 90000
+- openLink: "volyume://#access_token=${E2E_ACCESS_TOKEN}&refresh_token=${E2E_REFRESH_TOKEN}"
+- extendedWaitUntil:
+    visible: "Train|I agree to Volyume using my health and nutrition data to coach me.*"
+    timeout: 90000
+- runFlow:
+    when:
+      visible: "I agree to Volyume using my health and nutrition data to coach me.*"
+    commands:
+      - tapOn:
+          text: "I agree to Volyume using my health and nutrition data to coach me.*"
+          index: 0
+      - tapOn: "Continue"
+      - extendedWaitUntil:
+          visible: "Train"
+          timeout: 90000
+
+# 1. Today.
+- tapOn: "Today"
+- extendedWaitUntil:
+    visible: "Train"
+    timeout: 30000
+- takeScreenshot: screenshots/${MATRIX}/today
+- runFlow:
+    when:
+      true: ${MODE == 'assert'}
+    commands:
+      - assertScreenshot:
+          path: .maestro/baselines/${MATRIX}/today.png
+          thresholdPercentage: 97
+
+# 2. Nutrition (the diary).
+- tapOn: "Nutrition"
+- extendedWaitUntil:
+    visible: "Nutrition"
+    timeout: 30000
+- takeScreenshot: screenshots/${MATRIX}/nutrition
+- runFlow:
+    when:
+      true: ${MODE == 'assert'}
+    commands:
+      - assertScreenshot:
+          path: .maestro/baselines/${MATRIX}/nutrition.png
+          thresholdPercentage: 97
+
+# 3. Progress.
+- tapOn: "Progress"
+- extendedWaitUntil:
+    visible: "Progress"
+    timeout: 30000
+- takeScreenshot: screenshots/${MATRIX}/progress
+- runFlow:
+    when:
+      true: ${MODE == 'assert'}
+    commands:
+      - assertScreenshot:
+          path: .maestro/baselines/${MATRIX}/progress.png
+          thresholdPercentage: 97
+
+# 4. Train (the plans).
+- tapOn: "Train"
+- extendedWaitUntil:
+    visible: "Train"
+    timeout: 30000
+- takeScreenshot: screenshots/${MATRIX}/train
+- runFlow:
+    when:
+      true: ${MODE == 'assert'}
+    commands:
+      - assertScreenshot:
+          path: .maestro/baselines/${MATRIX}/train.png
+          thresholdPercentage: 97
+
+# 5. The logger: a blank session from Today, one exercise, one logged set.
+- tapOn: "Today"
+- runFlow:
+    when:
+      visible: "Start your first workout"
+    commands:
+      - tapOn: "Start your first workout"
+- runFlow:
+    when:
+      visible: 'Just want to log\? Start a blank workout'
+    commands:
+      - tapOn: 'Just want to log\? Start a blank workout'
+- extendedWaitUntil:
+    visible: "Add exercise"
+    timeout: 30000
+- tapOn: "Add exercise"
+- tapOn: "Search exercises…"
+- inputText: "Barbell Bench"
+- extendedWaitUntil:
+    visible: "Barbell Bench Press"
+    timeout: 15000
+- tapOn: "Barbell Bench Press"
+- extendedWaitUntil:
+    visible:
+      id: "volyume-well-weight"
+    timeout: 15000
+- tapOn:
+    id: "volyume-well-weight"
+- inputText: "60"
+- tapOn:
+    id: "volyume-well-reps"
+- inputText: "8"
+- hideKeyboard
+- tapOn:
+    id: "volyume-btn-complete-set"
+- runFlow:
+    when:
+      visible: "Exact rest alerts"
+    commands:
+      - tapOn: "Not now"
+- extendedWaitUntil:
+    visible: "Set 1 logged"
+    timeout: 15000
+- takeScreenshot: screenshots/${MATRIX}/logger
+- runFlow:
+    when:
+      true: ${MODE == 'assert'}
+    commands:
+      - assertScreenshot:
+          path: .maestro/baselines/${MATRIX}/logger.png
+          thresholdPercentage: 97
+
+# Leave the test user as it was: discard the session through the app's own
+# confirm (Keep training / Discard workout).
+- tapOn:
+    id: "volyume-workout-close"
+- extendedWaitUntil:
+    visible: 'Discard workout\?'
+    timeout: 10000
+- tapOn: "Discard workout"
+- extendedWaitUntil:
+    visible: "Train"
+    timeout: 30000

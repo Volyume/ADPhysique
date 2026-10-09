@@ -109,3 +109,36 @@ after the signed-in entry point renders. This is the documented seam from
 the proposal (section 1) — real session, real RLS, no gate bypassed: the
 injected user still hits the Article 9 gate, tier resolution, and sync
 exactly like an OAuth sign-in.
+
+## Screenshot net (Campaign 27 phase 2d, D104-3)
+
+`flows/10-screenshot-net.yaml` walks Today, Nutrition, Progress, Train and
+the logger (a blank session with one logged set, discarded at the end) and
+takes one screenshot of each. The workflow **Screenshot net (pre-release)**
+(`.github/workflows/screenshot-net.yml`, manual dispatch only) runs it on the
+fixed matrix:
+
+| Matrix | Where | How |
+| --- | --- | --- |
+| `android-360-font130` | the API 34 x86_64 emulator | window 1080 x 2340 at 480 dpi (360 x 780 dp, the S22 class), system text size 1.3x, status bar in demo mode (clock 10:00) |
+| `ios-large` | an iPhone 16 Pro Max simulator on a macOS runner | an EAS simulator build on the `e2e-simulator` profile, passed as `ios_simulator_build_url`; status bar overridden (10:00). Skipped when no URL is given |
+
+Modes:
+
+1. `mode=capture` writes the screenshots only and uploads them as the
+   `screenshots-<matrix>-<run>` artifact. Use it for the first run of a
+   matrix and after an intended redesign. Download the artifact and commit
+   the PNGs to `.maestro/baselines/<matrix>/` (`today.png`, `nutrition.png`,
+   `progress.png`, `train.png`, `logger.png`); those are the baselines.
+2. `mode=assert` takes the same screenshots and compares each with its
+   committed baseline (`assertScreenshot`, threshold 97%: up to 3% of
+   pixels may differ). A screen that drifted fails the run; the artifact
+   holds the new screenshots to inspect and, if the change was intended,
+   to commit as the new baseline.
+
+The Android APK comes from a `Build Android (APK + AAB, signed)` run with
+`architectures` set to `arm64-v8a,x86_64`, exactly as the E2E workflow takes
+it. Builds are the founder's to run; this workflow never builds.
+
+Beside the net, every campaign device checklist carries a manual pass at the
+phone's maximum accessibility text size (CLAUDE.md, Testing on device).

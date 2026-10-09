@@ -228,6 +228,8 @@ Kept as they are: rest strip docked outside the scroll, compact, one render site
 
 ## 7. Device checklist (physical Android, EAS build), both walks
 
+Every walk ends with one pass at the phone's maximum accessibility text size (Settings, Display, then the system text size at its largest): nothing overlaps, nothing is cut off, every number still reads (D104-3, Pillar D).
+
 1. Start a planned session: the toolbar shows Rest, Notes, the clock, Finish; the session name; the first exercise expanded with its rows; every other exercise as a header. Expected: no bottom bar.
 2. Tap the next row's check without touching anything: the set logs with the coach's numbers; the check turns amber; the rest strip starts; the row below becomes the next row. Expected: one tap, no keyboard.
 3. Tap the next row's kg well: the keypad docks; type a weight; Next moves to reps; Done closes; the check logs the typed numbers. Expected: entry_typed = 1 for that set (visible nowhere, but the row keeps the typed values).
