@@ -84,10 +84,12 @@ export function useSessionClock(startTime) {
 
 export default function SessionClock({ startTime }) {
   const t = useTheme();
-  // A fact beside the session name: the numerals in secondary ink, nothing
+  // A fact beside the session name: the numerals in primary ink, nothing
   // drawn around them, no caption (a running clock says what it is).
   const live = useMemo(() => ({
-    text: { ...t.type.num('title'), color: t.colors.textSecondary },
+    // The same role and ink as the rest strip's readout (founder, 2026-10-09):
+    // the two clocks on the page read as one thing.
+    text: { ...t.type.num('title'), color: t.colors.textPrimary },
   }), [t]);
 
   const elapsedMs = useSessionClock(startTime);

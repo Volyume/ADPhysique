@@ -57,7 +57,7 @@ describe('SessionHeader', () => {
     expect(tree.root.findAll((n) => n.type === 'Ionicons')).toHaveLength(0);
   });
 
-  test('with startTime the clock sits after the title on the same row, in secondary ink, spoken as Elapsed', () => {
+  test('with startTime the clock sits after the title on the same row, in primary ink, spoken as Elapsed', () => {
     jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
     const tree = render({ startTime: START });
     const clocks = hosts(tree, (p) => p.accessibilityRole === 'timer');
@@ -66,7 +66,7 @@ describe('SessionHeader', () => {
     expect(clock.props.accessibilityLabel).toMatch(/^Elapsed/);
     expect(allText(clock)).toEqual(['12:06']);
     const s = flat(clock.props.style);
-    expect(s.color).toBe(colors.textSecondary);
+    expect(s.color).toBe(colors.textPrimary);
     expect(s.fontSize).toBe(type.title.fontSize);
     expect(s.fontVariant).toEqual(['tabular-nums']);
     // Same row: the wrapper is a centred row, the title then the clock are its two children.

@@ -247,7 +247,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // line (SessionHeader), tabular title numerals in secondary ink, no pill,
     // no caption, and the toolbar no longer hosts it.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textSecondary },");
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textPrimary },");
     const HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionHeader.js'), 'utf8');
     expect(HEADER).toContain('{startTime ? <SessionClock startTime={startTime} /> : null}');
     const TOOLBAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionToolbar.js'), 'utf8');
