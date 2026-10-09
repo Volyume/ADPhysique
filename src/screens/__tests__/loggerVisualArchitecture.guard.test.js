@@ -158,8 +158,20 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     expect(SET_ROW).toContain('inputAccessoryViewID={input.inputAccessoryViewID}');
     expect(SRC).toContain("const LOGGER_BAR_ACCESSORY_ID = 'volyume-logger-keyboard-bar';");
     expect(SRC).toContain('returnKeyType: iosPad ? undefined :');
-    expect(SRC).toContain('inputAccessoryViewID: iosPad ? LOGGER_BAR_ACCESSORY_ID : undefined,');
-    expect(SRC).toContain('<InputAccessoryView nativeID={LOGGER_BAR_ACCESSORY_ID}>');
+    // One accessory per input, named by field and row and keyed by that name
+    // (2026-10-09 audit B1 and B2): React Native attaches an accessory to the
+    // input it finds once, so a shared bar stayed on the first input.
+    expect(SRC).toContain("inputAccessoryViewID: Platform.OS === 'ios' ? barAccessoryId : undefined,");
+    expect(SRC).toContain('<InputAccessoryView key={barAccessoryId} nativeID={barAccessoryId}>');
+    // Mid-cluster the bar's action is Finish cluster, as the row's check is (audit B3).
+    expect(SRC).toContain('if (cluster) finishCluster(); else handleCompleteSetPress();');
+    // tick-all reads nextRowShown, so it is declared first (audit C1).
+    expect(SRC.indexOf('const nextRowShown =')).toBeLessThan(SRC.indexOf('const tickAllCount ='));
+    expect(SRC.indexOf('const activeExerciseType =')).toBeLessThan(SRC.indexOf('const restSheetNextLabel ='));
+    // The keyboard going away closes the well (audit C6); no safe inset under
+    // a bar that sits on the keyboard (audit C5).
+    expect(SRC).toContain("Keyboard.addListener('keyboardDidHide'");
+    expect(SRC).not.toContain('safeBottom={safeBottom}');
   });
 
   test('the step bar can never produce a number the typed fields refused', () => {

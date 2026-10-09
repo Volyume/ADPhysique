@@ -73,7 +73,7 @@
  * target: logged is the app's success checkmark-circle, next the one amber
  * ring on the card, pending a subtle ring.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
@@ -212,7 +212,9 @@ function buildLive(t) {
     wellEditing: { borderColor: withAlpha(c.primary, alpha.strong) },
     wellValue: { ...num('bodyStrong'), color: c.textPrimary },
     wellGhost: { color: c.textSecondary },
-    wellPlaceholder: { ...num('bodyStrong'), color: c.textDisabled },
+    // The house TextField's placeholder ink (textMuted); textDisabled is for
+    // disabled controls (2026-10-09 audit D6).
+    wellPlaceholder: { ...num('bodyStrong'), color: c.textMuted },
     wellActive: { color: c.textPrimary },
     // A logged set wears the app's "done" mark (checkmark-circle in
     // success); the set you are on is the one amber ring on the card.
@@ -300,6 +302,18 @@ function LastCell({ last, onPress, testID, live }) {
 
 function WellCell({ field, word, text, spoken, wellState, editingField, ghost, input, onPress, testID, name, live }) {
   const isEditingThis = wellState === 'editing' && editingField === field;
+  // Focus through the input's own focus method, not autoFocus: on the new
+  // architecture autoFocus makes the field first responder directly and never
+  // applies selectTextOnFocus (2026-10-09 audit E1, verified in React
+  // Native's RCTTextInputComponentView), which is why the founder's iPhone
+  // showed the caret after the seed with nothing selected.
+  const inputRef = useRef(null);
+  const hasInput = !!input;
+  useEffect(() => {
+    if (!hasInput) return;
+    const el = inputRef.current;
+    if (el && typeof el.focus === 'function') el.focus();
+  }, [hasInput]);
   const box = [styles.well, live.well, isEditingThis && live.wellEditing];
   const label = `${name} ${word}`;
   if (input) {
@@ -308,6 +322,7 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
     return (
       <View style={box}>
         <TextInput
+          ref={inputRef}
           testID={input.testID}
           style={[live.wellValue, live.wellActive, styles.wellInput]}
           value={input.value == null ? '' : String(input.value)}
@@ -317,7 +332,7 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
           inputAccessoryViewID={input.inputAccessoryViewID}
           onSubmitEditing={input.onSubmitEditing}
           selectTextOnFocus
-          autoFocus
+          submitBehavior="submit"
           accessibilityLabel={label}
         />
       </View>

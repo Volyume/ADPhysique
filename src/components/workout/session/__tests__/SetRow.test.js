@@ -96,9 +96,9 @@ describe('SetRow wells', () => {
   test('pending: placeholder ink, the regular numeric face', () => {
     const tree = render({ wells: { weight: 70, reps: 8, state: 'pending' }, check: 'pending' });
     const s = wellText(tree, 'Set 2 weight');
-    expect(s.color).toBe(colors.textDisabled);
+    expect(s.color).toBe(colors.textMuted);
     expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
-    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textDisabled);
+    expect(wellText(tree, 'Set 2 reps').color).toBe(colors.textMuted);
   });
 
   test('editing weight: only the weight box takes the primary-tint edge, both values stay primary ink', () => {
@@ -497,7 +497,7 @@ describe('SetRow exercise kinds', () => {
     '%s: placeholder ink while pending; primary ink and the tinted edge while editing',
     (kind, label) => {
       const pending = render({ kind, wells: { weight: 10, reps: 60, state: 'pending' }, check: 'pending' });
-      expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textDisabled);
+      expect(wellText(pending, `Set 2 ${label}`).color).toBe(colors.textMuted);
       const editing = render({ kind, wells: { weight: 10, reps: 60, state: 'editing', editingField: 'reps' } });
       expect(wellText(editing, `Set 2 ${label}`).color).toBe(colors.textPrimary);
       expect(flat(one(byLabel(editing, `Set 2 ${label}`)).props.style).borderColor).toBe(withAlpha(colors.primary, alpha.strong));
@@ -623,7 +623,11 @@ describe('SetRow phone-keyboard path', () => {
     expect(box.props.keyboardType).toBe('decimal-pad');
     expect(box.props.returnKeyType).toBe(input.returnKeyType);
     expect(box.props.selectTextOnFocus).toBe(true);
-    expect(box.props.autoFocus).toBe(true);
+    // Focus goes through the input's focus method on mount, never autoFocus
+    // (2026-10-09 audit E1: autoFocus skips selectTextOnFocus on Fabric);
+    // the return key submits without blurring, so Next never drops the keyboard.
+    expect(box.props.autoFocus).toBeUndefined();
+    expect(box.props.submitBehavior).toBe('submit');
     expect(box.props.onSubmitEditing).toBe(input.onSubmitEditing);
     // The box around the field is a plain View (not a button) carrying the editing edge.
     const wrap = one(hosts(tree, (p) => flat(p.style).borderWidth === 1.5 && flat(p.style).borderColor === withAlpha(colors.primary, alpha.strong)));

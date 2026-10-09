@@ -23,10 +23,12 @@
  *               well
  *   onDone      the last action; it reads "Done" unless `doneLabel` says
  *               otherwise
- *   doneLabel   'Done' (default) | 'Log'. On the next set the last action
- *               LOGS the set (founder, 2026-10-09: "too many clicks"), so
- *               typing the reps and pressing it is the whole set; on an
- *               edit of a logged set it stays Done
+ *   doneLabel   what the last action does: 'Done' (default), 'Log' (spoken
+ *               "Log set"), or the row's own action ('Finish' mid-cluster,
+ *               'Other side' mid-pair, 'Start' for a cluster type). On the
+ *               next set the last action LOGS the set (founder, 2026-10-09:
+ *               "too many clicks"), so typing the reps and pressing it is
+ *               the whole set; on an edit of a logged set it stays Done
  *   safeBottom  optional bottom inset in dp (default 0) under the row, for
  *               the gesture bar when the keyboard is not covering it
  *
@@ -120,8 +122,8 @@ export default function KeyboardBar({ step = 1, unit = 'kg', mode = 'number', on
       <Action
         testID="volyume-bar-done"
         icon="checkmark"
-        label={doneLabel === 'Log' ? 'Log' : 'Done'}
-        spoken={doneLabel === 'Log' ? 'Log set' : 'Done'}
+        label={doneLabel}
+        spoken={doneLabel === 'Log' ? 'Log set' : doneLabel}
         onPress={onDone}
         glyphColor={ink}
         labelStyle={live.label}
