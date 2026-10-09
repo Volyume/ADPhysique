@@ -1,15 +1,27 @@
 /**
- * SessionToolbar (12-BUILD-SPEC sections 2 to 4, register D220). Pins: the four
- * test ids plus the History tool that renders only when onHistory is given
- * (D220 addendum 10), every callback, the icon-only Finish with its full spoken
- * name, the busy state, that the clock is not in the bar (it sits on the session title's line, D220 addendum 12), the tool labels, and the
- * token-only source guard.
+ * SessionToolbar (register D220 addendum 14: the logger's header is the app's
+ * modal chrome). The toolbar is a ModalHeader and nothing else: the X on the
+ * left (Cancel workout), the session name centred at the title role with the
+ * elapsed clock as its subtitle, and on the right the History glyph (only when
+ * onHistory is given) and the amber icon-only Finish. There are no Rest or
+ * Notes tools; those are rows on the exercise overflow sheet.
+ *
+ * Pins: the test ids present with and without onHistory, the spoken labels and
+ * roles, the glyph names, sizes and colours, Finish icon only (no visible
+ * word), the busy state, the 48 dp boxes, the bar's hairline and absent fill,
+ * the title role and centring, the subtitle clock with and without startTime,
+ * every callback firing once, and the token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
+import { StyleSheet } from 'react-native';
 import { create, act } from 'react-test-renderer';
 import { colors, type } from '../../../../styles/theme';
 import SessionToolbar from '../SessionToolbar';
+
+const START = 1700000000000;
+const MIN = 60 * 1000;
+const SEC = 1000;
 
 function render(props) {
   let tree;
@@ -29,119 +41,159 @@ function allText(node) {
   if (Array.isArray(node)) return node.flatMap(allText);
   return allText(node.children);
 }
-const ALL_IDS = ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'];
+const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
 const glyphs = (node) => (node.root || node).findAll((n) => n.type === 'Ionicons');
+const titleNode = (tree, title) => tree.root.findAll((n) => n.type === 'Text' && allText(n).join('') === title)[0];
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 describe('SessionToolbar', () => {
-  test('carries the four test ids; the History tool only when onHistory is given', () => {
+  test('carries the close and finish test ids; the History glyph only when onHistory is given', () => {
     const tree = render({});
-    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes']
-      .forEach((id) => byId(tree, id));
+    byId(tree, 'volyume-workout-close');
+    byId(tree, 'volyume-workout-finish');
     expect(hosts(tree, (p) => p.testID === 'volyume-tool-history')).toHaveLength(0);
-    expect(allText(tree.toJSON())).not.toContain('History');
     const withHistory = render({ onHistory: jest.fn() });
-    [...ALL_IDS].forEach((id) => byId(withHistory, id));
+    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-history'].forEach((id) => byId(withHistory, id));
   });
 
-  test('the History tool sits after Notes: stats glyph, History caption, spoken name and hint, calls onHistory once', () => {
-    const onHistory = jest.fn();
-    const tree = render({ onHistory });
-    const tool = byId(tree, 'volyume-tool-history');
-    expect(tool.props.accessibilityRole).toBe('button');
-    expect(tool.props.accessibilityLabel).toBe('History and records');
-    expect(tool.props.accessibilityHint).toBe('Previous sessions and records for the current exercise');
-    const glyph = glyphs(tool);
-    expect(glyph).toHaveLength(1);
-    expect(glyph[0].props.name).toBe('stats-chart-outline');
-    expect(glyph[0].props.size).toBe(22);
-    expect(glyph[0].props.color).toBe(colors.textSecondary);
-    expect(allText(tool)).toEqual(['History']);
-    const order = hosts(tree, (p) => typeof p.testID === 'string' && p.testID.startsWith('volyume-tool-')).map((n) => n.props.testID);
-    expect(order).toEqual(['volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history']);
-    press(tool);
-    expect(onHistory).toHaveBeenCalledTimes(1);
+  test('there are no Rest or Notes tools and no visible tool words', () => {
+    const tree = render({ title: 'Push day', onHistory: jest.fn() });
+    ['volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+      expect(hosts(tree, (p) => p.testID === id)).toHaveLength(0);
+    });
+    // The only text is the title: no Rest, Notes or History caption.
+    expect(allText(tree.toJSON())).toEqual(['Push day']);
   });
 
   test('every callback fires once', () => {
-    const cb = { onClose: jest.fn(), onRest: jest.fn(), onNotes: jest.fn(), onFinish: jest.fn() };
+    const cb = { onClose: jest.fn(), onHistory: jest.fn(), onFinish: jest.fn() };
     const tree = render(cb);
     press(byId(tree, 'volyume-workout-close'));
-    press(byId(tree, 'volyume-tool-rest'));
-    press(byId(tree, 'volyume-tool-notes'));
+    press(byId(tree, 'volyume-tool-history'));
     press(byId(tree, 'volyume-workout-finish'));
     Object.values(cb).forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
   });
 
   test('accessibility labels and roles', () => {
-    const tree = render({});
+    const tree = render({ onHistory: jest.fn() });
     expect(byId(tree, 'volyume-workout-close').props.accessibilityLabel).toBe('Cancel workout');
     expect(byId(tree, 'volyume-workout-finish').props.accessibilityLabel).toBe('Finish workout');
-    expect(byId(tree, 'volyume-tool-rest').props.accessibilityLabel).toBe('Rest timer');
-    expect(byId(tree, 'volyume-tool-notes').props.accessibilityLabel).toBe('Session notes');
-    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes']
+    expect(byId(tree, 'volyume-tool-history').props.accessibilityLabel).toBe('History and records for the current exercise');
+    ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-history']
       .forEach((id) => expect(byId(tree, id).props.accessibilityRole).toBe('button'));
   });
 
-  test('tools are named under their glyphs; Finish shows no word (icon only)', () => {
+  test('Close is the 24 dp X in primary ink', () => {
     const tree = render({});
+    const close = glyphs(byId(tree, 'volyume-workout-close'));
+    expect(close).toHaveLength(1);
+    expect(close[0].props.name).toBe('close');
+    expect(close[0].props.size).toBe(24);
+    expect(close[0].props.color).toBe(colors.textPrimary);
+  });
+
+  test('History is the outlined stats glyph at 24 dp in primary ink', () => {
+    const tree = render({ onHistory: jest.fn() });
+    const glyph = glyphs(byId(tree, 'volyume-tool-history'));
+    expect(glyph).toHaveLength(1);
+    expect(glyph[0].props.name).toBe('stats-chart-outline');
+    expect(glyph[0].props.size).toBe(24);
+    expect(glyph[0].props.color).toBe(colors.textPrimary);
+  });
+
+  test('Finish is the amber double check at 24 dp, icon only: no visible word', () => {
+    const tree = render({ title: 'Push day', startTime: START, onHistory: jest.fn() });
+    const finish = glyphs(byId(tree, 'volyume-workout-finish'));
+    expect(finish).toHaveLength(1);
+    expect(finish[0].props.name).toBe('checkmark-done');
+    expect(finish[0].props.size).toBe(24);
+    expect(finish[0].props.color).toBe(colors.primary);
+    expect(allText(byId(tree, 'volyume-workout-finish'))).toEqual([]);
     const words = allText(tree.toJSON());
-    expect(words).toContain('Rest');
-    expect(words).toContain('Notes');
     expect(words).not.toContain('Finish');
     expect(words).not.toContain('Finish workout');
   });
 
-  test('Finish is the amber double check; the tools are 22 dp in secondary ink under a caption label; Cancel is a muted X', () => {
-    const tree = render({});
-    const finish = glyphs(byId(tree, 'volyume-workout-finish'));
-    expect(finish).toHaveLength(1);
-    expect(finish[0].props.name).toBe('checkmark-done');
-    expect(finish[0].props.color).toBe(colors.primary);
-    ['volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
-      const glyph = glyphs(byId(tree, id))[0];
-      expect(glyph.props.size).toBe(22);
-      expect(glyph.props.color).toBe(colors.textSecondary);
-    });
-    expect(glyphs(byId(tree, 'volyume-tool-rest'))[0].props.name).toBe('timer-outline');
-    ['Rest', 'Notes'].forEach((word) => {
-      const label = tree.root.findAll((n) => n.type === 'Text' && allText(n).join('') === word)[0];
-      const s = Object.assign({}, ...[].concat(label.props.style).filter(Boolean));
-      expect(s.color).toBe(colors.textSecondary);
-      expect(s.fontSize).toBe(type.caption.fontSize);
-      expect(s.fontFamily).toBe(type.caption.fontFamily);
-    });
-    const close = glyphs(byId(tree, 'volyume-workout-close'))[0];
-    expect(close.props.name).toBe('close');
-    expect(close.props.color).toBe(colors.textMuted);
+  test('the right accessory is a centred row with an 8 dp gap, History before Finish', () => {
+    const tree = render({ onHistory: jest.fn() });
+    const rows = hosts(tree, (p) => flat(p.style).flexDirection === 'row' && flat(p.style).gap === 8);
+    expect(rows).toHaveLength(1);
+    expect(flat(rows[0].props.style).alignItems).toBe('center');
+    const order = rows[0].findAll((n) => typeof n.type === 'string' && typeof n.props.testID === 'string')
+      .map((n) => n.props.testID);
+    expect(order).toEqual(['volyume-tool-history', 'volyume-workout-finish']);
   });
 
-  test('chromeless: a bottom hairline and no fill on the bar, no divider, no border or fill on Finish or the tools', () => {
+  test('the bar: a bottom hairline in the subtle border colour, 16/12 padding, and no fill', () => {
     const tree = render({ onHistory: jest.fn() });
-    const flatten = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
-    const bar = flatten(tree.toJSON().props.style);
-    expect(bar.borderBottomWidth).toBe(1);
+    const bar = flat(tree.toJSON().props.style);
+    expect(typeof StyleSheet.hairlineWidth).toBe('number');
+    expect(bar.borderBottomWidth).toBe(StyleSheet.hairlineWidth);
     expect(bar.borderBottomColor).toBe(colors.borderSubtle);
+    expect(bar.paddingHorizontal).toBe(16);
+    expect(bar.paddingVertical).toBe(12);
     expect(bar.backgroundColor).toBeUndefined();
-    ['volyume-workout-finish', 'volyume-workout-close', 'volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'].forEach((id) => {
-      const s = flatten(byId(tree, id).props.style);
+  });
+
+  test('chromeless controls: no fill, border or divider on Close, History or Finish', () => {
+    const tree = render({ onHistory: jest.fn() });
+    ['volyume-workout-close', 'volyume-tool-history', 'volyume-workout-finish'].forEach((id) => {
+      const s = flat(byId(tree, id).props.style);
       expect(s.backgroundColor).toBeUndefined();
       expect(s.borderWidth).toBeUndefined();
       expect(s.borderColor).toBeUndefined();
     });
-    // The only things with an edge are the bar's own bottom hairline.
     const edged = tree.root.findAll((n) => typeof n.type === 'string'
-      && (flatten(n.props.style).borderLeftWidth !== undefined || flatten(n.props.style).borderRightWidth !== undefined
-        || flatten(n.props.style).width === 1));
+      && (flat(n.props.style).borderLeftWidth !== undefined || flat(n.props.style).borderRightWidth !== undefined
+        || flat(n.props.style).width === 1));
     expect(edged).toHaveLength(0);
   });
 
-  test('the clock is not in the bar: no timer node, no Elapsed text, no numerals', () => {
+  test('hit targets: Close is a 48 dp wide box with a 48 dp minimum height; History and Finish are 48 by 48', () => {
     const tree = render({ onHistory: jest.fn() });
-    expect(hosts(tree, (p) => p.accessibilityRole === 'timer')).toHaveLength(0);
-    const words = allText(tree.toJSON());
-    expect(words.join(' ')).not.toContain('Elapsed');
-    expect(words.filter((w) => /^\d+:\d{2}$/.test(w))).toHaveLength(0);
-    expect(words.sort()).toEqual(['History', 'Notes', 'Rest']);
+    const close = flat(byId(tree, 'volyume-workout-close').props.style);
+    expect(close.width).toBe(48);
+    expect(close.minHeight).toBe(48);
+    ['volyume-tool-history', 'volyume-workout-finish'].forEach((id) => {
+      const s = flat(byId(tree, id).props.style);
+      expect(s.width).toBe(48);
+      expect(s.height).toBe(48);
+    });
+  });
+
+  test('the title is the title prop at the title role in primary ink, one line, centred', () => {
+    const tree = render({ title: 'Push day' });
+    const node = titleNode(tree, 'Push day');
+    expect(node).toBeDefined();
+    expect(node.props.numberOfLines).toBe(1);
+    const s = flat(node.props.style);
+    expect(s.color).toBe(colors.textPrimary);
+    expect(s.fontSize).toBe(type.title.fontSize);
+    expect(s.fontFamily).toBe(type.title.fontFamily);
+    expect(s.textAlign).toBe('center');
+  });
+
+  describe('subtitle clock', () => {
+    test('with startTime: a timer node under the title showing the elapsed time', () => {
+      jest.spyOn(Date, 'now').mockReturnValue(START + 12 * MIN + 6 * SEC);
+      const tree = render({ title: 'Push day', startTime: START });
+      const timers = hosts(tree, (p) => p.accessibilityRole === 'timer');
+      expect(timers).toHaveLength(1);
+      expect(timers[0].props.accessibilityLabel).toBe('Elapsed 12 minutes 6 seconds');
+      expect(allText(timers[0])).toEqual(['12:06']);
+      expect(allText(tree.toJSON())).toEqual(['Push day', '12:06']);
+    });
+
+    test('without startTime: no timer node and no numerals', () => {
+      const tree = render({ title: 'Push day', onHistory: jest.fn() });
+      expect(hosts(tree, (p) => p.accessibilityRole === 'timer')).toHaveLength(0);
+      const words = allText(tree.toJSON());
+      expect(words.join(' ')).not.toContain('Elapsed');
+      expect(words.filter((w) => /^\d+:\d{2}$/.test(w))).toHaveLength(0);
+    });
   });
 
   describe('finishBusy', () => {
@@ -161,21 +213,6 @@ describe('SessionToolbar', () => {
       const spinner = node.findAll((n) => n.type === 'ActivityIndicator');
       expect(spinner).toHaveLength(1);
       expect(spinner[0].props.color).toBe(colors.primary);
-    });
-  });
-
-  test('hit targets: the controls are at least 48 dp', () => {
-    const tree = render({ onHistory: jest.fn() });
-    const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
-    ['volyume-workout-close', 'volyume-workout-finish'].forEach((id) => {
-      const s = flat(byId(tree, id).props.style);
-      expect(s.width).toBe(48);
-      expect(s.height).toBe(48);
-    });
-    ['volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'].forEach((id) => {
-      const s = flat(byId(tree, id).props.style);
-      expect(s.width).toBe(56);
-      expect(s.minHeight).toBe(48);
     });
   });
 });

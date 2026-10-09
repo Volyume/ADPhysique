@@ -59,7 +59,11 @@ describe('shared chrome polish', () => {
     let tree;
     act(() => { tree = create(<ModalHeader title="Choose date" onClose={() => {}} />); });
     const title = tree.root.findAllByType(Text).find((node) => node.props.children === 'Choose date');
-    const header = title.parent;
+    // The title sits in a centre column (title over an optional subtitle,
+    // D220 addendum 14); the header is the nearest ancestor drawing the
+    // bottom hairline.
+    let header = title.parent;
+    while (header && flatten(header.props.style).borderBottomWidth == null) header = header.parent;
     expect(flatten(header.props.style).borderBottomColor).toBe(colors.borderSubtle);
     expect(flatten(tree.root.findByProps({ accessibilityLabel: 'Close' }).props.style).width).toBe(touchTarget.minimum);
   });
