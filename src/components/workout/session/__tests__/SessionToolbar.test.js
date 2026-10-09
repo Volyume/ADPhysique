@@ -2,7 +2,7 @@
  * SessionToolbar (12-BUILD-SPEC sections 2 to 4, register D220). Pins: the four
  * test ids plus the History tool that renders only when onHistory is given
  * (D220 addendum 10), every callback, the icon-only Finish with its full spoken
- * name, the busy state, the clock it contains, the tool labels, and the
+ * name, the busy state, that the clock is not in the bar (it sits on the session title's line, D220 addendum 12), the tool labels, and the
  * token-only source guard.
  */
 import fs from 'fs';
@@ -13,7 +13,7 @@ import SessionToolbar from '../SessionToolbar';
 
 function render(props) {
   let tree;
-  act(() => { tree = create(<SessionToolbar startTime={1700000000000} {...props} />); });
+  act(() => { tree = create(<SessionToolbar {...props} />); });
   return tree;
 }
 const hosts = (tree, pred) => tree.root.findAll((n) => typeof n.type === 'string' && pred(n.props || {}));
@@ -135,10 +135,13 @@ describe('SessionToolbar', () => {
     expect(edged).toHaveLength(0);
   });
 
-  test('contains the session clock', () => {
-    const tree = render({});
-    const clock = hosts(tree, (p) => p.accessibilityRole === 'timer');
-    expect(clock).toHaveLength(1);
+  test('the clock is not in the bar: no timer node, no Elapsed text, no numerals', () => {
+    const tree = render({ onHistory: jest.fn() });
+    expect(hosts(tree, (p) => p.accessibilityRole === 'timer')).toHaveLength(0);
+    const words = allText(tree.toJSON());
+    expect(words.join(' ')).not.toContain('Elapsed');
+    expect(words.filter((w) => /^\d+:\d{2}$/.test(w))).toHaveLength(0);
+    expect(words.sort()).toEqual(['History', 'Notes', 'Rest']);
   });
 
   describe('finishBusy', () => {
@@ -171,7 +174,7 @@ describe('SessionToolbar', () => {
     });
     ['volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'].forEach((id) => {
       const s = flat(byId(tree, id).props.style);
-      expect(s.width).toBe(52);
+      expect(s.width).toBe(56);
       expect(s.minHeight).toBe(48);
     });
   });

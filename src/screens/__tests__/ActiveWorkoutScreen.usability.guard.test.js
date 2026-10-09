@@ -243,11 +243,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // textPrimary - it is data, not decoration, and the header amber
     // competed with the single filled Log set CTA. Same type.num role.
     // Clean-up (D220): the clock is SessionClock, tabular title numerals in
-    // primary ink. Re-pinned (D220 addendum 7): the approved 2026-08-18
-    // header's "Elapsed" overline over the numerals, no pill, no bold.
+    // Re-pinned (D220 addendum 12): the clock sits on the session title's
+    // line (SessionHeader), tabular title numerals in secondary ink, no pill,
+    // no caption, and the toolbar no longer hosts it.
     const CLOCK = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionClock.js'), 'utf8');
-    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textPrimary },");
-    expect(CLOCK).toContain('label: { ...t.type.overline, color: t.colors.textMuted },');
+    expect(CLOCK).toContain("text: { ...t.type.num('title'), color: t.colors.textSecondary },");
+    const HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionHeader.js'), 'utf8');
+    expect(HEADER).toContain('{startTime ? <SessionClock startTime={startTime} /> : null}');
+    const TOOLBAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/session/SessionToolbar.js'), 'utf8');
+    expect(TOOLBAR).not.toContain('SessionClock');
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
