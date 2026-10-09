@@ -209,7 +209,14 @@ describe('estimated-max/PR split (failure 7): record system intact, routine copy
     expect(SRC).toContain("record: detectedPRs.some((pr) => pr.setId === s.id),");
     expect(SRC).not.toMatch(/primaryIcon=\{[^}]*trophy/);
     expect(strip(SET_ROW)).not.toMatch(/trophy/);
-    expect(SRC).toContain('showPRCelebration');
+    // D220 addendum 36 (founder device verdict 2026-10-09): the record
+    // EARNED is a line of the card under the table (RecordLine), never a
+    // floating surface; the threshold line above stays banned.
+    expect(SRC).toContain('noteRecord(exercise.id');
+    expect(SRC).toContain('<RecordLine record={exerciseRecord} celebrate={celebrateRecord}');
+    expect(SRC).not.toContain('showPRCelebration');
+    expect(SRC).not.toContain('loggerNoticeTop');
+    expect(SRC).not.toContain('loggerBottomInset');
   });
 });
 

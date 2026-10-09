@@ -3,7 +3,6 @@
  *
  *  - addExerciseToWorkout / addSetToCurrentExercise / addRestTime / tickRestTimer
  *    use the functional set(state => ...) form so concurrent updates don't race.
- *  - showPRCelebration queues subsequent PRs instead of overwriting.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -144,46 +143,6 @@ describe('rest timer', () => {
     const remaining = useAppStore.getState().restTimerRemaining;
     expect(remaining).toBeGreaterThanOrEqual(9);
     expect(remaining).toBeLessThanOrEqual(10);
-  });
-});
-
-describe('PR celebration queue', () => {
-  test('first PR sets prCelebration directly', () => {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    useAppStore.getState().showPRCelebration({ type: '1rm_estimate', label: 'New 1RM 150kg' });
-    const { prCelebration, prCelebrationQueue } = useAppStore.getState();
-    expect(prCelebration).toBeDefined();
-    expect(prCelebration.type).toBe('1rm_estimate');
-    expect(prCelebrationQueue).toEqual([]);
-  });
-
-  test('second PR enqueues instead of overwriting', () => {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    useAppStore.getState().showPRCelebration({ type: '1rm_estimate', label: 'A' });
-    useAppStore.getState().showPRCelebration({ type: 'heaviest_weight', label: 'B' });
-    const { prCelebration, prCelebrationQueue } = useAppStore.getState();
-    expect(prCelebration.label).toBe('A');
-    expect(prCelebrationQueue.length).toBe(1);
-    expect(prCelebrationQueue[0].label).toBe('B');
-  });
-
-  test('hidePRCelebration pops the queue if anything is pending', () => {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    useAppStore.getState().showPRCelebration({ type: '1rm_estimate', label: 'A' });
-    useAppStore.getState().showPRCelebration({ type: 'heaviest_weight', label: 'B' });
-    useAppStore.getState().showPRCelebration({ type: 'reps_at_weight', label: 'C' });
-    expect(useAppStore.getState().prCelebrationQueue.length).toBe(2);
-    useAppStore.getState().hidePRCelebration();
-    expect(useAppStore.getState().prCelebration.label).toBe('B');
-    expect(useAppStore.getState().prCelebrationQueue.length).toBe(1);
-    useAppStore.getState().hidePRCelebration();
-    expect(useAppStore.getState().prCelebration.label).toBe('C');
-    expect(useAppStore.getState().prCelebrationQueue.length).toBe(0);
-    useAppStore.getState().hidePRCelebration();
-    expect(useAppStore.getState().prCelebration).toBeNull();
   });
 });
 

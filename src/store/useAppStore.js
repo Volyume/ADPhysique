@@ -55,10 +55,6 @@ const ACTIVE_WORKOUT_KEY = '@volyume_active_workout';
 // rest; the bound exists to refuse the impossible, never to police the unusual.
 const REST_MAX_SECONDS = 3600;
 
-// Monotonic stamp for PR celebrations (see showPRCelebration): App.js keys
-// the PRCelebration component on it so every celebration remounts and its
-// mount-time auto-dismiss timer actually runs.
-let _prCelebrationSeq = 0;
 
 // Workout preferences (Hevy teardown 2026-06-29, R1): the global default rest
 // timer and whether the rest timer auto-starts when a set is logged. Both are
@@ -762,8 +758,6 @@ const useAppStore = create((set, get) => ({
       workoutExercises: [],
       currentExerciseIndex: 0,
       restTimerActive: false,
-      prCelebration: null,
-      prCelebrationQueue: [],
     });
     // A2 (hostile review): signing out mid-rest must retire the scheduled
     // end-of-rest alert too, or "Rest done" sounds on a signed-out device.
@@ -2207,36 +2201,9 @@ const useAppStore = create((set, get) => ({
   // PR celebration queue. The user might hit two PRs on the same set
   // (heaviest weight + new 1RM), the previous single-slot field lost the
   // second. Now we queue, the top of the queue renders, dismiss pops.
-  prCelebration: null,
-  prCelebrationQueue: [],
-  // Each celebration is stamped with a unique _seq so App.js can key the
-  // PRCelebration component off it. Without the key, a queued celebration
-  // popping in reuses the mounted component, whose auto-dismiss timer only
-  // runs on mount, so the toast stuck on screen indefinitely (founder
-  // device report 2026-07-13: "First lift logged" never went away).
-  showPRCelebration: (pr) => set((state) => {
-    const stamped = { ...pr, _seq: ++_prCelebrationSeq };
-    return state.prCelebration
-      ? { prCelebrationQueue: [...state.prCelebrationQueue, stamped] }
-      : { prCelebration: stamped };
-  }),
-  hidePRCelebration: () => set((state) => {
-    if (state.prCelebrationQueue.length === 0) {
-      return { prCelebration: null };
-    }
-    const [next, ...rest] = state.prCelebrationQueue;
-    return { prCelebration: next, prCelebrationQueue: rest };
-  }),
-  // Founder device order 2026-08-18: the PR toast docks at the BOTTOM of
-  // the logger, just above the rest bar's amber top line, not over the
-  // header. The logger measures its bottom chrome (rest strip + bottom
-  // bar, safe area included) via onLayout and publishes the height here;
-  // PRCelebration reads it to anchor the toast. 0 = no logger chrome
-  // mounted (the toast falls back to a plain safe-area bottom offset).
-  loggerBottomInset: 0,
-  setLoggerBottomInset: (h) => set((state) => (
-    state.loggerBottomInset === h ? state : { loggerBottomInset: Number(h) || 0 }
-  )),
+  // The in-session record toast's queue and the logger's notice inset lived
+  // here until D220 addendum 36; the record is a line of the exercise card
+  // now (RecordLine), with no store state.
 
   // Gym weight units (barbells, dumbbells). kg-only (UK): lbs was removed,
   // so this is always 'kg'. setUnits coerces anything else to 'kg' and any

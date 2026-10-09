@@ -1343,7 +1343,7 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(summary).toMatch(/New bests on \$\{detectedPRs\.length\} lifts/);
     expect(stripComments(summary)).not.toMatch(/new PR\{/);
     // The in-session celebration labels stay plain English, unabbreviated.
-    const celebration = read('components/PRCelebration.js');
+    const celebration = read('components/workout/session/RecordLine.js');
     expect(celebration).toContain('First lift logged');
     expect(celebration).toContain('New heaviest weight');
   });

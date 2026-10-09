@@ -50,6 +50,7 @@ import KeyboardBar from '../components/workout/session/KeyboardBar';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
 import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
+import RecordLine, { recordText } from '../components/workout/session/RecordLine';
 import { buildExerciseHistory } from '../lib/exerciseHistory';
 import { stepValue, WEIGHT_RULES, DISTANCE_RULES, REPS_RULES } from '../lib/keypadEntry';
 import useAppStore from '../store/useAppStore';
@@ -309,11 +310,6 @@ function WorkoutBottomSheet({
 // (imported above). Re-exported here so existing `import { LoggedSetRow }
 // from '.../ActiveWorkoutScreen'` call sites keep working unchanged.
 
-// The logger's bottom chrome (rest strip + action bar, safe area included)
-// never legitimately exceeds this. Used to reject nonsense layout passes
-// before they can move the PR toast (founder device report 2026-08-18).
-const MAX_BOTTOM_CHROME = 320;
-
 /**
  * Rebuild a slot's routineExercise for a swapped-in exercise. The slot owns
  * the prescription (D219 lane A4, design 4.12, founder R10: "the new
@@ -365,7 +361,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     openRestViewAfterLog: s.openRestViewAfterLog,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
-    showPRCelebration: s.showPRCelebration,
     endWorkout: s.endWorkout,
     workoutStartTime: s.workoutStartTime,
     lastActivityAt: s.lastActivityAt,
@@ -380,7 +375,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
     startRestTimer, defaultRestSeconds, autoStartRestTimer, openRestViewAfterLog, workoutPrefsLoaded, loadWorkoutPrefs,
-    showPRCelebration, endWorkout, workoutStartTime,
+    endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak,
     barWeight,
   } = store;
@@ -389,73 +384,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // twice per rest, so it cannot re-introduce the per-tick re-render the
   // shallow selector above exists to prevent.
   const restTimerActive = useAppStore(s => s.restTimerActive);
-  // Founder device order 2026-08-18: publish the measured bottom-chrome
-  // height (rest strip + bottom bar) so the PR toast docks just above the
-  // rest bar's amber line. Read via getState in the handler (no re-render
-  // dependency) and cleared on unmount so a PR fired outside the logger
-  // falls back to the toast's own safe-area offset.
-  // Stage C (D220): the published inset is the ratcheted bottom chrome (the
-  // rest strip) PLUS the keyboard step bar's live height while a well is
-  // open (D220 addendum 18), so the PR toast docks above whichever is on
-  // screen and drops back when the bar closes. The ratchet and its ceiling
-  // apply to the chrome part only.
-  const chromeRatchetRef = useRef(0);
   const barHeightRef = useRef(0);
-  const safeBottomRef = useRef(0);
-  // On iOS the keyboard (with the bar riding it as its accessory) covers the
-  // bottom of the screen, so the toast docks above the keyboard's frame
-  // (D220 addendum 34, audit D13); on Android the window resizes and the
-  // bar's own height is the inset.
-  const keyboardHeightRef = useRef(0);
-  const publishBottomInset = useCallback(() => {
-    const s = useAppStore.getState();
-    const bottom = Platform.OS === 'ios' && keyboardHeightRef.current > 0
-      ? keyboardHeightRef.current
-      : (barHeightRef.current || safeBottomRef.current);
-    const h = chromeRatchetRef.current + bottom;
-    if (h !== (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
-  }, []);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      keyboardHeightRef.current = Math.round(e?.endCoordinates?.height ?? 0);
-      publishBottomInset();
-    });
-    const hide = Keyboard.addListener('keyboardDidHide', () => {
-      keyboardHeightRef.current = 0;
-      publishBottomInset();
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, [publishBottomInset]);
   const handleBarLayout = useCallback((e) => {
     const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
     if (h < 0) return;
     barHeightRef.current = h;
     setBarHeight(h);
-    publishBottomInset();
-  }, [publishBottomInset]);
-  const handleBottomChromeLayout = useCallback((e) => {
-    // Founder device report 2026-08-18 (second walk): the rest strip HIDES
-    // itself when no rest is running, so a PR fired in that moment measured
-    // the chrome short and the toast docked over the Log set button. The
-    // published height now only RATCHETS UP while the logger is mounted -
-    // its tallest state (bottom bar + rest strip) is the "above the amber
-    // line" position, and the rest strip is appearing at log time anyway.
-    // Reset happens on unmount only.
-    const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
-    // Founder device report 2026-08-18 (third walk): the toast stopped
-    // appearing AT ALL on a second PR. A ratchet with no ceiling can latch
-    // any spurious layout pass forever, and one big value pushes an
-    // absolutely-positioned toast clean off the top of the screen. The
-    // bottom chrome is a rest strip plus an action bar - it is never taller
-    // than MAX_BOTTOM_CHROME - so anything outside that range is a bad
-    // measurement and is ignored rather than trusted.
-    if (h <= 0 || h > MAX_BOTTOM_CHROME) return;
-    if (h > chromeRatchetRef.current) {
-      chromeRatchetRef.current = h;
-      publishBottomInset();
-    }
-  }, [publishBottomInset]);
-  useEffect(() => () => { useAppStore.getState().setLoggerBottomInset(0); }, []);
+  }, []);
   // Drop assisted machine regressions from swap suggestions for anyone past
   // their first block. A true beginner keeps them. Unknown experience is treated
   // as non-beginner so an athlete is never offered a crutch.
@@ -558,6 +493,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [entryField, setEntryField] = useState(null);
   const [editField, setEditField] = useState(null);
   const [rowSheet, setRowSheet] = useState(null);
+  // D220 addendum 36: the in-session record is a LINE OF THE CARD, under the
+  // set table (RecordLine), never a floating surface. Per exercise id, the
+  // latest record earned this session (or the honest first-lift line); the
+  // set that earned it must still be logged for the line to show, so a
+  // delete clears it by itself. celebrateRef holds the key of the record the
+  // next render must celebrate (haptic, announcement, enter animation), set
+  // only on the log or edit that earned it, so a jump back or a remount
+  // never celebrates twice.
+  const [exerciseRecords, setExerciseRecords] = useState({});
+  const celebrateRef = useRef(null);
+  const noteRecord = useCallback((exerciseId, record) => {
+    if (!exerciseId || !record) return;
+    celebrateRef.current = `${record.type}|${recordText(record)}`;
+    setExerciseRecords((prev) => ({ ...prev, [exerciseId]: record }));
+  }, []);
   // Stage D (D220): the rest length behind a section header's timer well.
   // `restOverrides` is this session's chosen length per exercise id (so a
   // freeform slot with no plan row can still be changed); a plan row is
@@ -852,7 +802,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // can never render under the navigation buttons; devices that report
   // real insets are untouched.
   const safeBottom = insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 48 : 0);
-  safeBottomRef.current = safeBottom;
   const timerRef = useRef(null);
 
   // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED,
@@ -3323,17 +3272,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // (PRCelebration renders its calm first-lift toast), and it never
         // joins the session's PR list. From set two onwards there is a bar,
         // so from set two onwards a record is possible.
-        showPRCelebration({
+        noteRecord(exercise.id, {
           type: 'first_lift',
           weight: setData.weight,
           reps: setData.actualReps,
-          value: setData.weight,
-          previousValue: null,
-          label: `${setData.weight}${units} x ${setData.actualReps} logged as your starting point`,
-          exerciseName: exercise.name,
+          units,
+          setId: setData.id,
         });
       } else if (prs.length > 0) {
-        showPRCelebration({ ...prs[0], exerciseName: exercise.name });
+        noteRecord(exercise.id, { ...prs[0], units, setId: setData.id });
         // Keep one PR per exercise (the most significant), so a multi-set,
         // multi-exercise session reports a handful of PRs, not dozens. The
         // per-set celebration above still fires each time a new best lands.
@@ -3723,7 +3670,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const editedPrs = editPrHistory.length > 0 && editedType !== 'warmup'
           ? detectPR({ weight, actualReps, setType: editedType, evidenceClass: editedEvidenceClass }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
-          showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
+          noteRecord(exercise.id, { ...editedPrs[0], units, setId: editingSet.id });
         }
         setDetectedPRs(prev => {
           const withoutThisSet = prev.filter(p => p.setId !== editingSet.id);
@@ -4788,14 +4735,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // plate; a time well steps by 5 s inside the bar.
   const activeStep = activeField === 'weight' ? (setTableKind === 'distance' ? 1 : weightStepKg) : 1;
   const inputOpen = activeField != null;
-  // The bar's height counts towards the PR toast's inset only while open.
   useEffect(() => {
     if (!inputOpen) {
       barHeightRef.current = 0;
       setBarHeight(0);
-      publishBottomInset();
     }
-  }, [inputOpen, publishBottomInset]);
+  }, [inputOpen]);
   function writeActiveField(field, next) {
     if (editingSet) setEditValue((v) => ({ ...(v || {}), [field]: next, isGhost: false }));
     else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });
@@ -5177,6 +5122,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       testIDs: { row: `volyume-pending-row-${n}` },
     });
   }
+  // D220 addendum 36: the record line under the table. The latest record
+  // earned on this exercise this session, shown only while the set that
+  // earned it is still logged; celebrated on the render that follows the
+  // log that earned it (celebrateRef) and never again.
+  const exerciseRecord = (() => {
+    const r = exercise?.id ? exerciseRecords[exercise.id] : null;
+    if (!r) return null;
+    if (r.setId && !loggedSets.some((row) => row.id === r.setId)) return null;
+    return r;
+  })();
+  const recordKey = exerciseRecord ? `${exerciseRecord.type}|${recordText(exerciseRecord)}` : null;
+  const celebrateRecord = recordKey != null && celebrateRef.current === recordKey;
+  useEffect(() => { celebrateRef.current = null; });
   // The quiet lines above the table: the group-focus cue (D44) names the
   // destination for a sighted user; the warm-up line explains the W row once;
   // the first-time line says how to choose a first load when there is no
@@ -5705,6 +5663,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
 
           <View style={styles.activeBody}>
+          {/* D220 addendum 36: the record, as a line of the card under the
+              rows it belongs to. No floating surface; the card grows by the
+              line and nothing is covered. */}
+          {exerciseRecord ? (
+            <RecordLine record={exerciseRecord} celebrate={celebrateRecord} reduceMotion={!!reduceMotion} />
+          ) : null}
           {/* R4 (D64): the between-sides banner. Appears only mid-pair
               (side one logged via the primary, side two pending on the same
               relabelled primary below). Cluster-banner visual class: bordered
@@ -5823,12 +5787,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             bar and outside the workspace scroll - rest state is glanceable
             by the thumb without ever pushing the active set down the page
             (screenshot failure 2). RestTimer self-hides when idle.
-            Founder device order 2026-08-18: the wrapper measures this whole
-            bottom chrome and publishes the height so the PR toast can dock
-            just ABOVE the rest bar's amber top line instead of covering the
-            header. Measurement only - layout is unchanged (a plain
-            full-width View in the same column). */}
-        <View onLayout={handleBottomChromeLayout}>
+            Nothing measures this chrome any more (D220 addendum 36: the
+            record is a line of the exercise card, not a docked toast). */}
+        <View>
         {/* Activation ruling (first-run coherence pass): the once-ever rest
             introduction sits directly above the strip it explains, inside the
             measured bottom chrome so the PR toast still docks clear of both.
