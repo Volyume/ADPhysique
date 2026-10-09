@@ -16,7 +16,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, radius, type } from '../../styles/theme';
+import { spacing, radius, type, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 
@@ -50,9 +50,9 @@ export default function StatusStrip({ items }) {
               accessibilityState={{ expanded }}
               accessibilityLabel={`${item.label}, tap to ${expanded ? 'collapse' : 'expand'}`}
             >
-              {item.icon && <Ionicons name={item.icon} size={14} color={item.iconColor || t.colors.textSecondary} />}
+              {item.icon && <Ionicons name={item.icon} size={iconSize.sm} color={item.iconColor || t.colors.textSecondary} />}
               <Text style={[styles.chipText, { color: t.colors.textPrimary }]}>{item.label}</Text>
-              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={t.colors.textMuted} />
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           );
         })}

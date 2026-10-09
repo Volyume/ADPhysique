@@ -126,7 +126,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // dead-styles sweep, recorded on the board).
     expect(ACTIVE_WORKOUT).not.toContain('styles.firstSetHint');
     // The note input moved into NowCard, same calm placeholder.
-    expect(STATUS_STRIP).toContain("item.icon && <Ionicons name={item.icon} size={14} color={item.iconColor || t.colors.textSecondary} />");
+    // Re-pinned: D220 addendum 27 (audit D7), the off-scale 14 moved to iconSize.sm.
+    expect(STATUS_STRIP).toContain("item.icon && <Ionicons name={item.icon} size={iconSize.sm} color={item.iconColor || t.colors.textSecondary} />");
     expect(STATUS_STRIP).toMatch(/chip: \{[\s\S]*borderWidth: 1,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).not.toContain('sparkles');
   });

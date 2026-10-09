@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, iconSize, spacing, type, fontFamily } from '../styles/theme';
+import { colors, iconSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -102,7 +102,7 @@ export default function RestTimer() {
     drainTrack: { backgroundColor: t.colors.surface3 },
     drainFill: { backgroundColor: t.colors.primaryFill },
     drainFillWarm: { backgroundColor: t.colors.warning },
-    doneText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
+    doneText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.onSuccessBg },
     doneContainer: { backgroundColor: t.colors.successBg },
   };
 
@@ -634,8 +634,7 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
   doneText: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
+    ...type.w(type.label, 'semibold'),
     // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
     // fails 4.5:1 composited on successBg in light theme at every elevation).
     color: colors.onSuccessBg,

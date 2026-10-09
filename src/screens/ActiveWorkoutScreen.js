@@ -2275,14 +2275,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ]);
   }
 
-  // Hardware back → cancel flow
+  // Hardware back → cancel flow. Through a ref so the listener, installed
+  // once, runs the LATEST handleCancelWorkout: the first render's closure
+  // saw the seed as the entry and discarded typed work with no confirm
+  // (2026-10-09 audit C7).
+  const handleCancelWorkoutRef = useRef(null);
+  handleCancelWorkoutRef.current = handleCancelWorkout;
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleCancelWorkout();
+      handleCancelWorkoutRef.current?.();
       return true;
     });
     return () => sub.remove();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // D9: load the per-exercise "log per side" preferences once - which
@@ -2733,7 +2737,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // previous exercise.
     let cancelled = false;
 
-    async function loadHistory() {
+    async function loadHistoryReads() {
       // Campaign 20 Phase 2, Stage 3 (design section 9.1/19, 2 - one bounded
       // evidence pass): getLastNWorkoutSets moves from N=2 to N=3, the one
       // data change the design requires, and getAllCompletedSetsForExercise
@@ -2998,6 +3002,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }
         }
       } catch (_) { /* draft restore is best-effort */ }
+    }
+
+    // D220 addendum 27 (audit A2): one thrown read used to reject unhandled and
+    // leave the row blank with no trace; it is logged here and the load ends
+    // cleanly (the cancelled guard inside the reads is untouched).
+    async function loadHistory() {
+      try {
+        await loadHistoryReads();
+      } catch (e) {
+        logError('ActiveWorkoutScreen.loadHistory', e, { exerciseId: exercise?.id });
+      }
     }
 
     loadHistory();
@@ -5256,7 +5271,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[styles.sessionScrollContent, inputOpen && barHeight > 0 ? { paddingBottom: barHeight } : null]}
-          onLayout={(e) => { scrollViewportRef.current = e?.nativeEvent?.layout?.height ?? 0; }}
+          onLayout={(e) => {
+            scrollViewportRef.current = e?.nativeEvent?.layout?.height ?? 0;
+            // The keyboard resizes this view after the bar has laid out, so
+            // the earlier scroll ran against the full height (2026-10-09
+            // audit C4): run it again against the real one. The viewport
+            // now ends at the keyboard (or the bar), so only a margin is
+            // subtracted.
+            if (inputOpenRef.current && inputRowRef.current) scrollRowAboveBar(inputRowRef.current, spacing.sm);
+          }}
           keyboardShouldPersistTaps="handled"
           // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
           // auto-scroll that keeps the focused input visible, so the
@@ -5291,7 +5314,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               overflow that the title row used to hold. */}
           <SessionHeader name={sessionTitle} startTime={workoutStartTime} />
           {collapsedSectionsBefore}
-          <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
+          {/* Keyed by the slot and its exercise, never the entry object: the
+              store replaces that object on every log, edit and delete, which
+              remounted the whole section each time (the fold re-collapsed,
+              every row and input remounted; 2026-10-09 audit C3). A swap
+              keeps the slot id and changes the exercise, so it still resets. */}
+          <View key={`${currentEntry?.routineExercise?.id ?? currentExerciseIndex}-${exercise?.id ?? 'none'}`} onLayout={handleActiveSectionLayout}>
           <ExerciseSection
             index={currentExerciseIndex + 1}
             name={exercise.name}
@@ -5354,7 +5382,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <React.Fragment key="circuit">
                     <View style={[styles.supersetChip, live.supersetChip]}>
-                      <Ionicons name="repeat" size={11} color={t.colors.primary} />
+                      <Ionicons name="repeat" size={iconSize.sm} color={t.colors.primary} />
                       <Text style={[styles.supersetChipText, live.supersetChipText]}>
                         Circuit · Round {roundNum} of {targetSets} · with {partnerNamesText}
                       </Text>
@@ -5375,7 +5403,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 iconColor: t.colors.primary,
                 content: (
                   <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
-                    <Ionicons name="link" size={11} color={t.colors.primary} />
+                    <Ionicons name="link" size={iconSize.sm} color={t.colors.primary} />
                     <Text style={[styles.supersetChipText, live.supersetChipText]}>
                       Superset - alternates with {partnerNamesText}
                     </Text>
@@ -5507,7 +5535,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <View key="deload" style={[styles.deloadBanner, live.deloadBanner]}>
                     <View style={styles.deloadBannerLeft}>
-                      <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
+                      <Ionicons name="battery-charging-outline" size={iconSize.sm} color={t.colors.warning} />
                       <View style={{ flex: 1 }}>
                         {/* C18: the title comes from the RESOLVED state, so a
                             mid-block recovery adjustment is never announced as
@@ -5674,7 +5702,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel="Mini-set reps"
                   keyboardType="number-pad"
-                  returnKeyType="done"
+                  // D220 addendum 27 (audit C20): on iOS a return key type on a
+                  // number pad makes React Native build its own toolbar; the
+                  // pad has no return key there, so the Mini-set button adds.
+                  returnKeyType={Platform.OS === 'ios' ? undefined : 'done'}
                   onSubmitEditing={addMiniSet}
                 />
                 <Button
@@ -5704,12 +5735,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Phase 2B: the rest strip + CTA live OUTSIDE this scroll and the
               bar already absorbs safeBottom - counting it here too created
               the dead gap on the founder's S22 shots. A step of breathing
-              room is all the scroll needs. */}
+              room is all the scroll needs: the content's own paddingBottom,
+              with no extra spacer after it (D220 addendum 27, audit D12). */}
           </View>
           </ExerciseSection>
           </View>
           {collapsedSectionsAfter}
-          <View style={{ height: spacing.xl }} />
         </ScrollView>
 
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,
@@ -6184,7 +6215,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{opt.description}</Text>
                   </View>
                   {currentSet.setType === opt.value && (
-                    <Ionicons name="checkmark" size={18} color={t.colors.primary} />
+                    <Ionicons name="checkmark" size={iconSize.md} color={t.colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -6634,7 +6665,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           // its group kind here too, with the same repeat icon
                           // the live chip and the builder use.
                           <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
-                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
+                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={iconSize.sm} color={t.colors.primary} />
                             <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}</Text>
                           </View>
                         )}
@@ -7247,7 +7278,7 @@ const styles = StyleSheet.create({
   // the whole width exactly as it did before this row wrapper existed).
   bottomBarRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   clusterBanner: {
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.half), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
   clusterTitle: { ...type.label, color: colors.primary },
@@ -7261,7 +7292,7 @@ const styles = StyleSheet.create({
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.half), borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     // Explicit transparent: the Button `tertiary` variant this now renders
     // as (components/Button.js) fills with colors.primaryBg by default;
@@ -7376,7 +7407,7 @@ const styles = StyleSheet.create({
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
   // fails 4.5:1 composited on successBg in light theme at every elevation).
-  targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
+  targetBannerText: { ...type.w(type.label, 'semibold'), color: colors.onSuccessBg, flex: 1 },
   // D44: transient banner naming the destination exercise after a
   // superset/giant-set group-driven focus change (forward jump or
   // round-return). Same shape as targetBanner above, primary tint instead of
@@ -7439,7 +7470,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   nextTimeBannerText: {
     ...type.bodySm,
@@ -7464,7 +7495,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.warning },
+  deloadBannerTitle: { ...type.w(type.label, 'bold'), color: colors.warning },
   deloadBannerSub: { ...type.caption, color: colors.textMuted },
 });
 
@@ -7540,11 +7571,11 @@ function buildLiveStyles(t) {
     autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     autoAdvanceRowAction: { ...t.type.captionStrong, color: t.colors.textPrimary },
     bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    clusterBanner: { borderColor: withAlpha(t.colors.primary, 0.502), backgroundColor: t.colors.primaryBg },
+    clusterBanner: { borderColor: withAlpha(t.colors.primary, alpha.half), backgroundColor: t.colors.primaryBg },
     clusterTitle: { ...t.type.label, color: t.colors.primary },
     clusterReps: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },
-    clusterAddBtn: { borderColor: withAlpha(t.colors.primary, 0.502) },
+    clusterAddBtn: { borderColor: withAlpha(t.colors.primary, alpha.half) },
     clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
@@ -7583,7 +7614,7 @@ function buildLiveStyles(t) {
     adjustedSignal: { ...t.type.caption, color: t.colors.textMuted },
     adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     targetBanner: { backgroundColor: t.colors.successBg, borderColor: t.colors.success },
-    targetBannerText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
+    targetBannerText: { ...t.type.w(t.type.label, 'semibold'), color: t.colors.onSuccessBg },
     groupFocusBanner: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     groupFocusBannerText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     supOverlay: { backgroundColor: t.colors.scrim },
@@ -7611,11 +7642,11 @@ function buildLiveStyles(t) {
     staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
     staleDiscardText: { ...t.type.label, color: t.colors.error },
-    nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     nextTimeMoreToggleText: { ...t.type.label, color: t.colors.primary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
-    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.warning },
+    deloadBannerTitle: { ...t.type.w(t.type.label, 'bold'), color: t.colors.warning },
     deloadBannerSub: { ...t.type.caption, color: t.colors.textMuted },
   };
 }
