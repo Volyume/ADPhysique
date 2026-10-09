@@ -151,7 +151,15 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     expect(SRC).not.toContain('systemKeyboard');
     expect(SRC).not.toContain('<Keypad');
     expect(SET_ROW).toContain('<TextInput');
-    expect(SET_ROW).toContain("returnKeyType={input.returnKeyType || 'done'}");
+    // The return key and the accessory id pass through unchanged (D220
+    // addendum 23): an iOS number pad gets no return key type, so the system
+    // draws no return-key capsule, and the keyboard bar is its accessory.
+    expect(SET_ROW).toContain('returnKeyType={input.returnKeyType}');
+    expect(SET_ROW).toContain('inputAccessoryViewID={input.inputAccessoryViewID}');
+    expect(SRC).toContain("const LOGGER_BAR_ACCESSORY_ID = 'volyume-logger-keyboard-bar';");
+    expect(SRC).toContain('returnKeyType: iosPad ? undefined :');
+    expect(SRC).toContain('inputAccessoryViewID: iosPad ? LOGGER_BAR_ACCESSORY_ID : undefined,');
+    expect(SRC).toContain('<InputAccessoryView nativeID={LOGGER_BAR_ACCESSORY_ID}>');
   });
 
   test('the step bar can never produce a number the typed fields refused', () => {
