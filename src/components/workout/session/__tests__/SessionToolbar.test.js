@@ -1,8 +1,9 @@
 /**
  * SessionToolbar (12-BUILD-SPEC sections 2 to 4, register D220). Pins: the four
- * test ids, every callback, the icon-only Finish with its full spoken name, the
- * busy state, the clock it contains, the tool labels, and the token-only
- * source guard.
+ * test ids plus the History tool that renders only when onHistory is given
+ * (D220 addendum 10), every callback, the icon-only Finish with its full spoken
+ * name, the busy state, the clock it contains, the tool labels, and the
+ * token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
@@ -28,13 +29,37 @@ function allText(node) {
   if (Array.isArray(node)) return node.flatMap(allText);
   return allText(node.children);
 }
+const ALL_IDS = ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'];
 const glyphs = (node) => (node.root || node).findAll((n) => n.type === 'Ionicons');
 
 describe('SessionToolbar', () => {
-  test('carries the four test ids', () => {
+  test('carries the four test ids; the History tool only when onHistory is given', () => {
     const tree = render({});
     ['volyume-workout-close', 'volyume-workout-finish', 'volyume-tool-rest', 'volyume-tool-notes']
       .forEach((id) => byId(tree, id));
+    expect(hosts(tree, (p) => p.testID === 'volyume-tool-history')).toHaveLength(0);
+    expect(allText(tree.toJSON())).not.toContain('History');
+    const withHistory = render({ onHistory: jest.fn() });
+    [...ALL_IDS].forEach((id) => byId(withHistory, id));
+  });
+
+  test('the History tool sits after Notes: stats glyph, History caption, spoken name and hint, calls onHistory once', () => {
+    const onHistory = jest.fn();
+    const tree = render({ onHistory });
+    const tool = byId(tree, 'volyume-tool-history');
+    expect(tool.props.accessibilityRole).toBe('button');
+    expect(tool.props.accessibilityLabel).toBe('History and records');
+    expect(tool.props.accessibilityHint).toBe('Previous sessions and records for the current exercise');
+    const glyph = glyphs(tool);
+    expect(glyph).toHaveLength(1);
+    expect(glyph[0].props.name).toBe('stats-chart-outline');
+    expect(glyph[0].props.size).toBe(22);
+    expect(glyph[0].props.color).toBe(colors.textSecondary);
+    expect(allText(tool)).toEqual(['History']);
+    const order = hosts(tree, (p) => typeof p.testID === 'string' && p.testID.startsWith('volyume-tool-')).map((n) => n.props.testID);
+    expect(order).toEqual(['volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history']);
+    press(tool);
+    expect(onHistory).toHaveBeenCalledTimes(1);
   });
 
   test('every callback fires once', () => {
@@ -91,13 +116,13 @@ describe('SessionToolbar', () => {
   });
 
   test('chromeless: a bottom hairline and no fill on the bar, no divider, no border or fill on Finish or the tools', () => {
-    const tree = render({});
+    const tree = render({ onHistory: jest.fn() });
     const flatten = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
     const bar = flatten(tree.toJSON().props.style);
     expect(bar.borderBottomWidth).toBe(1);
     expect(bar.borderBottomColor).toBe(colors.borderSubtle);
     expect(bar.backgroundColor).toBeUndefined();
-    ['volyume-workout-finish', 'volyume-workout-close', 'volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+    ['volyume-workout-finish', 'volyume-workout-close', 'volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'].forEach((id) => {
       const s = flatten(byId(tree, id).props.style);
       expect(s.backgroundColor).toBeUndefined();
       expect(s.borderWidth).toBeUndefined();
@@ -137,16 +162,16 @@ describe('SessionToolbar', () => {
   });
 
   test('hit targets: the controls are at least 48 dp', () => {
-    const tree = render({});
+    const tree = render({ onHistory: jest.fn() });
     const flat = (style) => Object.assign({}, ...[].concat(style).filter(Boolean));
     ['volyume-workout-close', 'volyume-workout-finish'].forEach((id) => {
       const s = flat(byId(tree, id).props.style);
       expect(s.width).toBe(48);
       expect(s.height).toBe(48);
     });
-    ['volyume-tool-rest', 'volyume-tool-notes'].forEach((id) => {
+    ['volyume-tool-rest', 'volyume-tool-notes', 'volyume-tool-history'].forEach((id) => {
       const s = flat(byId(tree, id).props.style);
-      expect(s.width).toBe(56);
+      expect(s.width).toBe(52);
       expect(s.minHeight).toBe(48);
     });
   });

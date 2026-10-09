@@ -1,14 +1,14 @@
 /**
  * ExerciseSection (12-BUILD-SPEC sections 1.3, 2 and 3, register D220; the
- * header redrawn on the founder render verdict 2026-10-09, addendum 9). Pins:
- * the three states (active mounts the tools row, children and footer; done
- * shows the green check and the count; upcoming is the header alone), the
- * header as ONE button (badge, one-line name, trailing state, no chevron), the
- * tools row (Guide, History, Rest length: glyph over caption, active only,
- * each only when its callback is given) and its place between the header and
- * the children, every callback, that the bests line is gone (the History tool
- * is the only way to onHistory), the accessibility labels, and the token-only
- * source guard.
+ * header redrawn on the founder render verdicts 2026-10-09, addenda 9 and 10).
+ * Pins: the three states (active mounts the children and footer; done shows
+ * the green check alone, its count in the spoken label; upcoming is the header
+ * alone), the header as ONE button (24 dp badge, one-line name at the label
+ * role semibold, trailing state, no chevron), that the tools row is gone (no
+ * Guide, History or Rest length control, and the onDetails, onHistory and
+ * onRestLength props draw nothing), the card order header, children, footer,
+ * every footer callback, that the bests line is gone, the accessibility labels
+ * and hints, and the token-only source guard.
  */
 import fs from 'fs';
 import path from 'path';
@@ -69,21 +69,29 @@ describe('ExerciseSection states', () => {
     one(byLabel(withSwap, 'Swap exercise'));
   });
 
-  test('done: green check and the count, nothing else', () => {
+  test('done: the green check alone, the count in the spoken label only', () => {
     const tree = render({ state: 'done', doneSetCount: 3 });
     expect(joined(tree)).not.toContain('TABLE_CHILD');
-    expect(words(tree.toJSON())).toContain('3 sets');
+    // The text "3 sets" is no longer drawn; the badge, name and check remain.
+    expect(words(tree.toJSON())).not.toContain('3 sets');
+    expect(words(tree.toJSON())).toEqual(['2', 'Barbell Row (Bent Over)']);
     // The app's "done" mark: the filled success check, as the plan detail.
     const glyph = tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'checkmark-circle');
     expect(glyph).toHaveLength(1);
     expect(glyph[0].props.color).toBe(colors.success);
     expect(byLabel(tree, 'Add set')).toHaveLength(0);
     expect(byLabel(tree, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
-    expect(byLabel(tree, '3 sets done')).toHaveLength(1);
+    const slot = one(byLabel(tree, '3 sets done'));
+    expect(slot.props.accessible).toBe(true);
+    expect(slot.findAll((n) => n.type === 'Ionicons')).toHaveLength(1);
+    expect(words(slot)).toEqual([]);
+    expect(glyph[0].props.size).toBe(16);
   });
 
-  test('done: one set is singular', () => {
-    expect(words(render({ state: 'done', doneSetCount: 1 }).toJSON())).toContain('1 set');
+  test('done: one set is singular (in the spoken label only)', () => {
+    const tree = render({ state: 'done', doneSetCount: 1 });
+    one(byLabel(tree, '1 set done'));
+    expect(words(tree.toJSON())).not.toContain('1 set');
   });
 
   test('upcoming: the header alone, no buttons even when every tool callback is given', () => {
@@ -110,33 +118,33 @@ describe('ExerciseSection states', () => {
     expect(byLabel(tree, 'History and records for Barbell Row (Bent Over)')).toHaveLength(0);
   });
 
-  test('upcoming and partly done: "{done} of {total} sets" sits in the trailing slot, not under the name', () => {
+  test('upcoming and partly done: "{done} of {total}" (no "sets" word) sits in the trailing slot at the caption role, not under the name', () => {
     const tree = render({ state: 'upcoming', doneSetCount: 2, totalSetCount: 4 });
-    textHost(tree, '2 of 4 sets');
+    const count = flat(textHost(tree, '2 of 4').props.style);
+    expect(count.color).toBe(colors.textSecondary);
+    expect(count.fontSize).toBe(type.caption.fontSize);
+    expect(count.fontFamily).toBe(type.caption.fontFamily);
+    expect(words(tree.toJSON())).not.toContain('2 of 4 sets');
     one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), 2 of 4 sets done'));
     // The name block holds the name alone (no groupLabel given), so the count
     // is a sibling of the block, after it.
     const block = one(hosts(tree, (p) => flat(p.style).flex === 1 && flat(p.style).minWidth === 0));
     expect(words(block)).toEqual(['Barbell Row (Bent Over)']);
-    expect(joined(render({ state: 'upcoming', doneSetCount: 0, totalSetCount: 4 }))).not.toContain('of 4 sets');
+    expect(joined(render({ state: 'upcoming', doneSetCount: 0, totalSetCount: 4 }))).not.toContain('of 4');
   });
 
-  test('a tool renders only when its callback is given, on the active section (no dead control before its sheet is wired)', () => {
+  test('the tools row is gone: onDetails, onHistory and onRestLength as props draw nothing', () => {
     const none = render({});
-    expect(byLabel(none, 'Guide for Barbell Row (Bent Over)')).toHaveLength(0);
-    expect(byLabel(none, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
-    expect(byLabel(none, 'History and records for Barbell Row (Bent Over)')).toHaveLength(0);
-    expect(hosts(none, (p) => flat(p.style).minWidth === 56)).toHaveLength(0);
-    const restOnly = render({ onRestLength: jest.fn() });
-    one(byLabel(restOnly, 'Rest length for Barbell Row (Bent Over)'));
-    expect(byLabel(restOnly, 'Guide for Barbell Row (Bent Over)')).toHaveLength(0);
-    expect(byLabel(restOnly, 'History and records for Barbell Row (Bent Over)')).toHaveLength(0);
-    const guideOnly = render({ onDetails: jest.fn() });
-    one(byLabel(guideOnly, 'Guide for Barbell Row (Bent Over)'));
-    expect(byLabel(guideOnly, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
-    const historyOnly = render({ onHistory: jest.fn() });
-    one(byLabel(historyOnly, 'History and records for Barbell Row (Bent Over)'));
-    expect(byLabel(historyOnly, 'Guide for Barbell Row (Bent Over)')).toHaveLength(0);
+    const given = render({ onDetails: jest.fn(), onHistory: jest.fn(), onRestLength: jest.fn() });
+    ['Guide for', 'History and records for', 'Rest length for'].forEach((prefix) => {
+      expect(hosts(given, (p) => typeof p.accessibilityLabel === 'string' && p.accessibilityLabel.startsWith(prefix))).toHaveLength(0);
+    });
+    expect(byLabel(given, 'History and records')).toHaveLength(0);
+    expect(words(given.toJSON())).toEqual(words(none.toJSON()));
+    expect(words(given.toJSON())).not.toContain('Guide');
+    expect(words(given.toJSON())).not.toContain('History');
+    expect(words(given.toJSON())).not.toContain('Rest length');
+    expect(hosts(given, (p) => typeof p.onPress === 'function')).toHaveLength(hosts(none, (p) => typeof p.onPress === 'function').length);
   });
 
   test('groupLabel is a caption under the name and in the spoken label', () => {
@@ -145,11 +153,13 @@ describe('ExerciseSection states', () => {
     one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), superset'));
   });
 
-  test('skipped: muted name, "Left out" in the count slot, no tools, still tappable', () => {
+  test('skipped: muted name, "Left out" in the count slot at the caption role, still tappable', () => {
     const onPressHeader = jest.fn();
-    const tree = render({ state: 'upcoming', skipped: true, onPressHeader, onRestLength: jest.fn() });
-    textHost(tree, 'Left out');
-    expect(byLabel(tree, 'Rest length for Barbell Row (Bent Over)')).toHaveLength(0);
+    const tree = render({ state: 'upcoming', skipped: true, onPressHeader });
+    const left = flat(textHost(tree, 'Left out').props.style);
+    expect(left.fontSize).toBe(type.caption.fontSize);
+    expect(left.fontFamily).toBe(type.caption.fontFamily);
+    expect(left.color).toBe(colors.textSecondary);
     const title = one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over), left out for time'));
     press(title);
     expect(onPressHeader).toHaveBeenCalledTimes(1);
@@ -170,9 +180,8 @@ describe('ExerciseSection states', () => {
 });
 
 describe('ExerciseSection header', () => {
-  test('exercise name: bodyStrong in primary ink on one line; the index in the plan detail\'s 32 dp order badge', () => {
-    // The plan detail's exercise row (RoutineDetailScreen exerciseCard): the
-    // name is text ink, not amber; amber is spent on the set you are on.
+  test('exercise name: label role semibold in primary ink on one line, shrinking a little; the index in a 24 dp order badge', () => {
+    // Amber is spent on the set you are on, not on the name.
     const tree = render({});
     const name = textHost(tree, 'Barbell Row (Bent Over)');
     const s = flat(name.props.style);
@@ -180,18 +189,20 @@ describe('ExerciseSection header', () => {
     // One line, the whole width of the name block (founder render verdict
     // 2026-10-09); the trailing state is the only thing after it.
     expect(name.props.numberOfLines).toBe(1);
-    expect(s.fontFamily).toBe(type.bodyStrong.fontFamily);
-    expect(s.fontSize).toBe(type.bodyStrong.fontSize);
+    expect(name.props.adjustsFontSizeToFit).toBe(true);
+    expect(name.props.minimumFontScale).toBe(0.75);
+    expect(s.fontFamily).toBe(type.w(type.label, 'semibold').fontFamily);
+    expect(s.fontSize).toBe(type.label.fontSize);
     const indexText = textHost(tree, '2');
     const index = flat(indexText.props.style);
     expect(index.color).toBe(colors.textSecondary);
     expect(index.fontVariant).toEqual(['tabular-nums']);
     expect(index.fontSize).toBe(type.label.fontSize);
     expect(index.fontFamily).toBe(type.w(type.label, 'bold').fontFamily);
-    const badge = flat(one(hosts(tree, (p) => flat(p.style).borderRadius === 16 && flat(p.style).width === 32)).props.style);
-    expect(badge.width).toBe(32);
-    expect(badge.height).toBe(32);
-    expect(badge.borderRadius).toBe(16);
+    const badge = flat(one(hosts(tree, (p) => flat(p.style).borderRadius === 12 && flat(p.style).width === 24)).props.style);
+    expect(badge.width).toBe(24);
+    expect(badge.height).toBe(24);
+    expect(badge.borderRadius).toBe(12);
     expect(badge.backgroundColor).toBe(colors.surface2);
   });
 
@@ -202,10 +213,11 @@ describe('ExerciseSection header', () => {
     expect(s.minHeight).toBe(56);
     expect(s.flexDirection).toBe('row');
     expect(s.alignItems).toBe('center');
-    expect(s.gap).toBe(spacing.md);
+    expect(s.gap).toBe(spacing.sm);
+    expect(s.gap).toBe(8);
     expect(s.paddingHorizontal).toBe(spacing.lg);
     // Badge, then the name block, then the trailing count.
-    expect(words(header)).toEqual(['2', 'Barbell Row (Bent Over)', '1 of 3 sets']);
+    expect(words(header)).toEqual(['2', 'Barbell Row (Bent Over)', '1 of 3']);
     const nameBlock = one(hosts(tree, (p) => flat(p.style).flex === 1 && flat(p.style).minWidth === 0));
     expect(words(nameBlock)).toEqual(['Barbell Row (Bent Over)']);
     expect(tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'chevron-forward')).toHaveLength(0);
@@ -216,10 +228,14 @@ describe('ExerciseSection header', () => {
     expect(hosts(tree, (p) => typeof p.onPress === 'function')).toHaveLength(1);
   });
 
-  test('the header button names the exercise, carries the accordion state and a hint when inactive', () => {
+  test('the header button names the exercise, carries the accordion state and a hint: the guide when active and pressable, make-current when collapsed', () => {
     const active = one(byLabel(render({}), 'Exercise 2, Barbell Row (Bent Over)'));
     expect(active.props.accessibilityState).toEqual({ expanded: true });
+    // No onPressHeader: nothing opens, so no hint.
     expect(active.props.accessibilityHint).toBeUndefined();
+    const activePressable = one(byLabel(render({ onPressHeader: jest.fn() }), 'Exercise 2, Barbell Row (Bent Over)'));
+    expect(activePressable.props.accessibilityState).toEqual({ expanded: true });
+    expect(activePressable.props.accessibilityHint).toBe('Opens the exercise guide');
     const upcoming = one(byLabel(render({ state: 'upcoming' }), 'Exercise 2, Barbell Row (Bent Over)'));
     expect(upcoming.props.accessibilityState).toEqual({ expanded: false });
     expect(upcoming.props.accessibilityHint).toBe('Makes this the current exercise');
@@ -240,80 +256,18 @@ describe('ExerciseSection header', () => {
     press(one(byLabel(tree, 'Exercise 2, Barbell Row (Bent Over)')));
     expect(onPressHeader).toHaveBeenCalledTimes(2);
   });
-
-  test('onDetails fires from the Guide tool only', () => {
-    const onDetails = jest.fn();
-    const onPressHeader = jest.fn();
-    const tree = render({ onDetails, onPressHeader });
-    press(one(byLabel(tree, 'Guide for Barbell Row (Bent Over)')));
-    expect(onDetails).toHaveBeenCalledTimes(1);
-    expect(onPressHeader).not.toHaveBeenCalled();
-  });
 });
 
-describe('ExerciseSection tools row', () => {
-  const NAME = 'Barbell Row (Bent Over)';
-
-  test('Guide, History and Rest length: each a glyph over a caption in secondary ink; their callbacks fire', () => {
-    const onDetails = jest.fn();
-    const onHistory = jest.fn();
-    const onRestLength = jest.fn();
-    const tree = render({ onDetails, onHistory, onRestLength });
-    const specs = [
-      ['Guide', 'information-circle-outline', `Guide for ${NAME}`, onDetails],
-      ['History', 'stats-chart-outline', `History and records for ${NAME}`, onHistory],
-      ['Rest length', 'timer-outline', `Rest length for ${NAME}`, onRestLength],
-    ];
-    specs.forEach(([caption, icon, label, cb]) => {
-      const tool = one(byLabel(tree, label));
-      expect(tool.props.accessibilityRole).toBe('button');
-      const s = flat(tool.props.style);
-      expect(s.minWidth).toBe(56);
-      expect(s.minHeight).toBe(touchTarget.minimum);
-      expect(s.paddingHorizontal).toBe(spacing.sm);
-      expect(s.alignItems).toBe('center');
-      expect(s.justifyContent).toBe('center');
-      expect(s.gap).toBe(spacing.xxs);
-      // Chromeless: a glyph on the surface, no well, no border.
-      expect(s.backgroundColor).toBeUndefined();
-      expect(s.borderWidth).toBeUndefined();
-      expect(s.borderColor).toBeUndefined();
-      const glyph = tool.findAll((n) => n.type === 'Ionicons');
-      expect(glyph).toHaveLength(1);
-      expect(glyph[0].props.name).toBe(icon);
-      expect(glyph[0].props.size).toBe(22);
-      expect(glyph[0].props.color).toBe(colors.textSecondary);
-      const text = one(tool.findAll((n) => n.type === 'Text'));
-      expect(words(text)).toEqual([caption]);
-      const ts = flat(text.props.style);
-      expect(ts.color).toBe(colors.textSecondary);
-      expect(ts.fontSize).toBe(type.caption.fontSize);
-      expect(ts.fontFamily).toBe(type.caption.fontFamily);
-      press(tool);
-      expect(cb).toHaveBeenCalledTimes(1);
-    });
-    // The row itself: left-aligned tools, 8 dp side padding.
-    const row = one(hosts(tree, (p) => flat(p.style).flexDirection === 'row' && flat(p.style).paddingHorizontal === spacing.sm
-      && flat(p.style).minHeight === undefined && flat(p.style).alignItems === 'center'));
-    expect(words(row)).toEqual(['Guide', 'History', 'Rest length']);
-  });
-
-  test('order on the active card: header, tools, children, footer', () => {
+describe('ExerciseSection card order', () => {
+  test('active: header, children, footer (no tools row between)', () => {
     const tree = render({ onDetails: jest.fn(), onHistory: jest.fn(), onRestLength: jest.fn() });
     const kids = tree.toJSON().children;
-    expect(kids).toHaveLength(4);
-    const [header, tools, child, footer] = kids;
-    expect(header.props.accessibilityLabel).toBe(`Exercise 2, ${NAME}`);
-    expect(words(tools)).toEqual(['Guide', 'History', 'Rest length']);
+    expect(kids).toHaveLength(3);
+    const [header, child, footer] = kids;
+    expect(header.props.accessibilityLabel).toBe('Exercise 2, Barbell Row (Bent Over)');
     expect(words(child)).toEqual(['TABLE_CHILD']);
     expect(flat(footer.props.style).minHeight).toBe(52);
     expect(words(footer)).toContain('Add set');
-  });
-
-  test('with no tool callback there is no tools row: header, children, footer', () => {
-    const kids = render({}).toJSON().children;
-    expect(kids).toHaveLength(3);
-    expect(words(kids[1])).toEqual(['TABLE_CHILD']);
   });
 });
 
@@ -360,16 +314,6 @@ describe('ExerciseSection bests line is gone', () => {
     expect(byLabel(tree, 'History and records')).toHaveLength(0);
     expect(joined(tree)).not.toContain('Last session');
     expect(joined(tree)).not.toContain('Best');
-  });
-
-  test('onHistory is reached only through the History tool', () => {
-    const onHistory = jest.fn();
-    const tree = render({ onHistory });
-    const reached = hosts(tree, (p) => typeof p.onPress === 'function' && p.accessibilityLabel
-      && /history/i.test(p.accessibilityLabel));
-    expect(reached.map((n) => n.props.accessibilityLabel)).toEqual(['History and records for Barbell Row (Bent Over)']);
-    press(one(byLabel(tree, 'History and records for Barbell Row (Bent Over)')));
-    expect(onHistory).toHaveBeenCalledTimes(1);
   });
 });
 

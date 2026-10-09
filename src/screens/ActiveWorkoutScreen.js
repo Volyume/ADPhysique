@@ -5136,6 +5136,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={handleCancelWorkout}
           onRest={() => setShowRestSheet(true)}
           onNotes={() => setShowNotesSheet(true)}
+          onHistory={openHistorySheet}
           onFinish={handleFinishWorkout}
         />
 
@@ -5194,11 +5195,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               header carries the name (the tap that used to open the details
               is its chevron) and its footer carries Add set, Swap and the
               overflow that the title row used to hold. */}
-          <SessionHeader
-            name={sessionTitle}
-            note={sessionNote}
-            onNotes={() => setShowNotesSheet(true)}
-          />
+          <SessionHeader name={sessionTitle} />
           {collapsedSectionsBefore}
           <View key={keyForWorkoutExercise(currentEntry)} onLayout={handleActiveSectionLayout}>
           <ExerciseSection
@@ -5206,9 +5203,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             name={exercise.name}
             state="active"
             groupLabel={null}
-            onDetails={handleOpenExerciseDetails}
-            onHistory={previousHistory ? openHistorySheet : undefined}
-            onRestLength={currentSGI == null ? () => setShowRestLengthFor(currentExerciseIndex) : undefined}
+            onPressHeader={handleOpenExerciseDetails}
             onAddSet={armExtraSet}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
@@ -6319,6 +6314,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   removed as genuinely dead code (grepped: no other caller).
                   Re-pinned in ActiveWorkoutScreen.reorder.guard.test.js
                   (D43 S3). */}
+              {/* D220 addendum 10: the exercise's rest length lives here,
+                  off the card (a grouped station rests by the group). */}
+              {currentSGI == null ? (
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => { setShowOverflow(false); setShowRestLengthFor(currentExerciseIndex); }}
+                accessibilityRole="button"
+                accessibilityLabel={`Rest length for ${exercise?.name ?? 'this exercise'}`}
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="timer-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Rest length</Text>
+                </View>
+              </TouchableOpacity>
+              ) : null}
               {workoutExercises.length > 1 && (
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
@@ -6951,7 +6961,9 @@ const styles = StyleSheet.create({
   // The page: padding lg and gap md, the stack every other screen uses
   // (AnalyticsScreen, RecoveryScreen); the exercises are house cards on it.
   sessionScrollContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
-  activeBody: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  // No top padding: the header above is 56 dp and centred, so an empty
+  // body adds only its bottom gap (D220 addendum 10, the page fit).
+  activeBody: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.

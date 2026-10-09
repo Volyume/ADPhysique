@@ -579,10 +579,12 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     // cannot be a record is the one with nothing on record to beat, and it
     // gets the honest acknowledgement instead of a record claim.
     expect(AWS).toMatch(/!priorUnknown && prHistory\.length === 0/);
-    // And the live record line reads the same history the log does (D87
-    // contract), so the flag can neither promise a record the log withholds
-    // nor stay dark on one the log gives.
-    expect(AWS).toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]\.filter\(isWorkingSetRow\)/);
+    // The live record line (D87) is gone from the logger (D220 addenda 9
+    // and 10, the founder's render verdicts): the on-log detectPR call above
+    // is the one record judgement, so there is no second reading to keep in
+    // agreement with it.
+    expect(AWS).not.toMatch(/buildRecordLine\(/);
+    expect(AWS).not.toContain("from '../lib/workoutRecordLine'");
   });
 
   test('the summary states a week in progress instead of a finished-week verdict', () => {
