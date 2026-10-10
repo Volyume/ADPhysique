@@ -149,6 +149,12 @@ export const WHATS_NEW = {
   // builder's standard per category (register D219 addendum 3). No plan
   // line, as for 2.11.0 on the founder's word; the privacy notice rides
   // inside the Community line.
+  // 2.13.0 (founder, 2026-10-10): men's physique trains legs once a week
+  // (register D219 addendum 4). No plan line, as for 2.11.0 and 2.12.0 on
+  // the founder's word; the privacy notice rides inside the Community line.
+  '2.13.0': [
+    { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+  ],
   '2.12.0': [
     { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],

@@ -108,8 +108,8 @@ describe('privacy, consent, export and store-copy truth', () => {
   // sheet shows only the running version's notes, so a person updating
   // straight from 2.5.0 to the running version sees only that entry).
   // 2.8.0 leads with it; 2.9.0 (trimmed to two entries on the founder's
-  // word), 2.10.0, 2.11.0 and 2.12.0 carry it inside the Community line.
-  test.each(['2.8.0', '2.9.0', '2.10.0', '2.11.0', '2.12.0'])('the policy change is announced in the app in %s, as the policy promises', (version) => {
+  // word), 2.10.0, 2.11.0, 2.12.0 and 2.13.0 carry it inside the Community line.
+  test.each(['2.8.0', '2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.13.0'])('the policy change is announced in the app in %s, as the policy promises', (version) => {
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
     const start = sheet.indexOf(`'${version}': [`);
     expect(start).toBeGreaterThan(-1);
