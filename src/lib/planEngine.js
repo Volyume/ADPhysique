@@ -1480,7 +1480,7 @@ const ASSISTED_RE = /\bassisted\b/i;
 // decides them, unconfounded by the separate, pre-existing MRV safety clamp
 // that runs later in generatePlan and may legitimately trim delivered volume
 // for unrelated reasons).
-export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase, sessionFatigue = null) {
+export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase, sessionFatigue = null, roleSlot = slot) {
   if (sessionTarget < 2) return [];
 
   let available = filterPool(muscle, equipment, goal);
@@ -1730,7 +1730,7 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   if (requiredSubs.length > numEx) {
     subsToCover = [];
     for (let k = 0; k < numEx; k++) {
-      subsToCover.push(requiredSubs[(slot + k) % requiredSubs.length]);
+      subsToCover.push(requiredSubs[(roleSlot + k) % requiredSubs.length]);
     }
   }
   for (const role of subsToCover) {
@@ -2024,9 +2024,16 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
     if (sessionTarget < 2) continue;
 
     const usedNames = usedNamesByMuscle[muscle] ?? new Set();
+    // The role rotation advances once per session THIS MUSCLE is trained, not
+    // once per session in the week. Rotating by the week's session index let
+    // two sessions of one muscle alias modulo the role count (figure 5-day
+    // back sits in sessions 1 and 4: (1+k)%3 and (4+k)%3 are the same pair),
+    // so the first role (vertical pull) was never covered.
+    const roleSlot = usedNames._visits ?? 0;
+    usedNames._visits = roleSlot + 1;
     const exs = selectExercisesForMuscle(
       muscle, sessionTarget, equipment, goal, slot,
-      usedNames, wTarget, landmarks, experience, nutritionPhase, sessionFatigue
+      usedNames, wTarget, landmarks, experience, nutritionPhase, sessionFatigue, roleSlot
     );
     usedNamesByMuscle[muscle] = usedNames;
     // Tag each emitted exercise with the muscle it was picked for so the
@@ -2468,7 +2475,7 @@ export const DIVISION_MATRIX = {
   figure: {
     label: 'X-Frame',
     3: [
-      { name: 'Shoulders + Back', muscles: ['side_delts', 'back', 'rear_delts', 'biceps', 'chest'] },
+      { name: 'Shoulders + Back', muscles: ['side_delts', 'back', 'rear_delts', 'biceps', 'triceps', 'chest'] },
       { name: 'Legs + Glutes', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
       { name: 'Upper B + Legs', muscles: ['back', 'side_delts', 'chest', 'quads', 'hamstrings', 'triceps'] },
     ],

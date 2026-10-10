@@ -111,7 +111,12 @@ describe('C16-FIT the answer comes from the athlete\'s own plan', () => {
     // minutes (timeConstraint.over). 86 is over the 75 option and under the
     // 90 option, so 90 is the smallest length that works. planFit.js is
     // unchanged: it still reads the engine's own verdict.
-    expect(smallestWorking({ goal: 'bikini' })).toBe(90);
+    // RE-PINNED AGAIN 2026-10-10 (DECISIONS D219 addendum 3, per-category
+    // standard): 90 -> 75. Bikini's chest and arms are now held at the
+    // category's light floors (chest 4, arms 4 a week, divisionStandard.js)
+    // rather than grown to the general standard, so the 4-day sessions fit
+    // the 75 minute option again. The prescription still decides the length.
+    expect(smallestWorking({ goal: 'bikini' })).toBe(75);
   });
 
   test('no lookup table, no minutes-per-day rule, no claim of an optimum', () => {

@@ -75,21 +75,32 @@ describe('Phase 2 benchmark: division specialisation', () => {
   // least two sessions, and what makes it Men's Physique rather than a
   // generic Upper/Lower is that BOTH uppers lead with back and side delts
   // (the V-taper's width), the first being named for it.
+  // RE-PINNED AGAIN 2026-10-10 (DECISIONS D219 addendum 3, per-category
+  // standard): the men's physique 4-day cell is now 'Upper A (Width)' and
+  // 'Upper B (Detail)' (the only 4-day source, upper/lower twice). Upper A
+  // opens with the pulldown, Upper B with the lateral raise then the pulldown
+  // (observed), so "the first lift is a pull" became "the first lift is a
+  // pull or a lateral raise, and both sit ahead of any pressing".
   test('MP 4-day is not a generic Upper/Lower (both uppers lead with back and side delts)', () => {
     const names = mp4.workouts.map(w => w.name);
     expect(names).not.toContain('Upper A');
     expect(names.some(n => /width/i.test(n))).toBe(true);
+    expect(names).toEqual(expect.arrayContaining(['Upper A (Width)', 'Upper B (Detail)']));
     expect(names.filter(n => /upper/i.test(n))).toHaveLength(2);
     expect(names.filter(n => /lower/i.test(n))).toHaveLength(2);
     const uppers = mp4.workouts.filter(w => /upper/i.test(w.name));
     for (const w of uppers) {
-      // Back leads: the first lift of each upper is a pull-down or row.
-      expect(w.exercises[0].exerciseName).toMatch(/pulldown|pull-up|row/i);
-      // Side delts are in the same session, ahead of any pressing.
+      // Back and side delts lead: the first lift of each upper is a
+      // pull-down, row or lateral raise, and both a back pull and a lateral
+      // raise sit ahead of any pressing.
+      expect(w.exercises[0].exerciseName).toMatch(/pulldown|pull-up|row|lateral raise/i);
       const lateral = w.exercises.findIndex(e => /lateral raise/i.test(e.exerciseName));
+      const pull = w.exercises.findIndex(e => /pulldown|pull-up|row/i.test(e.exerciseName));
       const press = w.exercises.findIndex(e => /bench|press/i.test(e.exerciseName));
       expect(lateral).toBeGreaterThanOrEqual(0);
+      expect(pull).toBeGreaterThanOrEqual(0);
       expect(lateral).toBeLessThan(press);
+      expect(pull).toBeLessThan(press);
     }
   });
   // RE-PINNED 2026-10-10 (same order). Old: glutes the highest-volume muscle
