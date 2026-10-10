@@ -49,7 +49,8 @@
  */
 import { ROLE } from './bands';
 import { assignRoles, PLAN_MUSCLES } from './roles';
-import { familiesFor, divisionFamily, sessionsAllowing, placeExposures } from './families';
+import { divisionSessions } from './divisionStandard';
+import { familiesFor, divisionFamily, sessionsAllowing, sessionsListed, placeExposures } from './families';
 import { allocatePeakWeek } from './allocate';
 import { bestOrder, prepareRotation, rotationPenalty, permutations, spacingLayouts, RECOVERED_SHARE_OF_CLOCK } from './rotation';
 import { simulateBlock, lowestByMuscle } from './readiness';
@@ -128,6 +129,7 @@ export function buildPlan(inputs) {
     : null;
   const ctx = {
     n,
+    goal: inputs.goal || 'general',
     roles,
     fixed,
     choices: inputs.choices || {},
@@ -403,6 +405,8 @@ function evaluateFamily(family, ctx) {
   // session, removes one or drops an exercise.
   const fixed = ctx.fixed || null;
   const allowedBy = {};
+  const listedBy = {};
+  const standardNeedsBy = {};
   for (const m of Object.keys(roles)) {
     if (!roles[m].direct) continue;
     // The sessions a muscle's standard needs (design 4.4: two from 12 weekly
@@ -413,11 +417,17 @@ function evaluateFamily(family, ctx) {
     // one session needs two (biceps, triceps and calves at 8 with two
     // exercises of 3 sets; back at 12 under the cap of 8).
     const oneSessionRoom = Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation);
-    const standardNeeds = roles[m].role !== ROLE.MAINTENANCE
-      && ((roles[m].peak >= FREQUENCY.preferTwoExposuresFromWeekly && n >= FREQUENCY.preferTwoExposuresMinSessions)
+    // The category's own sessions a week for the muscle, where its standard
+    // says (divisionStandard.js; a men's physique leg day is one a week in
+    // the 5-day week), else the general rule.
+    const own = roles[m].role === ROLE.FOCUS ? null : divisionSessions(ctx.goal, m, n);
+    const standardNeeds = roles[m].role === ROLE.MAINTENANCE ? 1 : (own !== null ? own
+      : (((roles[m].peak >= FREQUENCY.preferTwoExposuresFromWeekly && n >= FREQUENCY.preferTwoExposuresMinSessions)
         || (BIG_MUSCLES.has(m) && n >= 3)
-        || (roles[m].directFloor || 0) > oneSessionRoom) ? 2 : 1;
+        || (roles[m].directFloor || 0) > oneSessionRoom) ? 2 : 1));
+    standardNeedsBy[m] = standardNeeds;
     allowedBy[m] = fixed ? fixed.sessionsFor(m) : sessionsAllowing(family, m, { focus: roles[m].role === ROLE.FOCUS, atLeast: standardNeeds });
+    listedBy[m] = fixed ? allowedBy[m] : sessionsListed(family, m);
   }
   const trainable = Object.keys(allowedBy).filter((m) => allowedBy[m].length > 0 && (fixed || (ctx.choices[m] || []).length > 0))
     .sort((a, b) => muscleIndex(a) - muscleIndex(b));
@@ -441,7 +451,16 @@ function evaluateFamily(family, ctx) {
     const bigTwice = BIG_MUSCLES.has(m) && n >= 3 && roles[m].role !== ROLE.MAINTENANCE;
     const floorNeedsTwo = roles[m].role !== ROLE.MAINTENANCE
       && (roles[m].directFloor || 0) > Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation);
-    k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, two || fullBodyBig || bigTwice || floorNeedsTwo ? 2 : 1);
+    // The category's own count wins where its standard gives one
+    // (divisionStandard.js); a focus muscle takes the general rule.
+    const own = roles[m].role === ROLE.FOCUS ? null : divisionSessions(ctx.goal, m, n);
+    const start = own !== null ? own : (two || fullBodyBig || bigTwice || floorNeedsTwo ? 2 : 1);
+    // A division's list says where a muscle trains: it trains in every
+    // session the list names (a wellness "Hams + Glutes" day holds glutes),
+    // and in more only where its standard needs them (founder order
+    // 2026-10-10; the lists are the categories' own structure).
+    const listedCount = family.division ? (listedBy[m] || []).length : 0;
+    k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, Math.max(start, listedCount));
   }
   // The two sessions are kept: the search and the readiness fixes never take
   // a big-five muscle of a full-body week below them (the search runs without
@@ -449,9 +468,8 @@ function evaluateFamily(family, ctx) {
   // rear-delt exercise, and the clock then left the quads one squat a week;
   // review 2026-10-05, finding 6).
   const twiceAtLeast = (m) => !fixed && roles[m].role !== ROLE.MAINTENANCE && allowedBy[m].length >= 2
-    && ((BIG_MUSCLES.has(m) && n >= 3)
-      || (roles[m].directFloor || 0) > Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation));
-  const lowestK = (m) => (twiceAtLeast(m) ? 2 : 1);
+    && (standardNeedsBy[m] ?? 1) >= 2;
+  const lowestK = (m) => Math.max(twiceAtLeast(m) ? 2 : 1, family.division ? Math.min(allowedBy[m].length, (listedBy[m] || []).length) : 1);
   const state = {
     k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, slowerCaps: {}, standardCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
   };
@@ -460,7 +478,31 @@ function evaluateFamily(family, ctx) {
   const exposuresNow = () => {
     const out = {};
     const cost = family.sessions.map((sess) => sess.muscles.length);
-    trainable.forEach((m, i) => { out[m] = placeInOrder(allowedBy[m], state.k[m], state.placementOrder, i, cost); });
+    // The sessions the family names for the muscle come first (a division's
+    // arms day holds the arms); the fallback sessions of its half fill only
+    // the count beyond them, spaced against the listed ones.
+    trainable.forEach((m, i) => {
+      const listed = listedBy[m] || [];
+      const k = state.k[m];
+      if (listed.length >= k || listed.length === allowedBy[m].length) {
+        out[m] = placeInOrder(listed.length >= k ? listed : allowedBy[m], k, state.placementOrder, i, cost);
+        return;
+      }
+      const extra = allowedBy[m].filter((si) => !listed.includes(si));
+      const chosen = [...listed];
+      while (chosen.length < k && extra.length > 0) {
+        // The extra session with the largest smallest gap to the chosen ones.
+        const cyc = state.placementOrder;
+        const n = cyc.length;
+        const gapTo = (si) => Math.min(...chosen.map((cj) => {
+          const d = Math.abs(cyc.indexOf(si) - cyc.indexOf(cj));
+          return Math.min(d, n - d);
+        }));
+        extra.sort((a, b) => (gapTo(b) - gapTo(a)) || ((cost[a] || 0) - (cost[b] || 0)) || (a - b));
+        chosen.push(extra.shift());
+      }
+      out[m] = chosen.sort((a, b) => a - b);
+    });
     return out;
   };
 
@@ -624,6 +666,9 @@ function evaluateFamily(family, ctx) {
       // Short of its standard in its own sets (founder order 2026-10-10):
       // another session is tried whatever the fractional count says.
       const shortOfStandard = (alloc.weekly[m]?.direct || 0) + 1e-9 < (state.roles[m].directFloor || 0);
+      // A division's structure is kept: a session beyond the list's own is
+      // tried only for the standard, never for growth above it.
+      if (family.division && state.k[m] >= (listedBy[m] || []).length && !shortOfStandard) return false;
       return capped || blocked || shortOfStandard;
     }).sort((a, b) => ((floorOf(b) - W(b)) - (floorOf(a) - W(a))) || (muscleIndex(a) - muscleIndex(b)));
     const crowded = crowdedSessions(alloc, exposures, trainable, state.roles, ctx.choices, state.maxSlots);

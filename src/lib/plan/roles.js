@@ -33,6 +33,7 @@
 import { ROLE } from './bands';
 import { ROLE_TARGETS, GROWTH_FLOOR, OBJECTIVE, BLOCK, STANDARD_DIRECT_FLOOR, STANDARD_DIRECT_FLOOR_DEFAULT } from './science';
 import { GOAL_OVERLAYS } from '../coachingGoals';
+import { divisionDirectFloor } from './divisionStandard';
 
 /** Every muscle key the plan knows (algorithms.js VOLUME_LANDMARKS keys). */
 export const PLAN_MUSCLES = Object.freeze([
@@ -103,7 +104,7 @@ export function assignRoles({
         weight: OBJECTIVE.roleWeight.focus,
         peak: ROLE_TARGETS.focus.peak - cut,
         growthFloor: GROWTH_FLOOR.focus,
-        directFloor: STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT,
+        directFloor: divisionDirectFloor(goal, m) ?? STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT,
         direct: true,
       };
       continue;
@@ -122,12 +123,18 @@ export function assignRoles({
       const weight = typeof o === 'number' && o > 1.0
         ? Math.min(OBJECTIVE.roleWeight.focus, o)
         : OBJECTIVE.roleWeight.standard;
+      const directFloor = divisionDirectFloor(goal, m) ?? STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT;
+      // A muscle the division de-emphasises (overlay below 1.0) keeps its
+      // standard and is held there: its growth sets go to the judged
+      // muscles (research 2026-10-10: bikini chest at a median of 7.5 sets,
+      // wellness chest at 1, men's physique glutes at 9).
+      const deEmphasised = typeof o === 'number' && o < 1.0;
       out[m] = {
         role: ROLE.STANDARD,
-        weight,
-        peak: standardPeak - cut,
-        growthFloor: GROWTH_FLOOR.standard,
-        directFloor: STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT,
+        weight: deEmphasised ? 0 : weight,
+        peak: deEmphasised ? Math.max(directFloor, MAINTENANCE_TARGET.deEmphasised) - (cut > 0 ? Math.min(cut, 2) : 0) : standardPeak - cut,
+        growthFloor: deEmphasised ? Math.min(GROWTH_FLOOR.standard, directFloor) : GROWTH_FLOOR.standard,
+        directFloor,
         direct: true,
       };
       continue;

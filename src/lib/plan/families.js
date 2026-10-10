@@ -135,6 +135,13 @@ export function divisionFamily(divisionMatrix, goal, sessionsPerWeek) {
  * exposure for a muscle being brought up, design 4.5 step 5). Indexes in the
  * family's order.
  */
+/** The sessions a family's list names for a muscle (indexes in the family's order). */
+export function sessionsListed(family, muscle) {
+  const out = [];
+  family.sessions.forEach((sess, i) => { if (sess.muscles.includes(muscle)) out.push(i); });
+  return out;
+}
+
 export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } = {}) {
   const listed = [];
   const half = bodyHalf(muscle);
@@ -151,7 +158,8 @@ export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } 
     // puts the triceps' second session on leg day.
     const counted = sess.muscles.filter((m) => m !== 'abs');
     const inHalf = counted.filter((m) => bodyHalf(m) === half).length;
-    if (inHalf >= 2 || (inHalf > 0 && inHalf * 2 >= counted.length)) sameHalfSessions.push(i);
+    // Abs train on any day, so every session is theirs to fall back to.
+    if (muscle === 'abs' || inHalf >= 2 || (inHalf > 0 && inHalf * 2 >= counted.length)) sameHalfSessions.push(i);
   });
   // Founder order 2026-10-10 (register D219 addendum, the standard floor): a
   // division's session list adds emphasis on top of the standard routine and

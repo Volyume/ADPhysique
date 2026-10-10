@@ -34,6 +34,12 @@ import { buildPlan } from '../planner';
 import { assignRoles } from '../roles';
 import { ROLE } from '../bands';
 import { STANDARD_DIRECT_FLOOR } from '../science';
+import { divisionDirectFloor } from '../divisionStandard';
+
+// The standard is the category's own (divisionStandard.js, research of 2026-10-10), else the general one.
+const floorFor = (goal, m) => divisionDirectFloor(goal, m) ?? STANDARD_DIRECT_FLOOR[m];
+// A muscle whose standard is one light exercise (a bikini chest at 4, a wellness chest at 2) holds one exercise.
+const exercisesFor = (goal, m) => (floorFor(goal, m) <= 4 ? 1 : 2);
 import { DIVISION_MATRIX } from '../../planEngine';
 
 const CHOICES = require('./fixtures/choices');
@@ -83,16 +89,16 @@ describe('the standard floor: every growth muscle keeps its routine in every goa
   test.each(CASES.map((c) => [label(c), c]))('%s: every growth muscle has 2 exercises and its direct floor at week 5', (_name, c) => {
     const { direct, exercises } = totals(build(c));
     for (const m of GROWTH) {
-      expect({ muscle: m, exercises: exercises[m] || 0, ok: (exercises[m] || 0) >= 2 }).toEqual({ muscle: m, exercises: exercises[m] || 0, ok: true });
-      expect({ muscle: m, direct: direct[m] || 0, floor: STANDARD_DIRECT_FLOOR[m], ok: (direct[m] || 0) >= STANDARD_DIRECT_FLOOR[m] })
-        .toEqual({ muscle: m, direct: direct[m] || 0, floor: STANDARD_DIRECT_FLOOR[m], ok: true });
+      expect({ muscle: m, exercises: exercises[m] || 0, ok: (exercises[m] || 0) >= exercisesFor(c.goal, m) }).toEqual({ muscle: m, exercises: exercises[m] || 0, ok: true });
+      expect({ muscle: m, direct: direct[m] || 0, floor: floorFor(c.goal, m), ok: (direct[m] || 0) >= floorFor(c.goal, m) })
+        .toEqual({ muscle: m, direct: direct[m] || 0, floor: floorFor(c.goal, m), ok: true });
     }
   });
 
   test.each(CASES.filter((c) => c.focusMuscles.length > 0).map((c) => [label(c), c]))('%s: the focus pick never lowers another muscle below the floor', (_name, c) => {
     const { direct, exercises } = totals(build(c));
     for (const m of GROWTH.filter((x) => !c.focusMuscles.includes(x))) {
-      expect({ muscle: m, ok: (exercises[m] || 0) >= 2 && (direct[m] || 0) >= STANDARD_DIRECT_FLOOR[m] })
+      expect({ muscle: m, ok: (exercises[m] || 0) >= exercisesFor(c.goal, m) && (direct[m] || 0) >= floorFor(c.goal, m) })
         .toEqual({ muscle: m, ok: true });
     }
   });
@@ -126,6 +132,7 @@ describe('the old rule cannot come back', () => {
     const roles = assignRoles({ goal: 'mens_physique', focusMuscles: [], experience: 'intermediate', firstBlock: false });
     expect(roles.quads.role).toBe(ROLE.STANDARD);
     expect(roles.quads.direct).toBe(true);
-    expect(roles.quads.directFloor).toBeGreaterThanOrEqual(STANDARD_DIRECT_FLOOR.quads);
+    expect(roles.quads.directFloor).toBe(divisionDirectFloor('mens_physique', 'quads'));
+    expect(roles.quads.directFloor).toBeGreaterThanOrEqual(8);
   });
 });

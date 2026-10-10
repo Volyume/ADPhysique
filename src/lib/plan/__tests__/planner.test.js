@@ -33,6 +33,7 @@
 import { buildPlan } from '../planner';
 import { prescribeWeek } from '../prescribe';
 import { exerciseCap, PER_SESSION, SESSION_CEILINGS, BLOCK, ROLE_TARGETS, STANDARD_DIRECT_FLOOR } from '../science';
+import { divisionDirectFloor } from '../divisionStandard';
 import { TYPICAL_WEEK_GAP_HOURS } from '../../recovery/constants';
 import { DIVISION_MATRIX } from '../../planEngine';
 
@@ -119,7 +120,7 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
   // session that runs past the person's length or the D45 ceilings is
   // reported, not trimmed.
   const GROWTH_DIRECT = ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs'];
-  test.each(BUILT.map((b) => [label(b), b]))('%s: the standard floor is kept at week 5', (_name, { plan: p }) => {
+  test.each(BUILT.map((b) => [label(b), b]))('%s: the standard floor is kept at week 5', (_name, { inputs, plan: p }) => {
     const direct = {};
     const count = {};
     for (const w of p.workouts) {
@@ -132,9 +133,9 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     const servedDirect = {};
     for (const w of p.workouts) for (const e of w.exercises) servedDirect[e.muscle] = (servedDirect[e.muscle] || 0) + (served[e.slotKey] || 0);
     for (const m of GROWTH_DIRECT) {
-      expect({ muscle: m, exercises: count[m] || 0, ok: (count[m] || 0) >= 2 }).toEqual({ muscle: m, exercises: count[m] || 0, ok: true });
-      expect({ muscle: m, direct: direct[m] || 0, ok: (direct[m] || 0) >= STANDARD_DIRECT_FLOOR[m] }).toEqual({ muscle: m, direct: direct[m] || 0, ok: true });
-      expect({ muscle: m, served: servedDirect[m] || 0, ok: (servedDirect[m] || 0) >= STANDARD_DIRECT_FLOOR[m] }).toEqual({ muscle: m, served: servedDirect[m] || 0, ok: true });
+      expect({ muscle: m, exercises: count[m] || 0, ok: (count[m] || 0) >= ((divisionDirectFloor(inputs.goal, m) ?? STANDARD_DIRECT_FLOOR[m]) <= 4 ? 1 : 2) }).toEqual({ muscle: m, exercises: count[m] || 0, ok: true });
+      expect({ muscle: m, direct: direct[m] || 0, ok: (direct[m] || 0) >= (divisionDirectFloor(inputs.goal, m) ?? STANDARD_DIRECT_FLOOR[m]) }).toEqual({ muscle: m, direct: direct[m] || 0, ok: true });
+      expect({ muscle: m, served: servedDirect[m] || 0, ok: (servedDirect[m] || 0) >= (divisionDirectFloor(inputs.goal, m) ?? STANDARD_DIRECT_FLOOR[m]) }).toEqual({ muscle: m, served: servedDirect[m] || 0, ok: true });
     }
   });
 
@@ -297,8 +298,9 @@ describe('focus muscles keep their programmed sets (founder rule 2026-10-04)', (
     const LOWER = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'tibialis'];
     for (const { plan: p } of BUILT) {
       for (const w of p.workouts) {
-        if (/full|focus/i.test(w.name)) continue; // a full-body or focus day trains both by design
-        const halves = new Set(w.exercises.filter((e) => e.muscle !== 'abs').map((e) => (LOWER.includes(e.muscle) ? 'lower' : 'upper')));
+        if (/full|focus|\+ legs/i.test(w.name)) continue; // a full-body, focus or upper-plus-legs day trains both by design
+        // Abs and calves are finishers on any day (research 2026-10-10: calves ride upper days in men's physique).
+        const halves = new Set(w.exercises.filter((e) => e.muscle !== 'abs' && e.muscle !== 'calves').map((e) => (LOWER.includes(e.muscle) ? 'lower' : 'upper')));
         expect({ session: w.name, halves: halves.size <= 1 }).toEqual({ session: w.name, halves: true });
       }
     }

@@ -179,6 +179,15 @@ export function allocatePeakWeek({
     const pair = Math.min(2, list.length);
     const order = Math.max(0, (exposures[m] || []).indexOf(s));
     let index = slotIndex < pair ? (order + slotIndex) % pair : slotIndex;
+    // A muscle trained once a week opens with its compounds, then its
+    // isolation lifts (founder order 2026-10-10, the standard per category:
+    // a men's physique leg day holds the quads' standard of 8 as a squat and
+    // a leg press, which a squat and a leg extension capped at 3 cannot).
+    if ((exposures[m] || []).length === 1) {
+      const seq = [...list.map((_, i) => i).filter((i) => list[i].kind !== 'isolation'), ...list.map((_, i) => i).filter((i) => list[i].kind === 'isolation')];
+      const idx = seq[slotIndex];
+      return list[idx] ? { choice: list[idx], index: idx } : null;
+    }
     // A muscle whose first choice is a compound opens every session with a
     // compound: where the rotation would open its second session with the
     // isolation movement (the quads' leg extension alone on day B), the
