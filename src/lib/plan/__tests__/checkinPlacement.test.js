@@ -532,11 +532,18 @@ describe('the recovery-safe weekly maximum (design 4.14 step 4; review finding 5
   test('a muscle at its recovery-safe maximum is not raised; with no maximum the band top still holds', () => {
     const built = BUILT[0].plan;
     const { sessions, facts, rows, catalogue } = planParts(built);
-    const m = Object.keys(facts.recoverySafeMax).find((x) => facts.roles[x] !== 'maintenance' && facts.roles[x] !== undefined);
-    const at = rows.find((r) => r.mesocycle_week_id === 'w1' && r.muscle === m).planned_sets;
+    // The muscle is one the open check-in does raise: under the standard
+    // floor (founder order 2026-10-10) the plan's fuller routine can leave a
+    // muscle (the abs, three exercises at their 3-set cap) with no room to
+    // take a set, and such a muscle cannot show the clamp.
+    const open = planCheckin({ sessions, facts: { ...facts, recoverySafeMax: {} }, weeks: weeksFrom(0), rows, signal: 3, catalogue });
+    const plannedOf = (x) => rows.find((r) => r.mesocycle_week_id === 'w1' && r.muscle === x)?.planned_sets;
+    const m = Object.keys(facts.recoverySafeMax).sort().find((x) => facts.roles[x] !== 'maintenance' && facts.roles[x] !== undefined
+      && open.changes.some((c) => c.muscle === x && c.mesocycleWeekId === 'w1' && c.plannedSets > plannedOf(x)));
+    expect(m).toBeDefined();
+    const at = plannedOf(m);
     const capped = planCheckin({ sessions, facts: { ...facts, recoverySafeMax: { ...facts.recoverySafeMax, [m]: at } }, weeks: weeksFrom(0), rows, signal: 3, catalogue });
     expect(capped.changes.filter((c) => c.muscle === m && c.mesocycleWeekId === 'w1' && c.plannedSets > at)).toEqual([]);
-    const open = planCheckin({ sessions, facts: { ...facts, recoverySafeMax: {} }, weeks: weeksFrom(0), rows, signal: 3, catalogue });
     expect(open.changes.some((c) => c.muscle === m && c.mesocycleWeekId === 'w1' && c.plannedSets > at)).toBe(true);
   });
 });

@@ -252,9 +252,50 @@ export function prescribeWeek({ sessions, weekTargets, facts = {} } = {}) {
     if (over > 0) aboveTarget[m] = over;
   }
 
+  keepCreditedCaps(list, byMuscle, sets, facts);
   rebalanceFractional(list, byMuscle, sets, shortfall, facts);
 
   return { sets, shortfall, aboveTarget, perSession: sessionTotals(list, sets) };
+}
+
+/**
+ * The fill above puts a muscle's sets on its compounds first. Where that
+ * lifts a credited muscle past its fractional cap in the session (the
+ * Romanian deadlift's half set for the glutes, with the glutes at their
+ * cap), the sets move within the same session from the crediting exercise
+ * to the muscle's exercises that do not credit it, under their caps, so the
+ * week's total for the muscle is kept and the credited muscle is not cut.
+ * Deterministic: muscles in sorted order, slots in session order.
+ */
+function keepCreditedCaps(list, byMuscle, sets, facts) {
+  for (let pass = 0; pass < 4; pass++) {
+    let moved = false;
+    const totals = sessionTotals(list, sets);
+    for (const m of Array.from(byMuscle.keys()).sort()) {
+      const free = (byMuscle.get(m) || []).filter((e) => !isTyped(e.slot));
+      for (const si of Array.from(new Set(free.map((e) => e.si)))) {
+        const sid = list[si]?.id;
+        const here = free.filter((e) => e.si === si);
+        const creditedOver = (j) => (totals[sid]?.fractional?.[j] || 0) > fractionalCapFor(j, facts) + 1e-9;
+        const crediting = here.filter((e) => Object.entries(e.slot?.credits || {}).some(([j, c]) => j !== m && c > 0 && creditedOver(j)));
+        if (crediting.length === 0) continue;
+        const plain = here.filter((e) => !Object.entries(e.slot?.credits || {}).some(([j, c]) => j !== m && c > 0 && creditedOver(j)));
+        for (const from of crediting) {
+          while ((sets[from.slot.id] || 0) > SETS_PER_EXERCISE.floor
+            && Object.entries(from.slot.credits || {}).some(([j, c]) => j !== m && c > 0 && creditedOver(j))) {
+            const to = plain.find((e) => (sets[e.slot.id] || 0) < capOf(e.slot));
+            if (!to) break;
+            sets[from.slot.id] -= 1;
+            sets[to.slot.id] += 1;
+            moved = true;
+            const fresh = sessionTotals(list, sets);
+            totals[sid] = fresh[sid];
+          }
+        }
+      }
+    }
+    if (!moved) break;
+  }
 }
 
 /** A slot served without a weekly row: its stored count, at least one set, never above its cap. */
@@ -342,7 +383,13 @@ function rebalanceFractional(list, byMuscle, sets, shortfall, facts) {
             if (n <= SETS_PER_EXERCISE.floor) continue;
             if (!pick || n > (sets[pick.slot.id] || 0)) pick = e;
           }
-          if (!pick) break;
+          if (!pick) {
+            // Founder order 2026-10-10 (the standard floor): the excess may
+            // come from a crediting muscle's set in this session, moved to
+            // that muscle's other session when every cap there still holds.
+            if (moveCreditingSet(list, byMuscle, sets, facts, si, m)) { toMove -= 1; moved = true; continue; }
+            break;
+          }
           sets[pick.slot.id] -= 1;
           toMove -= 1;
           moved = true;
@@ -372,4 +419,55 @@ function rebalanceFractional(list, byMuscle, sets, shortfall, facts) {
     }
     if (!moved) break;
   }
+}
+
+/**
+ * Moves one set of a muscle that credits m (a slot in session `si` whose
+ * credits[m] > 0, above its own floor) to another session of that muscle with
+ * direct and fractional room, only when every cap holds in the destination
+ * session afterwards. Sorted slot ids, so the order is deterministic.
+ * Returns whether a set moved.
+ */
+function moveCreditingSet(list, byMuscle, sets, facts, si, m) {
+  const session = list[si];
+  const slots = (Array.isArray(session?.slots) ? session.slots : []).slice()
+    .sort((a, b) => (String(a?.id) < String(b?.id) ? -1 : String(a?.id) > String(b?.id) ? 1 : 0));
+  for (const slot of slots) {
+    const c = slot?.muscle;
+    if (!c || c === m || isTyped(slot)) continue;
+    const credit = slot?.credits && typeof slot.credits === 'object' ? slot.credits[m] : 0;
+    if (!isNum(credit) || credit <= 0) continue;
+    if ((sets[slot.id] || 0) <= SETS_PER_EXERCISE.floor) continue;
+    const mine = (byMuscle.get(c) || []).filter((e) => !isTyped(e.slot));
+    const dCap = directCapFor(c, facts);
+    const fCap = fractionalCapFor(c, facts);
+    const otherSessions = Array.from(new Set(mine.map((e) => e.si))).filter((sj) => sj !== si).sort((a, b) => a - b);
+    for (const sj of otherSessions) {
+      const entries = mine.filter((e) => e.si === sj);
+      let target = null;
+      for (const e of entries) {
+        const room = capOf(e.slot) - (sets[e.slot.id] || 0);
+        if (room > 0 && (!target || room > capOf(target.slot) - (sets[target.slot.id] || 0))) target = e;
+      }
+      if (!target) continue;
+      const tid = list[sj]?.id;
+      const before = sessionTotals(list, sets)[tid];
+      sets[slot.id] -= 1;
+      sets[target.slot.id] += 1;
+      const after = sessionTotals(list, sets)[tid];
+      // c has room, and no muscle passes its cap in the destination session
+      // because of the move.
+      let ok = (after?.direct?.[c] || 0) <= dCap && (after?.fractional?.[c] || 0) <= fCap + 1e-9;
+      if (ok) {
+        for (const x of Object.keys(after?.fractional || {})) {
+          const a = after.fractional[x] || 0;
+          if (a > fractionalCapFor(x, facts) + 1e-9 && a > (before?.fractional?.[x] || 0) + 1e-9) { ok = false; break; }
+        }
+      }
+      if (ok) return true;
+      sets[slot.id] += 1;
+      sets[target.slot.id] -= 1;
+    }
+  }
+  return false;
 }

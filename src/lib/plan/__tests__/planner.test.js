@@ -10,8 +10,10 @@
  *      allows a focus muscle) at the peak week, and in EVERY week served by
  *      prescribe(): the founder's "I've seen instances where I have 6 sets in
  *      an exercise as we progress".
- *   2. Sessions inside D45 (8 exercises, 25 working sets) and the person's
- *      session length (plus the generator's 5-minute tolerance) at the peak.
+ *   2. The standard floor (founder order 2026-10-10): every direct-trained
+ *      growth muscle keeps its STANDARD_DIRECT_FLOOR in its own sets and at
+ *      least 2 exercises at week 5; a session past the person's length or the
+ *      D45 ceilings (8 exercises, 25 working sets) is reported, never trimmed.
  *   3. One number everywhere: week 5 served by prescribe() equals the
  *      planner's own peak for every exercise.
  *   4. Nothing planned above 30 fractional sets a week; a focus muscle never
@@ -30,7 +32,7 @@
  */
 import { buildPlan } from '../planner';
 import { prescribeWeek } from '../prescribe';
-import { exerciseCap, PER_SESSION, SESSION_CEILINGS, BLOCK, ROLE_TARGETS } from '../science';
+import { exerciseCap, PER_SESSION, SESSION_CEILINGS, BLOCK, ROLE_TARGETS, STANDARD_DIRECT_FLOOR } from '../science';
 import { TYPICAL_WEEK_GAP_HOURS } from '../../recovery/constants';
 import { DIVISION_MATRIX } from '../../planEngine';
 
@@ -111,24 +113,47 @@ describe('the plan builder over a matrix of days, session lengths, goals and foc
     }
   });
 
-  test.each(BUILT.map((b) => [label(b), b]))('%s: sessions inside D45 and the session length', (_name, { inputs, plan: p }) => {
-    p.workouts.forEach((w, i) => {
-      // Past D45 only where focus sets took it (founder 2026-10-04), and reported.
-      const over = w.exercises.length > SESSION_CEILINGS.exercises
-        || w.exercises.reduce((a, e) => a + e.peakSets, 0) > SESSION_CEILINGS.workingSets;
-      if (over) {
-        expect({ session: w.name, focusInIt: w.exercises.some((e) => p.v2.roles[e.muscle] === 'focus'), reported: p.v2.overCeilings.includes(w.sessionKey) })
-          .toEqual({ session: w.name, focusInIt: true, reported: true });
+  // Founder order 2026-10-10 (register D219 addendum, the standard floor):
+  // nothing is reduced to fit the session length or the day count. Every
+  // direct-trained growth muscle keeps its standard in its own sets, and a
+  // session that runs past the person's length or the D45 ceilings is
+  // reported, not trimmed.
+  const GROWTH_DIRECT = ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs'];
+  test.each(BUILT.map((b) => [label(b), b]))('%s: the standard floor is kept at week 5', (_name, { plan: p }) => {
+    const direct = {};
+    const count = {};
+    for (const w of p.workouts) {
+      for (const e of w.exercises) {
+        direct[e.muscle] = (direct[e.muscle] || 0) + e.peakSets;
+        count[e.muscle] = (count[e.muscle] || 0) + 1;
       }
-      expect(p.v2.sessionMinutesAtPeak[i]).toBeDefined();
-    });
-    // Over the length only where focus sets took it (founder rule 2026-10-04:
-    // never cut a focus muscle's volume for time), and then the plan says so.
+    }
+    const served = serve(p, BLOCK.peakWeek).sets;
+    const servedDirect = {};
+    for (const w of p.workouts) for (const e of w.exercises) servedDirect[e.muscle] = (servedDirect[e.muscle] || 0) + (served[e.slotKey] || 0);
+    for (const m of GROWTH_DIRECT) {
+      expect({ muscle: m, exercises: count[m] || 0, ok: (count[m] || 0) >= 2 }).toEqual({ muscle: m, exercises: count[m] || 0, ok: true });
+      expect({ muscle: m, direct: direct[m] || 0, ok: (direct[m] || 0) >= STANDARD_DIRECT_FLOOR[m] }).toEqual({ muscle: m, direct: direct[m] || 0, ok: true });
+      expect({ muscle: m, served: servedDirect[m] || 0, ok: (servedDirect[m] || 0) >= STANDARD_DIRECT_FLOOR[m] }).toEqual({ muscle: m, served: servedDirect[m] || 0, ok: true });
+    }
+  });
+
+  test.each(BUILT.map((b) => [label(b), b]))('%s: a session past the length or the D45 ceilings is reported, never trimmed', (_name, { inputs, plan: p }) => {
     p.workouts.forEach((w) => {
-      const minutes = p.v2.sessionMinutesAtPeak[Number(w.sessionKey.slice(1))];
-      if (minutes > inputs.sessionLengthMinutes + 5 + 1e-9) {
-        expect({ session: w.name, focusInIt: w.exercises.some((e) => p.v2.roles[e.muscle] === 'focus'), reported: p.v2.overTime[w.sessionKey] > 0 })
-          .toEqual({ session: w.name, focusInIt: true, reported: true });
+      const i = Number(w.sessionKey.slice(1));
+      const minutes = p.v2.sessionMinutesAtPeak[i];
+      expect(minutes).toBeDefined();
+      const sets = w.exercises.reduce((a, e) => a + e.peakSets, 0);
+      const overCeilings = w.exercises.length > SESSION_CEILINGS.exercises || sets > SESSION_CEILINGS.workingSets;
+      expect({ session: w.name, reported: p.v2.overCeilings.includes(w.sessionKey) }).toEqual({ session: w.name, reported: overCeilings });
+      // The length is reported when the session runs more than the generator's
+      // 5-minute tolerance over it; rounding to a tenth of a minute is allowed.
+      const over = minutes - inputs.sessionLengthMinutes;
+      const reported = (p.v2.overTime[w.sessionKey] || 0) > 0;
+      if (over > 5 + 0.05) expect({ session: w.name, reported }).toEqual({ session: w.name, reported: true });
+      if (over <= 5 - 0.05) expect({ session: w.name, reported }).toEqual({ session: w.name, reported: false });
+      if (reported) {
+        expect(p.v2.overTime[w.sessionKey]).toBeGreaterThan(5);
         expect(p.estimatedSessionMinutes).toBeGreaterThanOrEqual(Math.ceil(minutes));
       }
     });

@@ -122,8 +122,11 @@ describe('explainPlan: what a plan without facts shows', () => {
 describe('explainPlan: a 4-day plan', () => {
   const res = explain(FOUR_DAY, { minutes: 75 });
 
-  test('the lines, in reading order, for a plan with no focus muscle and nothing limited', () => {
-    expect(ids(res)).toEqual(['structure', 'spacing', 'cap', 'length', 'readiness', 'ladder']);
+  test('the lines, in reading order, for a plan with no focus muscle: its fuller sessions are reported, not trimmed', () => {
+    // Founder order 2026-10-10 (the standard floor): the full standard routine
+    // makes some sessions run past 8 exercises or 25 sets and past the length,
+    // and the plan says so (the `over` and `ceilings` lines).
+    expect(ids(res)).toEqual(['structure', 'spacing', 'cap', 'length', ...(FOUR_DAY.v2.overTime && Object.keys(FOUR_DAY.v2.overTime).length ? ['over'] : []), ...(FOUR_DAY.v2.overCeilings.length ? ['ceilings'] : []), 'readiness', 'ladder']);
   });
 
   test('the structure: how many sessions, which split, and why it was chosen', () => {
@@ -159,7 +162,9 @@ describe('explainPlan: a 4-day plan', () => {
     const t = textOf(res, 'length');
     expect(t).toMatch(/^At the peak of the block, sessions run about \d+ to \d+ minutes/);
     expect(t).toMatch(/the 75 you set/);
-    expect(t).toMatch(/No session goes past 8 exercises or 25 working sets\./);
+    // The reassurance is only given when it is true of the plan's own facts.
+    if (FOUR_DAY.v2.overCeilings.length === 0) expect(t).toMatch(/No session goes past 8 exercises or 25 working sets\./);
+    else expect(t).not.toMatch(/No session goes past/);
   });
 
   test('the readiness promise, and the closest reading', () => {
@@ -235,12 +240,24 @@ describe('explainPlan: a focus plan', () => {
 describe('explainPlan: an over-time plan', () => {
   const res = explain(OVER_TIME, { minutes: 45 });
 
-  test('names the session that runs over, by how much, and what the plan did first', () => {
-    const over = Math.round(OVER_TIME.v2.overTime.s1);
+  test('names the sessions that run over, by how much, and what the plan did first', () => {
+    // Founder order 2026-10-10: the full standard routine runs several sessions
+    // past 45 minutes; each is named with its real length, none is trimmed.
+    const keys = Object.keys(OVER_TIME.v2.overTime);
+    expect(keys.length).toBeGreaterThan(0);
+    const names = sessionsOf(OVER_TIME);
+    const parts = keys.map((k) => `${names.find((n) => n.id === k).name} (about ${Math.round(OVER_TIME.v2.overTime[k])} minutes)`);
     const t = textOf(res, 'over');
-    expect(t).toContain(`At the peak, Lower A runs about ${over} minutes past the 45 you set.`);
+    if (keys.length === 1) {
+      expect(t).toContain(`At the peak, ${names.find((n) => n.id === keys[0]).name} runs about ${Math.round(OVER_TIME.v2.overTime[keys[0]])} minutes past the 45 you set.`);
+    } else {
+      const last = parts[parts.length - 1];
+      expect(t).toContain(`At the peak, ${parts.slice(0, -1).join(', ')} and ${last} run past the 45 you set.`);
+    }
     expect(t).toMatch(/shortens the rest between sets on the smaller muscles' isolation exercises to 60 seconds/);
+    expect(t).toMatch(/Every muscle keeps its full routine, so the real length is shown here and no sets are cut to fit the time\./);
     expect(t).toMatch(/Your focus muscles keep every set, because bringing them up is what you picked\./);
+    expect(t).not.toMatch(/\bheld\b|cut to fit the session|trimmed/);
   });
 
   test('the length line states the minutes against the person\'s length without calling it inside', () => {
@@ -256,7 +273,7 @@ describe('explainPlan: an over-time plan', () => {
   });
 
   test('without the person\'s length the line still says what it can', () => {
-    const t = textOf(explainPlan({ facts: OVER_TIME.v2, sessions: sessionsOf(OVER_TIME) }), 'over');
+    const t = textOf(explainPlan({ facts: { ...OVER_TIME.v2, overTime: { s1: 22 } }, sessions: sessionsOf(OVER_TIME) }), 'over');
     expect(t).toMatch(/runs about \d+ minutes over the session length you set\./);
   });
 });
@@ -267,8 +284,8 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
   test('a session past 8 exercises or 25 working sets says why', () => {
     expect(THREE_FOCUS.v2.overCeilings.length).toBeGreaterThan(0);
     const t = textOf(res, 'ceilings');
-    expect(t).toMatch(/holds more than 8 exercises or 25 working sets/);
-    expect(t).toMatch(/focus sets are programmed in full/);
+    expect(t).toMatch(/holds? more than 8 exercises or 25 working sets/);
+    expect(t).toMatch(/every muscle keeps its full routine and your focus sets are programmed in full, and none of it is cut to fit\./);
     expect(textOf(res, 'length')).not.toMatch(/No session goes past/);
   });
 
@@ -280,7 +297,7 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
     expect(t).toMatch(/the plan aims for every muscle to be estimated at least 90% recovered when its next session starts/);
     expect(t).toContain(`about ${pct}%`);
     expect(t).toMatch(new RegExp(`before ${THREE_FOCUS.workouts[reading.position].name} in week ${reading.week}`));
-    expect(t).toContain('The exception: ');
+    expect(t).toMatch(/The exceptions?: /);
     expect(t).toContain(`never below a muscle's growth floor (${GROWTH_FLOOR.standard} sets a week, or ${GROWTH_FLOOR.focus} for a focus muscle), and shows the closest it found`);
     expect(t).not.toMatch(/every muscle is estimated at least 90% recovered when its next session starts, in every week/);
   });
@@ -290,8 +307,14 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
   test('a single limited muscle (3 days, glutes in focus)', () => {
     const r = explain(LIMITED, { minutes: 75 });
     const limited = LIMITED.v2.notes.filter((n) => n.kind === 'promise_limited');
-    expect(limited.map((n) => n.muscle)).toEqual(['hamstrings']);
-    expect(textOf(r, 'readiness')).toContain(`Hamstrings about ${Math.round(limited[0].lowest * 100)}%`);
+    // Under the standard floor (founder order 2026-10-10) a 3-day week with
+    // a glute focus leaves the glutes limited as well as the hamstrings; the
+    // line names every limited muscle with its estimate.
+    expect(limited.map((n) => n.muscle)).toContain('hamstrings');
+    for (const n of limited) {
+      const name = n.muscle[0].toUpperCase() + n.muscle.slice(1).replace('_', ' ');
+      expect(textOf(r, 'readiness')).toContain(`${name} about ${Math.round(n.lowest * 100)}%`);
+    }
   });
 
   test('more than three limited muscles: the worst three are named and the rest counted', () => {

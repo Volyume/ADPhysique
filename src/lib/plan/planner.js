@@ -459,7 +459,8 @@ function evaluateFamily(family, ctx) {
   // Each muscle's sessions, spaced as evenly as the current cycle order allows.
   const exposuresNow = () => {
     const out = {};
-    trainable.forEach((m, i) => { out[m] = placeInOrder(allowedBy[m], state.k[m], state.placementOrder, i); });
+    const cost = family.sessions.map((sess) => sess.muscles.length);
+    trainable.forEach((m, i) => { out[m] = placeInOrder(allowedBy[m], state.k[m], state.placementOrder, i, cost); });
     return out;
   };
 
@@ -522,7 +523,7 @@ function evaluateFamily(family, ctx) {
       twiceFirst: fixed || !family.key.startsWith('full_body') ? [] : [...FULL_BODY_TWICE],
       bigFirst: [...BIG_MUSCLES],
     });
-    balanceSlots(alloc, state.roles, fixed !== null);
+    balanceSlots(alloc, state.roles, fixed !== null, state.sessionCaps);
     // An exposure that took no sets (it did not fit) is not one: the split
     // and the order read the sessions the muscle is really trained in.
     for (const m of Object.keys(exposures)) {
@@ -943,9 +944,10 @@ function evaluateFamily(family, ctx) {
  * Place k of a muscle's allowed sessions evenly in a given cycle order
  * (families.placeExposures works on cycle positions). Returns session indexes.
  */
-function placeInOrder(allowedSessions, k, cycle, rotate) {
+function placeInOrder(allowedSessions, k, cycle, rotate, cost = null) {
   const positions = allowedSessions.map((si) => cycle.indexOf(si)).filter((p) => p >= 0);
-  const chosen = placeExposures(positions, k, cycle.length, rotate);
+  const positionCost = Array.isArray(cost) ? cycle.map((si) => cost[si] || 0) : null;
+  const chosen = placeExposures(positions, k, cycle.length, rotate, positionCost);
   return chosen.map((p) => cycle[p]).sort((a, b) => a - b);
 }
 
@@ -1073,7 +1075,7 @@ function readinessOrder(block, alloc, layouts, usual, hoursPeak, hoursPerson, lo
  * person's own rows, which stay where they are, and prescribe() serves a
  * session over its stored order, so the sets are split over that very order.
  */
-function balanceSlots(alloc, roles, keepAuthored = false) {
+function balanceSlots(alloc, roles, keepAuthored = false, sessionCaps = {}) {
   for (const sess of alloc.sessions) {
     sess.slots = keepAuthored
       ? [...sess.slots].sort((a, b) => a.choice.authoredIndex - b.choice.authoredIndex)
@@ -1083,10 +1085,22 @@ function balanceSlots(alloc, roles, keepAuthored = false) {
       if (!byMuscle.has(slot.muscle)) byMuscle.set(slot.muscle, []);
       byMuscle.get(slot.muscle).push(slot);
     }
+    // The compounds take the sets first, as the week server fills a session,
+    // unless that lifts a credited muscle's fractional total past its cap in
+    // this session (a set moved onto the Romanian deadlift credits the
+    // glutes): then the allocator's own split, which the caps were checked
+    // against, is kept, so the plan's sets are the sets served.
+    const capOf = (j) => sessionCaps?.[j]?.fractional ?? PER_SESSION.fractionalCap;
     for (const list of byMuscle.values()) {
       const total = list.reduce((a, x) => a + x.sets, 0);
       const { sets } = fillSession(total, list.map((x) => x.cap));
+      const before = list.map((x) => x.sets);
       list.forEach((x, i) => { x.sets = sets[i]; });
+      const after = sessionLoad(sess.slots).fractional;
+      list.forEach((x, i) => { x.sets = before[i]; });
+      const was = sessionLoad(sess.slots).fractional;
+      const breaks = Object.keys(after).some((j) => roles[j]?.direct && after[j] > capOf(j) + 1e-9 && after[j] > (was[j] || 0) + 1e-9);
+      if (!breaks) list.forEach((x, i) => { x.sets = sets[i]; });
     }
     sess.workingSets = sess.slots.reduce((a, x) => a + x.sets, 0);
   }

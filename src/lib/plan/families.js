@@ -144,13 +144,14 @@ export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } 
     // Abs train on any day, so they never make a session part of a half:
     // a push day that lists abs is an upper-body session (no glute work on
     // it, no lateral raises on a leg day).
-    // A session belongs to the half most of its listed muscles are in (a
-    // lower day with a lateral-raise finisher is a lower day), so the
-    // fallback never puts the triceps' second session on leg day.
+    // A session is of a half when it trains that half in earnest: most of
+    // its listed muscles, or at least two of them (a full-body day with the
+    // squat and the hinge is a lower day too). A lower day with one
+    // lateral-raise finisher is not an upper day, so the fallback never
+    // puts the triceps' second session on leg day.
     const counted = sess.muscles.filter((m) => m !== 'abs');
-    const upper = counted.filter((m) => bodyHalf(m) === 'upper').length;
-    const sessionHalf = upper * 2 >= counted.length ? 'upper' : 'lower';
-    if (counted.length > 0 && sessionHalf === half) sameHalfSessions.push(i);
+    const inHalf = counted.filter((m) => bodyHalf(m) === half).length;
+    if (inHalf >= 2 || (inHalf > 0 && inHalf * 2 >= counted.length)) sameHalfSessions.push(i);
   });
   // Founder order 2026-10-10 (register D219 addendum, the standard floor): a
   // division's session list adds emphasis on top of the standard routine and
@@ -173,7 +174,7 @@ export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } 
  * `rotate` so muscles spread across sessions rather than piling onto the
  * first. Deterministic. Returns session indexes in cycle order.
  */
-export function placeExposures(allowed, k, n, rotate = 0) {
+export function placeExposures(allowed, k, n, rotate = 0, cost = null) {
   const list = [...allowed].sort((a, b) => a - b);
   if (k <= 0 || list.length === 0) return [];
   if (k >= list.length) return list;
@@ -195,7 +196,13 @@ export function placeExposures(allowed, k, n, rotate = 0) {
     const minGap = Math.min(...gaps);
     const spread = Math.max(...gaps) - minGap;
     const offset = (sub[0] - (rotate % n) + n) % n;
-    const key = [-minGap, spread, offset, ...sub];
+    // Among equally spaced choices the muscle's dedicated sessions come
+    // before a broader one (`cost`, the muscles a session lists): a 5-day
+    // week with two lower days and a full-body day trains the legs on the
+    // lower days, as a coach writes it, not on the full-body day and one
+    // lower day with the other left to a single exercise.
+    const broad = Array.isArray(cost) ? sub.reduce((a, v) => a + (cost[v] || 0), 0) : 0;
+    const key = [-minGap, spread, broad, offset, ...sub];
     if (!best || compareKeys(key, best.key) < 0) best = { key, sub };
   }
   return best.sub;

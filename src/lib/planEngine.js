@@ -2354,7 +2354,7 @@ export const DIVISION_MATRIX = {
     3: [
       { name: 'Full A (Width)', muscles: ['back', 'side_delts', 'chest', 'quads', 'hamstrings', 'triceps'] },
       { name: 'Full B (Detail)', muscles: ['back', 'rear_delts', 'chest', 'glutes', 'biceps', 'calves'] },
-      { name: 'Lower + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'side_delts', 'abs', 'calves'] },
+      { name: 'Lower + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'abs', 'calves'] },
     ],
     4: [
       { name: 'Upper A (Width)', muscles: ['back', 'side_delts', 'rear_delts', 'chest', 'triceps', 'biceps'] },
@@ -2367,7 +2367,7 @@ export const DIVISION_MATRIX = {
       { name: 'Push (Delts + Chest)', muscles: ['side_delts', 'chest', 'front_delts', 'triceps'] },
       { name: 'Legs + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
       { name: 'Upper (Thickness)', muscles: ['back', 'chest', 'traps', 'rear_delts', 'biceps', 'triceps'] },
-      { name: 'Lower + Abs', muscles: ['hamstrings', 'glutes', 'quads', 'calves', 'abs', 'side_delts'] },
+      { name: 'Lower + Abs', muscles: ['hamstrings', 'glutes', 'quads', 'calves', 'abs'] },
     ],
     6: [
       { name: 'Pull (Width)', muscles: ['back', 'rear_delts', 'biceps', 'side_delts'] },
@@ -2383,7 +2383,7 @@ export const DIVISION_MATRIX = {
     3: [
       { name: 'Full A (Back + Delt)', muscles: ['back', 'side_delts', 'chest', 'quads', 'hamstrings', 'triceps'] },
       { name: 'Full B (Chest + Arm)', muscles: ['chest', 'back', 'rear_delts', 'biceps', 'glutes', 'calves'] },
-      { name: 'Lower (Sweep + Ham)', muscles: ['quads', 'hamstrings', 'glutes', 'side_delts', 'abs', 'calves'] },
+      { name: 'Lower (Sweep + Ham)', muscles: ['quads', 'hamstrings', 'glutes', 'abs', 'calves'] },
     ],
     4: [
       { name: 'Upper A (Back + Delt)', muscles: ['back', 'side_delts', 'rear_delts', 'chest', 'biceps', 'triceps'] },

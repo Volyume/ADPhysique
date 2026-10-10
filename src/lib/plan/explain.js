@@ -304,6 +304,10 @@ function overLine(facts, sessions, sessionLengthMinutes) {
       : `At the peak, ${list} run over the session length you set.`;
   }
   let text = `${head} Before a session is allowed to run over, the plan shortens the rest between sets on the smaller muscles' isolation exercises to ${TRIMMED_REST_SECONDS} seconds.`;
+  // Founder order 2026-10-10 (the standard floor): no muscle's routine is
+  // cut to fit the session length, so the line says so for every plan; the
+  // focus sentence stays where a focus was picked.
+  text += ' Every muscle keeps its full routine, so the real length is shown here and no sets are cut to fit the time.';
   if (hasFocus(facts)) {
     text += ' Your focus muscles keep every set, because bringing them up is what you picked.';
   }
@@ -317,7 +321,7 @@ function ceilingsLine(facts, sessions) {
     .map((s) => sessionName(sessions, s.id));
   if (names.length === 0) return null;
   const verb = names.length === 1 ? 'holds' : 'hold';
-  const text = `At the peak, ${joinList(names)} ${verb} more than ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} working sets, because your focus sets are programmed in full and are never cut to fit.`;
+  const text = `At the peak, ${joinList(names)} ${verb} more than ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} working sets, because every muscle keeps its full routine${hasFocus(facts) ? ' and your focus sets are programmed in full' : ''}, and none of it is cut to fit.`;
   return line('ceilings', text, 'SESSION_CEILINGS.exercises');
 }
 

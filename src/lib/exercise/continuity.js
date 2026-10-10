@@ -208,6 +208,36 @@ export function applyContinuity({
         });
       }
 
+      // A reviewed prescription change belongs to the EXERCISE, not to one
+      // routine row. A fuller plan can place the same kept lift in a second
+      // session while the person's plan held it once, so no free incumbent
+      // entry is left for that slot. Without this the second slot kept the
+      // planner's own rep range while the receipt and the first slot carried
+      // the reviewed one. Only an exercise already retained from its own
+      // incumbent and not yet placed in THIS workout qualifies.
+      if (!incumbent && verdictFor && used.has(ex.exerciseId) && !placedInWorkout.has(ex.exerciseId)) {
+        const reviewed = verdictFor(ex.exerciseId);
+        const change = reviewed?.verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE
+          ? reviewed.prescriptionChange : null;
+        const base = change ? incumbents.find(i => i.exerciseId === ex.exerciseId) : null;
+        if (base) {
+          placedInWorkout.add(base.exerciseId);
+          decisions.push({
+            workout: w.name ?? null,
+            exerciseId: base.exerciseId,
+            exerciseName: base.exerciseName ?? null,
+            previousExerciseId: base.exerciseId,
+            previousExerciseName: base.exerciseName ?? null,
+            outcome: SLOT_OUTCOME.RETAINED,
+            reason: reviewed.reason,
+            prescriptionChange: change,
+            insteadOfId: null,
+            insteadOfName: null,
+          });
+          return { ...ex, repMin: change.repMin, repMax: change.repMax };
+        }
+      }
+
       // Nothing was doing this job before.
       if (!incumbent) {
         decisions.push({
