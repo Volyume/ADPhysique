@@ -8,19 +8,27 @@
  * progression model has to key on something else.
  *
  * THE ANSWER IS NO, and the reason is worth stating because it is NOT obvious:
- * a repeated session within one programme week IS legitimate and DOES occur -
- * the bikini Glute Focus split at six and seven days lists "Glutes" twice - but
- * the persistence layer writes ONE ROUTINE ROW PER WORKOUT ENTRY. Two "Glutes"
- * sessions are two routine rows with two ids that happen to share a name.
+ * the persistence layer writes ONE ROUTINE ROW PER WORKOUT ENTRY, and a
+ * session is identified by its routine row (mesocycle_week_id, routine_id),
+ * never by its display name. A person may rename two sessions alike (the
+ * rename path touches name only), and two same-named sessions are then two
+ * routine rows with two ids that happen to share a name.
  *
- * So the duplication is in the DISPLAY NAME, not in the identity. The pair is
+ * So any duplication is in the DISPLAY NAME, not in the identity. The pair is
  * sufficient, and the thing that is NOT safe to identify a session by is its
  * name - which is exactly what the amendment already forbids.
  *
+ * 2026-10-10 (D219 addendum 3): DIVISION_MATRIX was rewritten per category
+ * from research and the generator now names every session in a week
+ * distinctly (bikini 6-day no longer holds two "Glutes"). The invariant never
+ * depended on the generator repeating names, so this suite no longer needs
+ * it to: the duplicate-name case is built by renaming two generated
+ * workouts alike after generation.
+ *
  * WHAT EACH HALF OF THIS SUITE CAN PROVE. The engine half runs the real
- * generator and shows the duplicate-name case genuinely exists, so nobody
- * later "simplifies" the model on the assumption that names are unique. The
- * writer half is a source guard, because the write is a SQLite transaction:
+ * generator, pins one required session per workout entry, and shows that
+ * alike names do not collapse entries, so nobody later "simplifies" the
+ * model on the assumption that names are unique. The writer half is a source guard, because the write is a SQLite transaction:
  * what it pins is that the loop is per-workout with its own createRoutine
  * call, which is what makes the ids distinct.
  */
@@ -52,9 +60,9 @@ function everyPlan() {
 }
 
 // The hand-authored DIVISION_MATRIX bikini[6] cell (planEngine.js,
-// `bikini: { ... 6: [...] }`): six session IDENTITIES, two of them
-// sharing the display name "Glutes" - the fact this whole suite exists to
-// prove. Used two ways below: as an order-free SET (identities survive
+// `bikini: { ... 6: [...] }`), as rewritten by D219 addendum 3: six
+// session IDENTITIES with six distinct display names. Used two ways below:
+// as an order-free SET (identities survive
 // any future recovery-sequencing refinement) and, reconstructed into this
 // order, as the INPUT sequenceSessionsForRecovery is asked to re-score
 // (D201 and its addenda: lead rulings 1-3, 2026-09-25) so the ORDER
@@ -62,7 +70,7 @@ function everyPlan() {
 // array that a future scoring refinement would silently outdate again -
 // as happened twice already (see the D201 register).
 const AUTHORED_BIKINI_6_NAMES = [
-  'Glutes', 'Upper (Delt + Back)', 'Glutes', 'Lower (Quad)', 'Upper (Delt + Arm)', 'Glutes Pump + Abs',
+  'Glutes + Hams', 'Upper A (Delts + Back)', 'Glutes + Quads', 'Upper B (Delts + Arms)', 'Glutes (Pump)', 'Core + Delts',
 ];
 
 /** exerciseId -> { primaryMuscle, secondaryMuscles }, built from the same
@@ -84,10 +92,13 @@ function buildExerciseByIdFromPool() {
  * Regroups `workouts` (the generator's final, already-sequenced order) by
  * name and pops them out in `authoredNames` order, reconstructing the
  * pre-hook (authored) input array sequenceSessionsForRecovery was actually
- * called with. Correct even for the two same-named "Glutes" sessions: lead
- * ruling 1 guarantees workouts[0] is the untouched authored lead, so it is
- * always the first "Glutes" enqueued (and so the first popped); the other
- * "Glutes" is then the only one left, by elimination.
+ * called with. This matches by name, which is safe ONLY because the current
+ * authored names are distinct within the week (D219 addendum 3); each queue
+ * therefore holds exactly one workout. It is a test-local reconstruction
+ * helper, not a statement that names identify sessions. If names ever repeat
+ * again, the queues pop in the final order, so lead ruling 1 (workouts[0] is
+ * the untouched authored lead) is what keeps the first repeat correct and the
+ * other is left by elimination.
  */
 function reconstructAuthoredOrder(workouts, authoredNames) {
   const queues = new Map();
@@ -99,16 +110,17 @@ function reconstructAuthoredOrder(workouts, authoredNames) {
 }
 
 describe('A REQUIRED SESSION IS NOT ITS NAME', () => {
-  test('the generator genuinely repeats a session name within one programme week', () => {
-    // If this ever stops being true the model is still correct, but the
-    // reasoning above would be quietly resting on nothing - so it is pinned.
-    const repeated = everyPlan().filter(({ plan }) => {
-      const names = plan.workouts.map((w) => w.name);
-      return new Set(names).size !== names.length;
-    });
-    expect(repeated.length).toBeGreaterThan(0);
-    const bikini = repeated.find((r) => r.goal === 'bikini' && r.daysPerWeek === 6);
+  test('the generator emits one required session per workout entry', () => {
+    // Every offered plan: a distinct entry per session, no entry dropped or
+    // merged. The bikini 6-day cell is pinned by identity SET and order below.
+    const plans = everyPlan();
+    expect(plans.length).toBeGreaterThan(0);
+    for (const { plan } of plans) {
+      expect(plan.workouts.every((w) => typeof w.name === 'string' && w.name.length > 0)).toBe(true);
+    }
+    const bikini = plans.find((r) => r.goal === 'bikini' && r.daysPerWeek === 6);
     expect(bikini).toBeTruthy();
+    expect(bikini.plan.workouts).toHaveLength(AUTHORED_BIKINI_6_NAMES.length);
 
     // D201 (per-muscle recovery programme) reorders these six sessions for
     // recovery spacing, and moved this exact pin twice already as the
@@ -120,7 +132,7 @@ describe('A REQUIRED SESSION IS NOT ITS NAME', () => {
     // 1. The SET of six session identities is exactly the hand-authored
     //    DIVISION_MATRIX bikini[6] cell, order-free - this suite's whole
     //    point is that these six sessions have six distinct identities
-    //    regardless of a display-name repeat or where sequencing places it.
+    //    regardless of where sequencing places them.
     expect([...actualNames].sort()).toEqual([...AUTHORED_BIKINI_6_NAMES].sort());
 
     // 2. The ORDER matches whatever sequenceSessionsForRecovery itself
@@ -140,11 +152,17 @@ describe('A REQUIRED SESSION IS NOT ITS NAME', () => {
   });
 
   test('so NOTHING may identify a required session by its display name', () => {
-    // Two "Glutes" sessions in one week are two different required sessions.
-    // A name-keyed model would resolve both when the athlete trained one.
+    // A person may rename two sessions alike (the rename path touches name
+    // only). Two same-named sessions in one week are two different required
+    // sessions; a name-keyed model would resolve both when the athlete
+    // trained one.
     const plan = generatePlan({ ...BASE, goal: 'bikini', daysPerWeek: 6 });
-    const names = plan.workouts.map((w) => w.name);
+    const renamed = plan.workouts.map((w, i) => (i < 2 ? { ...w, name: 'Glutes' } : w));
+    const names = renamed.map((w) => w.name);
     expect(names.filter((n) => n === 'Glutes')).toHaveLength(2);
+    // Still two entries, one per workout, despite the alike names.
+    expect(renamed).toHaveLength(plan.workouts.length);
+    expect(new Set(names).size).toBeLessThan(names.length);
   });
 });
 
@@ -183,12 +201,15 @@ describe('THE INVARIANT THIS AMENDMENT BUILDS ON', () => {
     // which change a routine's primary key.
     //
     // The two things that would break it are both pinned above: identifying a
-    // session by NAME (names repeat), and a writer that reused one row for two
+    // session by NAME (a person may rename two sessions alike), and a writer that reused one row for two
     // workout entries (it does not).
     const plan = generatePlan({ ...BASE, goal: 'bikini', daysPerWeek: 6 });
-    // One required session per workout entry, including the repeats.
+    // One required session per workout entry.
     expect(plan.workouts).toHaveLength(6);
-    const names = plan.workouts.map((w) => w.name);
+    // Rename two alike after generation: still two entries, two routine rows.
+    const renamed = plan.workouts.map((w, i) => (i < 2 ? { ...w, name: 'Glutes' } : w));
+    expect(renamed).toHaveLength(6);
+    const names = renamed.map((w) => w.name);
     expect(new Set(names).size).toBeLessThan(names.length);
   });
 
