@@ -574,6 +574,17 @@ function evaluateFamily(family, ctx) {
     return { exposures, alloc };
   };
 
+  // The session a division's list names the muscle in first: its own day.
+  const ownSessionFor = (m) => {
+    if (!family.division) return null;
+    let best = null;
+    family.sessions.forEach((sess, i) => {
+      const at = sess.muscles.indexOf(m);
+      if (at < 0) return;
+      if (best === null || at < best.at) best = { at, i };
+    });
+    return best ? best.i : null;
+  };
   const sessionRoom = (m, si) => {
     const direct = state.sessionCaps?.[m]?.direct ?? PER_SESSION.directCap;
     if (fixed) {
@@ -739,7 +750,7 @@ function evaluateFamily(family, ctx) {
     order = orderFor(alloc);
   }
   for (let pass = 0; pass < 2; pass++) {
-    const split = sparingFocus(lightCapsFor(exposures, order, usual, hoursPeak, trainable));
+    const split = sparingFocus(lightCapsFor(exposures, order, usual, hoursPeak, trainable, ownSessionFor));
     if (sameCaps(split, state.lightCaps)) break;
     state.lightCaps = split;
     ({ exposures, alloc } = run());
@@ -768,7 +779,7 @@ function evaluateFamily(family, ctx) {
   // When a muscle's number of sessions changes, its light and heavy split is
   // worked out again for its new sessions in the current order.
   const resplit = (m) => {
-    const mine = lightCapsForMuscle(m, exposuresNow(), order, usual, hoursPeak, state.forcedSplit[m] === true);
+    const mine = lightCapsForMuscle(m, exposuresNow(), order, usual, hoursPeak, state.forcedSplit[m] === true, ownSessionFor(m));
     const next = { ...state.lightCaps };
     if (mine && keepsFocusFloor(m, mine)) next[m] = mine; else delete next[m];
     state.lightCaps = next;
@@ -817,7 +828,7 @@ function evaluateFamily(family, ctx) {
         let acted = false;
         if (kind === 'split') {
           tried.split[m] = true;
-          const mine = withAuthoredFloors(m, lightCapsForMuscle(m, exposures, order, usual, hoursPeak, true));
+          const mine = withAuthoredFloors(m, lightCapsForMuscle(m, exposures, order, usual, hoursPeak, true, ownSessionFor(m)));
           if (mine && keepsFocusFloor(m, mine)) {
             state.lightCaps = { ...state.lightCaps, [m]: mine };
             state.forcedSplit = { ...state.forcedSplit, [m]: true };
@@ -1177,7 +1188,7 @@ function maxSlotsPerSession(alloc, m) {
  * clear within that gap. `force` marks the light exposures even when a full
  * dose would clear (the readiness check's split step).
  */
-function lightCapsForMuscle(m, exposures, order, usual, hoursPeak, force = false) {
+function lightCapsForMuscle(m, exposures, order, usual, hoursPeak, force = false, ownSession = null) {
   const list = exposures[m] || [];
   if (list.length < 2) return null;
   const n = order.length;
@@ -1192,6 +1203,15 @@ function lightCapsForMuscle(m, exposures, order, usual, hoursPeak, force = false
   });
   let longest = gaps[0];
   for (const g of gaps) if (g.h > longest.h + 1e-9) longest = g;
+  // A division's own day for the muscle (the session whose list names it
+  // first: the shoulders day for the side delts) is its heavy session, and
+  // the other exposures are the light ones, as a coach writes the week
+  // (founder decision 2026-10-10, D219 addendum 4). Only where the longest
+  // gap does not already follow that day.
+  if (Number.isFinite(ownSession)) {
+    const own = gaps.find((g) => g.session === ownSession);
+    if (own) longest = own;
+  }
   const heavyT90 = RECOVERED_SHARE_OF_CLOCK * hoursPeak(m, HEAVY_LIGHT.heavyDirectHigh);
   const mine = {};
   for (const g of gaps) {
@@ -1206,10 +1226,10 @@ function lightCapsForMuscle(m, exposures, order, usual, hoursPeak, force = false
   return Object.keys(mine).length ? mine : null;
 }
 
-function lightCapsFor(exposures, order, usual, hoursPeak, trainable) {
+function lightCapsFor(exposures, order, usual, hoursPeak, trainable, ownSessionFor = () => null) {
   const caps = {};
   for (const m of trainable) {
-    const mine = lightCapsForMuscle(m, exposures, order, usual, hoursPeak, false);
+    const mine = lightCapsForMuscle(m, exposures, order, usual, hoursPeak, false, ownSessionFor(m));
     if (mine) caps[m] = mine;
   }
   return caps;

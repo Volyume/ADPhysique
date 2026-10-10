@@ -74,3 +74,15 @@ describe('the session lists carry the standard', () => {
     }
   });
 });
+
+describe("men's physique trains legs once a week (founder decision 2026-10-10, D219 addendum 4)", () => {
+  test('one session lists quads, hamstrings and glutes at every day count, and the standard says one', () => {
+    for (const days of [3, 4, 5, 6]) {
+      const sessions = DIVISION_MATRIX.mens_physique[days];
+      for (const m of ['quads', 'hamstrings', 'glutes']) {
+        const listed = sessions.filter((s) => s.muscles.includes(m)).length;
+        expect({ days, m, listed, standard: divisionSessions('mens_physique', m, days) }).toEqual({ days, m, listed: 1, standard: 1 });
+      }
+    }
+  });
+});

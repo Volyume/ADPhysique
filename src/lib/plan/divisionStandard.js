@@ -43,13 +43,14 @@ export const DIVISION_STANDARD = Object.freeze({
       chest: 10, back: 12, side_delts: 10, rear_delts: 6, biceps: 8, triceps: 8,
       quads: 8, hamstrings: 6, glutes: 4, calves: 8, abs: 8,
     }),
-    // Legs once a week in the 3- and 5-day weeks (the modal 5-day is a
-    // body-part week with one leg day; 3 to 3 among named athletes on once
-    // against twice), twice in the upper/lower 4-day week and the push/pull/
-    // legs 6-day week, which is how the only 4-day and 6-day sources run.
+    // Legs once a week at every day count (founder decision 2026-10-10,
+    // register D219 addendum 4: a men's physique week is never two leg days;
+    // the judging excludes the upper legs under board shorts, and named
+    // athletes Hendrickson, Buendia and Bilal train legs once). The other
+    // days are upper-focused: width, detail, shoulders and arms.
     sessions: Object.freeze({
-      quads: Object.freeze({ 3: 1, 4: 2, 5: 1, 6: 2 }),
-      hamstrings: Object.freeze({ 3: 1, 4: 2, 5: 1, 6: 2 }),
+      quads: Object.freeze({ 3: 1, 4: 1, 5: 1, 6: 1 }),
+      hamstrings: Object.freeze({ 3: 1, 4: 1, 5: 1, 6: 1 }),
       glutes: Object.freeze({ 3: 1, 4: 1, 5: 1, 6: 1 }),
       calves: Object.freeze({ 3: 2, 4: 2, 5: 2, 6: 2 }),
     }),
@@ -157,7 +158,7 @@ export const EVIDENCE = Object.freeze({
   'mens_physique.directFloor.glutes': 'S: gluteal 9 (0 to 30), the lowest of the men\'s divisions; glutes are not judged in board shorts (file 06). Maintenance-band top.',
   'mens_physique.directFloor.calves': 'S: triceps surae 16; the survey authors note calves as a tiebreaker (file 06 section 5). General standard.',
   'mens_physique.directFloor.abs': 'S: abdominals 15, the highest of the men\'s divisions; the waist and abs are judged (file 06 section 1.1). Two above the general standard.',
-  'mens_physique.sessions.quads': 'File 06 section 3.1: 5-day modal is a body-part week with one leg day (Hendrickson, Buendia); the only 4-day source is upper/lower twice (Hanson); 6-day is push/pull/legs twice (Terry, Cook); no 3-day week found, the 3-day follows the 5-day\'s one leg day.',
+  'mens_physique.sessions.quads': 'Founder decision 2026-10-10 (register D219 addendum 4): one leg day a week at every day count. File 06 section 3.1: Hendrickson, Buendia and Bilal train legs once; the upper-focused 4- to 6-day week is Bilal\'s (M6b); the judging excludes the upper legs (IFBB 2017 rules).',
   'mens_physique.sessions.hamstrings': 'As quads (file 06 section 3.1).',
   'mens_physique.sessions.glutes': 'S: gluteal 9, once a week on the leg day (file 06 section 3.1; no source gives glutes a second day).',
   'mens_physique.sessions.calves': 'Calves twice a week, on the leg day and as an upper-day finisher (file 09 B2: Lunsford calves on two days; file 06 section 5: calves a tiebreaker).',

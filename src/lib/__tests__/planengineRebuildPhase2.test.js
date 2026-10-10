@@ -86,8 +86,11 @@ describe('Phase 2 benchmark: division specialisation', () => {
     expect(names).not.toContain('Upper A');
     expect(names.some(n => /width/i.test(n))).toBe(true);
     expect(names).toEqual(expect.arrayContaining(['Upper A (Width)', 'Upper B (Detail)']));
+    // Founder decision 2026-10-10 (D219 addendum 4): one leg day a week;
+    // the fourth day is shoulders and arms.
     expect(names.filter(n => /upper/i.test(n))).toHaveLength(2);
-    expect(names.filter(n => /lower/i.test(n))).toHaveLength(2);
+    expect(names.filter(n => /legs/i.test(n))).toHaveLength(1);
+    expect(names.some(n => /shoulders \+ arms/i.test(n))).toBe(true);
     const uppers = mp4.workouts.filter(w => /upper/i.test(w.name));
     for (const w of uppers) {
       // Back and side delts lead: the first lift of each upper is a
