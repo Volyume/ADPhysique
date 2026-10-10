@@ -332,13 +332,15 @@ export function allocatePeakWeek({
       }
     }
   } else {
-    placeRound(muscles, 0);
+    // Every muscle's first exercise is placed whatever the session's length
+    // (the standard floor, founder order 2026-10-10).
+    placeRound(muscles, 0, true);
     // A full-body week (`twiceFirst`, the planner's big five): once every
     // muscle has its first exercise, those muscles' further sessions open
     // before any set is added, so the week's time goes to training the big
     // muscles twice, as a coach programmes a full-body week, before the
     // smaller muscles' sets (review 2026-10-05, finding 6).
-    placeRemaining(muscles.filter((m) => twiceFirst.includes(m) && roles[m].role !== ROLE.FOCUS));
+    placeRemaining(muscles.filter((m) => twiceFirst.includes(m) && roles[m].role !== ROLE.FOCUS), true);
     placeRemaining(muscles.filter((m) => roles[m].role === ROLE.FOCUS), true);
   }
 
@@ -395,6 +397,13 @@ export function allocatePeakWeek({
     // never cut to fit the session length; a session that runs over says so
     // (and first shortens the smaller muscles' rest, below).
     { members: growers.filter((m) => roles[m].role === ROLE.FOCUS), level: floorOf, openings: true, valued: true, ignoreTime: true },
+    // Founder order 2026-10-10 (register D219 addendum, the standard floor):
+    // no muscle's standard is cut to fit the session length or the day count.
+    // The growth floor of every standard muscle is placed the way a focus
+    // muscle's sets are: past the session's length and the D45 ceilings when
+    // it must be, with the session's real length reported (`overMinutes`,
+    // `overCeilings`). Time and the ceilings bind only the growth above the
+    // floors (step 4).
     // Founder answer 2026-10-05, "Big muscles first": the big muscles
     // (`bigFirst`) open their further sessions and reach their growth floor
     // before a smaller muscle gets another session or its growth sets, so a
@@ -402,27 +411,38 @@ export function allocatePeakWeek({
     {
       members: growers.filter((m) => roles[m].role !== ROLE.FOCUS && bigFirst.includes(m)),
       opens: muscles.filter((m) => roles[m].role !== ROLE.FOCUS && bigFirst.includes(m)),
-      level: floorOf, openings: true, valued: true,
+      level: floorOf, openings: true, valued: true, ignoreTime: true,
     },
     {
       members: growers.filter((m) => roles[m].role !== ROLE.FOCUS && !bigFirst.includes(m)),
       opens: muscles.filter((m) => roles[m].role !== ROLE.FOCUS && !bigFirst.includes(m)),
-      level: floorOf, openings: true, valued: true,
+      level: floorOf, openings: true, valued: true, ignoreTime: true,
     },
   ];
-  for (const { members, level, openings, valued, ignoreTime = false, opens = null } of floorSteps) {
+  // The standard in the muscle's own sets (founder order 2026-10-10, the
+  // standard floor; science.js STANDARD_DIRECT_FLOOR): after the fractional
+  // floors, every growing muscle is brought to its direct floor on its own
+  // exercises, whatever credit the other muscles' sets gave it, past the
+  // session's length and ceilings when it must be. A focus muscle and a
+  // standard one keep the same standard; the focus adds on top of it.
+  floorSteps.push({
+    members: growers, level: (m) => Math.min(roles[m].directFloor || 0, roles[m].peak), openings: true, valued: true, ignoreTime: true, measure: 'direct',
+  });
+  for (const { members, level, openings, valued, ignoreTime = false, opens = null, measure = 'fractional' } of floorSteps) {
     // The other muscles' further sessions open once the focus muscles have
     // their sets (step 1): the big muscles' first, then the rest.
-    if (opens) placeRemaining(opens);
+    if (opens) placeRemaining(opens, ignoreTime);
     let floorGuard = 2000;
     while (floorGuard-- > 0) {
       let best = null;
       for (const allowOpening of openings ? [false, true] : [false]) {
         for (const m of members) {
           const target = level(m);
-          const W = weekly[m]?.fractional || 0;
-          // Up to the level, the last set allowed to carry it just past.
-          if (W + EPS >= target || W + 1 > roles[m].peak + EPS) continue;
+          const W = weekly[m]?.[measure] || 0;
+          // Up to the level, the last set allowed to carry it just past. The
+          // direct floor is a standard the peak never caps (a muscle's own
+          // sets are the standard; the fractional peak binds the growth above).
+          if (W + EPS >= target || (measure === 'fractional' && W + 1 > roles[m].peak + EPS)) continue;
           const step = bestStepFor(m, { exposures, sessions, fits, openSlot, slotsAllowed, gapAfter, allowOpening, ignoreTime });
           if (!step) continue;
           const [focus, standard] = valued ? closes(step) : [0, 0];
@@ -522,7 +542,12 @@ function bestStepFor(m, {
     // Prefer the session with fewer of m's sets (spreads load), then the one
     // followed by the longer gap, then the earlier one.
     const here = mine.reduce((a, x) => a + x.sets, 0);
-    const key = [here, step.opening ? 1 : 0, -(Array.isArray(gapAfter) ? (gapAfter[s] || 0) : 0), s];
+    // A new exercise goes to the muscle's session with fewer exercises
+    // already (founder order 2026-10-10: the standard's exercises are spread
+    // over the week's sessions, not piled into one past the D45 ceiling while
+    // its twin has room).
+    const crowd = step.opening ? sessions[s].slots.filter((x) => x.sets > 0).length : 0;
+    const key = [here, step.opening ? 1 : 0, crowd, -(Array.isArray(gapAfter) ? (gapAfter[s] || 0) : 0), s];
     if (!best || lexLess(key, best.key)) best = { key, step };
   }
   return best ? best.step : null;

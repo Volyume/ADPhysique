@@ -117,7 +117,10 @@ export function buildPlan(inputs) {
     experience: inputs.experience,
     firstBlock: inputs.firstBlock !== false,
     nutritionPhase: inputs.nutritionPhase,
-    trainedMuscles: fixed ? fixed.muscles : (division ? Array.from(new Set(division.sessions.flatMap((s) => s.muscles))) : null),
+    // A division's session list no longer limits which muscles are trained
+    // (founder order 2026-10-10, the standard floor): a muscle it leaves out
+    // trains in its half's sessions (families.sessionsAllowing).
+    trainedMuscles: fixed ? fixed.muscles : null,
   });
   const roles = fixed ? heldWhereAuthored(assigned, fixed) : assigned;
   const factor = Number.isFinite(inputs.learnedFactor)
@@ -402,7 +405,19 @@ function evaluateFamily(family, ctx) {
   const allowedBy = {};
   for (const m of Object.keys(roles)) {
     if (!roles[m].direct) continue;
-    allowedBy[m] = fixed ? fixed.sessionsFor(m) : sessionsAllowing(family, m, { focus: roles[m].role === ROLE.FOCUS });
+    // The sessions a muscle's standard needs (design 4.4: two from 12 weekly
+    // sets with 4 or more sessions); a division list naming fewer opens the
+    // muscle's half of the body to it (founder order 2026-10-10).
+    // One session holds at most the muscle's allowed exercises at the
+    // isolation cap, under the direct cap; a standard that does not fit in
+    // one session needs two (biceps, triceps and calves at 8 with two
+    // exercises of 3 sets; back at 12 under the cap of 8).
+    const oneSessionRoom = Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation);
+    const standardNeeds = roles[m].role !== ROLE.MAINTENANCE
+      && ((roles[m].peak >= FREQUENCY.preferTwoExposuresFromWeekly && n >= FREQUENCY.preferTwoExposuresMinSessions)
+        || (BIG_MUSCLES.has(m) && n >= 3)
+        || (roles[m].directFloor || 0) > oneSessionRoom) ? 2 : 1;
+    allowedBy[m] = fixed ? fixed.sessionsFor(m) : sessionsAllowing(family, m, { focus: roles[m].role === ROLE.FOCUS, atLeast: standardNeeds });
   }
   const trainable = Object.keys(allowedBy).filter((m) => allowedBy[m].length > 0 && (fixed || (ctx.choices[m] || []).length > 0))
     .sort((a, b) => muscleIndex(a) - muscleIndex(b));
@@ -420,17 +435,25 @@ function evaluateFamily(family, ctx) {
     // glutes, chest, back) in at least two sessions, as full-body programming
     // does; design 4.4's preference for two starts only at four sessions.
     const fullBodyBig = family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m);
-    k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, two || fullBodyBig ? 2 : 1);
+    // Founder order 2026-10-10 (the standard floor; 05-DIVISION-STANDARDS.md
+    // section 2): the big muscles train twice a week at three or more
+    // sessions in every structure, a division's included.
+    const bigTwice = BIG_MUSCLES.has(m) && n >= 3 && roles[m].role !== ROLE.MAINTENANCE;
+    const floorNeedsTwo = roles[m].role !== ROLE.MAINTENANCE
+      && (roles[m].directFloor || 0) > Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation);
+    k[m] = fixed ? allowedBy[m].length : Math.min(allowedBy[m].length, two || fullBodyBig || bigTwice || floorNeedsTwo ? 2 : 1);
   }
   // The two sessions are kept: the search and the readiness fixes never take
   // a big-five muscle of a full-body week below them (the search runs without
   // the clock, so it once traded the quads' second session for a second
   // rear-delt exercise, and the clock then left the quads one squat a week;
   // review 2026-10-05, finding 6).
-  const twiceAtLeast = (m) => !fixed && family.key.startsWith('full_body') && FULL_BODY_TWICE.has(m) && allowedBy[m].length >= 2;
+  const twiceAtLeast = (m) => !fixed && roles[m].role !== ROLE.MAINTENANCE && allowedBy[m].length >= 2
+    && ((BIG_MUSCLES.has(m) && n >= 3)
+      || (roles[m].directFloor || 0) > Math.min(PER_SESSION.directCap, exercisesAllowed(m) * SETS_PER_EXERCISE.capIsolation));
   const lowestK = (m) => (twiceAtLeast(m) ? 2 : 1);
   const state = {
-    k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, slowerCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
+    k, lightCaps: {}, forcedSplit: {}, maxSlots: {}, sessionCaps: {}, slowerCaps: {}, standardCaps: {}, roles, placementOrder: family.sessions.map((_, i) => i),
   };
 
   // Each muscle's sessions, spaced as evenly as the current cycle order allows.
@@ -470,6 +493,15 @@ function evaluateFamily(family, ctx) {
     }
     // A slower recoverer's lower direct cap (design 4.4), where it was found
     // to keep every weekly total (below).
+    // A muscle whose standard in its own sets the fractional session cap
+    // would deny (another muscle's credited sets fill it, a glute focus's hip
+    // thrusts on the hamstrings) takes a higher fractional cap in the plan's
+    // own facts (founder order 2026-10-10: the standard is never cut; the cap
+    // marks where extra benefit stops being detectable, not a harm). The
+    // plan's rows carry it, so the week server places the same sets.
+    for (const [m, f] of Object.entries(state.standardCaps || {})) {
+      caps[m] = { direct: caps[m]?.direct ?? PER_SESSION.directCap, fractional: Math.max(caps[m]?.fractional ?? PER_SESSION.fractionalCap, f) };
+    }
     for (const [m, cap] of Object.entries(state.slowerCaps || {})) {
       caps[m] = { direct: Math.min(caps[m]?.direct ?? PER_SESSION.directCap, cap), fractional: caps[m]?.fractional ?? PER_SESSION.fractionalCap };
     }
@@ -520,10 +552,16 @@ function evaluateFamily(family, ctx) {
   // (founder rule 2026-10-04: a focus muscle's volume is never cut): where
   // its light caps would, it keeps full sessions and the readiness check
   // reports the tighter recovery instead.
+  // Nor does a light session take any growing muscle below its standard in
+  // its own sets (founder order 2026-10-10, the standard floor): the split
+  // is dropped and the readiness check reports the tighter recovery.
   const keepsFocusFloor = (m, caps) => {
-    if (state.roles[m]?.role !== ROLE.FOCUS || !caps) return true;
+    const r = state.roles[m];
+    if (!r || r.role === ROLE.MAINTENANCE || !caps) return true;
     const room = (exposures[m] || []).reduce((a, si) => a + Math.min(Number.isFinite(caps[si]) ? caps[si] : Infinity, sessionRoom(m, si)), 0);
-    return room + 1e-9 >= (state.roles[m].growthFloor || 0);
+    if (room + 1e-9 < (r.directFloor || 0)) return false;
+    if (r.role !== ROLE.FOCUS) return true;
+    return room + 1e-9 >= (r.growthFloor || 0);
   };
   // Fixed structure: a light session never holds fewer sets than the person's
   // own exercises for the muscle do at their 2-set floors (every authored
@@ -582,7 +620,10 @@ function evaluateFamily(family, ctx) {
       if (state.k[m] >= allowedBy[m].length || W(m) + 1 > state.roles[m].peak + 1e-9) return false;
       const capped = (exposures[m] || []).some((si) => directIn(alloc, si, m) >= sessionCapOf(m, si));
       const blocked = W(m) + 1e-9 < floorOf(m) && alloc.limitedBy[m] === 'limits';
-      return capped || blocked;
+      // Short of its standard in its own sets (founder order 2026-10-10):
+      // another session is tried whatever the fractional count says.
+      const shortOfStandard = (alloc.weekly[m]?.direct || 0) + 1e-9 < (state.roles[m].directFloor || 0);
+      return capped || blocked || shortOfStandard;
     }).sort((a, b) => ((floorOf(b) - W(b)) - (floorOf(a) - W(a))) || (muscleIndex(a) - muscleIndex(b)));
     const crowded = crowdedSessions(alloc, exposures, trainable, state.roles, ctx.choices, state.maxSlots);
     const lowers = trainable.filter((m) => state.k[m] > lowestK(m)
@@ -605,6 +646,27 @@ function evaluateFamily(family, ctx) {
       rejected.add(`${m}:${state.k[m]}:${d}`);
     }
     if (!moved) break;
+  }
+  // The standard in each muscle's own sets, where the search left it short
+  // (its sessions hold the sets but their fractional cap is filled by the
+  // other muscles' credits): the plan's fractional cap for that muscle rises
+  // a set at a time until the standard is placed.
+  for (let guard = 0; guard < 8 && !fixed; guard++) {
+    const short = trainable.filter((m) => state.roles[m].role !== ROLE.MAINTENANCE
+      && (alloc.weekly[m]?.direct || 0) + 1e-9 < (state.roles[m].directFloor || 0));
+    if (short.length === 0) break;
+    const raise = (j) => {
+      state.standardCaps[j] = (state.standardCaps[j] ?? (state.sessionCaps?.[j]?.fractional ?? PER_SESSION.fractionalCap)) + 1;
+    };
+    for (const m of short) {
+      raise(m);
+      // The muscles its exercises credit, whose filled cap refuses the set
+      // (a glute focus at its cap refuses the hamstrings' hinge).
+      for (const c of ctx.choices[m] || []) {
+        for (const j of Object.keys(c.credits || {})) if (j !== m && state.roles[j]?.direct) raise(j);
+      }
+    }
+    ({ exposures, alloc } = run({ unlimited: true }));
   }
   ({ exposures, alloc } = run());
 
@@ -739,7 +801,12 @@ function evaluateFamily(family, ctx) {
         }
         if (!acted) continue;
         rebuild();
-        const keepsFloor = (alloc.weekly[m]?.fractional || 0) + 1e-9 >= Math.min(floor, before.alloc.weekly[m]?.fractional || 0);
+        // A fix is kept only if the muscle stays at its growth floor and, in
+        // its own sets, at its standard (founder order 2026-10-10): a
+        // readiness gain never costs the standard, nor any other muscle its own.
+        const keepsFloor = (alloc.weekly[m]?.fractional || 0) + 1e-9 >= Math.min(floor, before.alloc.weekly[m]?.fractional || 0)
+          && trainable.every((j) => (alloc.weekly[j]?.direct || 0) + 1e-9
+            >= Math.min(state.roles[j].directFloor || 0, before.alloc.weekly[j]?.direct || 0));
         if (keepsFloor && readinessDeficit(sim) < deficit - 1e-9) {
           notes.push({ muscle: m, kind, peak: Math.round((alloc.weekly[m]?.fractional || 0) * 10) / 10 });
           improved = true;
@@ -813,6 +880,37 @@ function evaluateFamily(family, ctx) {
     }
   }
 
+  // The standard, last (founder order 2026-10-10): whatever the readiness
+  // fixes, the ramp and the slower cap did, a growing muscle short of its
+  // standard in its own sets gets it back. A light split that left it short
+  // is dropped (the readiness check reports the tighter recovery, as it does
+  // for a focus muscle); else its fractional cap, and its credited muscles',
+  // rise a set at a time, the plan rebuilt after each change.
+  for (let guard = 0; guard < 8 && !fixed; guard++) {
+    const short = trainable.filter((m) => state.roles[m].role !== ROLE.MAINTENANCE
+      && (alloc.weekly[m]?.direct || 0) + 1e-9 < (state.roles[m].directFloor || 0));
+    if (short.length === 0) break;
+    for (const m of short) {
+      if (state.lightCaps[m]) {
+        const next = { ...state.lightCaps };
+        delete next[m];
+        state.lightCaps = next;
+        const forced = { ...state.forcedSplit };
+        delete forced[m];
+        state.forcedSplit = forced;
+        continue;
+      }
+      state.standardCaps[m] = (state.standardCaps[m] ?? (state.sessionCaps?.[m]?.fractional ?? PER_SESSION.fractionalCap)) + 1;
+      for (const c of ctx.choices[m] || []) {
+        for (const j of Object.keys(c.credits || {})) {
+          if (j === m || !state.roles[j]?.direct) continue;
+          state.standardCaps[j] = (state.standardCaps[j] ?? (state.sessionCaps?.[j]?.fractional ?? PER_SESSION.fractionalCap)) + 1;
+        }
+      }
+    }
+    rebuild();
+  }
+
   const finalScore = rotationPenalty({ loads: loadsOf(alloc), order, layouts, hoursFor: hoursPeak });
   const objective = trainable.reduce((sum, m) => {
     const r = state.roles[m];
@@ -869,6 +967,7 @@ function gapAfterSessions(order, layout) {
 function floorShortfall(roles, weekly, muscles) {
   let maintenance = 0;
   let focus = 0;
+  let direct = 0;
   let big = 0;
   let standard = 0;
   for (const m of muscles) {
@@ -877,6 +976,10 @@ function floorShortfall(roles, weekly, muscles) {
     const W = weekly[m]?.fractional || 0;
     const floor = Math.min(r.growthFloor || 0, r.peak);
     maintenance += Math.max(0, Math.min(ROLE_TARGETS.maintenance.low, floor) - W);
+    // The standard in the muscle's own sets (founder order 2026-10-10): a
+    // structure that leaves a muscle short of it loses to one that does not,
+    // before the fractional floors are compared.
+    direct += Math.max(0, (r.directFloor || 0) - (weekly[m]?.direct || 0));
     const short = Math.max(0, floor - W);
     if (r.role === ROLE.FOCUS) focus += short;
     // Founder answer 2026-10-05 ("Big muscles first"): the big five's
@@ -884,7 +987,7 @@ function floorShortfall(roles, weekly, muscles) {
     else if (BIG_MUSCLES.has(m)) big += (r.weight || 1) * short;
     else standard += (r.weight || 1) * short;
   }
-  return [maintenance, focus, big, standard];
+  return [maintenance, focus, direct, big, standard];
 }
 
 const sameVector = (a, b) => a.every((x, i) => Math.abs(x - b[i]) <= 1e-9);

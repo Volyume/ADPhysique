@@ -135,20 +135,31 @@ export function divisionFamily(divisionMatrix, goal, sessionsPerWeek) {
  * exposure for a muscle being brought up, design 4.5 step 5). Indexes in the
  * family's order.
  */
-export function sessionsAllowing(family, muscle, { focus = false } = {}) {
-  const out = [];
+export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } = {}) {
+  const listed = [];
+  const half = bodyHalf(muscle);
+  const sameHalfSessions = [];
   family.sessions.forEach((sess, i) => {
-    if (sess.muscles.includes(muscle)) { out.push(i); return; }
-    if (focus && !family.division) {
-      const half = bodyHalf(muscle);
-      // Abs train on any day, so they never make a session part of a half:
-      // a push day that lists abs is an upper-body session (no glute work on
-      // it, no lateral raises on a leg day).
-      const sameHalf = sess.muscles.some((m) => m !== 'abs' && bodyHalf(m) === half);
-      if (sameHalf) out.push(i);
-    }
+    if (sess.muscles.includes(muscle)) { listed.push(i); return; }
+    // Abs train on any day, so they never make a session part of a half:
+    // a push day that lists abs is an upper-body session (no glute work on
+    // it, no lateral raises on a leg day).
+    const sameHalf = sess.muscles.some((m) => m !== 'abs' && bodyHalf(m) === half);
+    if (sameHalf) sameHalfSessions.push(i);
   });
-  return out;
+  // Founder order 2026-10-10 (register D219 addendum, the standard floor): a
+  // division's session list adds emphasis on top of the standard routine and
+  // never takes a muscle's standard away. So a muscle the list names in fewer
+  // sessions than its standard needs (`atLeast`, the planner's exposures for
+  // its growth floor), or not at all, may also train in any session of its
+  // half of the body; the listed sessions stay first in the order so the
+  // division's own structure is kept where it already serves the muscle. A
+  // focus muscle takes its half's sessions in every family (design 4.5 step
+  // 5), a division's included.
+  if (focus || listed.length < atLeast) {
+    return [...listed, ...sameHalfSessions.filter((i) => !listed.includes(i))].sort((a, b) => a - b);
+  }
+  return listed;
 }
 
 /**

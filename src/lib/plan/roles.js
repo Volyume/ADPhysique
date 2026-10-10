@@ -31,7 +31,7 @@
  * Pure: no I/O, no clock, no randomness.
  */
 import { ROLE } from './bands';
-import { ROLE_TARGETS, GROWTH_FLOOR, OBJECTIVE, BLOCK } from './science';
+import { ROLE_TARGETS, GROWTH_FLOOR, OBJECTIVE, BLOCK, STANDARD_DIRECT_FLOOR, STANDARD_DIRECT_FLOOR_DEFAULT } from './science';
 import { GOAL_OVERLAYS } from '../coachingGoals';
 
 /** Every muscle key the plan knows (algorithms.js VOLUME_LANDMARKS keys). */
@@ -71,9 +71,10 @@ const AGGRESSIVE_CUT_PHASES = new Set(['aggressive_cut']);
  * @param {string} [input.nutritionPhase]        aggressive_cut lowers the peaks by 2
  * @param {string[]|null} [input.trainedMuscles] muscles the plan's sessions can train (a division's
  *                                                 session lists); null means every muscle
- * @returns {Object<string, { role: string, weight: number, peak: number, growthFloor: number, direct: boolean }>}
- *   `peak` and `growthFloor` are fractional sets a week; `direct` says whether the muscle gets
- *   exercises of its own (false: it is held on indirect work).
+ * @returns {Object<string, { role: string, weight: number, peak: number, growthFloor: number, directFloor: number, direct: boolean }>}
+ *   `peak` and `growthFloor` are fractional sets a week; `directFloor` is the standard in the muscle's own
+ *   sets (founder order 2026-10-10); `direct` says whether the muscle gets exercises of its own (false: it
+ *   is held on indirect work).
  */
 export function assignRoles({
   goal = 'general', focusMuscles = [], addedMuscles = [], experience = 'intermediate',
@@ -102,14 +103,20 @@ export function assignRoles({
         weight: OBJECTIVE.roleWeight.focus,
         peak: ROLE_TARGETS.focus.peak - cut,
         growthFloor: GROWTH_FLOOR.focus,
+        directFloor: STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT,
         direct: true,
       };
       continue;
     }
 
     const judged = typeof o === 'number' && o >= 1.0;
-    const deEmphasised = typeof o === 'number' && o < 1.0;
-    const growth = (GROWTH_MUSCLES.includes(m) && !deEmphasised) || judged || added.has(m);
+    // Founder order 2026-10-10 (register D219 addendum, the standard floor):
+    // every growth muscle keeps its standard role in every goal. A division's
+    // overlay below 1.0 says where the emphasis is NOT, never that the muscle
+    // is held: men's physique still trains its legs for growth, bikini its
+    // chest and arms. The overlay raises a muscle's weight above standard or
+    // leaves it at standard; it never lowers it to maintenance.
+    const growth = GROWTH_MUSCLES.includes(m) || judged || added.has(m);
 
     if (growth && canTrain) {
       const weight = typeof o === 'number' && o > 1.0
@@ -120,6 +127,7 @@ export function assignRoles({
         weight,
         peak: standardPeak - cut,
         growthFloor: GROWTH_FLOOR.standard,
+        directFloor: STANDARD_DIRECT_FLOOR[m] ?? STANDARD_DIRECT_FLOOR_DEFAULT,
         direct: true,
       };
       continue;
@@ -127,15 +135,15 @@ export function assignRoles({
 
     if (OPT_IN_MUSCLES.includes(m)) continue;
 
-    // Held at maintenance: directly when the plan's sessions train it and a
-    // division lists it, otherwise on indirect work alone.
-    const directMaintenance = deEmphasised && canTrain && GROWTH_MUSCLES.includes(m);
+    // Held at maintenance on indirect work alone: the muscles a goal does
+    // not judge (front delts from presses, traps from rows and deadlifts).
     out[m] = {
       role: ROLE.MAINTENANCE,
       weight: 0,
-      peak: directMaintenance ? MAINTENANCE_TARGET.deEmphasised : MAINTENANCE_TARGET.indirect,
+      peak: MAINTENANCE_TARGET.indirect,
       growthFloor: 0,
-      direct: directMaintenance,
+      directFloor: 0,
+      direct: false,
     };
   }
   return out;

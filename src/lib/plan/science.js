@@ -106,6 +106,31 @@ export const GROWTH_FLOOR = Object.freeze({
   focus: 20,
 });
 
+// ── The standard, in DIRECT sets a week (founder order 2026-10-10) ───────
+// The bottom of the baseline every category keeps for an intermediate
+// (05-DIVISION-STANDARDS.md section 1), in the muscle's own exercises: the
+// half credit a press gives the triceps never stands in for the triceps'
+// own work, and no division, focus pick, session length or day count takes
+// it away. Muscles not listed take STANDARD_DIRECT_FLOOR_DEFAULT when trained
+// directly.
+export const STANDARD_DIRECT_FLOOR = Object.freeze({
+  chest: 10,
+  back: 12,
+  quads: 10,
+  hamstrings: 8,
+  glutes: 8,
+  calves: 8,
+  biceps: 8,
+  triceps: 8,
+  side_delts: 8,
+  rear_delts: 6,
+  abs: 6,
+  traps: 4,
+  adductors: 4,
+  forearms: 4,
+});
+export const STANDARD_DIRECT_FLOOR_DEFAULT = 4;
+
 // ── The block (design 4.2, 4.14; founder Q5 = A) ─────────────────────────
 export const BLOCK = Object.freeze({
   weeks: 6,
@@ -225,6 +250,8 @@ export const EVIDENCE = Object.freeze({
   'ROLE_TARGETS.raised': { grade: 'CONV', source: 'A standard muscle raised by check-ins above 20, up to 24 (design 4.2, 4.10)' },
   'GROWTH_FLOOR.standard': { grade: 'A', source: 'Bottom of the normal growth band; weekly dose is A-graded, clocks D (design 4.14; S STOP 5)' },
   'GROWTH_FLOOR.focus': { grade: 'A', source: 'Bottom of the focus band (design 4.14)' },
+  STANDARD_DIRECT_FLOOR: { grade: 'D', source: "Founder order 2026-10-10 (the standard is never taken away); the bottom of the intermediate baseline per muscle in 05-DIVISION-STANDARDS.md section 1 (RP landmarks, Schoenfeld 2017), in direct sets" },
+  STANDARD_DIRECT_FLOOR_DEFAULT: { grade: 'CONV', source: 'Founder order 2026-10-10: a directly trained muscle not in the table keeps 4 sets of its own a week' },
   'BLOCK.weeks': { grade: 'CONV', source: 'The 6-week block stays; the evidence is neutral on block length (design 4.2)' },
   'BLOCK.peakWeek': { grade: 'CONV', source: 'Climb reaches the peak in week 5 (design 4.2)' },
   'BLOCK.week1BelowPeak': { grade: 'CONV', source: 'Week 1 starts at max(floors, peak - 8): a 4-week climb at +2 a week (design 4.2; S F11)' },
