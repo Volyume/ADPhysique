@@ -167,9 +167,14 @@ describe('D46 exemptions', () => {
     // overlay rule: delivery stays ABOVE the MEV + 2 trim floor (8), which
     // it could not if the trim had bitten. (coachDivisions.test.js pins
     // figure's exact stage-2b threshold.)
+    // Founder order 2026-10-10 (the standard floor): the 5-day figure and
+    // women's physique lists hold two lower sessions and no glute work on an
+    // upper day, so this legacy fallback generator (one hip thrust a lower
+    // session) delivers the 8-set glute standard exactly; the live planner
+    // (planner.standardFloor.test.js) carries it higher on the same lists.
     for (const goal of ['figure', 'womens_physique']) {
       const plan = generatePlan({ ...BASE, daysPerWeek: 5, goal });
-      expect(plan.weeklyVolumeSummary.glutes.plannedSets).toBeGreaterThan(8);
+      expect(plan.weeklyVolumeSummary.glutes.plannedSets).toBeGreaterThanOrEqual(8);
     }
   });
 

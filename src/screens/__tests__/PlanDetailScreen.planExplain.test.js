@@ -162,7 +162,14 @@ describe('"Why this plan" on the plan screen, for a plan with facts', () => {
     expect(text).toContain('4 sessions a week, alternating upper and lower.');
     expect(text).toMatch(/Glutes are your focus: \d+ direct sets a week now, climbing to \d+ by week 5, trained first in Lower A and Lower B\./);
     expect(text).toContain('No exercise goes above 4 sets.');
-    expect(text).toMatch(/At a usual week's spacing, every muscle is estimated at least 90% recovered/);
+    // RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum: the
+    // standard floor wins over the readiness fix). The fixture plan used to
+    // reach "every muscle ... at least 90% recovered"; with every muscle's
+    // standard kept, the readiness line now reports "The exceptions:", each
+    // naming a muscle and a percentage (observed: Glutes about 86% before
+    // Lower B in week 5; Hamstrings about 88%).
+    expect(text).toMatch(/At a usual week's spacing, the plan aims for every muscle to be estimated at least 90% recovered when its next session starts\. The exceptions: /);
+    expect(text).toMatch(/The exceptions: [A-Z][a-z ]+ about \d+%/);
   });
 
   test('the static split note is superseded', async () => {

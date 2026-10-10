@@ -66,16 +66,46 @@ describe('Phase 2 benchmark: division specialisation', () => {
     '%s %i-day leads with a glute movement', (goal, days) => {
       expect(isGluteLead(measure(gen(goal, { days })).lead)).toBe(true);
     });
-  test('MP 4-day is not a generic Upper/Lower (width vs thickness split)', () => {
+  // RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum: the full
+  // standard routine for every muscle, emphasis ADDED, never subtracted). The
+  // old pin wanted a "width" session and a "thickness" session, i.e. a
+  // thickness day built around back, rear delts and traps with the pressing
+  // and lower body thinned. The rebuilt 4-day cell is two uppers and two
+  // lowers (never three uppers and one lower), every growth muscle in at
+  // least two sessions, and what makes it Men's Physique rather than a
+  // generic Upper/Lower is that BOTH uppers lead with back and side delts
+  // (the V-taper's width), the first being named for it.
+  test('MP 4-day is not a generic Upper/Lower (both uppers lead with back and side delts)', () => {
     const names = mp4.workouts.map(w => w.name);
     expect(names).not.toContain('Upper A');
     expect(names.some(n => /width/i.test(n))).toBe(true);
-    expect(names.some(n => /thick/i.test(n))).toBe(true);
+    expect(names.filter(n => /upper/i.test(n))).toHaveLength(2);
+    expect(names.filter(n => /lower/i.test(n))).toHaveLength(2);
+    const uppers = mp4.workouts.filter(w => /upper/i.test(w.name));
+    for (const w of uppers) {
+      // Back leads: the first lift of each upper is a pull-down or row.
+      expect(w.exercises[0].exerciseName).toMatch(/pulldown|pull-up|row/i);
+      // Side delts are in the same session, ahead of any pressing.
+      const lateral = w.exercises.findIndex(e => /lateral raise/i.test(e.exerciseName));
+      const press = w.exercises.findIndex(e => /bench|press/i.test(e.exerciseName));
+      expect(lateral).toBeGreaterThanOrEqual(0);
+      expect(lateral).toBeLessThan(press);
+    }
   });
-  test('Bikini glutes are the highest-volume muscle', () => {
+  // RE-PINNED 2026-10-10 (same order). Old: glutes the highest-volume muscle
+  // of the week. With chest, biceps and triceps now in every division, the
+  // legacy generator's "shoulders" key (side + rear + front delts merged into
+  // one summary line) totals more than glutes: observed bikini 4-day,
+  // shoulders 18 (three delt heads, a lateral-raise and rear-delt week),
+  // glutes 14, hamstrings 12, back 12, quads 8, chest, biceps, triceps,
+  // calves and abs 6. So the rule that stays true: glutes are the
+  // highest-volume SINGLE muscle of the week, above every other key except
+  // the merged delt group, and the highest of the lower body.
+  test('Bikini glutes are the highest-volume single muscle (the merged delt group aside)', () => {
     const s = weeklySets(bik4);
-    const maxMuscle = Object.entries(s).sort((a, b) => b[1] - a[1])[0][0];
-    expect(maxMuscle).toBe('glutes');
+    const others = Object.entries(s).filter(([k]) => k !== 'shoulders' && k !== 'glutes');
+    for (const [, n] of others) expect(s.glutes).toBeGreaterThan(n);
+    expect(s.glutes).toBeGreaterThan(Math.max(s.quads, s.hamstrings, s.calves));
   });
   test('MP back volume >= chest volume', () => {
     const s = weeklySets(mp4);

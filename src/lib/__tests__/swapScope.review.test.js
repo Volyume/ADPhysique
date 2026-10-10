@@ -32,6 +32,11 @@
  *    of each muscle moves in the plan's facts the same way, and the week reads:
  *    2 on the new exercise, 3 on the Machine Hip Thrust, no quads shortfall.
  *    A swap within a muscle, and a plan that is not the active one, move nothing.
+ *
+ * RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum, the standard floor):
+ * the numbers above are the review's, from the planner of that day. The rebuilt plan
+ * serves Lower B's Machine Hip Thrust 4 (not 3) and the Lat Pulldown (Wide Grip) 4 in
+ * Upper A (not Upper B); the rules pinned are unchanged.
  */
 
 jest.mock('../dbCrypto', () => {
@@ -160,24 +165,29 @@ const targetsOf = async (blockId) => {
   return out;
 };
 
-// Upper B: the session whose Lat Pulldown the plan serves 4 sets in week 5
-// (with big muscles first, founder answer 2026-10-05, Upper A's is served 3,
-// which would not test the cap).
+// Upper A: the session whose Lat Pulldown (Wide Grip) the plan serves 4 sets in
+// week 5. RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum, the
+// standard floor): the premise moved from Upper B to Upper A. The rebuilt plan
+// serves the week-5 compounds Upper A: Bench Press 4, Lat Pulldown (Wide Grip) 4,
+// Seated Cable Row 4; Upper B: Bench Press 3, Incline Dumbbell Press 3, Seated
+// Cable Row 4 (it no longer holds a Lat Pulldown at all). Upper A's Lat
+// Pulldown is a compound served 4, above the isolation cap of 3, so the same
+// swaps test the same rule.
 describe('finding 1: a one-off swap is served inside the new exercise\'s own cap', () => {
   const ISOLATION_CAP = exerciseCap('isolation');
 
-  test('the premise: week 5 serves the Upper B Lat Pulldown a compound\'s sets, above an isolation exercise\'s cap', async () => {
+  test('the premise: week 5 serves the Upper A Lat Pulldown a compound\'s sets, above an isolation exercise\'s cap', async () => {
     const { week, routine } = await seedPlan();
-    const rows = await rowsOf(routine('Upper B').id);
+    const rows = await rowsOf(routine('Upper A').id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     expect(lat.exercise.compoundIsolation).toBe('compound');
-    const allocation = await served({ week, routineId: routine('Upper B').id, exercises: rows });
+    const allocation = await served({ week, routineId: routine('Upper A').id, exercises: rows });
     expect(allocation[lat.exercise.id]).toBeGreaterThan(ISOLATION_CAP);
   });
 
   test('swapped for an isolation pulldown for one session it is served 3, on every read, and the plan is untouched', async () => {
     const { week, routine } = await seedPlan();
-    const upper = routine('Upper B');
+    const upper = routine('Upper A');
     const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const isolation = exerciseNamed('Cable Straight-Arm Pulldown');
@@ -203,7 +213,7 @@ describe('finding 1: a one-off swap is served inside the new exercise\'s own cap
 
   test('swapped for a compound the slot\'s sets are kept: the cap is the exercise\'s own, not a cut', async () => {
     const { week, routine } = await seedPlan();
-    const upper = routine('Upper B');
+    const upper = routine('Upper A');
     const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const closeGrip = exerciseNamed('Lat Pulldown (Close Grip)');
@@ -214,7 +224,7 @@ describe('finding 1: a one-off swap is served inside the new exercise\'s own cap
 
   test('the person\'s own typed count is served as typed, even over the swapped-in exercise\'s cap (design 4.3)', async () => {
     const { programmeId, week, routine } = await seedPlan();
-    const upper = routine('Upper B');
+    const upper = routine('Upper A');
     const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const facts = await getProgrammePlanFacts(programmeId);
@@ -226,7 +236,7 @@ describe('finding 1: a one-off swap is served inside the new exercise\'s own cap
 
   test('a permanent swap to the same isolation exercise is served inside the cap on the refetch too', async () => {
     const { userId, week, routine } = await seedPlan();
-    const upper = routine('Upper B');
+    const upper = routine('Upper A');
     const rows = await rowsOf(upper.id);
     const lat = rowNamed(rows, 'Lat Pulldown (Wide Grip)');
     const isolation = exerciseNamed('Cable Straight-Arm Pulldown');
@@ -290,21 +300,23 @@ describe('finding 2: a permanent swap to another muscle moves the slot\'s sets',
     expect(shortfall.glutes ?? 0).toBe(0);
   });
 
-  test('the review\'s case in numbers: Leg Extension 2 sets goes to the glute exercise, the Machine Hip Thrust keeps 3', async () => {
+  test('the review\'s case in numbers: Leg Extension 2 sets goes to the glute exercise, the Machine Hip Thrust keeps 4', async () => {
     const plan = await seedPlan();
     const lowerB = plan.routine('Lower B');
     const rowsBefore = await rowsOf(lowerB.id);
     const before = await served({ week: plan.week, routineId: lowerB.id, exercises: rowsBefore });
     // The premise is the review's plan, as the planner built it then; if the planner's
     // served numbers have since changed, re-read the case, the relations above still hold.
+    // RE-PINNED 2026-10-10 (D219 addendum, the standard floor): Lower B now serves the
+    // Machine Hip Thrust 4 in week 5 (it was 3); the Leg Extension is still 2.
     expect(before[rowNamed(rowsBefore, 'Leg Extension').exercise.id]).toBe(2);
-    expect(before[rowNamed(rowsBefore, 'Machine Hip Thrust').exercise.id]).toBe(3);
+    expect(before[rowNamed(rowsBefore, 'Machine Hip Thrust').exercise.id]).toBe(4);
 
     const { glute } = await swapLegExtensionForGlutes(plan);
     const rows = await rowsOf(lowerB.id);
     const after = await served({ week: plan.week, routineId: lowerB.id, exercises: rows });
     expect(after[glute.id]).toBe(2);
-    expect(after[rowNamed(rows, 'Machine Hip Thrust').exercise.id]).toBe(3);
+    expect(after[rowNamed(rows, 'Machine Hip Thrust').exercise.id]).toBe(4);
   });
 
   test('the sets move for the current and later weeks by what each week served; past weeks keep theirs', async () => {

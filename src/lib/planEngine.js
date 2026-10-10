@@ -2468,9 +2468,9 @@ export const DIVISION_MATRIX = {
   figure: {
     label: 'X-Frame',
     3: [
-      { name: 'Full (Delt + Back Width)', muscles: ['side_delts', 'back', 'rear_delts', 'chest', 'triceps', 'hamstrings'] },
+      { name: 'Full (Delt + Back Width)', muscles: ['side_delts', 'back', 'rear_delts', 'chest', 'triceps', 'biceps', 'hamstrings'] },
       { name: 'Lower (Glute + Ham + Quad)', muscles: ['glutes', 'hamstrings', 'quads', 'calves', 'chest', 'biceps'] },
-      { name: 'Full (Delt + Arm + Abs)', muscles: ['side_delts', 'back', 'triceps', 'glutes', 'quads', 'abs'] },
+      { name: 'Full (Delt + Arm + Abs)', muscles: ['side_delts', 'back', 'triceps', 'biceps', 'glutes', 'quads', 'abs'] },
     ],
     4: [
       { name: 'Upper A (Back + Rear Delt)', muscles: ['back', 'rear_delts', 'side_delts', 'chest', 'triceps', 'biceps'] },

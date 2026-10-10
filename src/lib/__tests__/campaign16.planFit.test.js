@@ -102,7 +102,16 @@ describe('C16-FIT the answer comes from the athlete\'s own plan', () => {
     // Re-anchored (EL-21): see the comment above — the bikini generated
     // plan now needs the same 75 minutes the base case does, post
     // subregion correction.
-    expect(smallestWorking({ goal: 'bikini' })).toBe(75);
+    // RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum: the
+    // full standard routine for every growth muscle, nothing reduced for
+    // time): 75 -> 90. Arithmetic, from the real plan: the rebuilt bikini
+    // 4-day cell now carries chest, biceps and triceps beside the glute
+    // work, so Lower A (Glute + Ham) is 8 exercises and 25 sets (the other
+    // sessions 24, 24 and 23 sets), which the engine itself times at 86
+    // minutes (timeConstraint.over). 86 is over the 75 option and under the
+    // 90 option, so 90 is the smallest length that works. planFit.js is
+    // unchanged: it still reads the engine's own verdict.
+    expect(smallestWorking({ goal: 'bikini' })).toBe(90);
   });
 
   test('no lookup table, no minutes-per-day rule, no claim of an optimum', () => {

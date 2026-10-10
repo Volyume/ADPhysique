@@ -87,10 +87,18 @@ describe('Phase 3 increment 0: division character survives the library path', ()
     expect(bik.lead).not.toBe(mp.lead);
   });
 
-  test('Bikini glutes are still the highest-volume muscle on the library path', () => {
+  // RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum: standard
+  // routine kept for every muscle, emphasis added). See
+  // planengineRebuildPhase2.test.js: the legacy summary merges side, rear and
+  // front delts into "shoulders" (observed 18 on the library path), which now
+  // out-totals glutes (14) because chest, biceps and triceps joined the week.
+  // Glutes stay the highest SINGLE muscle (hamstrings and back 12, quads 7).
+  test('Bikini glutes are still the highest-volume single muscle on the library path (merged delt group aside)', () => {
     const s = weeklySets(genLib('bikini', { days: 4 }));
-    const maxMuscle = Object.entries(s).sort((a, b) => b[1] - a[1])[0][0];
-    expect(maxMuscle).toBe('glutes');
+    for (const [k, n] of Object.entries(s)) {
+      if (k === 'glutes' || k === 'shoulders') continue;
+      expect(s.glutes).toBeGreaterThan(n);
+    }
   });
 
   test('MP back >= chest on the library path', () => {
