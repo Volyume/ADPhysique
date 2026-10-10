@@ -807,7 +807,12 @@ function buildEffectivePool(exerciseLibrary, canonicalNames = null) {
 // muscle bucket keeps its FIRST bucket (POOL/the generated pool key each
 // exercise under exactly one primary muscle in practice).
 const LETTERED_NAME = /^(.+) ([A-Z])$/;
-function reletterByPosition(workouts) {
+function reletterByPosition(workouts, keepAuthoredNames = false) {
+  // A DIVISION_MATRIX template names its sessions by CONTENT ("Upper A" holds
+  // chest and arms, "Upper B" does not), so the letters are identity there, not
+  // order. Re-lettering after the recovery sequencer swapped two of them put
+  // Upper A's exercises under the name "Upper B" and broke the template.
+  if (keepAuthoredNames) return workouts;
   const baseCounts = new Map();
   for (const w of workouts) {
     const m = LETTERED_NAME.exec(w?.name ?? '');
@@ -3574,11 +3579,14 @@ function _generatePlanInner(inputs) {
   // scorer has chosen the order they are re-assigned by final position:
   // a 4-day upper/lower always reads Upper A, Lower A, Upper B, Lower B,
   // never Upper A, Lower B, Upper B, Lower A. Only a "<base> <letter>"
-  // name whose base repeats in the week is touched, hand-authored ones
-  // included (a DIVISION_MATRIX "Glute Focus A/B" pair follows the same
-  // positional rule); a name without a trailing letter (a lone "Legs",
-  // "Upper (Delt + Back)") is left exactly as authored.
-  const validWorkouts = reletterByPosition(recoverySequenced.workouts);
+  // name whose base repeats in the week is touched, and only in a GENERATED
+  // split, where A and B hold the same muscles. A DIVISION_MATRIX name is
+  // identity, not order (its "Upper A" and "Upper B" hold different
+  // muscles; register D219 addendum 3), so a matrix plan keeps its authored
+  // names whatever order the scorer chooses: relettering it once put the
+  // "Upper B" label on the chest-and-arms session built from the Upper A
+  // template. A name without a trailing letter is left exactly as authored.
+  const validWorkouts = reletterByPosition(recoverySequenced.workouts, !!matrixCell);
 
   // C16 DIVISION (completion pass): the truthfulness report. Computed from
   // the FINISHED week - after the time trim, after continuity has not yet
