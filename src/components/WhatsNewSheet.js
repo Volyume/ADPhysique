@@ -145,6 +145,13 @@ export const WHATS_NEW = {
   // 2.11.0 (founder, 2026-10-10): no plan-builder line, on the founder's
   // word ("Remove what's new for plan change"). The privacy notice rides
   // inside the Community line, as in 2.9.0 and 2.10.0.
+  // 2.12.0 (founder, 2026-10-10: "Bump version number again"): the plan
+  // builder's standard per category (register D219 addendum 3). No plan
+  // line, as for 2.11.0 on the founder's word; the privacy notice rides
+  // inside the Community line.
+  '2.12.0': [
+    { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+  ],
   '2.11.0': [
     { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],
