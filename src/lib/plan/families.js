@@ -144,8 +144,13 @@ export function sessionsAllowing(family, muscle, { focus = false, atLeast = 0 } 
     // Abs train on any day, so they never make a session part of a half:
     // a push day that lists abs is an upper-body session (no glute work on
     // it, no lateral raises on a leg day).
-    const sameHalf = sess.muscles.some((m) => m !== 'abs' && bodyHalf(m) === half);
-    if (sameHalf) sameHalfSessions.push(i);
+    // A session belongs to the half most of its listed muscles are in (a
+    // lower day with a lateral-raise finisher is a lower day), so the
+    // fallback never puts the triceps' second session on leg day.
+    const counted = sess.muscles.filter((m) => m !== 'abs');
+    const upper = counted.filter((m) => bodyHalf(m) === 'upper').length;
+    const sessionHalf = upper * 2 >= counted.length ? 'upper' : 'lower';
+    if (counted.length > 0 && sessionHalf === half) sameHalfSessions.push(i);
   });
   // Founder order 2026-10-10 (register D219 addendum, the standard floor): a
   // division's session list adds emphasis on top of the standard routine and
