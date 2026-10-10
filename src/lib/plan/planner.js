@@ -477,7 +477,13 @@ function evaluateFamily(family, ctx) {
   // Each muscle's sessions, spaced as evenly as the current cycle order allows.
   const exposuresNow = () => {
     const out = {};
-    const cost = family.sessions.map((sess) => sess.muscles.length);
+    // Among equally spaced choices a muscle takes the sessions holding the
+    // fewest muscles so far (a running load), so a full-body week spreads
+    // its muscles over its three days instead of piling two (observed 158,
+    // 48 and 115 minutes on a 3-day week, 2026-10-10). The muscles are
+    // placed in the plan's order, the big ones first.
+    const cost = family.sessions.map(() => 0);
+    const take = (list) => { for (const si of list) cost[si] += 1; return list; };
     // The sessions the family names for the muscle come first (a division's
     // arms day holds the arms); the fallback sessions of its half fill only
     // the count beyond them, spaced against the listed ones.
@@ -485,7 +491,7 @@ function evaluateFamily(family, ctx) {
       const listed = listedBy[m] || [];
       const k = state.k[m];
       if (listed.length >= k || listed.length === allowedBy[m].length) {
-        out[m] = placeInOrder(listed.length >= k ? listed : allowedBy[m], k, state.placementOrder, i, cost);
+        out[m] = take(placeInOrder(listed.length >= k ? listed : allowedBy[m], k, state.placementOrder, i, cost));
         return;
       }
       const extra = allowedBy[m].filter((si) => !listed.includes(si));
@@ -501,7 +507,7 @@ function evaluateFamily(family, ctx) {
         extra.sort((a, b) => (gapTo(b) - gapTo(a)) || ((cost[a] || 0) - (cost[b] || 0)) || (a - b));
         chosen.push(extra.shift());
       }
-      out[m] = chosen.sort((a, b) => a - b);
+      out[m] = take(chosen.sort((a, b) => a - b));
     });
     return out;
   };

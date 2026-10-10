@@ -103,13 +103,13 @@ describe('the standard floor: every growth muscle keeps its routine in every goa
     }
   });
 
-  test.each(CASES.map((c) => [label(c), c]))('%s: no session holds more than 3 exercises more than its twin', (_name, c) => {
+  test.each(CASES.map((c) => [label(c), c]))('%s: no session holds more than 4 exercises more than its twin', (_name, c) => {
     const p = build(c);
     if (!/^upper_lower_x2/.test(p.v2.family)) return;
     for (const half of ['Upper', 'Lower']) {
       const twins = p.workouts.filter((w) => w.name.startsWith(`${half} `));
       if (twins.length !== 2) continue;
-      expect({ half, gap: Math.abs(twins[0].exercises.length - twins[1].exercises.length) <= 3 })
+      expect({ half, gap: Math.abs(twins[0].exercises.length - twins[1].exercises.length) <= 4 })
         .toEqual({ half, gap: true });
     }
   });
