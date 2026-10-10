@@ -303,11 +303,11 @@ function overLine(facts, sessions, sessionLengthMinutes) {
       ? `At the peak, ${list} run past the ${set} you set.`
       : `At the peak, ${list} run over the session length you set.`;
   }
-  let text = `${head} Before a session is allowed to run over, the plan shortens the rest between sets on the smaller muscles' isolation exercises to ${TRIMMED_REST_SECONDS} seconds.`;
-  // Founder order 2026-10-10 (the standard floor): no muscle's routine is
-  // cut to fit the session length, so the line says so for every plan; the
-  // focus sentence stays where a focus was picked.
-  text += ' Every muscle keeps its full routine, so the real length is shown here and no sets are cut to fit the time.';
+  // Founder decisions 2026-10-10 (the standard floor; "Trim rest time not
+  // exercises"): rest is shortened first, from the isolation exercises up,
+  // never the compounds below two minutes; what is still over is shown.
+  let text = `${head} Before a session is allowed to run over, the plan shortens the rest between sets, starting with the smaller muscles' isolation exercises (to ${TRIMMED_REST_SECONDS} seconds) and never taking a compound lift below two minutes, because that rest is where the growth is.`;
+  text += ' Every muscle keeps its full routine, so the real length is shown here and no exercises or sets are cut to fit the time.';
   if (hasFocus(facts)) {
     text += ' Your focus muscles keep every set, because bringing them up is what you picked.';
   }

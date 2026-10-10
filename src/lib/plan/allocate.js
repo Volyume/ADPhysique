@@ -56,6 +56,20 @@ const TRANSITION_SECONDS = Object.freeze({
 export const TIME_TOLERANCE_MINUTES = 5;
 // The rest a smaller muscle's isolation sets drop to when a session runs over.
 export const TRIMMED_REST_SECONDS = 60;
+// Founder decision 2026-10-10 ("Trim rest time not exercises"): a session
+// that runs past the person's length first shortens rest, one rung at a
+// time, from the rest the evidence says matters least to the rest it says
+// matters most, and stops at the first rung that fits. Nothing below the
+// floors here: two minutes or more between compound sets grows more muscle
+// than one (Schoenfeld 2016); isolation sets recover in about a minute. What
+// is still over after the last rung is reported, never cut.
+export const REST_LADDER = Object.freeze([
+  { rung: 'small_isolation', kinds: ['isolation'], smallOnly: true, floor: 60 },
+  { rung: 'isolation', kinds: ['isolation'], smallOnly: false, floor: 60 },
+  { rung: 'machine', kinds: ['machine'], smallOnly: false, floor: 90 },
+  { rung: 'mod_compound', kinds: ['mod_compound'], smallOnly: false, floor: 120 },
+  { rung: 'heavy_compound', kinds: ['heavy_compound'], smallOnly: false, floor: 150 },
+]);
 const SMALL_MUSCLES = new Set(['side_delts', 'rear_delts', 'front_delts', 'traps', 'biceps', 'triceps', 'forearms', 'calves', 'abs', 'neck', 'tibialis']);
 // A muscle's progress to a floor is read in tenths of it (1 set of a standard
 // muscle's 10), so the floor steps stay level to within a tenth.
@@ -486,13 +500,23 @@ export function allocatePeakWeek({
   // so the person sees the session's real length.
   const limit = sessionLengthMinutes > 0 ? sessionLengthMinutes : 60;
   for (const sess of sessions) {
-    if (!Number.isFinite(limit) || sessionMinutes(sess.slots, equipment) <= limit + TIME_TOLERANCE_MINUTES + EPS) continue;
-    for (const x of sess.slots) {
-      if (x.kind === 'isolation' && SMALL_MUSCLES.has(x.muscle) && roles[x.muscle]?.role !== ROLE.FOCUS
-        && (x.restSec ?? REST_BY_KIND.isolation) > TRIMMED_REST_SECONDS) {
-        x.restSec = TRIMMED_REST_SECONDS;
-        x.restTrimmed = true;
+    if (!Number.isFinite(limit)) continue;
+    const fits = () => sessionMinutes(sess.slots, equipment) <= limit + TIME_TOLERANCE_MINUTES + EPS;
+    if (fits()) continue;
+    // The ladder, rung by rung, until the session fits or the ladder ends. A
+    // focus muscle's exercises keep their rest on the first rung (founder
+    // rule 2026-10-04) and join from the second, like every other.
+    for (const step of REST_LADDER) {
+      for (const x of sess.slots) {
+        if (!step.kinds.includes(x.kind)) continue;
+        if (step.smallOnly && (!SMALL_MUSCLES.has(x.muscle) || roles[x.muscle]?.role === ROLE.FOCUS)) continue;
+        if ((x.restSec ?? REST_BY_KIND[x.kind] ?? 120) > step.floor) {
+          x.restSec = step.floor;
+          x.restTrimmed = true;
+        }
       }
+      sess.restRung = step.rung;
+      if (fits()) break;
     }
   }
 
@@ -503,6 +527,7 @@ export function allocatePeakWeek({
         slots: sess.slots.filter((x) => x.sets > 0),
         minutes,
         overMinutes: Number.isFinite(limit) ? Math.max(0, Math.round((minutes - limit) * 10) / 10) : 0,
+        restRung: sess.restRung || null,
         overCeilings: sess.slots.filter((x) => x.sets > 0).length > SESSION_CEILINGS.exercises
           || sess.slots.reduce((a, x) => a + x.sets, 0) > SESSION_CEILINGS.workingSets,
         workingSets: sess.slots.reduce((a, x) => a + x.sets, 0),

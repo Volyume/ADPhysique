@@ -254,8 +254,8 @@ describe('explainPlan: an over-time plan', () => {
       const last = parts[parts.length - 1];
       expect(t).toContain(`At the peak, ${parts.slice(0, -1).join(', ')} and ${last} run past the 45 you set.`);
     }
-    expect(t).toMatch(/shortens the rest between sets on the smaller muscles' isolation exercises to 60 seconds/);
-    expect(t).toMatch(/Every muscle keeps its full routine, so the real length is shown here and no sets are cut to fit the time\./);
+    expect(t).toMatch(/shortens the rest between sets, starting with the smaller muscles' isolation exercises \(to 60 seconds\) and never taking a compound lift below two minutes/);
+    expect(t).toMatch(/Every muscle keeps its full routine, so the real length is shown here and no exercises or sets are cut to fit the time\./);
     expect(t).toMatch(/Your focus muscles keep every set, because bringing them up is what you picked\./);
     expect(t).not.toMatch(/\bheld\b|cut to fit the session|trimmed/);
   });
