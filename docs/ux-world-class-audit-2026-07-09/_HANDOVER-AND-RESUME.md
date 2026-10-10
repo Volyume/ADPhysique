@@ -1,6 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-10 (late) — MEN'S PHYSIQUE ONE LEG DAY (D219 ADDENDUM 4) AND 2.13.0 ★
+The founder built a men's physique plan on 2.12.0 and got two leg days again (the lead's addendum 3 ruling for the 4- and 6-day weeks). Reversed: one leg day at every day count (`divisionStandard.js`, DIVISION_MATRIX 4-day Upper A (Width), Legs + Abs, Upper B (Detail), Shoulders + Arms; 6-day push, pull, legs, push, pull, shoulders and arms), a muscle's own listed day is its heavy session, and a week's muscles spread by running session load (3-day general and bodybuilding weeks balanced). Every category at every day count was dumped and checked against files 06 to 09 before the bump. Version 2.13.0. NEXT: the founder's device walk per category.
+
 ## ★ 2026-10-10 (evening) — THE PLAN BUILDER: THE STANDARD PER CATEGORY (D219 ADDENDUM 3) ON `fix/division-standards` ★
 The founder rejected the morning's one-size standard ("Research properly plans should be specific per category"). Four cited research files (06 to 09 in `docs/audit/plan-builder-science-2026-10-04/`) and the per-category standard in `src/lib/plan/divisionStandard.js` (floors and sessions a week per muscle per category, a source line per number, pinned by `divisionStandard.test.js`); DIVISION_MATRIX rewritten per category from the modal structures; the planner reads the category's floors (roles.js) and sessions (planner.js), a division's list is authoritative for where a muscle trains, a de-emphasised muscle is held at its standard, a once-a-week muscle opens with its compounds. Rulings and evidence limits: register D219 addendum 3. NEXT: the legacy generator's pins re-derived against the new lists, the full gate, merge, the founder's device walk per category.
 
