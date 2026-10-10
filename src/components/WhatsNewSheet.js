@@ -142,6 +142,14 @@ export const WHATS_NEW = {
   // community level up and the logger rebuild"). Two entries. The privacy
   // notice the policy promises rides inside the Community line, since the
   // sheet shows only the running version's notes.
+  // 2.11.0 (founder, 2026-10-10: "Bump version again please"): the plan
+  // builder's standard floor (register D219 addenda 2026-10-10). The privacy
+  // notice rides inside the Community line, as in 2.9.0 and 2.10.0.
+  '2.11.0': [
+    { icon: 'fitness-outline', text: 'Every plan now keeps a full routine for every muscle, whatever your goal, your days or your focus. Picking a focus adds to it rather than taking from it, and chest, arms and legs are never left to one exercise.' },
+    { icon: 'time-outline', text: 'If a session runs past the length you set, the plan shortens the rest between sets first, never a compound lift below two minutes, and then tells you the real length. No exercise or set is removed to fit the clock.' },
+    { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+  ],
   '2.10.0': [
     { icon: 'barbell-outline', text: 'Logging a set is one tap quicker: type your reps and press Log, and the set is saved. Every set shows what you lifted last time beside it, dumbbells step to the next weight on the rack, and pull-ups, planks and runs now have their own history and records.' },
     { icon: 'text-outline', text: 'Volyume follows your phone\'s text size, within limits that keep every screen readable, and fits a little more on smaller phones.' },
