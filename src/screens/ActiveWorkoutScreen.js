@@ -5171,7 +5171,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const barLogLabel = cluster ? 'Finish'
     : perSide ? 'Other side'
       : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start'
-        : 'Log';
+        : 'Log set';
   const nextCheckLabel = cluster ? 'Finish cluster'
     : perSide ? 'Log other side'
       : isWarmupEntry ? 'Log warm-up'
@@ -5203,6 +5203,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // auto-advance (audit D4). The title names a typed set by its type
       // (audit P7: a drop set after set 2 was titled "Set 2").
       onLongPressRow: () => { cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
+      // While the keyboard is up a tap on a row's blank space puts it away;
+      // it never opens the set sheet (founder report 2026-10-11).
+      holdOff: inputOpen,
       testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
     });
   });
@@ -5237,6 +5240,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     onPressWell: (field) => openWell(field),
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
     onLongPressRow: () => setRowSheet({ kind: 'next', title: 'Next set' }),
+    holdOff: inputOpen,
     testIDs: { row: 'volyume-next-set-row', marker: 'volyume-set-type-btn', last: 'volyume-last-cell', weight: 'volyume-well-weight', reps: 'volyume-well-reps' },
   });
   for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
@@ -5976,6 +5980,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onNext={activeField === 'weight' ? handleInputNext : undefined}
                 onDone={editingSet ? handleInputDone : handleInputLog}
                 doneLabel={editingSet ? 'Done' : barLogLabel}
+                onDismiss={editingSet ? undefined : closeInput}
                 safeBottom={0}
               />
             </View>
@@ -5992,6 +5997,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onNext={activeField === 'weight' ? handleInputNext : undefined}
               onDone={editingSet ? handleInputDone : handleInputLog}
               doneLabel={editingSet ? 'Done' : barLogLabel}
+              onDismiss={editingSet ? undefined : closeInput}
               safeBottom={0}
             />
           </View>

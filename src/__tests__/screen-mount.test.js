@@ -2343,7 +2343,13 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       await typeOnKeyboard(tree, 'reps', 10); // reps input open, nothing logged yet
       expect(loggedCount()).toBe(0);
       expect(host(tree, 'volyume-bar-done').props.accessibilityLabel).toBe('Log set');
-      expect(barText(tree)).toBe('Log');
+      expect(barText(tree)).toBe('Log set');
+      // While the keyboard is up the rows stand aside (founder report
+      // 2026-10-11: a tap on a blank area opened the set sheet), and OK sits
+      // beside Log set.
+      const nextRow = () => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.testID === 'volyume-next-set-row' && n.props.delayLongPress)[0];
+      expect(nextRow().props.disabled).toBe(true);
+      expect(host(tree, 'volyume-bar-ok')).toBeTruthy();
 
       await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
       expect(loggedCount()).toBe(1); // one more logged row, no second log
@@ -2351,10 +2357,23 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       expect(textInput(tree, 'volyume-reps-input')).toBeUndefined(); // the input closed
       expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
 
-      // Editing the logged row: the same action reads Done.
+      expect(nextRow().props.disabled).toBe(false); // keyboard away: the hold is back
+
+      // OK puts the keyboard away and keeps what was typed, logging nothing.
+      await typeOnKeyboard(tree, 'weight', 65);
+      expect(nextRow().props.disabled).toBe(true);
+      await actFlush(() => pressable(tree, 'volyume-bar-ok').props.onPress());
+      expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
+      expect(loggedCount()).toBe(1);
+      expect(database.createWorkoutSet).toHaveBeenCalledTimes(1);
+      expect(nextRow().props.disabled).toBe(false);
+      expect(host(tree, 'volyume-well-weight').findAll((n) => n.type === 'Text').map((n) => [].concat(n.props.children).join('')).join('')).toContain('65');
+
+      // Editing the logged row: the same action reads Done, with no OK.
       await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
       expect(host(tree, 'volyume-bar-done').props.accessibilityLabel).toBe('Done');
       expect(barText(tree)).toBe('Done');
+      expect(host(tree, 'volyume-bar-ok')).toBeUndefined();
       expect(loggedCount()).toBe(1);
     } finally {
       unmountTree(tree);

@@ -43,6 +43,12 @@
  *   onLongPressRow  when given, the whole row answers a 300 ms hold with no
  *              arguments (the marker button carries "Hold for more options");
  *              a press on a well or the check is still a plain press
+ *   holdOff    true while the phone's keyboard is up: the row stands aside,
+ *              its hold is off and a tap on its blank space is not the row's,
+ *              so it reaches the screen's scroll view, which puts the keyboard
+ *              away (founder report 2026-10-11: tapping a blank area to put
+ *              the keyboard down opened the set sheet instead). Its own
+ *              controls keep their presses
  *   checkLabel a string that replaces the check's spoken name (the screen's
  *              "Log warm-up", "Log other side", "Start cluster"); the spoken
  *              name IS the action's name (R4/D64)
@@ -440,6 +446,7 @@ export default function SetRow({
   kind = 'weight_reps',
   units = 'kg',
   inputField = null,
+  holdOff = false,
   testIDs,
 }) {
   const t = useTheme();
@@ -501,6 +508,11 @@ export default function SetRow({
     // The hold lives on the container with no onPress of its own, so the
     // children keep their plain presses. accessible={false} keeps the row from
     // swallowing its own controls into one element for a screen reader.
+    // A Pressable claims every touch on it, onPress or not, so while the
+    // keyboard is up it is disabled (holdOff): a disabled Pressable claims
+    // nothing, and a tap on the row's blank space puts the keyboard away.
+    // The Pressable stays mounted either way, so the field being typed into
+    // is never remounted.
     return (
       <Pressable
         testID={ids.row}
@@ -508,6 +520,7 @@ export default function SetRow({
         onLayout={onLayout}
         onLongPress={() => onLongPressRow()}
         delayLongPress={LONG_PRESS_MS}
+        disabled={!!holdOff}
         accessible={false}
       >
         {body}

@@ -23,12 +23,18 @@
  *               well
  *   onDone      the last action; it reads "Done" unless `doneLabel` says
  *               otherwise
- *   doneLabel   what the last action does: 'Done' (default), 'Log' (spoken
- *               "Log set"), or the row's own action ('Finish' mid-cluster,
- *               'Other side' mid-pair, 'Start' for a cluster type). On the
- *               next set the last action LOGS the set (founder, 2026-10-09:
- *               "too many clicks"), so typing the reps and pressing it is
- *               the whole set; on an edit of a logged set it stays Done
+ *   doneLabel   what the last action does: 'Done' (default), 'Log set', or
+ *               the row's own action ('Finish' mid-cluster, 'Other side'
+ *               mid-pair, 'Start' for a cluster type). On the next set the
+ *               last action LOGS the set (founder, 2026-10-09: "too many
+ *               clicks"), so typing the reps and pressing it is the whole
+ *               set; on an edit of a logged set it stays Done. It read "Log"
+ *               until the founder's 2026-10-11 order: "Change Log to Log Set"
+ *   onDismiss   when given, an OK action before the last one puts the
+ *               keyboard away and keeps what was typed, without logging
+ *               (founder, 2026-10-11: "Maybe we need an Ok button alongside
+ *               Log"). The screen gives it whenever the last action logs or
+ *               finishes; an edit's Done already closes
  *   safeBottom  optional bottom inset in dp (default 0) under the row, for
  *               the gesture bar when the keyboard is not covering it
  *
@@ -57,7 +63,7 @@ function spokenUnit(unit) {
   return unit || '';
 }
 
-function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }) {
+function Action({ testID, icon, label, spoken, hint, onPress, glyphColor, labelStyle }) {
   return (
     <TouchableOpacity
       testID={testID}
@@ -65,6 +71,7 @@ function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={spoken}
+      accessibilityHint={hint}
     >
       <Ionicons name={icon} size={iconSize.md} color={glyphColor} />
       <Text style={labelStyle} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
@@ -72,7 +79,7 @@ function Action({ testID, icon, label, spoken, onPress, glyphColor, labelStyle }
   );
 }
 
-export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mode = 'number', onStep, onNext, onDone, doneLabel = 'Done', safeBottom = 0 }) {
+export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mode = 'number', onStep, onNext, onDone, onDismiss, doneLabel = 'Done', safeBottom = 0 }) {
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
@@ -125,11 +132,23 @@ export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mo
           labelStyle={live.label}
         />
       ) : null}
+      {onDismiss ? (
+        <Action
+          testID="volyume-bar-ok"
+          icon="chevron-down"
+          label="OK"
+          spoken="OK"
+          hint="Puts the keyboard away and keeps what you typed"
+          onPress={onDismiss}
+          glyphColor={ink}
+          labelStyle={live.label}
+        />
+      ) : null}
       <Action
         testID="volyume-bar-done"
         icon="checkmark"
         label={doneLabel}
-        spoken={doneLabel === 'Log' ? 'Log set' : doneLabel}
+        spoken={doneLabel}
         onPress={onDone}
         glyphColor={ink}
         labelStyle={live.label}
@@ -141,8 +160,13 @@ export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mo
 const styles = StyleSheet.create({
   // The rest strip's row: 48 dp, a hairline above, the page's 16 dp left
   // margin and the 8 dp right inset that puts the last word on the margin.
+  // The row wraps rather than clip: with the weight well's five actions at
+  // the phone's largest text the bar is wider than a phone, and a second line
+  // is better than a cut-off label (the actions keep their right edge).
   bar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     minHeight: touchTarget.minimum,
     paddingLeft: spacing.lg,

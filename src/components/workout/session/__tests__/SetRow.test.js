@@ -562,6 +562,24 @@ describe('SetRow long press and check name', () => {
     expect(onLongPressRow).toHaveBeenCalledWith();
   });
 
+  // Founder report 2026-10-11: "It's when I click a blank area to get the
+  // keyboard down ... stop Notes pop up when clicking blank area." A
+  // Pressable claims every touch on it, so the row's blank space never let
+  // the scroll view put the keyboard away, and a rested finger opened the
+  // sheet. While the keyboard is up the row is disabled: it claims nothing.
+  test('holdOff: the row claims no touch while the keyboard is up, stays mounted, and its controls keep their presses', () => {
+    const onLongPressRow = jest.fn();
+    const onPressWell = jest.fn();
+    const off = render({ onLongPressRow, onPressWell, holdOff: true });
+    const row = rowPressable(off);
+    expect(row).toBeTruthy(); // same element: the field being typed into is never remounted
+    expect(row.props.disabled).toBe(true);
+    press(one(byLabel(off, 'Set 2 reps')));
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+    const on = render({ onLongPressRow });
+    expect(rowPressable(on).props.disabled).toBe(false);
+  });
+
   test('the hold hint sits on the check (and on a marker that is not a button); a screen reader reaches the overflow as an action on the check', () => {
     const onLongPressRow = jest.fn();
     const withButton = render({ onLongPressRow, onPressMarker: () => {} });
