@@ -1,6 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-11 (end of day) — PLANNER AUDIT ROUNDS CLOSED; STRUCTURE ENGINE ON MAIN (NOT YET WIRED) ★
+Founder: "you need to secure this in this round or next at the latest". Round 8 fixed (`src/lib/structure/engine.js`, the renderer `docs/audit/plan-builder-map-2026-10-11/tools/render-structure-plans.jest.js`, page `12-STRUCTURE-PLANS-RENDERED.md`); reports `21-ROUND8-COACH-AUDIT.md`, `22-ROUND8-USER-AUDIT.md`; rulings in DECISIONS D222 round 8 addendum (C8-1 week-level leg-day calves, C8-3 own floor binds, R56 beginner focus 4 sets in the focus stage, U8-1 statement not choice). Round 9 verification CLEAN. Merged to main over a green gate (1,566 suites). Position: phase 6 of `11-BUILD-PLAN.md` is next.
+
 ## ★ 2026-10-11 (late night) — SENTRY CLEARED, PLAIN WORDING, MUSCLE DETAIL IN THE APP STYLE (D225), ON MAIN ★
 Founder order: "Also check Sentry. Many errors cracking in there now fix them all", "FOLLOW THE STYLE IN THE APP", "No \"ai talk\"". Built on `fix/sentry-and-plain-copy`, merged to main: `src/lib/sync.js` (weeks after their block), `src/lib/supabase.js` (expired-token retry; Google device state), `src/components/auth/AuthSheet.js`, `src/lib/authDeepLink.js`, `src/store/useAppStore.js`, `src/lib/sentry.js`, `src/lib/sync/telemetry.js`, `src/lib/sync/runner.js`; wording in `src/lib/volumeBandLabels.js`, `src/lib/plan/bands.js`, `src/lib/volumeJudgement.js`, `src/lib/progress/volumeStrip.js` and five screens or notes; `src/lib/recovery/muscleDetail.js` (`detailFacts`) and `src/components/MuscleRecoveryList.js` (rows, no chips). D225 records each Sentry issue, its cause and what stays open (3F, 3G, 3J). Next: the whole-app plain-wording sweep; planner round 8.
 
