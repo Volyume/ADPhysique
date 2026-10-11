@@ -33,6 +33,7 @@ import {
 import { structureChoices } from './patterns';
 import { checkPlan, weeklyMax, weeklyMin } from './checker';
 import { weeklyLoad, sessionMinutes } from './measure';
+import { senseCheck } from './sense';
 
 // The patterns that train each muscle, in preference order (09 B2 and the
 // catalogue's role order). `main` patterns rotate by visit; a `fallback`
@@ -423,9 +424,18 @@ function buildWith(args, strategy) {
       for (const m of short) {
         for (const si of visitsOf(m)) {
           const s = plan.sessions[si];
+          // Never taken: a muscle's only exercise of the week, or an exercise
+          // the session's name depends on (the sense order, D222).
+          const protectedEx = (ex) => {
+            const weekCount = plan.sessions.reduce((t, x) => t + x.exercises.filter((y) => y.muscle === ex.muscle).length, 0);
+            if (weekCount <= 1) return true;
+            const group = (order[si].core || []).find((g) => g.includes(ex.muscle));
+            return !!group && s.exercises.filter((y) => group.includes(y.muscle)).length <= 1;
+          };
           const donors = s.exercises
             .filter((ex) => ex.muscle !== m)
             .map((ex) => ({ ex, take: ex.peak > SESSION_LIMITS.setsPerExerciseMin ? 1 : ex.peak }))
+            .filter(({ ex, take }) => !(take === ex.peak && protectedEx(ex)))
             .filter(({ ex, take }) => fr(ex.muscle) - take >= goalAll(ex.muscle)
               && PATTERNS[ex.pattern].credits.every((c) => fr(c) - CREDIT_FRACTION * take >= goalAll(c)))
             .sort((a, b) => ((fr(b.ex.muscle) - goalAll(b.ex.muscle)) - (fr(a.ex.muscle) - goalAll(a.ex.muscle))) || (s.exercises.indexOf(a.ex) - s.exercises.indexOf(b.ex)));
@@ -452,6 +462,26 @@ function buildWith(args, strategy) {
     }
   }
 
+  const setsOf = (si) => plan.sessions[si].exercises.reduce((t, ex) => t + ex.peak, 0);
+  const hasDirect = (si, m) => directIn(si, m) >= SESSION_LIMITS.setsPerExerciseMin;
+  const openFor = (m, si) => actionsFor(m, si).filter((a) => a.type === 'open').some((a) => apply(a));
+
+  // P0 (the founder's sense order, D222): before any volume, every session
+  // gets what its name promises (its template core), and every muscle the
+  // category trains gets an exercise of its own somewhere in the week, so no
+  // muscle is covered only by other exercises' credits.
+  for (let si = 0; si < n; si += 1) {
+    for (const group of order[si].core || []) {
+      const trainable = group.filter((m) => targets[m] && !plan.untrainable.includes(m) && lists[si].includes(m));
+      if (!trainable.length || trainable.some((m) => hasDirect(si, m))) continue;
+      [...trainable].sort((a, b) => rank(a) - rank(b)).some((m) => openFor(m, si));
+    }
+  }
+  for (const m of order2) {
+    if (visitsOf(m).some((si) => hasDirect(si, m))) continue;
+    [...visitsOf(m)].sort((a, b) => (setsOf(a) - setsOf(b)) || (a - b)).some((si) => openFor(m, si));
+  }
+
   // A: minimums (HARD). B: normal volume (Q1 = C: never cut by the clock).
   // C: focus on top, last, so it only takes capacity no other muscle could
   // use (C5).
@@ -469,6 +499,31 @@ function buildWith(args, strategy) {
   fill((m) => targets[m].typical, order2);
   plan.focus = focus;
   if (focus.length) fill((m) => targets[m].target, muscleOrder(category, focus).filter((m) => focus.includes(m) && !plan.untrainable.includes(m)), { allowRepair: false });
+
+  // Sense passes (D222). Each only adds sets, inside every check.
+  // S3: pulling at least matches pressing (a chest focus can tip it).
+  const directOf = (muscles) => plan.sessions.reduce((t, s) => t + s.exercises.filter((ex) => muscles.includes(ex.muscle)).reduce((u, ex) => u + ex.peak, 0), 0);
+  const backMuscles = ['lats', 'upper_back'].filter((m) => targets[m] && !plan.untrainable.includes(m));
+  for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
+    const actions = backMuscles.flatMap((m) => visitsOf(m).flatMap((si) => actionsFor(m, si)))
+      .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (setsOf(a.si) - setsOf(b.si)) || (a.si - b.si) || (rank(a.m) - rank(b.m)));
+    if (!actions.some((a) => apply(a))) break;
+  }
+  // S5: every session worth the trip: 3 exercises and 8 working sets (6
+  // for a beginner), topped up from the muscles the session lists.
+  const minSessionSets = beginner ? 6 : 8;
+  for (let si = 0; si < n; si += 1) {
+    for (let guard = 0; guard < 20; guard += 1) {
+      const s = plan.sessions[si];
+      if (s.exercises.length >= 3 && setsOf(si) >= minSessionSets) break;
+      const wantOpen = s.exercises.length < 3;
+      const actions = lists[si].filter((m) => targets[m] && !plan.untrainable.includes(m))
+        .flatMap((m) => actionsFor(m, si))
+        .filter((a) => (wantOpen ? a.type === 'open' : true))
+        .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (directIn(si, a.m) - directIn(si, b.m)) || (rank(a.m) - rank(b.m)));
+      if (!actions.some((a) => apply(a))) break;
+    }
+  }
 
   // S7: order inside each session: heavy compounds, moderate compounds,
   // machines, isolation; then P before S before M; focus first in a tier.
@@ -500,6 +555,7 @@ function buildWith(args, strategy) {
       }
     }
   }
+  plan.overflow = overflow;
   const minutes = plan.sessions.map((s) => sessionMinutes(s, peak, equipment));
   plan.reportedMinutes = minutes.map((m) => Math.round(m * 10) / 10);
   plan.needsLengthChoice = length != null && minutes.some((m) => m > length + TIME_MODEL.toleranceMinutes);
@@ -509,6 +565,12 @@ function buildWith(args, strategy) {
   const check = checkPlan(plan);
   if (!check.ok) {
     return { ok: false, refusal: { reason: 'checks_failed', failures: check.failures, detail: 'the built plan failed the rulebook checks' } };
+  }
+  // And the sense layer (D222): a plan a coach or the person would find
+  // senseless is never returned either.
+  const sense = senseCheck(plan);
+  if (!sense.ok) {
+    return { ok: false, refusal: { reason: 'sense_failed', failures: sense.failures, detail: sense.failures.map((f) => f.detail).join('; ') } };
   }
 
   const weekly = check.weekly;
@@ -543,6 +605,7 @@ function buildWith(args, strategy) {
 // from its goal first; each exercise filled before another is opened. The
 // first that reaches every minimum is kept, so the result stays
 // deterministic (C19).
+const RETRYABLE = new Set(['minimum_unreachable', 'sense_failed']);
 const STRATEGIES = Object.freeze(['credit', 'preference'].flatMap((patterns) => ['value', 'priority', 'need', 'compact']
   .map((order) => Object.freeze({ patterns, order }))));
 
@@ -557,13 +620,17 @@ export function buildStructurePlan(args) {
   let last = null;
   for (const strategy of STRATEGIES) {
     const r = buildWith(args, strategy);
-    if (r.ok || r.refusal.reason !== 'minimum_unreachable') return r;
-    last = r;
+    if (r.ok || !RETRYABLE.has(r.refusal.reason)) return r;
+    if (!last || last.refusal.reason !== 'minimum_unreachable') last = r;
   }
-  const more = DAY_COUNTS.filter((d) => d > args.days);
-  for (const d of more) {
-    const tried = STRATEGIES.some((strategy) => buildWith({ ...args, days: d }, strategy).ok);
-    if (tried) { last.refusal.minimumDays = d; break; }
-  }
+  // The nearest day counts that would hold the week in the same kit, more
+  // days first on a tie (most refusals are short weeks); the person chooses.
+  const others = DAY_COUNTS.filter((d) => d !== args.days)
+    .sort((a, b) => (Math.abs(a - args.days) - Math.abs(b - args.days)) || (b - a));
+  const builds = (d) => STRATEGIES.some((strategy) => buildWith({ ...args, days: d }, strategy).ok);
+  const more = others.filter((d) => d > args.days).find(builds);
+  if (more != null) last.refusal.minimumDays = more;
+  const nearest = more != null && Math.abs(more - args.days) === 1 ? more : others.find(builds);
+  if (nearest != null) last.refusal.suggestedDays = nearest;
   return last;
 }

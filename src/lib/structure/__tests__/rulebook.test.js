@@ -136,6 +136,19 @@ describe('templates', () => {
     expect(clashes).toEqual([]);
   });
 
+  test('every session states what its name promises, from muscles it lists (sense order, D222)', () => {
+    const bad = [];
+    for (const c of CATEGORIES) {
+      for (const d of DAY_COUNTS) {
+        for (const s of TEMPLATES[c][d]) {
+          if (!s.core || s.core.length === 0) bad.push(`${c} ${d}d ${s.key}: no core`);
+          for (const g of s.core || []) if (!g.some((m) => s.muscles.includes(m))) bad.push(`${c} ${d}d ${s.key}: core ${g.join('/')} not listed`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
   test("men's physique trains legs in exactly one session at every day count (F4)", () => {
     for (const d of DAY_COUNTS) {
       const legSessions = TEMPLATES.mens_physique[d].filter((s) => s.muscles.some((m) => ['quads', 'hamstrings'].includes(m)));

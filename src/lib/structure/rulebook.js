@@ -283,9 +283,18 @@ export const PRIORITY = Object.freeze([
 // in the cycle but are never reordered (09 s1.3). Indirect-only muscles are
 // never listed; they are trained through credits. `hints` restricts a
 // muscle to certain patterns in that session (09 B7 wellness 5d).
+// `core` is what the session's name promises (the founder's sense order,
+// D222): each group must be trained directly in the session by at least
+// one of its muscles, so a "Chest & Triceps" day always holds chest and
+// triceps work and an "Upper" day always holds a press and a pull.
 const S = (key, name, muscles, hints) => Object.freeze({
   key, name, muscles: Object.freeze(muscles), ...(hints ? { hints: Object.freeze(hints) } : {}),
 });
+const BACK = ['lats', 'upper_back'];
+const CORE = {
+  upper: [['chest'], BACK], lower: [['quads'], ['hamstrings', 'glute_max']], push: [['chest']], pull: [BACK],
+  legs: [['quads'], ['hamstrings']],
+};
 const UPPER = ['chest', 'lats', 'upper_back', 'side_delts', 'rear_delts', 'biceps', 'triceps'];
 const LOWER = ['quads', 'hamstrings', 'glute_max', 'glute_med', 'calves', 'abs'];
 const PUSH = ['chest', 'side_delts', 'triceps'];
@@ -448,16 +457,57 @@ const BODYBUILDING_TEMPLATES = Object.freeze({
   ]),
 });
 
+// What each session's name promises, by session key; a key not listed
+// takes the shared default below. Each entry is a list of groups; each group
+// needs at least one of its muscles trained directly in the session.
+const SESSION_CORE = {
+  general: {
+    upper: CORE.upper, upper_a: CORE.upper, upper_b: CORE.upper, lower: CORE.lower, lower_a: CORE.lower, lower_b: CORE.lower,
+    push: CORE.push, push_a: CORE.push, push_b: CORE.push, pull: CORE.pull, pull_a: CORE.pull, pull_b: CORE.pull,
+    legs: CORE.legs, legs_a: CORE.legs, legs_b: CORE.legs,
+    shoulders_arms: [['side_delts'], ['biceps'], ['triceps']],
+  },
+  mens_physique: {
+    upper: CORE.upper, legs_abs: [['quads'], ['hamstrings'], ['abs']],
+    push: CORE.push, pull: CORE.pull, legs_side: [['quads'], ['hamstrings'], ['side_delts']],
+    back_a_delts: [BACK, ['side_delts', 'rear_delts']], back_b_delts: [BACK, ['side_delts', 'rear_delts']],
+    legs: [['quads'], ['hamstrings']], chest_triceps: [['chest'], ['triceps']],
+    back_a: [BACK, ['biceps']], back_b: [BACK, ['biceps']], delts_abs: [['side_delts', 'rear_delts'], ['abs']],
+    shoulders_a: [['side_delts', 'rear_delts']], shoulders_b: [['side_delts', 'rear_delts'], ['abs']],
+  },
+  bikini: {
+    lower: [['glute_max'], ['hamstrings']], upper: [BACK], upper_a: [BACK], upper_b: [BACK],
+    glutes_hams: [['glute_max'], ['hamstrings']], quads_glute_med: [['quads'], ['glute_med']],
+    lower_a: [['glute_max']], lower_b: [['glute_max', 'quads'], ['glute_med', 'quads']], lower_c: [['glute_max'], ['hamstrings']],
+    glute_med_abs: [['glute_med'], ['abs']],
+  },
+  wellness: {
+    lower: [['quads'], ['hamstrings'], ['glute_max']], upper: [BACK], upper_a: [BACK], upper_b: [BACK],
+    lower_a: [['quads'], ['glute_max', 'hamstrings']], lower_b: [['quads'], ['glute_max', 'hamstrings']],
+    glutes_hams: [['glute_max'], ['hamstrings']], quads_glute_med: [['quads'], ['glute_med']],
+    glutes_hams_quads: [['glute_max'], ['hamstrings'], ['quads']], hams_glute_med: [['hamstrings'], ['glute_med']],
+    quads_glutes: [['quads'], ['glute_max']], glutes_a: [['glute_max'], ['hamstrings']], quads_a: [['quads'], ['glute_med']],
+    hams_glutes_b: [['hamstrings'], ['glute_max']], quads_b: [['quads'], ['adductors']],
+  },
+  figure: {
+    upper_a: [BACK, ['side_delts']], upper_b: [['side_delts'], ['chest']],
+    back_rear_biceps: [BACK, ['rear_delts'], ['biceps']], side_chest_triceps: [['side_delts'], ['chest'], ['triceps']],
+    back_side_biceps: [BACK, ['side_delts'], ['biceps']],
+  },
+};
+const withCore = (templates, cores) => Object.freeze(Object.fromEntries(Object.entries(templates).map(([d, list]) => [d,
+  Object.freeze(list.map((x) => Object.freeze({ ...x, core: Object.freeze((cores[x.key] || SESSION_CORE.general[x.key] || []).map((g) => Object.freeze([...g]))) })))])));
+
 /** TEMPLATES[category][days] = the rotation's sessions, in order. */
 export const TEMPLATES = Object.freeze({
-  general: GENERAL_TEMPLATES,
-  bodybuilding: BODYBUILDING_TEMPLATES,
-  classic_physique: GENERAL_TEMPLATES,
-  mens_physique: MENS_PHYSIQUE_TEMPLATES,
-  bikini: BIKINI_TEMPLATES,
-  wellness: WELLNESS_TEMPLATES,
-  figure: FIGURE_TEMPLATES,
-  womens_physique: FIGURE_TEMPLATES,
+  general: withCore(GENERAL_TEMPLATES, SESSION_CORE.general),
+  bodybuilding: withCore(BODYBUILDING_TEMPLATES, SESSION_CORE.general),
+  classic_physique: withCore(GENERAL_TEMPLATES, SESSION_CORE.general),
+  mens_physique: withCore(MENS_PHYSIQUE_TEMPLATES, SESSION_CORE.mens_physique),
+  bikini: withCore(BIKINI_TEMPLATES, SESSION_CORE.bikini),
+  wellness: withCore(WELLNESS_TEMPLATES, SESSION_CORE.wellness),
+  figure: withCore(FIGURE_TEMPLATES, SESSION_CORE.figure),
+  womens_physique: withCore(FIGURE_TEMPLATES, SESSION_CORE.figure),
 });
 
 // R22: when a muscle cannot reach its category minimum in the sessions its
