@@ -685,7 +685,7 @@ describe('State matrix — S6: recovery week SCHEDULED', () => {
 
 // ─── S7 — adaptive recovery adjustment (mid-block) ─────────────────────────
 describe('State matrix — S7: recovery ADAPTIVE ADJUSTMENT', () => {
-  test('Today line never claims "Recovery week" for an unscheduled reduction', async () => {
+  test('Today says nothing about an unscheduled reduction (D224)', async () => {
     useAppStore.setState(PRO_USER);
     const RECOVERY = { state: 'adaptive_recovery_adjustment', weekIndex: 3, plannedWeeks: 6, recoveryWeek: 6, weeksToRecovery: 3 };
     applyFixture({
@@ -699,14 +699,18 @@ describe('State matrix — S7: recovery ADAPTIVE ADJUSTMENT', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('Training is lighter for now. Why?');
-    expect(REGION.todayLineText(tree)).not.toMatch(/^Recovery week/);
+    // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+    // recovery data from today. I don't want it there full stop."): the
+    // adaptive adjustment is a recovery reading and is not on Today (the
+    // workout screen explains it when the session opens).
+    expect(REGION.todayLineText(tree)).toBeNull();
+    expect(flattenText(tree)).not.toMatch(/Recovery week|lighter for now|Recovery-adjusted/);
   });
 });
 
 // ─── S8 — data-driven deload SUGGESTED (no structural state) ───────────────
 describe('State matrix — S8: deload suggested, data-driven only', () => {
-  test('Today line carries the suggestion; distinct from the structural recovery wording', async () => {
+  test('Today does not carry the fatigue suggestion (D224)', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
@@ -722,8 +726,10 @@ describe('State matrix — S8: deload suggested, data-driven only', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    // RE-ANCHORED 2026-09-26 (D204 / D207 Lane F: the Today line describes the signs, it no longer suggests a recovery week)
-    expect(REGION.todayLineText(tree)).toBe('Signs of building fatigue. See why.');
+    // RE-ANCHORED D224: the fatigue-based suggestion is a recovery reading;
+    // it is not on Today (Progress keeps its own deload alert).
+    expect(REGION.todayLineText(tree)).toBeNull();
+    expect(flattenText(tree)).not.toMatch(/fatigue/i);
   });
 });
 

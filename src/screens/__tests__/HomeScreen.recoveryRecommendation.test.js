@@ -521,65 +521,33 @@ const LEGACY_SWAP_RESULT = {
   ],
 };
 
-describe('the plain line: programme next is ready or not, no recommendation', () => {
-  test('the calm line renders under the session name; no "Keep" control', async () => {
+// RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the recovery
+// data from today. I don't want it there full stop."): Today no longer reads
+// the recovery loader or shows a recovery line, however much the recovery
+// modules would say; the Recovery screen keeps every estimate.
+describe('Today shows no recovery data (D224)', () => {
+  test('no recovery line, no link to Recovery, and the recovery loader is never read', async () => {
     useAppStore.setState(PRO_USER);
+    const loadMuscleRecovery = jest.fn(async () => ({ map: {}, nowMs: Date.now(), habitualWeekdays: null, typicalStartMinute: 18 * 60 }));
+    const recommendNextWorkout = jest.fn(() => PLAIN_RESULT);
     applyFixture({
       db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
       lib: {
         resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => PLAIN_RESULT,
+        loadMuscleRecovery,
+        recommendNextWorkout,
       },
     });
-    const { tree, errors } = await mountHome({});
+    const { tree, errors } = await mountHome({ navigation: makeNav() });
     expect(errors).toEqual([]);
     const text = flattenText(tree);
     expect(REGION.heroPlanned(tree)).toBe(true);
-    expect(text).toContain('Quads are estimated 64% recovered, ready by Thursday.');
-    expect(text).not.toMatch(/is next in your plan/);
-    expect(text).not.toMatch(/Keep Legs/);
-    expect(text).not.toMatch(/Push is ready now/);
+    expect(text).not.toMatch(/estimated|recovered|Ready now/);
+    expect(tree.root.findAll((n) => n.props?.accessibilityHint === 'Opens Recovery')).toHaveLength(0);
+    expect(loadMuscleRecovery).not.toHaveBeenCalled();
+    expect(recommendNextWorkout).not.toHaveBeenCalled();
     // Programme order is untouched: Legs is still the primary session.
     expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
-  });
-});
-
-describe('the recovery line opens the Recovery screen (D214, RC-26)', () => {
-  // Home never linked to the Recovery screen: the only way in was the
-  // Progress row. The line under the next session is now a link to it; the
-  // line's own words are unchanged, and nothing else on Home moved.
-  test('tapping the line goes to the Recovery screen in the Progress tab, and the line still reads as before', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => PLAIN_RESULT,
-      },
-    });
-    const nav = makeNav();
-    const { tree, errors } = await mountHome({ navigation: nav });
-    expect(errors).toEqual([]);
-    const link = tree.root.findAll((n) => n.props?.accessibilityHint === 'Opens Recovery' && typeof n.props?.onPress === 'function')[0];
-    expect(link).toBeTruthy();
-    expect(link.props.accessibilityRole).toBe('link');
-    expect(link.props.accessibilityLabel).toBe('Quads are estimated 64% recovered, ready by Thursday.');
-    expect(flattenText(tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
-    await TestRenderer.act(async () => { link.props.onPress(); });
-    expect(nav.navigate).toHaveBeenCalledWith('ProgressTab', { screen: 'Recovery', initial: false });
-  });
-
-  test('no recovery line, no link', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        recommendNextWorkout: () => ({ ...PLAIN_RESULT, programmeNextLine: null }),
-      },
-    });
-    const { tree } = await mountHome({ navigation: makeNav() });
-    expect(tree.root.findAll((n) => n.props?.accessibilityHint === 'Opens Recovery')).toHaveLength(0);
   });
 });
 
@@ -615,8 +583,8 @@ describe('Home never recommends another session: Start is the plan\'s next, with
     expect(text).not.toMatch(/Push is ready now/);
     expect(findByLabel(tree, /^Keep /).length).toBe(0);
     expect(text).not.toMatch(/Keep (Legs|planned session)/);
-    // What it does say is the plan's next session's own readiness line.
-    expect(text).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+    // D224: and no recovery line at all.
+    expect(text).not.toContain('Quads are estimated 64% recovered, ready by Thursday.');
   });
 
   test('Start opens the plan\'s next session, not a recovered one (the routine its action loads)', async () => {
@@ -737,7 +705,8 @@ describe('the block decision outranks everything, and the line follows the displ
     expect(findByLabel(tree, 'Keep Legs').length).toBe(0);
   });
 
-  test('a session the athlete picks from the sheet shows ITS OWN line, never programme-next\'s', async () => {
+  // RE-ANCHORED D224: a session the person picks carries no recovery line either.
+  test('a session the athlete picks from the sheet shows no recovery line either (D224)', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
@@ -748,10 +717,6 @@ describe('the block decision outranks everything, and the line follows the displ
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
-
-    // Pick Push from the options sheet (its onSelectOverride prop is the
-    // sheet's one way of choosing a different session).
     const sheet = tree.root.findAll(
       (n) => typeof n.props.onSelectOverride === 'function' && Array.isArray(n.props.planAllWorkouts),
     )[0];
@@ -761,12 +726,11 @@ describe('the block decision outranks everything, and the line follows the displ
     });
     const text = flattenText(tree);
     expect(findByLabel(tree, 'Start Push').length).toBeGreaterThan(0);
-    expect(text).toContain('Ready now.');
-    expect(text).not.toContain('Quads are estimated 64% recovered');
+    expect(text).not.toMatch(/Ready now|estimated|recovered/);
   });
 });
 
-describe('the loader rejects: the card renders exactly as it did before this feature existed', () => {
+describe('whatever the recovery modules do, the ordinary hero renders (D224: Today never reads them)', () => {
   test('no recovery copy anywhere; the ordinary hero renders', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
@@ -797,30 +761,5 @@ describe('the loader rejects: the card renders exactly as it did before this fea
     expect(errors).toEqual([]);
     expect(REGION.heroPlanned(tree)).toBe(true);
     expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
-  });
-});
-
-describe('no habit yet: the projection still produces a calm, present-tense line', () => {
-  test('with habitualWeekdays null, recommendNextWorkout still receives a projectedAtMs and the plain line renders', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
-        loadMuscleRecovery: async () => ({
-          map: {}, nowMs: Date.now(), recoveryRating: 'average', habitualWeekdays: null, typicalStartMinute: 18 * 60,
-        }),
-        recommendNextWorkout: (args) => {
-          // The projection collapses to "now" with no habit -- proven here
-          // by the fact recommendNextWorkout is actually called with a
-          // finite projectedAtMs rather than something undefined/NaN.
-          expect(Number.isFinite(args.projectedAtMs)).toBe(true);
-          return PLAIN_RESULT;
-        },
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
   });
 });

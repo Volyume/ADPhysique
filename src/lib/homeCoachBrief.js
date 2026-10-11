@@ -3,6 +3,12 @@
 
 /**
  * Derive a 1-3 sentence coaching brief from available training data.
+ *
+ * D224 (founder order 2026-10-11, on Today: "Remove the recovery data from
+ * today. I don't want it there full stop."): the rules that read fatigue
+ * (the deload signal, two very tiring sessions, a low-fatigue "Looking good")
+ * are gone; recovery lives on the Recovery screen. The long-gap welcome and
+ * the temporary-change line stay.
  * Returns { headline, body, type, lines: [...] } where type is 'go' | 'caution' | 'recover'
  * and lines is an array of brief strings (e.g. for testing).
  */
@@ -24,7 +30,7 @@ export function constraintLineText(constraintSubject = null) {
     : 'Training works around your temporary change.';
 }
 
-export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false, constraintSubject = null }) {
+export function buildCoachBrief({ lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false, constraintSubject = null }) {
   // Helper to apply activeConstraint quiet line to any result
   const applyConstraintLine = (result) => {
     if (!activeConstraint) return result;
@@ -37,42 +43,10 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
   };
 
   // D204 (founder rule 2026-09-26, "They don't choose sessions!"; lead
-  // review of the plain-English sweep): every rule below DESCRIBES. The
-  // brief used to say "drop the weight", "Consider reducing weight by 10%
-  // today", "Ease in" and "Push the quality today"; the plan sets the
-  // session, so the brief says what it sees and never what to lift.
+  // review of the plain-English sweep): every rule below DESCRIBES; the plan
+  // sets the session, so the brief says what it sees and never what to lift.
 
-  // Rule 1, deload suggested
-  if (deloadSuggestion) {
-    return applyConstraintLine({
-      headline: 'Fatigue has been building',
-      body: 'Your last four weeks of sessions show signs of it.',
-      type: 'recover',
-    });
-  }
-
-  // Rule 2, high fatigue (avg of last 2 sessions ≥ 3.5)
-  // C6 RB6-4 (D97-25): present-tense advice needs RECENT sessions - the
-  // rule read the last two rated rows at any age, telling a six-month
-  // returner (Free tier included) to cut weight 10% "today" off ancient
-  // fatigue. Sessions must sit inside the 14-day detraining boundary.
-  const recentRated = (fatigueHistory ?? []).filter((r) => {
-    const t = Number(r?.startedAt ?? r?.started_at);
-    return Number.isFinite(t) && (Date.now() - t) <= 14 * 86400000;
-  });
-  if (recentRated.length >= 2) {
-    const recent = recentRated.slice(0, 2);
-    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-    if (avg >= 3.5) {
-      return applyConstraintLine({
-        headline: 'Fatigue building',
-        body: 'You rated your last two sessions as very tiring.',
-        type: 'caution',
-      });
-    }
-  }
-
-  // Rule 3, long gap since last session
+  // Long gap since the last session.
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
     return applyConstraintLine({
       headline: 'Good to see you back',
@@ -81,32 +55,10 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     });
   }
 
-  // Rule 4 REMOVED (founder ruling 2026-08-06): "Muscle groups need
-  // attention" fired whenever 2+ muscles sat below their weekly minimum
-  // mid-week -- which is the GUARANTEED state mid-plan (the plan spreads
-  // muscles across the week), so the brief was telling users to override
-  // their own plan's rotation. The plan owns weekly allocation; the brief
-  // never second-guesses it per muscle.
+  // Rule 4 REMOVED (founder ruling 2026-08-06): the plan owns weekly
+  // allocation; the brief never second-guesses it per muscle.
 
-  // Rule 5, volume on track, low fatigue.
-  // C5-P18-04 (D96): "Training is on track" is a TREND judgement, and it used
-  // to fire from a single rated session. The sibling voice on the same screen
-  // (readinessSummary.js, priority 4) deliberately waits for two rated
-  // sessions before it speaks about a trend, so the two Home coaching voices
-  // now agree on what counts as evidence. Rules 1-3 are unaffected.
-  if (fatigueHistory.length >= 2) {
-    const recent = fatigueHistory.slice(0, 2);
-    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-    if (avg <= 2) {
-      return applyConstraintLine({
-        headline: 'Looking good',
-        body: 'Training is on track.',
-        type: 'go',
-      });
-    }
-  }
-
-  // Rule 6, default
+  // Default.
   return applyConstraintLine({
     headline: 'Ready when you are',
     body: 'Ready when you are.',

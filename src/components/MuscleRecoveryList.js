@@ -103,7 +103,7 @@ import { MUSCLE_DISPLAY_NAMES, allocateExerciseVolume, calculateWeeklyVolume } f
 import { trainingRecency } from '../lib/trainingRecency';
 import { safeFormatDate } from '../lib/safeFormat';
 import { RECOVERY_ESTIMATE_LABEL, LOOKBACK_DAYS, REFERENCE_SETS } from '../lib/recovery/constants';
-import { readyClause } from '../lib/recovery/nextWorkoutRecommendation';
+import { readyByClause } from '../lib/recovery/nextInPlan';
 import {
   muscleDetailRows, intentFor, recoveryTimeline, clockComparison, clockLine, weekPanel, spacingLine,
 } from '../lib/recovery/muscleDetail';
@@ -174,13 +174,15 @@ export function muscleRecoveryBarFill(percent, c) {
   return withAlpha(c.recovery, alpha.edge);
 }
 
-/** "ready by Thursday", "ready later today", or "ready now" for a muscle
- * already at or above the recovered threshold (status 'recovered',
- * readyAtMs null by the model's own contract): one authority,
- * nextWorkoutRecommendation's readyClause. */
+/** "ready by tomorrow afternoon", "ready by Friday morning", or "ready now"
+ * for a muscle already at or above the recovered threshold (status
+ * 'recovered', readyAtMs null by the model's own contract). D224 (founder
+ * 2026-10-11: "Side delts ready tomorrow on Today. But different in
+ * recovery."): one authority for the words, nextInPlan's readyByClause, the
+ * same the "Next in your plan" card and the open detail use. */
 export function muscleReadyClause(entry, nowMs) {
   if (entry.status === 'recovered' || !Number.isFinite(entry.readyAtMs)) return 'ready now';
-  return readyClause(entry.readyAtMs, nowMs);
+  return `ready ${readyByClause(entry.readyAtMs, nowMs)}`;
 }
 
 /** The row's one muted line: "Ready by Thursday · Trained 2 days ago". */
@@ -414,43 +416,45 @@ function Swatch({ color, edge = null }) {
 }
 
 /**
- * The last session's estimate as a timeline: the solid part is the time since
- * the session, the shaded part the estimate's range, the mark the estimate
- * itself (D223). One hue, the `recovery` token (D214 Q1 = A).
+ * The ready estimate as a timeline (D223, D224): the solid part is the time
+ * since the last session, the shaded part the range of the estimated ready
+ * instant, the mark the estimate itself, the same instant the row and the
+ * "Next in your plan" card state. One hue, the `recovery` token (D214 Q1 = A).
  */
 function RecoveryTimeline({ timeline, live, t }) {
   const scale = timeline.scaleHours;
-  const passed = timeline.passedHours;
-  const spoken = passed === null
-    ? `Estimated recovery time ${timeline.estimateText}, range ${timeline.rangeText}.`
-    : `Estimated recovery time ${timeline.estimateText}, range ${timeline.rangeText}. ${capitalise(timeline.passedText)} since the last session.`;
+  const headline = `Estimated ready ${timeline.readyText}`;
+  const spoken = timeline.ready
+    ? `${headline}. ${capitalise(timeline.passedText)} since the last session.`
+    : `${headline}, in ${timeline.toGoText}, range ${timeline.rangeText}. ${capitalise(timeline.passedText)} since the last session.`;
   const zoneColor = withAlpha(t.colors.recovery, alpha.strong);
   return (
     <View style={styles.block} accessible accessibilityLabel={spoken}>
+      <Text style={live.readyHeadline}>{headline}</Text>
       <View style={[styles.track, styles.trackTall, live.track, styles.trackOpen]}>
-        <View style={[styles.zone, { left: share(timeline.lowHours, scale), width: share(timeline.highHours - timeline.lowHours, scale), backgroundColor: zoneColor }]} />
-        {passed !== null ? (
-          <View style={[styles.fillAbs, { width: share(passed, scale), backgroundColor: t.colors.recovery }]} />
+        {!timeline.ready ? (
+          <View style={[styles.zone, { left: share(timeline.lowHours, scale), width: share(timeline.highHours - timeline.lowHours, scale), backgroundColor: zoneColor }]} />
         ) : null}
-        <View style={[styles.mark, { left: share(timeline.estimateHours, scale) }, live.mark]} />
+        <View style={[styles.fillAbs, { width: share(timeline.passedHours, scale), backgroundColor: t.colors.recovery }]} />
+        {!timeline.ready ? <View style={[styles.mark, { left: share(timeline.readyHours, scale) }, live.mark]} /> : null}
       </View>
       <View style={styles.stats}>
-        {passed !== null ? (
+        <View style={styles.stat}>
+          <Text style={live.statValue}>{timeline.passedText}</Text>
+          <View style={styles.legendRow}>
+            <Swatch color={t.colors.recovery} />
+            <Text style={[styles.legendText, live.statLabel]}>Since the last session</Text>
+          </View>
+        </View>
+        {!timeline.ready ? (
           <View style={styles.stat}>
-            <Text style={live.statValue}>{timeline.passedText}</Text>
+            <Text style={live.statValue}>{timeline.toGoText}</Text>
             <View style={styles.legendRow}>
-              <Swatch color={t.colors.recovery} />
-              <Text style={[styles.legendText, live.statLabel]}>Since the last session</Text>
+              <Swatch color={zoneColor} edge={t.colors.recovery} />
+              <Text style={[styles.legendText, live.statLabel]}>{`To go, range ${timeline.rangeText}`}</Text>
             </View>
           </View>
         ) : null}
-        <View style={styles.stat}>
-          <Text style={live.statValue}>{timeline.estimateText}</Text>
-          <View style={styles.legendRow}>
-            <Swatch color={zoneColor} edge={t.colors.recovery} />
-            <Text style={[styles.legendText, live.statLabel]}>{`Estimated recovery time, range ${timeline.rangeText}`}</Text>
-          </View>
-        </View>
       </View>
     </View>
   );
@@ -462,7 +466,7 @@ function ClockCompare({ muscle, live, t }) {
   const top = Math.max(...clocks.map((c) => c.highHours));
   return (
     <View style={styles.block} accessible accessibilityLabel={clockLine(muscle)}>
-      <Text style={live.subhead}>{`Usual estimate after a session of about ${REFERENCE_SETS} sets`}</Text>
+      <Text style={live.subhead}>{`Usually estimated ready after a session of about ${REFERENCE_SETS} sets`}</Text>
       {clocks.map((c) => {
         const own = c.muscle === muscle;
         return (
@@ -531,9 +535,11 @@ function WeekBlock({ week, live }) {
  *
  *   - the muscle's plain word as a subtitle, and the plan's intent for a muscle
  *     the plan raised or holds;
- *   - "Recovery estimate": a timeline of the last session (the time since it,
- *     the estimate's range shaded, the estimate marked) with the two figures
- *     under it, then the muscle's usual clock beside one other muscle's;
+ *   - "Recovery estimate": the estimated ready time (D224: the one instant the
+ *     row and the "Next in your plan" card state) as a timeline from the last
+ *     session (the time since it, the range shaded, the estimate marked) with
+ *     the two figures under it, then the muscle's usual ready time beside one
+ *     other muscle's;
  *   - "This week so far" (with `withWeek`): the counted total large with its
  *     band, the split into main and helper sets, the band's own line, a bar
  *     placing the week against the plan's range, and the most in one session
@@ -872,6 +878,7 @@ function buildLiveStyles(t) {
     body: { ...t.type.bodySm, color: t.colors.textPrimary },
     note: { ...t.type.captionTight, color: t.colors.textMuted },
     noteStrong: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    readyHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     statLabel: { ...t.type.captionTight, color: t.colors.textSecondary },
     mark: { backgroundColor: t.colors.textPrimary },

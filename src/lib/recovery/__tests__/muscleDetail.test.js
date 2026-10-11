@@ -32,6 +32,8 @@ import {
   weekFigures, clockWords, clockLine, spacingLine, estimateLine, muscleDetailRows,
   durationText, rangeText, recoveryTimeline, clockComparison, intentFor, weekPanel,
 } from '../muscleDetail';
+import { readyWindow, readyHoursAfterOneSession, buildMuscleRecoveryMap } from '../muscleRecoveryModel';
+import { readyByClause } from '../nextInPlan';
 import { calculateWeeklyVolume } from '../../algorithms';
 import { recoveryHours } from '../constants';
 
@@ -95,28 +97,35 @@ describe('weekFigures: the heatmap\'s own week, split into direct and indirect s
   });
 });
 
-describe('the clock: each muscle\'s own, in plain words, as an estimate', () => {
-  test('biceps and back differ, and each carries a range', () => {
+// RE-ANCHORED D224 (founder 2026-10-11: "Inaccuracies on reported recovery
+// too. Side delts ready tomorrow on Today. But different in recovery."): the
+// usual time is the time one session of about 6 sets takes to read as READY
+// (the same 90% every ready-by on the screen means), never the time to clear
+// the session completely, so it and the muscle's own estimate measure one
+// thing. Under 72 hours it reads in hours, so biceps and back still differ.
+describe('the usual time: each muscle\'s own, in plain words, as an estimate', () => {
+  test('biceps and back differ, each is the ready time of one session, and each carries a range', () => {
     const biceps = clockWords('biceps');
     const back = clockWords('back');
-    expect(biceps.hours).toBe(recoveryHours('biceps'));
+    expect(biceps.hours).toBeCloseTo(readyHoursAfterOneSession(recoveryHours('biceps')), 9);
+    expect(biceps.hours).toBeLessThan(recoveryHours('biceps'));
     expect(biceps.hours).toBeLessThan(back.hours); // the founder: biceps recover quicker than back
-    expect(biceps.text).toBe('about 2 days (range 1.5 to 2.5 days)');
-    expect(back.text).toBe('about 2.5 days (range 2 to 3 days)');
+    expect(biceps.text).toBe('about 43 hours (range 32 to 54 hours)');
+    expect(back.text).toBe('about 54 hours (range 40 to 67 hours)');
   });
 
-  test('the line is an estimate, names the muscle\'s own clock and compares with back (or biceps for back)', () => {
+  test('the line is an estimate of readiness, names the muscle\'s own time and compares with back (or biceps for back)', () => {
     expect(clockLine('biceps')).toBe(
-      'Biceps are estimated at about 2 days (range 1.5 to 2.5 days) after a session of about 6 sets. Muscles differ: back is estimated at about 2.5 days (range 2 to 3 days).',
+      'Biceps are usually estimated ready about 43 hours (range 32 to 54 hours) after a session of about 6 sets. Muscles differ: back is usually estimated ready about 54 hours (range 40 to 67 hours).',
     );
     expect(clockLine('back')).toBe(
-      'Back is estimated at about 2.5 days (range 2 to 3 days) after a session of about 6 sets. Muscles differ: biceps are estimated at about 2 days (range 1.5 to 2.5 days).',
+      'Back is usually estimated ready about 54 hours (range 40 to 67 hours) after a session of about 6 sets. Muscles differ: biceps are usually estimated ready about 43 hours (range 32 to 54 hours).',
     );
   });
 
-  test('a muscle whose clock equals back\'s does not claim a difference', () => {
+  test('a muscle whose time equals back\'s does not claim a difference', () => {
     expect(recoveryHours('chest')).toBe(recoveryHours('back'));
-    expect(clockLine('chest')).toBe('Chest is estimated at about 2.5 days (range 2 to 3 days) after a session of about 6 sets.');
+    expect(clockLine('chest')).toBe('Chest is usually estimated ready about 54 hours (range 40 to 67 hours) after a session of about 6 sets.');
   });
 });
 
@@ -142,9 +151,18 @@ describe('the estimate after the last session, and the spacing of the sessions c
     expect(spacingLine(null)).toBeNull();
   });
 
-  test('the estimate: about T hours with its range, the hours that have passed, and "Estimated, not measured"', () => {
-    expect(estimateLine(entry, NOW)).toBe(
-      'Estimated recovery after the last session: about 59 hours (range 44 to 74); 60 hours have passed. Estimated, not measured.',
+  // RE-ANCHORED D224: the estimate is the one ready estimate (the model's
+  // readyWindow, every counted session compounding), never the last
+  // session's own clock alone.
+  test('the estimate: ready now once the model reads it ready, with the hours passed and "Estimated, not measured"', () => {
+    expect(estimateLine(entry, NOW)).toBe('Estimated ready now; 60 hours have passed since the last session. Estimated, not measured.');
+  });
+
+  test("the estimate: still recovering, the ready instant in the card's words, the hours to go and their range", () => {
+    const soon = { contributingSessions: [{ workoutId: 'c', endMs: NOW - 4 * HOUR, sets: 6, hoursT: 36 }] };
+    const w = readyWindow(soon.contributingSessions, NOW);
+    expect(estimateLine(soon, NOW)).toBe(
+      `Estimated ready ${readyByClause(w.readyAtMs, NOW)}, in about ${durationText((w.readyAtMs - NOW) / HOUR)} (range ${rangeText((w.earliestMs - NOW) / HOUR, (w.latestMs - NOW) / HOUR)}); 4 hours have passed since the last session. Estimated, not measured.`,
     );
   });
 
@@ -245,14 +263,6 @@ describe('muscleDetailRows: the rows behind a muscle\'s estimate', () => {
 // panel draws. What this pins: each figure is the one the rows print (one clock, one band, one cap),
 // so the drawing and the words never disagree; the durations read as people say them.
 describe('D223: the figures the drawn detail reads', () => {
-  const entry = {
-    muscle: 'biceps',
-    contributingSessions: [
-      { workoutId: 'b', endMs: NOW - 144 * HOUR, sets: 6, hoursT: 48 },
-      { workoutId: 'c', endMs: NOW - 30 * HOUR, sets: 9, hoursT: 59 },
-    ],
-  };
-
   test('durations: hours under 36, then days to the nearest half; never "0 hours"', () => {
     expect(durationText(0)).toBe('less than an hour');
     expect(durationText(0.4)).toBe('less than an hour');
@@ -267,24 +277,46 @@ describe('D223: the figures the drawn detail reads', () => {
     expect(rangeText(24, 24)).toBe('24 hours');
   });
 
-  test('the timeline is the estimate line\'s own numbers: the last session\'s clock, its band, the hours passed', () => {
-    const tl = recoveryTimeline(entry, NOW);
-    const last = entry.contributingSessions[entry.contributingSessions.length - 1];
-    expect(tl.estimateHours).toBe(last.hoursT);
-    expect(tl.passedHours).toBeCloseTo((NOW - last.endMs) / HOUR, 6);
-    expect(tl.lowHours).toBeLessThan(tl.estimateHours);
-    expect(tl.highHours).toBeGreaterThan(tl.estimateHours);
+  // RE-ANCHORED D224: the timeline is the one ready estimate.
+  test("the timeline is the model's ready window: the ready instant, its range, the hours passed", () => {
+    const recovering = { contributingSessions: [
+      { workoutId: 'b', endMs: NOW - 26 * HOUR, sets: 5, hoursT: 36 },
+      { workoutId: 'c', endMs: NOW - 4 * HOUR, sets: 5, hoursT: 36 },
+    ] };
+    const tl = recoveryTimeline(recovering, NOW);
+    const w = readyWindow(recovering.contributingSessions, NOW);
+    const lastEnd = NOW - 4 * HOUR;
+    expect(tl.ready).toBe(false);
+    expect(tl.passedHours).toBeCloseTo(4, 6);
+    expect(tl.readyHours).toBeCloseTo((w.readyAtMs - lastEnd) / HOUR, 6);
+    expect(tl.lowHours).toBeLessThanOrEqual(tl.readyHours);
+    expect(tl.highHours).toBeGreaterThanOrEqual(tl.readyHours);
     expect(tl.scaleHours).toBe(Math.max(tl.highHours, tl.passedHours));
-    // The line prints the same rounded figures.
-    const line = estimateLine(entry, NOW);
-    expect(line).toContain(`about ${Math.round(tl.estimateHours)} hours (range ${Math.round(tl.lowHours)} to ${Math.round(tl.highHours)})`);
+    expect(tl.readyText).toBe(readyByClause(w.readyAtMs, NOW));
+    // Already ready: no range, the bar is the time passed.
+    const done = recoveryTimeline({ contributingSessions: [{ workoutId: 'z', endMs: NOW - 100 * HOUR, sets: 6, hoursT: 48 }] }, NOW);
+    expect(done.ready).toBe(true);
+    expect(done.readyText).toBe('now');
     expect(recoveryTimeline(null, NOW)).toBeNull();
-    expect(recoveryTimeline({ contributingSessions: [{ endMs: NOW - HOUR, hoursT: 0 }] }, NOW)).toBeNull();
-    // Long past the range: the scale grows to the hours passed, so the solid part never overflows.
-    const old = recoveryTimeline({ contributingSessions: [{ endMs: NOW - 9 * DAY, hoursT: 48 }] }, NOW);
-    expect(old.scaleHours).toBeCloseTo(9 * 24, 6);
-    // No clock: no hours passed, the estimate alone.
-    expect(recoveryTimeline(entry, undefined).passedHours).toBeNull();
+    expect(recoveryTimeline({ contributingSessions: [{ endMs: NOW - HOUR, sets: 3 }] }, NOW)).toBeNull();
+  });
+
+  test("D224: the detail's ready instant is the model's own, the one the list row and the card state", () => {
+    // Side delts trained yesterday and today (the founder's screenshot): the
+    // model's map entry and the detail's window agree to the millisecond.
+    const lib = { lat: { id: 'lat', name: 'Lateral Raise', primaryMuscle: 'side_delts', secondaryMuscles: [] } };
+    const day = (h) => NOW - h * HOUR;
+    const setsOf = (w) => Array.from({ length: 5 }, (_, i) => ({ id: `${w}${i}`, workoutId: w, exerciseId: 'lat', setType: 'straight' }));
+    const sessions = [
+      { id: 'y', startedAt: day(27), endedAt: day(26), sets: setsOf('y') },
+      { id: 't', startedAt: day(5), endedAt: day(4), sets: setsOf('t') },
+    ];
+    const map = buildMuscleRecoveryMap({ sessions, exerciseById: lib, recoveryRating: 'average', nowMs: NOW });
+    const e = map.side_delts;
+    expect(e.contributingSessions).toHaveLength(2);
+    expect(Number.isFinite(e.readyAtMs)).toBe(true);
+    expect(readyWindow(e.contributingSessions, NOW).readyAtMs).toBe(e.readyAtMs);
+    expect(recoveryTimeline(e, NOW).readyText).toBe(readyByClause(e.readyAtMs, NOW));
   });
 
   test('the clocks compared are clockLine\'s: the muscle\'s own first, then back (or biceps for back)', () => {
@@ -293,8 +325,8 @@ describe('D223: the figures the drawn detail reads', () => {
     expect(abs[0].hours).toBe(clockWords('abs').hours);
     expect(abs[1].hours).toBe(clockWords('back').hours);
     expect(clockComparison('back').map((c) => c.muscle)).toEqual(['back', 'biceps']);
-    expect(abs[1].text).toBe('about 2.5 days');
-    expect(clockComparison('biceps')[0].text).toBe('about 2 days');
+    expect(abs[1].text).toBe('about 54 hours'); // RE-ANCHORED D224: the usual ready time
+    expect(clockComparison('biceps')[0].text).toBe('about 43 hours');
   });
 
   test('the intent is the rows\' own "In your plan"; a standard muscle has none', () => {

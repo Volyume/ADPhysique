@@ -156,10 +156,12 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
     expect(HOME).toMatch(/AsyncStorage\.setItem\(`@volyume_coach_banner_dismissed_\$\{latestCoachOutput\.weekStart\}`, 'true'\)\.catch\(\(\) => \{\}\);/);
   });
 
-  test('the deload suggestion keeps its exact original eligibility gate, tap-through and dismissal', () => {
-    expect(HOME).toMatch(/deloadEligible: deloadBannerEligible,/);
-    expect(HOME).toMatch(/onDeloadPress: \(\) => \{ haptics\.selection\(\); navigation\.navigate\('CoachReview'\); \},/);
-    expect(HOME).toMatch(/onDeloadDismiss: \(\) => setDeloadDismissed\(true\),/);
+  // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+  // recovery data from today. I don't want it there full stop."): the
+  // fatigue-based recovery-week suggestion is a recovery reading; it leaves
+  // Today (Progress keeps its own deload alert).
+  test('the deload suggestion is not on Today (D224)', () => {
+    expect(HOME).not.toMatch(/deloadEligible|onDeloadPress|onDeloadDismiss|deloadBannerEligible/);
   });
 
   test('the phase mismatch keeps its exact original dismissal function', () => {

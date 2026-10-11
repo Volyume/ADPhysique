@@ -1,6 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-11 (night) — TODAY HAS NO RECOVERY DATA; RECOVERY STATES ONE READY INSTANT (D224), ON MAIN ★
+Founder order: "Remove the recovery data from today. I don't want it there full stop", with "Side delts ready tomorrow on Today. But different in recovery." Built on `fix/today-no-recovery`, merged to main: `src/screens/HomeScreen.js`, `src/lib/readinessSummary.js`, `src/lib/homeCoachBrief.js` (no recovery reading on Today; the planned recovery week stays); `src/lib/recovery/muscleRecoveryModel.js` (`readyWindow`, `readyHoursAfterOneSession`), `src/lib/recovery/nextInPlan.js` (`readyByClause`, weekday within the week), `src/lib/recovery/muscleDetail.js` and `src/components/MuscleRecoveryList.js` (every figure is the one ready instant). Register D224 records what left Today, what stays and why, and the three-answers mechanism that caused the inaccuracy. Position: waiting on the founder's device walk.
+
 ## ★ 2026-10-11 (evening) — RECOVERY MUSCLE DETAIL REDESIGNED (D223), ON MAIN ★
 Founder order on the open Abs detail: "This data for muscles recovery looks horrendous, redesign this areas make it understandable, readable and slick." Built on `fix/recovery-detail-redesign`, merged to main: `src/components/MuscleRecoveryList.js` (`MuscleDetail` drawn in sections), `src/lib/recovery/muscleDetail.js` (`recoveryTimeline`, `clockComparison`, `weekPanel`, `intentFor`, `durationText`, `rangeText`), `NextInPlanCard.js` and `ReadinessCards.js` (learned speed and session splits passed to the card's detail). Register D223 has the design and every bound kept. Position: waiting on the founder's device walk; the planner (D222, branch `planner/structure-engine-rulebook`) continues with round 6.
 

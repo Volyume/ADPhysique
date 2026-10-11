@@ -665,11 +665,12 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(plans).toMatch(/visible=\{!!blockReview\}/);
     expect(plans).toMatch(/onPress=\{confirmNextBlockReview\}/);
     expect(read('lib/blockAdvisor.js')).not.toMatch(/autoStart|automaticTransition/);
-    // The suggestion banner is suppressed inside a scheduled recovery week
-    // (FB-02), a display gate only -- shouldDeload is untouched.
-    const home = read('screens/HomeScreen.js');
-    expect(home).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
-    expect(home).toMatch(/deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery/);
+    // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+    // recovery data from today. I don't want it there full stop."): the
+    // fatigue-based suggestion is not on Today at all, so it can never argue
+    // with a scheduled recovery week there (FB-02's intent, held absolutely).
+    const home = read('screens/HomeScreen.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(home).not.toMatch(/deloadBannerEligible|deloadSuggestion|shouldDeload/);
   });
 
   test('"Block finished" fires on the finished state, once, not on every recovery-week session', () => {
@@ -1692,12 +1693,15 @@ describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02
     expect(fs.existsSync(SRC('components/StreakWeeksSection.js'))).toBe(false);
   });
 
-  test('"Training is on track" needs two rated sessions, like its sibling voice', () => {
+  // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+  // recovery data from today. I don't want it there full stop."): the brief
+  // reads no fatigue at all, so no number of rated sessions renders a trend.
+  test('"Training is on track" is never read from rated sessions (D224)', () => {
     const { buildCoachBrief } = require('../lib/homeCoachBrief');
-    const one = buildCoachBrief({ fatigueHistory: [{ fatigueLevel: 1 }], deloadSuggestion: null, lastWorkoutDaysAgo: 1 });
-    expect(one.headline).not.toBe('Looking good');
-    const two = buildCoachBrief({ fatigueHistory: [{ fatigueLevel: 1 }, { fatigueLevel: 2 }], deloadSuggestion: null, lastWorkoutDaysAgo: 1 });
-    expect(two.headline).toBe('Looking good');
+    for (const fatigueHistory of [[{ fatigueLevel: 1 }], [{ fatigueLevel: 1 }, { fatigueLevel: 2 }]]) {
+      const brief = buildCoachBrief({ fatigueHistory, deloadSuggestion: null, lastWorkoutDaysAgo: 1 });
+      expect(brief.headline).not.toBe('Looking good');
+    }
   });
 });
 
@@ -1970,13 +1974,12 @@ describe('HOME: the recovery suggestion acknowledges the block it is arguing wit
   // underlying PM-08/FM-07 suggestion, its suppression inside a scheduled
   // recovery week, and its CoachReview tap-through (where the block's own
   // recovery position is still shown) are all unchanged.
-  test('the suggestion still defers to the block via its unchanged eligibility gate', () => {
+  // RE-ANCHORED D224: the suggestion is not on Today at all (Progress keeps
+  // its own deload alert), so it cannot argue with the block there.
+  test('the suggestion is not on Today, so it never argues with the block there (D224)', () => {
     const src = read('screens/HomeScreen.js');
     expect(src).not.toMatch(/const scheduledRecoveryAhead =/);
-    // FB-02's suppression inside a scheduled recovery week is untouched.
-    expect(src).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
-    expect(src).toMatch(/const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;/);
-    expect(src).toMatch(/onDeloadPress: \(\) => \{ haptics\.selection\(\); navigation\.navigate\('CoachReview'\); \},/);
+    expect(src).not.toMatch(/deloadBannerEligible|onDeloadPress/);
   });
 
   test('the deload maths itself is untouched', () => {

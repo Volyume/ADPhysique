@@ -38,7 +38,12 @@ import MuscleRecoveryList, {
 } from '../MuscleRecoveryList';
 import { resolveTheme, withAlpha, alpha } from '../../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../../lib/algorithms';
-import { readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
+// RE-ANCHORED D224 (founder 2026-10-11: "Side delts ready tomorrow on Today. But
+// different in recovery."): the row words its ready instant through the same
+// clause as the "Next in your plan" card and the open detail.
+import { readyByClause } from '../../lib/recovery/nextInPlan';
+import { readyWindow } from '../../lib/recovery/muscleRecoveryModel';
+const readyClause = (at, now) => `ready ${readyByClause(at, now)}`;
 import { RECOVERY_ESTIMATE_LABEL, LOOKBACK_DAYS } from '../../lib/recovery/constants';
 
 const THEME = resolveTheme({
@@ -243,10 +248,10 @@ describe('one row: name, estimated percent with its status word, bar, meta line,
     expect(all.some((t) => /NaN/.test(t))).toBe(false);
   });
 
-  test('a literal weekday: two days from a Wednesday noon reads "Ready by Friday"', () => {
+  test('a literal weekday and a part of the day: two days from a Wednesday noon reads "Ready by Friday afternoon"', () => {
     const all = texts(render());
-    expect(all).toContain('Ready by Friday · Trained 2 days ago');
-    expect(all).toContain('Ready by tomorrow · Trained 1 day ago');
+    expect(all).toContain('Ready by Friday afternoon · Trained 2 days ago');
+    expect(all).toContain('Ready by tomorrow afternoon · Trained 1 day ago');
   });
 
   test('each visible row registers its node with its muscle key, so the screen can scroll to it (RC-12)', () => {
@@ -573,8 +578,9 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
   test('the clock is the muscle\'s own and differs from back\'s: biceps about 2 days, an estimate with a range', () => {
     const bicepsLines = muscleRecoveryDetailLines(ROWS[2], false, null, { role: 'standard', week: null, nowMs: NOW });
     const clock = bicepsLines.find((l) => l.label === 'Recovery clock').value;
-    expect(clock).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
-    expect(clock).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    // RE-ANCHORED D224: the usual time to read as ready, in hours.
+    expect(clock).toMatch(/^Biceps are usually estimated ready about 43 hours \(range 32 to 54 hours\)/);
+    expect(clock).toMatch(/Muscles differ: back is usually estimated ready about 54 hours/);
   });
 
   test('without roles and week figures the breakdown lines are exactly what they were, and the panel has no week section', () => {
@@ -629,33 +635,39 @@ describe('D223: the open detail is drawn, not listed', () => {
     expect(all).toEqual(expect.arrayContaining(['Recovery estimate', 'This week so far', 'Sessions counted', 'How this is estimated']));
   });
 
-  test('the timeline: the time since the session solid, the estimate marked, its range shaded, each the figure printed under it', () => {
+  // RE-ANCHORED D224: the timeline is the one ready estimate (the model's
+  // readyWindow), the same instant the row states.
+  test('the timeline: the time since the session solid, the estimated ready instant marked, its range shaded, each the figure printed under it', () => {
     const tree = detail();
     const all = texts(tree);
+    const w = readyWindow(ABS.contributingSessions, NOW);
+    const H = 3600000;
+    expect(all).toContain(`Estimated ready ${readyByClause(w.readyAtMs, NOW)}`);
     expect(all).toContain('4 hours');
     expect(all).toContain('Since the last session');
-    expect(all).toContain('about 26 hours');
-    const block = labelled(tree, /^Estimated recovery time about 26 hours/);
+    expect(all).toContain(`about ${Math.round((w.readyAtMs - NOW) / H)} hours`);
+    const block = labelled(tree, /^Estimated ready /);
     expect(block.props.accessible).toBe(true);
     expect(block.props.accessibilityLabel).toMatch(/4 hours since the last session\.$/);
-    // The scale is the range's high end; the solid part is 4 of it, in the recovery token.
+    // The scale is the range's high end from the session; the solid part is 4 of it.
     const views = block.findAll((n) => typeof n.type === 'string' && widthOf(n) && /%$/.test(widthOf(n)));
     const solid = views.find((n) => bgOf(n) === THEME.colors.recovery);
-    const scale = Number(all.find((x) => /^Estimated recovery time, range/.test(x)).match(/to (\d+) hours/)[1]);
-    expect(parseFloat(widthOf(solid))).toBeCloseTo((4 / scale) * 100, 0);
-    // The shaded range is the recovery token at a lighter strength, never another hue.
+    const scale = (w.latestMs - (NOW - 4 * H)) / H;
+    expect(parseFloat(widthOf(solid))).toBeCloseTo((4 / scale) * 100, 1);
     const shaded = views.find((n) => bgOf(n) === withAlpha(THEME.colors.recovery, alpha.strong));
     expect(shaded).toBeTruthy();
+    // The row above says the same instant in the same words.
+    expect(muscleRecoveryRowMeta({ ...ABS, readyAtMs: w.readyAtMs }, NOW, NOW - 4 * H)).toMatch(new RegExp(`^Ready ${readyByClause(w.readyAtMs, NOW)} ·`));
   });
 
   test('the usual clocks: the muscle\'s own beside back\'s, each bar as long as its figure, spoken in the clock sentence', () => {
     const tree = detail();
     const all = texts(tree);
-    expect(all).toContain('Usual estimate after a session of about 6 sets');
+    expect(all).toContain('Usually estimated ready after a session of about 6 sets');
     expect(all).toContain('Abs');
     expect(all).toContain('Back');
-    const block = labelled(tree, /^Abs are estimated at about/);
-    expect(block.props.accessibilityLabel).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    const block = labelled(tree, /^Abs are usually estimated ready about/);
+    expect(block.props.accessibilityLabel).toMatch(/Muscles differ: back is usually estimated ready about 54 hours/);
     const bars = block.findAll((n) => typeof n.type === 'string' && widthOf(n) && /%$/.test(widthOf(n)));
     expect(bars).toHaveLength(2);
     // Own bar in the recovery token, the other in ink; abs' clock is the shorter.
@@ -704,7 +716,7 @@ describe('D223: the open detail is drawn, not listed', () => {
     expect(all).not.toContain('Since the last session');
     expect(all).not.toContain('Sessions counted');
     expect(all).not.toContain('Based on');
-    expect(all).toContain('Usual estimate after a session of about 6 sets');
+    expect(all).toContain('Usually estimated ready after a session of about 6 sets');
   });
 
   test('every text wraps at the largest text size: nothing in the detail is clamped to one line', () => {

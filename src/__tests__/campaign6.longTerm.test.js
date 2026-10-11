@@ -545,9 +545,14 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
     expect(src).toMatch(/Recovery week on the calendar\. Pick up whenever suits you\./);
   });
 
-  test('RB6-4: both fatigue composers bound their claims to recent sessions', () => {
-    expect(read('lib/readinessSummary.js')).toMatch(/_recentRated\(fatigueHistory, nowMs\)/);
-    expect(read('lib/homeCoachBrief.js')).toMatch(/\(Date\.now\(\) - t\) <= 14 \* 86400000/);
+  // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+  // recovery data from today. I don't want it there full stop."): neither
+  // composer reads fatigue any longer, so neither can narrate old fatigue as
+  // current (RB6-4's intent, held absolutely).
+  test('RB6-4: neither Today composer reads fatigue at all (D224)', () => {
+    const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code('lib/readinessSummary.js')).not.toMatch(/fatigue/i);
+    expect(code('lib/homeCoachBrief.js')).not.toMatch(/fatigue/i);
   });
 
   test('RB6-6: the win-back keys are guarded and every write stamps', () => {

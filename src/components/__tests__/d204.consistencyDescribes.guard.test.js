@@ -111,23 +111,25 @@ describe('the four-week fatigue banner describes, in a neutral card', () => {
 
 describe("Today's coach brief describes, never tells you what to lift (D204 addendum 2)", () => {
   const { buildCoachBrief } = require('../../lib/homeCoachBrief');
-  const now = Date.now();
-  const rated = (level) => [
-    { fatigueLevel: level, startedAt: now - 1 * 86400000 },
-    { fatigueLevel: level, startedAt: now - 3 * 86400000 },
-  ];
+  // RE-ANCHORED D224 (founder order 2026-10-11: "Remove the recovery data from
+  // today. I don't want it there full stop."): the brief's fatigue rules (the
+  // deload signal, two very tiring sessions, the low-fatigue "on track") are
+  // gone; the long-gap welcome and the default remain.
   const cases = {
-    deload: buildCoachBrief({ fatigueHistory: [], deloadSuggestion: { deload: true }, lastWorkoutDaysAgo: 1 }),
-    fatigue: buildCoachBrief({ fatigueHistory: rated(4), deloadSuggestion: null, lastWorkoutDaysAgo: 1 }),
-    gap: buildCoachBrief({ fatigueHistory: [], deloadSuggestion: null, lastWorkoutDaysAgo: 6 }),
-    onTrack: buildCoachBrief({ fatigueHistory: rated(1), deloadSuggestion: null, lastWorkoutDaysAgo: 1 }),
+    gap: buildCoachBrief({ lastWorkoutDaysAgo: 6 }),
+    recent: buildCoachBrief({ lastWorkoutDaysAgo: 1 }),
   };
 
   test('each rule says what it sees', () => {
-    expect(cases.deload.body).toBe('Your last four weeks of sessions show signs of it.');
-    expect(cases.fatigue.body).toBe('You rated your last two sessions as very tiring.');
     expect(cases.gap.body).toBe("It's been a while since your last session.");
-    expect(cases.onTrack.body).toBe('Training is on track.');
+    expect(cases.recent.body).toBe('Ready when you are.');
+  });
+
+  test('D224: no recovery or fatigue reading reaches the brief, whatever is passed', () => {
+    const now = Date.now();
+    const tired = [{ fatigueLevel: 5, startedAt: now - 86400000 }, { fatigueLevel: 5, startedAt: now - 3 * 86400000 }];
+    const brief = buildCoachBrief({ fatigueHistory: tired, deloadSuggestion: { deload: true }, lastWorkoutDaysAgo: 1 });
+    expect(`${brief.headline}. ${brief.body}`).not.toMatch(/fatigue|tiring|on track/i);
   });
 
   test('no rule tells the athlete to lift lighter, ease in or push', () => {

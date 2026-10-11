@@ -158,9 +158,12 @@ import { logError } from '../../lib/errorLog';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../../lib/recovery/load';
 import { getPlanRoles } from '../../lib/effectiveLandmarks';
-import { recoveredPhrase, partOfDay } from '../../lib/recovery/nextInPlan';
+import { recoveredPhrase } from '../../lib/recovery/nextInPlan';
 import { clockLine } from '../../lib/recovery/muscleDetail';
-import { recommendNextWorkout, readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
+import { recommendNextWorkout } from '../../lib/recovery/nextWorkoutRecommendation';
+// RE-ANCHORED D224: the list row words its ready instant through the card's own clause.
+import { readyByClause } from '../../lib/recovery/nextInPlan';
+const readyClause = (at, now) => `ready ${readyByClause(at, now)}`;
 import { RECOVERY_ESTIMATE_LABEL } from '../../lib/recovery/constants';
 
 const NOW = Date.now();
@@ -613,7 +616,8 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     expect(all).toContain('estimated recovered now'); // biceps: recovered
     expect(all).toContain('No recent session on triceps.'); // RC-5: never called recovered
     // The session line reads the LATEST muscle (quads, two days out), and says what has no session behind it.
-    const clause = partOfDay(QUADS_READY_AT, NOW).text;
+    // RE-ANCHORED D224: the card's one clause (by a weekday and part of the day).
+    const clause = readyByClause(QUADS_READY_AT, NOW);
     expect(all).toContain(`Chest, Quads and Biceps: estimated recovered ${clause}. No recent session on Triceps.`);
     // It comes first in the block: before the heading, the answer line and the rows.
     expect(all.indexOf('Next in your plan: Upper A')).toBeLessThan(all.indexOf('Recovery by muscle'));
@@ -672,10 +676,11 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     await act(async () => { line.props.onPress(); });
     const all = texts(tree);
     expect(clockNode(tree).length).toBeGreaterThan(0);
-    expect(all).toContain('about 2 days (1.5 to 2.5 days)');
-    expect(all).toContain('about 2.5 days (2 to 3 days)');
-    expect(clockLine('biceps')).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
-    expect(clockLine('biceps')).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    // RE-ANCHORED D224: the usual time to read as ready, in hours.
+    expect(all).toContain('about 43 hours (32 to 54 hours)');
+    expect(all).toContain('about 54 hours (40 to 67 hours)');
+    expect(clockLine('biceps')).toMatch(/^Biceps are usually estimated ready about 43 hours \(range 32 to 54 hours\)/);
+    expect(clockLine('biceps')).toMatch(/Muscles differ: back is usually estimated ready about 54 hours/);
     // Tapping again closes it.
     await act(async () => { line.props.onPress(); });
     expect(clockNode(tree)).toHaveLength(0);
