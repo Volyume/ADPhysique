@@ -26,7 +26,7 @@
 import { buildStructurePlan } from '../engine';
 import { checkPlan, checkFocusAgainstBaseline } from '../checker';
 import { senseCheck } from '../sense';
-import { CATEGORIES, DAY_COUNTS, TIERS, VOLUME, REST_TRIM_ORDER, PROGRESSION, restClassFor, restSecondsFor } from '../rulebook';
+import { CATEGORIES, DAY_COUNTS, TIERS, VOLUME, REST_TRIM_ORDER, PROGRESSION, PATTERNS, restClassFor, restSecondsFor } from '../rulebook';
 import { sessionLoad, isTrained } from '../measure';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
@@ -246,6 +246,11 @@ describe('every experience level and focus pick passes both layers', () => {
             const c = checkPlan(r.plan);
             const sc = senseCheck(r.plan);
             if (!c.ok || !sc.ok) bad.push(`${experience} ${kit} ${days}d ${focus.join('+')}: ${[...c.failures, ...sc.failures].map((f) => f.code).join(',')}`);
+            // Round 7 user audit (U7-5: a beginner's focus line read "ROOM
+            // LEFT"): a legal set left unplaced is never a stated cause.
+            for (const x of [...r.report.belowTypical, ...r.report.focusResults]) {
+              if ((x.limits || [])[0] === 'room') bad.push(`${experience} ${kit} ${days}d ${focus.join('+')}: ${x.muscle} room`);
+            }
           }
         }
       }
@@ -268,18 +273,27 @@ describe('focus and the clock', () => {
   // exercise but abs and calves falls, are the same at every length; the
   // clock moves only abs, calves and single sets between sessions that
   // both list the muscle.
+  // Round 7 coach audit (C7-2: wellness 5 days asked for 70-minute sessions
+  // beside a 41-minute day holding the same leg extension): a whole
+  // isolation exercise may move too, onto the same movement in a session
+  // that lists its muscle. So every compound stays where it falls, and the
+  // week holds the same isolation exercises.
   test.each(CATEGORIES)('%s: the same week at 45, 60, 75 and 90 minutes, at every day count (Q1 = C, R48)', (goal) => {
     const ownSets = (plan) => {
       const out = {};
       for (const s of plan.sessions) for (const ex of s.exercises) out[ex.muscle] = (out[ex.muscle] || 0) + ex.peak;
       return JSON.stringify(Object.entries(out).sort());
     };
+    const isolation = (ex) => PATTERNS[ex.pattern].kind === 'isolation';
+    const compounds = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => !isolation(ex)).map((ex) => ex.name).join(',')).join('|');
+    const isolations = (plan) => [...new Set(plan.sessions.flatMap((s) => s.exercises.filter(isolation).map((ex) => ex.name)))].sort().join(',');
     for (const days of DAY_COUNTS) {
       const builds = [45, 60, 75, 90].map((lengthMinutes) => build(goal, days, 'full_gym', { lengthMinutes }));
       expect([goal, days, builds.map((b) => b.ok)]).toEqual([goal, days, builds.map(() => builds[0].ok)]);
       if (!builds[0].ok) continue;
       expect([goal, days, builds.map((b) => ownSets(b.plan))]).toEqual([goal, days, builds.map(() => ownSets(builds[0].plan))]);
-      expect([goal, days, builds.map((b) => placement(b.plan))]).toEqual([goal, days, builds.map(() => placement(builds[0].plan))]);
+      expect([goal, days, builds.map((b) => compounds(b.plan))]).toEqual([goal, days, builds.map(() => compounds(builds[0].plan))]);
+      expect([goal, days, builds.map((b) => isolations(b.plan))]).toEqual([goal, days, builds.map(() => isolations(builds[0].plan))]);
     }
   });
 

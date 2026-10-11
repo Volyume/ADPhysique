@@ -21,7 +21,8 @@
  */
 import { buildStructurePlan, weeksFor, weeklyTargets } from '../engine';
 import { checkPlan, checkFocusAgainstBaseline } from '../checker';
-import { PROGRESSION, TIME_MODEL, PATTERNS, TIERS } from '../rulebook';
+import { PROGRESSION, TIME_MODEL, PATTERNS, TIERS, PER_SESSION } from '../rulebook';
+import { sessionLoad } from '../measure';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
 
@@ -674,15 +675,23 @@ describe('the round 6 coach and user audits', () => {
     expect(plain('general', 6).report.sameAsFewerDays).toBe(5);
   });
 
-  test('C6-12: names carry a letter only at the end, never name the back twice, and are not repeated in a week', () => {
+  // RE-ANCHORED round 7 (U7-8, C7-9: two letter styles in one week, and
+  // letters on a pair whose names did not match): a letter follows a name's
+  // first part, and only where two sessions' names start the same.
+  test('C6-12, U7-8: one letter style, after the first part, only where names start the same; the back never named twice', () => {
     for (const goal of ['general', 'bodybuilding', 'classic_physique', 'mens_physique', 'bikini', 'wellness', 'figure', 'womens_physique']) {
       for (const days of [3, 4, 5, 6]) {
         const r = plain(goal, days, { experience: days === 5 && goal === 'general' ? 'advanced' : 'intermediate' });
         if (!r.ok) continue;
         const names = r.plan.sessions.map((s) => s.name);
         expect([goal, days, new Set(names).size]).toEqual([goal, days, names.length]);
+        const head = (nm) => nm.split(/, | & /)[0].replace(/ [A-F]$/, '');
         for (const name of names) {
-          expect([goal, days, name, / [A-C][,&]/.test(name), /Lats/.test(name) && /Back/.test(name), name.split(/, | & /).length <= 4]).toEqual([goal, days, name, false, false, true]);
+          const parts = name.split(/, | & /);
+          const lettered = / [A-F]$/.test(parts[0]);
+          const shared = names.filter((x) => head(x) === head(name)).length > 1;
+          expect([goal, days, name, parts.slice(1).some((p) => / [A-F]$/.test(p)), /\(/.test(name), lettered, /Lats/.test(name) && /Back/.test(name), parts.length <= 4])
+            .toEqual([goal, days, name, false, false, shared, false, true]);
         }
       }
     }
@@ -694,5 +703,170 @@ describe('the round 6 coach and user audits', () => {
       expect(x.countedTo).toBeGreaterThanOrEqual(x.minimum);
       expect(x.to).toBeLessThan(x.from);
     }
+  });
+});
+
+describe('the round 7 coach and user audits', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const all = (r) => r.plan.sessions.flatMap((s) => s.exercises);
+  const directIn = (s, m) => s.exercises.filter((ex) => ex.muscle === m).reduce((t, ex) => t + ex.peak, 0);
+
+  test('C7-1, U7-12: the length offered is the shortest that holds the week without asking', () => {
+    for (const [goal, days, lengthMinutes] of [['bodybuilding', 6, 45], ['mens_physique', 4, 30], ['bikini', 5, 45], ['figure', 4, 45]]) {
+      const r = plain(goal, days, { lengthMinutes });
+      expect(r.report.needsLengthChoice).toBe(true);
+      const offered = r.report.suggestedLength;
+      expect([goal, days, plain(goal, days, { lengthMinutes: offered }).report.needsLengthChoice]).toEqual([goal, days, false]);
+      for (const l of TIME_MODEL.lengths.filter((x) => x > lengthMinutes && x < offered)) {
+        expect([goal, days, l, plain(goal, days, { lengthMinutes: l }).report.needsLengthChoice]).toEqual([goal, days, l, true]);
+      }
+    }
+    expect(plain('bodybuilding', 6, { lengthMinutes: 45 }).report.suggestedLength).toBe(60);
+  });
+
+  test('C7-2: a whole isolation moves onto the same movement in a lighter session rather than ask for a longer one', () => {
+    const r = plain('wellness', 5);
+    expect(r.report.needsLengthChoice).toBe(false);
+    const long = plain('wellness', 5, { lengthMinutes: 90 });
+    expect(JSON.stringify(Object.entries(r.report.weekly).map(([m, v]) => [m, v.sets])))
+      .toBe(JSON.stringify(Object.entries(long.report.weekly).map(([m, v]) => [m, v.sets])));
+    expect(checkPlan(r.plan).ok).toBe(true);
+  });
+
+  test("C7-3, U7-3: a cause names the session it is true of; a muscle's own cap only where that session holds 8 of it", () => {
+    for (const [goal, days, equipment, focus] of [['mens_physique', 5, 'full_gym', ['quads']], ['general', 3, 'machines_cables', []], ['bodybuilding', 5, 'full_gym', []], ['general', 4, 'full_gym', ['chest']]]) {
+      const r = plain(goal, days, { equipment, focus });
+      const entries = [...r.report.belowTypical, ...r.report.focusResults.filter((f) => f.causes)];
+      for (const b of entries) {
+        for (const g of (b.causes || { groups: [] }).groups) {
+          for (const sessionName of g.sessions) {
+            const s = r.plan.sessions.find((x) => x.name === sessionName);
+            expect([goal, b.muscle, sessionName, !!s]).toEqual([goal, b.muscle, sessionName, true]);
+            // At the cap, or so near it that every step there breaks it.
+            const l = sessionLoad(s, PROGRESSION.peakWeek)[b.muscle] || { direct: 0, fractional: 0 };
+            if (g.code === 'muscle_cap') expect([goal, b.muscle, sessionName, l.direct + 2 > PER_SESSION.directCap || l.fractional + 2 > PER_SESSION.fractionalCap]).toEqual([goal, b.muscle, sessionName, true]);
+            if (g.code === 'set_cap') expect([goal, b.muscle, sessionName, s.exercises.reduce((t, ex) => t + ex.peak, 0) >= 23]).toEqual([goal, b.muscle, sessionName, true]);
+          }
+        }
+        if (b.causes && b.causes.every) expect(b.causes.groups).toHaveLength(1);
+      }
+    }
+    // The coach's case: one more leg extension set breaks only the 24 sets.
+    const q = plain('mens_physique', 5, { focus: ['quads'] });
+    const legs = q.plan.sessions.find((s) => s.exercises.some((ex) => ex.muscle === 'quads'));
+    const quads = q.report.focusResults.find((f) => f.muscle === 'quads');
+    if (quads.causes && quads.causes.groups[0].code === 'muscle_cap') expect(directIn(legs, 'quads')).toBeGreaterThanOrEqual(8);
+  });
+
+  test('C7-4, C7-6: a lone 2-set lead compound takes its third set from an isolation whose muscle stays above normal', () => {
+    for (const [goal, days, experience] of [['figure', 5, 'advanced'], ['womens_physique', 5, 'advanced'], ['classic_physique', 5, 'intermediate']]) {
+      const r = plain(goal, days, { experience });
+      for (const s of r.plan.sessions) {
+        for (const ex of s.exercises.filter((x) => ['chest', 'lats', 'upper_back', 'quads', 'glute_max'].includes(x.muscle) && PATTERNS[x.pattern].kind === 'compound')) {
+          const lone = s.exercises.filter((y) => y.muscle === ex.muscle && PATTERNS[y.pattern].kind === 'compound').length === 1;
+          if (!lone || ex.peak >= 3) continue;
+          // Still at 2 only where no isolation in the session could give.
+          const donors = s.exercises.filter((y) => PATTERNS[y.pattern].kind === 'isolation' && y.peak > 2 && y.muscle !== ex.muscle
+            && r.report.weekly[y.muscle] && r.report.weekly[y.muscle].sets - 1 >= r.report.weekly[y.muscle].typical + 1);
+          expect([goal, s.name, ex.name, donors.map((d) => d.name)]).toEqual([goal, s.name, ex.name, []]);
+        }
+      }
+    }
+  });
+
+  test('C7-5: an upper session with a calf finisher is never named "Full Body"', () => {
+    const r = plain('figure', 5, { equipment: 'barbell_plates', experience: 'advanced' });
+    for (const s of r.plan.sessions) {
+      const legs = s.exercises.some((ex) => ['quads', 'hamstrings', 'glute_max', 'glute_med', 'adductors'].includes(ex.muscle));
+      if (/Full Body/.test(s.name)) expect([s.name, legs]).toEqual([s.name, true]);
+    }
+    expect(r.plan.sessions.some((s) => s.name === 'Upper Body & Calves')).toBe(true);
+  });
+
+  test("C7-7: men's physique 5 days gives calves and abs their normal volume, at least what 4 days gives", () => {
+    const five = plain('mens_physique', 5).report.weekly;
+    const four = plain('mens_physique', 4).report.weekly;
+    for (const m of ['calves', 'abs']) {
+      expect([m, five[m].sets >= five[m].typical]).toEqual([m, true]);
+      expect([m, five[m].sets >= four[m].sets]).toEqual([m, true]);
+    }
+  });
+
+  test('C7-8: in a lower session a leg curl comes before the calf raise (P before S before M)', () => {
+    for (const s of plain('bikini', 4).plan.sessions) {
+      const curl = s.exercises.findIndex((ex) => ex.pattern === 'leg_curl');
+      const calf = s.exercises.findIndex((ex) => ex.pattern === 'calf');
+      if (curl >= 0 && calf >= 0) expect([s.name, curl < calf]).toEqual([s.name, true]);
+    }
+  });
+
+  test('C7-9: a session holding side-glute work names the side glutes, or is a lower-body session', () => {
+    for (const [goal, days, experience] of [['wellness', 6, 'intermediate'], ['wellness', 6, 'advanced'], ['wellness', 6, 'beginner'], ['bikini', 4, 'intermediate']]) {
+      for (const s of plain(goal, days, { experience }).plan.sessions) {
+        if (s.exercises.some((ex) => ex.muscle === 'glute_med')) expect([goal, s.name, /Side Glutes|Lower|Legs/.test(s.name)]).toEqual([goal, s.name, true]);
+      }
+    }
+  });
+
+  test('C7-10: a pick within 2 sets of the focus maximum is already close to the most, and takes nothing', () => {
+    const r = plain('classic_physique', 6, { experience: 'advanced', focus: ['lats'] });
+    const f = r.report.focusResults[0];
+    expect(f.reason).toBe('at_max');
+    expect(f.nearMax).toBe(true);
+    expect(f.max - f.before).toBeLessThan(2);
+    expect(r.report.focusTook).toEqual([]);
+    expect(r.report.needsFocusChoice).toBe(false);
+  });
+
+  test('U7-1: a muscle the kit cannot train is reported with its counted sets, and below its minimum', () => {
+    const r = plain('bodybuilding', 4, { equipment: 'barbell_plates' });
+    const lats = r.report.untrainableSets.find((u) => u.muscle === 'lats');
+    expect(lats.sets).toBeLessThan(lats.minimum);
+    expect(r.report.belowMinimum).toContain('lats');
+    expect(all(r).some((ex) => ex.muscle === 'lats')).toBe(false);
+    // A full gym leaves none below the minimum.
+    expect(plain('bodybuilding', 4).report.belowMinimum).toEqual([]);
+  });
+
+  test('U7-2: the day count R55 offers gains at least 2 sets over its own plain week, at the figure it states', () => {
+    for (const [goal, days, focus] of [['general', 2, ['glute_med']], ['mens_physique', 4, ['rear_delts']], ['general', 3, ['chest']], ['bodybuilding', 4, ['chest']]]) {
+      const r = plain(goal, days, { focus });
+      for (const c of r.report.focusChoice.filter((x) => x.moreDays != null)) {
+        const then = plain(goal, c.moreDays, { focus });
+        const res = then.report.focusResults.find((x) => x.muscle === c.muscle);
+        expect([goal, days, c.muscle, res.after - res.before >= 2, res.after]).toEqual([goal, days, c.muscle, true, c.setsThen]);
+        expect([goal, days, c.lengthThen == null, then.report.needsLengthChoice]).toEqual([goal, days, !then.report.needsLengthChoice, then.report.needsLengthChoice]);
+      }
+    }
+  });
+
+  test('U7-4: a pick the kit cannot train asks before saving', () => {
+    const r = plain('mens_physique', 3, { equipment: 'barbell_plates', focus: ['lats'] });
+    expect(r.report.needsFocusChoice).toBe(true);
+    expect(r.report.focusChoice.find((c) => c.muscle === 'lats')).toMatchObject({ untrainable: true, moreDays: null });
+  });
+
+  test("U7-5: a beginner's calf focus fills the room it opened; no reason is ever \"room\"", () => {
+    const r = plain('mens_physique', 3, { experience: 'beginner', focus: ['calves'] });
+    const f = r.report.focusResults[0];
+    expect(f.after - f.before).toBeGreaterThanOrEqual(2);
+    expect((f.limits || [])[0]).not.toBe('room');
+  });
+
+  test('U7-10: a refusal offers the length its day count needs', () => {
+    const r = plain('bikini', 5, { equipment: 'barbell_plates' });
+    expect(r.ok).toBe(false);
+    const then = plain('bikini', r.refusal.suggestedDays, { equipment: 'barbell_plates' });
+    expect(r.refusal.suggestedLength == null).toBe(!then.report.needsLengthChoice);
+    if (r.refusal.suggestedLength != null) {
+      expect(plain('bikini', r.refusal.suggestedDays, { equipment: 'barbell_plates', lengthMinutes: r.refusal.suggestedLength }).report.needsLengthChoice).toBe(false);
+    }
+  });
+
+  test('U7-13: a week with fewer sets than one day fewer says by how many', () => {
+    const r = plain('general', 6, { equipment: 'home_gym' });
+    const five = plain('general', 5, { equipment: 'home_gym' });
+    const total = (w) => Object.values(w).reduce((t, v) => t + v.sets, 0);
+    expect(r.report.fewerSetsThan).toEqual({ days: 5, sets: Math.round(total(five.report.weekly) - total(r.report.weekly)) });
   });
 });
