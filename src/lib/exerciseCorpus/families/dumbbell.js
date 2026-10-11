@@ -436,7 +436,7 @@ export default [
     repMin: 10, repMax: 15,
     fatigueCost: 2, sfr: 4,
     subregion: "flat",
-    aliases: ["DB Pullover","dumbbell around pullover","dumbbell straight arm pullover","Bent-Arm Dumbbell Pullover","Straight-Arm Dumbbell Pullover","Cross-Bench Dumbbell Pullovers","Pullover"],
+    aliases: ["DB Pullover","dumbbell around pullover","Bent-Arm Dumbbell Pullover","Cross-Bench Dumbbell Pullovers","Pullover"],
     loadCharacter: "grind",
     setup: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest.",
     execution: "Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest.",
@@ -457,6 +457,29 @@ export default [
     setup: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest.",
     execution: "Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest.",
     watch: "Letting the ribs flare as the weight goes back turns the stretch into a lower-back arch.",
+  },
+  // Register D222 (2026-10-11, lead decision on the founder's delegation):
+  // the straight-arm pullover is the lat version, kept apart from the two
+  // chest pullovers above, whose target is disputed. With straight arms the
+  // work is shoulder extension, the lats' job, so it is a back exercise; it
+  // gives a dumbbell-only or home kit a lat exercise (09 B11 names a
+  // pullover for exactly that plan). Unlisted in the canonicality registry,
+  // so the older generator ranks it as a specialist, below its staples.
+  {
+    name: "Straight-Arm Dumbbell Pullover",
+    primaryMuscle: "back",
+    secondaryMuscles: ["chest"],
+    equipment: "dumbbell",
+    movementPattern: "pull",
+    compound: false,
+    repMin: 10, repMax: 15,
+    fatigueCost: 2, sfr: 4,
+    subregion: "shoulder_extension",
+    aliases: ["dumbbell straight arm pullover","DB Straight-Arm Pullover","Straight-Arm DB Pullover"],
+    loadCharacter: "grind",
+    setup: "Lie along a flat bench holding one dumbbell in both hands above your chest, arms straight.",
+    execution: "Keeping your arms straight, lower it behind your head in an arc, then pull it back over your chest.",
+    watch: "Bending your elbows moves the work onto your chest, so keep your arms long.",
   },
   {
     name: "Dumbbell Rear Delt Fly",

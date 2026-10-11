@@ -239,10 +239,16 @@ function buildWith(args, strategy) {
   // R27: the own sets a priority or standard muscle never goes below.
   const ownFloor = (m) => Math.ceil(targets[m].min / 2);
 
+  const offer = kitOffer(kit);
   const plan = {
     category, days, equipment, experience, focus: [],
     lengthMinutes: args.lengthMinutes,
     untrainable: kit.untrainable.filter((m) => targets[m]),
+    // R32 (register D222): a muscle the kit gives exactly one exercise of
+    // its own is held to what that exercise can carry (09 s7 anticipates
+    // single-pattern kits with its 5-set allowance); a shortfall is
+    // reported, never a refusal, as for a muscle the kit cannot train (R17).
+    kitLimited: Object.keys(targets).filter((m) => !kit.untrainable.includes(m) && (offer.names[m] || 0) === 1),
     sessions: order.map((t) => ({ key: t.key, name: t.name, exercises: [] })),
   };
   const n = plan.sessions.length;
@@ -603,7 +609,8 @@ function buildWith(args, strategy) {
   let growth = false;
   const floorMuscles = order2.filter(isLeadTier);
   const shortOwn = fill(ownFloor, floorMuscles, { allowOverflow: true, direct: true, fair: true, allowRepair: false });
-  const shortOfMinimum = shortOwn.length ? [] : fill((m) => targets[m].min, order2, { allowOverflow: true });
+  const shortOfMinimum = shortOwn.length ? [] : fill((m) => targets[m].min, order2, { allowOverflow: true })
+    .filter((m) => !plan.kitLimited.includes(m));
   if (shortOwn.length || shortOfMinimum.length) {
     const ownSets = directWeek();
     const short = shortOwn.length ? shortOwn : shortOfMinimum;
@@ -807,7 +814,7 @@ function buildWith(args, strategy) {
     const held = s.exercises.filter((ex) => ex.peak >= SESSION_LIMITS.setsPerExerciseMin).map((ex) => ex.muscle);
     s.name = sessionName(order[i].name, held);
   });
-  plan.kitOffer = kitOffer(kit);
+  plan.kitOffer = offer;
 
   const minutes = plan.sessions.map((s) => sessionMinutes(s, peak, equipment));
   plan.reportedMinutes = minutes.map((m) => Math.round(m * 10) / 10);
@@ -844,6 +851,9 @@ function buildWith(args, strategy) {
       // audits: six-day weeks were offered "or more days").
       moreDaysPossible: plan.needsLengthChoice ? days < Math.max(...DAY_COUNTS) : false,
       focusUnmet: plan.focusUnmet,
+      kitShort: plan.kitLimited
+        .filter((m) => (weekly[m]?.fractional ?? 0) < targets[m].min)
+        .map((m) => ({ muscle: m, sets: weekly[m]?.fractional ?? 0, minimum: targets[m].min })),
       belowTypical,
       untrainable: plan.untrainable,
       overflow,

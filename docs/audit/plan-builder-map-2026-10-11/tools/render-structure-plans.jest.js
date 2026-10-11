@@ -35,6 +35,7 @@ function render(args, title) {
   const sc = senseCheck(r.plan);
   lines.push(`Rulebook checks: ${c.ok ? 'pass' : c.failures.map((f) => f.code).join(', ')}. Sense checks: ${sc.ok ? 'pass' : sc.failures.map((f) => f.code).join(', ')}.`);
   lines.push(`Longest session ${r.report.longestMinutes.toFixed(0)} min against ${args.lengthMinutes} chosen${r.report.needsLengthChoice ? ` (asks for a longer session: ${r.report.suggestedLength} min${r.report.moreDaysPossible ? ', or more days' : ''})` : ''}.`);
+  for (const k of r.report.kitShort || []) lines.push(`With this equipment ${k.muscle} has one exercise of its own: ${k.sets} of ${k.minimum} sets a week (the plan says so).`);
   for (const f of r.report.focusUnmet || []) lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (its sessions are full; the plan says so).`);
   lines.push('');
   r.plan.sessions.forEach((s, i) => {

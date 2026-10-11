@@ -184,8 +184,12 @@ export function checkPlan(plan, opts = {}) {
     const hi = weeklyMax(plan.category, m, plan.focus);
     // 09 s7 (R17): a muscle the kit has no pattern for is reported, not
     // failed; it is trained only through other exercises' credits.
+    // R32: a muscle the kit gives one exercise of its own is held to what
+    // that exercise can carry; a shortfall is reported, not failed.
     if ((plan.untrainable || []).includes(m)) {
       if (v.fractional < lo) warnings.push({ code: 'C4', muscle: m, detail: `${m} cannot be trained directly with this equipment; ${v.fractional} sets a week through other exercises` });
+    } else if ((plan.kitLimited || []).includes(m) && v.direct > 0) {
+      if (v.fractional < lo) warnings.push({ code: 'C4', muscle: m, detail: `${m} has one exercise of its own with this equipment; ${v.fractional} sets a week against the minimum ${lo}` });
     } else if (v.fractional < lo) fail('C4', `${m} ${v.fractional} sets a week, below the minimum ${lo}`, { week: peak, muscle: m });
     if (v.fractional > hi) fail('C4', `${m} ${v.fractional} sets a week, above the maximum ${hi}`, { week: peak, muscle: m });
   }

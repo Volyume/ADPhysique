@@ -574,6 +574,9 @@ const SPECIALIST = [
   'Conventional Deadlift', 'Sumo Deadlift', 'Rack Pull', 'Trap Bar Deadlift',
   'JM Press', 'Glute Ham Raise', // 'Good Morning (Barbell)' retired into 'Barbell Good Morning' (EL-25), listed below
   'Cable Pull-Through', 'Nordic Curl', 'Dumbbell Pullover',
+  // Register D222 (2026-10-11): the lat pullover the structure engine gives
+  // dumbbell and home kits by name; the older generator ranks it here.
+  'Straight-Arm Dumbbell Pullover',
 
   // Deadlift/hinge/posterior-chain variants with a higher skill or fatigue
   // cost than the RDL/leg-curl staples already covering hamstrings.

@@ -96,10 +96,12 @@ describe('choices per kit', () => {
   test('what a kit cannot train is reported (09 s7)', () => {
     expect(all.full_gym.untrainable).toEqual([]);
     expect(all.machines_cables.untrainable).toEqual([]);
-    // No vertical pull or pullover in these kits: the lats are trained
-    // through rows and the plan says so.
-    expect(all.dumbbells_only.untrainable).toEqual(['lats', 'adductors']);
-    expect(all.home_gym.untrainable).toEqual(['lats', 'adductors']);
+    // Dumbbells train the lats with the straight-arm pullover (register
+    // D222); a barbell kit has no vertical pull or pullover, so its lats are
+    // trained through rows and the plan says so.
+    expect(all.dumbbells_only.untrainable).toEqual(['adductors']);
+    expect(all.home_gym.untrainable).toEqual(['adductors']);
+    expect(all.dumbbells_only.byPattern.pullover.map((c) => c.name)).toEqual(['Straight-Arm Dumbbell Pullover']);
     expect(all.barbell_plates.untrainable).toEqual(['lats', 'adductors']);
     expect(all.bodyweight.untrainable).toEqual(['traps', 'adductors']);
   });

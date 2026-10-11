@@ -17,7 +17,9 @@
  * number.
  *
  * SUPPLEMENTS (R16). The catalogue has no glute-med, pullover or (in two
- * kits) lateral-raise choice, which the rulebook needs. They are added here,
+ * kits) lateral-raise choice, which the rulebook needs. The dumbbell lat
+ * pullover is the library's Straight-Arm Dumbbell Pullover (register D222),
+ * never the contested Dumbbell Pullover. They are added here,
  * not in the catalogue, so the older planner is untouched. Each is the plain
  * movement a person recognises. Two are rows the canonicality registry
  * ranks niche: the plate lateral raise (09 s7 names it for barbell kits) and
@@ -114,6 +116,8 @@ export const SUPPLEMENTS = Object.freeze({
   pullover: Object.freeze([
     { name: 'Cable Straight-Arm Pulldown', reason: 'Works the lats with straight arms, a second angle to a pulldown.', grade: 'D' },
     { name: 'Cable Lat Pullover', reason: 'Works the lats with straight arms, a second angle to a pulldown.', grade: 'D' },
+    // 09 B11: "Dumbbells-only, men's physique 4d: pullover + one-arm row".
+    { name: 'Straight-Arm Dumbbell Pullover', reason: 'Works the lats with straight arms, the lat exercise a dumbbell-only kit has.', grade: 'D' },
   ]),
   lateral: Object.freeze([
     { name: 'Seated Lateral Raise', reason: 'A seated lateral raise, a second variant where the kit has only dumbbells.', grade: 'D' },

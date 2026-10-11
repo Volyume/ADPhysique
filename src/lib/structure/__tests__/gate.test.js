@@ -13,7 +13,7 @@
  *   refuses more, or a rule change that quietly lets one through, fails
  *   here);
  * - men's physique, the founder's own category, builds at every day count in
- *   every gym kit;
+ *   a gym and from 3 days with dumbbells or a home gym;
  * - focus only adds (C5) and the clock never removes a set (Q1 = C).
  */
 import { buildStructurePlan } from '../engine';
@@ -35,16 +35,14 @@ const build = (goal, days, equipment, over = {}) => buildStructurePlan({
 const sig = (plan) => plan.sessions.flatMap((s) => s.exercises.map((ex) => `${ex.name}x${ex.peak}`)).sort().join(',');
 const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => !['abs', 'calves'].includes(ex.muscle)).map((ex) => ex.name).join(',')).join('|');
 
-// The weeks refused today for an intermediate person (56 of 240), most at
+// The weeks refused today for an intermediate person (48 of 240), most at
 // 2 or 3 days. Every muscle the category trains must have an
 // exercise of its own (the founder's sense order, D222), which costs session
 // slots. Lead-checked by hand (register D222):
 // - impossible under the rules: bodybuilding 2 days (the upper session
 //   needs 9 exercises against the 8 limit) and 3 days (the leg session needs
 //   26 sets against 24); classic physique 3 days (27 sets); wellness 2 days
-//   (the lower session needs 9 exercises); side delts in the barbell and
-//   bodyweight kits at 2 and 3 days (one lateral raise, capped at 5 sets, in
-//   one session); men's physique 6 days with barbell and plates (the
+//   (the lower session needs 9 exercises); men's physique 6 days with barbell and plates (the
 //   shoulder sessions have two exercises in the kit, too thin to be worth
 //   the trip, S5);
 // - tight weeks the engine has not packed yet: figure and women's physique
@@ -59,24 +57,29 @@ const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => 
 //   which leaves a hip thrust and a slider curl, too thin to be worth the
 //   trip); wellness 5 days with dumbbells, barbell or a home gym (09's
 //   hinge-only hamstring session holds one hinge, two hinges loading the
-//   lower back twice, so hamstrings fall short of 10).
+//   lower back twice, so hamstrings fall short of 10);
+// - once dumbbells train the lats (the straight-arm pullover, register
+//   D222): men's physique, figure and women's physique at 2 days with
+//   dumbbells or a home gym (the one upper session would need nine
+//   exercises to give every upper muscle its own, against the 8 limit;
+//   these weeks built before only by leaving the lats without one).
 // The list may only shrink, except by a ruling recorded in register D222. A refusal names the nearest day count that
 // works (09 B12); the person chooses.
 const KNOWN_REFUSALS = new Set([
+  ...['full_gym', 'machines_cables', 'dumbbells_only', 'home_gym'].flatMap((k) => [`bodybuilding 2d ${k}`]),
   ...['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'].flatMap((k) => [
-    `bodybuilding 2d ${k}`, `bodybuilding 3d ${k}`, `classic_physique 2d ${k}`, `classic_physique 3d ${k}`,
+    `bodybuilding 3d ${k}`, `classic_physique 2d ${k}`, `classic_physique 3d ${k}`,
   ]),
-  'mens_physique 2d barbell_plates', 'mens_physique 2d bodyweight', 'mens_physique 3d barbell_plates', 'mens_physique 3d bodyweight',
   'mens_physique 6d barbell_plates', 'mens_physique 6d bodyweight',
   'bikini 5d barbell_plates', 'bikini 6d barbell_plates', 'wellness 6d barbell_plates',
   'wellness 5d dumbbells_only', 'wellness 5d barbell_plates', 'wellness 5d home_gym',
+  'mens_physique 2d dumbbells_only', 'mens_physique 2d home_gym', 'figure 2d dumbbells_only', 'figure 2d home_gym',
+  'womens_physique 2d dumbbells_only', 'womens_physique 2d home_gym',
   'wellness 2d full_gym', 'wellness 2d machines_cables',
   'wellness 3d full_gym', 'wellness 3d dumbbells_only', 'wellness 3d barbell_plates', 'wellness 3d home_gym', 'wellness 3d bodyweight',
   'wellness 5d bodyweight',
-  'figure 2d full_gym', 'figure 2d machines_cables', 'figure 2d barbell_plates', 'figure 2d bodyweight',
-  'figure 3d barbell_plates', 'figure 3d bodyweight',
-  'womens_physique 2d full_gym', 'womens_physique 2d machines_cables', 'womens_physique 2d barbell_plates', 'womens_physique 2d bodyweight',
-  'womens_physique 3d barbell_plates', 'womens_physique 3d bodyweight',
+  'figure 2d full_gym', 'figure 2d machines_cables',
+  'womens_physique 2d full_gym', 'womens_physique 2d machines_cables',
 ]);
 
 describe('every category, day count and kit (intermediate)', () => {
@@ -123,10 +126,11 @@ describe('every category, day count and kit (intermediate)', () => {
     expect([...KNOWN_REFUSALS].filter((x) => !refused.includes(x))).toEqual([]);
   });
 
-  test("men's physique builds at every day count in every gym kit", () => {
+  test("men's physique builds at every day count in a gym, and from 3 days with dumbbells or a home gym", () => {
     const mp = results.filter(({ goal, kit }) => goal === 'mens_physique' && ['full_gym', 'machines_cables', 'dumbbells_only', 'home_gym'].includes(kit));
     expect(mp).toHaveLength(20);
-    expect(mp.filter(({ r }) => !r.ok).map(({ days, kit }) => `${days}d ${kit}`)).toEqual([]);
+    expect(mp.filter(({ r }) => !r.ok).map(({ days, kit }) => `${days}d ${kit}`)).toEqual(['2d dumbbells_only', '2d home_gym']);
+    for (const { r } of mp.filter((x) => !x.r.ok)) expect(r.refusal.suggestedDays).toBe(3);
   });
 });
 

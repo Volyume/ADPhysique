@@ -50,7 +50,9 @@ const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v7';
 // format migration itself — the 18 seedRoutines.js REQUIRED_EXERCISES rows
 // fold in as canonical (id-remapped from their old random uid via the
 // same-name merge below) and the six EL-21 duplicate pairs retire.
-const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v4';
+// v5 (register D222, 2026-10-11): Straight-Arm Dumbbell Pullover, the lat
+// pullover the structure engine gives dumbbell and home kits.
+const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v5';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //
