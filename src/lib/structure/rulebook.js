@@ -168,8 +168,13 @@ export const SESSION_LIMITS = Object.freeze({
   exercisesPerMuscleLarge: 3,
   exercisesPerMuscleOther: 2,
   exercisesPerMuscleFrontDelts: 1,
-  beginnerExercises: 5,
-  beginnerSetsPerExercise: 3,
+  // R23 (register D222): beginners take the normal session limits. 09's
+  // 5 exercises and 3 sets cannot hold a week that trains every muscle
+  // directly (a 2-day upper session lists 7); beginners' lower weekly
+  // volume (EXPERIENCE, applied to the minimum as well) keeps their
+  // sessions short instead, about 4.5 exercises on average.
+  beginnerExercises: 8,
+  beginnerSetsPerExercise: 4,
 });
 
 // ── Rest and reps by exercise kind (09 s5, B11; R6) ───────────────────────
@@ -209,6 +214,10 @@ export const TIME_MODEL = Object.freeze({
 // ── Focus and experience (09 s3, B4) ──────────────────────────────────────
 export const FOCUS = Object.freeze({ addFractional: 4, cap: 20, maxPicks: 3 });
 export const EXPERIENCE = Object.freeze({ beginner: 0.7, intermediate: 1, advanced: 1.15 });
+// R23: the beginner factor also scales the weekly minimum (untrained people
+// grow on low volume; Pelland 2026 puts the most growth per set at 5 to 10
+// fractional sets a week). Advanced people keep the full minimum.
+export const EXPERIENCE_MINIMUM = Object.freeze({ beginner: 0.7, intermediate: 1, advanced: 1 });
 
 // ── Joint protection (09 s6, B6) ──────────────────────────────────────────
 export const JOINT_RULES = Object.freeze({
@@ -494,13 +503,14 @@ export const EVIDENCE = Object.freeze({
   LIGHT_DOSE: 'D: 09 s4 dose classes; held at RIR 2 or more all block, R1 (register D222).',
   RECOVERY_HOURS: 'B: Moran-Navarro 2017 (failure slows recovery 24-48 h); C: Miller 2005 (tendon collagen to 72 h); D: per-muscle hours, 09 B5.',
   MIN_HOURS_BETWEEN_SESSIONS_WARNING: 'D: 09 s4.',
-  SESSION_LIMITS: 'D: 09 s5; 24 working sets, R4 (register D222).',
+  SESSION_LIMITS: 'D: 09 s5; 24 working sets, R4; beginner limits R23 (register D222).',
   REST_SECONDS: 'B for the isolation floor (Singer 2024), D for the rest: 09 s5 table, R6 (register D222).',
   REP_RANGES: 'D: 09 B11.',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',
   FOCUS: 'D: 09 s3 and B4.',
   EXPERIENCE: 'D: 09 s3 and B4.',
+  EXPERIENCE_MINIMUM: 'A for low-volume growth in untrained people (Pelland 2026 efficiency tiers); D: lead ruling R23 (register D222).',
   JOINT_RULES: 'C/D: 09 s6 and B6 (Siewe 2014 injury sites; Kolber 2014 for J3 and J4).',
   PROGRESSION: 'C: Rogerson 2024 (deload every 5.6 weeks, volume cut, frequency kept); B: compounds short of failure (Robinson 2024, Refalo 2024); D: the ladder; R1 (register D222).',
   CHECKIN: 'D: 09 s8.',

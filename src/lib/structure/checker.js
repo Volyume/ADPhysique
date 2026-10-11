@@ -14,7 +14,7 @@
  * applies, the session key or keys, the muscle, and a plain detail line.
  */
 import {
-  TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES,
+  TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES, EXPERIENCE_MINIMUM,
   SESSION_LIMITS, REST_SECONDS, JOINT_RULES, TIME_MODEL, PROGRESSION,
   OHP_PATTERNS, KNEE_COMPOUND_PATTERNS, ELBOW_ISOLATION_PATTERNS,
   SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS,
@@ -51,6 +51,15 @@ export function weeklyMax(category, muscle, focus) {
   if (t === 'I') return null;
   const base = VOLUME[t].max;
   return (focus || []).includes(muscle) ? Math.min(base + FOCUS.addFractional, FOCUS.cap) : base;
+}
+
+/** The weekly minimum for a muscle, scaled for a beginner (09 s3; R23). */
+export function weeklyMin(category, muscle, days, experience) {
+  const t = tierOf(category, muscle);
+  if (t === 'I') return 0;
+  const base = VOLUME[t].min[days];
+  const f = EXPERIENCE_MINIMUM[experience] ?? 1;
+  return f === 1 ? base : Math.max(1, Math.round(base * f));
 }
 
 /**
@@ -171,7 +180,7 @@ export function checkPlan(plan, opts = {}) {
       if (v.direct > VOLUME.I.maxDirect) fail('C4', `${m} ${v.direct} direct sets on an indirect-only muscle (limit ${VOLUME.I.maxDirect})`, { week: peak, muscle: m });
       continue;
     }
-    const lo = VOLUME[t].min[plan.days];
+    const lo = weeklyMin(plan.category, m, plan.days, plan.experience);
     const hi = weeklyMax(plan.category, m, plan.focus);
     // 09 s7 (R17): a muscle the kit has no pattern for is reported, not
     // failed; it is trained only through other exercises' credits.

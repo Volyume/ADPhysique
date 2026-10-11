@@ -31,7 +31,7 @@ import {
   PROGRESSION, TEMPLATES, DAY_COUNTS, OPT_IN_MUSCLES, SIBLING_MUSCLES, CREDIT_FRACTION, rulebookCategory,
 } from './rulebook';
 import { structureChoices } from './patterns';
-import { checkPlan, weeklyMax } from './checker';
+import { checkPlan, weeklyMax, weeklyMin } from './checker';
 import { weeklyLoad, sessionMinutes } from './measure';
 
 // The patterns that train each muscle, in preference order (09 B2 and the
@@ -116,7 +116,7 @@ export function weeklyTargets(category, days, experience, focus) {
     const t = tierOf(category, m);
     if (t === 'I') continue;
     const v = VOLUME[t];
-    const min = v.min[days];
+    const min = weeklyMin(category, m, days, experience);
     const max = weeklyMax(category, m, focus);
     const typical = Math.max(min, Math.min(v.max, Math.round(v.typical * factor)));
     const target = focus.includes(m) ? Math.min(max, typical + FOCUS.addFractional) : typical;

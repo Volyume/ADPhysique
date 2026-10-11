@@ -208,11 +208,25 @@ describe('C6 session limits', () => {
     expect(checkPlan(p).failures.some((f) => f.code === 'C6' && f.muscle === 'side_delts')).toBe(true);
   });
 
-  test('a beginner session past 5 exercises fails', () => {
+  test('R23: a beginner keeps the normal limits and a 70% minimum', () => {
     const p = validPlan();
     p.experience = 'beginner';
     session(p, 'legs').exercises.push(ex('x1', 'adduction', 'isolation', 2));
+    expect(codes(checkPlan(p))).not.toContain('C6');
+    session(p, 'legs').exercises.push(ex('x2', 'abduction', 'isolation', 2), ex('x3', 'kickback', 'isolation', 2), ex('x4', 'shrug', 'isolation', 2));
+    expect(session(p, 'legs').exercises).toHaveLength(9);
     expect(codes(checkPlan(p))).toContain('C6');
+    // abs minimum 6 for an intermediate at 4 days, round(6 x 0.7) = 4 for a
+    // beginner: 4 weekly abs sets fail the one and pass the other.
+    const absFails = (plan) => checkPlan(plan).failures.some((f) => f.code === 'C4' && f.muscle === 'abs');
+    const q = validPlan();
+    session(q, 'legs').exercises.pop();
+    session(q, 'chest_triceps').exercises[4] = ex('leg_raise', 'leg_raise', 'isolation', 4);
+    expect(absFails(q)).toBe(true);
+    q.experience = 'beginner';
+    expect(absFails(q)).toBe(false);
+    session(q, 'chest_triceps').exercises[4] = ex('leg_raise', 'leg_raise', 'isolation', 3);
+    expect(absFails(q)).toBe(true);
   });
 });
 
