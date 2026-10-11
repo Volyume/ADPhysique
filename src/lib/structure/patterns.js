@@ -149,7 +149,17 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Reverse Crunch', reason: 'Curls the hips up off the floor for the lower abs.', grade: 'D' },
     { name: 'Leg Raise', reason: 'Raises straight legs lying on the floor for the lower abs.', grade: 'D' },
   ]),
+  // Round 4 coach audit: the catalogue's only adduction is the machine, so
+  // wellness weeks without one reported adductors untrainable although the
+  // library holds these. The band first; the Copenhagen adduction is the
+  // harder one, done with the knee on the bench (short lever) to start.
+  adduction: Object.freeze([
+    { name: 'Band Standing Hip Adduction', reason: 'Trains the inner thigh with a band.', grade: 'D' },
+    { name: 'Copenhagen Adduction', reason: 'Trains the inner thigh with your leg on a bench; start with the knee on the bench.', grade: 'D' },
+  ]),
   leg_curl: Object.freeze([
+    // Round 4 user audit: a dumbbell kit curls with a dumbbell before sliders.
+    { name: 'Lying Dumbbell Leg Curl', reason: 'A hamstring curl holding a dumbbell between your feet.', grade: 'D' },
     { name: 'TRX Hamstring Curl', reason: 'A hamstring curl with suspension straps.', grade: 'D' },
     { name: 'Slider Leg Curl (Bodyweight)', reason: 'A hamstring curl on sliders.', grade: 'D' },
   ]),
@@ -219,7 +229,10 @@ const GYM_KITS = new Set(['full_gym', 'machines_cables']);
 // R38: a library name that is another name's machine under a second name; it
 // is never offered beside its original (a seated calf raise one day and a
 // "seated machine calf raise" the next read as two exercises).
-const TWINS = Object.freeze({ 'Seated Machine Calf Raise': 'Seated Calf Raise' });
+// Round 4 user audit: the cable lat pullover is the cable straight-arm
+// pulldown under another name (both straight-arm pulls on a cable), so a
+// week holding both read as one exercise listed twice.
+const TWINS = Object.freeze({ 'Seated Machine Calf Raise': 'Seated Calf Raise', 'Cable Lat Pullover': 'Cable Straight-Arm Pulldown' });
 // Unloaded stand-ins, offered only where their pattern has no loaded choice in
 // the kit (coach audit: a full-gym bikini week took clamshells because a
 // fresh name won over the loaded cable abduction).
@@ -335,6 +348,8 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
       pattern,
       muscle: PATTERNS[pattern].muscle,
       kind: kindOf(row),
+      // A compound with no load but the body's own (its reps follow effort).
+      unloaded: (row.equipmentCategory ?? row.equipment_category) === 'bodyweight' && kindOf(row) !== 'isolation',
       extraJoints: [...(NAME_EXTRA_JOINTS[name] || [])],
       reason: meta.reason,
       grade: meta.grade,

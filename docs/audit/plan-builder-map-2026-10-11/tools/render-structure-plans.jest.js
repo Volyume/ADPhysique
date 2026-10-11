@@ -24,43 +24,90 @@ const LABEL = {
   bikini: 'Bikini', wellness: 'Wellness', figure: 'Figure', womens_physique: "Women's physique",
 };
 
+const NAMES = {
+  side_delts: 'side delts', rear_delts: 'rear delts', front_delts: 'front delts', upper_back: 'upper back',
+  glute_max: 'glutes', glute_med: 'glute medius', lats: 'lats',
+};
+const name = (m) => NAMES[m] || m.replace(/_/g, ' ');
+// What binds in the sessions that hold a muscle (engine report `limits`).
+function limitText(m, limits = []) {
+  const parts = {
+    muscle_cap: `the most ${name(m)} work one session may hold`,
+    set_cap: 'a full session of 24 sets',
+    exercise_cap: 'the most exercises one session may hold',
+    rules: 'the recovery and joint rules for the rest',
+  };
+  const caps = limits.map((l) => parts[l]).filter(Boolean);
+  return caps.length ? `its sessions are at their limits: ${caps.join('; ')}` : 'its sessions are at their limits';
+}
+
 function render(args, title) {
   const r = buildStructurePlan({ library: LIBRARY, ...args });
   const lines = [`### ${title}`, ''];
   if (!r.ok) {
-    lines.push(`Refused: ${r.refusal.detail}. Nearest day count that works: ${r.refusal.suggestedDays ?? 'none'}.`, '');
+    const days = r.refusal.suggestedDays;
+    lines.push(`Not built: ${r.refusal.detail}.${days ? ` ${days} days a week works.` : ''}`, '');
     return lines;
   }
   const c = checkPlan(r.plan);
   const sc = senseCheck(r.plan);
   lines.push(`Rulebook checks: ${c.ok ? 'pass' : c.failures.map((f) => f.code).join(', ')}. Sense checks: ${sc.ok ? 'pass' : sc.failures.map((f) => f.code).join(', ')}.`);
-  lines.push(`Longest session ${r.report.longestMinutes.toFixed(0)} min against ${args.lengthMinutes} chosen${r.report.needsLengthChoice ? ` (asks for a longer session: ${r.report.suggestedLength} min${r.report.moreDaysPossible ? ', or more days' : ''})` : ''}.`);
-  for (const k of r.report.kitShort || []) lines.push(`With this equipment ${k.muscle} has one exercise of its own: ${k.sets} of ${k.minimum} sets a week (the plan says so).`);
-  for (const f of r.report.focusUnmet || []) {
-    const why = f.reason === 'session_cap'
-      ? `it has ${f.sessions} session${f.sessions === 1 ? '' : 's'} a week, each already holding the most one session may`
-      : f.reason === 'pull_balance' ? 'pulling could not be raised to match more pressing'
-        : f.reason === 'hamstring_balance' ? 'hamstrings could not be raised to half of more quad work'
-        : f.reason === 'checks' ? 'the focused week failed a check, so the focus was taken back'
-          : 'its sessions are full';
-    lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (${why}; the plan says so).`);
+  // The messages below are worded as the app should show them (round 4
+  // user audit): muscle names, sets a week, the session that runs long and
+  // the choice that works.
+  const rep = r.report;
+  if (rep.needsLengthChoice) {
+    const over = rep.overSessions.map((x) => `${x.name} comes to about ${x.minutes} minutes`).join('; ');
+    lines.push(`Asks before saving: ${over}, against the ${args.lengthMinutes} you chose. A ${rep.suggestedLength}-minute session fits${rep.daysThatFit ? `, or ${rep.daysThatFit} days a week at ${args.lengthMinutes} minutes` : ''}.`);
+  } else {
+    lines.push(`Longest session about ${rep.longestMinutes.toFixed(0)} minutes against the ${args.lengthMinutes} chosen.`);
   }
-  if ((r.report.focusTook || []).length) {
-    lines.push(`To make room for the focus: ${r.report.focusTook.map((x) => `${x.muscle} ${x.from} to ${x.to} own sets (minimum ${x.minimum})`).join('; ')}.`);
+  for (const k of rep.kitShort || []) lines.push(`With this equipment ${name(k.muscle)} has one exercise: ${k.sets} of its ${k.minimum} sets a week.`);
+  for (const m of rep.focusIgnored || []) lines.push(`Focus on ${name(m)} has no effect: this category does not train it directly.`);
+  for (const f of rep.focusResults || []) {
+    const n = name(f.muscle);
+    if (f.reason === 'reached') lines.push(`Focus on ${n}: ${f.before} to ${f.after} sets a week.`);
+    else if (f.reason === 'at_max') lines.push(`Focus on ${n}: already at ${f.before} sets a week, the most a week holds for it, so the plan is the same.`);
+    else {
+      const why = f.reason === 'pull_balance' ? 'more pressing would need more pulling than the week can hold'
+        : f.reason === 'hamstring_balance' ? 'more quad work would need more hamstring work than the week can hold'
+          : f.reason === 'checks' ? 'adding more would break a rule of the plan'
+            : limitText(f.muscle, f.limits);
+      lines.push(`Focus on ${n}: ${f.before} to ${f.after} sets a week, short of ${f.target}: ${why}.${f.reachedAt ? ` With ${f.reachedAt} days a week it reaches ${f.target}.` : ''}`);
+    }
+  }
+  // One line per cause, not one per muscle (a tight week listed a dozen).
+  const picked = new Set((rep.focusResults || []).map((f) => f.muscle));
+  const byCause = new Map();
+  for (const b of rep.belowTypical || []) {
+    if (picked.has(b.muscle) || (rep.kitShort || []).some((k) => k.muscle === b.muscle)) continue;
+    const cause = limitText('it', b.limits).replace('the most it work', 'the most of that muscle');
+    if (!byCause.has(cause)) byCause.set(cause, []);
+    byCause.get(cause).push(`${name(b.muscle)} ${b.sets} of ${b.target}`);
+  }
+  for (const [cause, list] of byCause) lines.push(`Below normal volume (sets a week; ${cause}): ${list.join(', ')}.`);
+  if ((rep.focusTook || []).length) {
+    lines.push(`To make room for the focus: ${rep.focusTook.map((x) => `${name(x.muscle)} ${x.from} to ${x.to} sets a week of its own (its minimum is ${x.minimum})`).join('; ')}.`);
   }
   lines.push('');
   r.plan.sessions.forEach((s, i) => {
     const sets = s.exercises.reduce((t, ex) => t + ex.peak, 0);
     lines.push(`**${i + 1}. ${s.name}** (${s.exercises.length} exercises, ${sets} sets at the peak, about ${r.report.minutes[i].toFixed(0)} min)`);
     for (const ex of s.exercises) {
-      lines.push(`- ${ex.name}: sets by week ${ex.weeks.map((w) => w.sets).join('/')}, ${ex.repRange[0]}-${ex.repRange[1]} reps, rest ${ex.restSec} s${ex.nextDayException ? ', kept 2 reps short of failure all block (next-day light dose)' : ''}`);
+      lines.push(`- ${ex.name}: sets by week ${ex.weeks.map((w) => w.sets).join('/')}, ${ex.repRange[0]}-${ex.repRange[1]} reps, rest ${ex.restSec} s${ex.nextDayException ? ', stop 2 reps short of failure every week: the next session trains this muscle again' : ''}`);
     }
     lines.push('');
   });
   lines.push('Weekly sets at the peak (counted: own sets + half of other exercises\' credit; then the muscle\'s own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):');
   const own = {};
   for (const s of r.plan.sessions) for (const ex of s.exercises) own[ex.muscle] = (own[ex.muscle] || 0) + ex.peak;
-  lines.push(Object.entries(r.report.weekly).map(([m, v]) => `${m} ${v.sets}, own ${own[m] || 0} (${v.min}/${v.target}/${v.max})`).join('; ') + '.');
+  // R34's figure beside the counted one where they differ (round 4 coach
+  // audit: the line showed a count above the maximum it printed).
+  const towardsMax = (m, v) => (own[m] || 0) + Math.min(Math.max(0, v.sets - (own[m] || 0)), Math.max(0, v.max - v.min));
+  lines.push(Object.entries(r.report.weekly).map(([m, v]) => {
+    const t = towardsMax(m, v);
+    return `${m} ${v.sets}${t !== v.sets ? ` (${t} towards the maximum)` : ''}, own ${own[m] || 0} (${v.min}/${v.target}/${v.max})`;
+  }).join('; ') + '.');
   if (r.report.untrainable.length) lines.push(`Cannot be trained directly with this equipment: ${r.report.untrainable.join(', ')}.`);
   lines.push('');
   return lines;

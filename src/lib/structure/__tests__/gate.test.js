@@ -43,24 +43,20 @@ const build = (goal, days, equipment, over = {}) => buildStructurePlan({
 const sig = (plan) => plan.sessions.flatMap((s) => s.exercises.map((ex) => `${ex.name}x${ex.peak}`)).sort().join(',');
 const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => !['abs', 'calves'].includes(ex.muscle)).map((ex) => ex.name).join(',')).join('|');
 
-// The weeks refused today for an intermediate person (48 of 240), most at
+// The weeks refused today for an intermediate person (49 of 240), most at
 // 2 or 3 days. Every muscle the category trains must have an
 // exercise of its own (the founder's sense order, D222), which costs session
 // slots. Lead-checked by hand (register D222):
 // - impossible under the rules: bodybuilding 2 days (the upper session
 //   needs 9 exercises against the 8 limit) and 3 days (the leg session needs
 //   26 sets against 24); classic physique 3 days (27 sets); wellness 2 days
-//   (the lower session needs 9 exercises); men's physique 6 days with barbell and plates (the
-//   shoulder sessions have two exercises in the kit, too thin to be worth
-//   the trip, S5);
+//   (the lower session needs 9 exercises);
 // - tight weeks the engine has not packed yet: figure and women's physique
 //   at 2 days in a full gym or machines, which fit by hand at exactly 24
 //   sets and 8 exercises; classic physique 2 days;
 // - from the coach and user audits of the rendered plans (R24, R26):
-//   men's physique 6 days with bodyweight (Shoulders A would be a band
-//   lateral raise and one rear-delt movement, a band pull-apart and a band
-//   rear fly being one movement); bikini 5 and 6 days and wellness 6 days
-//   with barbell and plates (the glutes-and-hamstrings session cannot hinge
+//   bikini 5 and 6 days with barbell and plates (the glutes-and-hamstrings
+//   session cannot hinge
 //   beside the squat session, every loaded hinge loading the lower back,
 //   which leaves a hip thrust and a slider curl, too thin to be worth the
 //   trip); wellness 5 days with dumbbells, barbell or a home gym (09's
@@ -70,7 +66,16 @@ const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => 
 //   D222): men's physique, figure and women's physique at 2 days with
 //   dumbbells or a home gym (the one upper session would need nine
 //   exercises to give every upper muscle its own, against the 8 limit;
-//   these weeks built before only by leaving the lats without one).
+//   these weeks built before only by leaving the lats without one);
+// - once every kit trains the adductors (round 4 coach audit, register
+//   D222): wellness at 2 days with dumbbells, barbell and plates, a home gym
+//   or bodyweight, as already in a gym (the lower session would need nine
+//   exercises; these weeks built before only by reporting the adductors
+//   untrainable, which was untrue).
+// Round 4 (R50: a priority or standard muscle short of normal volume may
+// take one more session of its half) let three weeks build that the sense
+// layer had refused as too thin: men's physique 6 days with barbell and
+// plates or bodyweight, and wellness 6 days with barbell and plates.
 // The list may only shrink, except by a ruling recorded in register D222. A refusal names the nearest day count that
 // works (09 B12); the person chooses.
 const KNOWN_REFUSALS = new Set([
@@ -78,12 +83,12 @@ const KNOWN_REFUSALS = new Set([
   ...['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'].flatMap((k) => [
     `bodybuilding 3d ${k}`, `classic_physique 2d ${k}`, `classic_physique 3d ${k}`,
   ]),
-  'mens_physique 6d barbell_plates', 'mens_physique 6d bodyweight',
-  'bikini 5d barbell_plates', 'bikini 6d barbell_plates', 'wellness 6d barbell_plates',
+  'bikini 5d barbell_plates', 'bikini 6d barbell_plates',
   'wellness 5d dumbbells_only', 'wellness 5d barbell_plates', 'wellness 5d home_gym',
   'mens_physique 2d dumbbells_only', 'mens_physique 2d home_gym', 'figure 2d dumbbells_only', 'figure 2d home_gym',
   'womens_physique 2d dumbbells_only', 'womens_physique 2d home_gym',
   'wellness 2d full_gym', 'wellness 2d machines_cables',
+  'wellness 2d dumbbells_only', 'wellness 2d barbell_plates', 'wellness 2d home_gym', 'wellness 2d bodyweight',
   'wellness 3d full_gym', 'wellness 3d dumbbells_only', 'wellness 3d barbell_plates', 'wellness 3d home_gym', 'wellness 3d bodyweight',
   'wellness 5d bodyweight',
   'figure 2d full_gym', 'figure 2d machines_cables',
@@ -232,6 +237,26 @@ describe('focus and the clock', () => {
     const withFocus = build(goal, 4, 'full_gym', { focus: [pick] });
     expect(base.ok && withFocus.ok).toBe(true);
     expect(checkFocusAgainstBaseline(withFocus.plan, base.plan).failures).toEqual([]);
+  });
+
+  // R48 (round 4 coach audit: classic physique 6 days built 120 sets at 60
+  // minutes and 110 at 75 and 90): every muscle's own sets, and where every
+  // exercise but abs and calves falls, are the same at every length; the
+  // clock moves only abs, calves and single sets between sessions that
+  // both list the muscle.
+  test.each(CATEGORIES)('%s: the same week at 45, 60, 75 and 90 minutes, at every day count (Q1 = C, R48)', (goal) => {
+    const ownSets = (plan) => {
+      const out = {};
+      for (const s of plan.sessions) for (const ex of s.exercises) out[ex.muscle] = (out[ex.muscle] || 0) + ex.peak;
+      return JSON.stringify(Object.entries(out).sort());
+    };
+    for (const days of DAY_COUNTS) {
+      const builds = [45, 60, 75, 90].map((lengthMinutes) => build(goal, days, 'full_gym', { lengthMinutes }));
+      expect([goal, days, builds.map((b) => b.ok)]).toEqual([goal, days, builds.map(() => builds[0].ok)]);
+      if (!builds[0].ok) continue;
+      expect([goal, days, builds.map((b) => ownSets(b.plan))]).toEqual([goal, days, builds.map(() => ownSets(builds[0].plan))]);
+      expect([goal, days, builds.map((b) => placement(b.plan))]).toEqual([goal, days, builds.map(() => placement(builds[0].plan))]);
+    }
   });
 
   test.each(CATEGORIES)('%s: the same plan at 30 and 90 minutes (Q1 = C)', (goal) => {

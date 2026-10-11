@@ -225,6 +225,11 @@ export const REP_RANGES = Object.freeze({
   machine: Object.freeze([8, 15]),
   isolation: Object.freeze([10, 20]),
 });
+// A compound done with body weight alone cannot be loaded to fit a range,
+// so its reps follow effort: as many as the week's RIR allows, 6 to 30
+// (round 4 coach audit: push-ups and split squats at 8 to 12 sit far from
+// RIR 3 to 1 for an intermediate; pull-ups at 8 to 12 are beyond many).
+export const REP_RANGE_UNLOADED_COMPOUND = Object.freeze([6, 30]);
 // The order rest is shortened in when a session runs over, least costly
 // first (09 s5 step 2; F3): isolation, then machine, then moderate and
 // heavy compounds, each to its floor.
@@ -400,7 +405,7 @@ const BIKINI_TEMPLATES = Object.freeze({
   3: Object.freeze([
     S('glutes_hams', 'Glutes & Hamstrings', ['glute_max', 'hamstrings']),
     S('upper', 'Upper', BIKINI_UPPER),
-    S('quads_glute_med', 'Quads, Glute Med & Abs', ['quads', 'glute_med', 'calves', 'abs']),
+    S('quads_glute_med', 'Quads, Side Glutes & Abs', ['quads', 'glute_med', 'calves', 'abs']),
   ]),
   4: Object.freeze([
     S('lower_a', 'Lower A', ['glute_max', 'hamstrings', 'abs']),
@@ -421,7 +426,7 @@ const BIKINI_TEMPLATES = Object.freeze({
     S('lower_b', 'Lower B', ['quads', 'glute_med', 'calves', 'abs']),
     S('lower_c', 'Lower C', ['glute_max', 'hamstrings']),
     S('upper_b', 'Upper B', BIKINI_UPPER),
-    S('glute_med_abs', 'Glute Med, Abs & Calves', ['glute_med', 'abs', 'calves']),
+    S('glute_med_abs', 'Side Glutes, Abs & Calves', ['glute_med', 'abs', 'calves']),
   ]),
 });
 
@@ -432,7 +437,7 @@ const WELLNESS_TEMPLATES = Object.freeze({
   3: Object.freeze([
     S('glutes_hams', 'Glutes & Hamstrings', ['glute_max', 'hamstrings']),
     S('upper', 'Upper', [...UPPER, 'abs']),
-    S('quads_glute_med', 'Quads, Glute Med & Adductors', ['quads', 'glute_med', 'adductors', 'calves']),
+    S('quads_glute_med', 'Quads, Side Glutes & Inner Thighs', ['quads', 'glute_med', 'adductors', 'calves']),
   ]),
   4: Object.freeze([
     S('lower_a', 'Lower A', WELLNESS_LOWER), S('upper_a', 'Upper A', UPPER),
@@ -441,7 +446,7 @@ const WELLNESS_TEMPLATES = Object.freeze({
   5: Object.freeze([
     S('glutes_hams_quads', 'Glutes, Hamstrings & Quads', ['glute_max', 'hamstrings', 'quads', 'calves'], { hamstrings: ['leg_curl'] }),
     S('upper_a', 'Upper A', [...UPPER, 'abs']),
-    S('hams_glute_med', 'Hamstrings, Glute Med & Adductors', ['hamstrings', 'glute_med', 'adductors', 'calves'], { hamstrings: ['hinge'] }),
+    S('hams_glute_med', 'Hamstrings, Side Glutes & Inner Thighs', ['hamstrings', 'glute_med', 'adductors', 'calves'], { hamstrings: ['hinge'] }),
     S('quads_glutes', 'Quads & Glutes', ['quads', 'glute_max']),
     S('upper_b', 'Upper B', [...UPPER, 'abs']),
   ]),
@@ -451,10 +456,10 @@ const WELLNESS_TEMPLATES = Object.freeze({
   6: Object.freeze([
     S('glutes_a', 'Glutes A & Hamstrings', ['glute_max', 'hamstrings']),
     S('upper_a', 'Upper A', [...UPPER, 'abs']),
-    S('quads_a', 'Quads A & Glute Med', ['quads', 'glute_med', 'calves']),
+    S('quads_a', 'Quads A & Side Glutes', ['quads', 'glute_med', 'calves']),
     S('hams_glutes_b', 'Hamstrings & Glutes B', ['hamstrings', 'glute_max']),
     S('upper_b', 'Upper B', [...UPPER, 'abs']),
-    S('quads_b', 'Quads B & Adductors', ['quads', 'adductors', 'calves']),
+    S('quads_b', 'Quads B & Inner Thighs', ['quads', 'adductors', 'calves']),
   ]),
 });
 
@@ -604,6 +609,7 @@ export const EVIDENCE = Object.freeze({
   orderKindFor: 'D: 09 s7 order with R37 (register D222).',
   restClassFor: 'D: 09 s5 rest table with R29, R37 and R43 (register D222).',
   REP_RANGES: 'D: 09 B11.',
+  REP_RANGE_UNLOADED_COMPOUND: 'B: Schoenfeld 2017 (J Strength Cond Res 31:3508, low and high loads give similar hypertrophy taken near failure); D: lead ruling, round 4 coach audit (register D222).',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',
   FOCUS: 'D: 09 s3 and B4.',

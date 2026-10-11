@@ -207,13 +207,20 @@ describe('the audits of the rendered plans (R24 to R31)', () => {
     for (const ex of all(r).filter((x) => x.pattern === 'squat_machine' && x.kind === 'machine')) expect([ex.name, ex.restSec >= 120]).toEqual([ex.name, true]);
   });
 
-  test("R30: a men's physique chest focus takes a free upper day at 5 days, and says why it cannot at 4", () => {
+  // R47 (round 4 user audit; the founder, D219: "Even with specialising
+  // chest I get two exercises!"): at 4 days no upper session neighbours
+  // neither chest day, so chest goes on the leg day.
+  test("R30, R47: a men's physique chest focus takes a free upper day at 5 days, and the leg day at 4", () => {
     const five = plain('mens_physique', 5, { focus: ['chest'] });
     expect(five.ok).toBe(true);
     expect(five.plan.overflow.some((o) => o.muscle === 'chest')).toBe(true);
     expect(five.report.focusUnmet).toEqual([]);
     const four = plain('mens_physique', 4, { focus: ['chest'] });
-    expect(four.report.focusUnmet.map((f) => f.muscle)).toEqual(['chest']);
+    expect(four.report.focusUnmet).toEqual([]);
+    const legs = four.plan.sessions.find((s) => s.key === 'legs');
+    expect(legs.exercises.filter((ex) => ex.muscle === 'chest').length).toBeGreaterThanOrEqual(1);
+    expect(legs.name).toMatch(/Chest/);
+    expect(checkPlan(four.plan).ok).toBe(true);
   });
 
   test('R31, R38: session names say what the session holds; abs and calves are named unless the name says so', () => {
@@ -294,8 +301,10 @@ describe('the second audits (R32 to R38)', () => {
         if (r.ok) expect([goal, days, all(r).some((ex) => ex.name === 'Seated Machine Calf Raise')]).toEqual([goal, days, false]);
       }
     }
-    const four = plain('mens_physique', 4, { focus: ['chest'] });
-    expect(four.report.focusUnmet).toEqual([expect.objectContaining({ muscle: 'chest', reason: 'session_cap', sessions: 1 })]);
+    // Side delts at 4 days: both shoulder sessions already hold the most
+    // one session may, and no session neighbours neither.
+    const four = plain('mens_physique', 4, { focus: ['side_delts'] });
+    expect(four.report.focusUnmet).toEqual([expect.objectContaining({ muscle: 'side_delts', reason: 'session_cap', sessions: 2 })]);
   });
 });
 
@@ -345,5 +354,116 @@ describe('the code review and third coach audit (R39 to R45)', () => {
     expect(r.ok).toBe(false);
     expect(r.refusal.reason).toBe('experience_unknown');
     expect(week(plain('general', 4, { experience: undefined }))).toEqual(week(plain('general', 4, { experience: 'intermediate' })));
+  });
+});
+
+describe('the round 4 coach and user audits (R47 to R53)', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const all = (r) => r.plan.sessions.flatMap((s) => s.exercises);
+  const own = (r, m) => all(r).filter((ex) => ex.muscle === m).reduce((n, ex) => n + ex.peak, 0);
+  const session = (r, key) => r.plan.sessions.find((s) => s.key === key);
+
+  test("R20 restored: every men's physique chest session leads with an incline press; a fly before any flat press", () => {
+    for (const days of [4, 5, 6]) {
+      const r = plain('mens_physique', days);
+      for (const s of r.plan.sessions) {
+        const chest = s.exercises.filter((ex) => ex.muscle === 'chest');
+        if (!chest.length) continue;
+        expect([days, s.key, chest[0].pattern]).toEqual([days, s.key, 'press_incline']);
+        expect([days, s.key, chest.some((ex) => ex.pattern === 'press_flat') && !chest.some((ex) => ex.pattern === 'fly')]).toEqual([days, s.key, false]);
+      }
+      expect(all(r).filter((ex) => ex.muscle === 'chest').some((ex) => ex.pattern === 'fly')).toBe(true);
+    }
+  });
+
+  test('R49: a lead muscle gives its only compound in a session at least 3 sets before an isolation there passes 3', () => {
+    const classic = plain('classic_physique', 4);
+    expect(session(classic, 'upper_a').exercises.find((ex) => ex.muscle === 'chest').peak).toBeGreaterThanOrEqual(3);
+    const general = plain('general', 4);
+    for (const key of ['upper_a', 'upper_b']) {
+      const s = session(general, key);
+      for (const m of ['lats', 'upper_back']) {
+        const comps = s.exercises.filter((ex) => ex.muscle === m && PATTERNS[ex.pattern].kind === 'compound');
+        if (comps.length === 1 && s.exercises.some((ex) => PATTERNS[ex.pattern].kind === 'isolation' && ex.peak > 3)) {
+          expect([key, comps[0].name, comps[0].peak >= 3]).toEqual([key, comps[0].name, true]);
+        }
+      }
+    }
+  });
+
+  test('R50: classic physique 5 days trains the lats in a second session', () => {
+    const r = plain('classic_physique', 5);
+    expect(r.plan.sessions.filter((s) => s.exercises.some((ex) => ex.muscle === 'lats')).length).toBeGreaterThanOrEqual(2);
+    expect(checkPlan(r.plan).ok).toBe(true);
+  });
+
+  test('R51: a session named for the arms gives each at least 4 sets of its own', () => {
+    const r = plain('general', 5);
+    const s = session(r, 'shoulders_arms');
+    for (const m of ['biceps', 'triceps']) {
+      expect([m, s.exercises.filter((ex) => ex.muscle === m).reduce((n, ex) => n + ex.peak, 0) >= 4]).toEqual([m, true]);
+    }
+  });
+
+  test('R52: a focus adds to what the plain week gives, or says it is at the most a week holds', () => {
+    for (const [goal, days, m] of [['bikini', 5, 'glute_max'], ['mens_physique', 4, 'biceps'], ['bodybuilding', 5, 'biceps']]) {
+      const base = plain(goal, days);
+      const r = plain(goal, days, { focus: [m] });
+      const res = r.report.focusResults.find((x) => x.muscle === m);
+      expect([goal, m, res.after > base.report.weekly[m].sets || res.reason === 'at_max']).toEqual([goal, m, true]);
+      expect(checkFocusAgainstBaseline(r.plan, base.plan).failures).toEqual([]);
+    }
+  });
+
+  test('R53: no fifth set beside a short exercise of the same muscle, and no two 2-set exercises of one movement in a session', () => {
+    for (const [goal, days, equipment] of [['mens_physique', 4, 'dumbbells_only'], ['mens_physique', 5, 'machines_cables'], ['wellness', 4, 'dumbbells_only'], ['figure', 3, 'bodyweight'], ['figure', 4, 'full_gym']]) {
+      const r = plain(goal, days, { equipment });
+      for (const s of r.plan.sessions) {
+        for (const m of new Set(s.exercises.map((ex) => ex.muscle))) {
+          const mine = s.exercises.filter((ex) => ex.muscle === m);
+          expect([goal, days, equipment, s.key, m, mine.some((ex) => ex.peak > 4) && mine.some((ex) => ex.peak < 4)]).toEqual([goal, days, equipment, s.key, m, false]);
+          const twos = mine.filter((ex) => ex.peak === 2).map((ex) => ex.pattern);
+          expect([goal, days, s.key, m, new Set(twos).size === twos.length]).toEqual([goal, days, s.key, m, true]);
+        }
+      }
+    }
+  });
+
+  test('a second curl variant where the fresh hinge cannot go, and the dumbbell kit trains the adductors', () => {
+    const w6 = plain('wellness', 6);
+    expect(own(w6, 'hamstrings')).toBeGreaterThan(12);
+    const db = plain('wellness', 4, { equipment: 'dumbbells_only' });
+    expect(db.report.untrainable).not.toContain('adductors');
+    expect(own(db, 'adductors')).toBeGreaterThanOrEqual(2);
+  });
+
+  test("a beginner's leg day opens with a machine or dumbbell compound; bodyweight compounds take reps by effort", () => {
+    const r = plain('general', 3, { experience: 'beginner', lengthMinutes: 45 });
+    const legs = r.plan.sessions.find((s) => /leg/i.test(s.key));
+    expect(legs.exercises[0].kind).not.toBe('heavy_compound');
+    const bw = plain('figure', 3, { equipment: 'bodyweight' });
+    const pushUp = all(bw).find((ex) => ex.name === 'Push-Up');
+    expect(pushUp.repRange).toEqual([6, 30]);
+  });
+
+  test('a lift that loads the spine comes before one that does not, whatever the focus', () => {
+    const r = plain('womens_physique', 4, { focus: ['glute_max'] });
+    for (const s of r.plan.sessions) {
+      const names = s.exercises.map((ex) => ex.name);
+      if (names.includes('Barbell Back Squat') && names.includes('Barbell Hip Thrust')) {
+        expect(names.indexOf('Barbell Back Squat')).toBeLessThan(names.indexOf('Barbell Hip Thrust'));
+      }
+    }
+  });
+
+  test('the report names what binds a muscle below normal volume and the days that would fit or reach a focus', () => {
+    const r = plain('bodybuilding', 4);
+    expect(r.report.belowTypical.length).toBeGreaterThan(0);
+    for (const b of r.report.belowTypical) expect(b.limits.length).toBeGreaterThan(0);
+    const asks = plain('general', 4, { lengthMinutes: 45 });
+    if (asks.report.needsLengthChoice) {
+      expect(asks.report.overSessions.length).toBeGreaterThan(0);
+      expect(asks.report.moreDaysPossible).toBe(asks.report.daysThatFit != null);
+    }
   });
 });

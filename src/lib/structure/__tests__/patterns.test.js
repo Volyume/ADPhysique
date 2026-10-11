@@ -98,12 +98,16 @@ describe('choices per kit', () => {
     expect(all.machines_cables.untrainable).toEqual([]);
     // Dumbbells train the lats with the straight-arm pullover (register
     // D222); a barbell kit has no vertical pull or pullover, so its lats are
-    // trained through rows and the plan says so.
-    expect(all.dumbbells_only.untrainable).toEqual(['adductors']);
-    expect(all.home_gym.untrainable).toEqual(['adductors']);
+    // trained through rows and the plan says so. Adductors are trainable in
+    // every kit since the round 4 coach audit (the band adduction and the
+    // Copenhagen adduction, register D222).
+    expect(all.dumbbells_only.untrainable).toEqual([]);
+    expect(all.home_gym.untrainable).toEqual([]);
     expect(all.dumbbells_only.byPattern.pullover.map((c) => c.name)).toEqual(['Straight-Arm Dumbbell Pullover']);
-    expect(all.barbell_plates.untrainable).toEqual(['lats', 'adductors']);
-    expect(all.bodyweight.untrainable).toEqual(['traps', 'adductors']);
+    expect(all.dumbbells_only.byPattern.adduction.map((c) => c.name)).toContain('Copenhagen Adduction');
+    expect(all.bodyweight.byPattern.adduction.map((c) => c.name)).toEqual(['Band Standing Hip Adduction', 'Copenhagen Adduction']);
+    expect(all.barbell_plates.untrainable).toEqual(['lats']);
+    expect(all.bodyweight.untrainable).toEqual(['traps']);
   });
 
   test('the person\'s own logged exercise comes first within its pattern', () => {
