@@ -155,6 +155,15 @@ describe('C4 weekly range', () => {
     expect(checkPlan(p).failures.some((f) => f.code === 'C4' && f.muscle === 'abs')).toBe(true);
   });
 
+  test('R17: a muscle the kit cannot train is reported, not failed (09 s7)', () => {
+    const p = validPlan();
+    session(p, 'legs').exercises.pop();
+    p.untrainable = ['abs'];
+    const r = checkPlan(p);
+    expect(r.failures.some((f) => f.code === 'C4' && f.muscle === 'abs')).toBe(false);
+    expect(r.warnings.some((x) => x.code === 'C4' && x.muscle === 'abs')).toBe(true);
+  });
+
   test('an indirect-only muscle past 4 direct sets fails', () => {
     const p = validPlan();
     p.category = 'general';
