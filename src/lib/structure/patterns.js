@@ -99,6 +99,7 @@ const NAME_EXTRA_JOINTS = Object.freeze({
   'Smith Machine Romanian Deadlift': ['spinal_axial'],
   'Barbell Overhead Press': ['spinal_axial'],
   'Barbell Lunge': ['spinal_axial'],
+  'Stiff-Leg Deadlift': ['spinal_axial'],
 });
 
 // R16: choices the catalogue lacks, per pattern, in preference order. Each
@@ -115,8 +116,27 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Cable Lat Pullover', reason: 'Works the lats with straight arms, a second angle to a pulldown.', grade: 'D' },
   ]),
   lateral: Object.freeze([
+    { name: 'Seated Lateral Raise', reason: 'A seated lateral raise, a second variant where the kit has only dumbbells.', grade: 'D' },
+    { name: 'Leaning Lateral Raise', reason: 'A lateral raise leaning away from a support, a second dumbbell variant.', grade: 'D' },
     { name: 'Plate Lateral Raise', reason: 'A lateral raise holding a plate, for a kit with no dumbbells or cables.', grade: 'D' },
     { name: 'Band Lateral Raise', reason: 'A lateral raise with a band, for a kit with no weights.', grade: 'D' },
+  ]),
+  // A chest-supported row trains the upper back without loading the spine
+  // (09 B2 joint tags), so a barbell kit need not pair a bent-over row with
+  // its squats and hinges.
+  row_supported: Object.freeze([
+    { name: 'Chest-Supported T-Bar Row', reason: 'A row with the chest supported, so the lower back is not loaded.', grade: 'D' },
+    { name: 'Seal Row', reason: 'A row lying on a bench, so the lower back is not loaded.', grade: 'D' },
+    { name: 'Chest-Supported Row (Barbell)', reason: 'A row with the chest supported, so the lower back is not loaded.', grade: 'D' },
+  ]),
+  hinge: Object.freeze([
+    { name: 'Stiff-Leg Deadlift (Dumbbell)', reason: 'A second hip hinge for the hamstrings where the kit has only dumbbells.', grade: 'D' },
+    { name: 'Single-Leg Romanian Deadlift (DB)', reason: 'A one-leg hip hinge for the hamstrings with dumbbells.', grade: 'D' },
+    { name: 'Stiff-Leg Deadlift', reason: 'A second hip hinge for the hamstrings with a barbell.', grade: 'D' },
+  ]),
+  leg_curl: Object.freeze([
+    { name: 'TRX Hamstring Curl', reason: 'A hamstring curl with suspension straps, for a kit with no leg curl machine.', grade: 'D' },
+    { name: 'Slider Leg Curl (Bodyweight)', reason: 'A hamstring curl on sliders, for a kit with no machines.', grade: 'D' },
   ]),
 });
 

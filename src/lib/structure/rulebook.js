@@ -268,7 +268,7 @@ export const PRIORITY = Object.freeze([
   Object.freeze({ goal: 'chosen_length', type: 'confirm' }),
 ]);
 
-// ── Templates (09 B7; R11 to R14) ─────────────────────────────────────────
+// ── Templates (09 B7; R11 to R13, R21) ───────────────────────────────────
 // Each session lists the muscles it may train directly. The rotation is a
 // cycle: the last session neighbours the first. Sessions may start anywhere
 // in the cycle but are never reordered (09 s1.3). Indirect-only muscles are
@@ -426,16 +426,43 @@ const FIGURE_TEMPLATES = Object.freeze({
   6: GENERAL_TEMPLATES[6],
 });
 
+// R21: open bodybuilding's 5-day week trains the upper body twice. In 09's
+// general 5-day week chest sits in Push alone, and a priority muscle with a
+// minimum of 10 cannot reach it in one session under the 8-set cap; the
+// fifth session (Shoulders & Arms) becomes a full upper session, which
+// neighbours only the two leg sessions.
+const BODYBUILDING_TEMPLATES = Object.freeze({
+  ...GENERAL_TEMPLATES,
+  5: Object.freeze([
+    GENERAL_TEMPLATES[5][0], GENERAL_TEMPLATES[5][1], GENERAL_TEMPLATES[5][2], GENERAL_TEMPLATES[5][3],
+    S('upper', 'Upper', UPPER),
+  ]),
+});
+
 /** TEMPLATES[category][days] = the rotation's sessions, in order. */
 export const TEMPLATES = Object.freeze({
   general: GENERAL_TEMPLATES,
-  bodybuilding: GENERAL_TEMPLATES,
+  bodybuilding: BODYBUILDING_TEMPLATES,
   classic_physique: GENERAL_TEMPLATES,
   mens_physique: MENS_PHYSIQUE_TEMPLATES,
   bikini: BIKINI_TEMPLATES,
   wellness: WELLNESS_TEMPLATES,
   figure: FIGURE_TEMPLATES,
   womens_physique: FIGURE_TEMPLATES,
+});
+
+// R22: when a muscle cannot reach its category minimum in the sessions its
+// template lists it in (one session, or a kit with one exercise for it), it
+// may also go in a session that does not neighbour any session training it
+// and that already lists a muscle of its own group, so a glute-med set joins
+// a glute session, never a chest day.
+export const SIBLING_MUSCLES = Object.freeze({
+  chest: ['triceps'], triceps: ['chest', 'biceps'], biceps: ['triceps', 'lats'],
+  lats: ['upper_back'], upper_back: ['lats'],
+  side_delts: ['rear_delts'], rear_delts: ['side_delts', 'upper_back'],
+  quads: ['hamstrings', 'glute_max'], hamstrings: ['quads', 'glute_max'],
+  glute_max: ['glute_med', 'hamstrings'], glute_med: ['glute_max'],
+  adductors: ['quads', 'glute_med'], calves: ['quads', 'hamstrings'], abs: [],
 });
 
 /** The rulebook's category for an app goal key (R15). */
@@ -478,6 +505,7 @@ export const EVIDENCE = Object.freeze({
   PROGRESSION: 'C: Rogerson 2024 (deload every 5.6 weeks, volume cut, frequency kept); B: compounds short of failure (Robinson 2024, Refalo 2024); D: the ladder; R1 (register D222).',
   CHECKIN: 'D: 09 s8.',
   PRIORITY: 'D: 09 B8, with founder Q1 = C (register D222).',
-  TEMPLATES: 'D for structure, A for frequency (Pelland 2026): 09 B7; R11 to R13 (register D222).',
+  TEMPLATES: 'D for structure, A for frequency (Pelland 2026): 09 B7; R11 to R13 and R21 (register D222).',
+  SIBLING_MUSCLES: 'D: lead ruling R22 (register D222); where a muscle may take a session it is not listed in to reach its minimum.',
   rulebookCategory: 'D: lead ruling R15 (register D222).',
 });

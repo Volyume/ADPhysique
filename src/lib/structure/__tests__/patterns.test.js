@@ -112,6 +112,6 @@ describe('choices per kit', () => {
 
   test('a sole pattern is never claimed in a full gym', () => {
     expect(all.full_gym.solePatternMuscles).toEqual([]);
-    expect(all.dumbbells_only.solePatternMuscles).toContain('hamstrings');
+    expect(all.dumbbells_only.solePatternMuscles).toContain('glute_med');
   });
 });

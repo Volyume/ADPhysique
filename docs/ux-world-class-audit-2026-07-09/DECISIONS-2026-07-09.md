@@ -12046,3 +12046,19 @@ Asked in chat as a multiple-choice form (founder order: "Ask the questions multi
 - R10: people already on plans built by the old planners have their active plan rebuilt through the engine at their next session, keeping exercises wherever the checks allow; hand-built plans are left as built and checked, with a calm note on a hard failure (11 phase 8). Why: the measured faults (10 section 5) are on plans people are training on now.
 
 **Release.** The engine lands on main behind `STRUCTURE_ENGINE`, off, until the founder signs off the rendered plans (08 Part 1, point 3). The founder runs every build. No planner change ships before that.
+
+### D222 addendum (2026-10-11): lead rulings made while building the engine (R11 to R22)
+
+Each was forced by the full gate (every category, day count and kit, real library) or by a plan the lead read; recorded with its reason (D33).
+- R11: men's physique 3 days puts the light side-delt dose in Legs & Side Delts, the session before Push. Why: the next-day rule tests the earlier session of a pair; 09 labelled the Push dose light, which the rotation makes the later one.
+- R12: wellness, figure and women's physique 2-day weeks (09 gives none) are Lower | Upper and Upper | Lower.
+- R13: wellness 6 days lists hamstrings in Glutes A as well. Why: a priority muscle (minimum 10) in one session cannot pass the 8-set cap, and no pattern credits hamstrings.
+- R15: women's bodybuilding takes the open bodybuilding rulebook; strength_size and weak_point take the general one (09 covers eight categories).
+- R16: patterns the catalogue lacks are added in the structure module only: glute-med abductions, straight-arm pulldowns, chest-supported barbell rows (so a barbell kit's upper back need not load the spine), second dumbbell lateral raises and hinges, and leg curls for kits without a machine. Two are rows the canonicality registry ranks niche (plate and band lateral raises): 09 s7 names the plate raise, and without them side delts, a priority muscle in five categories, go untrained (F2). The contested Dumbbell Pullover stays out.
+- R17: a muscle a kit has no pattern for is reported, not refused (09 s7 "report it as untrainable"); the lats in dumbbell, home and barbell kits are trained through rows and the plan says so.
+- R18: a focus pick on an indirect-only muscle (front delts, traps, forearms) is reported and not trained.
+- R19: a maintenance muscle takes its least fatiguing exercise (a machine or dumbbell before a barbell).
+- R20: men's physique leads chest with the incline press, then a fly, a flat press only when more chest sets are needed, on a machine or dumbbells first. Why: the upper chest is the category's judged priority (09 s1.1, B11).
+- R21: open bodybuilding's 5-day week trains the upper body twice (its fifth session is a full Upper). Why: chest, a priority with a minimum of 10, cannot reach it in Push alone.
+- R22: a muscle that cannot reach its minimum in its listed sessions may go in a session that neighbours none of them and already lists a muscle of its group (glute med joins a glute session, never a chest day).
+- Engine design (not a rule change): a week is filled by the set that closes the most shortfall, minimums first, then normal volume, then focus on top; when a week is tight the engine tries eight orders and keeps the first that holds every minimum, so the result is the same for the same inputs. A week none can hold is refused with the fewest days that would. Today 32 of 240 intermediate weeks are refused (src/lib/structure/__tests__/gate.test.js lists and explains each); in a full gym only classic physique at 3 days.

@@ -57,7 +57,7 @@ export function weeklyMax(category, muscle, focus) {
  * Check a structure plan (see measure.js for the shape).
  * @returns {{ ok: boolean, failures: object[], warnings: object[], minutes: number[], weekly: object }}
  */
-export function checkPlan(plan) {
+export function checkPlan(plan, opts = {}) {
   const failures = [];
   const warnings = [];
   const fail = (code, detail, extra = {}) => failures.push({ code, detail, ...extra });
@@ -73,7 +73,10 @@ export function checkPlan(plan) {
   const shiftOk = template.length === keys.length && template.some((_, k) => template.every((t, i) => t === keys[(i + k) % keys.length]));
   if (!shiftOk) fail('C1', `sessions ${keys.join(',')} are not the ${plan.category} ${plan.days}-day template ${template.join(',')}`);
 
-  for (let w = 1; w <= weeks; w += 1) {
+  // opts.weeks limits the per-week checks (the engine checks its peak week
+  // while it builds, and every week once the plan is complete).
+  const weekList = Array.isArray(opts.weeks) ? opts.weeks.filter((w) => w >= 1 && w <= weeks) : Array.from({ length: weeks }, (_, i) => i + 1);
+  for (const w of weekList) {
     const loads = sessions.map((s) => sessionLoad(s, w));
 
     // C2: no muscle trained in two neighbouring sessions, unless it is a
