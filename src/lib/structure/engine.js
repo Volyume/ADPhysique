@@ -29,7 +29,7 @@ import {
   MUSCLES, PATTERNS, TIERS, VOLUME, FOCUS, EXPERIENCE, FAST_MUSCLES, LARGE_MUSCLES,
   SESSION_LIMITS, REP_RANGES, REST_TRIM_ORDER, TIME_MODEL,
   PROGRESSION, TEMPLATES, DAY_COUNTS, OPT_IN_MUSCLES, SIBLING_MUSCLES, CREDIT_FRACTION, rulebookCategory,
-  restSecondsFor,
+  restSecondsFor, orderKindFor, PER_SESSION,
 } from './rulebook';
 import { structureChoices, variantOf } from './patterns';
 import { checkPlan, weeklyMax, weeklyMin } from './checker';
@@ -102,7 +102,8 @@ const COVERED_BY = Object.freeze({
   forearms: /forearms|arms|upper/i, traps: /traps|back|shoulders|upper/i,
   quads: /quads|legs|lower/i, hamstrings: /hamstrings|hams|legs|lower/i,
   glute_max: /glute|legs|lower/i, glute_med: /glute|legs|lower/i, adductors: /adductors|legs|lower/i,
-  calves: /calves|legs|lower|quads|hamstrings|glute/i, abs: /abs|core|legs|lower/i,
+  // R38: abs and calves are named unless the name says so ("Legs & Abs").
+  calves: /calves|legs|lower/i, abs: /abs|core/i,
 });
 const LABEL = Object.freeze({
   chest: 'Chest', front_delts: 'Front Delts', lats: 'Lats', upper_back: 'Back', side_delts: 'Side Delts',
@@ -337,7 +338,11 @@ function buildWith(args, strategy) {
       if (ex.peak < setCap) out.push({ type: 'inc', m, si, ex, pattern: ex.pattern, sets: 1 });
     }
     if (s.exercises.length >= exerciseCap || own.length >= exercisesPerMuscle(m)) return out;
-    const v = visitsOf(m).indexOf(si);
+    // Rotation follows how many of the week's sessions already hold the
+    // muscle, so its first exercise of the week takes its first preferred
+    // pattern (R34: a bodybuilder's only biceps exercise was a hammer curl,
+    // the rotation having started at the template's second visit).
+    const v = plan.sessions.filter((x, j) => j !== si && x.exercises.some((ex) => ex.muscle === m)).length;
     const inKit = (p) => (kit.byPattern[p] || []).length > 0;
     const { main, fallback } = patternsFor(category, m, tier, hintsOf[si]);
     const mainAvail = main.filter(inKit);
@@ -462,10 +467,18 @@ function buildWith(args, strategy) {
   // share (user and coach audits: general 2 days left chest at its minimum
   // while a second row took a slot); `overflowSiblings`: the muscles whose
   // sessions a muscle short of its goal may join (R22, R30).
+  // `incOnly`: only more sets on exercises already there (R38, beginners);
+  // `protect`: muscles a repair may never take a set from (R36: a lower
+  // tier's pass never takes from a higher tier's normal volume);
+  // `limitMinutes`: a step is kept only while its session, at floor rest,
+  // stays inside it (R36, the refill after R28's moves).
   const fill = (goalOf, muscles, {
     allowOverflow = false, allowRepair = true, direct = false, fair = false, overflowSiblings = null,
+    incOnly = false, protect = null, limitMinutes = null,
   } = {}) => {
     const blocked = new Set();
+    const refused = new Set();
+    const stepKey = (a) => `${a.type}|${a.si}|${a.m}|${a.pattern}|${a.ex ? a.ex.id : ''}`;
     for (;;) {
       const weekly = weeklyLoad(plan, peak);
       const own = direct ? directWeek() : null;
@@ -475,7 +488,7 @@ function buildWith(args, strategy) {
       const wanting = muscles.filter((m) => deficit[m] > 0 && !blocked.has(m));
       if (!wanting.length) break;
       const actions = [];
-      for (const m of wanting) for (const si of visitsOf(m)) actions.push(...actionsFor(m, si));
+      for (const m of wanting) for (const si of visitsOf(m)) actions.push(...actionsFor(m, si).filter((a) => (!incOnly || a.type === 'inc') && !refused.has(stepKey(a))));
       const byValue = (a, b) => valueOf(b, deficit, direct) - valueOf(a, deficit, direct);
       const byNeed = (a, b) => (deficit[b.m] / goalOf(b.m)) - (deficit[a.m] / goalOf(a.m));
       const byRank = (a, b) => rank(a.m) - rank(b.m);
@@ -493,7 +506,18 @@ function buildWith(args, strategy) {
       let done = false;
       for (const a of actions) {
         if (valueOf(a, deficit, direct) <= 0) break;
-        if (apply(a)) { done = true; break; }
+        const s = plan.sessions[a.si];
+        const before = s.exercises.map((ex) => [ex, ex.peak]);
+        if (!apply(a)) continue;
+        if (limitMinutes != null && Math.round(floorMinutes(s)) > limitMinutes) {
+          s.exercises = before.map(([ex]) => ex);
+          before.forEach(([ex, p]) => setPeak(ex, p));
+          baseline = new Set(currentFaults().map(faultKey));
+          refused.add(stepKey(a));
+          continue;
+        }
+        done = true;
+        break;
       }
       if (done) continue;
       // Nothing placeable: a muscle short of its minimum may take a further
@@ -512,7 +536,7 @@ function buildWith(args, strategy) {
       }
       if (!opened) break;
     }
-    if (allowRepair) repair(goalOf, muscles);
+    if (allowRepair) repair(goalOf, muscles, protect);
     const weekly = weeklyLoad(plan, peak);
     const own = directWeek();
     return muscles.filter((m) => (direct ? own[m] || 0 : (weekly[m] || {}).fractional || 0) < goalOf(m));
@@ -524,7 +548,7 @@ function buildWith(args, strategy) {
   // every muscle that exercise counts for stays at or above its own goal.
   // The freed room is kept only if the short muscle then gains a set; so a
   // repair never leaves any muscle below its goal to pay for another.
-  function repair(goalOf, muscles) {
+  function repair(goalOf, muscles, protect = null) {
     const goalAll = (m) => (muscles.includes(m) ? goalOf(m) : (targets[m] ? Math.min(goalOf(m) || 0, targets[m].min) : 0));
     for (let guard = 0; guard < 200; guard += 1) {
       const weekly = weeklyLoad(plan, peak);
@@ -544,10 +568,14 @@ function buildWith(args, strategy) {
             return !!group && s.exercises.filter((y) => group.includes(y.muscle)).length <= 1;
           };
           const donors = s.exercises
-            .filter((ex) => ex.muscle !== m)
+            .filter((ex) => ex.muscle !== m && !(protect && protect(ex.muscle)))
             .map((ex) => ({ ex, take: ex.peak > SESSION_LIMITS.setsPerExerciseMin ? 1 : ex.peak }))
             .filter(({ ex, take }) => !(take === ex.peak && protectedEx(ex)))
-            .filter(({ ex, take }) => !(isLeadTier(ex.muscle) && (directWeek()[ex.muscle] || 0) - take < ownFloor(ex.muscle)))
+            // R34: a repair never takes a muscle's own sets below its floor,
+            // nor an arm's or rear delt's below its minimum, the sets the
+            // own-set pass placed so credit would not stand in for them.
+            .filter(({ ex, take }) => !(isLeadTier(ex.muscle) && (directWeek()[ex.muscle] || 0) - take
+              < (CREDIT_FED.includes(ex.muscle) ? targets[ex.muscle].min : ownFloor(ex.muscle))))
             .filter(({ ex, take }) => fr(ex.muscle) - take >= goalAll(ex.muscle)
               && PATTERNS[ex.pattern].credits.every((c) => fr(c) - CREDIT_FRACTION * take >= goalAll(c)))
             .sort((a, b) => ((fr(b.ex.muscle) - goalAll(b.ex.muscle)) - (fr(a.ex.muscle) - goalAll(a.ex.muscle))) || (s.exercises.indexOf(a.ex) - s.exercises.indexOf(b.ex)));
@@ -626,8 +654,20 @@ function buildWith(args, strategy) {
     };
   }
   growth = true;
-  fill((m) => targets[m].min, order2.filter((m) => isLeadTier(m) && CREDIT_FED.includes(m)), { direct: true, fair: true, allowRepair: false });
-  fill((m) => targets[m].typical, order2, { fair: true });
+  fill((m) => targets[m].min, order2.filter((m) => isLeadTier(m) && CREDIT_FED.includes(m)), { direct: true, fair: true, allowRepair: false, incOnly: beginner });
+  // R36: normal volume by tier (09 B10 S5: P before S before M), fairly
+  // within each; a repair in a tier's pass may take sets from a lower tier
+  // down to its minimum, never from a higher tier.
+  const TIER_ORDER = ['P', 'S', 'M'];
+  const fillTypical = (opts = {}) => {
+    TIER_ORDER.forEach((tier, i) => {
+      const higher = new Set(TIER_ORDER.slice(0, i));
+      fill((m) => targets[m].typical, order2.filter((m) => targets[m].tier === tier), {
+        fair: true, protect: (m) => !!targets[m] && higher.has(targets[m].tier), ...opts,
+      });
+    });
+  };
+  fillTypical();
   plan.focus = focus;
   // R30 (coach and user audits: a men's physique chest focus added nothing,
   // chest's one session being full): a focus muscle whose sessions are full
@@ -645,32 +685,44 @@ function buildWith(args, strategy) {
   growth = false;
   const afterFocus = weeklyLoad(plan, peak);
   plan.focusTargets = Object.fromEntries(focusList.map((m) => [m, targets[m].target]));
+  // R38: why a focus fell short: every session that may hold it already
+  // holds the most one session may (session_cap), or its sessions are full.
   plan.focusUnmet = focusList
     .filter((m) => ((afterFocus[m] || {}).fractional || 0) < targets[m].target)
-    .map((m) => ({ muscle: m, sets: (afterFocus[m] || {}).fractional || 0, target: targets[m].target, reason: 'sessions_full' }));
+    .map((m) => ({
+      muscle: m,
+      sets: (afterFocus[m] || {}).fractional || 0,
+      target: targets[m].target,
+      reason: visitsOf(m).every((si) => directIn(si, m) >= PER_SESSION.directCap) ? 'session_cap' : 'sessions_full',
+      sessions: visitsOf(m).length,
+    }));
 
   // Sense passes (D222). Each only adds sets, inside every check.
-  // S3: pulling at least matches pressing (a chest focus can tip it).
-  const directOf = (muscles) => plan.sessions.reduce((t, s) => t + s.exercises.filter((ex) => muscles.includes(ex.muscle)).reduce((u, ex) => u + ex.peak, 0), 0);
-  const backMuscles = ['lats', 'upper_back'].filter((m) => targets[m] && !plan.untrainable.includes(m));
-  for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
-    const actions = backMuscles.flatMap((m) => visitsOf(m).flatMap((si) => actionsFor(m, si)))
-      .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (setsOf(a.si) - setsOf(b.si)) || (a.si - b.si) || (rank(a.m) - rank(b.m)));
-    if (!actions.some((a) => apply(a))) break;
+  // S3: pulling at least matches pressing (a chest focus can tip it). Run
+  // again after any later refill (R36).
+  function balancePushPull() {
+    const directOf = (muscles) => plan.sessions.reduce((t, s) => t + s.exercises.filter((ex) => muscles.includes(ex.muscle)).reduce((u, ex) => u + ex.peak, 0), 0);
+    const backMuscles = ['lats', 'upper_back'].filter((m) => targets[m] && !plan.untrainable.includes(m));
+    for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
+      const actions = backMuscles.flatMap((m) => visitsOf(m).flatMap((si) => actionsFor(m, si)))
+        .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (setsOf(a.si) - setsOf(b.si)) || (a.si - b.si) || (rank(a.m) - rank(b.m)));
+      if (!actions.some((a) => apply(a))) break;
+    }
+    // Still pressing more than pulling (a kit with no lat exercise caps the
+    // pulling): pressing sets above their minimum, never a focus pick's, give
+    // way one at a time, from the exercise with the most sets. Normal volume
+    // is the softest goal (09 B8), shoulder balance is not.
+    const pushMuscles = ['chest', 'front_delts'].filter((m) => targets[m] && !focus.includes(m));
+    for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
+      const own = directWeek();
+      const spare = plan.sessions.flatMap((x) => x.exercises)
+        .filter((ex) => pushMuscles.includes(ex.muscle) && ex.peak > SESSION_LIMITS.setsPerExerciseMin
+          && own[ex.muscle] - 1 >= Math.max(targets[ex.muscle].min, ownFloor(ex.muscle)) && fractional(ex.muscle) - 1 >= targets[ex.muscle].min)
+        .sort((a, b) => b.peak - a.peak);
+      if (!spare.some((ex) => tryStep(() => setPeak(ex, ex.peak - 1), () => setPeak(ex, ex.peak + 1)))) break;
+    }
   }
-  // Still pressing more than pulling (a kit with no lat exercise caps the
-  // pulling): pressing sets above their minimum, never a focus pick's, give
-  // way one at a time, from the exercise with the most sets. Normal volume
-  // is the softest goal (09 B8), shoulder balance is not.
-  const pushMuscles = ['chest', 'front_delts'].filter((m) => targets[m] && !focus.includes(m));
-  for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
-    const own = directWeek();
-    const spare = plan.sessions.flatMap((x) => x.exercises)
-      .filter((ex) => pushMuscles.includes(ex.muscle) && ex.peak > SESSION_LIMITS.setsPerExerciseMin
-        && own[ex.muscle] - 1 >= Math.max(targets[ex.muscle].min, ownFloor(ex.muscle)) && fractional(ex.muscle) - 1 >= targets[ex.muscle].min)
-      .sort((a, b) => b.peak - a.peak);
-    if (!spare.some((ex) => tryStep(() => setPeak(ex, ex.peak - 1), () => setPeak(ex, ex.peak + 1)))) break;
-  }
+  balancePushPull();
   // S5: every session worth the trip: 3 exercises and 8 working sets (6
   // for a beginner), topped up from the muscles the session lists.
   const minSessionSets = beginner ? 6 : 8;
@@ -697,7 +749,8 @@ function buildWith(args, strategy) {
   // (a fly straight after the press).
   const absLast = (ex) => (ex.muscle === 'abs' ? 1 : 0);
   const orderSession = (s) => {
-    const lead = [...s.exercises].sort((a, b) => KIND_RANK[a.kind] - KIND_RANK[b.kind]).find((ex) => ex.muscle !== 'abs');
+    const rankOf = (ex) => KIND_RANK[orderKindFor(ex.kind, ex.pattern)];
+    const lead = [...s.exercises].sort((a, b) => rankOf(a) - rankOf(b)).find((ex) => ex.muscle !== 'abs');
     const home = lead ? regionOf(lead.muscle) : null;
     const away = (ex) => (ex.kind === 'isolation' && home && regionOf(ex.muscle) !== home ? 1 : 0);
     // A fly straight after the press it finishes, before the next muscle.
@@ -706,7 +759,7 @@ function buildWith(args, strategy) {
     s.exercises = s.exercises
       .map((ex, i) => ({ ex, i }))
       .sort((a, b) => (absLast(a.ex) - absLast(b.ex))
-        || (KIND_RANK[a.ex.kind] - KIND_RANK[b.ex.kind])
+        || (rankOf(a.ex) - rankOf(b.ex))
         || (away(a.ex) - away(b.ex))
         || (unfinished(a.ex) - unfinished(b.ex))
         || (TIER_RANK[tierOf(category, a.ex.muscle)] - TIER_RANK[tierOf(category, b.ex.muscle)])
@@ -789,6 +842,14 @@ function buildWith(args, strategy) {
       listsBefore.forEach((l, i) => { lists[i] = l; });
       overflow.length = overflowBefore;
       baseline = new Set(currentFaults().map(faultKey));
+    } else if (overflow.length > overflowBefore) {
+      // R36: the room the moves freed goes back to normal volume, a set kept
+      // only while its session stays inside the chosen length.
+      growth = true;
+      fillTypical({ limitMinutes: limit, allowRepair: false });
+      growth = false;
+      balancePushPull();
+      plan.sessions.forEach(orderSession);
     }
   }
 

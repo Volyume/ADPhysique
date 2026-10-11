@@ -36,7 +36,12 @@ function render(args, title) {
   lines.push(`Rulebook checks: ${c.ok ? 'pass' : c.failures.map((f) => f.code).join(', ')}. Sense checks: ${sc.ok ? 'pass' : sc.failures.map((f) => f.code).join(', ')}.`);
   lines.push(`Longest session ${r.report.longestMinutes.toFixed(0)} min against ${args.lengthMinutes} chosen${r.report.needsLengthChoice ? ` (asks for a longer session: ${r.report.suggestedLength} min${r.report.moreDaysPossible ? ', or more days' : ''})` : ''}.`);
   for (const k of r.report.kitShort || []) lines.push(`With this equipment ${k.muscle} has one exercise of its own: ${k.sets} of ${k.minimum} sets a week (the plan says so).`);
-  for (const f of r.report.focusUnmet || []) lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (its sessions are full; the plan says so).`);
+  for (const f of r.report.focusUnmet || []) {
+    const why = f.reason === 'session_cap'
+      ? `it has ${f.sessions} session${f.sessions === 1 ? '' : 's'} a week, each already holding the most one session may`
+      : 'its sessions are full';
+    lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (${why}; the plan says so).`);
+  }
   lines.push('');
   r.plan.sessions.forEach((s, i) => {
     const sets = s.exercises.reduce((t, ex) => t + ex.peak, 0);
@@ -46,8 +51,10 @@ function render(args, title) {
     }
     lines.push('');
   });
-  lines.push('Weekly sets at the peak (counted: own sets + half of other exercises\' credit), against minimum / normal / maximum:');
-  lines.push(Object.entries(r.report.weekly).map(([m, v]) => `${m} ${v.sets} (${v.min}/${v.target}/${v.max})`).join('; ') + '.');
+  lines.push('Weekly sets at the peak (counted: own sets + half of other exercises\' credit; then the muscle\'s own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):');
+  const own = {};
+  for (const s of r.plan.sessions) for (const ex of s.exercises) own[ex.muscle] = (own[ex.muscle] || 0) + ex.peak;
+  lines.push(Object.entries(r.report.weekly).map(([m, v]) => `${m} ${v.sets}, own ${own[m] || 0} (${v.min}/${v.target}/${v.max})`).join('; ') + '.');
   if (r.report.untrainable.length) lines.push(`Cannot be trained directly with this equipment: ${r.report.untrainable.join(', ')}.`);
   lines.push('');
   return lines;

@@ -167,9 +167,14 @@ export const SUPPLEMENTS = Object.freeze({
 // - leg curls: seated (hip bent, the hamstring lengthened; Maeo 2021) or
 //   lying and standing (hip straight);
 // - hip thrusts: two legs or one;
-// - vertical pulls: wide, neutral or underhand grip;
+// - vertical pulls: a pulldown (any grip: a wide and a neutral pulldown in
+//   one session read as the same exercise twice, R33), a pull-up or a
+//   chin-up;
 // - curls: preacher, standing or cable;
-// - abduction: seated, standing or lying.
+// - abduction: seated (hip bent) or standing (hip straight), which load the
+//   side of the hip in different positions as a seated and a lying leg curl
+//   do the hamstrings; with one abduction a session, glute med could not
+//   reach its minimum in bikini's 3-day week (R33, measured);
 // Any other pattern is one movement whatever the name (a cable and a machine
 // crunch, a rope and a bar pushdown, a pec deck and a dumbbell rear fly, a
 // barbell and a dumbbell Romanian deadlift: two hinges in a session load the
@@ -188,9 +193,9 @@ const VARIANTS = Object.freeze({
   calf: (name) => (/seated/i.test(name) ? 'bent_knee' : 'straight_knee'),
   leg_curl: (name) => (/seated/i.test(name) ? 'hip_bent' : 'hip_straight'),
   hip_thrust: (name) => (ONE_LEG.test(name) ? 'one_leg' : 'two_legs'),
-  vpull: (name) => (/chin-up|underhand|supinated/i.test(name) ? 'underhand' : /neutral|close/i.test(name) ? 'neutral' : 'wide'),
+  vpull: (name) => (/chin-up|underhand|supinated/i.test(name) ? 'chin_up' : /pull-up|pullup/i.test(name) ? 'pull_up' : 'pulldown'),
   curl: (name) => (/preacher/i.test(name) ? 'preacher' : /cable/i.test(name) ? 'cable' : 'standing'),
-  abduction: (name) => (/machine/i.test(name) ? 'seated' : /clamshell|side-lying/i.test(name) ? 'lying' : 'standing'),
+  abduction: (name) => (/machine/i.test(name) ? 'seated' : 'standing'),
 });
 
 /**
@@ -206,6 +211,14 @@ export function variantOf(pattern, name) {
 }
 
 const GYM_KITS = new Set(['full_gym', 'machines_cables']);
+// R38: a library name that is another name's machine under a second name; it
+// is never offered beside its original (a seated calf raise one day and a
+// "seated machine calf raise" the next read as two exercises).
+const TWINS = Object.freeze({ 'Seated Machine Calf Raise': 'Seated Calf Raise' });
+// Unloaded stand-ins, offered only where their pattern has no loaded choice in
+// the kit (coach audit: a full-gym bikini week took clamshells because a
+// fresh name won over the loaded cable abduction).
+const UNLOADED = new Set(['Clamshell (Side-Lying)', 'Band Standing Hip Abduction']);
 const NEEDS_BAR = /^hanging /i;
 
 const SUPPLEMENT_SOURCE = 'Added by the rulebook so this muscle can be trained with your equipment (register D222, R16)';
@@ -342,9 +355,14 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
   }
 
   // The person's own logged exercise first within each pattern; otherwise
-  // the order above, which is stable.
-  for (const list of Object.values(byPattern)) {
-    list.sort((a, b) => Number(b.logged) - Number(a.logged));
+  // the order above, which is stable. A twin goes where its original is
+  // offered (R38), unless the person logs the twin and not the original.
+  for (const [p, list] of Object.entries(byPattern)) {
+    const names = new Set(list.map((c) => c.name));
+    const loaded = list.some((c) => !UNLOADED.has(c.name));
+    byPattern[p] = list.filter((c) => !(TWINS[c.name] && names.has(TWINS[c.name]) && !(c.logged && !list.find((o) => o.name === TWINS[c.name]).logged)))
+      .filter((c) => !(loaded && UNLOADED.has(c.name) && !c.logged));
+    byPattern[p].sort((a, b) => Number(b.logged) - Number(a.logged));
   }
 
   const patternsByMuscle = {};

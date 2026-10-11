@@ -214,10 +214,19 @@ describe('the audits of the rendered plans (R24 to R31)', () => {
     expect(four.report.focusUnmet.map((f) => f.muscle)).toEqual(['chest']);
   });
 
-  test('R31: session names say what the session holds', () => {
-    const r = plain('mens_physique', 4);
-    expect(r.plan.sessions.find((s) => s.key === 'chest_triceps').name).toBe('Chest, Triceps & Abs');
-    expect(plain('figure', 4).plan.sessions.map((s) => s.name).slice(0, 3)).toEqual(['Back, Delts & Biceps', 'Lower A', 'Delts, Chest & Triceps']);
+  test('R31, R38: session names say what the session holds; abs and calves are named unless the name says so', () => {
+    for (const goal of ['mens_physique', 'general', 'bikini', 'wellness']) {
+      for (const days of [3, 4, 5, 6]) {
+        const r = plain(goal, days);
+        if (!r.ok) continue;
+        for (const s of r.plan.sessions) {
+          const held = new Set(s.exercises.map((ex) => ex.muscle));
+          if (held.has('abs')) expect([goal, days, s.name, /Abs|Core/.test(s.name)]).toEqual([goal, days, s.name, true]);
+          if (held.has('calves')) expect([goal, days, s.name, /Calves|Legs|Lower/.test(s.name)]).toEqual([goal, days, s.name, true]);
+        }
+      }
+    }
+    expect(plain('figure', 4).plan.sessions.map((s) => s.name).slice(0, 3)).toEqual(['Back, Delts & Biceps', 'Lower A & Abs', 'Delts, Chest & Triceps']);
   });
 
   test('a dumbbells-only kit is never given a hanging raise (no bar)', () => {
@@ -225,3 +234,66 @@ describe('the audits of the rendered plans (R24 to R31)', () => {
     expect(all(r).some((ex) => /^hanging /i.test(ex.name))).toBe(false);
   });
 });
+
+describe('the second audits (R32 to R38)', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const all = (r) => r.plan.sessions.flatMap((s) => s.exercises);
+
+  test('R33: no session holds two pulldowns, whatever the grip', () => {
+    for (const [goal, days] of [['general', 3], ['general', 5], ['classic_physique', 6], ['figure', 5], ['figure', 6], ['womens_physique', 6]]) {
+      const r = plain(goal, days);
+      expect([goal, days, r.ok]).toEqual([goal, days, true]);
+      for (const s of r.plan.sessions) {
+        expect([goal, days, s.key, s.exercises.filter((ex) => /pulldown/i.test(ex.name) && ex.pattern === 'vpull').length <= 1]).toEqual([goal, days, s.key, true]);
+      }
+    }
+  });
+
+  // At 5 days the arms reach their own minimum beside a week of rows. At 4
+  // days both upper sessions are at the 24-set cap holding six priority
+  // muscles' minimums, so the arms hold 4 own sets each (round 2 found one
+  // 3-set hammer curl): measured, not a target.
+  test('R34: a bodybuilder\'s first biceps exercise of the week is a curl, and the arms keep own sets beside a week of rows', () => {
+    const own = (r, m) => all(r).filter((ex) => ex.muscle === m).reduce((n, ex) => n + ex.peak, 0);
+    const five = plain('bodybuilding', 5);
+    const t = weeklyTargets('bodybuilding', 5, 'intermediate', []);
+    expect(own(five, 'biceps')).toBeGreaterThanOrEqual(t.biceps.min);
+    expect(own(five, 'triceps')).toBeGreaterThanOrEqual(t.triceps.min);
+    const four = plain('bodybuilding', 4);
+    expect(all(four).filter((ex) => ex.muscle === 'biceps').map((ex) => ex.pattern)).toContain('curl');
+    expect(own(four, 'biceps')).toBeGreaterThanOrEqual(4);
+    expect(own(four, 'triceps')).toBeGreaterThanOrEqual(4);
+  });
+
+  test('R35: figure 3 days doses side delts lightly in Legs, the session before Push; women\'s physique keeps the general week', () => {
+    const fig = plain('figure', 3);
+    const legs = fig.plan.sessions.find((s) => s.key === 'legs_side');
+    const lateral = legs.exercises.find((ex) => ex.pattern === 'lateral');
+    expect(lateral.nextDayException).toBe(true);
+    expect(fig.plan.sessions[(fig.plan.sessions.indexOf(legs) + 1) % 3].key).toBe('push');
+    expect(plain('womens_physique', 3).plan.sessions.map((s) => s.key)).toEqual(['push', 'pull', 'legs']);
+  });
+
+  test('R37: a leg press or hack squat opens before a moderate compound; an upper-body machine compound rests at least 90 s', () => {
+    for (const goal of ['general', 'bodybuilding', 'bikini']) {
+      const r = plain(goal, 4, { lengthMinutes: 30 });
+      for (const s of r.plan.sessions) {
+        const i = s.exercises.findIndex((ex) => ex.kind === 'machine' && ['squat_machine', 'hip_thrust'].includes(ex.pattern));
+        if (i > 0) expect([goal, s.key, s.exercises.slice(0, i).every((ex) => ex.kind === 'heavy_compound' || ['squat_machine', 'hip_thrust'].includes(ex.pattern))]).toEqual([goal, s.key, true]);
+        for (const ex of s.exercises.filter((x) => x.kind === 'machine' && PATTERNS[x.pattern].kind === 'compound')) expect([ex.name, ex.restSec >= 90]).toEqual([ex.name, true]);
+      }
+    }
+  });
+
+  test('R38: a library twin is never offered beside its original, and a focus report says why it fell short', () => {
+    for (const goal of ['general', 'womens_physique', 'classic_physique']) {
+      for (const days of [4, 5, 6]) {
+        const r = plain(goal, days);
+        if (r.ok) expect([goal, days, all(r).some((ex) => ex.name === 'Seated Machine Calf Raise')]).toEqual([goal, days, false]);
+      }
+    }
+    const four = plain('mens_physique', 4, { focus: ['chest'] });
+    expect(four.report.focusUnmet).toEqual([expect.objectContaining({ muscle: 'chest', reason: 'session_cap', sessions: 1 })]);
+  });
+});
+

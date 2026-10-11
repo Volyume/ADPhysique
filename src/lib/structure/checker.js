@@ -15,7 +15,7 @@
  */
 import {
   TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES, EXPERIENCE_MINIMUM,
-  SESSION_LIMITS, restSecondsFor, JOINT_RULES, TIME_MODEL, PROGRESSION,
+  SESSION_LIMITS, restSecondsFor, orderKindFor, JOINT_RULES, TIME_MODEL, PROGRESSION,
   OHP_PATTERNS, KNEE_COMPOUND_PATTERNS, ELBOW_ISOLATION_PATTERNS,
   SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS,
 } from './rulebook';
@@ -191,7 +191,11 @@ export function checkPlan(plan, opts = {}) {
     } else if ((plan.kitLimited || []).includes(m) && v.direct > 0) {
       if (v.fractional < lo) warnings.push({ code: 'C4', muscle: m, detail: `${m} has one exercise of its own with this equipment; ${v.fractional} sets a week against the minimum ${lo}` });
     } else if (v.fractional < lo) fail('C4', `${m} ${v.fractional} sets a week, below the minimum ${lo}`, { week: peak, muscle: m });
-    if (v.fractional > hi) fail('C4', `${m} ${v.fractional} sets a week, above the maximum ${hi}`, { week: peak, muscle: m });
+    // R34: other exercises' credit counts towards the maximum only up to the
+    // maximum less the minimum, so credit never crowds out a muscle's own
+    // minimum (a week of rows filled the biceps' maximum with credit).
+    const towardsMax = v.direct + Math.min(v.fractional - v.direct, Math.max(0, hi - lo));
+    if (towardsMax > hi) fail('C4', `${m} ${v.fractional} sets a week (${v.direct} its own), above the maximum ${hi}`, { week: peak, muscle: m });
   }
 
   // C7: every rest at or above its floor.
@@ -229,7 +233,7 @@ export function checkPlan(plan, opts = {}) {
 
   // C17: compound tiers first (heavy, moderate, machine, isolation).
   for (const s of sessions) {
-    const ranks = (s.exercises || []).map((ex) => KIND_RANK[ex.kind] ?? 3);
+    const ranks = (s.exercises || []).map((ex) => KIND_RANK[orderKindFor(ex.kind, ex.pattern)] ?? 3);
     for (let i = 1; i < ranks.length; i += 1) {
       if (ranks[i] < ranks[i - 1]) { fail('C17', `${s.exercises[i].name} after a lighter exercise`, { session: s.key }); break; }
     }

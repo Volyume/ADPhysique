@@ -43,8 +43,9 @@ function validPlan() {
         ex('cable_curl', 'curl', 'isolation', 2),
       ] },
       { key: 'legs', name: 'Legs', exercises: [
-        ex('db_rdl', 'hinge', 'mod_compound', 3),
+        // A hack squat ranks with the heavy compounds (R37).
         ex('hack_squat', 'squat_machine', 'machine', 4),
+        ex('db_rdl', 'hinge', 'mod_compound', 3),
         ex('leg_curl', 'leg_curl', 'isolation', 3),
         ex('calf_raise', 'calf', 'isolation', 4),
         ex('cable_crunch', 'crunch', 'isolation', 3),

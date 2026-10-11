@@ -201,11 +201,19 @@ export const REST_SECONDS = Object.freeze({
 // squat or machine hip thrust is a machine, but a lower-body compound under
 // heavy load; it rests as a heavy compound does (a 75 s floor between leg
 // press sets is not enough to repeat the load).
+// R37: it orders with the heavy compounds too, so a 2-set dumbbell Romanian
+// deadlift never opens ahead of a 4-set leg press; and an upper-body machine
+// compound (a machine press or row) rests as a moderate compound.
 export const HEAVY_REST_MACHINE_PATTERNS = Object.freeze(['squat_machine', 'hip_thrust']);
 /** The rest default and floor for an exercise of this kind and pattern. */
 export function restSecondsFor(kind, pattern) {
   if (kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern)) return REST_SECONDS.heavy_compound;
+  if (kind === 'machine' && PATTERNS[pattern] && PATTERNS[pattern].kind === 'compound') return REST_SECONDS.mod_compound;
   return REST_SECONDS[kind];
+}
+/** The kind an exercise ranks as in a session's order (C17; R37). */
+export function orderKindFor(kind, pattern) {
+  return kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern) ? 'heavy_compound' : kind;
 }
 export const REP_RANGES = Object.freeze({
   heavy_compound: Object.freeze([6, 10]),
@@ -449,7 +457,14 @@ const WELLNESS_TEMPLATES = Object.freeze({
 const FIGURE_TEMPLATES = Object.freeze({
   // R12: 09 gives no 2-day figure week; Upper | Lower as for general.
   2: GENERAL_TEMPLATES[2],
-  3: GENERAL_TEMPLATES[3],
+  // R35: side delts, figure's signature muscle, also take a light dose in
+  // Legs, the session before Push, as men's physique does (R11). Women's
+  // physique keeps the general week (below): measured, its leg session
+  // cannot then hold the hamstrings' and calves' minimums.
+  3: Object.freeze([
+    GENERAL_TEMPLATES[3][0], GENERAL_TEMPLATES[3][1],
+    S('legs_side', 'Legs & Side Delts', ['quads', 'hamstrings', 'glute_max', 'glute_med', 'calves', 'side_delts']),
+  ]),
   4: Object.freeze([
     // Named for what they hold (user audit, D222): the first upper session
     // pulls and the second presses, so "Upper A" and "Upper B" misled.
@@ -514,6 +529,7 @@ const SESSION_CORE = {
     hams_glutes_b: [['hamstrings'], ['glute_max']], quads_b: [['quads'], ['adductors']],
   },
   figure: {
+    legs_side: [['quads'], ['hamstrings', 'glute_max'], ['side_delts']],
     upper_a: [BACK, ['side_delts']], upper_b: [['side_delts'], ['chest']],
     back_rear_biceps: [BACK, ['rear_delts'], ['biceps']], side_chest_triceps: [['side_delts'], ['chest'], ['triceps']],
     back_side_biceps: [BACK, ['side_delts'], ['biceps']],
@@ -531,7 +547,7 @@ export const TEMPLATES = Object.freeze({
   bikini: withCore(BIKINI_TEMPLATES, SESSION_CORE.bikini),
   wellness: withCore(WELLNESS_TEMPLATES, SESSION_CORE.wellness),
   figure: withCore(FIGURE_TEMPLATES, SESSION_CORE.figure),
-  womens_physique: withCore(FIGURE_TEMPLATES, SESSION_CORE.figure),
+  womens_physique: withCore(Object.freeze({ ...FIGURE_TEMPLATES, 3: GENERAL_TEMPLATES[3] }), SESSION_CORE.figure),
 });
 
 // R22: when a muscle cannot reach its category minimum in the sessions its
@@ -580,7 +596,8 @@ export const EVIDENCE = Object.freeze({
   SESSION_LIMITS: 'D: 09 s5; 24 working sets, R4; beginner limits R23 (register D222).',
   REST_SECONDS: 'B for the isolation floor (Singer 2024), D for the rest: 09 s5 table, R6 (register D222).',
   HEAVY_REST_MACHINE_PATTERNS: 'D: coaching consensus for loaded lower-body compounds; lead ruling R29 (register D222).',
-  restSecondsFor: 'D: 09 s5 rest table with R29 (register D222).',
+  restSecondsFor: 'D: 09 s5 rest table with R29 and R37 (register D222).',
+  orderKindFor: 'D: 09 s7 order with R37 (register D222).',
   REP_RANGES: 'D: 09 B11.',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',
