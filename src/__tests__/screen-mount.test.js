@@ -2241,12 +2241,16 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
     }
   });
 
-  test('(r3) opening another well with an unsaved edit asks first; Discard proceeds and keeps the logged set (D220 addendum 28, 3b)', async () => {
+  // Founder report 2026-10-11 ("Discard changes?" on a box tap): leaving an
+  // edit saves it, by a tap on another box or by the keyboard going away;
+  // nothing asks (amends D220 addendum 28, 3b).
+  test('(r3) opening another well with an unsaved edit saves the edit, asks nothing, and opens the well', async () => {
     const database = require('../lib/database');
     const orig = { ...database };
     mockNoHistory(database);
     database.getCurrentMesocycleWeek = async () => null;
     database.createWorkoutSet = jest.fn(async (data) => ({ id: `set-r3-${Date.now()}`, ...data, createdAt: Date.now(), updatedAt: Date.now() }));
+    database.updateWorkoutSet = jest.fn(async () => {});
     const alerts = require('../components/AppAlert');
     const spy = jest.spyOn(alerts, 'appAlert').mockImplementation(() => {});
     let tree = null;
@@ -2256,22 +2260,68 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       const result = await mountScreen(Screen);
       tree = result.tree;
       await typeAndLog(tree, 60, 8);
-      // Edit the logged row's reps without saving, then tap the next row's weight.
+      // Edit the logged row's reps, then tap the next row's weight.
       await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
       await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText('9'));
       spy.mockClear();
       await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy.mock.calls[0][0]).toBe('Discard changes?');
-      const buttons = spy.mock.calls[0][2];
-      expect(buttons.map((b) => b.text)).toEqual(['Keep editing', 'Discard']);
-      // Nothing moved yet: the edit is still open.
-      expect(textInput(tree, 'volyume-reps-input')).toBeTruthy();
-      await actFlush(() => buttons[1].onPress());
+      expect(spy).not.toHaveBeenCalled();
+      expect(database.updateWorkoutSet).toHaveBeenCalledTimes(1);
+      expect(database.updateWorkoutSet.mock.calls[0][1]).toEqual(expect.objectContaining({ actualReps: 9 }));
       expect(textInput(tree, 'volyume-weight-input')).toBeTruthy(); // the next row's well opened
-      expect((useAppStore.getState().workoutExercises[0].sets || [])[0].actualReps ?? (useAppStore.getState().workoutExercises[0].sets || [])[0].reps).toBe(8);
+      const first = (useAppStore.getState().workoutExercises[0].sets || [])[0];
+      expect(first.actualReps ?? first.reps).toBe(9);
     } finally {
       spy.mockRestore();
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(r3b) the keyboard going away with an unsaved edit saves it; with none, the edit closes', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    database.createWorkoutSet = jest.fn(async (data) => ({ id: `set-r3b-${Date.now()}`, ...data, createdAt: Date.now(), updatedAt: Date.now() }));
+    database.updateWorkoutSet = jest.fn(async () => {});
+    const { Keyboard } = require('react-native');
+    // The jest mock of React Native's TextInput has no State statics; on a
+    // phone the house TextInput carries React Native's (no field focused once
+    // the keyboard has gone).
+    const HouseTextInput = require('../components/TextInput').default;
+    const origState = HouseTextInput.State;
+    HouseTextInput.State = { currentlyFocusedInput: () => null };
+    const hides = [];
+    const listen = jest.spyOn(Keyboard, 'addListener').mockImplementation((name, fn) => {
+      if (name === 'keyboardDidHide') hides.push(fn);
+      return { remove: () => {} };
+    });
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exR3b', repsMin: 8, repsMax: 15 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      await typeAndLog(tree, 60, 8);
+      expect(hides.length).toBeGreaterThan(0);
+      const hide = () => hides[hides.length - 1]();
+      // An untouched edit closes quietly.
+      await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
+      await actFlush(() => hide());
+      expect(textInput(tree, 'volyume-reps-input')).toBeUndefined();
+      expect(database.updateWorkoutSet).not.toHaveBeenCalled();
+      // A changed edit is saved.
+      await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-reps-input').props.onChangeText('11'));
+      await actFlush(() => hide());
+      expect(database.updateWorkoutSet).toHaveBeenCalledTimes(1);
+      expect(database.updateWorkoutSet.mock.calls[0][1]).toEqual(expect.objectContaining({ actualReps: 11 }));
+      const first = (useAppStore.getState().workoutExercises[0].sets || [])[0];
+      expect(first.actualReps ?? first.reps).toBe(11);
+    } finally {
+      HouseTextInput.State = origState;
+      listen.mockRestore();
       unmountTree(tree);
       Object.assign(database, orig);
     }

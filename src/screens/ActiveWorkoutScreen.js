@@ -3665,8 +3665,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSet]);
 
+  // Leaving an edit saves it (founder report 2026-10-11), so a save can be
+  // asked for by a box tap and by the keyboard going away at nearly the same
+  // moment: the ref lets only the first run. Resolves true once saved.
+  const savingEditRef = useRef(false);
   async function handleSaveEditedSet() {
-    if (saving || !editingSet || !editValue) return;
+    if (saving || savingEditRef.current || !editingSet || !editValue) return false;
     const validation = validateSetEntryValue({
       value: editValue,
       exercise,
@@ -3675,7 +3679,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     });
     if (!validation.ok) {
       appAlert(validation.title, validation.message);
-      return;
+      return false;
     }
     // For timed/distance the value columns are weight=distance/0 and
     // actualReps=seconds; SetEntry already stores those numbers, so parse
@@ -3683,6 +3687,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const { actualReps, weight } = validation;
 
     setSaving(true);
+    savingEditRef.current = true;
     try {
       await updateWorkoutSet(editingSet.id, { weight, actualReps });
       updateSetInCurrentExercise(editingSet.id, { weight, actualReps });
@@ -3751,6 +3756,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       hapticsVocab.setLogged();
       // P9 TalkBack: spoken counterpart of the ack above.
       try { AccessibilityInfo.announceForAccessibility('Set updated'); } catch (_) {}
+      return true;
     } catch (e) {
       logError('ActiveWorkoutScreen.handleSaveEditedSet', e, {
         userId: user?.id,
@@ -3761,8 +3767,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         'Couldn\'t save changes',
         'Your edit was not saved. Tap Save to retry. If this keeps happening, tell us from Settings > Help.',
       );
+      return false;
     } finally {
       setSaving(false);
+      savingEditRef.current = false;
     }
   }
 
@@ -4867,15 +4875,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
       || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
   }
-  // Founder ruling 2026-10-09 (D220 addendum 28, 3b): opening another well
-  // while an edit holds an unsaved change asks first, in the app's own
-  // dialog, instead of discarding the change silently.
+  // Leaving an edit saves it (founder report 2026-10-11: the discard prompt
+  // came up on a box tap, the edit having been left open when the keyboard
+  // went away; amends D220 addendum 28, 3b, whose concern was a change lost
+  // silently). Opening another well with a change in hand saves the change
+  // first; a change that cannot be saved shows its reason and stays open.
   function openWell(field, set = null) {
     if (editingSet && editIsDirty() && (set?.id ?? null) !== editingSet.id) {
-      appAlert('Discard changes?', 'Your change to this set is not saved.', [
-        { text: 'Keep editing', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => { closeEditSet(); setEditField(null); openWellNow(field, set); } },
-      ]);
+      handleSaveEditedSet().then((saved) => { if (saved) openWellNow(field, set); });
       return;
     }
     openWellNow(field, set);
@@ -4920,6 +4927,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // closes the well too (2026-10-09 audit C6), unless another input already
   // holds focus: moving between wells can hide and re-show the keyboard.
   const inputOpenRef = useRef(false);
+  // The listener is registered once, so it cannot read the edit; it counts
+  // the leave and the effect below, which reads the current edit, settles it.
+  const [editLeftTick, setEditLeftTick] = useState(0);
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidHide', () => {
       if (!inputOpenRef.current) return;
@@ -4927,9 +4937,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setEntryField(null);
       setEditField(null);
       setTimeDraft(null);
+      setEditLeftTick((n) => n + 1);
     });
     return () => sub.remove();
   }, []);
+  // The keyboard going away by any route (a blank tap, an iOS drag, Android
+  // back) leaves an edit of a logged set: a change is saved, an untouched
+  // edit closes. It had stayed open unseen, and the next box tap asked to
+  // discard it (founder report 2026-10-11).
+  useEffect(() => {
+    if (!editLeftTick || !editingSet) return;
+    if (editIsDirty()) handleSaveEditedSet(); else closeEditSet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLeftTick]);
   // D220 addendum 25: the first keystroke into a freshly opened well REPLACES
   // what the well held, as the retired keypad did. selectTextOnFocus is kept,
   // but on the founder's iPhone it did not select the seed under autoFocus

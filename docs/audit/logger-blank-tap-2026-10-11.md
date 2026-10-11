@@ -30,3 +30,11 @@ Decision (lead, under the founder's standing delegation): nothing opens the set 
 - The set being entered: a Note action on the keyboard bar, beside OK and Log set, on the set's last box (reps, or time), where the bar has room; on the weight box Next leads to it. Note puts the keyboard away, keeps the typed numbers and opens "Next set" with "Note for this set".
 - A logged set: its green tick is the button for its sheet (its note, Edit set, Delete set), spoken "Set 1 options"; opening it cancels a pending auto-advance, as the hold did (audit D4). Delete stays reachable only through a deliberate press.
 - With no hold, a set row is a plain view again, so a tap on its blank space always puts the keyboard away.
+
+## Fourth report: "Discard changes?" on a box tap (same day)
+
+4. "Sometimes when I press a box it does this too. The logger is buggy as f" (screenshot: "Discard changes? Your change to this set is not saved." over Machine Lateral Raise; set 1 logged as 40 kg x 50, its reps box showing 20 with the editing edge.)
+
+Mechanism (read in the code): tapping a logged set's box opens an edit of that set. The keyboard going away by any route but Done (a blank tap, an iOS drag, Android back) closed the box (`keyboardDidHide`: entry and edit field cleared) but left the edit itself open and unsaved, invisible. The next tap on any other box found that unsaved change and asked "Discard changes?" (D220 addendum 28, 3b). The blank-tap fix earlier today made the keyboard go away that way more often, so the prompt came more often.
+
+Decision (lead, under the founder's standing delegation; amends D220 addendum 28, 3b, whose concern was a change lost silently): leaving an edit saves it. The keyboard going away by any route, or a tap on another box, saves the change to the logged set; nothing asks. A change that cannot be saved (an empty or out-of-range number) shows the existing reason and the box stays open. An exercise change still closes an edit unsaved, as before (saving there would write against the new exercise); noted, not changed.
