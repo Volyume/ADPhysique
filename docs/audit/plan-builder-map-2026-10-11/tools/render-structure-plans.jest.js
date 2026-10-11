@@ -34,7 +34,9 @@ function render(args, title) {
   const c = checkPlan(r.plan);
   const sc = senseCheck(r.plan);
   lines.push(`Rulebook checks: ${c.ok ? 'pass' : c.failures.map((f) => f.code).join(', ')}. Sense checks: ${sc.ok ? 'pass' : sc.failures.map((f) => f.code).join(', ')}.`);
-  lines.push(`Longest session ${r.report.longestMinutes.toFixed(0)} min against ${args.lengthMinutes} chosen${r.report.needsLengthChoice ? ` (asks for a longer session: ${r.report.suggestedLength} min, or more days)` : ''}.`, '');
+  lines.push(`Longest session ${r.report.longestMinutes.toFixed(0)} min against ${args.lengthMinutes} chosen${r.report.needsLengthChoice ? ` (asks for a longer session: ${r.report.suggestedLength} min${r.report.moreDaysPossible ? ', or more days' : ''})` : ''}.`);
+  for (const f of r.report.focusUnmet || []) lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (its sessions are full; the plan says so).`);
+  lines.push('');
   r.plan.sessions.forEach((s, i) => {
     const sets = s.exercises.reduce((t, ex) => t + ex.peak, 0);
     lines.push(`**${i + 1}. ${s.name}** (${s.exercises.length} exercises, ${sets} sets at the peak, about ${r.report.minutes[i].toFixed(0)} min)`);

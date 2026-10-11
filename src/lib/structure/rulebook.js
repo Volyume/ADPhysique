@@ -68,7 +68,11 @@ export const PATTERNS = Object.freeze({
   squat_machine: { muscle: 'quads', kind: 'compound', credits: ['glute_max', 'adductors'], joints: ['knee'] },
   lunge: { muscle: 'quads', kind: 'compound', credits: ['glute_max'], joints: ['knee'] },
   leg_ext: { muscle: 'quads', kind: 'isolation', credits: [], joints: ['knee'] },
-  hinge: { muscle: 'hamstrings', kind: 'compound', credits: ['glute_max'], joints: [] },
+  // R26 (register D222, coach audit of the rendered plans): every loaded
+  // hinge loads the lower back, whatever the implement, so a dumbbell
+  // Romanian deadlift counts for the lumbar rules (J5, J6) as a barbell one
+  // does. The lower back is the commonest injury site (09 s6: Siewe 2014).
+  hinge: { muscle: 'hamstrings', kind: 'compound', credits: ['glute_max'], joints: ['spinal_axial'] },
   leg_curl: { muscle: 'hamstrings', kind: 'isolation', credits: [], joints: ['knee'] },
   hip_thrust: { muscle: 'glute_max', kind: 'compound', credits: [], joints: [] },
   kickback: { muscle: 'glute_max', kind: 'isolation', credits: [], joints: [] },
@@ -175,6 +179,14 @@ export const SESSION_LIMITS = Object.freeze({
   // sessions short instead, about 4.5 exercises on average.
   beginnerExercises: 8,
   beginnerSetsPerExercise: 4,
+  // R25 (register D222, from the user audit of the rendered plans): above
+  // the minimum, a beginner's session stays inside 09's beginner limits, 5
+  // exercises and 3 sets an exercise. R23 lets the minimum use the normal
+  // limits so no muscle drops out; normal volume never takes a beginner's
+  // session past 09's limits (a first leg day of 8 exercises and 24 sets
+  // is not a beginner session).
+  beginnerGrowthExercises: 5,
+  beginnerGrowthSetsPerExercise: 3,
 });
 
 // ── Rest and reps by exercise kind (09 s5, B11; R6) ───────────────────────
@@ -185,6 +197,16 @@ export const REST_SECONDS = Object.freeze({
   machine: Object.freeze({ default: 120, floor: 75 }),
   isolation: Object.freeze({ default: 75, floor: 60 }),
 });
+// R29 (register D222, coach audit of the rendered plans): a leg press, hack
+// squat or machine hip thrust is a machine, but a lower-body compound under
+// heavy load; it rests as a heavy compound does (a 75 s floor between leg
+// press sets is not enough to repeat the load).
+export const HEAVY_REST_MACHINE_PATTERNS = Object.freeze(['squat_machine', 'hip_thrust']);
+/** The rest default and floor for an exercise of this kind and pattern. */
+export function restSecondsFor(kind, pattern) {
+  if (kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern)) return REST_SECONDS.heavy_compound;
+  return REST_SECONDS[kind];
+}
 export const REP_RANGES = Object.freeze({
   heavy_compound: Object.freeze([6, 10]),
   mod_compound: Object.freeze([8, 12]),
@@ -429,9 +451,11 @@ const FIGURE_TEMPLATES = Object.freeze({
   2: GENERAL_TEMPLATES[2],
   3: GENERAL_TEMPLATES[3],
   4: Object.freeze([
-    S('upper_a', 'Upper A', ['lats', 'upper_back', 'side_delts', 'rear_delts', 'biceps']),
+    // Named for what they hold (user audit, D222): the first upper session
+    // pulls and the second presses, so "Upper A" and "Upper B" misled.
+    S('upper_a', 'Back, Delts & Biceps', ['lats', 'upper_back', 'side_delts', 'rear_delts', 'biceps']),
     S('lower_a', 'Lower A', LOWER),
-    S('upper_b', 'Upper B', ['side_delts', 'rear_delts', 'chest', 'triceps']),
+    S('upper_b', 'Delts, Chest & Triceps', ['side_delts', 'rear_delts', 'chest', 'triceps']),
     S('lower_b', 'Lower B', LOWER),
   ]),
   5: Object.freeze([
@@ -555,6 +579,8 @@ export const EVIDENCE = Object.freeze({
   MIN_HOURS_BETWEEN_SESSIONS_WARNING: 'D: 09 s4.',
   SESSION_LIMITS: 'D: 09 s5; 24 working sets, R4; beginner limits R23 (register D222).',
   REST_SECONDS: 'B for the isolation floor (Singer 2024), D for the rest: 09 s5 table, R6 (register D222).',
+  HEAVY_REST_MACHINE_PATTERNS: 'D: coaching consensus for loaded lower-body compounds; lead ruling R29 (register D222).',
+  restSecondsFor: 'D: 09 s5 rest table with R29 (register D222).',
   REP_RANGES: 'D: 09 B11.',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',

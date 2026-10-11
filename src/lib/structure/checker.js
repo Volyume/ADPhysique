@@ -15,7 +15,7 @@
  */
 import {
   TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES, EXPERIENCE_MINIMUM,
-  SESSION_LIMITS, REST_SECONDS, JOINT_RULES, TIME_MODEL, PROGRESSION,
+  SESSION_LIMITS, restSecondsFor, JOINT_RULES, TIME_MODEL, PROGRESSION,
   OHP_PATTERNS, KNEE_COMPOUND_PATTERNS, ELBOW_ISOLATION_PATTERNS,
   SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS,
 } from './rulebook';
@@ -193,7 +193,7 @@ export function checkPlan(plan, opts = {}) {
   // C7: every rest at or above its floor.
   for (const s of sessions) {
     for (const ex of s.exercises || []) {
-      const r = REST_SECONDS[ex.kind];
+      const r = restSecondsFor(ex.kind, ex.pattern);
       if (!r) fail('C7', `${ex.name} has no rest kind`, { session: s.key });
       else if (!Number.isFinite(ex.restSec) || ex.restSec < r.floor) fail('C7', `${ex.name} rests ${ex.restSec} s (floor ${r.floor})`, { session: s.key });
     }
@@ -235,7 +235,9 @@ export function checkPlan(plan, opts = {}) {
   // tolerance, the plan must ask for a longer session or more days.
   const minutes = sessions.map((s) => sessionMinutes(s, peak, plan.equipment));
   if (Number.isFinite(plan.lengthMinutes)) {
-    const over = minutes.some((m) => m > plan.lengthMinutes + TIME_MODEL.toleranceMinutes);
+    // Judged on the whole minute the person is shown: shown as 65 against
+    // 60 chosen it does not ask, shown as 66 it does (user audit, D222).
+    const over = minutes.some((m) => Math.round(m) > plan.lengthMinutes + TIME_MODEL.toleranceMinutes);
     if (over && !plan.needsLengthChoice) fail('C18', `a session runs ${Math.max(...minutes).toFixed(0)} minutes against ${plan.lengthMinutes} chosen, without asking`);
     if (Array.isArray(plan.reportedMinutes)) {
       plan.reportedMinutes.forEach((r, i) => {

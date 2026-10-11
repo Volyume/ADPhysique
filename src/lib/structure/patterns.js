@@ -134,11 +134,75 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Single-Leg Romanian Deadlift (DB)', reason: 'A one-leg hip hinge for the hamstrings with dumbbells.', grade: 'D' },
     { name: 'Stiff-Leg Deadlift', reason: 'A second hip hinge for the hamstrings with a barbell.', grade: 'D' },
   ]),
+  // A kit with no bar to hang from still trains the lower abs (R16, user
+  // audit: hanging raises are offered only where there is a bar).
+  leg_raise: Object.freeze([
+    { name: 'Reverse Crunch', reason: 'Curls the hips up off the floor for the lower abs, no bar needed.', grade: 'D' },
+    { name: 'Leg Raise', reason: 'Raises straight legs lying on the floor for the lower abs, no bar needed.', grade: 'D' },
+  ]),
   leg_curl: Object.freeze([
     { name: 'TRX Hamstring Curl', reason: 'A hamstring curl with suspension straps, for a kit with no leg curl machine.', grade: 'D' },
     { name: 'Slider Leg Curl (Bodyweight)', reason: 'A hamstring curl on sliders, for a kit with no machines.', grade: 'D' },
   ]),
 });
+
+// R24 (the sense order, D222): one movement once per session. A coach never
+// writes two Romanian deadlifts, or a seated calf raise beside a seated
+// machine calf raise, into one session. Two exercises of one pattern are
+// the same movement unless they load the muscle differently; these are the
+// differences that count:
+// - lateral raises: the implement and lean (dumbbell, leaning, cable,
+//   machine, plate, band) move the hardest point of the lift; a seated and a
+//   standing dumbbell raise are one movement;
+// - rows: a seated cable row, a chest-supported row (dumbbell, machine or
+//   barbell on a bench), a T-bar row and a one-arm row each pull a different
+//   path;
+// - flyes, machine squats, lunges: each name loads the muscle differently;
+// - calves: knee straight or bent (the bent knee shifts the work to the
+//   soleus);
+// - leg curls: seated (hip bent, the hamstring lengthened; Maeo 2021) or
+//   lying and standing (hip straight);
+// - hip thrusts: two legs or one;
+// - vertical pulls: wide, neutral or underhand grip;
+// - curls: preacher, standing or cable;
+// - abduction: seated, standing or lying.
+// Any other pattern is one movement whatever the name (a cable and a machine
+// crunch, a rope and a bar pushdown, a pec deck and a dumbbell rear fly, a
+// barbell and a dumbbell Romanian deadlift: two hinges in a session load the
+// lower back twice, R26).
+const BY_NAME = (name) => name;
+const ONE_LEG = /single-leg|single leg|one-leg|one leg|b-stance/i;
+const VARIANTS = Object.freeze({
+  lateral: (name) => (/leaning/i.test(name) ? 'leaning' : /cable/i.test(name) ? 'cable' : /machine/i.test(name) ? 'machine'
+    : /plate/i.test(name) ? 'plate' : /band/i.test(name) ? 'band' : 'dumbbell'),
+  row_supported: (name) => (/cable/i.test(name) && !/single|one-arm/i.test(name) ? 'cable'
+    : /t-bar/i.test(name) ? 't_bar' : /^dumbbell row$|single-arm|one-arm|single arm/i.test(name) ? 'one_arm'
+      : /inverted/i.test(name) ? 'inverted' : 'chest_supported'),
+  fly: BY_NAME,
+  squat_machine: BY_NAME,
+  lunge: BY_NAME,
+  calf: (name) => (/seated/i.test(name) ? 'bent_knee' : 'straight_knee'),
+  leg_curl: (name) => (/seated/i.test(name) ? 'hip_bent' : 'hip_straight'),
+  hip_thrust: (name) => (ONE_LEG.test(name) ? 'one_leg' : 'two_legs'),
+  vpull: (name) => (/chin-up|underhand|supinated/i.test(name) ? 'underhand' : /neutral|close/i.test(name) ? 'neutral' : 'wide'),
+  curl: (name) => (/preacher/i.test(name) ? 'preacher' : /cable/i.test(name) ? 'cable' : 'standing'),
+  abduction: (name) => (/machine/i.test(name) ? 'seated' : /clamshell|side-lying/i.test(name) ? 'lying' : 'standing'),
+});
+
+/**
+ * The movement an exercise gives a session (R24): two exercises with the
+ * same variant are the same movement twice.
+ * @param {string} pattern  a rulebook pattern key
+ * @param {string} name     the exercise name
+ * @returns {string}
+ */
+export function variantOf(pattern, name) {
+  const f = Object.prototype.hasOwnProperty.call(VARIANTS, pattern) ? VARIANTS[pattern] : null;
+  return f ? `${pattern}:${f(String(name || ''))}` : String(pattern);
+}
+
+const GYM_KITS = new Set(['full_gym', 'machines_cables']);
+const NEEDS_BAR = /^hanging /i;
 
 const SUPPLEMENT_SOURCE = 'Added by the rulebook so this muscle can be trained with your equipment (register D222, R16)';
 const HEAVY_CATEGORIES = new Set(['barbell', 'landmine']);
@@ -228,8 +292,14 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
   const byPattern = {};
   const seen = new Set();
 
+  // A hanging raise needs a bar to hang from: a gym has one, and so does a
+  // kit whose pulls include the pull-up. Dumbbells at home do not (the user
+  // audit of the rendered plans, D222).
+  const pullUp = rows.get('Pull-Up');
+  const hasBar = GYM_KITS.has(kit) || (!!pullUp && profilesOf(pullUp).includes(kit));
   const offer = (name, pattern, meta) => {
     if (!pattern || !PATTERNS[pattern] || seen.has(`${pattern}|${name}`)) return;
+    if (!hasBar && NEEDS_BAR.test(name)) return;
     const row = rows.get(name);
     if (!row || !hasLoadPrescription(row) || !profilesOf(row).includes(kit)) return;
     seen.add(`${pattern}|${name}`);

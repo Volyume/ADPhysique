@@ -17,7 +17,9 @@
 import {
   TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE,
 } from './rulebook';
-import { sessionLoad, isTrained, isLightDose, setsIn, rirIn, patternOf, PEAK_WEEK } from './measure';
+import { sessionLoad, weeklyLoad, isTrained, isLightDose, setsIn, rirIn, patternOf, PEAK_WEEK } from './measure';
+import { variantOf } from './patterns';
+import { weeklyMin } from './checker';
 
 const PUSH_MUSCLES = new Set(['chest', 'front_delts']);
 const PULL_MUSCLES = new Set(['lats', 'upper_back']);
@@ -57,7 +59,16 @@ export function doseClass(session, muscle, week) {
  *   S5 every session is worth the trip: 3 exercises and 8 working sets
  *      (6 for a beginner) at the peak week;
  *   S6 every session's work is what its name covers;
- *   S7 every session trains what its name promises (its template `core`).
+ *   S7 every session trains what its name promises (its template `core`);
+ *   S8 no movement twice in a session (R24: two Romanian deadlifts, or a
+ *      seated calf raise beside a seated machine calf raise);
+ *   S9 abs last in a session (R24);
+ *   S10 a priority or standard muscle's own sets are at least half its
+ *      weekly minimum (R27: never left to other exercises' credit);
+ *   S11 hamstrings trained by two or more exercises get a hinge and a
+ *      curl where the kit has both (09 s7; coach audit: a week of Romanian
+ *      deadlifts and no curl);
+ *   S12 a focus pick below its target is reported, never silent (R30).
  * @param {object} plan  a structure plan (measure.js)
  * @returns {{ ok: boolean, failures: object[] }}
  */
@@ -100,6 +111,45 @@ export function senseCheck(plan) {
     }
   }
 
+  // S10: own sets of priority and standard muscles, at least half the minimum.
+  for (const m of Object.keys(TIERS)) {
+    const t = tierOf(plan.category, m);
+    if ((t !== 'P' && t !== 'S') || OPT_IN_MUSCLES.includes(m) || untrainable.has(m)) continue;
+    const floor = Math.ceil(weeklyMin(plan.category, m, plan.days, plan.experience) / 2);
+    if ((direct[m] || 0) < floor) fail('S10', `${m} has ${direct[m] || 0} sets of its own against a floor of ${floor}`, { muscle: m });
+  }
+
+  // S11: a hinge and a curl for hamstrings across the week.
+  const offer = plan.kitOffer || { names: {}, patterns: {} };
+  const byMuscle = {};
+  for (const s of plan.sessions) {
+    for (const ex of s.exercises) {
+      const p = patternOf(ex);
+      if (!p || setsIn(ex, week) <= 0) continue;
+      (byMuscle[p.muscle] ||= []).push({ name: ex.name, pattern: ex.pattern });
+    }
+  }
+  const hams = byMuscle.hamstrings || [];
+  const kitHams = offer.patterns.hamstrings || [];
+  if (hams.length >= 2 && kitHams.includes('hinge') && kitHams.includes('leg_curl')
+    && !(hams.some((x) => x.pattern === 'hinge') && hams.some((x) => x.pattern === 'leg_curl'))) {
+    fail('S11', 'hamstrings get no hinge or no curl all week', { muscle: 'hamstrings' });
+  }
+
+  // S12: a focus pick short of its target is reported. The engine records
+  // each pick's target; a plan from elsewhere with focus and no targets
+  // fails, since nothing says what the focus was meant to reach.
+  if (Array.isArray(plan.focus) && plan.focus.length) {
+    const fr = weeklyLoad(plan, week);
+    const reported = new Set((plan.focusUnmet || []).map((f) => f.muscle));
+    for (const m of plan.focus) {
+      if (untrainable.has(m) || reported.has(m) || tierOf(plan.category, m) === 'I') continue;
+      const target = (plan.focusTargets || {})[m];
+      const sets = (fr[m] || {}).fractional || 0;
+      if (target == null || sets < target) fail('S12', `the ${m} focus reaches ${sets} of ${target ?? 'an unrecorded target'} and the plan does not say so`, { muscle: m });
+    }
+  }
+
   // S3: pulling at least matches pressing.
   const push = Object.entries(direct).filter(([m]) => PUSH_MUSCLES.has(m)).reduce((t, [, v]) => t + v, 0);
   const pull = Object.entries(direct).filter(([m]) => PULL_MUSCLES.has(m)).reduce((t, [, v]) => t + v, 0);
@@ -123,6 +173,18 @@ export function senseCheck(plan) {
     for (const ex of live) {
       const p = patternOf(ex);
       if (p && !allowed.has(p.muscle)) fail('S6', `${ex.name} (${p.muscle}) in ${s.key}, which is not named for it`, { session: s.key, muscle: p.muscle });
+    }
+    const seen = new Map();
+    for (const ex of live) {
+      const p = patternOf(ex);
+      if (!p) continue;
+      const v = variantOf(ex.pattern, ex.name);
+      if (seen.has(v)) fail('S8', `${seen.get(v)} and ${ex.name} in ${s.key} are the same movement twice`, { session: s.key, muscle: p.muscle });
+      else seen.set(v, ex.name);
+    }
+    const firstAbs = live.findIndex((ex) => (patternOf(ex) || {}).muscle === 'abs');
+    if (firstAbs >= 0 && live.slice(firstAbs).some((ex) => (patternOf(ex) || {}).muscle !== 'abs')) {
+      fail('S9', `${s.key}: abs work comes before ${live.slice(firstAbs).find((ex) => (patternOf(ex) || {}).muscle !== 'abs').name}`, { session: s.key, muscle: 'abs' });
     }
     if (t) {
       const own = {};

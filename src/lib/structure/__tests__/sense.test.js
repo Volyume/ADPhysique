@@ -129,3 +129,54 @@ test('S7: a "Back B & Delts" day with no back exercise fails', () => {
   b.exercises.unshift(ex('face_pull', 'face_pull', 'isolation', 3));
   expect(senseCheck(p).failures.some((f) => f.code === 'S7' && f.session === 'back_b_delts')).toBe(true);
 });
+
+test('S8: the same movement twice in one session fails; two variants that load it differently pass (R24)', () => {
+  const p = plan();
+  session(p, 'legs').exercises.splice(1, 0, ex('Romanian Deadlift (Barbell)', 'hinge', 'heavy_compound', 2));
+  expect(senseCheck(p).failures.some((f) => f.code === 'S8' && f.muscle === 'hamstrings')).toBe(true);
+  const q = plan();
+  const legs = session(q, 'legs');
+  legs.exercises = legs.exercises.filter((x) => x.pattern !== 'calf');
+  legs.exercises.splice(3, 0, ex('Seated Calf Raise', 'calf', 'isolation', 2), ex('Seated Machine Calf Raise', 'calf', 'isolation', 2));
+  expect(senseCheck(q).failures.some((f) => f.code === 'S8' && f.muscle === 'calves')).toBe(true);
+  const r = plan();
+  const legsR = session(r, 'legs');
+  legsR.exercises = legsR.exercises.filter((x) => x.pattern !== 'calf');
+  legsR.exercises.splice(3, 0, ex('Standing Calf Raise (Machine)', 'calf', 'isolation', 2), ex('Seated Calf Raise', 'calf', 'isolation', 2));
+  expect(senseCheck(r).failures.filter((f) => f.code === 'S8')).toEqual([]);
+});
+
+test('S9: abs halfway through a leg session fails (R24)', () => {
+  const p = plan();
+  const legs = session(p, 'legs');
+  const crunch = legs.exercises.find((x) => x.pattern === 'crunch');
+  legs.exercises = [crunch, ...legs.exercises.filter((x) => x !== crunch)];
+  expect(senseCheck(p).failures.some((f) => f.code === 'S9' && f.session === 'legs')).toBe(true);
+});
+
+test('S10: a standard muscle left on credit, under half its minimum of its own, fails (R27)', () => {
+  const p = plan();
+  for (const s of p.sessions) s.exercises = s.exercises.filter((x) => x.pattern !== 'hammer');
+  session(p, 'back_a_delts').exercises.find((x) => x.pattern === 'curl').weeks = ex('c', 'curl', 'isolation', 2).weeks;
+  expect(senseCheck(p).failures.some((f) => f.code === 'S10' && f.muscle === 'biceps')).toBe(true);
+});
+
+test('S11: hamstrings trained twice with no hinge all week fail where the kit has one (09 s7)', () => {
+  const p = plan();
+  p.kitOffer = { names: {}, patterns: { hamstrings: ['hinge', 'leg_curl'] } };
+  const legs = session(p, 'legs');
+  legs.exercises = legs.exercises.filter((x) => x.pattern !== 'hinge');
+  legs.exercises.splice(1, 0, ex('Lying Leg Curl', 'leg_curl', 'isolation', 3));
+  expect(senseCheck(p).failures.some((f) => f.code === 'S11' && f.muscle === 'hamstrings')).toBe(true);
+  p.kitOffer = { names: {}, patterns: { hamstrings: ['leg_curl'] } };
+  expect(senseCheck(p).failures.some((f) => f.code === 'S11')).toBe(false);
+});
+
+test('S12: a focus pick short of its target must be reported (R30)', () => {
+  const p = plan();
+  p.focus = ['chest'];
+  p.focusTargets = { chest: 14 };
+  expect(senseCheck(p).failures.some((f) => f.code === 'S12' && f.muscle === 'chest')).toBe(true);
+  p.focusUnmet = [{ muscle: 'chest', sets: 8, target: 14, reason: 'sessions_full' }];
+  expect(senseCheck(p).failures.some((f) => f.code === 'S12')).toBe(false);
+});

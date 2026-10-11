@@ -29,10 +29,14 @@ const KITS = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates',
 const build = (goal, days, equipment, over = {}) => buildStructurePlan({
   goal, days, lengthMinutes: 60, equipment, experience: 'intermediate', focus: [], library: LIBRARY, ...over,
 });
-const sig = (plan) => plan.sessions.map((s) => s.exercises.map((ex) => `${ex.name}x${ex.peak}`).join(',')).join('|');
+// The week's sets, wherever they fall: the clock never removes or changes a
+// set (Q1 = C); it may only move a whole abs or calf exercise to a shorter
+// session (R28).
+const sig = (plan) => plan.sessions.flatMap((s) => s.exercises.map((ex) => `${ex.name}x${ex.peak}`)).sort().join(',');
+const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => !['abs', 'calves'].includes(ex.muscle)).map((ex) => ex.name).join(',')).join('|');
 
-// The weeks refused today for an intermediate person (49 of 240), all at 2
-// or 3 days but two. Every muscle the category trains must have an
+// The weeks refused today for an intermediate person (56 of 240), most at
+// 2 or 3 days. Every muscle the category trains must have an
 // exercise of its own (the founder's sense order, D222), which costs session
 // slots. Lead-checked by hand (register D222):
 // - impossible under the rules: bodybuilding 2 days (the upper session
@@ -45,15 +49,27 @@ const sig = (plan) => plan.sessions.map((s) => s.exercises.map((ex) => `${ex.nam
 //   the trip, S5);
 // - tight weeks the engine has not packed yet: figure and women's physique
 //   at 2 days in a full gym or machines, which fit by hand at exactly 24
-//   sets and 8 exercises; classic physique 2 days.
-// The list may only shrink. A refusal names the nearest day count that
+//   sets and 8 exercises; classic physique 2 days;
+// - from the coach and user audits of the rendered plans (R24, R26):
+//   men's physique 6 days with bodyweight (Shoulders A would be a band
+//   lateral raise and one rear-delt movement, a band pull-apart and a band
+//   rear fly being one movement); bikini 5 and 6 days and wellness 6 days
+//   with barbell and plates (the glutes-and-hamstrings session cannot hinge
+//   beside the squat session, every loaded hinge loading the lower back,
+//   which leaves a hip thrust and a slider curl, too thin to be worth the
+//   trip); wellness 5 days with dumbbells, barbell or a home gym (09's
+//   hinge-only hamstring session holds one hinge, two hinges loading the
+//   lower back twice, so hamstrings fall short of 10).
+// The list may only shrink, except by a ruling recorded in register D222. A refusal names the nearest day count that
 // works (09 B12); the person chooses.
 const KNOWN_REFUSALS = new Set([
   ...['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'].flatMap((k) => [
     `bodybuilding 2d ${k}`, `bodybuilding 3d ${k}`, `classic_physique 2d ${k}`, `classic_physique 3d ${k}`,
   ]),
   'mens_physique 2d barbell_plates', 'mens_physique 2d bodyweight', 'mens_physique 3d barbell_plates', 'mens_physique 3d bodyweight',
-  'mens_physique 6d barbell_plates',
+  'mens_physique 6d barbell_plates', 'mens_physique 6d bodyweight',
+  'bikini 5d barbell_plates', 'bikini 6d barbell_plates', 'wellness 6d barbell_plates',
+  'wellness 5d dumbbells_only', 'wellness 5d barbell_plates', 'wellness 5d home_gym',
   'wellness 2d full_gym', 'wellness 2d machines_cables',
   'wellness 3d full_gym', 'wellness 3d dumbbells_only', 'wellness 3d barbell_plates', 'wellness 3d home_gym', 'wellness 3d bodyweight',
   'wellness 5d bodyweight',
@@ -148,6 +164,7 @@ describe('focus and the clock', () => {
     const short = build(goal, 4, 'full_gym', { lengthMinutes: 30 });
     const long = build(goal, 4, 'full_gym', { lengthMinutes: 90 });
     expect(sig(short.plan)).toBe(sig(long.plan));
+    expect(placement(short.plan)).toBe(placement(long.plan));
     expect(short.report.needsLengthChoice).toBe(true);
   });
 });
