@@ -569,9 +569,9 @@ Longest session 67 min against 60 chosen (asks for a longer session: 75 min, or 
 
 **1. Push & Abs** (8 exercises, 24 sets at the peak, about 62 min)
 - Incline Machine Press: sets by week 3/3/4/4/4/2, 8-15 reps, rest 75 s
+- Pec Deck (Machine Fly): sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 - Dumbbell Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
 - Machine Lateral Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
-- Pec Deck (Machine Fly): sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 - Cable Overhead Tricep Extension: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
 - Tricep Pushdown (Rope): sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 - Cable Crunch: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
@@ -1066,8 +1066,8 @@ Longest session 62 min against 60 chosen.
 
 **4. Hamstrings & Glutes B** (3 exercises, 9 sets at the peak, about 32 min)
 - Machine Hip Thrust: sets by week 2/2/3/3/3/2, 8-15 reps, rest 180 s
-- Lying Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
 - Cable Kickback: sets by week 2/2/2/2/2/1, 10-20 reps, rest 75 s
+- Lying Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
 
 **5. Upper B & Abs** (7 exercises, 22 sets at the peak, about 60 min)
 - Lat Pulldown (Neutral Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 120 s
@@ -1480,9 +1480,9 @@ Focus not fully reached: chest 8 of 14 (its sessions are full; the plan says so)
 - Lat Pulldown (Wide Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
 - Seated Cable Row: sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
 - Machine Row (Chest Supported): sets by week 2/2/2/2/2/1, 8-15 reps, rest 75 s
+- Cable Straight-Arm Pulldown: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 - Dumbbell Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
 - Machine Lateral Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
-- Cable Straight-Arm Pulldown: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 - Reverse Pec Deck: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
 - EZ Bar Preacher Curl: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
 

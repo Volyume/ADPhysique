@@ -686,17 +686,22 @@ function buildWith(args, strategy) {
   // B11 plan, since the trunk braces every other lift; and the isolation
   // work of the half of the body the session's compounds train comes before
   // the other half's (leg extensions and curls before a leg day's lateral
-  // raises).
+  // raises), and the muscles the session's compounds started come first
+  // (a fly straight after the press).
   const absLast = (ex) => (ex.muscle === 'abs' ? 1 : 0);
   const orderSession = (s) => {
     const lead = [...s.exercises].sort((a, b) => KIND_RANK[a.kind] - KIND_RANK[b.kind]).find((ex) => ex.muscle !== 'abs');
     const home = lead ? regionOf(lead.muscle) : null;
     const away = (ex) => (ex.kind === 'isolation' && home && regionOf(ex.muscle) !== home ? 1 : 0);
+    // A fly straight after the press it finishes, before the next muscle.
+    const pressed = new Set(s.exercises.filter((ex) => ex.kind !== 'isolation').map((ex) => ex.muscle));
+    const unfinished = (ex) => (ex.kind === 'isolation' && !pressed.has(ex.muscle) ? 1 : 0);
     s.exercises = s.exercises
       .map((ex, i) => ({ ex, i }))
       .sort((a, b) => (absLast(a.ex) - absLast(b.ex))
         || (KIND_RANK[a.ex.kind] - KIND_RANK[b.ex.kind])
         || (away(a.ex) - away(b.ex))
+        || (unfinished(a.ex) - unfinished(b.ex))
         || (TIER_RANK[tierOf(category, a.ex.muscle)] - TIER_RANK[tierOf(category, b.ex.muscle)])
         || (Number(focus.includes(b.ex.muscle)) - Number(focus.includes(a.ex.muscle)))
         || (MUSCLES.indexOf(a.ex.muscle) - MUSCLES.indexOf(b.ex.muscle))
