@@ -379,16 +379,15 @@ describe('the round 4 coach and user audits (R47 to R53)', () => {
   test('R49: a lead muscle gives its only compound in a session at least 3 sets before an isolation there passes 3', () => {
     const classic = plain('classic_physique', 4);
     expect(session(classic, 'upper_a').exercises.find((ex) => ex.muscle === 'chest').peak).toBeGreaterThanOrEqual(3);
+    // General 4 days, Upper A (round 4 coach C4-10): the pulldown takes its
+    // third set from the reverse pec deck, the rear delts' own minimum giving
+    // way. Round 5 (C5-2): never from the side delts, which sit below normal
+    // too; a row left at 2 beside them stays (moving it would only trade one
+    // shortfall for another).
     const general = plain('general', 4);
-    for (const key of ['upper_a', 'upper_b']) {
-      const s = session(general, key);
-      for (const m of ['lats', 'upper_back']) {
-        const comps = s.exercises.filter((ex) => ex.muscle === m && PATTERNS[ex.pattern].kind === 'compound');
-        if (comps.length === 1 && s.exercises.some((ex) => PATTERNS[ex.pattern].kind === 'isolation' && ex.peak > 3)) {
-          expect([key, comps[0].name, comps[0].peak >= 3]).toEqual([key, comps[0].name, true]);
-        }
-      }
-    }
+    const upperA = session(general, 'upper_a');
+    expect(upperA.exercises.find((ex) => ex.pattern === 'vpull').peak).toBeGreaterThanOrEqual(3);
+    expect(general.report.weekly.side_delts.sets).toBeGreaterThanOrEqual(8);
   });
 
   test('R50: classic physique 5 days trains the lats in a second session', () => {
@@ -465,5 +464,64 @@ describe('the round 4 coach and user audits (R47 to R53)', () => {
       expect(asks.report.overSessions.length).toBeGreaterThan(0);
       expect(asks.report.moreDaysPossible).toBe(asks.report.daysThatFit != null);
     }
+  });
+});
+
+describe('the round 5 coach and user audits', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const all = (r) => r.plan.sessions.flatMap((s) => s.exercises);
+  const own = (r, m) => all(r).filter((ex) => ex.muscle === m).reduce((n, ex) => n + ex.peak, 0);
+
+  test("C5-1: a beginner's leg day holds a lower-body compound", () => {
+    for (const [goal, days] of [['mens_physique', 2], ['mens_physique', 4], ['mens_physique', 5], ['bikini', 3], ['bikini', 5]]) {
+      const r = plain(goal, days, { experience: 'beginner' });
+      for (const s of r.plan.sessions.filter((x) => /leg|lower|quads/i.test(x.key))) {
+        expect([goal, days, s.key, s.exercises.some((ex) => PATTERNS[ex.pattern].kind === 'compound' && ['quads', 'hamstrings', 'glute_max'].includes(ex.muscle))])
+          .toEqual([goal, days, s.key, true]);
+      }
+    }
+  });
+
+  test("C5-6, R54: figure 4 days keeps its side delts at normal volume; the biceps' own minimum does not take them", () => {
+    for (const goal of ['figure', 'womens_physique']) expect([goal, plain(goal, 4).report.weekly.side_delts.sets]).toEqual([goal, 14]);
+  });
+
+  test('C5-7: classic physique 4 days rows on both upper days', () => {
+    const r = plain('classic_physique', 4);
+    expect(own(r, 'upper_back')).toBeGreaterThanOrEqual(5);
+  });
+
+  test("C5-11: men's physique with dumbbells flies its chest", () => {
+    const r = plain('mens_physique', 4, { equipment: 'dumbbells_only' });
+    expect(all(r).filter((ex) => ex.muscle === 'chest').map((ex) => ex.pattern)).toContain('fly');
+  });
+
+  test('C5-5: an abs focus at 5 and 6 days adds sets', () => {
+    for (const days of [5, 6]) {
+      const r = plain('mens_physique', days, { focus: ['abs'] });
+      const res = r.report.focusResults.find((x) => x.muscle === 'abs');
+      expect([days, res.after > res.before]).toEqual([days, true]);
+    }
+  });
+
+  test('C5-9: the hinge day takes a leg curl once its hinge is full, so wellness 5 days builds in home kits', () => {
+    for (const equipment of ['dumbbells_only', 'home_gym', 'bodyweight']) expect([equipment, plain('wellness', 5, { equipment }).ok]).toEqual([equipment, true]);
+  });
+
+  test('C5-9: every muscle below normal volume names a real binder, never an unplaced set', () => {
+    for (const [goal, days] of [['general', 2], ['bodybuilding', 4], ['classic_physique', 5], ['figure', 4], ['wellness', 5]]) {
+      const r = plain(goal, days);
+      for (const b of r.report.belowTypical) {
+        expect([goal, days, b.muscle, b.limits.some((l) => l === 'room' || l.startsWith('rules'))]).toEqual([goal, days, b.muscle, false]);
+      }
+    }
+  });
+
+  test('C5-16, C5-21: a beginner is never offered more than 4 days; the Copenhagen adduction takes 6 to 12 reps', () => {
+    const r = plain('general', 3, { experience: 'beginner', lengthMinutes: 45 });
+    if (r.report.daysThatFit != null) expect(r.report.daysThatFit).toBeLessThanOrEqual(4);
+    const w = plain('wellness', 4, { equipment: 'dumbbells_only' });
+    const cop = all(w).find((ex) => ex.name === 'Copenhagen Adduction');
+    if (cop) expect(cop.repRange).toEqual([6, 12]);
   });
 });

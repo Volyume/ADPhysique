@@ -30,7 +30,7 @@
  * Pure, no I/O, deterministic.
  */
 import { CATALOGUE, THIN_KIT } from '../plan/catalogue';
-import { PATTERNS } from './rulebook';
+import { PATTERNS, REP_RANGE_UNLOADED_ISOLATION } from './rulebook';
 
 // The catalogue role each pattern comes from, by default for every name.
 const ROLE_PATTERN = Object.freeze({
@@ -149,6 +149,13 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Reverse Crunch', reason: 'Curls the hips up off the floor for the lower abs.', grade: 'D' },
     { name: 'Leg Raise', reason: 'Raises straight legs lying on the floor for the lower abs.', grade: 'D' },
   ]),
+  // Round 5 coach audit (C5-11): the catalogue's flies are the pec deck and
+  // the cable crossover, so dumbbell and home kits had no fly and men's
+  // physique chest there was two presses (R20).
+  fly: Object.freeze([
+    { name: 'Dumbbell Fly', reason: 'A chest fly with dumbbells, the arms in a wide arc.', grade: 'D' },
+    { name: 'Incline Dumbbell Fly', reason: 'A chest fly on an incline bench, for the upper chest.', grade: 'D' },
+  ]),
   // Round 4 coach audit: the catalogue's only adduction is the machine, so
   // wellness weeks without one reported adductors untrainable although the
   // library holds these. The band first; the Copenhagen adduction is the
@@ -242,6 +249,17 @@ const NEEDS_BAR = /^hanging /i;
 // for kits without a cable; where the kit has a cable one, a gym's second
 // back day takes it instead.
 const NO_CABLE_ONLY = new Set(['Straight-Arm Dumbbell Pullover']);
+// Round 5 coach audit (C5-21): the Copenhagen adduction is progressed in low
+// reps from the short lever; 10 to 20 is far past what most can do well.
+const REP_OVERRIDES = Object.freeze({ 'Copenhagen Adduction': Object.freeze([6, 12]) });
+// And a bench dip loads the shoulder in extension (09 s6, shoulder 36.6%):
+// last among its pattern's choices, after the diamond push-up.
+const LAST_CHOICE = new Set(['Bench Dip']);
+// Round 5 user audit: a curl on sliders or suspension straps needs kit the
+// person may not own; offered only where the kit has no other leg curl (a
+// dumbbell week used the slider curl on its second day beside a dumbbell
+// curl on the first).
+const EXTRA_KIT = new Set(['TRX Hamstring Curl', 'Slider Leg Curl (Bodyweight)']);
 
 const SUPPLEMENT_SOURCE = 'Added by the rulebook so this muscle can be trained with your equipment (register D222, R16)';
 const HEAVY_CATEGORIES = new Set(['barbell', 'landmine']);
@@ -350,6 +368,9 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
       kind: kindOf(row),
       // A compound with no load but the body's own (its reps follow effort).
       unloaded: (row.equipmentCategory ?? row.equipment_category) === 'bodyweight' && kindOf(row) !== 'isolation',
+      // An exercise's own rep range where the kind's does not suit it.
+      repRange: REP_OVERRIDES[name]
+        || ((row.equipmentCategory ?? row.equipment_category) === 'bodyweight' && kindOf(row) === 'isolation' ? REP_RANGE_UNLOADED_ISOLATION : null),
       extraJoints: [...(NAME_EXTRA_JOINTS[name] || [])],
       reason: meta.reason,
       grade: meta.grade,
@@ -387,8 +408,9 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
     const cable = list.some((c) => /cable/i.test(c.name));
     byPattern[p] = list.filter((c) => !(TWINS[c.name] && names.has(TWINS[c.name]) && !(c.logged && !list.find((o) => o.name === TWINS[c.name]).logged)))
       .filter((c) => !(loaded && UNLOADED.has(c.name) && !c.logged))
-      .filter((c) => !(cable && NO_CABLE_ONLY.has(c.name) && !c.logged));
-    byPattern[p].sort((a, b) => Number(b.logged) - Number(a.logged));
+      .filter((c) => !(cable && NO_CABLE_ONLY.has(c.name) && !c.logged))
+      .filter((c) => !(list.some((o) => !EXTRA_KIT.has(o.name)) && EXTRA_KIT.has(c.name) && !c.logged));
+    byPattern[p].sort((a, b) => (Number(b.logged) - Number(a.logged)) || (Number(LAST_CHOICE.has(a.name)) - Number(LAST_CHOICE.has(b.name))));
   }
 
   const patternsByMuscle = {};

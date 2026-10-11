@@ -15,13 +15,14 @@
  * Pure, no I/O, deterministic.
  */
 import {
-  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE,
+  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE, PATTERNS,
 } from './rulebook';
 import { sessionLoad, weeklyLoad, isTrained, isLightDose, setsIn, rirIn, patternOf, PEAK_WEEK } from './measure';
 import { variantOf } from './patterns';
 import { weeklyMin } from './checker';
 
 const PUSH_MUSCLES = new Set(['chest', 'front_delts']);
+const LOWER = new Set(['quads', 'hamstrings', 'glute_max']);
 const PULL_MUSCLES = new Set(['lats', 'upper_back']);
 const HOURS_PER_SESSION_GAP = 24; // F5: the next session may be the next day.
 
@@ -68,7 +69,9 @@ export function doseClass(session, muscle, week) {
  *   S11 hamstrings trained by two or more exercises get a hinge and a
  *      curl where the kit has both (09 s7; coach audit: a week of Romanian
  *      deadlifts and no curl);
- *   S12 a focus pick below its target is reported, never silent (R30).
+ *   S12 a focus pick below its target is reported, never silent (R30);
+ *   S13 a session built around the quads holds a lower-body compound
+ *      where the kit has one (round 5 coach audit).
  * @param {object} plan  a structure plan (measure.js)
  * @returns {{ ok: boolean, failures: object[] }}
  */
@@ -194,6 +197,16 @@ export function senseCheck(plan) {
         if (!trainable.length) continue;
         if (!trainable.some((m) => (own[m] || 0) >= 2)) {
           fail('S7', `${s.name || s.key} has no ${trainable.join(' or ')} exercise`, { session: s.key, muscle: trainable[0] });
+        }
+      }
+      // S13 (round 5 coach audit): a session built around the quads holds a
+      // lower-body compound (a squat, leg press, lunge, hinge or hip thrust)
+      // wherever the kit has one.
+      if ((t.core || []).some((g) => g.includes('quads'))) {
+        const lowerCompound = (p) => p && p.kind === 'compound' && LOWER.has(p.muscle);
+        const kitHas = [...LOWER].some((m) => (offer.patterns[m] || []).some((k) => lowerCompound(PATTERNS[k])));
+        if (kitHas && !live.some((ex) => lowerCompound(patternOf(ex)) && setsIn(ex, week) >= 2)) {
+          fail('S13', `${s.name || s.key} has no lower-body compound`, { session: s.key, muscle: 'quads' });
         }
       }
     }

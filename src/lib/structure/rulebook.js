@@ -230,6 +230,9 @@ export const REP_RANGES = Object.freeze({
 // (round 4 coach audit: push-ups and split squats at 8 to 12 sit far from
 // RIR 3 to 1 for an intermediate; pull-ups at 8 to 12 are beyond many).
 export const REP_RANGE_UNLOADED_COMPOUND = Object.freeze([6, 30]);
+// And an isolation with body weight alone (a side-lying clamshell): 15 to
+// 30, to reach the week's RIR (round 5 coach audit).
+export const REP_RANGE_UNLOADED_ISOLATION = Object.freeze([15, 30]);
 // The order rest is shortened in when a session runs over, least costly
 // first (09 s5 step 2; F3): isolation, then machine, then moderate and
 // heavy compounds, each to its floor.
@@ -609,6 +612,7 @@ export const EVIDENCE = Object.freeze({
   orderKindFor: 'D: 09 s7 order with R37 (register D222).',
   restClassFor: 'D: 09 s5 rest table with R29, R37 and R43 (register D222).',
   REP_RANGES: 'D: 09 B11.',
+  REP_RANGE_UNLOADED_ISOLATION: 'B: Schoenfeld 2017 (as for unloaded compounds); D: lead ruling, round 5 coach audit (register D222).',
   REP_RANGE_UNLOADED_COMPOUND: 'B: Schoenfeld 2017 (J Strength Cond Res 31:3508, low and high loads give similar hypertrophy taken near failure); D: lead ruling, round 4 coach audit (register D222).',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',

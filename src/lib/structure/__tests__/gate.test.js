@@ -43,7 +43,7 @@ const build = (goal, days, equipment, over = {}) => buildStructurePlan({
 const sig = (plan) => plan.sessions.flatMap((s) => s.exercises.map((ex) => `${ex.name}x${ex.peak}`)).sort().join(',');
 const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => !['abs', 'calves'].includes(ex.muscle)).map((ex) => ex.name).join(',')).join('|');
 
-// The weeks refused today for an intermediate person (49 of 240), most at
+// The weeks refused today for an intermediate person (46 of 240), most at
 // 2 or 3 days. Every muscle the category trains must have an
 // exercise of its own (the founder's sense order, D222), which costs session
 // slots. Lead-checked by hand (register D222):
@@ -59,9 +59,9 @@ const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => 
 //   session cannot hinge
 //   beside the squat session, every loaded hinge loading the lower back,
 //   which leaves a hip thrust and a slider curl, too thin to be worth the
-//   trip); wellness 5 days with dumbbells, barbell or a home gym (09's
-//   hinge-only hamstring session holds one hinge, two hinges loading the
-//   lower back twice, so hamstrings fall short of 10);
+//   trip); wellness 5 days with barbell and plates (the hinge day holds one
+//   hinge, two loading the lower back twice, and the kit has no leg curl to
+//   follow it, so hamstrings fall short of 10);
 // - once dumbbells train the lats (the straight-arm pullover, register
 //   D222): men's physique, figure and women's physique at 2 days with
 //   dumbbells or a home gym (the one upper session would need nine
@@ -76,6 +76,9 @@ const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => 
 // take one more session of its half) let three weeks build that the sense
 // layer had refused as too thin: men's physique 6 days with barbell and
 // plates or bodyweight, and wellness 6 days with barbell and plates.
+// Round 5 (a template's hint leads a session, not limits it) let wellness 5
+// days with dumbbells, a home gym or bodyweight build: the hinge day takes a
+// leg curl once its one hinge is full.
 // The list may only shrink, except by a ruling recorded in register D222. A refusal names the nearest day count that
 // works (09 B12); the person chooses.
 const KNOWN_REFUSALS = new Set([
@@ -84,13 +87,12 @@ const KNOWN_REFUSALS = new Set([
     `bodybuilding 3d ${k}`, `classic_physique 2d ${k}`, `classic_physique 3d ${k}`,
   ]),
   'bikini 5d barbell_plates', 'bikini 6d barbell_plates',
-  'wellness 5d dumbbells_only', 'wellness 5d barbell_plates', 'wellness 5d home_gym',
+  'wellness 5d barbell_plates',
   'mens_physique 2d dumbbells_only', 'mens_physique 2d home_gym', 'figure 2d dumbbells_only', 'figure 2d home_gym',
   'womens_physique 2d dumbbells_only', 'womens_physique 2d home_gym',
   'wellness 2d full_gym', 'wellness 2d machines_cables',
   'wellness 2d dumbbells_only', 'wellness 2d barbell_plates', 'wellness 2d home_gym', 'wellness 2d bodyweight',
   'wellness 3d full_gym', 'wellness 3d dumbbells_only', 'wellness 3d barbell_plates', 'wellness 3d home_gym', 'wellness 3d bodyweight',
-  'wellness 5d bodyweight',
   'figure 2d full_gym', 'figure 2d machines_cables',
   'womens_physique 2d full_gym', 'womens_physique 2d machines_cables',
 ]);
@@ -195,6 +197,26 @@ describe('every category, day count and kit (intermediate)', () => {
           const earlier = REST_TRIM_ORDER.slice(0, REST_TRIM_ORDER.indexOf(cls));
           const notFloored = s.exercises.filter((x) => earlier.includes(restClassFor(x.kind, x.pattern)) && x.restSec > restSecondsFor(x.kind, x.pattern).floor);
           if (notFloored.length) bad.push(`${goal} ${days}d ${kit} ${s.key}: ${ex.name} trimmed before ${notFloored[0].name}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  // Round 5 audits (C5-3, U5-2): a session's name says only what it holds.
+  test('every muscle word in a session name has an exercise of at least 2 sets in that session', () => {
+    const WORDS = {
+      Abs: ['abs'], Calves: ['calves'], Chest: ['chest'], Biceps: ['biceps'], Triceps: ['triceps'], Quads: ['quads'],
+      Hamstrings: ['hamstrings'], Glutes: ['glute_max'], 'Side Glutes': ['glute_med'], 'Inner Thighs': ['adductors'],
+      Lats: ['lats'], 'Side Delts': ['side_delts'], 'Rear Delts': ['rear_delts'], Arms: ['biceps', 'triceps'],
+    };
+    const bad = [];
+    for (const { goal, days, kit, r } of results.filter((x) => x.r.ok)) {
+      for (const s of r.plan.sessions) {
+        const held = new Set(s.exercises.filter((ex) => ex.peak >= 2).map((ex) => ex.muscle));
+        for (const part of s.name.replace(/ \([A-C]\)$/, '').split(/, | & /)) {
+          const promised = WORDS[part.replace(/ [A-C]$/, '')];
+          if (promised && !promised.some((m) => held.has(m))) bad.push(`${goal} ${days}d ${kit} ${s.name}: ${part}`);
         }
       }
     }

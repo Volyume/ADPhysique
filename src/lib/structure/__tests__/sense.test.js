@@ -180,3 +180,14 @@ test('S12: a focus pick short of its target must be reported (R30)', () => {
   p.focusUnmet = [{ muscle: 'chest', sets: 8, target: 14, reason: 'sessions_full' }];
   expect(senseCheck(p).failures.some((f) => f.code === 'S12')).toBe(false);
 });
+
+test('S13: a session built around the quads holds a lower-body compound where the kit has one (round 5 coach audit)', () => {
+  const p = plan();
+  p.kitOffer = { names: {}, patterns: { quads: ['squat_machine', 'leg_ext'], hamstrings: ['hinge', 'leg_curl'] } };
+  const legs = session(p, 'legs');
+  legs.exercises = legs.exercises.filter((x) => !['squat_machine', 'hinge'].includes(x.pattern));
+  legs.exercises.unshift(ex('leg_ext', 'leg_ext', 'isolation', 4));
+  expect(senseCheck(p).failures.some((f) => f.code === 'S13' && f.session === 'legs')).toBe(true);
+  p.kitOffer = { names: {}, patterns: { quads: ['leg_ext'], hamstrings: ['leg_curl'] } };
+  expect(senseCheck(p).failures.some((f) => f.code === 'S13')).toBe(false);
+});
