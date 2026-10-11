@@ -79,6 +79,9 @@ const placement = (plan) => plan.sessions.map((s) => s.exercises.filter((ex) => 
 // Round 5 (a template's hint leads a session, not limits it) let wellness 5
 // days with dumbbells, a home gym or bodyweight build: the hinge day takes a
 // leg curl once its one hinge is full.
+// Round 6 (a second exercise opens before a fifth set, C6-14) let figure
+// and women's physique 2 days with dumbbells or a home gym build: the upper
+// session holds eight exercises, one of every upper muscle, inside the limit.
 // The list may only shrink, except by a ruling recorded in register D222. A refusal names the nearest day count that
 // works (09 B12); the person chooses.
 const KNOWN_REFUSALS = new Set([
@@ -88,8 +91,7 @@ const KNOWN_REFUSALS = new Set([
   ]),
   'bikini 5d barbell_plates', 'bikini 6d barbell_plates',
   'wellness 5d barbell_plates',
-  'mens_physique 2d dumbbells_only', 'mens_physique 2d home_gym', 'figure 2d dumbbells_only', 'figure 2d home_gym',
-  'womens_physique 2d dumbbells_only', 'womens_physique 2d home_gym',
+  'mens_physique 2d dumbbells_only', 'mens_physique 2d home_gym',
   'wellness 2d full_gym', 'wellness 2d machines_cables',
   'wellness 2d dumbbells_only', 'wellness 2d barbell_plates', 'wellness 2d home_gym', 'wellness 2d bodyweight',
   'wellness 3d full_gym', 'wellness 3d dumbbells_only', 'wellness 3d barbell_plates', 'wellness 3d home_gym', 'wellness 3d bodyweight',

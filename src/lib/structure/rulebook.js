@@ -215,10 +215,50 @@ export function restClassFor(kind, pattern) {
 export function restSecondsFor(kind, pattern) {
   return REST_SECONDS[restClassFor(kind, pattern)];
 }
-/** The kind an exercise ranks as in a session's order (C17; R37). */
+/**
+ * The kind an exercise ranks as in a session's order (C17; R37). Round 6
+ * coach audit (C6-3): a machine compound ranks as the moderate compound it
+ * rests as (a chest-supported machine row with the dumbbell press it sits
+ * beside), so a session's own rows come before a top-up press.
+ */
 export function orderKindFor(kind, pattern) {
-  return kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern) ? 'heavy_compound' : kind;
+  return restClassFor(kind, pattern);
 }
+
+/**
+ * The ranks a session's order is judged by (C17): heavy, moderate, machine,
+ * isolation, non-decreasing within each block. Round 6 audits: work of the
+ * other half that came in for another muscle (`visitors`, a set of exercise
+ * indexes) is its own block after the session's own (U6-10); and a hip
+ * thrust after a hinge in its block ranks with the hinge (C6-8, F6: the
+ * spine-loading lift goes first).
+ */
+export function orderRanks(exercises, visitors = new Set()) {
+  const KIND = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
+  const out = [];
+  for (const block of [false, true]) {
+    let hingeRank = null;
+    const ranks = [];
+    exercises.forEach((ex, i) => {
+      if (visitors.has(i) !== block) return;
+      let r = KIND[orderKindFor(ex.kind, ex.pattern)] ?? 3;
+      if (ex.pattern === 'hinge' && hingeRank == null) hingeRank = r;
+      if (ex.pattern === 'hip_thrust' && hingeRank != null) r = Math.max(r, hingeRank);
+      ranks.push({ i, r });
+    });
+    out.push(ranks);
+  }
+  return out;
+}
+
+// Body halves (R30, R31): the upper-body muscles; abs are the trunk; the rest
+// are lower body.
+export const UPPER_MUSCLES = Object.freeze(['chest', 'lats', 'upper_back', 'front_delts', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
+export const regionOf = (m) => (m === 'abs' ? 'trunk' : UPPER_MUSCLES.includes(m) ? 'upper' : 'lower');
+// F4 (founder, D219 addendum 4): men's physique trains legs in one session a
+// week at every day count. The legs are these; calves are not among them
+// (the founder-approved week carries a calf finisher on an upper day).
+export const LEGS_ONCE = Object.freeze({ mens_physique: Object.freeze(['quads', 'hamstrings', 'glute_max', 'glute_med', 'adductors']) });
 export const REP_RANGES = Object.freeze({
   heavy_compound: Object.freeze([6, 10]),
   mod_compound: Object.freeze([8, 12]),
@@ -609,7 +649,11 @@ export const EVIDENCE = Object.freeze({
   REST_SECONDS: 'B for the isolation floor (Singer 2024), D for the rest: 09 s5 table, R6 (register D222).',
   HEAVY_REST_MACHINE_PATTERNS: 'D: coaching consensus for loaded lower-body compounds; lead ruling R29 (register D222).',
   restSecondsFor: 'D: 09 s5 rest table with R29 and R37 (register D222).',
-  orderKindFor: 'D: 09 s7 order with R37 (register D222).',
+  orderKindFor: 'D: 09 s7 order with R37; a machine compound ranks as its rest class (round 6, C6-3; register D222).',
+  orderRanks: 'D: 09 s7 order judged per block (the session\'s own work, then the other half\'s visiting work, U6-10) with a hip thrust after a hinge ranking with it (C6-8, F6); register D222 round 6.',
+  UPPER_MUSCLES: 'D: the body halves the session order and focus overflow read (R30, R31; register D222).',
+  regionOf: 'D: the body half of a muscle, abs the trunk (R30, R31; register D222).',
+  LEGS_ONCE: 'A: founder F4 (D219 addendum 4): men\'s physique trains legs in one session a week at every day count; calves are not among them (the approved week carries a calf finisher on an upper day). Round 6, C6-1.',
   restClassFor: 'D: 09 s5 rest table with R29, R37 and R43 (register D222).',
   REP_RANGES: 'D: 09 B11.',
   REP_RANGE_UNLOADED_ISOLATION: 'B: Schoenfeld 2017 (as for unloaded compounds); D: lead ruling, round 5 coach audit (register D222).',

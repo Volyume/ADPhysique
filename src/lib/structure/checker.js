@@ -17,7 +17,7 @@ import {
   TEMPLATES, TIERS, VOLUME, FOCUS, PER_SESSION, FAST_MUSCLES, LARGE_MUSCLES, EXPERIENCE_MINIMUM,
   SESSION_LIMITS, restSecondsFor, orderKindFor, JOINT_RULES, TIME_MODEL, PROGRESSION,
   OHP_PATTERNS, KNEE_COMPOUND_PATTERNS, ELBOW_ISOLATION_PATTERNS,
-  SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS,
+  SKULL_OVERHEAD_PATTERNS, REAR_DELT_HEALTH_PATTERNS, orderRanks, regionOf, PATTERNS,
 } from './rulebook';
 import {
   patternOf, setsIn, rirIn, jointsOf, sessionLoad, isTrained, isLightDose,
@@ -231,11 +231,25 @@ export function checkPlan(plan, opts = {}) {
     if (sig && signatures.indexOf(sig) !== i) fail('C16', `${sessions[i].key} repeats ${sessions[signatures.indexOf(sig)].key}`, { session: sessions[i].key });
   });
 
-  // C17: compound tiers first (heavy, moderate, machine, isolation).
+  // C17: compound tiers first (heavy, moderate, machine, isolation), within
+  // the session's own work and within the other half's visiting work, a hip
+  // thrust after a hinge ranking with the hinge (orderRanks).
+  const plannedFor = (key) => new Set(((TEMPLATES[plan.category] || {})[plan.days] || []).find((t) => t.key === key)?.muscles || []);
   for (const s of sessions) {
-    const ranks = (s.exercises || []).map((ex) => KIND_RANK[orderKindFor(ex.kind, ex.pattern)] ?? 3);
-    for (let i = 1; i < ranks.length; i += 1) {
-      if (ranks[i] < ranks[i - 1]) { fail('C17', `${s.exercises[i].name} after a lighter exercise`, { session: s.key }); break; }
+    const exs = s.exercises || [];
+    const named = plannedFor(s.key);
+    const byRank = (a, b) => (KIND_RANK[orderKindFor(a.kind, a.pattern)] ?? 3) - (KIND_RANK[orderKindFor(b.kind, b.pattern)] ?? 3);
+    const muscleOf = (ex) => (PATTERNS[ex.pattern] || {}).muscle;
+    const lead = [...exs].filter((ex) => muscleOf(ex) !== 'abs' && named.has(muscleOf(ex))).sort(byRank)[0]
+      || [...exs].filter((ex) => muscleOf(ex) !== 'abs').sort(byRank)[0];
+    const home = lead ? regionOf(PATTERNS[lead.pattern].muscle) : null;
+    const visitors = new Set(exs.map((ex, i) => {
+      const m = (PATTERNS[ex.pattern] || {}).muscle;
+      return m && m !== 'abs' && !named.has(m) && home && regionOf(m) !== home ? i : -1;
+    }).filter((i) => i >= 0));
+    for (const ranks of orderRanks(exs, visitors)) {
+      const bad = ranks.findIndex((x, k) => k > 0 && x.r < ranks[k - 1].r);
+      if (bad > 0) { fail('C17', `${exs[ranks[bad].i].name} after a lighter exercise`, { session: s.key }); break; }
     }
   }
 

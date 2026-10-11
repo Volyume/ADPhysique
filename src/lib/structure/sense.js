@@ -15,7 +15,7 @@
  * Pure, no I/O, deterministic.
  */
 import {
-  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE, PATTERNS,
+  TIERS, OPT_IN_MUSCLES, LARGE_MUSCLES, TEMPLATES, RECOVERY_HOURS, PER_SESSION, LIGHT_DOSE, PATTERNS, LEGS_ONCE,
 } from './rulebook';
 import { sessionLoad, weeklyLoad, isTrained, isLightDose, setsIn, rirIn, patternOf, PEAK_WEEK } from './measure';
 import { variantOf } from './patterns';
@@ -71,7 +71,9 @@ export function doseClass(session, muscle, week) {
  *      deadlifts and no curl);
  *   S12 a focus pick below its target is reported, never silent (R30);
  *   S13 a session built around the quads holds a lower-body compound
- *      where the kit has one (round 5 coach audit).
+ *      where the kit has one (round 5 coach audit);
+ *   S14 men's physique trains the legs in one session a week (F4; round 6
+ *      coach audit C6-1: a quad focus put a leg extension on a chest day).
  * @param {object} plan  a structure plan (measure.js)
  * @returns {{ ok: boolean, failures: object[] }}
  */
@@ -153,6 +155,13 @@ export function senseCheck(plan) {
     }
   }
 
+  // S14: the legs in one session a week where the category says so (F4).
+  const legsOnce = LEGS_ONCE[plan.category];
+  if (legsOnce) {
+    const legDays = plan.sessions.filter((s) => s.exercises.some((ex) => setsIn(ex, week) > 0 && legsOnce.includes((patternOf(ex) || {}).muscle)));
+    if (legDays.length > 1) fail('S14', `legs trained in ${legDays.map((s) => s.key).join(' and ')}`, { muscle: 'quads' });
+  }
+
   // S3: pulling at least matches pressing.
   const push = Object.entries(direct).filter(([m]) => PUSH_MUSCLES.has(m)).reduce((t, [, v]) => t + v, 0);
   const pull = Object.entries(direct).filter(([m]) => PULL_MUSCLES.has(m)).reduce((t, [, v]) => t + v, 0);
@@ -170,7 +179,7 @@ export function senseCheck(plan) {
   for (const s of plan.sessions) {
     const live = s.exercises.filter((ex) => setsIn(ex, week) > 0);
     const sets = live.reduce((t, ex) => t + setsIn(ex, week), 0);
-    if (live.length < 3 || sets < minSets) fail('S5', `${s.key}: ${live.length} exercises, ${sets} sets`, { session: s.key });
+    if (live.length < 3 || sets < minSets) fail('S5', `${s.key}: ${live.length} exercises, ${sets} sets`, { session: s.key, sessionName: s.name, exercises: live.length, sets });
     const t = template.find((x) => x.key === s.key);
     const allowed = new Set([...(t ? t.muscles : []), ...overflow.filter((o) => o.session === s.key).map((o) => o.muscle)]);
     for (const ex of live) {
