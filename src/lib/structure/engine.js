@@ -397,6 +397,9 @@ function buildWith(args, strategy) {
   // reads it (round 4 coach audit: the first pass read it before its
   // declaration, a ReferenceError under spec JavaScript).
   let growth = false;
+  // R56 (round 8, U8-2): true while the focus is placed, the only stage in
+  // which a beginner's pick takes the normal 4 sets an exercise.
+  let focusStage = false;
   const faultKey = (f) => `${f.code}|${f.session || ''}|${(f.sessions || []).join(',')}|${f.muscle || ''}|${f.detail}`;
   const currentFaults = () => {
     const r = checkPlan(plan, { weeks: [peak] });
@@ -457,7 +460,12 @@ function buildWith(args, strategy) {
     const own = s.exercises.filter((ex) => ex.muscle === m);
     const out = [];
     // R25: above the minimum a beginner's session keeps 09's beginner limits.
-    let setCap = growth && beginner ? Math.min(maxSetsFor(m), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(m);
+    // Round 8 user audit (U8-2, lead ruling R56): a muscle a beginner picks
+    // as a focus may take the beginner's normal 4 sets an exercise (R23)
+    // above the minimum, so the pick changes the week; 09's 5 exercises a
+    // session still bind (a beginner's focus pick had changed nothing at 2
+    // to 4 days in 91 of 91 builds).
+    let setCap = growth && beginner && !(focusStage && focus.includes(m)) ? Math.min(maxSetsFor(m), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(m);
     // A light dose is at most 4 direct sets (09 s4; R42).
     if (light) setCap = Math.min(setCap, LIGHT_DOSE.maxDirectSets);
     const exerciseCap = growth && beginner ? SESSION_LIMITS.beginnerGrowthExercises : maxExercises;
@@ -1190,7 +1198,11 @@ function buildWith(args, strategy) {
       .filter((ex) => ex !== lead && PATTERNS[ex.pattern].kind === 'isolation' && ex.peak > SESSION_LIMITS.setsPerExerciseMin && targets[ex.muscle]
         && ex.muscle !== lead.muscle && frT(ex.muscle) - 1 >= targets[ex.muscle].typical
         && !(namesNow(si, ex.muscle) && directIn(si, ex.muscle) - 1 < NAMED_SETS)
-        && (!isLeadTier(ex.muscle) || (ownT[ex.muscle] || 0) - 1 >= (CREDIT_FED.includes(ex.muscle) ? targets[ex.muscle].min : ownFloor(ex.muscle)))
+        // Round 8 coach audit (C8-3, lead ruling): the C7-4 ruling binds as
+        // written. The donor's counted sets stay at or above normal; an arm or
+        // rear delt gives way down to its own floor (S10), not its weekly
+        // minimum, so a lone 2-set row takes its third set from a curl.
+        && (!isLeadTier(ex.muscle) || (ownT[ex.muscle] || 0) - 1 >= ownFloor(ex.muscle))
         && PATTERNS[ex.pattern].credits.every((c) => !targets[c] || frT(c) - CREDIT_FRACTION >= targets[c].min))
       .sort((a, b) => ((frT(b.muscle) - targets[b.muscle].typical) - (frT(a.muscle) - targets[a.muscle].typical)) || givesFirst(s, a, b));
     const quiet = () => new Set([...senseFaults()].filter((k) => !k.startsWith('S9|')));
@@ -1298,14 +1310,22 @@ function buildWith(args, strategy) {
     // Round 7 coach audit (C7-8: a top-up leg curl after the calf raise in
     // "Lower B"): a muscle the session's name already covers is ordered as
     // the session's own work (09 s7: P before S before M).
+    // Round 8 coach audit (C8-2: "Shoulders, Arms & Lats" ended with its
+    // lats work; a wellness "Lower Body" put the calf raise before the
+    // abduction): the name read is the one the person will see, built from
+    // the session's muscles now, not the template's.
+    const shown = si >= 0 ? sessionName(order[si].name, s.exercises.filter((ex) => ex.peak >= SESSION_LIMITS.setsPerExerciseMin).map((ex) => ex.muscle)) : '';
     const topUp = (ex) => (si >= 0 && !order[si].muscles.includes(ex.muscle)
-      && !(COVERED_BY[ex.muscle] && COVERED_BY[ex.muscle].test(order[si].name)) ? 1 : 0);
+      && !(COVERED_BY[ex.muscle] && (COVERED_BY[ex.muscle].test(order[si].name) || COVERED_BY[ex.muscle].test(shown))) ? 1 : 0);
     // Round 6 user audit (U6-10: a men's physique leg day with a chest focus
     // read hack squat, Romanian deadlift, incline press, leg extension, leg
     // curl, cable crossover): work of the other half that came in for
     // another muscle (a focus or a top-up) follows all of the session's own
     // work, so each half reads as one block (orderRanks, rulebook.js).
-    const visitor = (ex) => (topUp(ex) && away(ex) ? 1 : 0);
+    // Round 8 (C8-2 kept from undoing U6-10): work of the other half the
+    // template does not list stays a visitor even when the shown name now
+    // names it ("Legs, Side Delts & Chest").
+    const visitor = (ex) => (si >= 0 && !order[si].muscles.includes(ex.muscle) && away(ex) ? 1 : 0);
     // A fly straight after the press it finishes, before the next muscle.
     const pressed = new Set(s.exercises.filter((ex) => ex.kind !== 'isolation').map((ex) => ex.muscle));
     const unfinished = (ex) => (ex.kind === 'isolation' && !pressed.has(ex.muscle) ? 1 : 0);
@@ -1381,10 +1401,21 @@ function buildWith(args, strategy) {
   // a sixth exercise).
   const moveCap = beginner ? SESSION_LIMITS.beginnerGrowthExercises : maxExercises;
   const NAMES_FLOATER = Object.freeze({ abs: /abs|core/i, calves: /calves/i });
+  // Round 8 coach audit (C8-1, lead ruling): a week that trains calves
+  // keeps a calf exercise on at least one leg session whose template lists
+  // them (D219 addendum 4: the men's physique leg day carries the calves,
+  // the upper-day finisher beside it, never instead of it; 47 weeks had
+  // moved every leg day's calves to upper days). With two leg days one may
+  // still give its calf raise to a finisher (figure 5 days keeps 7 calf
+  // sets that way). The same at every length (R48).
+  const legTemplate = (i) => order[i].muscles.includes('calves')
+    && order[i].muscles.some((x) => ['quads', 'hamstrings', 'glute_max'].includes(x));
+  const legDayCalves = (i, m) => m === 'calves' && legTemplate(i)
+    && !plan.sessions.some((t, j) => j !== i && legTemplate(j) && t.exercises.some((x) => x.muscle === 'calves'));
   const movable = (i) => {
     const s = plan.sessions[i];
     return s.exercises.filter((x) => FLOATERS.includes(x.muscle) && x.kind === 'isolation'
-      && !(NAMES_FLOATER[x.muscle].test(order[i].name) && s.exercises.filter((y) => y.muscle === x.muscle).length === 1));
+      && !((NAMES_FLOATER[x.muscle].test(order[i].name) || legDayCalves(i, x.muscle)) && s.exercises.filter((y) => y.muscle === x.muscle).length === 1));
   };
 
   // R48 (round 4 coach audit: a longer chosen session built a smaller week,
@@ -1619,6 +1650,7 @@ function buildWith(args, strategy) {
     const swapTopUps = () => swapInto(false);
     const cap = {};
     let balanced = false;
+    focusStage = true;
     for (let attempt = 0; attempt < 6; attempt += 1) {
       growth = true;
       // Any other muscle's goal is its own target, so room-making keeps it
@@ -1762,7 +1794,23 @@ function buildWith(args, strategy) {
     const s = plan.sessions[si];
     if (directIn(si, m) >= PER_SESSION.directCap) return ['muscle_cap'];
     const acts = actionsFor(m, si);
-    if (!acts.length) return [noStep(m, si)];
+    // Round 8 coach audit (C8-4: "the most sets of them one session may
+    // hold" said of 7 hamstring sets): for a beginner above the minimum the
+    // cheapest step, one more set on an exercise there, is barred by the
+    // beginner's 3 sets an exercise (R25), not by the muscle's cap; that is
+    // the cause stated.
+    const beginnerSetLimit = growth && beginner && !acts.some((a) => a.type === 'inc')
+      && !(focusStage && focus.includes(m))
+      && s.exercises.some((ex) => ex.muscle === m && ex.peak >= SESSION_LIMITS.beginnerGrowthSetsPerExercise && ex.peak < maxSetsFor(m));
+    if (!acts.length) return beginnerSetLimit ? ['exercise_full', noStep(m, si)] : [noStep(m, si)];
+    if (beginnerSetLimit) {
+      const rest = bindersFor(acts, m, si);
+      return ['exercise_full', ...rest.filter((b) => b !== 'exercise_full')];
+    }
+    return bindersFor(acts, m, si);
+  };
+  const bindersFor = (acts, m, si) => {
+    const s = plan.sessions[si];
     // S6 is the probe's own artefact: a session the muscle joined for normal
     // volume (R50) lists it, whatever the overflow record now holds.
     const quiet = () => new Set([...senseFaults()].filter((k) => !/^(S6|S9|S12)\|/.test(k)));
@@ -1956,7 +2004,7 @@ function buildWith(args, strategy) {
               const at = src.exercises.indexOf(ex);
               const same = dst.exercises.find((y) => y.id === ex.id)
                 || dst.exercises.find((y) => y.muscle === ex.muscle && y.pattern === ex.pattern && variantOf(y.pattern, y.name) === variantOf(ex.pattern, ex.name));
-              let setCap = beginner ? Math.min(maxSetsFor(ex.muscle), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(ex.muscle);
+              let setCap = beginner && !focus.includes(ex.muscle) ? Math.min(maxSetsFor(ex.muscle), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(ex.muscle);
               if (same && same.nextDayException) setCap = Math.min(setCap, LIGHT_DOSE.maxDirectSets);
               if (same ? same.peak + ex.peak > setCap : dst.exercises.length >= moveCap) continue;
               const move = same

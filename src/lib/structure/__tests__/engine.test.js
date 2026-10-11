@@ -780,7 +780,9 @@ describe('the round 7 coach and user audits', () => {
       const legs = s.exercises.some((ex) => ['quads', 'hamstrings', 'glute_max', 'glute_med', 'adductors'].includes(ex.muscle));
       if (/Full Body/.test(s.name)) expect([s.name, legs]).toEqual([s.name, true]);
     }
-    expect(r.plan.sessions.some((s) => s.name === 'Upper Body & Calves')).toBe(true);
+    // Round 8 (C8-1): the leg day keeps a calf raise; the finisher may sit
+    // on any upper day.
+    expect(r.plan.sessions.some((s) => s.exercises.some((ex) => ex.muscle === 'quads') && s.exercises.some((ex) => ex.muscle === 'calves'))).toBe(true);
   });
 
   test("C7-7: men's physique 5 days gives calves and abs their normal volume, at least what 4 days gives", () => {
@@ -870,3 +872,75 @@ describe('the round 7 coach and user audits', () => {
     expect(r.report.fewerSetsThan).toEqual({ days: 5, sets: Math.round(total(five.report.weekly) - total(r.report.weekly)) });
   });
 });
+
+// Round 8 coach and user audits (register D222, round 8 addendum). Each test
+// pins a finding so a later fix cannot quietly bring it back.
+describe('the round 8 coach and user audits', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const legDaysWithCalves = (r) => r.plan.sessions.filter((s) => s.exercises.some((ex) => ['quads', 'hamstrings'].includes(ex.muscle))
+    && s.exercises.some((ex) => ex.muscle === 'calves')).length;
+
+  test('C8-1: a week that trains calves keeps a calf raise on a leg day', () => {
+    for (const [goal, days, over] of [['mens_physique', 5, { experience: 'advanced' }], ['mens_physique', 5, { experience: 'advanced', equipment: 'machines_cables', lengthMinutes: 75 }],
+      ['mens_physique', 5, { experience: 'advanced', equipment: 'dumbbells_only' }], ['bodybuilding', 6, {}], ['bodybuilding', 6, { experience: 'advanced' }],
+      ['figure', 6, { experience: 'advanced' }], ['womens_physique', 6, { experience: 'advanced' }], ['general', 6, { experience: 'advanced' }],
+      ['figure', 5, { equipment: 'barbell_plates', experience: 'advanced', lengthMinutes: 75 }]]) {
+      const r = plain(goal, days, over);
+      expect([goal, days, over, legDaysWithCalves(r) >= 1]).toEqual([goal, days, over, true]);
+      expect([goal, days, over, r.report.weekly.calves.sets >= r.report.weekly.calves.typical]).toEqual([goal, days, over, true]);
+    }
+  });
+
+  test('C8-2: the top-up order reads the name the person sees', () => {
+    const r = plain('classic_physique', 5, { lengthMinutes: 75, focus: ['lats', 'side_delts'] });
+    const s = r.plan.sessions.find((x) => /Lats/.test(x.name) && /Arms/.test(x.name));
+    const lastLats = Math.max(...s.exercises.map((ex, i) => (ex.muscle === 'lats' ? i : -1)));
+    const firstArm = s.exercises.findIndex((ex) => ['biceps', 'triceps', 'rear_delts'].includes(ex.muscle));
+    expect(lastLats).toBeLessThan(firstArm);
+    const w = plain('wellness', 5);
+    const lower = w.plan.sessions.find((x) => /^Lower Body A/.test(x.name));
+    const at = (m) => lower.exercises.findIndex((ex) => ex.muscle === m);
+    expect(at('glute_med')).toBeLessThan(at('calves'));
+  });
+
+  test("C8-3: a lone 2-set row takes its third set from a curl whose muscle stays above normal", () => {
+    const r = plain('general', 4);
+    for (const s of r.plan.sessions) {
+      const rows = s.exercises.filter((ex) => ex.muscle === 'upper_back' && PATTERNS[ex.pattern].kind === 'compound');
+      if (rows.length === 1) expect([s.name, rows[0].name, rows[0].peak >= 3]).toEqual([s.name, rows[0].name, true]);
+    }
+  });
+
+  test("C8-4: a beginner's cause is the 3 sets an exercise, never the muscle's cap below 8 sets", () => {
+    const r = plain('wellness', 3, { experience: 'beginner', lengthMinutes: 45 });
+    for (const b of r.report.belowTypical || []) {
+      if (b.limits[0] === 'muscle_cap') {
+        const most = Math.max(...r.plan.sessions.map((s) => s.exercises.filter((ex) => ex.muscle === b.muscle).reduce((t, ex) => t + ex.peak, 0)));
+        expect([b.muscle, most]).toEqual([b.muscle, PER_SESSION.directCap]);
+      }
+    }
+  });
+
+  test("U8-2: a beginner's focus pick never lowers its muscle, and where it changes nothing a session limit is the stated cause", () => {
+    let changed = 0;
+    let total = 0;
+    for (const goal of ['general', 'bodybuilding', 'classic_physique']) {
+      for (const days of [2, 3, 4]) {
+        for (const m of ['chest', 'lats', 'side_delts', 'biceps']) {
+          const base = plain(goal, days, { experience: 'beginner' });
+          const r = plain(goal, days, { experience: 'beginner', focus: [m] });
+          const gain = r.report.weekly[m].sets - base.report.weekly[m].sets;
+          total += 1;
+          expect([goal, days, m, gain >= 0]).toEqual([goal, days, m, true]);
+          if (gain > 0) { changed += 1; continue; }
+          const res = r.report.focusResults.find((f) => f.muscle === m);
+          expect([goal, days, m, ['exercise_cap', 'set_cap', 'muscle_cap', 'exercise_full'].includes((res.limits || [])[0]) || res.reason === 'at_max'])
+            .toEqual([goal, days, m, true]);
+        }
+      }
+    }
+    // Before round 8 no beginner pick at 2 to 4 days changed the week.
+    expect(changed / total).toBeGreaterThan(0.6);
+  });
+});
+
