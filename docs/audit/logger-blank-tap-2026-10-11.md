@@ -38,3 +38,15 @@ Decision (lead, under the founder's standing delegation): nothing opens the set 
 Mechanism (read in the code): tapping a logged set's box opens an edit of that set. The keyboard going away by any route but Done (a blank tap, an iOS drag, Android back) closed the box (`keyboardDidHide`: entry and edit field cleared) but left the edit itself open and unsaved, invisible. The next tap on any other box found that unsaved change and asked "Discard changes?" (D220 addendum 28, 3b). The blank-tap fix earlier today made the keyboard go away that way more often, so the prompt came more often.
 
 Decision (lead, under the founder's standing delegation; amends D220 addendum 28, 3b, whose concern was a change lost silently): leaving an edit saves it. The keyboard going away by any route, or a tap on another box, saves the change to the logged set; nothing asks. A change that cannot be saved (an empty or out-of-range number) shows the existing reason and the box stays open. An exercise change still closes an edit unsaved, as before (saving there would write against the new exercise); noted, not changed.
+
+## Fifth report: the freeze when scrolling down (same day)
+
+5. "Another logger bug, this happens then it crashes when scrolling down. Error is on sentry" (screenshots: the logger with the keyboard bar riding on a keyboard part-way down the screen and a black band above it where the keyboard had been; then iOS's "Volyume Crashed".)
+
+Observed: Sentry VOLYUME-3J, "App Hanging: App hanging for at least 2000 ms", 2026-10-11 08:28:59 UTC (09:29 on the founder's phone, Europe/London), release 2.13.0 (81), iPhone18,2, iOS 27.2. Main thread in UIKit layout: CA::Transaction::commit, -[UIView layoutSublayersOfLayer:], -[UIView _updateSafeAreaInsets], -[UIView _safeAreaInsetsForFrame:inSuperview:ignoreViewController:]. No JavaScript error: the app froze in layout and iOS ended it.
+
+Read in the code: the session scroll view lets a scroll drag the keyboard down on iOS (keyboardDismissMode 'interactive'), the screen sits in a KeyboardAvoidingView whose bottom padding follows the keyboard, the keyboard bar rides the keyboard as an InputAccessoryView, and every layout of the scroll view while a box is open fires an animated programmatic scroll to keep the row above the bar (scrollRowAboveBar, audit C4). The screenshot is the half-dragged state: keyboard part-way down, the bar on it, the padding still at the full keyboard height.
+
+Inference (not reproduced on a device here): during the drag these feed each other; the padding change relays out the scroll view, which fires an animated scroll against the finger, which moves the keyboard again; UIKit's layout loops until the watchdog ends the app.
+
+Fix: the scroll view never drags the keyboard (iOS now as Android: 'none'); the keyboard goes away by a blank tap, OK, Log set or Done. And no programmatic scroll while the person's finger is moving the list. Both inputs to the loop are removed.

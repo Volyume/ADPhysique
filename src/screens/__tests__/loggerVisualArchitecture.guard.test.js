@@ -238,8 +238,8 @@ describe('the bans hold in every session component (source guard)', () => {
 });
 
 describe('Android input-focus fix survives the restructure', () => {
-  test('the workspace ScrollView keeps keyboardDismissMode none on Android', () => {
-    expect(SRC).toContain("keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}");
+  test('the workspace ScrollView keeps keyboardDismissMode none (both platforms since VOLYUME-3J)', () => {
+    expect(SRC).toContain('keyboardDismissMode="none"');
     expect(SRC).not.toContain("'on-drag'}");
   });
 });

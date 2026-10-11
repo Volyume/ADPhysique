@@ -4911,7 +4911,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   // Scroll so the row being typed into sits above the keypad. The pad's
   // height is known once it lays out, so this runs on that layout too.
+  // Set while the person's finger moves the list: a programmatic scroll then
+  // would fight the finger (founder report 2026-10-11, Sentry VOLYUME-3J).
+  const userDraggingRef = useRef(false);
   function scrollRowAboveBar(rowId, padHeight) {
+    if (userDraggingRef.current) return;
     const rowY = rowYRef.current[rowId];
     const viewport = scrollViewportRef.current;
     if (!Number.isFinite(rowY) || !viewport || !padHeight) return;
@@ -5505,7 +5509,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // (Log set, the header X and the overflow sheet's own drag handle
           // remain the ways to dismiss/leave), but typing becomes reliable,
           // which is the defect that made the screen unusable.
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+          //
+          // 'none' on iOS too (founder report 2026-10-11, Sentry VOLYUME-3J):
+          // dragging the list dragged the keyboard ('interactive'), the
+          // keyboard-avoiding padding then relaid the list out, and each
+          // layout fired an animated scroll against the finger; the app froze
+          // in UIKit layout and iOS ended it. The keyboard now goes away by
+          // a blank tap, OK, Log set or Done, never by a drag.
+          keyboardDismissMode="none"
+          // No programmatic scroll while the person's finger moves the list.
+          onScrollBeginDrag={() => { userDraggingRef.current = true; }}
+          onScrollEndDrag={() => { userDraggingRef.current = false; }}
         >
           {/* Stage A (D220): the session title and its note, then the
               session sheet: collapsed headers above, the active exercise as
