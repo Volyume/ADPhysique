@@ -1,3 +1,4 @@
+/* global test */
 /**
  * generate-samples.jest.js -- produces 03-REAL-SAMPLES.md and
  * 04-MEASURED-ISSUES.md for the plan-builder map (2026-10-11).
@@ -28,7 +29,7 @@ const GOALS = ['mens_physique', 'classic_physique', 'bodybuilding', 'bikini', 'w
 const EQUIP = ['full_gym', 'machines_cables', 'dumbbells_only', 'home_gym', 'barbell_plates', 'bodyweight'];
 const LOWER = new Set(['quads', 'hamstrings', 'glutes', 'adductors']);
 const GROWTH = ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs'];
-const BY_NAME = new Map(LIBRARY.map((e) => [e.name, e]));
+
 
 const choicesCache = {};
 const choicesFor = (equipment) => {

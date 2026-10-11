@@ -1,3 +1,4 @@
+/* global test */
 // Older generator (src/lib/planEngine.js generatePlan), as the app called it before 5 October.
 import { generatePlan, POOL } from '../planEngine';
 const { measure, floorFor, MATRIX } = require(process.env.CMP_CORE);

@@ -1,3 +1,4 @@
+/* global test */
 // New planner (src/lib/plan/planner.js), as the app calls it.
 import { buildPlan } from '../planner';
 import { resolveCatalogue } from '../catalogue';
