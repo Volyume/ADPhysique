@@ -38,9 +38,10 @@ Conclusion (lead ruling, recorded in the register): the rules hold together; the
 | F5 no fixed days; next session may be tomorrow | The adjacency rule assumes exactly this | Agrees |
 | F6 recovery never traded | Recovery is HARD, rank 1 | Agrees |
 
-## 4. Founder decisions
+## 4. Founder decisions (2026-10-11, register D222)
 
-Q1 (F3 against 09 section 5). See the chat message of 2026-10-11 and the register entry.
+- Q1 = C: F3 kept with a check. The full plan (standard, normal volume, focus) is always built; rest is shortened first; if a session still runs more than 5 minutes over the chosen length, the app shows the real length and asks for a longer session or more days before saving.
+- Q2 = yes: 09 is the rulebook with the corrections above (R1 to R6) and the rulings R7 to R10 in D222.
 
 ## 5. The map's numbers as 09 uses them (OBSERVED: each figure traced to the map files; Sonnet read pass, lead-reviewed)
 
