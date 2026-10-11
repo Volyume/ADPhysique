@@ -2362,7 +2362,11 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       // OK puts the keyboard away and keeps what was typed, logging nothing.
       await typeOnKeyboard(tree, 'weight', 65);
       expect(nextRow().props.disabled).toBe(true);
+      const { Keyboard } = require('react-native');
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
       await actFlush(() => pressable(tree, 'volyume-bar-ok').props.onPress());
+      expect(dismiss).toHaveBeenCalled(); // Android keeps a keyboard its field outlived
+      dismiss.mockRestore();
       expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
       expect(loggedCount()).toBe(1);
       expect(database.createWorkoutSet).toHaveBeenCalledTimes(1);

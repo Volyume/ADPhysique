@@ -4952,6 +4952,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setEditField(null);
     setTimeDraft(null);
   }
+  // The bar's OK (founder, 2026-10-11): the keyboard goes away and the box
+  // closes, keeping what was typed, logging nothing. Dismissed explicitly:
+  // on Android the keyboard can outlive the field it was opened for.
+  function handleInputOk() {
+    Keyboard.dismiss();
+    closeInput();
+  }
   function handleInputStep(delta) {
     if (!activeField) return;
     replaceOnFirstKeyRef.current = false;
@@ -5980,7 +5987,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onNext={activeField === 'weight' ? handleInputNext : undefined}
                 onDone={editingSet ? handleInputDone : handleInputLog}
                 doneLabel={editingSet ? 'Done' : barLogLabel}
-                onDismiss={editingSet ? undefined : closeInput}
+                onDismiss={editingSet ? undefined : handleInputOk}
                 safeBottom={0}
               />
             </View>
@@ -5997,7 +6004,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onNext={activeField === 'weight' ? handleInputNext : undefined}
               onDone={editingSet ? handleInputDone : handleInputLog}
               doneLabel={editingSet ? 'Done' : barLogLabel}
-              onDismiss={editingSet ? undefined : closeInput}
+              onDismiss={editingSet ? undefined : handleInputOk}
               safeBottom={0}
             />
           </View>
