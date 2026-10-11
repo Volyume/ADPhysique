@@ -1059,7 +1059,7 @@ function buildWith(args, strategy) {
     // first (adding only); where it cannot be, the focus is built again from
     // the plain week with that much less of the pick, so no set given to
     // make room is ever left unused. A muscle on the other side of a
-    // balance never gives room to a focus.
+    // balance gives room only while the balance still holds.
     const PUSH = ['chest', 'front_delts'];
     const PULL = ['lats', 'upper_back'];
     const hamstringsTrained = !!targets.hamstrings && !plan.untrainable.includes('hamstrings');
