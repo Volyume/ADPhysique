@@ -94,7 +94,7 @@ const EXPLAINERS = {
         'General athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.',
       ] },
       { heading: '1.6 to 2.2 g/kg', lines: [
-        'The range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.',
+        'The range most often recommended for building muscle. Gains level off at about 1.6 g for each kg of body weight, so the top of the range leaves some room to spare.',
       ] },
       { heading: '2.2 to 3.3 g/kg', lines: [
         'The upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.',

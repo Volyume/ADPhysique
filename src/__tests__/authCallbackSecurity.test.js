@@ -153,6 +153,8 @@ describe('credential validation and exchange failures', () => {
     expect(looksLikeAccessToken(ACCESS)).toBe(true);
     expect(looksLikeRefreshToken(REFRESH)).toBe(true);
     expect(looksLikeRefreshToken(ACCESS)).toBe(true);
+    // Sentry VOLYUME-3E: Supabase's 12-character refresh tokens are genuine.
+    expect(looksLikeRefreshToken('m2bvfquwmpz5')).toBe(true);
   });
 
   test.each([

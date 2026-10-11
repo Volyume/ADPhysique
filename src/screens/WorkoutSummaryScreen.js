@@ -1970,13 +1970,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   line tells anyone to do less (D204: a surface describes). */}
               <InfoTooltip size={11} text={
                 `${readOnly ? 'How many sets you did for each muscle group.' : 'How much you\'ve trained each muscle group this week.'}\n\n` +
-                'The bands come from studies of weekly sets:\n' +
-                'Below maintenance: under 2 sets a week\n' +
-                'Maintenance range: 2 to 6 sets, enough to hold the size you have\n' +
-                'Normal growth range: 10 to 20 sets\n' +
-                'Focus range: 20 to 30 sets, for a muscle you picked to bring up in your plan\n' +
-                'Beyond the studied range: over 42 sets, where the research cannot say what extra sets add\n\n' +
-                'A set counts once for the muscle it works most and half for each muscle that helps. A muscle your plan raised reads against its focus range, and one it did not reads as above normal growth from 20 sets.'
+                'Too few to hold size: under 2 sets a week\n' +
+                'Holds your size: 2 to 6 sets\n' +
+                'Usual range for growth: 10 to 20 sets\n' +
+                'Higher range for a focus: 20 to 30 sets, for a muscle you picked to bring up in your plan\n' +
+                'More than needed: over 42 sets\n\n' +
+                'A set counts once for the muscle it works most and half for each muscle that helps. A muscle your plan raised is read against the higher range, and one it did not reads as above the usual range from 20 sets.'
               } />
             </View>
             {/* C5-P16-01 (D96): the week-in-progress statement, so the

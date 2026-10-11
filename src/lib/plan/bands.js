@@ -84,29 +84,29 @@ export function bandLine(band, role, muscleLabel) {
   const muscle = muscleLabel || 'this muscle';
   switch (band) {
     case BAND.BELOW_MAINTENANCE:
-      return 'Below maintenance for this muscle.';
+      return 'Too few sets this week to hold this muscle\'s size.';
     case BAND.MAINTENANCE:
-      return 'Maintenance range: studies find this holds the size you have.';
+      return 'Enough to hold the size you have.';
     case BAND.BETWEEN:
-      return 'Between maintenance and the normal growth range.';
+      return 'Enough to hold your size, with some growth.';
     case BAND.NORMAL_GROWTH:
       return r === ROLE.FOCUS
-        ? `Normal growth range. Your plan is building ${muscle} towards its focus range.`
-        : 'Normal growth range.';
+        ? `In the usual range for building muscle. Your plan is taking ${muscle} up to the higher range for a focus.`
+        : 'In the usual range for building muscle.';
     case BAND.FOCUS_RANGE:
       if (r === ROLE.FOCUS) {
-        return `Within your focus range for ${muscle}: you picked it to bring up. Studies have found small extra gains at weekly totals like this.`;
+        return `In the higher range for ${muscle}, which you picked to bring up. Sets above the usual range add a little more growth.`;
       }
       if (r === ROLE.RAISED) {
-        return `Within the focus range for ${muscle}: your check-ins raised it. Studies have found small extra gains at weekly totals like this.`;
+        return `In the higher range for ${muscle}, raised at your check-in. Sets above the usual range add a little more growth.`;
       }
-      return 'Above the normal growth range. This is focus-level volume for a muscle that is not a focus in your plan.';
+      return 'Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.';
     case BAND.TOP_OF_STUDIED:
       return r === ROLE.FOCUS
-        ? 'Top of your focus range. This is near the most that studies have tested, and each extra set adds little.'
-        : 'Near the top of what studies have tested. Each extra set adds little.';
+        ? 'The top of the higher range. Each extra set from here adds very little.'
+        : 'A lot of sets for one week. Each extra set from here adds very little.';
     case BAND.BEYOND_STUDIED:
-      return 'Beyond the range studies have tested, so the research cannot say what extra sets add.';
+      return 'More sets than needed. Extra sets here may add nothing.';
     default:
       return '';
   }
@@ -184,6 +184,8 @@ export function sessionVolumeFlag({ direct = 0, fractional = 0, focusCap = false
   if (!(direct > directCap) && !(fractional > fractionalCap)) return null;
   return {
     tone: 'note',
-    line: `More than most studies have tested in one session (about ${fractionalCap} sets). The same sets spread over more sessions are counted the same in the weekly total.`,
+    // Founder 2026-10-11 ("'More than most studies' etc what the heck is that
+    // meant to mean to a human"): plain words, what it means for the person.
+    line: `More than about ${fractionalCap} sets in one session. Past that, extra sets in the same session tend to add little; spread over more sessions they are more likely to help.`,
   };
 }

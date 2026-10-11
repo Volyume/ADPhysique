@@ -177,6 +177,26 @@ describe('sentry.js captureWarning expected-offline gate', () => {
     expect(SentryNative.addBreadcrumb).not.toHaveBeenCalled();
   });
 
+  // Sentry VOLYUME-28/2C/2J (2026-10-11): errorLog.logWarn nests the caller's
+  // context as extra.context, so a summary that states every failure was a
+  // lost connection must be read there; a summary with a real cause still
+  // ships.
+  test('a summary stating every failure was a lost connection (nested context) is demoted', () => {
+    setup(false);
+    sentry.captureWarning('1 of 1 workouts failed to upload', {
+      scope: 'sync.bulkUploadLocalData', extra: { context: { allNetwork: true } },
+    });
+    sentry.captureWarning('sync.push.meal_plans.errors', {
+      scope: 'sync.push.meal_plans', extra: { context: { errors: 1, allNetwork: true } },
+    });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledTimes(2);
+    sentry.captureWarning('sync.push.meal_plans.errors', {
+      scope: 'sync.push.meal_plans', extra: { context: { errors: 1, allNetwork: false } },
+    });
+    expect(SentryNative.captureMessage).toHaveBeenCalledWith('sync.push.meal_plans.errors');
+  });
+
   test('a non-sync warning is never demoted, even while offline', () => {
     setup(true);
     sentry.captureWarning('purchase acknowledgement failed', { scope: 'payments.playBilling.acknowledge' });

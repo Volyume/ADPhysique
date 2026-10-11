@@ -33,14 +33,14 @@ const codeOnly = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])
 describe('the eight group words and the four tone words', () => {
   test('the group words, in the order a list reads them', () => {
     expect(VOLUME_BAND_LABELS).toEqual({
-      below_maintenance: 'Below maintenance',
-      maintenance: 'Maintenance range',
-      between: 'Between maintenance and growth',
-      normal_growth: 'Normal growth range',
-      focus_range: 'Focus range',
-      above_normal: 'Above normal growth',
-      top_of_studied: 'Top of the studied range',
-      beyond_studied: 'Beyond the studied range',
+      below_maintenance: 'Too few to hold size',
+      maintenance: 'Holds your size',
+      between: 'Holds size, some growth',
+      normal_growth: 'Usual range for growth',
+      focus_range: 'Higher range for a focus',
+      above_normal: 'Above the usual range',
+      top_of_studied: 'Close to the upper limit',
+      beyond_studied: 'More than needed',
     });
     expect(Object.keys(VOLUME_BAND_LABELS)).toEqual([...GROUP_ORDER]);
     expect(Object.isFrozen(VOLUME_BAND_LABELS)).toBe(true);
@@ -48,10 +48,10 @@ describe('the eight group words and the four tone words', () => {
 
   test('the tone words', () => {
     expect(VOLUME_TONE_LABELS).toEqual({
-      below: 'Below maintenance',
-      building: 'Maintenance to growth',
-      growth: 'Growth range',
-      beyond: 'Beyond the studied range',
+      below: 'Too few to hold size',
+      building: 'Holds size, some growth',
+      growth: 'Range for growth',
+      beyond: 'More than needed',
     });
     expect(Object.keys(VOLUME_TONE_LABELS).sort()).toEqual(Object.values(TONE).sort());
     expect(Object.isFrozen(VOLUME_TONE_LABELS)).toBe(true);

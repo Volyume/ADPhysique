@@ -665,10 +665,9 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
     loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
     recommendNextWorkout.mockReturnValue(NEXT());
-    // RE-ANCHORED D223 (founder 2026-10-11: "This data for muscles recovery looks horrendous,
-    // redesign this areas make it understandable, readable and slick."): the clock sentence is now
-    // the spoken label of two drawn bars, each printed with its own figure.
-    const clockNode = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityLabel === clockLine('biceps'));
+    // RE-ANCHORED 2026-10-11 (founder: "FOLLOW THE STYLE IN THE APP!!!! ... No pills or anything
+    // else!"): the usual times are two label and value rows, the muscle's own and back's.
+    const clockNode = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && /^Usually takes: /.test(n.props.accessibilityLabel || ''));
     const tree = await render();
     expect(clockNode(tree)).toHaveLength(0);
     const line = tree.root.findAll((n) => typeof n.type === 'string' && /^Biceps, estimated recovered now/.test(n.props.accessibilityLabel || ''))[0];
@@ -677,8 +676,9 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     const all = texts(tree);
     expect(clockNode(tree).length).toBeGreaterThan(0);
     // RE-ANCHORED D224: the usual time to read as ready, in hours.
-    expect(all).toContain('about 43 hours (32 to 54 hours)');
-    expect(all).toContain('about 54 hours (40 to 67 hours)');
+    expect(all).toContain('About 43 hours after 6 sets');
+    expect(all).toContain('Back usually takes');
+    expect(all).toContain('About 54 hours');
     expect(clockLine('biceps')).toMatch(/^Biceps are usually estimated ready about 43 hours \(range 32 to 54 hours\)/);
     expect(clockLine('biceps')).toMatch(/Muscles differ: back is usually estimated ready about 54 hours/);
     // Tapping again closes it.
@@ -708,12 +708,12 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     await act(async () => { BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0].onMuscleTap('biceps'); });
     await flush();
     const all = texts(tree);
-    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
-    // RE-ANCHORED D223: the week is drawn, the total large and the split under it.
+    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    // RE-ANCHORED 2026-10-11: the week as label and value rows, in plain words.
     expect(all).toContain('27');
-    expect(all).toContain('sets counted');
-    expect(all).toContain('20 as the main muscle worked · 14 as a helper, at half credit');
-    expect(all.some((t) => /^Within your focus range for biceps: you picked it to bring up\./.test(t))).toBe(true);
+    expect(all).toContain('20 as the main muscle, 14 helping (each counts as half)');
+    expect(all).toContain('Higher range for a focus');
+    expect(all).toContain('20 to 30 sets a week');
     expect(all.join(' | ')).not.toMatch(/too much|overtrain|near the limit/i);
   });
 

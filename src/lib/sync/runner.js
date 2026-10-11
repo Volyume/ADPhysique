@@ -19,7 +19,12 @@
 // depth could only mislead the "changes waiting" line. It is deleted; the
 // LIVE retry queue is legacy pending_sync_ops (src/lib/syncQueue.js) and
 // status depth now reads that. Lazy-required to avoid an import cycle.
-import { trackSyncRun } from './telemetry';
+import { trackSyncRun, syncErrorMark, onlyNetworkErrorsSince } from './telemetry';
+
+// The lost-connection summary (Sentry VOLYUME-2J) is telemetry: it must never
+// be able to throw into a sync cycle.
+const markErrors = () => { try { return syncErrorMark(); } catch (_) { return null; } };
+const networkOnlySince = (mark) => { try { return onlyNetworkErrorsSince(mark) === true; } catch (_) { return false; } };
 import { listSyncableTables } from './registry';
 import { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } from './transport';
 import { isSignOutWiping } from './signOutGuard';
@@ -222,6 +227,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         // 1. Per-table push for migrated tables.
         for (const tableName of MIGRATED_TABLES) {
           if (dbDeferred) break;
+          const mark = markErrors();
           const result = await pushTable(tableName, { userId, localUserId }).catch((e) => {
             if (e?.dbCryptoDeferred === true) return { count: 0, errors: 0, skipped: 'db_deferred' };
             erroredCount += 1;
@@ -243,6 +249,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
               errors: result.errors,
               count: result.count ?? 0,
               skipped: result.skipped ?? null,
+              allNetwork: networkOnlySince(mark),
             });
           }
         }
@@ -291,6 +298,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
           // whenSyncIdle resolves before the wipe touches the DB.
           if (isSignOutWiping()) break;
           if (dbDeferred) break;
+          const mark = markErrors();
           const result = await pullTable(tableName, { userId, localUserId }).catch((e) => {
             if (e?.dbCryptoDeferred === true) return { count: 0, errors: 0, skipped: 'db_deferred' };
             erroredCount += 1;
@@ -307,6 +315,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
               errors: result.errors,
               count: result.count ?? 0,
               skipped: result.skipped ?? null,
+              allNetwork: networkOnlySince(mark),
             });
           }
         }

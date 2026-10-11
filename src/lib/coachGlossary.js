@@ -46,7 +46,7 @@ export const GLOSSARY = {
   // legend's (i). It says what the figure counts (sets, this week so far or a
   // weekly average over 2 or 4 weeks) and what the four colours are.
   volumeHeatmapBands:
-    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 10 runs from holding the size you have towards growth, 10 to 20 is the normal growth range, 20 to 30 is a focus range, and studies have little to say beyond 42. A muscle you picked as a focus in your plan reads against its focus range. Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
+    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. Under 2 sets a week is too few to hold a muscle\'s size, 2 to 10 holds it with some growth, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. Past 42 sets a week, more sets are unlikely to help. A muscle you picked as a focus in your plan is read against the higher range. Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:

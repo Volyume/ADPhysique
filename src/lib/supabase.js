@@ -201,6 +201,38 @@ export async function hasStoredAuthSession() {
   }
 }
 
+// Sentry VOLYUME-2H, 2M, 1G and the "JWT expired" events grouped into 2D
+// and 28: a database read or write sent with an access token that expired
+// while a long sync was running (the token is checked once before the run,
+// hasLiveSession below, and auto-refresh only runs in the foreground). The
+// database answers 401 PGRST303 "JWT expired" and the pull or push failed
+// until the next run. The client's fetch now refreshes the session once and
+// sends the same request again with the new token. Only database requests
+// (/rest/v1/) and only that exact answer; anything else, or a refresh that
+// fails, returns the original answer unchanged. A token "issued at future"
+// (clock skew) is a different PGRST303 and is left to withClockSkewRetry.
+export function makeExpiredTokenRetryFetch(getClient, baseFetch = (...args) => fetch(...args)) {
+  return async (input, init) => {
+    const res = await baseFetch(input, init);
+    try {
+      const url = typeof input === 'string' ? input : String(input?.url ?? input ?? '');
+      if (res?.status !== 401 || !url.includes('/rest/v1/')) return res;
+      const body = await res.clone().json().catch(() => null);
+      if (!body || body.code !== 'PGRST303' || !/jwt expired/i.test(String(body.message ?? ''))) return res;
+      const client = getClient();
+      if (!client?.auth?.refreshSession) return res;
+      const { data, error } = await client.auth.refreshSession();
+      const token = data?.session?.access_token;
+      if (error || !token) return res;
+      const headers = new Headers(init?.headers);
+      headers.set('Authorization', `Bearer ${token}`);
+      return baseFetch(input, { ...init, headers });
+    } catch (_) {
+      return res;
+    }
+  };
+}
+
 // Returns null when SUPABASE_URL / SUPABASE_ANON_KEY env vars are absent (Stage 1).
 let _client = null;
 let _initialized = false;
@@ -212,13 +244,15 @@ export function getSupabaseClient() {
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   try {
-    const rawClient = createClient(url, key, {
+    let rawClient = null;
+    rawClient = createClient(url, key, {
       auth: {
         storage: secureAuthStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
       },
+      global: { fetch: makeExpiredTokenRetryFetch(() => rawClient) },
     });
     // Wrap the client in the observability proxy so every .from(table)
     // call emits a breadcrumb with the table name, operation, and
@@ -560,6 +594,15 @@ export async function signInWithGoogle() {
     const code = e?.code;
     if (statusCodes && (code === statusCodes.SIGN_IN_CANCELLED || code === statusCodes.IN_PROGRESS)) {
       return { cancelled: true };
+    }
+    // Sentry VOLYUME-3K (2026-10-11, an Honor phone): Google Play services
+    // on the phone answered INTERNAL_ERROR, or are missing or out of date.
+    // Nothing in our code or Supabase ran; it is the phone's state, like
+    // Apple's apple_device_state, so callers show the remedy. A configuration
+    // fault (DEVELOPER_ERROR) is not this and stays an error.
+    if ((statusCodes && code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE)
+      || /^INTERNAL_ERROR$/i.test(String(e?.message ?? '')) || String(code) === '8') {
+      return { error: { code: 'google_device_state', message: e?.message ?? 'Google sign-in failed.' } };
     }
     return { error: { message: e?.message ?? 'Google sign-in failed.' } };
   }

@@ -31,7 +31,7 @@ describe('bandFor: the boundaries', () => {
     expect(bandFor(w)).toBe(band);
   });
 
-  test('a missing or negative total reads as below maintenance', () => {
+  test('a missing or negative total reads as muscles with too few sets', () => {
     expect(bandFor(undefined)).toBe(BAND.BELOW_MAINTENANCE);
     expect(bandFor(-3)).toBe(BAND.BELOW_MAINTENANCE);
     expect(bandFor(NaN)).toBe(BAND.BELOW_MAINTENANCE);
@@ -43,21 +43,21 @@ describe("the founder's 27 biceps sets", () => {
     const v = volumeBand(27, ROLE.FOCUS, { muscleLabel: 'biceps', target: 22 });
     expect(v.band).toBe(BAND.FOCUS_RANGE);
     expect(v.tone).toBe('neutral');
-    expect(v.line).toBe('Within your focus range for biceps: you picked it to bring up. Studies have found small extra gains at weekly totals like this.');
+    expect(v.line).toBe('In the higher range for biceps, which you picked to bring up. Sets above the usual range add a little more growth.');
     expect(v.roleLine).toBe('Focus: you picked biceps to bring up.');
     expect(v.targetLine).toBe('Your plan targets 22 a week.');
   });
 
   test('a standard muscle at 24 reads as focus-level volume, not as a fault', () => {
     const v = volumeBand(24, ROLE.STANDARD, { muscleLabel: 'biceps' });
-    expect(v.line).toBe('Above the normal growth range. This is focus-level volume for a muscle that is not a focus in your plan.');
+    expect(v.line).toBe('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
     expect(v.tone).toBe('neutral');
     expect(v.roleLine).toBeNull();
   });
 
   test('a muscle the check-ins raised says so instead of claiming the person picked it', () => {
     const v = volumeBand(22, ROLE.RAISED, { muscleLabel: 'back' });
-    expect(v.line).toMatch(/^Within the focus range for back: your check-ins raised it\./);
+    expect(v.line).toMatch(/^In the higher range for back, raised at your check-in\./);
     expect(v.line).not.toMatch(/you picked/);
     expect(v.roleLine).toBe('Raised at your check-in.');
   });
@@ -89,8 +89,8 @@ describe('the wording table', () => {
   });
 
   test('a focus muscle still in the normal growth range is described as building towards its focus range', () => {
-    expect(bandLine(BAND.NORMAL_GROWTH, ROLE.FOCUS, 'glutes')).toBe('Normal growth range. Your plan is building glutes towards its focus range.');
-    expect(bandLine(BAND.NORMAL_GROWTH, ROLE.STANDARD, 'glutes')).toBe('Normal growth range.');
+    expect(bandLine(BAND.NORMAL_GROWTH, ROLE.FOCUS, 'glutes')).toBe('In the usual range for building muscle. Your plan is taking glutes up to the higher range for a focus.');
+    expect(bandLine(BAND.NORMAL_GROWTH, ROLE.STANDARD, 'glutes')).toBe('In the usual range for building muscle.');
   });
 
   test('an unknown role reads as standard', () => {

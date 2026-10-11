@@ -404,3 +404,73 @@ export function weekPanel({ muscle, role, week = null } = {}) {
     flagLine: flag ? flag.line : null,
   };
 }
+
+const capitalise = (text) => (text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text);
+
+/** "About 56 hours", "56 to 84 hours": the gaps between the counted sessions, as a row value. */
+export function spacingValue(entry) {
+  const sessions = sortedSessions(entry);
+  if (sessions.length < 2) return null;
+  const gaps = [];
+  for (let i = 1; i < sessions.length; i += 1) gaps.push((sessions[i].endMs - sessions[i - 1].endMs) / HOUR_MS);
+  const lo = Math.min(...gaps);
+  const hi = Math.max(...gaps);
+  return Math.round(lo) === Math.round(hi) ? `About ${durationText(hi)}` : capitalise(rangeText(lo, hi));
+}
+
+/**
+ * The open detail as the app's own label and value rows, each value a few
+ * plain words (founder 2026-10-11, on the redesigned detail: "FOLLOW THE
+ * STYLE IN THE APP!!!! Do not free flow other formats and styles!!! No pills
+ * or anything else!", and "'More than most studies' etc what the heck is that
+ * meant to mean to a human"). The facts are the ones D219, D223 and D224
+ * settled (the one ready time, the usual time beside another muscle's, the
+ * week's counted sets and its range); only the form changed.
+ *
+ * @returns {{ recovery: Array<{label: string, value: string}>, week: Array<{label: string, value: string}> }}
+ */
+export function detailFacts({ muscle, entry = null, role, week = null, nowMs } = {}) {
+  const recovery = [];
+  const t = recoveryTimeline(entry, nowMs);
+  if (t) {
+    recovery.push({ label: 'Estimated ready', value: t.ready ? 'Now' : capitalise(t.readyText) });
+    recovery.push({ label: 'Last trained', value: `${capitalise(t.passedText)} ago` });
+    if (!t.ready) recovery.push({ label: 'Could be ready', value: `In ${t.rangeText}` });
+  }
+  const own = clockWords(muscle);
+  recovery.push({ label: 'Usually takes', value: `${capitalise(own.short)} after ${REFERENCE_SETS} sets` });
+  // D219: "biceps recover quicker than back", shown as two figures, never asserted.
+  const otherKey = muscle === 'back' ? 'biceps' : 'back';
+  const other = clockWords(otherKey);
+  if (other.hours !== own.hours) {
+    recovery.push({ label: `${muscleDisplayName(otherKey)} usually takes`, value: capitalise(other.short) });
+  }
+
+  const weekRows = [];
+  const intent = intentFor({ muscle, role, week });
+  if (intent) weekRows.push({ label: 'In your plan', value: intent });
+  const p = weekPanel({ muscle, role, week });
+  if (!p) {
+    weekRows.push({ label: 'Sets so far', value: 'None yet' });
+  } else {
+    const r = normaliseRole(role);
+    const focusLike = r === ROLE.FOCUS || r === ROLE.RAISED;
+    const direct = Number.isFinite(week.direct) && week.direct > 0 ? week.direct : 0;
+    const helping = Number.isFinite(week.indirect) && week.indirect > 0 ? week.indirect : 0;
+    weekRows.push({ label: 'Sets so far', value: p.creditText });
+    weekRows.push({
+      label: 'Made up of',
+      value: helping > 0
+        ? `${formatSets(direct)} as the main muscle, ${formatSets(helping)} helping (each counts as half)`
+        : `${formatSets(direct)} as the main muscle`,
+    });
+    weekRows.push({ label: 'Where that sits', value: p.bandLabel });
+    weekRows.push({
+      label: focusLike ? 'Higher range for a focus' : 'Usual range for growth',
+      value: `${p.bar.bandStart} to ${p.bar.bandEnd} sets a week`,
+    });
+    weekRows.push({ label: 'Most in one session', value: `${p.sessionMostText} ${setsWord(p.sessionMost)}` });
+    if (p.flagLine) weekRows.push({ label: 'Note', value: p.flagLine });
+  }
+  return { recovery, week: weekRows };
+}

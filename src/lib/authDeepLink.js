@@ -55,9 +55,15 @@ export function looksLikeAccessToken(token) {
 
 // Supabase refresh tokens are opaque strings, not JWTs. Keep a narrow,
 // whitespace-free transport shape and let setSession validate the credential.
+// Sentry VOLYUME-3E (4 refusals, "malformed_tokens", real phones opening a
+// sign-in link): the shape check asked for 16 characters or more. Supabase
+// Auth issues refresh tokens as short as 12 characters (INFERRED from its
+// token format; the access token in the same links is a JWT and passes), so
+// genuine links were refused. 8 is the floor now: junk still fails here, and
+// the server validates the token itself (getUser, then setSession).
 export function looksLikeRefreshToken(token) {
   return typeof token === 'string'
-    && token.length >= 16 && token.length <= 4096
+    && token.length >= 8 && token.length <= 4096
     && /^[A-Za-z0-9._~-]+$/.test(token);
 }
 

@@ -39,29 +39,29 @@ describe("the founder's case: a focus muscle above 20 sets is never judged too m
     const j = judgeWeek({ muscle: 'biceps', sets, role: 'focus' });
     expect(j.band).toBe('focus_range');
     expect(j.group).toBe(GROUP.FOCUS);
-    expect(j.label).toBe('Focus range');
+    expect(j.label).toBe('Higher range for a focus');
     expect(j.tone).toBe(TONE.GROWTH);
     expect(j.noteTone).toBe(false);
-    expect(j.line).toMatch(/^Within your focus range for biceps: you picked it to bring up\./);
+    expect(j.line).toMatch(/^In the higher range for biceps, which you picked to bring up\./);
   });
 
   test('27 focus sets read with the reason, in the words the founder asked for', () => {
     const j = judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' });
-    expect(j.reason).toBe('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(j.reason).toBe('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
     expect(j.roleLine).toBe('Focus: you picked biceps to bring up.');
   });
 
   test('a raised muscle reads inside the focus range and says the check-ins raised it', () => {
     const j = judgeWeek({ muscle: 'back', sets: 24, role: 'raised' });
     expect(j.group).toBe(GROUP.FOCUS);
-    expect(j.reason).toBe('Your check-ins raised back: 24 sets, inside the focus range of 20 to 30.');
+    expect(j.reason).toBe('Your check-ins raised back: 24 sets, inside the higher range for a focus, 20 to 30.');
   });
 
   test('the same 27 sets for a muscle that is NOT a focus read as focus-level volume, not as a fault', () => {
     const j = judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' });
     expect(j.group).toBe(GROUP.ABOVE_NORMAL);
-    expect(j.label).toBe('Above normal growth');
-    expect(j.line).toBe('Above the normal growth range. This is focus-level volume for a muscle that is not a focus in your plan.');
+    expect(j.label).toBe('Above the usual range');
+    expect(j.line).toBe('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
     expect(j.noteTone).toBe(false);
     expect(j.reason).toBeNull();
   });

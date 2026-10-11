@@ -325,7 +325,7 @@ export const CONDITION_PROFILES = Object.freeze([
     fatigueNote: 'Tiredness after a brain injury is real and often invisible to everyone else. Fewer days and shorter sessions are a normal shape here, and Volyume works to the plan you set rather than pushing you towards more.',
     lateralityNote: `Effects are often one-sided. Where that is true for you, ${SIDED}`,
     generalisable: [
-      'Research finds strength training worthwhile long after a stroke, with each person’s starting point setting the shape.',
+      'Research finds strength training is still worthwhile long after a stroke. Where each person starts decides how it is set up.',
     ],
     individual: [
       'The research is honest that no standard dose exists after stroke; your own response is the guide.',
@@ -818,7 +818,7 @@ export const CONDITION_PROFILES = Object.freeze([
     fatigueNote: 'Steadiness often drops as a session goes on. You can finish a session whenever you want to, and everything you logged up to that point still counts.',
     lateralityNote: `Tremor is often one-sided or specific to certain tasks. Where that is true, ${SIDED}`,
     generalisable: [
-      'Research suggests strength work itself remains fully available, with the right equipment taking care of the need for steadiness.',
+      'Research suggests strength work stays fully open to you, with the right equipment taking care of steadiness.',
     ],
     individual: [],
     neverInfer: [

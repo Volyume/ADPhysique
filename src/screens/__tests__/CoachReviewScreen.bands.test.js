@@ -116,10 +116,10 @@ describe("the check-in review, the founder's 27 biceps sets", () => {
     getPlanRoles.mockResolvedValue({ biceps: 'focus' });
     const t = texts(await mount());
     const all = t.join(' | ');
-    expect(t).toContain('Biceps - focus range');
-    expect(t).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(t).toContain('Biceps - higher range for a focus');
+    expect(t).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
     // The volume row's badge says the one judgement's word.
-    expect(t).toContain('Focus range');
+    expect(t).toContain('Higher range for a focus');
     expect(all).not.toMatch(RETIRED);
     // "What stood out" holds nothing for it: its empty line is printed.
     expect(t).toContain('Nothing to flag this week, your training is looking nicely balanced.');
@@ -128,9 +128,9 @@ describe("the check-in review, the founder's 27 biceps sets", () => {
   test('biceps NOT raised by the plan: "above normal growth" under what stood out, described and not blamed', async () => {
     const t = texts(await mount());
     const all = t.join(' | ');
-    expect(t).toContain('Biceps - above normal growth');
-    expect(t).toContain('Above the normal growth range. This is focus-level volume for a muscle that is not a focus in your plan.');
-    expect(t).toContain('Above normal growth');
+    expect(t).toContain('Biceps - above the usual range');
+    expect(t).toContain('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(t).toContain('Above the usual range');
     expect(all).not.toMatch(RETIRED);
     expect(t).not.toContain('Nothing to flag this week, your training is looking nicely balanced.');
   });
