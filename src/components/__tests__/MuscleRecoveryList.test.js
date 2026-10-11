@@ -273,14 +273,19 @@ describe('the breakdown: a tap opens it, the parent holds which row is open', ()
     expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 
+  // RE-ANCHORED D223 (founder 2026-10-11: "This data for muscles recovery looks horrendous,
+  // redesign this areas make it understandable, readable and slick."): the breakdown is drawn in
+  // sections, not listed as label and value pairs. The plain word is the subtitle ("Front of the
+  // thigh", under the row's own "Quads"), so the "Muscle" label is gone; the session, the basis
+  // and the two notes are unchanged in words.
   test('only the selected row shows its breakdown: the plain word, each session, the basis, the two notes', () => {
     const closed = texts(render());
     expect(closed).not.toContain('Based on');
     expect(closed).not.toContain(HALF_CREDIT_NOTE);
 
     const open = texts(render({ selectedMuscle: 'quads' }));
-    expect(open).toContain('Muscle');
-    expect(open).toContain('Quads, front of the thigh');
+    expect(open).not.toContain('Muscle');
+    expect(open).toContain('Front of the thigh');
     expect(open).toContain('Mon 21 Sep');
     // No split supplied: the model's own credit, labelled as credit (never a bare "6 sets").
     // RE-ANCHORED D214 addendum 9 (census 0.8): the unit comes first ("6 sets
@@ -544,17 +549,24 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
     expect(texts(tree).some((t) => /your focus this block/.test(t))).toBe(false);
   });
 
-  test('the open breakdown: intent, this week so far, the band, the clock, then the sessions, in that order', () => {
+  // RE-ANCHORED D223: the facts are F16's, drawn in sections. The intent stays first (the
+  // founder's demonstration that a raised muscle is inside its range); on the Recovery screen the
+  // recovery estimate comes next, then this week's sets with their band, then the sessions, then
+  // the fine print.
+  test('the open breakdown: intent, the recovery estimate, this week with its band, the sessions, the fine print, in that order', () => {
     const tree = render({ roles: BICEPS_FOCUS, weekFigures: WEEK, selectedMuscle: 'biceps' });
     const all = texts(tree);
     const idx = (label) => all.indexOf(label);
-    expect(idx('Muscle')).toBeGreaterThanOrEqual(0);
-    expect(idx('In your plan')).toBeGreaterThan(idx('Muscle'));
-    expect(idx('This week so far')).toBeGreaterThan(idx('In your plan'));
-    expect(idx('Band')).toBeGreaterThan(idx('This week so far'));
-    expect(idx('Recovery clock')).toBeGreaterThan(idx('Band'));
-    expect(idx('Based on')).toBeGreaterThan(idx('Recovery clock'));
-    expect(all).toContain('27 sets counted: 20 direct and 14 indirect at half credit.');
+    expect(idx('In your plan')).toBeGreaterThanOrEqual(0);
+    expect(idx('Recovery estimate')).toBeGreaterThan(idx('In your plan'));
+    expect(idx('This week so far')).toBeGreaterThan(idx('Recovery estimate'));
+    expect(idx('Focus range')).toBeGreaterThan(idx('This week so far'));
+    expect(idx('Sessions counted')).toBeGreaterThan(idx('Focus range'));
+    expect(idx('How this is estimated')).toBeGreaterThan(idx('Sessions counted'));
+    expect(idx('Based on')).toBeGreaterThan(idx('How this is estimated'));
+    expect(all).toContain('27');
+    expect(all).toContain('sets counted');
+    expect(all).toContain('20 as the main muscle worked · 14 as a helper, at half credit');
     expect(all).toContain('Within your focus range for biceps: you picked it to bring up. Studies have found small extra gains at weekly totals like this.');
   });
 
@@ -565,11 +577,15 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
     expect(clock).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
   });
 
-  test('without roles and week figures the breakdown lines are exactly what they were', () => {
+  test('without roles and week figures the breakdown lines are exactly what they were, and the panel has no week section', () => {
     const plain = muscleRecoveryDetailLines(ROWS[2], false, null);
     // The muscle, one counted session (labelled by its date), and what the estimate is based on.
     expect(plain.map((l) => l.label)).toEqual(['Muscle', expect.any(String), 'Based on']);
     expect(plain.some((l) => l.label === 'Recovery clock')).toBe(false);
+    const all = texts(render({ selectedMuscle: 'quads' }));
+    expect(all).not.toContain('This week so far');
+    expect(all).not.toContain('In your plan');
+    expect(all).toContain('Recovery estimate');
   });
 
   test('nothing here blames or instructs, and no row carries an em dash (D204)', () => {
@@ -577,5 +593,140 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
     const printed = texts(tree).join(' | ');
     expect(printed).not.toMatch(/too much|overtrain|near the limit|you should|consider|take it easy/i);
     expect(printed).not.toContain('—');
+  });
+});
+
+// D223 (founder 2026-10-11, on the open Abs detail: "This data for muscles recovery looks
+// horrendous, redesign this areas make it understandable, readable and slick."). The same facts,
+// drawn: what this pins is that the drawing tells the truth (each bar's length is the figure its
+// label prints), that every recovery figure is spoken as an estimate, that the panel is the
+// `recovery` token and ink only, and that nothing in it is clamped to one line (it must wrap at the
+// largest text size).
+describe('D223: the open detail is drawn, not listed', () => {
+  const { MuscleDetail } = require('../MuscleRecoveryList');
+  const HOUR_MS = 60 * 60 * 1000;
+  const ABS = {
+    muscle: 'abs', recoveredPercent: 19, status: 'recovering', readyAtMs: NOW + 20 * HOUR_MS, basis: 'time_and_volume',
+    contributingSessions: [{ workoutId: 'w-a', endMs: NOW - 4 * HOUR_MS, sets: 3, hoursT: 26 }],
+  };
+  const ABS_WEEK = { credit: 3, direct: 3, indirect: 0, sessionCredit: 3, sessionDirect: 3 };
+  function detail(props) {
+    let tree;
+    act(() => {
+      tree = create(<MuscleDetail muscle="abs" entry={ABS} role="standard" week={ABS_WEEK} nowMs={NOW} {...props} />);
+    });
+    return tree;
+  }
+  const widthOf = (node) => [].concat(node.props.style).filter(Boolean).reduce((w, st) => st.width ?? w, null);
+  const leftOf = (node) => [].concat(node.props.style).filter(Boolean).reduce((l, st) => st.left ?? l, null);
+  const bgOf = (node) => [].concat(node.props.style).filter(Boolean).reduce((c, st) => st.backgroundColor ?? c, null);
+  const labelled = (tree, re) => tree.root.findAll((n) => typeof n.type === 'string' && re.test(n.props?.accessibilityLabel || ''))[0];
+
+  test('the old label column is gone: no "Muscle", "Band", "Recovery clock" or "Estimate" labels', () => {
+    const all = texts(detail());
+    for (const label of ['Muscle', 'Band', 'Recovery clock', 'Estimate', 'Most in one session:']) expect(all).not.toContain(label);
+    expect(all).toContain('Stomach and sides');
+    expect(all).toEqual(expect.arrayContaining(['Recovery estimate', 'This week so far', 'Sessions counted', 'How this is estimated']));
+  });
+
+  test('the timeline: the time since the session solid, the estimate marked, its range shaded, each the figure printed under it', () => {
+    const tree = detail();
+    const all = texts(tree);
+    expect(all).toContain('4 hours');
+    expect(all).toContain('Since the last session');
+    expect(all).toContain('about 26 hours');
+    const block = labelled(tree, /^Estimated recovery time about 26 hours/);
+    expect(block.props.accessible).toBe(true);
+    expect(block.props.accessibilityLabel).toMatch(/4 hours since the last session\.$/);
+    // The scale is the range's high end; the solid part is 4 of it, in the recovery token.
+    const views = block.findAll((n) => typeof n.type === 'string' && widthOf(n) && /%$/.test(widthOf(n)));
+    const solid = views.find((n) => bgOf(n) === THEME.colors.recovery);
+    const scale = Number(all.find((x) => /^Estimated recovery time, range/.test(x)).match(/to (\d+) hours/)[1]);
+    expect(parseFloat(widthOf(solid))).toBeCloseTo((4 / scale) * 100, 0);
+    // The shaded range is the recovery token at a lighter strength, never another hue.
+    const shaded = views.find((n) => bgOf(n) === withAlpha(THEME.colors.recovery, alpha.strong));
+    expect(shaded).toBeTruthy();
+  });
+
+  test('the usual clocks: the muscle\'s own beside back\'s, each bar as long as its figure, spoken in the clock sentence', () => {
+    const tree = detail();
+    const all = texts(tree);
+    expect(all).toContain('Usual estimate after a session of about 6 sets');
+    expect(all).toContain('Abs');
+    expect(all).toContain('Back');
+    const block = labelled(tree, /^Abs are estimated at about/);
+    expect(block.props.accessibilityLabel).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    const bars = block.findAll((n) => typeof n.type === 'string' && widthOf(n) && /%$/.test(widthOf(n)));
+    expect(bars).toHaveLength(2);
+    // Own bar in the recovery token, the other in ink; abs' clock is the shorter.
+    expect(bgOf(bars[0])).toBe(THEME.colors.recovery);
+    expect(bgOf(bars[1])).toBe(THEME.colors.textMuted);
+    expect(parseFloat(widthOf(bars[0]))).toBeLessThan(parseFloat(widthOf(bars[1])));
+  });
+
+  test('this week: the total large with its band, the split, the band\'s line, the dot on the bar at the total', () => {
+    const tree = detail();
+    const all = texts(tree);
+    expect(all).toContain('3');
+    expect(all).toContain('sets counted');
+    expect(all).toContain('Maintenance range');
+    // No helper sets: the split names only the main sets.
+    expect(all).toContain('3 as the main muscle worked');
+    expect(all).toContain('Maintenance range: studies find this holds the size you have.');
+    expect(all).toContain('The shaded part is the normal growth range, 10 to 20 sets a week.');
+    expect(all).toContain('42 sets');
+    const bar = labelled(tree, /^3 sets this week\./);
+    const dot = bar.findAll((n) => typeof n.type === 'string' && /%$/.test(String(leftOf(n))))
+      .find((n) => bgOf(n) === THEME.colors.textPrimary);
+    expect(parseFloat(leftOf(dot))).toBeCloseTo((3 / 42) * 100, 1);
+  });
+
+  test('the most in one session against its limit, and the session note only above the cap', () => {
+    const inside = texts(detail());
+    expect(inside).toContain('Most in one session');
+    expect(inside).toContain('3 sets');
+    expect(inside).toContain('Limit for this muscle: 11 sets in one session');
+    expect(inside.some((x) => /More than most studies have tested/.test(x))).toBe(false);
+    const above = texts(detail({ week: { credit: 14, direct: 12, indirect: 4, sessionCredit: 14, sessionDirect: 12 } }));
+    expect(above).toContain('12 as the main muscle worked · 4 as a helper, at half credit');
+    expect(above.some((x) => /^More than most studies have tested in one session \(about 11 sets\)/.test(x))).toBe(true);
+  });
+
+  test('no sets this week reads "No sets counted yet." and draws no week bar', () => {
+    const tree = detail({ week: null });
+    expect(texts(tree)).toContain('No sets counted yet.');
+    expect(labelled(tree, /sets this week\./)).toBeUndefined();
+  });
+
+  test('a muscle with no counted session draws no timeline and no sessions, and still shows its usual clock', () => {
+    const tree = detail({ entry: null });
+    const all = texts(tree);
+    expect(all).not.toContain('Since the last session');
+    expect(all).not.toContain('Sessions counted');
+    expect(all).not.toContain('Based on');
+    expect(all).toContain('Usual estimate after a session of about 6 sets');
+  });
+
+  test('every text wraps at the largest text size: nothing in the detail is clamped to one line', () => {
+    const tree = detail({ role: 'focus', week: { credit: 27, direct: 20, indirect: 14, sessionCredit: 13.5, sessionDirect: 10 } });
+    const clamped = tree.root.findAllByType(Text).filter((n) => n.props.numberOfLines != null || n.props.adjustsFontSizeToFit);
+    expect(clamped).toHaveLength(0);
+  });
+
+  test('the "Next in your plan" card opens the same drawn detail, with the basis and splits the list uses', () => {
+    const NextInPlanCard = require('../NextInPlanCard').default;
+    const card = {
+      title: 'Next in your plan: Core', musclesLine: 'Abs.', sessionLine: null,
+      muscles: [{ muscle: 'abs', name: 'Abs', text: 'estimated recovered by tomorrow', a11y: 'Abs', role: 'standard', entry: ABS }],
+    };
+    let tree;
+    act(() => {
+      tree = create(<NextInPlanCard card={card} nowMs={NOW} weekByMuscle={{ abs: ABS_WEEK }} learnedSpeed sessionSplits={{ abs: { 'w-a': { main: 3, helped: 0 } } }} />);
+    });
+    act(() => { tree.root.findAll((n) => n.props?.accessibilityLabel === 'Abs' && n.props?.onPress)[0].props.onPress(); });
+    const all = texts(tree);
+    expect(all).toEqual(expect.arrayContaining(['Recovery estimate', 'This week so far', 'Sessions counted', 'How this is estimated']));
+    expect(all).toContain('Time, sets and your recovery speed');
+    expect(all).toContain('3 sets as the main muscle worked');
   });
 });

@@ -33,6 +33,10 @@
  *   card          nextInPlan.buildNextInPlanCard's result (never null here)
  *   nowMs         the loader's own "now", so every clause agrees
  *   weekByMuscle  muscleDetail.weekFigures' result, or null
+ *   learnedSpeed  true when the recovery speed learned from the lifts is in
+ *                 use (D210), so the detail's "Based on" names it (D223)
+ *   sessionSplits buildMuscleSessionSplits' result, so the detail's sessions
+ *                 name main and helper sets as the list's do (D223)
  */
 import { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
@@ -40,13 +44,14 @@ import Text from './Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, radius, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { muscleDetailRows } from '../lib/recovery/muscleDetail';
 import { MuscleDetail } from './MuscleRecoveryList';
 
 /** The minimum touch target (docs/rules/styling.md: every interactive element at least 48 dp). */
 const TARGET = 48;
 
-export default function NextInPlanCard({ card, nowMs, weekByMuscle = null }) {
+export default function NextInPlanCard({
+  card, nowMs, weekByMuscle = null, learnedSpeed = false, sessionSplits = null,
+}) {
   const t = useTheme();
   const live = buildLiveStyles(t);
   const [openMuscle, setOpenMuscle] = useState(null);
@@ -81,13 +86,13 @@ export default function NextInPlanCard({ card, nowMs, weekByMuscle = null }) {
                 </TouchableOpacity>
                 {expanded ? (
                   <MuscleDetail
-                    lines={muscleDetailRows({
-                      muscle: line.muscle,
-                      entry: line.entry,
-                      role: line.role,
-                      week: weekByMuscle?.[line.muscle] ?? null,
-                      nowMs,
-                    })}
+                    muscle={line.muscle}
+                    entry={line.entry}
+                    role={line.role}
+                    week={weekByMuscle?.[line.muscle] ?? null}
+                    nowMs={nowMs}
+                    learnedSpeed={learnedSpeed}
+                    splits={sessionSplits?.[line.muscle]}
                   />
                 ) : null}
               </View>

@@ -30,6 +30,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   weekFigures, clockWords, clockLine, spacingLine, estimateLine, muscleDetailRows,
+  durationText, rangeText, recoveryTimeline, clockComparison, intentFor, weekPanel,
 } from '../muscleDetail';
 import { calculateWeeklyVolume } from '../../algorithms';
 import { recoveryHours } from '../constants';
@@ -234,6 +235,108 @@ describe('muscleDetailRows: the rows behind a muscle\'s estimate', () => {
           expect(`${row.label} ${row.value}`).not.toMatch(NEVER);
           expect(`${row.label} ${row.value}`).not.toContain('—');
         }
+      }
+    }
+  });
+});
+
+// D223 (founder 2026-10-11: "This data for muscles recovery looks horrendous, redesign this areas
+// make it understandable, readable and slick."): the same facts as the rows above, as figures a
+// panel draws. What this pins: each figure is the one the rows print (one clock, one band, one cap),
+// so the drawing and the words never disagree; the durations read as people say them.
+describe('D223: the figures the drawn detail reads', () => {
+  const entry = {
+    muscle: 'biceps',
+    contributingSessions: [
+      { workoutId: 'b', endMs: NOW - 144 * HOUR, sets: 6, hoursT: 48 },
+      { workoutId: 'c', endMs: NOW - 30 * HOUR, sets: 9, hoursT: 59 },
+    ],
+  };
+
+  test('durations: hours under 36, then days to the nearest half; never "0 hours"', () => {
+    expect(durationText(0)).toBe('less than an hour');
+    expect(durationText(0.4)).toBe('less than an hour');
+    expect(durationText(1)).toBe('1 hour');
+    expect(durationText(4.2)).toBe('4 hours');
+    expect(durationText(35)).toBe('35 hours');
+    expect(durationText(36)).toBe('1.5 days');
+    expect(durationText(48)).toBe('2 days');
+    expect(durationText(60)).toBe('2.5 days');
+    expect(rangeText(18, 30)).toBe('18 to 30 hours');
+    expect(rangeText(36, 60)).toBe('1.5 to 2.5 days');
+    expect(rangeText(24, 24)).toBe('24 hours');
+  });
+
+  test('the timeline is the estimate line\'s own numbers: the last session\'s clock, its band, the hours passed', () => {
+    const tl = recoveryTimeline(entry, NOW);
+    const last = entry.contributingSessions[entry.contributingSessions.length - 1];
+    expect(tl.estimateHours).toBe(last.hoursT);
+    expect(tl.passedHours).toBeCloseTo((NOW - last.endMs) / HOUR, 6);
+    expect(tl.lowHours).toBeLessThan(tl.estimateHours);
+    expect(tl.highHours).toBeGreaterThan(tl.estimateHours);
+    expect(tl.scaleHours).toBe(Math.max(tl.highHours, tl.passedHours));
+    // The line prints the same rounded figures.
+    const line = estimateLine(entry, NOW);
+    expect(line).toContain(`about ${Math.round(tl.estimateHours)} hours (range ${Math.round(tl.lowHours)} to ${Math.round(tl.highHours)})`);
+    expect(recoveryTimeline(null, NOW)).toBeNull();
+    expect(recoveryTimeline({ contributingSessions: [{ endMs: NOW - HOUR, hoursT: 0 }] }, NOW)).toBeNull();
+    // Long past the range: the scale grows to the hours passed, so the solid part never overflows.
+    const old = recoveryTimeline({ contributingSessions: [{ endMs: NOW - 9 * DAY, hoursT: 48 }] }, NOW);
+    expect(old.scaleHours).toBeCloseTo(9 * 24, 6);
+    // No clock: no hours passed, the estimate alone.
+    expect(recoveryTimeline(entry, undefined).passedHours).toBeNull();
+  });
+
+  test('the clocks compared are clockLine\'s: the muscle\'s own first, then back (or biceps for back)', () => {
+    const abs = clockComparison('abs');
+    expect(abs.map((c) => c.muscle)).toEqual(['abs', 'back']);
+    expect(abs[0].hours).toBe(clockWords('abs').hours);
+    expect(abs[1].hours).toBe(clockWords('back').hours);
+    expect(clockComparison('back').map((c) => c.muscle)).toEqual(['back', 'biceps']);
+    expect(abs[1].text).toBe('about 2.5 days');
+    expect(clockComparison('biceps')[0].text).toBe('about 2 days');
+  });
+
+  test('the intent is the rows\' own "In your plan"; a standard muscle has none', () => {
+    const week = { credit: 27, direct: 20, indirect: 14, sessionCredit: 13.5, sessionDirect: 10 };
+    expect(intentFor({ muscle: 'biceps', role: 'focus', week })).toBe('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
+    expect(intentFor({ muscle: 'abs', role: 'maintenance' })).toBe('Maintained.');
+    expect(intentFor({ muscle: 'abs', role: 'standard', week })).toBeNull();
+  });
+
+  test('the week panel: the rows\' band and cap, the bar\'s range, the session note only above the cap', () => {
+    const week = { credit: 27, direct: 20, indirect: 14, sessionCredit: 13.5, sessionDirect: 10 };
+    const focus = weekPanel({ muscle: 'biceps', role: 'focus', week });
+    const rows = muscleDetailRows({ muscle: 'biceps', entry: null, role: 'focus', week, nowMs: NOW });
+    expect(focus.bandLine).toBe(rows.find((r) => r.label === 'Band').value);
+    expect(focus.bandLabel).toBe('Focus range');
+    expect(focus.creditText).toBe('27');
+    expect(focus.mainText).toBe('20 as the main muscle worked');
+    expect(focus.helperText).toBe('14 as a helper, at half credit');
+    expect(focus.bar).toEqual({ rangeStart: 2, rangeEnd: 42, bandStart: 20, bandEnd: 30, max: 42 });
+    expect(focus.zoneText).toBe('The shaded part is the focus range, 20 to 30 sets a week.');
+    expect(focus.sessionCap).toBe(12);
+    expect(focus.sessionCapText).toBe('Limit for a focus muscle: 12 sets in one session');
+    expect(focus.flagLine).toBe(rows.find((r) => r.label === 'Session').value);
+    const standard = weekPanel({ muscle: 'biceps', role: 'standard', week: { ...week, credit: 12, sessionCredit: 6, sessionDirect: 6 } });
+    expect(standard.bandLabel).toBe('Normal growth range');
+    expect(standard.bar.bandStart).toBe(10);
+    expect(standard.bar.bandEnd).toBe(20);
+    expect(standard.sessionCap).toBe(11);
+    expect(standard.flagLine).toBeNull();
+    // A total past the studied top stretches the bar so the dot stays on it.
+    expect(weekPanel({ muscle: 'biceps', role: 'standard', week: { ...week, credit: 50 } }).bar.max).toBe(50);
+    expect(weekPanel({ muscle: 'biceps', role: 'standard', week: null })).toBeNull();
+    expect(weekPanel({ muscle: 'biceps', role: 'standard', week: { ...week, credit: 0 } })).toBeNull();
+  });
+
+  test('no figure text blames, instructs or carries an em dash (D204)', () => {
+    for (const role of ['focus', 'raised', 'standard', 'maintenance']) {
+      for (const credit of [1, 6, 12, 27, 36, 50]) {
+        const p = weekPanel({ muscle: 'biceps', role, week: { credit, direct: credit, indirect: 0, sessionCredit: credit, sessionDirect: credit } });
+        const words = [p.unit, p.mainText, p.helperText, p.bandLabel, p.bandLine, p.zoneText, p.sessionCapText, p.flagLine].filter(Boolean).join(' ');
+        expect(words).not.toMatch(NEVER);
+        expect(words).not.toContain('—');
       }
     }
   });

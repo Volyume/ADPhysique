@@ -35,7 +35,7 @@ import {
   calculateWeeklyVolume, allocateExerciseVolume, isBallisticEvidenceRow, exerciseForSet, muscleDisplayName,
 } from '../algorithms';
 import { volumeWindowBounds } from '../volumeWindow';
-import { judgeWeek } from '../volumeJudgement';
+import { judgeWeek, rangeBarFor } from '../volumeJudgement';
 import {
   ROLE, normaliseRole, roleLine, countedLine, formatSets, sessionVolumeFlag,
 } from '../plan/bands';
@@ -248,4 +248,130 @@ export function muscleDetailRows({
   const spacing = spacingLine(entry);
   if (spacing) rows.push({ label: 'Spacing', value: spacing });
   return rows;
+}
+
+/*
+ * D223 (founder, 2026-10-11, on the screenshot of the open Abs detail: "This
+ * data for muscles recovery looks horrendous, redesign this areas make it
+ * understandable, readable and slick."): the same facts as muscleDetailRows,
+ * as numbers and short strings a panel can DRAW, so the detail stops being a
+ * column of label and paragraph pairs. Each figure below is the one the lines
+ * above print (the same clock, band, judgement, cap and flag), so the drawn
+ * panel and the spoken lines can never disagree. Pure, like the rest.
+ */
+
+/** "4 hours", "1 hour", "less than an hour"; from 36 hours, days to the nearest half: "2.5 days". */
+export function durationText(hours) {
+  if (!Number.isFinite(hours) || hours < 1) return 'less than an hour';
+  if (hours < 36) {
+    const h = Math.round(hours);
+    return `${h} ${h === 1 ? 'hour' : 'hours'}`;
+  }
+  const d = daysText(hours);
+  return `${d} ${d === '1' ? 'day' : 'days'}`;
+}
+
+/** "18 to 30 hours", "1.5 to 2.5 days": both ends in the high end's unit. */
+export function rangeText(lowHours, highHours) {
+  if (highHours < 36) {
+    const lo = Math.round(lowHours);
+    const hi = Math.round(highHours);
+    return lo === hi ? `${hi} hours` : `${lo} to ${hi} hours`;
+  }
+  const lo = daysText(lowHours);
+  const hi = daysText(highHours);
+  return lo === hi ? `${hi} days` : `${lo} to ${hi} days`;
+}
+
+/**
+ * The last counted session's estimate as a timeline: the hours since it ended,
+ * the model's own clock for it (`hoursT`) with its band, and the scale a bar
+ * draws them on (the band's high end, or the hours passed when more). Null
+ * when there is no clock to draw.
+ */
+export function recoveryTimeline(entry, nowMs) {
+  const sessions = sortedSessions(entry);
+  const last = sessions[sessions.length - 1];
+  const estimateHours = Number(last?.hoursT);
+  if (!last || !Number.isFinite(estimateHours) || estimateHours <= 0) return null;
+  const band = recoveryBandHours(estimateHours) || { lowHours: estimateHours, highHours: estimateHours };
+  const passedHours = Number.isFinite(nowMs) ? Math.max(0, (nowMs - last.endMs) / HOUR_MS) : null;
+  const scaleHours = Math.max(band.highHours, passedHours ?? 0);
+  return {
+    passedHours,
+    estimateHours,
+    lowHours: band.lowHours,
+    highHours: band.highHours,
+    scaleHours,
+    passedText: passedHours === null ? null : durationText(passedHours),
+    estimateText: `about ${durationText(estimateHours)}`,
+    rangeText: rangeText(band.lowHours, band.highHours),
+  };
+}
+
+/**
+ * The muscle's own typical clock beside one other muscle's (back, or biceps for
+ * back), as the two bars of a comparison: the same clocks clockLine prints.
+ * One item when the two clocks are the same.
+ */
+export function clockComparison(muscle) {
+  const item = (key) => {
+    const own = clockWords(key);
+    const band = recoveryBandHours(own.hours) || { lowHours: own.hours, highHours: own.hours };
+    return {
+      muscle: key,
+      name: muscleDisplayName(key),
+      hours: own.hours,
+      lowHours: band.lowHours,
+      highHours: band.highHours,
+      text: `about ${durationText(own.hours)}`,
+      rangeText: rangeText(band.lowHours, band.highHours),
+    };
+  };
+  const mine = item(muscle);
+  const otherKey = muscle === 'back' ? 'biceps' : 'back';
+  const other = item(otherKey);
+  return other.hours === mine.hours ? [mine] : [mine, other];
+}
+
+/** The plan's intent for a muscle, as muscleDetailRows' "In your plan" row; null for a standard muscle. */
+export function intentFor({ muscle, role, week = null } = {}) {
+  return muscleDetailRows({ muscle, role, week }).find((r) => r.label === 'In your plan')?.value ?? null;
+}
+
+/**
+ * This week's figures as a panel draws them: the counted total, its split, the
+ * band in the one judgement's words, the bar (rangeBarFor's numbers), the most
+ * in one session against its cap, and the session note when above it. Null
+ * when no set counted this week.
+ */
+export function weekPanel({ muscle, role, week = null } = {}) {
+  if (!week || !(week.credit > 0)) return null;
+  const r = normaliseRole(role);
+  const focusLike = r === ROLE.FOCUS || r === ROLE.RAISED;
+  const shown = Math.round(week.credit);
+  const judgement = judgeWeek({ muscle, sets: shown, role: r });
+  const bar = rangeBarFor(r, week.credit);
+  const cap = focusLike ? PER_SESSION.focusFractionalCap : PER_SESSION.fractionalCap;
+  const flag = sessionVolumeFlag({ direct: week.sessionDirect, fractional: week.sessionCredit, focusCap: focusLike });
+  const direct = Number.isFinite(week.direct) && week.direct > 0 ? week.direct : 0;
+  const indirect = Number.isFinite(week.indirect) && week.indirect > 0 ? week.indirect : 0;
+  return {
+    credit: week.credit,
+    creditText: formatSets(week.credit),
+    unit: `${setsWord(week.credit)} counted`,
+    mainText: `${formatSets(direct)} as the main muscle worked`,
+    helperText: `${formatSets(indirect)} as a helper, at half credit`,
+    bandLabel: judgement.label,
+    bandLine: judgement.line,
+    bar,
+    zoneText: focusLike
+      ? `The shaded part is the focus range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`
+      : `The shaded part is the normal growth range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`,
+    sessionMost: week.sessionCredit,
+    sessionMostText: formatSets(week.sessionCredit),
+    sessionCap: cap,
+    sessionCapText: `Limit for ${focusLike ? 'a focus muscle' : 'this muscle'}: ${cap} sets in one session`,
+    flagLine: flag ? flag.line : null,
+  };
 }

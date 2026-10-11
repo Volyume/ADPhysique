@@ -661,18 +661,24 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
     loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
     recommendNextWorkout.mockReturnValue(NEXT());
+    // RE-ANCHORED D223 (founder 2026-10-11: "This data for muscles recovery looks horrendous,
+    // redesign this areas make it understandable, readable and slick."): the clock sentence is now
+    // the spoken label of two drawn bars, each printed with its own figure.
+    const clockNode = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityLabel === clockLine('biceps'));
     const tree = await render();
-    expect(texts(tree)).not.toContain(clockLine('biceps'));
+    expect(clockNode(tree)).toHaveLength(0);
     const line = tree.root.findAll((n) => typeof n.type === 'string' && /^Biceps, estimated recovered now/.test(n.props.accessibilityLabel || ''))[0];
     expect(line.props.accessibilityRole).toBe('button');
     await act(async () => { line.props.onPress(); });
     const all = texts(tree);
-    expect(all).toContain(clockLine('biceps'));
+    expect(clockNode(tree).length).toBeGreaterThan(0);
+    expect(all).toContain('about 2 days (1.5 to 2.5 days)');
+    expect(all).toContain('about 2.5 days (2 to 3 days)');
     expect(clockLine('biceps')).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
     expect(clockLine('biceps')).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
     // Tapping again closes it.
     await act(async () => { line.props.onPress(); });
-    expect(texts(tree)).not.toContain(clockLine('biceps'));
+    expect(clockNode(tree)).toHaveLength(0);
   });
 
   test('a muscle the plan raised carries its role on the card, and the founder\'s case reads inside the focus range on its row and detail', async () => {
@@ -698,7 +704,10 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     await flush();
     const all = texts(tree);
     expect(all).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
-    expect(all).toContain('27 sets counted: 20 direct and 14 indirect at half credit.');
+    // RE-ANCHORED D223: the week is drawn, the total large and the split under it.
+    expect(all).toContain('27');
+    expect(all).toContain('sets counted');
+    expect(all).toContain('20 as the main muscle worked · 14 as a helper, at half credit');
     expect(all.some((t) => /^Within your focus range for biceps: you picked it to bring up\./.test(t))).toBe(true);
     expect(all.join(' | ')).not.toMatch(/too much|overtrain|near the limit/i);
   });
