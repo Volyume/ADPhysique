@@ -42,6 +42,27 @@ Conclusion (lead ruling, recorded in the register): the rules hold together; the
 
 Q1 (F3 against 09 section 5). See the chat message of 2026-10-11 and the register entry.
 
-## 5. Citations and the map's numbers
+## 5. The map's numbers as 09 uses them (OBSERVED: each figure traced to the map files; Sonnet read pass, lead-reviewed)
 
-Sections 5 and 6 are filled from the two verification passes (citations against primary sources; every number 09 attributes to the map against the map files).
+"Now" = commit 39a1929; "9 Oct" = ddcf0a5; "3 Oct" = a7c4333. Percentages are of the 1,440 plans unless stated.
+
+Holds as stated: recovery check failing in 80% and the plan saved anyway (04:11, 00:56); 37% with the same muscle 24 h apart, abs 406, side delts 148, calves 145 plans (04:13, 05:159-168); 25% with overhead pressing in two or more sessions (04:16); the 6-set overhead press and the thin-equipment +2 cap (05:228, 01:1515); the 1.10 front-delt overlay (01:384); 74% with the same exercise in neighbouring sessions, any gap (04:14); focus-first ordering (01:803, 01:1576); biceps 24 against a peak of 22 from uncapped credits (01:798, 01:1481); 240 of 240 below floor in barbell-and-plates and bodyweight kits, side delts in every one (04:52-53); the clash term about 1000 times the recovery terms (01:1505); the 26% figure for the 3 Oct generator (05:29).
+
+Holds with a qualifier:
+- "79-80% over 8 exercises / 25 sets or over length" is two separate measures (79% and 80%); either one: 1,295 of 1,440 (90%).
+- 9.3 exercises a session and 109 sets a week are means; 221 minutes is one plan (bodybuilding, 2 days, 45 minutes, three focus picks).
+- Front delts pressed back-to-back 46% (men's physique 77%) counts bench and incline presses and any gap; at 24 h apart it is 6%.
+- 288 of 288 two-day plans with the same muscle back-to-back: any gap, and every 2-day plan is full body; the map reads that as ordinary full-body training and uses the 24 h figure (0) as the recovery measure (05:15). The 3-day figure is the same. 09's rule changes 2- and 3-day plans to splits for exactly this reason (F5).
+- "Only 8 orders examined" is the readiness step; the order search scores every permutation (01 section 6.9).
+- The 10-set lateral raise and 11-set hip thrust are the older generator's plan served through the uncapped multiplier on the no-facts path (02:684, P17), not post-build paths in general.
+- Abs absent in men's physique 4-day is today's older generator (02:686); the 3 Oct generator's plan has abs (05:178).
+
+Not in the map (09's inference, plausible, to be confirmed by the checker in phase 2): no variety check; a silent beginner clamp causing beginner 45 min = intermediate 60 min (one sample pair, 03:2245 and 03:2897); "no lateral-raise pattern in those kits" (confirmed separately: section 2, R5); catalogue role order putting bench first in bikini upper sessions.
+
+Wrong: "4x4 leg compounds in library plans": library plans carry squat 4, leg press 3, RDL 3 (02:527-541); four leg compounds at 4 sets is the new planner's own men's physique plan (02:214-217). The wrap-around pair cannot explain the 26% (the measure puts the wrap pair at 72 h).
+
+R6 (added): rest floors. 09 says keep today's rest ladder (section 10) but its section 5 table gives different floors (heavy compound 120 s, moderate 90, machine 75, isolation 60) from today's (150, 120, 90, 60; 06:58). Lead ruling: 09's table governs; it is explicit and graded (isolation floor from Singer 2024).
+
+## 6. Citations against primary sources
+
+Filled from the citation pass.
