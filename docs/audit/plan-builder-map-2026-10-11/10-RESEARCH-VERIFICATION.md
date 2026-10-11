@@ -63,6 +63,18 @@ Wrong: "4x4 leg compounds in library plans": library plans carry squat 4, leg pr
 
 R6 (added): rest floors. 09 says keep today's rest ladder (section 10) but its section 5 table gives different floors (heavy compound 120 s, moderate 90, machine 75, isolation 60) from today's (150, 120, 90, 60; 06:58). Lead ruling: 09's table governs; it is explicit and graded (isolation floor from Singer 2024).
 
-## 6. Citations against primary sources
+## 6. Citations against primary sources (OBSERVED: abstracts via Europe PMC and publisher pages, full texts where open; Sonnet pass, lead-reviewed)
 
-Filled from the citation pass.
+17 of 19 VERIFIED as 09 states them; 2 PARTIAL; none fabricated or contradicted.
+
+VERIFIED: Pelland 2026 (67 studies, 2,058 participants, fractional counting strongest, frequency "compatible with negligible effects", efficiency tiers in its Table 3; the frequency slope was positive with 91.3% probability, so negligible is compatible, not proven); Remmert 2025 preprint (~2 direct / ~11 fractional per session); Robinson 2024; Refalo 2024 (J Sports Sci 42:85-101); Moran-Navarro 2017; Singer 2024 (benefit above 60 s, no appreciable difference above 90 s); Miller 2005; Kassiano 2022; Coleman 2024; Bell 2023 (Delphi, no duration numbers in the abstract); Rogerson 2024 (6.4 +/- 1.7 days every 5.6 +/- 2.3 weeks, frequency kept, volume cut); Siewe 2014 (every figure); Kolber 2014 (every figure); Campos 2020 (every figure; bench drives the front delt at 21.4% MVIC); Baz-Valle et al. 2026, Sports 14(1):20 (the "Spanish natural elite bodybuilders" survey, n = 56); NPC men's physique and bikini judging text.
+
+PARTIAL:
+- Lanza 2024 (J Bodyw Mov Ther 40:1417-22) is real and matches the design (10-week bench-only RCT, MRI). The quoted sentence comparing the pectoralis major with the anterior deltoid is not in the abstract and the full text was not reachable; the abstract reports the anterior deltoid grew against control and the medial deltoid least. The rule it supports (no mandatory direct front-delt work) also rests on Campos 2020 and stands at grade C.
+- da Silveira 2025 (Front Sports Act Living 7:1536360) is real (n = 154), but "split routines (85.5%), 4-7 sessions, twice weekly, 60-90 min" is background in its introduction, cited to Hackett 2013 and 2022 (male bodybuilder surveys), not its own result.
+
+Limits on how 09 uses sources, with rulings:
+- Remmert's ~11 fractional sets: the authors say these "are not upper limits" and to interpret cautiously. 09 uses 11 as a hard per-session cap. Ruling: kept as a hard cap as a deliberate conservative design limit under F6 and the founder's conservative posture (GC-D12), labelled in the rulebook as a design limit drawn from a preprint, not an evidence-proven ceiling.
+- Kolber's "not associated" lifts (bench, dips, behind-the-neck) were non-significant in a small cross-sectional sample: not proof of safety. No rule depends on them being safe; 09's joint rules restrict, never permit.
+- Siewe found no effect of session duration on injury; it does not support a length cap. 09's session limits are graded D and stay as design limits.
+- Kassiano supports avoiding excessive rotation; it does not show that fixing exercises for a whole block is better. The fixed-for-the-block rule stays at grade D (design).
