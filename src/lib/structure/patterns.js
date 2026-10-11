@@ -117,13 +117,13 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Cable Straight-Arm Pulldown', reason: 'Works the lats with straight arms, a second angle to a pulldown.', grade: 'D' },
     { name: 'Cable Lat Pullover', reason: 'Works the lats with straight arms, a second angle to a pulldown.', grade: 'D' },
     // 09 B11: "Dumbbells-only, men's physique 4d: pullover + one-arm row".
-    { name: 'Straight-Arm Dumbbell Pullover', reason: 'Works the lats with straight arms, the lat exercise a dumbbell-only kit has.', grade: 'D' },
+    { name: 'Straight-Arm Dumbbell Pullover', reason: 'Works the lats with straight arms, a second angle to a row.', grade: 'D' },
   ]),
   lateral: Object.freeze([
-    { name: 'Seated Lateral Raise', reason: 'A seated lateral raise, a second variant where the kit has only dumbbells.', grade: 'D' },
-    { name: 'Leaning Lateral Raise', reason: 'A lateral raise leaning away from a support, a second dumbbell variant.', grade: 'D' },
-    { name: 'Plate Lateral Raise', reason: 'A lateral raise holding a plate, for a kit with no dumbbells or cables.', grade: 'D' },
-    { name: 'Band Lateral Raise', reason: 'A lateral raise with a band, for a kit with no weights.', grade: 'D' },
+    { name: 'Seated Lateral Raise', reason: 'A lateral raise sitting down, so the body stays still.', grade: 'D' },
+    { name: 'Leaning Lateral Raise', reason: 'A lateral raise leaning away from a support, hardest near the top.', grade: 'D' },
+    { name: 'Plate Lateral Raise', reason: 'A lateral raise holding a plate.', grade: 'D' },
+    { name: 'Band Lateral Raise', reason: 'A lateral raise with a band.', grade: 'D' },
   ]),
   // A chest-supported row trains the upper back without loading the spine
   // (09 B2 joint tags), so a barbell kit need not pair a bent-over row with
@@ -134,19 +134,24 @@ export const SUPPLEMENTS = Object.freeze({
     { name: 'Chest-Supported Row (Barbell)', reason: 'A row with the chest supported, so the lower back is not loaded.', grade: 'D' },
   ]),
   hinge: Object.freeze([
-    { name: 'Stiff-Leg Deadlift (Dumbbell)', reason: 'A second hip hinge for the hamstrings where the kit has only dumbbells.', grade: 'D' },
+    { name: 'Stiff-Leg Deadlift (Dumbbell)', reason: 'A hip hinge for the hamstrings with straight legs.', grade: 'D' },
     { name: 'Single-Leg Romanian Deadlift (DB)', reason: 'A one-leg hip hinge for the hamstrings with dumbbells.', grade: 'D' },
-    { name: 'Stiff-Leg Deadlift', reason: 'A second hip hinge for the hamstrings with a barbell.', grade: 'D' },
+    { name: 'Stiff-Leg Deadlift', reason: 'A hip hinge for the hamstrings with straight legs.', grade: 'D' },
+  ]),
+  // R41: a dumbbell or home kit's elbow extension with the arm at the side,
+  // so triceps are not held to the two overhead patterns' elbow cap.
+  pushdown: Object.freeze([
+    { name: 'Tricep Kickback', reason: 'Straightens the elbow with the arm at your side, for the triceps.', grade: 'D' },
   ]),
   // A kit with no bar to hang from still trains the lower abs (R16, user
   // audit: hanging raises are offered only where there is a bar).
   leg_raise: Object.freeze([
-    { name: 'Reverse Crunch', reason: 'Curls the hips up off the floor for the lower abs, no bar needed.', grade: 'D' },
-    { name: 'Leg Raise', reason: 'Raises straight legs lying on the floor for the lower abs, no bar needed.', grade: 'D' },
+    { name: 'Reverse Crunch', reason: 'Curls the hips up off the floor for the lower abs.', grade: 'D' },
+    { name: 'Leg Raise', reason: 'Raises straight legs lying on the floor for the lower abs.', grade: 'D' },
   ]),
   leg_curl: Object.freeze([
-    { name: 'TRX Hamstring Curl', reason: 'A hamstring curl with suspension straps, for a kit with no leg curl machine.', grade: 'D' },
-    { name: 'Slider Leg Curl (Bodyweight)', reason: 'A hamstring curl on sliders, for a kit with no machines.', grade: 'D' },
+    { name: 'TRX Hamstring Curl', reason: 'A hamstring curl with suspension straps.', grade: 'D' },
+    { name: 'Slider Leg Curl (Bodyweight)', reason: 'A hamstring curl on sliders.', grade: 'D' },
   ]),
 });
 
@@ -220,6 +225,10 @@ const TWINS = Object.freeze({ 'Seated Machine Calf Raise': 'Seated Calf Raise' }
 // fresh name won over the loaded cable abduction).
 const UNLOADED = new Set(['Clamshell (Side-Lying)', 'Band Standing Hip Abduction']);
 const NEEDS_BAR = /^hanging /i;
+// R41 (coach audit 3): the dumbbell pullover is the straight-arm lat movement
+// for kits without a cable; where the kit has a cable one, a gym's second
+// back day takes it instead.
+const NO_CABLE_ONLY = new Set(['Straight-Arm Dumbbell Pullover']);
 
 const SUPPLEMENT_SOURCE = 'Added by the rulebook so this muscle can be trained with your equipment (register D222, R16)';
 const HEAVY_CATEGORIES = new Set(['barbell', 'landmine']);
@@ -360,8 +369,10 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
   for (const [p, list] of Object.entries(byPattern)) {
     const names = new Set(list.map((c) => c.name));
     const loaded = list.some((c) => !UNLOADED.has(c.name));
+    const cable = list.some((c) => /cable/i.test(c.name));
     byPattern[p] = list.filter((c) => !(TWINS[c.name] && names.has(TWINS[c.name]) && !(c.logged && !list.find((o) => o.name === TWINS[c.name]).logged)))
-      .filter((c) => !(loaded && UNLOADED.has(c.name) && !c.logged));
+      .filter((c) => !(loaded && UNLOADED.has(c.name) && !c.logged))
+      .filter((c) => !(cable && NO_CABLE_ONLY.has(c.name) && !c.logged));
     byPattern[p].sort((a, b) => Number(b.logged) - Number(a.logged));
   }
 

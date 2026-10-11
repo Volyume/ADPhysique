@@ -205,11 +205,15 @@ export const REST_SECONDS = Object.freeze({
 // deadlift never opens ahead of a 4-set leg press; and an upper-body machine
 // compound (a machine press or row) rests as a moderate compound.
 export const HEAVY_REST_MACHINE_PATTERNS = Object.freeze(['squat_machine', 'hip_thrust']);
+/** The rest class of an exercise: the REST_SECONDS row it rests by (R29, R37). */
+export function restClassFor(kind, pattern) {
+  if (kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern)) return 'heavy_compound';
+  if (kind === 'machine' && PATTERNS[pattern] && PATTERNS[pattern].kind === 'compound') return 'mod_compound';
+  return kind;
+}
 /** The rest default and floor for an exercise of this kind and pattern. */
 export function restSecondsFor(kind, pattern) {
-  if (kind === 'machine' && HEAVY_REST_MACHINE_PATTERNS.includes(pattern)) return REST_SECONDS.heavy_compound;
-  if (kind === 'machine' && PATTERNS[pattern] && PATTERNS[pattern].kind === 'compound') return REST_SECONDS.mod_compound;
-  return REST_SECONDS[kind];
+  return REST_SECONDS[restClassFor(kind, pattern)];
 }
 /** The kind an exercise ranks as in a session's order (C17; R37). */
 export function orderKindFor(kind, pattern) {
@@ -598,6 +602,7 @@ export const EVIDENCE = Object.freeze({
   HEAVY_REST_MACHINE_PATTERNS: 'D: coaching consensus for loaded lower-body compounds; lead ruling R29 (register D222).',
   restSecondsFor: 'D: 09 s5 rest table with R29 and R37 (register D222).',
   orderKindFor: 'D: 09 s7 order with R37 (register D222).',
+  restClassFor: 'D: 09 s5 rest table with R29, R37 and R43 (register D222).',
   REP_RANGES: 'D: 09 B11.',
   REST_TRIM_ORDER: 'D: 09 s5 step 2; founder F3 (rest shortened first).',
   TIME_MODEL: 'D: kept from the map (allocate.js sessionMinutes); tolerance from Q1 = C (register D222).',

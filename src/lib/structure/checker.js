@@ -258,19 +258,34 @@ export function checkPlan(plan, opts = {}) {
 }
 
 /**
- * C5: adding focus never takes sets from another muscle. Compares the focus
- * plan's peak weekly direct sets for every other muscle with the same plan
- * built without focus.
+ * C5 (R46, register D222): adding focus never takes another muscle below its
+ * standard. Founder F2: the category's standard routine is always kept and
+ * focus adds on top; the standard is the category minimum (Q1 = C), and 09
+ * B8 ranks focus additions above growth beyond it. Compares the focus plan
+ * with the same plan built without focus, at the peak week: a muscle that
+ * loses sets keeps its minimum, and a priority or standard muscle its own
+ * sets at half of it (R27); nothing is taken from a muscle of a higher tier
+ * than every focus pick (R36); and the week never loses sets.
  */
 export function checkFocusAgainstBaseline(plan, baseline) {
   const failures = [];
   const peak = PROGRESSION.peakWeek;
   const withFocus = weeklyLoad(plan, peak);
   const without = weeklyLoad(baseline, peak);
+  const focus = plan.focus || [];
+  const rank = (m) => ['P', 'S', 'M', 'I'].indexOf(tierOf(plan.category, m));
+  const topFocus = focus.length ? Math.min(...focus.map(rank)) : -1;
   for (const [m, v] of Object.entries(without)) {
-    if ((plan.focus || []).includes(m)) continue;
-    const now = (withFocus[m] || { direct: 0 }).direct;
-    if (now < v.direct) failures.push({ code: 'C5', muscle: m, detail: `${m} ${v.direct} to ${now} direct sets when focus was added` });
+    if (focus.includes(m)) continue;
+    const now = withFocus[m] || { direct: 0, fractional: 0 };
+    if (now.direct >= v.direct) continue;
+    const min = weeklyMin(plan.category, m, plan.days, plan.experience);
+    const t = tierOf(plan.category, m);
+    if (now.fractional < min) failures.push({ code: 'C5', muscle: m, detail: `${m} ${v.direct} to ${now.direct} direct sets when focus was added, below its minimum of ${min}` });
+    else if ((t === 'P' || t === 'S') && now.direct < Math.ceil(min / 2)) failures.push({ code: 'C5', muscle: m, detail: `${m} ${now.direct} own sets when focus was added, below half its minimum` });
+    else if (rank(m) < topFocus) failures.push({ code: 'C5', muscle: m, detail: `${m} gave ${v.direct - now.direct} sets to a focus of a lower tier` });
   }
+  const total = (w) => Object.values(w).reduce((s, v) => s + v.direct, 0);
+  if (total(withFocus) < total(without)) failures.push({ code: 'C5', detail: `the week went from ${total(without)} to ${total(withFocus)} direct sets when focus was added` });
   return { ok: failures.length === 0, failures };
 }

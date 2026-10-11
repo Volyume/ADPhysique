@@ -8,18 +8,20 @@
  *   a next-day exception held at RIR 2 or more (R1);
  * - every plan the engine returns passes the full checker;
  * - same inputs, same plan (C19);
- * - focus only ever adds (C5);
+ * - focus keeps every other muscle at its standard and the week its sets
+ *   (C5, R46);
  * - the clock never removes a set (founder Q1 = C): the same plan at every
  *   length, rest shortened first, and a choice asked for past the
  *   tolerance;
  * - men's physique: one leg day, no overhead pressing (F4, J1);
  * - a week the rules cannot hold is refused with the days that would;
  * - the rulings from the coach and user audits of the rendered plans
- *   (register D222, R24 to R31).
+ *   (register D222, R24 to R31), and from the code review and third coach
+ *   audit (R39 to R46; the matrix-wide ones are pinned in gate.test.js).
  */
 import { buildStructurePlan, weeksFor, weeklyTargets } from '../engine';
 import { checkPlan, checkFocusAgainstBaseline } from '../checker';
-import { PROGRESSION, TIME_MODEL, PATTERNS } from '../rulebook';
+import { PROGRESSION, TIME_MODEL, PATTERNS, TIERS } from '../rulebook';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
 
@@ -80,7 +82,7 @@ describe("men's physique 4 days, full gym", () => {
   });
 });
 
-describe('focus only ever adds (C5)', () => {
+describe('focus keeps every other muscle at its standard and the week its sets (C5, R46)', () => {
   test.each([
     ['mens_physique', ['side_delts']],
     ['mens_physique', ['biceps', 'side_delts', 'biceps']],
@@ -297,3 +299,51 @@ describe('the second audits (R32 to R38)', () => {
   });
 });
 
+describe('the code review and third coach audit (R39 to R45)', () => {
+  const plain = (goal, days, over = {}) => build({ goal, days, lengthMinutes: 60, ...over });
+  const week = (r) => r.plan.sessions.map((s) => `${s.key}:${s.exercises.map((ex) => `${ex.name}x${ex.peak}@${ex.restSec}`).join(',')}`);
+
+  test('R40: the start turns the finished week; any whole number is read round the cycle, anything else as session 1', () => {
+    const base = plain('mens_physique', 5);
+    const at = (startIndex) => week(plain('mens_physique', 5, { startIndex }));
+    const turned = (k) => week(base).map((_, i) => week(base)[(i + k) % 5]);
+    expect(at(2)).toEqual(turned(2));
+    expect(at(7)).toEqual(turned(2));
+    expect(at(-1)).toEqual(turned(4));
+    expect(at(1.5)).toEqual(week(base));
+    expect(at('2')).toEqual(week(base));
+    const r = plain('mens_physique', 5, { startIndex: 3 });
+    expect(r.report.minutes).toEqual(base.report.minutes.map((_, i) => base.report.minutes[(i + 3) % 5]));
+    expect(checkPlan(r.plan).ok).toBe(true);
+  });
+
+  // R46: a full week (general 4 days: both upper sessions at 24 sets) used
+  // to give a chest focus nothing. The focus now takes room above other
+  // muscles' standard, the lowest tier first, never from a higher tier or
+  // another pick, and the plan names who gave.
+  test('R46: in a full week a focus takes room above the standard, from its own tier or lower, and says so', () => {
+    const rankOf = (goal, m) => ['P', 'S', 'M'].indexOf(TIERS[m][goal]);
+    for (const [goal, days, focus] of [['general', 4, ['chest']], ['mens_physique', 4, ['side_delts']], ['bikini', 4, ['glute_max']], ['classic_physique', 5, ['lats']]]) {
+      const base = plain(goal, days);
+      const r = plain(goal, days, { focus });
+      const m = focus[0];
+      expect([goal, r.ok]).toEqual([goal, true]);
+      expect(checkFocusAgainstBaseline(r.plan, base.plan).failures).toEqual([]);
+      expect(checkPlan(r.plan).ok).toBe(true);
+      for (const x of r.report.focusTook) {
+        expect([goal, x.muscle, x.to >= x.minimum, rankOf(goal, x.muscle) >= rankOf(goal, m)]).toEqual([goal, x.muscle, true, true]);
+      }
+      if (goal === 'general') {
+        expect(r.report.weekly.chest.sets).toBeGreaterThan(base.report.weekly.chest.sets);
+        expect(r.report.focusTook.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test('R45: an experience level the rulebook does not know is refused; none given means intermediate', () => {
+    const r = plain('general', 4, { experience: 'expert' });
+    expect(r.ok).toBe(false);
+    expect(r.refusal.reason).toBe('experience_unknown');
+    expect(week(plain('general', 4, { experience: undefined }))).toEqual(week(plain('general', 4, { experience: 'intermediate' })));
+  });
+});

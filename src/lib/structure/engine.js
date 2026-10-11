@@ -8,15 +8,29 @@
  * never removes a set; rest is shortened first; a session still more than
  * 5 minutes over asks for a longer session or more days).
  *
- * HOW SETS ARE PLACED (S5). In three passes, each a round robin over the
- * muscles in priority order (P, then S, then M; focus first within a tier;
- * then the rulebook muscle order):
- *   A. every muscle up to its category minimum (09 s3), which is HARD: a
- *      muscle the kit can train that cannot reach it refuses the build;
- *   B. every muscle up to its normal volume (typical, scaled by experience),
- *      inside the hard limits, never by the clock (Q1 = C);
- *   C. focus picks up to typical + 4 (cap 20), last, so a focus pick can
- *      only take capacity no other muscle could use (C5).
+ * HOW SETS ARE PLACED (S5). The plain week first, the same with or without
+ * focus, then focus on top (R39). In order:
+ *   P0. every session's core and every muscle's first exercise of its own;
+ *   A. every priority or standard muscle's own sets up to half its minimum
+ *      (R27), then every muscle up to its category minimum (09 s3), both
+ *      HARD: a muscle the kit can train that cannot reach them refuses the
+ *      build; then arms' and rear delts' own sets towards their minimum;
+ *   B. normal volume (typical, scaled by experience) by tier, P, S, then M
+ *      (R36), inside the hard limits, never by the clock (Q1 = C);
+ *   then pulling to match pressing (S3), every session worth the trip (S5),
+ *      sets moved inside a session to where they are needed (R44), the
+ *      order inside each session, and abs, calves and single sets moved
+ *      between sessions only where that makes the week fit the length (R28,
+ *      R44);
+ *   C. focus picks up to typical + 4 (cap 20), last, on the finished week
+ *      (R39): first into free room, then into room other muscles give from
+ *      above their standard, their own tier or lower, the lowest first
+ *      (R46, C5); pulling then matches added pressing and hamstrings half
+ *      of added quads, and what the week cannot hold is reported.
+ * After that nothing changes a set: a next-day light dose the next session
+ * does not need is trained as normal (R42), and rest is shortened by rest
+ * class until each session fits (R43). The week is built from session 1 and
+ * turned to the person's start (R40).
  * Every step is one set on an existing exercise or a new exercise of two
  * sets, in a session the template lists the muscle in. A step is kept only
  * when the checker, run on the peak week, finds no new fault. Credits are
@@ -29,11 +43,11 @@ import {
   MUSCLES, PATTERNS, TIERS, VOLUME, FOCUS, EXPERIENCE, FAST_MUSCLES, LARGE_MUSCLES,
   SESSION_LIMITS, REP_RANGES, REST_TRIM_ORDER, TIME_MODEL,
   PROGRESSION, TEMPLATES, DAY_COUNTS, OPT_IN_MUSCLES, SIBLING_MUSCLES, CREDIT_FRACTION, rulebookCategory,
-  restSecondsFor, orderKindFor, PER_SESSION,
+  restSecondsFor, restClassFor, orderKindFor, PER_SESSION, LIGHT_DOSE,
 } from './rulebook';
 import { structureChoices, variantOf } from './patterns';
 import { checkPlan, weeklyMax, weeklyMin } from './checker';
-import { weeklyLoad, sessionMinutes } from './measure';
+import { weeklyLoad, sessionMinutes, sessionLoad, isTrained } from './measure';
 import { senseCheck } from './sense';
 
 // The patterns that train each muscle, in preference order (09 B2 and the
@@ -224,14 +238,21 @@ function buildWith(args, strategy) {
     return { ok: false, refusal: { reason: 'days_out_of_range', detail: `the rulebook covers 2 to 6 days, not ${days}` } };
   }
   const equipment = args.equipment || 'full_gym';
-  const experience = EXPERIENCE[args.experience] ? args.experience : 'intermediate';
+  // R45: none given means intermediate; a value the rulebook does not know
+  // is refused, never read silently as intermediate.
+  if (args.experience != null && !EXPERIENCE[args.experience]) {
+    return { ok: false, refusal: { reason: 'experience_unknown', detail: `the rulebook has no experience level "${args.experience}"` } };
+  }
+  const experience = args.experience == null ? 'intermediate' : args.experience;
   const beginner = experience === 'beginner';
   const { focus, ignored: focusIgnored, dropped: focusDropped } = normaliseFocus(category, args.focus);
 
   // S1: the template, started where asked (a cyclic shift, never a reorder).
   const template = TEMPLATES[category][days];
-  const start = ((args.startIndex || 0) % days + days) % days;
-  const order = template.map((_, i) => template[(i + start) % days]);
+  // R40: always built from session 1; buildStructurePlan rotates the
+  // finished week to where the person starts, so the start can never change
+  // whether a week builds or what it holds.
+  const order = [...template];
 
   // S4 inputs: what the kit carries.
   const kit = structureChoices({ library: args.library, profile: equipment, loggedExerciseNames: args.loggedExerciseNames });
@@ -245,6 +266,9 @@ function buildWith(args, strategy) {
     category, days, equipment, experience, focus: [],
     lengthMinutes: args.lengthMinutes,
     untrainable: kit.untrainable.filter((m) => targets[m]),
+    // S11 reads what the kit offers; set from the start so every sense
+    // check during the build sees it.
+    kitOffer: offer,
     // R32 (register D222): a muscle the kit gives exactly one exercise of
     // its own is held to what that exercise can carry (09 s7 anticipates
     // single-pattern kits with its 5-set allowance); a shortfall is
@@ -260,7 +284,10 @@ function buildWith(args, strategy) {
   // A next-day muscle in a session whose next session also lists it must be
   // a light dose there (09 s4, R1): isolation only, at most 4 direct sets,
   // held at RIR 2 or more all block.
-  const mustBeLight = lists.map((muscles, i) => new Set(muscles.filter((m) => FAST_MUSCLES.includes(m) && lists[(i + 1) % n].includes(m) && n > 1)));
+  // R42: only when the next session can hold the muscle at all: a kit with a
+  // single exercise for it can never put it in two neighbouring sessions
+  // (C16), so the dose would be held back for nothing.
+  const mustBeLight = lists.map((muscles, i) => new Set(muscles.filter((m) => FAST_MUSCLES.includes(m) && lists[(i + 1) % n].includes(m) && n > 1 && (offer.names[m] || 0) >= 2)));
   const visitsOf = (m) => lists.map((l, i) => (l.includes(m) ? i : -1)).filter((i) => i >= 0);
 
   const maxSetsFor = (m) => {
@@ -332,7 +359,9 @@ function buildWith(args, strategy) {
     const own = s.exercises.filter((ex) => ex.muscle === m);
     const out = [];
     // R25: above the minimum a beginner's session keeps 09's beginner limits.
-    const setCap = growth && beginner ? Math.min(maxSetsFor(m), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(m);
+    let setCap = growth && beginner ? Math.min(maxSetsFor(m), SESSION_LIMITS.beginnerGrowthSetsPerExercise) : maxSetsFor(m);
+    // A light dose is at most 4 direct sets (09 s4; R42).
+    if (light) setCap = Math.min(setCap, LIGHT_DOSE.maxDirectSets);
     const exerciseCap = growth && beginner ? SESSION_LIMITS.beginnerGrowthExercises : maxExercises;
     for (const ex of own) {
       if (ex.peak < setCap) out.push({ type: 'inc', m, si, ex, pattern: ex.pattern, sets: 1 });
@@ -357,12 +386,22 @@ function buildWith(args, strategy) {
       // names rotate by visit so two visits differ. Either way a name not yet
       // in the week comes before one that is, so a muscle's A and B sessions
       // use different exercises wherever the kit has them (09 s7).
+      // R41: the person's own logged exercise first, then the catalogue's
+      // names, the kit's stand-ins and the rulebook's supplements, in that
+      // order in every kit; only within a source do the rotation and the
+      // week's freshness choose.
       const lowFatigue = tier === 'M' || (LOW_FATIGUE_NAMES[category] || []).includes(m);
-      const rotatedNames = lowFatigue
-        ? [...names].sort((a, b) => (KIND_FATIGUE[a.kind] - KIND_FATIGUE[b.kind]))
-        : names.map((_, i) => names[(i + Math.max(0, v)) % names.length]);
+      const group = (c) => (c.from === 'thin_kit' ? 1 : c.from === 'supplement' ? 2 : 0);
+      const rotatedNames = [0, 1, 2].flatMap((g) => {
+        const list = names.filter((c) => group(c) === g);
+        return lowFatigue
+          ? [...list].sort((a, b) => (KIND_FATIGUE[a.kind] - KIND_FATIGUE[b.kind]))
+          : list.map((_, i) => list[(i + Math.max(0, v)) % list.length]);
+      });
       const fresh = (c) => (inWeek.has(c.exerciseId || c.name) ? 1 : 0);
-      const ordered = rotatedNames.map((c, i) => ({ c, i })).sort((a, b) => (fresh(a.c) - fresh(b.c)) || (a.i - b.i)).map((x) => x.c);
+      const ordered = rotatedNames.map((c, i) => ({ c, i }))
+        .sort((a, b) => (Number(!!b.c.logged) - Number(!!a.c.logged)) || (group(a.c) - group(b.c)) || (fresh(a.c) - fresh(b.c)) || (a.i - b.i))
+        .map((x) => x.c);
       const choices = ordered.filter((c) => !near.has(c.exerciseId || c.name) && !sessionVariants.has(variantOf(p, c.name)));
       return choices.length ? { pattern: p, choices } : null;
     };
@@ -467,6 +506,8 @@ function buildWith(args, strategy) {
   // share (user and coach audits: general 2 days left chest at its minimum
   // while a second row took a slot); `overflowSiblings`: the muscles whose
   // sessions a muscle short of its goal may join (R22, R30).
+  const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+  const posOf = (a) => (a.ex ? plan.sessions[a.si].exercises.indexOf(a.ex) : plan.sessions[a.si].exercises.length);
   // `incOnly`: only more sets on exercises already there (R38, beginners);
   // `protect`: muscles a repair may never take a set from (R36: a lower
   // tier's pass never takes from a higher tier's normal volume);
@@ -474,9 +515,8 @@ function buildWith(args, strategy) {
   // stays inside it (R36, the refill after R28's moves).
   const fill = (goalOf, muscles, {
     allowOverflow = false, allowRepair = true, direct = false, fair = false, overflowSiblings = null,
-    incOnly = false, protect = null, limitMinutes = null,
+    incOnly = false, protect = null, limitMinutes = null, byTier = false, noLoss = false, guardSense = false,
   } = {}) => {
-    const blocked = new Set();
     const refused = new Set();
     const stepKey = (a) => `${a.type}|${a.si}|${a.m}|${a.pattern}|${a.ex ? a.ex.id : ''}`;
     for (;;) {
@@ -485,7 +525,7 @@ function buildWith(args, strategy) {
       const level = (m) => (direct ? own[m] || 0 : (weekly[m] || {}).fractional || 0);
       const deficit = {};
       for (const m of muscles) deficit[m] = Math.max(0, goalOf(m) - level(m));
-      const wanting = muscles.filter((m) => deficit[m] > 0 && !blocked.has(m));
+      const wanting = muscles.filter((m) => deficit[m] > 0);
       if (!wanting.length) break;
       const actions = [];
       for (const m of wanting) for (const si of visitsOf(m)) actions.push(...actionsFor(m, si).filter((a) => (!incOnly || a.type === 'inc') && !refused.has(stepKey(a))));
@@ -502,7 +542,10 @@ function buildWith(args, strategy) {
         || (directIn(a.si, a.m) - directIn(b.si, b.m))
         || (a.si - b.si)
         || ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1))
-        || ((a.patternIndex || 0) - (b.patternIndex || 0)));
+        || ((a.patternIndex || 0) - (b.patternIndex || 0))
+        // R45: an exact tie falls to position, never to the sort's stability
+        // (the app runs on Hermes, the tests on V8).
+        || (posOf(a) - posOf(b)) || cmp(a.pattern, b.pattern) || cmp(a.m, b.m));
       let done = false;
       for (const a of actions) {
         if (valueOf(a, deficit, direct) <= 0) break;
@@ -536,7 +579,7 @@ function buildWith(args, strategy) {
       }
       if (!opened) break;
     }
-    if (allowRepair) repair(goalOf, muscles, protect);
+    if (allowRepair) repair(goalOf, muscles, protect, byTier, noLoss, guardSense);
     const weekly = weeklyLoad(plan, peak);
     const own = directWeek();
     return muscles.filter((m) => (direct ? own[m] || 0 : (weekly[m] || {}).fractional || 0) < goalOf(m));
@@ -548,7 +591,18 @@ function buildWith(args, strategy) {
   // every muscle that exercise counts for stays at or above its own goal.
   // The freed room is kept only if the short muscle then gains a set; so a
   // repair never leaves any muscle below its goal to pay for another.
-  function repair(goalOf, muscles, protect = null) {
+  // `protect(donor, short)`: a muscle that may not give to the short one;
+  // `byTier`: the lowest tier gives first (R46, focus); `noLoss`: the short
+  // muscle takes every set given, so the week never loses one (C5, R46);
+  // `guardSense`: a step that breaks a sense check is undone (a beginner's
+  // only leg curl given to a glute focus left hamstrings without a curl,
+  // S11). Pressing against pulling and quads against hamstrings are left to
+  // the focus phase, which raises the other side after the fill, and abs
+  // last (S9) to the session order, which runs after it.
+  function repair(goalOf, muscles, protect = null, byTier = false, noLoss = false, guardSense = false) {
+    const quietSense = () => new Set(senseCheck(plan).failures.filter((f) => !['S3', 'S4', 'S9', 'S12'].includes(f.code))
+      .map((f) => `${f.code}|${f.session || ''}|${f.muscle || ''}|${f.week || ''}`));
+    const senseBefore = guardSense ? quietSense() : null;
     const goalAll = (m) => (muscles.includes(m) ? goalOf(m) : (targets[m] ? Math.min(goalOf(m) || 0, targets[m].min) : 0));
     for (let guard = 0; guard < 200; guard += 1) {
       const weekly = weeklyLoad(plan, peak);
@@ -568,7 +622,7 @@ function buildWith(args, strategy) {
             return !!group && s.exercises.filter((y) => group.includes(y.muscle)).length <= 1;
           };
           const donors = s.exercises
-            .filter((ex) => ex.muscle !== m && !(protect && protect(ex.muscle)))
+            .filter((ex) => ex.muscle !== m && !(protect && protect(ex.muscle, m)))
             .map((ex) => ({ ex, take: ex.peak > SESSION_LIMITS.setsPerExerciseMin ? 1 : ex.peak }))
             .filter(({ ex, take }) => !(take === ex.peak && protectedEx(ex)))
             // R34: a repair never takes a muscle's own sets below its floor,
@@ -578,7 +632,8 @@ function buildWith(args, strategy) {
               < (CREDIT_FED.includes(ex.muscle) ? targets[ex.muscle].min : ownFloor(ex.muscle))))
             .filter(({ ex, take }) => fr(ex.muscle) - take >= goalAll(ex.muscle)
               && PATTERNS[ex.pattern].credits.every((c) => fr(c) - CREDIT_FRACTION * take >= goalAll(c)))
-            .sort((a, b) => ((fr(b.ex.muscle) - goalAll(b.ex.muscle)) - (fr(a.ex.muscle) - goalAll(a.ex.muscle))) || (s.exercises.indexOf(a.ex) - s.exercises.indexOf(b.ex)));
+            .sort((a, b) => (byTier ? TIER_RANK[tierOf(category, b.ex.muscle)] - TIER_RANK[tierOf(category, a.ex.muscle)] : 0)
+              || ((fr(b.ex.muscle) - goalAll(b.ex.muscle)) - (fr(a.ex.muscle) - goalAll(a.ex.muscle))) || (s.exercises.indexOf(a.ex) - s.exercises.indexOf(b.ex)));
           for (const { ex, take } of donors) {
             const at = s.exercises.indexOf(ex);
             const shrink = () => { if (take === ex.peak) s.exercises.splice(at, 1); else setPeak(ex, ex.peak - take); };
@@ -589,7 +644,14 @@ function buildWith(args, strategy) {
             for (const x of muscles) deficit[x] = Math.max(0, goalOf(x) - ((w2[x] || {}).fractional || 0));
             const options = actionsFor(m, si).sort((a, b) => (valueOf(b, deficit) - valueOf(a, deficit))
               || ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || ((a.patternIndex || 0) - (b.patternIndex || 0)));
-            if (options.some((a) => valueOf(a, deficit) > 0 && apply(a))) { improved = true; break; }
+            const gain = (a) => {
+              if (!(valueOf(a, deficit) > 0 && (!noLoss || a.sets >= take) && apply(a))) return false;
+              if (!senseBefore || ![...quietSense()].some((k) => !senseBefore.has(k))) return true;
+              if (a.type === 'inc') setPeak(a.ex, a.ex.peak - 1); else s.exercises.pop();
+              baseline = new Set(currentFaults().map(faultKey));
+              return false;
+            };
+            if (options.some(gain)) { improved = true; break; }
             // Nothing gained: put the donor back as it was.
             if (removing) s.exercises.splice(at, 0, ex); else setPeak(ex, ex.peak + take);
             baseline = new Set(currentFaults().map(faultKey));
@@ -623,8 +685,7 @@ function buildWith(args, strategy) {
   }
 
   // A: minimums (HARD). B: normal volume (Q1 = C: never cut by the clock).
-  // C: focus on top, last, so it only takes capacity no other muscle could
-  // use (C5).
+  // C: focus on top, last, never below another muscle's standard (C5, R46).
   // R27 (coach and user audits: bodybuilding arms had 2 sets of their own
   // a week, the rest credit from rows and presses). First the floor: every
   // priority or standard muscle takes own sets up to half its minimum
@@ -668,52 +729,40 @@ function buildWith(args, strategy) {
     });
   };
   fillTypical();
-  plan.focus = focus;
-  // R30 (coach and user audits: a men's physique chest focus added nothing,
-  // chest's one session being full): a focus muscle whose sessions are full
-  // may take one more session that neighbours none of them and trains the
-  // same half of the body. When none exists, the plan says how far the
-  // focus got and why, never silently.
-  const focusList = muscleOrder(category, focus).filter((m) => focus.includes(m) && !plan.untrainable.includes(m));
-  if (focusList.length) {
-    fill((m) => targets[m].target, focusList, {
-      allowRepair: false,
-      allowOverflow: true,
-      overflowSiblings: (m) => MUSCLES.filter((x) => x !== m && regionOf(x) === regionOf(m) && regionOf(m) !== 'trunk'),
-    });
-  }
   growth = false;
-  const afterFocus = weeklyLoad(plan, peak);
-  plan.focusTargets = Object.fromEntries(focusList.map((m) => [m, targets[m].target]));
-  // R38: why a focus fell short: every session that may hold it already
-  // holds the most one session may (session_cap), or its sessions are full.
-  plan.focusUnmet = focusList
-    .filter((m) => ((afterFocus[m] || {}).fractional || 0) < targets[m].target)
-    .map((m) => ({
-      muscle: m,
-      sets: (afterFocus[m] || {}).fractional || 0,
-      target: targets[m].target,
-      reason: visitsOf(m).every((si) => directIn(si, m) >= PER_SESSION.directCap) ? 'session_cap' : 'sessions_full',
-      sessions: visitsOf(m).length,
-    }));
+  plan.overflow = overflow;
+
+  const length = Number.isFinite(args.lengthMinutes) ? args.lengthMinutes : null;
+  const limit = length != null ? length + TIME_MODEL.toleranceMinutes : null;
+  const floorMinutes = (s) => {
+    const saved = s.exercises.map((ex) => ex.restSec);
+    s.exercises.forEach((ex) => { ex.restSec = restSecondsFor(ex.kind, ex.pattern).floor; });
+    const m = sessionMinutes(s, peak, equipment);
+    s.exercises.forEach((ex, i) => { ex.restSec = saved[i]; });
+    return m;
+  };
+  const senseKey = (f) => `${f.code}|${f.session || ''}|${f.muscle || ''}|${f.week || ''}`;
+  const senseFaults = () => new Set(senseCheck(plan).failures.map(senseKey));
+  const newIn = (now, before) => [...now].some((k) => !before.has(k));
+  const ownOf = (muscles) => plan.sessions.reduce((t, s) => t + s.exercises.filter((ex) => muscles.includes(ex.muscle)).reduce((u, ex) => u + ex.peak, 0), 0);
+  const pullShort = () => ownOf(['lats', 'upper_back']) < ownOf(['chest', 'front_delts']);
 
   // Sense passes (D222). Each only adds sets, inside every check.
-  // S3: pulling at least matches pressing (a chest focus can tip it). Run
-  // again after any later refill (R36).
+  // S3: pulling at least matches pressing. Run again after any later refill
+  // (R36); after focus the focus phase keeps the balance itself (R39, R46).
   function balancePushPull() {
-    const directOf = (muscles) => plan.sessions.reduce((t, s) => t + s.exercises.filter((ex) => muscles.includes(ex.muscle)).reduce((u, ex) => u + ex.peak, 0), 0);
     const backMuscles = ['lats', 'upper_back'].filter((m) => targets[m] && !plan.untrainable.includes(m));
-    for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
+    for (let guard = 0; guard < 40 && pullShort(); guard += 1) {
       const actions = backMuscles.flatMap((m) => visitsOf(m).flatMap((si) => actionsFor(m, si)))
         .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (setsOf(a.si) - setsOf(b.si)) || (a.si - b.si) || (rank(a.m) - rank(b.m)));
       if (!actions.some((a) => apply(a))) break;
     }
     // Still pressing more than pulling (a kit with no lat exercise caps the
-    // pulling): pressing sets above their minimum, never a focus pick's, give
-    // way one at a time, from the exercise with the most sets. Normal volume
-    // is the softest goal (09 B8), shoulder balance is not.
-    const pushMuscles = ['chest', 'front_delts'].filter((m) => targets[m] && !focus.includes(m));
-    for (let guard = 0; guard < 40 && directOf(['lats', 'upper_back']) < directOf(['chest', 'front_delts']); guard += 1) {
+    // pulling): pressing sets above their minimum give way one at a time,
+    // from the exercise with the most sets. Normal volume is the softest
+    // goal (09 B8), shoulder balance is not. The plain week only.
+    const pushMuscles = ['chest', 'front_delts'].filter((m) => targets[m]);
+    for (let guard = 0; guard < 40 && pullShort(); guard += 1) {
       const own = directWeek();
       const spare = plan.sessions.flatMap((x) => x.exercises)
         .filter((ex) => pushMuscles.includes(ex.muscle) && ex.peak > SESSION_LIMITS.setsPerExerciseMin
@@ -739,6 +788,90 @@ function buildWith(args, strategy) {
     }
   }
 
+  // R44 (coach audit 3): after normal volume, sets move inside a session to
+  // where they are needed: from a muscle above its minimum and its own
+  // floor to a muscle of a higher tier below its normal volume, or to an arm
+  // or rear delt below its own minimum (R27). Each move must lower the
+  // week's shortfall, read in that order (arms' and rear delts' own
+  // minimum, then P, S and M normal volume), so the pass ends; and it is
+  // kept only inside every rulebook and sense check. Like normal volume it
+  // never reads the clock (Q1 = C: the same week at every length; a longer
+  // session goes through rest and the length question as any set does).
+  const shortfall = (fr, own) => {
+    const v = [0, 0, 0, 0];
+    for (const [m, t] of Object.entries(targets)) {
+      if (plan.untrainable.includes(m)) continue;
+      if (isLeadTier(m) && CREDIT_FED.includes(m)) v[0] += Math.max(0, t.min - (own[m] || 0));
+      const i = TIER_ORDER.indexOf(t.tier);
+      if (i >= 0) v[i + 1] += Math.max(0, t.typical - (fr[m] || 0));
+    }
+    return v;
+  };
+  const lowerThan = (a, b) => {
+    for (let i = 0; i < a.length; i += 1) if (Math.abs(a[i] - b[i]) > 1e-9) return a[i] < b[i];
+    return false;
+  };
+  const ownShort = (m, own) => isLeadTier(m) && CREDIT_FED.includes(m) && (own[m] || 0) < targets[m].min;
+  growth = true;
+  for (let guard = 0; guard < 100; guard += 1) {
+    const weekly = weeklyLoad(plan, peak);
+    const fr = Object.fromEntries(Object.keys(targets).map((m) => [m, (weekly[m] || {}).fractional || 0]));
+    const own = directWeek();
+    const now = shortfall(fr, own);
+    const moves = [];
+    for (let si = 0; si < n; si += 1) {
+      const s = plan.sessions[si];
+      const needy = lists[si].filter((m) => targets[m] && !plan.untrainable.includes(m) && (ownShort(m, own) || fr[m] < targets[m].typical));
+      for (const m of needy) {
+        for (const a of actionsFor(m, si)) {
+          const pattern = a.type === 'inc' ? a.pattern : a.options[0].pattern;
+          for (const donor of s.exercises) {
+            const d = donor.muscle;
+            if (d === m || !targets[d] || donor.peak - a.sets < SESSION_LIMITS.setsPerExerciseMin) continue;
+            if (!ownShort(m, own) && TIER_RANK[targets[d].tier] <= TIER_RANK[targets[m].tier]) continue;
+            if (fr[d] - a.sets < targets[d].min) continue;
+            if (isLeadTier(d) && (own[d] || 0) - a.sets < (CREDIT_FED.includes(d) ? targets[d].min : ownFloor(d))) continue;
+            if (PATTERNS[donor.pattern].credits.some((c) => targets[c] && fr[c] - CREDIT_FRACTION * a.sets < targets[c].min)) continue;
+            // The week's shortfall after the move, counted before making it.
+            const fr2 = { ...fr };
+            const own2 = { ...own, [m]: (own[m] || 0) + a.sets, [d]: (own[d] || 0) - a.sets };
+            const add = (x, v) => { if (x in fr2) fr2[x] += v; };
+            add(m, a.sets);
+            for (const c of PATTERNS[pattern].credits) add(c, CREDIT_FRACTION * a.sets);
+            add(d, -a.sets);
+            for (const c of PATTERNS[donor.pattern].credits) add(c, -CREDIT_FRACTION * a.sets);
+            const after = shortfall(fr2, own2);
+            if (lowerThan(after, now)) moves.push({ a, donor, si, after, at: s.exercises.indexOf(donor) });
+          }
+        }
+      }
+    }
+    moves.sort((x, y) => (lowerThan(x.after, y.after) ? -1 : lowerThan(y.after, x.after) ? 1 : 0)
+      || (x.si - y.si) || (x.at - y.at) || (posOf(x.a) - posOf(y.a)) || cmp(x.a.m, y.a.m) || cmp(x.a.type, y.a.type));
+    const sense0 = senseFaults();
+    const tryMove = ({ a, donor, si }) => {
+      const s = plan.sessions[si];
+      const attempts = a.type === 'inc'
+        ? [[() => { setPeak(donor, donor.peak - 1); setPeak(a.ex, a.ex.peak + 1); }, () => { setPeak(a.ex, a.ex.peak - 1); setPeak(donor, donor.peak + 1); }]]
+        : a.options[0].choices.map((choice) => {
+          const ex = makeExercise(si, a.m, a.options[0].pattern, choice, a.sets);
+          return [() => { setPeak(donor, donor.peak - a.sets); s.exercises.push(ex); }, () => { s.exercises.pop(); setPeak(donor, donor.peak + a.sets); }];
+        });
+      for (const [move, undo] of attempts) {
+        if (!tryStep(move, undo)) continue;
+        if (newIn(senseFaults(), sense0)) {
+          undo();
+          baseline = new Set(currentFaults().map(faultKey));
+          continue;
+        }
+        return true;
+      }
+      return false;
+    };
+    if (!moves.some(tryMove)) break;
+  }
+  growth = false;
+
   // S7: order inside each session: heavy compounds, moderate compounds,
   // machines, isolation; then P before S before M; focus first in a tier.
   // R24 (both audits): abs come last whatever their tier, as in every 09
@@ -763,7 +896,7 @@ function buildWith(args, strategy) {
         || (away(a.ex) - away(b.ex))
         || (unfinished(a.ex) - unfinished(b.ex))
         || (TIER_RANK[tierOf(category, a.ex.muscle)] - TIER_RANK[tierOf(category, b.ex.muscle)])
-        || (Number(focus.includes(b.ex.muscle)) - Number(focus.includes(a.ex.muscle)))
+        || (Number(plan.focus.includes(b.ex.muscle)) - Number(plan.focus.includes(a.ex.muscle)))
         || (MUSCLES.indexOf(a.ex.muscle) - MUSCLES.indexOf(b.ex.muscle))
         || (a.i - b.i))
       .map((x) => x.ex);
@@ -774,24 +907,17 @@ function buildWith(args, strategy) {
   // shortest sessions ran under 30 minutes): before asking for a longer
   // session, move whole abs and calf exercises from a session still over the
   // chosen length at floor rest to the shortest session that takes them
-  // inside every rulebook and sense check. The week keeps every set (Q1 =
-  // C); only where the sets fall changes.
-  const length = Number.isFinite(args.lengthMinutes) ? args.lengthMinutes : null;
-  plan.overflow = overflow;
-  const floorMinutes = (s) => {
-    const saved = s.exercises.map((ex) => ex.restSec);
-    s.exercises.forEach((ex) => { ex.restSec = restSecondsFor(ex.kind, ex.pattern).floor; });
-    const m = sessionMinutes(s, peak, equipment);
-    s.exercises.forEach((ex, i) => { ex.restSec = saved[i]; });
-    return m;
-  };
+  // inside every rulebook and sense check; and (R44) single sets between
+  // two sessions that both list the muscle, onto an exercise of it already
+  // there, with no muscle losing normal volume. The week keeps every set
+  // (Q1 = C); only where the sets fall changes.
   if (length != null) {
-    const limit = length + TIME_MODEL.toleranceMinutes;
-    const senseKey = (f) => `${f.code}|${f.session || ''}|${f.muscle || ''}|${f.week || ''}`;
-    const before = plan.sessions.map((s) => [...s.exercises]);
+    const before = plan.sessions.map((s) => s.exercises.map((ex) => [ex, ex.peak]));
     const listsBefore = lists.map((l) => [...l]);
     const overflowBefore = overflow.length;
-    for (let guard = 0; guard < 24; guard += 1) {
+    let movedAny = false;
+    growth = true;
+    for (let guard = 0; guard < 40; guard += 1) {
       const over = plan.sessions.map((s, i) => ({ i, m: floorMinutes(s) }))
         .filter((x) => Math.round(x.m) > limit).sort((a, b) => (b.m - a.m) || (a.i - b.i));
       let moved = false;
@@ -801,7 +927,7 @@ function buildWith(args, strategy) {
           const dests = plan.sessions.map((s, j) => ({ j, m: floorMinutes(s) }))
             .filter((x) => x.j !== i && plan.sessions[x.j].exercises.length < maxExercises)
             .sort((a, b) => (a.m - b.m) || (a.j - b.j));
-          const senseBefore = new Set(senseCheck(plan).failures.map(senseKey));
+          const senseBefore = senseFaults();
           for (const { j } of dests) {
             const dst = plan.sessions[j];
             const at = src.exercises.indexOf(ex);
@@ -818,8 +944,7 @@ function buildWith(args, strategy) {
             }, undo);
             if (!kept) continue;
             orderSession(dst);
-            const senseAfter = senseCheck(plan).failures.map(senseKey);
-            if (Math.round(floorMinutes(dst)) > limit || senseAfter.some((k) => !senseBefore.has(k))) {
+            if (Math.round(floorMinutes(dst)) > limit || newIn(senseFaults(), senseBefore)) {
               undo();
               orderSession(src);
               baseline = new Set(currentFaults().map(faultKey));
@@ -832,17 +957,59 @@ function buildWith(args, strategy) {
         }
         if (moved) break;
       }
+      if (!moved) {
+        const weekly = weeklyLoad(plan, peak);
+        const fr = (m) => (weekly[m] || {}).fractional || 0;
+        for (const { i } of over) {
+          const src = plan.sessions[i];
+          const senseBefore = senseFaults();
+          const donors = src.exercises.filter((x) => x.peak > SESSION_LIMITS.setsPerExerciseMin)
+            .sort((a, b) => (b.peak - a.peak) || (src.exercises.indexOf(a) - src.exercises.indexOf(b)));
+          for (const ex of donors) {
+            const dests = visitsOf(ex.muscle).filter((j) => j !== i)
+              .map((j) => ({ j, m: floorMinutes(plan.sessions[j]) }))
+              .sort((a, b) => (a.m - b.m) || (a.j - b.j));
+            for (const { j } of dests) {
+              for (const a of actionsFor(ex.muscle, j).filter((x) => x.type === 'inc')) {
+                // The credit the set carries moves with it; no muscle may
+                // fall below its normal volume for the move.
+                const delta = {};
+                for (const c of PATTERNS[ex.pattern].credits) delta[c] = (delta[c] || 0) - CREDIT_FRACTION;
+                for (const c of PATTERNS[a.pattern].credits) delta[c] = (delta[c] || 0) + CREDIT_FRACTION;
+                if (Object.entries(delta).some(([c, dv]) => targets[c] && dv < 0 && fr(c) + dv < targets[c].typical)) continue;
+                const undo = () => { setPeak(a.ex, a.ex.peak - 1); setPeak(ex, ex.peak + 1); };
+                if (!tryStep(() => { setPeak(ex, ex.peak - 1); setPeak(a.ex, a.ex.peak + 1); }, undo)) continue;
+                if (Math.round(floorMinutes(plan.sessions[j])) > limit || newIn(senseFaults(), senseBefore)) {
+                  undo();
+                  baseline = new Set(currentFaults().map(faultKey));
+                  continue;
+                }
+                moved = true;
+                break;
+              }
+              if (moved) break;
+            }
+            if (moved) break;
+          }
+          if (moved) break;
+        }
+      }
       if (!moved) break;
+      movedAny = true;
     }
+    growth = false;
     // A move is kept only when the week then fits: if the person must
     // choose a longer session anyway, nothing moves (coach audit: calves
     // carried to a chest day while another session still asked).
     if (plan.sessions.some((s) => Math.round(floorMinutes(s)) > limit)) {
-      plan.sessions.forEach((s, i) => { s.exercises = before[i]; });
+      plan.sessions.forEach((s, i) => {
+        s.exercises = before[i].map(([ex]) => ex);
+        before[i].forEach(([ex, p]) => { if (ex.peak !== p) setPeak(ex, p); });
+      });
       listsBefore.forEach((l, i) => { lists[i] = l; });
       overflow.length = overflowBefore;
       baseline = new Set(currentFaults().map(faultKey));
-    } else if (overflow.length > overflowBefore) {
+    } else if (movedAny) {
       // R36: the room the moves freed goes back to normal volume, a set kept
       // only while its session stays inside the chosen length.
       growth = true;
@@ -853,17 +1020,167 @@ function buildWith(args, strategy) {
     }
   }
 
+  // R39 (code review BLOCKER: focus plans took sets from other muscles,
+  // three passes having run after the focus fill): focus goes last, on the
+  // finished plain week: the focus picks' sets (R30: a pick whose sessions
+  // are full may take one more session that neighbours none of them and
+  // trains the same half of the body), then pulling to match any added
+  // pressing. Pressing that pulling cannot match is taken back; if the
+  // focused week then fails any check, every focus change is taken back.
+  // The plan says how far each focus got and why, never silently.
+  // R46 (matrix: in a full week three focus picks in four added nothing):
+  // where the week has no room, a focus takes it from other muscles' sets
+  // above their standard (founder F2; the minimum, Q1 = C; 09 B8 ranks focus
+  // above growth beyond it), the lowest tier first, never from a tier above
+  // its own or another focus pick, never below a muscle's minimum or its own
+  // floor; and the plan names the muscles that gave.
+  plan.focus = focus;
+  baseline = new Set(currentFaults().map(faultKey));
+  const focusList = muscleOrder(category, focus).filter((m) => focus.includes(m) && !plan.untrainable.includes(m));
+  const focusWhy = {};
+  if (focusList.length) {
+    const kept = plan.sessions.map((s) => s.exercises.map((ex) => [ex, ex.peak]));
+    const keptLists = lists.map((l) => [...l]);
+    const keptOverflow = overflow.length;
+    const restore = () => {
+      plan.sessions.forEach((s, i) => {
+        s.exercises = kept[i].map(([ex]) => ex);
+        kept[i].forEach(([ex, p]) => { if (ex.peak !== p) setPeak(ex, p); });
+      });
+      keptLists.forEach((l, i) => { lists[i] = [...l]; });
+      overflow.length = keptOverflow;
+      baseline = new Set(currentFaults().map(faultKey));
+    };
+    const checkFaults = () => new Set(checkPlan(plan).failures.filter((f) => f.code !== 'C18').map(faultKey));
+    const plainSense = new Set([...senseFaults()].filter((k) => !k.startsWith('S12|')));
+    const plainChecks = checkFaults();
+    // The balances a focus can tip: pulling at least matches pressing (S3)
+    // and hamstrings at least half of quads (S4). The other side is raised
+    // first (adding only); where it cannot be, the focus is built again from
+    // the plain week with that much less of the pick, so no set given to
+    // make room is ever left unused. A muscle on the other side of a
+    // balance never gives room to a focus.
+    const PUSH = ['chest', 'front_delts'];
+    const PULL = ['lats', 'upper_back'];
+    const hamstringsTrained = !!targets.hamstrings && !plan.untrainable.includes('hamstrings');
+    const legGap = () => (hamstringsTrained ? ownOf(['quads']) - 2 * ownOf(['hamstrings']) : 0);
+    // Pulling gives to pressing, or hamstrings to quads, only while the
+    // balance still holds after both sides move (up to two sets each).
+    const focusProtect = (d, m) => focus.includes(d) || TIER_RANK[tierOf(category, d)] < TIER_RANK[tierOf(category, m)]
+      || (PULL.includes(d) && ownOf(PULL) - 2 < ownOf(PUSH) + (PUSH.includes(m) ? 2 : 0))
+      || (d === 'hamstrings' && hamstringsTrained && 2 * (ownOf(['hamstrings']) - 2) < ownOf(['quads']) + (m === 'quads' ? 2 : 0));
+    // The other side of a balance: room first, then (R46) room made as a
+    // focus makes it, since the balance is part of what the focus costs.
+    const raise = (muscles, short) => {
+      const trainable = muscles.filter((m) => targets[m] && !plan.untrainable.includes(m));
+      for (let guard = 0; guard < 40 && short(); guard += 1) {
+        const actions = trainable.flatMap((m) => visitsOf(m).flatMap((si) => actionsFor(m, si)))
+          .sort((a, b) => ((a.type === 'inc' ? 0 : 1) - (b.type === 'inc' ? 0 : 1)) || (setsOf(a.si) - setsOf(b.si)) || (a.si - b.si) || (rank(a.m) - rank(b.m)));
+        if (actions.some((a) => apply(a))) continue;
+        const w = weeklyLoad(plan, peak);
+        const goal = Object.fromEntries(trainable.map((m) => [m, ((w[m] || {}).fractional || 0) + 1]));
+        const had = ownOf(trainable);
+        repair((m) => (m in goal ? goal[m] : targets[m] ? targets[m].typical : 0), trainable, focusProtect, true, true, true);
+        if (ownOf(trainable) <= had) break;
+      }
+    };
+    const cap = {};
+    let balanced = false;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      growth = true;
+      fill((m) => Math.min(targets[m].target, cap[m] ?? Infinity), focusList, {
+        allowOverflow: true,
+        overflowSiblings: (m) => MUSCLES.filter((x) => x !== m && regionOf(x) === regionOf(m) && regionOf(m) !== 'trunk'),
+        byTier: true,
+        noLoss: true,
+        guardSense: true,
+        protect: focusProtect,
+      });
+      raise(PULL, () => ownOf(PULL) < ownOf(PUSH));
+      raise(['hamstrings'], () => legGap() > 0);
+      growth = false;
+      const pushGap = ownOf(PUSH) - ownOf(PULL);
+      const quadGap = legGap();
+      if (pushGap <= 0 && quadGap <= 0) { balanced = true; break; }
+      const reached = weeklyLoad(plan, peak);
+      const capped = [];
+      for (const [muscles, gap, why] of [[PUSH, pushGap, 'pull_balance'], [['quads'], quadGap, 'hamstring_balance']]) {
+        if (gap <= 0) continue;
+        for (const m of focusList.filter((x) => muscles.includes(x))) {
+          // Strictly lower each time: a two-set exercise can overshoot a cap.
+          cap[m] = Math.max(0, Math.min(cap[m] ?? Infinity, (reached[m] || {}).fractional || 0) - gap);
+          focusWhy[m] = why;
+          capped.push(m);
+        }
+      }
+      restore();
+      if (!capped.length) break;
+    }
+    plan.sessions.forEach(orderSession);
+    const senseNow = new Set([...senseFaults()].filter((k) => !k.startsWith('S12|')));
+    if (!balanced || newIn(checkFaults(), plainChecks) || newIn(senseNow, plainSense)) {
+      restore();
+      for (const m of focusList) focusWhy[m] = focusWhy[m] || 'checks';
+    }
+    baseline = new Set(currentFaults().map(faultKey));
+    const before = {};
+    for (const [ex, p] of kept.flat()) before[ex.muscle] = (before[ex.muscle] || 0) + p;
+    const after = directWeek();
+    plan.focusTook = Object.keys(before).filter((m) => !focus.includes(m) && (after[m] || 0) < before[m])
+      .sort((a, b) => rank(a) - rank(b))
+      .map((m) => ({ muscle: m, from: before[m], to: after[m] || 0, minimum: targets[m] ? targets[m].min : 0 }));
+  }
+  if (!plan.focusTook) plan.focusTook = [];
+  // An overflow entry where nothing was placed is dropped (R39).
+  plan.overflow = overflow.filter((o) => plan.sessions.some((s) => s.key === o.session && s.exercises.some((ex) => ex.muscle === o.muscle)));
+  const afterFocus = weeklyLoad(plan, peak);
+  plan.focusTargets = Object.fromEntries(focusList.map((m) => [m, targets[m].target]));
+  // R38: why a focus fell short: every session that may hold it already
+  // holds the most one session may (session_cap), or its sessions are full;
+  // R39: or pulling could not match more pressing (pull_balance), or
+  // hamstrings half of more quads (hamstring_balance), or the focused week
+  // failed a check and the focus was taken back (checks).
+  plan.focusUnmet = focusList
+    .filter((m) => ((afterFocus[m] || {}).fractional || 0) < targets[m].target)
+    .map((m) => ({
+      muscle: m,
+      sets: (afterFocus[m] || {}).fractional || 0,
+      target: targets[m].target,
+      reason: focusWhy[m] || (visitsOf(m).every((si) => directIn(si, m) >= PER_SESSION.directCap) ? 'session_cap' : 'sessions_full'),
+      sessions: visitsOf(m).length,
+    }));
+
+  // R42 (coach and review): a next-day light dose only where the next
+  // session trains that muscle. Where it ended up not doing so, the dose is
+  // trained as any other, when every check still passes.
+  {
+    const checkFaults = () => new Set(checkPlan(plan).failures.filter((f) => f.code !== 'C18').map(faultKey));
+    for (let si = 0; si < n; si += 1) {
+      const next = sessionLoad(plan.sessions[(si + 1) % n], peak);
+      for (const ex of plan.sessions[si].exercises) {
+        if (!ex.nextDayException || isTrained(next, ex.muscle)) continue;
+        const checks0 = checkFaults();
+        const sense0 = senseFaults();
+        const flag = (v) => { ex.nextDayException = v; ex.weeks = weeksFor(ex.peak, { nextDayException: v }); };
+        flag(false);
+        if (newIn(checkFaults(), checks0) || newIn(senseFaults(), sense0)) flag(true);
+      }
+    }
+  }
+
   // S10: real length (Q1 = C). Shorten rest towards its floor, least
   // costly first, only as far as each session needs; still over by more
-  // than the tolerance, the person chooses before saving.
+  // than the tolerance, the person chooses before saving. R43: by rest
+  // class, so a leg press or hack squat keeps its rest longer than a
+  // dumbbell Romanian deadlift.
   let restTrimmed = false;
   if (length != null) {
     for (const s of plan.sessions) {
-      for (const kind of REST_TRIM_ORDER) {
+      for (const cls of REST_TRIM_ORDER) {
         while (sessionMinutes(s, peak, equipment) > length) {
-          const exs = s.exercises.filter((ex) => ex.kind === kind && ex.restSec > restSecondsFor(kind, ex.pattern).floor);
+          const exs = s.exercises.filter((ex) => restClassFor(ex.kind, ex.pattern) === cls && ex.restSec > restSecondsFor(ex.kind, ex.pattern).floor);
           if (!exs.length) break;
-          for (const ex of exs) ex.restSec = Math.max(restSecondsFor(kind, ex.pattern).floor, ex.restSec - 15);
+          for (const ex of exs) ex.restSec = Math.max(restSecondsFor(ex.kind, ex.pattern).floor, ex.restSec - 15);
           restTrimmed = true;
         }
       }
@@ -875,7 +1192,6 @@ function buildWith(args, strategy) {
     const held = s.exercises.filter((ex) => ex.peak >= SESSION_LIMITS.setsPerExerciseMin).map((ex) => ex.muscle);
     s.name = sessionName(order[i].name, held);
   });
-  plan.kitOffer = offer;
 
   const minutes = plan.sessions.map((s) => sessionMinutes(s, peak, equipment));
   plan.reportedMinutes = minutes.map((m) => Math.round(m * 10) / 10);
@@ -912,18 +1228,34 @@ function buildWith(args, strategy) {
       // audits: six-day weeks were offered "or more days").
       moreDaysPossible: plan.needsLengthChoice ? days < Math.max(...DAY_COUNTS) : false,
       focusUnmet: plan.focusUnmet,
+      focusTook: plan.focusTook,
       kitShort: plan.kitLimited
         .filter((m) => (weekly[m]?.fractional ?? 0) < targets[m].min)
         .map((m) => ({ muscle: m, sets: weekly[m]?.fractional ?? 0, minimum: targets[m].min })),
       belowTypical,
       untrainable: plan.untrainable,
-      overflow,
+      overflow: plan.overflow,
       focusIgnored,
       focusDropped,
       warnings: check.warnings,
       weekly: Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, { sets: weekly[m]?.fractional ?? 0, ...t }])),
     },
   };
+}
+
+// R40 (code review): the week is built from session 1 and then turned to
+// start where the person starts (a cyclic shift: every session keeps its
+// neighbours), so the start can never change whether a week builds or what
+// it holds. A start that is not a whole number reads as session 1.
+function startAt(r, startIndex) {
+  const n = r.plan.sessions.length;
+  const start = Number.isInteger(startIndex) ? ((startIndex % n) + n) % n : 0;
+  if (!start) return r;
+  const turn = (list) => list.map((_, i) => list[(i + start) % n]);
+  r.plan.sessions = turn(r.plan.sessions);
+  r.plan.reportedMinutes = turn(r.plan.reportedMinutes);
+  r.report.minutes = r.plan.reportedMinutes;
+  return r;
 }
 
 // The ways the engine tries, in turn, when a week is tight. Exercise
@@ -948,14 +1280,20 @@ export function buildStructurePlan(args) {
   let last = null;
   for (const strategy of STRATEGIES) {
     const r = buildWith(args, strategy);
-    if (r.ok || !RETRYABLE.has(r.refusal.reason)) return r;
+    if (r.ok) return startAt(r, args.startIndex);
+    if (!RETRYABLE.has(r.refusal.reason)) return r;
     if (!last || last.refusal.reason !== 'minimum_unreachable') last = r;
   }
   // The nearest day counts that would hold the week in the same kit, more
   // days first on a tie (most refusals are short weeks); the person chooses.
+  // R45: each day count is tried once.
   const others = DAY_COUNTS.filter((d) => d !== args.days)
     .sort((a, b) => (Math.abs(a - args.days) - Math.abs(b - args.days)) || (b - a));
-  const builds = (d) => STRATEGIES.some((strategy) => buildWith({ ...args, days: d }, strategy).ok);
+  const tried = new Map();
+  const builds = (d) => {
+    if (!tried.has(d)) tried.set(d, STRATEGIES.some((strategy) => buildWith({ ...args, days: d }, strategy).ok));
+    return tried.get(d);
+  };
   const more = others.filter((d) => d > args.days).find(builds);
   if (more != null) last.refusal.minimumDays = more;
   const nearest = more != null && Math.abs(more - args.days) === 1 ? more : others.find(builds);

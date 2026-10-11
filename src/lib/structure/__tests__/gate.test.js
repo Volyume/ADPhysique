@@ -14,12 +14,20 @@
  *   here);
  * - men's physique, the founder's own category, builds at every day count in
  *   a gym and from 3 days with dumbbells or a home gym;
- * - focus only adds (C5) and the clock never removes a set (Q1 = C).
+ * - focus keeps every other muscle at its standard (C5) and the clock never
+ *   removes a set (Q1 = C);
+ * - the code review and third coach audit (register D222, R39 to R46): a
+ *   focus at every day count and kit, built last on the finished week,
+ *   keeps every other muscle at its standard (C5 as R46 reads it, founder
+ *   F2); the start of the rotation never changes the week; a gym is never
+ *   given a stand-in meant for a thinner kit; a next-day light dose only
+ *   where the next session trains the muscle; rest trimmed by rest class.
  */
 import { buildStructurePlan } from '../engine';
 import { checkPlan, checkFocusAgainstBaseline } from '../checker';
 import { senseCheck } from '../sense';
-import { CATEGORIES, DAY_COUNTS, TIERS, VOLUME } from '../rulebook';
+import { CATEGORIES, DAY_COUNTS, TIERS, VOLUME, REST_TRIM_ORDER, PROGRESSION, restClassFor, restSecondsFor } from '../rulebook';
+import { sessionLoad, isTrained } from '../measure';
 
 const { LIBRARY } = require('../../__tests__/campaign16.helpers');
 
@@ -126,6 +134,68 @@ describe('every category, day count and kit (intermediate)', () => {
     expect([...KNOWN_REFUSALS].filter((x) => !refused.includes(x))).toEqual([]);
   });
 
+  test('R39 and R46: a focus pick keeps every other muscle at its standard, at every day count and in every kit (C5)', () => {
+    const bad = [];
+    for (const { goal, days, kit, r } of results) {
+      if (!r.ok) continue;
+      const pick = Object.keys(TIERS).find((m) => TIERS[m][goal] === 'P');
+      const f = build(goal, days, kit, { focus: [pick] });
+      if (!f.ok) { bad.push(`${goal} ${days}d ${kit}: refused with focus`); continue; }
+      const c5 = checkFocusAgainstBaseline(f.plan, r.plan);
+      if (!c5.ok) bad.push(`${goal} ${days}d ${kit}: ${c5.failures.map((x) => x.detail).join('; ')}`);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  test('R40: every start in a gym builds the same week, turned', () => {
+    const bad = [];
+    const names = (sessions) => sessions.map((s) => `${s.key}:${s.exercises.map((ex) => `${ex.name}x${ex.peak}@${ex.restSec}`).join(',')}`).join('|');
+    for (const { goal, days, kit, r } of results.filter((x) => x.kit === 'full_gym' && x.r.ok)) {
+      for (let start = 1; start < days; start += 1) {
+        const turned = r.plan.sessions.map((_, i) => r.plan.sessions[(i + start) % days]);
+        const s = build(goal, days, kit, { startIndex: start });
+        if (!s.ok || names(s.plan.sessions) !== names(turned)) bad.push(`${goal} ${days}d start ${start}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  test('R41: a gym is never given a stand-in meant for a thinner kit', () => {
+    const bad = results.filter(({ kit, r }) => r.ok && ['full_gym', 'machines_cables'].includes(kit))
+      .flatMap(({ goal, days, kit, r }) => r.plan.sessions.flatMap((s) => s.exercises)
+        .filter((ex) => /TRX|Slider|Seated .*Lateral Raise|Straight-Arm Dumbbell Pullover|Reverse Crunch/.test(ex.name))
+        .map((ex) => `${goal} ${days}d ${kit}: ${ex.name}`));
+    expect(bad).toEqual([]);
+  });
+
+  test('R42: a next-day light dose only where the next session trains that muscle', () => {
+    const bad = [];
+    for (const { goal, days, kit, r } of results.filter((x) => x.r.ok)) {
+      const n = r.plan.sessions.length;
+      r.plan.sessions.forEach((s, i) => {
+        const next = sessionLoad(r.plan.sessions[(i + 1) % n], PROGRESSION.peakWeek);
+        for (const ex of s.exercises) if (ex.nextDayException && !isTrained(next, ex.muscle)) bad.push(`${goal} ${days}d ${kit} ${s.key}: ${ex.name}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+
+  test('R43: rest is trimmed by rest class, a class only once every earlier one is at its floor', () => {
+    const bad = [];
+    for (const { goal, days, kit, r } of results.filter((x) => x.r.ok)) {
+      for (const s of r.plan.sessions) {
+        for (const ex of s.exercises) {
+          const cls = restClassFor(ex.kind, ex.pattern);
+          if (ex.restSec >= restSecondsFor(ex.kind, ex.pattern).default) continue;
+          const earlier = REST_TRIM_ORDER.slice(0, REST_TRIM_ORDER.indexOf(cls));
+          const notFloored = s.exercises.filter((x) => earlier.includes(restClassFor(x.kind, x.pattern)) && x.restSec > restSecondsFor(x.kind, x.pattern).floor);
+          if (notFloored.length) bad.push(`${goal} ${days}d ${kit} ${s.key}: ${ex.name} trimmed before ${notFloored[0].name}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
   test("men's physique builds at every day count in a gym, and from 3 days with dumbbells or a home gym", () => {
     const mp = results.filter(({ goal, kit }) => goal === 'mens_physique' && ['full_gym', 'machines_cables', 'dumbbells_only', 'home_gym'].includes(kit));
     expect(mp).toHaveLength(20);
@@ -156,7 +226,7 @@ describe('every experience level and focus pick passes both layers', () => {
 });
 
 describe('focus and the clock', () => {
-  test.each(CATEGORIES)('%s: a focus pick at 4 days only adds (C5)', (goal) => {
+  test.each(CATEGORIES)('%s: a focus pick at 4 days keeps every other muscle at its standard (C5)', (goal) => {
     const pick = Object.keys(TIERS).find((m) => TIERS[m][goal] === 'P') || 'chest';
     const base = build(goal, 4, 'full_gym');
     const withFocus = build(goal, 4, 'full_gym', { focus: [pick] });

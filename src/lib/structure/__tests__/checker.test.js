@@ -175,17 +175,47 @@ describe('C4 weekly range', () => {
   });
 });
 
-describe('C5 focus never takes from another muscle', () => {
-  test('fewer chest sets with focus fails', () => {
+describe('C5 focus never takes another muscle below its standard (R46)', () => {
+  // Men's physique: side delts P, chest S, calves M; chest's minimum at 4
+  // days is 6. The reference week has 8 chest sets of its own.
+  const withFocus = (focus) => { const p = validPlan(); p.focus = focus; return p; };
+  const drop = (p, key, id) => { const s = session(p, key); s.exercises = s.exercises.filter((x) => x.id !== id); };
+
+  test('a side-delt focus may take chest sets above its minimum, when the week keeps its sets', () => {
     const base = validPlan();
-    const focus = validPlan();
-    focus.focus = ['side_delts'];
-    session(focus, 'chest_triceps').exercises[2] = ex('cable_fly', 'fly', 'isolation', 2);
-    session(focus, 'chest_triceps').exercises[1] = ex('machine_press', 'press_flat', 'machine', 2);
-    expect(checkFocusAgainstBaseline(focus, base).ok).toBe(true);
-    session(focus, 'chest_triceps').exercises.splice(2, 1);
-    const r = checkFocusAgainstBaseline(focus, base);
-    expect(r.failures.map((f) => f.muscle)).toEqual(['chest']);
+    const f = withFocus(['side_delts']);
+    drop(f, 'chest_triceps', 'cable_fly');
+    session(f, 'back_b_delts').exercises.push(ex('cable_lateral_b', 'lateral', 'isolation', 2));
+    expect(checkFocusAgainstBaseline(f, base).failures).toEqual([]);
+  });
+
+  test('taking chest below its minimum fails', () => {
+    const base = validPlan();
+    const f = withFocus(['side_delts']);
+    drop(f, 'chest_triceps', 'cable_fly');
+    drop(f, 'chest_triceps', 'machine_press');
+    session(f, 'back_b_delts').exercises.push(ex('cable_lateral_b', 'lateral', 'isolation', 4));
+    const r = checkFocusAgainstBaseline(f, base);
+    expect(r.failures.map((x) => x.muscle)).toEqual(['chest']);
+    expect(r.failures[0].detail).toMatch(/below its minimum of 6/);
+  });
+
+  test('a calf focus taking side-delt sets fails: a focus never takes from a higher tier', () => {
+    const base = validPlan();
+    session(base, 'back_b_delts').exercises.push(ex('cable_lateral_b', 'lateral', 'isolation', 3));
+    const f = withFocus(['calves']);
+    session(f, 'legs').exercises.splice(4, 0, ex('seated_calf', 'calf', 'isolation', 3));
+    const r = checkFocusAgainstBaseline(f, base);
+    expect(r.failures.map((x) => x.muscle)).toEqual(['side_delts']);
+    expect(r.failures[0].detail).toMatch(/lower tier/);
+  });
+
+  test('a focus week with fewer sets than the plain week fails', () => {
+    const base = validPlan();
+    const f = withFocus(['side_delts']);
+    drop(f, 'chest_triceps', 'cable_fly');
+    const r = checkFocusAgainstBaseline(f, base);
+    expect(r.failures.map((x) => x.detail)).toEqual([expect.stringMatching(/the week went from/)]);
   });
 });
 
@@ -201,6 +231,15 @@ describe('C6 session limits', () => {
     expect(checkPlan(five).failures.some((f) => f.code === 'C6' && /5 sets/.test(f.detail))).toBe(true);
     session(five, 'legs').exercises[3].solePattern = true;
     expect(checkPlan(five).failures.some((f) => f.code === 'C6' && /5 sets/.test(f.detail))).toBe(false);
+  });
+
+  test('more than 24 working sets in one session fails, within the exercise limit (review: untested branch)', () => {
+    const p = validPlan();
+    const legs = session(p, 'legs');
+    legs.exercises = legs.exercises.map((x) => ex(x.id, x.pattern, x.kind, 4));
+    legs.exercises.splice(3, 0, ex('leg_ext', 'leg_ext', 'isolation', 4), ex('adductor', 'adduction', 'isolation', 4));
+    expect(legs.exercises).toHaveLength(7);
+    expect(checkPlan(p).failures.some((f) => f.code === 'C6' && f.session === 'legs' && /28 working sets/.test(f.detail))).toBe(true);
   });
 
   test('a third exercise for a small muscle fails', () => {
@@ -281,6 +320,23 @@ describe('joint rules', () => {
     expect(codes(checkPlan(q))).toContain('C13');
   });
 
+  test('C13: a spinal-loading hinge in three sessions a week fails (review: untested branch)', () => {
+    const p = validPlan();
+    const hinge = (id) => ex(id, 'hinge', 'heavy_compound', 2, { extra: { extraJoints: ['spinal_axial'] } });
+    session(p, 'legs').exercises[1] = hinge('bb_rdl');
+    session(p, 'back_b_delts').exercises.splice(1, 0, hinge('good_morning'));
+    session(p, 'chest_triceps').exercises.splice(1, 0, hinge('rack_pull'));
+    expect(checkPlan(p).failures.some((f) => f.code === 'C13' && /heavy hinges in 3 sessions/.test(f.detail))).toBe(true);
+  });
+
+  test('C14: more than 10 elbow isolation sets in one session fails (review: untested branch)', () => {
+    const p = validPlan();
+    const b = session(p, 'back_b_delts');
+    b.exercises[4] = ex('hammer_curl', 'hammer', 'isolation', 4);
+    b.exercises.push(ex('cable_curl_b', 'curl', 'isolation', 4), ex('pushdown', 'pushdown', 'isolation', 3));
+    expect(checkPlan(p).failures.some((f) => f.code === 'C14' && /11 elbow isolation sets/.test(f.detail))).toBe(true);
+  });
+
   test('C14: more than 4 skull or overhead extension sets fails', () => {
     const p = validPlan();
     session(p, 'chest_triceps').exercises[3] = ex('overhead_ext', 'tri_overhead', 'isolation', 4);
@@ -300,6 +356,13 @@ describe('C16 to C18', () => {
     const p = validPlan();
     session(p, 'legs').exercises.push({ ...session(p, 'back_a_delts').exercises[4] });
     expect(codes(checkPlan(p))).toContain('C16');
+  });
+
+  test('C16: two identical sessions fail, even apart (review: untested branch)', () => {
+    const p = validPlan();
+    session(p, 'back_b_delts').exercises = session(p, 'back_a_delts').exercises.map((x) => ({ ...x }));
+    const r = checkPlan(p);
+    expect(r.failures.some((f) => f.code === 'C16' && f.session === 'back_b_delts' && /repeats back_a_delts/.test(f.detail))).toBe(true);
   });
 
   test('C17: an isolation before a compound fails', () => {

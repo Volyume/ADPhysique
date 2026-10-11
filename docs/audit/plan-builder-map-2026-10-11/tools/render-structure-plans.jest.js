@@ -39,8 +39,14 @@ function render(args, title) {
   for (const f of r.report.focusUnmet || []) {
     const why = f.reason === 'session_cap'
       ? `it has ${f.sessions} session${f.sessions === 1 ? '' : 's'} a week, each already holding the most one session may`
-      : 'its sessions are full';
+      : f.reason === 'pull_balance' ? 'pulling could not be raised to match more pressing'
+        : f.reason === 'hamstring_balance' ? 'hamstrings could not be raised to half of more quad work'
+        : f.reason === 'checks' ? 'the focused week failed a check, so the focus was taken back'
+          : 'its sessions are full';
     lines.push(`Focus not fully reached: ${f.muscle} ${f.sets} of ${f.target} (${why}; the plan says so).`);
+  }
+  if ((r.report.focusTook || []).length) {
+    lines.push(`To make room for the focus: ${r.report.focusTook.map((x) => `${x.muscle} ${x.from} to ${x.to} own sets (minimum ${x.minimum})`).join('; ')}.`);
   }
   lines.push('');
   r.plan.sessions.forEach((s, i) => {
