@@ -20,3 +20,13 @@ Screenshots: the "Next set" sheet ("Note for this set", "Save note") over Inclin
 - While the phone's keyboard is up, the rows stand aside: the hold is off and a tap on a row's blank space reaches the scroll view, which puts the keyboard away; the keyboard going away closes the box through the existing path (`keyboardDidHide`, audit C6), keeping what was typed.
 - The keyboard bar gains "OK" beside the logging action: it closes the box and the keyboard, keeping the typed numbers, without logging. Not shown while editing a logged set, where the last action is already "Done".
 - The logging action reads "Log set" (was "Log"), spoken the same.
+
+## Third report and the decision (same day)
+
+3. "It's really annoying notes popping up the whole time when I don't press the notes button alongside Log"
+
+Decision (lead, under the founder's standing delegation): nothing opens the set sheet but a deliberate press on its own button. The row hold is removed outright, not only while typing.
+
+- The set being entered: a Note action on the keyboard bar, beside OK and Log set, on the set's last box (reps, or time), where the bar has room; on the weight box Next leads to it. Note puts the keyboard away, keeps the typed numbers and opens "Next set" with "Note for this set".
+- A logged set: its green tick is the button for its sheet (its note, Edit set, Delete set), spoken "Set 1 options"; opening it cancels a pending auto-advance, as the hold did (audit D4). Delete stays reachable only through a deliberate press.
+- With no hold, a set row is a plain view again, so a tap on its blank space always puts the keyboard away.

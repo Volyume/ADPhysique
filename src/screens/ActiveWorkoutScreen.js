@@ -4959,6 +4959,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     Keyboard.dismiss();
     closeInput();
   }
+  // The bar's Note (founder, 2026-10-11: notes open from "the notes button
+  // alongside Log", never by themselves): the keyboard goes away, the typed
+  // numbers stay, and the next set's note opens.
+  function handleInputNote() {
+    Keyboard.dismiss();
+    closeInput();
+    setRowSheet({ kind: 'next', title: 'Next set' });
+  }
   function handleInputStep(delta) {
     if (!activeField) return;
     replaceOnFirstKeyRef.current = false;
@@ -5206,14 +5214,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       record: detectedPRs.some((pr) => pr.setId === s.id),
       inputField: editingThis ? activeInputField : null,
       onPressWell: (field) => openWell(field, s),
-      // A hold is the person staying on this exercise: it cancels a pending
-      // auto-advance (audit D4). The title names a typed set by its type
-      // (audit P7: a drop set after set 2 was titled "Set 2").
-      onLongPressRow: () => { cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
-      // While the keyboard is up a tap on a row's blank space puts it away;
-      // it never opens the set sheet (founder report 2026-10-11).
-      holdOff: inputOpen,
-      testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
+      // The tick is the button for the set's sheet (its note, Edit set and
+      // Delete set): it opens on a deliberate press only, never from the row
+      // (founder, 2026-10-11: "It's really annoying notes popping up the
+      // whole time"). Opening it is the person staying on this exercise: it
+      // cancels a pending auto-advance (audit D4). The title names a typed
+      // set by its type (audit P7: a drop set after set 2 was titled "Set 2").
+      onCheck: () => { Keyboard.dismiss(); cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
+      checkLabel: `${rowSheetTitleFor(s, warm, progressNum)} options`,
+      testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}`, check: `volyume-set-check-${i}` },
     });
   });
   const nextLast = isWarmupEntry
@@ -5246,8 +5255,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } : undefined,
     onPressWell: (field) => openWell(field),
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
-    onLongPressRow: () => setRowSheet({ kind: 'next', title: 'Next set' }),
-    holdOff: inputOpen,
     testIDs: { row: 'volyume-next-set-row', marker: 'volyume-set-type-btn', last: 'volyume-last-cell', weight: 'volyume-well-weight', reps: 'volyume-well-reps' },
   });
   for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
@@ -5988,6 +5995,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onDone={editingSet ? handleInputDone : handleInputLog}
                 doneLabel={editingSet ? 'Done' : barLogLabel}
                 onDismiss={editingSet ? undefined : handleInputOk}
+                onNote={editingSet || activeField === 'weight' ? undefined : handleInputNote}
                 safeBottom={0}
               />
             </View>
@@ -6005,6 +6013,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onDone={editingSet ? handleInputDone : handleInputLog}
               doneLabel={editingSet ? 'Done' : barLogLabel}
               onDismiss={editingSet ? undefined : handleInputOk}
+              onNote={editingSet || activeField === 'weight' ? undefined : handleInputNote}
               safeBottom={0}
             />
           </View>

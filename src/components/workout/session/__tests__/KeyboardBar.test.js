@@ -150,6 +150,24 @@ describe('KeyboardBar actions', () => {
     expect(byId(render({ onDone: jest.fn() }), 'volyume-bar-ok')).toHaveLength(0);
   });
 
+  // Founder, 2026-10-11: notes open from "the notes button alongside Log"
+  // and nothing else.
+  test('with onNote a Note action sits before OK and Log set and calls it; without, there is none', () => {
+    const onNote = jest.fn();
+    const onDone = jest.fn();
+    const tree = render({ doneLabel: 'Log set', onDone, onDismiss: jest.fn(), onNote });
+    const note = one(byId(tree, 'volyume-bar-note'));
+    expect(labelOf(note)).toBe('Note');
+    expect(note.props.accessibilityLabel).toBe('Note');
+    expect(note.props.accessibilityHint).toBe('Adds a note to this set');
+    const order = hosts(tree, (p) => typeof p.testID === 'string' && p.testID.startsWith('volyume-bar-')).map((n) => n.props.testID);
+    expect(order.slice(-3)).toEqual(['volyume-bar-note', 'volyume-bar-ok', 'volyume-bar-done']);
+    act(() => { note.props.onPress(); });
+    expect(onNote).toHaveBeenCalledTimes(1);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(byId(render({ onDone: jest.fn() }), 'volyume-bar-note')).toHaveLength(0);
+  });
+
   test('by default the last action reads "Done" and is spoken "Done"', () => {
     const tree = render({ onStep: jest.fn(), onDone: jest.fn() });
     const done = one(byId(tree, 'volyume-bar-done'));

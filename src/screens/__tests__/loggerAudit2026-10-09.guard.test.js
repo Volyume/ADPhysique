@@ -52,9 +52,13 @@ describe('the second logger audit stays fixed', () => {
     expect(SRC).toMatch(/function openDeleteFromMenu\(set\) \{[\s\S]{0,400}?if \(editingSet && editingSet\.id === set\.id\) \{\s*menuDeleteTargetIdRef\.current = null;\s*handleDeleteEditedSet\(\);\s*return;/);
   });
 
-  test('D4, D15: the reset is keyed on the exercise and closes the sheet; a hold cancels the advance', () => {
+  // The hold that opened a logged set's sheet is gone (founder, 2026-10-11:
+  // notes popped up unasked); the set's tick opens it, and still cancels a
+  // pending auto-advance.
+  test('D4, D15: the reset is keyed on the exercise and closes the sheet; opening a set\'s sheet cancels the advance', () => {
     expect(SRC).toMatch(/setExtraTargetSets\(0\);\s*setRowSheet\(null\);\s*\/\/ eslint-disable-next-line react-hooks\/exhaustive-deps\s*\}, \[currentExerciseIndex, exercise\?\.id\]\);/);
-    expect(SRC).toContain("onLongPressRow: () => { cancelAutoAdvance(); setRowSheet({ kind: 'logged'");
+    expect(SRC).toContain("onCheck: () => { Keyboard.dismiss(); cancelAutoAdvance(); setRowSheet({ kind: 'logged'");
+    expect(SRC).not.toContain('onLongPressRow:');
   });
 
   test('D5: the logged row carries its note and a saved note stays in the row', () => {

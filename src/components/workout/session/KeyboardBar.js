@@ -35,6 +35,11 @@
  *               (founder, 2026-10-11: "Maybe we need an Ok button alongside
  *               Log"). The screen gives it whenever the last action logs or
  *               finishes; an edit's Done already closes
+ *   onNote      when given, a Note action before OK opens the set's note
+ *               (founder, 2026-10-11: notes open from "the notes button
+ *               alongside Log" and nothing else). The screen gives it on the
+ *               set's last box, where the bar has room; on the weight box
+ *               Next leads there
  *   safeBottom  optional bottom inset in dp (default 0) under the row, for
  *               the gesture bar when the keyboard is not covering it
  *
@@ -79,7 +84,7 @@ function Action({ testID, icon, label, spoken, hint, onPress, glyphColor, labelS
   );
 }
 
-export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mode = 'number', onStep, onNext, onDone, onDismiss, doneLabel = 'Done', safeBottom = 0 }) {
+export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mode = 'number', onStep, onNext, onDone, onDismiss, onNote, doneLabel = 'Done', safeBottom = 0 }) {
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
@@ -128,6 +133,18 @@ export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mo
           label="Next"
           spoken="Next"
           onPress={onNext}
+          glyphColor={ink}
+          labelStyle={live.label}
+        />
+      ) : null}
+      {onNote ? (
+        <Action
+          testID="volyume-bar-note"
+          icon="create-outline"
+          label="Note"
+          spoken="Note"
+          hint="Adds a note to this set"
+          onPress={onNote}
           glyphColor={ink}
           labelStyle={live.label}
         />

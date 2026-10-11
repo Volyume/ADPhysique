@@ -2344,12 +2344,14 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       expect(loggedCount()).toBe(0);
       expect(host(tree, 'volyume-bar-done').props.accessibilityLabel).toBe('Log set');
       expect(barText(tree)).toBe('Log set');
-      // While the keyboard is up the rows stand aside (founder report
-      // 2026-10-11: a tap on a blank area opened the set sheet), and OK sits
-      // beside Log set.
-      const nextRow = () => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.testID === 'volyume-next-set-row' && n.props.delayLongPress)[0];
-      expect(nextRow().props.disabled).toBe(true);
+      // No row has a hold (founder, 2026-10-11: "notes popping up the whole
+      // time when I don't press the notes button alongside Log"): a row is a
+      // plain view, so a tap on its blank space puts the keyboard away. On
+      // the set's last box the bar carries Note and OK beside Log set.
+      const holds = () => tree.root.findAll((n) => typeof n.type !== 'string' && n.props.delayLongPress && /^volyume-(next-)?set-row/.test(String(n.props.testID)));
+      expect(holds()).toHaveLength(0);
       expect(host(tree, 'volyume-bar-ok')).toBeTruthy();
+      expect(host(tree, 'volyume-bar-note')).toBeTruthy();
 
       await actFlush(() => pressable(tree, 'volyume-bar-done').props.onPress());
       expect(loggedCount()).toBe(1); // one more logged row, no second log
@@ -2357,11 +2359,12 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       expect(textInput(tree, 'volyume-reps-input')).toBeUndefined(); // the input closed
       expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
 
-      expect(nextRow().props.disabled).toBe(false); // keyboard away: the hold is back
+      expect(holds()).toHaveLength(0);
 
       // OK puts the keyboard away and keeps what was typed, logging nothing.
-      await typeOnKeyboard(tree, 'weight', 65);
-      expect(nextRow().props.disabled).toBe(true);
+      await actFlush(() => pressable(tree, 'volyume-well-weight').props.onPress());
+      await actFlush(() => textInput(tree, 'volyume-weight-input').props.onChangeText('65'));
+      expect(host(tree, 'volyume-bar-note')).toBeUndefined(); // the weight box: Next leads to it
       const { Keyboard } = require('react-native');
       const dismiss = jest.spyOn(Keyboard, 'dismiss');
       await actFlush(() => pressable(tree, 'volyume-bar-ok').props.onPress());
@@ -2370,8 +2373,14 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
       expect(textInput(tree, 'volyume-weight-input')).toBeUndefined();
       expect(loggedCount()).toBe(1);
       expect(database.createWorkoutSet).toHaveBeenCalledTimes(1);
-      expect(nextRow().props.disabled).toBe(false);
       expect(host(tree, 'volyume-well-weight').findAll((n) => n.type === 'Text').map((n) => [].concat(n.props.children).join('')).join('')).toContain('65');
+
+      // Note opens the next set's note, keyboard away, numbers kept, nothing logged.
+      await typeOnKeyboard(tree, 'reps', 9);
+      await actFlush(() => pressable(tree, 'volyume-bar-note').props.onPress());
+      expect(textInput(tree, 'volyume-reps-input')).toBeUndefined();
+      expect(tree.root.findAll((n) => n.type === 'Text' && [].concat(n.props.children).join('') === 'Next set').length).toBeGreaterThan(0);
+      expect(loggedCount()).toBe(1);
 
       // Editing the logged row: the same action reads Done, with no OK.
       await actFlush(() => pressable(tree, 'volyume-well-reps-0').props.onPress());
@@ -2729,12 +2738,13 @@ describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
       await typeAndLog(tree, 60, 14);
       expect(weightInput(tree).props.value).toBe('62.5');
 
-      // Delete the second (60x14, the overshoot) set: hold its row for the
-      // row sheet, then Delete set drives the real confirm-then-remove flow
-      // (openDeleteFromMenu -> handleDeleteEditedSet).
-      const row = tree.root.findAll((n) => n.props && n.props.testID === 'volyume-set-row-1' && typeof n.props.onLongPress === 'function')[0];
-      expect(row).toBeTruthy();
-      await actFlush(() => row.props.onLongPress());
+      // Delete the second (60x14, the overshoot) set: its tick opens the
+      // set's sheet (the row hold is gone, founder 2026-10-11), then Delete
+      // set drives the real confirm-then-remove flow (openDeleteFromMenu ->
+      // handleDeleteEditedSet).
+      const tick = pressable(tree, 'volyume-set-check-1');
+      expect(tick).toBeTruthy();
+      await actFlush(() => tick.props.onPress());
       await actFlush(() => pressable(tree, 'volyume-setrow-sheet-delete').props.onPress());
 
       // Only the 60x10 set remains logged; the next box's carry-forward
