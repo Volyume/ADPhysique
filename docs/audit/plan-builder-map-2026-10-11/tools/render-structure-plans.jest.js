@@ -88,6 +88,10 @@ test('render', () => {
     [{ goal: 'wellness', days: 4, lengthMinutes: 60, equipment: 'dumbbells_only', experience: 'intermediate', focus: [] }, 'Wellness, 4 days, dumbbells only'],
     [{ goal: 'bodybuilding', days: 6, lengthMinutes: 90, equipment: 'full_gym', experience: 'advanced', focus: ['lats'] }, 'Bodybuilding, 6 days, advanced, 90 minutes, focus lats'],
     [{ goal: 'figure', days: 3, lengthMinutes: 60, equipment: 'bodyweight', experience: 'intermediate', focus: [] }, 'Figure, 3 days, bodyweight'],
+    [{ goal: 'general', days: 4, lengthMinutes: 60, equipment: 'full_gym', experience: 'intermediate', focus: ['chest'] }, 'General, 4 days, focus chest (R46: room made above the standard)'],
+    [{ goal: 'classic_physique', days: 5, lengthMinutes: 75, equipment: 'full_gym', experience: 'intermediate', focus: ['lats', 'side_delts'] }, 'Classic physique, 5 days, 75 minutes, focus lats and side delts'],
+    [{ goal: 'womens_physique', days: 4, lengthMinutes: 60, equipment: 'full_gym', experience: 'intermediate', focus: ['glute_max'] }, "Women's physique, 4 days, focus glutes"],
+    [{ goal: 'wellness', days: 5, lengthMinutes: 60, equipment: 'full_gym', experience: 'beginner', focus: ['quads'] }, 'Wellness, 5 days, beginner, focus quads'],
   ];
   for (const [args, title] of variants) out.push(...render(args, title));
   fs.writeFileSync(OUT, out.join('\n') + '\n');

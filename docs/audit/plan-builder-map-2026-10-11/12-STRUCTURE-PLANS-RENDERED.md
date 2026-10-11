@@ -1844,3 +1844,194 @@ With this equipment side_delts has one exercise of its own: 5 of 8 sets a week (
 Weekly sets at the peak (counted: own sets + half of other exercises' credit; then the muscle's own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):
 chest 9, own 8 (5/10/14); lats 10, own 8 (8/14/20); upper_back 8, own 4 (5/10/14); side_delts 5, own 5 (8/14/20); rear_delts 7, own 5 (5/10/14); biceps 11, own 5 (5/10/14); triceps 10, own 6 (5/10/14); quads 5, own 5 (5/10/14); hamstrings 5, own 5 (5/10/14); glute_max 7, own 3 (5/10/14); glute_med 3, own 3 (3/6/8); calves 3, own 3 (3/6/8); abs 8, own 8 (5/10/14).
 
+### General, 4 days, focus chest (R46: room made above the standard)
+
+Rulebook checks: pass. Sense checks: pass.
+Longest session 71 min against 60 chosen (asks for a longer session: 75 min, or more days).
+Focus not fully reached: chest 12 of 14 (its sessions are full; the plan says so).
+To make room for the focus: side_delts 8 to 6 own sets (minimum 6).
+
+**1. Upper A** (7 exercises, 24 sets at the peak, about 68 min)
+- Barbell Bench Press: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Lat Pulldown (Wide Grip): sets by week 2/2/2/2/2/1, 8-12 reps, rest 90 s
+- Seated Cable Row: sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
+- Cable Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Reverse Pec Deck: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Hammer Curl: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Cable Overhead Tricep Extension: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+
+**2. Lower A & Abs** (7 exercises, 24 sets at the peak, about 71 min)
+- Barbell Back Squat: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Romanian Deadlift (Barbell): sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Barbell Hip Thrust: sets by week 2/2/3/3/3/2, 6-10 reps, rest 120 s
+- Leg Extension: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Cable Hip Abduction: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Cable Crunch: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+
+**3. Upper B** (8 exercises, 24 sets at the peak, about 69 min)
+- Incline Barbell Bench Press: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Lat Pulldown (Neutral Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
+- Chest-Supported Row (Dumbbell): sets by week 2/2/2/2/2/1, 8-12 reps, rest 90 s
+- Cable Crossover (High to Low): sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Dumbbell Lateral Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Face Pull: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- EZ Bar Preacher Curl: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Tricep Pushdown (Bar): sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+
+**4. Lower B & Abs** (8 exercises, 24 sets at the peak, about 65 min)
+- Leg Press: sets by week 3/3/4/4/4/2, 8-15 reps, rest 120 s
+- Romanian Deadlift (Dumbbell): sets by week 2/2/2/2/2/1, 8-12 reps, rest 90 s
+- Lying Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Standing Calf Raise (Machine): sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Abduction Machine: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Hanging Leg Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Machine Crunch: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+
+Weekly sets at the peak (counted: own sets + half of other exercises' credit; then the muscle's own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):
+chest 12, own 12 (6/14/18); lats 9, own 6 (6/10/14); upper_back 9, own 6 (6/10/14); side_delts 6, own 6 (6/10/14); rear_delts 9, own 6 (6/10/14); biceps 12, own 6 (6/10/14); triceps 10, own 6 (6/10/14); quads 10, own 10 (6/10/14); hamstrings 10, own 10 (6/10/14); glute_max 10, own 3 (6/10/14); glute_med 5, own 5 (4/6/8); calves 10, own 10 (6/10/14); abs 10, own 10 (6/10/14).
+
+### Classic physique, 5 days, 75 minutes, focus lats and side delts
+
+Rulebook checks: pass. Sense checks: pass.
+Longest session 75 min against 75 chosen.
+Focus not fully reached: side_delts 16 of 18 (it has 2 sessions a week, each already holding the most one session may; the plan says so).
+
+**1. Legs A & Abs** (8 exercises, 24 sets at the peak, about 75 min)
+- Barbell Back Squat: sets by week 3/3/4/4/4/2, 6-10 reps, rest 180 s
+- Romanian Deadlift (Barbell): sets by week 3/3/4/4/4/2, 6-10 reps, rest 180 s
+- Leg Extension: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Seated Leg Curl: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Standing Calf Raise (Machine): sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Cable Hip Abduction: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Cable Crunch: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+
+**2. Push** (5 exercises, 19 sets at the peak, about 62 min)
+- Barbell Bench Press: sets by week 3/3/4/4/4/2, 6-10 reps, rest 180 s
+- Incline Dumbbell Press: sets by week 3/3/4/4/4/2, 8-12 reps, rest 150 s
+- Cable Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Machine Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Tricep Pushdown (Bar): sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+**3. Pull** (6 exercises, 21 sets at the peak, about 68 min)
+- Lat Pulldown (Wide Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 150 s
+- Seated Cable Row: sets by week 3/3/4/4/4/2, 8-12 reps, rest 150 s
+- Chest-Supported Row (Dumbbell): sets by week 2/2/2/2/2/1, 8-12 reps, rest 150 s
+- Cable Straight-Arm Pulldown: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Reverse Pec Deck: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Hammer Curl: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+**4. Legs B & Abs** (8 exercises, 24 sets at the peak, about 74 min)
+- Leg Press: sets by week 3/3/4/4/4/2, 8-15 reps, rest 180 s
+- Barbell Hip Thrust: sets by week 2/2/3/3/3/2, 6-10 reps, rest 180 s
+- Romanian Deadlift (Dumbbell): sets by week 2/2/2/2/2/1, 8-12 reps, rest 150 s
+- Leg Extension: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Lying Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Abduction Machine: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Hanging Leg Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+
+**5. Shoulders, Arms & Lats** (7 exercises, 24 sets at the peak, about 69 min)
+- Lat Pulldown (Neutral Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 150 s
+- Cable Lat Pullover: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Dumbbell Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Cable Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Face Pull: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- EZ Bar Preacher Curl: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Cable Overhead Tricep Extension: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+Weekly sets at the peak (counted: own sets + half of other exercises' credit; then the muscle's own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):
+chest 8, own 8 (6/10/14); lats 18, own 15 (10/18/20); upper_back 10, own 6 (6/10/14); side_delts 16, own 16 (10/18/20); rear_delts 10, own 7 (6/10/14); biceps 13, own 6 (6/10/14); triceps 10, own 6 (6/10/14); quads 12, own 12 (10/14/20); hamstrings 12, own 12 (10/14/20); glute_max 10, own 3 (6/10/14); glute_med 4, own 4 (4/6/8); calves 11, own 11 (10/14/20); abs 6, own 6 (6/10/14).
+
+### Women's physique, 4 days, focus glutes
+
+Rulebook checks: pass. Sense checks: pass.
+Longest session 72 min against 60 chosen (asks for a longer session: 75 min, or more days).
+To make room for the focus: quads 10 to 8 own sets (minimum 6); calves 10 to 9 own sets (minimum 6); glute_med 5 to 4 own sets (minimum 4).
+
+**1. Back, Delts & Biceps** (8 exercises, 24 sets at the peak, about 66 min)
+- Lat Pulldown (Wide Grip): sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
+- Seated Cable Row: sets by week 3/3/4/4/4/2, 8-12 reps, rest 90 s
+- Cable Straight-Arm Pulldown: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Dumbbell Lateral Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Machine Lateral Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Face Pull: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- EZ Bar Preacher Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Hammer Curl: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+
+**2. Lower A & Abs** (7 exercises, 24 sets at the peak, about 72 min)
+- Barbell Hip Thrust: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Barbell Back Squat: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Romanian Deadlift (Barbell): sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Glute Kickback Machine: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 60 s
+- Cable Hip Abduction: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Cable Crunch: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+
+**3. Delts, Chest & Triceps** (7 exercises, 24 sets at the peak, about 65 min)
+- Barbell Bench Press: sets by week 3/3/4/4/4/2, 6-10 reps, rest 120 s
+- Incline Dumbbell Press: sets by week 2/2/2/2/2/1, 8-12 reps, rest 90 s
+- Cable Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Machine Lateral Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Reverse Pec Deck: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Cable Overhead Tricep Extension: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Tricep Pushdown (Rope): sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+
+**4. Lower B & Abs** (8 exercises, 24 sets at the peak, about 65 min)
+- Leg Press: sets by week 3/3/4/4/4/2, 8-15 reps, rest 120 s
+- Romanian Deadlift (Dumbbell): sets by week 2/2/2/2/2/1, 8-12 reps, rest 90 s
+- Lying Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Standing Calf Raise (Machine): sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Seated Calf Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Abduction Machine: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+- Hanging Leg Raise: sets by week 3/3/4/4/4/2, 10-20 reps, rest 60 s
+- Machine Crunch: sets by week 2/2/2/2/2/1, 10-20 reps, rest 60 s
+
+Weekly sets at the peak (counted: own sets + half of other exercises' credit; then the muscle's own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):
+chest 6, own 6 (6/10/14); lats 10, own 8 (10/14/20); upper_back 6, own 4 (6/10/14); side_delts 12, own 12 (10/14/20); rear_delts 8, own 6 (6/10/14); biceps 10, own 6 (6/10/14); triceps 9, own 6 (6/10/14); quads 8, own 8 (6/10/14); hamstrings 10, own 10 (6/10/14); glute_max 14, own 7 (6/14/18); glute_med 4, own 4 (4/6/8); calves 9, own 9 (6/10/14); abs 10, own 10 (6/10/14).
+
+### Wellness, 5 days, beginner, focus quads
+
+Rulebook checks: pass. Sense checks: pass.
+Longest session 53 min against 60 chosen.
+Focus not fully reached: quads 12 of 14 (its sessions are full; the plan says so).
+
+**1. Glutes, Hamstrings, Quads & Calves** (5 exercises, 16 sets at the peak, about 53 min)
+- Barbell Back Squat: sets by week 3/3/4/4/4/2, 6-10 reps, rest 180 s
+- Barbell Hip Thrust: sets by week 2/2/2/2/2/1, 6-10 reps, rest 180 s
+- Seated Leg Curl: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Lying Leg Curl: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Standing Calf Raise (Machine): sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+**2. Upper A & Abs** (5 exercises, 13 sets at the peak, about 42 min)
+- Lat Pulldown (Wide Grip): sets by week 2/2/3/3/3/2, 8-12 reps, rest 150 s
+- Machine Row (Chest Supported): sets by week 2/2/2/2/2/1, 8-15 reps, rest 150 s
+- Dumbbell Lateral Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- EZ Bar Preacher Curl: sets by week 2/2/2/2/2/1, 10-20 reps, rest 75 s
+- Cable Crunch: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+**3. Hamstrings, Glute Med, Adductors & Calves** (5 exercises, 15 sets at the peak, about 46 min)
+- Romanian Deadlift (Dumbbell): sets by week 2/2/3/3/3/2, 8-12 reps, rest 150 s
+- Abduction Machine: sets by week 3/3/4/4/4/2, 10-20 reps, rest 75 s
+- Cable Hip Abduction: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Hip Adduction Machine: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Seated Calf Raise: sets by week 2/2/2/2/2/1, 10-20 reps, rest 75 s
+
+**4. Quads & Glutes** (4 exercises, 10 sets at the peak, about 39 min)
+- Leg Press: sets by week 2/2/3/3/3/2, 8-15 reps, rest 180 s
+- Machine Hip Thrust: sets by week 2/2/2/2/2/1, 8-15 reps, rest 180 s
+- Bulgarian Split Squat: sets by week 2/2/3/3/3/2, 8-12 reps, rest 150 s
+- Leg Extension: sets by week 2/2/2/2/2/1, 10-20 reps, rest 75 s
+
+**5. Upper B** (5 exercises, 15 sets at the peak, about 48 min)
+- Lat Pulldown (Neutral Grip): sets by week 2/2/3/3/3/2, 8-12 reps, rest 150 s
+- Incline Machine Press: sets by week 2/2/3/3/3/2, 8-15 reps, rest 150 s
+- Cable Lateral Raise: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Reverse Pec Deck: sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+- Tricep Pushdown (Rope): sets by week 2/2/3/3/3/2, 10-20 reps, rest 75 s
+
+Weekly sets at the peak (counted: own sets + half of other exercises' credit; then the muscle's own sets), against minimum / normal / maximum. Credit counts towards the maximum only up to the maximum less the minimum (R34):
+chest 3, own 3 (3/4/8); lats 7, own 6 (4/7/14); upper_back 5, own 2 (3/4/8); side_delts 6, own 6 (4/7/14); rear_delts 4, own 3 (3/4/8); biceps 6, own 2 (3/4/8); triceps 4.5, own 3 (3/4/8); quads 12, own 12 (7/14/20); hamstrings 10, own 10 (7/10/20); glute_max 10.5, own 4 (7/10/20); glute_med 7, own 7 (4/7/14); adductors 6.5, own 3 (4/7/14); calves 5, own 5 (3/4/8); abs 3, own 3 (3/4/8).
+
