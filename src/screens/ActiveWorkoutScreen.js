@@ -3665,8 +3665,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSet]);
 
+  // Leaving an edit saves it (founder report 2026-10-11), so a save can be
+  // asked for by a box tap and by the keyboard going away at nearly the same
+  // moment: the ref lets only the first run. Resolves true once saved.
+  const savingEditRef = useRef(false);
   async function handleSaveEditedSet() {
-    if (saving || !editingSet || !editValue) return;
+    if (saving || savingEditRef.current || !editingSet || !editValue) return false;
     const validation = validateSetEntryValue({
       value: editValue,
       exercise,
@@ -3675,7 +3679,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     });
     if (!validation.ok) {
       appAlert(validation.title, validation.message);
-      return;
+      return false;
     }
     // For timed/distance the value columns are weight=distance/0 and
     // actualReps=seconds; SetEntry already stores those numbers, so parse
@@ -3683,6 +3687,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const { actualReps, weight } = validation;
 
     setSaving(true);
+    savingEditRef.current = true;
     try {
       await updateWorkoutSet(editingSet.id, { weight, actualReps });
       updateSetInCurrentExercise(editingSet.id, { weight, actualReps });
@@ -3751,6 +3756,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       hapticsVocab.setLogged();
       // P9 TalkBack: spoken counterpart of the ack above.
       try { AccessibilityInfo.announceForAccessibility('Set updated'); } catch (_) {}
+      return true;
     } catch (e) {
       logError('ActiveWorkoutScreen.handleSaveEditedSet', e, {
         userId: user?.id,
@@ -3761,8 +3767,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         'Couldn\'t save changes',
         'Your edit was not saved. Tap Save to retry. If this keeps happening, tell us from Settings > Help.',
       );
+      return false;
     } finally {
       setSaving(false);
+      savingEditRef.current = false;
     }
   }
 
@@ -4867,15 +4875,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return String(editValue?.weight ?? '') !== String(editingSet.weight ?? '')
       || String(editValue?.reps ?? '') !== String(editingSet.actualReps ?? editingSet.reps ?? '');
   }
-  // Founder ruling 2026-10-09 (D220 addendum 28, 3b): opening another well
-  // while an edit holds an unsaved change asks first, in the app's own
-  // dialog, instead of discarding the change silently.
+  // Leaving an edit saves it (founder report 2026-10-11: the discard prompt
+  // came up on a box tap, the edit having been left open when the keyboard
+  // went away; amends D220 addendum 28, 3b, whose concern was a change lost
+  // silently). Opening another well with a change in hand saves the change
+  // first; a change that cannot be saved shows its reason and stays open.
   function openWell(field, set = null) {
     if (editingSet && editIsDirty() && (set?.id ?? null) !== editingSet.id) {
-      appAlert('Discard changes?', 'Your change to this set is not saved.', [
-        { text: 'Keep editing', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => { closeEditSet(); setEditField(null); openWellNow(field, set); } },
-      ]);
+      handleSaveEditedSet().then((saved) => { if (saved) openWellNow(field, set); });
       return;
     }
     openWellNow(field, set);
@@ -4904,7 +4911,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   // Scroll so the row being typed into sits above the keypad. The pad's
   // height is known once it lays out, so this runs on that layout too.
+  // Set while the person's finger moves the list: a programmatic scroll then
+  // would fight the finger (founder report 2026-10-11, Sentry VOLYUME-3J).
+  const userDraggingRef = useRef(false);
   function scrollRowAboveBar(rowId, padHeight) {
+    if (userDraggingRef.current) return;
     const rowY = rowYRef.current[rowId];
     const viewport = scrollViewportRef.current;
     if (!Number.isFinite(rowY) || !viewport || !padHeight) return;
@@ -4920,6 +4931,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // closes the well too (2026-10-09 audit C6), unless another input already
   // holds focus: moving between wells can hide and re-show the keyboard.
   const inputOpenRef = useRef(false);
+  // The listener is registered once, so it cannot read the edit; it counts
+  // the leave and the effect below, which reads the current edit, settles it.
+  const [editLeftTick, setEditLeftTick] = useState(0);
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidHide', () => {
       if (!inputOpenRef.current) return;
@@ -4927,9 +4941,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setEntryField(null);
       setEditField(null);
       setTimeDraft(null);
+      setEditLeftTick((n) => n + 1);
     });
     return () => sub.remove();
   }, []);
+  // The keyboard going away by any route (a blank tap, an iOS drag, Android
+  // back) leaves an edit of a logged set: a change is saved, an untouched
+  // edit closes. It had stayed open unseen, and the next box tap asked to
+  // discard it (founder report 2026-10-11).
+  useEffect(() => {
+    if (!editLeftTick || !editingSet) return;
+    if (editIsDirty()) handleSaveEditedSet(); else closeEditSet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLeftTick]);
   // D220 addendum 25: the first keystroke into a freshly opened well REPLACES
   // what the well held, as the retired keypad did. selectTextOnFocus is kept,
   // but on the founder's iPhone it did not select the seed under autoFocus
@@ -4951,6 +4975,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setEntryField(null);
     setEditField(null);
     setTimeDraft(null);
+  }
+  // The bar's OK (founder, 2026-10-11): the keyboard goes away and the box
+  // closes, keeping what was typed, logging nothing. Dismissed explicitly:
+  // on Android the keyboard can outlive the field it was opened for.
+  function handleInputOk() {
+    Keyboard.dismiss();
+    closeInput();
+  }
+  // The bar's Note (founder, 2026-10-11: notes open from "the notes button
+  // alongside Log", never by themselves): the keyboard goes away, the typed
+  // numbers stay, and the next set's note opens.
+  function handleInputNote() {
+    Keyboard.dismiss();
+    closeInput();
+    setRowSheet({ kind: 'next', title: 'Next set' });
   }
   function handleInputStep(delta) {
     if (!activeField) return;
@@ -5171,7 +5210,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const barLogLabel = cluster ? 'Finish'
     : perSide ? 'Other side'
       : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start'
-        : 'Log';
+        : 'Log set';
   const nextCheckLabel = cluster ? 'Finish cluster'
     : perSide ? 'Log other side'
       : isWarmupEntry ? 'Log warm-up'
@@ -5199,11 +5238,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       record: detectedPRs.some((pr) => pr.setId === s.id),
       inputField: editingThis ? activeInputField : null,
       onPressWell: (field) => openWell(field, s),
-      // A hold is the person staying on this exercise: it cancels a pending
-      // auto-advance (audit D4). The title names a typed set by its type
-      // (audit P7: a drop set after set 2 was titled "Set 2").
-      onLongPressRow: () => { cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
-      testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}` },
+      // The tick is the button for the set's sheet (its note, Edit set and
+      // Delete set): it opens on a deliberate press only, never from the row
+      // (founder, 2026-10-11: "It's really annoying notes popping up the
+      // whole time"). Opening it is the person staying on this exercise: it
+      // cancels a pending auto-advance (audit D4). The title names a typed
+      // set by its type (audit P7: a drop set after set 2 was titled "Set 2").
+      onCheck: () => { Keyboard.dismiss(); cancelAutoAdvance(); setRowSheet({ kind: 'logged', set: s, title: `${rowSheetTitleFor(s, warm, progressNum)} · ${shortSetText(s)}` }); },
+      checkLabel: `${rowSheetTitleFor(s, warm, progressNum)} options`,
+      testIDs: { row: `volyume-set-row-${i}`, weight: `volyume-well-weight-${i}`, reps: `volyume-well-reps-${i}`, check: `volyume-set-check-${i}` },
     });
   });
   const nextLast = isWarmupEntry
@@ -5236,7 +5279,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } : undefined,
     onPressWell: (field) => openWell(field),
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
-    onLongPressRow: () => setRowSheet({ kind: 'next', title: 'Next set' }),
     testIDs: { row: 'volyume-next-set-row', marker: 'volyume-set-type-btn', last: 'volyume-last-cell', weight: 'volyume-well-weight', reps: 'volyume-well-reps' },
   });
   for (let n = (isWarmupEntry ? workingLogged + 1 : workingLogged + 2); n <= targetSets; n += 1) {
@@ -5467,7 +5509,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // (Log set, the header X and the overflow sheet's own drag handle
           // remain the ways to dismiss/leave), but typing becomes reliable,
           // which is the defect that made the screen unusable.
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+          //
+          // 'none' on iOS too (founder report 2026-10-11, Sentry VOLYUME-3J):
+          // dragging the list dragged the keyboard ('interactive'), the
+          // keyboard-avoiding padding then relaid the list out, and each
+          // layout fired an animated scroll against the finger; the app froze
+          // in UIKit layout and iOS ended it. The keyboard now goes away by
+          // a blank tap, OK, Log set or Done, never by a drag.
+          keyboardDismissMode="none"
+          // No programmatic scroll while the person's finger moves the list.
+          onScrollBeginDrag={() => { userDraggingRef.current = true; }}
+          onScrollEndDrag={() => { userDraggingRef.current = false; }}
         >
           {/* Stage A (D220): the session title and its note, then the
               session sheet: collapsed headers above, the active exercise as
@@ -5976,6 +6028,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onNext={activeField === 'weight' ? handleInputNext : undefined}
                 onDone={editingSet ? handleInputDone : handleInputLog}
                 doneLabel={editingSet ? 'Done' : barLogLabel}
+                onDismiss={editingSet ? undefined : handleInputOk}
+                onNote={editingSet || activeField === 'weight' ? undefined : handleInputNote}
                 safeBottom={0}
               />
             </View>
@@ -5992,6 +6046,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onNext={activeField === 'weight' ? handleInputNext : undefined}
               onDone={editingSet ? handleInputDone : handleInputLog}
               doneLabel={editingSet ? 'Done' : barLogLabel}
+              onDismiss={editingSet ? undefined : handleInputOk}
+              onNote={editingSet || activeField === 'weight' ? undefined : handleInputNote}
               safeBottom={0}
             />
           </View>

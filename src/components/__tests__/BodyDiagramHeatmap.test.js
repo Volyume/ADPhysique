@@ -442,7 +442,7 @@ describe('the volume palette and its legend', () => {
     const tree = create(<BodyDiagramHeatmap volumeByMuscle={VOLUME_BY_MUSCLE} onMuscleTap={() => {}} />);
     const group = host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0];
     const legend = group.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
-    expect(legend).toEqual(['Below maintenance', 'Maintenance to growth', 'Growth range', 'Beyond the studied range', 'No sets']);
+    expect(legend).toEqual(['Too few to hold size', 'Holds size, some growth', 'Range for growth', 'More than needed', 'No sets']);
     const sw = swatches(tree);
     expect(sw.map((s) => s.backgroundColor)).toEqual([
       t.colors.textMuted, t.colors.volumeMinimum, t.colors.success, t.colors.macroCarb, undefined,
@@ -453,7 +453,7 @@ describe('the volume palette and its legend', () => {
     expect(sw[4]).toMatchObject({ borderWidth: 1, borderColor: t.colors.border, borderStyle: 'solid' });
     expect(tree.root.findAllByType(InfoTooltip).length).toBeGreaterThan(0);
     expect(host(tree, (n) => n.props.accessible === true && String(n.props.accessibilityLabel).startsWith('Key: '))[0].props.accessibilityLabel)
-      .toBe('Key: Below maintenance, Maintenance to growth, Growth range, Beyond the studied range, No sets');
+      .toBe('Key: Too few to hold size, Holds size, some growth, Range for growth, More than needed, No sets');
   });
 
   test('under the colour-blind-safe palette "Maintenance to growth" and "Growth range" are different colours', () => {

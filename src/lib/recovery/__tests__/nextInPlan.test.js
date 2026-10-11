@@ -11,7 +11,7 @@
  *     When the plan week is complete it names next week's first session, labelled
  *     as such.
  *   - Each muscle's own estimated readiness, rounded to a part of the day (this
- *     afternoon, this evening, tomorrow morning, in about 2 days), because every
+ *     afternoon, this evening, tomorrow morning, Friday morning), because every
  *     estimate carries a band of about 25% and a clock time would claim more than
  *     the model knows. They are forecasts of readiness, never a statement that the
  *     person trains then: the card's title never names a day.
@@ -47,8 +47,12 @@ describe('partOfDay: a readiness forecast rounded to a part of the day', () => {
     [at(1, 6), 'tomorrow', 'tomorrow morning'],
     [at(1, 14), 'tomorrow', 'tomorrow afternoon'],
     [at(1, 19), 'tomorrow', 'tomorrow evening'],
-    [at(2, 8), 'days', 'in about 2 days'],
-    [at(5, 20), 'days', 'in about 5 days'],
+    // RE-ANCHORED D224 (founder 2026-10-11: "Side delts ready tomorrow on
+    // Today. But different in recovery."): one wording for every surface, and
+    // within the week it names the weekday, as the list did.
+    [at(2, 8), 'week', 'Friday morning'],
+    [at(5, 20), 'week', 'Monday evening'],
+    [at(9, 8), 'days', 'in about 9 days'],
   ])('ready %#: %s', (readyAt, kind, text) => {
     const p = partOfDay(readyAt, NOW);
     expect(p.kind).toBe(kind);
@@ -65,7 +69,8 @@ describe('partOfDay: a readiness forecast rounded to a part of the day', () => {
     expect(recoveredPhrase(at(0, 7), NOW)).toBe('estimated recovered now');
     expect(recoveredPhrase(at(0, 18), NOW)).toBe('estimated recovered by this evening');
     expect(recoveredPhrase(at(1, 8), NOW)).toBe('estimated recovered by tomorrow morning');
-    expect(recoveredPhrase(at(3, 8), NOW)).toBe('estimated recovered in about 3 days');
+    expect(recoveredPhrase(at(3, 8), NOW)).toBe('estimated recovered by Saturday morning');
+    expect(recoveredPhrase(at(9, 8), NOW)).toBe('estimated recovered in about 9 days');
   });
 });
 
@@ -193,7 +198,7 @@ describe('each muscle\'s own readiness, and the latest muscle for the session li
     expect(build().sessionLine).toBe('Every muscle in it is estimated recovered by tomorrow morning.');
     // Chest (tomorrow 08:00) is later than triceps (today 18:00); make triceps the latest instead.
     const map = { ...MAP, triceps: entry('triceps', { recoveredPercent: 40, status: 'recovering', readyAtMs: at(3, 10) }) };
-    expect(build({ recoveryMap: map }).sessionLine).toBe('Every muscle in it is estimated recovered in about 3 days.');
+    expect(build({ recoveryMap: map }).sessionLine).toBe('Every muscle in it is estimated recovered by Saturday morning.'); // RE-ANCHORED D224: the weekday
   });
 
   test('every muscle recovered: "now"', () => {

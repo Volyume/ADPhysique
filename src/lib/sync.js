@@ -854,6 +854,13 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
 
     // Upload in batches of 10 to avoid hammering the API
     let failures = 0;
+    // Sentry VOLYUME-28 ("1 of 1 workouts failed to upload", 23 events on one
+    // phone, Sep 13 to Oct 5): each failure's own warning, which carries the
+    // cause, is dropped as connection noise when the cause is a lost
+    // connection, and none reached Sentry in 30 days; only this summary did,
+    // with no cause. It now says whether every failure was a lost connection,
+    // so an offline sync stays a breadcrumb and a real failure still ships.
+    let failuresAllNetwork = true;
     for (let i = 0; i < completed.length; i += 10) {
       const batch = completed.slice(i, i + 10);
       await Promise.all(
@@ -866,6 +873,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             if (wMs > maxPushedMs) maxPushedMs = wMs;
           } catch (e) {
             failures++;
+            if (!isNetworkNoise(typeof e?.causeMessage === 'string' && e.causeMessage ? e.causeMessage : e?.message)) failuresAllNetwork = false;
             // Per-workout failure doesn't abort the batch but it is logged
             // so the user can spot patterns in the Debug logs surface
             // (e.g. "every workout from 2024-12 fails, schema mismatch").
@@ -900,7 +908,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
       await new Promise(r => setTimeout(r, 50));
     }
     if (failures > 0) {
-      logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId });
+      logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId, allNetwork: failuresAllNetwork });
     } else if (maxPushedMs > workoutsWm) {
       // Advance only on a clean workout push: a failure leaves the
       // watermark where it was so the failed rows retry next cycle and
@@ -1185,6 +1193,18 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
 
 async function _pushMesocycles(sb, supabaseUserId, localUserId) {
   try {
+    // Sentry VOLYUME-2D/2F/2C (2026-10-10, build 81): every week of every
+    // block failed with 42501 "new row violates row-level security policy
+    // for table mesocycle_weeks". The cloud policy admits a week only when
+    // its block is already in the cloud for this person. Weeks were pushed
+    // for every local block, including a block this run did not push: one
+    // with no dates (filtered out below), one whose upsert failed, or one
+    // created on the device after the block list was read (a goal change
+    // while a sync ran, the screen these events came from). One such week
+    // rejected its whole 200-row request, so good weeks were lost with it.
+    // Only weeks whose block was pushed in this run go up; the rest wait for
+    // the run that pushes their block.
+    let pushedBlocks = new Set();
     const mesos = await getAllMesocyclesForUser(localUserId);
     if (mesos?.length) {
       // The cloud mesocycles schema declares start_date and end_date as
@@ -1252,10 +1272,12 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
       if (rows.length) {
         const { error } = await sb.from('mesocycles').upsert(rows, { onConflict: 'user_id,id' });
         if (error) logPgErr('sync._pushMesocycles', error);
+        else pushedBlocks = new Set(rows.map(r => r.id));
       }
     }
-    const weeks = await getAllMesocycleWeeksForUser(localUserId);
-    if (weeks?.length) {
+    const weeks = (await getAllMesocycleWeeksForUser(localUserId) || [])
+      .filter(w => pushedBlocks.has(w.mesocycleId));
+    if (weeks.length) {
       const rows = weeks.map(w => ({
         // Explicit user_id for the (user_id, id) composite PK, not relying on
         // the inheritance trigger alone (audit A2).
@@ -3276,3 +3298,7 @@ export {
   trackSyncRun,
   trackSyncConflictResolved,
 } from './sync/index';
+
+// Test seam for the block push (Sentry VOLYUME-2D/2F/2C): the suite drives it
+// with a fake client and a mocked local store; nothing in the app calls it.
+export const _pushMesocyclesForTests = _pushMesocycles;

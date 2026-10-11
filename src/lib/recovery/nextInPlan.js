@@ -19,7 +19,7 @@
  *   estimated recovered by tomorrow morning" is true of the slowest muscle,
  *   where the limiting (least recovered now) muscle can be a quick one.
  * - Times are rounded to a part of the day (this afternoon, this evening,
- *   tomorrow morning, in about 2 days), because each estimate carries a band
+ *   tomorrow morning, by Friday morning), because each estimate carries a band
  *   of about 25% and a clock time would claim more than the model knows. They
  *   are forecasts of readiness, never a statement that the person trains then:
  *   there are no scheduled training days, and the title never names a day.
@@ -46,17 +46,24 @@ import { roleFor } from '../volumeJudgement';
 import { sessionReadiness } from './sessionReadiness';
 import { muscleNameList } from './nextWorkoutRecommendation';
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 /**
  * A ready-by instant, rounded to a part of the day, relative to nowMs.
- * `kind` is 'now' (already past, or no instant), 'today', 'tomorrow' or 'days';
- * `text` is "now", "this evening", "tomorrow morning" or "in about 2 days".
- * Civil-calendar days (not a raw millisecond subtraction), so a clock change
- * never shifts the word by a day. Morning is before 12:00, afternoon before
- * 17:00, evening from 17:00.
+ * `kind` is 'now' (already past, or no instant), 'today', 'tomorrow', 'week'
+ * or 'days'; `text` is "now", "this evening", "tomorrow morning", "Friday
+ * morning" or "in about 9 days". Civil-calendar days (not a raw millisecond
+ * subtraction), so a clock change never shifts the word by a day. Morning is
+ * before 12:00, afternoon before 17:00, evening from 17:00.
+ *
+ * D224 (founder 2026-10-11: "Side delts ready tomorrow on Today. But
+ * different in recovery."): every recovery surface words the ready instant
+ * through this one function, so the list, the card and the detail say the
+ * same thing; within the week it names the weekday, as the list did.
  *
  * @param {number|null} readyAtMs
  * @param {number} nowMs
- * @returns {{ kind: 'now'|'today'|'tomorrow'|'days', text: string }}
+ * @returns {{ kind: 'now'|'today'|'tomorrow'|'week'|'days', text: string }}
  */
 export function partOfDay(readyAtMs, nowMs) {
   if (!Number.isFinite(readyAtMs) || !Number.isFinite(nowMs) || readyAtMs <= nowMs) return { kind: 'now', text: 'now' };
@@ -65,19 +72,20 @@ export function partOfDay(readyAtMs, nowMs) {
   const part = hour < 12 ? 'morning' : (hour < 17 ? 'afternoon' : 'evening');
   if (!Number.isFinite(days) || days <= 0) return { kind: 'today', text: `this ${part}` };
   if (days === 1) return { kind: 'tomorrow', text: `tomorrow ${part}` };
+  if (days < 7) return { kind: 'week', text: `${WEEKDAYS[new Date(readyAtMs).getDay()]} ${part}` };
   return { kind: 'days', text: `in about ${days} days` };
 }
 
-/** "now", "by this evening", "by tomorrow morning" or "in about 2 days": the clause after "recovered". */
-function clauseFor(readyAtMs, nowMs) {
+/** "now", "by this evening", "by tomorrow morning", "by Friday morning" or "in about 9 days". */
+export function readyByClause(readyAtMs, nowMs) {
   const p = partOfDay(readyAtMs, nowMs);
   if (p.kind === 'now' || p.kind === 'days') return p.text;
   return `by ${p.text}`;
 }
 
-/** "estimated recovered now", "estimated recovered by this evening", "... in about 2 days". */
+/** "estimated recovered now", "estimated recovered by this evening", "... by Friday morning". */
 export function recoveredPhrase(readyAtMs, nowMs) {
-  return `estimated recovered ${clauseFor(readyAtMs, nowMs)}`;
+  return `estimated recovered ${readyByClause(readyAtMs, nowMs)}`;
 }
 
 /** "Chest, back, biceps and triceps": the first name capitalised, the rest as words in a sentence. */
@@ -180,7 +188,7 @@ export function buildNextInPlanCard({
     } else {
       const withSession = counted.filter((c) => c.status !== 'no_recent_session').map((c) => c.muscle);
       const without = counted.filter((c) => c.status === 'no_recent_session').map((c) => c.muscle);
-      const clause = clauseFor(readiness.latestReadyAtMs, nowMs);
+      const clause = readyByClause(readiness.latestReadyAtMs, nowMs);
       sessionLine = without.length
         ? `${muscleNameList(withSession)}: estimated recovered ${clause}. No recent session on ${muscleNameList(without)}.`
         : `Every muscle in it is estimated recovered ${clause}.`;

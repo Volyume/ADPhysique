@@ -506,9 +506,16 @@ describe('P0-7: permissive-default defects are closed', () => {
     // manufactured zero; zeroFillUnrated defaults FALSE) now lives there
     // and is behaviourally pinned by algorithms.deloadBuckets.test.js.
     // HomeScreen must consume the shared builder, never re-derive.
+    // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+    // recovery data from today. I don't want it there full stop."): Today
+    // no longer reads the deload signal at all, so it neither re-derives
+    // nor calls the builder. The surfaces that still read it (Progress via
+    // useProgressData, and the coach review) consume the shared builder.
     const home = read('screens/HomeScreen.js');
     expect(home).not.toMatch(/avgJointDiscomfort: 0,\s*\/\/ not tracked/);
-    expect(home).toMatch(/buildLast4WeekDeloadBuckets\(/);
+    expect(home).not.toMatch(/shouldDeload\(|buildLast4WeekDeloadBuckets\(/);
+    expect(read('hooks/useProgressData.js')).toMatch(/buildLast4WeekDeloadBuckets\(/);
+    expect(read('screens/CoachReviewScreen.js')).toMatch(/buildLast4WeekDeloadBuckets\(/);
     const algorithms = read('lib/algorithms.js');
     expect(algorithms).toMatch(/jointRatedWeeks\.length/);
     expect(algorithms).toMatch(/zeroFillUnrated = false/);

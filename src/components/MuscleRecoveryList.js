@@ -59,7 +59,16 @@
  * 2.5, each an estimate with a range), the estimate after the last session and
  * the spacing of the sessions counted (muscleDetail.js). A muscle the plan
  * raised also carries its intent on the row's own muted line. Without the two
- * props the list is exactly as it was.
+ * props the breakdown has no plan intent and no week section.
+ *
+ * D223 (founder, 2026-10-11, on the open Abs detail: "This data for muscles
+ * recovery looks horrendous, redesign this areas make it understandable,
+ * readable and slick."): the breakdown is no longer a column of labels beside
+ * right-aligned paragraphs. The same facts are drawn in sections (MuscleDetail
+ * below): the recovery estimate as a timeline with its two figures and the
+ * muscle's usual clock beside back's as two bars, this week's total large with
+ * its band and a bar against the plan's range, the sessions as dated rows, and
+ * the fine print last under "How this is estimated".
  *
  * Pure presentation: no I/O, never imports `../lib/database`.
  *
@@ -94,8 +103,11 @@ import { MUSCLE_DISPLAY_NAMES, allocateExerciseVolume, calculateWeeklyVolume } f
 import { trainingRecency } from '../lib/trainingRecency';
 import { safeFormatDate } from '../lib/safeFormat';
 import { RECOVERY_ESTIMATE_LABEL, LOOKBACK_DAYS } from '../lib/recovery/constants';
-import { readyClause } from '../lib/recovery/nextWorkoutRecommendation';
-import { muscleDetailRows } from '../lib/recovery/muscleDetail';
+import { readyByClause } from '../lib/recovery/nextInPlan';
+import {
+  muscleDetailRows, detailFacts, spacingValue, intentFor,
+} from '../lib/recovery/muscleDetail';
+import SectionLabel from './SectionLabel';
 import { roleFor } from '../lib/volumeJudgement';
 
 /** Group order and labels: the figure legend's own words, in the spec's row
@@ -163,13 +175,15 @@ export function muscleRecoveryBarFill(percent, c) {
   return withAlpha(c.recovery, alpha.edge);
 }
 
-/** "ready by Thursday", "ready later today", or "ready now" for a muscle
- * already at or above the recovered threshold (status 'recovered',
- * readyAtMs null by the model's own contract): one authority,
- * nextWorkoutRecommendation's readyClause. */
+/** "ready by tomorrow afternoon", "ready by Friday morning", or "ready now"
+ * for a muscle already at or above the recovered threshold (status
+ * 'recovered', readyAtMs null by the model's own contract). D224 (founder
+ * 2026-10-11: "Side delts ready tomorrow on Today. But different in
+ * recovery."): one authority for the words, nextInPlan's readyByClause, the
+ * same the "Next in your plan" card and the open detail use. */
 export function muscleReadyClause(entry, nowMs) {
   if (entry.status === 'recovered' || !Number.isFinite(entry.readyAtMs)) return 'ready now';
-  return readyClause(entry.readyAtMs, nowMs);
+  return `ready ${readyByClause(entry.readyAtMs, nowMs)}`;
 }
 
 /** The row's one muted line: "Ready by Thursday · Trained 2 days ago". */
@@ -352,7 +366,9 @@ function sessionSetsText(cs, split) {
 }
 
 /**
- * The breakdown lines behind one row's estimate, newest session first. D219:
+ * The breakdown behind one row's estimate as plain label and value lines,
+ * newest session first: the text form of the facts MuscleDetail draws (D223),
+ * kept so its wording stays pinned in one place. D219:
  * with `extra` ({ role, week, nowMs }) the plan's intent, this week's sets and
  * their band, the muscle's own clock, the estimate with its range and the
  * spacing follow the muscle's name (muscleDetail.muscleDetailRows); without it
@@ -374,24 +390,101 @@ export function muscleRecoveryDetailLines(entry, learnedSpeed = false, splits = 
   return lines;
 }
 
+/** The first letter up: "stomach and sides" reads "Stomach and sides" as a subtitle. */
+function capitalise(text) {
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text;
+}
+
+/** One section of the open detail: the app's section label, then its rows. */
+function DetailSection({ title, live, divided = true, children }) {
+  return (
+    <View style={[styles.section, divided ? [styles.sectionDivided, live.divider] : null]}>
+      <SectionLabel heading>{title}</SectionLabel>
+      {children}
+    </View>
+  );
+}
+
+/** One fact: a short label and its value, the app's label and value row. */
+function DetailRow({ label, value, live }) {
+  return (
+    <View style={styles.detailLine} accessible accessibilityLabel={`${label}: ${value}`}>
+      <Text style={[styles.detailLabel, live.detailLabel]}>{label}</Text>
+      <Text style={[styles.detailValue, live.detailValue]}>{value}</Text>
+    </View>
+  );
+}
+
 /**
- * The open breakdown: label and value lines, then the half-credit sentence and
- * where the recovery answer lives. Shared by the rows below and the "Next in
- * your plan" card (D219), so the two read the same.
+ * The open detail behind one muscle's estimate. D223 (founder 2026-10-11:
+ * "This data for muscles recovery looks horrendous, redesign this areas make
+ * it understandable, readable and slick.") and its correction the same day
+ * ("FOLLOW THE STYLE IN THE APP!!!! Do not free flow other formats and
+ * styles!!! No pills or anything else! There's a set style for a reason this
+ * needs to be a complete app"): the app's own section labels and label and
+ * value rows, each value a few plain words (muscleDetail.detailFacts), no
+ * pill, no drawn chart, no colour of its own:
+ *
+ *   - the muscle's plain word, then "Recovery": the estimated ready time (the
+ *     one instant the row and the "Next in your plan" card state, D224), when
+ *     it was last trained, the range, and the usual time beside another
+ *     muscle's;
+ *   - "This week so far" (with `withWeek`): the plan's intent for a muscle it
+ *     raised, the counted sets, what they are made of, where they sit and the
+ *     range, the most in one session;
+ *   - "Sessions counted": each session's date and sets, newest first, and the
+ *     time between them;
+ *   - "How this is worked out": the basis, the half credit sentence, where the
+ *     recovery answer lives, and "Estimated, not measured."
+ *
+ * Shared by the rows below and the "Next in your plan" card, so the two read
+ * the same. Describes, never instructs (D204); every text wraps at the largest
+ * text size (nothing is clamped to one line).
  */
-export function MuscleDetail({ lines }) {
+export function MuscleDetail({
+  muscle, entry = null, role, week = null, nowMs, learnedSpeed = false, splits = null, withWeek = true,
+}) {
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const gloss = MUSCLE_PLAIN_WORDS[muscle];
+  const facts = detailFacts({ muscle, entry, role, week: withWeek ? week : null, nowMs });
+  const sessions = Array.isArray(entry?.contributingSessions) ? [...entry.contributingSessions].reverse() : [];
+  const between = spacingValue(entry);
+  const basis = entry ? muscleRecoveryBasisText(entry.basis, learnedSpeed) : null;
   return (
     <View style={[styles.detail, live.detail]}>
-      {lines.map((line, i) => (
-        <View key={`${line.label}-${i}`} style={styles.detailLine} accessible accessibilityLabel={`${line.label}: ${line.value}`}>
-          <Text style={live.detailLabel}>{line.label}</Text>
-          <Text style={[styles.detailValue, live.detailValue]}>{line.value}</Text>
-        </View>
-      ))}
-      <Text style={[styles.detailNote, live.detailNote]}>{HALF_CREDIT_NOTE}</Text>
-      <Text style={[styles.detailNote, live.detailNote]}>{RECOVERY_ANSWER_NOTE}</Text>
+      {gloss ? <Text style={live.gloss}>{capitalise(gloss)}</Text> : null}
+
+      <DetailSection title="Recovery" live={live} divided={!!gloss}>
+        {facts.recovery.map((row) => <DetailRow key={row.label} label={row.label} value={row.value} live={live} />)}
+      </DetailSection>
+
+      {withWeek ? (
+        <DetailSection title="This week so far" live={live}>
+          {facts.week.map((row) => <DetailRow key={row.label} label={row.label} value={row.value} live={live} />)}
+        </DetailSection>
+      ) : null}
+
+      {sessions.length ? (
+        <DetailSection title="Sessions counted" live={live}>
+          {sessions.map((cs, i) => (
+            <DetailRow
+              key={`${cs?.workoutId ?? 'session'}-${i}`}
+              label={safeFormatDate(cs?.endMs, 'EEE d MMM', '') || 'Session'}
+              value={sessionSetsText(cs, splits?.[cs?.workoutId])}
+              live={live}
+            />
+          ))}
+          {between ? <DetailRow label="Time between them" value={between} live={live} /> : null}
+        </DetailSection>
+      ) : null}
+
+      <DetailSection title="How this is worked out" live={live}>
+        {basis ? <DetailRow label="Based on" value={basis} live={live} /> : null}
+        <Text style={live.note}>{HALF_CREDIT_NOTE}</Text>
+        <Text style={live.note}>{RECOVERY_ANSWER_NOTE}</Text>
+        <Text style={live.note}>Estimated, not measured.</Text>
+      </DetailSection>
     </View>
   );
 }
@@ -409,12 +502,10 @@ function MuscleRecoveryRow({
   const estimatedPercentText = `${percent}% recovered`; // estimated recovery
   const estimatedFillWidth = `${percent}%`; // estimated recovery, the bar's fill
   const fill = muscleRecoveryBarFill(percent, t.colors);
-  const detail = expanded ? muscleRecoveryDetailLines(entry, learnedSpeed, splits, extra) : null;
   // D219: a muscle the plan raised carries its intent on the row (the reason, with this week's
   // sets), so the screen shows the intent beside the recovery and never reads a focus as a fault.
   const intent = extra && (extra.role === 'focus' || extra.role === 'raised')
-    ? muscleDetailRows({ muscle: entry.muscle, entry, role: extra.role, week: extra.week ?? null, nowMs })
-      .find((r) => r.label === 'In your plan')?.value ?? null
+    ? intentFor({ muscle: entry.muscle, role: extra.role, week: extra.week ?? null })
     : null;
   // The breakdown is a SIBLING of the touchable, never its child: a
   // touchable with its own accessibilityLabel is one opaque node to
@@ -461,7 +552,18 @@ function MuscleRecoveryRow({
         </Text>
         {intent ? <Text style={live.meta}>{intent}</Text> : null}
       </TouchableOpacity>
-      {detail ? <MuscleDetail lines={detail} /> : null}
+      {expanded ? (
+        <MuscleDetail
+          muscle={entry.muscle}
+          entry={entry}
+          role={extra?.role}
+          week={extra?.week ?? null}
+          nowMs={nowMs}
+          learnedSpeed={learnedSpeed}
+          splits={splits}
+          withWeek={!!extra}
+        />
+      ) : null}
     </View>
   );
 }
@@ -573,11 +675,15 @@ const styles = StyleSheet.create({
   track: { height: spacing.xs2, borderRadius: radius.xs, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radius.xs },
   detail: {
-    marginTop: spacing.xs, padding: spacing.md, gap: spacing.xs, borderRadius: radius.sm,
+    marginTop: spacing.xs, padding: spacing.md, borderRadius: radius.sm,
   },
-  detailLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  section: { gap: spacing.xs, paddingVertical: spacing.md },
+  sectionDivided: { borderTopWidth: StyleSheet.hairlineWidth },
+  detailLine: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md,
+  },
+  detailLabel: { flexShrink: 1 },
   detailValue: { flexShrink: 1, textAlign: 'right' },
-  detailNote: { marginTop: spacing.xs },
   detailsLink: { minHeight: TARGET, justifyContent: 'center', alignSelf: 'flex-start' },
 });
 
@@ -589,9 +695,11 @@ function buildLiveStyles(t) {
     track: { backgroundColor: t.colors.surface2 },
     meta: { ...t.type.captionTight, color: t.colors.textMuted },
     detail: { backgroundColor: t.colors.surface2 },
-    detailLabel: { ...t.type.captionTight, color: t.colors.textMuted },
+    divider: { borderTopColor: t.colors.borderSubtle },
+    gloss: { ...t.type.bodySm, color: t.colors.textSecondary },
+    note: { ...t.type.captionTight, color: t.colors.textMuted },
+    detailLabel: { ...t.type.captionTight, color: t.colors.textSecondary },
     detailValue: { ...t.type.captionStrong, color: t.colors.textPrimary },
-    detailNote: { ...t.type.captionTight, color: t.colors.textMuted },
     recoveredNames: { ...t.type.bodySm, color: t.colors.textSecondary },
     detailsLinkText: { ...t.type.label, color: t.colors.textSecondary, textDecorationLine: 'underline' },
     namesLine: { ...t.type.bodySm, color: t.colors.textSecondary },

@@ -73,10 +73,10 @@ const STRIP_CREDIT_SENTENCE = 'A set counts once for the muscle it works most an
 /** The (i) behind the strip in a normal week. */
 export const STRIP_TOOLTIP = STRIP_OPENING
   + STRIP_CREDIT_SENTENCE
-  + 'The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 6 holds the size you have, 10 to 20 is the normal growth range and 20 to 30 is the range for a muscle you picked to bring up. '
-  + 'A muscle you picked to bring up in your plan reads against that range. '
-  + 'A muscle your plan trains counts as below maintenance even before its first set. '
-  + 'Within the studied range covers every band from maintenance up to 42 sets, and beyond that studies have little to say.';
+  + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 6 holds it, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
+  + 'A muscle you picked to bring up in your plan is read against that higher range. '
+  + 'A muscle your plan trains counts as too few to hold size until its first set. '
+  + 'Enough sets covers everything from 2 sets up to 42. Past 42 sets a week, more sets are unlikely to help.';
 
 /**
  * The same (i) in the planned recovery week: the same opening and credit
@@ -91,9 +91,9 @@ export const STRIP_RECOVERY_TOOLTIP = STRIP_OPENING
 
 /** The legend's words, in the order the bar's tones read. */
 export const STRIP_LEGEND_LABEL = Object.freeze({
-  under: 'Below maintenance',
-  in: 'Within the studied range',
-  over: 'Beyond the studied range',
+  under: 'Too few to hold size',
+  in: 'Enough sets',
+  over: 'More than needed',
   neutral: 'Trained',
 });
 
@@ -169,7 +169,7 @@ export function isStripRecoveryWeek({ position = null, currentMesoWeek = null } 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 function underClause(under) {
-  return under === 0 ? 'none below maintenance' : `${under} below maintenance`;
+  return under === 0 ? 'no muscle with too few sets' : `${under} muscles with too few sets`;
 }
 
 /**

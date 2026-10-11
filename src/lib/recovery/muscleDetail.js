@@ -25,6 +25,16 @@
  *   - the estimate after the last session with its range and the hours that have
  *     passed, and the spacing of the sessions the model counted.
  *
+ * D224 (founder 2026-10-11: "Inaccuracies on reported recovery too. Side delts
+ * ready tomorrow on Today. But different in recovery."): the detail had three
+ * answers to "when is it ready?" (a typical 6-set session to fully recovered,
+ * the last session alone to fully recovered, and the row's ready-by, which
+ * counts every recent session). Every figure now answers one question, the
+ * estimated ready instant (READY_PERCENT, muscleRecoveryModel.readyWindow),
+ * worded through the card's own clause (nextInPlan.readyByClause): the usual
+ * time is the time one 6-set session takes to read as ready, and the estimate
+ * is the one the row and the card state, with its range.
+ *
  * Every line describes and never instructs (D204), says "estimated" for each
  * recovery claim, and carries no em dash. Nothing here changes volume, calories,
  * weight, food or notifications, and it reads none of them.
@@ -35,13 +45,15 @@ import {
   calculateWeeklyVolume, allocateExerciseVolume, isBallisticEvidenceRow, exerciseForSet, muscleDisplayName,
 } from '../algorithms';
 import { volumeWindowBounds } from '../volumeWindow';
-import { judgeWeek } from '../volumeJudgement';
+import { judgeWeek, rangeBarFor } from '../volumeJudgement';
 import {
   ROLE, normaliseRole, roleLine, countedLine, formatSets, sessionVolumeFlag,
 } from '../plan/bands';
 import { PER_SESSION } from '../plan/science';
 import { recoveryHours, recoveryBandHours, REFERENCE_SETS } from './constants';
 import { muscleVerb } from './nextWorkoutRecommendation';
+import { readyWindow, readyHoursAfterOneSession } from './muscleRecoveryModel';
+import { readyByClause } from './nextInPlan';
 
 const HOUR_MS = 3600000;
 
@@ -133,37 +145,52 @@ function daysText(hours) {
   return Number.isInteger(d) ? String(d) : d.toFixed(1);
 }
 
+/** A usual time in words: hours under 72 ("about 43 hours"), then days to the nearest half. */
+function usualText(hours) {
+  if (hours < 72) return `${Math.round(hours)} hours`;
+  const d = daysText(hours);
+  return `${d} days`;
+}
+
 /**
- * A muscle's own recovery clock, in plain words: "about 2 days (range 1.5 to 2.5
- * days)". The base clock for a session of REFERENCE_SETS sets at a neutral effort,
- * with the model's own band of plus or minus 25%.
+ * A muscle's usual time to read as ready after one session of about
+ * REFERENCE_SETS sets, in plain words: "about 43 hours (range 32 to 54
+ * hours)". D224 (founder 2026-10-11, "Inaccuracies on reported recovery"):
+ * the same READY_PERCENT every ready-by on the screen means, never the time to
+ * clear the session completely, so the usual time and the muscle's own
+ * estimate measure one thing. With the model's band of plus or minus 25%.
  */
 export function clockWords(muscle) {
-  const hours = recoveryHours(muscle);
-  const band = recoveryBandHours(hours);
-  const main = daysText(hours);
-  const lo = band ? daysText(band.lowHours) : main;
-  const hi = band ? daysText(band.highHours) : main;
+  const hours = readyHoursAfterOneSession(recoveryHours(muscle));
+  const band = recoveryBandHours(recoveryHours(muscle));
+  const lo = band ? readyHoursAfterOneSession(band.lowHours) : hours;
+  const hi = band ? readyHoursAfterOneSession(band.highHours) : hours;
+  const unit = hi < 72 ? ' hours' : ' days';
+  const loText = usualText(lo).replace(/ (hours|days)$/, '');
   return {
     hours,
-    text: `about ${main} ${main === '1' ? 'day' : 'days'} (range ${lo} to ${hi} days)`,
+    lowHours: lo,
+    highHours: hi,
+    short: `about ${usualText(hours)}`,
+    text: `about ${usualText(hours)} (range ${loText} to ${usualText(hi).replace(/ (hours|days)$/, '')}${unit})`,
   };
 }
 
 /**
- * The clock sentence for a muscle: its own, and, when it differs, one other
- * muscle's beside it (back for any muscle but back, biceps for back), so "biceps
- * recover quicker than back" is visible as two estimates, not asserted.
+ * The usual-time sentence for a muscle: its own, and, when it differs, one
+ * other muscle's beside it (back for any muscle but back, biceps for back),
+ * so "biceps recover quicker than back" is visible as two estimates, not
+ * asserted.
  */
 export function clockLine(muscle) {
   const name = muscleDisplayName(muscle);
   const own = clockWords(muscle);
-  const base = `${name} ${muscleVerb(muscle)} estimated at ${own.text} after a session of about ${REFERENCE_SETS} sets.`;
+  const base = `${name} ${muscleVerb(muscle)} usually estimated ready ${own.text} after a session of about ${REFERENCE_SETS} sets.`;
   const otherKey = muscle === 'back' ? 'biceps' : 'back';
   const other = clockWords(otherKey);
   if (other.hours === own.hours) return base;
   const otherName = muscleDisplayName(otherKey).toLowerCase();
-  return `${base} Muscles differ: ${otherName} ${muscleVerb(otherKey)} estimated at ${other.text}.`;
+  return `${base} Muscles differ: ${otherName} ${muscleVerb(otherKey)} usually estimated ready ${other.text}.`;
 }
 
 function sortedSessions(entry) {
@@ -183,21 +210,19 @@ export function spacingLine(entry) {
 }
 
 /**
- * "Estimated recovery after the last session: about 59 hours (range 44 to 74); 60
- * hours have passed. Estimated, not measured." From the last counted session's own
- * clock (the model's `hoursT`) and the model's band. Null when there is no clock.
+ * "Estimated ready by tomorrow afternoon, in about 26 hours (range 20 to 33
+ * hours); 4 hours have passed since the last session. Estimated, not
+ * measured." D224: the one ready estimate (muscleRecoveryModel.readyWindow,
+ * the same instant the list and the card state), never the last session's
+ * own clock alone. Null when there is no counted session.
  */
 export function estimateLine(entry, nowMs) {
-  const sessions = sortedSessions(entry);
-  const last = sessions[sessions.length - 1];
-  const hoursT = Number(last?.hoursT);
-  if (!last || !Number.isFinite(hoursT) || hoursT <= 0) return null;
-  const band = recoveryBandHours(hoursT);
-  const range = band ? ` (range ${Math.round(band.lowHours)} to ${Math.round(band.highHours)})` : '';
-  const head = `Estimated recovery after the last session: about ${Math.round(hoursT)} hours${range}`;
-  if (!Number.isFinite(nowMs)) return `${head}. Estimated, not measured.`;
-  const passed = Math.max(0, Math.round((nowMs - last.endMs) / HOUR_MS));
-  return `${head}; ${passed} ${passed === 1 ? 'hour has' : 'hours have'} passed. Estimated, not measured.`;
+  const t = recoveryTimeline(entry, nowMs);
+  if (!t) return null;
+  const passed = Math.round(t.passedHours);
+  const tail = `${passed} ${passed === 1 ? 'hour has' : 'hours have'} passed since the last session. Estimated, not measured.`;
+  if (t.ready) return `Estimated ready now; ${tail}`;
+  return `Estimated ready ${t.readyText}, in ${t.toGoText} (range ${t.rangeText}); ${tail}`;
 }
 
 /**
@@ -248,4 +273,204 @@ export function muscleDetailRows({
   const spacing = spacingLine(entry);
   if (spacing) rows.push({ label: 'Spacing', value: spacing });
   return rows;
+}
+
+/*
+ * D223 (founder, 2026-10-11, on the screenshot of the open Abs detail: "This
+ * data for muscles recovery looks horrendous, redesign this areas make it
+ * understandable, readable and slick."): the same facts as muscleDetailRows,
+ * as numbers and short strings a panel can DRAW, so the detail stops being a
+ * column of label and paragraph pairs. Each figure below is the one the lines
+ * above print (the same clock, band, judgement, cap and flag), so the drawn
+ * panel and the spoken lines can never disagree. Pure, like the rest.
+ */
+
+/** "4 hours", "1 hour", "less than an hour"; from 36 hours, days to the nearest half: "2.5 days". */
+export function durationText(hours) {
+  if (!Number.isFinite(hours) || hours < 1) return 'less than an hour';
+  if (hours < 36) {
+    const h = Math.round(hours);
+    return `${h} ${h === 1 ? 'hour' : 'hours'}`;
+  }
+  const d = daysText(hours);
+  return `${d} ${d === '1' ? 'day' : 'days'}`;
+}
+
+/** "18 to 30 hours", "1.5 to 2.5 days": both ends in the high end's unit. */
+export function rangeText(lowHours, highHours) {
+  if (highHours < 36) {
+    const lo = Math.round(lowHours);
+    const hi = Math.round(highHours);
+    return lo === hi ? `${hi} hours` : `${lo} to ${hi} hours`;
+  }
+  const lo = daysText(lowHours);
+  const hi = daysText(highHours);
+  return lo === hi ? `${hi} days` : `${lo} to ${hi} days`;
+}
+
+/**
+ * The ready estimate as a timeline (D224): from the end of the last counted
+ * session, the hours passed, the estimated ready instant and its range (the
+ * model's own band, every contributing session compounding), and the scale a
+ * bar draws them on. `ready` when the muscle already reads as ready. Null
+ * when there is no counted session or no clock.
+ */
+export function recoveryTimeline(entry, nowMs) {
+  const sessions = sortedSessions(entry);
+  const last = sessions[sessions.length - 1];
+  if (!last || !Number.isFinite(nowMs) || !(Number(last.hoursT) > 0)) return null;
+  const passedHours = Math.max(0, (nowMs - last.endMs) / HOUR_MS);
+  const window = readyWindow(sessions, nowMs);
+  if (!window) {
+    return {
+      ready: true, passedHours, scaleHours: Math.max(passedHours, 1), passedText: durationText(passedHours), readyText: 'now',
+    };
+  }
+  const since = (ms) => (ms - last.endMs) / HOUR_MS;
+  const toGo = (ms) => Math.max(0, (ms - nowMs) / HOUR_MS);
+  const readyHours = since(window.readyAtMs);
+  const lowHours = since(window.earliestMs);
+  const highHours = since(window.latestMs);
+  return {
+    ready: false,
+    passedHours,
+    readyHours,
+    lowHours,
+    highHours,
+    scaleHours: Math.max(highHours, passedHours),
+    passedText: durationText(passedHours),
+    readyText: readyByClause(window.readyAtMs, nowMs),
+    toGoText: `about ${durationText(toGo(window.readyAtMs))}`,
+    rangeText: rangeText(toGo(window.earliestMs), toGo(window.latestMs)),
+  };
+}
+
+/**
+ * The muscle's usual ready time beside one other muscle's (back, or biceps
+ * for back), as the two bars of a comparison: the same times clockLine
+ * prints. One item when the two are the same.
+ */
+export function clockComparison(muscle) {
+  const item = (key) => {
+    const w = clockWords(key);
+    return {
+      muscle: key, name: muscleDisplayName(key), hours: w.hours, lowHours: w.lowHours, highHours: w.highHours, text: w.short, rangeText: w.text.replace(/^about [^(]+\(range /, '').replace(/\)$/, ''),
+    };
+  };
+  const mine = item(muscle);
+  const otherKey = muscle === 'back' ? 'biceps' : 'back';
+  const other = item(otherKey);
+  return other.hours === mine.hours ? [mine] : [mine, other];
+}
+
+/** The plan's intent for a muscle, as muscleDetailRows' "In your plan" row; null for a standard muscle. */
+export function intentFor({ muscle, role, week = null } = {}) {
+  return muscleDetailRows({ muscle, role, week }).find((r) => r.label === 'In your plan')?.value ?? null;
+}
+
+/**
+ * This week's figures as a panel draws them: the counted total, its split, the
+ * band in the one judgement's words, the bar (rangeBarFor's numbers), the most
+ * in one session against its cap, and the session note when above it. Null
+ * when no set counted this week.
+ */
+export function weekPanel({ muscle, role, week = null } = {}) {
+  if (!week || !(week.credit > 0)) return null;
+  const r = normaliseRole(role);
+  const focusLike = r === ROLE.FOCUS || r === ROLE.RAISED;
+  const shown = Math.round(week.credit);
+  const judgement = judgeWeek({ muscle, sets: shown, role: r });
+  const bar = rangeBarFor(r, week.credit);
+  const cap = focusLike ? PER_SESSION.focusFractionalCap : PER_SESSION.fractionalCap;
+  const flag = sessionVolumeFlag({ direct: week.sessionDirect, fractional: week.sessionCredit, focusCap: focusLike });
+  const direct = Number.isFinite(week.direct) && week.direct > 0 ? week.direct : 0;
+  const indirect = Number.isFinite(week.indirect) && week.indirect > 0 ? week.indirect : 0;
+  return {
+    credit: week.credit,
+    creditText: formatSets(week.credit),
+    unit: `${setsWord(week.credit)} counted`,
+    mainText: `${formatSets(direct)} as the main muscle worked`,
+    helperText: `${formatSets(indirect)} as a helper, at half credit`,
+    bandLabel: judgement.label,
+    bandLine: judgement.line,
+    bar,
+    zoneText: focusLike
+      ? `The shaded part is the focus range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`
+      : `The shaded part is the normal growth range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`,
+    sessionMost: week.sessionCredit,
+    sessionMostText: formatSets(week.sessionCredit),
+    sessionCap: cap,
+    sessionCapText: `Limit for ${focusLike ? 'a focus muscle' : 'this muscle'}: ${cap} sets in one session`,
+    flagLine: flag ? flag.line : null,
+  };
+}
+
+const capitalise = (text) => (text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text);
+
+/** "About 56 hours", "56 to 84 hours": the gaps between the counted sessions, as a row value. */
+export function spacingValue(entry) {
+  const sessions = sortedSessions(entry);
+  if (sessions.length < 2) return null;
+  const gaps = [];
+  for (let i = 1; i < sessions.length; i += 1) gaps.push((sessions[i].endMs - sessions[i - 1].endMs) / HOUR_MS);
+  const lo = Math.min(...gaps);
+  const hi = Math.max(...gaps);
+  return Math.round(lo) === Math.round(hi) ? `About ${durationText(hi)}` : capitalise(rangeText(lo, hi));
+}
+
+/**
+ * The open detail as the app's own label and value rows, each value a few
+ * plain words (founder 2026-10-11, on the redesigned detail: "FOLLOW THE
+ * STYLE IN THE APP!!!! Do not free flow other formats and styles!!! No pills
+ * or anything else!", and "'More than most studies' etc what the heck is that
+ * meant to mean to a human"). The facts are the ones D219, D223 and D224
+ * settled (the one ready time, the usual time beside another muscle's, the
+ * week's counted sets and its range); only the form changed.
+ *
+ * @returns {{ recovery: Array<{label: string, value: string}>, week: Array<{label: string, value: string}> }}
+ */
+export function detailFacts({ muscle, entry = null, role, week = null, nowMs } = {}) {
+  const recovery = [];
+  const t = recoveryTimeline(entry, nowMs);
+  if (t) {
+    recovery.push({ label: 'Estimated ready', value: t.ready ? 'Now' : capitalise(t.readyText) });
+    recovery.push({ label: 'Last trained', value: `${capitalise(t.passedText)} ago` });
+    if (!t.ready) recovery.push({ label: 'Could be ready', value: `In ${t.rangeText}` });
+  }
+  const own = clockWords(muscle);
+  recovery.push({ label: 'Usually takes', value: `${capitalise(own.short)} after ${REFERENCE_SETS} sets` });
+  // D219: "biceps recover quicker than back", shown as two figures, never asserted.
+  const otherKey = muscle === 'back' ? 'biceps' : 'back';
+  const other = clockWords(otherKey);
+  if (other.hours !== own.hours) {
+    recovery.push({ label: `${muscleDisplayName(otherKey)} usually takes`, value: capitalise(other.short) });
+  }
+
+  const weekRows = [];
+  const intent = intentFor({ muscle, role, week });
+  if (intent) weekRows.push({ label: 'In your plan', value: intent });
+  const p = weekPanel({ muscle, role, week });
+  if (!p) {
+    weekRows.push({ label: 'Sets so far', value: 'None yet' });
+  } else {
+    const r = normaliseRole(role);
+    const focusLike = r === ROLE.FOCUS || r === ROLE.RAISED;
+    const direct = Number.isFinite(week.direct) && week.direct > 0 ? week.direct : 0;
+    const helping = Number.isFinite(week.indirect) && week.indirect > 0 ? week.indirect : 0;
+    weekRows.push({ label: 'Sets so far', value: p.creditText });
+    weekRows.push({
+      label: 'Made up of',
+      value: helping > 0
+        ? `${formatSets(direct)} as the main muscle, ${formatSets(helping)} helping (each counts as half)`
+        : `${formatSets(direct)} as the main muscle`,
+    });
+    weekRows.push({ label: 'Where that sits', value: p.bandLabel });
+    weekRows.push({
+      label: focusLike ? 'Higher range for a focus' : 'Usual range for growth',
+      value: `${p.bar.bandStart} to ${p.bar.bandEnd} sets a week`,
+    });
+    weekRows.push({ label: 'Most in one session', value: `${p.sessionMostText} ${setsWord(p.sessionMost)}` });
+    if (p.flagLine) weekRows.push({ label: 'Note', value: p.flagLine });
+  }
+  return { recovery, week: weekRows };
 }

@@ -542,7 +542,13 @@ const useAppStore = create((set, get) => ({
         // doesn't silently lose unsynced edits. force=true means the user was
         // shown the risk and chose to proceed.
         if (!force && (res?.status === 'error' || res?.status === 'skipped' || (res?.errored_count ?? 0) > 0)) {
-          log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
+          // Sentry VOLYUME-3H: a push that did not run at all ('skipped': the
+          // lock stayed busy, or consent or a wipe was pending) is this
+          // safety rule doing its job, and the person is told and offered
+          // "sign out anyway"; it is recorded at info. A push that ran and
+          // failed stays a warning.
+          const pushFirstLog = res?.status === 'skipped' && !(res?.errored_count > 0) ? log.logInfo : log.logWarn;
+          pushFirstLog('clearAuthStateForSignOut.pushFirstFailed',
             'sign-out aborted: push did not complete cleanly, keeping user signed in',
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };

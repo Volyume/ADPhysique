@@ -41,7 +41,7 @@ import {
   setPendingReEntryEase, clearPendingReEntryEaseIfMatches,
 } from '../lib/reEntryEaseState';
 import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
-import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
+import { nextWorkoutRecoveryLabel, isLighterTrainingState, RECOVERY_STATE } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
 // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 R3, hero merge):
 // CoachBriefCard's card-in-card render is retired -- the hero now renders
@@ -74,7 +74,7 @@ import {
   getWorkoutSetsForWorkout, getExerciseById, uid,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getExerciseLookup,
   getMorningWeightToday, getMorningWeights, logMorningWeight,
-  getRecentWorkoutFeedback, getLatestCoachOutput,
+  getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getLatestCheckin,
   getAllWeeklyCheckinsForUser,
@@ -83,19 +83,16 @@ import {
   FIRST_CHECKIN_MIN_DAYS,
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
-import { computeAndLogSessionAdjustments, servedSetsResolver } from '../lib/sessionAdjustments';
-// D201 (per-muscle recovery, docs/recovery-programme-2026-09-25/00-SPEC.md
-// section 4): all recovery-domain I/O goes through this loader -- this
-// screen composes only. loadMuscleRecovery/loadPlannedSetsByRoutine are the
-// domain's ONLY reads; nextLikelyTrainingTime and recommendNextWorkout are
-// pure.
-import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
-import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
-import { recommendNextWorkout } from '../lib/recovery/nextWorkoutRecommendation';
+import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
+// D224 (founder order 2026-10-11: "Remove the recovery data from today. I
+// don't want it there full stop."): Today reads no recovery estimate, no
+// soreness, sleep, energy or fatigue reading and no recovery-driven
+// adjustment; recovery lives on the Recovery screen. The block's planned
+// recovery week stays (the plan's own calendar, not a reading).
 import { heroPlanLabel, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { localWeekStartMs, localWeekEndMs, localDayKey, todayLocalKey } from '../lib/dayKey';
+import { localWeekStartMs, localDayKey, todayLocalKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
@@ -121,12 +118,12 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 // D218 (founder order 2026-10-03, "ensure all exercises are logged and reported
 // correct after the workout ends"): a finished session's total is read on one
 // basis everywhere, each set's own exercise type and load semantics through the
 // shared lookup (src/lib/sessionReport.js).
-import { buildSessionReport, setMapsFor } from '../lib/sessionReport';
+import { buildSessionReport } from '../lib/sessionReport';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
@@ -297,7 +294,6 @@ export default function HomeScreen({ navigation, route }) {
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
   const bwu = bodyWeightUnits || 'st';
 
-  const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   // B-2 (F-18): an ACTIVE plan that holds no sessions. Kept as its own
@@ -412,8 +408,6 @@ export default function HomeScreen({ navigation, route }) {
     sleepQuality: null,
     energyScore: null,
   });
-  const [deloadSuggestion, setDeloadSuggestion] = useState(null);
-  const [deloadDismissed, setDeloadDismissed] = useState(false);
   // C18 recovery visibility. NOT a dismissal: the card only collapses once the
   // athlete has opened the explanation, and it never disappears while the
   // state is true. Keyed by block AND state, so a later adaptive reduction, or
@@ -422,13 +416,6 @@ export default function HomeScreen({ navigation, route }) {
   const [recoveryRead, setRecoveryRead] = useState(false);
   // C18: the authoritative programme position, so Home never re-derives it.
   const [programmePosition, setProgrammePosition] = useState(null);
-  // D201 (per-muscle recovery, spec section 4): { programmeNext,
-  // programmeNextLine, perSession } from recommendNextWorkout, or null while
-  // loading/unavailable -- the card renders exactly as it did before this
-  // feature existed whenever this is null. D219: this DESCRIBES the plan's
-  // sessions (the line under the next session's name, and under a session the
-  // person picks themselves); it never names another session to start.
-  const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
   // C18 long-gap re-entry: asked once per return, never on every screen.
   const [reEntryAsked, setReEntryAsked] = useState(false);
   // Campaign 22 Phase 2 Stage 1 (spec §13 rank 6): the re-entry question's
@@ -464,7 +451,6 @@ export default function HomeScreen({ navigation, route }) {
   const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
 
   // Fatigue trend mini-graph
-  const [fatigueSessions, setFatigueSessions] = useState([]); // array newest-first
 
   const pendingStartRef = React.useRef(null); // ({ routineId, initialExercises })
 
@@ -540,7 +526,6 @@ export default function HomeScreen({ navigation, route }) {
         loadBlockProgress(),
         loadPhaseBanner(),
         loadPlateauBanner(),
-        loadFatigueTrend(),
         loadBriefDismissal(),
         loadWelcome(),
         loadHytOffer(),
@@ -989,16 +974,6 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  async function loadFatigueTrend() {
-    try {
-      if (!user?.id) return;
-      const rows = await getRecentWorkoutFeedback(user.id, 6);
-      setFatigueSessions(rows);
-    } catch (_) {
-      setFatigueSessions([]);
-    }
-  }
-
   async function loadTodayWeight() {
     try {
       const entry = await getMorningWeightToday(user.id);
@@ -1059,41 +1034,20 @@ export default function HomeScreen({ navigation, route }) {
 
   async function loadWeekStats() {
     try {
-      // X5 (cross-surface consistency audit 2026-07-30): this used to use a
-      // rolling trailing-7-day window, which could show a different "sessions
-      // this week" figure than other Monday-anchored counts on this screen.
-      // Every "this week" boundary now comes from the shared dayKey.js
-      // helpers so they can never disagree.
-      const weekStartMs = localWeekStartMs();
-      const weekEndMs = localWeekEndMs(weekStartMs);
       const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
-      // LB-7: this card needs at most the last four weeks of sets (week
-      // stats + the deload window below), not every set ever logged. Load
-      // that bounded slice once; the workout list is rows, not sets.
+      // LB-7: this card needs at most the last four weeks of sets, not every
+      // set ever logged. Load that bounded slice once; the workout list is
+      // rows, not sets.
       const [allWorkouts, recentSets, lookup] = await Promise.all([
         getAllWorkouts(user.id),
         getWorkoutSetsSince(user.id, fourWeeksAgo),
         // D218 (audit F-8 part 2): the shared exercise lookup (unfiltered,
         // survivor-aware) says each logged set's exercise type and load
-        // semantics for the totals below and the deload check. Best-effort:
+        // semantics for the last session's total below. Best-effort:
         // it only refines them, so a failed read reads as null and the totals
         // fall back to plain weight x reps, as the old library read did.
         getExerciseLookup().catch(() => null),
       ]);
-      const thisWeek = allWorkouts.filter(
-        w => w.startedAt >= weekStartMs && w.startedAt < weekEndMs && w.isCompleted,
-      );
-      const workoutIds = new Set(thisWeek.map(w => w.id));
-      const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
-      // D218 (audit F-8, P21): the week's volume is read on the same basis as
-      // every session total: per hand x2, assistance excluded, and a distance
-      // or duration set (metres or seconds in the weight column) not counted
-      // as kilograms, each by the set's own exercise.
-      const weekMaps = setMapsFor(weekSets, lookup);
-      const totalVol = calculateTonnage(weekSets, weekMaps.exerciseTypeById, weekMaps.loadSemanticsById);
-      setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
-
-
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
       setTotalSessions(completed.length);
@@ -1183,40 +1137,9 @@ export default function HomeScreen({ navigation, route }) {
         setLastSessionTonnage(null);
       }
 
-      // Deload suggestion, build last-4-weeks summary and run shouldDeload
-      // Reset dismissed state each time data reloads so a new week's signal shows again
-      setDeloadDismissed(false);
-      try {
-        // Campaign 24 §2 (LOCKED baseline: import + call change only, no
-        // behaviour change): bucket-building extracted to the shared
-        // buildLast4WeekDeloadBuckets (src/lib/algorithms.js). exerciseMap:
-        // null reproduces the hard-coded hasOverMRV: false (D92 residual,
-        // unchanged); weeksSinceLastDeloadOverride: 99 reproduces the flat
-        // 99; excludeWarmups + repsViaWorkoutRoster together reproduce this
-        // screen's exact avgReps sourcing (recentSets filtered by the
-        // completed-workout roster for the week, then warm-ups excluded).
-        // shouldDeload itself is untouched.
-        // D218 (audit F-25): repsTypeById hands the rep average each set's
-        // exercise type, so a plank held for 60 seconds is not averaged as 60
-        // reps. exerciseMap stays null (hasOverMRV stays false) and every
-        // other option is exactly as it was.
-        const last4Weeks = buildLast4WeekDeloadBuckets(recentSets, allWorkouts, null, {
-          now: Date.now(),
-          excludeWarmups: true,
-          repsViaWorkoutRoster: true,
-          weeksSinceLastDeloadOverride: 99,
-          repsTypeById: setMapsFor(recentSets, lookup).exerciseTypeById,
-        });
-        const result = shouldDeload(last4Weeks);
-        setDeloadSuggestion(result.deload ? result : null);
-        // NAV-4: the differential loader reads this signal after the parallel
-        // pass (state set above is not yet readable in the same pass).
-        return { deloadSuggested: !!result.deload };
-      } catch (_) {
-        setDeloadSuggestion(null);
-      }
+      // D224: Today runs no deload check; the fatigue-based recovery-week
+      // suggestion is a recovery reading and lives on Progress.
     } catch (_e) {}
-    return { deloadSuggested: false };
   }
 
   async function loadExerciseCounts() {
@@ -1403,7 +1326,6 @@ export default function HomeScreen({ navigation, route }) {
         setSelectedWorkoutOverride(null);
         setPlanHasNoSessions(false);
         setProgrammePosition(null);
-        setRecoveryRecommendation(null);
         return;
       }
       const routines = await getRoutinesForPlan(plan.id);
@@ -1415,7 +1337,6 @@ export default function HomeScreen({ navigation, route }) {
       setPlanHasNoSessions(routines.length === 0);
       if (routines.length === 0) {
         setNextWorkout(null); setProgrammePosition(null);
-        setRecoveryRecommendation(null);
         return;
       }
       // C18 BLOCK PROGRESSION. This used to read
@@ -1454,71 +1375,16 @@ export default function HomeScreen({ navigation, route }) {
       // nothing saying the week's work was done. The hero renders the
       // week-complete state instead; an extra session stays available as a
       // deliberate choice through the workout-options sheet.
-      if (!next && isWeekComplete(position)) { setNextWorkout(null); setRecoveryRecommendation(null); return; }
+      if (!next && isWeekComplete(position)) { setNextWorkout(null); return; }
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
         : 0;
       setNextWorkout({ routine: routines[idx], total: routines.length, idx });
-      // D201: the recovery readings (D219: descriptions of sessions, never a
-      // recommendation) come through the domain loader only, after the
-      // programme position is known -- see loadRecoveryRecommendation.
-      await loadRecoveryRecommendation(position);
     } catch (_e) {
       setNextWorkout(null);
       setPlanAllWorkouts([]);
       setSelectedWorkoutOverride(null);
       setPlanHasNoSessions(false);
-      setRecoveryRecommendation(null);
-    }
-  }
-
-  // D201 (per-muscle recovery, spec section 4.2/4.3): reads the muscle
-  // recovery estimate and each outstanding session's readiness, entirely
-  // through src/lib/recovery/load.js -- this function composes only. Runs after
-  // loadNextWorkout has resolved the programme position, and clears the result
-  // (rather than leaving a stale one showing) whenever there is no outstanding
-  // next session to describe. D219: the result DESCRIBES sessions (the line
-  // under the plan's next session, and under one the person picks); it never
-  // names a different session to start and it never changes Start.
-  async function loadRecoveryRecommendation(position) {
-    const programmeNext = position?.nextSession ?? null;
-    if (!user?.id || !position || !programmeNext) {
-      setRecoveryRecommendation(null);
-      return;
-    }
-    try {
-      const sessions = position.sessions ?? [];
-      const outstandingIds = sessions
-        .filter((s) => s.state === 'outstanding')
-        .map((s) => s.routineId);
-      const [recovery, plannedSetsByRoutine] = await Promise.all([
-        loadMuscleRecovery(user.id),
-        loadPlannedSetsByRoutine(outstandingIds, servedSetsResolver(user.id)),
-      ]);
-      // Opus review finding 10: a core read that failed is not an all-clear;
-      // the card renders exactly as before this feature existed.
-      if (recovery?.degraded) {
-        setRecoveryRecommendation(null);
-        return;
-      }
-      const projectedAtMs = nextLikelyTrainingTime({
-        nowMs: recovery.nowMs,
-        habitualWeekdays: recovery.habitualWeekdays,
-        typicalStartMinute: recovery.typicalStartMinute,
-      });
-      const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
-      const result = recommendNextWorkout({
-        sessions,
-        plannedSetsByRoutine,
-        recoveryMap: recovery.map,
-        projectedAtMs,
-        nowMs: recovery.nowMs,
-        routineNamesById,
-      });
-      setRecoveryRecommendation(result);
-    } catch (e) {
-      logError('HomeScreen.loadRecoveryRecommendation', e, { userId: user?.id });
-      setRecoveryRecommendation(null);
     }
   }
 
@@ -2019,21 +1885,6 @@ export default function HomeScreen({ navigation, route }) {
   // Options sheet (HomeChangeWorkoutSheet) as one more workout option.
   const canSkipThisWorkout = !!(programmePosition?.nextSession
     && programmePosition.nextSession.routineId === displayWorkout?.routine?.id);
-  // The recovery line under the card's session name (spec 4.3, D201 addendum
-  // 4 ruling 6): under the plan's next session, its own line without the
-  // name; under any other session the athlete picked from the sheet, THAT
-  // session's own line, never programme-next's (Opus review findings 7 and
-  // 8). null renders nothing. D219: no session is recommended, so no line
-  // carries a swap reason.
-  const displayedRoutineId = displayWorkout?.routine?.id ?? null;
-  const heroRecoveryLine = (() => {
-    if (!recoveryRecommendation || displayedRoutineId == null) return null;
-    if (displayedRoutineId === recoveryRecommendation.programmeNext?.routineId) {
-      return recoveryRecommendation.programmeNextLine ?? null;
-    }
-    return (recoveryRecommendation.perSession ?? [])
-      .find((p) => p.routineId === displayedRoutineId)?.line ?? null;
-  })();
   // C18 recovery visibility: the NEXT-WORKOUT surface names the state too, so
   // the session the athlete is about to start says what it is before they open
   // it. Straight from the block's resolved state - never re-derived here, and
@@ -2045,7 +1896,11 @@ export default function HomeScreen({ navigation, route }) {
   // The calendar-side reading is the fallback only when position is unreadable.
   const gatedRecoveryState = programmePosition?.recoveryState
     ?? currentMesoWeek?.recoveryState ?? null;
-  const recoveryLabel = nextWorkoutRecoveryLabel(gatedRecoveryState);
+  // D224: Today shows the block's planned recovery week only; the adaptive
+  // adjustment is a recovery reading (the workout screen explains it when
+  // the session opens).
+  const todayRecoveryState = gatedRecoveryState?.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY ? gatedRecoveryState : null;
+  const recoveryLabel = nextWorkoutRecoveryLabel(todayRecoveryState);
 
   // Derive how many days since last completed workout (null = no history)
   const lastWorkoutDaysAgo = lastSession
@@ -2203,9 +2058,7 @@ export default function HomeScreen({ navigation, route }) {
 
   const rawCoachBrief = showCoachBrief
     ? buildCoachBrief({
-        fatigueHistory: fatigueSessions,
-        weeklyVolume: weekStats,
-        deloadSuggestion,
+        // D224: no fatigue or deload reading feeds the brief on Today.
         lastWorkoutDaysAgo,
         blockProgress,
         // D112 R5 (closes audit T1-14/T2-31): the constraint line is no
@@ -2244,10 +2097,9 @@ export default function HomeScreen({ navigation, route }) {
     || capabilityCheckFailed,
   );
 
-  // S15#7: readiness aggregate. One calm line for the mesocycle chip,
-  // composed from signals HomeScreen already loads (block phase, the
-  // shouldDeload signal, last session's soreness/sleep/energy facts, recent
-  // fatigue trend) rather than the phase-only text it showed before.
+  // S15#7: one calm line for the block chip. D224: block facts only (the
+  // planned recovery week, a first session, the default block line); no
+  // recovery reading.
   // Stage 1 (2026-08-09, blueprint-adaptive-mesocycle §3.5): a block past
   // its recovery week is finished and awaiting the user's next-block
   // decision. That state outranks every readiness read, because the week
@@ -2267,10 +2119,9 @@ export default function HomeScreen({ navigation, route }) {
       currentMesoWeek,
       // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy
       // contradiction fix): the SAME resolved state RecoveryStateCard and
-      // the hero eyebrow read, so this chip can never disagree with them.
-      gatedRecoveryState,
-      deloadSuggestion,
-      fatigueHistory: fatigueSessions,
+      // the hero eyebrow read, so this chip can never disagree with them
+      // (D224: the planned recovery week only).
+      gatedRecoveryState: todayRecoveryState,
       lastSession,
     });
 
@@ -2371,35 +2222,6 @@ export default function HomeScreen({ navigation, route }) {
   // voices never say the same thing") is retired with the card -- it no
   // longer renders on Home at all (FOUNDER-RULINGS-PHASE2 R3). Only the
   // trial-ENDING fact below (rank 8) may occupy the Today line now.
-  // FB-02 (D96): display gate only, no change to shouldDeload's maths or
-  // thresholds. Inside a SCHEDULED recovery week the user is following the
-  // app's own prescription of roughly half the reps, which drops the
-  // rolling four-week rep average enough to score the banner -- so Home
-  // reported the app's own reduction back as a performance problem, right
-  // above a chip already saying "Recovery week, pull effort back", and
-  // taps through to advice to reduce sets by a third during the week that
-  // IS the reduction. A finished block awaiting its decision holds at
-  // recovery-week volume for the same reason.
-  const inScheduledRecovery = !!currentMesoWeek?.isDeload || !!currentMesoWeek?.awaitingDecision;
-  const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;
-  // PM-08 / FM-07 (D96): OUTSIDE a scheduled recovery week the signal is
-  // legitimate, but the banner said "Recovery week suggested" with no
-  // reference to the block the user is in, and the four-week summary passes
-  // weeksSinceLastDeload: 99 ("unknown: conservative") so the block's own
-  // recovery week never suppresses it. The suggestion stands; it now
-  // acknowledges the scheduled week when the block has one still to come, so
-  // the app is not silently arguing with its own plan. Tier-blind, like the
-  // banner: a Free user has no Apply mechanism, so naming the week already in
-  // their plan is the honest thing either way. Display only, no change to
-  // shouldDeload's maths or thresholds.
-  // Campaign 22 Phase 2 Stage 1: the "your block already has a recovery week
-  // scheduled at week N" addendum (scheduledRecoveryWeekIndex/
-  // scheduledRecoveryAhead) is dropped -- the new Today line is ONE sentence
-  // (spec §17 R2), and this addendum was display-only extra colour, never
-  // load-bearing for shouldDeload's own maths/thresholds. The suggestion
-  // itself, its eligibility (deloadBannerEligible, unchanged above) and its
-  // tap-through to CoachReview (where the block's own recovery position is
-  // still visible) are all untouched.
   const phaseBannerEligible = !!phaseMismatch && !phaseBannerDismissed;
   // B3 lift plateau banner: below deload and phase, recovery and targets
   // outrank a single lift's stall, dismissible per exercise + week.
@@ -2502,12 +2324,11 @@ export default function HomeScreen({ navigation, route }) {
     // 26): the evidence pane below the hero is the readiness home on every
     // day now, logged or not, so there is no conflict day left to resolve.
     // resolveFirstReview in the arbiter handles the absent fact as null.
+    // D224: the planned recovery week only; the fatigue-based recovery-week
+    // suggestion is a recovery reading and stays on Progress.
     recovery: {
-      state: gatedRecoveryState,
+      state: todayRecoveryState,
       onOpenDetail: () => { haptics.selection(); setShowRecoveryDetail(true); },
-      deloadEligible: deloadBannerEligible,
-      onDeloadPress: () => { haptics.selection(); navigation.navigate('CoachReview'); },
-      onDeloadDismiss: () => setDeloadDismissed(true),
     },
     reEntry: {
       eligible: reEntryDue,
@@ -2902,38 +2723,9 @@ export default function HomeScreen({ navigation, route }) {
                 {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
-            {/* D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
-                00-SPEC.md section 4.3). recommendNextWorkout already composed
-                the exact copy -- this card renders it verbatim, never
-                re-deriving a figure or a day word. Guarded on the loader having
-                resolved: the card renders exactly as before this feature existed
-                while recovery data is loading or unavailable (recoveryRecommendation
-                stays null). D219: the line DESCRIBES the session shown (the plan's
-                next, or one the person picked); no session is recommended, so
-                there is no reason line, no switch of the Start target and no
-                "Keep" control. */}
-            {/* D214 (RC-26): the recovery line is the way in to the Recovery
-                screen, which Home never linked to before; the line itself is
-                unchanged. */}
-            {heroRecoveryLine ? (
-              <TouchableOpacity
-                onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'Recovery'); }}
-                hitSlop={{ top: spacing.lg, bottom: spacing.lg }}
-                accessibilityRole="link"
-                accessibilityLabel={heroRecoveryLine}
-                accessibilityHint="Opens Recovery"
-              >
-                <Text style={[styles.heroBody, live.heroBody]}>{heroRecoveryLine}</Text>
-              </TouchableOpacity>
-            ) : null}
-            {/* S15#7 readiness aggregate: tells the user where they are in
-                the training block PLUS whatever recovery/soreness/sleep/
-                energy/fatigue signal outranks a plain phase read this week,
-                composed by buildReadinessSummary so it is one calm line
-                instead of the phase-only chip plus scattered other reads.
-                Keeps Volyume's coaching identity visible at the start of
-                every session, the way an RP-style plan would. Tooltip-free
-                because the row is glanceable on its own. */}
+            {/* S15#7: where the person is in the training block, one calm
+                line composed by buildReadinessSummary. D224: it reads no
+                recovery signal (no soreness, sleep, energy or fatigue). */}
             {readinessChipEl}
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §8/§16/§17
                 R3, hero merge): CoachBriefCard's card-in-card render is
@@ -3369,7 +3161,7 @@ export default function HomeScreen({ navigation, route }) {
         accessibilityLabel="Recovery detail"
       >
         <RecoveryStateCard
-          recoveryState={gatedRecoveryState}
+          recoveryState={todayRecoveryState}
           expanded={!recoveryRead}
           onToggle={toggleRecoveryRead}
         />

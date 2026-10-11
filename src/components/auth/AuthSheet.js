@@ -118,7 +118,9 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
         // what to do and nothing in our code failed. Logging it as an error
         // kept a diagnosed, handled state open in Sentry. Real provider
         // failures keep the error level.
-        if (result.error.code === 'apple_device_state') {
+        // Sentry VOLYUME-3K: Google Play services failing on the phone
+        // (google_device_state) is the same kind of known device condition.
+        if (result.error.code === 'apple_device_state' || result.error.code === 'google_device_state') {
           logInfo('LoginScreen.oauth.deviceState', `provider=${provider}`, { code: result.error.code });
         } else {
           logError('LoginScreen.oauth.providerError', result.error, { provider });
@@ -137,6 +139,8 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
         // SDK text still never reaches the user.
         if (result.error.code === 'apple_device_state') {
           toast.show('Apple could not finish sign-in. Check you are signed in to iCloud in your phone Settings, then try again.', { variant: 'error' });
+        } else if (result.error.code === 'google_device_state') {
+          toast.show('Google could not finish sign-in on this phone. Try again, or sign in with your email instead.', { variant: 'error' });
         } else {
           toast.show(authErrorMessage(result.error), { variant: 'error' });
         }

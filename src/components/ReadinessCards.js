@@ -960,7 +960,13 @@ export default function ReadinessCards({
                 muscle in it is estimated recovered. It describes; it never
                 recommends another session. */}
             {!muscleRecoveryFailed && nextCard ? (
-              <NextInPlanCard card={nextCard} nowMs={muscleRecoveryNowMs} weekByMuscle={weekByMuscle} />
+              <NextInPlanCard
+                card={nextCard}
+                nowMs={muscleRecoveryNowMs}
+                weekByMuscle={weekByMuscle}
+                learnedSpeed={muscleRecovery?.personal?.reason === 'adjusted'}
+                sessionSplits={sessionSplits}
+              />
             ) : null}
             <View>
               <Text style={live.mfTitle} accessibilityRole="header">Recovery by muscle</Text>

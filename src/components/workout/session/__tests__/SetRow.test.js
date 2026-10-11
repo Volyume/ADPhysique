@@ -137,8 +137,10 @@ describe('SetRow wells', () => {
     // D220 addendum 22: on the founder's iPhone every fit-scaled text on the
     // row being typed into collapsed far below its declared floor, so no text
     // on the row carries adjustsFontSizeToFit; the columns fit their content.
+    // Sideways each box reaches half the gap to the other (founder report
+    // 2026-10-11, pinned in the hold block below).
     const cell = one(byLabel(render({}), 'Set 2 weight'));
-    expect(cell.props.hitSlop).toEqual({ top: 2, bottom: 2, left: 0, right: 0 });
+    expect(cell.props.hitSlop).toEqual({ top: 2, bottom: 2, left: spacing.sm / 2, right: spacing.sm / 2 });
     expect(flat(cell.props.style).height).toBe(44);
     const text = textIn(cell);
     expect(text.props.numberOfLines).toBe(1);
@@ -560,6 +562,24 @@ describe('SetRow long press and check name', () => {
     expect(onLongPressRow).toHaveBeenCalledWith();
   });
 
+  // Founder report 2026-10-11: "It's when I click a blank area to get the
+  // keyboard down ... stop Notes pop up when clicking blank area." A
+  // Pressable claims every touch on it, so the row's blank space never let
+  // the scroll view put the keyboard away, and a rested finger opened the
+  // sheet. While the keyboard is up the row is disabled: it claims nothing.
+  test('holdOff: the row claims no touch while the keyboard is up, stays mounted, and its controls keep their presses', () => {
+    const onLongPressRow = jest.fn();
+    const onPressWell = jest.fn();
+    const off = render({ onLongPressRow, onPressWell, holdOff: true });
+    const row = rowPressable(off);
+    expect(row).toBeTruthy(); // same element: the field being typed into is never remounted
+    expect(row.props.disabled).toBe(true);
+    press(one(byLabel(off, 'Set 2 reps')));
+    expect(onPressWell).toHaveBeenCalledWith('reps');
+    const on = render({ onLongPressRow });
+    expect(rowPressable(on).props.disabled).toBe(false);
+  });
+
   test('the hold hint sits on the check (and on a marker that is not a button); a screen reader reaches the overflow as an action on the check', () => {
     const onLongPressRow = jest.fn();
     const withButton = render({ onLongPressRow, onPressMarker: () => {} });
@@ -648,6 +668,32 @@ describe('SetRow phone-keyboard path', () => {
     expect(s.fontFamily).toBe(type.num('bodyStrong').fontFamily);
     expect(s.fontSize).toBe(type.bodyStrong.fontSize);
     expect(s.fontVariant).toEqual(['tabular-nums']);
+  });
+
+  // Founder report 2026-10-11: "This note thing keeps popping up when I
+  // select a box to enter weight or rep not when pressing note button." The
+  // field was sized to its one line of text inside the 44 dp box, so a touch
+  // on the box's top or bottom band, or in the gap between the two boxes,
+  // reached the row, whose 300 ms hold opens the set sheet. Every point of
+  // both boxes, and the gap between them, must belong to a box.
+  test('while editing, the field fills its whole box and keeps the box reach, so the row hold never takes a tap on it', () => {
+    const tree = render({ onLongPressRow: jest.fn(), inputField: field(), wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    const input = one(inputs(tree));
+    const s = flat(input.props.style);
+    expect(s.flex).toBe(1);
+    expect(s.alignSelf).toBe('stretch');
+    expect(s.textAlignVertical).toBe('center');
+    expect(input.props.hitSlop).toEqual(one(byLabel(tree, 'Set 2 reps')).props.hitSlop);
+  });
+
+  test('the two boxes meet in the middle of the gap between them, at rest and while editing', () => {
+    const resting = render({ onLongPressRow: jest.fn() });
+    const gap = flat(hosts(resting, (p) => flat(p.style).flexDirection === 'row' && flat(p.style).gap === spacing.sm && flat(p.style).flex === 1)[0].props.style).gap;
+    const w = one(byLabel(resting, 'Set 2 weight')).props.hitSlop;
+    const r = one(byLabel(resting, 'Set 2 reps')).props.hitSlop;
+    expect(w.right + r.left).toBe(gap);
+    const editing = render({ onLongPressRow: jest.fn(), inputField: field(), wells: { weight: 72.5, reps: 8, state: 'editing', editingField: 'weight' } });
+    expect(one(inputs(editing)).props.hitSlop.right + one(byLabel(editing, 'Set 2 reps')).props.hitSlop.left).toBe(gap);
   });
 
   test('the other well stays a pressable value', () => {

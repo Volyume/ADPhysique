@@ -150,7 +150,10 @@ describe('the numbers come from the caller', () => {
   });
 
   test('Home and the Recovery cards pass the served-sets resolver into the loader', () => {
-    expect(read('screens/HomeScreen.js')).toMatch(/loadPlannedSetsByRoutine\(outstandingIds, servedSetsResolver\(user\.id\)\)/);
+    // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+    // recovery data from today. I don't want it there full stop."): Today no
+    // longer reads planned sets for recovery at all; the Recovery cards do.
+    expect(read('screens/HomeScreen.js')).not.toMatch(/loadPlannedSetsByRoutine/);
     expect(read('components/ReadinessCards.js')).toMatch(/loadPlannedSetsByRoutine\(ids, servedSetsResolver\(userId\)\)/);
   });
 });

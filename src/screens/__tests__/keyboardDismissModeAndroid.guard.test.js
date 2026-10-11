@@ -31,7 +31,6 @@ const fs = require('fs');
 const path = require('path');
 
 const SITES = [
-  { file: 'ActiveWorkoutScreen.js', dir: ['..'] },
   { file: 'HomeScreen.js', dir: ['..'] },
   { file: 'NutritionTargetsScreen.js', dir: ['..'] },
 ];
@@ -44,6 +43,18 @@ describe('Android keyboardDismissMode is deterministically "none", never "on-dra
       expect(src).not.toContain("keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}");
     });
   }
+
+  // The logger's list never drags the keyboard on either platform (founder
+  // report 2026-10-11, Sentry VOLYUME-3J: a drag-dismiss on iOS froze the
+  // app in UIKit layout), and never scrolls itself while a finger moves it.
+  test("ActiveWorkoutScreen.js: 'none' on both platforms, and no programmatic scroll during a drag", () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'ActiveWorkoutScreen.js'), 'utf8');
+    expect(src).toContain('keyboardDismissMode="none"');
+    expect(src).not.toMatch(/keyboardDismissMode=\{Platform\.OS === 'ios' \? 'interactive'/);
+    expect(src).toContain('onScrollBeginDrag={() => { userDraggingRef.current = true; }}');
+    expect(src).toContain('onScrollEndDrag={() => { userDraggingRef.current = false; }}');
+    expect(src).toMatch(/function scrollRowAboveBar\(rowId, padHeight\) \{\s*if \(userDraggingRef\.current\) return;/);
+  });
 
   test('no production screen anywhere still sets Android to on-drag', () => {
     const screensDir = path.join(__dirname, '..');

@@ -5,6 +5,28 @@
  */
 
 import { logInfo, logWarn, logError } from '../errorLog';
+import { isNetworkNoise } from '../observability/networkNoise';
+
+// Sentry VOLYUME-2J: the runner's per-table summary ("sync.push.meal_plans
+// .errors" and others, 30 events in 30 days) carried a count but no cause, so
+// a sync that failed only because the connection dropped (each table error's
+// own report is dropped as connection noise) still reached Sentry as a
+// warning. Every table error passes through logSyncError, which now keeps two
+// counts: every error, and errors that were not a lost connection. The runner
+// reads them around each table, and its summary says when that table's
+// failures were all lost connections.
+let _syncErrorsSeen = 0;
+let _syncErrorsReal = 0;
+
+/** A point to measure from, before a table's push or pull. */
+export function syncErrorMark() {
+  return { seen: _syncErrorsSeen, real: _syncErrorsReal };
+}
+
+/** True when errors were logged since `mark` and every one was a lost connection. */
+export function onlyNetworkErrorsSince(mark) {
+  return !!mark && _syncErrorsSeen > mark.seen && _syncErrorsReal === mark.real;
+}
 
 /**
  * Fire a sync_run event after a sync attempt completes.
@@ -104,6 +126,11 @@ export function isDbDeferredError(err) {
 
 export function logSyncError(scope, err, ctx) {
   try {
+    _syncErrorsSeen += 1;
+    if (!isDbDeferredError(err) && !isDeletedAccountFkError(err)
+      && !isNetworkNoise(err?.message) && !isNetworkNoise(err)) {
+      _syncErrorsReal += 1;
+    }
     if (isDbDeferredError(err)) {
       logInfo(
         `${scope}.dbDeferred`,

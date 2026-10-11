@@ -276,7 +276,11 @@ export function captureError(error, ctx = {}) {
 const STORE_NOISE = /sku not found|item.{0,12}unavailable|billing.{0,12}unavailable|service.{0,12}unavailable|no play offer|product not found|st13runtime_error/i;
 function _isExpectedOfflineNoise(message, ctx) {
   try {
-    if (ctx?.extra?.allNetwork === true) return true;
+    // errorLog.logWarn forwards the caller's context NESTED, as
+    // extra.context (Sentry VOLYUME-28/2C/2J, 2026-10-11): reading only the
+    // top level meant rule 3 never matched a real warning, so every
+    // lost-connection summary still reached Sentry. Both shapes are read.
+    if (ctx?.extra?.allNetwork === true || ctx?.extra?.context?.allNetwork === true) return true;
     if (NETWORK_NOISE.test(String(message ?? ''))) return true;
     if (ctx?.extra && isNetworkNoise(ctx.extra)) return true;
     if (/^payments\./.test(String(ctx?.scope ?? '')) && STORE_NOISE.test(String(message ?? ''))) return true;

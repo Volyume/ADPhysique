@@ -686,36 +686,21 @@ describe('D218 (F-8 part 2, P20): the computed Last session total reads each set
 });
 
 // ─── F-8: the computed week stats ───────────────────────────────────────────
-describe('D218 (F-8, P21): the computed week stats read the same basis', () => {
-  // The week volume is computed and handed to the coach brief, which does not
-  // print it today; it is read here at the call, so it cannot drift.
-  const NOW = new Date(2026, 9, 1, 12, 0, 0).getTime(); // Thursday 1 October 2026, 12:00 local
-  const WEDNESDAY = new Date(2026, 8, 30, 12, 0, 0).getTime(); // yesterday, the same Monday week
-
-  test('week volume applies per hand, assistance, and the distance and duration exclusions', async () => {
+// RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the recovery
+// data from today. I don't want it there full stop."): the week's volume was
+// computed only for the coach brief's fatigue rules, which are gone, so Home
+// computes no week stats and the brief is handed none.
+describe('D218 (F-8, P21) and D224: Home computes no week stats for the brief', () => {
+  test('the brief is handed no weekly volume, fatigue or deload reading', async () => {
     useAppStore.setState(userState());
-    spyOn(Date, 'now').mockReturnValue(NOW);
     const brief = spyOn(homeCoachBriefMod, 'buildCoachBrief');
-    applyFixture({
-      db: {
-        getActivePlan: async () => ({ id: 'p1', name: 'My Plan' }),
-        getRoutinesForPlan: async () => [{ id: 'r1', name: 'Push Day' }],
-        getAllWorkouts: async () => [lastWorkout({ id: 'w-week', startedAt: WEDNESDAY, endedAt: WEDNESDAY + 3600000 })],
-        getWorkoutSetsSince: async () => sessionSets('w-week').map((s) => ({ ...s, createdAt: WEDNESDAY })),
-      },
-      lib: {
-        resolveProgrammePosition: async () => ({
-          nextSession: { routineId: 'r1', name: 'Push Day' },
-          sessions: [{ routineId: 'r1', state: 'outstanding' }],
-          activeWeekId: 'wk1', blockId: 'b1', recoveryState: null, weekResolved: false,
-        }),
-      },
-    });
+    applyFixture({ db: { getAllWorkouts: async () => [lastWorkout({})], getWorkoutSetsSince: async () => sessionSets('w-last') } });
     await mountHome({});
-    const withSessions = brief.mock.calls.map((c) => c[0].weeklyVolume).filter((v) => v && v.sessions > 0);
-    expect(withSessions.length).toBeGreaterThan(0);
-    expect(withSessions[withSessions.length - 1].volume).toBe(SESSION_TONNAGE);
-    expect(withSessions[withSessions.length - 1].sets).toBe(10);
+    for (const [args] of brief.mock.calls) {
+      expect(args).not.toHaveProperty('weeklyVolume');
+      expect(args).not.toHaveProperty('fatigueHistory');
+      expect(args).not.toHaveProperty('deloadSuggestion');
+    }
   });
 });
 
@@ -747,37 +732,15 @@ describe('D218 (F-3, P19): the block rows credit through the unfiltered lookup',
 });
 
 // ─── F-25 caller: the deload check ──────────────────────────────────────────
-describe('D218 (F-25, P40): Home\'s deload check is handed each set\'s exercise type', () => {
-  test('repsTypeById reaches the bucket builder; every other option and the null exercise map are exactly as before', async () => {
+// RE-ANCHORED D224: Today runs no deload check (a recovery reading); Progress
+// runs its own (useProgressData), pinned there.
+describe('D218 (F-25, P40) and D224: Today runs no deload check', () => {
+  test('the bucket builder is never called on Today', async () => {
     useAppStore.setState(userState());
     const build = spyOn(algorithmsMod, 'buildLast4WeekDeloadBuckets');
-    applyFixture({
-      db: {
-        getAllWorkouts: async () => [lastWorkout({ totalVolume: null })],
-        getWorkoutSetsSince: async () => sessionSets('w-last'),
-      },
-    });
+    applyFixture({ db: { getAllWorkouts: async () => [lastWorkout({ totalVolume: null })], getWorkoutSetsSince: async () => sessionSets('w-last') } });
     await mountHome({});
-    expect(build).toHaveBeenCalledTimes(1);
-    const [sets, workouts, exerciseMap, opts] = build.mock.calls[0];
-    expect(sets.length).toBeGreaterThan(0);
-    expect(workouts).toHaveLength(1);
-    expect(exerciseMap).toBeNull(); // hasOverMRV stays false on Home
-    expect(opts).toMatchObject({
-      excludeWarmups: true, repsViaWorkoutRoster: true, weeksSinceLastDeloadOverride: 99,
-    });
-    // Exactly these options, nothing else (no zero-fill, no week anchor: Home keeps its rolling weeks).
-    expect(Object.keys(opts).sort()).toEqual([
-      'excludeWarmups', 'now', 'repsTypeById', 'repsViaWorkoutRoster', 'weeksSinceLastDeloadOverride',
-    ]);
-    expect(Number.isFinite(opts.now)).toBe(true);
-    expect(opts.repsTypeById).toEqual({
-      'ex-bench': 'weight_reps',
-      'ex-db-curl': 'weight_reps',
-      'ex-custom-hammer': 'weight_reps',
-      'ex-heel-walk': 'distance',
-      'ex-plank': 'duration',
-    });
+    expect(build).not.toHaveBeenCalled();
   });
 });
 

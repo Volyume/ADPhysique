@@ -43,6 +43,12 @@
  *   onLongPressRow  when given, the whole row answers a 300 ms hold with no
  *              arguments (the marker button carries "Hold for more options");
  *              a press on a well or the check is still a plain press
+ *   holdOff    true while the phone's keyboard is up: the row stands aside,
+ *              its hold is off and a tap on its blank space is not the row's,
+ *              so it reaches the screen's scroll view, which puts the keyboard
+ *              away (founder report 2026-10-11: tapping a blank area to put
+ *              the keyboard down opened the set sheet instead). Its own
+ *              controls keep their presses
  *   checkLabel a string that replaces the check's spoken name (the screen's
  *              "Log warm-up", "Log other side", "Start cluster"); the spoken
  *              name IS the action's name (R4/D64)
@@ -103,7 +109,11 @@ const CHECK_SIZE = 28;
 const TICK_SIZE = 16;
 const RING_WIDTH = 1.5;
 // 44 dp wells and a 24 dp marker column are taken to 48 dp by their slop.
-const WELL_HIT_SLOP = { top: 2, bottom: 2, left: 0, right: 0 };
+// Sideways each well takes half the gap between the two wells, so a tap that
+// just misses a box lands on the nearer box, never on the row, whose 300 ms
+// hold opens the set sheet (founder report 2026-10-11: the note sheet opened
+// when tapping a box to enter a weight or reps).
+const WELL_HIT_SLOP = { top: 2, bottom: 2, left: spacing.sm / 2, right: spacing.sm / 2 };
 const CHECK_HIT_SLOP = { top: 0, bottom: 0, left: 6, right: 6 };
 const MARKER_HIT_SLOP = { top: 0, bottom: 0, left: 12, right: 12 };
 
@@ -331,12 +341,17 @@ function WellCell({ field, word, text, spoken, wellState, editingField, ghost, i
   const label = `${name} ${word}`;
   if (input) {
     // The well itself is the field: no stepper, no label row. A plain View, not
-    // a button, so the field is its own element for a screen reader.
+    // a button, so the field is its own element for a screen reader. The field
+    // fills the whole box and keeps the box's reach: sized to its one line of
+    // text it left the box's top and bottom to the row, so a touch there that
+    // rested 300 ms opened the set sheet instead of the keyboard (founder
+    // report 2026-10-11).
     return (
       <View style={box}>
         <TextInput
           ref={inputRef}
           testID={input.testID}
+          hitSlop={WELL_HIT_SLOP}
           style={[live.wellValue, live.wellActive, styles.wellInput]}
           value={input.value == null ? '' : String(input.value)}
           onChangeText={input.onChangeText}
@@ -431,6 +446,7 @@ export default function SetRow({
   kind = 'weight_reps',
   units = 'kg',
   inputField = null,
+  holdOff = false,
   testIDs,
 }) {
   const t = useTheme();
@@ -492,6 +508,11 @@ export default function SetRow({
     // The hold lives on the container with no onPress of its own, so the
     // children keep their plain presses. accessible={false} keeps the row from
     // swallowing its own controls into one element for a screen reader.
+    // A Pressable claims every touch on it, onPress or not, so while the
+    // keyboard is up it is disabled (holdOff): a disabled Pressable claims
+    // nothing, and a tap on the row's blank space puts the keyboard away.
+    // The Pressable stays mounted either way, so the field being typed into
+    // is never remounted.
     return (
       <Pressable
         testID={ids.row}
@@ -499,6 +520,7 @@ export default function SetRow({
         onLayout={onLayout}
         onLongPress={() => onLongPressRow()}
         delayLongPress={LONG_PRESS_MS}
+        disabled={!!holdOff}
         accessible={false}
       >
         {body}
@@ -547,7 +569,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: radius.md,
   },
-  wellInput: { alignSelf: 'stretch', minWidth: 0, padding: 0, textAlign: 'center' },
+  wellInput: { flex: 1, alignSelf: 'stretch', minWidth: 0, padding: 0, textAlign: 'center', textAlignVertical: 'center' },
   checkCol: {
     width: SET_COLUMNS.check,
     height: touchTarget.minimum,

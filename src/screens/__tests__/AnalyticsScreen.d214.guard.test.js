@@ -106,9 +106,9 @@ describe('2. The strip: the pure model, one tap target, one legend', () => {
     // (design 5.3): the strip reads the one judgement, so its tones are Below
     // maintenance, Within the studied range and Beyond the studied range; the old
     // "Under the range", "Inside the range" and "Too much" are retired.
-    expect(STRIP).toContain("under: 'Below maintenance'");
-    expect(STRIP).toContain("in: 'Within the studied range'");
-    expect(STRIP).toContain("over: 'Beyond the studied range'");
+    expect(STRIP).toContain("under: 'Too few to hold size'");
+    expect(STRIP).toContain("in: 'Enough sets'");
+    expect(STRIP).toContain("over: 'More than needed'");
     expect(CODE_OF(STRIP)).not.toMatch(/Too much|Under the range|Inside the range/);
   });
 

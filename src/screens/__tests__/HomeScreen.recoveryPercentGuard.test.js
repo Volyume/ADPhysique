@@ -18,10 +18,8 @@
  * Pins:
  *   (a) no template literal in either file interpolates a value immediately
  *       followed by a literal "%" (regex /\$\{[^}]*\}%/).
- *   (b) the only recovery line HomeScreen renders is `heroRecoveryLine`,
- *       which reads only recoveryRecommendation.programmeNextLine and a
- *       perSession[...].line -- never a third, ad hoc source -- and that
- *       variable, not a rebuilt string, is what the card's Text renders.
+ *   (b) RE-ANCHORED D224: Today renders no recovery line at all and reads
+ *       no recovery reading (the founder's order, below).
  *   (c) the change-workout sheet renders no recovery line at all.
  *
  * RE-PINNED D219 lane A6 (founder 2026-10-04: no surface recommends another
@@ -44,15 +42,6 @@ const SHEET_SRC = fs.readFileSync(
 
 const PERCENT_INTERPOLATION = /\$\{[^}]*\}%/;
 
-/** Same indexOf-bounded block extraction as HomeScreen.communityRow.guard.test.js's fnBody. */
-function block(src, startMarker, endMarker) {
-  const start = src.indexOf(startMarker);
-  expect(start).toBeGreaterThan(-1);
-  const end = src.indexOf(endMarker, start + startMarker.length);
-  expect(end).toBeGreaterThan(start);
-  return src.slice(start, end + endMarker.length);
-}
-
 describe('neither Home nor the change-workout sheet builds a recovery percent itself', () => {
   test('HomeScreen.js: no template literal interpolates a value into a percent', () => {
     expect(HOME_SRC).not.toMatch(PERCENT_INTERPOLATION);
@@ -63,26 +52,27 @@ describe('neither Home nor the change-workout sheet builds a recovery percent it
   });
 });
 
-describe('HomeScreen renders only heroRecoveryLine, sourced from recommendNextWorkout', () => {
-  const heroBody = block(HOME_SRC, 'const heroRecoveryLine = (() => {', '})();');
+// RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the recovery
+// data from today. I don't want it there full stop."): Today renders no
+// recovery line at all, and never imports the recovery estimate's modules.
+describe('Today renders no recovery data (D224)', () => {
+  const code = HOME_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  test('there is no swap branch: the hero line never reads a reason or an override (D219)', () => {
-    expect(heroBody).not.toMatch(/\.reason\b/);
-    expect(heroBody).not.toMatch(/recoveryOverride|recoveryPrimaryActive|\.recommended\b/);
+  test('no recovery line and no import of the recovery estimate', () => {
+    expect(code).not.toMatch(/heroRecoveryLine|recoveryRecommendation/);
+    expect(code).not.toMatch(/lib\/recovery\/(load|nextWorkoutRecommendation|nextLikelyTrainingTime)/);
+    expect(code).not.toMatch(/'Opens Recovery'/);
   });
 
-  test('the programme-next case reads recoveryRecommendation.programmeNextLine', () => {
-    expect(heroBody).toMatch(/recoveryRecommendation\.programmeNextLine/);
+  test('no soreness, sleep, energy, fatigue or deload reading feeds Today', () => {
+    expect(code).not.toMatch(/getRecentWorkoutFeedback|shouldDeload|buildLast4WeekDeloadBuckets|fatigueHistory|deloadSuggestion/);
   });
 
-  test('the fallback case reads a matching perSession entry\'s own .line, and nothing else', () => {
-    expect(heroBody).toMatch(/recoveryRecommendation\.perSession/);
-    expect(heroBody).toMatch(/\?\.line \?\? null/);
-  });
-
-  test('heroRecoveryLine itself, not a rebuilt string, is what the card renders', () => {
-    expect(HOME_SRC).toMatch(/\{heroRecoveryLine \? \(/);
-    expect(HOME_SRC).toMatch(/>\{heroRecoveryLine\}<\/Text>/);
+  test('the block state Today shows is the planned recovery week only', () => {
+    expect(code).toMatch(/const todayRecoveryState = gatedRecoveryState\?\.state === RECOVERY_STATE\.PLANNED_BLOCK_RECOVERY \? gatedRecoveryState : null;/);
+    expect(code).toMatch(/nextWorkoutRecoveryLabel\(todayRecoveryState\)/);
+    expect(code).toMatch(/gatedRecoveryState: todayRecoveryState/);
+    expect(code).toMatch(/recoveryState=\{todayRecoveryState\}/);
   });
 });
 

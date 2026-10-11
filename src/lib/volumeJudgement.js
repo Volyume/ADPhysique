@@ -123,13 +123,13 @@ const setsWord = (n) => (n === 1 ? 'set' : 'sets');
 function bandTail(band) {
   const b = WEEKLY_BANDS;
   switch (band) {
-    case BAND.BELOW_MAINTENANCE: return `below maintenance, which starts at ${b.maintenanceFrom} sets`;
-    case BAND.MAINTENANCE: return `in the maintenance range of ${b.maintenanceFrom} to ${b.maintenanceTop}`;
-    case BAND.BETWEEN: return 'between maintenance and the normal growth range';
-    case BAND.NORMAL_GROWTH: return `inside the normal growth range of ${b.normalFrom} to ${b.normalTop}`;
-    case BAND.FOCUS_RANGE: return `inside the focus range of ${b.normalTop} to ${b.focusTop}`;
-    case BAND.TOP_OF_STUDIED: return `at the top of the studied range of ${b.focusTop} to ${b.studiedTop}`;
-    default: return `beyond the ${b.studiedTop} sets that studies have tested`;
+    case BAND.BELOW_MAINTENANCE: return `below the ${b.maintenanceFrom} sets it takes to hold size`;
+    case BAND.MAINTENANCE: return `enough to hold size, which takes ${b.maintenanceFrom} to ${b.maintenanceTop}`;
+    case BAND.BETWEEN: return 'enough to hold size, with some growth';
+    case BAND.NORMAL_GROWTH: return `inside the usual range for growth, ${b.normalFrom} to ${b.normalTop}`;
+    case BAND.FOCUS_RANGE: return `inside the higher range for a focus, ${b.normalTop} to ${b.focusTop}`;
+    case BAND.TOP_OF_STUDIED: return `close to the upper limit, ${b.focusTop} to ${b.studiedTop}`;
+    default: return `past ${b.studiedTop} sets, more than needed`;
   }
 }
 

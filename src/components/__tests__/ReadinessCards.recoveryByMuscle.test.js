@@ -158,9 +158,12 @@ import { logError } from '../../lib/errorLog';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../../lib/recovery/load';
 import { getPlanRoles } from '../../lib/effectiveLandmarks';
-import { recoveredPhrase, partOfDay } from '../../lib/recovery/nextInPlan';
+import { recoveredPhrase } from '../../lib/recovery/nextInPlan';
 import { clockLine } from '../../lib/recovery/muscleDetail';
-import { recommendNextWorkout, readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
+import { recommendNextWorkout } from '../../lib/recovery/nextWorkoutRecommendation';
+// RE-ANCHORED D224: the list row words its ready instant through the card's own clause.
+import { readyByClause } from '../../lib/recovery/nextInPlan';
+const readyClause = (at, now) => `ready ${readyByClause(at, now)}`;
 import { RECOVERY_ESTIMATE_LABEL } from '../../lib/recovery/constants';
 
 const NOW = Date.now();
@@ -613,7 +616,8 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     expect(all).toContain('estimated recovered now'); // biceps: recovered
     expect(all).toContain('No recent session on triceps.'); // RC-5: never called recovered
     // The session line reads the LATEST muscle (quads, two days out), and says what has no session behind it.
-    const clause = partOfDay(QUADS_READY_AT, NOW).text;
+    // RE-ANCHORED D224: the card's one clause (by a weekday and part of the day).
+    const clause = readyByClause(QUADS_READY_AT, NOW);
     expect(all).toContain(`Chest, Quads and Biceps: estimated recovered ${clause}. No recent session on Triceps.`);
     // It comes first in the block: before the heading, the answer line and the rows.
     expect(all.indexOf('Next in your plan: Upper A')).toBeLessThan(all.indexOf('Recovery by muscle'));
@@ -661,18 +665,25 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     resolveProgrammePosition.mockResolvedValue({ nextSession: { routineId: 'r-legs' }, sessions: SESSIONS_AB });
     loadPlannedSetsByRoutine.mockResolvedValue({ 'r-legs': UPPER_A_SETS });
     recommendNextWorkout.mockReturnValue(NEXT());
+    // RE-ANCHORED 2026-10-11 (founder: "FOLLOW THE STYLE IN THE APP!!!! ... No pills or anything
+    // else!"): the usual times are two label and value rows, the muscle's own and back's.
+    const clockNode = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && /^Usually takes: /.test(n.props.accessibilityLabel || ''));
     const tree = await render();
-    expect(texts(tree)).not.toContain(clockLine('biceps'));
+    expect(clockNode(tree)).toHaveLength(0);
     const line = tree.root.findAll((n) => typeof n.type === 'string' && /^Biceps, estimated recovered now/.test(n.props.accessibilityLabel || ''))[0];
     expect(line.props.accessibilityRole).toBe('button');
     await act(async () => { line.props.onPress(); });
     const all = texts(tree);
-    expect(all).toContain(clockLine('biceps'));
-    expect(clockLine('biceps')).toMatch(/^Biceps are estimated at about 2 days \(range 1\.5 to 2\.5 days\)/);
-    expect(clockLine('biceps')).toMatch(/Muscles differ: back is estimated at about 2\.5 days/);
+    expect(clockNode(tree).length).toBeGreaterThan(0);
+    // RE-ANCHORED D224: the usual time to read as ready, in hours.
+    expect(all).toContain('About 43 hours after 6 sets');
+    expect(all).toContain('Back usually takes');
+    expect(all).toContain('About 54 hours');
+    expect(clockLine('biceps')).toMatch(/^Biceps are usually estimated ready about 43 hours \(range 32 to 54 hours\)/);
+    expect(clockLine('biceps')).toMatch(/Muscles differ: back is usually estimated ready about 54 hours/);
     // Tapping again closes it.
     await act(async () => { line.props.onPress(); });
-    expect(texts(tree)).not.toContain(clockLine('biceps'));
+    expect(clockNode(tree)).toHaveLength(0);
   });
 
   test('a muscle the plan raised carries its role on the card, and the founder\'s case reads inside the focus range on its row and detail', async () => {
@@ -697,9 +708,12 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     await act(async () => { BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0].onMuscleTap('biceps'); });
     await flush();
     const all = texts(tree);
-    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30.');
-    expect(all).toContain('27 sets counted: 20 direct and 14 indirect at half credit.');
-    expect(all.some((t) => /^Within your focus range for biceps: you picked it to bring up\./.test(t))).toBe(true);
+    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    // RE-ANCHORED 2026-10-11: the week as label and value rows, in plain words.
+    expect(all).toContain('27');
+    expect(all).toContain('20 as the main muscle, 14 helping (each counts as half)');
+    expect(all).toContain('Higher range for a focus');
+    expect(all).toContain('20 to 30 sets a week');
     expect(all.join(' | ')).not.toMatch(/too much|overtrain|near the limit/i);
   });
 

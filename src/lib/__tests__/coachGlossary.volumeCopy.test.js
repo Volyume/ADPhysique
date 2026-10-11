@@ -33,13 +33,17 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', '..', rel), 
 // range" and "Too much means past the point of extra benefit". Those words judged
 // against a landmark table that ignored the plan; the legend now names the four
 // tones of the one judgement (volumeJudgement.js) and says what the bands are.
+// RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck
+// is that meant to mean to a human", "No 'ai talk'"): the bands in plain words,
+// with no "studies" in them.
 describe('the Volume heatmap legend\'s (i): sets done, in a window, against the studied bands', () => {
   test('the lead\'s text, word for word', () => {
     expect(GLOSSARY.volumeHeatmapBands).toBe(
       'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. '
-      + 'The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 10 runs from holding the size you have towards growth, '
-      + '10 to 20 is the normal growth range, 20 to 30 is a focus range, and studies have little to say beyond 42. '
-      + 'A muscle you picked as a focus in your plan reads against its focus range. '
+      + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 10 holds it with some growth, '
+      + '10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
+      + 'Past 42 sets a week, more sets are unlikely to help. '
+      + 'A muscle you picked as a focus in your plan is read against the higher range. '
       + 'Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
     );
   });
@@ -47,8 +51,9 @@ describe('the Volume heatmap legend\'s (i): sets done, in a window, against the 
   test('it names the windows\' figure, names the bands, and never says "too much" or "near the limit"', () => {
     const text = GLOSSARY.volumeHeatmapBands;
     expect(text).toMatch(/this week so far or as a weekly average over 2 or 4 weeks/);
-    for (const word of ['below maintenance', 'normal growth range', 'focus range']) expect(text).toContain(word);
+    for (const word of ['too few to hold', 'usual range for growth', 'higher range']) expect(text).toContain(word);
     expect(text).not.toMatch(/too much|near the limit|just enough|helpful range|you've trained|compared with|recover from/i);
+    expect(text).not.toMatch(/stud(y|ies)|research/i);
     expect(text).not.toContain('—');
   });
 

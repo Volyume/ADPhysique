@@ -162,11 +162,11 @@ function structureLine(facts, sessions) {
   let text;
   if (family.startsWith('division_')) {
     const list = sessions.length ? `: ${joinList(names)}` : '';
-    text = `${n} sessions a week, following the split your goal keeps${list}. At the same weekly sets, studies find the split itself does not change growth, so the plan keeps your goal's own session list and spaces each muscle's sessions.`;
+    text = `${n} sessions a week, following the split your goal keeps${list}. With the same sets each week, how the week is split does not change growth, so the plan keeps your goal's own sessions and spaces each muscle's sessions apart.`;
   } else {
     const phrase = FAMILY_PHRASE[family] ?? (sessions.length ? joinList(names) : null);
     if (!phrase) return null;
-    text = `${n} sessions a week, ${phrase}. At the same weekly sets, studies find the split itself does not change growth, so this one is chosen for how well it fits your days, your session length and each muscle's recovery.`;
+    text = `${n} sessions a week, ${phrase}. With the same sets each week, how the week is split does not change growth, so this split is the one that best fits your days, your session length and each muscle's recovery.`;
   }
   return line('structure', text, 'FREQUENCY.preferTwoExposuresFromWeekly');
 }

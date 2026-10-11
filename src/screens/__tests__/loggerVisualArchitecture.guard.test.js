@@ -174,11 +174,14 @@ describe('the phone\'s keyboard is the input, with the step bar above it (D220 a
     expect(SRC).toContain("Keyboard.addListener('keyboardDidHide'");
     expect(SRC).not.toContain('safeBottom={safeBottom}');
     // D220 addendum 28: the row's marker names the set type (4a); Add set
-    // before the target adds a pending row (2a); a dirty edit asks first (3b).
+    // before the target adds a pending row (2a). 3b amended (founder report
+    // 2026-10-11): leaving an edit saves it, nothing asks.
     expect(SRC).toContain("const SET_TYPE_MARKERS = Object.freeze({ warmup: 'W', dropset: 'D', myo_reps: 'M', rest_pause: 'R', amrap: 'A' });");
     expect((SRC.match(/marker: markerForSet\(/g) || []).length).toBe(2);
     expect(SRC).toContain('if (!targetComplete) { setExtraTargetSets((n) => n + 1); return; }');
-    expect(SRC).toContain("appAlert('Discard changes?', 'Your change to this set is not saved.', [");
+    expect(SRC).not.toContain('Discard changes?');
+    expect(SRC).toContain('handleSaveEditedSet().then((saved) => { if (saved) openWellNow(field, set); });');
+    expect(SRC).toContain('if (editIsDirty()) handleSaveEditedSet(); else closeEditSet();');
   });
 
   test('the step bar can never produce a number the typed fields refused', () => {
@@ -235,8 +238,8 @@ describe('the bans hold in every session component (source guard)', () => {
 });
 
 describe('Android input-focus fix survives the restructure', () => {
-  test('the workspace ScrollView keeps keyboardDismissMode none on Android', () => {
-    expect(SRC).toContain("keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}");
+  test('the workspace ScrollView keeps keyboardDismissMode none (both platforms since VOLYUME-3J)', () => {
+    expect(SRC).toContain('keyboardDismissMode="none"');
     expect(SRC).not.toContain("'on-drag'}");
   });
 });

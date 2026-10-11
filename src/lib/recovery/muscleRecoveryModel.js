@@ -50,7 +50,7 @@ import {
   REFERENCE_SETS, FATIGUE_UNIT_MIN, FATIGUE_UNIT_MAX, LOOKBACK_DAYS,
   READY_PERCENT, NEARLY_PERCENT, DEFAULT_SESSION_MINUTES,
   NOVELTY_SESSIONS, NOVELTY_LAYOFF_DAYS,
-  recoveryHours, feedbackFactor, isLongLengthExercise,
+  recoveryHours, feedbackFactor, isLongLengthExercise, recoveryBandHours,
 } from './constants';
 
 const MS_PER_MINUTE = 60 * 1000;
@@ -368,6 +368,48 @@ function readingAt(contributingSessions, atMs) {
     ? null
     : computeReadyAtMs(contributingSessions, atMs, READY_FRACTION * peak);
   return { recoveredPercent, status, readyAtMs };
+}
+
+/**
+ * D224 (founder 2026-10-11: "Inaccuracies on reported recovery too. Side
+ * delts ready tomorrow on Today. But different in recovery."): the ONE
+ * answer every recovery surface gives to "when is it ready?". `readyAtMs` is
+ * exactly readingAt's (the estimated instant the muscle reaches
+ * READY_PERCENT, every contributing session compounding); `earliestMs` and
+ * `latestMs` read the same curve with every session's clock at the low and
+ * high end of the band each estimate carries (recoveryBandHours, plus or
+ * minus RECOVERY_BAND). Null when the muscle already reads as ready.
+ *
+ * @param {Array<{endMs:number, sets:number, hoursT:number}>} contributingSessions  sorted by endMs
+ * @param {number} atMs
+ * @returns {{ readyAtMs: number, earliestMs: number, latestMs: number } | null}
+ */
+export function readyWindow(contributingSessions, atMs) {
+  if (!Array.isArray(contributingSessions) || !contributingSessions.length || !Number.isFinite(atMs)) return null;
+  const readyAt = (sessions) => readingAt(sessions, atMs).readyAtMs;
+  const readyAtMs = readyAt(contributingSessions);
+  if (!Number.isFinite(readyAtMs)) return null;
+  const scaled = (side) => contributingSessions.map((cs) => {
+    const band = recoveryBandHours(cs.hoursT);
+    return band ? { ...cs, hoursT: band[side] } : cs;
+  });
+  const low = readyAt(scaled('lowHours'));
+  const high = readyAt(scaled('highHours'));
+  return {
+    readyAtMs,
+    earliestMs: Math.min(Number.isFinite(low) ? low : atMs, readyAtMs),
+    latestMs: Math.max(Number.isFinite(high) ? high : readyAtMs, readyAtMs),
+  };
+}
+
+/**
+ * D224: the hours one session of the given clock takes to read as ready (the
+ * same READY_PERCENT the curve uses), so a muscle's usual time and its own
+ * estimate measure the same thing.
+ */
+export function readyHoursAfterOneSession(hoursT) {
+  const h = Number(hoursT);
+  return Number.isFinite(h) && h > 0 ? h * (1 - READY_FRACTION) : null;
 }
 
 /** One muscle's output entry, from its (already time/window filtered) contributing sessions. */

@@ -41,7 +41,7 @@ describe('the band words come from the one judgement', () => {
   // RE-ANCHORED 2026-10-02 (closing review S4): the colour words went, because the
   // light and colour-blind-safe themes draw other colours for the same bands.
   test('the tooltip names the bands in words and never a colour, and never "too much"', () => {
-    for (const band of ['Below maintenance', 'Maintenance range', 'Normal growth range', 'Focus range', 'Beyond the studied range']) {
+    for (const band of ['Too few to hold size', 'Holds your size', 'Usual range for growth', 'Higher range for a focus', 'More than needed']) {
       expect(SECTION).toContain(`${band}: `);
     }
     expect(SECTION).not.toMatch(/\b(Green|Yellow|Red|Blue|Grey) = /);
@@ -50,14 +50,16 @@ describe('the band words come from the one judgement', () => {
 });
 
 describe('the tooltip\'s own lines (W1, W2, W3): they describe, and say what the figure is', () => {
-  test('the beyond line says the research cannot say what extra sets add (no "consider doing a little less")', () => {
-    expect(SECTION).toContain("'Beyond the studied range: over 42 sets, where the research cannot say what extra sets add\\n\\n'");
+  // RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck is that meant to mean to a human"; "No 'ai talk'"): the bands in plain words, no "studies".
+  test('the beyond line says more is not known to help (no "consider doing a little less")', () => {
+    expect(SECTION).toContain("'More than needed: over 42 sets\\n\\n'");
+    expect(SECTION).not.toMatch(/stud(y|ies)|research/i);
     expect(SECTION).not.toMatch(/consider doing a little less|next week\\n/);
   });
 
   test('the focus line says what a focus range is for, and the closing line says what the plan\'s role does', () => {
-    expect(SECTION).toContain("'Focus range: 20 to 30 sets, for a muscle you picked to bring up in your plan\\n'");
-    expect(SECTION).toContain('A muscle your plan raised reads against its focus range, and one it did not reads as above normal growth from 20 sets.');
+    expect(SECTION).toContain("'Higher range for a focus: 20 to 30 sets, for a muscle you picked to bring up in your plan\\n'");
+    expect(SECTION).toContain('A muscle your plan raised is read against the higher range, and one it did not reads as above the usual range from 20 sets.');
     expect(SECTION).not.toMatch(/right at the floor|one or two more sets/);
   });
 

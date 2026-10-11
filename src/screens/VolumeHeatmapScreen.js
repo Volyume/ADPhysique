@@ -801,7 +801,7 @@ export default function VolumeHeatmapScreen({ route }) {
         </View>
 
         <Text style={[styles.footerNote, live.footerNote]}>
-          {'Bands come from studies of weekly sets. A muscle you picked as a focus in your plan reads against its focus range.'}
+          {'A muscle you picked as a focus in your plan is read against the higher range.'}
         </Text>
 
         {/* Sets a week: the trend card. The chips name the window, and a chip

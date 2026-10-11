@@ -37,17 +37,20 @@ function fnBody(src, decl) {
 describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling', () => {
   test('dayKey.js Monday-anchored helpers are imported', () => {
     // RE-ANCHORED 2026-09-22 (founder order item 2): the Today live Community
-    // row stamps its cache with todayLocalKey from the same module; the three
-    // Monday-anchored helpers are still imported from it.
-    expect(HOME).toMatch(/import \{ localWeekStartMs, localWeekEndMs, localDayKey, todayLocalKey \} from '\.\.\/lib\/dayKey';/);
+    // row stamps its cache with todayLocalKey from the same module.
+    // RE-ANCHORED D224: localWeekEndMs left with the week's totals (below).
+    expect(HOME).toMatch(/import \{ localWeekStartMs, localDayKey, todayLocalKey \} from '\.\.\/lib\/dayKey';/);
   });
 
-  test('loadWeekStats (the "Sessions this week" glance card) uses the Monday-anchored window', () => {
+  // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the recovery
+  // data from today. I don't want it there full stop."): the week's sessions,
+  // sets and volume were computed only for the fatigue rules of the coach
+  // brief, which are gone, so loadWeekStats no longer computes a "this week"
+  // figure and holds no week window to anchor. It must never bring back a
+  // rolling one.
+  test('loadWeekStats computes no "this week" figure, and no rolling window', () => {
     const body = fnBody(HOME, 'async function loadWeekStats()');
-    expect(body).toMatch(/const weekStartMs = localWeekStartMs\(\);/);
-    expect(body).toMatch(/const weekEndMs = localWeekEndMs\(weekStartMs\);/);
-    expect(body).toMatch(/w\.startedAt >= weekStartMs && w\.startedAt < weekEndMs/);
-    // The old rolling-7-day literal must be gone from this function.
+    expect(body).not.toMatch(/setWeekStats|weekEndMs/);
     expect(body).not.toMatch(/Date\.now\(\) - 7 \* 24 \* 60 \* 60 \* 1000/);
   });
 

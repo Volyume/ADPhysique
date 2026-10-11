@@ -34,7 +34,11 @@ describe('recovery wording — single source of truth (spec §8)', () => {
     expect(src).toMatch(/isLighterTrainingState\(gatedRecoveryState\)/);
   });
 
-  it('behavioural: at the adaptive-recovery state, the chip never claims "Recovery week" and the card agrees training is only "lighter for now"', () => {
+  // RE-ANCHORED D224 (founder order 2026-10-11: "Remove the recovery data
+  // from today. I don't want it there full stop."): the adaptive adjustment is
+  // a recovery reading, so Today's chip says nothing about it (the block line);
+  // the card, shown off Today, still says training is only lighter for now.
+  it('behavioural: at the adaptive-recovery state, the chip never claims "Recovery week" and says nothing of recovery; the card says "lighter for now"', () => {
     const gatedRecoveryState = {
       state: RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT,
       weekIndex: 2, plannedWeeks: 6, recoveryWeek: 6, weeksToRecovery: 4,
@@ -50,8 +54,8 @@ describe('recovery wording — single source of truth (spec §8)', () => {
       lastSession: null,
     });
     const card = recoveryStateCard(gatedRecoveryState);
-    expect(chip.tone).toBe('recover');
     expect(chip.line).not.toMatch(/^Recovery week/);
+    expect(chip.line).not.toMatch(/recover/i);
     expect(card).not.toBeNull();
     expect(card.title).not.toBe('Recovery week');
   });

@@ -16,14 +16,14 @@
  *    plan does not programme; each muscle is judged on the heatmap's own rounded
  *    figure;
  *  - the strip folds the eight groups into three named tones (Below
- *    maintenance, Within the studied range, Beyond the studied range) read from
+ *    maintenance, Range for growth, More than needed) read from
  *    one colour table, so the legend and the bar can never name different
  *    colours, in every palette;
  *  - RE-PINNED under D219 lane A5 (design 5.3, register D219): the strip reads
  *    the ONE judgement every surface shares (volumeJudgement.judgeWeek, the
  *    role-aware band function) and no longer the landmark table. Its old third
  *    tone, "Too much" in the error colour, is gone: a focus muscle at 27 weekly
- *    sets is Within the studied range (the founder's case), and only a total
+ *    sets is Range for growth (the founder's case), and only a total
  *    beyond the 42 sets studies have tested is marked, in an information colour,
  *    never the error one. Its (i) names the bands instead of the landmark range;
  *  - in the block's planned recovery week (the programme position's GATED
@@ -127,14 +127,14 @@ describe('N below maintenance: the heatmap\'s first group, by construction', () 
     expect(s.loggedSets).toBe(34);
     expect(s.musclesWorked).toBe(3);
     expect(s.under).toBe(1);
-    expect(s.line).toBe('This week so far: 34 sets logged across 3 muscles · 1 below maintenance');
+    expect(s.line).toBe('This week so far: 34 sets logged across 3 muscles · 1 muscles with too few sets');
   });
 
   test('a plan-programmed muscle with no sets yet counts; one the plan does not programme and has no sets never does', () => {
     const planTrained = new Set(['chest', 'back', 'quads', 'biceps']);
     expect(strip(sets, { planTrained }).under).toBe(2); // chest + biceps (no sets, programmed)
     // front_delts, calves and the rest have no sets and are not programmed: uncounted.
-    expect(strip(sets, { planTrained }).line).toContain('· 2 below maintenance');
+    expect(strip(sets, { planTrained }).line).toContain('· 2 muscles with too few sets');
   });
 
   test('a trained muscle below maintenance counts even when the plan does not programme it (lead ruling, D214 addendum 3)', () => {
@@ -142,10 +142,10 @@ describe('N below maintenance: the heatmap\'s first group, by construction', () 
     expect(strip(sets, { planTrained }).under).toBe(2); // chest (trained, below) + biceps (programmed, no sets)
   });
 
-  test('none below: "none below maintenance", never "0 below"', () => {
+  test('none below: "no muscle with too few sets", never "0 below"', () => {
     const s = strip([...rows('row', 12)]);
     expect(s.under).toBe(0);
-    expect(s.line).toBe('This week so far: 12 sets logged across 1 muscle · none below maintenance');
+    expect(s.line).toBe('This week so far: 12 sets logged across 1 muscle · no muscle with too few sets');
   });
 
   test('the count equals the number of muscles whose heatmap group is the first one, over every muscle', () => {
@@ -173,7 +173,7 @@ describe('N below maintenance: the heatmap\'s first group, by construction', () 
 
   // D219 (the founder's case): the strip reads the role from the plan's facts, and
   // 27 weekly sets on a focus muscle are inside the studied range, never marked.
-  test('27 sets of a focus muscle read as Within the studied range; only a total past 42 is Beyond', () => {
+  test('27 sets of a focus muscle read as Range for growth; only a total past 42 is Beyond', () => {
     const focus = strip(rows('curl', 27), { roles: { biceps: 'focus' } });
     expect(focus.segments[0]).toMatchObject({ muscle: 'biceps', sets: 27, tone: STRIP_TONE.IN });
     const plain = strip(rows('curl', 27));
@@ -202,7 +202,7 @@ describe('the three tones and the bar', () => {
   test('the legend names exactly the three tones, in the strip\'s words', () => {
     const colors = resolveTheme({}).colors;
     const items = stripLegendItems({ colors });
-    expect(items.map((i) => i.label)).toEqual(['Below maintenance', 'Within the studied range', 'Beyond the studied range']);
+    expect(items.map((i) => i.label)).toEqual(['Too few to hold size', 'Enough sets', 'More than needed']);
     expect(items.map((i) => i.label)).toEqual([STRIP_LEGEND_LABEL.under, STRIP_LEGEND_LABEL.in, STRIP_LEGEND_LABEL.over]);
   });
 
@@ -264,7 +264,7 @@ describe('a recovery week: no count, no verdict (PR-14)', () => {
   });
 
   test('the spoken line never reads the middle dot', () => {
-    expect(strip(sets).spoken).toBe('This week so far: 34 sets logged across 3 muscles, 1 below maintenance');
+    expect(strip(sets).spoken).toBe('This week so far: 34 sets logged across 3 muscles, 1 muscles with too few sets');
     expect(strip(sets).spoken).not.toContain('·');
   });
 });
@@ -320,7 +320,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
     expect(SCREEN_SOURCE).not.toMatch(/calculateWeeklyVolume|getVolumeStatus|weeklyVolume|\.workingSets\b/);
   });
 
-  test('the middle tone is named "Within the studied range" everywhere the strip speaks, and nothing says "too much"', () => {
+  test('the middle tone is named "Enough sets" everywhere the strip speaks, and nothing says "too much"', () => {
     const colors = resolveTheme({}).colors;
     const spoken = [
       strip([...rows('bench', 5), ...rows('row', 12)]).spoken,
@@ -331,23 +331,25 @@ describe('the module is pure, shares the one definition and never instructs', ()
       ...stripLegendItems({ colors }).map((i) => i.label),
     ].join(' | ');
     expect(spoken).not.toMatch(/too much|near the limit|under the range|inside the range|just enough/i);
-    expect(STRIP_LEGEND_LABEL.in).toBe('Within the studied range');
-    expect(STRIP_TOOLTIP).toContain('Within the studied range covers');
+    expect(STRIP_LEGEND_LABEL.in).toBe('Enough sets');
+    expect(STRIP_TOOLTIP).toContain('Enough sets covers');
   });
 
+  // RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck is that meant to mean to a human"; "No 'ai talk'"): the bands in plain words, no "studies".
   test('the (i), normal week: the opening, the credit sentence, the bands, the plan role, the folded groups', () => {
     expect(STRIP_TOOLTIP).toBe(
       'This week so far counts the sets you have logged since Monday.\n\n'
       + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
-      + 'The bands come from studies of weekly sets: under 2 is below maintenance, 2 to 6 holds the size you have, 10 to 20 is the normal growth range and 20 to 30 is the range for a muscle you picked to bring up. '
-      + 'A muscle you picked to bring up in your plan reads against that range. '
-      + 'A muscle your plan trains counts as below maintenance even before its first set. '
-      + 'Within the studied range covers every band from maintenance up to 42 sets, and beyond that studies have little to say.',
+      + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 6 holds it, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
+      + 'A muscle you picked to bring up in your plan is read against that higher range. '
+      + 'A muscle your plan trains counts as too few to hold size until its first set. '
+      + 'Enough sets covers everything from 2 sets up to 42. Past 42 sets a week, more sets are unlikely to help.',
     );
-    // It names the legend's first two tones in the legend's own words, and the third as "beyond 42".
+    // It names the legend's first two tones in the legend's own words, and the third as past 42.
     expect(STRIP_TOOLTIP.toLowerCase()).toContain(STRIP_LEGEND_LABEL.under.toLowerCase());
     expect(STRIP_TOOLTIP).toContain(STRIP_LEGEND_LABEL.in);
-    expect(STRIP_TOOLTIP).toContain('beyond that studies have little to say');
+    expect(STRIP_TOOLTIP).toContain('Past 42 sets a week, more sets are unlikely to help');
+    expect(STRIP_TOOLTIP).not.toMatch(/stud(y|ies)|research/i);
   });
 
   test('the (i), recovery week: the same opening and credit sentence, then why nothing is judged', () => {
@@ -358,7 +360,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
       + 'The bar draws one shade for the muscles you trained.',
     );
     // Both versions open with the same two sentences (the one credit rule at every site, V2).
-    const shared = STRIP_TOOLTIP.split(' The bands')[0];
+    const shared = STRIP_TOOLTIP.split(' Under 2 sets')[0];
     expect(STRIP_RECOVERY_TOOLTIP.startsWith(shared)).toBe(true);
   });
 

@@ -77,7 +77,8 @@ describe('B-1 — the week-complete state', () => {
     // admitted into the literal pattern below. RE-PINNED D219 lane A6: the
     // kept-today flag this guard used to clear is gone with the "Keep"
     // control (no surface recommends another session).
-    expect(home).toMatch(/if \(!next && isWeekComplete\(position\)\) \{ setNextWorkout\(null\); setRecoveryRecommendation\(null\); return; \}/);
+    // RE-ANCHORED D224: Today holds no recovery readings to clear.
+    expect(home).toMatch(/if \(!next && isWeekComplete\(position\)\) \{ setNextWorkout\(null\); return; \}/);
     // And the guard runs BEFORE the idx fallback it replaces.
     expect(home.indexOf('isWeekComplete(position)')).toBeLessThan(home.indexOf('const idx = next'));
   });

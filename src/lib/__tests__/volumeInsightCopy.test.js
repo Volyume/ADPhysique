@@ -9,9 +9,9 @@
  * judgement every surface shares (volumeJudgement.judgeWeek), and no line
  * instructs in either direction (D204). This suite pins:
  *   - the at-a-glance line: "27 sets · Focus range" for a muscle the plan raised,
- *     "27 sets · Above normal growth" for the same number on a muscle it did not;
+ *     "27 sets · Above the usual range" for the same number on a muscle it did not;
  *   - the explanation behind a tap: the reason for a raised muscle ("Biceps are
- *     your focus this block: 27 sets, inside the focus range of 20 to 30."), the
+ *     your focus this block: 27 sets, inside the higher range for a focus, 20 to 30."), the
  *     evidence sentence for the band, the plan target only when the week is above
  *     it;
  *   - nothing blames, nothing instructs, no em dash, at any total for any role.
@@ -28,26 +28,26 @@ describe('getVolumeInsight', () => {
   });
 
   test('rounds the set count and reads the band word, for any role', () => {
-    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 12.4, role: 'standard' }))).toBe('12 sets · Normal growth range');
-    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 1, role: 'standard' }))).toBe('1 set · Below maintenance');
+    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 12.4, role: 'standard' }))).toBe('12 sets · Usual range for growth');
+    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 1, role: 'standard' }))).toBe('1 set · Too few to hold size');
   });
 
   test("the founder's case: 27 sets reads as the focus range on a muscle the plan raised, not as a fault", () => {
-    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' }))).toBe('27 sets · Focus range');
-    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'raised' }))).toBe('27 sets · Focus range');
-    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' }))).toBe('27 sets · Above normal growth');
+    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' }))).toBe('27 sets · Higher range for a focus');
+    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'raised' }))).toBe('27 sets · Higher range for a focus');
+    expect(getVolumeInsight(judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' }))).toBe('27 sets · Above the usual range');
   });
 
   test('every band says its own word, and none says "too much" or "near the limit"', () => {
     const words = [0, 4, 8, 14, 24, 35, 50].map((n) => getVolumeInsight(judgeWeek({ muscle: 'chest', sets: n, role: 'standard' })));
     expect(words).toEqual([
-      '0 sets · Below maintenance',
-      '4 sets · Maintenance range',
-      '8 sets · Between maintenance and growth',
-      '14 sets · Normal growth range',
-      '24 sets · Above normal growth',
-      '35 sets · Top of the studied range',
-      '50 sets · Beyond the studied range',
+      '0 sets · Too few to hold size',
+      '4 sets · Holds your size',
+      '8 sets · Holds size, some growth',
+      '14 sets · Usual range for growth',
+      '24 sets · Above the usual range',
+      '35 sets · Close to the upper limit',
+      '50 sets · More than needed',
     ]);
     for (const w of words) expect(w).not.toMatch(NEVER);
   });
@@ -63,14 +63,14 @@ describe('getVolumeWhy', () => {
   test('a muscle the plan raised: the reason, then the evidence sentence', () => {
     const why = getVolumeWhy(judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' }));
     expect(why).toBe(
-      'Biceps are your focus this block: 27 sets, inside the focus range of 20 to 30. '
-      + 'Within your focus range for biceps: you picked it to bring up. Studies have found small extra gains at weekly totals like this.',
+      'Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30. '
+      + 'In the higher range for biceps, which you picked to bring up. Sets above the usual range add a little more growth.',
     );
   });
 
   test('a muscle the plan did not raise: the same number is described as focus-level volume, with no fault', () => {
     expect(getVolumeWhy(judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' }))).toBe(
-      'Above the normal growth range. This is focus-level volume for a muscle that is not a focus in your plan.',
+      'Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.',
     );
   });
 

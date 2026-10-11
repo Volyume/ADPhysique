@@ -76,8 +76,14 @@ describe('ONE AUTHORITATIVE STATE, composed where the block is read', () => {
 describe('CHAIN A + B: HOME / TODAY, the primary fix', () => {
   const home = read('screens/HomeScreen.js');
 
+  // RE-ANCHORED D224 (founder order 2026-10-11, on Today: "Remove the
+  // recovery data from today. I don't want it there full stop."): Today shows
+  // the block's planned recovery week only (the plan's calendar), from the
+  // same gated resolver; the adaptive adjustment, a recovery reading, is
+  // explained in the workout screen when the session opens.
   test('Home renders the card from the resolved state, not from a UI boolean of its own', () => {
-    expect(home).toMatch(/<RecoveryStateCard\s*\n\s*recoveryState=\{gatedRecoveryState\}/);
+    expect(home).toMatch(/const todayRecoveryState = gatedRecoveryState\?\.state === RECOVERY_STATE\.PLANNED_BLOCK_RECOVERY \? gatedRecoveryState : null;/);
+    expect(home).toMatch(/<RecoveryStateCard\s*\n\s*recoveryState=\{todayRecoveryState\}/);
     // C18 block progression: the state Home renders is the GATED one, so a
     // recovery week cannot appear while a required session is outstanding.
     expect(home).toMatch(/const gatedRecoveryState = programmePosition\?\.recoveryState/);
@@ -86,7 +92,7 @@ describe('CHAIN A + B: HOME / TODAY, the primary fix', () => {
   });
 
   test('THE NEXT-WORKOUT SURFACE names the state too, from the same resolver', () => {
-    expect(home).toMatch(/const recoveryLabel = nextWorkoutRecoveryLabel\(gatedRecoveryState\)/);
+    expect(home).toMatch(/const recoveryLabel = nextWorkoutRecoveryLabel\(todayRecoveryState\)/);
     expect(home).toMatch(/recoveryLabel \? `\$\{recoveryLabel\} · \$\{planProgress\}` : planProgress/);
     expect(nextWorkoutRecoveryLabel(PLANNED)).toBe('Recovery week');
     expect(nextWorkoutRecoveryLabel(ADAPTIVE)).toBe('Recovery-adjusted');
@@ -113,9 +119,10 @@ describe('CHAIN A + B: HOME / TODAY, the primary fix', () => {
   // its eligibility gate and its CoachReview tap-through (where the block's
   // own recovery position is still shown) are unchanged -- this test now
   // pins that persistence instead of the retired addendum string.
-  test('the deload SUGGESTION banner still defers to the block via its unchanged eligibility gate', () => {
-    expect(home).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
-    expect(home).toMatch(/const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;/);
+  // RE-ANCHORED D224: the fatigue-based suggestion is not on Today at all, so
+  // it can never argue with the block there (Progress keeps its own alert).
+  test('the deload SUGGESTION is not on Today, so it never argues with the block there (D224)', () => {
+    expect(home).not.toMatch(/deloadBannerEligible|onDeloadPress/);
   });
 });
 
