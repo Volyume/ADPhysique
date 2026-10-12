@@ -1874,6 +1874,10 @@ const SYNCED_PREF_PATTERNS = [
   /^@volyume_schedule_v1$/,
   /^@volyume_intent_prompt_off$/,
   /^@volyume_physique_tracking_enabled$/,
+  // D226: the chosen place in the calorie range (numbers only, no health
+  // inputs), so every device can tell a chosen target from the engine's and
+  // put the engine's back under calm mode or an open ED flag.
+  /^@volyume_energy_choice$/,
   // The profile blob and its per-field write stamps travel together: the
   // blob carries coachTone, coachAutonomy, showScience, bodyWeightUnits and
   // the meal-plan prefs, none of which exist as cloud columns.

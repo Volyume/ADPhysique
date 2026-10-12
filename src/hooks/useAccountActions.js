@@ -13,6 +13,7 @@ import {
   clearDeletedAccountStorage,
 } from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
+import { clearTrainingStatus } from '../lib/trainingStatus';
 
 // The account-level destructive flows (sign-out, delete account, withdraw
 // health-data consent) live here, in one hook, rather than being duplicated
@@ -388,6 +389,9 @@ export default function useAccountActions() {
         // Older supabase-js versions used this key.
         await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
       } catch (e) { logError('SettingsScreen.deleteAccount.wipeSecureStore', e); }
+      // D226: the private training status (SecureStore, this phone only).
+      // Best effort; clearTrainingStatus never throws.
+      await clearTrainingStatus();
 
       // SC-2: honest partial-success message. The data is gone but the
       // sign-in credentials could not be removed yet (Edge Function

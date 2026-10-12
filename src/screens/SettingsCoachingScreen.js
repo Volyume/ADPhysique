@@ -10,6 +10,7 @@ import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
+import { enforceEnergyChoice } from '../lib/energyChoiceEnforce';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
 import { deleteUserPref, setUserPref } from '../lib/sync';
 import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
@@ -76,6 +77,9 @@ export default function SettingsCoachingScreen() {
     const mode = value ? 'calm' : 'normal';
     await setWellbeingMode(mode);
     setCalmEnabled(value);
+    // D226: calm mode puts the engine's own calorie target back at once,
+    // everywhere (best effort; the foreground check repeats it).
+    if (value && user?.id) enforceEnergyChoice(user.id).catch(() => {});
   }
 
   async function toggleCycleTracking(value) {

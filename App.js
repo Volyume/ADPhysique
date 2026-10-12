@@ -717,6 +717,15 @@ export default function App() {
           } catch (_) {}
         }
         lastSyncAt = now;
+        // D226: after start-up and each sync, calm mode or an open ED flag
+        // (including one synced from another device) puts the engine's own
+        // calorie target back. Best effort, fail-closed inside.
+        if (localUserId) {
+          try {
+            // eslint-disable-next-line global-require
+            require('./src/lib/energyChoiceEnforce').enforceEnergyChoice(localUserId).catch(() => {});
+          } catch (_) { /* never block sync */ }
+        }
         if (supabaseUserId) {
           // Route the catch-up push through syncAll() instead of calling
           // bulkUploadLocalData directly. SYNC_ARCHITECTURE_LOCKED.md
@@ -850,6 +859,17 @@ export default function App() {
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {
+      // D226: on every return to the foreground, calm mode or an open ED flag
+      // (raised here or synced from another device) puts the engine's own
+      // calorie target back. Best effort, fail-closed inside.
+      if (state === 'active') {
+        try {
+          // eslint-disable-next-line global-require
+          const uidNow = require('./src/store/useAppStore').default.getState().user?.id;
+          // eslint-disable-next-line global-require
+          if (uidNow) require('./src/lib/energyChoiceEnforce').enforceEnergyChoice(uidNow).catch(() => {});
+        } catch (_) { /* never block the foreground */ }
+      }
       // Lifecycle telemetry: app_foregrounded fires only AFTER the
       // cold-start event has fired (otherwise the first 'active'
       // transition on mount would double-count with app_cold_start).

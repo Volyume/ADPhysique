@@ -108,9 +108,9 @@ export const PROTEIN_APPROACHES = {
 const KCAL_PER_G_PROTEIN = 4;
 const KCAL_PER_G_CARB = 4;
 const KCAL_PER_G_FAT = 9;
-const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
-const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
-const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
+export const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
+export const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
+export const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
 
 // MATADOR trial (2017, Int J Obesity): intermittent energy restriction with 2-week breaks
 // every 8–12 weeks preserves metabolic rate better than continuous restriction.

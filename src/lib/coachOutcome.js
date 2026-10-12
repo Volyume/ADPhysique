@@ -19,6 +19,7 @@
  * (the screen passes [] / null when suppressed); it is never softened here.
  */
 
+import { trendInBand } from './trendInBand';
 import { isApplied } from './coachApply';
 
 const DAY_MS = 86400000;
@@ -60,7 +61,7 @@ export function pairAppliedWithOutcome(historyDesc = []) {
       weekStart: week.weekStart,
       domain,
       verdictWeekStart: next.weekStart,
-      onTarget: next.trend.onTarget,
+      onTarget: trendInBand(next.trend),
     });
   }
   return pairs;
