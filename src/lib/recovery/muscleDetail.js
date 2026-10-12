@@ -254,14 +254,14 @@ export function muscleDetailRows({
   if (intent && r !== ROLE.STANDARD) rows.push({ label: 'In your plan', value: intent });
 
   if (!has) {
-    rows.push({ label: 'This week so far', value: 'No sets counted yet.' });
+    rows.push({ label: 'This week so far', value: 'No sets yet.' });
   } else {
     rows.push({ label: 'This week so far', value: countedLine(week.direct, week.indirect) });
     rows.push({ label: 'Band', value: judgement.line });
     const cap = focusLike ? PER_SESSION.focusFractionalCap : PER_SESSION.fractionalCap;
     rows.push({
       label: 'Most in one session',
-      value: `${formatSets(week.sessionCredit)} ${setsWord(week.sessionCredit)} (limit for ${focusLike ? 'a focus muscle' : 'this muscle'}: ${cap})`,
+      value: `${formatSets(week.sessionCredit)} ${setsWord(week.sessionCredit)} (past about ${cap}, extra sets add little)`,
     });
     const flag = sessionVolumeFlag({ direct: week.sessionDirect, fractional: week.sessionCredit, focusCap: focusLike });
     if (flag) rows.push({ label: 'Session', value: flag.line });
@@ -388,19 +388,19 @@ export function weekPanel({ muscle, role, week = null } = {}) {
   return {
     credit: week.credit,
     creditText: formatSets(week.credit),
-    unit: `${setsWord(week.credit)} counted`,
+    unit: `${setsWord(week.credit)} this week`,
     mainText: `${formatSets(direct)} as the main muscle worked`,
-    helperText: `${formatSets(indirect)} as a helper, at half credit`,
+    helperText: `${formatSets(indirect)} from other exercises that help it, counted as half`,
     bandLabel: judgement.label,
     bandLine: judgement.line,
     bar,
     zoneText: focusLike
-      ? `The shaded part is the focus range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`
-      : `The shaded part is the normal growth range, ${bar.bandStart} to ${bar.bandEnd} sets a week.`,
+      ? `The shaded part is the higher range for a focus, ${bar.bandStart} to ${bar.bandEnd} sets a week.`
+      : `The shaded part is the usual range for growth, ${bar.bandStart} to ${bar.bandEnd} sets a week.`,
     sessionMost: week.sessionCredit,
     sessionMostText: formatSets(week.sessionCredit),
     sessionCap: cap,
-    sessionCapText: `Limit for ${focusLike ? 'a focus muscle' : 'this muscle'}: ${cap} sets in one session`,
+    sessionCapText: `Past about ${cap} sets in one session, extra sets add little`,
     flagLine: flag ? flag.line : null,
   };
 }
@@ -461,10 +461,10 @@ export function detailFacts({ muscle, entry = null, role, week = null, nowMs } =
     weekRows.push({
       label: 'Made up of',
       value: helping > 0
-        ? `${formatSets(direct)} as the main muscle, ${formatSets(helping)} helping (each counts as half)`
+        ? `${formatSets(direct)} as the main muscle, ${formatSets(helping)} from other exercises that help it (each counted as half)`
         : `${formatSets(direct)} as the main muscle`,
     });
-    weekRows.push({ label: 'Where that sits', value: p.bandLabel });
+    weekRows.push({ label: 'Range it falls in', value: p.bandLabel });
     weekRows.push({
       label: focusLike ? 'Higher range for a focus' : 'Usual range for growth',
       value: `${p.bar.bandStart} to ${p.bar.bandEnd} sets a week`,

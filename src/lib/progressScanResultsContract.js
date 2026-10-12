@@ -256,7 +256,7 @@ export function buildScanReceipt(scan, { previousScan = null } = {}) {
   if (comparisonStatus === 'baseline') {
     return {
       outcome: 'baseline',
-      sentence: 'Your starting set is saved. Take your next set the same way, at least a week from now, to unlock comparison.',
+      sentence: 'Your starting set is saved. Take your next set the same way, at least a week from now, to see how you compare.',
       whyLines: [],
     };
   }

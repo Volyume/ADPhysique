@@ -123,30 +123,30 @@ const setsWord = (n) => (n === 1 ? 'set' : 'sets');
 function bandTail(band) {
   const b = WEEKLY_BANDS;
   switch (band) {
-    case BAND.BELOW_MAINTENANCE: return `below the ${b.maintenanceFrom} sets it takes to hold size`;
+    case BAND.BELOW_MAINTENANCE: return `below the ${b.maintenanceFrom} it takes to hold size`;
     case BAND.MAINTENANCE: return `enough to hold size, which takes ${b.maintenanceFrom} to ${b.maintenanceTop}`;
     case BAND.BETWEEN: return 'enough to hold size, with some growth';
-    case BAND.NORMAL_GROWTH: return `inside the usual range for growth, ${b.normalFrom} to ${b.normalTop}`;
-    case BAND.FOCUS_RANGE: return `inside the higher range for a focus, ${b.normalTop} to ${b.focusTop}`;
-    case BAND.TOP_OF_STUDIED: return `close to the upper limit, ${b.focusTop} to ${b.studiedTop}`;
-    default: return `past ${b.studiedTop} sets, more than needed`;
+    case BAND.NORMAL_GROWTH: return `the usual range for growth (${b.normalFrom} to ${b.normalTop})`;
+    case BAND.FOCUS_RANGE: return `the higher range for a focus (${b.normalTop} to ${b.focusTop})`;
+    case BAND.TOP_OF_STUDIED: return `close to the upper limit (${b.focusTop} to ${b.studiedTop})`;
+    default: return `more than needed (past ${b.studiedTop})`;
   }
 }
 
 /**
  * The one-line reason for a muscle the plan raised: "Biceps are your focus
- * this block: 27 sets, inside the focus range of 20 to 30." Only a focus or a
+ * this block. 27 sets a week is the higher range for a focus (20 to 30)." Only a focus or a
  * raised muscle has one (a standard muscle's intent needs no demonstration).
  */
 function reasonFor({ muscle, role, band, sets }) {
   if (!FOCUS_LIKE.has(role)) return null;
   const name = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
   const n = formatSets(sets);
-  const tail = `${n} ${setsWord(sets)}, ${bandTail(band)}`;
-  if (role === ROLE.RAISED) return `Your check-ins raised ${name.toLowerCase()}: ${tail}.`;
-  const lead = `${name} ${muscleVerb(muscle)} your focus this block: ${tail}`;
+  const tail = `${n} ${setsWord(sets)} a week is ${bandTail(band)}`;
+  if (role === ROLE.RAISED) return `Your check-ins raised the sets for ${name.toLowerCase()}. ${tail}.`;
+  const lead = `${name} ${muscleVerb(muscle)} your focus this block. ${tail}`;
   return band === BAND.NORMAL_GROWTH || band === BAND.BETWEEN || band === BAND.MAINTENANCE || band === BAND.BELOW_MAINTENANCE
-    ? `${lead}. Your plan is building towards the focus range.`
+    ? `${lead}, and your plan is building up to the higher range.`
     : `${lead}.`;
 }
 

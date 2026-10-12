@@ -55,11 +55,11 @@ const PREFILL_BLOCK = ACTIVE_WORKOUT.slice(
 
 describe('the first-time prefill line', () => {
   test('the copy exists, and never restates the range or says "Target"', () => {
-    expect(PREFILL_BLOCK).toContain('First time on this lift. Pick a weight you could lift about ${band.max} times, with a couple in reserve. It is saved for next time.');
+    expect(PREFILL_BLOCK).toContain('First time on this lift. Choose a weight you could lift about ${band.max} times, with a couple of reps left in the tank. It is saved for next time.');
     // Band unavailable (freeform slot, no recommended reps): the same
     // instruction without a number, never a blank or a fabricated range.
     expect(PREFILL_BLOCK).toContain(
-      'Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.',
+      'Choose a weight you could lift for the full rep range, with a couple of reps left in the tank. It is saved for next time.',
     );
     // The retired phrasing. "First time - Target 8-12 reps" duplicated the
     // position line; the branch that builds this row may never reintroduce

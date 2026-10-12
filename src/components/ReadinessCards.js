@@ -169,7 +169,7 @@ export function recoveryByMuscleCaption(personal) {
 
 /** The caption's (i): the percent's referent and thresholds (RC-7) and what
  * the ratings do (RC-22). Describes; it tells nobody what to do. */
-export const RECOVERY_PERCENT_NOTE = "The percent is how much of the fatigue from a muscle's last session is estimated to have cleared; 90% counts as recovered, 75% as nearly. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.";
+export const RECOVERY_PERCENT_NOTE = "The percent is how much of the tiredness from a muscle's last session is estimated to have worn off. 90% counts as recovered and 75% as nearly there. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.";
 
 /** The ratings card's (i): the true scales, and that soreness is asked
  * BEFORE a session (RC-1, RC-6). */

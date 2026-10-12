@@ -1551,7 +1551,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
             value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
             label="Total lifted"
-            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+            tooltip={'Sets x reps x weight, added together. It is a rough guide to how much work you did, and more is not always better.'}
           />
           {/* 4-week comparison verdict, fused into the hero so "your number"
               and "how it compares" read as one statement. Renders once we

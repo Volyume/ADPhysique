@@ -345,7 +345,7 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
       'Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for your answer to ‘How’s your recovery?’ and your ratings. Not a measurement.',
     );
     expect(RECOVERY_PERCENT_NOTE).toBe(
-      "The percent is how much of the fatigue from a muscle's last session is estimated to have cleared; 90% counts as recovered, 75% as nearly. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.",
+      "The percent is how much of the tiredness from a muscle's last session is estimated to have worn off. 90% counts as recovered and 75% as nearly there. A session you rate as exhausting, or that leaves you sore or with joint discomfort, is estimated to take longer to recover.",
     );
   });
 });
@@ -708,10 +708,10 @@ describe('the "Next in your plan" card and the sessions still to do (D219 lane B
     await act(async () => { BodyDiagramHeatmap.mock.calls[BodyDiagramHeatmap.mock.calls.length - 1][0].onMuscleTap('biceps'); });
     await flush();
     const all = texts(tree);
-    expect(all).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    expect(all).toContain('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
     // RE-ANCHORED 2026-10-11: the week as label and value rows, in plain words.
     expect(all).toContain('27');
-    expect(all).toContain('20 as the main muscle, 14 helping (each counts as half)');
+    expect(all).toContain('20 as the main muscle, 14 from other exercises that help it (each counted as half)');
     expect(all).toContain('Higher range for a focus');
     expect(all).toContain('20 to 30 sets a week');
     expect(all.join(' | ')).not.toMatch(/too much|overtrain|near the limit/i);

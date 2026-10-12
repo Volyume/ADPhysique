@@ -197,9 +197,9 @@ describe('muscleDetailRows: the rows behind a muscle\'s estimate', () => {
     const rows = rowsOf();
     expect(rows[0]).toEqual({
       label: 'In your plan',
-      value: 'Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.',
+      value: 'Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).',
     });
-    expect(value(rows, 'This week so far')).toBe('27 sets counted: 20 direct and 14 indirect at half credit.');
+    expect(value(rows, 'This week so far')).toBe('27 sets, made up of 20 as the main muscle and 14 from other exercises that help it, counted as half.');
     expect(value(rows, 'Band')).toBe(
       'In the higher range for biceps, which you picked to bring up. Sets above the usual range add a little more growth.',
     );
@@ -208,12 +208,12 @@ describe('muscleDetailRows: the rows behind a muscle\'s estimate', () => {
   test('the same 27 sets for a muscle the plan did not raise: focus-level volume, described, never blamed', () => {
     const rows = rowsOf({ role: 'standard' });
     expect(rows.find((r) => r.label === 'In your plan')).toBeUndefined();
-    expect(value(rows, 'Band')).toBe('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(value(rows, 'Band')).toBe('More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.');
   });
 
   test('the most in one session, against its limit (12 for a focus muscle, 11 for any other)', () => {
-    expect(value(rowsOf(), 'Most in one session')).toBe('13.5 sets (limit for a focus muscle: 12)');
-    expect(value(rowsOf({ role: 'standard' }), 'Most in one session')).toBe('13.5 sets (limit for this muscle: 11)');
+    expect(value(rowsOf(), 'Most in one session')).toBe('13.5 sets (past about 12, extra sets add little)');
+    expect(value(rowsOf({ role: 'standard' }), 'Most in one session')).toBe('13.5 sets (past about 11, extra sets add little)');
   });
 
   test('above the session cap the one band module\'s own session line is added, and only then', () => {
@@ -234,7 +234,7 @@ describe('muscleDetailRows: the rows behind a muscle\'s estimate', () => {
     const rows = muscleDetailRows({ muscle: 'biceps', entry: null, role: 'focus', week: null, nowMs: NOW });
     expect(rows).toEqual([
       { label: 'In your plan', value: 'Focus: you picked biceps to bring up.' },
-      { label: 'This week so far', value: 'No sets counted yet.' },
+      { label: 'This week so far', value: 'No sets yet.' },
       { label: 'Recovery clock', value: clockLine('biceps') },
     ]);
   });
@@ -331,7 +331,7 @@ describe('D223: the figures the drawn detail reads', () => {
 
   test('the intent is the rows\' own "In your plan"; a standard muscle has none', () => {
     const week = { credit: 27, direct: 20, indirect: 14, sessionCredit: 13.5, sessionDirect: 10 };
-    expect(intentFor({ muscle: 'biceps', role: 'focus', week })).toBe('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    expect(intentFor({ muscle: 'biceps', role: 'focus', week })).toBe('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
     expect(intentFor({ muscle: 'abs', role: 'maintenance' })).toBe('Maintained.');
     expect(intentFor({ muscle: 'abs', role: 'standard', week })).toBeNull();
   });
@@ -344,11 +344,11 @@ describe('D223: the figures the drawn detail reads', () => {
     expect(focus.bandLabel).toBe('Higher range for a focus');
     expect(focus.creditText).toBe('27');
     expect(focus.mainText).toBe('20 as the main muscle worked');
-    expect(focus.helperText).toBe('14 as a helper, at half credit');
+    expect(focus.helperText).toBe('14 from other exercises that help it, counted as half');
     expect(focus.bar).toEqual({ rangeStart: 2, rangeEnd: 42, bandStart: 20, bandEnd: 30, max: 42 });
-    expect(focus.zoneText).toBe('The shaded part is the focus range, 20 to 30 sets a week.');
+    expect(focus.zoneText).toBe('The shaded part is the higher range for a focus, 20 to 30 sets a week.');
     expect(focus.sessionCap).toBe(12);
-    expect(focus.sessionCapText).toBe('Limit for a focus muscle: 12 sets in one session');
+    expect(focus.sessionCapText).toBe('Past about 12 sets in one session, extra sets add little');
     expect(focus.flagLine).toBe(rows.find((r) => r.label === 'Session').value);
     const standard = weekPanel({ muscle: 'biceps', role: 'standard', week: { ...week, credit: 12, sessionCredit: 6, sessionDirect: 6 } });
     expect(standard.bandLabel).toBe('Usual range for growth');

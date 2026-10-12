@@ -100,13 +100,13 @@ export function bandLine(band, role, muscleLabel) {
       if (r === ROLE.RAISED) {
         return `In the higher range for ${muscle}, raised at your check-in. Sets above the usual range add a little more growth.`;
       }
-      return 'Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.';
+      return 'More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.';
     case BAND.TOP_OF_STUDIED:
       return r === ROLE.FOCUS
         ? 'The top of the higher range. Each extra set from here adds very little.'
         : 'A lot of sets for one week. Each extra set from here adds very little.';
     case BAND.BEYOND_STUDIED:
-      return 'More sets than needed. Extra sets here may add nothing.';
+      return 'More sets than needed. Extra sets past this point are unlikely to add growth.';
     default:
       return '';
   }
@@ -137,15 +137,15 @@ export function targetLine(weeklyFractionalSets, target) {
 }
 
 /**
- * How a weekly total was counted (S F16): "12 sets counted: 6 direct and
- * 12 indirect at half credit." `indirect` is the number of synergist sets,
- * each counted as half.
+ * How a weekly total was counted (S F16): "12 sets, made up of 6 as the main
+ * muscle and 12 from other exercises that help it, counted as half."
+ * `indirect` is the number of synergist sets, each counted as half.
  */
 export function countedLine(direct, indirect) {
   const d = Number.isFinite(direct) && direct > 0 ? direct : 0;
   const i = Number.isFinite(indirect) && indirect > 0 ? indirect : 0;
   const total = d + 0.5 * i;
-  return `${formatSets(total)} ${setsWord(total)} counted: ${formatSets(d)} direct and ${formatSets(i)} indirect at half credit.`;
+  return `${formatSets(total)} ${setsWord(total)}, made up of ${formatSets(d)} as the main muscle and ${formatSets(i)} from other exercises that help it, counted as half.`;
 }
 
 /**
@@ -186,6 +186,6 @@ export function sessionVolumeFlag({ direct = 0, fractional = 0, focusCap = false
     tone: 'note',
     // Founder 2026-10-11 ("'More than most studies' etc what the heck is that
     // meant to mean to a human"): plain words, what it means for the person.
-    line: `More than about ${fractionalCap} sets in one session. Past that, extra sets in the same session tend to add little; spread over more sessions they are more likely to help.`,
+    line: `More than about ${fractionalCap} sets in one session. After that, extra sets in the same session tend to add little. Spread over more sessions, the same sets are more likely to help.`,
   };
 }

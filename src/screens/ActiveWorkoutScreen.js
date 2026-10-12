@@ -5340,8 +5340,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (() => {
       const band = bandFor(0);
       return band?.max != null
-        ? `First time on this lift. Pick a weight you could lift about ${band.max} times, with a couple in reserve. It is saved for next time.`
-        : 'First time on this lift. Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.';
+        ? `First time on this lift. Choose a weight you could lift about ${band.max} times, with a couple of reps left in the tank. It is saved for next time.`
+        : 'First time on this lift. Choose a weight you could lift for the full rep range, with a couple of reps left in the tank. It is saved for next time.';
     })()
     : null;
 

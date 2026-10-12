@@ -63,7 +63,7 @@ function changesLine(changes) {
   if (added.length) parts.push(`${added.length} ${added.length === 1 ? 'exercise' : 'exercises'} added`);
   return {
     id: 'changes',
-    text: `Exercises: ${parts.join('; ')}. The plan now chooses from the standard exercise list for your equipment, and keeps the exercises you were already training with where they fit.`,
+    text: `${parts.map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`).join(' ')} The plan now chooses from the standard exercise list for your equipment and keeps the exercises you were already training with where they fit.`,
   };
 }
 
@@ -141,7 +141,7 @@ export function composePlanRebuildNote({
     lines.push({ id: 'kept', text: 'Your plan is as you built it: every exercise and every set count is yours.' });
     lines.push({
       id: 'typed',
-      text: `Your set counts are served as you typed them in weeks 1 to 5, with no climb added on top, and at half in the recovery week. The ${SETS_PER_EXERCISE.capCompound}-set and ${SETS_PER_EXERCISE.capIsolation}-set limits apply to sets the plan adds, never to numbers you typed.`,
+      text: `Your set counts stay as you typed them in weeks 1 to 5, with nothing added on top, and are halved in the recovery week. The ${SETS_PER_EXERCISE.capCompound}-set and ${SETS_PER_EXERCISE.capIsolation}-set limits apply to sets the plan adds, never to numbers you typed.`,
     });
   }
   lines.push(blockLine(week));

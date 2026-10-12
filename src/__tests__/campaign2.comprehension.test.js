@@ -82,7 +82,7 @@ describe('TRAINING comprehension', () => {
     expect(src).toMatch(/kept progressing in the higher-volume weeks with recovery to spare/);
   });
 
-  test('insufficient data never claims learning; the research start claims research-based guidance only', () => {
+  test('insufficient data never claims learning; the research start claims standard recommendations only', () => {
     const src = read('lib/interBlock.js');
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(src).toMatch(/too little to judge how it responded/);

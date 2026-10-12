@@ -855,7 +855,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         ) : null}
         <Text style={[styles.insufficientBody, live.insufficientBody]}>
           {receipt?.rule ?? dataNote ??
-            'Your coach looks at your training and weight from day one. It waits to change your calories or training volume until it has about two weeks of weigh-ins plus a check-in, so any change follows a real trend rather than one unusual week. Keep logging your sessions, your morning weight and your weekly check-in. The first change comes once the trend is clear.'}
+            'Your coach looks at your training and weight from day one. It waits until it has about two weeks of weigh-ins and a check-in before changing your calories or training volume. That way a change follows a real pattern, not one unusual week. Keep logging your sessions, your morning weight and your weekly check-in. The first change comes once the pattern is clear.'}
         </Text>
         {receipt?.unlockLine ? (
           <Text style={[styles.receiptUnlock, live.receiptUnlock]}>{receipt.unlockLine}</Text>

@@ -47,21 +47,21 @@ describe("the founder's case: a focus muscle above 20 sets is never judged too m
 
   test('27 focus sets read with the reason, in the words the founder asked for', () => {
     const j = judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' });
-    expect(j.reason).toBe('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    expect(j.reason).toBe('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
     expect(j.roleLine).toBe('Focus: you picked biceps to bring up.');
   });
 
   test('a raised muscle reads inside the focus range and says the check-ins raised it', () => {
     const j = judgeWeek({ muscle: 'back', sets: 24, role: 'raised' });
     expect(j.group).toBe(GROUP.FOCUS);
-    expect(j.reason).toBe('Your check-ins raised back: 24 sets, inside the higher range for a focus, 20 to 30.');
+    expect(j.reason).toBe('Your check-ins raised the sets for back. 24 sets a week is the higher range for a focus (20 to 30).');
   });
 
   test('the same 27 sets for a muscle that is NOT a focus read as focus-level volume, not as a fault', () => {
     const j = judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' });
     expect(j.group).toBe(GROUP.ABOVE_NORMAL);
     expect(j.label).toBe('Above the usual range');
-    expect(j.line).toBe('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(j.line).toBe('More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.');
     expect(j.noteTone).toBe(false);
     expect(j.reason).toBeNull();
   });

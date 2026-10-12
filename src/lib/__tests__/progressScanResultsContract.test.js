@@ -154,7 +154,7 @@ describe('buildScanReceipt: one calm sentence + Why? lines per outcome', () => {
     const scan = scanWith({ deltaExplanation: { comparisonStatus: 'baseline' } });
     const receipt = buildScanReceipt(scan);
     expect(receipt.outcome).toBe('baseline');
-    expect(receipt.sentence).toBe('Your starting set is saved. Take your next set the same way, at least a week from now, to unlock comparison.');
+    expect(receipt.sentence).toBe('Your starting set is saved. Take your next set the same way, at least a week from now, to see how you compare.');
     expect(receipt.whyLines).toEqual([]);
   });
 

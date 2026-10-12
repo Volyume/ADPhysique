@@ -179,7 +179,7 @@ describe('A7 (final certification 2026-09-05): no advice off excluded evidence',
     });
     const hamstrings = insights.find(i => i.key === 'under_mev_hamstrings');
     expect(hamstrings).toBeDefined();
-    expect(hamstrings.copy).toContain('Adding a set or two this week');
+    expect(hamstrings.copy).toContain('There has been little work for your hamstrings in the last 3 weeks.');
   });
 
   test('circuit sets do not suppress the nudge (EL-7: they COUNT toward volume)', () => {

@@ -21,7 +21,7 @@ describe('BLOCK_DEFINITION: one shared training-block explanation', () => {
     expect(typeof BLOCK_DEFINITION).toBe('string');
     expect(BLOCK_DEFINITION).toContain('A training block is the multi-week shape of your training');
     expect(BLOCK_DEFINITION).toContain(`a block of ${BLOCK_PLANNED_WEEKS} weeks`);
-    expect(BLOCK_DEFINITION).toContain('Nothing rolls into a new block on its own');
+    expect(BLOCK_DEFINITION).toContain('A new block never starts on its own');
   });
 
   test('MesocycleBuilderScreen reads the shared constant, not an inline copy', () => {

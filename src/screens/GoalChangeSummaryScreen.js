@@ -233,7 +233,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           pops/goes back rather than replacing -- so this matches its
           sibling plain-push screens (GoalLockConsentScreen,
           BlockReflectionScreen) via BackHeader, not a ModalHeader X-close. */}
-      <BackHeader title="Here's what changed" onBack={handleDone} />
+      <BackHeader title="What changed" onBack={handleDone} />
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
         <Card tone="success" style={styles.heroCard}>

@@ -22,12 +22,12 @@ const LINES = [
   {
     id: 'structure',
     text: '4 sessions a week, alternating upper and lower.',
-    source: { key: 'FREQUENCY.preferTwoExposuresFromWeekly', grade: 'CONV', gradeLabel: 'A convention Volyume chose', line: 'At equal weekly sets, training frequency does not change growth (Ochi 2018).' },
+    source: { key: 'FREQUENCY.preferTwoExposuresFromWeekly', grade: 'CONV', gradeLabel: 'A rule Volyume chose', line: 'With the same number of sets in a week, training a muscle more often does not grow it more.' },
   },
   {
     id: 'ladder',
     text: 'Weeks 1 to 5 stop about 3, 2, 2, 1 and 1 reps short of failure.',
-    source: { key: 'BLOCK.rirLadder', grade: 'A', gradeLabel: 'Strong evidence', line: 'Stopping one rep short of failure keeps most of the growth (Refalo 2023).' },
+    source: { key: 'BLOCK.rirLadder', grade: 'A', gradeLabel: 'Well established', line: 'Stopping a rep or so before you could not do another keeps most of the growth.' },
   },
 ];
 
@@ -55,9 +55,9 @@ describe('PlanExplainLines', () => {
 
   test('no source is shown until a line\'s source is tapped', () => {
     const out = text(render(LINES).toJSON());
-    expect(out).not.toContain('Ochi 2018');
-    expect(out).not.toContain('Refalo 2023');
-    expect(out).not.toContain('Strong evidence');
+    expect(out).not.toContain('A rule Volyume chose');
+    expect(out).not.toContain('does not grow it more');
+    expect(out).not.toContain('Well established');
   });
 
   test('tapping a line\'s source shows its grade and its one-line source, and tapping again hides it', () => {
@@ -65,11 +65,11 @@ describe('PlanExplainLines', () => {
     expect(toggles(tree)).toHaveLength(2);
     act(() => { toggles(tree)[1].props.onPress(); });
     let out = text(tree.toJSON());
-    expect(out).toContain('Strong evidence. Stopping one rep short of failure keeps most of the growth (Refalo 2023).');
-    expect(out).not.toContain('Ochi 2018'); // only the tapped line opens
+    expect(out).toContain('Well established. Stopping a rep or so before you could not do another keeps most of the growth.');
+    expect(out).not.toContain('A rule Volyume chose'); // only the tapped line opens
     act(() => { toggles(tree)[1].props.onPress(); });
     out = text(tree.toJSON());
-    expect(out).not.toContain('Refalo 2023');
+    expect(out).not.toContain('Well established');
   });
 
   test('the toggle says what it does and whether the line is open', () => {

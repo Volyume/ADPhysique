@@ -117,7 +117,7 @@ describe("the check-in review, the founder's 27 biceps sets", () => {
     const t = texts(await mount());
     const all = t.join(' | ');
     expect(t).toContain('Biceps - higher range for a focus');
-    expect(t).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    expect(t).toContain('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
     // The volume row's badge says the one judgement's word.
     expect(t).toContain('Higher range for a focus');
     expect(all).not.toMatch(RETIRED);
@@ -129,7 +129,7 @@ describe("the check-in review, the founder's 27 biceps sets", () => {
     const t = texts(await mount());
     const all = t.join(' | ');
     expect(t).toContain('Biceps - above the usual range');
-    expect(t).toContain('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(t).toContain('More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.');
     expect(t).toContain('Above the usual range');
     expect(all).not.toMatch(RETIRED);
     expect(t).not.toContain('Nothing to flag this week, your training is looking nicely balanced.');

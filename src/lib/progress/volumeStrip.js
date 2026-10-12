@@ -73,10 +73,12 @@ const STRIP_CREDIT_SENTENCE = 'A set counts once for the muscle it works most an
 /** The (i) behind the strip in a normal week. */
 export const STRIP_TOOLTIP = STRIP_OPENING
   + STRIP_CREDIT_SENTENCE
-  + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 6 holds it, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
+  + 'Under 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. '
+  + '10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. '
+  + '30 to 42 is close to the upper limit, and past 42 extra sets are more than needed. '
   + 'A muscle you picked to bring up in your plan is read against that higher range. '
-  + 'A muscle your plan trains counts as too few to hold size until its first set. '
-  + 'Enough sets covers everything from 2 sets up to 42. Past 42 sets a week, more sets are unlikely to help.';
+  + 'A muscle your plan trains reads as too few to hold size until its first set. '
+  + 'The colour labelled Enough sets covers 2 to 42 sets a week.';
 
 /**
  * The same (i) in the planned recovery week: the same opening and credit

@@ -119,7 +119,7 @@ describe('ManualBuilderScreen: the per-session cap note', () => {
     const tree = await buildDayWithBiceps(6); // 3 -> 9
     const text = textOf(tree);
     expect(text).toContain('Biceps: 9 sets in Day 1.');
-    expect(text).toContain('More than about 11 sets in one session. Past that, extra sets in the same session tend to add little');
+    expect(text).toContain('More than about 11 sets in one session. After that, extra sets in the same session tend to add little');
   });
 
   test('at the session cap (8 sets) there is no note', async () => {
