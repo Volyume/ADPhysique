@@ -395,7 +395,13 @@ export default function useProgressData() {
       // warmup exclusion). shouldDeload itself is untouched.
       const buckets = buildLast4WeekDeloadBuckets(sets, workouts, exMap, { now: Date.now(), roles });
       const result = shouldDeload(buckets);
-      setDeloadAlert(result.deload ? result : null);
+      // Register D227 lane B (spec E3): on an AUTHORED plan the reduction week
+      // comes from the plan's own triggers (two or more) on the coach's card,
+      // so the single-signal score never fires here.
+      // eslint-disable-next-line global-require
+      const authored = result.deload && await require('../lib/library/authoredCoachIO').isActivePlanAuthored(user?.id);
+      if (!isCurrentRequest()) return;
+      setDeloadAlert(result.deload && !authored ? result : null);
     } catch (e) {
       logError('useProgressData.loadDeloadCheck', e, { userId: user?.id });
     }

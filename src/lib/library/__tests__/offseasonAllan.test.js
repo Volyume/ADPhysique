@@ -172,10 +172,14 @@ describe('the definition is the founder\'s plan as ruled (A2, A5, A6)', () => {
     expect(authoredEffortText(facts, 'isolation', 'growth')).toBe('Stop 0 to 1 reps short. The last set may go to failure.');
   });
 
-  test('caps (C1): laterals up to 7, leg curl and calves 4, the session caps', () => {
+  // Spec H1 (lead ruling after lane A): the seated leg curl's cap is 5, so the
+  // legs check-in (D4) can take hamstrings to 5 a week through it; the leg
+  // extension's is 4 for the same reason (quads up to 7).
+  test('caps (C1, H1): laterals up to 7, leg curl 5, leg extension 4, calves 4, the session caps', () => {
     const def = OFFSEASON_ALLAN.sessions.flatMap((s) => s.exercises);
     for (const e of def.filter((x) => x.muscle === 'side_delts')) expect(e.cap).toBe(7);
-    expect(def.find((x) => x.key === 'd3.seated_leg_curl').cap).toBe(4);
+    expect(def.find((x) => x.key === 'd3.seated_leg_curl').cap).toBe(5);
+    expect(def.find((x) => x.key === 'd3.leg_extension').cap).toBe(4);
     expect(def.find((x) => x.key === 'd3.standing_calf').cap).toBe(4);
     // No cap is ever below the founder's own Growth number.
     for (const e of def) expect(e.cap).toBeGreaterThanOrEqual(e.sets.growth);

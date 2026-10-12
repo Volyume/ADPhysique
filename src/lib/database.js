@@ -5970,6 +5970,31 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
 }
 
 /**
+ * Register D227 lane B (spec H7): true when `planId` is the active plan, its
+ * facts are AUTHORED and its own block is running (not finished). Activating
+ * it again then keeps that block: a new block of it starts only through the
+ * next-block flow, which calls activatePlanWithBlock directly. False on any
+ * other plan and on a failed read (the caller then activates as before).
+ */
+export async function isAuthoredBlockRunning(userId, planId) {
+  try {
+    const plan = await getActivePlan(userId);
+    if (!plan?.id || plan.id !== planId) return false;
+    const block = await getActiveBlock(userId);
+    if (!block?.id) return false;
+    const facts = await getProgrammePlanFacts(planId);
+    // eslint-disable-next-line global-require
+    const { isAuthoredFacts } = require('./library/authored');
+    if (!isAuthoredFacts(facts) || facts.authored?.run?.mesocycleId !== block.id) return false;
+    const { awaitingDecision } = getBlockStatus(block.startDate, block.plannedWeeks || block.durationWeeks || 5);
+    return !awaitingDecision;
+  } catch (e) {
+    logError('database.isAuthoredBlockRunning', e, { planId });
+    return false;
+  }
+}
+
+/**
  * Register D227 (spec C2): the facts of an AUTHORED plan, making sure a copy
  * of an authored library plan carries them. Returns the plan's facts when they
  * are authored; when the plan has NO facts and is a copy of a library plan
@@ -10622,6 +10647,12 @@ export async function applyCoachTrainingAdjustmentWithDb(d, {
   changes,
   coachOutput,
   setDeload = false,
+  // Register D227 lane B (spec E3, H4): an AUTHORED plan's reduction week is
+  // set at the plan's own reduction effort (RIR 3), and the block's planned
+  // reduction week, when it falls within 2 weeks, is released back to a
+  // working week in the same commit. Both default to today's behaviour.
+  deloadRirTarget = 4,
+  releaseWeek = null,
 }) {
   if (!userId || !mesocycleWeekId || !Number.isFinite(weekStart)
     || coachOutput?.weekStart !== weekStart) {
@@ -10637,7 +10668,7 @@ export async function applyCoachTrainingAdjustmentWithDb(d, {
     );
     if (!ownedWeek) throw new Error('Coach adjustment target week is not owned by the current account.');
 
-    if (setDeload) await setMesocycleWeekDeloadInTx(d, mesocycleWeekId);
+    if (setDeload) await setMesocycleWeekDeloadInTx(d, mesocycleWeekId, { rirTarget: deloadRirTarget });
     for (const change of changes) {
       // eslint-disable-next-line no-await-in-loop
       await upsertPlannedMuscleVolumeInTx(d, {
@@ -10645,6 +10676,20 @@ export async function applyCoachTrainingAdjustmentWithDb(d, {
         ...change,
         source: 'coach',
       });
+    }
+    if (releaseWeek?.weekId) {
+      validateCoachVolumeChanges(releaseWeek.changes ?? []);
+      const owned = await d.getFirstAsync(
+        `SELECT mw.id FROM mesocycle_weeks mw JOIN mesocycles m ON m.id = mw.mesocycle_id
+          WHERE mw.id = ? AND m.user_id = ?`,
+        [releaseWeek.weekId, userId],
+      );
+      if (!owned) throw new Error('Coach adjustment release week is not owned by the current account.');
+      await setMesocycleWeekDeloadInTx(d, releaseWeek.weekId, { isDeload: false, rirTarget: releaseWeek.rirTarget ?? 1 });
+      for (const change of releaseWeek.changes ?? []) {
+        // eslint-disable-next-line no-await-in-loop
+        await upsertPlannedMuscleVolumeInTx(d, { mesocycleWeekId: releaseWeek.weekId, ...change, source: 'coach' });
+      }
     }
     return saveCoachOutputInTx(d, userId, coachOutput);
   });
@@ -12914,6 +12959,107 @@ export async function getExerciseProgressionSessions(userId, exerciseIds = [], {
   }
   const out = new Map();
   for (const [exerciseId, sessions] of byExercise) out.set(exerciseId, [...sessions.values()]);
+  return out;
+}
+
+/**
+ * Register D227 lane B (spec E2, E3): each exercise's last completed sessions,
+ * newest first, with the workout's own ratings and its block week, for the
+ * authored plan's stall rule and reduction triggers (library/authoredCoachIO).
+ * Read only; the same capability-eligible window the plateau reads use.
+ *
+ * @returns {Promise<Map<string, Array<{ workoutId: string, at: number, routineId: ?string,
+ *   difficulty: ?number, sorenessBefore: ?number, jointDiscomfort: ?number, sleepQuality: ?number,
+ *   energyScore: ?number, intent: ?string, mesocycleId: ?string, weekIndex: ?number, isDeload: boolean,
+ *   sets: Array<{ weight: number, actualReps: number, setType: string, targetRepsMin: ?number }> }>>>}
+ */
+export async function getAuthoredExerciseSessions(userId, exerciseIds = [], { perExercise = 4 } = {}) {
+  if (!userId || !Array.isArray(exerciseIds) || exerciseIds.length === 0) return new Map();
+  const d = await db();
+  const ids = [...new Set(exerciseIds.filter(Boolean))].slice(0, 80);
+  if (ids.length === 0) return new Map();
+  const holes = ids.map(() => '?').join(',');
+  const rows = await d.getAllAsync(
+    `SELECT s.exercise_id AS exerciseId, s.workout_id AS workoutId, s.weight AS weight,
+            s.actual_reps AS actualReps, s.set_type AS setType, s.target_reps_min AS targetRepsMin,
+            w.started_at AS startedAt, w.routine_id AS routineId, w.session_difficulty AS difficulty,
+            w.soreness_24h_before AS sorenessBefore, w.joint_discomfort AS jointDiscomfort,
+            w.sleep_quality AS sleepQuality, w.energy_score AS energyScore, w.pre_workout_intent AS intent,
+            mw.mesocycle_id AS mesocycleId, mw.week_index AS weekIndex, mw.is_deload AS isDeload
+       FROM workout_sets s
+       JOIN workouts w ON w.id = s.workout_id
+       LEFT JOIN mesocycle_weeks mw ON mw.id = w.mesocycle_week_id
+      WHERE w.user_id = ? AND w.is_completed = 1 AND w.deleted_at IS NULL AND s.exercise_id IN (${holes})
+      ORDER BY s.exercise_id ASC, w.started_at DESC, s.set_number ASC`,
+    [userId, ...ids],
+  );
+  const eligible = await filterCapabilityEligibleSetRows(userId, rows ?? [], { atField: 'startedAt' });
+  const byExercise = new Map();
+  for (const r of eligible ?? []) {
+    if (!byExercise.has(r.exerciseId)) byExercise.set(r.exerciseId, new Map());
+    const sessions = byExercise.get(r.exerciseId);
+    if (!sessions.has(r.workoutId)) {
+      if (sessions.size >= perExercise) continue;
+      sessions.set(r.workoutId, {
+        workoutId: r.workoutId,
+        at: Number(r.startedAt) || 0,
+        routineId: r.routineId ?? null,
+        difficulty: r.difficulty ?? null,
+        sorenessBefore: r.sorenessBefore ?? null,
+        jointDiscomfort: r.jointDiscomfort ?? null,
+        sleepQuality: r.sleepQuality ?? null,
+        energyScore: r.energyScore ?? null,
+        intent: r.intent ?? null,
+        mesocycleId: r.mesocycleId ?? null,
+        weekIndex: r.weekIndex ?? null,
+        isDeload: Number(r.isDeload) === 1,
+        sets: [],
+      });
+    }
+    sessions.get(r.workoutId).sets.push({
+      weight: Number(r.weight) || 0,
+      actualReps: Number(r.actualReps) || 0,
+      setType: r.setType ?? 'straight',
+      targetRepsMin: r.targetRepsMin ?? null,
+    });
+  }
+  const out = new Map();
+  for (const [exerciseId, sessions] of byExercise) out.set(exerciseId, [...sessions.values()]);
+  return out;
+}
+
+/**
+ * Register D227 lane B (spec E3 triggers 2 and 3): the completed sessions of
+ * one block week, each with its own ratings and whether any working set fell
+ * short of its exercise's rep minimum. Read only.
+ */
+export async function getAuthoredWeekSessions(userId, mesocycleWeekId) {
+  if (!userId || !mesocycleWeekId) return [];
+  const d = await db();
+  const workouts = await d.getAllAsync(
+    `SELECT id, started_at AS startedAt, soreness_24h_before AS sorenessBefore, joint_discomfort AS jointDiscomfort
+       FROM workouts
+      WHERE user_id = ? AND mesocycle_week_id = ? AND is_completed = 1 AND deleted_at IS NULL
+      ORDER BY started_at ASC`,
+    [userId, mesocycleWeekId],
+  );
+  const out = [];
+  for (const w of workouts ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    const missed = await d.getFirstAsync(
+      `SELECT COUNT(*) AS n FROM workout_sets
+        WHERE workout_id = ? AND COALESCE(set_type, 'straight') = 'straight'
+          AND target_reps_min IS NOT NULL AND actual_reps IS NOT NULL AND actual_reps < target_reps_min`,
+      [w.id],
+    );
+    out.push({
+      workoutId: w.id,
+      at: Number(w.startedAt) || 0,
+      sorenessBefore: w.sorenessBefore ?? null,
+      jointDiscomfort: w.jointDiscomfort ?? null,
+      missedRepMin: Number(missed?.n) > 0,
+    });
+  }
   return out;
 }
 

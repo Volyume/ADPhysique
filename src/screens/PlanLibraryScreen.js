@@ -23,7 +23,9 @@ import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
 import { getPlanDays, planEquipmentAllows, scorePlanRecommendation } from '../lib/onboarding/freeStarter';
-import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
+import {
+  BLOCK_START_SENTENCE, AUTHORED_BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, isAuthoredPlanTags,
+} from '../lib/blockExplain';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
@@ -494,7 +496,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
     appAlert(
       'Add this plan?',
       `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`
-      + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+      + `\n\n${(isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE)} ${ACTIVATION_MEANING_SENTENCE}`,
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { addingRef.current = false; } },
         {
@@ -523,7 +525,9 @@ export default function PlanLibraryScreen({ navigation, route }) {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
-              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
+              const ok = await confirmPlanSwitchMidBlock(user.id, {
+                newPlanName: planHeadingName(plan.name), blockSentence: (isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE),
+              });
               if (!ok) { navigation.goBack(); return; }
               await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
               // C5-P10-05 (D96): activation used to end in a bare goBack(),

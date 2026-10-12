@@ -46,7 +46,10 @@ export async function readActiveBlockStatus(userId) {
 //
 // Otherwise shows an Alert and resolves to the user's choice.
 export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
-  const { newPlanName, mode = 'switch', keepBlock = false } = opts;
+  // Register D227 lane B (H5): `blockSentence` lets an authored plan's
+  // activation state its own true block length; every other caller gets the
+  // shared sentence, unchanged.
+  const { newPlanName, mode = 'switch', keepBlock = false, blockSentence = BLOCK_START_SENTENCE } = opts;
   if (!userId) return true;
 
   const status = await readActiveBlockStatus(userId);
@@ -69,7 +72,7 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
     return new Promise(resolve => {
       appAlert(
         'Make this your active plan?',
-        `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+        `${blockSentence} ${ACTIVATION_MEANING_SENTENCE}`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           { text: 'Set as active', onPress: () => resolve(true) },

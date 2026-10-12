@@ -57,6 +57,12 @@
  *     optional[]   the Growth-only trial(s), with exerciseId; never served
  *     raises       slot key -> extra Growth sets a week (lane B writes; block
  *                  2 carries them forward: B2 "from the level reached")
+ *     trims        slot key -> sets a check-in's pull-back took off the
+ *                  working weeks of the CURRENT block (lane B, D3), never
+ *                  below the slot's Health sets; a new block clears them
+ *     legs         { block } once the legs check-in (D4) added its sets in
+ *                  that block; legsAnswer { block, weekIndex, answer } the
+ *                  person's answer to the legs question for that week
  *     run          null until the plan's first block starts, then
  *                  { block: n, mesocycleId, blocks: { [mesocycleId]: n },
  *                    phases?: [8 phases] }   phases (optional, lane B: a hold
@@ -124,15 +130,27 @@ export function authoredPhaseOf(facts, { blockNumber = 1, weekIndex, isDeload = 
 
 /**
  * The sets a slot is served in `phase`: the authored ladder's, plus any
- * raise lane B applied (Growth only), never above the slot's cap.
+ * raise lane B applied (Growth only), never above the slot's cap, less any
+ * pull-back trim a check-in applied in this block (working weeks only, spec
+ * D3), never below the slot's Health sets. The reduction week is always the
+ * Reduction column as written.
  */
 export function authoredSlotSets(facts, slot, phase) {
   const base = Number(slot?.sets?.[phase]);
   if (!Number.isFinite(base) || base < 1) return null;
   const raise = phase === 'growth' ? Number(facts?.authored?.raises?.[slot.key]) : 0;
-  const total = base + (Number.isFinite(raise) && raise > 0 ? Math.round(raise) : 0);
+  let total = base + (Number.isFinite(raise) && raise > 0 ? Math.round(raise) : 0);
   const cap = Number(slot?.cap);
-  return Number.isFinite(cap) && cap >= 1 ? Math.min(total, Math.max(cap, base)) : total;
+  if (Number.isFinite(cap) && cap >= 1) total = Math.min(total, Math.max(cap, base));
+  if (phase !== 'reduction') {
+    const trim = Number(facts?.authored?.trims?.[slot.key]);
+    if (Number.isFinite(trim) && trim > 0) {
+      const health = Number(slot?.sets?.health);
+      const floor = Number.isFinite(health) && health >= 1 ? Math.min(health, total) : 1;
+      total = Math.max(floor, total - Math.round(trim));
+    }
+  }
+  return total;
 }
 
 /** Every slot of the plan, in session order, with its session. */
@@ -224,7 +242,9 @@ export function authoredEffortText(facts, kind, phase) {
  *            slots: Object<string, string> }}  by exercise id; slots maps an
  *            exercise id to its slot key
  */
-export function authoredServedWeek({ facts, routineId, mesocycleId = null, weekIndex, isDeload = false, exercises }) {
+export function authoredServedWeek({
+  facts, routineId, mesocycleId = null, weekIndex, isDeload = false, exercises, caps = null,
+}) {
   const out = { sets: {}, rir: {}, phase: null, slots: {} };
   if (!isAuthoredFacts(facts) || !routineId) return out;
   const session = facts.authored.sessions.find((s) => s && s.routineId === routineId);
@@ -236,6 +256,9 @@ export function authoredServedWeek({ facts, routineId, mesocycleId = null, weekI
   const list = Array.isArray(session.exercises) ? session.exercises : [];
   const typed = facts.typed != null && typeof facts.typed === 'object' && !Array.isArray(facts.typed) ? facts.typed : {};
   const rows = Array.isArray(exercises) ? exercises : [];
+  // Lane B (lead ruling on the capability lane): a muscle the reintroduction
+  // ramp is bringing back is served min(ladder, ramp level, typed if typed).
+  const capped = authoredCappedSlotSets(facts, phase, caps);
   const taken = new Set();
   const match = new Map();
   rows.forEach((row, i) => {
@@ -263,10 +286,132 @@ export function authoredServedWeek({ facts, routineId, mesocycleId = null, weekI
       const sets = authoredSlotSets(facts, slot, phase);
       if (sets != null) out.sets[row.exerciseId] = sets;
     }
+    if (capped.has(slot.key) && out.sets[row.exerciseId] != null) {
+      out.sets[row.exerciseId] = Math.min(out.sets[row.exerciseId], capped.get(slot.key));
+    }
     const r = authoredRirRange(facts, slot.kind, phase);
     if (r) out.rir[row.exerciseId] = r[0];
   }
+  // Spec H8: the optional trial, when the person added it to its own session
+  // in a week of its phase, is served its written sets at its written effort
+  // (2 sets, 2 or more reps in reserve). Never served unless added.
+  const optional = authoredOptionalFor(facts, { routineId, phase });
+  rows.forEach((row, i) => {
+    if (match.has(i) || !row?.exerciseId) return;
+    const o = optional.find((x) => x.exerciseId === row.exerciseId);
+    if (!o) return;
+    const t = row.slotId != null ? typed[row.slotId] : undefined;
+    out.sets[row.exerciseId] = typeof t === 'number' && Number.isFinite(t) && t >= 1 ? t : o.sets;
+    if (Number.isFinite(o.rirMin)) out.rir[row.exerciseId] = o.rirMin;
+  });
   return out;
+}
+
+/**
+ * Lane B (lead ruling: the capability lane on an authored plan): each slot's
+ * sets in `phase` when an app muscle's week is capped (the reintroduction
+ * ramp's level, `caps` app muscle -> direct sets a week). Over the cap, one
+ * set at a time comes off the muscle's slot with the most sets (ties: the
+ * last in plan order), never below 1 a slot. Only capped muscles' slots are
+ * returned; an empty map when nothing is capped.
+ *
+ * @returns {Map<string, number>} slot key -> capped sets
+ */
+export function authoredCappedSlotSets(facts, phase, caps) {
+  const out = new Map();
+  if (!isAuthoredFacts(facts) || !phase || caps == null || typeof caps !== 'object') return out;
+  const all = slotsOf(facts);
+  for (const [muscle, rawCap] of Object.entries(caps)) {
+    const cap = Number(rawCap);
+    if (!Number.isFinite(cap) || cap < 0) continue;
+    const mine = all.filter(({ slot }) => (slot.appMuscle || appMuscleOf(slot.muscle)) === muscle)
+      .map(({ slot }) => ({ key: slot.key, n: authoredSlotSets(facts, slot, phase) || 0 }));
+    if (!mine.length) continue;
+    let total = mine.reduce((a, x) => a + x.n, 0);
+    while (total > cap) {
+      let best = -1;
+      mine.forEach((x, i) => { if (x.n > 1 && (best < 0 || x.n >= mine[best].n)) best = i; });
+      if (best < 0) break;
+      mine[best].n -= 1;
+      total -= 1;
+    }
+    for (const x of mine) out.set(x.key, x.n);
+  }
+  return out;
+}
+
+/**
+ * Spec H8: the optional exercises the plan offers in this session in this
+ * phase, through its own add list (marked optional, never served by
+ * default): each { key, exerciseId, name, sets, rirMin }. Empty for a plan
+ * that is not authored, another session, or another phase.
+ */
+export function authoredOptionalFor(facts, { routineId, phase } = {}) {
+  if (!isAuthoredFacts(facts) || !routineId || !phase) return [];
+  const session = facts.authored.sessions.find((s) => s && s.routineId === routineId);
+  if (!session) return [];
+  return (Array.isArray(facts.authored.optional) ? facts.authored.optional : [])
+    .filter((o) => o?.exerciseId && o.phase === phase && (o.session == null || o.session === session.key))
+    .map((o) => ({
+      key: o.key, exerciseId: o.exerciseId, name: o.name, sets: Number(o.sets) || 2, rirMin: Number(o.rirMin),
+    }));
+}
+
+// Spec H9: the plain nouns a session's exercises are called by, in the order
+// they first appear, for the plan screen's weekly effort line.
+const EFFORT_NOUNS = [
+  [/pulldown|pullover/i, 'pulldowns'],
+  [/row/i, 'rows'],
+  [/squat|leg press/i, 'squats'],
+  [/press/i, 'presses'],
+  [/lateral raise/i, 'raises'],
+  [/calf raise/i, 'calf raises'],
+  [/curl/i, 'curls'],
+  [/extension|pushdown/i, 'extensions'],
+  [/fly|crossover|pec deck/i, 'flies'],
+  [/crunch/i, 'crunches'],
+];
+
+function nounsOf(slots) {
+  const out = [];
+  for (const x of slots) {
+    const hit = EFFORT_NOUNS.find(([re]) => re.test(String(x?.name ?? '')));
+    if (hit && !out.includes(hit[1])) out.push(hit[1]);
+  }
+  return out;
+}
+
+const joinAnd = (list) => (list.length <= 1 ? list.join('')
+  : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`);
+
+const spanOf = (r) => (r[0] === r[1] ? `${r[0]}` : `${r[0]} to ${r[1]}`);
+
+/**
+ * Spec H9 (A6): the session plan screen's one line with this week's target
+ * effort, e.g. "This week: stop 1 to 2 reps short on pulldowns and rows; 0
+ * to 1 on raises, flies, curls and crunches." Null for a plan that is not
+ * authored or a routine that is not one of its sessions.
+ */
+export function authoredWeekEffortLine(facts, { routineId, phase } = {}) {
+  if (!isAuthoredFacts(facts) || !routineId || !phase) return null;
+  const session = facts.authored.sessions.find((s) => s && s.routineId === routineId);
+  if (!session) return null;
+  const list = Array.isArray(session.exercises) ? session.exercises : [];
+  const c = authoredRirRange(facts, 'compound', phase);
+  const i = authoredRirRange(facts, 'isolation', phase);
+  if (!c || !i) return null;
+  const compound = nounsOf(list.filter((x) => x.kind !== 'isolation'));
+  const isolation = nounsOf(list.filter((x) => x.kind === 'isolation'));
+  const parts = [];
+  if (compound.length) parts.push(`stop ${spanOf(c)} reps short on ${joinAnd(compound)}`);
+  if (isolation.length) {
+    parts.push(compound.length
+      ? `${spanOf(i)} on ${joinAnd(isolation)}`
+      : `stop ${spanOf(i)} reps short on ${joinAnd(isolation)}`);
+  }
+  if (!parts.length) return null;
+  const last = phase === 'growth' ? ' The last set of an isolation exercise may go to failure.' : '';
+  return `This week: ${parts.join('; ')}.${last}`;
 }
 
 // ── F1: the closed exercise list ─────────────────────────────────────────
@@ -364,7 +509,9 @@ export function authoredCapFor(facts, { routineExerciseId = null, exerciseId = n
  * @param {Array<{routineExercise: object, exercise: object}>} args.exercises  today's rows
  * @param {{directCap: number, fractionalCap: number}} args.houseCaps
  */
-export function authoredPlanLimits({ facts, routineId, mesocycleId = null, weekIndex, isDeload = false, exercises, houseCaps }) {
+export function authoredPlanLimits({
+  facts, routineId, mesocycleId = null, weekIndex, isDeload = false, exercises, houseCaps, caps = null,
+}) {
   if (!isAuthoredFacts(facts) || !routineId) return null;
   const session = facts.authored.sessions.find((s) => s && s.routineId === routineId);
   if (!session) return null;
@@ -374,7 +521,7 @@ export function authoredPlanLimits({ facts, routineId, mesocycleId = null, weekI
   const rows = (Array.isArray(exercises) ? exercises : []).map((e) => ({
     exerciseId: e?.exercise?.id ?? null, slotId: e?.routineExercise?.id ?? null,
   }));
-  const today = authoredServedWeek({ facts, routineId, mesocycleId, weekIndex, isDeload, exercises: rows });
+  const today = authoredServedWeek({ facts, routineId, mesocycleId, weekIndex, isDeload, exercises: rows, caps });
   const slotByKey = new Map(session.exercises.map((x) => [x.key, x]));
   const sessionDirect = {};
   for (const [exerciseId, key] of Object.entries(today.slots)) {
@@ -395,14 +542,17 @@ export function authoredPlanLimits({ facts, routineId, mesocycleId = null, weekI
     const slot = slotByKey.get(key);
     const m = slot?.appMuscle;
     if (!slot || !m) continue;
-    const top = Number(facts.recoverySafeMax?.[m]);
+    const rampCap = caps != null ? Number(caps[m]) : NaN;
+    const safe = Number(facts.recoverySafeMax?.[m]);
+    // A muscle the reintroduction ramp holds never climbs past the ramp's level.
+    const top = Number.isFinite(rampCap) ? Math.min(Number.isFinite(safe) ? safe : rampCap, rampCap) : safe;
     out[exerciseId] = {
       cap: Number.isFinite(slot.cap) ? slot.cap : 0,
       sessionDirect: sessionDirect[m] || 0,
       sessionDirectCap: capOf(m, 'direct', houseCaps?.directCap ?? 0),
       sessionFractional: sessionDirect[m] || 0,
       sessionFractionalCap: capOf(m, 'fractional', houseCaps?.fractionalCap ?? 0),
-      weekFractional: week[m] || 0,
+      weekFractional: Number.isFinite(rampCap) ? Math.min(week[m] || 0, rampCap) : (week[m] || 0),
       weekTop: Number.isFinite(top) ? top : (week[m] || 0),
     };
   }

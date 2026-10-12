@@ -48,7 +48,13 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
     const live = (mesos ?? []).find((m) => m.isActive === 1 || m.isActive === true);
     if (!live?.id) return out;
     const weeks = await db.getMesocycleWeeks(live.id);
-    const current = (weeks ?? []).find((w) => {
+    // Register D227 lane B (lead ruling): on an AUTHORED plan the ramp starts
+    // in the block week the episode ended in, from the plan's own Health
+    // level for the muscle (never from the full ladder), so the plan never
+    // serves an affected exercise at full volume first. Every other plan
+    // takes the path below, unchanged. Null on any other plan or failure.
+    const authored = await authoredRampStart(db, userId, live.id, weeks).catch(() => null);
+    const current = authored?.current ?? (weeks ?? []).find((w) => {
       const s = w.startedAt ?? w.started_at ?? null;
       return s != null && s <= endedAtMs && (w.completedAt ?? w.completed_at ?? null) == null;
     }) ?? (weeks ?? []).find((w) => (w.completedAt ?? w.completed_at ?? null) == null);
@@ -63,8 +69,10 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
     for (const muscle of released) {
       // eslint-disable-next-line no-await-in-loop
       const currentRows = await db.getPlannedMuscleVolume(current.id);
-      const nowPlanned = (currentRows ?? []).find((r) => r.muscle === muscle)?.planned_sets ?? null;
-      if (nowPlanned == null) continue;
+      const rowPlanned = (currentRows ?? []).find((r) => r.muscle === muscle)?.planned_sets ?? null;
+      if (rowPlanned == null) continue;
+      const nowPlanned = authored && Number.isFinite(authored.health[muscle])
+        ? Math.min(rowPlanned, authored.health[muscle]) : rowPlanned;
       // The plan's own peak for this muscle across the block - the
       // protected target (never invented, never exceeded).
       let peak = 0;
@@ -81,9 +89,27 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
       if (!peak || nowPlanned >= peak) continue;
       const steps = remaining.length;
       let changedTo = null;
+      // D227 lane B: the authored ramp's first step is the week it ended in.
+      if (authored && !(current.isDeload ?? current.is_deload)) {
+        // eslint-disable-next-line no-await-in-loop
+        await db.upsertPlannedMuscleVolume({
+          mesocycleWeekId: current.id,
+          muscle,
+          plannedSets: nowPlanned,
+          mev: bands?.mev ?? null, mav: bands?.mav ?? null, mrv: bands?.mrv ?? null,
+          source: 'reintroduction',
+        });
+        changedTo = nowPlanned;
+      }
       for (let i = 0; i < steps; i += 1) {
-        const target = Math.round(nowPlanned + ((peak - nowPlanned) * (i + 1)) / steps);
+        let target = Math.round(nowPlanned + ((peak - nowPlanned) * (i + 1)) / steps);
         const week = remaining[i];
+        if (authored) {
+          // D227 lane B: never above the plan's own ladder for that week.
+          // eslint-disable-next-line no-await-in-loop
+          const own = ((await db.getPlannedMuscleVolume(week.id)) ?? []).find((r) => r.muscle === muscle)?.planned_sets;
+          if (Number.isFinite(own)) target = Math.min(target, own);
+        }
         // eslint-disable-next-line no-await-in-loop
         await db.upsertPlannedMuscleVolume({
           mesocycleWeekId: week.id,
@@ -100,6 +126,33 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
   } catch (_e) {
     return out;
   }
+}
+
+/**
+ * Register D227 lane B: for the active AUTHORED plan's live block, the week
+ * the episode ended in (the block's current week, read from the calendar)
+ * and each app muscle's Health sets a week (the plan's own floor and its ramp
+ * reference, D227 addendum). Null for every other plan.
+ */
+async function authoredRampStart(db, userId, mesocycleId, weeks) {
+  const plan = await db.getActivePlan(userId);
+  if (!plan?.id) return null;
+  const facts = await db.getProgrammePlanFacts(plan.id);
+  // eslint-disable-next-line global-require
+  const { isAuthoredFacts, appMuscleOf } = require('../library/authored');
+  if (!isAuthoredFacts(facts)) return null;
+  const week = await db.getCurrentMesocycleWeek(userId);
+  if (!week?.id || week.mesocycleId !== mesocycleId || week.awaitingDecision) return null;
+  const current = (weeks ?? []).find((w) => w.id === week.id);
+  if (!current) return null;
+  const health = {};
+  for (const s of facts.authored.sessions) {
+    for (const x of s.exercises) {
+      const m = x.appMuscle || appMuscleOf(x.muscle);
+      if (m && Number.isFinite(x?.sets?.health)) health[m] = (health[m] || 0) + x.sets.health;
+    }
+  }
+  return { current, health };
 }
 
 /** The section 23.5 line - trajectory copy, no promises, no timelines.

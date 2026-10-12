@@ -290,6 +290,21 @@ export function servedSetsCap(row, planContext) {
  * plan screen resolves it once for all of a plan's routines); left undefined
  * the context is resolved from `workout.routineId`.
  */
+/**
+ * Register D227 lane B (lead ruling on the capability lane): the muscles a
+ * week's planned rows show the reintroduction ramp bringing back (source
+ * 'reintroduction', capability/reintroduction.js), each with the ramp's
+ * level. Null when there are none.
+ */
+export function reintroductionCaps(weekRows) {
+  const out = {};
+  for (const r of Array.isArray(weekRows) ? weekRows : []) {
+    const n = Number(r?.planned_sets ?? r?.plannedSets);
+    if (r?.source === 'reintroduction' && r?.muscle && Number.isFinite(n)) out[r.muscle] = n;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export async function getSessionWeeklyAllocation({ workout, exercises, planContext: given }) {
   const none = { allocation: null, weekRows: [], v2: false };
   try {
@@ -341,6 +356,10 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     // keeps what it was served above. Every other plan comes back as it was.
     const weekIndex = Number(week?.week_index ?? week?.weekIndex);
     const isDeload = Number(week?.is_deload ?? week?.isDeload) === 1;
+    // Lane B (lead ruling): a muscle the capability lane's reintroduction ramp
+    // is bringing back (its row stamped 'reintroduction') is capped at the
+    // ramp's level this week, on top of the authored ladder.
+    const rampCaps = reintroductionCaps(weekRows);
     const authored = authoredServedWeek({
       facts: planContext?.facts,
       routineId: workout.routineId,
@@ -348,6 +367,7 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       weekIndex,
       isDeload,
       exercises: todays,
+      caps: rampCaps,
     });
     const allocation = (Object.keys(ladder.sets).length || Object.keys(authored.sets).length)
       ? { ...served, ...ladder.sets, ...authored.sets } : served;
@@ -358,7 +378,7 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     return {
       allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
       ...(Object.keys(rir).length ? { rir } : {}),
-      ...(authored.phase ? { authoredWeek: { mesocycleId, weekIndex, isDeload, phase: authored.phase } } : {}),
+      ...(authored.phase ? { authoredWeek: { mesocycleId, weekIndex, isDeload, phase: authored.phase, caps: rampCaps } } : {}),
     };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
@@ -567,6 +587,7 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
             isDeload: authoredWeek?.isDeload === true,
             exercises,
             houseCaps: { directCap: PER_SESSION.directCap, fractionalCap: PER_SESSION.fractionalCap },
+            caps: authoredWeek?.caps ?? null,
           })
           : buildPlanLimits({
             planContext,

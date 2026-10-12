@@ -349,6 +349,95 @@ export function discountOutliers(comparableHistory) {
   return list.filter((s, i) => tops[i] === 0 || tops[i] >= med * 0.9);
 }
 
+// ── Register D227 (spec E1, H4): the AUTHORED plan's double progression ────
+//
+// The founder's document, section 4: keep the load until EVERY working set at
+// the top load reaches the top of the rep range at or inside the target effort
+// (the session's effort rating no harder than planned, the house FQ-3 read),
+// then add one increment and restart at the bottom of the range. Increments
+// are the slot's own when the plan writes one, else 5 kg for a compound and
+// 2.5 kg for an isolation exercise (machine stacks), never capped at 5% of the
+// load. Lateral raises and reverse flies (`repsFirst`) progress by reps up to
+// 20 first when the next increment would drop reps by more than 4: read from
+// the last time the load went up on the exercise, else a stack step of more
+// than 10% of the load. Ramp weeks hold or match the load (progression is a
+// Growth-phase tool); the reduction week holds the load at the bottom of the
+// range, stopping 3 or more reps short (H4). The house consecutive-miss drop
+// still applies: a real regression is never masked.
+export const AUTHORED_REPS_FIRST_CEILING = 20;
+const AUTHORED_REPS_FIRST_DROP = 4;
+const AUTHORED_REPS_FIRST_STEP_SHARE = 0.10;
+
+export function authoredIncrementKg(authored, units = 'kg') {
+  const own = Number(authored?.increment);
+  if (Number.isFinite(own) && own > 0) return own;
+  const kg = authored?.kind === 'isolation' ? 2.5 : 5;
+  return units === 'lbs' ? (authored?.kind === 'isolation' ? 5 : 10) : kg;
+}
+
+// Whether a reps-first exercise should build reps to 20 before the next load.
+function authoredRepsFirstActive(usable, W, inc) {
+  for (let i = 0; i + 1 < usable.length; i++) {
+    const newer = topLoadAndReps(usable[i]);
+    const older = topLoadAndReps(usable[i + 1]);
+    if (newer && older && newer.W > older.W) return (older.R_top - newer.R_top) > AUTHORED_REPS_FIRST_DROP;
+  }
+  return W > 0 && (inc / W) > AUTHORED_REPS_FIRST_STEP_SHARE;
+}
+
+function authoredOpeningLoad(comparableHistory, band, opts) {
+  const a = opts.authored;
+  const units = opts.units ?? 'kg';
+  const usable = discountOutliers(comparableHistory);
+  if (!usable.length) {
+    return { weight: null, provenance: PROVENANCE.INSUFFICIENT_EVIDENCE, sourceAt: null };
+  }
+  const recent = usable[0];
+  const top = topLoadAndReps(recent);
+  if (!top) {
+    return { weight: null, provenance: PROVENANCE.INSUFFICIENT_EVIDENCE, sourceAt: recent.at ?? null };
+  }
+  const recentBand = recent.band || band;
+  const inc = authoredIncrementKg(a, units);
+  const sourceAt = recent.at ?? null;
+  // The house consecutive-miss drop, unchanged (a real regression).
+  if (classifyReps(top.R_top, recentBand) === 'missed' && usable.length >= 2) {
+    const priorTop = topLoadAndReps(usable[1]);
+    if (priorTop && classifyReps(priorTop.R_top, usable[1].band || band) === 'missed' && top.W > 0) {
+      return { weight: Math.max(0, roundQuarter(top.W - inc)), provenance: PROVENANCE.LOAD_DROP_CONSECUTIVE_MISS, sourceAt };
+    }
+  }
+  if (a.phase === 'reduction') {
+    return { weight: top.W, provenance: PROVENANCE.HOLD_BUILDING_RANGE, sourceAt, repsTarget: band.min };
+  }
+  if (a.phase !== 'growth') {
+    // Ramp weeks: hold or match the load; reps may still build in the range.
+    return { weight: top.W, provenance: PROVENANCE.MATCH_LOAD_ADD_REP, sourceAt };
+  }
+  const repsCeiling = a.repsFirst === true && band.max < AUTHORED_REPS_FIRST_CEILING
+    && authoredRepsFirstActive(usable, top.W, inc)
+    ? AUTHORED_REPS_FIRST_CEILING : band.max;
+  const everySetTopped = top.atW.length > 0 && top.atW.every((x) => x.reps >= repsCeiling);
+  if (everySetTopped && top.W > 0) {
+    const sd = recent.difficulty == null ? NaN : Number(recent.difficulty);
+    if (Number.isFinite(sd) && sd >= 1 && sd <= 3) {
+      return { weight: roundQuarter(top.W + inc), provenance: PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED, sourceAt };
+    }
+    return {
+      weight: top.W,
+      provenance: Number.isFinite(sd) && sd >= 4 ? PROVENANCE.HOLD_EFFORT_VERY_HARD : PROVENANCE.HOLD_EFFORT_UNKNOWN,
+      sourceAt,
+      ...(repsCeiling !== band.max ? { repsCeiling } : {}),
+    };
+  }
+  return {
+    weight: top.W,
+    provenance: PROVENANCE.MATCH_LOAD_ADD_REP,
+    sourceAt,
+    ...(repsCeiling !== band.max ? { repsCeiling } : {}),
+  };
+}
+
 // ── §10: LOAD-PROGRESSION RULE — next session's opening/top-set load ──────
 //
 // `comparableHistory` must already be §8-comparable (assembleEvidencePacket
@@ -357,6 +446,12 @@ export function discountOutliers(comparableHistory) {
 // loop, §10 preamble). Outlier-discounted internally (§13.3 / scenario 45).
 export function nextSessionOpeningLoad(comparableHistory, band, opts = {}) {
   const { incrementKg = null, units = 'kg', category = 'compound', equipmentCategory = null } = opts;
+  // Register D227 (spec E1): an AUTHORED plan's exercise progresses by the
+  // founder's own double progression. Every other exercise takes the house
+  // rule below, unchanged.
+  if (opts.authored && typeof opts.authored === 'object') {
+    return authoredOpeningLoad(comparableHistory, band, opts);
+  }
   const usable = discountOutliers(comparableHistory);
   if (!usable.length) {
     return { weight: null, provenance: PROVENANCE.INSUFFICIENT_EVIDENCE, sourceAt: null };
@@ -778,6 +873,9 @@ export function assembleEvidencePacket(input) {
           ? !!senior.readinessReductionActive : derivedReadinessCut,
       },
       history: historySessions,
+      // Register D227 (spec E1): the authored plan's progression context
+      // ({ phase, kind, repsFirst, increment }), or null for every other plan.
+      authored: normalizeAuthored(input?.authored),
       today: {
         working: todayWorking,
         overrideLoad: num(overrideLoad),
@@ -828,6 +926,7 @@ export async function buildEvidencePacket({
   overrideLoad = null,
   overrideReps = null,
   now = Date.now(),
+  authored = null,
 } = {}) {
   // eslint-disable-next-line global-require
   const { getLastNWorkoutSets, getWorkoutById, stampCapabilityConstrainedSessions } = require('./database');
@@ -874,7 +973,23 @@ export async function buildEvidencePacket({
     overrideLoad,
     overrideReps,
     now,
+    // D227 E1: the authored plan's progression context, when the caller has one.
+    authored,
   });
+}
+
+// D227 E1: the authored context a packet may carry, or null.
+function normalizeAuthored(a) {
+  if (!a || typeof a !== 'object') return null;
+  const phase = typeof a.phase === 'string' ? a.phase : null;
+  if (!phase) return null;
+  const increment = Number(a.increment);
+  return {
+    phase,
+    kind: a.kind === 'isolation' ? 'isolation' : 'compound',
+    repsFirst: a.repsFirst === true,
+    ...(Number.isFinite(increment) && increment > 0 ? { increment } : {}),
+  };
 }
 
 // ── resolveSetPrescription internals ───────────────────────────────────────
@@ -935,6 +1050,7 @@ function normalizePacket(packet) {
       readinessReductionActive: !!p.senior?.readinessReductionActive,
     },
     history,
+    authored: normalizeAuthored(p.authored),
     today: {
       working: (Array.isArray(p.today?.working) ? p.today.working : [])
         .filter((w) => w && Number.isFinite(w.pos) && Number.isFinite(w.weight) && Number.isFinite(w.reps))
@@ -988,6 +1104,8 @@ function determineWorkingLoad({ packet, comparableHistory, band, pos }) {
     units: exercise.units,
     category: exercise.category,
     equipmentCategory: exercise.equipmentCategory,
+    // D227 E1: present only for an exercise of an AUTHORED plan.
+    ...(packet.authored ? { authored: packet.authored } : {}),
   };
 
   if (today.overrideLoad != null) {
@@ -1054,7 +1172,15 @@ function determineWorkingLoad({ packet, comparableHistory, band, pos }) {
   }
 
   const opening = nextSessionOpeningLoad(comparableHistory, band, opts);
-  return { L: opening.weight, provenance: opening.provenance, repsOverride: null, sessionDriven: false };
+  return {
+    L: opening.weight,
+    provenance: opening.provenance,
+    // D227 (E1, H4): the authored rule's own rep target (the reduction week's
+    // bottom of the range) and reps-first ceiling; absent on every other plan.
+    repsOverride: Number.isFinite(opening.repsTarget) ? opening.repsTarget : null,
+    sessionDriven: false,
+    ...(Number.isFinite(opening.repsCeiling) ? { repsCeiling: opening.repsCeiling } : {}),
+  };
 }
 
 /**
@@ -1161,7 +1287,9 @@ export function resolveSetPrescription(packet, position) {
     repsTarget = band.min;
   } else {
     const E = expectedReps({ pos: pos.index, comparableHistory, today: p.today, band, category: p.exercise.category });
-    repsTarget = clamp(Math.min(E + 1, band.max), band.min, band.max);
+    // D227 E1: a reps-first exercise of an authored plan builds to 20.
+    const repCap = Number.isFinite(working.repsCeiling) ? working.repsCeiling : band.max;
+    repsTarget = clamp(Math.min(E + 1, repCap), band.min, repCap);
   }
 
   // AMRAP positions: capability/load only, never a numeric rep target (§15).

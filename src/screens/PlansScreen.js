@@ -25,7 +25,7 @@ import BottomSheet from '../components/BottomSheet';
 import {
   getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
-  activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
+  activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails, isAuthoredBlockRunning,
   archivePlan, unarchivePlan, softDeleteRoutine, getActiveBlock,
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises,
   getProgrammePlanFacts } from '../lib/database';
@@ -33,7 +33,7 @@ import { isAuthoredFacts } from '../lib/library/authored';
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
-import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt, BLOCK_DEFINITION } from '../lib/blockExplain';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, blockStartSentenceFor, buildSeedReceipt, BLOCK_DEFINITION } from '../lib/blockExplain';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -912,7 +912,7 @@ export default function PlansScreen({ navigation }) {
         const confirmed = await new Promise((resolve) => {
           appAlert(
             'Make this your active plan?',
-            `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+            `${blockStartSentenceFor(plan)} ${ACTIVATION_MEANING_SENTENCE}`,
             [
               { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
               { text: 'Set as active', onPress: () => resolve(true) },
@@ -922,7 +922,14 @@ export default function PlansScreen({ navigation }) {
         });
         if (!confirmed) return;
       }
-      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
+      // Register D227 lane B (H7): this plan's own running block is kept.
+      if (await isAuthoredBlockRunning(user.id, plan.id)) {
+        toast.show('This plan is already active and its block carries on.', { variant: 'info' });
+        return;
+      }
+      const ok = await confirmPlanSwitchMidBlock(user.id, {
+        newPlanName: planHeadingName(plan.name), blockSentence: blockStartSentenceFor(plan),
+      });
       if (!ok) return;
       await activatePlanWithBlock(user.id, plan.id, planHeadingName(plan.name));
       await loadData();

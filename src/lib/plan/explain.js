@@ -196,6 +196,12 @@ function structureLine(facts, sessions) {
 function spacingLine(facts, sessions) {
   const n = sessions.length;
   if (n < 2) return null;
+  // Register D227 lane B (spec F2): an AUTHORED plan trains the side delts on
+  // consecutive days on purpose, the author's one accepted exception; the
+  // line says so instead of the generic back-to-back wording.
+  if (facts.kind === 'authored') {
+    return line('spacing', 'Side delts are trained on back-to-back days by design: lateral raises are low in fatigue.', 'READINESS.clockBand');
+  }
   const typical = Array.isArray(TYPICAL_WEEK_GAP_HOURS[n]) && TYPICAL_WEEK_GAP_HOURS[n].length === n
     ? TYPICAL_WEEK_GAP_HOURS[n]
     : new Array(n).fill(168 / n);

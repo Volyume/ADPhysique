@@ -44,7 +44,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { explainSelection } from '../lib/planRationale';
 import { rankSwaps } from '../lib/swapEngine';
-import { authoredSwapOptions } from '../lib/library/authored';
+import { authoredSwapOptions, authoredWeekEffortLine } from '../lib/library/authored';
 import { swapAdjacentBlocks } from '../lib/reorder';
 import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
@@ -236,6 +236,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // Register D227 (spec F1): true while the sheet shows an AUTHORED plan's
   // closed list; the sheet then offers no way out to the full library.
   const [swapClosedList, setSwapClosedList] = useState(false);
+  // Register D227 lane B (H9): this week's target effort on an authored plan.
+  const [effortLine, setEffortLine] = useState(null);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
   // session" or "From now on". This screen edits the plan, so a fresh sheet
   // starts at "From now on" (what a swap here has always done). The ref is what
@@ -439,6 +441,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setExercises(withExercises);
     setServedSets(served);
     setAllExercises(all);
+
+    // Register D227 lane B (spec H9, A6): on the active AUTHORED plan the
+    // session's plan screen states this week's target effort in one plain
+    // line (the logger's own effort line stays retired, 2026-08-17). Best
+    // effort: the line is simply absent on any other plan or a failed read.
+    try {
+      // eslint-disable-next-line global-require
+      const { loadAuthoredContext } = require('../lib/library/authoredCoachIO');
+      const ctx = user?.id && r?.programmeId ? await loadAuthoredContext(user.id) : null;
+      setEffortLine(ctx && ctx.programmeId === r.programmeId
+        ? authoredWeekEffortLine(ctx.facts, { routineId, phase: ctx.phase })
+        : null);
+    } catch (_e) { setEffortLine(null); }
 
     // A4: division fingerprint. Pure re-presentation of the volume overlay
     // the generator already applied to this plan: diff the division plan's
@@ -1233,6 +1248,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         </Text>
       ) : null}
       <MuscleTagRow exercises={exercises} />
+      {effortLine ? (
+        <Text style={[styles.divisionLine, live.divisionLine]}>{effortLine}</Text>
+      ) : null}
       {divisionGapLine ? (
         <Text style={[styles.divisionLine, live.divisionLine]}>{divisionGapLine}</Text>
       ) : null}

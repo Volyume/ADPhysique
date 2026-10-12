@@ -27,6 +27,8 @@
  */
 import { muscleDisplayName } from './algorithms';
 import { BLOCK_PLANNED_WEEKS } from './mesocycle';
+// Register D227 lane B (H5): pure data, no imports of its own.
+import { OFFSEASON_ALLAN } from './library/offseasonAllan';
 
 const num = (v, fallback) => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
@@ -54,6 +56,31 @@ const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
 export const BLOCK_START_SENTENCE =
   `This starts a ${numberWord(BLOCK_PLANNED_WEEKS)}-week training block: `
   + `${numberWord(BLOCK_PLANNED_WEEKS - 1)} weeks that build, then a lighter recovery week.`;
+
+/**
+ * Register D227 lane B (spec H5): the true block an AUTHORED plan's activation
+ * starts, derived from the plan's own first block (so it can never describe a
+ * block the writer does not create): for the off-season plan, "This starts an
+ * eight-week training block: two ramp weeks that build, five Growth weeks,
+ * then a lighter reduction week."
+ */
+const AUTHORED_FIRST_BLOCK = OFFSEASON_ALLAN.blocks.first;
+const countOf = (list, p) => list.filter((x) => x === p).length;
+const smallWord = (n) => ({ 1: 'one', 2: 'two' }[n] ?? numberWord(n));
+export const AUTHORED_BLOCK_START_SENTENCE =
+  `This starts an ${numberWord(AUTHORED_FIRST_BLOCK.length)}-week training block: `
+  + `${smallWord(countOf(AUTHORED_FIRST_BLOCK, 'ramp1') + countOf(AUTHORED_FIRST_BLOCK, 'ramp2'))} ramp weeks that build, `
+  + `${smallWord(countOf(AUTHORED_FIRST_BLOCK, 'growth'))} Growth weeks, then a lighter reduction week.`;
+
+/** True for the tags of an authored plan (the library entry's and every copy's). */
+export function isAuthoredPlanTags(tags) {
+  return String(tags ?? '').split(/\s+/).includes('authored');
+}
+
+/** H5: the block sentence for the plan being activated. */
+export function blockStartSentenceFor(plan) {
+  return isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE;
+}
 
 /**
  * C5-P10-08 (D96): what activation actually changes, in one sentence.

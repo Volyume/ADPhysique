@@ -288,7 +288,11 @@ export default function CoachReviewScreen() {
       });
 
       const deload = shouldDeload(patchedBuckets);
-      setDeloadResult(deload);
+      // Register D227 lane B (spec E3): on an AUTHORED plan the single-signal
+      // score never fires; the plan's own triggers drive the coach's card.
+      // eslint-disable-next-line global-require
+      const authored = deload?.deload && await require('../lib/library/authoredCoachIO').isActivePlanAuthored(user?.id);
+      setDeloadResult(authored ? { ...deload, deload: false, reasons: [] } : deload);
 
     } catch (_e) {
       // U-B-6: distinguish a genuine read failure from an empty week. Show a

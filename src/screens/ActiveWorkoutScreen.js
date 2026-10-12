@@ -99,7 +99,7 @@ import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
 } from '../lib/recoveryState';
 import { rankSwaps } from '../lib/swapEngine';
-import { authoredSwapOptions } from '../lib/library/authored';
+import { authoredSwapOptions, authoredOptionalFor } from '../lib/library/authored';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
   countProgressSets,
@@ -741,13 +741,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // planner built. The outline then shows the same served count for every
   // exercise, not only the current one (design 4.9, one number everywhere).
   const [planServedV2, setPlanServedV2] = useState(false);
+  // Register D227 lane B (spec H8): the authored plan's optional exercise
+  // ids for this session in this week (the machine shoulder press on Day 2 in
+  // Growth), offered first in the Add exercise picker; empty otherwise.
+  const [planOptional, setPlanOptional] = useState([]);
+  const planOptionalIds = useMemo(() => planOptional.map((o) => o.exerciseId), [planOptional]);
   useEffect(() => {
     let cancelled = false;
-    getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
+    const allocationRead = getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises });
+    allocationRead
       .then(({ allocation, v2 }) => {
         if (cancelled) return;
         setWeeklyAllocation(allocation);
         setPlanServedV2(!!v2);
+      })
+      .catch(() => {});
+    // D227 H8: the same read names the plan's optional exercise, if any.
+    allocationRead
+      .then(({ planContext, authoredWeek }) => {
+        if (cancelled) return;
+        setPlanOptional(authoredOptionalFor(planContext?.facts, {
+          routineId: activeWorkout?.routineId ?? null, phase: authoredWeek?.phase ?? null,
+        }));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -1330,6 +1345,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       overrideLoad,
       overrideReps,
       now: Date.now(),
+      authored: packetBase.authored ?? null,
     });
   }, [packetBase, loggedSets, overrideLoad, overrideReps, readinessTweak, reEntryEaseActive, readinessReduces, readinessDismissed]);
 
@@ -2146,7 +2162,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       handleConfirmSwap(ex);
     } else {
       const newIndex = workoutExercises.length;
-      addExerciseToWorkout(ex);
+      // D227 H8: the plan's optional exercise joins at its written sets.
+      const optional = planOptional.find((o) => o.exerciseId === ex?.id);
+      if (optional) addExerciseToWorkout(ex, { recommendedSets: optional.sets });
+      else addExerciseToWorkout(ex);
       setCurrentExerciseIndex(newIndex);
     }
     setShowExercisePicker(false);
@@ -2817,6 +2836,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // BEFORE assembling the packet: senior.isDeload/deloadTargets/
       // blockFinished are packet INPUTS (design section 14, Law F), so this
       // fetch has to land before the resolver can seed the entry.
+      // Register D227 lane B (spec E1, H4): an exercise of an AUTHORED plan
+      // progresses by the plan's own double progression, and its reduction
+      // week holds the load at normal reps and the plan's own effort, never
+      // the house deload's halved reps at RIR 4. Null for every other plan.
+      let localAuthored = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { loadAuthoredProgression } = require('../lib/library/authoredCoachIO');
+        localAuthored = await loadAuthoredProgression(user?.id, {
+          exerciseId: exercise.id, routineId: activeWorkout?.routineId ?? null,
+        });
+      } catch (_e) { localAuthored = null; }
+      if (cancelled) return;
       let localIsDeloadWeek = false;
       let localBlockFinished = false;
       let localDeloadTargets = null; // {weight, reps} pairs, the packet's shape
@@ -2852,7 +2884,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // (packet.senior.deloadTargets, design section 14 Law F) rather
           // than a separate setTargets/currentSet write: the resolver's own
           // SENIOR_RECOVERY_HOLD branch below is what actually seeds the box.
-          if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
+          if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id && !localAuthored) {
             const week1Sets = await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
             if (cancelled) return;
             if (week1Sets.length > 0) {
@@ -2922,6 +2954,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           blockFinished: localBlockFinished,
           layoffDays,
         },
+        authored: localAuthored,
       };
       setPacketBase(base);
       setOverrideLoad(null);
@@ -2949,6 +2982,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         overrideLoad: null,
         overrideReps: null,
         now: Date.now(),
+        authored: base.authored,
       });
       const seedPos = countProgressSets(allLoggedForExercise) + 1;
       // EL-10: a circuit station or ballistic exercise never receives an
@@ -2981,6 +3015,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       };
       if (localIsDeloadWeek && deloadRirSeed != null && seedPrescription.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
         seeded.rir = deloadRirSeed;
+      }
+      // D227 H4: the authored reduction week's own effort (compound 3,
+      // isolation 2 to 3 reps in reserve).
+      if (localAuthored?.phase === 'reduction' && Number.isFinite(localAuthored.rirTarget)) {
+        seeded.rir = localAuthored.rirTarget;
       }
       setCurrentSet({ ...DEFAULT_SET, ...seeded });
       seededEntryRef.current = { weight: seeded.weight, reps: seeded.reps };
@@ -3418,6 +3457,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             overrideLoad: nextOverrideLoad,
             overrideReps: nextOverrideReps,
             now: Date.now(),
+            authored: packetBase.authored ?? null,
           });
           const nextPos = countProgressSets(newLoggedSets) + 1;
           // EL-10: see the seedPrescription comment above - no automatic
@@ -5451,6 +5491,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
+          planOptional={pickerMode === 'swap' ? undefined : planOptionalIds}
         />
       </SafeAreaView>
     );
@@ -6142,6 +6183,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
+          planOptional={pickerMode === 'swap' ? undefined : planOptionalIds}
         />
 
         {/* Superset / giant-set heads-up modal, appears once per group when the

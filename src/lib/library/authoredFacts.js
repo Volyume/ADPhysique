@@ -214,6 +214,9 @@ export function rekeyAuthoredFacts(facts, { routineIdMap = {}, routineExerciseId
     }
   }
   copy.authored.raises = {};
+  copy.authored.trims = {};
+  delete copy.authored.legs;
+  delete copy.authored.legsAnswer;
   copy.authored.run = null;
   copy.weeklyTargets = authoredWeeklyTargets(copy, 1);
   copy.rirLadder = authoredRirLadder(copy, 1);
@@ -240,8 +243,8 @@ export function nextAuthoredBlockNumber(facts, priorActiveMesocycleId) {
  * the run records it, and weeklyTargets and rirLadder are the new block's.
  * Raises lane B applied are kept (B2: Growth carries on from the level
  * reached); a restart at block 1 clears them, so the plan starts at the ramp
- * again. Any schedule override (run.phases) belongs to its own block and is
- * dropped. Never mutates its input.
+ * again. Any schedule override (run.phases), a pull-back's trims and a legs
+ * answer belong to their own block and are dropped. Never mutates its input.
  */
 export function factsForAuthoredBlock(facts, { blockNumber, mesocycleId }) {
   if (!isAuthoredFacts(facts)) return facts;
@@ -250,7 +253,14 @@ export function factsForAuthoredBlock(facts, { blockNumber, mesocycleId }) {
   const blocks = blockNumber > 1 && prior.blocks && typeof prior.blocks === 'object' ? { ...prior.blocks } : {};
   if (mesocycleId) blocks[mesocycleId] = blockNumber;
   next.authored.run = { block: blockNumber, mesocycleId: mesocycleId ?? null, blocks };
-  if (blockNumber <= 1) next.authored.raises = {};
+  if (blockNumber <= 1) {
+    next.authored.raises = {};
+    delete next.authored.legs;
+  }
+  // Lane B (spec D3): a pull-back's trims belong to the block they were
+  // applied in; the next block starts from the level its raises reached.
+  next.authored.trims = {};
+  delete next.authored.legsAnswer;
   next.weeklyTargets = authoredWeeklyTargets(next, blockNumber);
   next.rirLadder = authoredRirLadder(next, blockNumber);
   return next;

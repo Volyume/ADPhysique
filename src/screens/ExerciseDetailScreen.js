@@ -409,7 +409,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       // Plateau detection
       const sessionArrays = sessions.map(s => s.sets ?? s); // newest-first already
       const plateauResult = detectPlateau(sessionArrays, ex?.defaultRepMin ?? 6, ex?.defaultRepMax ?? 12);
-      setPlateau(plateauResult.plateau ? plateauResult : null);
+      // Register D227 lane B (spec E2): an exercise of an AUTHORED plan is
+      // judged by the plan's own stall rule and offered only its listed
+      // substitutions; no rep-range change is suggested on that plan.
+      // eslint-disable-next-line global-require
+      const authoredStall = await require('../lib/library/authoredCoachIO')
+        .loadAuthoredStallForExercise(user?.id, exerciseId).catch(() => undefined);
+      if (authoredStall !== undefined) setPlateau(authoredStall ? { message: authoredStall.message } : null);
+      else setPlateau(plateauResult.plateau ? plateauResult : null);
 
       // Compute local PRs from working sets.
       // D218 (founder order 2026-10-03, audit F-14): the records read ONLY rows

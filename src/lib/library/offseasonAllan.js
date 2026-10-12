@@ -37,9 +37,12 @@
  *                exact. Health is the ramp's reference only (D227 addendum:
  *                the plan starts at Ramp 1)
  *     cap        the most sets this exercise is ever served (C1): the
- *                founder's Growth number, laterals up to 7
+ *                founder's Growth number, laterals and lat exercises up to
+ *                7, the seated leg curl 5 and the leg extension 4 (spec H1
+ *                and D4: the legs check-in's one extra set each)
  *     subs       the document's listed substitutions, as corpus names (A3,
- *                F1): the ONLY exercises that may stand in for this slot
+ *                F1), plus the alternatives its main cells name (spec H2):
+ *                the ONLY exercises that may stand in for this slot
  *     perArm     sets are counted per arm (the document's "per arm")
  *     notes      the cue in plain British English (A4)
  *
@@ -105,6 +108,8 @@ export const OFFSEASON_ALLAN = Object.freeze({
       sets: 2,
       rirMin: 2,
       phase: 'growth',
+      // H8: offered on Day 2 only, through the plan's own add list.
+      session: 'd2',
       notes: 'Optional in Growth weeks only: 2 sets at 2 or more reps in reserve, only if it is completely pain-free.',
     }),
   ]),
@@ -183,20 +188,20 @@ export const OFFSEASON_ALLAN = Object.freeze({
       name: 'Legs, Delts & Lats',
       exercises: Object.freeze([
         { key: 'd3.seated_leg_curl', name: 'Seated Leg Curl', muscle: 'hamstrings', kind: 'isolation', repsMin: 8, repsMax: 12, rest: 105,
-          sets: { health: 3, ramp1: 3, ramp2: 3, growth: 4, reduction: 2 }, cap: 4,
+          sets: { health: 3, ramp1: 3, ramp2: 3, growth: 4, reduction: 2 }, cap: 5,
           subs: ['Lying Leg Curl'],
           notes: `Thigh pad tight. Sit your hips back and lean your torso forward a little for more stretch on the hamstrings. Control the return to near-full knee extension and pause briefly at full bend. Use the lying curl only if no seated curl is free. ${PARTIALS}` },
         { key: 'd3.hack_squat', name: 'Hack Squat Machine', muscle: 'quads', kind: 'compound', repsMin: 8, repsMax: 12, rest: 150,
           sets: { health: 2, ramp1: 2, ramp2: 3, growth: 3, reduction: 2 }, cap: 3,
-          subs: ['Pendulum Squat', 'Belt Squat'],
+          subs: ['Pendulum Squat', 'Belt Squat', 'Leg Press'],
           notes: 'Feet in the middle of the platform, shoulder width apart. Go as deep as your hips and knees allow without your pelvis tucking under. Push through the whole foot and stop just short of locking out.' },
         { key: 'd3.leg_extension', name: 'Leg Extension', muscle: 'quads', kind: 'isolation', repsMin: 10, repsMax: 15, rest: 90,
-          sets: { health: 2, ramp1: 2, ramp2: 2, growth: 3, reduction: 1 }, cap: 3,
+          sets: { health: 2, ramp1: 2, ramp2: 2, growth: 3, reduction: 1 }, cap: 4,
           subs: ['Single-Leg Leg Extension'],
           notes: 'Set the seat so your knee lines up with the pivot, with a slight backward lean or a reclined back pad if it adjusts. Hold at the top for 1 second and control the lowering.' },
         { key: 'd3.standing_calf', name: 'Standing Calf Raise (Machine)', muscle: 'calves', kind: 'isolation', repsMin: 8, repsMax: 15, rest: 75,
           sets: { health: 3, ramp1: 3, ramp2: 3, growth: 4, reduction: 2 }, cap: 4,
-          subs: ['Seated Calf Raise'],
+          subs: ['Seated Calf Raise', 'Leg Press Calf Raise'],
           notes: `Pause for 1 to 2 seconds in the deepest stretch on every rep, then rise all the way onto your toes. The seated version loads the calves less, so the standing one is preferred. ${PARTIALS}` },
         { key: 'd3.cable_lateral', name: 'Single-Arm Cable Lateral Raise', muscle: 'side_delts', kind: 'isolation', repsMin: 12, repsMax: 20, rest: 75,
           sets: { health: 3, ramp1: 4, ramp2: 5, growth: 5, reduction: 3 }, cap: 7,
@@ -238,7 +243,7 @@ export const OFFSEASON_ALLAN = Object.freeze({
           notes: 'Straight or EZ bar, facing the stack. Keep your elbows slightly in front of your torso, never pulled back behind it.' },
         { key: 'd4.cross_body_extension', name: 'Cross-Body Cable Tricep Extension', muscle: 'triceps', kind: 'isolation', repsMin: 10, repsMax: 15, rest: 75,
           sets: { health: 2, ramp1: 2, ramp2: 2, growth: 3, reduction: 1 }, cap: 3,
-          subs: ['Machine Tricep Extension'],
+          subs: ['Machine Tricep Extension', 'Cable Overhead Tricep Extension'],
           notes: 'Work in a pain-free range, keeping the shoulder comfortable throughout.' },
       ]),
     }),
