@@ -26,6 +26,13 @@
  *                                    planDiff.keepsBlockOnRebuild; when true
  *                                    the sheet says the block carries on
  *                                    instead of restarting
+ *                        structure   D222 phase 6 (R65): the structure engine's
+ *                                    preview block (generatePlanDryRun); its
+ *                                    real session length is shown and its
+ *                                    message lines are listed beside the fit
+ *                        refusal     D222 phase 6 (R65): a week the structure
+ *                                    engine will not build; its words are
+ *                                    shown and nothing can be confirmed
  *   currentPlanName  - the plan being replaced, when there is one
  *   otherPlansCount  - how many other non-archived plans the athlete has
  *   confirmLabel     - the confirm button's title
@@ -134,6 +141,12 @@ export default function PlanPreviewSheet({
   const blockLine = blockRestartLine(preview.blockStatus);
   const keptLine = preview.keepBlock ? blockKeptLine(preview.blockStatus) : null;
   const plansLine = otherPlansLine(otherPlansCount);
+  // D222 phase 6 (R65): the structure engine's real length (the longest
+  // session at the peak, not the length asked for), its own lines, and a
+  // refusal, which leaves nothing to confirm.
+  const realMinutes = Number.isFinite(preview.structure?.longestMinutes) ? preview.structure.longestMinutes : null;
+  const structureLines = Array.isArray(preview.structure?.messages) ? preview.structure.messages : [];
+  const refusalText = typeof preview.refusal?.text === 'string' ? preview.refusal.text : null;
 
   return (
     <BottomSheet
@@ -154,7 +167,7 @@ export default function PlanPreviewSheet({
         <Text style={[styles.diffSub, live.diffSub]}>{memoryLine}</Text>
       ) : null}
 
-      {isFirst ? (
+      {isFirst && !refusalText ? (
         // First plan: there is nothing to diff against, so the sheet shows
         // the plan that is about to be built, in the same facts the diff
         // table uses for a rebuild.
@@ -168,7 +181,8 @@ export default function PlanPreviewSheet({
             <SummaryRow
               live={live}
               label="Session length"
-              value={preview.sessionLengthMinutes != null ? `${preview.sessionLengthMinutes} min` : '-'}
+              value={realMinutes != null ? `${realMinutes} min`
+                : preview.sessionLengthMinutes != null ? `${preview.sessionLengthMinutes} min` : '-'}
             />
           </View>
           {workouts.length > 0 ? (
@@ -206,8 +220,11 @@ export default function PlanPreviewSheet({
               live={live}
               label="Session length"
               now={diff.sessionLength.now != null ? `${diff.sessionLength.now} min` : '-'}
-              after={diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
-              changed={diff.sessionLength.changed}
+              after={realMinutes != null ? `${realMinutes} min`
+                : diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
+              // With the engine's real minutes in the After cell, the highlight
+              // compares those minutes with the current plan's, not the length asked for.
+              changed={realMinutes != null ? diff.sessionLength.now !== realMinutes : diff.sessionLength.changed}
             />
           </View>
           {/* C16 job 11 (completion pass): the change receipt, built
@@ -367,10 +384,25 @@ export default function PlanPreviewSheet({
         </View>
       ) : null}
 
+      {/* D222 phase 6 (R65): what the structure engine says about this week,
+          in the words of structure/messages.js, beside the fit above. */}
+      {structureLines.length > 0 ? (
+        <View style={styles.diffMoves}>
+          {structureLines.map((line, i) => (
+            <Text key={`structure-${i}`} style={[styles.diffShortfall, live.diffShortfall]}>{line}</Text>
+          ))}
+        </View>
+      ) : null}
+      {refusalText ? (
+        <Text style={[styles.diffShortfall, live.diffShortfall]}>{refusalText}</Text>
+      ) : null}
+
       {/* D139: the plain consequences, always shown, never inferred from the
           diff above. What a block is, what confirming does to the block in
           progress, where the plans being replaced go, and what does not
-          travel with a rebuild. */}
+          travel with a rebuild. A refused week changes nothing, so it has
+          none (D222 phase 6, R65). */}
+      {refusalText ? null : (
       <View style={styles.consequences}>
         <Text style={[styles.diffShortfall, live.diffShortfall]}>
           {keptLine ?? `${BLOCK_START_SENTENCE}${blockLine ? ` ${blockLine}` : ''}`}
@@ -387,15 +419,18 @@ export default function PlanPreviewSheet({
           </Text>
         ) : null}
       </View>
+      )}
 
-      <Button variant="emphatic"
-        title={confirmLabel}
-        onPress={confirm}
-        loading={busy}
-        disabled={busy}
-        accessibilityLabel={confirmLabel}
-        style={styles.saveBtn}
-      />
+      {refusalText ? null : (
+        <Button variant="emphatic"
+          title={confirmLabel}
+          onPress={confirm}
+          loading={busy}
+          disabled={busy}
+          accessibilityLabel={confirmLabel}
+          style={styles.saveBtn}
+        />
+      )}
       <Button
         title="Not yet"
         variant="tertiary"

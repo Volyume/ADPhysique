@@ -596,3 +596,19 @@ describe('sessionsFromRoutines: the screens\' view of the plan, from the routine
     expect(sessionsFromRoutines({}, [{ routine: { id: 'r1' }, rows: null }])).toEqual([{ id: 'r1', name: null, muscles: [] }]);
   });
 });
+
+// D222 phase 6: a plan the structure engine built (family "structure:...") runs
+// no recovery model, so its structure line must not claim the split "best fits"
+// each muscle's recovery. Other families keep their wording.
+describe('explainPlan: the structure line of a structure-engine plan', () => {
+  test('says what is true: the count and the goal\'s usual sessions, with no recovery claim', () => {
+    const sessions = [{ id: 'a', name: 'Push', muscles: ['chest'] }, { id: 'b', name: 'Pull', muscles: ['back'] }, { id: 'c', name: 'Legs', muscles: ['quads'] }];
+    const res = explainPlan({
+      facts: { ...FOUR_DAY.v2, family: 'structure:mens_physique:3' }, sessions, sessionLengthMinutes: 60,
+    });
+    const t = res.lines.find((l) => l.id === 'structure').text;
+    expect(t).toBe('3 sessions a week, the way your goal is usually trained: Push, Pull and Legs.');
+    expect(t).not.toMatch(/best fits|recovery/);
+    expect(t).not.toMatch(/—/);
+  });
+});
