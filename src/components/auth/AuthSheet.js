@@ -283,7 +283,7 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
       // so promising "we have sent you an email" would be a claim we cannot
       // make. Same honesty as the duplicate-signup wording above.
       setNotice({
-        text: 'If that email has an account, we have sent a link to get back in. Open it on this phone, then come back here.',
+        text: 'If that email has an account, we have sent a link to get back in. Open it on this phone, then come back here. If it is not in your inbox, look in your spam or junk folder.',
       });
     } catch (err) {
       logError('LoginScreen.reset.threw', err, {});

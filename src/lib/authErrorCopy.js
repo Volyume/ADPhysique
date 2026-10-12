@@ -28,7 +28,7 @@ export const AUTH_COPY = Object.freeze({
   rateLimited: 'Too many attempts just now. Wait a minute, then try again.',
   badCredentials: 'That email or password is not right.',
   duplicate: 'That email already has an account. Try signing in instead.',
-  unconfirmed: 'Check your email to confirm your account, then sign in.',
+  unconfirmed: 'Check your email to confirm your account, then sign in. If it is not in your inbox, look in your spam or junk folder.',
   weakPassword: 'Use a password of at least 6 characters.',
   fallback: "That didn't go through. Try again.",
 });
