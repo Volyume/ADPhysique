@@ -148,9 +148,9 @@ describe('the plan reveal explains a plan with facts', () => {
     expect(getProgrammePlanFacts).toHaveBeenCalledWith('prog1');
     expect(text).toContain('Why this plan, for you');
     expect(text).toContain('4 sessions a week, alternating upper and lower.');
-    expect(text).toMatch(/Glutes are your focus: \d+ direct sets a week now, climbing to \d+ by week 5, trained first in Lower A and Lower B\./);
+    expect(text).toMatch(/Glutes are your focus: \d+ sets a week now, building to \d+ by week 5, trained first in Lower A and Lower B\./);
     expect(text).toContain('No exercise goes above 4 sets.');
-    expect(text).toMatch(/Weeks 1 to 5 stop about 3, 2, 2, 1 and 1 reps short of failure/);
+    expect(text).toMatch(/about 3, 2, 2, 1 and 1 reps in weeks 1 to 5/);
   });
 
   test('they stay collapsed until the row is opened (Start training comes first)', async () => {
@@ -163,9 +163,10 @@ describe('the plan reveal explains a plan with facts', () => {
     const { tree } = await renderScreen();
     const toggles = tree.root.findAllByType(TouchableOpacity).filter((n) => n.props.accessibilityLabel === 'Show the source for this line');
     expect(toggles.length).toBeGreaterThanOrEqual(5);
-    expect(flattenText(tree.toJSON())).not.toContain('Ochi 2018');
+    expect(flattenText(tree.toJSON())).not.toContain('A rule Volyume chose');
     await act(async () => { toggles[0].props.onPress(); });
-    expect(flattenText(tree.toJSON())).toContain('(Ochi 2018)');
+    expect(flattenText(tree.toJSON())).toContain('A rule Volyume chose. With the same number of sets in a week');
+    expect(flattenText(tree.toJSON())).not.toContain('Ochi 2018'); // no author-year citation reaches the screen
   });
 
   test('the old one-line split note is superseded by the explanation', async () => {

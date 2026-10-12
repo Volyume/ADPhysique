@@ -50,7 +50,7 @@ describe("the founder's 27 biceps sets", () => {
 
   test('a standard muscle at 24 reads as focus-level volume, not as a fault', () => {
     const v = volumeBand(24, ROLE.STANDARD, { muscleLabel: 'biceps' });
-    expect(v.line).toBe('Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(v.line).toBe('More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.');
     expect(v.tone).toBe('neutral');
     expect(v.roleLine).toBeNull();
   });
@@ -109,9 +109,9 @@ describe('the wording table', () => {
 
 describe('countedLine and formatSets', () => {
   test('a total is shown with how it was counted', () => {
-    expect(countedLine(6, 12)).toBe('12 sets counted: 6 direct and 12 indirect at half credit.');
-    expect(countedLine(9, 9)).toBe('13.5 sets counted: 9 direct and 9 indirect at half credit.');
-    expect(countedLine(1, 0)).toBe('1 set counted: 1 direct and 0 indirect at half credit.');
+    expect(countedLine(6, 12)).toBe('12 sets, made up of 6 as the main muscle and 12 from other exercises that help it, counted as half.');
+    expect(countedLine(9, 9)).toBe('13.5 sets, made up of 9 as the main muscle and 9 from other exercises that help it, counted as half.');
+    expect(countedLine(1, 0)).toBe('1 set, made up of 1 as the main muscle and 0 from other exercises that help it, counted as half.');
   });
 
   test('numbers show one decimal at most, never a trailing .0', () => {

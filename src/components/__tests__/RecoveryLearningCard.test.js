@@ -150,7 +150,7 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread' }));
     expect(copy.state).toBe('waiting');
     expect(copy.headline).toBe('Not learning yet');
-    expect(copy.body).toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
+    expect(copy.body).toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far your rests between workouts have been too similar to tell anything.');
     // D210 addendum 3: the old line said the breaks "have been much the same
     // length", false for a schedule that alternates three and four days.
     expect(copy.body).not.toMatch(/much the same length/);
@@ -166,13 +166,13 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 2, reason: 'fixed_reps' }));
     expect(copy.state).toBe('waiting');
     expect(copy.headline).toBe('Not learning yet');
-    expect(copy.body).toBe('Sets kept exactly as the screen filled them in, and exercises logged with the same reps at least half the time, show the plan rather than how each workout went, so they are left out. That leaves too few comparisons so far.');
+    expect(copy.body).toBe('Sets you did not change from what the app suggested are left out, and so are exercises where you logged the same reps at least half the time. They show the plan rather than how you actually did. That leaves too few to compare so far.');
     expect(copy.progress).toBeNull();
-    expect(copy.summary).toBe('Too few comparisons are left once repeated reps and sets kept as filled in are set aside.');
+    expect(copy.summary).toBe('Too few workouts are left to compare once repeated reps and unchanged sets are set aside.');
     // Both kinds are named, in the summary and in the method.
     expect(copy.summary).toMatch(/repeated reps/);
-    expect(copy.summary).toMatch(/kept as filled in/);
-    expect(copy.body).toMatch(/kept exactly as the screen filled them in/);
+    expect(copy.summary).toMatch(/unchanged sets/);
+    expect(copy.body).toMatch(/did not change from what the app suggested/);
     expect(copy.body).toMatch(/the same reps at least half the time/);
   });
 
@@ -180,10 +180,10 @@ describe('what the card says, state by state', () => {
     const copy = recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few' }));
     expect(copy.state).toBe('learning');
     expect(copy.headline).toBe('Still learning');
-    expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has 5, and learning starts after 8 usable comparisons.');
+    expect(copy.body).toBe('Each exercise is compared with the same exercise on the same day in an earlier week. Each muscle needs 5 matching workouts, and your recovery speed starts to adjust after 8.');
     expect(copy.progress).toEqual({ done: 5, needed: PERSONAL_MIN_PAIRS });
     expect(copy.evidence).toBeNull();
-    expect(copy.summary).toBe(`Learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`);
+    expect(copy.summary).toBe(`Learning starts after ${PERSONAL_MIN_PAIRS} matching workouts.`);
   });
 
   test('every state has exactly ONE sentence under the headline (D214)', () => {
@@ -272,9 +272,9 @@ describe('what the card says when the comparisons were not of the same weekday (
 
   test('the method paragraphs that describe the comparison say "the last time you did it", never "on the same day"', () => {
     const noSpread = recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread', ...SLOT }));
-    expect(noSpread.body).toBe('Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
+    expect(noSpread.body).toBe('Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far your rests between workouts have been too similar to tell anything.');
     const learning = recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few', ...SLOT }));
-    expect(learning.body).toBe(`Each exercise is compared with the last time you did it. A muscle’s comparisons become usable once it has 5, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`);
+    expect(learning.body).toBe(`Each exercise is compared with the last time you did it. Each muscle needs 5 matching workouts, and your recovery speed starts to adjust after ${PERSONAL_MIN_PAIRS}.`);
     for (const reason of ['adjusted', 'not_clear', 'no_spread', 'fixed_reps', 'too_few']) {
       const copy = recoveryLearningCopy(reading({
         reason, factor: reason === 'adjusted' ? 1.3 : 1, pairs: 12, pairsByMuscle: { quads: 12 }, ...SLOT,
@@ -286,9 +286,9 @@ describe('what the card says when the comparisons were not of the same weekday (
 
   test('the other readings (not slot) keep the words they had', () => {
     expect(recoveryLearningCopy(reading({ pairs: 16, reason: 'no_spread' })).body)
-      .toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.');
+      .toBe('Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far your rests between workouts have been too similar to tell anything.');
     expect(recoveryLearningCopy(reading({ pairs: 5, reason: 'too_few' })).body)
-      .toBe('Each exercise is compared with the same exercise on the same day in an earlier week. A muscle’s comparisons become usable once it has 5, and learning starts after 8 usable comparisons.');
+      .toBe('Each exercise is compared with the same exercise on the same day in an earlier week. Each muscle needs 5 matching workouts, and your recovery speed starts to adjust after 8.');
   });
 
   test('everything else about a slot reading is as for any other: state, headline, summary, scale and progress do not move', () => {
@@ -441,7 +441,7 @@ describe('rendering', () => {
     act(() => { tree = create(<RecoveryLearningCard personal={reading({ pairs: 3, reason: 'too_few' })} />); });
     const shown = texts(tree);
     expect(shown).toContain('Still learning');
-    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} usable so far`);
+    expect(shown).toContain(`3 of ${PERSONAL_MIN_PAIRS} matching workouts so far`);
     // D214 RC-13: the person is ALWAYS placed on the scale; with nothing
     // learned they sit at the first estimate and the label says so.
     expect(shown).toContain('You, at the first estimate');

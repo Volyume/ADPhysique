@@ -145,8 +145,8 @@ describe('a manual plan: every count is the person\'s own', () => {
   test('says the plan is as built, counts are served as typed, the recovery week is half, and the caps bind only what the plan adds', () => {
     expect(ids(manual)).toEqual(['kept', 'typed', 'block']);
     expect(manual.lines[0].text).toMatch(/every exercise and every set count is yours/);
-    expect(manual.lines[1].text).toMatch(/served as you typed them in weeks 1 to 5/);
-    expect(manual.lines[1].text).toMatch(/half in the recovery week/);
+    expect(manual.lines[1].text).toMatch(/stay as you typed them in weeks 1 to 5/);
+    expect(manual.lines[1].text).toMatch(/halved in the recovery week/);
     expect(manual.lines[1].text).toMatch(/4-set and 3-set limits apply to sets the plan adds, never to numbers you typed/);
   });
 

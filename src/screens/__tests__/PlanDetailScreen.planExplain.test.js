@@ -160,16 +160,16 @@ describe('"Why this plan" on the plan screen, for a plan with facts', () => {
     expect(getProgrammePlanFacts).toHaveBeenCalledWith('prog1');
     expect(text).toContain('Why this plan, for you');
     expect(text).toContain('4 sessions a week, alternating upper and lower.');
-    expect(text).toMatch(/Glutes are your focus: \d+ direct sets a week now, climbing to \d+ by week 5, trained first in Lower A and Lower B\./);
+    expect(text).toMatch(/Glutes are your focus: \d+ sets a week now, building to \d+ by week 5, trained first in Lower A and Lower B\./);
     expect(text).toContain('No exercise goes above 4 sets.');
     // RE-PINNED 2026-10-10 (founder order, DECISIONS D219 addendum: the
     // standard floor wins over the readiness fix). The fixture plan used to
     // reach "every muscle ... at least 90% recovered"; with every muscle's
-    // standard kept, the readiness line now reports "The exceptions:", each
+    // standard kept, the readiness line now reports "Short of that:", each
     // naming a muscle and a percentage (observed: Glutes about 86% before
     // Lower B in week 5; Hamstrings about 88%).
-    expect(text).toMatch(/At a usual week's spacing, the plan aims for every muscle to be estimated at least 90% recovered when its next session starts\. The exceptions: /);
-    expect(text).toMatch(/The exceptions: [A-Z][a-z ]+ about \d+%/);
+    expect(text).toMatch(/In a normal week, the plan aims for every muscle to be at least 90% recovered when it is trained again\. Short of that: /);
+    expect(text).toMatch(/Short of that: [A-Z][a-z ]+ about \d+%/);
   });
 
   test('the static split note is superseded', async () => {
@@ -186,7 +186,7 @@ describe('"Why this plan" on the plan screen, for a plan with facts', () => {
     ]);
     const { text } = await renderScreen();
     expect(getPlannedMuscleVolumeForBlock).toHaveBeenCalledWith('m1');
-    expect(text).toContain('Glutes are your focus: 14 direct sets a week now, climbing to 20 by week 5');
+    expect(text).toContain('Glutes are your focus: 14 sets a week now, building to 20 by week 5');
   });
 
   test('rows that cannot be read fall back to the targets the plan was built with', async () => {
@@ -194,14 +194,14 @@ describe('"Why this plan" on the plan screen, for a plan with facts', () => {
     getPlannedMuscleVolumeForBlock.mockRejectedValue(new Error('read failed'));
     const { text } = await renderScreen();
     const t = FACTS.weeklyTargets.glutes;
-    expect(text).toContain(`Glutes are your focus: ${t[0]} direct sets a week now, climbing to ${t[4]} by week 5`);
+    expect(text).toContain(`Glutes are your focus: ${t[0]} sets a week now, building to ${t[4]} by week 5`);
   });
 
   test('a saved plan that is not the active one reads week 1 and never reads the active block', async () => {
     setUp({ activeId: 'someone-else' });
     const { text } = await renderScreen();
     const t = FACTS.weeklyTargets.glutes;
-    expect(text).toContain(`${t[0]} direct sets a week now, climbing to ${t[4]} by week 5`);
+    expect(text).toContain(`${t[0]} sets a week now, building to ${t[4]} by week 5`);
     expect(getCurrentMesocycleWeek).not.toHaveBeenCalled();
     expect(getPlannedMuscleVolumeForBlock).not.toHaveBeenCalled();
   });
@@ -210,13 +210,13 @@ describe('"Why this plan" on the plan screen, for a plan with facts', () => {
     const { tree } = await renderScreen();
     const toggles = tree.root.findAllByType(TouchableOpacity).filter((n) => n.props.accessibilityLabel === 'Show the source for this line');
     expect(toggles.length).toBeGreaterThanOrEqual(5);
-    expect(flattenText(tree.toJSON())).not.toContain('Refalo 2023');
+    expect(flattenText(tree.toJSON())).not.toContain('Well established');
     const ladder = toggles[toggles.length - 1]; // structure, spacing, focus, cap, readiness, ladder
     await act(async () => { ladder.props.onPress(); });
     const after = flattenText(tree.toJSON());
-    expect(after).toContain('Strong evidence. Stopping one rep short of failure');
-    expect(after).toContain('Refalo 2023');
-    expect(after).not.toContain('Krieger 2010'); // only the tapped line opens
+    expect(after).toContain('Well established. Stopping a rep or so before you could not do another');
+    expect(after).not.toMatch(/Refalo|Robinson|Vieira|Krieger|Ochi|Enes/); // no author-year citation reaches the screen
+    expect(after).not.toContain('A rule Volyume chose'); // only the tapped line opens
   });
 });
 

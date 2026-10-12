@@ -132,30 +132,30 @@ describe('explainPlan: a 4-day plan', () => {
   test('the structure: how many sessions, which split, and why it was chosen', () => {
     const t = textOf(res, 'structure');
     expect(t).toMatch(/^4 sessions a week, alternating upper and lower\./);
-    expect(t).toMatch(/does not change growth/);
+    expect(t).toMatch(/grow a muscle however the week is split/);
   });
 
   test('the spacing: the shortest gap between a muscle\'s own sessions, on consecutive days and in a usual week', () => {
     const t = textOf(res, 'spacing');
     // Upper A, Lower A, Upper B, Lower B: a muscle trained twice sits two
     // sessions apart, 2 x 24 - 1 = 47 hours back to back.
-    expect(t).toMatch(/at least 47 hours apart even on consecutive training days/);
-    expect(t).toMatch(/at least \d+ hours apart in a usual week/);
+    expect(t).toMatch(/at least 47 hours apart, even if you train on back-to-back days/);
+    expect(t).toMatch(/at least \d+ hours apart in a normal week/);
   });
 
   test('a muscle in sessions that sit next to each other is described as it is, not as "kept" apart', () => {
     // Full Body, Upper, Lower: the full-body session trains every muscle the
     // next session trains again, so the closest gap is one slot, 24 - 1 hours.
     const t = textOf(explain(LIMITED, { minutes: 75 }), 'spacing');
-    expect(t).toMatch(/^Some muscles are trained in sessions that sit next to each other, so their closest sessions are 23 hours apart on consecutive training days and 47 hours apart in a usual week\./);
-    expect(t).not.toMatch(/keeps each muscle/);
+    expect(t).toMatch(/^Some muscles are trained in two sessions in a row, so their sessions are 23 hours apart if you train on back-to-back days and 47 hours apart in a normal week\./);
+    expect(t).not.toMatch(/keeps each muscle|sit next to each other/);
   });
 
   test('the cap, and why', () => {
     const t = textOf(res, 'cap');
     expect(t).toMatch(/^No exercise goes above 4 sets\./);
-    expect(t).toMatch(/fewer reps for more fatigue/);
-    expect(t).toMatch(/second exercise trains parts of the muscle the first reaches less/);
+    expect(t).toMatch(/fewer reps and more tiredness/);
+    expect(t).toMatch(/second exercise works parts of the muscle the first one hits less/);
   });
 
   test('the session length at the peak against the person\'s length', () => {
@@ -163,20 +163,20 @@ describe('explainPlan: a 4-day plan', () => {
     expect(t).toMatch(/^At the peak of the block, sessions run about \d+ to \d+ minutes/);
     expect(t).toMatch(/the 75 you set/);
     // The reassurance is only given when it is true of the plan's own facts.
-    if (FOUR_DAY.v2.overCeilings.length === 0) expect(t).toMatch(/No session goes past 8 exercises or 25 working sets\./);
+    if (FOUR_DAY.v2.overCeilings.length === 0) expect(t).toMatch(/No session goes past 8 exercises or 25 sets, not counting warm-ups\./);
     else expect(t).not.toMatch(/No session goes past/);
   });
 
   test('the readiness promise, and the closest reading', () => {
     const t = textOf(res, 'readiness');
-    expect(t).toMatch(/every muscle is estimated at least 90% recovered when its next session starts/);
+    expect(t).toMatch(/every muscle is estimated to be at least 90% recovered when it is trained again/);
     expect(t).toMatch(/The closest is [A-Z][a-z ]+ at about \d+% before (Upper|Lower) [AB] in week \d/);
   });
 
   test('the effort ladder: 3, 2, 2, 1, 1 reps short of failure, then the easier recovery week at 4', () => {
     const t = textOf(res, 'ladder');
-    expect(t).toMatch(/Weeks 1 to 5 stop about 3, 2, 2, 1 and 1 reps short of failure/);
-    expect(t).toMatch(/week 6 eases to about 4/);
+    expect(t).toMatch(/about 3, 2, 2, 1 and 1 reps in weeks 1 to 5/);
+    expect(t).toMatch(/then about 4 in week 6, the easier week/);
   });
 });
 
@@ -194,22 +194,22 @@ describe('explainPlan: a focus plan', () => {
     const facts = { ...FOCUS.v2, limitedBy: {} };
     const res = explainPlan({ facts, sessions: sessionsOf(FOCUS), sessionLengthMinutes: 75, week: 1 });
     expect(textOf(res, 'focus:glutes')).toBe(
-      `Glutes are your focus: ${t[0]} direct sets a week now, climbing to ${t[4]} by week 5, trained first in Lower A and Lower B.`,
+      `Glutes are your focus: ${t[0]} sets a week now, building to ${t[4]} by week 5, trained first in Lower A and Lower B.`,
     );
   });
 
   test('"now" follows the block week; week 5 is the peak, week 6 the recovery week', () => {
-    expect(textOf(explain(FOCUS, { minutes: 75, week: 3 }), 'focus:glutes')).toContain(`${t[2]} direct sets a week now, climbing to ${t[4]} by week 5`);
-    expect(textOf(explain(FOCUS, { minutes: 75, week: 5 }), 'focus:glutes')).toContain(`${t[4]} direct sets a week, the peak of this block`);
+    expect(textOf(explain(FOCUS, { minutes: 75, week: 3 }), 'focus:glutes')).toContain(`${t[2]} sets a week now, building to ${t[4]} by week 5`);
+    expect(textOf(explain(FOCUS, { minutes: 75, week: 5 }), 'focus:glutes')).toContain(`${t[4]} sets a week, the peak of this block`);
     const recovery = textOf(explain(FOCUS, { minutes: 75, week: 6 }), 'focus:glutes');
     expect(recovery).toContain('recovery week');
-    expect(recovery).toContain(`${t[5]} direct sets`);
+    expect(recovery).toContain(`${t[5]} sets`);
     expect(recovery).toContain(`peak of ${t[4]} in week 5`);
   });
 
   test('the sets the plan holds today (planned_muscle_volume, after check-ins) win over the plan-time targets', () => {
     const res = explain(FOCUS, { minutes: 75, week: 2, targetsByWeek: { 2: { glutes: 17 }, 5: { glutes: 25 } } });
-    expect(textOf(res, 'focus:glutes')).toContain('17 direct sets a week now, climbing to 25 by week 5');
+    expect(textOf(res, 'focus:glutes')).toContain('17 sets a week now, building to 25 by week 5');
   });
 
   test('a muscle that is not first in its sessions is not claimed to be', () => {
@@ -220,7 +220,7 @@ describe('explainPlan: a focus plan', () => {
 
   test('without the sessions, nothing is said about where it is trained', () => {
     const res = explainPlan({ facts: FOCUS.v2, sessionLengthMinutes: 75 });
-    expect(textOf(res, 'focus:glutes')).toMatch(/^Glutes are your focus: \d+ direct sets/);
+    expect(textOf(res, 'focus:glutes')).toMatch(/^Glutes are your focus: \d+ sets/);
     expect(textOf(res, 'focus:glutes')).not.toMatch(/trained first/);
   });
 
@@ -233,7 +233,7 @@ describe('explainPlan: a focus plan', () => {
   test('a focus muscle the set caps stopped short of says so', () => {
     const facts = { ...FOCUS.v2, limitedBy: { ...FOCUS.v2.limitedBy, glutes: 'limits' } };
     const res = explainPlan({ facts, sessions: sessionsOf(FOCUS), sessionLengthMinutes: 75 });
-    expect(textOf(res, 'focus:glutes')).toMatch(/The set caps and session limits are what hold it there\.$/);
+    expect(textOf(res, 'focus:glutes')).toMatch(/The limits on sets per exercise and per session are what hold it there\.$/);
   });
 });
 
@@ -254,8 +254,8 @@ describe('explainPlan: an over-time plan', () => {
       const last = parts[parts.length - 1];
       expect(t).toContain(`At the peak, ${parts.slice(0, -1).join(', ')} and ${last} run past the 45 you set.`);
     }
-    expect(t).toMatch(/shortens the rest between sets, starting with the smaller muscles' isolation exercises \(to 60 seconds\) and never taking a compound lift below two minutes/);
-    expect(t).toMatch(/Every muscle keeps its full routine, so the real length is shown here and no exercises or sets are cut to fit the time\./);
+    expect(t).toMatch(/shortens your rest between sets, starting with single-joint exercises for smaller muscles \(to 60 seconds\)\. Big lifts that use several joints, such as squats and presses, always keep at least two minutes/);
+    expect(t).toMatch(/No exercises or sets are cut to fit the time, so the real length is shown\./);
     expect(t).toMatch(/Your focus muscles keep every set, because bringing them up is what you picked\./);
     expect(t).not.toMatch(/\bheld\b|cut to fit the session|trimmed/);
   });
@@ -284,8 +284,8 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
   test('a session past 8 exercises or 25 working sets says why', () => {
     expect(THREE_FOCUS.v2.overCeilings.length).toBeGreaterThan(0);
     const t = textOf(res, 'ceilings');
-    expect(t).toMatch(/holds? more than 8 exercises or 25 working sets/);
-    expect(t).toMatch(/every muscle keeps its full routine and your focus sets are programmed in full, and none of it is cut to fit\./);
+    expect(t).toMatch(/(has|have) more than 8 exercises or 25 sets \(not counting warm-ups\)/);
+    expect(t).toMatch(/because nothing is cut to fit\. Every muscle keeps all its sets, including the extra sets for your focus muscles\./);
     expect(textOf(res, 'length')).not.toMatch(/No session goes past/);
   });
 
@@ -294,11 +294,11 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
     const reading = THREE_FOCUS.v2.readiness.lowest[worst.muscle];
     const pct = Math.round(worst.lowest * 100);
     const t = textOf(res, 'readiness');
-    expect(t).toMatch(/the plan aims for every muscle to be estimated at least 90% recovered when its next session starts/);
+    expect(t).toMatch(/the plan aims for every muscle to be at least 90% recovered when it is trained again/);
     expect(t).toContain(`about ${pct}%`);
     expect(t).toMatch(new RegExp(`before ${THREE_FOCUS.workouts[reading.position].name} in week ${reading.week}`));
-    expect(t).toMatch(/The exceptions?: /);
-    expect(t).toContain(`never below a muscle's growth floor (${GROWTH_FLOOR.standard} sets a week, or ${GROWTH_FLOOR.focus} for a focus muscle), and shows the closest it found`);
+    expect(t).toMatch(/Short of that: /);
+    expect(t).toContain(`never fewer than ${GROWTH_FLOOR.standard} a week for a muscle (${GROWTH_FLOOR.focus} for a focus muscle). It shows the closest it found`);
     expect(t).not.toMatch(/every muscle is estimated at least 90% recovered when its next session starts, in every week/);
   });
 
@@ -325,7 +325,7 @@ describe('explainPlan: sessions past the ceilings, and a promise that is limited
     expect(t).toMatch(/Back about 60%/);
     expect(t).toMatch(/Quads about 70%/);
     expect(t).toMatch(/and 2 more/);
-    expect(t).toContain('The exceptions: ');
+    expect(t).toContain('Short of that: ');
     expect(t).not.toMatch(/Biceps/);
   });
 });
@@ -334,7 +334,7 @@ describe('explainPlan: what the plan did to keep its promise, and the ramp', () 
   test('an extra session for a muscle is reported', () => {
     expect(EXTRA_SESSION.v2.notes.some((n) => n.kind === 'extra_session' && n.muscle === 'glutes')).toBe(true);
     const t = textOf(explain(EXTRA_SESSION, { minutes: 75 }), 'fixes');
-    expect(t).toBe('To keep each session starting recovered, the plan gave glutes an extra session.');
+    expect(t).toBe('To give each muscle time to recover, the plan gave glutes an extra session.');
   });
 
   test('each kind of change reads as a plain fact, once per muscle', () => {
@@ -346,16 +346,16 @@ describe('explainPlan: what the plan did to keep its promise, and the ramp', () 
     ];
     const facts = { ...FOUR_DAY.v2, notes };
     const t = textOf(explainPlan({ facts, sessions: sessionsOf(FOUR_DAY), sessionLengthMinutes: 75 }), 'fixes');
-    expect(t).toContain('gave triceps a lighter and a heavier session with the heavier one before the longer gap');
+    expect(t).toContain('gave triceps a lighter and a heavier session, with the heavier one before the longer rest');
     expect(t).toContain('trained calves in one session fewer');
-    expect(t).toContain('held hamstrings at about 13.5 counted sets a week, not below the growth floor');
+    expect(t).toContain('kept hamstrings at about 13.5 sets a week, enough to keep it growing');
     expect(t.match(/hamstrings/g)).toHaveLength(1);
   });
 
   test('a ramp is reported against what was logged, with the tested step', () => {
     const facts = { ...FOUR_DAY.v2, notes: [{ muscle: 'chest', kind: 'ramped' }, { muscle: 'back', kind: 'ramped' }, { muscle: 'chest', kind: 'ramped' }] };
     const t = textOf(explainPlan({ facts, sessions: sessionsOf(FOUR_DAY), sessionLengthMinutes: 75 }), 'ramp');
-    expect(t).toBe('The plan opens the block with fewer chest and back exercises than at the peak, because it starts within 3 sets of what you logged over the last 4 weeks and climbs from there.');
+    expect(t).toBe('The block starts with fewer chest and back exercises than at the peak. It begins within 3 sets of what you logged in the last 4 weeks, then builds up.');
   });
 
   test('no changes, no lines', () => {
@@ -370,7 +370,7 @@ describe('explainPlan: the cap line is true of this plan', () => {
     const facts = { ...FOUR_DAY.v2, thin: { s0: ['ex1'] }, typed: { re1: 6 } };
     const t = textOf(explainPlan({ facts, sessions: sessionsOf(FOUR_DAY), sessionLengthMinutes: 75 }), 'cap');
     expect(t).toMatch(/Where your equipment gives a muscle a single exercise, it can take up to 2 more sets\./);
-    expect(t).toMatch(/Set counts you typed yourself are kept as typed\./);
+    expect(t).toMatch(/Set counts you typed in yourself stay as typed\./);
   });
 
   test('without them the line carries neither exception', () => {
@@ -394,14 +394,14 @@ describe('explainPlan: every structure the planner can build', () => {
     const facts = { ...FOUR_DAY.v2, family: 'division_mens_physique_5' };
     const sessions = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'].map((name, i) => ({ id: `s${i}`, name, muscles: [] }));
     const t = textOf(explainPlan({ facts, sessions }), 'structure');
-    expect(t).toMatch(/^5 sessions a week, following the split your goal keeps: Chest, Back, Legs, Shoulders and Arms\./);
+    expect(t).toMatch(/^5 sessions a week, the way your goal is usually trained: Chest, Back, Legs, Shoulders and Arms\./);
     expect(t).not.toMatch(/is chosen for/);
   });
 
   test('a real division plan explains itself', () => {
     const p = plan({ daysPerWeek: 5, goal: 'mens_physique' });
     const res = explain(p, { minutes: 75 });
-    expect(textOf(res, 'structure')).toMatch(/^5 sessions a week, following the split your goal keeps: /);
+    expect(textOf(res, 'structure')).toMatch(/^5 sessions a week, the way your goal is usually trained: /);
   });
 });
 
@@ -443,8 +443,8 @@ describe('explainPlan: sources', () => {
 
   test('the grades a person sees are labelled honestly (a convention is called one)', () => {
     const byKey = Object.fromEntries(all.map((l) => [l.source.key, l.source]));
-    expect(byKey['SETS_PER_EXERCISE.capCompound'].gradeLabel).toMatch(/convention/i);
-    expect(byKey['BLOCK.rirLadder'].gradeLabel).toMatch(/evidence/i);
+    expect(byKey['SETS_PER_EXERCISE.capCompound'].gradeLabel).toBe('A rule Volyume chose');
+    expect(byKey['BLOCK.rirLadder'].gradeLabel).toBe('Well established');
   });
 
   test('line ids are unique within a plan', () => {
@@ -541,7 +541,7 @@ describe('explainPlan: purity', () => {
 
   test('a week outside the block reads as the nearest week of it', () => {
     const t = FOCUS.v2.weeklyTargets.glutes;
-    expect(textOf(explain(FOCUS, { minutes: 75, week: 0 }), 'focus:glutes')).toContain(`${t[0]} direct sets a week now`);
+    expect(textOf(explain(FOCUS, { minutes: 75, week: 0 }), 'focus:glutes')).toContain(`${t[0]} sets a week now`);
     expect(textOf(explain(FOCUS, { minutes: 75, week: 99 }), 'focus:glutes')).toContain('recovery week');
     expect(BLOCK.weeks).toBe(6);
   });

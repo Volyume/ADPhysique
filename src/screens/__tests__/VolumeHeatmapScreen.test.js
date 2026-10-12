@@ -618,7 +618,7 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
     expect(flattenText(tree.toJSON())).not.toMatch(/Too much|Near the limit|overtrain/i);
     await act(async () => { findMuscleRow(tree, 'Biceps:').props.onPress(); });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
+    expect(text).toContain('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
     expect(text).toContain('Sets above the usual range add a little more growth.');
     // The figure and the bar paint the tone of the growth range, never error or warning.
     expect(lastFigureInput().volumeByMuscle.biceps).toMatchObject({ workingSets: 27, status: 'focus_range', color: colors.success });
@@ -632,7 +632,7 @@ describe('D214 (7.4 item 5): the rows are grouped with counts, in a fixed order'
     const tree = await mount();
     expect(groupHeaders(tree)).toEqual(['Above the usual range, 1 muscle', 'No sets, 16 muscles']);
     await act(async () => { findMuscleRow(tree, 'Biceps:').props.onPress(); });
-    expect(flattenText(tree.toJSON())).toContain('as much as a muscle picked to bring up gets, though this one is not a focus in your plan.');
+    expect(flattenText(tree.toJSON())).toContain('This is the range a focus muscle gets, but this one is not a focus in your plan.');
     expect(flattenText(tree.toJSON())).not.toMatch(/Too much|Near the limit|overtrain/i);
   });
 

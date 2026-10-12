@@ -85,7 +85,7 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   // otherwise unchanged.
   const muscleLines = (lines) => lines.filter((l) => !l.startsWith('Plus ')
     && !l.startsWith('The rest still start')
-    && !l.startsWith('Your weekly sets for each muscle start from research-based guidance'));
+    && !l.startsWith('Your weekly sets start from standard recommendations'));
 
   const summary = {
     chest: { week1: 11, peak: 17, peakWeek: 4, deload: 10, source: 'seed_ledger' },
@@ -144,14 +144,14 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   // D93 (Campaign 2, Phase 7): re-anchored from "returns [] with nothing
   // personalised". The original pin's intent - no LEARNED claim for a
   // research ramp - is preserved and extended: the research state now gets
-  // its own honest line, which must claim research-based guidance and must
+  // its own honest line, which must claim standard recommendations and must
   // NOT claim personal history (review B: no profile claim for template or
   // pure-research seeds).
   test('a fully research/profile-seeded block states the honest research start, claiming no learning', () => {
     const [line, ...rest] = buildBlockStartLines({ summary: { quads: summary.quads } });
     expect(rest).toEqual([]);
     expect(line).toContain('because you have not finished a block yet');
-    expect(line).toContain('research-based guidance');
+    expect(line).toContain('standard recommendations');
     expect(line).not.toMatch(/last block|past blocks|your own setting/);
   });
 
@@ -200,7 +200,7 @@ describe('block-end reflection rows', () => {
     expect(recoveryProposalLine(ledger)).toBeNull();
     const line = recoveryProposalLine({ ...ledger, proposedRecoveryDays: 10 });
     expect(line).toContain('10 days');
-    expect(line.toLowerCase()).toContain('your call');
+    expect(line.toLowerCase()).toContain('up to you');
     expect(line).not.toMatch(/—/);
   });
 });

@@ -332,7 +332,7 @@ describe('the module is pure, shares the one definition and never instructs', ()
     ].join(' | ');
     expect(spoken).not.toMatch(/too much|near the limit|under the range|inside the range|just enough/i);
     expect(STRIP_LEGEND_LABEL.in).toBe('Enough sets');
-    expect(STRIP_TOOLTIP).toContain('Enough sets covers');
+    expect(STRIP_TOOLTIP).toContain('The colour labelled Enough sets covers 2 to 42 sets a week');
   });
 
   // RE-ANCHORED 2026-10-11 (founder: "'More than most studies' etc what the heck is that meant to mean to a human"; "No 'ai talk'"): the bands in plain words, no "studies".
@@ -340,15 +340,17 @@ describe('the module is pure, shares the one definition and never instructs', ()
     expect(STRIP_TOOLTIP).toBe(
       'This week so far counts the sets you have logged since Monday.\n\n'
       + 'A set counts once for the muscle it works most and half for each muscle that helps, so the muscle figures add up to more than the sets you logged. '
-      + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 6 holds it, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
+      + 'Under 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. '
+      + '10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. '
+      + '30 to 42 is close to the upper limit, and past 42 extra sets are more than needed. '
       + 'A muscle you picked to bring up in your plan is read against that higher range. '
-      + 'A muscle your plan trains counts as too few to hold size until its first set. '
-      + 'Enough sets covers everything from 2 sets up to 42. Past 42 sets a week, more sets are unlikely to help.',
+      + 'A muscle your plan trains reads as too few to hold size until its first set. '
+      + 'The colour labelled Enough sets covers 2 to 42 sets a week.',
     );
     // It names the legend's first two tones in the legend's own words, and the third as past 42.
     expect(STRIP_TOOLTIP.toLowerCase()).toContain(STRIP_LEGEND_LABEL.under.toLowerCase());
     expect(STRIP_TOOLTIP).toContain(STRIP_LEGEND_LABEL.in);
-    expect(STRIP_TOOLTIP).toContain('Past 42 sets a week, more sets are unlikely to help');
+    expect(STRIP_TOOLTIP).toContain('past 42 extra sets are more than needed');
     expect(STRIP_TOOLTIP).not.toMatch(/stud(y|ies)|research/i);
   });
 

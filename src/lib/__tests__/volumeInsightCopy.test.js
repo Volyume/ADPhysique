@@ -11,7 +11,7 @@
  *   - the at-a-glance line: "27 sets · Focus range" for a muscle the plan raised,
  *     "27 sets · Above the usual range" for the same number on a muscle it did not;
  *   - the explanation behind a tap: the reason for a raised muscle ("Biceps are
- *     your focus this block: 27 sets, inside the higher range for a focus, 20 to 30."), the
+ *     your focus this block. 27 sets a week is the higher range for a focus (20 to 30)."), the
  *     evidence sentence for the band, the plan target only when the week is above
  *     it;
  *   - nothing blames, nothing instructs, no em dash, at any total for any role.
@@ -63,14 +63,14 @@ describe('getVolumeWhy', () => {
   test('a muscle the plan raised: the reason, then the evidence sentence', () => {
     const why = getVolumeWhy(judgeWeek({ muscle: 'biceps', sets: 27, role: 'focus' }));
     expect(why).toBe(
-      'Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30. '
+      'Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30). '
       + 'In the higher range for biceps, which you picked to bring up. Sets above the usual range add a little more growth.',
     );
   });
 
   test('a muscle the plan did not raise: the same number is described as focus-level volume, with no fault', () => {
     expect(getVolumeWhy(judgeWeek({ muscle: 'biceps', sets: 27, role: 'standard' }))).toBe(
-      'Above the usual range for building muscle: as much as a muscle picked to bring up gets, though this one is not a focus in your plan.',
+      'More than the usual range for building muscle. This is the range a focus muscle gets, but this one is not a focus in your plan.',
     );
   });
 

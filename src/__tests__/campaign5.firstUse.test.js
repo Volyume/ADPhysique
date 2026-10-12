@@ -643,7 +643,7 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     const def = read('lib/blockExplain.js');
     expect(def).not.toMatch(/optional layer you add on top/);
     expect(def).not.toMatch(/Set a start date,\s*\n?\s*duration and recovery week/);
-    expect(def).toMatch(/Nothing rolls into a new block on its own/);
+    expect(def).toMatch(/A new block never starts on its own/);
     // FB-20: and it no longer promises the block moves to Past blocks the
     // moment the last week completes.
     expect(def).not.toMatch(/the block closes and moves to Past blocks below/);
@@ -776,7 +776,7 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(joined).not.toContain('Chest'); // unchanged sorts last
     expect(joined).toContain('up from 10 in week 1');
     expect(joined).toContain('Plus 1 more muscle group, set the same way.');
-    expect(joined).toContain('The rest still start from research-based guidance');
+    expect(joined).toContain('The rest still start from standard recommendations');
     // A retained muscle, when it is shown, states the retention.
     const held = buildBlockStartLines({
       summary: { chest: { week1: 6, peak: 14, peakWeek: 4, deload: 6, source: 'seed_ledger' } },

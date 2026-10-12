@@ -983,7 +983,7 @@ describe('State matrix — M: legacy user_insights backlog exists in the DB, lan
     useAppStore.setState(PRO_USER);
     const legacyBacklog = [
       { id: 'i1', type: 'stalled_lift', title: 'Bench press', body: 'Your bench press has stalled.', severity: 2 },
-      { id: 'i2', type: 'peaked_lift', title: 'Squat', body: 'Time to add a little weight next session.', severity: 1 },
+      { id: 'i2', type: 'peaked_lift', title: 'Squat', body: 'You reached the top of your rep range on Squat in your last two sessions.', severity: 1 },
     ];
     applyFixture({
       db: {
@@ -1002,7 +1002,7 @@ describe('State matrix — M: legacy user_insights backlog exists in the DB, lan
     expect(errors).toEqual([]);
     const txt = flattenText(tree);
     expect(txt).not.toContain('stalled');
-    expect(txt).not.toContain('Time to add a little weight next session.');
+    expect(txt).not.toContain('You reached the top of your rep range on Squat in your last two sessions.');
     expect(txt).not.toMatch(/for you/i);
     expect(database.getActiveInsights).not.toHaveBeenCalled();
   });

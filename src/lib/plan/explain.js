@@ -73,7 +73,7 @@ const FAMILY_PHRASE = Object.freeze({
   full_body_ab: 'two full-body sessions, A and B',
   upper_lower: 'one upper-body and one lower-body session',
   ppl: 'push, pull and legs',
-  full_body_abc: 'three full-body sessions that each emphasise different muscles',
+  full_body_abc: 'three full-body sessions, each leaning on different muscles',
   upper_lower_full: 'upper, lower and a full-body session',
   upper_lower_x2: 'alternating upper and lower',
   ppl_upper: 'push, pull and legs, then an upper-body session',
@@ -81,41 +81,49 @@ const FAMILY_PHRASE = Object.freeze({
   ppl_upper_lower: 'push, pull and legs, then an upper and a lower session',
   upper_lower_x2_full: 'upper and lower twice, and a full-body session',
   upper_lower_x2_focus: 'upper and lower twice, and a session for your focus muscles',
-  body_part: 'a few muscles in each session, a body-part week',
+  body_part: 'a few muscles in each session',
   ppl_x2: 'push, pull and legs, twice',
   upper_lower_x3: 'upper and lower, three times',
 });
 
 // ── the one-line sources a person reads on tap ───────────────────────────
+// Author-year citations live in these comments (the audit trail), never in the
+// text a person reads (founder order 2026-10-11, register D225). The EVIDENCE
+// entry in science.js holds the full source for each key.
 const SOURCE_LINES = Object.freeze({
+  // Ochi 2018.
   'FREQUENCY.preferTwoExposuresFromWeekly':
-    `At equal weekly sets, training frequency does not change growth; sharing ${FREQUENCY.preferTwoExposuresFromWeekly} or more weekly sets across two sessions spreads the load (Ochi 2018).`,
+    `With the same number of sets in a week, training a muscle more often does not grow it more. From ${FREQUENCY.preferTwoExposuresFromWeekly} sets a week, splitting them over two sessions makes each session easier.`,
   'READINESS.clockBand':
-    `No study gives the spread of recovery times in trained lifters, so every recovery time Volyume shows is an estimate, about ${Math.round(READINESS.clockBand * 100)}% either way.`,
+    `Nobody has measured how much recovery times vary between experienced lifters. Every recovery time here is a rough estimate, give or take about ${Math.round(READINESS.clockBand * 100)}%.`,
   'READINESS.recoveredFraction':
-    `Recovered means about ${RECOVERED_PERCENT}% of the last session's fatigue has cleared, the same meaning the Recovery screen uses.`,
+    `Recovered means about ${RECOVERED_PERCENT}% of the tiredness from your last session has worn off. The Recovery screen uses the same meaning.`,
+  // Enes 2024.
   'ROLE_TARGETS.focus':
-    `The top productive tier of weekly sets is ${ROLE_TARGETS.focus.low} to ${ROLE_TARGETS.focus.high}; the plan never goes above ${ROLE_TARGETS.focus.plannedCeiling}, and climbs ${ROLE_TARGETS.focus.climb} to ${ROLE_TARGETS.focus.maxClimb} sets a week, the step that was tested (Enes 2024).`,
+    `The highest range that still adds growth is ${ROLE_TARGETS.focus.low} to ${ROLE_TARGETS.focus.high} sets a week for one muscle. The plan stays under ${ROLE_TARGETS.focus.plannedCeiling} and builds up by ${ROLE_TARGETS.focus.climb} to ${ROLE_TARGETS.focus.maxClimb} sets a week, the size of step that has been tried.`,
+  // Krieger 2010.
   'SETS_PER_EXERCISE.capCompound':
-    `A limit Volyume chose: no trial finds a ceiling at ${SETS_PER_EXERCISE.capIsolation} or ${SETS_PER_EXERCISE.capCompound} sets of one exercise, and 4 to 6 sets were not better than 2 to 3 (Krieger 2010).`,
+    `A limit Volyume chose. Doing 4 to 6 sets of one exercise has not been shown to beat 2 to 3, so the plan stops at ${SETS_PER_EXERCISE.capIsolation} or ${SETS_PER_EXERCISE.capCompound} and uses a second exercise instead.`,
   'SESSION_CEILINGS.exercises':
-    `A limit Volyume chose: ${SESSION_CEILINGS.exercises} exercises and ${SESSION_CEILINGS.workingSets} working sets in a session.`,
+    `A limit Volyume chose. No more than ${SESSION_CEILINGS.exercises} exercises and ${SESSION_CEILINGS.workingSets} sets (not counting warm-ups) in a session.`,
   'GROWTH_FLOOR.standard':
-    `The floor is the bottom of the range where weekly sets reliably grow a muscle, ${GROWTH_FLOOR.standard} for most muscles and ${GROWTH_FLOOR.focus} for a focus muscle; the recovery times it is weighed against are estimates.`,
+    `The fewest sets a week that reliably grow a muscle is about ${GROWTH_FLOOR.standard}, or ${GROWTH_FLOOR.focus} for a muscle you picked to bring up. The plan weighs this against recovery times, which are only estimates.`,
+  // Refalo 2023, Robinson 2024 (failure adds at most a small edge); Vieira 2022 (larger recovery cost).
   'BLOCK.rirLadder':
-    'Stopping one rep short of failure in the heavy weeks keeps most of the growth; failure adds at most a small edge (Refalo 2023, Robinson 2024) for a larger recovery cost (Vieira 2022).',
+    'Stopping a rep or so before you could not do another keeps most of the growth. Going all the way adds at most a little more growth and takes longer to recover from.',
+  // Scarpelli 2022, Enes 2024.
   'RAMP.maxAboveLogged':
-    'A block opens near what you did recently, with no jump larger than the tested steps (Scarpelli 2022, Enes 2024).',
+    'A new block starts close to what you have been doing lately, and builds up in small steps.',
 });
 
 // science.js's grades (03-SCIENCE.md section 0.1), said plainly.
 const GRADE_LABEL = Object.freeze({
-  A: 'Strong evidence',
-  B: 'Good evidence',
-  C: 'Limited evidence',
-  D: 'Expert consensus',
-  CONV: 'A convention Volyume chose',
-  INF: 'An inference from the evidence',
+  A: 'Well established',
+  B: 'Fairly well established',
+  C: 'Early findings',
+  D: 'What coaches broadly agree on',
+  CONV: 'A rule Volyume chose',
+  INF: 'Our reading of the findings',
 });
 
 function sourceFor(key) {
@@ -168,11 +176,11 @@ function structureLine(facts, sessions) {
   let text;
   if (family.startsWith('division_')) {
     const list = sessions.length ? `: ${joinList(names)}` : '';
-    text = `${n} sessions a week, following the split your goal keeps${list}. With the same sets each week, how the week is split does not change growth, so the plan keeps your goal's own sessions and spaces each muscle's sessions apart.`;
+    text = `${n} sessions a week, the way your goal is usually trained${list}. The same sets grow a muscle however the week is split, so the plan keeps those sessions and leaves a gap between sessions for the same muscle.`;
   } else {
     const phrase = FAMILY_PHRASE[family] ?? (sessions.length ? joinList(names) : null);
     if (!phrase) return null;
-    text = `${n} sessions a week, ${phrase}. With the same sets each week, how the week is split does not change growth, so this split is the one that best fits your days, your session length and each muscle's recovery.`;
+    text = `${n} sessions a week, ${phrase}. The same sets grow a muscle however the week is split, so this one is chosen to fit your days, your session length and how long each muscle needs to recover.`;
   }
   return line('structure', text, 'FREQUENCY.preferTwoExposuresFromWeekly');
 }
@@ -210,8 +218,8 @@ function spacingLine(facts, sessions) {
     }
   }
   const text = backToBack >= KEPT_APART_HOURS
-    ? `The order keeps each muscle's own sessions at least ${Math.round(backToBack)} hours apart even on consecutive training days, and at least ${Math.round(usual)} hours apart in a usual week. Recovery times are estimates, so the order is built to hold up whichever days you train.`
-    : `Some muscles are trained in sessions that sit next to each other, so their closest sessions are ${Math.round(backToBack)} hours apart on consecutive training days and ${Math.round(usual)} hours apart in a usual week. Recovery times are estimates, so the plan also checks recovery at your usual spacing.`;
+    ? `Each muscle's sessions are at least ${Math.round(backToBack)} hours apart, even if you train on back-to-back days, and at least ${Math.round(usual)} hours apart in a normal week. Recovery times are only estimates, so the order works whichever days you train.`
+    : `Some muscles are trained in two sessions in a row, so their sessions are ${Math.round(backToBack)} hours apart if you train on back-to-back days and ${Math.round(usual)} hours apart in a normal week. Recovery times are only estimates, so the plan also checks recovery at your usual spacing.`;
   return line('spacing', text, 'READINESS.clockBand');
 }
 
@@ -233,12 +241,12 @@ function focusLines(facts, sessions, week, targetsByWeek) {
     let body;
     if (week < BLOCK.peakWeek) {
       body = now < peak
-        ? `${now} direct sets a week now, climbing to ${peak} by week ${BLOCK.peakWeek}`
-        : `${now} direct sets a week now, the same through week ${BLOCK.peakWeek}`;
+        ? `${now} sets a week now, building to ${peak} by week ${BLOCK.peakWeek}`
+        : `${now} sets a week now, the same through week ${BLOCK.peakWeek}`;
     } else if (week === BLOCK.peakWeek) {
-      body = `${now} direct sets a week, the peak of this block`;
+      body = `${now} sets a week, the peak of this block`;
     } else {
-      body = `this is the recovery week, at ${now} direct sets after a peak of ${peak} in week ${BLOCK.peakWeek}`;
+      body = `this is the recovery week, at ${now} sets after a peak of ${peak} in week ${BLOCK.peakWeek}`;
     }
     const trainedIn = sessions.filter((s) => Array.isArray(s.muscles) && s.muscles.includes(m));
     const first = trainedIn.filter((s) => s.muscles[0] === m);
@@ -246,7 +254,7 @@ function focusLines(facts, sessions, week, targetsByWeek) {
       ? `, trained first in ${joinList(first.map((s) => sessionName(sessions, s.id)))}`
       : '';
     const limit = facts.limitedBy?.[m] === 'limits'
-      ? ' The set caps and session limits are what hold it there.'
+      ? ' The limits on sets per exercise and per session are what hold it there.'
       : '';
     out.push(line(`focus:${m}`, `${label(m)} ${are(m)} your focus: ${body}${where}.${limit}`, 'ROLE_TARGETS.focus'));
   }
@@ -255,13 +263,13 @@ function focusLines(facts, sessions, week, targetsByWeek) {
 
 function capLine(facts) {
   const cap = SETS_PER_EXERCISE.capCompound;
-  let text = `No exercise goes above ${cap} sets. Past ${SETS_PER_EXERCISE.capIsolation} or ${cap} sets, each extra set of the same exercise gets fewer reps for more fatigue, and a second exercise trains parts of the muscle the first reaches less.`;
+  let text = `No exercise goes above ${cap} sets. After ${SETS_PER_EXERCISE.capIsolation} or ${cap} sets of one exercise, each extra set gets fewer reps and more tiredness, and a second exercise works parts of the muscle the first one hits less.`;
   const thin = isObject(facts.thin) && Object.values(facts.thin).some((list) => Array.isArray(list) && list.length > 0);
   if (thin) {
     text += ` Where your equipment gives a muscle a single exercise, it can take up to ${SETS_PER_EXERCISE.thinEquipmentBonus} more sets.`;
   }
   if (isObject(facts.typed) && Object.keys(facts.typed).length > 0) {
-    text += ' Set counts you typed yourself are kept as typed.';
+    text += ' Set counts you typed in yourself stay as typed.';
   }
   return line('cap', text, 'SETS_PER_EXERCISE.capCompound');
 }
@@ -282,7 +290,7 @@ function lengthLine(facts, sessionLengthMinutes) {
   }
   let text = `At the peak of the block, sessions run ${range}${against}.`;
   if (Array.isArray(facts.overCeilings) && facts.overCeilings.length === 0) {
-    text += ` No session goes past ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} working sets.`;
+    text += ` No session goes past ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} sets, not counting warm-ups.`;
   }
   return line('length', text, 'SESSION_CEILINGS.exercises');
 }
@@ -312,8 +320,9 @@ function overLine(facts, sessions, sessionLengthMinutes) {
   // Founder decisions 2026-10-10 (the standard floor; "Trim rest time not
   // exercises"): rest is shortened first, from the isolation exercises up,
   // never the compounds below two minutes; what is still over is shown.
-  let text = `${head} Before a session is allowed to run over, the plan shortens the rest between sets, starting with the smaller muscles' isolation exercises (to ${TRIMMED_REST_SECONDS} seconds) and never taking a compound lift below two minutes, because that rest is where the growth is.`;
-  text += ' Every muscle keeps its full routine, so the real length is shown here and no exercises or sets are cut to fit the time.';
+  // Worded plainly under D225: isolation = single-joint, compound = big lifts.
+  let text = `${head} Before letting a session run over, the plan shortens your rest between sets, starting with single-joint exercises for smaller muscles (to ${TRIMMED_REST_SECONDS} seconds). Big lifts that use several joints, such as squats and presses, always keep at least two minutes.`;
+  text += ' No exercises or sets are cut to fit the time, so the real length is shown.';
   if (hasFocus(facts)) {
     text += ' Your focus muscles keep every set, because bringing them up is what you picked.';
   }
@@ -326,8 +335,8 @@ function ceilingsLine(facts, sessions) {
     .filter((s) => facts.overCeilings.includes(s.id))
     .map((s) => sessionName(sessions, s.id));
   if (names.length === 0) return null;
-  const verb = names.length === 1 ? 'holds' : 'hold';
-  const text = `At the peak, ${joinList(names)} ${verb} more than ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} working sets, because every muscle keeps its full routine${hasFocus(facts) ? ' and your focus sets are programmed in full' : ''}, and none of it is cut to fit.`;
+  const verb = names.length === 1 ? 'has' : 'have';
+  const text = `At the peak, ${joinList(names)} ${verb} more than ${SESSION_CEILINGS.exercises} exercises or ${SESSION_CEILINGS.workingSets} sets (not counting warm-ups), because nothing is cut to fit. Every muscle keeps all its sets${hasFocus(facts) ? ', including the extra sets for your focus muscles' : ''}.`;
   return line('ceilings', text, 'SESSION_CEILINGS.exercises');
 }
 
@@ -344,7 +353,7 @@ function readinessLine(facts, sessions) {
   const lowest = isObject(readiness.lowest) ? readiness.lowest : {};
   if (readiness.passes) {
     const readings = Object.values(lowest).filter((r) => isObject(r) && isNumber(r.fraction));
-    let text = `At a usual week's spacing, every muscle is estimated at least ${RECOVERED_PERCENT}% recovered when its next session starts, in every week of the block.`;
+    let text = `In a normal week, every muscle is estimated to be at least ${RECOVERED_PERCENT}% recovered when it is trained again, in every week of the block.`;
     if (readings.length) {
       const closest = readings.reduce((a, b) => (b.fraction < a.fraction ? b : a));
       text += ` The closest is ${label(closest.muscle)} at about ${Math.round(closest.fraction * 100)}%${readingWhere(sessions, closest)}.`;
@@ -365,9 +374,8 @@ function readinessLine(facts, sessions) {
   const named = limited.slice(0, MAX_LIMITED_NAMED).map((l) => (
     `${label(l.muscle)} about ${Math.round(l.fraction * 100)}%${readingWhere(sessions, lowest[l.muscle])}`
   ));
-  const more = limited.length > MAX_LIMITED_NAMED ? `; and ${limited.length - MAX_LIMITED_NAMED} more` : '';
-  const heading = named.length === 1 && !more ? 'The exception' : 'The exceptions';
-  const text = `At a usual week's spacing, the plan aims for every muscle to be estimated at least ${RECOVERED_PERCENT}% recovered when its next session starts. ${heading}: ${named.join('; ')}${more}. The plan tries a different order, a lighter and heavier split and another session first, and fewer sets last, never below a muscle's growth floor (${GROWTH_FLOOR.standard} sets a week, or ${GROWTH_FLOOR.focus} for a focus muscle), and shows the closest it found.`;
+  const more = limited.length > MAX_LIMITED_NAMED ? `, and ${limited.length - MAX_LIMITED_NAMED} more` : '';
+    const text = `In a normal week, the plan aims for every muscle to be at least ${RECOVERED_PERCENT}% recovered when it is trained again. Short of that: ${more ? named.join(', ') : joinList(named)}${more}. The plan tried a different order, a lighter and a heavier session for the same muscle, and another session. Fewer sets came last, and never fewer than ${GROWTH_FLOOR.standard} a week for a muscle (${GROWTH_FLOOR.focus} for a focus muscle). It shows the closest it found.`;
   return line('readiness', text, 'GROWTH_FLOOR.standard');
 }
 
@@ -382,15 +390,15 @@ function fixesLine(facts) {
   const phrases = [];
   for (const n of seen.values()) {
     const m = lowerLabel(n.muscle);
-    if (n.kind === 'split') phrases.push(`gave ${m} a lighter and a heavier session with the heavier one before the longer gap`);
+    if (n.kind === 'split') phrases.push(`gave ${m} a lighter and a heavier session, with the heavier one before the longer rest`);
     else if (n.kind === 'extra_session') phrases.push(`gave ${m} an extra session`);
     else if (n.kind === 'fewer_sessions') phrases.push(`trained ${m} in one session fewer`);
-    else if (isNumber(n.peak)) phrases.push(`held ${m} at about ${n.peak} counted sets a week, not below the growth floor`);
+    else if (isNumber(n.peak)) phrases.push(`kept ${m} at about ${n.peak} sets a week, enough to keep it growing`);
   }
   if (phrases.length === 0) return null;
   const shown = phrases.slice(0, MAX_FIXES_NAMED);
   const more = phrases.length > shown.length ? `, and made ${phrases.length - shown.length} more changes like these` : '';
-  return line('fixes', `To keep each session starting recovered, the plan ${joinList(shown)}${more}.`, 'READINESS.recoveredFraction');
+  return line('fixes', `To give each muscle time to recover, the plan ${joinList(shown)}${more}.`, 'READINESS.recoveredFraction');
 }
 
 function rampLine(facts) {
@@ -399,7 +407,7 @@ function rampLine(facts) {
     if (isObject(n) && n.kind === 'ramped' && typeof n.muscle === 'string' && !muscles.includes(n.muscle)) muscles.push(n.muscle);
   }
   if (muscles.length === 0) return null;
-  const text = `The plan opens the block with fewer ${joinList(muscles.map(lowerLabel))} exercises than at the peak, because it starts within ${RAMP.maxAboveLogged} sets of what you logged over the last ${RAMP.loggedWindowWeeks} weeks and climbs from there.`;
+  const text = `The block starts with fewer ${joinList(muscles.map(lowerLabel))} exercises than at the peak. It begins within ${RAMP.maxAboveLogged} sets of what you logged in the last ${RAMP.loggedWindowWeeks} weeks, then builds up.`;
   return line('ramp', text, 'RAMP.maxAboveLogged');
 }
 
@@ -408,7 +416,7 @@ function ladderLine(facts) {
   if (ladder.length < 2) return null;
   const working = ladder.slice(0, -1);
   const recovery = ladder[ladder.length - 1];
-  const text = `Weeks 1 to ${working.length} stop about ${joinList(working.map(String))} reps short of failure; week ${ladder.length} eases to about ${recovery}. Stopping short of failure keeps most of the growth for less fatigue to recover from.`;
+  const text = `Sets stop a few reps before you could not do another: about ${joinList(working.map(String))} reps in weeks 1 to ${working.length}, then about ${recovery} in week ${ladder.length}, the easier week. Stopping short keeps most of the growth for less tiredness to recover from.`;
   return line('ladder', text, 'BLOCK.rirLadder');
 }
 

@@ -118,7 +118,7 @@ describe('DAY 0: the profile produces safe, honest first targets', () => {
       },
     });
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatch(/research-based guidance/);
+    expect(lines[0]).toMatch(/standard recommendations/);
     expect(lines[0]).not.toMatch(/your last block|past blocks/);
   });
 });

@@ -545,8 +545,8 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
     const tree = render({ roles: BICEPS_FOCUS, weekFigures: WEEK, selectedMuscle: null });
     // The recovered group is names only until "Show details"; open it to see the row.
     act(() => { tree.root.findAll((n) => n.props?.accessibilityLabel === 'Show details for the recovered muscles')[0].props.onPress(); });
-    expect(texts(tree)).toContain('Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30.');
-    expect(bicepsRow(tree).props.accessibilityLabel).toMatch(/\. Biceps are your focus this block: 27 sets, inside the higher range for a focus, 20 to 30\.$/);
+    expect(texts(tree)).toContain('Biceps are your focus this block. 27 sets a week is the higher range for a focus (20 to 30).');
+    expect(bicepsRow(tree).props.accessibilityLabel).toMatch(/\. Biceps are your focus this block\. 27 sets a week is the higher range for a focus \(20 to 30\)\.$/);
   });
 
   test('a standard muscle\'s row carries no intent line', () => {
@@ -571,7 +571,7 @@ describe('D219: the plan\'s role, this week\'s sets and the muscle\'s own clock'
     expect(idx('How this is worked out')).toBeGreaterThan(idx('Sessions counted'));
     expect(idx('Based on')).toBeGreaterThan(idx('How this is worked out'));
     expect(all).toContain('27');
-    expect(all).toContain('20 as the main muscle, 14 helping (each counts as half)');
+    expect(all).toContain('20 as the main muscle, 14 from other exercises that help it (each counted as half)');
     expect(all).toContain('20 to 30 sets a week');
   });
 
@@ -667,12 +667,12 @@ describe('D223: the open detail is the app\'s own rows, in plain words', () => {
     const tree = detail();
     expect(rowValue(tree, 'Sets so far')).toBe('3');
     expect(rowValue(tree, 'Made up of')).toBe('3 as the main muscle');
-    expect(rowValue(tree, 'Where that sits')).toBe('Holds your size');
+    expect(rowValue(tree, 'Range it falls in')).toBe('Holds your size');
     expect(rowValue(tree, 'Usual range for growth')).toBe('10 to 20 sets a week');
     expect(rowValue(tree, 'Most in one session')).toBe('3 sets');
     expect(rowValue(tree, 'Note')).toBeUndefined();
     const above = detail({ week: { credit: 14, direct: 12, indirect: 4, sessionCredit: 14, sessionDirect: 12 } });
-    expect(rowValue(above, 'Made up of')).toBe('12 as the main muscle, 4 helping (each counts as half)');
+    expect(rowValue(above, 'Made up of')).toBe('12 as the main muscle, 4 from other exercises that help it (each counted as half)');
     expect(rowValue(above, 'Note')).toMatch(/^More than about 11 sets in one session\. /);
   });
 

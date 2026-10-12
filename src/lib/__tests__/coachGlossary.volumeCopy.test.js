@@ -39,10 +39,10 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', '..', rel), 
 describe('the Volume heatmap legend\'s (i): sets done, in a window, against the studied bands', () => {
   test('the lead\'s text, word for word', () => {
     expect(GLOSSARY.volumeHeatmapBands).toBe(
-      'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. '
-      + 'Under 2 sets a week is too few to hold a muscle\'s size, 2 to 10 holds it with some growth, '
-      + '10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. '
-      + 'Past 42 sets a week, more sets are unlikely to help. '
+      'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks.\n\n'
+      + 'Under 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. '
+      + '10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. '
+      + '30 to 42 is close to the upper limit, and past 42 extra sets are more than needed.\n\n'
       + 'A muscle you picked as a focus in your plan is read against the higher range. '
       + 'Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
     );
@@ -73,7 +73,7 @@ describe('the Volume heatmap legend\'s (i): sets done, in a window, against the 
     // ceiling as "too much" (it nudges on the exercise and session caps instead),
     // so its gloss describes the dots against the fewest sets that help a muscle grow.
     expect(GLOSSARY.volumeBands).toBe(
-      'How many direct sets a week your plan gives each muscle, against the fewest that still help it grow. A hollow dot means none yet, a half dot means fewer than that, and a full dot means at least that.',
+      'How many sets a week your plan gives each muscle, against the fewest that still grow it. Empty dot: none yet. Half dot: fewer than that. Full dot: at least that many.',
     );
     expect(GLOSSARY.volumeBands).not.toMatch(/helpful range|you've trained|this week|too much|recover from/i);
   });

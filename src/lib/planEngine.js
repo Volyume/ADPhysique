@@ -2801,9 +2801,9 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   const splitName = SPLIT_LABELS[splitType] ?? splitType;
   const scheduleMap = {
     full_body:
-      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Hitting every muscle group each session means you practise each movement pattern ${effectiveDays} times a week. Frequent repetition is the primary driver of early and intermediate progress, and this structure uses your available days as efficiently as possible.`,
+      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Hitting every muscle group each session means you practise each movement pattern ${effectiveDays} times a week. Practising each lift often helps early progress, and this layout makes good use of your available days.`,
     upper_lower:
-      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Training each muscle group twice a week is the most well-supported frequency for consistent progress: each muscle gets enough practice to grow, enough sets per session to make training worthwhile, and 48–72 hours between sessions to recover.`,
+      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Training each muscle group twice a week works well for steady progress. Each muscle gets enough practice to grow, enough sets per session to make training worthwhile, and 48 to 72 hours between sessions to recover.`,
     ppl:
       `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Grouping muscles by movement pattern means each group has fully recovered before it trains again. Push muscles rest on Pull and Legs days, so there is no leftover chest fatigue when you are pressing for shoulders.`,
     ppl_ab:
@@ -2836,7 +2836,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   const expMap = {
     beginner:     `When you're starting out, your body responds well to almost any consistent training. Volume is kept lower here so you can build good technique and work capacity before adding more sets.`,
     intermediate: `At this stage, your muscles need more total weekly sets to keep improving than they did early on. This plan does enough to keep you progressing without piling up more fatigue than you can recover from between sessions.`,
-    advanced:     `Progress comes more slowly now and needs more specific programming. Set counts are higher here because your body has adapted to handle more work, and lower volumes simply would not be enough to keep you moving forward.`,
+    advanced:     `Progress comes more slowly now, so the plan is more specific. Set counts are higher here because your body has adapted to handle more work, and lower set counts would not be enough to keep you moving forward.`,
     competitive:  `Your muscles have adapted to high training volumes and need a lot of weekly work to keep changing. This plan uses the highest set counts, balanced carefully against recovery so you can sustain quality across the full block.`,
   };
   result.experience = expMap[experience] ?? `Experience level: ${experience}.`;
@@ -2849,7 +2849,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   // chip saying "Week 1 of 6". The number now comes from the block writer's
   // own constant, so the explanation is true of the block that exists.
   const weeks = BLOCK_PLANNED_WEEKS;
-  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one to two sets per muscle group per week across the first ${weeks - 1} weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
+  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one to two sets per muscle group per week across the first ${weeks - 1} weeks. The final week is an easier recovery week, at about half the volume. It is part of the plan, and it gives your muscles time to recover before the next block.`;
 
   // equipment
   // CC-D25 (CC27): "safe to perform" was an unsupported safety claim -
@@ -2891,7 +2891,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // weakPoints (conditional)
   if (weakPointUILabels.length > 0) {
-    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently giving extra attention to an area that's behind, over several weeks, while the rest of the plan stays balanced, is the most reliable way to close the gap.`;
+    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Giving extra work to a muscle that is behind, week after week, while the rest of the plan stays balanced, is a steady way to close the gap.`;
   }
 
   return result;

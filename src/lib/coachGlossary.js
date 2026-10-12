@@ -9,11 +9,11 @@
 // numbers), it does not change the strings.
 export const GLOSSARY = {
   precisionCoaching:
-    'Every week it reads your weight trend, check-in and training, compares what happened to what was expected, and explains the decision. Nothing is random.',
+    'Every week it reads your weight trend, check-in and training, compares what happened to what was expected, and explains the decision. Nothing is left to chance.',
   volume:
     'The total work for a muscle: the number of sets you do for it in a week, not counting warm-ups.',
   deload:
-    'Recovery week: a planned lighter week at the end of the block. It has fewer sets, lighter weights and easier effort targets, so fatigue clears. It is not a week for trying to set new personal records (PRs), and sets done in it do not count towards the block\'s progress.',
+    'Recovery week: a planned lighter week at the end of the block. It has fewer sets, lighter weights and easier effort targets, so tiredness can clear. It is not a week for setting new personal records (PRs). Sets done in it do not count towards the block\'s progress.',
   maintenanceCalories:
     'The daily calories that keep your weight steady. Any change to your calorie target is measured from this starting point.',
   // C5-P14-03 (D96): the basis clause used to read "worked out from your
@@ -41,12 +41,12 @@ export const GLOSSARY = {
   // window. D219 (design 5.3): neither says a muscle has too many sets; the
   // heatmap's names the evidence bands of volumeJudgement.js.
   volumeBands:
-    'How many direct sets a week your plan gives each muscle, against the fewest that still help it grow. A hollow dot means none yet, a half dot means fewer than that, and a full dot means at least that.',
+    'How many sets a week your plan gives each muscle, against the fewest that still grow it. Empty dot: none yet. Half dot: fewer than that. Full dot: at least that many.',
   // D214 addendum 9 (census 0.21, H10), re-worded under D219: the Volume heatmap
   // legend's (i). It says what the figure counts (sets, this week so far or a
   // weekly average over 2 or 4 weeks) and what the four colours are.
   volumeHeatmapBands:
-    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks. Under 2 sets a week is too few to hold a muscle\'s size, 2 to 10 holds it with some growth, 10 to 20 is the usual range for growth, and 20 to 30 is the higher range for a muscle you picked to bring up. Past 42 sets a week, more sets are unlikely to help. A muscle you picked as a focus in your plan is read against the higher range. Each row’s bar runs from 2 to 42 sets and marks the range your plan aims at.',
+    'How many sets you have done for a muscle, this week so far or as a weekly average over 2 or 4 weeks.\n\nUnder 2 sets a week is too few to hold a muscle\'s size. 2 to 6 holds it, and 6 to 10 holds it with some growth. 10 to 20 is the usual range for growth. 20 to 30 is the higher range, for a muscle you picked to bring up. 30 to 42 is close to the upper limit, and past 42 extra sets are more than needed.\n\nA muscle you picked as a focus in your plan is read against the higher range. Each row\u2019s bar runs from 2 to 42 sets and marks the range your plan aims at.',
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:
@@ -71,13 +71,13 @@ export const GLOSSARY = {
   engineLog:
     'A plain record of what Precision Coaching changed in your training, and why.',
   division:
-    "The category you'd compete in (e.g. bodybuilding, classic physique, bikini); your plan is tailored to what that division is judged on.",
+    "The category you'd compete in (e.g. bodybuilding, classic physique, bikini); your plan is built around what that division is judged on.",
   phase:
     'Your current aim: lose fat (cut), gain muscle slowly (lean-gain) or hold steady (maintain).',
   macros:
     'Protein, carbs and fat: the three nutrients your daily calories are made of.',
   proteinTier:
-    'How high your protein target is set: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors). Based on your bodyweight, or your lean mass if you have logged a measured body-fat reading.',
+    'How much protein you aim for: Standard, Optimised (the recommended choice) or Advanced (more, for hard cuts and competitors). Based on your bodyweight, or your lean mass if you have logged a measured body-fat reading.',
   recomposition:
     'Your weight held steady while your shape or strength kept changing. A sign fat and muscle are both changing, even though the scale is not moving.',
   // Footer credential line ("volume landmarks, autoregulation, and RED-S
@@ -118,7 +118,7 @@ export const GLOSSARY = {
   // for high/moderate confidence, hollow for low, dashed when there was not
   // enough to score.
   volyumeScore:
-    'The Volyume Score is worked out from your own photos to show your progress. It allows for pose and lighting, so scores from different photo sets can be compared. The band shows your current range and the confidence tag shows how reliable this particular score is; on the trend view that becomes the marker shape, filled for high or moderate confidence, hollow for low confidence, dashed when there was not enough to score. It is not a body fat measurement, a medical assessment, or a comparison with anyone else.',
+    'The Volyume Score is worked out from your own photos to show your progress. It allows for pose and lighting, so scores from different photo sets can be compared. The band shows your current range. The confidence tag shows how reliable this score is. On the trend view, a filled marker means high or moderate confidence, a hollow one means low confidence, and a dashed one means there was not enough to score. It is not a body fat measurement, a medical assessment, or a comparison with anyone else.',
   // O22 (comprehension-and-trust audit 2026-08-06): BlockReflectionScreen's
   // stat row has zero tooltips on the one screen meant to summarise a block
   // in plain language. workingSets is deliberately NOT the "effort checked"

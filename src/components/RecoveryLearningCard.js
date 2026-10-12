@@ -181,8 +181,8 @@ export function recoveryLearningCopy(personal) {
       // Addendum 9 (0.9): "rest" is the common word for the time between workouts.
       summary: 'The rest between your workouts has not varied enough to learn from yet.',
       body: slot
-        ? 'Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.'
-        : 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far the rests have been too alike, or long enough to recover fully.',
+        ? 'Your recovery speed is worked out by comparing each exercise with the last time you did it, after rests of different lengths. So far your rests between workouts have been too similar to tell anything.'
+        : 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after rests of different lengths. So far your rests between workouts have been too similar to tell anything.',
       example: null,
       evidence: null,
       progress: null,
@@ -192,8 +192,8 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      summary: 'Too few comparisons are left once repeated reps and sets kept as filled in are set aside.',
-      body: 'Sets kept exactly as the screen filled them in, and exercises logged with the same reps at least half the time, show the plan rather than how each workout went, so they are left out. That leaves too few comparisons so far.',
+      summary: 'Too few workouts are left to compare once repeated reps and unchanged sets are set aside.',
+      body: 'Sets you did not change from what the app suggested are left out, and so are exercises where you logged the same reps at least half the time. They show the plan rather than how you actually did. That leaves too few to compare so far.',
       example: null,
       evidence: null,
       progress: null,
@@ -202,8 +202,8 @@ export function recoveryLearningCopy(personal) {
   return {
     state: 'learning',
     headline: 'Still learning',
-    summary: `Learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
-    body: `${slot ? 'Each exercise is compared with the last time you did it.' : 'Each exercise is compared with the same exercise on the same day in an earlier week.'} A muscle’s comparisons become usable once it has ${PERSONAL_MIN_MUSCLE_PAIRS}, and learning starts after ${PERSONAL_MIN_PAIRS} usable comparisons.`,
+    summary: `Learning starts after ${PERSONAL_MIN_PAIRS} matching workouts.`,
+    body: `${slot ? 'Each exercise is compared with the last time you did it.' : 'Each exercise is compared with the same exercise on the same day in an earlier week.'} Each muscle needs ${PERSONAL_MIN_MUSCLE_PAIRS} matching workouts, and your recovery speed starts to adjust after ${PERSONAL_MIN_PAIRS}.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },
@@ -328,7 +328,7 @@ export default function RecoveryLearningCard({ personal = null }) {
             <View style={[styles.progressFill, live.progressFill, { width: progressPct }]} />
           </View>
           <Text style={live.meta}>
-            {`${copy.progress.done} of ${copy.progress.needed} usable so far`}
+            {`${copy.progress.done} of ${copy.progress.needed} matching workouts so far`}
           </Text>
         </View>
       ) : null}

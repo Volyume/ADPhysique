@@ -206,7 +206,7 @@ export default function PlanPreviewSheet({
       ) : diff ? (
         <>
           <Text style={[styles.diffSub, live.diffSub]}>
-            Here's what changes. Your current plan stays until you confirm.
+            Changes to your plan are below. Your current plan stays until you confirm.
           </Text>
           <View style={[styles.diffTable, live.diffTable]}>
             <View style={[styles.diffHeadRow, live.diffHeadRow]}>

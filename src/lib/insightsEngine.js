@@ -113,7 +113,7 @@ export function generateInsights(rawArgs = {}) {
       const name = MUSCLE_DISPLAY_NAMES[muscleKey] ?? muscleKey;
       insights.push(mkInsight(
         'under_mev_muscle', 1,
-        `Your ${name.toLowerCase()} hasn't had much work in 3 weeks. Adding a set or two this week will get it growing again.`,
+        `There has been little work for your ${name.toLowerCase()} in the last 3 weeks.`,
         `under_mev_${muscleKey}`,
         { muscle: muscleKey },
       ));
@@ -151,7 +151,7 @@ export function generateInsights(rawArgs = {}) {
       if (peaked) {
         insights.push(mkInsight(
           'peaked_lift', 1,
-          `You hit the top of your rep range on ${exName} twice in a row. Time to add a little weight next session.`,
+          `You reached the top of your rep range on ${exName} in your last two sessions.`,
           `peaked_${exId}`,
           { exerciseId: exId },
         ));
@@ -186,7 +186,7 @@ export function generateInsights(rawArgs = {}) {
   if (sorenessWoW != null && sorenessWoW >= 18) {
     insights.push(mkInsight(
       'recovery_warn', 2,
-      `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein.`,
+      `You have been arriving at sessions more sore each week.`,
       'recovery_warn',
       { sorenessWoW: Math.round(sorenessWoW) },
     ));
@@ -218,7 +218,7 @@ export function generateInsights(rawArgs = {}) {
       // went, and "It's not a setback, it's part of the plan" went with it,
       // since it described the lighter week and would otherwise point at
       // nothing.
-      `Your training load and fatigue are both running high.`,
+      `You have logged a lot of training lately, or rated yourself very tired.`,
       'deload_due',
       { overMrvWeeks, fatigue: fatigue != null ? Math.round(fatigue * 10) / 10 : null },
     ));

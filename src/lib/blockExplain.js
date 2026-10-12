@@ -83,8 +83,8 @@ export const BLOCK_DEFINITION =
   + 'the last of them the recovery week. There is nothing to set up.\n\n'
   + 'When the block finishes:\n'
   + '• Your plan keeps going. The workouts are still there.\n'
-  + '• Nothing rolls into a new block on its own. You choose what comes next\n'
-  + '• The finished block moves to Past blocks once your next block starts';
+  + '• A new block never starts on its own. You choose what comes next.\n'
+  + '• The finished block moves to Past blocks once your next block starts.';
 
 /**
  * D139 (programme creation and planning masterpass, 2026-09-03): what
@@ -134,7 +134,7 @@ const SOURCE_CLAUSE = Object.freeze({
 // null, coach) proves nothing and stays silent.
 const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
 const RESEARCH_START_LINE =
-  'Your weekly sets for each muscle start from research-based guidance, because you have not finished a block yet. From your next block on, each muscle\'s starting sets come from how it went in the block before.';
+  'Your weekly sets start from standard recommendations, because you have not finished a block yet. From your next block on, each muscle\'s starting sets come from how it went in the block before.';
 // C6 P9-06 (D97): the line above is FALSE for a mature user whose new
 // block is template-seeded after a plan switch or wizard rebuild - they
 // have plenty of personal history; this block simply did not use it
@@ -142,7 +142,7 @@ const RESEARCH_START_LINE =
 // template; D97-9 carries whether they should). The mature variant makes
 // the same honest research claim without denying the history exists.
 const RESEARCH_START_LINE_MATURE =
-  'Your weekly sets for this block start from research-based guidance rather than from your earlier blocks. From the next block on, each muscle\'s starting sets come from how this one goes.';
+  'Your weekly sets for this block start from standard recommendations rather than from your earlier blocks. From the next block on, each muscle\'s starting sets come from how this one goes.';
 
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
@@ -195,7 +195,7 @@ export function summariseSeededPlan(plannedRows = [], deloadWeekIndex = null) {
 // block went" lines read as "all of this is personalised". This names the
 // remainder without mislabelling it.
 const RESEARCH_REMAINDER_LINE =
-  'The rest still start from research-based guidance, until they have a finished block behind them.';
+  'The rest still start from standard recommendations, until they have a finished block behind them.';
 
 /**
  * FB-27/FB-28 (D96): how this muscle's numbers moved against the block
@@ -453,7 +453,7 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
  */
 export function recoveryProposalLine(ledger) {
   if (num(ledger?.proposedRecoveryDays, 7) !== 10) return null;
-  return 'Several signs of strain showed up together this block, so a longer recovery of about 10 days is suggested before the next one starts. Your call.';
+  return 'You seem to have been under a lot of strain this block, so about 10 days of easier training before the next block is suggested. It is up to you.';
 }
 
 /**

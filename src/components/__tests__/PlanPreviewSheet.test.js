@@ -139,7 +139,7 @@ describe('PlanPreviewSheet: rebuild mode', () => {
     const { tree } = render({ preview: REBUILD_PREVIEW, confirmLabel: 'Confirm and rebuild' });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Before you rebuild');
-    expect(text).toContain("Here's what changes. Your current plan stays until you confirm.");
+    expect(text).toContain("Changes to your plan are below. Your current plan stays until you confirm.");
     expect(text).toContain('Now');
     expect(text).toContain('After');
     expect(text).toContain('What stays');
