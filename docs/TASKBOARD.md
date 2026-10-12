@@ -546,3 +546,5 @@ workflow survives as a fallback.
 - **AI-assisted food input (photo meal-scan / voice)** - HELD by founder order, not rejected and not approved; do not build or re-propose unprompted (D27 addendum). (The coaching engine's no-AI rule is separate and absolute.)
 
 ---
+
+**NEW PLAN BUILDER ON (STRUCTURE_ENGINE = true), phases 7 and 8 on main, founder sign-off D222.** Follow-ups: (1) engine-path refusal text when the person's exclusions cause it (campaign9.generation exclusion tests run switch-off meanwhile); (2) editing an engine plan in ManualBuilder; (3) injury-rewrite swaps without the confirm step; (4) reintroduction.js week resolution reads unwritten started_at (all plans); (5) a released reduction week during a ramp on the authored plan.

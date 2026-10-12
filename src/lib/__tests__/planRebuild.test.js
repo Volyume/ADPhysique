@@ -36,6 +36,8 @@
  *  - the ONE-TIME NOTE: written once after a rebuild, shown until dismissed,
  *    gone after, never rewritten for the same plan.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 
 jest.mock('../dbCrypto', () => {
   const { DatabaseSync } = require('node:sqlite');

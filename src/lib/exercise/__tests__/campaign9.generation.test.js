@@ -21,6 +21,9 @@
  * database is stubbed, so what is being tested is the actual generation path
  * a device runs.
  */
+// Tests the older planner's plans, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../../structure/release', () => ({ ...jest.requireActual('../../structure/release'), STRUCTURE_ENGINE: false }));
+
 jest.mock('../../database', () => ({
   EXERCISE_INTENT: { EXCLUDED: 'excluded', AVOIDED_BLOCK: 'avoided_block' },
   getExerciseIntents: jest.fn(async () => []),

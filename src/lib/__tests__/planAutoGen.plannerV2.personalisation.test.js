@@ -23,6 +23,8 @@
  *    reaches this file for equipmentReachable and must never reach the recovery
  *    model); the loader is required lazily, as the planner is.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../plan/release', () => ({ PLANNER_V2: true }));
 jest.mock('../plan/planner', () => {
   const actual = jest.requireActual('../plan/planner');

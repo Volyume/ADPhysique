@@ -5,6 +5,8 @@
  * to "wellness" mid-mesocycle, the bug surfaced in commit c1dabca was
  * that this used to bail entirely on older profiles.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   createProgramme: jest.fn(),
   createRoutine: jest.fn(),

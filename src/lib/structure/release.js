@@ -21,7 +21,7 @@
  *
  * Pure: constants, no I/O.
  */
-export const STRUCTURE_ENGINE = false;
+export const STRUCTURE_ENGINE = true;
 
 export const PROTECTED_PROGRAMME_IDS = Object.freeze([
   // The founder's own hand-built plan (founder standing order).

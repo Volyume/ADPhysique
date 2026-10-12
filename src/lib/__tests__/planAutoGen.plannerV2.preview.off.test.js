@@ -15,6 +15,8 @@
  * is a deliberate edit of the constant and of the first test, never an accident
  * (planAutoGen.plannerV2.off.test.js pins the same for the save).
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../plan/planner', () => {
   const actual = jest.requireActual('../plan/planner');
   return { ...actual, buildPlan: jest.fn(actual.buildPlan) };

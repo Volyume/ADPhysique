@@ -14,6 +14,8 @@
  *      real Error object with the original message, so it survives in the
  *      on-device debug log / Sentry even though it is never shown.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   createProgramme: jest.fn(),
   createRoutine: jest.fn(),

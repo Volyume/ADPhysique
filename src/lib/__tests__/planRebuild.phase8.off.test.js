@@ -4,6 +4,8 @@
  * Today's choice card is never offered, and that an old-planner `done` record
  * still counts as current (the older suites pin the rest unchanged).
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   getActivePlan: jest.fn(), getProgrammeById: jest.fn(), getRoutinesForPlan: jest.fn(),
   getRoutineExercisesWithDetails: jest.fn(), getProgrammePlanFacts: jest.fn(), getAllExercises: jest.fn(),

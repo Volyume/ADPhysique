@@ -20,6 +20,8 @@
  * row literal; a capability state from the real resolver) - the F8
  * lesson: a fixture the producer never emits proves nothing.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   getAllExercises: jest.fn(),
   getActivePlan: jest.fn(),

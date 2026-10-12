@@ -38,6 +38,9 @@
  * serves Lower B's Machine Hip Thrust 4 (not 3) and the Lat Pulldown (Wide Grip) 4 in
  * Upper A (not Upper B); the rules pinned are unchanged.
  */
+// Tests the older planner's plans, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
+
 
 jest.mock('../dbCrypto', () => {
   const { DatabaseSync } = require('node:sqlite');

@@ -26,6 +26,8 @@
  *    change reaches the saved row; an exercise the person trains is never
  *    dropped in silence.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../plan/release', () => ({ PLANNER_V2: true }));
 // The real planner, wrapped so a test can see whether it was called at all.
 jest.mock('../plan/planner', () => {

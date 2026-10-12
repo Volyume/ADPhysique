@@ -26,6 +26,9 @@
  * database after the commit. Two independent counts that agree are
  * evidence. One count repeated is not.
  */
+// Tests the older planner's plans, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
+
 
 jest.mock('../dbCrypto', () => {
   const { DatabaseSync } = require('node:sqlite');

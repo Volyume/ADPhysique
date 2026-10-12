@@ -234,8 +234,10 @@ describe('R91: plans that are never moved', () => {
   async function expectUntouched(plan, reason) {
     const before = await table('SELECT id, plan_facts FROM programmes WHERE user_id = ?', [U]);
     const out = await ensureActivePlanRebuilt(U, { profile: PROFILE });
-    expect(out.status).toBe('skipped');
-    if (reason) expect(out.reason).toBe(reason);
+    // An authored plan reads as current (D227: served as written, never
+    // rebuilt); every other kept plan is skipped with its reason.
+    if (reason === 'authored') expect(out.status).toBe('current');
+    else { expect(out.status).toBe('skipped'); if (reason) expect(out.reason).toBe(reason); }
     expect(await table('SELECT id, plan_facts FROM programmes WHERE user_id = ?', [U])).toEqual(before);
     expect(await getPlanRebuildNote(U)).toBeNull();
     expect((await activeProgramme()).id).toBe(plan.programmeId);

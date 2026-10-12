@@ -27,6 +27,8 @@
  *    load prescription are never handed over.
  * Every one of these fails on a build without this lane's code.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../plan/release', () => ({ PLANNER_V2: true }));
 // The real planner, wrapped so a test can read exactly what it was handed.
 jest.mock('../plan/planner', () => {

@@ -11,6 +11,8 @@
  * constant and of the first test below, never an accident. The rest of the
  * off-path behaviour is pinned by planAutoGen.test.js, which is unedited.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   createProgramme: jest.fn(),
   createRoutine: jest.fn(),

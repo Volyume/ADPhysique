@@ -11,6 +11,8 @@
  * read as before. The guard is not behind the structure engine's switch: the
  * founder's order holds whichever planner is live.
  */
+// Tests the older planner path, kept for style-pool plans and the switch-off state; the engine path is covered by the structure suites.
+jest.mock('../structure/release', () => ({ ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: false }));
 jest.mock('../database', () => ({
   getActivePlan: jest.fn(),
   getProgrammeById: jest.fn(),
