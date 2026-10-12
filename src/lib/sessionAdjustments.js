@@ -42,6 +42,7 @@ import { logWarn } from './errorLog';
 import { prescribeWeek } from './plan/prescribe';
 import { PER_SESSION, exerciseCap } from './plan/science';
 import { roleTop } from './plan/checkinPlacement';
+import { structureServedWeek } from './structure/serve';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -311,17 +312,32 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       // D219 review fix 1: the exercise in the slot today is held to its own cap.
       cap: servedSetsCap(e, planContext),
     }));
-    const allocation = manualRecoveryWeekSets({
+    const served = manualRecoveryWeekSets({
       facts: planContext?.facts,
       week,
       exercises: todays,
       allocation: computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows), planContext),
     });
+    // D222 phase 6 (R62): a plan the structure engine built (facts.structure
+    // version 3) serves each of its exercises the engine's own ladder for the
+    // block week, typed counts still winning, and the ladder's effort where it
+    // is above the week's (the next-day exception). An exercise the engine
+    // did not build (added by hand later) keeps what it was served above.
+    // Every other plan comes back exactly as it was.
+    const ladder = structureServedWeek({
+      facts: planContext?.facts,
+      routineId: workout.routineId,
+      weekIndex: Number(week?.week_index ?? week?.weekIndex),
+      weekRir: Number(week?.rir_target ?? week?.rirTarget),
+      exercises: todays,
+    });
+    const allocation = Object.keys(ladder.sets).length ? { ...served, ...ladder.sets } : served;
     // planContext rides along (D219 lane R3) so the session's own +1 reads the
     // same plan facts the week was served from; callers read the fields they
     // need, and the `none` shape above is unchanged.
     return {
       allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
+      ...(Object.keys(ladder.rir).length ? { rir: ladder.rir } : {}),
     };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);

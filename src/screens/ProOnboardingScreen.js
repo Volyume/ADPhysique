@@ -3116,10 +3116,16 @@ export default function ProOnboardingScreen({ navigation }) {
     // their own answers by the real generator; nothing here is a rule of
     // thumb, and no length is called optimal, because no length is.
     if (fitReview) {
-      const copy = fitCopy(fitReview.state, fitReview);
       const keep = keepChoiceCopy(fitReview);
+      // D222 phase 6 (R65): with the structure engine, a refused week names
+      // the day count that builds, more or fewer, and cannot be kept as it is.
       const moreSessions = (fitReview.alternatives ?? [])
-        .find(a => a.kind === 'more_sessions');
+        .find(a => a.kind === 'more_sessions' || a.kind === 'fewer_sessions');
+      const refusalText = typeof fitReview.refusal?.text === 'string' ? fitReview.refusal.text : null;
+      // A refused week is said in the engine's own words (structure/messages.js).
+      const copy = refusalText
+        ? { ...fitCopy(fitReview.state, fitReview), body: refusalText }
+        : fitCopy(fitReview.state, fitReview);
       const moreCopy = moreSessions ? alternativeCopy(moreSessions) : null;
 
       return (
@@ -3209,17 +3215,21 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             ) : null}
 
-            <Text style={[styles.continueHint, live.continueHint]}>{keep.detail}</Text>
-            <Button variant="emphatic"
-              title={`Build my plan: ${keep.label}`}
-              trailingIcon="arrow-forward"
-              style={[styles.primaryBtn, fitBusy && styles.primaryBtnDisabled]}
-              onPress={fitBusy ? undefined : () => acceptFit(null)}
-              disabled={fitBusy}
-              loading={fitBusy}
-              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
-              accessibilityLabel={`Build my plan, ${keep.label}`}
-            />
+            {refusalText ? null : (
+              <>
+                <Text style={[styles.continueHint, live.continueHint]}>{keep.detail}</Text>
+                <Button variant="emphatic"
+                  title={`Build my plan: ${keep.label}`}
+                  trailingIcon="arrow-forward"
+                  style={[styles.primaryBtn, fitBusy && styles.primaryBtnDisabled]}
+                  onPress={fitBusy ? undefined : () => acceptFit(null)}
+                  disabled={fitBusy}
+                  loading={fitBusy}
+                  textStyle={[styles.primaryBtnText, live.primaryBtnText]}
+                  accessibilityLabel={`Build my plan, ${keep.label}`}
+                />
+              </>
+            )}
           </ScrollView>
         </SafeAreaView>
       );

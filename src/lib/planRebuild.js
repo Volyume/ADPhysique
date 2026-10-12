@@ -80,6 +80,7 @@ import { SLOT_OUTCOME, slotKey } from './exercise/continuity';
 import { planGeneratedRebuildV2, planFixedRebuildV2, plannerV2PlanFacts } from './planAutoGen';
 import { composePlanRebuildNote, PLAN_REBUILD_KIND } from './planRebuildNote';
 import { logError, logInfo, logWarn } from './errorLog';
+import { isProtectedProgramme } from './structure/release';
 
 export const PLAN_KIND = PLAN_REBUILD_KIND;
 
@@ -355,8 +356,12 @@ async function rebuildGenerated({ userId, routines, routinesWithRows, profile, b
         credits: x.credits,
       })),
     })),
+    // D222 phase 6 (R60): a week the structure engine built carries its own
+    // facts (the version 2 fields and the structure block).
     buildFacts: (ids) => ({
-      ...plannerV2PlanFacts(plan.v2, ids.routineIdBySession, ids.thinByRoutine, ids.slotsByRoutine),
+      ...(typeof computed.structureFacts === 'function'
+        ? computed.structureFacts(ids.routineIdBySession)
+        : plannerV2PlanFacts(plan.v2, ids.routineIdBySession, ids.thinByRoutine, ids.slotsByRoutine)),
       kind: PLAN_KIND.GENERATED,
     }),
     weeklyTargets: plan.v2.weeklyTargets,
@@ -594,6 +599,9 @@ function storeProfile() {
 async function run(userId, opts) {
   const programme = await getActivePlan(userId);
   if (!programme?.id) return { status: 'none' };
+  // D222 phase 6 (R67, founder standing order): a protected programme is
+  // never rebuilt, whatever its facts say. Nothing is recorded or written.
+  if (isProtectedProgramme(programme.id)) return { status: 'skipped', reason: 'protected', programmeId: programme.id };
   const final = (answer) => {
     settled.set(programme.id, answer);
     return { ...answer, programmeId: programme.id };

@@ -45,6 +45,13 @@ import {
   generatePlan, DIVISION_MATRIX, SELECTION_REASON, resolveWeakPointKeys,
 } from './planEngine';
 import { PLANNER_V2 } from './plan/release';
+// D222 phase 6: the structure engine's switch and seam (spec 23, R60 to R67).
+import { STRUCTURE_ENGINE } from './structure/release';
+import { buildStructurePlan } from './structure/engine';
+import {
+  structureArgs, structureCheckIds, structureWorkoutsForWrite, structureFacts, structureWeeklyTargets,
+  structureRefusal, structurePreview, structureFit, structurePlanName,
+} from './structure/adapt';
 import { resolveCatalogue, catalogueCredits } from './plan/catalogue';
 import { assessPlanFit, assessDurationOptions } from './planFit';
 import { phaseToNutritionKey } from './coachingGoals';
@@ -265,6 +272,14 @@ export async function assessScheduleFit(profile, {
       library = filterLibraryForGeneration(allExercises, intentState).library;
     } catch (_) { library = allExercises; }
   }
+  // D222 phase 6 (R63, R65): with the structure engine on and no style pool,
+  // the fit is the engine's own answer at the person's schedule and at each
+  // offered length: its refusal or its length question, in the shape the fit
+  // review renders. No old-planner answer is ever given in its place.
+  if (STRUCTURE_ENGINE && !(await activeStylePool(userId))) {
+    return assessFitWithStructureEngine({ userId, inputs, library, allExercises, durationOptions });
+  }
+
   const canonicalNames = canonicalNameSet(allExercises);
 
   // generatePlan is pure and deterministic, which is what makes asking it
@@ -1027,6 +1042,17 @@ export async function generateAndSavePlan(userId, profile, {
     styleKey = styleKeyFromTags(currentPlan?.tags);
   } catch (_) { styleKey = null; }
   const stylePool = styleKey ? stylePoolFor(styleKey) : null;
+
+  // D222 phase 6 (R63, R66): with the structure engine on and no style pool,
+  // the plan is built by the structure engine and saved as built. There is no
+  // fallback to an older planner: a refusal, a failed check or an engine
+  // exception comes back to the caller as a calm failure (R63). With the
+  // switch off this block is never entered.
+  if (STRUCTURE_ENGINE && !stylePool) {
+    return saveWithStructureEngine({
+      userId, inputs, allExercises, generationLibrary, ledger, allowLearnedCarry, keepBlock,
+    });
+  }
 
   // D219 lane B6: with the release switch on, the new planner builds the plan
   // from the standard catalogue and saves it through the same writers. It
@@ -2089,12 +2115,17 @@ export async function planGeneratedRebuildV2({ userId, profile, daysPerWeek, rep
     const base = buildPlanInputs(profile);
     if (!base) return { ok: false, reason: 'profile_incomplete' };
     const inputs = { ...base, daysPerWeek };
-    if (plannerV2SessionCount(inputs) !== daysPerWeek) return { ok: false, reason: 'days_not_kept' };
+    // The new planner's own day rule; the structure engine answers for its own
+    // days (a refusal), below.
+    if (!STRUCTURE_ENGINE && plannerV2SessionCount(inputs) !== daysPerWeek) return { ok: false, reason: 'days_not_kept' };
     let styleKey = null;
     try {
       styleKey = styleKeyFromTags((await getActivePlan(userId))?.tags);
     } catch (_) { styleKey = null; }
     if (styleKey) return { ok: false, reason: 'style_plan' };
+    // D222 phase 6 (R63): with the structure engine on, the rebuild is the
+    // engine's week at the person's days, or nothing (no older planner).
+    if (STRUCTURE_ENGINE) return await rebuildWithStructureEngine({ userId, inputs });
 
     const allExercises = await getAllExercises();
     const intentState = await loadGenerationIntent(userId);
@@ -2318,6 +2349,12 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   } catch (_) { styleKey = null; }
   const stylePool = styleKey ? stylePoolFor(styleKey) : null;
 
+  // D222 phase 6 (R63, R65): the twin of generateAndSavePlan's structure
+  // engine route, for the same cases and with no fallback.
+  if (STRUCTURE_ENGINE && !stylePool) {
+    return previewWithStructureEngine({ userId, inputs, allExercises, generationLibrary });
+  }
+
   // D219 lane B7: the twin of generateAndSavePlan's hand-over to the new
   // planner, for the same cases (switch on, no style pool) and with the same
   // fallback. With the switch off this block is never entered.
@@ -2420,4 +2457,262 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   }
   return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
     { capabilityState: intentState?.capability, library: allExercises });
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// D222 phase 6: the structure engine (STRUCTURE_ENGINE, structure/release.js).
+//
+// Authority: docs/audit/plan-builder-map-2026-10-11/23-PHASE6-INTEGRATION-SPEC.md
+// (lead rulings R60 to R66). With the switch on and no style pool, a new plan,
+// its preview, the schedule fit and the rebuild of a generated plan are all
+// built by structure/engine.buildStructurePlan from the same filtered library
+// the new planner uses, and the plan is saved exactly as the engine built and
+// checked it: no continuity pass, no older planner as a fallback. A refusal or
+// a question goes back to the caller (R65); an engine exception is logged as
+// 'structure.build' and comes back as a calm failure (R63). Nothing in this
+// section runs while the switch is off.
+// ───────────────────────────────────────────────────────────────────────────
+
+// The style pool of the person's active plan (kettlebell and circuit
+// templates), or null. Best-effort: a read failure is no style pool, as today.
+async function activeStylePool(userId) {
+  if (!userId) return null;
+  try {
+    const key = styleKeyFromTags((await getActivePlan(userId))?.tags);
+    return key ? stylePoolFor(key) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// An empty continuity receipt: the engine keeps no exercise of the plan it
+// replaces (it prefers the person's logged exercises through
+// loggedExerciseNames instead), so there is no decision to report.
+function structureNoContinuity(isRebuild = false) {
+  return { isRebuild, decisions: [], summary: summariseDecisions([]) };
+}
+
+/**
+ * Build with the structure engine (R64). Answers { args, result } (the result
+ * is the engine's own: built, or a refusal), or { args, error } when the engine
+ * threw or built an exercise with no library row; the error is logged here.
+ * `days` overrides the profile's day count (the rebuild keeps the person's).
+ */
+async function buildWithStructureEngine({ userId, inputs, library, allExercises, lengthMinutes, days }) {
+  const loggedExerciseNames = await plannerV2LoggedNames(userId, allExercises);
+  const args = {
+    ...structureArgs(inputs),
+    ...(Number.isFinite(lengthMinutes) ? { lengthMinutes } : {}),
+    ...(Number.isFinite(days) ? { days } : {}),
+  };
+  try {
+    const result = buildStructurePlan({ ...args, library, loggedExerciseNames });
+    if (result.ok) structureCheckIds(result.plan, library);
+    return { args, result };
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('structure.build', e, { goal: args.goal, days: args.days, lengthMinutes: args.lengthMinutes, equipment: args.equipment, experience: args.experience }); } catch (_) {}
+    return { args, error: e };
+  }
+}
+
+/** The plan as the preview and the plan diff read it (the generator's shape). */
+function structurePlanForPreview(result, args) {
+  return {
+    name: structurePlanName(args),
+    description: '',
+    goal: args.goal,
+    splitType: null,
+    daysPerWeek: result.plan.sessions.length,
+    estimatedSessionMinutes: Math.ceil(Math.max(0, ...result.report.minutes)),
+    workouts: structureWorkoutsForWrite(result.plan),
+  };
+}
+
+/**
+ * generateAndSavePlan's body for the structure engine (R66): one transaction
+ * holding the programme, a routine per engine session in the engine's order,
+ * each exercise at week 1's sets, and the plan's facts (R60) keyed by the ids
+ * just written; then activation (the block kept, or a new block) and the
+ * block's weekly rows from the facts' weeklyTargets (R62), as the new
+ * planner's save does.
+ */
+async function saveWithStructureEngine({
+  userId, inputs, allExercises, generationLibrary, ledger, allowLearnedCarry, keepBlock,
+}) {
+  const built = await buildWithStructureEngine({ userId, inputs, library: generationLibrary, allExercises });
+  if (built.error) return { ok: false, error: 'plan_engine_error' };
+  const { args, result } = built;
+  if (!result.ok) {
+    return { ok: false, error: 'structure_refused', refusal: structureRefusal(result.refusal, args) };
+  }
+  const workouts = structureWorkoutsForWrite(result.plan);
+
+  // The reasons are read from the saved plan, not from a cached rationale.
+  try {
+    await AsyncStorage.setItem(PLAN_WHYTHIS_KEY(userId), JSON.stringify({}));
+  } catch (_) { /* non-fatal */ }
+
+  const planName = await makeUniquePlanName(userId, structurePlanName(args));
+  let programmeId = null;
+  try {
+    const d = await db();
+    const { prog } = await runInTransaction(d, async () => {
+      const programme = await createProgramme(userId, planName, '', 0, null, null, null, false);
+      programmeId = programme.id;
+      const routineIds = [];
+      const routineExerciseIds = [];
+      // Routines in the engine's order: createRoutine gives each the next
+      // position, so the position IS the rotation position.
+      for (const workout of workouts) {
+        const routine = await createRoutine(userId, workout.name, null, null, 0, null, programme.id, false, false);
+        routineIds.push(routine.id);
+        const reIds = [];
+        for (let i = 0; i < workout.exercises.length; i++) {
+          const ex = workout.exercises[i];
+          const row = await addExerciseToRoutine(
+            routine.id, ex.exerciseId, i, ex.repMin, ex.repMax, null, ex.sets,
+            null, // startingWeight: the engine does not set one
+            ex.restSec ?? null,
+            null, // no superset pairing
+            false,
+            ex.selectionReason ?? null,
+          );
+          reIds.push(row?.id ?? null);
+        }
+        routineExerciseIds.push(reIds);
+      }
+      await setProgrammePlanFacts(
+        programme.id,
+        structureFacts(result, args, { routineIds, routineExerciseIds }),
+        { scheduleSync: false },
+      );
+      return { prog: programme };
+    });
+
+    let blockKept = false;
+    let blockId = null;
+    if (keepBlock) {
+      const keptBlockId = await activatePlanKeepingBlock(userId, prog.id);
+      blockKept = !!keptBlockId;
+      blockId = keptBlockId || null;
+    }
+    if (!blockKept) {
+      blockId = await activatePlanWithBlock(userId, prog.id, planName, { ledger, allowLearnedCarry });
+    }
+    await writePlannerV2WeeklyRows({
+      userId, blockId, weeklyTargets: structureWeeklyTargets(result.plan), blockKept,
+    });
+    await archiveOtherUserPlans(userId, prog.id);
+    try {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('./telemetry/firsts');
+      trackFirst(userId, 'first_plan_generated').catch(() => {});
+    } catch (_) { /* tolerate test env without telemetry */ }
+    return {
+      ok: true,
+      programmeId: prog.id,
+      blockKept,
+      continuity: structureNoContinuity(),
+      structure: structurePreview(result, args),
+    };
+  } catch (e) {
+    if (programmeId) {
+      try {
+        await deleteProgrammeCascade(programmeId, { scheduleSync: false });
+      } catch (cleanupError) {
+        // eslint-disable-next-line global-require
+        try { require('./errorLog').logError('plan.generateAndSave.cleanupFailed', cleanupError, { userId, programmeId }); } catch (_) {}
+      }
+    }
+    return { ok: false, error: e?.message ?? 'DB write failed' };
+  }
+}
+
+/**
+ * generatePlanDryRun's body for the structure engine (R65): `{ ok: true, plan,
+ * structure }` for a built week (the length question, the focus questions and
+ * the message lines in `structure`), or `{ ok: false, refusal }` for a week the
+ * engine refuses. Read-only.
+ */
+async function previewWithStructureEngine({ userId, inputs, allExercises, generationLibrary }) {
+  const built = await buildWithStructureEngine({ userId, inputs, library: generationLibrary, allExercises });
+  if (built.error) return { ok: false, error: 'plan_engine_error' };
+  const { args, result } = built;
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: 'structure_refused',
+      refusal: structureRefusal(result.refusal, args),
+      sessionLengthMinutes: inputs.sessionLengthMinutes,
+    };
+  }
+  return {
+    ok: true,
+    plan: structurePlanForPreview(result, args),
+    sessionLengthMinutes: inputs.sessionLengthMinutes,
+    structureMemory: null,
+    continuity: structureNoContinuity(),
+    structure: structurePreview(result, args),
+  };
+}
+
+/**
+ * assessScheduleFit's body for the structure engine (R65): the engine at the
+ * person's schedule and at each offered length, memoised by length.
+ */
+async function assessFitWithStructureEngine({ userId, inputs, library, allExercises, durationOptions }) {
+  const byLength = new Map();
+  const at = async (lengthMinutes) => {
+    if (!byLength.has(lengthMinutes)) {
+      byLength.set(lengthMinutes, await buildWithStructureEngine({ userId, inputs, library, allExercises, lengthMinutes }));
+    }
+    return byLength.get(lengthMinutes);
+  };
+  const here = await at(inputs.sessionLengthMinutes);
+  if (here.error) return { ok: false, error: 'plan_fit_error' };
+  const options = Array.isArray(durationOptions) ? durationOptions : [45, 60, 75, 90];
+  const byDuration = [];
+  for (const minutes of options) {
+    // eslint-disable-next-line no-await-in-loop
+    const b = await at(minutes);
+    if (b.error) return { ok: false, error: 'plan_fit_error' };
+    byDuration.push({ minutes, result: b.result });
+  }
+  return { ok: true, ...structureFit(here.result, here.args, byDuration) };
+}
+
+/**
+ * planGeneratedRebuildV2's body for the structure engine (R63): the engine's
+ * week at the person's days, for planRebuild's writer. A refusal, or a week
+ * that asks the person a question (a longer session, more days, or a focus
+ * pick that adds too little), is not built: an automatic rebuild has nobody
+ * to ask, so the plan stays exactly as it is.
+ */
+async function rebuildWithStructureEngine({ userId, inputs }) {
+  const allExercises = await getAllExercises();
+  const intentState = await loadGenerationIntent(userId);
+  const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+  const library = libraryForReviewedProposal(filteredLibrary, reviewedReplacementIds(null));
+  const built = await buildWithStructureEngine({ userId, inputs, library, allExercises, days: inputs.daysPerWeek });
+  if (built.error) return { ok: false, reason: 'error', error: built.error };
+  const { args, result } = built;
+  if (!result.ok) return { ok: false, reason: 'structure_refused' };
+  if (result.report.needsLengthChoice || result.report.needsFocusChoice) return { ok: false, reason: 'structure_needs_choice' };
+  const plan = structurePlanForPreview(result, args);
+  const weeklyTargets = structureWeeklyTargets(result.plan);
+  const planName = await makeUniquePlanName(userId, plan.name);
+  return {
+    ok: true,
+    inputs,
+    plan: { ...plan, v2: { weeklyTargets } },
+    resolved: { workouts: plan.workouts, continuity: structureNoContinuity(true) },
+    planName,
+    // The facts, keyed by the routines the writer creates (it records the
+    // routine of each session key; routine exercise ids are not reported, so
+    // serving matches by exercise id within the routine, R62).
+    structureFacts: (routineIdBySession) => structureFacts(result, args, {
+      routineIds: result.plan.sessions.map((s) => routineIdBySession?.[s.key] ?? null),
+    }),
+  };
 }
