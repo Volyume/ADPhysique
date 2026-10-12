@@ -236,6 +236,9 @@ export const LONG_LENGTH_EXERCISE_NAMES = Object.freeze([
   'Zottman Preacher Curl',
   'Plate-Loaded Preacher Curl',
   'Preacher Curl Machine',
+  // Register D227 (2026-10-12): the cable preacher curl the off-season plan
+  // added to the library, the same long-length loading as its family.
+  'Cable Preacher Curl',
 ]);
 const LONG_LENGTH_NAME_SET = new Set(LONG_LENGTH_EXERCISE_NAMES);
 

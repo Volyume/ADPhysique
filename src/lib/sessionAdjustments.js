@@ -43,6 +43,7 @@ import { prescribeWeek } from './plan/prescribe';
 import { PER_SESSION, exerciseCap } from './plan/science';
 import { roleTop } from './plan/checkinPlacement';
 import { structureServedWeek } from './structure/serve';
+import { authoredServedWeek, authoredPlanLimits, isAuthoredFacts } from './library/authored';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -334,13 +335,30 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       isDeload: Number(week?.is_deload ?? week?.isDeload) === 1,
       exercises: todays,
     });
-    const allocation = Object.keys(ladder.sets).length ? { ...served, ...ladder.sets } : served;
+    // Register D227 (spec C1): an AUTHORED plan serves each of its exercises
+    // the author's own sets for the block week's phase (the recovery week the
+    // Reduction column), typed counts still winning; an exercise added by hand
+    // keeps what it was served above. Every other plan comes back as it was.
+    const weekIndex = Number(week?.week_index ?? week?.weekIndex);
+    const isDeload = Number(week?.is_deload ?? week?.isDeload) === 1;
+    const authored = authoredServedWeek({
+      facts: planContext?.facts,
+      routineId: workout.routineId,
+      mesocycleId,
+      weekIndex,
+      isDeload,
+      exercises: todays,
+    });
+    const allocation = (Object.keys(ladder.sets).length || Object.keys(authored.sets).length)
+      ? { ...served, ...ladder.sets, ...authored.sets } : served;
+    const rir = { ...ladder.rir, ...authored.rir };
     // planContext rides along (D219 lane R3) so the session's own +1 reads the
     // same plan facts the week was served from; callers read the fields they
     // need, and the `none` shape above is unchanged.
     return {
       allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
-      ...(Object.keys(ladder.rir).length ? { rir: ladder.rir } : {}),
+      ...(Object.keys(rir).length ? { rir } : {}),
+      ...(authored.phase ? { authoredWeek: { mesocycleId, weekIndex, isDeload, phase: authored.phase } } : {}),
     };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
@@ -532,19 +550,30 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     // The session-layer ±1 tweaks below then apply on top of the allocated
     // base, so an applied coach change (or the recovery week's per-muscle
     // reductions) and the readiness tweaks compose instead of competing.
-    const { allocation, weekRows, planContext } = await getSessionWeeklyAllocation({ workout, exercises });
+    const { allocation, weekRows, planContext, authoredWeek } = await getSessionWeeklyAllocation({ workout, exercises });
 
     // D219 (design 4.11): on a plan the new planner built, the +1 stays inside
     // that plan's caps (the exercise's, the session's and the role's top).
+    // Register D227 (spec C1): an AUTHORED plan's caps replace the house caps.
     let planLimits = null;
     if (planContext) {
       try {
-        planLimits = buildPlanLimits({
-          planContext,
-          routineId: workout.routineId,
-          weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
-          exercises,
-        });
+        planLimits = isAuthoredFacts(planContext.facts)
+          ? authoredPlanLimits({
+            facts: planContext.facts,
+            routineId: workout.routineId,
+            mesocycleId: authoredWeek?.mesocycleId ?? null,
+            weekIndex: authoredWeek?.weekIndex,
+            isDeload: authoredWeek?.isDeload === true,
+            exercises,
+            houseCaps: { directCap: PER_SESSION.directCap, fractionalCap: PER_SESSION.fractionalCap },
+          })
+          : buildPlanLimits({
+            planContext,
+            routineId: workout.routineId,
+            weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
+            exercises,
+          });
       } catch (e) {
         logWarn('sessionAdjustments.planLimits', e?.message);
       }

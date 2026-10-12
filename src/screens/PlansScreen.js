@@ -27,7 +27,9 @@ import {
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, unarchivePlan, softDeleteRoutine, getActiveBlock,
-  getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises } from '../lib/database';
+  getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises,
+  getProgrammePlanFacts } from '../lib/database';
+import { isAuthoredFacts } from '../lib/library/authored';
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -582,6 +584,12 @@ export default function PlansScreen({ navigation }) {
     // that follows -- counts and enums only, fire-and-forget.
     if (user?.id) track(user.id, 'block_decision', { intent }).catch(() => {});
 
+    // Register D227 (spec B2): an AUTHORED plan's next block is the plan's own
+    // (Growth from the level reached, then a reduction week), whichever option
+    // was tapped: no generator review, nothing about its exercises changes. It
+    // goes through the literal confirm below, worded for it.
+    const authoredPlan = isAuthoredFacts(await getProgrammePlanFacts(activePlan.id).catch(() => null));
+
     // C16 phase C (completion pass): "Continue with adjustments" now REVIEWS
     // before it acts. It gathers what the next block would actually be -
     // the volume the ledger resolved AND the exercise decisions continuity
@@ -590,14 +598,17 @@ export default function PlansScreen({ navigation }) {
     // the whole longitudinal engine reached the user as a single sentence
     // on a card and no exercise it judged was ever changed.
     if (intent === 'adjust') {
-      try {
-        await openNextBlockReview();
-      } catch (e) {
-        logError('PlansScreen.openNextBlockReview', e, { userId: user?.id, planId: activePlan?.id });
-        toast.show("Couldn't prepare your next block, try again", { variant: 'error' });
-        restartingRef.current = false;
+      // D227: an authored plan skips the review and takes the literal confirm.
+      if (!authoredPlan) {
+        try {
+          await openNextBlockReview();
+        } catch (e) {
+          logError('PlansScreen.openNextBlockReview', e, { userId: user?.id, planId: activePlan?.id });
+          toast.show("Couldn't prepare your next block, try again", { variant: 'error' });
+          restartingRef.current = false;
+        }
+        return;
       }
-      return;
     }
 
     // REPEAT MEANS REPEAT. Everything below is the literal path: the same
@@ -608,7 +619,9 @@ export default function PlansScreen({ navigation }) {
     // through a button whose alert promises the opposite.
     appAlert(
       'Run this plan again?',
-      "A new training block starts today with the same workouts and the same set targets as last time.",
+      authoredPlan
+        ? 'A new 8-week block starts today with the same workouts: 7 Growth weeks carrying on from the level you reached, then a reduction week.'
+        : "A new training block starts today with the same workouts and the same set targets as last time.",
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { restartingRef.current = false; } },
         {
@@ -739,7 +752,11 @@ export default function PlansScreen({ navigation }) {
     // REPEAT MEANS REPEAT, enforced here and not only at the call site: a
     // repeat intent may never rebuild the programme, whatever it was asked
     // for. This is the assertion the epoch module's own header promised.
-    const mayRefine = refine === true && seedIntent === 'adjust';
+    // Register D227 (spec B2, F1): an AUTHORED plan is never rebuilt by the
+    // generator at a block boundary: its next block is the same plan, and
+    // activatePlanWithBlock starts that plan's own next block.
+    const authoredPlan = isAuthoredFacts(await getProgrammePlanFacts(activePlan.id).catch(() => null));
+    const mayRefine = refine === true && seedIntent === 'adjust' && !authoredPlan;
     const seedRanges = review?.seedRanges ?? blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
       intent: seedIntent, userProfile, tier,
     }).catch(() => null);

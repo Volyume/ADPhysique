@@ -43,7 +43,10 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // and Barbell & Plates) instead of `band` (no-equipment profile only).
 // The category is written by corpusEntryToSeedRow, so without this bump an
 // install that already ran v6 would keep the wrong category for good.
-const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v7';
+// v8 (register D227, 2026-10-12, spec A3): Single-Arm Cable Lateral Raise
+// takes its lateral_raise subregion. updateExerciseMetadata now writes the
+// subregion it is handed, so an existing install takes the fix once.
+const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v8';
 // Bumped when exercises are added to the corpus so the top-up scans for the
 // new canonical IDs once on installs that already seeded an earlier list.
 // v4 (EL-14/EL-15, exercise-library-expansion-2026-09-05): the corpus
@@ -52,7 +55,11 @@ const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v7';
 // same-name merge below) and the six EL-21 duplicate pairs retire.
 // v5 (register D222, 2026-10-11): Straight-Arm Dumbbell Pullover, the lat
 // pullover the structure engine gives dumbbell and home kits.
-const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v5';
+// v6 (register D227, 2026-10-12, spec A3): the four substitutions the
+// founder's off-season plan lists that the library lacked (Cable Preacher
+// Curl, Seated Cable Chest Press, Neutral-Grip Machine Pulldown,
+// Single-Arm High-Pulley Seated Cable Row).
+const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v6';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //

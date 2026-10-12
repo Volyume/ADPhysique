@@ -55,6 +55,7 @@ import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration } from './exercise/generation';
 import { muscleDisplayName } from './algorithms';
 import { logWarn } from './errorLog';
+import { isAuthoredFacts } from './library/authored';
 
 // planEngine.SELECTION_REASON.VOLUME_FILL: "delivers the remaining sets the
 // muscle's target needs", which planRationale.explainSelection renders. The
@@ -183,7 +184,11 @@ export async function resolveCheckinPlan({ userId, profile = null, signal, withh
   const context = await loadPlanContext(userId);
   if (!context) return null;
   const kind = checkinKind(signal, { withheld });
-  const catalogue = kind === CHECKIN_KIND.INCREASE ? await loadCatalogue({ userId, profile }) : {};
+  // Register D227 (spec D5, F1): a check-in never opens a new exercise on an
+  // AUTHORED plan (its exercise list is closed), so the placement is handed no
+  // catalogue to open one from. Its sets go onto prescribed exercises only.
+  const catalogue = kind === CHECKIN_KIND.INCREASE && !isAuthoredFacts(context.facts)
+    ? await loadCatalogue({ userId, profile }) : {};
   const heldRaw = typeof holdMuscles === 'function' && kind === CHECKIN_KIND.INCREASE
     ? await holdMuscles()
     : holdMuscles;

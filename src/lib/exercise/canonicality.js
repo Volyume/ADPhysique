@@ -577,6 +577,11 @@ const SPECIALIST = [
   // Register D222 (2026-10-11): the lat pullover the structure engine gives
   // dumbbell and home kits by name; the older generator ranks it here.
   'Straight-Arm Dumbbell Pullover',
+  // Register D227 (2026-10-12): the four substitutions the founder's
+  // off-season plan lists that the library lacked. Specialist: reached by
+  // that plan's own substitution list, never by a generator by default.
+  'Cable Preacher Curl', 'Seated Cable Chest Press',
+  'Neutral-Grip Machine Pulldown', 'Single-Arm High-Pulley Seated Cable Row',
 
   // Deadlift/hinge/posterior-chain variants with a higher skill or fatigue
   // cost than the RDL/leg-curl staples already covering hamstrings.

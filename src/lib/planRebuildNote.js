@@ -160,9 +160,15 @@ export function composePlanRebuildNote({
 // the explanation must not say what is not true of them: these lines are left
 // out for those kinds, every other line (the readiness it measured, the session
 // length, the effort ladder of the block) is true of them and stays.
+// Register D227: an AUTHORED plan (library/authored.js) is its author's in
+// every number: the planner chose neither its split, nor the 4-set and 3-set
+// exercise caps (laterals reach 5 in Growth), and its 8-week phase schedule is
+// not the 6-week block the focus lines describe (a 'focus' entry drops every
+// 'focus:<muscle>' line). The spacing, readiness and effort lines stay true.
 const NOT_CLAIMED = Object.freeze({
   [PLAN_REBUILD_KIND.LIBRARY]: Object.freeze(['structure']),
   [PLAN_REBUILD_KIND.MANUAL]: Object.freeze(['structure', 'spacing', 'cap']),
+  authored: Object.freeze(['structure', 'cap', 'focus']),
 });
 
 /**
@@ -174,5 +180,5 @@ const NOT_CLAIMED = Object.freeze({
 export function explainLinesForKind(lines, kind) {
   const drop = NOT_CLAIMED[kind];
   if (!drop || !Array.isArray(lines)) return lines;
-  return lines.filter((l) => !drop.includes(l?.id));
+  return lines.filter((l) => !drop.includes(l?.id) && !drop.some((d) => String(l?.id ?? '').startsWith(`${d}:`)));
 }

@@ -69,6 +69,7 @@ import {
   getPlannedMuscleVolumeForBlock,
   getRecentlyUsedExerciseIds,
   rebuildPlanKeepingBlockV2,
+  ensureAuthoredPlanFacts,
 } from './database';
 import { allocateExerciseVolume } from './algorithms';
 import { deriveParamKey } from './poolGenerator';
@@ -608,6 +609,23 @@ async function run(userId, opts) {
   };
   if (settled.has(programme.id)) return { ...settled.get(programme.id), programmeId: programme.id };
   const facts = await getProgrammePlanFacts(programme.id);
+  // Register D227 (spec C2): an AUTHORED plan is served exactly as its author
+  // wrote it, so the planner's rebuild never touches it, whatever else its
+  // facts say. A copy of an authored library plan that arrived without facts
+  // gets them from the definition here, before any rebuild could run.
+  if (facts?.kind === 'authored') return final({ status: 'current' });
+  if (facts == null && typeof ensureAuthoredPlanFacts === 'function') {
+    let unreadable = false;
+    const authored = await ensureAuthoredPlanFacts(programme.id).catch((e) => {
+      logWarn('planRebuild.authoredFacts', e?.message);
+      unreadable = true;
+      return null;
+    });
+    if (authored) return final({ status: 'current' });
+    // Fail closed: a plan that might be authored is never rebuilt on a read
+    // that failed; it is asked again at the next open.
+    if (unreadable) return { status: 'retry', programmeId: programme.id, reason: 'authored_unreadable' };
+  }
   if (facts?.version === 2) return final({ status: 'current' });
   const state = await readState(userId);
   const prior = state[programme.id];

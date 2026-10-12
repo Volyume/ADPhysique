@@ -99,6 +99,7 @@ import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
 } from '../lib/recoveryState';
 import { rankSwaps } from '../lib/swapEngine';
+import { authoredSwapOptions } from '../lib/library/authored';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
   countProgressSets,
@@ -668,6 +669,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercises"); it resets to false every time the sheet is (re)opened.
   const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
   const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
+  // Register D227 (spec F1): true while the sheet shows an AUTHORED plan's
+  // closed list (that exercise's listed substitutions only): the sheet then
+  // offers no way out to the full library.
+  const [swapClosedList, setSwapClosedList] = useState(false);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
   // session" or "From now on". swapScope is the choice (the segmented control
   // reads the state); the refs are what handleConfirmSwap reads, because the
@@ -1852,7 +1857,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // exercise change) wins over it, both directions. Round 15's
     // post-await bump could orphan that later, newer load.
     const swapSeq = ++intentLoadSeqRef.current;
-    const allExercises = await getAllExercises();
+    let allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
     // C9 Work 3: ask for a wider structural slate than we show, then let the
     // personal layer re-order inside it and drop anything the user has
@@ -1891,6 +1896,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
       } catch (_) { swapPlanFactsRef.current = null; }
     }
+    // Register D227 (spec F1): an AUTHORED plan offers only the listed
+    // substitutions of this exercise's slot; nothing relaxes it. A plan that
+    // is not authored gets null (no restriction), exactly as before.
+    let closedPool = null;
+    if (swapProgrammeId) {
+      try {
+        closedPool = authoredSwapOptions(
+          await getProgrammePlanFacts(swapProgrammeId), exercise?.id, { routineId: activeWorkout?.routineId ?? null },
+        );
+      } catch (_) { closedPool = null; }
+    }
+    setSwapClosedList(closedPool != null);
+    // The candidates themselves are narrowed, so the ranking below is exactly
+    // the one every other plan runs (swapSheetCapabilityNarrowing guard).
+    if (closedPool) allExercises = allExercises.filter((e) => closedPool.has(e?.id));
     const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     const ranked = rankSwaps(exercise, allExercises, {
       excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment,
@@ -7121,7 +7141,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {/* EL-11: user intent outranks inference - the pool is a default,
                 never a hidden restriction, so "Show all exercises" is always
                 one tap away while it applies. */}
-            {swapStylePoolKey && !swapStyleShowAll ? (
+            {swapStylePoolKey && !swapStyleShowAll && !swapClosedList ? (
               <View style={[styles.swapNote, live.swapNote, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                 <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0 }]}>
                   Showing {styleLabelFor(swapStylePoolKey)} exercises
@@ -7169,10 +7189,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
                     {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
                   </Text>
-                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
+                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>
+                    {swapClosedList ? 'This plan lists no other exercise for this one here.' : 'Search the full library instead.'}
+                  </Text>
                 </View>
               }
-              ListFooterComponent={
+              ListFooterComponent={swapClosedList ? (
+                // D227 F1: an authored plan's list is closed, so there is no
+                // way out to the full library from here.
+                <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
+              ) : (
                 // Escape hatch from the ranked suggestions: search the whole
                 // library or add your own. Always present, so it works whether
                 // or not there were candidates.
@@ -7197,7 +7223,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons name="search" size={16} color={t.colors.textSecondary} />
                   <Text style={[styles.swapBrowseText, live.swapBrowseText]}>Search exercise library</Text>
                 </TouchableOpacity>
-              }
+              )}
             />
           </SafeAreaView>
           </SafeAreaProvider>

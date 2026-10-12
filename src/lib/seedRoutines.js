@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAllExercises, createRoutine, addExerciseToRoutine,
   createProgramme, getLibraryPlans, getRoutinesForPlan, getRoutineExercisesWithDetails,
+  getProgrammePlanFacts, setProgrammePlanFacts,
 } from './database';
 import { logError, logWarn, logInfo } from './errorLog';
 // Sentry VOLYUME-28 (2026-09-06): the exercise seed chain is awaited before
@@ -10,6 +11,11 @@ import { exercisesReady } from './seedExercises';
 // F-16 (certification 2026-09-05): the two band-only library plans live in
 // their own module and join LIBRARY_PLANS below.
 import { BAND_LIBRARY_PLANS } from './seedRoutines.bandPlans';
+// Register D227: the authored off-season plan is defined once, as pure data,
+// and its LIBRARY_PLANS entry and plan facts are both derived from it.
+import { OFFSEASON_ALLAN } from './library/offseasonAllan';
+import { authoredLibraryEntry, isAuthoredFacts } from './library/authored';
+import { buildAuthoredFacts } from './library/authoredFacts';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
 // v13 (CC28): the capability-led routine families - nine free plans
@@ -29,7 +35,9 @@ import { BAND_LIBRARY_PLANS } from './seedRoutines.bandPlans';
 // missing. The seed now waits for the exercise chain, repairs any library
 // routine that lacks a template exercise, and keeps repairing on later
 // launches while anything is still missing.
-const SEED_KEY = '@volyume_routines_seeded_v17';
+// v18 (register D227, 2026-10-12): adds the authored plan "Mens Physique Off
+// Season - Allan" (src/lib/library/offseasonAllan.js) with its plan facts.
+const SEED_KEY = '@volyume_routines_seeded_v18';
 // Set when a run left a template exercise unresolved; cleared once a repair
 // pass finds nothing missing. Read on every launch so the repair reruns
 // without waiting for the next SEED_KEY bump.
@@ -2495,7 +2503,6 @@ export const LIBRARY_PLANS = [
 // F-16: appended after the literal so the source-slicing library-data guard
 // (seedRoutinesLibraryData.test.js) keeps evaluating the literal alone.
 LIBRARY_PLANS.push(...BAND_LIBRARY_PLANS);
-
 // ─── Seed function ────────────────────────────────────────────────────────────
 
 export async function seedRoutinesIfNeeded(userId) {
@@ -2532,7 +2539,8 @@ export async function seedRoutinesIfNeeded(userId) {
           for (const ex of all) lookup[ex.name] = ex;
           const res = await repairLibraryPlans(LIBRARY_PLANS, existingLibrary, lookup);
           if (res.added > 0) logInfo('seedRoutines.repaired', `Added ${res.added} missing exercises to library plans`);
-          if (res.stillMissing === 0) await AsyncStorage.removeItem(INCOMPLETE_KEY).catch(() => {});
+          const authoredUnresolved = await ensureAuthoredLibraryFacts(LIBRARY_PLANS, existingLibrary, lookup);
+          if (res.stillMissing === 0 && authoredUnresolved === 0) await AsyncStorage.removeItem(INCOMPLETE_KEY).catch(() => {});
         }
         return;
       }
@@ -2614,13 +2622,20 @@ export async function seedRoutinesIfNeeded(userId) {
     const repaired = await repairLibraryPlans(LIBRARY_PLANS, existingLibrary, byName);
     if (repaired.added > 0) logInfo('seedRoutines.repaired', `Added ${repaired.added} missing exercises to library plans`);
 
+    // Register D227: the authored plans' facts, over every library plan now
+    // on the device (just created or created before).
+    stage = 'authoredFacts';
+    stageDetail = null;
+    const libraryNow = await getLibraryPlans().catch(() => existingLibrary);
+    const authoredUnresolved = await ensureAuthoredLibraryFacts(LIBRARY_PLANS, libraryNow, byName);
+
     stage = 'setMarker';
     stageDetail = null;
     await AsyncStorage.setItem(SEED_KEY, '1');
-    if (missing > 0 || repaired.stillMissing > 0) {
+    if (missing > 0 || repaired.stillMissing > 0 || authoredUnresolved > 0) {
       // Remember the gap so the next launch repairs it once the chain has run.
       await AsyncStorage.setItem(INCOMPLETE_KEY, '1').catch(() => {});
-      logWarn('seedRoutines.incomplete', `${missing + repaired.stillMissing} template exercises unresolved; will repair on a later launch`);
+      logWarn('seedRoutines.incomplete', `${missing + repaired.stillMissing + authoredUnresolved} template exercises unresolved; will repair on a later launch`);
     } else {
       await AsyncStorage.removeItem(INCOMPLETE_KEY).catch(() => {});
     }
@@ -2628,4 +2643,55 @@ export async function seedRoutinesIfNeeded(userId) {
   } catch (err) {
     logError('seedRoutines.seedRoutinesIfNeeded', err, { stage, stageDetail });
   }
+}
+
+// Register D227 (spec A1): appended at the end of the module, after the seed
+// function, so the source-slicing guards (seedRoutinesLibraryData.test.js,
+// corpus.guard.test.js) keep evaluating the literal alone; the push still runs
+// at module load, before any seed call.
+// Its entry carries `authored`, the definition the seed writes the plan's
+// facts from (ensureAuthoredLibraryFacts below).
+LIBRARY_PLANS.push(authoredLibraryEntry(OFFSEASON_ALLAN));
+
+/**
+ * Register D227 (spec A1, C2): every authored library plan carries its facts
+ * (programmes.plan_facts, kind 'authored'), built from its definition against
+ * the library programme's own routines and rows, so a copy can re-key them
+ * and the coach serves the plan as written. Written when the facts are absent
+ * or name an exercise the library could not resolve before (a later run, once
+ * the exercise top-up has added it, fills it in). Returns how many names are
+ * still unresolved, so the seed's repair marker covers them too.
+ *
+ * @param {Array<object>} plans     LIBRARY_PLANS-shaped templates
+ * @param {Array<object>} existing  library programme rows (getLibraryPlans)
+ * @param {Record<string, object>} byName  exercise rows keyed by canonical name
+ * @returns {Promise<number>}
+ */
+export async function ensureAuthoredLibraryFacts(plans, existing, byName) {
+  const byPlanName = new Map((existing ?? []).map((p) => [p.name, p]));
+  let unresolvedTotal = 0;
+  for (const plan of plans ?? []) {
+    if (!plan?.authored) continue;
+    const row = byPlanName.get(plan.name);
+    if (!row?.id) continue;
+    const current = await getProgrammePlanFacts(row.id);
+    const complete = isAuthoredFacts(current) && current.authored.sessions.every((s) => s.routineId
+      && s.exercises.every((x) => x.exerciseId && x.routineExerciseId && x.subs.every((sub) => sub.exerciseId)));
+    if (complete) continue;
+    const routines = await getRoutinesForPlan(row.id);
+    const withRows = [];
+    for (const routine of routines ?? []) {
+      // eslint-disable-next-line no-await-in-loop
+      const rows = await getRoutineExercisesWithDetails(routine.id);
+      withRows.push({
+        routineId: routine.id,
+        rows: (rows ?? []).map((r) => ({ routineExerciseId: r?.routineExercise?.id ?? null, exerciseId: r?.exercise?.id ?? null })),
+      });
+    }
+    const { facts, unresolved } = buildAuthoredFacts(plan.authored, { routines: withRows, exerciseByName: byName });
+    unresolvedTotal += unresolved.length;
+    if (unresolved.length) logWarn('seedRoutines.authoredUnresolved', `${plan.name}: ${unresolved.join(', ')}`);
+    await setProgrammePlanFacts(row.id, facts);
+  }
+  return unresolvedTotal;
 }

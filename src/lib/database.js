@@ -3768,6 +3768,10 @@ export async function updateExerciseMetadata(id, meta) {
   if (meta.cue !== undefined) { sets.push('cue = ?'); args.push(meta.cue || null); }
   if (meta.exerciseCategory !== undefined) { sets.push('exercise_category = ?'); args.push(meta.exerciseCategory ?? 'compound'); }
   if (meta.incrementKg !== undefined) { sets.push('increment_kg = ?'); args.push(meta.incrementKg ?? 2.5); }
+  // Register D227 (spec A3): the corpus row's subregion, so a corpus fix
+  // (Single-Arm Cable Lateral Raise's lateral_raise) reaches an existing
+  // install at the next re-derive. Only a row that carries the field writes it.
+  if (meta.subregion !== undefined) { sets.push('subregion = ?'); args.push(meta.subregion ?? null); }
   sets.push('updated_at = ?');
   args.push(Date.now(), id);
   await d.runAsync(`UPDATE exercises SET ${sets.join(', ')} WHERE id = ?`, args);
@@ -5654,6 +5658,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   const d = await db();
   const now = Date.now();
   const id = uid();
+  const authored = await authoredBlockFor(planId, _priorActiveBlock?.id, id);
   // C6 T-2 (D97-24): store the LOCAL activation day, not the UTC one - an
   // evening activation in the Americas used to store tomorrow's date.
   const _sd = new Date();
@@ -5703,6 +5708,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
         BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
         'hypertrophy', 'offseason_hypertrophy', NEW_BLOCK_RIR_LADDER, now, now],
     );
+    if (authored) await setAuthoredShape(d, id, authored, now);
   });
 
   await generateMesocycleWeeks(id);
@@ -5739,9 +5745,9 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
       reason: 'baseline pool check failed; seeding template rows',
     });
   }
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger, {
+  await (!authored ? generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger, {
     blockedMuscles: capabilityBlockedMuscles,
-  });
+  }) : writeAuthoredPlanBlock(id, planId, authored, VOLUME_LANDMARKS, capabilityBlockedMuscles));
 
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
@@ -5910,6 +5916,7 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
     [libraryPlanId],
   );
 
+  const routinePairs = [];
   for (let i = 0; i < libRoutineRows.length; i++) {
     const libRoutine = rowToCamel(libRoutineRows[i]);
     const newRoutine = await duplicateRoutine(libRoutine.id, userId, libRoutine.name);
@@ -5920,9 +5927,86 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
       'UPDATE routines SET programme_id = ?, is_library = 0, source_routine_id = ?, is_template = 0, position = ? WHERE id = ?',
       [newPlan.id, libRoutine.id, i, newRoutine.id],
     );
+    routinePairs.push([libRoutine.id, newRoutine.id]);
+  }
+
+  // Register D227 (spec C2): an AUTHORED library plan's facts travel with the
+  // copy, its routine and routine exercise ids re-keyed to the copy's, so the
+  // copy is served as written and the planner's fixed-mode rebuild never
+  // touches it. Every other library plan's copy carries no facts, as before.
+  // A failure leaves the copy without facts; planRebuild and activation both
+  // rebuild them from the definition (ensureAuthoredPlanFacts) before anything
+  // else reads the plan.
+  try {
+    const libFacts = await getProgrammePlanFacts(libraryPlanId);
+    // eslint-disable-next-line global-require
+    const { isAuthoredFacts } = require('./library/authored');
+    if (isAuthoredFacts(libFacts)) {
+      // eslint-disable-next-line global-require
+      const { rekeyAuthoredFacts } = require('./library/authoredFacts');
+      const routineIdMap = {};
+      const routineExerciseIdMap = {};
+      for (const [libId, newId] of routinePairs) {
+        routineIdMap[libId] = newId;
+        const libRows = await getRoutineExercisesWithDetails(libId);
+        const newRows = await getRoutineExercisesWithDetails(newId);
+        libRows.forEach((row, k) => {
+          const twin = newRows[k];
+          if (row?.routineExercise?.id && twin?.routineExercise?.id
+            && row.exercise?.id === twin.exercise?.id) {
+            routineExerciseIdMap[row.routineExercise.id] = twin.routineExercise.id;
+          }
+        });
+      }
+      await setProgrammePlanFacts(newPlan.id, rekeyAuthoredFacts(libFacts, { routineIdMap, routineExerciseIdMap }));
+    } else {
+      await ensureAuthoredPlanFacts(newPlan.id);
+    }
+  } catch (e) {
+    logError('database.copyPlanFromLibrary.authoredFacts', e, { libraryPlanId });
   }
 
   return { ...newPlan, sourceProgrammeId: libraryPlanId };
+}
+
+/**
+ * Register D227 (spec C2): the facts of an AUTHORED plan, making sure a copy
+ * of an authored library plan carries them. Returns the plan's facts when they
+ * are authored; when the plan has NO facts and is a copy of a library plan
+ * with an authored definition (by the library plan's name), builds them from
+ * the definition against the copy's own routines, stores them and returns
+ * them. Null for every other plan (including any plan with facts of another
+ * kind, which are never overwritten). Throws only on a read or write failure.
+ */
+export async function ensureAuthoredPlanFacts(programmeId) {
+  if (!programmeId) return null;
+  const facts = await getProgrammePlanFacts(programmeId);
+  // eslint-disable-next-line global-require
+  const { isAuthoredFacts } = require('./library/authored');
+  if (isAuthoredFacts(facts)) return facts;
+  if (facts != null) return null;
+  const programme = await getProgrammeById(programmeId);
+  if (!programme?.sourceProgrammeId || Number(programme.isLibrary) === 1) return null;
+  const source = await getProgrammeById(programme.sourceProgrammeId);
+  if (!source || Number(source.isLibrary) !== 1) return null;
+  // eslint-disable-next-line global-require
+  const { authoredDefinitionFor, buildAuthoredFacts } = require('./library/authoredFacts');
+  const def = authoredDefinitionFor(source.name);
+  if (!def) return null;
+  const routines = await getRoutinesForPlan(programmeId);
+  const withRows = [];
+  for (const routine of routines ?? []) {
+    const rows = await getRoutineExercisesWithDetails(routine.id);
+    withRows.push({
+      routineId: routine.id,
+      rows: (rows ?? []).map((r) => ({ routineExerciseId: r?.routineExercise?.id ?? null, exerciseId: r?.exercise?.id ?? null })),
+    });
+  }
+  const exerciseByName = {};
+  for (const ex of await getAllExercises()) exerciseByName[ex.name] = ex;
+  const { facts: built } = buildAuthoredFacts(def, { routines: withRows, exerciseByName });
+  await setProgrammePlanFacts(programmeId, built);
+  return built;
 }
 
 export async function archivePlan(planId) {
@@ -6265,6 +6349,111 @@ export async function getNextMesocycleWeek(currentWeekId) {
 // ranges from the Block Ledger replace the static ramp when evidence
 // exists; the underscore drops when it is consumed). Default behaviour is
 // byte-identical until then.
+/**
+ * Register D227 (spec B3): an AUTHORED plan's block volume, written from the
+ * authored ladder (facts.weeklyTargets, one entry per block week), never the
+ * template or learned rows. Each trained muscle's row band is the plan's own:
+ * mev is its Health sets a week (the floor a pull-back never goes below, D3)
+ * and mrv its weekly ceiling (facts.recoverySafeMax), so the coach's apply
+ * clamps inside the author's numbers; mav keeps the research value as
+ * metadata. A muscle the plan does not train, or one the person's baseline
+ * limitations leave with nothing to train it (as generateInitialPlannedVolume
+ * does), gets honest zero rows. Source 'authored'. One transaction, logged
+ * and swallowed on failure like the template writer.
+ */
+/**
+ * Register D227 (spec B1 to B3): the facts an AUTHORED plan (facts.kind
+ * 'authored') starts its new block `mesocycleId` with: block 1 on a first
+ * activation, the next block when the block being replaced is this plan's own
+ * latest one (the plan screen's next-block paths). Null for every other plan,
+ * and on any failure (logged): the activation then writes the standard block.
+ */
+async function authoredBlockFor(planId, priorActiveMesocycleId, mesocycleId) {
+  try {
+    const facts = await ensureAuthoredPlanFacts(planId);
+    if (!facts) return null;
+    // eslint-disable-next-line global-require
+    const { nextAuthoredBlockNumber, factsForAuthoredBlock } = require('./library/authoredFacts');
+    const blockNumber = nextAuthoredBlockNumber(facts, priorActiveMesocycleId ?? null);
+    return factsForAuthoredBlock(facts, { blockNumber, mesocycleId });
+  } catch (e) {
+    logError('database.activatePlanWithBlock.authored', e, { planId });
+    return null;
+  }
+}
+
+/**
+ * Register D227 (spec B3): an authored block's planned volume from the
+ * authored ladder (writeAuthoredPlannedVolume), then the plan's facts, which
+ * record the block the plan is in. activatePlanWithBlock calls this in place
+ * of the template writer for an authored plan only.
+ */
+async function writeAuthoredPlanBlock(mesocycleId, planId, facts, volumeLandmarks, blockedMuscles) {
+  await writeAuthoredPlannedVolume(mesocycleId, facts, volumeLandmarks, { blockedMuscles });
+  try {
+    await setProgrammePlanFacts(planId, facts);
+  } catch (e) {
+    logError('database.activatePlanWithBlock.authoredFacts', e, { planId });
+  }
+}
+
+/**
+ * Register D227 (spec B1, B2): an authored block's length, recovery week and
+ * RIR ladder (8 weeks), written inside activation's own transaction right
+ * after the insert, before generateMesocycleWeeks reads them.
+ */
+async function setAuthoredShape(d, mesocycleId, facts, now) {
+  const weeks = facts.rirLadder.length;
+  const endDate = new Date(Date.now() + weeks * 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await d.runAsync(
+    `UPDATE mesocycles SET duration_weeks = ?, planned_weeks = ?, deload_week = ?, rir_ladder = ?, end_date = ?, updated_at = ?
+      WHERE id = ?`,
+    [weeks, weeks, weeks, JSON.stringify(facts.rirLadder), endDate, now, mesocycleId],
+  );
+}
+
+async function writeAuthoredPlannedVolume(mesocycleId, facts, volumeLandmarks, { blockedMuscles = null } = {}) {
+  try {
+    const d = await db();
+    const weeks = await d.getAllAsync(
+      'SELECT * FROM mesocycle_weeks WHERE mesocycle_id = ? ORDER BY week_index ASC',
+      [mesocycleId],
+    );
+    if (weeks.length === 0) return;
+    const blocked = blockedMuscles instanceof Set ? blockedMuscles : new Set(blockedMuscles ?? []);
+    const targets = facts?.weeklyTargets ?? {};
+    // The Health floor per app muscle (the ramp's reference, A5).
+    const health = {};
+    for (const s of facts?.authored?.sessions ?? []) {
+      for (const x of s.exercises ?? []) {
+        const m = x.appMuscle;
+        if (m && Number.isFinite(x.sets?.health)) health[m] = (health[m] || 0) + x.sets.health;
+      }
+    }
+    const now = Date.now();
+    await runInTransaction(d, async () => {
+      for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
+        const ladder = Array.isArray(targets[muscle]) ? targets[muscle] : null;
+        const trained = !!ladder && !blocked.has(muscle);
+        const top = Number(facts?.recoverySafeMax?.[muscle]);
+        const rowMev = trained ? Math.min(health[muscle] ?? 0, Number.isFinite(top) ? top : Infinity) : 0;
+        const rowMrv = trained ? (Number.isFinite(top) ? top : Math.max(...ladder)) : 0;
+        for (const week of weeks) {
+          const planned = trained ? Math.max(0, Math.round(Number(ladder[Number(week.week_index) - 1]) || 0)) : 0;
+          await d.runAsync(
+            `INSERT OR IGNORE INTO planned_muscle_volume
+               (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [`pmv_${week.id}_${muscle}`, week.id, muscle, planned, rowMev, landmarks.mav, rowMrv, 'authored', now, now],
+          );
+        }
+      }
+    });
+  } catch (e) {
+    logError('database.writeAuthoredPlannedVolume', e, { mesocycleId });
+  }
+}
+
 export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, ledger = null, { blockedMuscles = null } = {}) {
   try {
     const d = await db();
