@@ -49,6 +49,7 @@ import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from './pla
 import { buildChangeReceipt } from './planRationale';
 import { readActiveBlockStatus } from './planSwitch';
 import { logError } from './errorLog';
+import { profileWithOption } from './structure/adapt';
 
 /**
  * Read the current active plan into a comparable summary (NA-coaching-13:
@@ -82,13 +83,16 @@ export async function prepareStartWithPlan(userId, userProfile, {
   // report a change the athlete never made. Left null when unknown, which
   // renders as "-" rather than as a wrong number.
   currentSessionLengthMinutes = null,
+  // D222 phase 7 (R83): true when the person already answered the pre-flight
+  // in this preview (they are taking one of the engine's choices).
+  preflightDone = false,
 } = {}) {
   if (!userId) return { ok: false, reason: 'no_user', preview: null, otherPlansCount: 0 };
 
   // CC27 (section 9.6) red-team finding 1: the pre-flight runs before the
   // generator on every generation surface. Holding leaves the athlete where
   // they were, with nothing written.
-  const preflight = await capabilityPreflight(userId);
+  const preflight = preflightDone ? { proceed: true } : await capabilityPreflight(userId);
   if (!preflight.proceed) {
     const goAhead = await new Promise((resolve) => {
       offerCapabilityPreflightChoice({
@@ -157,6 +161,38 @@ export async function prepareStartWithPlan(userId, userProfile, {
 
 export async function commitStartWithPlan(userId, userProfile) {
   return generateAndSavePlan(userId, userProfile);
+}
+
+/**
+ * D222 phase 7 (R83): the preview again, after the person takes one of the
+ * structure engine's choices (more days, a longer session, without a focus
+ * pick). The profile the preview was prepared with takes the change
+ * (structure/adapt.profileWithOption) and the plan is prepared again from it,
+ * read only; the result carries that `profile`, which the caller commits (and
+ * saves, saveChosenProfile) only on confirm.
+ * @param {string} userId
+ * @param {object} profile  the profile the current preview was prepared with
+ * @param {object} option   one of preview.structure.options / preview.refusal.options
+ * @param {object} [opts]   prepareStartWithPlan's options (mode, currentSessionLengthMinutes)
+ */
+export async function prepareStartWithPlanOption(userId, profile, option, opts = {}) {
+  const next = profileWithOption(profile, option);
+  const prep = await prepareStartWithPlan(userId, next, { ...opts, preflightDone: true });
+  return { ...prep, profile: next };
+}
+
+/**
+ * D222 phase 7 (R83): once a plan built from a chosen profile is saved, the
+ * profile is saved with it, so the person's days, length and focus are the
+ * plan's. Nothing is saved when no choice was taken. Throws only on a write
+ * failure: the caller logs it.
+ */
+export async function saveChosenProfile(userId, chosen, original) {
+  if (!userId || !chosen || chosen === original) return false;
+  // eslint-disable-next-line global-require
+  const { default: useAppStore } = require('../store/useAppStore');
+  await useAppStore.getState().saveLocalProfile(userId, chosen);
+  return true;
 }
 
 

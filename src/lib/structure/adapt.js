@@ -21,7 +21,7 @@ import {
 } from './rulebook';
 import { checkPlan } from './checker';
 import { senseCheck } from './sense';
-import { planMessages, refusalText } from './messages';
+import { planMessages, refusalText, optionLabel } from './messages';
 import { VOLUME_LANDMARKS } from '../algorithms';
 import { SESSION_CEILINGS } from '../plan/science';
 import { SELECTION_REASON } from '../planEngine';
@@ -274,6 +274,116 @@ export function structureWeeklyTargets(plan) {
 export function structureFacts(result, args, { routineIds, routineExerciseIds = null }) {
   const { plan, report } = result;
   const rid = (i) => routineIds[i];
+  const reIds = Array.isArray(routineExerciseIds) ? routineExerciseIds : [];
+  const compat = structureCompat(plan, {
+    weekly: report.weekly || {}, minutes: report.minutes || [], lengthMinutes: args.lengthMinutes, routineIdOf: rid,
+  });
+  const c = checkPlan(plan);
+  const sc = senseCheck(plan);
+  const minutes = report.minutes || [];
+  return {
+    version: 2,
+    family: `structure:${plan.category}:${plan.days}`,
+    ...compat,
+    structure: {
+      version: 3,
+      category: plan.category,
+      days: plan.days,
+      lengthMinutes: plan.lengthMinutes,
+      equipment: plan.equipment,
+      experience: plan.experience,
+      focus: [...(plan.focus || [])],
+      // D222 phase 7 (R70): everything else checkPlan and senseCheck read, so
+      // the stored plan checks exactly as the built one (stored.planFromFacts).
+      ...structurePlanData(plan),
+      sessions: plan.sessions.map((s, i) => structureSession(s, rid(i), reIds[i])),
+      checks: {
+        ok: c.ok && sc.ok,
+        faults: c.failures.map((f) => ({ code: f.code, detail: f.detail })),
+        sense: sc.failures.map((f) => f.code),
+      },
+      report: {
+        minutes: [...minutes],
+        longestMinutes: report.longestMinutes,
+        needsLengthChoice: report.needsLengthChoice === true,
+        suggestedLength: report.suggestedLength ?? null,
+        daysThatFit: report.daysThatFit ?? null,
+        focusResults: report.focusResults || [],
+        focusUntrainable: report.focusUntrainable || [],
+        untrainableSets: report.untrainableSets || [],
+        belowMinimum: report.belowMinimum || [],
+        belowTypical: report.belowTypical || [],
+        fewerSetsThan: report.fewerSetsThan ?? null,
+        focusDropped: report.focusDropped || [],
+      },
+    },
+  };
+}
+
+/**
+ * D222 phase 7 (R70): the plan-level fields the checks read, as plain data.
+ * `focusUnmet` keeps only what the sense check reads (the muscle) and why.
+ */
+export function structurePlanData(plan) {
+  const offer = plan.kitOffer || { names: {}, patterns: {} };
+  return {
+    untrainable: [...(plan.untrainable || [])],
+    kitLimited: [...(plan.kitLimited || [])],
+    overflow: (plan.overflow || []).map((o) => ({ muscle: o.muscle, session: o.session, ...(o.reason ? { reason: o.reason } : {}) })),
+    focusTargets: { ...(plan.focusTargets || {}) },
+    focusUnmet: (plan.focusUnmet || []).map((f) => ({ muscle: f.muscle, ...(f.reason ? { reason: f.reason } : {}) })),
+    kitOffer: {
+      names: { ...(offer.names || {}) },
+      patterns: Object.fromEntries(Object.entries(offer.patterns || {}).map(([m, list]) => [m, [...list]])),
+    },
+  };
+}
+
+/** D222 phase 7 (R70): one exercise of a session as the structure block stores it. */
+export function structureExercise(ex, routineExerciseId = null) {
+  return {
+    routineExerciseId: routineExerciseId ?? ex.routineExerciseId ?? null,
+    exerciseId: ex.id ?? ex.exerciseId,
+    name: ex.name,
+    muscle: engineMuscleOf(ex),
+    pattern: ex.pattern,
+    kind: ex.kind,
+    peak: ex.peak,
+    weeks: ex.weeks.map((w) => ({ sets: w.sets, rir: w.rir })),
+    restSec: ex.restSec,
+    repRange: [...ex.repRange],
+    nextDayException: ex.nextDayException === true,
+    solePattern: ex.solePattern === true,
+    extraJoints: [...(ex.extraJoints || [])],
+    ...(Array.isArray(ex.tags) && ex.tags.length ? { tags: [...ex.tags] } : {}),
+  };
+}
+
+function structureSession(s, routineId, reIds) {
+  return {
+    routineId: routineId ?? s.routineId ?? null,
+    key: s.key,
+    name: s.name,
+    exercises: s.exercises.map((ex, j) => structureExercise(ex, Array.isArray(reIds) ? (reIds[j] ?? null) : null)),
+  };
+}
+
+/**
+ * The version 2 fields every older reader uses, derived from a structure plan
+ * (R60, R61), each in the meaning plan/planner.js and
+ * planAutoGen.plannerV2PlanFacts give it (see structureFacts). One function for
+ * the build (phase 6) and every change after it (phase 7, R72), so the two can
+ * never disagree.
+ * @param {object} plan  a structure plan (measure.js), its sessions in rotation order
+ * @param {object} opts
+ * @param {Object<string, {sets: number, tier: string, min: number, max: number}>} opts.weekly
+ *        each engine muscle's counted sets at the peak and its targets (the engine's report.weekly)
+ * @param {number[]} opts.minutes  each session's minutes at the peak
+ * @param {number} opts.lengthMinutes  the chosen session length
+ * @param {function(number): string} opts.routineIdOf  the routine id of session i
+ */
+export function structureCompat(plan, { weekly, minutes, lengthMinutes, routineIdOf }) {
+  const rid = routineIdOf;
   const peakIndex = PROGRESSION.peakWeek - 1;
 
   const slots = {};
@@ -289,12 +399,13 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
       const m = engineMuscleOf(ex);
       const k = appMuscleOf(m);
       const peak = ex.weeks[peakIndex].sets;
+      const id = ex.id ?? ex.exerciseId;
       ownPeakEngine[m] = (ownPeakEngine[m] || 0) + peak;
       if (!k) continue;
-      if (!Object.prototype.hasOwnProperty.call(slots[r], ex.id)) {
-        slots[r][ex.id] = { muscle: k, kind: ex.kind, credits: appCreditsOf(ex) };
+      if (!Object.prototype.hasOwnProperty.call(slots[r], id)) {
+        slots[r][id] = { muscle: k, kind: ex.kind, credits: appCreditsOf(ex) };
       }
-      if (ex.solePattern === true) (thin[r] = thin[r] || []).push(ex.id);
+      if (ex.solePattern === true) (thin[r] = thin[r] || []).push(id);
       if (ex.nextDayException === true) (lightCaps[k] = lightCaps[k] || {})[r] = LIGHT_DOSE.maxDirectSets;
       perSession[k] = perSession[k] || {};
       perSession[k][r] = (perSession[k][r] || 0) + peak;
@@ -310,7 +421,6 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
     }
   }
 
-  const weekly = report.weekly || {};
   const roles = {};
   const RANK = { maintenance: 0, standard: 1, focus: 2 };
   for (const [m, v] of Object.entries(weekly)) {
@@ -337,26 +447,19 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
     recoverySafeMax[k] = Math.max(peak, Math.floor(peak + free));
   }
 
-  const minutes = report.minutes || [];
   const sessionMinutesAtPeak = {};
   const overTime = {};
   const overCeilings = [];
   plan.sessions.forEach((s, i) => {
     const r = rid(i);
     sessionMinutesAtPeak[r] = minutes[i];
-    const over = Number.isFinite(args.lengthMinutes) ? minutes[i] - args.lengthMinutes : 0;
+    const over = Number.isFinite(lengthMinutes) ? minutes[i] - lengthMinutes : 0;
     if (over > TIME_MODEL.toleranceMinutes) overTime[r] = over;
     const setsAtPeak = s.exercises.reduce((t, ex) => t + ex.weeks[peakIndex].sets, 0);
     if (s.exercises.length > SESSION_CEILINGS.exercises || setsAtPeak > SESSION_CEILINGS.workingSets) overCeilings.push(r);
   });
 
-  const c = checkPlan(plan);
-  const sc = senseCheck(plan);
-  const reIds = Array.isArray(routineExerciseIds) ? routineExerciseIds : [];
-
   return {
-    version: 2,
-    family: `structure:${plan.category}:${plan.days}`,
     roles,
     weeklyTargets: structureWeeklyTargets(plan),
     exposureShares,
@@ -374,52 +477,6 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
     overTime,
     overCeilings,
     recoverySafeMax,
-    structure: {
-      version: 3,
-      category: plan.category,
-      days: plan.days,
-      lengthMinutes: plan.lengthMinutes,
-      equipment: plan.equipment,
-      experience: plan.experience,
-      focus: [...(plan.focus || [])],
-      sessions: plan.sessions.map((s, i) => ({
-        routineId: rid(i),
-        key: s.key,
-        name: s.name,
-        exercises: s.exercises.map((ex, j) => ({
-          routineExerciseId: (reIds[i] && reIds[i][j]) || null,
-          exerciseId: ex.id,
-          name: ex.name,
-          muscle: engineMuscleOf(ex),
-          pattern: ex.pattern,
-          kind: ex.kind,
-          peak: ex.peak,
-          weeks: ex.weeks.map((w) => ({ sets: w.sets, rir: w.rir })),
-          restSec: ex.restSec,
-          repRange: [...ex.repRange],
-          nextDayException: ex.nextDayException === true,
-        })),
-      })),
-      checks: {
-        ok: c.ok && sc.ok,
-        faults: c.failures.map((f) => ({ code: f.code, detail: f.detail })),
-        sense: sc.failures.map((f) => f.code),
-      },
-      report: {
-        minutes: [...minutes],
-        longestMinutes: report.longestMinutes,
-        needsLengthChoice: report.needsLengthChoice === true,
-        suggestedLength: report.suggestedLength ?? null,
-        daysThatFit: report.daysThatFit ?? null,
-        focusResults: report.focusResults || [],
-        focusUntrainable: report.focusUntrainable || [],
-        untrainableSets: report.untrainableSets || [],
-        belowMinimum: report.belowMinimum || [],
-        belowTypical: report.belowTypical || [],
-        fewerSetsThan: report.fewerSetsThan ?? null,
-        focusDropped: report.focusDropped || [],
-      },
-    },
   };
 }
 
@@ -475,6 +532,70 @@ export function structureRefusal(refusal, args) {
   };
 }
 
+// ── R83: answerable choices ────────────────────────────────────────────────
+
+const sameChange = (a, b) => JSON.stringify(a || null) === JSON.stringify(b || null);
+
+/**
+ * R83: the engine's choices as data a control can offer. Each option is
+ * { key, kind, change, label } where `change` is what the person's profile
+ * takes ({ daysPerWeek?, sessionLengthMinutes?, dropFocus?: [engine muscle] })
+ * and `kind` is
+ *   'length'      a longer session (the length question);
+ *   'days'        more days (the length question, a focus pick, a refusal);
+ *   'drop_focus'  the same days without a focus pick that adds too little;
+ *   'keep'        the plan as it is (change null): offered beside a question,
+ *                 never for a refused week, which cannot be kept.
+ * A week with no question and no refusal has no options (the confirm button
+ * stands as it is). The same change offered twice is offered once.
+ * @param {object} result  buildStructurePlan's result
+ * @param {{ days: number, lengthMinutes: number }} args
+ */
+export function structureOptions(result, args) {
+  const opts = [];
+  const add = (o) => { if (!opts.some((x) => sameChange(x.change, o.change))) opts.push(o); };
+  if (!result || !result.ok) {
+    const r = result && result.refusal ? result.refusal : {};
+    if (r.suggestedDays) {
+      add({ kind: 'days', change: { daysPerWeek: r.suggestedDays, ...(r.suggestedLength ? { sessionLengthMinutes: r.suggestedLength } : {}) } });
+    }
+  } else {
+    const rep = result.report || {};
+    if (rep.needsLengthChoice) {
+      if (rep.suggestedLength) add({ kind: 'length', change: { sessionLengthMinutes: rep.suggestedLength } });
+      if (rep.daysThatFit) add({ kind: 'days', change: { daysPerWeek: rep.daysThatFit } });
+    }
+    for (const f of rep.focusChoice || []) {
+      if (f.moreDays) add({ kind: 'days', change: { daysPerWeek: f.moreDays, ...(f.lengthThen ? { sessionLengthMinutes: f.lengthThen } : {}) } });
+      add({ kind: 'drop_focus', change: { dropFocus: [f.muscle] }, muscle: f.muscle });
+    }
+    if (opts.length) add({ kind: 'keep', change: null });
+  }
+  return opts.map((o, i) => ({ ...o, key: `${o.kind}-${i}`, label: optionLabel(o, args) }));
+}
+
+/**
+ * R83: the person's profile after they take one of the preview's choices.
+ * The day count and the session length are set; a dropped focus pick removes
+ * every weak-point label that maps to it (Chest and Upper Chest are both the
+ * chest). 'keep' and an unknown option return the profile unchanged. Pure.
+ * @param {object} profile  the profile the dry run was prepared with
+ * @param {?{ change: ?object }} option
+ */
+export function profileWithOption(profile, option) {
+  const c = option && option.change;
+  if (!profile || !c) return profile;
+  const next = { ...profile };
+  if (Number.isFinite(c.daysPerWeek)) next.daysPerWeek = c.daysPerWeek;
+  if (Number.isFinite(c.sessionLengthMinutes)) next.sessionLengthMinutes = c.sessionLengthMinutes;
+  if (Array.isArray(c.dropFocus) && c.dropFocus.length) {
+    const drop = new Set(c.dropFocus);
+    next.planWeakPoints = (Array.isArray(profile.planWeakPoints) ? profile.planWeakPoints : [])
+      .filter((label) => !drop.has(FOCUS_LABEL_MAP[label]));
+  }
+  return next;
+}
+
 /** R65: the dry run's `structure` block for a built week. */
 export function structurePreview(result, args) {
   const rep = result.report;
@@ -484,6 +605,8 @@ export function structurePreview(result, args) {
     daysThatFit: rep.daysThatFit ?? null,
     focusQuestions: rep.focusChoice || [],
     messages: planMessages(result, args).map(appLine),
+    // R83: the questions above as choices the person can take.
+    options: structureOptions(result, args),
     // The real length (R65): the longest session at the peak, not the input.
     minutes: [...rep.minutes],
     longestMinutes: Math.round(Math.max(...rep.minutes)),
@@ -546,6 +669,10 @@ export function structureFit(result, args, byDuration = []) {
   }
   return {
     state,
+    // R83: the choices (the focus questions too, which the fit review asks
+    // before the plan is saved), and the focus questions themselves.
+    options: structureOptions(result, args),
+    focusQuestions: result.ok ? (result.report.focusChoice || []) : [],
     daysPerWeek: args.days,
     sessionLengthMinutes: args.lengthMinutes,
     longestSessionMinutes: longest,

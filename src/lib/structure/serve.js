@@ -34,9 +34,15 @@ export function isStructureFacts(facts) {
  * @param {Array<{exerciseId: ?string, slotId: ?string, cap?: number}>} args.exercises
  *        today's rows; `cap` holds an exercise put in a slot for today (a one-off
  *        swap) to its own cap, as servedSetsCap does today
+ * @param {Object<string, number>} [args.ramp]  D222 phase 7 (R74): the injury
+ *        ramp's week (planned_muscle_volume rows with source 'reintroduction'),
+ *        app muscle -> its planned direct sets. Each exercise of such a muscle
+ *        is served its share of the ramp's figure against the plan's own
+ *        figure for the week (facts.weeklyTargets), never above the ladder
+ *        and never below one set
  * @returns {{ sets: Object<string, number>, rir: Object<string, number> }}  by exercise id
  */
-export function structureServedWeek({ facts, routineId, weekIndex, weekRir = null, isDeload = false, exercises }) {
+export function structureServedWeek({ facts, routineId, weekIndex, weekRir = null, isDeload = false, exercises, ramp = null }) {
   const out = { sets: {}, rir: {} };
   if (!isStructureFacts(facts) || !routineId || !Number.isInteger(weekIndex) || weekIndex < 1) return out;
   const session = facts.structure.sessions.find((s) => s && s.routineId === routineId);
@@ -65,7 +71,9 @@ export function structureServedWeek({ facts, routineId, weekIndex, weekRir = nul
       : ladder[Math.max(1, Math.min(weekIndex, ladder.length - 1)) - 1];
     if (!row.exerciseId || !week) continue;
     const t = row.slotId != null ? typed[row.slotId] : undefined;
-    if (typeof t === 'number' && Number.isFinite(t) && t >= 1) out.sets[row.exerciseId] = t;
+    // D222 phase 7 (R76): a typed count is served as typed; the recovery
+    // week still halves it (never below one set).
+    if (typeof t === 'number' && Number.isFinite(t) && t >= 1) out.sets[row.exerciseId] = isDeload === true ? Math.max(1, Math.round(t / 2)) : t;
     else if (Number.isFinite(week.sets) && week.sets >= 1) {
       // The planned exercise is served the ladder as built; another exercise
       // in its place today is held to its own cap.
@@ -73,6 +81,18 @@ export function structureServedWeek({ facts, routineId, weekIndex, weekRir = nul
       out.sets[row.exerciseId] = swapped ? Math.min(week.sets, row.cap) : week.sets;
     }
     if (Number.isFinite(week.rir) && (!Number.isFinite(weekRir) || week.rir > weekRir)) out.rir[row.exerciseId] = week.rir;
+    // R74: the injury ramp only lowers; it never takes an exercise above its ladder.
+    const app = APP_KEY[list[j].muscle] ?? list[j].muscle;
+    const held = ramp && Number.isFinite(ramp[app]) ? ramp[app] : null;
+    const planned = held != null && Array.isArray(facts.weeklyTargets?.[app]) ? facts.weeklyTargets[app][weekIndex - 1] : null;
+    if (held != null && Number.isFinite(planned) && planned > 0 && held < planned && Number.isFinite(out.sets[row.exerciseId])) {
+      const now = out.sets[row.exerciseId];
+      out.sets[row.exerciseId] = Math.max(1, Math.min(now, Math.round((now * held) / planned)));
+    }
   }
   return out;
 }
+
+// The app's muscle key of an engine muscle (adapt.appMuscleOf's merges),
+// kept here so the serving path imports nothing heavy.
+const APP_KEY = Object.freeze({ lats: 'back', upper_back: 'back', glute_max: 'glutes', glute_med: 'glutes' });

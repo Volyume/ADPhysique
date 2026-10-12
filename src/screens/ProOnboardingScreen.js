@@ -55,6 +55,7 @@ import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capa
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
 } from '../lib/planFit';
+import { profileWithOption } from '../lib/structure/adapt';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -1676,6 +1677,33 @@ export default function ProOnboardingScreen({ navigation }) {
     if (fit) setFitReview(fit);
   }
 
+  /**
+   * D222 phase 7 (R83): one of the structure engine's focus choices. Without
+   * the pick, the focus picks change and the engine is asked again (a week
+   * with nothing left to ask carries on); more days carries on at that day
+   * count, as the extra-day option does.
+   */
+  async function chooseFocusOption(option) {
+    if (!option?.change || fitBusy) return;
+    if (option.kind === 'days') {
+      acceptFit({
+        daysPerWeek: option.change.daysPerWeek,
+        sessionLengthMinutes: option.change.sessionLengthMinutes ?? fitReview?.sessionLengthMinutes ?? sessionLengthMinutes,
+      });
+      return;
+    }
+    const next = profileWithOption(planProfileNow(), option);
+    setPlanWeakPoints(next.planWeakPoints ?? []);
+    const fit = await runFitAssessment({ planWeakPoints: next.planWeakPoints ?? [] });
+    if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
+      || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
+      || (Array.isArray(fit.focusQuestions) && fit.focusQuestions.length > 0))) {
+      setFitReview(fit);
+      return;
+    }
+    acceptFit(null);
+  }
+
   /** Take the athlete's answer to the fit panel and carry on. */
   function acceptFit(alternative) {
     if (alternative) {
@@ -1705,8 +1733,11 @@ export default function ProOnboardingScreen({ navigation }) {
     if (!fitAccepted && !libraryKitForEquipment(equipment)) {
       if (fitInFlightRef.current) return;
       const fit = await runFitAssessment();
+      // D222 phase 7 (R83): a focus pick the structure engine asks about is
+      // answered here too, before the plan is saved.
       if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
-        || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED)) {
+        || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
+        || (Array.isArray(fit.focusQuestions) && fit.focusQuestions.length > 0))) {
         setFitReview(fit);
         return;
       }
@@ -3127,6 +3158,15 @@ export default function ProOnboardingScreen({ navigation }) {
         ? { ...fitCopy(fitReview.state, fitReview), body: refusalText }
         : fitCopy(fitReview.state, fitReview);
       const moreCopy = moreSessions ? alternativeCopy(moreSessions) : null;
+      // D222 phase 7 (R83): the engine's focus questions, each sentence with
+      // its choices beside it (never a "Choose ..." without a control).
+      const focusAsked = Array.isArray(fitReview.focusQuestions) && fitReview.focusQuestions.length > 0;
+      const focusLines = focusAsked
+        ? (fitReview.messages ?? []).filter((m) => /focus/i.test(m) && /Choose /.test(m))
+        : [];
+      const focusOptions = focusAsked
+        ? (fitReview.options ?? []).filter((o) => o.kind === 'drop_focus' || (o.kind === 'days' && fitReview.focusQuestions.some((f) => f.moreDays === o.change?.daysPerWeek)))
+        : [];
 
       return (
         <SafeAreaView key="step-8-fit" style={[styles.safe, live.safe]}>
@@ -3212,6 +3252,30 @@ export default function ProOnboardingScreen({ navigation }) {
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
                 </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {focusOptions.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Your focus</Text>
+                {focusLines.map((line, i) => (
+                  <Text key={`focus-line-${i}`} style={[styles.fieldHint, live.fieldHint]}>{line}</Text>
+                ))}
+                {focusOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.key ?? option.label}
+                    style={[styles.proteinOpt, live.proteinOpt]}
+                    onPress={() => chooseFocusOption(option)}
+                    disabled={fitBusy}
+                    accessibilityRole="button"
+                    accessibilityLabel={option.label}
+                  >
+                    <View style={styles.proteinOptionCopy}>
+                      <Text style={[styles.proteinOptLabel, live.proteinOptLabel]}>{option.label}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
               </View>
             ) : null}
 

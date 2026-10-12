@@ -54,6 +54,7 @@ import { formatBodyWeightShort } from '../lib/units';
 // receipt).
 import {
   prepareStartWithPlan, commitStartWithPlan, installLibraryPlanForKit, libraryKitForEquipment,
+  prepareStartWithPlanOption, saveChosenProfile,
   generationEquipmentFor, libraryKitOfferLine, libraryKitWord,
 } from '../lib/startWithPlan';
 // The equipment answers themselves live in ONE shared list with onboarding
@@ -161,6 +162,9 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [planPreview, setPlanPreview] = useState(null);
   const [planCommitting, setPlanCommitting] = useState(false);
   const planPreviewResolveRef = useRef(null);
+  // D222 phase 7 (R83): the profile the open preview was prepared from, and
+  // the profile one of the structure engine's choices made from it.
+  const goalPreviewRef = useRef(null);
   // One save at a time. The ref is the guard (state lags a render, so two
   // quick taps would both read it as idle); the state drives the spinner.
   const savingRef = useRef(false);
@@ -291,6 +295,32 @@ export default function ProGoalSetupScreen({ navigation }) {
 
   // Phases that represent a calorie deficit, used to track when the deficit began.
   const DEFICIT_PHASES = ['cut'];
+
+  // D222 phase 7 (R83): one of the structure engine's choices in the sheet
+  // (more days, a longer session, without a focus pick). The plan is prepared
+  // again from the changed profile and the sheet shows it; the confirm then
+  // builds from that profile. Nothing is saved until the person confirms.
+  async function handleGoalPlanOption(option) {
+    const base = goalPreviewRef.current;
+    if (!base || planCommitting) return;
+    setPlanCommitting(true);
+    try {
+      const again = await prepareStartWithPlanOption(user.id, base.chosen ?? base.profile, option, {
+        mode: 'goal',
+        currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
+      });
+      if (again.ok) {
+        goalPreviewRef.current = { ...base, chosen: again.profile };
+        setPlanPreview({ preview: again.preview, otherPlansCount: again.otherPlansCount });
+      } else {
+        logError('ProGoalSetupScreen.planOption', new Error(again.error ?? again.reason ?? 'plan_preview_failed'), { userId: user?.id });
+      }
+    } catch (e) {
+      logError('ProGoalSetupScreen.planOption', e, { userId: user?.id });
+    } finally {
+      setPlanCommitting(false);
+    }
+  }
 
   async function handleSave() {
     if (savingRef.current) return;
@@ -629,6 +659,11 @@ export default function ProGoalSetupScreen({ navigation }) {
       // before any write), so there is nothing to preview or generate.
       planResult = { ok: true, planName: installedPlan.planName };
     } else {
+    // D222 phase 7 (R83): the profile this preview was prepared from, for
+    // the structure engine's choices (handleGoalPlanOption), which prepare it
+    // again from a changed profile; the plan is then built from that profile
+    // and it is saved with the plan.
+    goalPreviewRef.current = { profile: updatedProfile, chosen: null };
     const prep = await prepareStartWithPlan(user.id, updatedProfile, {
       mode: 'goal',
       currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
@@ -647,8 +682,14 @@ export default function ProGoalSetupScreen({ navigation }) {
         planResult = { ok: false, error: 'plan_preview_declined' };
       } else {
         setPlanCommitting(true);
+        const chosenProfile = goalPreviewRef.current?.chosen ?? null;
         try {
-          planResult = await commitStartWithPlan(user.id, updatedProfile);
+          if (chosenProfile) planResult = await commitStartWithPlan(user.id, chosenProfile);
+          else planResult = await commitStartWithPlan(user.id, updatedProfile);
+          if (planResult?.ok && chosenProfile) {
+            await saveChosenProfile(user.id, chosenProfile, updatedProfile)
+              .catch((e) => logError('ProGoalSetupScreen.saveChosenProfile', e, { userId: user?.id }));
+          }
         } catch (e) {
           planResult = { ok: false, error: e?.message ?? 'unknown' };
         }
@@ -1005,6 +1046,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         otherPlansCount={planPreview?.otherPlansCount ?? 0}
         confirmLabel="Confirm and rebuild"
         onConfirm={() => planPreviewResolveRef.current?.(true)}
+        onChooseOption={handleGoalPlanOption}
         onClose={() => { if (!planCommitting) planPreviewResolveRef.current?.(false); }}
         busy={planCommitting}
       />

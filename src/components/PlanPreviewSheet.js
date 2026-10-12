@@ -33,10 +33,20 @@
  *                        refusal     D222 phase 6 (R65): a week the structure
  *                                    engine will not build; its words are
  *                                    shown and nothing can be confirmed
+ *                        D222 phase 7 (R83): `structure.options` and
+ *                                    `refusal.options` are the engine's
+ *                                    choices (adapt.structureOptions); each
+ *                                    is a button, and choosing one hands it
+ *                                    to `onChooseOption` (the caller prepares
+ *                                    again with the changed days, length or
+ *                                    focus); the 'keep' choice is the confirm
  *   currentPlanName  - the plan being replaced, when there is one
  *   otherPlansCount  - how many other non-archived plans the athlete has
  *   confirmLabel     - the confirm button's title
  *   onConfirm        - commit handler
+ *   onChooseOption   - D222 phase 7 (R83): called with one of the engine's
+ *                      choices other than 'keep'; without it the choices are
+ *                      not offered and the sheet behaves as before
  *   onClose          - dismiss handler ("Not yet", backdrop, back button)
  *   busy             - true while the commit runs; locks both controls
  */
@@ -55,6 +65,7 @@ import { structureMemoryCopy } from '../lib/programmeStructureMemory';
 import { splitLabel } from '../lib/planDiff';
 import { BLOCK_START_SENTENCE, blockRestartSentence, blockKeptSentence } from '../lib/blockExplain';
 import { track } from '../lib/telemetry';
+import { OPTIONS_HEADING } from '../lib/structure/messages';
 
 // D139: the three disclosures every confirm-before-commit moment owes the
 // athlete, in plain words. They are constants so the same sentence reaches
@@ -99,6 +110,7 @@ export default function PlanPreviewSheet({
   otherPlansCount = 0,
   confirmLabel = 'Confirm',
   onConfirm,
+  onChooseOption = null,
   onClose,
   busy = false,
   userId = null,
@@ -147,6 +159,13 @@ export default function PlanPreviewSheet({
   const realMinutes = Number.isFinite(preview.structure?.longestMinutes) ? preview.structure.longestMinutes : null;
   const structureLines = Array.isArray(preview.structure?.messages) ? preview.structure.messages : [];
   const refusalText = typeof preview.refusal?.text === 'string' ? preview.refusal.text : null;
+  // D222 phase 7 (R83): the engine's choices, offered only where the caller
+  // can prepare the plan again with one of them.
+  const rawOptions = refusalText ? preview.refusal?.options : preview.structure?.options;
+  const options = typeof onChooseOption === 'function' && Array.isArray(rawOptions) ? rawOptions : [];
+  const keepOption = options.find((o) => o?.kind === 'keep') ?? null;
+  const changeOptions = options.filter((o) => o && o.kind !== 'keep');
+  const choosing = changeOptions.length > 0 || keepOption != null;
 
   return (
     <BottomSheet
@@ -396,6 +415,25 @@ export default function PlanPreviewSheet({
       {refusalText ? (
         <Text style={[styles.diffShortfall, live.diffShortfall]}>{refusalText}</Text>
       ) : null}
+      {/* D222 phase 7 (R83): every "Choose ..." the engine says has its
+          control here, in the sheet's own buttons. Choosing one prepares the
+          plan again with it; the plan as it is stays the confirm. */}
+      {changeOptions.length > 0 ? (
+        <View style={styles.diffMoves}>
+          <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>{OPTIONS_HEADING}</Text>
+          {changeOptions.map((option) => (
+            <Button
+              key={option.key ?? option.label}
+              variant="secondary"
+              title={option.label}
+              onPress={() => { if (!busy) onChooseOption(option); }}
+              disabled={busy}
+              accessibilityLabel={option.label}
+              style={styles.optionBtn}
+            />
+          ))}
+        </View>
+      ) : null}
 
       {/* D139: the plain consequences, always shown, never inferred from the
           diff above. What a block is, what confirming does to the block in
@@ -423,11 +461,11 @@ export default function PlanPreviewSheet({
 
       {refusalText ? null : (
         <Button variant="emphatic"
-          title={confirmLabel}
+          title={choosing && keepOption ? keepOption.label : confirmLabel}
           onPress={confirm}
           loading={busy}
           disabled={busy}
-          accessibilityLabel={confirmLabel}
+          accessibilityLabel={choosing && keepOption ? keepOption.label : confirmLabel}
           style={styles.saveBtn}
         />
       )}
@@ -491,6 +529,7 @@ const styles = StyleSheet.create({
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   thinSessionBanner: { marginTop: spacing.sm },
+  optionBtn: { marginTop: spacing.xs },
   consequences: { marginTop: spacing.xs },
   diffBackBtn: { marginTop: spacing.sm },
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },

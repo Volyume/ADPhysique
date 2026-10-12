@@ -53,6 +53,12 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import {
+  confirmStructureChange, structureSwapFilter, saveStructureAdd, saveStructureRemove, restoreStructureRemove,
+  keepTypedStructureCount,
+} from '../lib/structurePlanChange';
+import { structureExerciseFromRow } from '../lib/structure/patterns';
+import { SWAP_BLOCKED } from '../lib/structure/messages';
 import ModalHeader from '../components/ModalHeader';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
@@ -249,6 +255,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [swapScope, setSwapScope] = useState(SWAP_SCOPE.PROGRAMME);
   const swapScopeRef = useRef(SWAP_SCOPE.PROGRAMME);
   const swapPlanFactsRef = useRef(null);
+  // D222 phase 7 (R75): the open swap sheet's structure-plan filter, or null.
+  const swapStructureFilterRef = useRef(null);
   function chooseSwapScope(value) {
     swapScopeRef.current = value;
     setSwapScope(value);
@@ -541,9 +549,21 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // write lands immediately and the 8-second undo toast re-adds it with
   // every field intact - alerts stay reserved for irreversible actions.
   async function removeExercise(routineExercise, exerciseName) {
+    // D222 phase 7 (R77): on a plan the structure engine built, a removal
+    // that goes beyond the plan's checks (a muscle falling below its minimum)
+    // is made only once the person keeps it, after the plain reason; it then
+    // leaves the plan's structure too. Any other plan: as before.
+    const programmeId = routine?.programmeId ?? null;
+    const gate = await confirmStructureChange(programmeId, { kind: 'removeExercise', ref: { routineExerciseId: routineExercise.id } });
+    if (!gate.proceed) return;
     haptics.commit();
     const captured = { ...routineExercise };
     await removeExerciseFromRoutine(routineExercise.id);
+    let structureBefore = null;
+    if (gate.structure) {
+      structureBefore = await saveStructureRemove(programmeId, routineExercise.id)
+        .catch((e) => { logError('RoutineDetailScreen.structureRemove', e, { routineId }); return null; });
+    }
     await loadRoutine();
     toast.show(`${exerciseName || 'Exercise'} removed.`, {
       variant: 'undo',
@@ -584,6 +604,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 await updateRoutineExerciseOrder(sorted[i].routineExercise.id, i);
               }
             }
+            // D222 phase 7 (R77): the structure takes the exercise back, on its restored row.
+            if (structureBefore && restored?.id) {
+              await restoreStructureRemove(programmeId, structureBefore, captured.id, restored.id);
+            }
             await loadRoutine();
           } catch (_) { /* best effort - the toast window may outlive the screen */ }
         },
@@ -592,14 +616,28 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function addExercise(exercise) {
+    // D222 phase 7 (R77): on a plan the structure engine built, the new
+    // exercise takes the ladder for its sets (3, the row's default) and an
+    // addition that goes beyond the plan's checks is made only once the
+    // person keeps it, after the plain reason. Any other plan: as before.
+    const programmeId = routine?.programmeId ?? null;
+    const asStructure = structureExerciseFromRow(exercise);
+    const gate = await confirmStructureChange(programmeId, {
+      kind: 'addExercise', routineId, exercise: asStructure, sets: 3,
+    });
+    if (!gate.proceed) return;
     haptics.selection();
-    await addExerciseToRoutine(
+    const created = await addExerciseToRoutine(
       routineId,
       exercise.id,
       exercises.length,
       exercise.defaultRepMin || 6,
       exercise.defaultRepMax || 12,
     );
+    if (gate.structure && asStructure && created?.id) {
+      await saveStructureAdd(programmeId, { routineId, exercise: asStructure, sets: 3, routineExerciseId: created.id })
+        .catch((e) => logError('RoutineDetailScreen.structureAdd', e, { routineId }));
+    }
     setShowAddExercise(false);
     await loadRoutine();
   }
@@ -666,6 +704,18 @@ export default function RoutineDetailScreen({ navigation, route }) {
         });
       }
     } else {
+      // D222 phase 7 (R76): on a plan the structure engine built, a typed
+      // count that goes beyond the plan's checks is saved only once the person
+      // keeps it, after the plain reason. Every other plan answers at once.
+      const setsChanged = sets !== Number(editingExercise.routineExercise.recommendedSets);
+      let typedConfirmed = false;
+      if (setsChanged && routine?.programmeId) {
+        const gate = await confirmStructureChange(routine.programmeId, {
+          kind: 'setSets', ref: { routineExerciseId: editingExercise.routineExercise.id }, count: sets,
+        });
+        if (!gate.proceed) return;
+        typedConfirmed = gate.structure?.verdict === 'confirm';
+      }
       await updateRoutineExercise(editingExercise.routineExercise.id, {
         recommendedSets: sets,
         recommendedRepsMin: repsMin,
@@ -684,6 +734,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
       if (sets !== Number(editingExercise.routineExercise.recommendedSets)) {
         try {
           await recordTypedSetCount(routine?.programmeId, editingExercise.routineExercise.id, sets);
+          // D222 phase 7 (R76): the call above records every count that
+          // passes a structure plan's checks; one beyond them, kept by the
+          // person after the reason, is theirs and is recorded here.
+          if (typedConfirmed) await keepTypedStructureCount(routine?.programmeId, editingExercise.routineExercise.id, sets);
         } catch (e) {
           logError('RoutineDetailScreen.recordTypedSetCount', e, { routineId });
         }
@@ -813,6 +867,20 @@ export default function RoutineDetailScreen({ navigation, route }) {
         toast.show('Volyume could not check Injuries & limitations just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
+    // D222 phase 7 (R75): on a plan the structure engine built, only exercises
+    // that go in without breaking the plan's checks are offered; the same
+    // filter guards a pick from the full library (handleConfirmSwap).
+    swapStructureFilterRef.current = null;
+    try {
+      const allowed = await structureSwapFilter(routine?.programmeId ?? null, {
+        routineId, routineExerciseId: routineExercise?.id ?? null, exerciseId: exercise?.id ?? null,
+      });
+      if (allowed) {
+        swapStructureFilterRef.current = allowed;
+        ordered = ordered.filter((c) => allowed(c.exercise));
+        if (proposal?.exerciseId && !allowed(all.find((e) => e.id === proposal.exerciseId) ?? { id: proposal.exerciseId })) proposal = null;
+      }
+    } catch (e) { logError('RoutineDetailScreen.structureSwapFilter', e, { routineId }); }
     setSwapCandidates(ordered);
     setDefaultProposal(proposal);
     setSwapNarrowedCount(narrowedCount);
@@ -986,6 +1054,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // writes the plan (applyExerciseSwap), "Just this session" leaves it alone.
   async function handleConfirmSwap(newExercise) {
     if (!swapState) return;
+    // D222 phase 7 (R75): a pick that would break a structure plan's checks
+    // does not go in (the list never offers one; this guards the full library).
+    if (swapStructureFilterRef.current && newExercise && !swapStructureFilterRef.current(newExercise)) {
+      toast.show(SWAP_BLOCKED, { variant: 'info' });
+      return;
+    }
     const originalId = swapState.exercise?.id;
     const originalName = swapState.exercise?.name || 'exercise';
     const rowId = swapState.routineExerciseId;

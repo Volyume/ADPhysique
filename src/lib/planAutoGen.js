@@ -50,7 +50,7 @@ import { STRUCTURE_ENGINE } from './structure/release';
 import { buildStructurePlan } from './structure/engine';
 import {
   structureArgs, structureCheckIds, structureWorkoutsForWrite, structureFacts, structureWeeklyTargets,
-  structureRefusal, structurePreview, structureFit, structurePlanName,
+  structureRefusal, structurePreview, structureFit, structurePlanName, structureOptions,
 } from './structure/adapt';
 import { resolveCatalogue, catalogueCredits } from './plan/catalogue';
 import { assessPlanFit, assessDurationOptions } from './planFit';
@@ -2643,7 +2643,8 @@ async function previewWithStructureEngine({ userId, inputs, allExercises, genera
     return {
       ok: false,
       error: 'structure_refused',
-      refusal: structureRefusal(result.refusal, args),
+      // D222 phase 7 (R83): the refusal's choices (the day count that builds).
+      refusal: { ...structureRefusal(result.refusal, args), options: structureOptions(result, args) },
       sessionLengthMinutes: inputs.sessionLengthMinutes,
     };
   }

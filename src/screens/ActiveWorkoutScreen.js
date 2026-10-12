@@ -72,6 +72,8 @@ import {
 } from '../lib/exercise/intent';
 import { familyLabel } from '../lib/exercise/movementFamily';
 import { useToast } from '../components/Toast';
+import { structureSwapFilter } from '../lib/structurePlanChange';
+import { SWAP_BLOCKED } from '../lib/structure/messages';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -689,6 +691,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const swapScopeRef = useRef(SWAP_SCOPE.SESSION);
   const swapScopeOfferedRef = useRef(false);
   const swapPlanFactsRef = useRef(null);
+  // D222 phase 7 (R75): the open swap sheet's structure-plan filter, or null.
+  const swapStructureFilterRef = useRef(null);
   function chooseSwapScope(value) {
     swapScopeRef.current = value;
     setSwapScope(value);
@@ -2018,12 +2022,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }
       }
     }
+    // D222 phase 7 (R75): on a plan the structure engine built, the list
+    // offers only exercises that go in without breaking the plan's checks (a
+    // blocked option is not shown); the same filter guards a pick from the
+    // full library (handleConfirmSwap). Any other plan: no filter.
+    swapStructureFilterRef.current = null;
+    try {
+      const allowed = await structureSwapFilter(swapProgrammeId, {
+        routineId: activeWorkout?.routineId ?? null,
+        routineExerciseId: routineExercise?.id ?? null,
+        exerciseId: exercise?.id ?? null,
+      });
+      if (allowed) {
+        swapStructureFilterRef.current = allowed;
+        ordered = ordered.filter((c) => allowed(c.exercise));
+      }
+    } catch (e) { logError('ActiveWorkoutScreen.structureSwapFilter', e, {}); }
     setSwapCandidates(ordered);
     setSwapNarrowedCount(narrowedCount);
     setShowSwapModal(true);
   }
 
   function handleConfirmSwap(newExercise) {
+    // D222 phase 7 (R75): a pick that would break a structure plan's checks
+    // does not go in (the list never offers one; this guards the full library).
+    if (swapStructureFilterRef.current && newExercise && !swapStructureFilterRef.current(newExercise)) {
+      toast.show(SWAP_BLOCKED, { variant: 'info' });
+      return;
+    }
     const store = useAppStore.getState();
     const updatedExercises = [...workoutExercises];
     // Load semantics rebuilt by the module-level helper shared with the

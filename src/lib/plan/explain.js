@@ -223,6 +223,17 @@ function spacingLine(facts, sessions) {
       usual = Math.min(usual, hours - ROTATION.sessionHours);
     }
   }
+  // D222 phase 7 (R83): the structure engine runs no recovery model, so a
+  // structure plan's line states the hours alone, with no recovery claim.
+  // The words are structure/messages.structureSpacingText's (R80), held here
+  // because this module imports only the plan's own pure modules (pinned in
+  // explain.test.js); phase7.test.js pins the two the same.
+  if (typeof facts.family === 'string' && facts.family.startsWith('structure:')) {
+    const text = backToBack >= KEPT_APART_HOURS
+      ? `Each muscle's sessions are at least ${Math.round(backToBack)} hours apart if you train on back-to-back days, and at least ${Math.round(usual)} hours apart in a normal week.`
+      : `Some muscle groups are trained in neighbouring sessions, so those sessions are ${Math.round(backToBack)} hours apart if you train on back-to-back days and ${Math.round(usual)} hours apart in a normal week.`;
+    return line('spacing', text, 'FREQUENCY.preferTwoExposuresFromWeekly');
+  }
   const text = backToBack >= KEPT_APART_HOURS
     ? `Each muscle's sessions are at least ${Math.round(backToBack)} hours apart, even if you train on back-to-back days, and at least ${Math.round(usual)} hours apart in a normal week. Recovery times are only estimates, so the order works whichever days you train.`
     : `Some muscles are trained in two sessions in a row, so their sessions are ${Math.round(backToBack)} hours apart if you train on back-to-back days and ${Math.round(usual)} hours apart in a normal week. Recovery times are only estimates, so the plan also checks recovery at your usual spacing.`;

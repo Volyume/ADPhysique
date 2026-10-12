@@ -45,6 +45,7 @@ import {
   getRecentlyUsedExerciseIds,
   addExerciseToRoutine,
   upsertPlannedMuscleVolume,
+  updateRoutineExerciseOrder,
 } from './database';
 import { buildPlanSessions } from './sessionAdjustments';
 import { computeVolumeApply } from './coachApply';
@@ -54,11 +55,17 @@ import { SETS_PER_EXERCISE } from './plan/science';
 import { repRangeFor, restFor } from './exercise/prescription';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration } from './exercise/generation';
-import { muscleDisplayName } from './algorithms';
 import { logWarn } from './errorLog';
 import { isAuthoredFacts } from './library/authored';
 import { authoredCheckin } from './library/authoredCoach';
 import { loadAuthoredStalls } from './library/authoredCoachIO';
+import {
+  isStructureFacts, planFromFacts, structureCheckin, refreshStructureFacts,
+} from './structure/stored';
+import { structureChoices } from './structure/patterns';
+import { restSecondsFor, REP_RANGES, REP_RANGE_UNLOADED_COMPOUND } from './structure/rulebook';
+import { structureCheckinCard } from './structure/messages';
+import { muscleDisplayName, VOLUME_LANDMARKS } from './algorithms';
 
 // planEngine.SELECTION_REASON.VOLUME_FILL: "delivers the remaining sets the
 // muscle's target needs", which planRationale.explainSelection renders. The
@@ -186,6 +193,12 @@ export async function resolveCheckinPlan({ userId, profile = null, signal, withh
   if (!userId) return null;
   const context = await loadPlanContext(userId);
   if (!context) return null;
+  // D222 phase 7 (R78, R78a): a plan the structure engine built is served
+  // from its own ladder, so the check-in changes the ladder (and the rows and
+  // facts that mirror it), never only the weekly rows.
+  if (isStructureFacts(context.facts)) {
+    return resolveStructureCheckin({ context, userId, profile, signal, withheld, holdMuscles });
+  }
   const kind = checkinKind(signal, { withheld });
   if (isAuthoredFacts(context.facts)) {
     return resolveAuthoredCheckin({ userId, context, signal, withheld, kind, holdMuscles, profile });
@@ -300,6 +313,7 @@ async function resolveAuthoredCheckin({ userId, context, signal, withheld, kind,
  * the later weeks' rows (source 'coach'). Returns the rows it added.
  */
 export async function writeCheckinPlan(resolved) {
+  if (resolved?.structure) return writeStructureCheckin(resolved);
   const { programmeId, plan, laterChanges, routinesWithRows, profile } = resolved;
   const added = [];
 
@@ -363,6 +377,209 @@ export async function writeCheckinPlan(resolved) {
     }
   }
 
+  for (const c of laterChanges) {
+    // eslint-disable-next-line no-await-in-loop
+    await upsertPlannedMuscleVolume({
+      mesocycleWeekId: c.mesocycleWeekId,
+      muscle: c.muscle,
+      plannedSets: c.plannedSets,
+      mev: c.mev,
+      mav: c.mav,
+      mrv: c.mrv,
+      source: 'coach',
+    });
+  }
+  return { added };
+}
+
+// ── D222 phase 7 (R78, R78a): check-ins on a structure plan ───────────────
+//
+// Authority: docs/audit/plan-builder-map-2026-10-11/24-PHASE7-AFTER-BUILD-SPEC.md
+// R78 and R78a. The check-in's raise, hold or reduce is applied to the
+// structure ladder from next week on (structure/stored.structureCheckin, every
+// step through the one gate, applyChange, as an automatic change); the plan's
+// facts are refreshed from the new ladder (R72) and the weekly rows from
+// next week on are rewritten from them (source 'coach'): next week's by the
+// screen's one atomic apply, the later weeks' here. The facts record the week
+// the check-in was applied for, so a second Apply after a part-failed write
+// changes the ladder only once.
+
+// The coach's card kind as the structure check-in's (09 s8): an increase is
+// a raise, a pull back a reduce; a hold, a withheld increase and the plan's
+// own climb change nothing.
+function structureKind(signal, withheld) {
+  const kind = checkinKind(signal, { withheld });
+  if (kind === CHECKIN_KIND.INCREASE) return 'raise';
+  if (kind === CHECKIN_KIND.PULL_BACK) return 'reduce';
+  return 'hold';
+}
+
+/**
+ * Per engine muscle, the exercises the person's kit and choices allow, as the
+ * engine offers them (patterns.structureChoices over the filtered library), in
+ * the shape a structure plan holds. Fails CLOSED like loadCatalogue: anything
+ * that cannot be read opens nothing.
+ */
+async function loadStructureCandidates({ userId, profile }) {
+  try {
+    const all = await getAllExercises();
+    const block = await getActiveBlock(userId).catch(() => null);
+    const intent = await loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null });
+    if (intent?.unavailable === true || intent?.capability?.unavailable === true) return () => [];
+    const filtered = filterLibraryForGeneration(all, intent);
+    const library = Array.isArray(filtered) ? filtered : filtered?.library;
+    if (!Array.isArray(library)) return () => [];
+    const recent = await getRecentlyUsedExerciseIds(userId, 400).catch(() => []);
+    const nameById = new Map((all ?? []).map((e) => [e.id, e.name]));
+    const loggedExerciseNames = (recent ?? []).map((id) => nameById.get(id)).filter(Boolean);
+    const kit = structureChoices({ library, profile: profile?.equipment ?? 'full_gym', loggedExerciseNames });
+    return (muscle) => {
+      const out = [];
+      for (const [pattern, list] of Object.entries(kit.byPattern)) {
+        for (const c of list) {
+          if (c.muscle !== muscle || c.exerciseId == null) continue;
+          const rest = restSecondsFor(c.kind, pattern);
+          out.push({
+            exerciseId: c.exerciseId,
+            name: c.name,
+            pattern,
+            muscle,
+            kind: c.kind,
+            extraJoints: [...(c.extraJoints || [])],
+            restSec: rest ? rest.default : null,
+            repRange: [...(c.repRange || (c.unloaded ? REP_RANGE_UNLOADED_COMPOUND : REP_RANGES[c.kind]))],
+          });
+        }
+      }
+      return out;
+    };
+  } catch (e) {
+    logWarn('checkinPlan.structureCandidates', e?.message);
+    return () => [];
+  }
+}
+
+/**
+ * The weekly rows from next week on that the new facts change, each with its
+ * week. A row an injury protocol holds (a reintroduction ramp, or mrv 0) is
+ * never raised, as the keep-block rebuild keeps it.
+ */
+function structureRowChanges(context, facts) {
+  const changes = [];
+  const byKey = new Map();
+  for (const r of context.rows) byKey.set(`${SNAKE(r, 'mesocycle_week_id', 'mesocycleWeekId')}|${r.muscle}`, r);
+  for (const week of context.weeks.slice(1)) {
+    for (const [muscle, targets] of Object.entries(facts.weeklyTargets || {})) {
+      const planned = Array.isArray(targets) ? targets[week.index - 1] : undefined;
+      if (!Number.isFinite(planned)) continue;
+      const row = byKey.get(`${week.id}|${muscle}`);
+      const land = VOLUME_LANDMARKS[muscle] || {};
+      if (row && (row.source === 'reintroduction' || Number(row.mrv) === 0) && planned > Number(SNAKE(row, 'planned_sets', 'plannedSets'))) continue;
+      if (row && Number(SNAKE(row, 'planned_sets', 'plannedSets')) === planned) continue;
+      changes.push({
+        mesocycleWeekId: week.id,
+        weekIndex: week.index,
+        muscle,
+        plannedSets: planned,
+        mev: row?.mev ?? land.mev ?? null,
+        mav: row?.mav ?? land.mav ?? null,
+        mrv: row?.mrv ?? land.mrv ?? null,
+      });
+    }
+  }
+  return changes;
+}
+
+async function resolveStructureCheckin({ context, userId, profile, signal, withheld, holdMuscles }) {
+  const nextWeek = context.weeks[1];
+  const kind = structureKind(signal, withheld);
+  const stored = context.facts.structure.checkin;
+  let facts = context.facts;
+  let result = null;
+  let card;
+  if (stored && stored.weekId === nextWeek.id) {
+    // Applied before for this week: the ladder already holds it.
+    card = stored.card;
+    result = { kind: stored.kind, muscles: [], opened: [], unplaced: [], notRaised: [], changed: false };
+  } else {
+    const plan = planFromFacts(context.facts);
+    const heldRaw = typeof holdMuscles === 'function' && kind === 'raise' ? await holdMuscles() : holdMuscles;
+    const held = heldRaw instanceof Set ? heldRaw : new Set(Array.isArray(heldRaw) ? heldRaw : []);
+    const candidates = kind === 'raise' ? await loadStructureCandidates({ userId, profile }) : null;
+    result = structureCheckin(plan, { kind, fromWeek: nextWeek.index, held, candidates });
+    card = structureCheckinCard(result);
+    if (result.changed) {
+      facts = {
+        ...refreshStructureFacts(context.facts, result.plan),
+      };
+      facts.structure = { ...facts.structure, checkin: { weekId: nextWeek.id, kind: result.kind, card } };
+    }
+  }
+  const changes = structureRowChanges(context, facts);
+  const nextWeekChanges = changes
+    .filter((c) => c.mesocycleWeekId === nextWeek.id)
+    .map(({ muscle, plannedSets, mev, mav, mrv }) => ({ muscle, plannedSets, mev, mav, mrv }));
+  return {
+    programmeId: context.programmeId,
+    mesocycleId: context.mesocycleId,
+    nextWeekId: nextWeek.id,
+    plan: { kind: result.kind, step: Number(signal) || 0, opened: result.opened, raisedRoles: [], applies: card.showApply },
+    card,
+    changes,
+    nextWeekChanges,
+    laterChanges: changes.filter((c) => c.mesocycleWeekId !== nextWeek.id),
+    routinesWithRows: context.routinesWithRows,
+    profile,
+    structure: { facts: facts !== context.facts ? facts : null, opened: result.opened },
+  };
+}
+
+// The routine row a structure exercise is inserted before: the next exercise
+// of its session that has a row. Null: it goes at the end.
+function rowAfter(facts, opened, routine) {
+  const session = facts.structure.sessions[opened.session];
+  for (let i = opened.position + 1; i < session.exercises.length; i += 1) {
+    const reId = session.exercises[i].routineExerciseId;
+    const row = reId ? routine.rows.find((r) => r?.routineExercise?.id === reId) : null;
+    if (row) return row;
+  }
+  return null;
+}
+
+async function writeStructureCheckin(resolved) {
+  const { programmeId, laterChanges, routinesWithRows, profile } = resolved;
+  const facts = resolved.structure.facts;
+  const added = [];
+  if (facts) {
+    const isStrength = profile?.trainingPhase === 'strength_size';
+    const all = (await getAllExercises()) ?? [];
+    const library = new Set(all.map((e) => e.id));
+    for (const opened of resolved.structure.opened || []) {
+      const routine = routinesWithRows.find((r) => r.routine.id === opened.routineId);
+      if (!routine || !library.has(opened.exerciseId)) continue;
+      const after = rowAfter(facts, opened, routine);
+      const end = routine.rows.reduce((a, r) => Math.max(a, Number(r?.routineExercise?.orderInRoutine ?? -1)), -1) + 1;
+      const order = after ? Number(after.routineExercise.orderInRoutine) : end;
+      if (after) {
+        // Make room: every row from that position moves down one.
+        for (const r of routine.rows) {
+          const o = Number(r?.routineExercise?.orderInRoutine);
+          // eslint-disable-next-line no-await-in-loop
+          if (Number.isFinite(o) && o >= order) await updateRoutineExerciseOrder(r.routineExercise.id, o + 1);
+        }
+      }
+      const e = opened.exercise;
+      // eslint-disable-next-line no-await-in-loop
+      const created = await addExerciseToRoutine(
+        opened.routineId, opened.exerciseId, order, e.repRange?.[0] ?? null, e.repRange?.[1] ?? null, null,
+        opened.sets, null, e.restSec ?? restFor(e.kind, isStrength), null, false, VOLUME_FILL, null, null,
+      );
+      const ex = facts.structure.sessions[opened.session].exercises[opened.position];
+      if (ex && created?.id) ex.routineExerciseId = created.id;
+      added.push({ ...opened, routineExerciseId: created?.id ?? null });
+    }
+    await setProgrammePlanFacts(programmeId, facts);
+  }
   for (const c of laterChanges) {
     // eslint-disable-next-line no-await-in-loop
     await upsertPlannedMuscleVolume({
