@@ -226,6 +226,20 @@ export default function PlanUpdateScreen({ navigation }) {
         if (!goAhead) return;
       }
       const dry = await generatePlanDryRun(user.id, updatedProfile);
+      // D222 phase 6 (R65): a week the structure engine refuses opens the
+      // sheet with the engine's own words and nothing to confirm.
+      if (!dry.ok && dry.refusal) {
+        setDiff(null);
+        setStaged({
+          profile: updatedProfile,
+          plan: null,
+          sessionLengthMinutes: dry.sessionLengthMinutes ?? null,
+          refusal: dry.refusal,
+          currentPlanName: null,
+          otherPlansCount: 0,
+        });
+        return;
+      }
       if (!dry.ok) {
         // C1: the code is logged for diagnostics, never shown, see
         // REBUILD_FAILED_MESSAGE above.
@@ -295,6 +309,9 @@ export default function PlanUpdateScreen({ navigation }) {
             || fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN)
           ? fit : null,
         receipt,
+        // D222 phase 6 (R65): the structure engine's real length and its
+        // message lines, shown beside the fit.
+        structure: dry.structure ?? null,
       });
     } catch (e) {
       logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
@@ -628,8 +645,8 @@ export default function PlanUpdateScreen({ navigation }) {
       <PlanPreviewSheet
         userId={user?.id ?? null}
         source="update"
-        visible={!!diff}
-        preview={diff && staged ? { ...staged, mode: 'rebuild', diff } : null}
+        visible={!!diff || !!staged?.refusal}
+        preview={staged && (diff || staged.refusal) ? { ...staged, mode: 'rebuild', diff } : null}
         currentPlanName={staged?.currentPlanName ?? null}
         otherPlansCount={staged?.otherPlansCount ?? 0}
         confirmLabel="Confirm and rebuild"

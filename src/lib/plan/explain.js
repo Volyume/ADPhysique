@@ -167,6 +167,12 @@ function structureLine(facts, sessions) {
   if (n < 2) return null;
   const family = typeof facts.family === 'string' ? facts.family : '';
   const names = sessions.map((s, i) => s.name || `Session ${i + 1}`);
+  // D222 phase 6: the structure engine runs no recovery model, so its line
+  // claims only what is true: the count and the goal's usual sessions.
+  if (family.startsWith('structure:')) {
+    const list = sessions.length ? `: ${joinList(names)}` : '';
+    return line('structure', `${n} sessions a week, the way your goal is usually trained${list}.`, 'FREQUENCY.preferTwoExposuresFromWeekly');
+  }
   let text;
   if (family.startsWith('division_')) {
     const list = sessions.length ? `: ${joinList(names)}` : '';

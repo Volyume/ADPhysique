@@ -106,6 +106,18 @@ export async function prepareStartWithPlan(userId, userProfile, {
     logError('startWithPlan.prepare', e, { userId });
     return { ok: false, reason: 'dry_run_failed', error: e?.message ?? 'unknown', preview: null, otherPlansCount: 0 };
   }
+  // D222 phase 6 (R65): a week the structure engine refuses is shown in the
+  // sheet in its own words, with nothing to confirm, rather than as a failure.
+  if (!dry?.ok && dry?.refusal) {
+    const blockStatus = await readActiveBlockStatus(userId).catch(() => null);
+    return {
+      ok: true,
+      preview: {
+        mode, plan: null, refusal: dry.refusal, sessionLengthMinutes: dry.sessionLengthMinutes ?? null, diff: null, blockStatus,
+      },
+      otherPlansCount: 0,
+    };
+  }
   if (!dry?.ok) {
     return { ok: false, reason: 'dry_run_failed', error: dry?.error ?? 'unknown', preview: null, otherPlansCount: 0 };
   }

@@ -258,6 +258,14 @@ export function alternativeCopy(alt) {
       detail: 'Gives your coach room for the full plan you would normally start on.',
     };
   }
+  // D222 phase 6 (R65): the structure engine can refuse a week and name a
+  // smaller day count that builds with the person's equipment.
+  if (alt.kind === 'fewer_sessions') {
+    return {
+      label: `${alt.daysPerWeek} x ${alt.sessionLengthMinutes} min`,
+      detail: 'A full plan builds over this many sessions with your equipment.',
+    };
+  }
   return {
     label: `${alt.daysPerWeek} x ${alt.sessionLengthMinutes} min`,
     detail: 'Spreading the same work over another session gives it more room.',
