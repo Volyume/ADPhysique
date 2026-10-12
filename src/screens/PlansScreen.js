@@ -904,6 +904,13 @@ export default function PlansScreen({ navigation }) {
     if (restartingRef.current) return;
     restartingRef.current = true;
     try {
+      // Register D227 lane B (H7, review fix 5): this plan's own running block is kept.
+      // Checked BEFORE the activation confirmation: when it holds, only the plain
+      // message shows, never "Make this your active plan?".
+      if (await isAuthoredBlockRunning(user.id, plan.id)) {
+        toast.show('This plan is already active and its block carries on.', { variant: 'info' });
+        return;
+      }
       // D139: planSwitch now shows this same dialogue itself whenever a block
       // exists (week 1 included), so this local copy is only for the truly
       // first activation with no block at all; otherwise two identical
@@ -921,11 +928,6 @@ export default function PlansScreen({ navigation }) {
           );
         });
         if (!confirmed) return;
-      }
-      // Register D227 lane B (H7): this plan's own running block is kept.
-      if (await isAuthoredBlockRunning(user.id, plan.id)) {
-        toast.show('This plan is already active and its block carries on.', { variant: 'info' });
-        return;
       }
       const ok = await confirmPlanSwitchMidBlock(user.id, {
         newPlanName: planHeadingName(plan.name), blockSentence: blockStartSentenceFor(plan),

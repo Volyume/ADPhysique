@@ -62,7 +62,7 @@ import {
   slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
 } from '../lib/exercise/swapCarry';
 import SegmentedControl from '../components/SegmentedControl';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise, uid } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
 import { localDayKey } from '../lib/dayKey';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
@@ -99,7 +99,7 @@ import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
 } from '../lib/recoveryState';
 import { rankSwaps } from '../lib/swapEngine';
-import { authoredSwapOptions, authoredOptionalFor } from '../lib/library/authored';
+import { authoredSwapOptions, authoredOptionalFor, authoredPlanState } from '../lib/library/authored';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
   countProgressSets,
@@ -673,6 +673,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // closed list (that exercise's listed substitutions only): the sheet then
   // offers no way out to the full library.
   const [swapClosedList, setSwapClosedList] = useState(false);
+  // Review fix 4: true when the plan's kind or facts could not be read, so no swap is offered.
+  const [swapUnavailable, setSwapUnavailable] = useState(false);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
   // session" or "From now on". swapScope is the choice (the segmented control
   // reads the state); the refs are what handleConfirmSwap reads, because the
@@ -1888,13 +1890,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // as an ordinary plan.
     let styleKey = null;
     let swapProgrammeId = null;
+    let swapPlanUnreadable = false;
     try {
       const routineId = activeWorkout?.routineId ?? null;
       const routineRow = routineId ? await getRoutineById(routineId) : null;
       swapProgrammeId = routineRow?.programmeId ?? null;
       const programmeRow = routineRow?.programmeId ? await getProgrammeById(routineRow.programmeId) : null;
       styleKey = styleKeyFromTags(programmeRow?.tags);
-    } catch (_) { styleKey = null; }
+    } catch (_) { styleKey = null; swapPlanUnreadable = !!activeWorkout?.routineId; }
     setSwapStylePoolKey(styleKey);
     setSwapStyleShowAll(relaxStyle);
     // D219 lane A4 (design 4.12): offer "From now on" where the slot has a plan
@@ -1915,14 +1918,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Register D227 (spec F1): an AUTHORED plan offers only the listed
     // substitutions of this exercise's slot; nothing relaxes it. A plan that
     // is not authored gets null (no restriction), exactly as before.
+    // Review fix 4: when the plan is authored, or its kind cannot be read, a
+    // failed facts read offers no swap at all (fail closed). A hand-added
+    // exercise is offered only the listed options of slots with its muscle.
     let closedPool = null;
+    let unavailable = swapPlanUnreadable;
     if (swapProgrammeId) {
       try {
-        closedPool = authoredSwapOptions(
-          await getProgrammePlanFacts(swapProgrammeId), exercise?.id, { routineId: activeWorkout?.routineId ?? null },
-        );
-      } catch (_) { closedPool = null; }
+        const state = authoredPlanState(await getProgrammeById(swapProgrammeId));
+        if (state === 'unknown') unavailable = true;
+        if (state === 'authored') {
+          closedPool = authoredSwapOptions(
+            await getProgrammePlanFacts(swapProgrammeId), exercise?.id,
+            { routineId: activeWorkout?.routineId ?? null, muscle: exercise?.primaryMuscle ?? null },
+          );
+          if (closedPool == null) unavailable = true;
+        }
+      } catch (_) { unavailable = true; }
     }
+    if (unavailable) closedPool = new Set();
+    setSwapUnavailable(unavailable);
     setSwapClosedList(closedPool != null);
     // The candidates themselves are narrowed, so the ranking below is exactly
     // the one every other plan runs (swapSheetCapabilityNarrowing guard).
@@ -2164,7 +2179,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newIndex = workoutExercises.length;
       // D227 H8: the plan's optional exercise joins at its written sets.
       const optional = planOptional.find((o) => o.exerciseId === ex?.id);
-      if (optional) addExerciseToWorkout(ex, { recommendedSets: optional.sets });
+      // Review fix 4: a proper routine exercise row like the others (an id,
+      // 8 to 12 reps, 120 s rest), at the sets the plan writes.
+      if (optional) {
+        addExerciseToWorkout(ex, {
+          id: uid(), recommendedSets: optional.sets, recommendedRepsMin: 8, recommendedRepsMax: 12, restSeconds: 120,
+        });
+      }
       else addExerciseToWorkout(ex);
       setCurrentExerciseIndex(newIndex);
     }
@@ -7228,18 +7249,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
-                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
-                    {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
-                  </Text>
+                  {swapUnavailable ? null : (
+                    <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
+                      {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
+                    </Text>
+                  )}
                   <Text style={[styles.swapEmptyText, live.swapEmptyText]}>
-                    {swapClosedList ? 'This plan lists no other exercise for this one here.' : 'Search the full library instead.'}
+                    {swapUnavailable
+                      ? 'Swaps aren\'t available right now. Try again in a moment.'
+                      : (swapClosedList ? 'This plan lists no other exercise for this one here.' : 'Search the full library instead.')}
                   </Text>
                 </View>
               }
               ListFooterComponent={swapClosedList ? (
                 // D227 F1: an authored plan's list is closed, so there is no
                 // way out to the full library from here.
-                <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
+                swapUnavailable ? null
+                  : <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
               ) : (
                 // Escape hatch from the ranked suggestions: search the whole
                 // library or add your own. Always present, so it works whether

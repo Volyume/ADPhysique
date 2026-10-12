@@ -34,6 +34,7 @@ import {
   getActivePlan,
   getProgrammePlanFacts,
   setProgrammePlanFacts,
+  setProgrammePlanFactsWithWeekRir,
   getRoutinesForPlan,
   getRoutineExercisesWithDetails,
   getCurrentMesocycleWeek,
@@ -288,6 +289,7 @@ async function resolveAuthoredCheckin({ userId, context, signal, withheld, kind,
     routinesWithRows: context.routinesWithRows,
     profile,
     authored: result,
+    weeks: context.weeks,
   };
 }
 
@@ -305,7 +307,20 @@ export async function writeCheckinPlan(resolved) {
   // authored serving reads: the plan's facts (raises, trims, the shifted
   // schedule, the legs mark) and the later weeks' planned volume.
   if (resolved.authored) {
-    if (resolved.authored.applies) await setProgrammePlanFacts(programmeId, resolved.authored.nextFacts);
+    if (resolved.authored.applies) {
+      // A hold shifts run.phases: the running block's later working weeks get
+      // their effort from the new ladder in the same write (review fix 2).
+      // Recovery weeks keep the value they were given; next week onward only.
+      const nextFacts = resolved.authored.nextFacts;
+      const ladder = Array.isArray(nextFacts?.rirLadder) ? nextFacts.rirLadder : [];
+      const rirByWeek = {};
+      for (const w of (Array.isArray(resolved.weeks) ? resolved.weeks : []).slice(1)) {
+        const v = ladder[Number(w.index) - 1];
+        if (!w.deload && Number.isInteger(v)) rirByWeek[w.id] = v;
+      }
+      if (Object.keys(rirByWeek).length) await setProgrammePlanFactsWithWeekRir(programmeId, nextFacts, rirByWeek);
+      else await setProgrammePlanFacts(programmeId, nextFacts);
+    }
     for (const c of laterChanges) {
       // eslint-disable-next-line no-await-in-loop
       await upsertPlannedMuscleVolume({

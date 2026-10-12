@@ -30,8 +30,9 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getExerciseById, getCompletedSetHistoryForExercise, getAllExercises, getExerciseLookup,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
-  deleteExercise, getRoutinesReferencingExercise,
+  deleteExercise, getRoutinesReferencingExercise, getActivePlan, getProgrammePlanFacts,
 } from '../lib/database';
+import { authoredSwapOptions, authoredPlanState } from '../lib/library/authored';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, loadMultiplierFor, isE1rmEligibleRow, isEstimatedMaxRow, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
@@ -529,6 +530,21 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             }
           }
         } catch (_) { pool = allExercises; }
+        // Register D227 (spec F1, review fix 3): on an AUTHORED plan the
+        // substitutes are only the options its slot lists, as in the swap
+        // sheet. A plan that is not authored is unchanged; a plan whose kind
+        // cannot be read lists none (fail closed).
+        try {
+          const uidForPlan = useAppStore.getState().user?.id ?? null;
+          const activePlan = uidForPlan ? await getActivePlan(uidForPlan) : null;
+          const planState = authoredPlanState(activePlan);
+          if (planState === 'authored') {
+            const options = authoredSwapOptions(
+              await getProgrammePlanFacts(activePlan.id), ex.id, { muscle: ex.primaryMuscle ?? null },
+            );
+            pool = options ? pool.filter((row) => options.has(row?.id)) : [];
+          } else if (planState === 'unknown') pool = [];
+        } catch (_) { pool = []; }
         const swaps = rankSwaps(ex, pool, { equipment: swapEquipment });
         setSubstitutes(swaps.slice(0, 4));
       } catch (_) {

@@ -44,7 +44,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { explainSelection } from '../lib/planRationale';
 import { rankSwaps } from '../lib/swapEngine';
-import { authoredSwapOptions, authoredWeekEffortLine } from '../lib/library/authored';
+import { authoredSwapOptions, authoredWeekEffortLine, authoredPlanState } from '../lib/library/authored';
 import { swapAdjacentBlocks } from '../lib/reorder';
 import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
@@ -236,6 +236,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // Register D227 (spec F1): true while the sheet shows an AUTHORED plan's
   // closed list; the sheet then offers no way out to the full library.
   const [swapClosedList, setSwapClosedList] = useState(false);
+  // Review fix 4: true when the plan's kind or facts could not be read, so no swap is offered.
+  const [swapUnavailable, setSwapUnavailable] = useState(false);
   // Register D227 lane B (H9): this week's target effort on an authored plan.
   const [effortLine, setEffortLine] = useState(null);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
@@ -718,14 +720,25 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // Register D227 (spec F1): an AUTHORED plan offers only the listed
     // substitutions of this exercise's slot; nothing relaxes it. Null (no
     // restriction) for every other plan, exactly as before.
+    // Review fix 4: when the plan is authored, or its kind cannot be read, a
+    // failed facts read offers no swap at all (fail closed). A hand-added
+    // exercise is offered only the listed options of slots with its muscle.
     let closedPool = null;
+    let unavailable = false;
     if (routine?.programmeId) {
       try {
+        const state = authoredPlanState(await getProgrammeById(routine.programmeId));
         const facts = await getProgrammePlanFacts(routine.programmeId);
         swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
-        closedPool = authoredSwapOptions(facts, exercise?.id, { routineId });
-      } catch (_) { swapPlanFactsRef.current = null; closedPool = null; }
+        if (state === 'unknown') unavailable = true;
+        if (state === 'authored') {
+          closedPool = authoredSwapOptions(facts, exercise?.id, { routineId, muscle: exercise?.primaryMuscle ?? null });
+          if (closedPool == null) unavailable = true;
+        }
+      } catch (_) { swapPlanFactsRef.current = null; unavailable = true; }
     }
+    if (unavailable) closedPool = new Set();
+    setSwapUnavailable(unavailable);
     setSwapClosedList(closedPool != null);
     // The candidates themselves are narrowed, so the ranking below is exactly
     // the one every other plan runs (swapSheetCapabilityNarrowing guard).
@@ -1782,15 +1795,20 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </Card>
               );
             }}
-            ListEmptyComponent={
+            ListEmptyComponent={swapUnavailable ? (
+              <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+                Swaps aren't available right now. Try again in a moment.
+              </Text>
+            ) : (
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet.'}
               </Text>
-            }
+            )}
             ListFooterComponent={swapClosedList ? (
               // D227 F1: an authored plan's list is closed, so there is no way
               // out to the full library from here.
-              <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
+              swapUnavailable ? null
+                : <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
             ) : (
               <Button
                 title="Search all exercises or create your own"

@@ -4969,6 +4969,34 @@ export async function setProgrammePlanFacts(programmeId, facts, { scheduleSync =
 }
 
 /**
+ * Register D227 (review fix 2): an authored plan's check-in that shifts the
+ * ramp writes the plan's facts AND the running block's stored week efforts
+ * (mesocycle_weeks.rir_target) in ONE transaction, so the weeks' effort never
+ * disagrees with the shifted ladder. `rirByWeekId` maps a week id to its new
+ * rir_target; a value that is not a whole number from 0 to 5 is skipped.
+ */
+export async function setProgrammePlanFactsWithWeekRir(programmeId, facts, rirByWeekId = {}) {
+  if (!programmeId) return;
+  const d = await db();
+  const text = facts == null ? null : JSON.stringify(facts);
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      'UPDATE programmes SET plan_facts = ?, updated_at = ? WHERE id = ?',
+      [text, Date.now(), programmeId],
+    );
+    for (const [weekId, rir] of Object.entries(rirByWeekId || {})) {
+      if (!Number.isInteger(rir) || rir < 0 || rir > 5) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync(
+        'UPDATE mesocycle_weeks SET rir_target = ?, updated_at = ? WHERE id = ?',
+        [rir, Date.now(), weekId],
+      );
+    }
+  });
+  _scheduleSync();
+}
+
+/**
  * D219 (design 4.3, lead ruling 6): the person typed a set count for a routine
  * exercise of a plan the new planner built. The count is recorded in the plan's
  * facts as `typed[routineExerciseId] = n`, so every week of the block serves

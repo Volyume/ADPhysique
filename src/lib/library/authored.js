@@ -440,7 +440,7 @@ export function authoredClosedIds(facts) {
  *
  * @returns {?Set<string>}
  */
-export function authoredSwapOptions(facts, exerciseId, { routineId = null } = {}) {
+export function authoredSwapOptions(facts, exerciseId, { routineId = null, muscle } = {}) {
   if (!isAuthoredFacts(facts)) return null;
   const out = new Set();
   let inSlot = false;
@@ -451,10 +451,49 @@ export function authoredSwapOptions(facts, exerciseId, { routineId = null } = {}
     inSlot = true;
     for (const id of members) out.add(id);
   }
-  if (!inSlot && routineId != null) return authoredSwapOptions(facts, exerciseId);
+  if (!inSlot && routineId != null) return authoredSwapOptions(facts, exerciseId, { muscle });
+  if (!inSlot && muscle !== undefined) {
+    // Review fix 4: an exercise in no slot (added by hand) is offered only the
+    // listed options of slots that train its muscle; none when no slot does.
+    const app = muscle ? appMuscleOf(muscle) : null;
+    const same = new Set();
+    for (const { slot } of slotsOf(facts)) {
+      if (!app || (slot.appMuscle || appMuscleOf(slot.muscle)) !== app) continue;
+      for (const id of [slot.exerciseId, ...(Array.isArray(slot.subs) ? slot.subs.map((x) => x?.exerciseId) : [])]) {
+        if (id) same.add(id);
+      }
+    }
+    same.delete(exerciseId);
+    return same;
+  }
   const result = inSlot ? out : authoredClosedIds(facts);
   result.delete(exerciseId);
   return result;
+}
+
+/**
+ * Review fix 4: whether a programme row's stored facts say it is an authored
+ * plan. 'authored', 'other' (no facts, or facts of another kind) or 'unknown'
+ * (the row could not be read, or its text cannot be parsed and does not name
+ * the authored kind). A caller offers no swap options on 'authored' without
+ * readable facts and on 'unknown' (fail closed).
+ *
+ * @param {?object} row  the programme row (camelCase) or null when none
+ * @param {boolean} [readOk]  false when reading the row failed
+ * @returns {'authored'|'other'|'unknown'}
+ */
+export function authoredPlanState(row, readOk = true) {
+  if (!readOk) return 'unknown';
+  if (row == null) return 'other';
+  const raw = row.planFacts ?? row.plan_facts;
+  if (raw == null || raw === '') return 'other';
+  if (typeof raw === 'object') return raw?.kind === AUTHORED_KIND ? 'authored' : 'other';
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed?.kind === AUTHORED_KIND ? 'authored' : 'other';
+  } catch (_) {
+    return /"kind"\s*:\s*"authored"/.test(String(raw)) ? 'authored' : 'unknown';
+  }
 }
 
 /**
@@ -470,7 +509,7 @@ export function authoredSubstituteFilter(facts) {
     const id = candidate?.id;
     if (!id) return false;
     if (original?.id == null) return closed.has(id);
-    const options = authoredSwapOptions(facts, original.id);
+    const options = authoredSwapOptions(facts, original.id, { muscle: original.primaryMuscle ?? null });
     return !!options && options.has(id);
   };
 }
@@ -524,9 +563,14 @@ export function authoredPlanLimits({
   const today = authoredServedWeek({ facts, routineId, mesocycleId, weekIndex, isDeload, exercises: rows, caps });
   const slotByKey = new Map(session.exercises.map((x) => [x.key, x]));
   const sessionDirect = {};
+  // The same sets per ENGINE muscle (lats and upper back apart), so the plan's
+  // per-session ceiling (lats 7, side delts 7) binds a +1 on one of them.
+  const sessionEngine = {};
   for (const [exerciseId, key] of Object.entries(today.slots)) {
-    const m = slotByKey.get(key)?.appMuscle;
+    const sl = slotByKey.get(key);
+    const m = sl?.appMuscle;
     if (m) sessionDirect[m] = (sessionDirect[m] || 0) + (today.sets[exerciseId] || 0);
+    if (sl?.muscle) sessionEngine[sl.muscle] = (sessionEngine[sl.muscle] || 0) + (today.sets[exerciseId] || 0);
   }
   const week = {};
   for (const { slot } of slotsOf(facts)) {
@@ -546,12 +590,17 @@ export function authoredPlanLimits({
     const safe = Number(facts.recoverySafeMax?.[m]);
     // A muscle the reintroduction ramp holds never climbs past the ramp's level.
     const top = Number.isFinite(rampCap) ? Math.min(Number.isFinite(safe) ? safe : rampCap, rampCap) : safe;
+    // Room left under the plan's per-session ceiling for this slot's ENGINE
+    // muscle; the app-muscle caps are tightened to it, never loosened.
+    const ceiling = Number(facts.authored?.ceilings?.perSession?.[slot.muscle]);
+    const engineRoom = Number.isFinite(ceiling) ? ceiling - (sessionEngine[slot.muscle] || 0) : Infinity;
+    const tighten = (cap) => Math.min(cap, (sessionDirect[m] || 0) + engineRoom);
     out[exerciseId] = {
       cap: Number.isFinite(slot.cap) ? slot.cap : 0,
       sessionDirect: sessionDirect[m] || 0,
-      sessionDirectCap: capOf(m, 'direct', houseCaps?.directCap ?? 0),
+      sessionDirectCap: tighten(capOf(m, 'direct', houseCaps?.directCap ?? 0)),
       sessionFractional: sessionDirect[m] || 0,
-      sessionFractionalCap: capOf(m, 'fractional', houseCaps?.fractionalCap ?? 0),
+      sessionFractionalCap: tighten(capOf(m, 'fractional', houseCaps?.fractionalCap ?? 0)),
       weekFractional: Number.isFinite(rampCap) ? Math.min(week[m] || 0, rampCap) : (week[m] || 0),
       weekTop: Number.isFinite(top) ? top : (week[m] || 0),
     };
