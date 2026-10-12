@@ -13,7 +13,13 @@
  *   - the next-day exception's RIR comes back where it is above the block
  *     week's RIR, and only there;
  *   - a count the person typed still wins;
- *   - an exercise added by hand later (no structure match) is served as today.
+ *   - an exercise added by hand later (no structure match) is served as today;
+ *   - the recovery week is the block week flagged is_deload, whatever its
+ *     index: week 5 of a kept 5-week block and week 6 of a 6-week block both
+ *     serve the ladder's recovery entry, and a working week past the ladder
+ *     clamps to the last working week, never to the recovery entry;
+ *   - a block week with no RIR target (null) is passed as "no block RIR", not
+ *     as 0 (Number(null) is 0), so a ladder RIR is served there.
  * Each fails on the resolver before phase 6 (no structure serving).
  */
 jest.mock('../database', () => ({
@@ -143,4 +149,62 @@ test('an exercise added by hand is served as today, not from the ladder', async 
   const before = await serve(0, 2, rows);
   expect(before.allocation[added.id]).toBeDefined();
   expect(allocation[added.id]).toBe(before.allocation[added.id]);
+});
+
+describe('the recovery week is the flagged week, not the sixth', () => {
+  const weekRow = (w, deload, rir = PROGRESSION.rirLadder[w - 1]) => async (id) => ({
+    id, mesocycle_id: 'mesocycle-1', week_index: w, is_deload: deload ? 1 : 0, rir_target: rir,
+  });
+
+  test('week 5 of a 5-week block serves the recovery entry (the ladder\'s last)', async () => {
+    database.getMesocycleWeekById.mockImplementation(weekRow(5, true));
+    const { allocation } = await serve(0, 5);
+    for (const ex of result.plan.sessions[0].exercises) {
+      expect(allocation[ex.id]).toBe(ex.weeks[ex.weeks.length - 1].sets);
+    }
+    // The sixth entry is lighter than week 5's working entry for at least one
+    // exercise, so this is not the working week served by accident.
+    expect(result.plan.sessions[0].exercises.some((ex) => ex.weeks[5].sets !== ex.weeks[4].sets)).toBe(true);
+  });
+
+  test('week 6 of a 6-week block serves the recovery entry', async () => {
+    database.getMesocycleWeekById.mockImplementation(weekRow(6, true));
+    const { allocation } = await serve(0, 6);
+    for (const ex of result.plan.sessions[0].exercises) expect(allocation[ex.id]).toBe(ex.weeks[5].sets);
+  });
+
+  test('a working week past the ladder clamps to the last working week, never the recovery entry', async () => {
+    database.getMesocycleWeekById.mockImplementation(weekRow(6, false));
+    const { allocation } = await serve(0, 6);
+    for (const ex of result.plan.sessions[0].exercises) expect(allocation[ex.id]).toBe(ex.weeks[4].sets);
+    // A block that runs past the ladder: the week row (and its planned rows)
+    // is week-6's, its index 7, not flagged as the recovery week.
+    database.getMesocycleWeekById.mockImplementation(weekRow(7, false));
+    const later = await serve(0, 6);
+    for (const ex of result.plan.sessions[0].exercises) expect(later.allocation[ex.id]).toBe(ex.weeks[4].sets);
+  });
+});
+
+describe('a block week with no RIR target', () => {
+  const zeroRirFacts = () => {
+    const copy = JSON.parse(JSON.stringify(facts));
+    copy.structure.sessions[0].exercises[0].weeks[2].rir = 0;
+    return copy;
+  };
+  const withTarget = (rir) => async (id) => ({ id, mesocycle_id: 'mesocycle-1', week_index: 3, is_deload: 0, rir_target: rir });
+
+  test('null is "no block RIR": the ladder\'s RIR is served, even a 0 (Number(null) would hide it)', async () => {
+    database.getProgrammePlanFacts.mockImplementation(async () => zeroRirFacts());
+    database.getMesocycleWeekById.mockImplementation(withTarget(null));
+    const { rir } = await serve(0, 3);
+    const first = result.plan.sessions[0].exercises[0];
+    expect(rir[first.id]).toBe(0);
+  });
+
+  test('a real target of 0 still only lets a higher ladder RIR through', async () => {
+    database.getProgrammePlanFacts.mockImplementation(async () => zeroRirFacts());
+    database.getMesocycleWeekById.mockImplementation(withTarget(0));
+    const { rir } = await serve(0, 3);
+    expect(rir?.[result.plan.sessions[0].exercises[0].id]).toBeUndefined();
+  });
 });

@@ -328,7 +328,10 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       facts: planContext?.facts,
       routineId: workout.routineId,
       weekIndex: Number(week?.week_index ?? week?.weekIndex),
-      weekRir: Number(week?.rir_target ?? week?.rirTarget),
+      // A missing target stays missing (null), never 0: serve.js reads a
+      // non-finite weekRir as "no block RIR".
+      weekRir: blockWeekRir(week),
+      isDeload: Number(week?.is_deload ?? week?.isDeload) === 1,
       exercises: todays,
     });
     const allocation = Object.keys(ladder.sets).length ? { ...served, ...ladder.sets } : served;
@@ -343,6 +346,14 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
     return none;
   }
+}
+
+/** The block week's RIR target, or null when it has none (null never becomes 0). */
+function blockWeekRir(week) {
+  const raw = week?.rir_target ?? week?.rirTarget;
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 // The limits of an exercise whose plan limits cannot be read: no room anywhere,

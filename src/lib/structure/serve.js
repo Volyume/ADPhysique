@@ -26,12 +26,17 @@ export function isStructureFacts(facts) {
  * @param {string} args.routineId  today's routine
  * @param {number} args.weekIndex  the block week, 1-based
  * @param {?number} [args.weekRir] the block week's RIR target
+ * @param {boolean} [args.isDeload] the block week is the recovery week (mesocycle_weeks.is_deload).
+ *        The recovery week serves the ladder's last entry (the engine's deload
+ *        week); a working week serves its own entry, clamped to the last
+ *        working week, never the recovery entry (a kept block can be 5 weeks
+ *        with week 5 the recovery week, or 6 with week 6)
  * @param {Array<{exerciseId: ?string, slotId: ?string, cap?: number}>} args.exercises
  *        today's rows; `cap` holds an exercise put in a slot for today (a one-off
  *        swap) to its own cap, as servedSetsCap does today
  * @returns {{ sets: Object<string, number>, rir: Object<string, number> }}  by exercise id
  */
-export function structureServedWeek({ facts, routineId, weekIndex, weekRir = null, exercises }) {
+export function structureServedWeek({ facts, routineId, weekIndex, weekRir = null, isDeload = false, exercises }) {
   const out = { sets: {}, rir: {} };
   if (!isStructureFacts(facts) || !routineId || !Number.isInteger(weekIndex) || weekIndex < 1) return out;
   const session = facts.structure.sessions.find((s) => s && s.routineId === routineId);
@@ -54,7 +59,10 @@ export function structureServedWeek({ facts, routineId, weekIndex, weekRir = nul
   });
   for (const [i, j] of match) {
     const row = rows[i];
-    const week = list[j].weeks?.[weekIndex - 1];
+    const ladder = Array.isArray(list[j].weeks) ? list[j].weeks : [];
+    const week = isDeload === true
+      ? ladder[ladder.length - 1]
+      : ladder[Math.max(1, Math.min(weekIndex, ladder.length - 1)) - 1];
     if (!row.exerciseId || !week) continue;
     const t = row.slotId != null ? typed[row.slotId] : undefined;
     if (typeof t === 'number' && Number.isFinite(t) && t >= 1) out.sets[row.exerciseId] = t;

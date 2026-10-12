@@ -21,7 +21,7 @@ import {
 } from './rulebook';
 import { checkPlan } from './checker';
 import { senseCheck } from './sense';
-import { planMessages, refusalMessage } from './messages';
+import { planMessages, refusalText } from './messages';
 import { VOLUME_LANDMARKS } from '../algorithms';
 import { SESSION_CEILINGS } from '../plan/science';
 import { SELECTION_REASON } from '../planEngine';
@@ -425,6 +425,45 @@ export function structureFacts(result, args, { routineIds, routineExerciseIds = 
 
 // ── R65: what the person is told ───────────────────────────────────────────
 
+// The audit page's own labels; the app never shows them (spec 23, review).
+const AUDIT_LABEL = /^(Not built|Asks before saving): /;
+
+/**
+ * The app-facing form of one of messages.js's lines: the audit-page label
+ * ("Not built: ", "Asks before saving: ") is dropped and the line starts with
+ * a capital. messages.js itself stays verbatim for the audit page.
+ * @param {string} line
+ * @returns {string}
+ */
+export function appLine(line) {
+  if (typeof line !== 'string') return line;
+  const bare = line.replace(AUDIT_LABEL, '');
+  return bare.charAt(0).toUpperCase() + bare.slice(1);
+}
+
+// What the person reads when a refusal has no plain sentence of its own.
+export const REFUSAL_GENERIC = 'This plan could not be built with these choices. Try a different number of days or session length.';
+
+/**
+ * True for a refusal whose sentence messages.js builds in plain words (a
+ * `sense_failed` refusal, worded from its failure code). Every other
+ * refusal's `detail` is the engine's internal text and is never shown.
+ */
+function refusalIsPlain(refusal) {
+  return refusal?.reason === 'sense_failed' && Array.isArray(refusal.failures) && refusal.failures.length > 0;
+}
+
+/**
+ * The app's sentence for a refused week: the plain reason (or the calm generic
+ * line when the reason is internal), then the day count that builds.
+ */
+export function appRefusalText(refusal, args) {
+  const head = refusalIsPlain(refusal) ? appLine(`${refusalText(refusal, args.days)}.`) : REFUSAL_GENERIC;
+  const days = refusal.suggestedDays;
+  const len = refusal.suggestedLength;
+  return `${head}${days ? ` ${days} days a week builds${len ? `, with sessions of ${len} minutes` : ''}.` : ''}`;
+}
+
 /** R65: a refusal as the dry run and the fit review carry it. */
 export function structureRefusal(refusal, args) {
   return {
@@ -432,7 +471,7 @@ export function structureRefusal(refusal, args) {
     suggestedDays: refusal.suggestedDays ?? null,
     suggestedLength: refusal.suggestedLength ?? null,
     minimumDays: refusal.minimumDays ?? null,
-    text: refusalMessage(refusal, args),
+    text: appRefusalText(refusal, args),
   };
 }
 
@@ -444,7 +483,7 @@ export function structurePreview(result, args) {
     suggestedLength: rep.suggestedLength ?? null,
     daysThatFit: rep.daysThatFit ?? null,
     focusQuestions: rep.focusChoice || [],
-    messages: planMessages(result, args),
+    messages: planMessages(result, args).map(appLine),
     // The real length (R65): the longest session at the peak, not the input.
     minutes: [...rep.minutes],
     longestMinutes: Math.round(Math.max(...rep.minutes)),
@@ -486,7 +525,7 @@ export function structureFit(result, args, byDuration = []) {
     const rep = result.report;
     longest = Math.max(0, ...rep.minutes);
     typical = rep.minutes.length ? Math.round(rep.minutes.reduce((a, b) => a + b, 0) / rep.minutes.length) : 0;
-    messages = planMessages(result, args);
+    messages = planMessages(result, args).map(appLine);
     if (rep.needsLengthChoice && rep.suggestedLength) {
       alternatives.push({ kind: 'longer_sessions', daysPerWeek: args.days, sessionLengthMinutes: rep.suggestedLength, state: PLAN_FIT.FULL_TARGET_FIT });
     }

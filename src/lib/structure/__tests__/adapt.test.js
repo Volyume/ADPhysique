@@ -28,10 +28,10 @@ const { PROGRESSION, PATTERNS } = require('../rulebook');
 const {
   focusFromWeakPoints, structureExperience, structureArgs, structureFacts, structureWeeklyTargets,
   structureWorkoutsForWrite, structureCheckIds, structureRefusal, structureFit, structurePreview,
-  appMuscleOf, FOCUS_LABEL_MAP,
+  appMuscleOf, FOCUS_LABEL_MAP, appLine, appRefusalText, REFUSAL_GENERIC,
 } = require('../adapt');
 const { structureServedWeek, isStructureFacts } = require('../serve');
-const { refusalMessage, planMessages } = require('../messages');
+const { planMessages } = require('../messages');
 const { VOLUME_LANDMARKS } = require('../../algorithms');
 const { SELECTION_REASON } = require('../../planEngine');
 const { PLAN_FIT } = require('../../planFit');
@@ -185,7 +185,7 @@ describe('R62: serving the ladder', () => {
     const session = sample.plan.sessions[light.si];
     for (let w = 1; w <= 6; w += 1) {
       const served = structureServedWeek({
-        facts, routineId: ['r-a', 'r-b', 'r-c'][light.si], weekIndex: w, weekRir: PROGRESSION.rirLadder[w - 1], exercises: rows,
+        facts, routineId: ['r-a', 'r-b', 'r-c'][light.si], weekIndex: w, weekRir: PROGRESSION.rirLadder[w - 1], isDeload: w === 6, exercises: rows,
       });
       for (const ex of session.exercises) expect(served.sets[ex.id]).toBe(ex.weeks[w - 1].sets);
     }
@@ -200,7 +200,7 @@ describe('R62: serving the ladder', () => {
     expect(w4.rir[light.ex.id]).toBe(2);
     const others = sample.plan.sessions[light.si].exercises.filter((ex) => !ex.nextDayException);
     for (const ex of others) expect(w4.rir[ex.id]).toBeUndefined();
-    const w6 = structureServedWeek({ facts, routineId: rid, weekIndex: 6, weekRir: 4, exercises: rows });
+    const w6 = structureServedWeek({ facts, routineId: rid, weekIndex: 6, weekRir: 4, isDeload: true, exercises: rows });
     expect(w6.rir[light.ex.id]).toBeUndefined();
   });
 
@@ -249,16 +249,16 @@ describe('R65: what the person is told', () => {
       suggestedDays: refused.refusal.suggestedDays,
       suggestedLength: refused.refusal.suggestedLength ?? null,
       minimumDays: refused.refusal.minimumDays ?? null,
-      text: refusalMessage(refused.refusal, REFUSED),
+      text: appRefusalText(refused.refusal, REFUSED),
     });
-    expect(r.text.startsWith('Not built: ')).toBe(true);
+    expect(r.text).not.toMatch(/^Not built: /);
     expect(r.text).not.toMatch(/—/);
   });
 
   test('the fit of a refusal needs a choice, names the days that build, and has no keep', () => {
     const fit = structureFit(refused, REFUSED, []);
     expect(fit.state).toBe(PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN);
-    expect(fit.refusal.text).toBe(refusalMessage(refused.refusal, REFUSED));
+    expect(fit.refusal.text).toBe(appRefusalText(refused.refusal, REFUSED));
     expect(fit.alternatives[0]).toEqual(expect.objectContaining({
       kind: refused.refusal.suggestedDays > 2 ? 'more_sessions' : 'fewer_sessions', daysPerWeek: refused.refusal.suggestedDays,
     }));
@@ -267,10 +267,43 @@ describe('R65: what the person is told', () => {
   test('a built week previews its real length and its own message lines', () => {
     const p = structurePreview(sample, SAMPLE_ARGS);
     expect(p.longestMinutes).toBe(Math.round(Math.max(...sample.report.minutes)));
-    expect(p.messages).toEqual(planMessages(sample, SAMPLE_ARGS));
+    expect(p.messages).toEqual(planMessages(sample, SAMPLE_ARGS).map(appLine));
     for (const line of p.messages) expect(line).not.toMatch(/—/);
     const fit = structureFit(sample, SAMPLE_ARGS, [{ minutes: 60, result: sample }]);
     expect(fit.durations).toEqual([expect.objectContaining({ minutes: 60, state: fit.state })]);
     expect(fit.refusal).toBeNull();
   });
 });
+
+describe('app copy for the engine\'s questions and refusals', () => {
+  test('appLine drops the audit page\'s labels and capitalises; other lines are unchanged', () => {
+    expect(appLine('Not built: with this equipment the week would not hold together.')).toBe('With this equipment the week would not hold together.');
+    expect(appLine('Asks before saving: your chest focus adds nothing.')).toBe('Your chest focus adds nothing.');
+    expect(appLine('Sessions run about 52 to 58 minutes.')).toBe('Sessions run about 52 to 58 minutes.');
+  });
+
+  test('no line the app shows carries a label, in a refusal, a preview or a fit', () => {
+    const refusal = structureRefusal({ reason: 'sense_failed', failures: [{ code: 'S14', detail: 'x' }], detail: 'x', suggestedDays: 4 }, REFUSED_ARGS);
+    expect(refusal.text).toBe('The legs would be trained in two sessions a week. 4 days a week builds.');
+    const asks = buildStructurePlan({ goal: 'mens_physique', days: 3, lengthMinutes: 30, equipment: 'full_gym', experience: 'intermediate', focus: ['chest'], library: LIBRARY });
+    const lines = asks.ok ? [...structurePreview(asks, { days: 3, lengthMinutes: 30 }).messages, ...structureFit(asks, { days: 3, lengthMinutes: 30 }, []).messages] : [];
+    for (const l of lines) expect(l).not.toMatch(/^(Not built|Asks before saving): /);
+  });
+
+  test('a refusal whose detail is internal never reaches the screen', () => {
+    for (const refusal of [
+      { reason: 'checks_failed', failures: [], detail: 'the built plan failed the rulebook checks' },
+      { reason: 'days_out_of_range', detail: 'the rulebook covers 2 to 6 days, not 9' },
+      { reason: 'experience_unknown', detail: 'the rulebook has no experience level "x"' },
+      { reason: 'minimum_unreachable', detail: 'side delts cannot get their weekly minimum in 2 sessions' },
+    ]) {
+      const text = structureRefusal(refusal, REFUSED_ARGS).text;
+      expect(text).toBe(REFUSAL_GENERIC);
+      expect(text).not.toMatch(/rulebook|checks|Not built|weekly minimum/);
+    }
+    expect(structureRefusal({ reason: 'checks_failed', detail: 'x', suggestedDays: 4, suggestedLength: 50 }, REFUSED_ARGS).text)
+      .toBe(`${REFUSAL_GENERIC} 4 days a week builds, with sessions of 50 minutes.`);
+    expect(REFUSAL_GENERIC).not.toMatch(/—/);
+  });
+});
+const REFUSED_ARGS = { goal: 'bodybuilding', days: 2, lengthMinutes: 60 };

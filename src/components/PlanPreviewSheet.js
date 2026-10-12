@@ -222,7 +222,9 @@ export default function PlanPreviewSheet({
               now={diff.sessionLength.now != null ? `${diff.sessionLength.now} min` : '-'}
               after={realMinutes != null ? `${realMinutes} min`
                 : diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
-              changed={diff.sessionLength.changed}
+              // With the engine's real minutes in the After cell, the highlight
+              // compares those minutes with the current plan's, not the length asked for.
+              changed={realMinutes != null ? diff.sessionLength.now !== realMinutes : diff.sessionLength.changed}
             />
           </View>
           {/* C16 job 11 (completion pass): the change receipt, built

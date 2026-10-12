@@ -2524,7 +2524,7 @@ function structurePlanForPreview(result, args) {
     goal: args.goal,
     splitType: null,
     daysPerWeek: result.plan.sessions.length,
-    estimatedSessionMinutes: Math.ceil(Math.max(0, ...result.report.minutes)),
+    estimatedSessionMinutes: Math.round(Math.max(0, ...result.report.minutes)),
     workouts: structureWorkoutsForWrite(result.plan),
   };
 }

@@ -7,6 +7,8 @@
  *   - the session length shown is the engine's real length (the longest
  *     session at the peak), not the length the person asked for, in both the
  *     first-plan summary and the rebuild's After column;
+ *   - the After row's highlight compares the engine's real minutes with the
+ *     current plan's, not the length asked for;
  *   - the engine's message lines (structure/messages.js) are listed;
  *   - a refused week shows the engine's own words, offers nothing to
  *     confirm, and makes none of the promises a confirm would (a block, the
@@ -65,7 +67,7 @@ const FIRST = {
   structure: STRUCTURE,
 };
 
-const REFUSAL_TEXT = 'Not built: side delts cannot get their weekly minimum in 2 sessions. 4 days a week builds.';
+const REFUSAL_TEXT = 'This plan could not be built with these choices. Try a different number of days or session length. 4 days a week builds.';
 
 function render(props = {}) {
   const merged = {
@@ -99,6 +101,24 @@ test('the rebuild After column shows the real length', () => {
   const text = flattenText(tree.toJSON());
   expect(text).toContain('58 min');
   expect(text).not.toContain('75 min');
+});
+
+test('the After highlight follows the real minutes against the current plan', () => {
+  const diffWith = (now, asked) => ({
+    days: { now: 3, after: 3, changed: false }, split: { now: null, after: null, changed: false },
+    sessionLength: { now, after: asked, changed: now !== asked }, movesAdded: [], movesDropped: [], identical: false,
+  });
+  // Asked 75, real 58, current 58: nothing changed in what the person gets.
+  const same = render({ preview: { ...FIRST, mode: 'rebuild', diff: diffWith(58, 75) } });
+  const sameDiff = same.tree.root.findAll((n) => n.props.changed !== undefined && n.props.label === 'Session length');
+  expect(sameDiff[0].props.changed).toBe(false);
+  // Asked 58, real 58 against a current 60: changed, though the asked length equals the real one.
+  const differs = render({ preview: { ...FIRST, mode: 'rebuild', diff: diffWith(60, 58) } });
+  expect(differs.tree.root.findAll((n) => n.props.label === 'Session length' && n.props.changed !== undefined)[0].props.changed).toBe(true);
+  // Without the structure engine the diff's own flag stands.
+  const { structure, ...plain } = FIRST;
+  const old = render({ preview: { ...plain, mode: 'rebuild', diff: diffWith(60, 75) } });
+  expect(old.tree.root.findAll((n) => n.props.label === 'Session length' && n.props.changed !== undefined)[0].props.changed).toBe(true);
 });
 
 test('a refusal shows its words and nothing to confirm', () => {

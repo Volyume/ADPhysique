@@ -184,7 +184,8 @@ describe('R63: a refusal or an exception is returned, never an old-style plan', 
     const out = await generateAndSavePlan('user-1', REFUSED);
     expect(out.ok).toBe(false);
     expect(out.error).toBe('structure_refused');
-    expect(out.refusal.text.startsWith('Not built: ')).toBe(true);
+    expect(out.refusal.text).not.toMatch(/^Not built: /);
+    expect(out.refusal.text.length).toBeGreaterThan(0);
     expect(createProgramme).not.toHaveBeenCalled();
     expect(setProgrammePlanFacts).not.toHaveBeenCalled();
     expect(buildPlan).not.toHaveBeenCalled();
@@ -224,6 +225,8 @@ describe('R65: the preview and the schedule fit', () => {
       needsLengthChoice: expect.any(Boolean), messages: expect.any(Array), longestMinutes: expect.any(Number),
     }));
     expect(dry.structure.messages.length).toBeGreaterThan(0);
+    // One rounding (nearest whole minute) for the plan's estimate and the real length.
+    expect(dry.plan.estimatedSessionMinutes).toBe(dry.structure.longestMinutes);
     expect(createProgramme).not.toHaveBeenCalled();
     expect(buildPlan).not.toHaveBeenCalled();
     expect(generatePlan).not.toHaveBeenCalled();
@@ -233,7 +236,7 @@ describe('R65: the preview and the schedule fit', () => {
     const dry = await generatePlanDryRun('user-1', REFUSED);
     expect(dry.ok).toBe(false);
     expect(dry.refusal).toEqual(expect.objectContaining({
-      reason: expect.any(String), text: expect.stringMatching(/^Not built: /),
+      reason: expect.any(String), text: expect.not.stringMatching(/^Not built: /),
     }));
     expect(generatePlan).not.toHaveBeenCalled();
   });
@@ -242,7 +245,7 @@ describe('R65: the preview and the schedule fit', () => {
     const fit = await assessScheduleFit(REFUSED, { userId: 'user-1', durationOptions: [60], dayOptions: [2, 3, 4, 5, 6] });
     expect(fit.ok).toBe(true);
     expect(fit.state).toBe(PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN);
-    expect(fit.refusal.text).toMatch(/^Not built: /);
+    expect(fit.refusal.text).not.toMatch(/^Not built: /);
     expect(fit.durations).toEqual([expect.objectContaining({ minutes: 60, state: PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN })]);
     expect(generatePlan).not.toHaveBeenCalled();
   });
