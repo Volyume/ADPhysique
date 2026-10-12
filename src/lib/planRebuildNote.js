@@ -27,6 +27,7 @@
  */
 import { muscleDisplayName } from './algorithms';
 import { SETS_PER_EXERCISE, BLOCK } from './plan/science';
+import { engineChangesText } from './structure/messages';
 
 export const PLAN_REBUILD_KIND = Object.freeze({
   GENERATED: 'generated',
@@ -53,6 +54,12 @@ function listed(items) {
 
 function changesLine(changes) {
   if (!changes) return null;
+  // D222 phase 8 (R92): a plan the structure engine rebuilt lists what it kept,
+  // swapped, added and took out, in the words of structure/messages.js.
+  if (changes.engine === true) {
+    const text = engineChangesText(changes, listed);
+    return text ? { id: 'changes', text } : null;
+  }
   const replaced = (Array.isArray(changes.replaced) ? changes.replaced : []).filter((r) => r?.from && r?.to);
   const removed = (Array.isArray(changes.removed) ? changes.removed : []).filter(Boolean);
   const added = (Array.isArray(changes.added) ? changes.added : []).filter(Boolean);

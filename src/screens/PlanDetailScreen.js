@@ -241,9 +241,11 @@ export default function PlanDetailScreen({ navigation, route }) {
         try {
           const factsNow = await getProgrammePlanFacts(planId);
           if (!isStructureFacts(factsNow)) {
+            // D222 phase 8 (R95): once per plan version (the plan as stored); an
+            // authored plan (D227) is skipped.
             // eslint-disable-next-line global-require
-            const { checkFixedPlan } = require('../lib/structure/stored');
-            noteFixed = fixedPlanNote(checkFixedPlan((routines ?? []).map((routine) => ({
+            const { checkFixedPlanOnce } = require('../lib/structure/existing');
+            noteFixed = fixedPlanNote(checkFixedPlanOnce(planId, factsNow, (routines ?? []).map((routine) => ({
               key: routine.id, name: routine.name, rows: detailsByRoutine[routine.id] ?? [],
             }))));
           }

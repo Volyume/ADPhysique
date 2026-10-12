@@ -522,3 +522,40 @@ export function structureSpacingText(backToBack, usual, apart) {
     ? `Each muscle's sessions are at least ${Math.round(backToBack)} hours apart if you train on back-to-back days, and at least ${Math.round(usual)} hours apart in a normal week.`
     : `Some muscle groups are trained in neighbouring sessions, so those sessions are ${Math.round(backToBack)} hours apart if you train on back-to-back days and ${Math.round(usual)} hours apart in a normal week.`;
 }
+
+// ── R94: a plan that cannot be rebuilt without a choice ────────────────────
+
+/**
+ * R94: the one calm card on Today when the engine would need the person to
+ * choose (their days or length do not build, or a length or focus question).
+ * The plan keeps serving exactly as it is; nothing was changed.
+ */
+export const NEEDS_CHOICE_CARD = Object.freeze({
+  title: 'Your plan can be updated',
+  body: 'Updating it needs a choice from you, such as a different number of days or a longer session, so your plan has been left exactly as it is.',
+  action: 'Update your plan',
+});
+
+// ── R92: the rebuild note's line for a plan the engine rebuilt ─────────────
+
+/**
+ * R92: what the rebuild did to the person's exercises, in plain words: kept,
+ * swapped, added and taken out. Each list is shortened with a count, never cut
+ * silently. Null when nothing is known.
+ * @param {{ kept?: string[], replaced?: Array<{from: string, to: string}>, removed?: string[], added?: string[] }} changes
+ * @param {(items: string[]) => string} listed
+ */
+export function engineChangesText(changes, listed) {
+  if (!changes) return null;
+  const kept = (changes.kept || []).filter(Boolean);
+  const replaced = (changes.replaced || []).filter((r) => r && r.from && r.to);
+  const removed = (changes.removed || []).filter(Boolean);
+  const added = (changes.added || []).filter(Boolean);
+  const parts = [];
+  if (kept.length) parts.push(`Kept: ${listed(kept)}.`);
+  if (replaced.length) parts.push(`Swapped: ${listed(replaced.map((r) => `${r.from} is now ${r.to}`))}.`);
+  if (added.length) parts.push(`Added: ${listed(added)}.`);
+  if (removed.length) parts.push(`Taken out: ${listed(removed)}.`);
+  if (!parts.length) return null;
+  return `${parts.join(' ')} Your plan was rebuilt with the same checks every new plan gets, and each exercise you already had stays wherever those checks allow it.`;
+}

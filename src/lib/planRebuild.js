@@ -51,6 +51,17 @@
  * own lines for the plan) and shown on the screens until the person dismisses
  * it: once per rebuild, never rewritten for the same plan.
  *
+ * D222 PHASE 8 (STRUCTURE_ENGINE on only; spec docs/audit/plan-builder-map-2026-10-11/
+ * 25-PHASE8-EXISTING-PLANS-SPEC.md, R90 to R97). A GENERATED plan whose facts
+ * are not an engine plan (structure.version 3) is rebuilt through the engine,
+ * keeping its exercises where the checks allow (R92); a plan already an engine
+ * plan is current (R90). The founder's programme, authored plans, library and
+ * kit plans, hand-built plans and style-pool plans are never moved (R91). A
+ * refusal or a question means no rebuild: the state records
+ * `skipped: needs_choice` and Today offers "Update your plan" (R94). The old
+ * facts are kept under `facts.previous` (R96). With the switch off none of
+ * this runs.
+ *
  * A plan the planner cannot build for (a profile with no goal, a kettlebell or
  * circuit template, days the planner cannot hold, a session nothing in it takes
  * sets and reps) is left exactly as it is and recorded, so it is not worked out
@@ -80,7 +91,11 @@ import { SLOT_OUTCOME, slotKey } from './exercise/continuity';
 import { planGeneratedRebuildV2, planFixedRebuildV2, plannerV2PlanFacts } from './planAutoGen';
 import { composePlanRebuildNote, PLAN_REBUILD_KIND } from './planRebuildNote';
 import { logError, logInfo, logWarn } from './errorLog';
-import { isProtectedProgramme } from './structure/release';
+import { isProtectedProgramme, STRUCTURE_ENGINE } from './structure/release';
+import {
+  NEEDS_CHOICE, isAuthoredFacts, isEnginePlanFacts, exerciseChanges, previousFactsOf,
+} from './structure/existing';
+import { styleKeyFromTags } from './exercise/stylePools';
 
 export const PLAN_KIND = PLAN_REBUILD_KIND;
 
@@ -91,6 +106,10 @@ export const PLAN_REBUILD_AT_NEXT_SESSION = true;
 // A failed rebuild is tried again at a later open, a bounded number of times: a
 // failure that repeats is not worked out, and logged, at every open for ever.
 const MAX_ATTEMPTS = 2;
+
+// D222 phase 8 (R90): a state record written while the engine is on says so.
+const ENGINE_STATE = 3;
+const engineMark = () => (STRUCTURE_ENGINE ? { engine: ENGINE_STATE } : {});
 
 const NOTE_KEY = (userId) => `@volyume_plan_rebuild_note_${userId}`;
 const STATE_KEY = (userId) => `@volyume_plan_rebuild_state_${userId}`;
@@ -327,12 +346,63 @@ function notBuilt(computed) {
   return computed.reason === 'profile_incomplete' ? retry(computed.reason) : skip(computed.reason);
 }
 
-async function rebuildGenerated({ userId, routines, routinesWithRows, profile, blockBefore }) {
+// D222 phase 8 (R96, R93): what an engine rebuild adds to the new plan's facts:
+// the old facts under `previous` (one level), and the counts the person typed,
+// carried onto the row of the same exercise (a typed count is served as typed).
+function engineCarry(ids, oldFacts, before, newWorkouts) {
+  const out = {
+    previous: previousFactsOf(oldFacts, before.map((rows, i) => ({ name: `Session ${i + 1}`, exercises: rows.map((r) => r.name) }))),
+  };
+  const oldTyped = isObject(oldFacts?.typed) ? oldFacts.typed : {};
+  const typedOf = new Map(); // exercise id -> the count typed for it (first row wins)
+  for (const rows of before) {
+    for (const r of rows) {
+      const n = Number(oldTyped[r.routineExerciseId]);
+      if (Number.isFinite(n) && n >= 1 && !typedOf.has(r.exerciseId)) typedOf.set(r.exerciseId, Math.round(n));
+    }
+  }
+  if (typedOf.size > 0) {
+    const typed = {};
+    newWorkouts.forEach((w) => {
+      const reIds = ids.routineExerciseIdsBySession?.[w.sessionKey] ?? [];
+      (w.exercises ?? []).forEach((x, i) => {
+        if (reIds[i] != null && typedOf.has(x.exerciseId)) typed[reIds[i]] = typedOf.get(x.exerciseId);
+      });
+    });
+    if (Object.keys(typed).length > 0) out.typed = typed;
+  }
+  return out;
+}
+
+// D222 phase 8 (R92): a plan's rows, per session, as the comparison reads them.
+function sessionRowsOf(routinesWithRows) {
+  return routinesWithRows.map(({ rows }) => rows
+    .filter(({ routineExercise: re }) => re?.groupKind !== 'circuit' && re?.exerciseId)
+    .map(({ routineExercise: re, exercise: ex }) => ({
+      exerciseId: re.exerciseId,
+      name: ex?.name ?? '',
+      muscle: ex ? (allocateExerciseVolume(ex).find((a) => a.role === 'primary')?.muscle ?? null) : null,
+      routineExerciseId: re.id,
+    })));
+}
+
+async function rebuildGenerated({ userId, routines, routinesWithRows, profile, blockBefore, facts }) {
   const exercisesById = new Map((await getAllExercises()).map((e) => [e.id, e]));
-  const dropped = await generatorPicksOutsideCatalogue(userId, routinesWithRows, exercisesById);
+  const engine = STRUCTURE_ENGINE;
+  // The engine has no continuity pass: it prefers the exercises the plan already
+  // has (R92), so the older planner's "picks outside the catalogue" are not used.
+  const dropped = engine ? new Map() : await generatorPicksOutsideCatalogue(userId, routinesWithRows, exercisesById);
+  const before = engine ? sessionRowsOf(routinesWithRows) : null;
   const computed = await planGeneratedRebuildV2({
     userId, profile, daysPerWeek: routines.length, replaceIds: new Set(dropped.keys()),
+    ...(engine ? { currentExerciseNames: before.flat().map((r) => r.name).filter(Boolean) } : {}),
   });
+  // R94: the engine refuses these days and length, or would ask a question: no
+  // rebuild, the plan keeps serving as it is, and the person is offered the
+  // choice (Today's card).
+  if (engine && !computed.ok && (computed.reason === 'structure_refused' || computed.reason === 'structure_needs_choice')) {
+    return skip(NEEDS_CHOICE);
+  }
   if (!computed.ok) return notBuilt(computed);
   const { plan, resolved, planName } = computed;
   const written = await rebuildPlanKeepingBlockV2(userId, {
@@ -363,9 +433,23 @@ async function rebuildGenerated({ userId, routines, routinesWithRows, profile, b
         ? computed.structureFacts(ids.routineIdBySession)
         : plannerV2PlanFacts(plan.v2, ids.routineIdBySession, ids.thinByRoutine, ids.slotsByRoutine)),
       kind: PLAN_KIND.GENERATED,
+      ...(engine ? engineCarry(ids, facts, before, resolved.workouts) : {}),
     }),
     weeklyTargets: plan.v2.weeklyTargets,
   });
+  const engineChanges = engine
+    ? {
+      engine: true,
+      ...exerciseChanges(before, resolved.workouts.map((w) => (w.exercises ?? []).map((x) => {
+        const row = exercisesById.get(x.exerciseId);
+        return {
+          exerciseId: x.exerciseId,
+          name: row?.name ?? x.exerciseName ?? '',
+          muscle: row ? (allocateExerciseVolume(row).find((a) => a.role === 'primary')?.muscle ?? null) : null,
+        };
+      }))),
+    }
+    : null;
   const decisions = Array.isArray(resolved.continuity?.decisions) ? resolved.continuity.decisions : [];
   const names = (outcome, key) => decisions.filter((d) => d.outcome === outcome).map((d) => d[key]).filter(Boolean);
   const replacedPicks = replacementsFor(dropped, resolved.workouts, exercisesById);
@@ -375,7 +459,7 @@ async function rebuildGenerated({ userId, routines, routinesWithRows, profile, b
     programmeId: written.programmeId,
     note: {
       kind: PLAN_KIND.GENERATED,
-      changes: {
+      changes: engineChanges ?? {
         replaced: [
           // The generator's picks outside the catalogue, then continuity's own replacements.
           ...replacedPicks.replaced,
@@ -563,6 +647,34 @@ export async function dismissPlanRebuildNote(userId) {
   }
 }
 
+/**
+ * D222 phase 8 (R94): whether Today offers "Update your plan" for this plan: the
+ * engine is on and the rebuild of THIS plan was skipped because it needs a
+ * choice (and the person has not set the card aside). Never throws.
+ */
+export async function getPlanRebuildChoice(userId, programmeId) {
+  try {
+    if (!STRUCTURE_ENGINE || !userId || !programmeId) return false;
+    const entry = (await readState(userId))[programmeId];
+    return entry?.status === 'skipped' && entry.reason === NEEDS_CHOICE && entry.dismissed !== true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** The person set the "Update your plan" card aside: the plan is untouched and the card is not shown again for it. */
+export async function dismissPlanRebuildChoice(userId, programmeId) {
+  try {
+    if (!userId || !programmeId) return;
+    const state = await readState(userId);
+    if (!isObject(state[programmeId])) return;
+    state[programmeId] = { ...state[programmeId], dismissed: true };
+    await AsyncStorage.setItem(STATE_KEY(userId), JSON.stringify(state));
+  } catch (e) {
+    logWarn('planRebuild.dismissChoice', e?.message);
+  }
+}
+
 async function writeNote(userId, programmeId, noteArgs) {
   try {
     const note = composePlanRebuildNote(noteArgs);
@@ -608,11 +720,23 @@ async function run(userId, opts) {
   };
   if (settled.has(programme.id)) return { ...settled.get(programme.id), programmeId: programme.id };
   const facts = await getProgrammePlanFacts(programme.id);
-  if (facts?.version === 2) return final({ status: 'current' });
+  if (STRUCTURE_ENGINE) {
+    // D222 phase 8. R91: an authored plan (D227) is never moved. R90: only an
+    // engine plan (structure.version 3) is current; a plan of the older planner
+    // is not, whatever its facts version.
+    if (isAuthoredFacts(facts)) return final({ status: 'skipped', reason: 'authored' });
+    if (isEnginePlanFacts(facts)) return final({ status: 'current' });
+    // R91: a style-pool plan (kettlebell, circuit tags) keeps its own pool; the engine has none.
+    if (styleKeyFromTags(programme.tags)) return final({ status: 'skipped', reason: 'style_plan' });
+  } else if (facts?.version === 2) {
+    return final({ status: 'current' });
+  }
   const state = await readState(userId);
   const prior = state[programme.id];
-  if (prior?.status === 'done') return final({ status: 'current' });
-  if (prior?.status === 'skipped') return final({ status: 'skipped', reason: prior.reason });
+  // R90: a record from the older planner (no `engine: 3`) is run once more.
+  const priorCounts = !STRUCTURE_ENGINE || prior?.engine === ENGINE_STATE;
+  if (prior?.status === 'done' && priorCounts) return final({ status: 'current' });
+  if (prior?.status === 'skipped' && priorCounts) return final({ status: 'skipped', reason: prior.reason });
   if (prior?.status === 'failed' && (prior.attempts ?? 0) >= MAX_ATTEMPTS) {
     return final({ status: 'failed', reason: 'attempts_spent' });
   }
@@ -621,7 +745,7 @@ async function run(userId, opts) {
   try {
     const routines = (await getRoutinesForPlan(programme.id)) ?? [];
     if (routines.length === 0) {
-      await recordState(userId, programme.id, { status: 'skipped', reason: 'no_sessions' });
+      await recordState(userId, programme.id, { status: 'skipped', reason: 'no_sessions', ...engineMark() });
       return final({ status: 'skipped', reason: 'no_sessions' });
     }
     const routinesWithRows = [];
@@ -633,7 +757,10 @@ async function run(userId, opts) {
     kind = classifyPlanKind({ programme, source, routines, rows: routinesWithRows.flatMap((x) => x.rows) });
     const profile = opts.profile !== undefined ? opts.profile : storeProfile();
     const blockBefore = await readBlockBefore(userId);
-    const args = { userId, programme, routines, routinesWithRows, profile, blockBefore };
+    // R91: with the engine on, a library, kit or hand-built plan is a fixed
+    // programme: never rebuilt (the plan screen checks it, R95).
+    if (STRUCTURE_ENGINE && kind !== PLAN_KIND.GENERATED) return final({ status: 'skipped', reason: 'fixed_plan', kind });
+    const args = { userId, programme, routines, routinesWithRows, profile, blockBefore, facts };
     let result;
     if (kind === PLAN_KIND.GENERATED) result = await rebuildGenerated(args);
     else if (kind === PLAN_KIND.LIBRARY) result = await rebuildFixed(args);
@@ -641,11 +768,11 @@ async function run(userId, opts) {
 
     if (result.status === 'retry') return { status: 'retry', programmeId: programme.id, reason: result.reason };
     if (result.status === 'skipped') {
-      await recordState(userId, programme.id, { status: 'skipped', reason: result.reason });
+      await recordState(userId, programme.id, { status: 'skipped', reason: result.reason, ...engineMark() });
       logInfo('planRebuild.skipped', result.reason, { kind });
       return { ...final({ status: 'skipped', reason: result.reason }), kind };
     }
-    await recordState(userId, programme.id, { status: 'done', kind });
+    await recordState(userId, programme.id, { status: 'done', kind, ...engineMark() });
     settled.set(programme.id, { status: 'current' });
     settled.set(result.programmeId, { status: 'current' });
     await writeNote(userId, result.programmeId, result.note);

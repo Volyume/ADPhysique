@@ -6983,6 +6983,9 @@ export async function rebuildPlanKeepingBlockV2(userId, spec) {
     const routineIdBySession = {};
     const thinByRoutine = {};
     const slotsByRoutine = {};
+    // D222 phase 8 (R93): the rows written per session, in order, so a rebuild
+    // can carry a typed set count onto the row of the exercise it was typed for.
+    const routineExerciseIdsBySession = {};
     let programmeId;
 
     if (newProgramme) {
@@ -7002,12 +7005,15 @@ export async function rebuildPlanKeepingBlockV2(userId, spec) {
         );
         if (workout.sessionKey != null) routineIdBySession[workout.sessionKey] = routine.id;
         const list = Array.isArray(workout.exercises) ? workout.exercises : [];
+        const writtenIds = [];
+        if (workout.sessionKey != null) routineExerciseIdsBySession[workout.sessionKey] = writtenIds;
         for (let i = 0; i < list.length; i++) {
           const ex = list[i];
-          await addExerciseToRoutine(
+          const addedRow = await addExerciseToRoutine(
             routine.id, ex.exerciseId, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
             null, ex.restSec ?? null, null, false, ex.selectionReason ?? null,
           );
+          writtenIds.push(addedRow?.id ?? null);
           if (ex.thinEquipment === true) {
             if (!thinByRoutine[routine.id]) thinByRoutine[routine.id] = [];
             thinByRoutine[routine.id].push(ex.exerciseId);
@@ -7068,7 +7074,7 @@ export async function rebuildPlanKeepingBlockV2(userId, spec) {
 
     // The plan's facts, in the same transaction as the rows they describe. The
     // running block's own stored ladder replaces the builder's (ruling 4).
-    const facts = spec.buildFacts({ routineIdBySession, thinByRoutine, slotsByRoutine });
+    const facts = spec.buildFacts({ routineIdBySession, thinByRoutine, slotsByRoutine, routineExerciseIdsBySession });
     if (!facts || typeof facts !== 'object' || Array.isArray(facts)) {
       throw new Error('rebuildPlanKeepingBlockV2: buildFacts gave no facts');
     }

@@ -53,6 +53,7 @@ import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
 // D219 lane C1b: a plan the new planner did not build is rebuilt once at the first
 // open (before anything below reads it), with a one-time note of what changed.
 import PlanRebuildNote from '../components/PlanRebuildNote';
+import PlanRebuildChoiceCard from '../components/PlanRebuildChoiceCard';
 import { ensureActivePlanRebuilt } from '../lib/planRebuild';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
@@ -2613,6 +2614,17 @@ export default function HomeScreen({ navigation, route }) {
             rebuilt at its first open. Renders nothing when there is none, and
             nothing after the person dismisses it. */}
         {!initialLoading && <PlanRebuildNote userId={user?.id} reloadKey={activePlan?.id ?? null} />}
+
+        {/* D222 phase 8 (R94): when the structure engine would need a choice to
+            rebuild this plan, one calm card offers "Update your plan". Nothing
+            is changed; renders nothing otherwise (and never with the switch off). */}
+        {!initialLoading && (
+          <PlanRebuildChoiceCard
+            userId={user?.id}
+            programmeId={activePlan?.id ?? null}
+            onUpdate={() => { haptics.selection(); navigation.navigate('PlanUpdate'); }}
+          />
+        )}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (

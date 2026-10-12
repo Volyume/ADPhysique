@@ -2110,7 +2110,7 @@ async function saveWithPlannerV2({
  *   no_catalogue, no_plan, nothing_resolved   nothing to build from or to write
  *   error               anything threw (`error` carries it, for the caller to log)
  */
-export async function planGeneratedRebuildV2({ userId, profile, daysPerWeek, replaceIds = null }) {
+export async function planGeneratedRebuildV2({ userId, profile, daysPerWeek, replaceIds = null, currentExerciseNames = null }) {
   try {
     const base = buildPlanInputs(profile);
     if (!base) return { ok: false, reason: 'profile_incomplete' };
@@ -2125,7 +2125,7 @@ export async function planGeneratedRebuildV2({ userId, profile, daysPerWeek, rep
     if (styleKey) return { ok: false, reason: 'style_plan' };
     // D222 phase 6 (R63): with the structure engine on, the rebuild is the
     // engine's week at the person's days, or nothing (no older planner).
-    if (STRUCTURE_ENGINE) return await rebuildWithStructureEngine({ userId, inputs });
+    if (STRUCTURE_ENGINE) return await rebuildWithStructureEngine({ userId, inputs, currentExerciseNames });
 
     const allExercises = await getAllExercises();
     const intentState = await loadGenerationIntent(userId);
@@ -2498,8 +2498,15 @@ function structureNoContinuity(isRebuild = false) {
  * threw or built an exercise with no library row; the error is logged here.
  * `days` overrides the profile's day count (the rebuild keeps the person's).
  */
-async function buildWithStructureEngine({ userId, inputs, library, allExercises, lengthMinutes, days }) {
-  const loggedExerciseNames = await plannerV2LoggedNames(userId, allExercises);
+async function buildWithStructureEngine({ userId, inputs, library, allExercises, lengthMinutes, days, preferredNames = null }) {
+  // D222 phase 8 (R92): the exercises a rebuilt plan already has go through the
+  // same channel as the ones the person has logged (the engine puts both first
+  // in a pattern's list), so a kept exercise survives wherever the engine's
+  // checks allow it; the checks still decide, nothing is forced in.
+  const loggedExerciseNames = [...new Set([
+    ...(await plannerV2LoggedNames(userId, allExercises)),
+    ...(Array.isArray(preferredNames) ? preferredNames.filter((n) => typeof n === 'string' && n) : []),
+  ])];
   const args = {
     ...structureArgs(inputs),
     ...(Number.isFinite(lengthMinutes) ? { lengthMinutes } : {}),
@@ -2690,12 +2697,14 @@ async function assessFitWithStructureEngine({ userId, inputs, library, allExerci
  * pick that adds too little), is not built: an automatic rebuild has nobody
  * to ask, so the plan stays exactly as it is.
  */
-async function rebuildWithStructureEngine({ userId, inputs }) {
+async function rebuildWithStructureEngine({ userId, inputs, currentExerciseNames = null }) {
   const allExercises = await getAllExercises();
   const intentState = await loadGenerationIntent(userId);
   const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
   const library = libraryForReviewedProposal(filteredLibrary, reviewedReplacementIds(null));
-  const built = await buildWithStructureEngine({ userId, inputs, library, allExercises, days: inputs.daysPerWeek });
+  const built = await buildWithStructureEngine({
+    userId, inputs, library, allExercises, days: inputs.daysPerWeek, preferredNames: currentExerciseNames,
+  });
   if (built.error) return { ok: false, reason: 'error', error: built.error };
   const { args, result } = built;
   if (!result.ok) return { ok: false, reason: 'structure_refused' };
