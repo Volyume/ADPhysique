@@ -46,6 +46,8 @@ import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capa
 // PlanPreviewSheet (same shared helper and sheet HomeScreen's own no-plan CTA
 // uses, so the app's one first-plan route behaves identically everywhere).
 import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+import { prepareStartWithPlanOption, saveChosenProfile } from '../lib/startWithPlan';
+import { beforeStructureBlockStart, afterStructureBlockStart } from '../lib/structurePlanChange';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
@@ -535,18 +537,47 @@ export default function PlansScreen({ navigation }) {
     }
   }
 
+  // D222 phase 7 (R83): one of the structure engine's choices (more days, a
+  // longer session, without a focus pick): the plan is prepared again from
+  // the changed profile, read only, and the sheet shows it. Nothing is saved
+  // until the person confirms.
+  async function handleChoosePlanOption(option) {
+    if (startWithPlanRef.current || startingPlan || !planPreview) return;
+    startWithPlanRef.current = true;
+    setPreparingPlan(true);
+    try {
+      const prep = await prepareStartWithPlanOption(user.id, planPreview.chosenProfile ?? userProfile, option, { mode: 'first' });
+      if (!prep.ok) {
+        logError('PlansScreen.planOption', new Error(prep.error ?? prep.reason ?? 'plan_generation_failed'), { userId: user?.id });
+        toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        return;
+      }
+      setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount, chosenProfile: prep.profile });
+    } finally {
+      startWithPlanRef.current = false;
+      setPreparingPlan(false);
+    }
+  }
+
   // Step 2 commits, only from the sheet's confirm button.
   async function handleConfirmStartWithPlan() {
     if (startingPlan) return;
     setStartingPlan(true);
     let result = { ok: false, error: 'not attempted' };
     try {
-      result = await commitStartWithPlan(user.id, userProfile);
+      // D222 phase 7 (R83): where the person took one of the engine's
+      // choices, the plan is built from the profile that choice made.
+      const chosenProfile = planPreview?.chosenProfile ?? null;
+      if (chosenProfile) result = await commitStartWithPlan(user.id, chosenProfile);
+      else result = await commitStartWithPlan(user.id, userProfile);
     } catch (e) {
       result = { ok: false, error: e?.message ?? 'unknown' };
     }
     setStartingPlan(false);
     if (result.ok) {
+      // D222 phase 7 (R83): a choice the person took is their profile now.
+      await saveChosenProfile(user.id, planPreview?.chosenProfile ?? null, userProfile)
+        .catch((e) => logError('PlansScreen.saveChosenProfile', e, { userId: user?.id }));
       setPlanPreview(null);
       await loadData();
       // D112 R5 (closes audit T1-12): every generation entry reveals
@@ -778,9 +809,16 @@ export default function PlansScreen({ navigation }) {
         if (result?.error !== 'capability_preflight_hold') {
           logError('PlansScreen.refineNextBlock', result?.error ?? 'unknown', { userId: user?.id });
         }
+        // D222 phase 7 (R79): a structure plan's next block starts a fresh ladder.
+        const structurePlan = await beforeStructureBlockStart(activePlan.id)
+          .catch((e) => { logError('PlansScreen.structureNextBlock', e, { userId: user?.id }); return false; });
         await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
           ledger: seedRanges, allowLearnedCarry: true,
         });
+        if (structurePlan) {
+          await afterStructureBlockStart(activePlan.id)
+            .catch((e) => logError('PlansScreen.structureNextBlockRows', e, { userId: user?.id }));
+        }
         toast.show('Your next block started with your current workouts', { variant: 'warning' });
       } else if (result.capabilityBlockedCount > 0) {
         // D112 R5 (closes audit T1-12): every generation entry reveals
@@ -790,10 +828,18 @@ export default function PlansScreen({ navigation }) {
     } else {
       // Review D5: on a repeat intent the activation must never reach for
       // the learned carry if the seed build failed.
+      // D222 phase 7 (R79): a structure plan's next block starts a fresh
+      // ladder from each exercise's peak, and its rows follow the ladder.
+      const structurePlan = await beforeStructureBlockStart(activePlan.id)
+        .catch((e) => { logError('PlansScreen.structureNextBlock', e, { userId: user?.id }); return false; });
       await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
         ledger: seedRanges,
         allowLearnedCarry: seedIntent !== 'repeat',
       });
+      if (structurePlan) {
+        await afterStructureBlockStart(activePlan.id)
+          .catch((e) => logError('PlansScreen.structureNextBlockRows', e, { userId: user?.id }));
+      }
     }
 
     if (seedRanges?.sourceMesocycleId) {
@@ -2022,6 +2068,7 @@ export default function PlansScreen({ navigation }) {
         onConfirm={handleConfirmStartWithPlan}
         onClose={() => { if (!startingPlan) setPlanPreview(null); }}
         busy={startingPlan}
+        onChooseOption={handleChoosePlanOption}
       />
 
       {/* FB-24 (D96): the receipt for "Continue with adjustments". Every

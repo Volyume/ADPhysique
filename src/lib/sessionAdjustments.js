@@ -42,7 +42,7 @@ import { logWarn } from './errorLog';
 import { prescribeWeek } from './plan/prescribe';
 import { PER_SESSION, exerciseCap } from './plan/science';
 import { roleTop } from './plan/checkinPlacement';
-import { structureServedWeek } from './structure/serve';
+import { structureServedWeek, isStructureFacts } from './structure/serve';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -333,6 +333,9 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       weekRir: blockWeekRir(week),
       isDeload: Number(week?.is_deload ?? week?.isDeload) === 1,
       exercises: todays,
+      // D222 phase 7 (R74): the injury ramp's rows lower the ladder, never raise it.
+      ramp: Object.fromEntries(weekRows.filter((r) => r.source === 'reintroduction')
+        .map((r) => [r.muscle, Number(r.planned_sets)]).filter(([, v]) => Number.isFinite(v))),
     });
     const allocation = Object.keys(ladder.sets).length ? { ...served, ...ladder.sets } : served;
     // planContext rides along (D219 lane R3) so the session's own +1 reads the
@@ -341,6 +344,9 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
     return {
       allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
       ...(Object.keys(ladder.rir).length ? { rir: ladder.rir } : {}),
+      // D222 phase 7 (R73): the block week, for the session's own plus one on
+      // a structure plan (structurePlanLimits). Absent on every other plan.
+      ...(isStructureFacts(planContext?.facts) ? { weekIndex: Number(week?.week_index ?? week?.weekIndex) } : {}),
     };
   } catch (e) {
     logWarn('sessionAdjustments.weeklyAllocation', e?.message);
@@ -390,10 +396,12 @@ const CLOSED_PLAN_LIMITS = Object.freeze({
  * @param {Object<string, number>} args.weekTargets  this week's direct-set target per muscle
  * @param {Array<{routineExercise: object, exercise: object}>} args.exercises  today's rows
  */
-export function buildPlanLimits({ planContext, routineId, weekTargets, exercises }) {
+export function buildPlanLimits({ planContext, routineId, weekTargets, exercises, weekIndex = null, allocation = null }) {
   const facts = planContext?.facts;
   const sessions = planContext?.sessions;
   if (facts?.version !== 2 || !Array.isArray(sessions) || !routineId) return null;
+  // D222 phase 7 (R73): a structure plan's plus one is its own gate.
+  if (isStructureFacts(facts)) return structurePlanLimits({ facts, routineId, weekIndex, exercises, allocation });
   const served = prescribeWeek({
     sessions,
     weekTargets: weekTargets || {},
@@ -428,6 +436,53 @@ export function buildPlanLimits({ planContext, routineId, weekTargets, exercises
       sessionFractionalCap: capOf(muscle, 'fractional', PER_SESSION.fractionalCap),
       weekFractional: weekFractional[muscle] || 0,
       weekTop: roleTop(facts?.roles?.[muscle]),
+    };
+  }
+  return out;
+}
+
+// What a structure plan's plus one leaves open: the gate has already judged
+// the session and the week, so only the exercise's own room is read.
+const OPEN = Number.MAX_SAFE_INTEGER;
+
+/**
+ * D222 phase 7 (R73): the session's own plus one on a structure plan. Minus
+ * one is always allowed (less work). Plus one on an exercise is offered only
+ * where the one gate (structure/stored.applyChange, this week only, an
+ * automatic change) finds no new hard fault with one more set; otherwise the
+ * exercise has no room (cap = the sets served), the safe direction. An
+ * exercise the engine did not build has no limits here, so the caller closes
+ * it (no plus one). Pure.
+ * @param {object} args
+ * @param {object} args.facts  the plan's facts (a structure plan)
+ * @param {string} args.routineId
+ * @param {number} args.weekIndex  the block week served today
+ * @param {Array<{routineExercise: object, exercise: object}>} args.exercises  today's rows
+ * @param {?Object<string, number>} args.allocation  exerciseId -> the sets served today
+ */
+export function structurePlanLimits({ facts, routineId, weekIndex, exercises, allocation }) {
+  if (!Number.isInteger(weekIndex) || weekIndex < 1) return {};
+  // eslint-disable-next-line global-require
+  const { planFromFacts, findExercise, applyChange } = require('./structure/stored');
+  const plan = planFromFacts(facts);
+  if (!plan) return {};
+  const out = {};
+  for (const row of Array.isArray(exercises) ? exercises : []) {
+    const exerciseId = row?.exercise?.id;
+    if (exerciseId == null) continue;
+    const ref = row?.routineExercise?.id != null && findExercise(plan, { routineExerciseId: row.routineExercise.id })
+      ? { routineExerciseId: row.routineExercise.id }
+      : { routineId, exerciseId };
+    const at = findExercise(plan, ref);
+    if (!at) continue;
+    const ex = plan.sessions[at.si].exercises[at.ei];
+    const served = Number.isFinite(allocation?.[exerciseId]) ? allocation[exerciseId]
+      : (ex.weeks[weekIndex - 1] ? ex.weeks[weekIndex - 1].sets : null);
+    if (!Number.isFinite(served)) continue;
+    const r = applyChange(plan, { kind: 'setSets', ref: { sessionIndex: at.si, exerciseIndex: at.ei }, fromWeek: weekIndex, count: served + 1, onlyWeek: true }, { auto: true });
+    out[exerciseId] = {
+      cap: r.verdict === 'ok' ? served + 1 : served,
+      sessionDirect: 0, sessionDirectCap: OPEN, sessionFractional: 0, sessionFractionalCap: OPEN, weekFractional: 0, weekTop: OPEN,
     };
   }
   return out;
@@ -532,7 +587,7 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     // The session-layer ±1 tweaks below then apply on top of the allocated
     // base, so an applied coach change (or the recovery week's per-muscle
     // reductions) and the readiness tweaks compose instead of competing.
-    const { allocation, weekRows, planContext } = await getSessionWeeklyAllocation({ workout, exercises });
+    const { allocation, weekRows, planContext, weekIndex } = await getSessionWeeklyAllocation({ workout, exercises });
 
     // D219 (design 4.11): on a plan the new planner built, the +1 stays inside
     // that plan's caps (the exercise's, the session's and the role's top).
@@ -544,6 +599,8 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
           routineId: workout.routineId,
           weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
           exercises,
+          weekIndex,
+          allocation,
         });
       } catch (e) {
         logWarn('sessionAdjustments.planLimits', e?.message);

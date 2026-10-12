@@ -30,7 +30,9 @@
  * Pure, no I/O, deterministic.
  */
 import { CATALOGUE, THIN_KIT } from '../plan/catalogue';
-import { PATTERNS, REP_RANGE_UNLOADED_ISOLATION } from './rulebook';
+import {
+  PATTERNS, REP_RANGE_UNLOADED_ISOLATION, REP_RANGE_UNLOADED_COMPOUND, REP_RANGES, restSecondsFor,
+} from './rulebook';
 
 // The catalogue role each pattern comes from, by default for every name.
 const ROLE_PATTERN = Object.freeze({
@@ -423,4 +425,63 @@ export function structureChoices({ library, profile, loggedExerciseNames } = {})
     if (available.length === 1 && kit !== 'full_gym') solePatternMuscles.push(muscle);
   }
   return { byPattern, untrainable, solePatternMuscles };
+}
+
+// ── D222 phase 7 (R75, R77): a library row as a structure exercise ────────
+
+// Every name the catalogue, the kit stand-ins and the supplements give a
+// pattern, in the order structureChoices offers them (the first wins where a
+// name is listed twice). Built once; pure data.
+let NAME_TO_PATTERN = null;
+function nameToPattern() {
+  if (NAME_TO_PATTERN) return NAME_TO_PATTERN;
+  const out = new Map();
+  const put = (name, pattern) => { if (pattern && PATTERNS[pattern] && !out.has(name)) out.set(name, pattern); };
+  for (const [muscle, roles] of Object.entries(CATALOGUE)) {
+    for (const r of roles) {
+      if (r.credited) continue;
+      for (const name of r.names) put(name, patternForName(muscle, r.id, name));
+    }
+  }
+  for (const kit of Object.values(THIN_KIT)) {
+    for (const [muscle, roles] of Object.entries(kit || {})) {
+      for (const [roleId, names] of Object.entries(roles || {})) {
+        for (const name of names || []) put(name, patternForName(muscle, roleId, name));
+      }
+    }
+  }
+  for (const [pattern, list] of Object.entries(SUPPLEMENTS)) for (const s of list) put(s.name, pattern);
+  NAME_TO_PATTERN = out;
+  return out;
+}
+
+/**
+ * D222 phase 7 (R75, R77): a library row as the exercise a structure plan
+ * holds, or null when the rulebook has no pattern for its name (such an
+ * exercise cannot be checked: checker C3 fails it). The rest is the
+ * default for its kind and pattern (09 s5), the reps its kind's (or its own
+ * where structureChoices gives it its own), the joints its pattern's plus
+ * any its name adds.
+ * @param {object} row  an exercises row ({ id, name, equipmentCategory, compoundIsolation, ... })
+ */
+export function structureExerciseFromRow(row) {
+  if (!row || typeof row.name !== 'string' || row.id == null) return null;
+  const pattern = nameToPattern().get(row.name) || null;
+  if (!pattern) return null;
+  const kind = kindOf(row);
+  const bodyweight = (row.equipmentCategory ?? row.equipment_category) === 'bodyweight';
+  const rest = restSecondsFor(kind, pattern);
+  const repRange = REP_OVERRIDES[row.name]
+    || (bodyweight && kind === 'isolation' ? REP_RANGE_UNLOADED_ISOLATION : null)
+    || (bodyweight && kind !== 'isolation' ? REP_RANGE_UNLOADED_COMPOUND : REP_RANGES[kind]);
+  return {
+    exerciseId: row.id,
+    name: row.name,
+    pattern,
+    muscle: PATTERNS[pattern].muscle,
+    kind,
+    extraJoints: [...(NAME_EXTRA_JOINTS[row.name] || [])],
+    restSec: rest ? rest.default : null,
+    repRange: [...(repRange || [8, 12])],
+  };
 }

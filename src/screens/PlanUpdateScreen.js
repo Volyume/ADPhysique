@@ -41,6 +41,7 @@ import { diffPlans, summariseProspectivePlan, keepsBlockOnRebuild } from '../lib
 // (Today and Train's no-plan empty states, and a goal/phase change), so all
 // four say the same things in the same order before anything is written.
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
+import { profileWithOption } from '../lib/structure/adapt';
 // F-16 REVISED, parity with first run: 'Kettlebells' and 'Bands' are answers
 // that install a library plan and never generate, and are stored as the
 // equipment PROFILE generationEquipmentFor maps them to. Same helpers, same
@@ -203,19 +204,24 @@ export default function PlanUpdateScreen({ navigation }) {
   // Step 1 (NEW): the review button runs a dry-run + diff and opens the preview.
   // Nothing is written until the user confirms, the active plan and profile are
   // untouched if they back out.
-  async function handleRebuildPress() {
+  // D222 phase 7 (R83): `chosen` is the profile after the person took one of
+  // the structure engine's choices in the sheet (handleChooseRebuildOption);
+  // the pre-flight was already answered for this preview. A press of the
+  // review button passes an event, never a profile.
+  async function handleRebuildPress(chosen = null) {
     if (previewing || saving) return;
     // F-16 REVISED point 3: belt and braces. The button is not rendered for
     // a style plan, so this can only be reached by a stale render.
     if (styleLock) return;
     setPreviewing(true);
-    const updatedProfile = buildUpdatedProfile();
+    const fromChoice = chosen != null && typeof chosen === 'object' && chosen.trainingGoal !== undefined && !chosen.nativeEvent;
+    const updatedProfile = fromChoice ? chosen : buildUpdatedProfile();
     try {
       // CC27 (section 9.6) / D112 R3 (closes audit T1-21): the SAME
       // capability pre-flight the commit runs, taken before the dry run,
       // so the preview can never show an unchecked plan that the confirm
       // step would then refuse to build.
-      const preflight = await capabilityPreflight(user.id);
+      const preflight = fromChoice ? { proceed: true } : await capabilityPreflight(user.id);
       if (!preflight.proceed) {
         const goAhead = await new Promise((resolve) => {
           offerCapabilityPreflightChoice({
@@ -319,6 +325,20 @@ export default function PlanUpdateScreen({ navigation }) {
     } finally {
       setPreviewing(false);
     }
+  }
+
+  // D222 phase 7 (R83): one of the structure engine's choices (more days, a
+  // longer session, without a focus pick). The form takes it, so what the
+  // screen shows is what is previewed, and the sheet is prepared again from
+  // it; nothing is saved until the person confirms.
+  async function handleChooseRebuildOption(option) {
+    if (previewing || saving || !staged?.profile) return;
+    const next = profileWithOption(staged.profile, option);
+    if (next === staged.profile) return;
+    if (Number.isFinite(next.daysPerWeek)) setDaysPerWeek(next.daysPerWeek);
+    if (Number.isFinite(next.sessionLengthMinutes)) setSessionLengthMinutes(next.sessionLengthMinutes);
+    if (Array.isArray(next.planWeakPoints)) setPlanWeakPoints(next.planWeakPoints);
+    await handleRebuildPress(next);
   }
 
   // Step 2 (NEW): confirm → the real commit. FF-002 split-brain protection is
@@ -651,8 +671,9 @@ export default function PlanUpdateScreen({ navigation }) {
         otherPlansCount={staged?.otherPlansCount ?? 0}
         confirmLabel="Confirm and rebuild"
         onConfirm={handleConfirmRebuild}
+        onChooseOption={handleChooseRebuildOption}
         onClose={() => { if (!saving) { setDiff(null); setStaged(null); } }}
-        busy={saving}
+        busy={saving || previewing}
       />
     </SafeAreaView>
   );

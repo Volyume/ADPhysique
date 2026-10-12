@@ -4978,13 +4978,34 @@ export async function setProgrammePlanFacts(programmeId, facts, { scheduleSync =
  * count that is not a whole number of at least one. A text count ('5') is read
  * as a number. Throws only on a write failure: the caller logs it.
  */
-export async function recordTypedSetCount(programmeId, routineExerciseId, sets) {
+export async function recordTypedSetCount(programmeId, routineExerciseId, sets, { confirmed = false } = {}) {
   if (!programmeId || !routineExerciseId) return false;
   const n = typeof sets === 'string' && sets.trim() !== '' ? Number(sets) : sets;
   if (typeof n !== 'number' || !Number.isFinite(n) || Math.round(n) < 1) return false;
   const facts = await getProgrammePlanFacts(programmeId);
   if (facts?.version !== 2) return false;
   const typed = facts.typed && typeof facts.typed === 'object' && !Array.isArray(facts.typed) ? facts.typed : {};
+  // D222 phase 7 (R76): on a plan the structure engine built, the typed count
+  // goes through the one gate (structure/stored.applyChange, a fixed count):
+  // 'ok' saves; a count that goes beyond the plan's checks saves only once the
+  // person has confirmed it (`confirmed`, asked by the screen with the plain
+  // reason). The ladder takes the count too (the recovery week halves it), so
+  // the version 2 fields rebuilt from it match what is served (R72). A row the
+  // engine did not build (added by hand) is recorded as today.
+  // eslint-disable-next-line global-require
+  const stored = require('./structure/stored');
+  if (stored.isStructureFacts(facts)) {
+    const plan = stored.planFromFacts(facts);
+    const ref = { routineExerciseId };
+    if (stored.findExercise(plan, ref)) {
+      const r = stored.applyChange(plan, { kind: 'setSets', ref, count: Math.round(n) });
+      if (r.verdict === 'blocked' || (r.verdict === 'confirm' && !confirmed)) return false;
+      // eslint-disable-next-line global-require
+      const { saveStructurePlan } = require('./structurePlanChange');
+      await saveStructurePlan(programmeId, facts, r.plan, { typed: { ...typed, [routineExerciseId]: Math.round(n) } });
+      return true;
+    }
+  }
   await setProgrammePlanFacts(programmeId, { ...facts, typed: { ...typed, [routineExerciseId]: Math.round(n) } });
   return true;
 }
@@ -5286,9 +5307,19 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
   try {
     // One write: the plan's facts and, for a swap into another muscle, the block's
     // weekly rows, so the plan is never left half moved.
-    await inOneWrite(d, () => carrySwapIntoPlanFacts(d, plan, before?.routineId ?? null, newExercise));
+    await inOneWrite(d, () => carrySwapIntoPlanFacts(d, plan, before?.routineId ?? null, newExercise, routineExerciseId));
   } catch (e) {
     logError('database.updateRoutineExerciseExercise.planFacts', e, { routineExerciseId });
+  }
+  // D222 phase 7 (R72): a structure plan's weekly rows follow its refreshed
+  // facts, written after the swap's own write (they read the running block).
+  if (plan?.structureSaved) {
+    try {
+      // eslint-disable-next-line global-require
+      await require('./structurePlanChange').refreshStructureRows(plan.programmeId, plan.structureSaved);
+    } catch (e) {
+      logError('database.updateRoutineExerciseExercise.structureRows', e, { routineExerciseId });
+    }
   }
   _scheduleSync();
   return { muscleChange };
@@ -5321,7 +5352,7 @@ async function inOneWrite(d, task) {
 async function readSwapPlanState(d, routineId, routineExerciseId, oldExercise, newExercise) {
   // eslint-disable-next-line global-require
   const { slotMuscleChange } = require('./exercise/swapCarry');
-  const state = { programmeId: null, facts: null, change: null, moves: null };
+  const state = { programmeId: null, facts: null, change: null, moves: null, oldExerciseId: oldExercise?.id ?? null };
   if (!routineId || !newExercise?.id) return state;
   const routine = await d.getFirstAsync('SELECT programme_id AS programmeId FROM routines WHERE id = ?', [routineId]);
   state.programmeId = routine?.programmeId ?? null;
@@ -5375,12 +5406,35 @@ async function readSwapPlanState(d, routineId, routineExerciseId, oldExercise, n
 // moved in the facts the same way (moveSlotShares) and the facts' own record of
 // every week's targets with them (moveWeeklyTargets). The write is not scheduled
 // here, the swap's own schedule covers it.
-async function carrySwapIntoPlanFacts(d, state, routineId, newExercise) {
+async function carrySwapIntoPlanFacts(d, state, routineId, newExercise, routineExerciseId = null) {
   // eslint-disable-next-line global-require
   const { planFactsAfterSwap, moveSlotShares, moveWeeklyTargets } = require('./exercise/swapCarry');
   if (!state?.programmeId || !state.facts || !routineId || !newExercise?.id) return;
   const base = await getProgrammePlanFacts(state.programmeId);
   if (base?.version !== 2) return;
+  // D222 phase 7 (R75, R72): on a plan the structure engine built, a permanent
+  // swap writes the new exercise into the structure block (the same ladder;
+  // the new exercise's pattern, joints and rest) and the version 2 fields are
+  // rebuilt from it. A row the engine did not build, or an exercise the
+  // rulebook cannot check (the swap sheet offers neither on such a slot), is
+  // carried as on any other plan.
+  // eslint-disable-next-line global-require
+  const stored = require('./structure/stored');
+  if (stored.isStructureFacts(base)) {
+    const planNow = stored.planFromFacts(base);
+    const ref = routineExerciseId != null && stored.findExercise(planNow, { routineExerciseId })
+      ? { routineExerciseId }
+      : { routineId, exerciseId: state.oldExerciseId ?? null };
+    // eslint-disable-next-line global-require
+    const exercise = require('./structure/patterns').structureExerciseFromRow(newExercise);
+    if (exercise && stored.findExercise(planNow, ref)) {
+      const r = stored.applyChange(planNow, { kind: 'replaceExercise', ref, exercise });
+      const next = stored.refreshStructureFacts(base, r.plan);
+      await setProgrammePlanFacts(state.programmeId, next, { scheduleSync: false });
+      state.structureSaved = next;
+      return;
+    }
+  }
   let next = planFactsAfterSwap(base, { routineId, newExercise }).facts;
   const moves = state.moves;
   if (moves && await moveSlotSetsInBlock(d, moves)) {

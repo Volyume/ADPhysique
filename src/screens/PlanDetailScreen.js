@@ -24,6 +24,9 @@ import PlanExplainLines from '../components/PlanExplainLines';
 import PlanRebuildNote from '../components/PlanRebuildNote';
 import { ensureActivePlanRebuilt } from '../lib/planRebuild';
 import { explainLinesForKind } from '../lib/planRebuildNote';
+import { STRUCTURE_ENGINE } from '../lib/structure/release';
+import { isStructureFacts } from '../lib/structure/serve';
+import { fixedPlanNote } from '../lib/structure/messages';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
 import { getPlanDays } from '../lib/onboarding/freeStarter';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
@@ -83,6 +86,9 @@ export default function PlanDetailScreen({ navigation, route }) {
   // that say what the plan did and why, computed from its own facts, each with
   // its source on tap. Null for every other plan: "Why this plan" is as before.
   const [explainLines, setExplainLines] = useState(null);
+  // D222 phase 7 (R79): one calm note on a library, kit or hand-built plan
+  // that goes beyond the checks for any plan; never a change. Switch-gated.
+  const [fixedNote, setFixedNote] = useState(null);
   // D139 (finding: "the library's 'N to swap' fact vanished on the deciding
   // screen"): the same capability-computed compatibility verdict the
   // library grid shows, recomputed for this plan's own exercises so the
@@ -227,6 +233,23 @@ export default function PlanDetailScreen({ navigation, route }) {
         }
       } catch (e) { logError('PlanDetailScreen.explain', e, { planId }); }
       setExplainLines(explained?.length ? explained : null);
+      // D222 phase 7 (R79): with the structure engine on, a fixed programme
+      // (any plan the engine did not build) is checked with the checks for
+      // any plan; a hard failure is said once, calmly, and nothing changes.
+      let noteFixed = null;
+      if (STRUCTURE_ENGINE) {
+        try {
+          const factsNow = await getProgrammePlanFacts(planId);
+          if (!isStructureFacts(factsNow)) {
+            // eslint-disable-next-line global-require
+            const { checkFixedPlan } = require('../lib/structure/stored');
+            noteFixed = fixedPlanNote(checkFixedPlan((routines ?? []).map((routine) => ({
+              key: routine.id, name: routine.name, rows: detailsByRoutine[routine.id] ?? [],
+            }))));
+          }
+        } catch (e) { logError('PlanDetailScreen.fixedPlanCheck', e, { planId }); }
+      }
+      setFixedNote(noteFixed);
       // The rationale cache is per-user and always tracks the active
       // auto-generated plan (every reroll archives the others), so it's
       // only meaningful here when this plan is the active one. Loading it
@@ -777,6 +800,14 @@ export default function PlanDetailScreen({ navigation, route }) {
             ))
           )}
         </View>
+
+        {fixedNote ? (
+          <View style={styles.section}>
+            <Card style={styles.whyCard}>
+              <Text style={[styles.whyText, live.whyText]}>{fixedNote}</Text>
+            </Card>
+          </View>
+        ) : null}
 
         {/* Why this plan, for you. Only on the active auto-generated plan,
             mirroring the enrollment reveal so the rationale is here any

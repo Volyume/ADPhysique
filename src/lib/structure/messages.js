@@ -344,3 +344,181 @@ export function planMessages(r, args) {
   });
   return lines;
 }
+
+// ── D222 phase 7 (R80): the words of every change after the build ─────────
+//
+// Authority: docs/audit/plan-builder-map-2026-10-11/24-PHASE7-AFTER-BUILD-SPEC.md
+// R73 to R83. Plain British English, calm, no em dash, and each line describes
+// the plan rather than telling anyone what to do (D204).
+
+/**
+ * R83: the label of one of the preview's choices (adapt.structureOptions).
+ * `option.kind`: 'length', 'days', 'drop_focus' or 'keep'.
+ * @param {{ kind: string, change: ?object, muscle?: string }} option
+ * @param {{ days: number, lengthMinutes: number }} args  the engine's arguments
+ */
+export function optionLabel(option, args) {
+  const c = option.change || {};
+  const days = c.daysPerWeek ?? args.days;
+  const len = c.sessionLengthMinutes ?? args.lengthMinutes;
+  switch (option.kind) {
+    case 'length': return `Sessions of ${len} minutes, ${days} days a week`;
+    case 'days': return `${days} days a week of ${len} minutes`;
+    case 'drop_focus': return `${args.days} days without the ${(option.muscles || [option.muscle]).map(name).join(' and ')} focus`;
+    case 'keep': return `Keep this plan: ${args.days} days a week of ${args.lengthMinutes} minutes`;
+    default: return '';
+  }
+}
+
+/** R83: the line above the preview's choices. */
+export const OPTIONS_HEADING = 'Your choices';
+
+// R71, R76, R77: what a change does to the plan, in plain words, for the
+// person deciding whether to keep it. One clause per check, said of the plan.
+const FAULT_CLAUSE = {
+  C1: () => 'the week would no longer follow the order of its sessions',
+  C2: (f) => `${f.muscle ? name(f.muscle) : 'a muscle'} would be trained in two sessions in a row`,
+  C3: (f) => (/no rulebook pattern/.test(f.detail) ? 'the plan has no checks for this exercise'
+    : /RIR/.test(f.detail) ? 'a compound would be taken to failure'
+      : `one session would hold more sets of ${f.muscle ? name(f.muscle) : 'one muscle'} than a session may`),
+  C4: (f) => (/below the minimum/.test(f.detail) ? `${f.muscle ? name(f.muscle) : 'a muscle'} would get fewer sets a week than its minimum`
+    : `${f.muscle ? name(f.muscle) : 'a muscle'} would get more sets a week than the most a week may hold`),
+  C6: (f) => (/allowed/.test(f.detail) ? 'an exercise would have more or fewer sets than one exercise may hold'
+    : /working sets/.test(f.detail) ? 'a session would hold more sets than one session may'
+      : f.muscle ? `a session would hold more exercises for ${name(f.muscle)} than one session may`
+        : 'a session would hold more exercises than one session may'),
+  C7: () => 'the rest between sets would be shorter than this exercise needs',
+  C8: () => 'overhead pressing would be in more sessions a week than the plan allows',
+  C9: () => 'the front of the shoulders would be loaded in two sessions in a row',
+  C10: () => 'the exercise moves the shoulder in a way the plan leaves out',
+  C12: () => 'the lower back would be loaded in two sessions in a row',
+  C13: () => 'the lower back would be loaded more than the plan allows',
+  C14: () => 'the elbows would be loaded more than the plan allows',
+  C15: () => 'the knees would be loaded in two sessions in a row',
+  C16: () => 'the same exercise would be in two sessions in a row',
+  C17: () => 'a heavier exercise would come after a lighter one',
+  C18: () => 'a session would run longer than the length you chose',
+  S1: (f) => `${f.muscle ? name(f.muscle) : 'a muscle'} would have no exercise of ${f.muscle && plural(f.muscle) ? 'their' : 'its'} own`,
+  S2: (f) => `${f.muscle ? name(f.muscle) : 'a muscle'} would have too little time to recover before ${f.muscle && plural(f.muscle) ? 'they are' : 'it is'} trained again`,
+  S3: () => 'pulling would fall behind pressing',
+  S4: () => 'the hamstrings would fall behind the quads',
+  S5: () => 'a session would hold too little to be a session of its own',
+  S6: () => 'an exercise would sit in a session that is not named for its muscle',
+  S7: () => 'a session would no longer train what its name says',
+  S8: () => 'the same movement would be in one session twice',
+  S9: () => 'abs work would come before other work in a session',
+  S10: (f) => `${f.muscle ? name(f.muscle) : 'a muscle'} would have too few sets of ${f.muscle && plural(f.muscle) ? 'their' : 'its'} own`,
+  S11: () => 'the hamstrings would have no hinge or no curl all week',
+  S12: () => 'a focus pick would fall short of its aim without the plan saying so',
+  S13: () => 'a session built around the quads would have no lower-body compound',
+  S14: () => 'the legs would be trained in two sessions a week',
+};
+
+/**
+ * R71: the plain reason a change goes against the plan's checks, from the
+ * new faults applyChange reports. At most two clauses, each said once.
+ * @param {Array<{ code: string, detail?: string, muscle?: string }>} faults
+ */
+export function changeReason(faults) {
+  const said = [];
+  for (const f of Array.isArray(faults) ? faults : []) {
+    const clause = FAULT_CLAUSE[f.code] ? FAULT_CLAUSE[f.code](f) : 'the plan would break one of its checks';
+    if (!said.includes(clause)) said.push(clause);
+  }
+  if (!said.length) return null;
+  const shown = said.slice(0, 2);
+  const more = said.length > 2 ? ', and more' : '';
+  return `With this change ${shown.join(', and ')}${more}.`;
+}
+
+/** R71, R76, R77: the confirm dialogue's words. */
+export const CHANGE_CONFIRM = Object.freeze({
+  title: 'This goes beyond your plan\'s checks',
+  keep: 'Keep my change',
+  back: 'Leave it as it was',
+});
+
+/** R75: the line when an exercise picked from the full library cannot go in. */
+export const SWAP_BLOCKED = 'This exercise cannot go in this session without going beyond your plan\'s checks, so the plan is left as it was.';
+
+// ── R78: the check-in card on a structure plan ─────────────────────────────
+
+const setWord = (n) => (n === 1 ? 'set' : 'sets');
+const upperFirst = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+const joinAnd = (parts) => (parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`);
+
+/**
+ * R78: the check-in card for a structure plan, in the card shape the screen
+ * renders (plan/checkinPlacement.describeCheckin's): heading, lines,
+ * unplacedLines, notRaisedLine, ifLeft and whether Apply shows.
+ * @param {object} result  stored.structureCheckin's result
+ */
+export function structureCheckinCard(result) {
+  const card = {
+    kind: result.kind, showApply: false, heading: '', lines: [], unplacedLines: [], notRaisedLine: null,
+    ifLeft: 'If you leave this, your plan carries on as planned.',
+  };
+  const moveText = (mv) => `${mv.name} ${mv.from} to ${mv.to}`;
+  if (result.kind === 'raise') {
+    if (!result.muscles.length) {
+      card.heading = 'There is no room for more sets this block';
+      card.ifLeft = null;
+    } else {
+      card.heading = `From next week: more sets for ${joinAnd(result.muscles.map((m) => name(m.muscle)))}`;
+      card.showApply = true;
+      for (const m of result.muscles) {
+        const parts = m.moves.map(moveText);
+        if (m.opened) parts.push(`${m.opened.name} joins with ${m.opened.sets} ${setWord(m.opened.sets)}`);
+        card.lines.push(`${upperFirst(name(m.muscle))}, ${m.added} more ${setWord(m.added)} a week: ${joinAnd(parts)}.`);
+      }
+    }
+    for (const m of result.unplaced) card.unplacedLines.push(`No room for more ${name(m)} this block.`);
+    if (result.notRaised.length) {
+      card.notRaisedLine = `Not raised: ${result.notRaised.map((x) => upperFirst(name(x.muscle))).join(', ')} (held by an Injuries & limitations entry or a soreness answer).`;
+    }
+    return card;
+  }
+  if (result.kind === 'reduce') {
+    if (!result.muscles.length) {
+      card.heading = 'There is nothing to take off next week';
+      card.lines.push('Every muscle is already at its minimum.');
+      card.ifLeft = null;
+      return card;
+    }
+    card.heading = 'From next week: fewer sets for each muscle';
+    card.lines.push('Each muscle gives about a fifth of its sets and stays at its minimum or above, for the rest of the block.');
+    card.showApply = true;
+    return card;
+  }
+  card.heading = 'Next week stays as your plan has it';
+  card.lines.push('Your plan carries on as planned.');
+  card.ifLeft = null;
+  return card;
+}
+
+// ── R79: library, kit and hand-built plans ─────────────────────────────────
+
+/**
+ * R79: the one calm note on a fixed programme that goes beyond the checks
+ * that apply to any plan. Never a change to the plan.
+ * @param {Array<{ code: string, detail?: string, muscle?: string }>} faults
+ */
+export function fixedPlanNote(faults) {
+  const reason = changeReason(faults);
+  if (!reason) return null;
+  const clause = reason.replace(/^With this change /, '').replace(/\.$/, '');
+  return `This plan is kept as it was written. As written, ${clause}.`;
+}
+
+// ── R83: the plan explanation's spacing line for a structure plan ──────────
+
+/**
+ * R83: the spacing line of a structure plan's explanation. The structure
+ * engine runs no recovery model, so the line states the hours alone and makes
+ * no claim about recovery.
+ */
+export function structureSpacingText(backToBack, usual, apart) {
+  return apart
+    ? `Each muscle's sessions are at least ${Math.round(backToBack)} hours apart if you train on back-to-back days, and at least ${Math.round(usual)} hours apart in a normal week.`
+    : `Some muscle groups are trained in neighbouring sessions, so those sessions are ${Math.round(backToBack)} hours apart if you train on back-to-back days and ${Math.round(usual)} hours apart in a normal week.`;
+}

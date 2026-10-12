@@ -116,6 +116,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 // and the READ-ONLY dry run; commitStartWithPlan is the real generation, run
 // only after the athlete confirms in PlanPreviewSheet.
 import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+import { prepareStartWithPlanOption, saveChosenProfile } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -1533,18 +1534,47 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
+  // D222 phase 7 (R83): one of the structure engine's choices (more days, a
+  // longer session, without a focus pick): the plan is prepared again from
+  // the changed profile, read only, and the sheet shows it. Nothing is saved
+  // until the person confirms.
+  async function handleChoosePlanOption(option) {
+    if (startWithPlanRef.current || startingPlan || !planPreview) return;
+    startWithPlanRef.current = true;
+    setPreparingPlan(true);
+    try {
+      const prep = await prepareStartWithPlanOption(user.id, planPreview.chosenProfile ?? userProfile, option, { mode: 'first' });
+      if (!prep.ok) {
+        logError('HomeScreen.planOption', new Error(prep.error ?? prep.reason ?? 'plan_generation_failed'), { userId: user?.id });
+        toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        return;
+      }
+      setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount, chosenProfile: prep.profile });
+    } finally {
+      startWithPlanRef.current = false;
+      setPreparingPlan(false);
+    }
+  }
+
   // Step 2 commits, only from the sheet's confirm button.
   async function handleConfirmStartWithPlan() {
     if (startingPlan) return;
     setStartingPlan(true);
     let result = { ok: false, error: 'not attempted' };
     try {
-      result = await commitStartWithPlan(user.id, userProfile);
+      // D222 phase 7 (R83): where the person took one of the engine's
+      // choices, the plan is built from the profile that choice made.
+      const chosenProfile = planPreview?.chosenProfile ?? null;
+      if (chosenProfile) result = await commitStartWithPlan(user.id, chosenProfile);
+      else result = await commitStartWithPlan(user.id, userProfile);
     } catch (e) {
       result = { ok: false, error: e?.message ?? 'unknown' };
     }
     setStartingPlan(false);
     if (result.ok) {
+      // D222 phase 7 (R83): a choice the person took is their profile now.
+      await saveChosenProfile(user.id, planPreview?.chosenProfile ?? null, userProfile)
+        .catch((e) => logError('HomeScreen.saveChosenProfile', e, { userId: user?.id }));
       setPlanPreview(null);
       await loadData();
       // D112 R5 (closes audit T1-12): every generation entry
@@ -3313,6 +3343,7 @@ export default function HomeScreen({ navigation, route }) {
         otherPlansCount={planPreview?.otherPlansCount ?? 0}
         confirmLabel="Start this plan"
         onConfirm={handleConfirmStartWithPlan}
+        onChooseOption={handleChoosePlanOption}
         onClose={() => { if (!startingPlan) setPlanPreview(null); }}
         busy={startingPlan}
       />
