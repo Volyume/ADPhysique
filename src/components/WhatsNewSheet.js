@@ -152,6 +152,14 @@ export const WHATS_NEW = {
   // 2.13.0 (founder, 2026-10-10): men's physique trains legs once a week
   // (register D219 addendum 4). No plan line, as for 2.11.0 and 2.12.0 on
   // the founder's word; the privacy notice rides inside the Community line.
+  // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
+  // calorie choice inside the range (D226); the privacy notice rides inside
+  // the Community line.
+  '2.14.0': [
+    { icon: 'barbell-outline', text: 'Plans are built a new way. Every session is checked so no muscle is trained hard two days running, sessions keep to the length you choose, and if a plan needs more time or more days, it asks you first.' },
+    { icon: 'nutrition-outline', text: 'You can now choose your daily calorie target anywhere inside your estimated range, and your macros follow.' },
+    { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+  ],
   '2.13.0': [
     { icon: 'people-outline', text: 'Community has its own tab. See what the people you follow are training, join groups, chat with them and take on a challenge together. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
   ],

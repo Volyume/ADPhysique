@@ -359,6 +359,8 @@ main and says what a build would carry. An iOS build started without
 permission during the 2026-09-04 fresh-install incident (D143) is the
 failure this rule records.
 
+**Version bump before every build (founder order 2026-10-12, standing).** Before any build is handed to the founder, bump the minor version in package.json, package-lock.json and app.json, add the version's What's new entry (WhatsNewSheet.js, the privacy line inside the Community line) and extend privacyTruth.guard.test.js, as every previous "Version x.y.0" commit did.
+
 **Testing on device (no simulator).** The founder works from a phone and
 cannot run a local simulator. EVERY shipped change includes a short manual
 test checklist written for a physical Android device using an EAS build (or
