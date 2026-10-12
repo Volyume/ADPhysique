@@ -12280,3 +12280,7 @@ Asked first (the target lives beside the ED-safety floors, Section 2; the status
 - **D5 ("spot on" for an accepted fast gain):** the coach output carries `trend.inBand`; what the person is told (the "spot on" verdict and its streak, the register streak, the weekly story, the great-week share card, the applied-change outcome verdicts) reads the band via `trendInBand`; `trend.onTarget` stays the decision read that drives the off-target streak.
 - **N2 (saved value off the slider grid):** the grid starts at the lowest point and the top sits on it, so the value saved is the value shown.
 - **N3 (recorded, unchanged):** when the engine's own target sits between the 0.8% and 1.5% lines (allowed today with a warning), the slider's lowest point is that target; no lower choice is possible.
+
+### D222 addendum (2026-10-12): the founder signs off the new plan builder
+
+**Founder, verbatim:** "Approve plan builder, sign off on it" (after reviewing the sign-off page, https://claude.ai/artifact/YEyEaGFCJP65EFCcXPxt6b; source `docs/audit/plan-builder-map-2026-10-11/26-SIGNOFF-PAGE.html`). This is phase 9's approval (11-BUILD-PLAN.md). RULED: `STRUCTURE_ENGINE` is set to true in the same change that lands the last of phase 7 (with its blockers R78a and R83) and phase 8 on main over a green gate; no further founder question is needed for that flip. The founder runs the build.
