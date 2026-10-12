@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -40,6 +40,11 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import EnergySlider from '../components/EnergySlider';
+import { readEdOrCalmSuppressed } from '../hooks/usePhotoSuppression';
+import { energyChoiceBounds, choicePosition, resolveChosenTarget } from '../lib/energyChoice';
+import { applyChoiceToResults } from '../lib/energyChoiceView';
+import { getTrainingStatus, setTrainingStatus, TRAINING_STATUS } from '../lib/trainingStatus';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 // Campaign 24 hostile-review F3: display-units helpers for the weight and
@@ -53,6 +58,24 @@ import { touchTarget } from '../styles/layout';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = '@volyume_nutrition_targets';
+// D226: the chosen place in the estimated range, kept so a recalculation
+// lands the choice in the same place. JSON: { position, appliedPosition,
+// chosenKcal, base, inputs }. Not the training status (that is SecureStore).
+const CHOICE_KEY = '@volyume_energy_choice';
+
+async function readChoiceRecord() {
+  try {
+    const raw = await AsyncStorage.getItem(CHOICE_KEY);
+    const rec = raw ? JSON.parse(raw) : null;
+    return rec && typeof rec === 'object' ? rec : null;
+  } catch (_) { return null; }
+}
+
+// The record only describes the saved targets when the saved target is the
+// one it chose; a target changed elsewhere (a coach adjustment) wins.
+function recordMatches(rec, saved) {
+  return !!(rec && rec.base && rec.inputs && Number(rec.chosenKcal) === Number(saved?.targetKcal));
+}
 
 // Founder device order 2026-08-17: the derivation explainers used to live in
 // InfoTooltip bubbles - static, overflowing the screen, raw text. They are
@@ -399,7 +422,19 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   const [consent,        setConsent]        = useState(false);
 
   // ── Results / UI state ──────────────────────────────────────────────────────────
-  const [results,      setResults]      = useState(null);
+  const [rawResults,   setResults]      = useState(null);
+  // D226: the engine's own target and macros, the person's place in the
+  // range, the inputs the range was sized with, a live drag preview, and the
+  // fail-closed ED-or-calm read (suppressed until proven otherwise).
+  const [engineBase,   setEngineBase]   = useState(null);
+  const [choiceInputs, setChoiceInputs] = useState(null);
+  const [position,     setPosition]     = useState(0);
+  const [dragKcal,     setDragKcal]     = useState(null);
+  const [suppressed,   setSuppressed]   = useState(true);
+  const [suppressionKnown, setSuppressionKnown] = useState(false);
+  const [prefillDone,  setPrefillDone]  = useState(false);
+  const [trainingStatus, setTrainingStatusState] = useState(TRAINING_STATUS.NATURAL);
+  const commitChain = useRef(Promise.resolve());
   const [expanded,     setExpanded]     = useState(false);
   // L05-NT2 (design audit 2026-07-09): was default-expanded, which forced all
   // four "why" disclosures open on first read and was the single biggest
@@ -433,6 +468,30 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   // per-meal protein ≤ 0.55 g/kg, falling back to 4 without bodyweight. Lives
   // in lib/nutritionTargetsView so the rule is locked with tests.
 
+  // D226: calm mode OR an open ED flag hides the slider and the status row.
+  // readEdOrCalmSuppressed is the app's fail-closed read (any read failure
+  // counts as suppressed); no signed-in user is suppressed too. Re-read on
+  // focus so a flag raised elsewhere applies without a remount.
+  useEffect(() => {
+    let alive = true;
+    const read = async () => {
+      let s = true;
+      try { s = user?.id ? await readEdOrCalmSuppressed(user.id) : true; } catch (_) { s = true; }
+      if (alive) { setSuppressed(s !== false); setSuppressionKnown(true); }
+    };
+    read();
+    const unsub = typeof navigation?.addListener === 'function'
+      ? navigation.addListener('focus', () => { read(); })
+      : null;
+    return () => { alive = false; if (typeof unsub === 'function') unsub(); };
+  }, [user?.id, navigation]);
+
+  useEffect(() => {
+    let alive = true;
+    getTrainingStatus().then((v) => { if (alive) setTrainingStatusState(v); }).catch(() => {}); // natural default
+    return () => { alive = false; };
+  }, []);
+
   // ── Load saved targets on mount, SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
     // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
@@ -464,6 +523,21 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       if (goalKey) setGoal(goalKey);
       if (t?.proteinApproach && PROTEIN_APPROACHES[t.proteinApproach]) setProteinApproach(t.proteinApproach);
     }
+    // D226: when the saved target is the one the person chose, recover the
+    // engine's baseline and their place; otherwise the saved target is the
+    // engine's (nothing chosen, or changed elsewhere).
+    async function restoreChoice(saved) {
+      const rec = await readChoiceRecord();
+      if (recordMatches(rec, saved)) {
+        setEngineBase(rec.base);
+        setChoiceInputs(rec.inputs);
+        setPosition(Number.isFinite(rec.appliedPosition) ? rec.appliedPosition : choicePosition(saved.targetKcal, rec.base.targetKcal));
+      } else {
+        setEngineBase({ targetKcal: saved.targetKcal, proteinG: saved.proteinG, fatG: saved.fatG, carbsG: saved.carbsG });
+        setChoiceInputs(null);
+        setPosition(0);
+      }
+    }
     async function loadSaved() {
       try {
         // The rich AsyncStorage copy is written by the same save as the DB row
@@ -494,6 +568,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
               if (hydrated.goal == null && rich.goal != null) hydrated.goal = rich.goal;
               if (hydrated.proteinApproach == null && rich.proteinApproach != null) hydrated.proteinApproach = rich.proteinApproach;
             }
+            await restoreChoice(hydrated);
             setResults(hydrated);
             syncFormFromTargets(hydrated);
             setFormCollapsed(true);
@@ -505,6 +580,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
           // prescription fields are useful, but its old maintenance value is
           // never accepted as present-day authority.
           const hydrated = await hydrateWithCurrentAuthority(rich);
+          await restoreChoice(hydrated);
           setResults(hydrated);
           syncFormFromTargets(hydrated);
           setFormCollapsed(true);
@@ -554,7 +630,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
         if (typeof userProfile?.daysPerWeek === 'number' && userProfile.daysPerWeek > 0) {
           setActivity(daysToActivityLevel(userProfile.daysPerWeek));
         }
-      } catch (_) {}
+      } catch (_) {} finally { setPrefillDone(true); }
     }
     prefill();
     // Runs once per user. userProfile fields are read as one-shot prefill seeds,
@@ -573,6 +649,122 @@ export default function NutritionTargetsScreen({ navigation, route }) {
   // ── Derived ──────────────────────────────────────────────────────────────────
   const formComplete =
     sex && age.trim() && heightFt.trim() && weight.trim() && consent;
+
+  // ── D226: the energy choice ────────────────────────────────────────────────
+  // `rawResults` is the saved record; `results` (what every render below
+  // reads) is that record with the person's choice applied, or the engine's
+  // own target when suppressed.
+  const effInputs = useMemo(() => {
+    if (choiceInputs) return choiceInputs;
+    const w = parseDecimalInput(weight);
+    if (!prefillDone || !sex || !isValidBodyWeightKg(w)) return null;
+    const bf = bodyFat.trim() ? parseDecimalInput(bodyFat) : null;
+    const bfOk = bf != null && Number.isFinite(bf) && isValidBodyFatPercent(bf);
+    return {
+      sex,
+      weightKg: w,
+      bodyFatPercent: bfOk ? bf : null,
+      bodyFatSource: bfOk ? normaliseBodyFatSource(bfSource) : null,
+    };
+  }, [choiceInputs, prefillDone, sex, weight, bodyFat, bfSource]);
+  const bounds = useMemo(() => {
+    if (!rawResults || !engineBase || !effInputs) return null;
+    return energyChoiceBounds({
+      targetKcal: engineBase.targetKcal,
+      maintenanceKcal: Number(rawResults.maintenanceKcal ?? rawResults.tdee),
+      ...effInputs,
+    });
+  }, [rawResults, engineBase, effInputs]);
+  const chooseActive = !suppressed && !!bounds?.canChoose;
+  const committedKcal = engineBase
+    ? resolveChosenTarget({ position, suppressed, bounds, targetKcal: engineBase.targetKcal })
+    : null;
+  const shownKcal = chooseActive && dragKcal != null ? dragKcal : committedKcal;
+  const results = useMemo(
+    () => (rawResults && engineBase ? applyChoiceToResults(rawResults, engineBase, shownKcal, effInputs) : rawResults),
+    [rawResults, engineBase, shownKcal, effInputs],
+  );
+
+  // Save a targets record the way handleCalculate does: the AsyncStorage copy,
+  // then the database row (a failure is surfaced, never silent).
+  async function persistTargets(targets) {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+    if (user?.id) {
+      try {
+        await saveNutritionTargets(user.id, { ...targets, gdprConsented: true });
+      } catch (e) {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('NutritionTargets.save', e, { userId: user.id }); } catch (_) {}
+        toast.show('Your choice is saved on this device, but the full save didn\'t finish. Try again.', { variant: 'warning', duration: 6000 });
+      }
+    }
+  }
+
+  // On release only (never per move): save the choice, remember the place,
+  // and run the plan-continuity review once.
+  function handleChoiceComplete(kcal) {
+    if (!chooseActive || !engineBase || !rawResults || !bounds) return;
+    const base = engineBase;
+    const pos = choicePosition(Math.max(bounds.min, Math.min(bounds.max, kcal)), base.targetKcal);
+    const chosen = resolveChosenTarget({ position: pos, suppressed: false, bounds, targetKcal: base.targetKcal });
+    if (chosen === committedKcal) { setDragKcal(null); return; }
+    const finalTargets = applyChoiceToResults(rawResults, base, chosen, effInputs);
+    setPosition(pos);
+    setDragKcal(null);
+    setResults(finalTargets);
+    commitChain.current = commitChain.current.then(async () => {
+      try {
+        await persistTargets(finalTargets);
+        await AsyncStorage.setItem(CHOICE_KEY, JSON.stringify({
+          position: pos, appliedPosition: pos, chosenKcal: finalTargets.targetKcal, base, inputs: effInputs,
+        }));
+        if (user?.id) {
+          try {
+            const review = await reviewTargetChangeAgainstActivePlan(user.id, finalTargets, userProfile);
+            if (!review?.error && review.action !== CONTINUITY_ACTION.KEEP) setPlanReview(review);
+          } catch (_) { /* off-plan is the common, silent case */ }
+        }
+      } catch (e) {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('NutritionTargets.choice', e); } catch (_) {}
+        toast.show('Could not save your choice, try again', { variant: 'error' });
+      }
+    });
+  }
+
+  // Calm mode or an open ED flag arriving while a chosen target is saved:
+  // the engine's target applies again, and is saved as today's target.
+  const revertedRef = useRef(null);
+  useEffect(() => {
+    if (!suppressionKnown || !suppressed || !engineBase || !rawResults) return;
+    if (Number(rawResults.targetKcal) === Number(engineBase.targetKcal)) return;
+    if (revertedRef.current === rawResults.targetKcal) return;
+    revertedRef.current = rawResults.targetKcal;
+    const engineTargets = applyChoiceToResults(rawResults, engineBase, engineBase.targetKcal, effInputs);
+    setResults(engineTargets);
+    setPosition(0);
+    (async () => {
+      try {
+        await persistTargets(engineTargets);
+        const rec = await readChoiceRecord();
+        await AsyncStorage.setItem(CHOICE_KEY, JSON.stringify({
+          ...(rec ?? {}), appliedPosition: 0, chosenKcal: engineTargets.targetKcal, base: engineBase, inputs: effInputs,
+        }));
+      } catch (_) { /* best effort: the display already shows the engine's target */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppressionKnown, suppressed, engineBase, rawResults]);
+
+  const handleTrainingStatus = useCallback(async (next) => {
+    const prev = trainingStatus;
+    setTrainingStatusState(next);
+    try {
+      await setTrainingStatus(next);
+    } catch (_) {
+      setTrainingStatusState(prev);
+      toast.show('Could not save that on this phone, try again', { variant: 'error' });
+    }
+  }, [trainingStatus, toast]);
 
   // ── Calculate ──────────────────────────────────────────────────────────────
   async function handleCalculate(goalOverride) {
@@ -654,16 +846,47 @@ export default function NutritionTargetsScreen({ navigation, route }) {
         maintenanceAuthority: authority?.resolved ?? null,
       };
 
-      setResults(targets);
+      // D226: keep the person's place in the range across a recalculation.
+      // The ED-or-calm read is taken fresh here (fail closed); when
+      // suppressed the engine's target applies and the saved place is not.
+      const engineBaseNow = {
+        targetKcal: calculatedTargets.targetKcal,
+        proteinG: calculatedTargets.proteinG,
+        fatG: calculatedTargets.fatG,
+        carbsG: calculatedTargets.carbsG,
+      };
+      const inputsSnap = { sex, weightKg: weightNum, bodyFatPercent: bfNum, bodyFatSource: baselineBfSource };
+      let suppressedNow = true;
+      try { suppressedNow = user?.id ? await readEdOrCalmSuppressed(user.id) !== false : true; } catch (_) { suppressedNow = true; }
+      const prevRec = await readChoiceRecord();
+      const storedPosition = Number.isFinite(prevRec?.position) ? prevRec.position : 0;
+      const boundsNow = energyChoiceBounds({
+        targetKcal: engineBaseNow.targetKcal,
+        maintenanceKcal: Number(calculatedTargets.maintenanceKcal ?? calculatedTargets.tdee),
+        ...inputsSnap,
+      });
+      const chosenNow = resolveChosenTarget({
+        position: storedPosition, suppressed: suppressedNow, bounds: boundsNow, targetKcal: engineBaseNow.targetKcal,
+      });
+      const finalTargets = applyChoiceToResults(targets, engineBaseNow, chosenNow, inputsSnap);
+      const appliedPosition = suppressedNow ? 0 : choicePosition(chosenNow, engineBaseNow.targetKcal);
+      setEngineBase(engineBaseNow);
+      setChoiceInputs(inputsSnap);
+      setPosition(appliedPosition);
+      setSuppressed(suppressedNow);
+      setResults(finalTargets);
       // Write to both stores: SQLite (primary) + AsyncStorage (read by other screens).
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalTargets));
+      AsyncStorage.setItem(CHOICE_KEY, JSON.stringify({
+        position: storedPosition, appliedPosition, chosenKcal: finalTargets.targetKcal, base: engineBaseNow, inputs: inputsSnap,
+      })).catch(() => {}); // best effort: the next recalculation starts from the engine's target
       if (user?.id) {
         // FF-005: await the database save and surface a failure rather than
         // fire-and-forget. The AsyncStorage copy above is already written, so
         // the user keeps their targets locally; the toast tells them the full
         // save didn't complete and to recalculate to retry.
         try {
-          await saveNutritionTargets(user.id, { ...targets, gdprConsented: true });
+          await saveNutritionTargets(user.id, { ...finalTargets, gdprConsented: true });
         } catch (e) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('NutritionTargets.save', e, { userId: user.id }); } catch (_) {}
@@ -701,7 +924,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
       // plan, or a review that fails, still keeps the target they just saved.
       if (user?.id) {
         try {
-          const review = await reviewTargetChangeAgainstActivePlan(user.id, targets, userProfile);
+          const review = await reviewTargetChangeAgainstActivePlan(user.id, finalTargets, userProfile);
           if (!review?.error && review.action !== CONTINUITY_ACTION.KEEP) {
             setPlanReview(review);
           }
@@ -1045,6 +1268,22 @@ export default function NutritionTargetsScreen({ navigation, route }) {
             />
           </View>
 
+          {/* D226: private training status. Shown nowhere else, and hidden
+              under calm mode or an open ED flag. */}
+          {!suppressed ? (
+            <View style={styles.formGroup}>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Training status</Text>
+              <PillGroup
+                options={[{ key: TRAINING_STATUS.NATURAL, label: 'Natural' }, { key: TRAINING_STATUS.ENHANCED, label: 'Enhanced' }]}
+                selected={trainingStatus}
+                onSelect={handleTrainingStatus}
+              />
+              <Text style={[styles.fieldHintKg, live.fieldHintKg, styles.statusHint]}>
+                Kept on this phone only. Enhanced lets the weekly coach accept faster weight gain during a building phase.
+              </Text>
+            </View>
+          ) : null}
+
           {/* ── SECTION 3: GOAL & PHASE ────────────────────────────────────────────────────── */}
 
           <SectionHeading title="Goal & phase" />
@@ -1225,6 +1464,33 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                     <Text style={[styles.heroRange, live.heroRange]}>
                       Estimated range: {formatEnergy(kMin, energyUnit)} to {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
+                    {/* D226: the slider, inside the estimated range. Hidden
+                        under calm mode or an open ED flag (chooseActive). */}
+                    {chooseActive ? (
+                      <View style={styles.energyChoice}>
+                        <EnergySlider
+                          value={shownKcal}
+                          min={bounds.min}
+                          max={bounds.max}
+                          step={bounds.step}
+                          onValueChange={setDragKcal}
+                          onSlidingComplete={handleChoiceComplete}
+                          onDragEnd={() => setDragKcal(null)}
+                          formatValue={(k) => formatEnergy(k, energyUnit)}
+                          unitWord={energyUnit === 'kj' ? 'kilojoules' : 'kilocalories'}
+                          accessibilityLabel="Daily energy target"
+                        />
+                        <View style={styles.energyChoiceEnds}>
+                          <Text style={[styles.heroRange, live.heroRange]}>{formatEnergy(bounds.min, energyUnit)}</Text>
+                          <Text style={[styles.heroRange, live.heroRange]}>{formatEnergy(bounds.max, energyUnit)}</Text>
+                        </View>
+                        {bounds.heldBy ? (
+                          <Text style={[styles.heroRange, live.heroRange, styles.energyChoiceNote]}>
+                            The lowest you can choose is set by the minimum your body needs.
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
                     {/* NU-7: make the floor's action legible. floorApplied is the
                         engine's structured signal that a safety system raised
                         this target (sex floor or the 1.5% rate gate). Valence
@@ -2043,6 +2309,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
   },
+  energyChoice: { alignSelf: 'stretch', gap: spacing.xs },
+  energyChoiceEnds: { flexDirection: 'row', justifyContent: 'space-between' },
+  energyChoiceNote: { textAlign: 'center' },
+  statusHint: { marginTop: spacing.xs },
 
   macroRow: {
     flexDirection: 'row',

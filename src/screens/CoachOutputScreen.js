@@ -136,6 +136,7 @@ import { appAlert } from '../components/AppAlert';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
+import { getTrainingStatus, gainCeilingFor } from '../lib/trainingStatus';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
@@ -2032,12 +2033,17 @@ export default function CoachOutputScreen({ navigation, route }) {
           };
         }
       } catch (_e) { physicalConstraint = null; }
+      // D226: the private training status becomes ONE number for the engine
+      // (gainCeilingPct, null for natural). The status itself never enters the
+      // run's inputs, output, the saved weekly run or the coach report.
+      const gainCeilingPct = gainCeilingFor(await getTrainingStatus());
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         physicalConstraint,
         priorInterventions,
         priorDeclines,
         manualVolumeMuscles,
+        gainCeilingPct,
         photoCorroborationBasis,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,

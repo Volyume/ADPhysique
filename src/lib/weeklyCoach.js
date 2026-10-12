@@ -630,6 +630,9 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {boolean}       inputs.scoffPositive              - wellbeing screen was positive; gates deficit suggestions
  * @param {number}        [inputs.nowMs]                    - injectable clock (epoch ms); defaults to Date.now()
  */
+/** D226 addendum: the weeks at the start of a gain phase in which a fast gain is read as settling (water and glycogen), not as off target. */
+export const GAIN_SETTLE_WEEKS = 4;
+
 export function runWeeklyCoach(inputs) {
   const {
     // F10 (EN-5): the engine's single clock read. Every time-anchored read in
@@ -645,6 +648,12 @@ export function runWeeklyCoach(inputs) {
     // pure engine). null = no active restriction, byte-identical to
     // every existing caller.
     physicalConstraint = null,
+    // D226 (founder decision 2026-10-12): in a gain phase, the fastest weekly
+    // gain (% bodyweight) still read as on target. The caller sets it from the
+    // person's private training status (never passed here by name, never in
+    // the output). null = the phase's own band, byte-identical to every
+    // existing caller. Gain phases only: a cut is never widened.
+    gainCeilingPct = null,
     morningWeights = [],
     sessionsCompleted: _sessionsCompletedRaw = 0,
     sessionsPlanned: _sessionsPlannedRaw = 3,
@@ -1113,8 +1122,23 @@ export function runWeeklyCoach(inputs) {
       : coachingRatePct < -0.01 ? `losing ${Math.abs(coachingRatePct)}%/wk`
         : 'holding steady');
 
+  // D226: a gain faster than the phase's band but at or under the caller's
+  // gain ceiling reads as on target, so the coach does not pull calories back.
+  const withinGainCeiling = phase.isBulk && Number.isFinite(gainCeilingPct) && gainCeilingPct > phase.goalRatePct
+    && decisionRatePct != null && decisionRatePct > phase.goalRatePct && decisionRatePct <= gainCeilingPct;
+  // D226 addendum (founder 2026-10-12: "Going enhanced from a cut to a bulk
+  // will see big gains in water retention and glycogen on the bat and then it
+  // slows down ... I'll likely gain 10lbs in the first couple of weeks"): the
+  // first GAIN_SETTLE_WEEKS of a gain phase are a settling period. Refilled
+  // glycogen carries water with it, so a fast early gain is read as on target
+  // and never starts the off-target streak that would trim calories at the
+  // first chance. A gain slower than target still reads as off target (the
+  // coach can still raise). Gain phases only: cuts are untouched.
+  const gainSettling = phase.isBulk && weeksInPhase < GAIN_SETTLE_WEEKS
+    && decisionRatePct != null && decisionRatePct > phase.goalRatePct;
+  const inBand = decisionRatePct != null && Math.abs(decisionRatePct - phase.goalRatePct) <= onTargetBand;
   const onTarget = (decisionRatePct != null)
-    ? Math.abs(decisionRatePct - phase.goalRatePct) <= onTargetBand
+    ? (inBand || withinGainCeiling || gainSettling)
     : null;
 
   const offTargetDirection = (decisionRatePct != null)
@@ -2139,6 +2163,10 @@ export function runWeeklyCoach(inputs) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal." });
+    } else if (onTarget && !inBand && gainSettling) {
+      heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Early in a building phase, fast gain is mostly water and stored carbohydrate, so your coach waits for it to settle.' });
+    } else if (onTarget && !inBand) {
+      heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Your gain is above the usual rate but inside the faster rate set in your nutrition settings.' });
     } else if (onTarget) {
       heldDecisions.push({ type: 'calories', reason: "Calorie target stays the same. Your weight trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
@@ -2286,7 +2314,7 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push('Your recovery overall was in range.');
   }
 
-  if (onTarget && coachingRateLabel != null) {
+  if (onTarget && inBand && coachingRateLabel != null) {
     // Quotes the coaching rate, not the scale delta: the verdict and the
     // number beside it now come from the same evidence.
     whatWorking.push(`Your weight trend is on target (${coachingRateLabel}).`);

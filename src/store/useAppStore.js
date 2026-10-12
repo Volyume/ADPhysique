@@ -732,6 +732,14 @@ const useAppStore = create((set, get) => ({
       }
     }
 
+    // D226: the private training status lives in SecureStore on this phone
+    // only; the next account must not inherit it. Best effort (never blocks
+    // sign-out; a missing value is the natural default anyway).
+    try {
+      // eslint-disable-next-line global-require
+      await require('../lib/trainingStatus').clearTrainingStatus();
+    } catch (_) { /* best effort */ }
+
     // The next account must not inherit this one's Apple name. Process-scoped
     // stash, so this matters on the dev/Expo-Go path where sign-out does not
     // reload the app (see setUser's SYNC-3 note).
