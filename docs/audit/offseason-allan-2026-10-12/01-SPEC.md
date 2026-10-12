@@ -93,3 +93,16 @@ Weekly direct sets: Ramp 1: lats 14, side delts 16, rear delts 5, upper back 5 (
 **G1 Simulation test:** a 16-week simulated off-season through the real coach code: select the plan, block 1 (ramp and Growth weekly sets exactly as A5 in every week), weekly check-ins with scripted signals (raises in Growth add 1 lat and 1 side-delt set a week onto the right exercises up to 20 and 22, never above 7 per session; a hold pauses the ramp; a pull-back never goes below Health), two reduction triggers at week 10 producing the reduction suggestion, block 2 starting from block 1's level, the stall rule after 3 flat sessions offering only the listed substitution, progression raising the load only when every set hits the top. Every week's served sets checked against A5 plus applied raises.
 **G2** The closed-list test (F1); the authored rebuild skip; other plans unchanged (existing suites green untouched).
 **G3** A fresh-eyes Opus review against this spec and the founder's document before merge.
+
+## H. Lead rulings after lane A (2026-10-12)
+
+1. Seated Leg Curl cap 5 (D4 can take hamstrings to 5 a week through it). Lat exercise caps 7 (inside the 7-a-session ceiling). Kept.
+2. The alternatives the document names inside its main cells join the closed list: Leg Press (45 degree) for the hack squat, Leg Press Calf Raise for the standing calf raise, Cable Overhead Tricep Extension for Day 4's cross-body extension. Lane A's nearest-row choices for the listed substitutions stand (Seated Machine Row (Wide), Lying Leg Curl, Dip Machine).
+3. BLOCKER before merge: the check-in card on this plan uses D2 to D5 (lane B), never the house +3 logic; its Apply writes only what authored serving reads.
+4. The reduction week (planned or early) on this plan serves normal reps at RIR 3 or more (compound 3, isolation 2 to 3), never the house deload's halved reps at RIR 4.
+5. The activation copy says the true block length for this plan ("eight-week block").
+6. The manual "Add exercise" picker stays the person's free choice (the closed list governs what the app adds or offers as a swap).
+7. Activating this plan again while its own block is running keeps the running block; a new block starts only through the next-block flow.
+8. The optional Machine Shoulder Press is offered on Day 2 in Growth weeks only, through the plan's own add list, marked optional, never served by default.
+9. Effort (A6): the founder removed the logger's session effort line on 2026-08-17, so it does not return to the logger. The session's plan screen shows one plain line with this week's target effort, e.g. "This week: stop 1 to 2 reps short on presses, pulldowns and rows; 0 to 1 on raises, curls and extensions."
+10. The 1-character margin on blockLifecycle.stage1's pinned window over activatePlanWithBlock is accepted and recorded; lane B must not grow that function (add helpers outside it).
