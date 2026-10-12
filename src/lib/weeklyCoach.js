@@ -1212,7 +1212,7 @@ export function runWeeklyCoach(inputs) {
     const dataNote = weeksInPhase < 2
       ? 'Keep logging. Adjustments start after your second week.'
       : 'Log your morning weight on at least 4 days this week to get coaching based on your weight trend.';
-    return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context: preFilterContext() });
+    return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, inBand, context: preFilterContext() });
   }
 
   // Adherence gate (Andy Morgan rule): < 50% sessions → stabilise first.
@@ -1221,7 +1221,7 @@ export function runWeeklyCoach(inputs) {
   // protective plannedSets > 0 ? ... : 0 posture.
   const sessionAdherence = sessionsPlanned > 0 ? sessionsCompleted / sessionsPlanned : 0;
   if (sessionAdherence < 0.5) {
-    return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, context: preFilterContext() });
+    return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, inBand, context: preFilterContext() });
   }
 
   // ── RECOVERY & PERFORMANCE SIGNALS (autoregulation matrix) ─────────────
@@ -2166,7 +2166,9 @@ export function runWeeklyCoach(inputs) {
     } else if (onTarget && !inBand && gainSettling) {
       heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Early in a building phase, fast gain is mostly water and stored carbohydrate, so your coach waits for it to settle.' });
     } else if (onTarget && !inBand) {
-      heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Your gain is above the usual rate but inside the faster rate set in your nutrition settings.' });
+      // D226 review fix: one neutral sentence; the saved and synced output
+      // never points to the private training status.
+      heldDecisions.push({ type: 'calories', reason: 'Calorie target stays the same. Your gain is above the usual rate but still inside the range your coach allows for this phase.' });
     } else if (onTarget) {
       heldDecisions.push({ type: 'calories', reason: "Calorie target stays the same. Your weight trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
@@ -2539,6 +2541,9 @@ export function runWeeklyCoach(inputs) {
       ewma7: ewma7Today,
       delta: weightDelta,
       onTarget: onTarget ?? false,
+      // D226 review fix: truly inside the phase's band (trendInBand.js);
+      // onTarget above is the decision read.
+      inBand: inBand === true,
       deltaLabel,
       rateLabel,
       // C10F: the rate the DECISION used, exposed so the surface that
@@ -2692,7 +2697,7 @@ function constraintScopePhrase(pcFact) {
   return muscles.map((m) => String(muscleDisplayName(m)).toLowerCase()).join(' and ');
 }
 
-function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context = null }) {
+function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, inBand = null, context = null }) {
   return {
     hasEnoughData: false,
     dataNote,
@@ -2701,7 +2706,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     context,
     limiters: context ? classifyLimiters(context) : null,
     weekLabel,
-    trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
+    trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, ...(inBand == null ? {} : { inBand: inBand === true }), deltaLabel, rateLabel },
     whatWorking: ['Logging consistently. The data is building.'],
     adjustments: {
       training: { signal: 'hold', note: appendWeeklyAnswerSuggestion('Continue your plan as written.', context?.training?.physicalConstraint) },
@@ -2733,7 +2738,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
   };
 }
 
-function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, context = null }) {
+function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, inBand = null, context = null }) {
   const limiters = context ? classifyLimiters(context) : null;
   // D112 R7 (audit T2-15): when the shortfall itself reads CONSTRAINED -
   // the restriction demonstrably shaped this week's sessions - the
@@ -2757,7 +2762,7 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     context,
     limiters,
     weekLabel,
-    trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
+    trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, ...(inBand == null ? {} : { inBand: inBand === true }), deltaLabel, rateLabel },
     whatWorking: ['Showing up, even partially, keeps the habit alive.'],
     adjustments: {
       training: { signal: 'hold', note: appendWeeklyAnswerSuggestion(trainingNote, pcFact) },

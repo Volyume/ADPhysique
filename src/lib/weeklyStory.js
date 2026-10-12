@@ -33,6 +33,7 @@
 
 // Campaign 18: the ONE definition of how many logged days it takes before an
 // intake reading may be compared to a target.
+import { trendInBand } from './trendInBand';
 import { MIN_INTAKE_DAYS } from './coachContext';
 // Wave C item 2 (whole-app coherence campaign 24, 2026-08-17,
 // WAVE-C-FINDINGS.md DUPLICATION finding): the ONE adherence-band constant,
@@ -119,7 +120,7 @@ function buildBodyChapter({ trend, hasEnoughWeightData, suppress }) {
     return chapter('body', 'trending-up-outline', 'Weighing in', body, false);
   }
   const label = trend.deltaLabel || 'Calculating…';
-  const body = trend.onTarget ? `${label}, on target for your goal.` : `${label}.`;
+  const body = trendInBand(trend) ? `${label}, on target for your goal.` : `${label}.`;
   return chapter('body', 'trending-up-outline', 'Weighing in', body, false);
 }
 

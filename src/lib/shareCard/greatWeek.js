@@ -25,6 +25,8 @@
  * never reward overshoot (off-target weeks don't qualify in the first place).
  */
 
+import { trendInBand } from '../trendInBand';
+
 const HEADLINE = 'Textbook Week';
 
 // A week is never celebratable while a safety signal is open, regardless of the
@@ -42,7 +44,7 @@ export function isGreatWeek(output) {
   if (!o.hasEnoughData) return { great: false, reasons: [] };
   if (!safetyClear(o)) return { great: false, reasons: [] };
 
-  const onTarget = o.trend?.onTarget === true;
+  const onTarget = trendInBand(o.trend);
   const planned = Number(o.sessionsPlanned) || 0;
   const completed = Number(o.sessionsCompleted) || 0;
   const hitSessions = planned > 0 && completed >= Math.ceil(planned * 0.75);
@@ -90,7 +92,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   const completed = Number(o.sessionsCompleted) || 0;
   const prs = Number(o.prsThisWeek) || 0;
   const recoveryGood = o.recoveryFlag === 'normal';
-  const onTarget = o.trend?.onTarget === true;
+  const onTarget = trendInBand(o.trend);
   const delta = Number(o.trend?.delta);
   const hasWeight = o.trend?.delta != null && Number.isFinite(delta);
   const u = units === 'lbs' ? 'lbs' : 'kg';

@@ -27,6 +27,7 @@
  * no cue asks for daily weighing or tighter food control.
  */
 
+import { trendInBand } from './trendInBand';
 import { checkJargon } from './whyThisTemplates';
 import { getLatestEwma, getEwmaSevenDaysAgo } from './weeklyCoach';
 import { pairAppliedWithOutcome } from './coachOutcome';
@@ -137,7 +138,7 @@ function onTargetStreak(currentOnTarget, history) {
   if (!currentOnTarget) return 0;
   let streak = 1;
   for (const entry of Array.isArray(history) ? history : []) {
-    if (entry?.trend?.onTarget === true) streak += 1;
+    if (trendInBand(entry?.trend)) streak += 1;
     else break;
   }
   return streak;
@@ -191,7 +192,7 @@ function buildInterpretation({ output, history, units, suppress, showScience = f
     : `Your ${avgTerm} is ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
 
   let verdict;
-  if (trend?.onTarget) {
+  if (trendInBand(trend)) {
     const streak = onTargetStreak(true, history);
     if (streak >= 2 && streak <= 6) {
       verdict = `That's the ${ORDINAL_WORDS[streak]} week running at the right rate.`;

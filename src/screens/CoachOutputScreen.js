@@ -137,6 +137,7 @@ import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
 import { getTrainingStatus, gainCeilingFor } from '../lib/trainingStatus';
+import { enforceEnergyChoice } from '../lib/energyChoiceEnforce';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
@@ -2205,6 +2206,8 @@ export default function CoachOutputScreen({ navigation, route }) {
           // bulkUploadLocalData re-pushes whatever this misses. The signals
           // never travel (the RPC has no parameter for them).
           pushEdPatternFlagsNow(user.id).catch(() => {});
+          // D226: an open flag puts the engine's own calorie target back.
+          enforceEnergyChoice(user.id).catch(() => {});
           // Q1 ED-safety: the flag is raised here in the foreground, so cancel
           // the (now audible) weigh-in prompts immediately. Their weekly
           // triggers are otherwise laid days ahead and would fire in the

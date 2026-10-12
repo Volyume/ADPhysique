@@ -28,7 +28,11 @@ export const RANGE_FRACTION = 0.1;
 /** The slider moves in steps of this many kcal. */
 export const ENERGY_STEP_KCAL = 25;
 
-const roundStep = (kcal) => Math.round(kcal / ENERGY_STEP_KCAL) * ENERGY_STEP_KCAL;
+/** The highest point at or below `top` on the grid that starts at `min`. */
+function onGridBelow(min, top) {
+  return top <= min ? min : min + Math.floor((top - min) / ENERGY_STEP_KCAL) * ENERGY_STEP_KCAL;
+}
+
 
 /**
  * The lowest and highest target the person may choose.
@@ -65,10 +69,11 @@ export function energyChoiceBounds({ targetKcal, maintenanceKcal, sex = null, we
   // Steps inside the bounds: the lowest step at or above the floor, the
   // highest at or below the range's top.
   let min = Math.ceil(low / ENERGY_STEP_KCAL) * ENERGY_STEP_KCAL;
-  const max = Math.floor(rangeHigh / ENERGY_STEP_KCAL) * ENERGY_STEP_KCAL;
   // A floor above the engine's target never takes the target itself away.
   if (min > target) { min = target; }
-  return { min, max: Math.max(max, min), step: ENERGY_STEP_KCAL, canChoose: max > min, heldBy };
+  // The top sits on the slider's grid, which starts at the lowest point.
+  const max = onGridBelow(min, rangeHigh);
+  return { min, max, step: ENERGY_STEP_KCAL, canChoose: max > min, heldBy };
 }
 
 /**
@@ -92,8 +97,36 @@ export function choicePosition(chosenKcal, targetKcal) {
 export function resolveChosenTarget({ position, suppressed, bounds, targetKcal }) {
   const t = Number(targetKcal);
   if (suppressed || !bounds || !bounds.canChoose || !Number.isFinite(position) || position === 0) return t;
-  const raw = roundStep(t + position * t * RANGE_FRACTION);
-  return Math.max(bounds.min, Math.min(bounds.max, raw));
+  const raw = t + position * t * RANGE_FRACTION;
+  // The slider's own grid, which starts at its lowest point (a lowest point
+  // held at an engine target that is not a multiple of the step keeps the
+  // value saved equal to the value shown).
+  const onGrid = bounds.min + Math.round((raw - bounds.min) / bounds.step) * bounds.step;
+  return Math.max(bounds.min, Math.min(bounds.max, onGrid));
+}
+
+/**
+ * The floor inputs, from the person's SAVED profile only (never from a form
+ * being edited: an unsaved sex or weight change must not lower the floors).
+ * Null when any part is missing, and the slider is then not offered.
+ * @param {?object} profile  the stored user profile
+ * @returns {?{ sex: string, weightKg: number, bodyFatPercent: ?number, bodyFatSource: ?string }}
+ */
+export function floorInputsFromProfile(profile) {
+  const sex = profile?.sex ?? profile?.biologicalSex ?? null;
+  const weightKg = Number(profile?.weightKg);
+  if (!sex || !Number.isFinite(weightKg) || weightKg <= 0) return null;
+  const bf = Number(profile?.bodyFatPercent);
+  const ok = Number.isFinite(bf) && bf > 0 && bf < 60;
+  return { sex, weightKg, bodyFatPercent: ok ? bf : null, bodyFatSource: ok ? (profile?.bodyFatSource ?? null) : null };
+}
+
+/** The line a target held at its lowest point carries, so every reader treats it as floored. */
+export const SAFE_MINIMUM_LINE = 'This target sits at your safe minimum. Days below safe minimum are not part of the plan.';
+
+/** True when a chosen target sits at a lowest point a limit holds (the target then counts as floored). */
+export function choiceAtFloor(chosenKcal, bounds) {
+  return !!bounds && bounds.heldBy != null && Number(chosenKcal) <= bounds.min;
 }
 
 /**
@@ -109,4 +142,19 @@ export function macrosForChoice(chosenKcal, { proteinG, fatG }) {
   // (a choice at the floor must not be saved a few kcal under it).
   const carbsG = Math.ceil(carbKcal / 4);
   return { targetKcal: Math.round(proteinG * 4 + fatG * 9 + carbsG * 4), proteinG, fatG, carbsG };
+}
+
+/**
+ * The bounds held by the strictest of several input sets (the saved records
+ * and the inputs the engine target was last calculated from): the lowest
+ * point is the highest any of them sets, so no single set of inputs, saved
+ * or calculated, can lower a floor. Null when no input set is complete.
+ */
+export function strictestBounds({ targetKcal, maintenanceKcal }, inputSets) {
+  const sets = (inputSets || []).filter(Boolean);
+  if (!sets.length) return null;
+  const all = sets.map((inp) => energyChoiceBounds({ targetKcal, maintenanceKcal, ...inp }));
+  const strict = all.reduce((a, b) => (b.min > a.min ? b : a));
+  const max = onGridBelow(strict.min, Math.min(...all.map((b) => b.max)));
+  return { ...strict, max, canChoose: max > strict.min };
 }

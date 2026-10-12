@@ -37,6 +37,7 @@
  * Pure functions only. No side effects, no DB, no I/O, no randomness.
  */
 
+import { trendInBand } from './trendInBand';
 import { checkJargon } from './whyThisTemplates';
 import { buildCoachResponse, preCommitmentFacts, commitmentOutcomeFacts, withScience } from './coachResponse';
 
@@ -145,7 +146,7 @@ function onTargetStreak(currentOnTarget, history) {
   if (!currentOnTarget) return 0;
   let streak = 1;
   for (const entry of Array.isArray(history) ? history : []) {
-    if (entry?.trend?.onTarget === true) streak += 1;
+    if (trendInBand(entry?.trend)) streak += 1;
     else break;
   }
   return streak;
@@ -168,7 +169,7 @@ function preciseInterpretation({ output, history, units, showScience = false }) 
     : `${avgTerm}: ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
 
   let verdict;
-  if (trend?.onTarget) {
+  if (trendInBand(trend)) {
     const streak = onTargetStreak(true, history);
     verdict = streak >= 2
       ? `Your weight has moved at the planned rate for ${streak} weeks in a row.`
