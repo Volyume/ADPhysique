@@ -337,6 +337,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // wording. Display only; never stored, never sent anywhere.
   const [episodeSubject, setEpisodeSubject] = useState(null);
   const [restrictionWeek, setRestrictionWeek] = useState(null); // 'fine'|'in_the_way'|'not_relevant'
+  // Register D227 lane B (D4): the authored plan's legs question, and its answer.
+  const [legsQuestionDue, setLegsQuestionDue] = useState(false);
+  const [legsFlat, setLegsFlat] = useState(null); // 'yes'|'no'|null
 
   // Step 4, Training
   const [trainingPerformance, setTrainingPerformance] = useState(null); // 'exceeded'|'hit'|'struggled'|'dropped'
@@ -435,6 +438,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
             setEpisodeOverdue(false);
             setEpisodeSubject(null);
           }
+        }
+        // Register D227 lane B (spec D4): on the authored off-season plan the
+        // check-in asks one extra question, once a block, before a Growth
+        // week. Best effort: false on any other plan or a failed read.
+        try {
+          // eslint-disable-next-line global-require
+          const { authoredLegsQuestionDue } = require('../lib/library/authoredCoachIO');
+          const due = await authoredLegsQuestionDue(user.id);
+          if (!cancelled) setLegsQuestionDue(due);
+        } catch (_) {
+          if (!cancelled) setLegsQuestionDue(false);
         }
         // X11 (cross-surface audit 2026-07-30), RULED after review: this count
         // stays a TRAILING 7-DAY window, deliberately.
@@ -928,6 +942,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
         }).catch(() => {});
       }
 
+      // Register D227 lane B (D4): the legs answer, read by this week's
+      // check-in card. Best effort, never blocks submit.
+      if (legsQuestionDue && legsFlat != null) {
+        try {
+          // eslint-disable-next-line global-require
+          const { recordAuthoredLegsAnswer } = require('../lib/library/authoredCoachIO');
+          await recordAuthoredLegsAnswer(userId, legsFlat);
+        } catch (_) {}
+      }
+
       // CC31 (section 19): store the weekly restriction answer if provided.
       // Best-effort, never blocks submit.
       if (restrictionWeek != null) {
@@ -1033,7 +1057,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }, [
     busy, submitSuccess, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
     calsAdherence, stepsAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
-    hasActiveEpisode, restrictionWeek,
+    hasActiveEpisode, restrictionWeek, legsQuestionDue, legsFlat,
   ]);
 
   // M4: the Button's success beat finished; run the stashed outcome.
@@ -1336,6 +1360,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </>
           )}
         </View>
+
+        {legsQuestionDue ? (
+          <View style={styles.section}>
+            <SectionLabel hint="If they do, your plan adds 1 set each to quads and hamstrings, once a block">Do your legs look flat in your shorts?</SectionLabel>
+            <OptionRow
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Yes' },
+              ]}
+              selected={legsFlat}
+              onSelect={setLegsFlat}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <SectionLabel hint="Illness, travel, big life stress, anything unusual (optional)">Anything else to flag?</SectionLabel>

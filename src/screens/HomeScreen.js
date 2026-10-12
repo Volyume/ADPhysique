@@ -879,6 +879,22 @@ export default function HomeScreen({ navigation, route }) {
   async function loadPlateauBanner() {
     try {
       if (!user?.id) { setPlateauBanner(null); return null; }
+      // Register D227 lane B (spec E2): on an AUTHORED plan the banner is the
+      // plan's own stall rule (3 sessions without a gain, recovery fine), with
+      // its plain message and the exercise's listed substitutions only.
+      // eslint-disable-next-line global-require
+      const authoredIO = require('../lib/library/authoredCoachIO');
+      const authoredCtx = await authoredIO.loadAuthoredContext(user.id).catch(() => null);
+      if (authoredCtx) {
+        const stalls = await authoredIO.loadAuthoredStalls(user.id, authoredCtx.facts);
+        const stall = [...stalls.values()][0] ?? null;
+        if (!stall) { setPlateauBanner(null); return null; }
+        const sKey = `@volyume_plateau_banner_dismissed_${user.id}_${stall.exerciseId}_${localWeekStartMs()}`;
+        const sv = await AsyncStorage.getItem(sKey).catch(() => null);
+        setPlateauBannerDismissed(sv === 'true');
+        setPlateauBanner({ exerciseId: stall.exerciseId, line: stall.message });
+        return stall;
+      }
       // Eight weeks covers detectPlateau's four-session window for a weekly
       // lift without loading every set ever logged (LB-7 pattern).
       const eightWeeksAgo = Date.now() - 8 * 7 * 24 * 60 * 60 * 1000;

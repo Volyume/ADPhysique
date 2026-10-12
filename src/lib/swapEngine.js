@@ -216,6 +216,11 @@ export function buildSwapReason(original, candidate) {
  *                       behaviour for every ordinary plan. The sheet's
  *                       explicit "Show all exercises" relaxes this by
  *                       simply omitting the option on that call.
+ * @param {Set<string>|string[]|null} options.closedPool - register D227 (spec
+ *                       F1): the exercise ids an AUTHORED plan lists for this
+ *                       slot (library/authored.authoredSwapOptions). Nothing
+ *                       outside it is ever offered, and no option relaxes it.
+ *                       null (default) = no restriction.
  * @returns {{ exercise: object, score: number, reason: string, sameMuscle: boolean }[]}
  *          D219 lane A4 (design 4.12): candidates that share the original's primary
  *          muscle come first (each in score order), then the rest; `sameMuscle`
@@ -228,11 +233,15 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     excludeIds = [],
     excludeAssisted = false,
     stylePool = null,
+    closedPool = null,
   } = options;
 
   const excludeSet = new Set([originalExercise.id, ...excludeIds]);
   const originalMuscle = muscleKeyOf(originalExercise);
   const styleSet = Array.isArray(stylePool) && stylePool.length ? new Set(stylePool) : null;
+  // D227 F1: a closed list is a hard bound, even when empty (an empty list
+  // offers nothing rather than everything).
+  const closedSet = closedPool instanceof Set ? closedPool : (Array.isArray(closedPool) ? new Set(closedPool) : null);
 
   const scored = allExercises
     // Mandatory exclusions
@@ -240,6 +249,8 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     // EL-11: a style-tagged plan's swap candidates never leave the pool,
     // unless the sheet's "Show all exercises" relaxation omitted stylePool.
     .filter((ex) => !styleSet || styleSet.has(ex.name))
+    // D227 F1: an authored plan's slot offers only its listed substitutions.
+    .filter((ex) => !closedSet || closedSet.has(ex.id))
     // Assisted-regression filter (intermediate+). Never applied to the original
     // itself: if the user is on an assisted lift and wants alternatives, they
     // still get loaded ones.

@@ -506,6 +506,26 @@ export default [
     execution: "Extend your arms forward and up until they straighten, then return slowly.",
     watch: "Letting the elbows wing out to the sides takes work off the triceps.",
   },
+  // Register D227 (2026-10-12, "Mens Physique Off Season - Allan", spec A3):
+  // a substitution the founder's plan lists that the library lacked. Held at
+  // the specialist tier in the canonicality registry, so the generators never
+  // reach for it without a programming reason.
+  {
+    name: "Cable Preacher Curl",
+    primaryMuscle: "biceps",
+    secondaryMuscles: [],
+    equipment: "cable",
+    movementPattern: "isolation",
+    compound: false,
+    repMin: 10, repMax: 15,
+    fatigueCost: 2, sfr: 5,
+    subregion: "short_head",
+    aliases: ["Preacher Cable Curl"],
+    loadCharacter: "grind",
+    setup: "Sit at a preacher bench facing a low pulley, your arms resting over the pad and a bar in your hands.",
+    execution: "Curl the bar up towards your shoulders, then lower it until your arms are fully extended.",
+    watch: "Lifting your elbows off the pad turns the curl into a swing.",
+  },
   {
     name: "Cable Pull-Through",
     primaryMuscle: "glutes",
@@ -1271,6 +1291,24 @@ export default [
     execution: "Push the rope down and spread the ends apart as your arms straighten, then return slowly.",
     watch: "Letting the elbows drift away from your body is the common fault.",
   },
+  // Register D227 (2026-10-12, "Mens Physique Off Season - Allan", spec A3):
+  // the seated cable press the founder's plan lists as a stand-in for the
+  // converging press. Specialist tier, as the other D227 rows.
+  {
+    name: "Seated Cable Chest Press",
+    primaryMuscle: "chest",
+    secondaryMuscles: ["triceps","front_delts"],
+    equipment: "cable",
+    movementPattern: "push",
+    compound: true,
+    repMin: 10, repMax: 15,
+    fatigueCost: 2, sfr: 4,
+    subregion: "flat",
+    loadCharacter: "grind",
+    setup: "Sit on a bench between two pulleys set at chest height, back supported, a handle in each hand beside your chest.",
+    execution: "Press both handles forward and slightly together until your arms extend, then return slowly.",
+    watch: "Letting your hands drift back past your torso puts the shoulder into a deep stretch.",
+  },
   {
     name: "Seated Cable Row",
     primaryMuscle: "back",
@@ -1328,7 +1366,8 @@ export default [
     compound: false,
     repMin: 12, repMax: 20,
     fatigueCost: 2, sfr: 5,
-    subregion: null,
+    // Register D227 (spec A3): the lateral raise subregion it lacked.
+    subregion: "lateral_raise",
     loadCharacter: "grind",
     setup: "Stand side-on to a low pulley, arm hanging across your body holding the handle.",
     execution: "Raise your arm out to the side to shoulder height, leading with the elbow, then lower slowly.",
@@ -1393,6 +1432,24 @@ export default [
     setup: "Rest your forearm on your thigh with your palm facing up, holding the handle at your fingertips.",
     execution: "Curl your wrist up towards you, then lower it fully to stretch the forearm.",
     watch: "Lifting the elbow off your thigh moves the work from the wrist to the arm.",
+  },
+  // Register D227 (2026-10-12, "Mens Physique Off Season - Allan", spec A3):
+  // the single-arm seated row from a high pulley the founder's plan lists as
+  // a stand-in for the iso-lateral pulldown. Specialist tier.
+  {
+    name: "Single-Arm High-Pulley Seated Cable Row",
+    primaryMuscle: "back",
+    secondaryMuscles: ["biceps"],
+    equipment: "cable",
+    movementPattern: "pull",
+    compound: true,
+    repMin: 10, repMax: 15,
+    fatigueCost: 2, sfr: 4,
+    subregion: "horizontal_lat",
+    loadCharacter: "grind",
+    setup: "Sit facing a high pulley, holding one handle with your arm reaching up and forward.",
+    execution: "Pull the elbow down and back towards your hip, then let the arm reach back up slowly.",
+    watch: "Twisting your torso to finish the pull takes the work off your back.",
   },
   {
     name: "Single-Arm Lat Pulldown",

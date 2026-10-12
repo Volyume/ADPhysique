@@ -80,6 +80,7 @@ import {
   getPlannedMuscleVolumeForBlock,
   getRecentlyUsedExerciseIds,
   rebuildPlanKeepingBlockV2,
+  ensureAuthoredPlanFacts,
 } from './database';
 import { allocateExerciseVolume } from './algorithms';
 import { deriveParamKey } from './poolGenerator';
@@ -720,10 +721,27 @@ async function run(userId, opts) {
   };
   if (settled.has(programme.id)) return { ...settled.get(programme.id), programmeId: programme.id };
   const facts = await getProgrammePlanFacts(programme.id);
+  // Register D227 (spec C2): an AUTHORED plan is served exactly as its author
+  // wrote it, so the planner's rebuild never touches it, whatever else its
+  // facts say. A copy of an authored library plan that arrived without facts
+  // gets them from the definition here, before any rebuild could run.
+  if (facts?.kind === 'authored') return final({ status: 'current' });
+  if (facts == null && typeof ensureAuthoredPlanFacts === 'function') {
+    let unreadable = false;
+    const authored = await ensureAuthoredPlanFacts(programme.id).catch((e) => {
+      logWarn('planRebuild.authoredFacts', e?.message);
+      unreadable = true;
+      return null;
+    });
+    if (authored) return final({ status: 'current' });
+    // Fail closed: a plan that might be authored is never rebuilt on a read
+    // that failed; it is asked again at the next open.
+    if (unreadable) return { status: 'retry', programmeId: programme.id, reason: 'authored_unreadable' };
+  }
   if (STRUCTURE_ENGINE) {
-    // D222 phase 8. R91: an authored plan (D227) is never moved. R90: only an
-    // engine plan (structure.version 3) is current; a plan of the older planner
-    // is not, whatever its facts version.
+    // D222 phase 8. R91: an authored plan (D227, above) is never moved. R90:
+    // only an engine plan (structure.version 3) is current; a plan of the
+    // older planner is not, whatever its facts version.
     if (isAuthoredFacts(facts)) return final({ status: 'skipped', reason: 'authored' });
     if (isEnginePlanFacts(facts)) return final({ status: 'current' });
     // R91: a style-pool plan (kettlebell, circuit tags) keeps its own pool; the engine has none.

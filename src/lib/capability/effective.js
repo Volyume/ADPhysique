@@ -112,7 +112,10 @@ export function bestEligibleSubstitute(exercise, library, isEligibleRow, taken =
     .filter((e) => e.id !== exercise.id
       && e.primaryMuscle === exercise.primaryMuscle
       && !(taken && taken.has(e.id))
-      && (!isCandidate || isCandidate(e))
+      // D227 F1: the scope question is also handed the exercise being
+      // replaced, so an authored plan's scope can offer only that
+      // exercise's listed substitutions. Every other scope ignores it.
+      && (!isCandidate || isCandidate(e, exercise))
       && isEligibleRow(e))
     .sort((a, b) => tierRank(a.name) - tierRank(b.name)
       || String(a.name).localeCompare(String(b.name)));

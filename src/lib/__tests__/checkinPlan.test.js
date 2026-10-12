@@ -181,6 +181,16 @@ describe('only a plan the new planner built gets a check-in plan', () => {
   });
 });
 
+describe('register D227 (spec D5, F1): an authored plan\'s list is closed', () => {
+  test('a +3 on an AUTHORED plan opens no exercise and reads no catalogue', async () => {
+    arrange({ facts: { ...FACTS, kind: 'authored', authored: { sessions: [] } } });
+    const resolved = await resolveCheckinPlan({ userId: 'u1', signal: 3, profile: { equipment: 'full_gym' } });
+    expect(resolved.plan.opened).toEqual([]);
+    expect(resolved.card.lines.join(' ')).not.toMatch(/joins/);
+    expect(resolveCatalogue).not.toHaveBeenCalled();
+  });
+});
+
 describe('what a +3 resolves to', () => {
   test('the card names each exercise set by set and the exercise that joins', async () => {
     arrange();

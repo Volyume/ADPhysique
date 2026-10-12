@@ -1482,23 +1482,39 @@ export default function CoachOutputScreen({ navigation, route }) {
     applyingRef.current = true;
     setApplyingKey('deload');
     try {
-      const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
-      // Stage 7 (§3.4): the deload lands at the strain-scaled share of
-      // each muscle's ACHIEVED peak this block rather than a flat MEV
-      // cut. Strain maps from the persisted weekly recovery read; a
-      // failed peak load degrades to the legacy flat cut, never blocks.
+      // Register D227 lane B (spec E3, H4): on an AUTHORED plan the reduction
+      // week serves the plan's Reduction column at its own effort (RIR 3, the
+      // same exercises at normal reps), and the block's planned reduction week
+      // is released when it falls within 2 weeks of this one. Every other plan
+      // takes the strain-scaled path below, unchanged.
       // eslint-disable-next-line global-require
-      const { getAchievedWeeklyPeaks } = require('../lib/blockLedgerRunner');
-      const peaks = await getAchievedWeeklyPeaks(user.id).catch(() => null);
-      const strainScore = output.recoveryFlag === 'deload_suggested' ? 4
-        : output.recoveryFlag === 'concerned' ? 2 : 0;
-      const changes = computeDeloadVolume(rows, peaks ? { peaks, strainScore } : null);
+      const { resolveAuthoredReductionApply } = require('../lib/library/authoredCoachIO');
+      const authoredApply = await resolveAuthoredReductionApply(user.id, nextTrainingWeekId);
+      let changes;
+      let sharePctApplied = null;
+      if (authoredApply) {
+        changes = authoredApply.changes;
+      } else {
+        const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
+        // Stage 7 (§3.4): the deload lands at the strain-scaled share of
+        // each muscle's ACHIEVED peak this block rather than a flat MEV
+        // cut. Strain maps from the persisted weekly recovery read; a
+        // failed peak load degrades to the legacy flat cut, never blocks.
+        // eslint-disable-next-line global-require
+        const { getAchievedWeeklyPeaks } = require('../lib/blockLedgerRunner');
+        const peaks = await getAchievedWeeklyPeaks(user.id).catch(() => null);
+        const strainScore = output.recoveryFlag === 'deload_suggested' ? 4
+          : output.recoveryFlag === 'concerned' ? 2 : 0;
+        changes = computeDeloadVolume(rows, peaks ? { peaks, strainScore } : null);
+        sharePctApplied = peaks ? Math.round(deloadShare(strainScore) * 100) : null;
+      }
       const updated = markApplied(output, 'deload', {
         weekId: nextTrainingWeekId, musclesChanged: changes.length,
         // Stage 8 (§3.6): the applied share, so the card can explain the
         // recovery dose from what actually happened — null when the
         // legacy flat cut ran (no peaks available).
-        sharePct: peaks ? Math.round(deloadShare(strainScore) * 100) : null,
+        sharePct: sharePctApplied,
+        ...(authoredApply ? { plannedReductionReleased: !!authoredApply.release } : {}),
       });
       await applyCoachTrainingAdjustmentAtomically({
         userId: user.id,
@@ -1507,6 +1523,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         changes,
         coachOutput: { weekStart, ...updated },
         setDeload: true,
+        // D227 E3/H4: the authored reduction week's own effort, and the
+        // planned reduction week released in the same commit.
+        ...(authoredApply ? { deloadRirTarget: authoredApply.rirTarget, releaseWeek: authoredApply.release } : {}),
       });
       // Only publish deload UI truth after the week, every volume target and
       // the applied receipt committed together.
@@ -2132,6 +2151,30 @@ export default function CoachOutputScreen({ navigation, route }) {
         // engine's differential paywall output is disabled regardless.
         hasUsedTrial: false,
       });
+      // Register D227 lane B (spec E3): on an AUTHORED plan the early reduction
+      // week is suggested by the plan's own triggers (two or more of five,
+      // read from what the app records), in place of the coach's generic
+      // deload count; the card and its Apply are the coach's existing ones.
+      // Only the live week is judged; a past week's review suggests none.
+      // Best effort: a failed read leaves the coach's own suggestion.
+      try {
+        // eslint-disable-next-line global-require
+        const { isActivePlanAuthored, loadAuthoredReductionTriggers } = require('../lib/library/authoredCoachIO');
+        if (await isActivePlanAuthored(user.id)) {
+          const triggers = viewingCurrentWeek
+            ? await loadAuthoredReductionTriggers(user.id, {
+              checkin: { energyScore: engineCheckin?.energyScore ?? null, sleepHours: engineCheckin?.sleepHours ?? null },
+            })
+            : null;
+          // eslint-disable-next-line global-require
+          const { authoredReductionNote } = require('../lib/library/authoredCoach');
+          result.deloadSuggested = !!triggers?.suggested;
+          result.deloadNote = triggers?.suggested ? authoredReductionNote(triggers) : null;
+          result.authoredReductionTriggers = triggers ? triggers.triggers.map((x) => x.key) : [];
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.authoredReduction', e, { userId: user?.id });
+      }
       // Learning is observational. An ED/FFM/manual-target intervention hold
       // cannot erase a valid energy-balance observation; only an evidence
       // confounder (cycle override or an unusual-event check-in) holds it.

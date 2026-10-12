@@ -948,6 +948,24 @@ export default [
     execution: "Tilt your head sideways against the pad, then return slowly to the centre.",
     watch: "Turning your head rather than tilting it sideways misses the muscles down the side of the neck.",
   },
+  // Register D227 (2026-10-12, "Mens Physique Off Season - Allan", spec A3):
+  // the neutral-grip pulldown machine the founder's plan lists as a stand-in
+  // for the V-bar pulldown. Specialist tier, as the other D227 rows.
+  {
+    name: "Neutral-Grip Machine Pulldown",
+    primaryMuscle: "back",
+    secondaryMuscles: ["biceps"],
+    equipment: "machine",
+    movementPattern: "pull",
+    compound: true,
+    repMin: 8, repMax: 15,
+    fatigueCost: 3, sfr: 4,
+    subregion: "vertical_pull",
+    loadCharacter: "grind",
+    setup: "Sit with your thighs under the pads and take the parallel handles above you, palms facing each other.",
+    execution: "Pull the handles down towards your upper chest, driving your elbows down, then extend slowly.",
+    watch: "Leaning far back to drag the handles down turns it into a row, so stay tall.",
+  },
   {
     name: "Pec Deck (Machine Fly)",
     primaryMuscle: "chest",

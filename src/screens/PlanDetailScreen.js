@@ -12,7 +12,7 @@ import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
-  activatePlanWithBlock, archivePlan, copyPlanFromLibrary,
+  activatePlanWithBlock, archivePlan, copyPlanFromLibrary, isAuthoredBlockRunning,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan, getAllRoutineSetCounts,
   updateRoutinePosition, getProgrammePlanFacts, getCurrentMesocycleWeek, getPlannedMuscleVolumeForBlock,
 } from '../lib/database';
@@ -29,7 +29,9 @@ import { isStructureFacts } from '../lib/structure/serve';
 import { fixedPlanNote } from '../lib/structure/messages';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
 import { getPlanDays } from '../lib/onboarding/freeStarter';
-import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
+import {
+  BLOCK_START_SENTENCE, AUTHORED_BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, isAuthoredPlanTags,
+} from '../lib/blockExplain';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -310,7 +312,7 @@ export default function PlanDetailScreen({ navigation, route }) {
     appAlert(
       'Add this plan?',
       `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`
-      + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+      + `\n\n${(isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE)} ${ACTIVATION_MEANING_SENTENCE}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -337,7 +339,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 toast.show('Could not copy plan. Try again.', { variant: 'error' });
                 return;
               }
-              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name, blockSentence: (isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE) });
               if (!ok) { navigation.goBack(); return; }
               await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
               // C5-P10-05 (D96): every activation entry point confirms
@@ -358,7 +360,12 @@ export default function PlanDetailScreen({ navigation, route }) {
     if (activatingRef.current) return; // C6 P9-04 (D97)
     activatingRef.current = true;
     try {
-      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+      // Register D227 lane B (H7): this plan's own running block is kept.
+      if (await isAuthoredBlockRunning(user.id, planId)) {
+        toast.show('This plan is already active and its block carries on.', { variant: 'info' });
+        return;
+      }
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name, blockSentence: (isAuthoredPlanTags(plan?.tags) ? AUTHORED_BLOCK_START_SENTENCE : BLOCK_START_SENTENCE) });
       if (!ok) return;
       await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
       await loadData();

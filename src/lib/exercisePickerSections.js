@@ -110,6 +110,23 @@ export function buildEmptyQuerySections({
 }
 
 /**
+ * Register D227 lane B (spec H8): an authored plan's optional exercise for
+ * this session and week, offered first under its own "optional" heading (and
+ * taken out of the sections below it); never added unless the person picks
+ * it. With no ids (every other plan) the sections come back unchanged.
+ */
+export function prependPlanOptionalSection(sections, base = [], planOptional = []) {
+  const ids = new Set((Array.isArray(planOptional) ? planOptional : []).map((id) => String(id)));
+  if (!ids.size) return sections;
+  const items = (Array.isArray(base) ? base : []).filter((e) => ids.has(String(e.id)));
+  if (!items.length) return sections;
+  const rest = sections
+    .map((s) => ({ ...s, items: s.items.filter((e) => !ids.has(String(e.id))) }))
+    .filter((s) => s.items.length);
+  return [{ key: 'optional', label: 'Optional in your plan this week', items }, ...rest];
+}
+
+/**
  * Flattens `buildEmptyQuerySections`' output into the single array a list
  * component renders, with a lightweight header marker
  * (`{ __section, key }`) ahead of each section's items. The picker's

@@ -44,6 +44,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { explainSelection } from '../lib/planRationale';
 import { rankSwaps } from '../lib/swapEngine';
+import { authoredSwapOptions, authoredWeekEffortLine, authoredPlanState } from '../lib/library/authored';
 import { swapAdjacentBlocks } from '../lib/reorder';
 import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
@@ -238,6 +239,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // for the currently open sheet.
   const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
   const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
+  // Register D227 (spec F1): true while the sheet shows an AUTHORED plan's
+  // closed list; the sheet then offers no way out to the full library.
+  const [swapClosedList, setSwapClosedList] = useState(false);
+  // Review fix 4: true when the plan's kind or facts could not be read, so no swap is offered.
+  const [swapUnavailable, setSwapUnavailable] = useState(false);
+  // Register D227 lane B (H9): this week's target effort on an authored plan.
+  const [effortLine, setEffortLine] = useState(null);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
   // session" or "From now on". This screen edits the plan, so a fresh sheet
   // starts at "From now on" (what a swap here has always done). The ref is what
@@ -443,6 +451,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setExercises(withExercises);
     setServedSets(served);
     setAllExercises(all);
+
+    // Register D227 lane B (spec H9, A6): on the active AUTHORED plan the
+    // session's plan screen states this week's target effort in one plain
+    // line (the logger's own effort line stays retired, 2026-08-17). Best
+    // effort: the line is simply absent on any other plan or a failed read.
+    try {
+      // eslint-disable-next-line global-require
+      const { loadAuthoredContext } = require('../lib/library/authoredCoachIO');
+      const ctx = user?.id && r?.programmeId ? await loadAuthoredContext(user.id) : null;
+      setEffortLine(ctx && ctx.programmeId === r.programmeId
+        ? authoredWeekEffortLine(ctx.facts, { routineId, phase: ctx.phase })
+        : null);
+    } catch (_e) { setEffortLine(null); }
 
     // A4: division fingerprint. Pure re-presentation of the volume overlay
     // the generator already applied to this plan: diff the division plan's
@@ -731,7 +752,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // the sheet's read wins over anything in flight at the tap, and a
     // load the user triggers after the tap wins over the sheet's.
     const swapSeq = ++intentSeqRef.current;
-    const all = allExercises.length ? allExercises : await getAllExercises();
+    let all = allExercises.length ? allExercises : await getAllExercises();
     const otherIds = exercises
       .map(({ exercise: ex }) => ex?.id)
       .filter(id => id && id !== exercise?.id);
@@ -750,12 +771,32 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // new planner's only) are read for the note on an exercise of another muscle.
     if (!relaxStyle) chooseSwapScope(SWAP_SCOPE.PROGRAMME);
     swapPlanFactsRef.current = null;
+    // Register D227 (spec F1): an AUTHORED plan offers only the listed
+    // substitutions of this exercise's slot; nothing relaxes it. Null (no
+    // restriction) for every other plan, exactly as before.
+    // Review fix 4: when the plan is authored, or its kind cannot be read, a
+    // failed facts read offers no swap at all (fail closed). A hand-added
+    // exercise is offered only the listed options of slots with its muscle.
+    let closedPool = null;
+    let unavailable = false;
     if (routine?.programmeId) {
       try {
+        const state = authoredPlanState(await getProgrammeById(routine.programmeId));
         const facts = await getProgrammePlanFacts(routine.programmeId);
         swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
-      } catch (_) { swapPlanFactsRef.current = null; }
+        if (state === 'unknown') unavailable = true;
+        if (state === 'authored') {
+          closedPool = authoredSwapOptions(facts, exercise?.id, { routineId, muscle: exercise?.primaryMuscle ?? null });
+          if (closedPool == null) unavailable = true;
+        }
+      } catch (_) { swapPlanFactsRef.current = null; unavailable = true; }
     }
+    if (unavailable) closedPool = new Set();
+    setSwapUnavailable(unavailable);
+    setSwapClosedList(closedPool != null);
+    // The candidates themselves are narrowed, so the ranking below is exactly
+    // the one every other plan runs (swapSheetCapabilityNarrowing guard).
+    if (closedPool) all = all.filter((e) => closedPool.has(e?.id));
     const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     // C9 Work 3: structural suitability still decides WHICH exercises are
     // valid replacements - that judgement stays in swapEngine. The personal
@@ -1294,6 +1335,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         </Text>
       ) : null}
       <MuscleTagRow exercises={exercises} />
+      {effortLine ? (
+        <Text style={[styles.divisionLine, live.divisionLine]}>{effortLine}</Text>
+      ) : null}
       {divisionGapLine ? (
         <Text style={[styles.divisionLine, live.divisionLine]}>{divisionGapLine}</Text>
       ) : null}
@@ -1774,7 +1818,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           {/* EL-11: user intent outranks inference - the pool is a default,
               never a hidden restriction, so "Show all exercises" is always
               one tap away while it applies. */}
-          {swapStylePoolKey && !swapStyleShowAll ? (
+          {swapStylePoolKey && !swapStyleShowAll && !swapClosedList ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, marginBottom: spacing.xs }}>
               <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0 }]}>
                 Showing {styleLabelFor(swapStylePoolKey)} exercises
@@ -1825,12 +1869,21 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </Card>
               );
             }}
-            ListEmptyComponent={
+            ListEmptyComponent={swapUnavailable ? (
+              <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+                Swaps aren't available right now. Try again in a moment.
+              </Text>
+            ) : (
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet.'}
               </Text>
-            }
-            ListFooterComponent={
+            )}
+            ListFooterComponent={swapClosedList ? (
+              // D227 F1: an authored plan's list is closed, so there is no way
+              // out to the full library from here.
+              swapUnavailable ? null
+                : <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
+            ) : (
               <Button
                 title="Search all exercises or create your own"
                 icon="search"
@@ -1847,7 +1900,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 textStyle={[styles.swapSearchAllText, live.swapSearchAllText]}
                 accessibilityLabel="Search all exercises or create your own"
               />
-            }
+            )}
           />
         </SafeAreaView>
       </Modal>

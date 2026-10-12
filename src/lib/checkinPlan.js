@@ -34,6 +34,7 @@ import {
   getActivePlan,
   getProgrammePlanFacts,
   setProgrammePlanFacts,
+  setProgrammePlanFactsWithWeekRir,
   getRoutinesForPlan,
   getRoutineExercisesWithDetails,
   getCurrentMesocycleWeek,
@@ -55,6 +56,9 @@ import { repRangeFor, restFor } from './exercise/prescription';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration } from './exercise/generation';
 import { logWarn } from './errorLog';
+import { isAuthoredFacts } from './library/authored';
+import { authoredCheckin } from './library/authoredCoach';
+import { loadAuthoredStalls } from './library/authoredCoachIO';
 import {
   isStructureFacts, planFromFacts, structureCheckin, refreshStructureFacts,
 } from './structure/stored';
@@ -196,7 +200,14 @@ export async function resolveCheckinPlan({ userId, profile = null, signal, withh
     return resolveStructureCheckin({ context, userId, profile, signal, withheld, holdMuscles });
   }
   const kind = checkinKind(signal, { withheld });
-  const catalogue = kind === CHECKIN_KIND.INCREASE ? await loadCatalogue({ userId, profile }) : {};
+  if (isAuthoredFacts(context.facts)) {
+    return resolveAuthoredCheckin({ userId, context, signal, withheld, kind, holdMuscles, profile });
+  }
+  // Register D227 (spec D5, F1): a check-in never opens a new exercise on an
+  // AUTHORED plan (its exercise list is closed), so the placement is handed no
+  // catalogue to open one from. Its sets go onto prescribed exercises only.
+  const catalogue = kind === CHECKIN_KIND.INCREASE && !isAuthoredFacts(context.facts)
+    ? await loadCatalogue({ userId, profile }) : {};
   const heldRaw = typeof holdMuscles === 'function' && kind === CHECKIN_KIND.INCREASE
     ? await holdMuscles()
     : holdMuscles;
@@ -241,6 +252,61 @@ export async function resolveCheckinPlan({ userId, profile = null, signal, withh
 }
 
 /**
+ * Register D227 lane B (spec D1 to D5, H3): the check-in on an AUTHORED plan.
+ * The coach's signal is today's; what it does is the plan's own (raise lats
+ * and side delts onto prescribed exercises in Growth, the ramp's own next
+ * week, a hold that shifts the ramp, a pull-back never below Health, the legs
+ * question), placed by library/authoredCoach.authoredCheckin. The card and
+ * the rows come from that one result, and Apply writes exactly what the
+ * authored serving reads: the plan's facts and the block's planned volume.
+ * Never opens an exercise and never reads the catalogue (D5).
+ */
+async function resolveAuthoredCheckin({ userId, context, signal, withheld, kind, holdMuscles, profile }) {
+  const wantsHolds = kind === CHECKIN_KIND.INCREASE || kind === CHECKIN_KIND.PLANNED_CLIMB;
+  // As for every plan: a failed read shows the card without that line, and
+  // the Apply tap re-checks (and waits if it still cannot read).
+  const heldRaw = typeof holdMuscles === 'function' ? (wantsHolds ? await holdMuscles() : []) : holdMuscles;
+  const held = heldRaw instanceof Set ? heldRaw : new Set(Array.isArray(heldRaw) ? heldRaw : []);
+  const stalls = await loadAuthoredStalls(userId, context.facts, context.routinesWithRows);
+  const block = Number(context.facts.authored?.run?.block) || 1;
+  const answer = context.facts.authored?.legsAnswer;
+  const legsFlat = answer?.answer === 'yes' && Number(answer.block) === block
+    && Number(answer.weekIndex) === Number(context.weeks[0]?.index);
+  const result = authoredCheckin({
+    facts: context.facts,
+    weeks: context.weeks,
+    rows: context.rows,
+    signal,
+    withheld,
+    held,
+    stalled: new Set(stalls.keys()),
+    legsFlat,
+    labelOf,
+    sessionNames: context.sessionNames,
+  });
+  if (!result) return null;
+  const nextWeekId = context.weeks[1].id;
+  const nextWeekChanges = result.changes
+    .filter((c) => c.mesocycleWeekId === nextWeekId)
+    .map(({ muscle, plannedSets, mev, mav, mrv }) => ({ muscle, plannedSets, mev, mav, mrv }));
+  const laterChanges = result.changes.filter((c) => c.mesocycleWeekId !== nextWeekId);
+  return {
+    programmeId: context.programmeId,
+    mesocycleId: context.mesocycleId,
+    nextWeekId,
+    plan: result.plan,
+    card: result.card,
+    changes: result.changes,
+    nextWeekChanges,
+    laterChanges,
+    routinesWithRows: context.routinesWithRows,
+    profile,
+    authored: result,
+    weeks: context.weeks,
+  };
+}
+
+/**
  * On Apply: write everything of a resolved check-in except next week's rows
  * and the coach output (the screen's atomic apply writes those, after this):
  * the new exercise rows, the plan's facts (a role raised, the new slots) and
@@ -250,6 +316,34 @@ export async function writeCheckinPlan(resolved) {
   if (resolved?.structure) return writeStructureCheckin(resolved);
   const { programmeId, plan, laterChanges, routinesWithRows, profile } = resolved;
   const added = [];
+
+  // Register D227 lane B (H3): an authored check-in writes only what the
+  // authored serving reads: the plan's facts (raises, trims, the shifted
+  // schedule, the legs mark) and the later weeks' planned volume.
+  if (resolved.authored) {
+    if (resolved.authored.applies) {
+      // A hold shifts run.phases: the running block's later working weeks get
+      // their effort from the new ladder in the same write (review fix 2).
+      // Recovery weeks keep the value they were given; next week onward only.
+      const nextFacts = resolved.authored.nextFacts;
+      const ladder = Array.isArray(nextFacts?.rirLadder) ? nextFacts.rirLadder : [];
+      const rirByWeek = {};
+      for (const w of (Array.isArray(resolved.weeks) ? resolved.weeks : []).slice(1)) {
+        const v = ladder[Number(w.index) - 1];
+        if (!w.deload && Number.isInteger(v)) rirByWeek[w.id] = v;
+      }
+      if (Object.keys(rirByWeek).length) await setProgrammePlanFactsWithWeekRir(programmeId, nextFacts, rirByWeek);
+      else await setProgrammePlanFacts(programmeId, nextFacts);
+    }
+    for (const c of laterChanges) {
+      // eslint-disable-next-line no-await-in-loop
+      await upsertPlannedMuscleVolume({
+        mesocycleWeekId: c.mesocycleWeekId, muscle: c.muscle, plannedSets: c.plannedSets,
+        mev: c.mev, mav: c.mav, mrv: c.mrv, source: 'coach',
+      });
+    }
+    return { added };
+  }
 
   if (plan.opened.length > 0) {
     const all = (await getAllExercises()) ?? [];

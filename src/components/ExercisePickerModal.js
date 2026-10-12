@@ -40,6 +40,7 @@ import { deriveExerciseMetadata } from '../lib/exerciseMetadata';
 import { fuzzySearch, findCanonicalNameMatch } from '../lib/exerciseFuzzySearch';
 import { tierRank } from '../lib/exercise/canonicality';
 import { buildRecentAndFrequentIds, buildEmptyQuerySections, flattenSectionsForList } from '../lib/exercisePickerSections';
+import { prependPlanOptionalSection } from '../lib/exercisePickerSections';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
 import Chip from './Chip';
@@ -197,7 +198,7 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
 // promote "In your plan" ahead of "Staples" for an empty query; a caller
 // that omits it simply gets no such section, everything else unchanged.
 export default function ExercisePickerModal({
-  visible, onClose, onSelect, saveLabel, actionLabel, planExercises,
+  visible, onClose, onSelect, saveLabel, actionLabel, planOptional, planExercises,
 }) {
   const toast = useToast();
   const userId = useAppStore(s => s.user?.id);
@@ -453,9 +454,12 @@ export default function ExercisePickerModal({
         getTier: e => tierRank(e.name),
       });
     }
-    const sections = buildEmptyQuerySections({ base, recentAndFrequentIds, planExercises });
+    // D227 H8: an authored plan's optional exercise for this session, first.
+    const sections = prependPlanOptionalSection(
+      buildEmptyQuerySections({ base, recentAndFrequentIds, planExercises }), base, planOptional,
+    );
     return flattenSectionsForList(sections);
-  }, [base, query, isSwapAction, recentAndFrequentIds, planExercises]);
+  }, [base, query, isSwapAction, recentAndFrequentIds, planExercises, planOptional]);
 
   // CC27 (section 9.4): the manual-conflict flows. Selection of a
   // capability-conflicted movement is never silent and never hard-blocked

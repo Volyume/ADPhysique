@@ -62,7 +62,7 @@ import {
   slotMuscleChange, swapMuscleNote, swapMuscleDoneNote,
 } from '../lib/exercise/swapCarry';
 import SegmentedControl from '../components/SegmentedControl';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, getProgrammePlanFacts, getActiveBlock, EXERCISE_INTENT, getExerciseLookup, updateRoutineExercise, uid } from '../lib/database';
 import { buildSessionReport } from '../lib/sessionReport';
 import { localDayKey } from '../lib/dayKey';
 import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
@@ -101,6 +101,7 @@ import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
 } from '../lib/recoveryState';
 import { rankSwaps } from '../lib/swapEngine';
+import { authoredSwapOptions, authoredOptionalFor, authoredPlanState } from '../lib/library/authored';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
   countProgressSets,
@@ -670,6 +671,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercises"); it resets to false every time the sheet is (re)opened.
   const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
   const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
+  // Register D227 (spec F1): true while the sheet shows an AUTHORED plan's
+  // closed list (that exercise's listed substitutions only): the sheet then
+  // offers no way out to the full library.
+  const [swapClosedList, setSwapClosedList] = useState(false);
+  // Review fix 4: true when the plan's kind or facts could not be read, so no swap is offered.
+  const [swapUnavailable, setSwapUnavailable] = useState(false);
   // D219 lane A4 (design 4.12, founder R10): every swap asks once, "Just this
   // session" or "From now on". swapScope is the choice (the segmented control
   // reads the state); the refs are what handleConfirmSwap reads, because the
@@ -740,13 +747,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // planner built. The outline then shows the same served count for every
   // exercise, not only the current one (design 4.9, one number everywhere).
   const [planServedV2, setPlanServedV2] = useState(false);
+  // Register D227 lane B (spec H8): the authored plan's optional exercise
+  // ids for this session in this week (the machine shoulder press on Day 2 in
+  // Growth), offered first in the Add exercise picker; empty otherwise.
+  const [planOptional, setPlanOptional] = useState([]);
+  const planOptionalIds = useMemo(() => planOptional.map((o) => o.exerciseId), [planOptional]);
   useEffect(() => {
     let cancelled = false;
-    getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
+    const allocationRead = getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises });
+    allocationRead
       .then(({ allocation, v2 }) => {
         if (cancelled) return;
         setWeeklyAllocation(allocation);
         setPlanServedV2(!!v2);
+      })
+      .catch(() => {});
+    // D227 H8: the same read names the plan's optional exercise, if any.
+    allocationRead
+      .then(({ planContext, authoredWeek }) => {
+        if (cancelled) return;
+        setPlanOptional(authoredOptionalFor(planContext?.facts, {
+          routineId: activeWorkout?.routineId ?? null, phase: authoredWeek?.phase ?? null,
+        }));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -1329,6 +1351,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       overrideLoad,
       overrideReps,
       now: Date.now(),
+      authored: packetBase.authored ?? null,
     });
   }, [packetBase, loggedSets, overrideLoad, overrideReps, readinessTweak, reEntryEaseActive, readinessReduces, readinessDismissed]);
 
@@ -1856,7 +1879,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // exercise change) wins over it, both directions. Round 15's
     // post-await bump could orphan that later, newer load.
     const swapSeq = ++intentLoadSeqRef.current;
-    const allExercises = await getAllExercises();
+    let allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
     // C9 Work 3: ask for a wider structural slate than we show, then let the
     // personal layer re-order inside it and drop anything the user has
@@ -1871,13 +1894,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // as an ordinary plan.
     let styleKey = null;
     let swapProgrammeId = null;
+    let swapPlanUnreadable = false;
     try {
       const routineId = activeWorkout?.routineId ?? null;
       const routineRow = routineId ? await getRoutineById(routineId) : null;
       swapProgrammeId = routineRow?.programmeId ?? null;
       const programmeRow = routineRow?.programmeId ? await getProgrammeById(routineRow.programmeId) : null;
       styleKey = styleKeyFromTags(programmeRow?.tags);
-    } catch (_) { styleKey = null; }
+    } catch (_) { styleKey = null; swapPlanUnreadable = !!activeWorkout?.routineId; }
     setSwapStylePoolKey(styleKey);
     setSwapStyleShowAll(relaxStyle);
     // D219 lane A4 (design 4.12): offer "From now on" where the slot has a plan
@@ -1895,6 +1919,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         swapPlanFactsRef.current = facts?.version === 2 ? facts : null;
       } catch (_) { swapPlanFactsRef.current = null; }
     }
+    // Register D227 (spec F1): an AUTHORED plan offers only the listed
+    // substitutions of this exercise's slot; nothing relaxes it. A plan that
+    // is not authored gets null (no restriction), exactly as before.
+    // Review fix 4: when the plan is authored, or its kind cannot be read, a
+    // failed facts read offers no swap at all (fail closed). A hand-added
+    // exercise is offered only the listed options of slots with its muscle.
+    let closedPool = null;
+    let unavailable = swapPlanUnreadable;
+    if (swapProgrammeId) {
+      try {
+        const state = authoredPlanState(await getProgrammeById(swapProgrammeId));
+        if (state === 'unknown') unavailable = true;
+        if (state === 'authored') {
+          closedPool = authoredSwapOptions(
+            await getProgrammePlanFacts(swapProgrammeId), exercise?.id,
+            { routineId: activeWorkout?.routineId ?? null, muscle: exercise?.primaryMuscle ?? null },
+          );
+          if (closedPool == null) unavailable = true;
+        }
+      } catch (_) { unavailable = true; }
+    }
+    if (unavailable) closedPool = new Set();
+    setSwapUnavailable(unavailable);
+    setSwapClosedList(closedPool != null);
+    // The candidates themselves are narrowed, so the ranking below is exactly
+    // the one every other plan runs (swapSheetCapabilityNarrowing guard).
+    if (closedPool) allExercises = allExercises.filter((e) => closedPool.has(e?.id));
     const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     const ranked = rankSwaps(exercise, allExercises, {
       excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment,
@@ -2152,7 +2203,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       handleConfirmSwap(ex);
     } else {
       const newIndex = workoutExercises.length;
-      addExerciseToWorkout(ex);
+      // D227 H8: the plan's optional exercise joins at its written sets.
+      const optional = planOptional.find((o) => o.exerciseId === ex?.id);
+      // Review fix 4: a proper routine exercise row like the others (an id,
+      // 8 to 12 reps, 120 s rest), at the sets the plan writes.
+      if (optional) {
+        addExerciseToWorkout(ex, {
+          id: uid(), recommendedSets: optional.sets, recommendedRepsMin: 8, recommendedRepsMax: 12, restSeconds: 120,
+        });
+      }
+      else addExerciseToWorkout(ex);
       setCurrentExerciseIndex(newIndex);
     }
     setShowExercisePicker(false);
@@ -2823,6 +2883,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // BEFORE assembling the packet: senior.isDeload/deloadTargets/
       // blockFinished are packet INPUTS (design section 14, Law F), so this
       // fetch has to land before the resolver can seed the entry.
+      // Register D227 lane B (spec E1, H4): an exercise of an AUTHORED plan
+      // progresses by the plan's own double progression, and its reduction
+      // week holds the load at normal reps and the plan's own effort, never
+      // the house deload's halved reps at RIR 4. Null for every other plan.
+      let localAuthored = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { loadAuthoredProgression } = require('../lib/library/authoredCoachIO');
+        localAuthored = await loadAuthoredProgression(user?.id, {
+          exerciseId: exercise.id, routineId: activeWorkout?.routineId ?? null,
+        });
+      } catch (_e) { localAuthored = null; }
+      if (cancelled) return;
       let localIsDeloadWeek = false;
       let localBlockFinished = false;
       let localDeloadTargets = null; // {weight, reps} pairs, the packet's shape
@@ -2858,7 +2931,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // (packet.senior.deloadTargets, design section 14 Law F) rather
           // than a separate setTargets/currentSet write: the resolver's own
           // SENIOR_RECOVERY_HOLD branch below is what actually seeds the box.
-          if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
+          if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id && !localAuthored) {
             const week1Sets = await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
             if (cancelled) return;
             if (week1Sets.length > 0) {
@@ -2928,6 +3001,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           blockFinished: localBlockFinished,
           layoffDays,
         },
+        authored: localAuthored,
       };
       setPacketBase(base);
       setOverrideLoad(null);
@@ -2955,6 +3029,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         overrideLoad: null,
         overrideReps: null,
         now: Date.now(),
+        authored: base.authored,
       });
       const seedPos = countProgressSets(allLoggedForExercise) + 1;
       // EL-10: a circuit station or ballistic exercise never receives an
@@ -2987,6 +3062,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       };
       if (localIsDeloadWeek && deloadRirSeed != null && seedPrescription.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
         seeded.rir = deloadRirSeed;
+      }
+      // D227 H4: the authored reduction week's own effort (compound 3,
+      // isolation 2 to 3 reps in reserve).
+      if (localAuthored?.phase === 'reduction' && Number.isFinite(localAuthored.rirTarget)) {
+        seeded.rir = localAuthored.rirTarget;
       }
       setCurrentSet({ ...DEFAULT_SET, ...seeded });
       seededEntryRef.current = { weight: seeded.weight, reps: seeded.reps };
@@ -3424,6 +3504,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             overrideLoad: nextOverrideLoad,
             overrideReps: nextOverrideReps,
             now: Date.now(),
+            authored: packetBase.authored ?? null,
           });
           const nextPos = countProgressSets(newLoggedSets) + 1;
           // EL-10: see the seedPrescription comment above - no automatic
@@ -5457,6 +5538,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
+          planOptional={pickerMode === 'swap' ? undefined : planOptionalIds}
         />
       </SafeAreaView>
     );
@@ -6148,6 +6230,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
+          planOptional={pickerMode === 'swap' ? undefined : planOptionalIds}
         />
 
         {/* Superset / giant-set heads-up modal, appears once per group when the
@@ -7147,7 +7230,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {/* EL-11: user intent outranks inference - the pool is a default,
                 never a hidden restriction, so "Show all exercises" is always
                 one tap away while it applies. */}
-            {swapStylePoolKey && !swapStyleShowAll ? (
+            {swapStylePoolKey && !swapStyleShowAll && !swapClosedList ? (
               <View style={[styles.swapNote, live.swapNote, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                 <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0 }]}>
                   Showing {styleLabelFor(swapStylePoolKey)} exercises
@@ -7192,13 +7275,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
-                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
-                    {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
+                  {swapUnavailable ? null : (
+                    <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
+                      {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
+                    </Text>
+                  )}
+                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>
+                    {swapUnavailable
+                      ? 'Swaps aren\'t available right now. Try again in a moment.'
+                      : (swapClosedList ? 'This plan lists no other exercise for this one here.' : 'Search the full library instead.')}
                   </Text>
-                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
                 </View>
               }
-              ListFooterComponent={
+              ListFooterComponent={swapClosedList ? (
+                // D227 F1: an authored plan's list is closed, so there is no
+                // way out to the full library from here.
+                swapUnavailable ? null
+                  : <Text style={[styles.swapNote, live.swapNote]}>This plan offers only the alternatives it lists for this exercise.</Text>
+              ) : (
                 // Escape hatch from the ranked suggestions: search the whole
                 // library or add your own. Always present, so it works whether
                 // or not there were candidates.
@@ -7223,7 +7317,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons name="search" size={16} color={t.colors.textSecondary} />
                   <Text style={[styles.swapBrowseText, live.swapBrowseText]}>Search exercise library</Text>
                 </TouchableOpacity>
-              }
+              )}
             />
           </SafeAreaView>
           </SafeAreaProvider>

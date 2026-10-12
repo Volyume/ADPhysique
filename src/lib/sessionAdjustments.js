@@ -43,6 +43,7 @@ import { prescribeWeek } from './plan/prescribe';
 import { PER_SESSION, exerciseCap } from './plan/science';
 import { roleTop } from './plan/checkinPlacement';
 import { structureServedWeek, isStructureFacts } from './structure/serve';
+import { authoredServedWeek, authoredPlanLimits, isAuthoredFacts } from './library/authored';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -289,6 +290,21 @@ export function servedSetsCap(row, planContext) {
  * plan screen resolves it once for all of a plan's routines); left undefined
  * the context is resolved from `workout.routineId`.
  */
+/**
+ * Register D227 lane B (lead ruling on the capability lane): the muscles a
+ * week's planned rows show the reintroduction ramp bringing back (source
+ * 'reintroduction', capability/reintroduction.js), each with the ramp's
+ * level. Null when there are none.
+ */
+export function reintroductionCaps(weekRows) {
+  const out = {};
+  for (const r of Array.isArray(weekRows) ? weekRows : []) {
+    const n = Number(r?.planned_sets ?? r?.plannedSets);
+    if (r?.source === 'reintroduction' && r?.muscle && Number.isFinite(n)) out[r.muscle] = n;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export async function getSessionWeeklyAllocation({ workout, exercises, planContext: given }) {
   const none = { allocation: null, weekRows: [], v2: false };
   try {
@@ -337,13 +353,35 @@ export async function getSessionWeeklyAllocation({ workout, exercises, planConte
       ramp: Object.fromEntries(weekRows.filter((r) => r.source === 'reintroduction')
         .map((r) => [r.muscle, Number(r.planned_sets)]).filter(([, v]) => Number.isFinite(v))),
     });
-    const allocation = Object.keys(ladder.sets).length ? { ...served, ...ladder.sets } : served;
+    // Register D227 (spec C1): an AUTHORED plan serves each of its exercises
+    // the author's own sets for the block week's phase (the recovery week the
+    // Reduction column), typed counts still winning; an exercise added by hand
+    // keeps what it was served above. Every other plan comes back as it was.
+    const weekIndex = Number(week?.week_index ?? week?.weekIndex);
+    const isDeload = Number(week?.is_deload ?? week?.isDeload) === 1;
+    // Lane B (lead ruling): a muscle the capability lane's reintroduction ramp
+    // is bringing back (its row stamped 'reintroduction') is capped at the
+    // ramp's level this week, on top of the authored ladder.
+    const rampCaps = reintroductionCaps(weekRows);
+    const authored = authoredServedWeek({
+      facts: planContext?.facts,
+      routineId: workout.routineId,
+      mesocycleId,
+      weekIndex,
+      isDeload,
+      exercises: todays,
+      caps: rampCaps,
+    });
+    const allocation = (Object.keys(ladder.sets).length || Object.keys(authored.sets).length)
+      ? { ...served, ...ladder.sets, ...authored.sets } : served;
+    const rir = { ...ladder.rir, ...authored.rir };
     // planContext rides along (D219 lane R3) so the session's own +1 reads the
     // same plan facts the week was served from; callers read the fields they
     // need, and the `none` shape above is unchanged.
     return {
       allocation: Object.keys(allocation).length ? allocation : null, weekRows, v2: planContext != null, planContext,
-      ...(Object.keys(ladder.rir).length ? { rir: ladder.rir } : {}),
+      ...(Object.keys(rir).length ? { rir } : {}),
+      ...(authored.phase ? { authoredWeek: { mesocycleId, weekIndex, isDeload, phase: authored.phase, caps: rampCaps } } : {}),
       // D222 phase 7 (R73): the block week, for the session's own plus one on
       // a structure plan (structurePlanLimits). Absent on every other plan.
       ...(isStructureFacts(planContext?.facts) ? { weekIndex: Number(week?.week_index ?? week?.weekIndex) } : {}),
@@ -587,21 +625,33 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     // The session-layer ±1 tweaks below then apply on top of the allocated
     // base, so an applied coach change (or the recovery week's per-muscle
     // reductions) and the readiness tweaks compose instead of competing.
-    const { allocation, weekRows, planContext, weekIndex } = await getSessionWeeklyAllocation({ workout, exercises });
+    const { allocation, weekRows, planContext, authoredWeek, weekIndex } = await getSessionWeeklyAllocation({ workout, exercises });
 
     // D219 (design 4.11): on a plan the new planner built, the +1 stays inside
     // that plan's caps (the exercise's, the session's and the role's top).
+    // Register D227 (spec C1): an AUTHORED plan's caps replace the house caps.
     let planLimits = null;
     if (planContext) {
       try {
-        planLimits = buildPlanLimits({
-          planContext,
-          routineId: workout.routineId,
-          weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
-          exercises,
-          weekIndex,
-          allocation,
-        });
+        planLimits = isAuthoredFacts(planContext.facts)
+          ? authoredPlanLimits({
+            facts: planContext.facts,
+            routineId: workout.routineId,
+            mesocycleId: authoredWeek?.mesocycleId ?? null,
+            weekIndex: authoredWeek?.weekIndex,
+            isDeload: authoredWeek?.isDeload === true,
+            exercises,
+            houseCaps: { directCap: PER_SESSION.directCap, fractionalCap: PER_SESSION.fractionalCap },
+            caps: authoredWeek?.caps ?? null,
+          })
+          : buildPlanLimits({
+            planContext,
+            routineId: workout.routineId,
+            weekTargets: Object.fromEntries((weekRows || []).map((r) => [r.muscle, r.planned_sets])),
+            exercises,
+            weekIndex,
+            allocation,
+          });
       } catch (e) {
         logWarn('sessionAdjustments.planLimits', e?.message);
       }

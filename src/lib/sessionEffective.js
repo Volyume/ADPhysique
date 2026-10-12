@@ -9,7 +9,7 @@
 import {
   getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails,
   getAllExercises, setConstraintEffectiveChoice, appendSessionConstraintEffects,
-  updateRoutineExerciseExercise, recordExerciseSwap, getActiveBlock,
+  updateRoutineExerciseExercise, recordExerciseSwap, getActiveBlock, getProgrammePlanFacts,
 } from './database';
 import { loadCapabilityResolveState, blockingConflicts } from './capability/resolve';
 import {
@@ -20,6 +20,7 @@ import { SWAP_SCOPE } from './exercise/swapScope';
 import { CONSTRAINT_SOURCE } from './capability/model';
 import { styleKeyFromTags } from './exercise/stylePools';
 import { substituteCandidateFilter } from './exercise/candidateScope';
+import { authoredSubstituteFilter } from './library/authored';
 
 export { setConstraintEffectiveChoice };
 
@@ -101,19 +102,39 @@ export async function loadScopedIntentState(userId) {
  * lib modules use to avoid an import cycle.
  *
  * @param {string} userId
- * @param {{planTags?: string|null, equipment?: string|null}} [opts]
+ * @param {{planTags?: string|null, equipment?: string|null, planFacts?: object|null}} [opts]
  *   undefined means "resolve it"; an explicit null means "no constraint
  *   from this axis", which is how a caller opts out.
- * @returns {Promise<((exercise: object) => boolean)|null>} null when
+ * @returns {Promise<((exercise: object, original?: object) => boolean)|null>} null when
  *   there is nothing to narrow - the untouched pre-F-14 candidate set.
  */
-export async function loadSubstituteScope(userId, { planTags, equipment } = {}) {
+export async function loadSubstituteScope(userId, { planTags, equipment, planFacts } = {}) {
   let tags = planTags;
-  if (tags === undefined) {
+  // Register D227 (spec F1): an AUTHORED plan's stand-ins come only from each
+  // exercise's listed substitutions. Resolved from the active plan (every
+  // caller serves, counts or rewrites the active plan), best effort like the
+  // style half: a read failure leaves the pre-D227 scope.
+  let facts = planFacts;
+  let activePlan;
+  if (tags === undefined || facts === undefined) {
     try {
-      tags = (await getActivePlan(userId))?.tags ?? null;
-    } catch (_e) { tags = null; /* best effort: no style restriction */ }
+      activePlan = await getActivePlan(userId);
+    } catch (_e) { activePlan = null; /* best effort: no style restriction */ }
   }
+  if (tags === undefined) tags = activePlan?.tags ?? null;
+  if (facts === undefined) {
+    try {
+      facts = activePlan?.id ? await getProgrammePlanFacts(activePlan.id) : null;
+    } catch (_e) { facts = null; }
+  }
+  const closed = authoredSubstituteFilter(facts);
+  const base = baseSubstituteScope(tags, equipment);
+  if (!closed) return base;
+  return (candidate, original) => closed(candidate, original) && (!base || base(candidate, original));
+}
+
+// The style and kit halves of the substitute scope (F-14), unchanged.
+function baseSubstituteScope(tags, equipment) {
   let eq = equipment;
   if (eq === undefined) {
     try {

@@ -30,8 +30,9 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getExerciseById, getCompletedSetHistoryForExercise, getAllExercises, getExerciseLookup,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
-  deleteExercise, getRoutinesReferencingExercise,
+  deleteExercise, getRoutinesReferencingExercise, getActivePlan, getProgrammePlanFacts,
 } from '../lib/database';
+import { authoredSwapOptions, authoredPlanState } from '../lib/library/authored';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, loadMultiplierFor, isE1rmEligibleRow, isEstimatedMaxRow, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
@@ -409,7 +410,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       // Plateau detection
       const sessionArrays = sessions.map(s => s.sets ?? s); // newest-first already
       const plateauResult = detectPlateau(sessionArrays, ex?.defaultRepMin ?? 6, ex?.defaultRepMax ?? 12);
-      setPlateau(plateauResult.plateau ? plateauResult : null);
+      // Register D227 lane B (spec E2): an exercise of an AUTHORED plan is
+      // judged by the plan's own stall rule and offered only its listed
+      // substitutions; no rep-range change is suggested on that plan.
+      // eslint-disable-next-line global-require
+      const authoredStall = await require('../lib/library/authoredCoachIO')
+        .loadAuthoredStallForExercise(user?.id, exerciseId).catch(() => undefined);
+      if (authoredStall !== undefined) setPlateau(authoredStall ? { message: authoredStall.message } : null);
+      else setPlateau(plateauResult.plateau ? plateauResult : null);
 
       // Compute local PRs from working sets.
       // D218 (founder order 2026-10-03, audit F-14): the records read ONLY rows
@@ -522,6 +530,21 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             }
           }
         } catch (_) { pool = allExercises; }
+        // Register D227 (spec F1, review fix 3): on an AUTHORED plan the
+        // substitutes are only the options its slot lists, as in the swap
+        // sheet. A plan that is not authored is unchanged; a plan whose kind
+        // cannot be read lists none (fail closed).
+        try {
+          const uidForPlan = useAppStore.getState().user?.id ?? null;
+          const activePlan = uidForPlan ? await getActivePlan(uidForPlan) : null;
+          const planState = authoredPlanState(activePlan);
+          if (planState === 'authored') {
+            const options = authoredSwapOptions(
+              await getProgrammePlanFacts(activePlan.id), ex.id, { muscle: ex.primaryMuscle ?? null },
+            );
+            pool = options ? pool.filter((row) => options.has(row?.id)) : [];
+          } else if (planState === 'unknown') pool = [];
+        } catch (_) { pool = []; }
         const swaps = rankSwaps(ex, pool, { equipment: swapEquipment });
         setSubstitutes(swaps.slice(0, 4));
       } catch (_) {
