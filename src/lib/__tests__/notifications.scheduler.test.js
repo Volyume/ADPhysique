@@ -632,7 +632,13 @@ describe('scheduleCascadeGateNotifications (dormant: override off)', () => {
     const d19 = byId['volyume_cascade_day19'];
     const d21 = byId['volyume_cascade_day21'];
     // 2 calendar days apart (10:00 both; quiet hours don't touch 10:00).
-    expect(d21.getTime() - d19.getTime()).toBe(2 * DAY);
+    // Two CALENDAR days apart at the same local time: across a clock change
+    // the millisecond gap is an hour off, which is the point of a local-time
+    // trigger, not a defect (the test used to pin 2 * DAY and failed every
+    // autumn and spring).
+    const twoDaysOn = new Date(d19);
+    twoDaysOn.setDate(twoDaysOn.getDate() + 2);
+    expect(d21.getTime()).toBe(twoDaysOn.getTime());
     expect(d19.getHours()).toBe(10);
     expect(d21.getHours()).toBe(10);
   });
