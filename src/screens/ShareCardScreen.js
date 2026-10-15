@@ -9,17 +9,27 @@
  *
  * The "Save as PDF" path is a separate, clean one-page HTML→PDF summary and is
  * unrelated to the image card.
+ *
+ * D229 addendum 6 (founder: "the share is actually not full screen on most
+ * mobiles ... Can we, like, extend it ... not wider, taller"): the formats
+ * are Story, Full screen (the phone's own shape, with its own safe areas),
+ * Feed (the 4:5 the code still calls 'portrait') and Square, then the
+ * Sticker; under Full screen the image can be set as the lock screen
+ * wallpaper on Android, and iOS says how to do it from Photos. Share is the
+ * one amber action, with Save to gallery and Post to Community beneath it
+ * (addendum 5 items 4 and 7: the Background row reads Gallery, Photo, None
+ * and "Photo look" reads "Look").
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
-  useWindowDimensions,
+  useWindowDimensions, Share,
 } from 'react-native';
 import Text from '../components/Text';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -56,6 +66,32 @@ try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; ImageFormat = S.ImageFormat; } catch (_) { /* optional */ }
+
+// Set as wallpaper (Full screen, Android): the video module's wrapper,
+// loaded only when asked for and treated as absent if it cannot load, so the
+// screen never depends on it.
+function loadWallpaperEngine() {
+  try {
+    // eslint-disable-next-line global-require
+    const engine = require('../lib/shareVideo/engine');
+    return engine && typeof engine.setLockScreenWallpaper === 'function' && typeof engine.isAvailable === 'function'
+      ? engine : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// The Background row's sources (D229 addendum 5 item 4, its words made
+// plain by the founder's rule of 2026-10-15: a person reads "Video", never
+// "clip"). VIDEO is named here for the lead's video source, which joins the
+// row between Photo and None with the "From this workout" strip beneath it;
+// nothing on this row offers it yet.
+const BACKGROUND_SOURCES = Object.freeze({
+  GALLERY: 'gallery',
+  PHOTO: 'photo',
+  VIDEO: 'video',
+  NONE: 'none',
+});
 
 // "Share to Stories" goes straight to the OS share sheet. The Instagram
 // Stories deep link (instagram-stories://share) cannot carry the rendered
@@ -156,12 +192,23 @@ export default function ShareCardScreen({ navigation, route }) {
   );
   // Story-first default (D109-1, Campaign 30): the story composition is now a
   // first-class layout on every card type (safe zones, balanced content), and
-  // stories are where these cards actually get posted. Square 1:1 and
-  // portrait 4:5 stay one tap away; 'sticker' is the transparent stat-panel
+  // stories are where these cards actually get posted. Full screen ('full',
+  // the phone's own shape, D229 addendum 6), Feed ('portrait', 4:5) and
+  // Square 1:1 stay one tap away; 'sticker' is the transparent stat-panel
   // export (ELITE-SHARE-SPEC pillar 3) for pasting onto the user's own story.
   const [format, setFormat] = useState('story');
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
+  const [settingWallpaper, setSettingWallpaper] = useState(false);
+  // Full screen takes the phone's own shape: the window's height over its
+  // width, and its status bar and home indicator as fractions of that
+  // height, so the card's outline clears them (the renderer holds the shape
+  // between 16:9 and 2.3).
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const fullAspect = windowWidth > 0 && windowHeight > 0 ? windowHeight / windowWidth : null;
+  const safeTopRatio = windowHeight > 0 ? (insets?.top || 0) / windowHeight : 0;
+  const safeBottomRatio = windowHeight > 0 ? (insets?.bottom || 0) / windowHeight : 0;
 
   const [showVolume, setShowVolume] = useState(true);
   const [showDate, setShowDate] = useState(true);
@@ -178,8 +225,10 @@ export default function ShareCardScreen({ navigation, route }) {
   const [showProgress, setShowProgress] = useState(false);
   // The best-lift feature is opt-in too (also force-stripped under suppress).
   const [showBestLift, setShowBestLift] = useState(true);
-  // Optional gym photo background (SkImage), available on every card type.
+  // Optional gym photo background (SkImage), available on every card type,
+  // and which Background source it came from (BACKGROUND_SOURCES).
   const [bgPhoto, setBgPhoto] = useState(null);
+  const [backgroundSource, setBackgroundSource] = useState(BACKGROUND_SOURCES.NONE);
   // Where the athlete placed and sized it ({ zoom, cx, cy }, null = centred)
   // and the same pixels as a data URI for the live preview (founder orders
   // 2026-09-26: the photo should show "best in the background", and camera
@@ -295,11 +344,12 @@ export default function ShareCardScreen({ navigation, route }) {
   // Campaign 30: the weekly recap's old square-only restriction is lifted -
   // the rebuilt renderer composes every type against the tall canvas (story
   // safe zones, content balance) instead of leaving it mostly empty. The
-  // card aspect ('square'|'portrait'|'story') now drives the renderer via
-  // params.aspect; isSquare stays derived for the legacy readers (PDF path,
-  // filenames, preview sizing fallbacks).
+  // card aspect ('square'|'portrait'|'story'|'full') now drives the renderer
+  // via params.aspect; isSquare stays derived for the legacy readers (PDF
+  // path, filenames, preview sizing fallbacks). Full screen is a tall card.
   const cardAspect = isSticker ? 'square' : format;
-  const isSquare = cardAspect !== 'story';
+  const isFullScreen = cardAspect === 'full';
+  const isSquare = cardAspect !== 'story' && !isFullScreen;
 
   // System typefaces (regular + bold) for the Skia renderer: the floor the
   // card can always draw with. getTypeface() gives a typeface we can resize
@@ -474,10 +524,16 @@ export default function ShareCardScreen({ navigation, route }) {
   }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, bodyWeightUnits, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
 
   // The selected card's params: the per-type build plus the chosen aspect
-  // preset (the renderer's cardHeight/draw both key off params.aspect).
+  // preset (the renderer's cardHeight/draw both key off params.aspect), and
+  // for Full screen the phone's own shape and safe areas.
   const buildParams = useCallback(
-    () => ({ ...buildParamsFor(cardType), aspect: cardAspect, quote }),
-    [buildParamsFor, cardType, cardAspect, quote],
+    () => ({
+      ...buildParamsFor(cardType),
+      aspect: cardAspect,
+      quote,
+      ...(isFullScreen ? { fullAspect, safeTopRatio, safeBottomRatio } : {}),
+    }),
+    [buildParamsFor, cardType, cardAspect, quote, isFullScreen, fullAspect, safeTopRatio, safeBottomRatio],
   );
 
   // How many of a list of lifts the image has room for, laid out exactly as
@@ -551,7 +607,7 @@ export default function ShareCardScreen({ navigation, route }) {
       // params object the full card would draw from, so every upstream gate
       // (suppress, toggles) applies identically - suppressed content has NO
       // export path here either.
-      const H = isSticker ? stickerHeight(width) : cardHeight(width, params.isSquare, params.aspect);
+      const H = isSticker ? stickerHeight(width) : cardHeight(width, params.isSquare, params.aspect, params.fullAspect);
       const surface = Skia.Surface.MakeOffscreen(width, H);
       if (!surface) {
         logError('ShareCardScreen.renderCard', new Error('MakeOffscreen returned null'), { width, H });
@@ -726,6 +782,7 @@ export default function ShareCardScreen({ navigation, route }) {
     setBgPhoto(null);
     setPhotoCrop(null);
     setFramerPhoto(null);
+    setBackgroundSource(BACKGROUND_SOURCES.NONE);
   }, []);
 
   // Recompute the live framer photo when the look or its committed strength
@@ -789,6 +846,7 @@ export default function ShareCardScreen({ navigation, route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
+      if (img) setBackgroundSource(BACKGROUND_SOURCES.PHOTO);
       if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
@@ -813,6 +871,7 @@ export default function ShareCardScreen({ navigation, route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
+      if (img) setBackgroundSource(BACKGROUND_SOURCES.GALLERY);
       if (img) acceptPhoto(img);
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
@@ -856,7 +915,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!livePhoto || !Skia || !typefaces) return null;
     try {
       const params = buildParams();
-      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect);
+      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect, params.fullAspect);
       const surface = Skia.Surface.MakeOffscreen(PREVIEW_RENDER_W, H);
       if (!surface) return null;
       drawShareCard(surface.getCanvas(), {
@@ -916,7 +975,7 @@ export default function ShareCardScreen({ navigation, route }) {
         return;
       }
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
       await MediaLibrary.saveToLibraryAsync(uri);
       toast.show('Saved to your gallery', { variant: 'success' });
     } catch (_e) {
@@ -934,8 +993,16 @@ export default function ShareCardScreen({ navigation, route }) {
   // dependency AND a registered Facebook App ID (mandatory since Jan 2023), so we
   // deliberately keep the zero-dependency share-sheet route and just present it
   // as a Story share with both app icons.
+  //
+  // The text link (D229 addendum 6, level-up 4): on iOS the image goes
+  // through React Native's Share with "volyume.app" as its message, so an
+  // app that takes text beside an image (Messages, WhatsApp, Notes) gets the
+  // address too. Android keeps expo-sharing's file-only share: an Android
+  // target rarely takes an image and text from one share (many drop one of
+  // the two), and the file alone reaches every target reliably.
   async function handleShareToStories() {
-    if (!Skia || !FileSystem || !Sharing) {
+    const isIos = Platform.OS === 'ios';
+    if (!Skia || !FileSystem || (isIos ? !Share : !Sharing)) {
       // P-16: device-specific, not "incomplete build".
       toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
@@ -947,7 +1014,11 @@ export default function ShareCardScreen({ navigation, route }) {
     setSharingToStories(true);
     try {
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      if (isIos) {
+        await Share.share({ url: uri, message: 'volyume.app' });
+        return;
+      }
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
       await Sharing.shareAsync(uri, {
@@ -960,14 +1031,55 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }
 
+  // Set as wallpaper (D229 addendum 6, level-up 2): Full screen on Android
+  // only, through the video module's lock screen call, offered only when
+  // that module says it can (an absent module hides the action). iOS has no
+  // way for an app to set a wallpaper, so it shows how instead.
+  const [wallpaperAvailable, setWallpaperAvailable] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    let cancelled = false;
+    const engine = loadWallpaperEngine();
+    if (!engine) return undefined;
+    Promise.resolve()
+      .then(() => engine.isAvailable())
+      .then((ok) => { if (!cancelled) setWallpaperAvailable(ok === true); })
+      .catch(() => { if (!cancelled) setWallpaperAvailable(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleSetWallpaper() {
+    const engine = loadWallpaperEngine();
+    if (!engine || !Skia || !FileSystem) {
+      toast.show("Setting a wallpaper isn't available on your device.", { variant: 'error', duration: 5000 });
+      return;
+    }
+    if (!typefaces) {
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      return;
+    }
+    setSettingWallpaper(true);
+    try {
+      const uri = await renderCardToFile();
+      if (!uri) { toast.show("Couldn't make the image, try again", { variant: 'error' }); return; }
+      await engine.setLockScreenWallpaper(uri);
+      toast.show('Set as your lock screen wallpaper', { variant: 'success' });
+    } catch (e) {
+      logError('ShareCardScreen.setWallpaper', e);
+      toast.show("Couldn't set the wallpaper, try again", { variant: 'error' });
+    } finally {
+      setSettingWallpaper(false);
+    }
+  }
+
   // EP-11/UI-03: the preview used to hard-code a 300dp width inside the
   // screen's 16dp horizontal padding, overflowing a 320dp phone (300 + 2*16
   // > 320). Cap at the design width but never exceed what this screen's own
-  // padding leaves available; height is derived from that so the card's
-  // aspect ratio is preserved.
-  const { width: windowWidth } = useWindowDimensions();
+  // padding leaves available (windowWidth, read near the top for Full
+  // screen too); height is derived from that so the card's aspect ratio is
+  // preserved.
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
-  const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect);
+  const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect, fullAspect);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -1016,31 +1128,45 @@ export default function ShareCardScreen({ navigation, route }) {
           </ScrollView>
         )}
 
-        {/* Format: story 9:16 first (D109-1), square 1:1, portrait 4:5, and
-            the transparent sticker export - all four for every card type. */}
+        {/* Format: story 9:16 first (D109-1), Full screen (the phone's own
+            shape, D229 addendum 6), Feed 4:5 ('portrait' in the code),
+            Square 1:1, and the transparent sticker export - all five for
+            every card type. Five fit across a phone with each icon over its
+            word. */}
         <View style={styles.section}>
           <SectionLabel>Format</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
               label="Story"
+              stacked
               active={format === 'story'}
               onPress={() => setFormat('story')}
               icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="Square"
-              active={format === 'square'}
-              onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+              label="Full screen"
+              stacked
+              active={format === 'full'}
+              onPress={() => setFormat('full')}
+              icon={<Ionicons name="expand-outline" size={15} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="4:5"
+              label="Feed"
+              stacked
               active={format === 'portrait'}
               onPress={() => setFormat('portrait')}
               icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
+              label="Square"
+              stacked
+              active={format === 'square'}
+              onPress={() => setFormat('square')}
+              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
               label="Sticker"
+              stacked
               active={isSticker}
               onPress={() => setFormat('sticker')}
               icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
@@ -1076,31 +1202,37 @@ export default function ShareCardScreen({ navigation, route }) {
         </View>
         ) : null}
 
-        {/* Background: the user's own photo as the canvas (gallery pick OR
-            camera capture; tone-sampled scrim keeps it legible in the
-            renderer), or the per-type crafted dark background ("No photo" --
-            renamed from "Dark" now that Dark names a share THEME above, not
-            a background choice; it still just clears the photo). Hidden for
-            the sticker, which is transparent by design. Only shown when the
+        {/* Background: the user's own photo as the canvas (Gallery, a pick
+            from the phone's photos, or Photo, the system camera; the
+            tone-sampled scrim keeps it legible), or None, the card's own
+            ground (renamed from "Dark" once Dark named a share THEME above;
+            it still just clears the photo). D229 addendum 5 item 4: the row
+            reads Gallery | Photo | None, and the video source joins it
+            (BACKGROUND_SOURCES.VIDEO): Video between Photo and None, and
+            the "From this workout" strip beneath the row. Hidden for the
+            sticker, which is transparent by design. Only shown when the
             native image picker is available in the build. */}
         {ImagePicker && !isSticker ? (
         <View style={styles.section}>
           <SectionLabel>Background</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
-              label="My photo"
-              active={!!bgPhoto}
+              label="Gallery"
+              accessibilityLabel="Gallery, choose a photo"
+              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="Camera"
-              active={false}
+              label="Photo"
+              accessibilityLabel="Photo, take one with the camera"
+              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
               onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={15} color={t.colors.textMuted} />}
+              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="No photo"
+              label="None"
+              accessibilityLabel="None, no photo"
               active={!bgPhoto}
               onPress={clearPhoto}
               icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
@@ -1109,13 +1241,15 @@ export default function ShareCardScreen({ navigation, route }) {
         </View>
         ) : null}
 
-        {/* Photo look (founder, 2026-09-27: "a tint or filter to the images
+        {/* Look (founder, 2026-09-27: "a tint or filter to the images
             ... Almost like Instagram filters but a select group of them that
-            enhance the look ... label them gym like ones"). Only once there
-            is a photo to apply it to, and never on the transparent sticker. */}
+            enhance the look ... label them gym like ones"; the heading reads
+            "Look" since D229 addendum 5 item 4, as it will serve videos too).
+            Only once there is a photo to apply it to, and never on the
+            transparent sticker. */}
         {bgPhoto && !isSticker ? (
         <View style={styles.section}>
-          <SectionLabel>Photo look</SectionLabel>
+          <SectionLabel>Look</SectionLabel>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1367,17 +1501,19 @@ export default function ShareCardScreen({ navigation, route }) {
           </Text>
         </View>
 
-        {/* Share to Story: Instagram + Facebook icons, opens the system share
-            sheet with the rendered PNG (founder 2026-06-30: present it as a Story
-            share for Instagram/Facebook, but route through the normal share
-            screen rather than a direct-composer intent, so no extra dependency or
-            Facebook App ID is needed). The user picks Instagram or Facebook from
-            the sheet; both let you post the image to a Story. R9/M9 (share-card
-            audit 2026-07-27): the visible label standardises on "Share image"
-            with every other action button in the family; the Instagram/Facebook
-            framing still comes through the icons and the pinned accessibility
-            label below, so the 2026-06-30 decision (OS share sheet, not a
-            direct-composer intent) is unaffected. */}
+        {/* Share: the ONE amber action on the screen (D229 addendum 5 item
+            7), Save to gallery and Post to Community beneath it. It opens the
+            system share sheet with the image, carrying the Instagram and
+            Facebook icons (founder 2026-06-30: present it as a Story share
+            for Instagram/Facebook, but route through the normal share screen
+            rather than a direct-composer intent, so no extra dependency or
+            Facebook App ID is needed). The user picks Instagram or Facebook
+            from the sheet; both let you post the image to a Story. R9/M9
+            (share-card audit 2026-07-27): the visible label standardises on
+            "Share image" with every other action button in the family; the
+            Instagram/Facebook framing still comes through the icons and the
+            pinned accessibility label below, so the 2026-06-30 decision (OS
+            share sheet, not a direct-composer intent) is unaffected. */}
         <Button
           title="Share image"
           icon="logo-instagram"
@@ -1386,10 +1522,46 @@ export default function ShareCardScreen({ navigation, route }) {
           disabled={sharingToStories || !cardReady}
           loading={sharingToStories}
           accessibilityLabel="Share to Instagram or Facebook Story"
-          variant="outline"
+          variant="emphatic"
           size="lg"
           style={styles.secondaryAction}
         />
+
+        {/* Save to gallery: writes the image straight to the device
+            gallery. Only shown when the media-library package is in the build. */}
+        {MediaLibrary ? (
+        <Button
+          title="Save to gallery"
+          icon="download-outline"
+          onPress={handleSaveToGallery}
+          disabled={savingToGallery || !cardReady}
+          loading={savingToGallery}
+          accessibilityLabel="Save to gallery"
+          variant="secondary"
+          size="lg"
+          style={styles.secondaryAction}
+        />
+        ) : null}
+
+        {/* Set as wallpaper (D229 addendum 6, level-up 2), under Full screen
+            only: on Android when the video module can set the lock screen;
+            on iOS, where no app can, the line that says how. */}
+        {isFullScreen && Platform.OS === 'android' && wallpaperAvailable ? (
+          <Button
+            title="Set as wallpaper"
+            icon="phone-portrait-outline"
+            onPress={handleSetWallpaper}
+            disabled={settingWallpaper || !cardReady}
+            loading={settingWallpaper}
+            accessibilityLabel="Set as your lock screen wallpaper"
+            variant="secondary"
+            size="lg"
+            style={styles.secondaryAction}
+          />
+        ) : null}
+        {isFullScreen && Platform.OS === 'ios' ? (
+          <Text style={[styles.wallpaperHint, live.wallpaperHint]}>Save it, then set it from Photos.</Text>
+        ) : null}
 
         {/* Community entry point 7 (social-discovery blueprint section 1):
             the same moment, a different destination. PR, milestone and
@@ -1407,26 +1579,10 @@ export default function ShareCardScreen({ navigation, route }) {
             icon="people-outline"
             onPress={() => navigateCrossTab(navigation, 'HomeTab', 'CommunityCompose', communityComposeParams)}
             accessibilityLabel="Post this to Community"
-            variant="outline"
+            variant="secondary"
             size="lg"
             style={styles.secondaryAction}
           />
-        ) : null}
-
-        {/* Save to gallery: writes the rendered card straight to the device
-            gallery. Only shown when the media-library package is in the build. */}
-        {MediaLibrary ? (
-        <Button
-          title="Save to gallery"
-          icon="download-outline"
-          onPress={handleSaveToGallery}
-          disabled={savingToGallery || !cardReady}
-          loading={savingToGallery}
-          accessibilityLabel="Save to gallery"
-          variant="outline"
-          size="lg"
-          style={styles.secondaryAction}
-        />
         ) : null}
       </ScrollView>
       </GestureDetector>
@@ -1583,12 +1739,17 @@ function OptionRow({ title, meta, note, selected, onPress, last, disabled = fals
 // prop-drilled `live`/`t` from ShareCardScreen, matching NutritionTargetsScreen's
 // MacroCard/WhySection precedent from batch E), own useTheme() call and the
 // shared buildLiveStyles(t) (same `styles` block this component reads).
-function SegmentBtn({ label, active, onPress, icon }) {
+// `stacked`: the icon over the word, for a row of five (the Format row),
+// with the word allowed a second line, and shrunk to fit, at a large text
+// size. Every segment's word is held to the chrome cap, as Chip and Button
+// hold theirs.
+// `accessibilityLabel`: a fuller spoken name that starts with the visible word.
+function SegmentBtn({ label, active, onPress, icon, stacked = false, accessibilityLabel = null }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.segment, active && [styles.segmentActive, live.segmentActive]]}
+      style={[styles.segment, stacked && styles.segmentStacked, active && [styles.segmentActive, live.segmentActive]]}
       onPress={onPress}
       // AY-6: the segmented control (card type / format / background) never
       // announced which segment was selected to a screen reader. Mirrors the
@@ -1596,10 +1757,17 @@ function SegmentBtn({ label, active, onPress, icon }) {
       // (accessibilityState={{ selected }}) and the Settings body-weight-unit
       // segmented control (SettingsWorkoutScreen.js).
       accessibilityState={{ selected: active }}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel || label}
     >
       {icon}
-      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
+      <Text
+        style={[styles.segmentText, live.segmentText, stacked && styles.segmentTextStacked, active && [styles.segmentTextActive, live.segmentTextActive]]}
+        numberOfLines={stacked ? 2 : undefined}
+        adjustsFontSizeToFit={stacked}
+        maxFontSizeMultiplier={fontScaleCaps.chrome}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -1674,9 +1842,12 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
+  // The Format row's five: the icon over the word, centred.
+  segmentStacked: { flexDirection: 'column', gap: spacing.xxs, paddingHorizontal: spacing.xxs },
   segmentActive: { backgroundColor: colors.surface3 },
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
+  segmentTextStacked: { textAlign: 'center' },
   previewOuter: { alignSelf: 'center' },
   previewPlaceholder: {
     alignItems: 'center', justifyContent: 'center',
@@ -1736,6 +1907,8 @@ const styles = StyleSheet.create({
   optionMeta: { ...type.caption, color: colors.textMuted },
   optionNote: { ...type.caption, color: colors.primary },
   secondaryAction: { marginTop: spacing.md },
+  // The iOS line under Full screen, where the wallpaper action would sit.
+  wallpaperHint: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -1784,5 +1957,6 @@ function buildLiveStyles(t) {
     optionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     optionMeta: { ...t.type.caption, color: t.colors.textMuted },
     optionNote: { ...t.type.caption, color: t.colors.primary },
+    wallpaperHint: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

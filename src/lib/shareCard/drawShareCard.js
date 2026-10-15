@@ -45,6 +45,34 @@
  * the outline colour and the wordmark asset -- never the photo look's own
  * colours, and never the sticker, which stays dark regardless of theme.
  *
+ * THE BACKDROP AND THE FIT (register D229 addendum 6, founder: "the share
+ * is actually not full screen on most mobiles ... Can we, like, extend it
+ * ... not wider, taller", "We don't want to encourage too much blank
+ * space", "elegant perhaps"):
+ *
+ *  - BACKDROP BLEED, the default. With a photo, the photo (in the chosen
+ *    look) is drawn over the WHOLE canvas first, softened (a Skia blur image
+ *    filter, BLEED_BLUR_RATIO of W as the Gaussian's standard deviation) and
+ *    covered outside the outline by the theme's ground at BLEED_INK_ALPHA,
+ *    so the outlined card still reads as the card and the image has no flat
+ *    band. Inside the outline nothing changed: the photo in its look, the
+ *    vignette, the scrim. On the light theme the outside wash is the light
+ *    ground, so the outside still follows the theme as it always has. A card
+ *    with no photo gets a quiet vertical gradient of the theme's own ground
+ *    (two of its own tones, no colour cast) instead of one flat fill.
+ *  - OMIT_PHOTO (the live photo preview, and the video overlay) draws no
+ *    photo at all, so it can soften nothing: outside the outline it paints
+ *    the same BLEED_INK_ALPHA ink, translucent, so the photo or clip under
+ *    it reads darkened there exactly as on the saved image; only the
+ *    softening belongs to the saved image alone. The overlay is drawn with a
+ *    frame of the clip (or the photo) as `bgPhoto`, so the layout is the
+ *    photo layout and the scrim is sampled from real pixels.
+ *  - FULL SCREEN (aspect 'full'): height is width x params.fullAspect (the
+ *    phone's own height over width, held to FULL_ASPECT_MIN..MAX), and the
+ *    outline's band clears the phone's own status bar and home indicator
+ *    (params.safeTopRatio / safeBottomRatio) instead of the Story chrome
+ *    ratios, so the card may use more height.
+ *
  * The module has one internal import, from the sibling photoLooks module
  * (the looks' colour matrices and vignette maths); otherwise it stays free of
  * imports so it keeps running unmodified under Jest. The manual eval-based
@@ -116,6 +144,19 @@ export const CARD_GROUND = DARK_PALETTE.bg0;
 function groundColour() {
   return THEME === 'light' ? LIGHT_PALETTE.bg0 : DARK_PALETTE.bg0;
 }
+
+// The quiet ground of a card with no photo (D229 addendum 6, level-up 1): a
+// vertical gradient of two of the theme's OWN ground tones, lighter at the
+// top, so the flat fill no longer reads as an empty screen. Two levels of
+// the theme's own ladder and no other hue, so it carries no colour cast, and
+// every text role keeps its contrast promise against both stops (pinned in
+// shareCardLevelUps.test.js): on dark, bg2 to bg0; on light, bg0 to bg1
+// (bg2 would take the light hero amber under 4.5:1).
+function groundGradientStops() {
+  return THEME === 'light'
+    ? [LIGHT_PALETTE.bg0, LIGHT_PALETTE.bg1]
+    : [DARK_PALETTE.bg2, DARK_PALETTE.bg0];
+}
 // theme.js lightColors.primaryFill: the bright brand amber the app uses as a
 // fill on light. Coincides with DARK_PALETTE.accent's value today, but is
 // pinned here as its own constant rather than derived from it, since the two
@@ -148,6 +189,29 @@ const STICKER_MARK_WIDTH_RATIO = 0.15;
 const STORY_TOP_SAFE_RATIO = 0.14;
 const STORY_SAFE_BOTTOM_RATIO = 0.20;
 
+// Full screen (D229 addendum 6, level-up 2): the phone's own aspect, height
+// over width, from the screen's window, held between Story's 16:9 and 2.3
+// (the tallest phones in use), and its own safe insets as fractions of that
+// height, each held to a quarter at most. A missing or unreadable aspect
+// falls back to Story's.
+export const FULL_ASPECT_MIN = 16 / 9;
+export const FULL_ASPECT_MAX = 2.3;
+export function clampFullAspect(fullAspect) {
+  const n = Number(fullAspect);
+  if (!Number.isFinite(n)) return FULL_ASPECT_MIN;
+  return Math.min(FULL_ASPECT_MAX, Math.max(FULL_ASPECT_MIN, n));
+}
+function clampSafeRatio(r) {
+  const n = Number(r);
+  return Number.isFinite(n) ? Math.min(0.25, Math.max(0, n)) : 0;
+}
+
+// The backdrop bleed (level-up 1): the softening of the photo outside the
+// outline, as the Gaussian's standard deviation in a fraction of W (CSS's
+// blur radius), and the theme ink laid over it there.
+export const BLEED_BLUR_RATIO = 0.015;
+export const BLEED_INK_ALPHA = 0.55;
+
 // How far the athlete can zoom into their photo on top of the cover fit. The
 // screen's positioning view clamps to the same value.
 export const MAX_PHOTO_ZOOM = 4;
@@ -160,6 +224,11 @@ export const MAX_PHOTO_ZOOM = 4;
 let BG = null;
 let BG_CROP = null;
 let OMIT_PHOTO = false;
+
+// Full screen's own safe band ({ top, bottom } fractions of H), or null on
+// every other format. Set per render, like BG above, because the layout
+// (frameBand) reads it.
+let SAFE_BAND = null;
 
 // The chosen photo look and its strength (photoLooks.js), and the share
 // theme ('dark' or 'light') with the dark-lettered wordmark for a light
@@ -393,7 +462,8 @@ export function photoCropFromRect(iw, ih, W, H, rect) {
 
 // Draw an image on W x H, framed by `crop` (see photoCoverRect). Where a
 // zoomed-out photo leaves the canvas uncovered, the caller's ground shows.
-function drawImageCover(canvas, Skia, img, W, H, crop, paint = null) {
+// Exported so the clip tone sampler (D229 addendum 4) reads a video frame the way the photo path does.
+export function drawImageCover(canvas, Skia, img, W, H, crop, paint = null) {
   const iw = img.width(); const ih = img.height();
   if (!iw || !ih) return;
   const r = photoCoverRect(iw, ih, W, H, crop);
@@ -415,7 +485,8 @@ function drawImageCover(canvas, Skia, img, W, H, crop, paint = null) {
 // light-photo card). Surface.MakeOffscreen + SkImage.readPixels are plain
 // Skia API on both the device and the CanvasKit harness. Returns null if the
 // photo can't be sampled so the caller falls back safely.
-function sampleAverageTone(Skia, img, W, H, crop) {
+// Exported so the clip tone sampler (D229 addendum 4) reads a video frame the way the photo path does.
+export function sampleAverageTone(Skia, img, W, H, crop) {
   try {
     const NW = 12;
     const NH = Math.max(6, Math.round(NW * (H / W)));
@@ -550,12 +621,51 @@ function drawVignette(canvas, Skia, W, H, frame, look, strength) {
   canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
 }
 
-// The ground when there is no photo: the app's own background, flat. The
-// per-type gradients, corner glows, rings and ticks of the previous design
-// are gone with the restyle (theme.js materials policy: no glow, gradient orb
-// or bloom outside the one sanctioned surface).
+// The ground when there is no photo: the app's own background. The per-type
+// gradients, corner glows, rings and ticks of the previous design are gone
+// with the restyle (theme.js materials policy: no glow, gradient orb or
+// bloom outside the one sanctioned surface). Since D229 addendum 6 the flat
+// fill carries one quiet vertical gradient between two of the theme's own
+// ground tones (groundGradientStops): no hue, no orb, no glow. The flat fill
+// is drawn first and stays the floor if the gradient cannot be made.
 function drawCraftedBackground(canvas, Skia, W, H) {
   fillRect(canvas, Skia, 0, 0, W, H, groundColour());
+  try {
+    if (!Skia.Shader || typeof Skia.Shader.MakeLinearGradient !== 'function') return;
+    const [top, bottom] = groundGradientStops();
+    const shader = Skia.Shader.MakeLinearGradient(
+      { x: W / 2, y: 0 }, { x: W / 2, y: H },
+      [Skia.Color(top), Skia.Color(bottom)],
+      [0, 1], CLAMP,
+    );
+    const p = Skia.Paint(); p.setShader(shader);
+    canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+  } catch (_e) { /* the flat ground stands */ }
+}
+
+// The ink of the backdrop bleed outside the outline (level-up 1): the
+// theme's own ground at BLEED_INK_ALPHA, so a dark card darkens the
+// photo there and a light card washes it pale, the outside following the
+// theme as the plain ground always did.
+function bleedInk() {
+  return rgba(groundColour(), BLEED_INK_ALPHA);
+}
+
+// A paint that draws the photo in the chosen look, softened by a Gaussian of
+// standard deviation `sigma` px where this Skia build has the image-filter
+// API (react-native-skia's ImageFilter.MakeBlur and Paint.setImageFilter,
+// on the device and under CanvasKit alike). Best effort: a build without
+// them, or a filter that fails to build, draws the look unsoftened.
+function softLookPaint(Skia, sigma) {
+  let p = lookPaint(Skia, PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
+  if (!p) { p = Skia.Paint(); p.setAntiAlias(true); }
+  try {
+    if (sigma > 0 && Skia.ImageFilter && typeof Skia.ImageFilter.MakeBlur === 'function'
+      && typeof p.setImageFilter === 'function') {
+      p.setImageFilter(Skia.ImageFilter.MakeBlur(sigma, sigma, CLAMP, null));
+    }
+  } catch (_e) { /* the softening is decorative; the look still draws */ }
+  return p;
 }
 
 // Skia ClipOp, as numbers like FILL and STROKE above. On device JsiSkCanvas
@@ -566,11 +676,15 @@ const CLIP_DIFFERENCE = 0;
 const CLIP_INTERSECT = 1;
 
 // `frame`: the outline's rectangle (layoutCard, bandFrame). With a photo, the
-// photo and its scrim are drawn only inside the outline's rounded shape, and
-// the plain ground outside it (founder, 2026-09-27: "fix it so that the
-// image only goes within the outline"). Positioning the photo shows the
-// same: that render leaves the inside clear for the photo underneath and
-// paints the ground outside.
+// sharp photo and its scrim are drawn only inside the outline's rounded
+// shape (founder, 2026-09-27: "fix it so that the image only goes within the
+// outline"); since the backdrop bleed (D229 addendum 6, level-up 1, the
+// founder's later "full screen ... not wider, taller" and "We don't want to
+// encourage too much blank space") the same photo, softened and under the
+// theme's ink, fills the canvas outside it, where the plain ground used to
+// be. Positioning the photo (OMIT_PHOTO) leaves the inside clear for the
+// photo underneath and paints only the translucent ink outside, so the photo
+// there reads darkened as on the saved image.
 function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
   if (hasPhoto()) {
     // The athlete's photo, framed where they put it, under a tone-sampled
@@ -581,9 +695,20 @@ function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
       const r = Math.round(FRAME_RADIUS * s);
       const clip = frame ? Skia.RRectXY(Skia.XYWHRect(frame.x, frame.y, frame.w, frame.h), r, r) : null;
       if (clip) {
+        // The bleed, under everything: the theme's ground (shown only where
+        // a zoomed-out photo leaves the canvas uncovered), then the photo in
+        // its look, softened, over the whole canvas. Decorative, so a
+        // failure leaves the plain ground outside the outline, never a lost
+        // card.
+        if (!OMIT_PHOTO) {
+          fillRect(canvas, Skia, 0, 0, W, H, groundColour());
+          try {
+            drawImageCover(canvas, Skia, BG, W, H, BG_CROP, softLookPaint(Skia, Math.max(1, W * BLEED_BLUR_RATIO)));
+          } catch (_e) { /* the plain ground stands outside the outline */ }
+        }
         canvas.save();
         canvas.clipRRect(clip, CLIP_DIFFERENCE, true);
-        drawCraftedBackground(canvas, Skia, W, H);
+        fillRect(canvas, Skia, 0, 0, W, H, bleedInk());
         canvas.restore();
         canvas.save();
         canvas.clipRRect(clip, CLIP_INTERSECT, true);
@@ -695,9 +820,17 @@ function frameInset(pad) {
 // actions cover the image (audit H2 lifted the footer clear of that zone;
 // D108 set it at 20%), so the outline and the logo are never under them. On
 // square and portrait, inside the image's edge by the same margin as the
-// sides.
+// sides. On Full screen (SAFE_BAND set), between the phone's own status bar
+// and home indicator instead of a story's chrome, so the card may use more
+// of the height (D229 addendum 6, level-up 2).
 function frameBand(W, H, isSquare, pad) {
   const edge = frameInset(pad);
+  if (SAFE_BAND) {
+    return {
+      top: Math.max(edge, Math.round(H * SAFE_BAND.top)),
+      bottom: H - Math.max(edge, Math.round(H * SAFE_BAND.bottom)),
+    };
+  }
   const storyLift = isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
   const top = isSquare ? edge : Math.max(edge, Math.round(H * STORY_TOP_SAFE_RATIO));
   return { top, bottom: H - Math.max(edge, storyLift) };
@@ -1050,7 +1183,8 @@ function cardSizes(fmt, photo) {
 
 function bodyFormat(p) {
   if (p.aspect === 'portrait') return 'portrait';
-  if (p.aspect === 'story') return 'story';
+  // Full screen is at least a story's height, so it takes the story's sizes.
+  if (p.aspect === 'story' || p.aspect === 'full') return 'story';
   if (p.aspect === 'square') return 'square';
   return p.isSquare ? 'square' : 'story'; // legacy callers with no aspect param
 }
@@ -1225,7 +1359,7 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark, liftCount) {
 // widths, always show the same lifts.
 function sessionLiftCount(Skia, typefaces, wordmark, p) {
   const W = 1080;
-  const H = cardHeight(W, p.isSquare, p.aspect);
+  const H = cardHeight(W, p.isSquare, p.aspect, p.fullAspect);
   const font = makeFonts(Skia, typefaces, 1);
   const { chosen, drawHead, bodyWith } = sessionParts(Skia, W, p, 1, font);
   return liftsThatFit(W, H, 1, p, drawHead, bodyWith, chosen, wordmark);
@@ -1456,7 +1590,7 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   const cellsBottom = footerY - Math.round(24 * s);
   const cellsH = Math.max(1, cellsBottom - cellsTop);
 
-  if (p.aspect === 'story') {
+  if (p.aspect === 'story' || p.aspect === 'full') {
     // Stacked: older on top, newer below (two portraits each get a landscape-ish
     // cell in the tall 9:16 frame — side-by-side would slice each to a sliver).
     const cellW = W - pad * 2;
@@ -1488,14 +1622,31 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
  * The back-compatible two-arg form (isSquare boolean) drives every existing
  * card type unchanged. The optional third `aspect` is used by every card type
  * that wants the ('square'|'portrait'|'story') preset: 'square' 1:1, 'portrait'
- * 4:5 (the IG-feed ratio) and 'story' 9:16. When `aspect` is omitted the legacy
- * isSquare behaviour is preserved exactly.
+ * 4:5 (the IG-feed ratio, "Feed" on the screen) and 'story' 9:16. 'full'
+ * (D229 addendum 6, level-up 2) is the phone's own aspect: width times the
+ * fourth argument, `fullAspect` (the window's height over its width),
+ * clamped to FULL_ASPECT_MIN..FULL_ASPECT_MAX. When `aspect` is omitted the
+ * legacy isSquare behaviour is preserved exactly.
  */
-export function cardHeight(width, isSquare, aspect) {
+export function cardHeight(width, isSquare, aspect, fullAspect) {
   if (aspect === 'square') return width;
   if (aspect === 'portrait') return Math.round((width * 5) / 4);
   if (aspect === 'story') return Math.round((width * 16) / 9);
+  if (aspect === 'full') return Math.round(width * clampFullAspect(fullAspect));
   return isSquare ? width : Math.round((width * 16) / 9);
+}
+
+// A tall format: story or full screen (everything else lays out square-like).
+function isTallAspect(aspect) {
+  return aspect === 'story' || aspect === 'full';
+}
+
+// Full screen's own safe band, from the params (null on every other
+// format). The layout reads it through SAFE_BAND, set per render.
+function safeBandFor(params) {
+  return params.aspect === 'full'
+    ? { top: clampSafeRatio(params.safeTopRatio), bottom: clampSafeRatio(params.safeBottomRatio) }
+    : null;
 }
 
 /**
@@ -1514,9 +1665,13 @@ export function cardHeight(width, isSquare, aspect) {
  * @param deps.photoCrop the athlete's framing of bgPhoto ({ zoom, cx, cy },
  *   see photoCoverRect), or null for the centre crop
  * @param deps.omitPhoto true to draw everything EXCEPT the photo itself (the
- *   scrim and the text over a transparent ground): the screen's positioning
- *   view lays this over the photo it moves underneath
+ *   scrim and the text over a transparent inside, and the bleed's ink alone,
+ *   translucent, outside the outline): the screen's positioning view, and
+ *   the video overlay, lay this over the photo or clip
  * @param deps.photos { before, after } SkImages for the beforeAfter card, or null
+ *
+ * params (beyond the card's data): aspect 'story' | 'full' | 'portrait' |
+ * 'square', with fullAspect and safeTopRatio/safeBottomRatio for 'full'.
  */
 export function drawShareCard(canvas, {
   Skia, width, params, typefaces, wordmark, wordmarkDark = null, bgPhoto = null, photoCrop = null, omitPhoto = false, photos = null,
@@ -1524,6 +1679,7 @@ export function drawShareCard(canvas, {
   BG = bgPhoto || null; // optional photo background (all card types)
   BG_CROP = photoCrop || null;
   OMIT_PHOTO = !!omitPhoto;
+  SAFE_BAND = safeBandFor(params);
   // The photo look and its strength (photoLooks.js): 'none'/undefined draws
   // exactly as before.
   PHOTO_LOOK = params.photoLook || 'none';
@@ -1536,13 +1692,14 @@ export function drawShareCard(canvas, {
   THEME = params.theme === 'light' ? 'light' : 'dark';
   WORDMARK_DARK = wordmarkDark || null;
   PALETTE = (THEME === 'light' && !hasPhoto()) ? LIGHT_PALETTE : DARK_PALETTE;
-  // Every card type drives its own three aspect presets ('square' |
-  // 'portrait' | 'story') via params.aspect (ELITE-SHARE-SPEC pillar 3/#4);
+  // Every card type drives its own aspect presets ('square' | 'portrait' |
+  // 'story' | 'full') via params.aspect (ELITE-SHARE-SPEC pillar 3/#4);
   // callers that pass no aspect keep the legacy isSquare boolean untouched.
+  // Full screen lays out as a tall card, like a story.
   const aspect = params.aspect || null;
-  const isSquare = aspect ? aspect !== 'story' : !!params.isSquare;
+  const isSquare = aspect ? !isTallAspect(aspect) : !!params.isSquare;
   const W = width;
-  const H = cardHeight(width, isSquare, aspect);
+  const H = cardHeight(width, isSquare, aspect, params.fullAspect);
   const s = W / 1080;
   const font = makeFonts(Skia, typefaces, s);
   const p = { ...params, isSquare, aspect };
@@ -1583,14 +1740,17 @@ export function drawShareCard(canvas, {
 export function sessionLiftsThatFit({
   Skia, params, typefaces, wordmark = null, bgPhoto = null, lifts = [],
 }) {
-  const saved = [BG, BG_CROP, OMIT_PHOTO];
+  const saved = [BG, BG_CROP, OMIT_PHOTO, SAFE_BAND];
   BG = bgPhoto || null;
   try {
+    // Full screen's band changes the room the lifts have, so they are laid
+    // out exactly as the card will draw them.
+    SAFE_BAND = safeBandFor(params);
     const aspect = params.aspect || null;
-    const isSquare = aspect ? aspect !== 'story' : !!params.isSquare;
+    const isSquare = aspect ? !isTallAspect(aspect) : !!params.isSquare;
     return sessionLiftCount(Skia, typefaces, wordmark, { ...params, isSquare, aspect, topLifts: lifts, topSet: null });
   } finally {
-    [BG, BG_CROP, OMIT_PHOTO] = saved;
+    [BG, BG_CROP, OMIT_PHOTO, SAFE_BAND] = saved;
   }
 }
 
