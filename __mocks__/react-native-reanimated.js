@@ -64,6 +64,11 @@ const reanimated = {
   cancelAnimation: () => {},
   runOnJS: (fn) => fn,
   runOnUI: (fn) => fn,
+  // D229 share clips: the frame callback, the worklet runtimes. No frame is
+  // ever driven in a test; the runtime calls run the worklet at once.
+  useFrameCallback: () => ({ setActive: () => {}, isActive: false }),
+  createWorkletRuntime: () => ({}),
+  runOnRuntime: (_rt, fn) => fn,
   interpolate: () => 0,
   Extrapolate: { CLAMP: 'clamp' },
   Extrapolation: { CLAMP: 'clamp' },
