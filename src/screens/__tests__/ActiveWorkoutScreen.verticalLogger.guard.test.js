@@ -31,6 +31,13 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 describe('jump is jump: tapping another exercise never skips, reorders or advances programme state', () => {
   test('handleJumpToExercise only audits and moves focus', () => {
@@ -55,7 +62,7 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
     // jump handler, and the one order-changing path is the overflow sheet's
     // Reorder exercises row.
     expect(SRC).toContain('onPressHeader={() => handleJumpToExercise(i)}');
-    expect(SRC).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');
+    expect(SHEETS).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');
     expect(SRC).not.toContain('<WorkoutOutline');
   });
 
@@ -157,9 +164,9 @@ describe('the continuous set sequence: completed above, active entry, upcoming b
 
 describe('the reorder engine is the untouched block-aware sheet', () => {
   test('DragReorderList + swapAdjacentBlocks + index re-pointing all remain', () => {
-    expect(SRC).toContain('<DragReorderList');
-    expect(SRC).toContain('onReorder={handleReorderWorkoutExercises}');
-    expect(SRC).toContain('getGroupId={(e) => e.supersetGroupId ?? null}');
+    expect(SHEETS).toContain('<DragReorderList');
+    expect(SHEETS).toContain('onReorder={handleReorderWorkoutExercises}');
+    expect(SHEETS).toContain('getGroupId={(e) => e.supersetGroupId ?? null}');
     const fn = SRC.match(/function handleReorderWorkoutExercises\(nextExercises\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(fn).toContain('const movedEntry = workoutExercises[currentExerciseIndex];');
     expect(fn).toContain('const newIndex = nextExercises.indexOf(movedEntry);');

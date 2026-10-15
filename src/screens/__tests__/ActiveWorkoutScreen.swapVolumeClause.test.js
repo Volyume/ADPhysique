@@ -25,6 +25,13 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 const DATABASE = fs.readFileSync(
   path.join(__dirname, '..', '..', 'lib', 'database.js'),
   'utf8',
@@ -44,7 +51,7 @@ describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () 
     // with two wordings; the founder's NA-wr-3 clause is in BOTH, verbatim, and
     // "Your plan is not changed" stays only where the plan cannot change (a
     // freeform exercise, and the "I can't do this" route that already asked).
-    expect(ACTIVE_WORKOUT).toContain(
+    expect(SHEETS).toContain(
       "<Text style={[styles.swapNote, live.swapNote]}>{swapScopeOffered\n"
       + "              ? \"Choose a close match. It keeps this slot's sets and reps, and sets you log count towards the new exercise's own muscle in your weekly volume.\"\n"
       + "              : \"Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.\"}</Text>",
@@ -52,7 +59,7 @@ describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () 
   });
 
   test('the clause sits inside the swap modal, so it is shown every time the swap sheet opens', () => {
-    const swapModalWindow = ACTIVE_WORKOUT.match(
+    const swapModalWindow = SHEETS.match(
       /\{\/\* Exercise Swap Modal \*\/\}[\s\S]*?<\/Modal>/,
     )?.[0] ?? '';
     expect(swapModalWindow).toContain('visible={showSwapModal}');

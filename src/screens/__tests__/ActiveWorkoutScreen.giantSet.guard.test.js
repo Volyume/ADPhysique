@@ -30,6 +30,13 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 // Independent re-derivation of the screen's superset auto-jump rule
 // (ActiveWorkoutScreen.js: findIndex((e, i) => i > currentExerciseIndex &&
@@ -81,9 +88,11 @@ describe('giant-set session cycling order and rest parity', () => {
   });
 
   test('the heads-up renders one numbered row per member (not a hardcoded pair)', () => {
-    expect(SRC).toContain('(supersetHeadsUp?.memberNames ?? []).map((memberName, memberIdx) =>');
-    // The old two-name-only fields must be gone.
+    expect(SHEETS).toContain('(supersetHeadsUp?.memberNames ?? []).map((memberName, memberIdx) =>');
+    // The old two-name-only fields must be gone (from the screen and the sheets).
     expect(SRC).not.toContain('exerciseAName');
     expect(SRC).not.toContain('exerciseBName');
+    expect(SHEETS).not.toContain('exerciseAName');
+    expect(SHEETS).not.toContain('exerciseBName');
   });
 });

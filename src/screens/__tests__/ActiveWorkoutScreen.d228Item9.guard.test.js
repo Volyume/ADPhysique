@@ -17,6 +17,9 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'ActiveWorkoutScreen.js'), 'utf8');
+// The overflow sheet's JSX moved to SessionSheets.js (D228 item 9, monolith
+// first cut); the row's strings and its show condition are read from there.
+const SHEETS = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'), 'utf8');
 const body = (startMarker, endMarker) => {
   const a = SRC.indexOf(startMarker);
   expect(a).toBeGreaterThan(-1);
@@ -27,9 +30,9 @@ const body = (startMarker, endMarker) => {
 
 describe('"Use last session" overflow row', () => {
   test('the row exists with its exact label and sub', () => {
-    expect(SRC).toContain('accessibilityLabel="Use last session"');
-    expect(SRC).toContain('>Use last session</Text>');
-    expect(SRC).toContain('Fill the pending sets from last time');
+    expect(SHEETS).toContain('accessibilityLabel="Use last session"');
+    expect(SHEETS).toContain('>Use last session</Text>');
+    expect(SHEETS).toContain('Fill the pending sets from last time');
   });
 
   test('it is shown only with a last session, a pending row and a plain straight entry', () => {
@@ -40,7 +43,7 @@ describe('"Use last session" overflow row', () => {
     expect(cond).toContain('!isWarmupEntry && !cluster && !perSide');
     expect(cond).toContain('!isClusterType(currentSet.setType)');
     expect(cond).toContain('unilateralExercises.has(exercise.id)');
-    expect(SRC).toContain('{canUseLastSession && (');
+    expect(SHEETS).toContain('{canUseLastSession && (');
   });
 
   test('tapping it fills the entry and logs nothing', () => {

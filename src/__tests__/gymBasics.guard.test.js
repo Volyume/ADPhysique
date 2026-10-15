@@ -27,6 +27,13 @@ const SCREEN = fs.readFileSync(
   'utf8'
 );
 
+// D228 item 9 (monolith first cut): the warm-up sheet and the overflow row that
+// opens it moved to SessionSheets.js; the screen keeps the handlers.
+const SHEETS = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8'
+);
+
 describe('B8 keep-awake wiring', () => {
   test('activation lives inside useFocusEffect, not a mount effect', () => {
     const focusIdx = SCREEN.indexOf('useFocusEffect(');
@@ -67,13 +74,14 @@ describe('B8 warm-up helper stays pull-only', () => {
   });
 
   test('the warm-up helper opens only from explicit onPress handlers', () => {
-    const opens = [...SCREEN.matchAll(/setShowWarmupRamp\(true\)/g)];
+    const opens = [...SCREEN.matchAll(/setShowWarmupRamp\(true\)/g)].map((m) => [SCREEN, m])
+      .concat([...SHEETS.matchAll(/setShowWarmupRamp\(true\)/g)].map((m) => [SHEETS, m]));
     expect(opens.length).toBeGreaterThanOrEqual(1);
-    for (const m of opens) {
+    for (const [SRCTEXT, m] of opens) {
       // Walk back a short window and require an onPress binding — an open
       // inside an effect or render path has no such binding nearby. (The
       // window comfortably spans the warm-up anchor lines inside the handler.)
-      const windowBefore = SCREEN.slice(Math.max(0, m.index - 400), m.index);
+      const windowBefore = SRCTEXT.slice(Math.max(0, m.index - 400), m.index);
       expect(windowBefore).toMatch(/onPress=\{/);
       expect(windowBefore).not.toMatch(/useEffect\s*\(/);
     }
@@ -81,13 +89,13 @@ describe('B8 warm-up helper stays pull-only', () => {
 
   test('warm-up choices only prefill the entry as a warm-up; nothing is logged for the user', () => {
     // The row handler marks the entry setType 'warmup' via setCurrentSet…
-    expect(SCREEN).toMatch(/setCurrentSet\(s => \(\{ \.\.\.s, weight: row\.weight, reps: row\.reps, setType: 'warmup', isGhost: false \}\)\)/);
+    expect(SHEETS).toMatch(/setCurrentSet\(s => \(\{ \.\.\.s, weight: row\.weight, reps: row\.reps, setType: 'warmup', isGhost: false \}\)\)/);
     // …and the warm-up helper never calls the set-logging pipeline itself.
-    const sheetStart = SCREEN.indexOf('B8: warm-up set helper');
-    const sheetEnd = SCREEN.indexOf('Exercise overflow sheet');
+    const sheetStart = SHEETS.indexOf('B8: warm-up set helper');
+    const sheetEnd = SHEETS.indexOf('Exercise overflow sheet');
     expect(sheetStart).toBeGreaterThanOrEqual(0);
     expect(sheetEnd).toBeGreaterThan(sheetStart);
-    const sheet = SCREEN.slice(sheetStart, sheetEnd);
+    const sheet = SHEETS.slice(sheetStart, sheetEnd);
     expect(sheet).not.toMatch(/handleCompleteSetPress|createWorkoutSet|addSetToCurrentExercise/);
   });
 

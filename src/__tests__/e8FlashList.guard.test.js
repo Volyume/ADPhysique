@@ -30,7 +30,11 @@ const CONVERTED = [
   'src/screens/ProgressPhotosScreen.js',
   'src/screens/FoodSearchScreen.js',
   'src/screens/RoutineDetailScreen.js',
-  'src/screens/ActiveWorkoutScreen.js',
+  // D228 item 9 (monolith first cut): the logger's swap Modal and its
+  // FlashList moved out of the screen into SessionSheets.js. The screen
+  // renders no list of its own now; the guarantee is pinned on the file
+  // that does.
+  'src/components/workout/session/SessionSheets.js',
   // BuildWorkoutScreen.js dropped (D1 sweep, design-consistency-audit-
   // 2026-08-06 DD4): its local hand-rolled Modal/FlashList exercise picker
   // was replaced with the shared <ExercisePickerModal>, so it no longer

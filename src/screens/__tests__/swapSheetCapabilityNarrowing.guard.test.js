@@ -37,6 +37,9 @@ const path = require('path');
 
 const ACTIVE_WORKOUT = fs.readFileSync(path.join(__dirname, '..', 'ActiveWorkoutScreen.js'), 'utf8');
 const ROUTINE_DETAIL = fs.readFileSync(path.join(__dirname, '..', 'RoutineDetailScreen.js'), 'utf8');
+// D228 item 9 (monolith first cut): the logger's swap Modal JSX moved to
+// SessionSheets.js; the quiet-line and empty-state pins read it from there.
+const ACTIVE_SHEETS = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'), 'utf8');
 
 function slice(src, startMarker, endMarker, fromIndex = 0) {
   const start = src.indexOf(startMarker, fromIndex);
@@ -132,7 +135,7 @@ describe('the recovery-narrow full-library path (RoutineDetailScreen unresolved 
 
 describe('ActiveWorkoutScreen swap sheet: quiet line + capability-aware empty state', () => {
   const modalBlock = slice(
-    ACTIVE_WORKOUT,
+    ACTIVE_SHEETS,
     "Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.",
     'ListFooterComponent={',
   );

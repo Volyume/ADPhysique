@@ -290,8 +290,12 @@ describe('the app never PROPOSES work the user has just ruled out', () => {
     const effect = src.slice(src.indexOf('const acknowledgedUnilateralRef'), src.indexOf('Log this one side at a time?'));
     expect(effect.length).toBeGreaterThan(200);
     expect(effect).toMatch(/sidedRuleBearsOnThis/);
-    // The manual per-side toggle is untouched.
-    expect(src).toMatch(/accessibilityLabel=\{unilateralExercises\.has\(exercise\.id\) \? 'Stop logging this exercise per side'/);
+    // The manual per-side toggle is untouched. (D228 item 9, monolith first
+    // cut: its overflow row moved to SessionSheets.js.)
+    const sheets = fs.readFileSync(
+      path.resolve(__dirname, '../../../components/workout/session/SessionSheets.js'), 'utf8',
+    );
+    expect(sheets).toMatch(/accessibilityLabel=\{unilateralExercises\.has\(exercise\.id\) \? 'Stop logging this exercise per side'/);
   });
 
   it('no capability copy claims Volyume programmes the unaffected side or records sides apart', () => {

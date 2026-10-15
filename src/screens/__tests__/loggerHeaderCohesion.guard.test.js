@@ -31,6 +31,9 @@ import path from 'path';
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 
 const ACTIVE = read('../ActiveWorkoutScreen.js');
+// D228 item 9 (monolith first cut): the superset heads-up styles moved with
+// the raw Modals to SessionSheets.js.
+const SHEETS = read('../../components/workout/session/SessionSheets.js');
 const REST = read('../../components/RestTimer.js');
 const EMPTY = read('../../components/workout/EmptyExerciseView.js');
 
@@ -108,6 +111,6 @@ describe('compliance sweep: named data numerals are tabular', () => {
     expect(ACTIVE).toContain("clusterReps: { ...type.num('bodyStrong')");
   });
   test('superset pair chip number is tabular', () => {
-    expect(ACTIVE).toContain("supPairChipText: { ...type.num('captionStrong')");
+    expect(SHEETS).toContain("supPairChipText: { ...type.num('captionStrong')");
   });
 });

@@ -34,6 +34,13 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 describe('F-13 (a): the pre-set heads-up has a circuit branch, with no Unlink', () => {
   test('the branch is gated on the stored group KIND, not on the group size', () => {
@@ -42,8 +49,8 @@ describe('F-13 (a): the pre-set heads-up has a circuit branch, with no Unlink', 
   });
 
   test('the title says "Circuit coming up" and the icon is the circuit repeat, not the link', () => {
-    expect(SRC).toContain("? 'Circuit coming up'");
-    expect(SRC).toContain('<Ionicons name={headsUpIsCircuit ? \'repeat\' : \'link\'} size={24}');
+    expect(SHEETS).toContain("? 'Circuit coming up'");
+    expect(SHEETS).toContain('<Ionicons name={headsUpIsCircuit ? \'repeat\' : \'link\'} size={24}');
   });
 
   test('the body names the stations, the absence of rest between them, the round rest and the rounds', () => {
@@ -58,12 +65,12 @@ describe('F-13 (a): the pre-set heads-up has a circuit branch, with no Unlink', 
   });
 
   test('Unlink is withheld on a circuit and still offered on a superset or giant set', () => {
-    expect(SRC).toContain('{headsUpIsCircuit ? null : (');
-    expect(SRC).toContain('accessibilityLabel="Unlink the superset"');
+    expect(SHEETS).toContain('{headsUpIsCircuit ? null : (');
+    expect(SHEETS).toContain('accessibilityLabel="Unlink the superset"');
   });
 
   test('the circuit tip never tells the athlete to unlink', () => {
-    const tip = SRC.match(/'Tip: if a station is taken[^']*'/)?.[0] ?? '';
+    const tip = SHEETS.match(/'Tip: if a station is taken[^']*'/)?.[0] ?? '';
     expect(tip).toBeTruthy();
     expect(tip.toLowerCase()).not.toContain('unlink');
   });
@@ -103,8 +110,8 @@ describe('F-13 (c): rounds, not sets, wherever a circuit is described', () => {
   });
 
   test('the reorder sheet chip labels a circuit station "Circuit", with the repeat icon', () => {
-    expect(SRC).toContain("const rowIsCircuit = item.routineExercise?.groupKind === 'circuit';");
-    expect(SRC).toContain("{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}");
+    expect(SHEETS).toContain("const rowIsCircuit = item.routineExercise?.groupKind === 'circuit';");
+    expect(SHEETS).toContain("{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}");
   });
 
   test('the notification body counts rounds when the caller says it is a circuit', () => {
@@ -157,7 +164,7 @@ describe('F-13 (d, e): the chip counts the CIRCUIT\'s round, and rotates rather 
 
 describe('F-13 (f) / A15: a full-library swap is not filed as a style cause', () => {
   test('the "search the full library" escape relaxes the style pool before the picker opens', () => {
-    const footer = SRC.slice(SRC.indexOf('ListFooterComponent={'), SRC.indexOf('accessibilityLabel="Search exercise library"'));
+    const footer = SHEETS.slice(SHEETS.indexOf('ListFooterComponent={'), SHEETS.indexOf('accessibilityLabel="Search exercise library"'));
     expect(footer).toContain('setSwapStyleShowAll(true);');
     expect(footer).toContain("setPickerMode('swap');");
   });

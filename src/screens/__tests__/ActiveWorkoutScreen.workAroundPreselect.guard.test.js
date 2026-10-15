@@ -24,6 +24,13 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'ActiveWorkoutScreen.js'), 'utf8');
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
   // CC33 close-out renamed the user-facing copy to the words a person
@@ -31,9 +38,9 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
   // answer, digest pattern 5; the competitive teardown's sharpest
   // complaint was a GOWOD review asking for exactly that option). The
   // BEHAVIOUR this file pins is unchanged - only the anchors move.
-  const site = SRC.indexOf("accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today`");
-  const alertSite = SRC.lastIndexOf('appAlert(', site);
-  const block = SRC.slice(alertSite, site);
+  const site = SHEETS.indexOf("accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today`");
+  const alertSite = SHEETS.lastIndexOf('appAlert(', site);
+  const block = SHEETS.slice(alertSite, site);
 
   test('reads the real sheet block (sanity: both buttons are present)', () => {
     expect(site).toBeGreaterThan(-1);
@@ -72,11 +79,14 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
 
   test('the labels are the user\'s words, not the lane\'s internal vocabulary', () => {
     expect(SRC).not.toMatch(/Swap and note a temporary change/);
+    expect(SHEETS).not.toMatch(/Swap and note a temporary change/);
     // "Work around this" was our term on the user's own button. It may
     // still appear in prose ("Volyume will work around this") and in
     // comments, but never again as a control the user has to decode.
     expect(SRC).not.toMatch(/>Work around this</);
     expect(SRC).not.toMatch(/label="Work around/);
+    expect(SHEETS).not.toMatch(/>Work around this</);
+    expect(SHEETS).not.toMatch(/label="Work around/);
   });
 });
 

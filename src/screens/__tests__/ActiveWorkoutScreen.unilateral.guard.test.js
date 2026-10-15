@@ -61,6 +61,13 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 describe('unilateral logging: laterality detection never forces bilateral exercises', () => {
   test('the suggestion effect gates strictly on exercise.laterality === \'unilateral\'', () => {
@@ -73,7 +80,7 @@ describe('unilateral logging: laterality detection never forces bilateral exerci
   });
 
   test('the manual overflow toggle is scoped to unilateral-flagged exercises only', () => {
-    expect(ACTIVE_WORKOUT).toContain("exercise?.laterality === 'unilateral' && (");
+    expect(SHEETS).toContain("exercise?.laterality === 'unilateral' && (");
   });
 
   test('the suggestion never repeats once an exercise has been asked about', () => {
@@ -189,7 +196,7 @@ describe('one-time walkthrough fires once ever, same @volyume_seen_* convention 
 
   test('the walkthrough-seen flag is read once at load and written on either answer', () => {
     expect(ACTIVE_WORKOUT).toContain('AsyncStorage.getItem(UNILATERAL_WALKTHROUGH_SEEN_KEY).catch(() => null),');
-    expect(ACTIVE_WORKOUT).toContain("AsyncStorage.setItem(UNILATERAL_WALKTHROUGH_SEEN_KEY, 'true').catch(() => {});");
+    expect(SHEETS).toContain("AsyncStorage.setItem(UNILATERAL_WALKTHROUGH_SEEN_KEY, 'true').catch(() => {});");
   });
 
   test('later exercises get a quick confirm only once the walkthrough has been seen', () => {
@@ -199,7 +206,7 @@ describe('one-time walkthrough fires once ever, same @volyume_seen_* convention 
 
   test('R4 (D64): the walkthrough teaches the two-tap flow and never promises a "lower side" comparison', () => {
     expect(ACTIVE_WORKOUT).not.toContain("using your lower side's reps");
-    expect(ACTIVE_WORKOUT).toContain('Do your first side, then tap the check.');
-    expect(ACTIVE_WORKOUT).toContain('Tap the check again to log the other side: one more tap on the same control.');
+    expect(SHEETS).toContain('Do your first side, then tap the check.');
+    expect(SHEETS).toContain('Tap the check again to log the other side: one more tap on the same control.');
   });
 });

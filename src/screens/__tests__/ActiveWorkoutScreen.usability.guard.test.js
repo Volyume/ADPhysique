@@ -5,6 +5,15 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the overflow, warm-up, set type, reorder,
+// info and swap sheets, the three raw Modals and the styles used only by them
+// moved to SessionSheets.js. Pins on that JSX and on those styles read the
+// new file; the pinned strings and regexes are unchanged.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 // Re-pinned for D43 S1 extraction: LoggedSetRow and EmptyExerciseView moved
 // out of ActiveWorkoutScreen.js into src/components/workout/ (pure
 // extraction, no behaviour/visual change -- see the extraction's own header
@@ -117,10 +126,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // R3 rebuild: the in-card first-set paragraph is DELETED - the founder
     // ruled the set card carries the set, never a lesson. The same glossary
     // education is pull-only behind a named row.
-    expect(ACTIVE_WORKOUT).toContain("'How logging works'");
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="How logging works"');
-    expect(ACTIVE_WORKOUT).toContain('Use exercise options for form tips, warm-ups, swaps and session settings.');
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Exercise options"');
+    expect(SHEETS).toContain("'How logging works'");
+    expect(SHEETS).toContain('accessibilityLabel="How logging works"');
+    expect(SHEETS).toContain('Use exercise options for form tips, warm-ups, swaps and session settings.');
+    expect(SHEETS).toContain('accessibilityLabel="Exercise options"');
+    expect(SHEETS).not.toContain('accessibilityLabel="More options for this exercise"');
     expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="More options for this exercise"');
     // The hint's RENDER is gone (its frozen style entries await the queued
     // dead-styles sweep, recorded on the board).
@@ -233,7 +243,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
     // Re-pinned for D43 S1 extraction: loggedSetRow moved to
     // src/components/workout/LoggedSetRow.js's own frozen styles.
-    expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
+    expect(SHEETS).toContain('numberOfLines={1}');
     // Phase 2B (founder ruling, screenshot failure 7): routine estimated-max
     // copy is REMOVED from the entry card - the record system (recordRow /
     // recordLine.isRecord) is the only max-adjacent surface left.
@@ -259,9 +269,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // D148: the logger's primary is the standard primary (raised surface,
     // white label), not an amber fill.
     expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
-    expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.title, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');
+    expect(SHEETS).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
+    expect(SHEETS).toContain('swapTitle: { ...type.title, color: colors.textPrimary }');
+    expect(SHEETS).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toMatch(/exerciseName: \{ flex: 1, fontSize: fontSize\.lg,[\s\S]*fontWeight: fontWeight\.black/);
     expect(ACTIVE_WORKOUT).not.toMatch(/completeBtnText: \{ fontSize: fontSize\.md,[\s\S]*fontWeight: fontWeight\.bold/);
   });
@@ -328,7 +338,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sheetOptionLabel
     // gained a live.sheetOptionLabel override in its style array (source:
     // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
+    expect(SHEETS).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
     // R3 rebuild (founder ruling 2026-07-12): the corner pencil was a
     // one-way latch (open only, dead after its first tap) and is DELETED.
     // NowCard's note row is the one entry point and toggles honestly both
@@ -360,10 +370,13 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain("{ text: 'Keep training', style: 'cancel' }");
     expect(ACTIVE_WORKOUT).toContain("{ text: 'Discard workout', style: 'destructive', onPress: () => discardWorkout(source) }");
     expect(ACTIVE_WORKOUT).toContain("confirmDiscard('ActiveWorkoutScreen.discardModal')");
-    expect(ACTIVE_WORKOUT).toContain("confirmDiscard('ActiveWorkoutScreen.discardStale')");
+    expect(SHEETS).toContain("confirmDiscard('ActiveWorkoutScreen.discardStale')");
     expect(ACTIVE_WORKOUT).not.toContain('showDiscardModal');
     expect(ACTIVE_WORKOUT).not.toContain('discardConfirmBtnText');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
+    expect(SHEETS).not.toContain('showDiscardModal');
+    expect(SHEETS).not.toContain('discardConfirmBtnText');
+    expect(SHEETS).not.toContain('>Keep Training<');
     // D220 review: the check is the one control, so the retry names it.
     expect(ACTIVE_WORKOUT).toContain("const retryAction = 'the check';");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
@@ -371,33 +384,38 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('long workout utility sheets are scroll-safe on phone screens', () => {
-    expect(ACTIVE_WORKOUT).toContain("import BottomSheet from '../components/BottomSheet';");
-    expect(ACTIVE_WORKOUT).toContain('function WorkoutSheetScroll');
-    expect(ACTIVE_WORKOUT).toContain('function WorkoutBottomSheet');
-    expect(ACTIVE_WORKOUT).toContain('<BottomSheet');
-    expect(ACTIVE_WORKOUT.match(/<WorkoutBottomSheet/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(SHEETS).toContain("import BottomSheet from '../../BottomSheet';");
+    expect(SHEETS).toContain('function WorkoutSheetScroll');
+    expect(SHEETS).toContain('function WorkoutBottomSheet');
+    expect(SHEETS).toContain('<BottomSheet');
+    expect(SHEETS.match(/<WorkoutBottomSheet/g)?.length).toBeGreaterThanOrEqual(4);
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetOverlay}');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetHost}');
     expect(ACTIVE_WORKOUT).not.toContain('styles.sheetHandle');
-    expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
+    expect(SHEETS).not.toContain('style={styles.sheetOverlay}');
+    expect(SHEETS).not.toContain('style={styles.sheetHost}');
+    expect(SHEETS).not.toContain('styles.sheetHandle');
+    expect(SHEETS).toContain('keyboardShouldPersistTaps="handled"');
   });
 
   test('warm-up helper uses gym-floor language, not internal ramp wording', () => {
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
+    expect(SHEETS).toContain('accessibilityLabel="Warm-up sets"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.sheetTitle
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
-    expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
-    expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
+    expect(SHEETS).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
+    expect(SHEETS).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
+    expect(SHEETS).toContain('Load as a warm-up set.');
     expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');
     expect(ACTIVE_WORKOUT).not.toContain('<Text style={styles.sheetOptionLabel}>Warm-up ramp</Text>');
+    expect(SHEETS).not.toContain('Tap a row to load it as a warm-up');
+    expect(SHEETS).not.toContain('<Text style={styles.sheetOptionLabel}>Warm-up ramp</Text>');
   });
 
   test('custom workout modals stay within the screen and keyboard-safe', () => {
-    expect(ACTIVE_WORKOUT).toMatch(/supSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
-    expect(ACTIVE_WORKOUT).toContain('supSheetScroll');
-    expect(ACTIVE_WORKOUT).toContain('supSheetContent');
-    expect(ACTIVE_WORKOUT).toMatch(/staleSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(SHEETS).toMatch(/supSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(SHEETS).toContain('supSheetScroll');
+    expect(SHEETS).toContain('supSheetContent');
+    expect(SHEETS).toMatch(/staleSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
     // The discard confirm is AppAlert's own dialog now (D220 addendum 26),
     // which carries its own 88% cap.
   });
@@ -430,11 +448,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('modal actions use the same compact logger button system', () => {
-    expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(SHEETS).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     // keepTrainingBtn left with the hand-rolled discard modal (D220 addendum 26).
-    expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.textPrimary }');
+    expect(SHEETS).toContain('staleResumeText: { ...type.bodyStrong, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('staleResumeText: { fontSize: fontSize.md');
-    expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
+    expect(SHEETS).not.toContain('staleResumeText: { fontSize: fontSize.md');
+    expect(SHEETS).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(SHEETS).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
   });
 });

@@ -21,6 +21,9 @@ const path = require('path');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const DETAIL = read('ExerciseDetailScreen.js');
 const ACTIVE = read('ActiveWorkoutScreen.js');
+// D228 item 9 (monolith first cut): the swap Modal's JSX, with its calm
+// fail-closed line, moved to SessionSheets.js.
+const ACTIVE_SHEETS = read('../components/workout/session/SessionSheets.js');
 const ROUTINE = read('RoutineDetailScreen.js');
 const PLANS = read('PlansScreen.js');
 const LINE = /Swaps aren(\\)?'t available right now\. Try again in a moment\./;
@@ -31,8 +34,8 @@ test('3: the exercise page narrows substitutes to the authored slot\'s options',
   expect(DETAIL).toContain('pool.filter((row) => options.has(row?.id))');
 });
 
-test.each([['ActiveWorkoutScreen', ACTIVE], ['RoutineDetailScreen', ROUTINE]])('4: %s fails closed with the calm line', (_n, src) => {
-  expect(src).toMatch(LINE);
+test.each([['ActiveWorkoutScreen', ACTIVE, ACTIVE_SHEETS], ['RoutineDetailScreen', ROUTINE, ROUTINE]])('4: %s fails closed with the calm line', (_n, src, lineSrc) => {
+  expect(lineSrc).toMatch(LINE);
   expect(src).toContain('authoredPlanState(');
   expect(src).toContain("muscle: exercise?.primaryMuscle ?? null");
   expect(src).toMatch(/catch \(_\) \{[^}]*unavailable = true;/);

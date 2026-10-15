@@ -1407,7 +1407,8 @@ describe('LOGGER: the first session states its effort target and its own words (
   });
 
   test('the warm-up sheet helps the user with no working weight (C5-P13-04)', () => {
-    const src = read('screens/ActiveWorkoutScreen.js');
+    // D228 item 9 (monolith first cut): the warm-up sheet moved to SessionSheets.js.
+    const src = read('components/workout/session/SessionSheets.js');
     // The branch aimed at the first-timer used to be a dead end.
     expect(src).not.toContain('Enter your working weight first, then come back for warm-up sets.');
     expect(src).toContain('No working weight yet. Start with the empty bar');

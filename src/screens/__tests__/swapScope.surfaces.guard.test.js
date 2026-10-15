@@ -38,6 +38,12 @@ const SCREENS = path.join(__dirname, '..');
 const COMPONENTS = path.join(__dirname, '..', '..', 'components');
 const read = (dir, f) => fs.readFileSync(path.join(dir, f), 'utf8');
 const ACTIVE = read(SCREENS, 'ActiveWorkoutScreen.js');
+// D228 item 9 (monolith first cut): the swap Modal's JSX moved to
+// SessionSheets.js; pins on that JSX read it from there.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
 const ROUTINE = read(SCREENS, 'RoutineDetailScreen.js');
 
 // The text of a function from its signature to the first closing brace at the same indent.
@@ -71,9 +77,13 @@ describe('every swap surface is listed, each with its answer about scope', () =>
   test('the two surfaces that ask import the one-off-safe path, not the plan write', () => {
     for (const src of [ACTIVE, ROUTINE]) {
       expect(src).toContain("import { applyExerciseSwap } from '../lib/exercise/swapApply';");
-      expect(src).toContain("import SegmentedControl from '../components/SegmentedControl';");
-      expect(src).toContain('SWAP_SCOPE_OPTIONS');
     }
+    // The logger's swap Modal (SegmentedControl and the scope options) now
+    // lives in SessionSheets.js; its import paths are relative to that file.
+    expect(SHEETS).toContain("import SegmentedControl from '../../SegmentedControl';");
+    expect(SHEETS).toContain('SWAP_SCOPE_OPTIONS');
+    expect(ROUTINE).toContain("import SegmentedControl from '../components/SegmentedControl';");
+    expect(ROUTINE).toContain('SWAP_SCOPE_OPTIONS');
     // The logger has no way to write the plan except through applyExerciseSwap.
     expect(ACTIVE).not.toMatch(/import \{[^}]*\b(updateRoutineExerciseExercise|recordExerciseSwap)\b[^}]*\} from '\.\.\/lib\/database'/);
   });
@@ -82,7 +92,7 @@ describe('every swap surface is listed, each with its answer about scope', () =>
 describe('ActiveWorkoutScreen: the swap sheet asks, the one-off leaves the plan alone', () => {
   const confirm = fnWindow(ACTIVE, 'function handleConfirmSwap(newExercise) {');
   const open = fnWindow(ACTIVE, 'async function handleOpenSwap(');
-  const sheet = ACTIVE.match(/\{\/\* Exercise Swap Modal \*\/\}[\s\S]*?<\/Modal>/)?.[0] ?? '';
+  const sheet = SHEETS.match(/\{\/\* Exercise Swap Modal \*\/\}[\s\S]*?<\/Modal>/)?.[0] ?? '';
 
   test('the sheet carries the choice, and a fresh open starts at "Just this session"', () => {
     expect(sheet).toContain('<SegmentedControl');

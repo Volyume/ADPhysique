@@ -83,7 +83,11 @@ describe('the hand-rolled fills on the reviewed screens follow the same rule', (
     expect(diary).toMatch(/<Ionicons name="barcode-outline" size=\{26\} color=\{t\.colors\.primary\} \/>/);
   });
   test('the workout logger primaries are raised surfaces with white labels', () => {
-    const aw = read('screens/ActiveWorkoutScreen.js');
+    // D228 item 9 (monolith first cut): supPrimaryBtn and staleResume moved
+    // with the raw Modals to SessionSheets.js; completeBtn stays on the screen.
+    const awScreen = read('screens/ActiveWorkoutScreen.js');
+    const awSheets = read('components/workout/session/SessionSheets.js');
+    const aw = awScreen + '\n' + awSheets;
     // keepTrainingBtn left with the hand-rolled discard modal (D220 addendum
     // 26, 2026-10-09): the discard confirm is AppAlert's own dialog now.
     for (const k of ['completeBtn', 'supPrimaryBtn', 'staleResume']) {

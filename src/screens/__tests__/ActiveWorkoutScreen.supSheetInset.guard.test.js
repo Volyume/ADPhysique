@@ -18,27 +18,37 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
+// D228 item 9 (monolith first cut): the sheets' JSX moved to SessionSheets.js;
+// pins on that JSX read it from there, the screen keeps every handler.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 
 describe('ActiveWorkoutScreen superset/unilateral sheet bottom inset (D36a)', () => {
   test('both modals widen supSheetContent with the safe-area inset', () => {
-    const occurrences = ACTIVE_WORKOUT.match(
+    const occurrences = SHEETS.match(
       /contentContainerStyle=\{\[styles\.supSheetContent,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.xxl,\s*insets\.bottom\s*\+\s*spacing\.lg\)\s*\}\]\}/g,
     ) ?? [];
     expect(occurrences.length).toBe(2);
   });
 
   test('the superset heads-up modal uses the inset-aware contentContainerStyle', () => {
-    const supersetWindow = ACTIVE_WORKOUT.match(/visible=\{!!supersetHeadsUp\}[\s\S]{0,600}/)?.[0] ?? '';
+    const supersetWindow = SHEETS.match(/visible=\{!!supersetHeadsUp\}[\s\S]{0,600}/)?.[0] ?? '';
     expect(supersetWindow).toContain('contentContainerStyle={[styles.supSheetContent, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}');
   });
 
   test('the unilateral-suggest modal uses the inset-aware contentContainerStyle', () => {
-    const unilateralWindow = ACTIVE_WORKOUT.match(/visible=\{!!unilateralSuggest\}[\s\S]{0,1200}/)?.[0] ?? '';
+    const unilateralWindow = SHEETS.match(/visible=\{!!unilateralSuggest\}[\s\S]{0,1200}/)?.[0] ?? '';
     expect(unilateralWindow).toContain('contentContainerStyle={[styles.supSheetContent, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}');
   });
 
   test('these two modals stay raw Modals, not BottomSheet, by ruling', () => {
-    const supersetWindow = ACTIVE_WORKOUT.match(/Superset \/ giant-set heads-up modal[\s\S]{0,600}/)?.[0] ?? '';
+    const supersetWindow = SHEETS.match(/Superset \/ giant-set heads-up modal[\s\S]{0,600}/)?.[0] ?? '';
     expect(supersetWindow).toContain('<Modal');
+    // The screen no longer holds either modal; it renders SessionSheets.
+    expect(ACTIVE_WORKOUT).toContain('<SessionSheets');
+    expect(ACTIVE_WORKOUT).not.toContain('contentContainerStyle={[styles.supSheetContent');
   });
 });

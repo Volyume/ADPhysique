@@ -33,6 +33,14 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   'utf8',
 );
 
+// The sheets' JSX (overflow, reorder) moved to SessionSheets.js (D228 item 9,
+// monolith first cut); the pins on that JSX read it from there. The screen
+// keeps every handler and all state.
+const SHEETS = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'session', 'SessionSheets.js'),
+  'utf8',
+);
+
 describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9, re-pinned D43 S3)', () => {
   test('D43 S3: handleMoveExercise/canMoveUp/canMoveDown (the old overflow one-step move) are gone -- the reorder sheet is the one path', () => {
     expect(ACTIVE_WORKOUT).not.toContain('function handleMoveExercise(direction)');
@@ -43,8 +51,9 @@ describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9, re-pinned D43
   });
 
   test('D32: no new dependency -- the reorder sheet reuses DragReorderList (gesture-handler + Reanimated), never a reorder library', () => {
-    expect(ACTIVE_WORKOUT).toContain("import DragReorderList from '../components/DragReorderList';");
-    expect(ACTIVE_WORKOUT).toContain('<DragReorderList');
+    // The import path is relative to the new file's folder.
+    expect(SHEETS).toContain("import DragReorderList from '../../DragReorderList';");
+    expect(SHEETS).toContain('<DragReorderList');
     expect(ACTIVE_WORKOUT).not.toMatch(/draggable-flatlist/i);
     expect(ACTIVE_WORKOUT).not.toMatch(/react-native-sortable/i);
   });
@@ -63,9 +72,9 @@ describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9, re-pinned D43
 
   test('D32: the overflow menu opens the reorder sheet (only when there is more than one exercise)', () => {
     expect(ACTIVE_WORKOUT).toContain('const [showReorderSheet, setShowReorderSheet] = useState(false);');
-    expect(ACTIVE_WORKOUT).toContain('{workoutExercises.length > 1 && (');
-    expect(ACTIVE_WORKOUT).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Reorder exercises"');
+    expect(SHEETS).toContain('{workoutExercises.length > 1 && (');
+    expect(SHEETS).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');
+    expect(SHEETS).toContain('accessibilityLabel="Reorder exercises"');
   });
 
   test('D32: the sheet is block-aware -- a paired exercise moves and lands as a unit, via the shared reorder helper', () => {
@@ -93,7 +102,7 @@ describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9, re-pinned D43
   });
 
   test('D32: the sheet is tier-blind (no tier reference anywhere in its render block)', () => {
-    const sheetWindow = ACTIVE_WORKOUT.match(/\{\/\* Reorder sheet \(D32[\s\S]*?<\/WorkoutBottomSheet>/)?.[0] ?? '';
+    const sheetWindow = SHEETS.match(/\{\/\* Reorder sheet \(D32[\s\S]*?<\/WorkoutBottomSheet>/)?.[0] ?? '';
     expect(sheetWindow.length).toBeGreaterThan(0);
     expect(sheetWindow).not.toMatch(/\btier\b/);
   });
