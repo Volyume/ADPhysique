@@ -25,6 +25,7 @@ import { readShareSettings } from './trainingProfile';
 import { sessionShareGateState } from './trainingConsistency';
 import { readCachedMe } from './profile';
 import { listMyGroups } from './groups';
+import { readFirstPostConfirmed } from './firstPost';
 import { buildSessionPayload, buildPrPayload, buildMilestonePayload } from './posts';
 
 export const PENDING_ITEMS_KEY = 'community.pendingItems';
@@ -253,9 +254,11 @@ export async function publishAmbientItems({
 /**
  * Flush every queued item through the same call, behind the same gate as
  * publishAmbientItems (sharing on, and neither calm mode nor an open ED
- * flag). A terminal refusal drops its item silently (no toast: this is an
- * ambient background convenience, never a user-facing failure); a
- * retryable one keeps it queued for the next foreground or reconnect.
+ * flag) and, from D228 item 1, the person's one-time first-post
+ * confirmation (held, never dropped, until they have answered). A terminal
+ * refusal drops its item silently (no toast: this is an ambient background
+ * convenience, never a user-facing failure); a retryable one keeps it
+ * queued for the next foreground or reconnect.
  * Idempotent throughout: re-sending an item already delivered returns the
  * existing row (`client_ref`), never a duplicate.
  *
@@ -284,6 +287,15 @@ export async function flushPendingAmbientItems(userId) {
   }
   const { allowed } = await sessionShareGateState(userId, share.share_sessions);
   if (!allowed) return { flushed: 0, dropped: 0, remaining: items.length };
+  // D228 item 1 (option B): the first automatic post waits for the person's
+  // one-time confirmation on the workout summary. Until they have answered,
+  // nothing queued is sent on their behalf: everything stays queued, nothing
+  // is dropped (the same shape as the unreadable-store hold above). After the
+  // gate on purpose: calm mode and an open flag still decide first. An
+  // unreadable confirmation key reads as unconfirmed, so this fails closed.
+  if (!(await readFirstPostConfirmed(userId))) {
+    return { flushed: 0, dropped: 0, remaining: items.length };
+  }
   const stillPending = [];
   let flushed = 0;
   let dropped = 0;

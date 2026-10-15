@@ -15,6 +15,9 @@
  *    (`offline`/`unavailable`); every other refusal (`not_allowed`,
  *    `minor_restricted`, anything else) is dropped, never retried;
  *  - `flushPendingAmbientItems` follows the identical retry-vs-drop rule;
+ *  - D228 item 1: the flush holds the queue (sends nothing, drops nothing)
+ *    for a person who has not made the one-time first-post confirmation,
+ *    and fails closed when that key cannot be read;
  *  - the audience chooser is exactly three values, and both screens that
  *    render it build the chip row from that one closed set rather than a
  *    hand-rolled list that could drift from it;
@@ -52,6 +55,7 @@ const { readShareSettings } = require('../lib/community/trainingProfile');
 const { sessionShareGateState } = require('../lib/community/trainingConsistency');
 const { readCachedMe } = require('../lib/community/profile');
 const { listMyGroups } = require('../lib/community/groups');
+const { firstPostConfirmedKey } = require('../lib/community/firstPost');
 const {
   publishAmbientItems, flushPendingAmbientItems, PENDING_ITEMS_KEY,
   hasSeenSessionShareOffer, recordSessionShareOfferSeen,
@@ -67,6 +71,9 @@ const PR_LIST = [
 beforeEach(() => {
   jest.clearAllMocks();
   mockStore.clear();
+  // D228 item 1: every case below is about a person who has already made the
+  // one-time first-post confirmation; the unconfirmed cases set their own.
+  mockStore.set(firstPostConfirmedKey('u1'), '1');
   readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'followers' });
   sessionShareGateState.mockResolvedValue({ allowed: true, gated: false });
   readCachedMe.mockResolvedValue({ is_minor: false });
@@ -277,6 +284,78 @@ describe('flushPendingAmbientItems: the gate at flush time (review F1)', () => {
     const edgeAt = app.indexOf("callSyncAll('network')");
     expect(edgeAt).toBeGreaterThan(-1);
     expect(app.slice(edgeAt, edgeAt + 1200)).toMatch(/flushPendingAmbientItems\(uid\)/);
+  });
+});
+
+// D228 item 1 (option B): the first automatic post waits for one confirmation.
+// A queued item belongs to a person who has not confirmed only when it was
+// queued before the confirmation existed; the flush must not send it on their
+// behalf. Written to FAIL against the shipped flush, which sent it.
+describe('flushPendingAmbientItems: the first-post confirmation (D228 item 1)', () => {
+  async function queueOne() {
+    createPost.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
+    await publishAmbientItems({ userId: 'u1', workoutId: 'w1' });
+    createPost.mockClear();
+  }
+
+  test('unconfirmed: nothing is sent, nothing is dropped, everything stays queued', async () => {
+    await queueOne();
+    mockStore.delete(firstPostConfirmedKey('u1'));
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+    expect(JSON.parse(mockStore.get(PENDING_ITEMS_KEY))).toHaveLength(1);
+  });
+
+  test('FAILS CLOSED: an unreadable confirmation key holds the queue too', async () => {
+    await queueOne();
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const plainRead = async (k) => (mockStore.has(k) ? mockStore.get(k) : null);
+    AsyncStorage.getItem.mockImplementation(async (k) => {
+      if (k === firstPostConfirmedKey('u1')) throw new Error('unreadable');
+      return plainRead(k);
+    });
+    try {
+      const out = await flushPendingAmbientItems('u1');
+      expect(createPost).not.toHaveBeenCalled();
+      expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+    } finally {
+      AsyncStorage.getItem.mockImplementation(plainRead);
+    }
+  });
+
+  test('confirmed: the queue drains exactly as before', async () => {
+    await queueOne();
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).toHaveBeenCalledTimes(1);
+    expect(out).toEqual({ flushed: 1, dropped: 0, remaining: 0 });
+  });
+
+  test('withdrawn sharing still drops the queue for an unconfirmed person (consent withdrawn beats the hold)', async () => {
+    await queueOne();
+    mockStore.delete(firstPostConfirmedKey('u1'));
+    readShareSettings.mockResolvedValue({ share_sessions: false, sessions_audience: 'followers' });
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 1, remaining: 0 });
+  });
+
+  test('the gate still runs: gated AND unconfirmed sends nothing either', async () => {
+    await queueOne();
+    mockStore.delete(firstPostConfirmedKey('u1'));
+    sessionShareGateState.mockResolvedValue({ allowed: false, gated: true });
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+  });
+
+  test('source: the confirmation is read before any send, and the gate is still consulted first', () => {
+    const ambient = fs.readFileSync(path.join(__dirname, '../lib/community/ambient.js'), 'utf8');
+    const flushAt = ambient.indexOf('export async function flushPendingAmbientItems(userId)');
+    const body = ambient.slice(flushAt, ambient.indexOf('export async function clearPendingAmbientItems', flushAt));
+    expect(body.indexOf('readFirstPostConfirmed(')).toBeGreaterThan(-1);
+    expect(body.indexOf('sessionShareGateState(')).toBeLessThan(body.indexOf('readFirstPostConfirmed('));
+    expect(body.indexOf('readFirstPostConfirmed(')).toBeLessThan(body.indexOf('sendAutoItem('));
   });
 });
 
@@ -533,10 +612,17 @@ describe('the Community share strip under the hero (founder order 2026-09-22, so
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const body = SOURCE.slice(start, end);
-    expect(body.indexOf('readCachedMe(user.id)')).toBeLessThan(body.indexOf('publishAmbientItems('));
+    // D228 item 1: the publish itself moved into `runAmbientPublish` so the
+    // first-post sheet can run it after a confirmation; the effect still
+    // reads the cached profile before it can reach it.
+    expect(body.indexOf('readCachedMe(user.id)')).toBeLessThan(body.indexOf('runAmbientPublish()'));
     expect(body).toMatch(/skipped: 'no_profile'/);
     expect(body).toMatch(/skipped: 'sharing_off'/);
-    expect(body).toMatch(/setAmbientOutcome\(out/);
+    const helperAt = SOURCE.indexOf('const runAmbientPublish = async () => {');
+    expect(helperAt).toBeGreaterThan(-1);
+    const helper = SOURCE.slice(helperAt, start);
+    expect(helper).toMatch(/publishAmbientItems\(/);
+    expect(helper).toMatch(/setAmbientOutcome\(out/);
   });
 
   test('a queued (offline) share never offers a second, duplicating post', () => {

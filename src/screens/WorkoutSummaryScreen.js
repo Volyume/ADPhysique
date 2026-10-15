@@ -26,6 +26,7 @@ import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import BottomSheet from '../components/BottomSheet';
+import FirstPostSheet from '../components/community/FirstPostSheet';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -70,9 +71,13 @@ import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
 import {
   loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings, refreshMe, sessionsSharingSentence,
-  publishConsistency, publishAmbientItems,
+  publishConsistency, publishAmbientItems, sessionShareGateState,
   flushPendingAmbientItems, hasSeenSessionShareOffer, recordSessionShareOfferSeen,
 } from '../lib/community';
+// D228 item 1: the first automatic post waits for one confirmation. Direct
+// imports, beside the barrel, because these two modules are new in this lane.
+import { readFirstPostConfirmed, markFirstPostConfirmed } from '../lib/community/firstPost';
+import { saveShareSessions } from '../lib/community/shareSessions';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -287,6 +292,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [ambientOutcome, setAmbientOutcome] = useState(null);
   const [communityMember, setCommunityMember] = useState(null);
   const [calmKnown, setCalmKnown] = useState(false);
+  // D228 item 1 (option B): the one-time "Share this session?" sheet, shown
+  // before the FIRST automatic post. `firstPostSheetMinor` is kept apart from
+  // `firstPostSheetOpen` so a minor's sheet does not flash the Everyone action
+  // while it closes.
+  const [firstPostSheetOpen, setFirstPostSheetOpen] = useState(false);
+  const [firstPostSheetMinor, setFirstPostSheetMinor] = useState(false);
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
   // coaching loop, but only open when the lifter deliberately rates the session.
@@ -399,7 +410,52 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // time this screen shows). A best-effort opportunistic flush of any
   // previously queued items rides along, so returning to the app after
   // being offline also drains the queue without a dedicated global hook.
+  // D228 item 1: the FIRST such post waits for the person's one-time
+  // confirmation (the sheet below); the flush holds the queue until then.
   const ambientPublishedRef = useRef(false);
+  // D228 item 1: the sheet is answered once; a second call (a double tap, or
+  // the sheet's own close arriving after a choice) is ignored.
+  const firstPostAnsweredRef = useRef(false);
+
+  // The normal publish for THIS workout. Unchanged in what it sends; lifted out
+  // of the effect below so the first-post sheet can run it after a
+  // confirmation. It is only ever reached past the gate and the confirmation.
+  const runAmbientPublish = async () => {
+    const prList = (detectedPRs || []).map((p) => ({
+      exerciseId: p.exerciseId,
+      exerciseName: p.exerciseName,
+      weight: p.weight,
+      reps: p.reps,
+      units: p.units,
+      // F2: detectPR's previousValue is type-dependent (algorithms.js)
+      // -- an e1RM for 1rm_estimate, a rep count for
+      // most_reps_at_weight -- and only a weight for heaviest_weight.
+      // ActivityItemRow renders this figure as a weight, so only pass
+      // it through for the one PR type where that is true.
+      previousBest: p.type === 'heaviest_weight' ? (p.previousValue ?? null) : null,
+      date: startedAt ?? endedAt ?? Date.now(),
+    }));
+    // D221 3d: the completed-session count (this one included) decides
+    // whether a milestone follows; a failed read just means none.
+    let completedCount = null;
+    try {
+      // eslint-disable-next-line global-require
+      completedCount = await require('../lib/database').getCompletedWorkoutCount(user.id);
+    } catch (_e) { /* no milestone this time */ }
+    const out = await publishAmbientItems({
+      userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg', completedCount,
+    });
+    setAmbientOutcome(out ?? { created: 0, queued: 0, skipped: 'failed' });
+    if (out?.sessionPostId) {
+      setAutoSessionPost({ id: out.sessionPostId, payload: out.sessionPayload });
+    }
+    // D194 addendum 2: the server refused the session because the
+    // profile's own setting does not allow it. Refresh the profile now,
+    // which mirrors the real setting onto this device, so the sharing
+    // screen the strip links to shows the truth.
+    if (out?.sessionRefused === 'not_allowed') refreshMe(user.id).catch(() => {});
+  };
+
   useEffect(() => {
     if (readOnly || !workoutId || !user?.id || ambientPublishedRef.current) return;
     ambientPublishedRef.current = true;
@@ -416,39 +472,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         setCommunityMember(member);
         if (!member) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'no_profile' }); return; }
         if (!share.share_sessions) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'sharing_off' }); return; }
-        const prList = (detectedPRs || []).map((p) => ({
-          exerciseId: p.exerciseId,
-          exerciseName: p.exerciseName,
-          weight: p.weight,
-          reps: p.reps,
-          units: p.units,
-          // F2: detectPR's previousValue is type-dependent (algorithms.js)
-          // -- an e1RM for 1rm_estimate, a rep count for
-          // most_reps_at_weight -- and only a weight for heaviest_weight.
-          // ActivityItemRow renders this figure as a weight, so only pass
-          // it through for the one PR type where that is true.
-          previousBest: p.type === 'heaviest_weight' ? (p.previousValue ?? null) : null,
-          date: startedAt ?? endedAt ?? Date.now(),
-        }));
-        // D221 3d: the completed-session count (this one included) decides
-        // whether a milestone follows; a failed read just means none.
-        let completedCount = null;
+        // D228 item 1 (option B). The order below is the law: the calm / open
+        // ED flag gate FIRST (it decides before anything is asked or posted;
+        // a gate that cannot answer is closed), then the person's one-time
+        // confirmation, and only then the publish. Unconfirmed: nothing is
+        // posted; the sheet asks who should see their sessions.
+        let gateOpen = false;
         try {
-          // eslint-disable-next-line global-require
-          completedCount = await require('../lib/database').getCompletedWorkoutCount(user.id);
-        } catch (_e) { /* no milestone this time */ }
-        const out = await publishAmbientItems({
-          userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg', completedCount,
-        });
-        setAmbientOutcome(out ?? { created: 0, queued: 0, skipped: 'failed' });
-        if (out?.sessionPostId) {
-          setAutoSessionPost({ id: out.sessionPostId, payload: out.sessionPayload });
+          gateOpen = (await sessionShareGateState(user.id, share.share_sessions)).allowed === true;
+        } catch (_e) { gateOpen = false; }
+        if (!gateOpen) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'gated' }); return; }
+        if (!(await readFirstPostConfirmed(user.id))) {
+          setFirstPostSheetMinor(!!me.is_minor);
+          setFirstPostSheetOpen(true);
+          return;
         }
-        // D194 addendum 2: the server refused the session because the
-        // profile's own setting does not allow it. Refresh the profile now,
-        // which mirrors the real setting onto this device, so the sharing
-        // screen the strip links to shows the truth.
-        if (out?.sessionRefused === 'not_allowed') refreshMe(user.id).catch(() => {});
+        await runAmbientPublish();
       } catch (_e) {
         // best effort: never the reason the summary fails to show
         setAmbientOutcome((prev) => prev ?? { created: 0, queued: 0, skipped: 'failed' });
@@ -456,6 +495,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, workoutId, user?.id]);
+
+  // D228 item 1: the sheet's answers. "Everyone" and "People who follow me"
+  // write the audience through the one existing sharing path
+  // (`saveShareSessions`, the Training profile screen's own setter), record
+  // the confirmation, and only then run the normal publish for this workout.
+  // "Not now" (and a swipe, scrim tap or back) posts nothing, writes nothing
+  // and records nothing, so the question returns at the next finished workout.
+  const answerFirstPost = async (choice) => {
+    if (firstPostAnsweredRef.current) return;
+    firstPostAnsweredRef.current = true;
+    setFirstPostSheetOpen(false);
+    const keepPrivate = () => setAmbientOutcome({ created: 0, queued: 0, skipped: 'not_confirmed' });
+    if (choice === 'not_now' || !user?.id) { keepPrivate(); return; }
+    let confirmed = false;
+    try {
+      const isMinor = firstPostSheetMinor;
+      const prev = await readShareSettings(user.id);
+      // An unreadable store is not a baseline to write over.
+      if (prev.read_failed) { keepPrivate(); return; }
+      const next = { ...prev, share_sessions: true, sessions_audience: isMinor ? 'followers' : choice };
+      const saved = await saveShareSessions(user.id, prev, next, { isMinor });
+      // The rules moved on: the choice was not saved, so nothing is confirmed.
+      if (saved?.status === 'rules_outdated') { keepPrivate(); return; }
+      await markFirstPostConfirmed(user.id);
+      confirmed = true;
+      await runAmbientPublish();
+    } catch (e) {
+      logError('WorkoutSummary.firstPostConfirm', e, { workoutId });
+      if (confirmed) setAmbientOutcome((prev) => prev ?? { created: 0, queued: 0, skipped: 'failed' });
+      else keepPrivate();
+    }
+  };
 
   // Communities revamp phase 3 (Q2): decide whether to show the
   // once-only offer, once eligibility (the first completed workout ever,
@@ -593,7 +664,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // the @volyume_feedback_prompt_history_v1 store. Never fires in
   // read-only mode (viewing old history).
   useEffect(() => {
-    if (readOnly || !feedbackSheet) return;
+    // D228 item 1: never stack this on top of the first-post sheet; it waits
+    // for that sheet to close, then runs its own beat from there.
+    if (readOnly || !feedbackSheet || firstPostSheetOpen) return;
     const totalDone = completedWorkoutCount ?? 0;
     // Trigger windows: after session 1 (the "is this for you?" beat)
     // and after session 10 (the "still working?" beat). Both gated
@@ -615,7 +688,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       });
     }, 1400);
     return () => clearTimeout(t);
-  }, [readOnly, completedWorkoutCount, feedbackSheet]);
+  }, [readOnly, completedWorkoutCount, feedbackSheet, firstPostSheetOpen]);
 
   // 4-week comparison against prior sessions of the SAME routine, and the
   // last of them (compareWithPriorSessions). Skipped for one-off sessions
@@ -1416,6 +1489,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       };
     }
     if (!ambientOutcome || communityMember == null) return null;
+    // D228 item 1: "Not now" on the first-post sheet. Said plainly: nothing
+    // was posted, the manual post is still there, and the question will come
+    // back after the next workout (it is not a "sharing is off" state).
+    if (ambientOutcome.skipped === 'not_confirmed') {
+      return {
+        title: 'Only you can see this session',
+        sub: 'It has not been posted. Post it now if you like. You will be asked again after your next workout.',
+        action: {
+          title: 'Post this session',
+          a11y: 'Post this session to Community',
+          onPress: () => openCompose({ kind: 'session', workoutId }),
+        },
+        link: null,
+      };
+    }
     if (ambientOutcome.queued > 0) {
       return {
         title: 'Shares to Community when you are back online',
@@ -2378,6 +2466,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
       </BottomSheet>
+      {/* D228 item 1 (option B): the one-time question before the FIRST
+          automatic post. Only ever opened by the auto-share effect, after the
+          calm / open-flag gate and the sharing and membership checks. */}
+      <FirstPostSheet
+        visible={firstPostSheetOpen}
+        isMinor={firstPostSheetMinor}
+        onChoose={answerFirstPost}
+        onNotNow={() => answerFirstPost('not_now')}
+      />
       {/* D2: gold burst over the summary for the 50/100-session rungs. Set
           only inside the calm/ED-suppressed-free branch; renders nothing
           under reduce-motion; never blocks taps. */}

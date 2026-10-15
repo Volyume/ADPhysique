@@ -81,7 +81,11 @@ import {
   getProfile, follow, COMMUNITY_HOST_HANDLE, inviteMessage, inviteLabel, firstHereLine,
   hostRowVisible, hostCaption, readHostDismissed, writeHostDismissed, GROUP_PURPOSE_LINE,
   listMyGroups, acceptGroupInvite, declineGroupInvite,
+  readShareSettings, sessionShareGateState, sessionsSharingSentence,
 } from '../lib/community';
+// D228 item 1 (option C): the one-time receipt's seen-flag. A direct import,
+// beside the barrel, because the module is new in this lane.
+import { readJoinReceiptSeen, markJoinReceiptSeen } from '../lib/community/joinReceipt';
 import { todayLocalKey } from '../lib/dayKey';
 import { composeAudienceLine, composeDefaultVisibility } from './CommunityComposeScreen';
 
@@ -236,6 +240,8 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [status, setStatus] = useState(null);
+  // D228 item 1 (option C): the one-time receipt, { sentence } or null.
+  const [joinReceipt, setJoinReceipt] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteBusy, setInviteBusy] = useState(null);
   // Chat unread counts by group id (D221 3b), from the same `listMyGroups`
@@ -420,6 +426,40 @@ export default function CommunityHubScreen({ navigation, route }) {
     if (!focusedOnceRef.current) { focusedOnceRef.current = true; return; }
     load({ quiet: true });
   }, [load]));
+
+  // D228 item 1 (option C): the one-time post-join receipt. It names the real
+  // audience (`sessionsSharingSentence` over the person's own stored settings)
+  // and links straight to where it is changed. It shows only when the posting
+  // path's own gate (`sessionShareGateState`: sharing on, and neither calm
+  // mode nor an open ED flag) would allow a post, so it is never shown with
+  // sharing off (the sentence would only say Off), with an unreadable sharing
+  // store, or under suppression; a gate that cannot answer is closed. Re-read
+  // on every focus, so calm mode turned on elsewhere removes it on return. The
+  // seen-flag fails toward showing. Latest read wins (the ref).
+  const receiptRequestRef = useRef(0);
+  const refreshJoinReceipt = useCallback(async () => {
+    const id = receiptRequestRef.current + 1;
+    receiptRequestRef.current = id;
+    const settle = (value) => { if (id === receiptRequestRef.current) setJoinReceipt(value); };
+    if (!joined || !uid) { settle(null); return; }
+    try {
+      const share = await readShareSettings(uid);
+      const { allowed } = await sessionShareGateState(uid, share.share_sessions);
+      if (!allowed || share.read_failed) { settle(null); return; }
+      if (await readJoinReceiptSeen(uid)) { settle(null); return; }
+      settle({ sentence: sessionsSharingSentence(share.share_sessions, share.sessions_audience) });
+    } catch (_e) {
+      settle(null);
+    }
+  }, [joined, uid]);
+  useFocusEffect(useCallback(() => { refreshJoinReceipt(); }, [refreshJoinReceipt]));
+
+  // Dismissing the card, or following its link, settles it for good.
+  const settleJoinReceipt = useCallback(() => {
+    receiptRequestRef.current += 1;
+    setJoinReceipt(null);
+    markJoinReceiptSeen(uid);
+  }, [uid]);
 
   // Community product audit section 1: the app-foreground trigger for the
   // consistency counters, alongside the workout-completion one in
@@ -779,6 +819,41 @@ export default function CommunityHubScreen({ navigation, route }) {
             >
               <Text style={[t.type.captionStrong, { color: t.colors.textPrimary }]}>Read the rules</Text>
             </Pressable>
+          </Band>
+          <BandGap />
+        </>
+      ) : null}
+
+      {/* D228 item 1 (option C): the one-time receipt. `consistencyGated` is
+          a second check beside the read in `refreshJoinReceipt` (it fails
+          closed until the gate has cleared). */}
+      {joinReceipt && !consistencyGated ? (
+        <>
+          <Band style={styles.notice}>
+            <Text style={[t.type.bodyStrong, { color: t.colors.textPrimary }]}>
+              Your sessions post to Community
+            </Text>
+            <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+              {joinReceipt.sentence}
+            </Text>
+            <View style={styles.noticeActions}>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth={false}
+                title="Change who sees this"
+                onPress={() => { settleJoinReceipt(); navigation.navigate('CommunityPrivacy'); }}
+                accessibilityLabel="Change who sees your sessions"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Dismiss"
+                onPress={settleJoinReceipt}
+                accessibilityLabel="Dismiss this notice about your sessions"
+              />
+            </View>
           </Band>
           <BandGap />
         </>

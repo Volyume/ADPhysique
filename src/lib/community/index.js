@@ -131,6 +131,11 @@ export {
   recordSessionShareOfferSeen,
 } from './ambient';
 
+// D228 item 1 (options B and C): the one-time first-post confirmation and
+// the Hub's one-time post-join receipt, both device-recorded per person.
+export { FIRST_POST_AUDIENCES, firstPostConfirmedKey, readFirstPostConfirmed, markFirstPostConfirmed } from './firstPost';
+export { joinReceiptSeenKey, readJoinReceiptSeen, markJoinReceiptSeen } from './joinReceipt';
+
 export {
   respectGivenKey, lastRespectGivenState, recordRespectGiven, respectAll,
   clearRespectGivenState,
