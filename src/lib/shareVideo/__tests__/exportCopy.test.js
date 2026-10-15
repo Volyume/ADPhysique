@@ -23,13 +23,13 @@ jest.mock('expo-modules-core', () => ({
 }));
 
 const FOUNDER_LINES = {
-  E_DECODE: 'This phone cannot open that clip. Some videos filmed at very high quality are too much for older phones. You could record a clip in Volyume instead, or choose a different one.',
+  E_DECODE: 'This phone cannot open that video. Some videos filmed at very high quality are too much for older phones. You could record a video in Volyume instead, or choose a different one.',
   E_ENCODE: 'The video could not be made on this phone this time. Your photo card is ready to share instead.',
-  E_FRAME: 'That clip was too big for this phone to prepare. A shorter clip, or one filmed at a lower quality, should work.',
-  E_SOURCE: 'That clip could not be opened. It may have been moved or deleted.',
+  E_FRAME: 'That video was too big for this phone to prepare. A shorter video, or one filmed at a lower quality, should work.',
+  E_SOURCE: 'That video could not be opened. It may have been moved or deleted.',
   E_SPACE: 'There is not enough space on your phone to make the video. Once some space is free you can try again.',
-  E_ICLOUD: 'That clip is still downloading from iCloud. Try again once it has finished.',
-  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and it will start again.',
+  E_ICLOUD: 'That video is still downloading from iCloud. Try again once it has finished.',
+  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and tap Share video again.',
 };
 
 const AI_WORD = /\bAI\b/; // case-sensitive, as a word: "again" and "said" are fine
@@ -48,6 +48,13 @@ describe('the founder\'s lines', () => {
     const codes = [EXPORT_ERROR.DECODE, EXPORT_ERROR.ENCODE, EXPORT_ERROR.FRAME, EXPORT_ERROR.SOURCE,
       EXPORT_ERROR.SPACE, EXPORT_ERROR.ICLOUD, EXPORT_ERROR.BACKGROUND];
     expect(codes.sort()).toEqual(Object.keys(FOUNDER_LINES).sort());
+  });
+
+  test('every line says "video", never "clip", and claims no restart of its own (addendum 8)', () => {
+    for (const line of Object.values(FOUNDER_LINES)) {
+      expect(line).not.toMatch(/\bclips?\b/i);
+      expect(line).not.toMatch(/start again/);
+    }
   });
 
   test('nothing is said for a chosen cancel or a second tap', () => {

@@ -11,7 +11,7 @@
  * declarations (Android: exactly the three named Media3 artefacts at 1.11.1,
  * with 1.10.1 named as the fallback; iOS: ExpoModulesCore only, iOS 16); the
  * one Android permission it adds (SET_WALLPAPER, a normal permission, for the
- * lock screen); and the camera purpose strings naming short workout clips
+ * lock screen); and the camera purpose strings naming short workout videos
  * with the microphone still blocked (ruling 4: silent by default).
  */
 const fs = require('fs');
@@ -112,10 +112,14 @@ describe('the module', () => {
 });
 
 describe('app.json', () => {
-  test('both camera purpose strings name short workout clips', () => {
-    expect(app.ios.infoPlist.NSCameraUsageDescription).toMatch(/short workout clips/);
+  // RE-ANCHORED 2026-10-15 (D229 addendum 8: "video", never "clip" in
+  // anything a person reads, the OS permission prompts included).
+  test('both camera purpose strings name short workout videos', () => {
+    expect(app.ios.infoPlist.NSCameraUsageDescription).toMatch(/short workout videos/);
+    expect(app.ios.infoPlist.NSCameraUsageDescription).not.toMatch(/\bclips?\b/i);
     const cameraPlugin = app.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-camera');
-    expect(cameraPlugin[1].cameraPermission).toMatch(/short workout clips/);
+    expect(cameraPlugin[1].cameraPermission).toMatch(/short workout videos/);
+    expect(cameraPlugin[1].cameraPermission).not.toMatch(/\bclips?\b/i);
   });
 
   test('clips stay silent: the microphone stays blocked on Android and off in expo-camera', () => {

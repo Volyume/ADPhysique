@@ -53,15 +53,17 @@ export const EXPORT_ERROR = Object.freeze({
 
 const KNOWN_CODES = new Set(Object.values(EXPORT_ERROR));
 
-// Founder's copy, 2026-10-15: British English, plain, no technical words.
+// Founder's copy, 2026-10-15: British English, plain, no technical words;
+// "video", never "clip" (addendum 8), and the background line tells the
+// person what to do (tap Share video again), since nothing restarts itself.
 const EXPORT_LINES = Object.freeze({
-  E_DECODE: 'This phone cannot open that clip. Some videos filmed at very high quality are too much for older phones. You could record a clip in Volyume instead, or choose a different one.',
+  E_DECODE: 'This phone cannot open that video. Some videos filmed at very high quality are too much for older phones. You could record a video in Volyume instead, or choose a different one.',
   E_ENCODE: 'The video could not be made on this phone this time. Your photo card is ready to share instead.',
-  E_FRAME: 'That clip was too big for this phone to prepare. A shorter clip, or one filmed at a lower quality, should work.',
-  E_SOURCE: 'That clip could not be opened. It may have been moved or deleted.',
+  E_FRAME: 'That video was too big for this phone to prepare. A shorter video, or one filmed at a lower quality, should work.',
+  E_SOURCE: 'That video could not be opened. It may have been moved or deleted.',
   E_SPACE: 'There is not enough space on your phone to make the video. Once some space is free you can try again.',
-  E_ICLOUD: 'That clip is still downloading from iCloud. Try again once it has finished.',
-  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and it will start again.',
+  E_ICLOUD: 'That video is still downloading from iCloud. Try again once it has finished.',
+  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and tap Share video again.',
   E_UNAVAILABLE: 'Videos cannot be made in this version of Volyume. Your photo card is ready to share instead.',
 });
 
