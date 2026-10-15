@@ -190,7 +190,8 @@ describe('D14: no P3 trigger is ED-safety/wellbeing/calm-mode, so none is exempt
 
   test('ED-flag/calm-mode suppression that already existed for the activation nudge is untouched (its loader, not its render gate)', () => {
     const activationLoader = HOME.slice(HOME.indexOf('async function loadActivationNudge'));
-    expect(activationLoader.slice(0, 1000)).toMatch(/edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)/);
+    // D228 item 2: the same three-way OR through the one composition.
+    expect(activationLoader.slice(0, 1000)).toMatch(/deriveSafetyState\(\{ mode: wellbeing, edFlag \}\)\.suppressed/);
   });
 
   test('the cap governs only the P3 stack, and no ED/wellbeing surface was funnelled into it', () => {

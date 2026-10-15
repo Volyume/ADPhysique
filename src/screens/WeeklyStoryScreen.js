@@ -51,8 +51,9 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs } from '../lib/dayKey';
 import { weekRangeLabel } from '../lib/coachOutput/viewCopy';
 import { buildWeeklyStory } from '../lib/weeklyStory';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 import { logError } from '../lib/errorLog';
+import { deriveSafetyState } from '../lib/safetyState';
 
 const EMPTY = { weekLabel: null, chapters: [] };
 
@@ -87,7 +88,8 @@ export default function WeeklyStoryScreen() {
       ]);
       const intake = await getRecentIntakeSummary(user.id).catch(() => null);
 
-      const suppress = !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      const suppress = deriveSafetyState({ mode: wellbeing, edFlag }).suppressed;
       const isCurrentWeek = coachOutput?.weekStart != null && Number(coachOutput.weekStart) === weekStart;
 
       setStory(buildWeeklyStory({

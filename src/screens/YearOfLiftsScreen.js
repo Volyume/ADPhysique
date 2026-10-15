@@ -36,7 +36,7 @@ import {
   getLifetimeTonnage, getLifetimeWorkoutStats,
 } from '../lib/database';
 import { safeDate, safeToFixed } from '../lib/safeFormat';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
 import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
@@ -44,6 +44,7 @@ import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
 import EmptyState from '../components/EmptyState';
 import { logError } from '../lib/errorLog';
+import { deriveSafetyState } from '../lib/safetyState';
 
 // How long each story card holds before auto-advancing (Instagram-story feel).
 const STORY_MS = 5000;
@@ -572,7 +573,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
           getRecapData(user.id, { startMs, endMs, compare: true }),
         ]);
-        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setNeutral(deriveSafetyState({ mode, edFlag }).suppressed); // D228 item 2: one composition
         setData(recap);
       } else if (variant === 'block') {
         setData(await getBlockReflectionData(user.id, mesocycleId));
@@ -597,7 +598,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           getLifetimeTonnage(user.id).catch(() => null),
           getLifetimeWorkoutStats(user.id).catch(() => null),
         ]);
-        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setNeutral(deriveSafetyState({ mode, edFlag }).suppressed); // D228 item 2: one composition
         setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
         setLifetime(
           Number.isFinite(lifetimeTonnage) && lifetimeStats

@@ -46,7 +46,8 @@ describe('Audit §15#1: WeeklyStoryScreen wiring', () => {
   test('fails CLOSED on the ED-pattern flag and wellbeing read, same contract as CoachHeldHistoryScreen', () => {
     expect(SCREEN).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
     expect(SCREEN).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)\.then\(\(v\) => v \|\| 'unspecified'\)\.catch\(\(\) => 'read_failed'\)/);
-    expect(SCREEN).toMatch(/const suppress = !!edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\);/);
+    // D228 item 2: the same three-way OR through the one composition.
+    expect(SCREEN).toMatch(/const suppress = deriveSafetyState\(\{ mode: wellbeing, edFlag \}\)\.suppressed;/);
     // The catch-all error path must also suppress rather than risk a number
     // rendering over an undetected open flag.
     expect(SCREEN).toMatch(/buildWeeklyStory\(\{ weekLabel: weekRangeLabel\(weekStart\), suppress: true \}\)/);

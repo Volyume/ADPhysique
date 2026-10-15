@@ -35,10 +35,11 @@ import { localWeekStartMs, todayLocalKey } from '../dayKey';
 // Home's Start and Plans' "Start next workout" read (programmePosition.js).
 import { resolveProgrammePosition } from '../programmePosition';
 import { sessionDisplayName } from '../blockProgression';
-import { isCalm, WELLBEING_KEY } from '../wellbeing';
+import { WELLBEING_KEY } from '../wellbeing';
 import { buildWidgetSnapshot, emptyWidgetSnapshot } from './snapshot';
 import { persistWidgetSnapshot } from './storage';
 import { readCachedFriends, fetchFriendsTrainedToday } from './friends';
+import { deriveSafetyState } from '../safetyState';
 
 /** Gather the widget inputs from local storage. Exposed for unit tests. */
 export async function gatherWidgetInputs(userId) {
@@ -130,7 +131,8 @@ export async function gatherWidgetInputs(userId) {
     friendsFetchedAt: (cachedFriends && cachedFriends.dayKey === todayLocalKey())
       ? cachedFriends.fetchedAt
       : null,
-    edFlagOpen: !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing),
+    // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+    edFlagOpen: deriveSafetyState({ mode: wellbeing, edFlag }).suppressed,
   };
 }
 

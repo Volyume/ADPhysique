@@ -20,7 +20,6 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WELLBEING_KEY, isCalm } from './wellbeing';
 import { SAFE_MINIMUM_LINE } from './energyChoice';
 
 export const ENERGY_CHOICE_KEY = '@volyume_energy_choice';
@@ -52,16 +51,17 @@ export async function writeChoiceRecord({ position, appliedPosition, chosenKcal,
   await AsyncStorage.setItem(ENERGY_CHOICE_KEY, JSON.stringify(clean));
 }
 
-/** Fail-closed: true when calm mode is on, an ED flag is open, or either read fails. */
+/**
+ * Fail-closed: true when calm mode is on, an ED flag is open, or either read
+ * fails. D228 item 2: reads through the one composition
+ * (src/lib/safetyState.js); a missing user is the unknown, suppressed state.
+ */
 export async function isEnergyChoiceSuppressed(userId) {
-  if (!userId) return true;
   try {
-    const mode = await AsyncStorage.getItem(WELLBEING_KEY);
-    if (isCalm(mode)) return true;
     // eslint-disable-next-line global-require
-    const { getOpenEdPatternFlag } = require('./database');
-    const flag = await getOpenEdPatternFlag(userId);
-    return !!flag;
+    const { readSafetyState } = require('./safetyState');
+    const s = await readSafetyState(userId);
+    return s.suppressed;
   } catch (_) {
     return true;
   }

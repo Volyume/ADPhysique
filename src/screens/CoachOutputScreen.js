@@ -110,7 +110,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister, withScience } from '../lib/coachRegister';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 import {
   cancelMorningNotification,
   cancelMealReminders,
@@ -175,6 +175,7 @@ import {
   WeekRowsCard,
 } from '../components/coachOutput/CoachOutputCards';
 import { SettingRow } from '../components/SettingsPrimitives';
+import { deriveSafetyState } from '../lib/safetyState';
 
 // D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3 "both" placement):
 // the adherence-why line's one-time seen-flag, same '@volyume_seen_*'
@@ -1122,7 +1123,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // from 'unspecified'. getWellbeingMode swallows failures, which would fail
       // OPEN here (calm false -> the countdown shows over a possibly-calm state).
       const wb = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
-      const calm = isCalm(wb) || wb === 'read_failed';
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      const cdState = deriveSafetyState({ mode: wb, edFlag: openFlag });
+      const calm = cdState.calm || cdState.readFailed;
       const state = contestCountdown({
         showDateMs,
         nowMs: Date.now(),
@@ -1694,7 +1697,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Fail closed: an unreadable wellbeing read tightens the response (calm),
       // matching the open-ED-flag path; getWellbeingMode swallows failures.
       const wbMode = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
-      const calmNow = isCalm(wbMode) || wbMode === 'read_failed';
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      const wbState = deriveSafetyState({ mode: wbMode, edFlag: null });
+      const calmNow = wbState.calm || wbState.readFailed;
       const hideExactScanRanges = await getProgressScanHideExactPreference();
       setCalmMode(calmNow);
       // Check-in day for the forward-pull anchor; same preference read as

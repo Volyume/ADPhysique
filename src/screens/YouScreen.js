@@ -39,8 +39,9 @@ import { logError } from '../lib/errorLog';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
+import { deriveSafetyState } from '../lib/safetyState';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -252,10 +253,9 @@ export default function YouScreen({ navigation }) {
         const firstWeightAt = weights.length
           ? Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity))
           : null;
-        const edSuppressed = !!edFlag
-          || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
-          || wellbeing === 'read_failed'
-          || isCalm(wellbeing);
+        // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+        const safety = deriveSafetyState({ mode: wellbeing, edFlag, scoffScore: userProfile?.scoffScore });
+        const edSuppressed = safety.suppressed || safety.scoffPositive;
         // FOUNDER DECISION (fully free, no tier split): the ledger runs for
         // everyone now, not only Pro.
         const ledger = buildCoachLedger({

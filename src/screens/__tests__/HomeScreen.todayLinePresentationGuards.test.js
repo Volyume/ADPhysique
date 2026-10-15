@@ -123,7 +123,10 @@ describe('ED-safety — D98-2 suppression parity (moved here from the deleted fi
     const site = HOME.indexOf('async function loadFirstReviewFacts()');
     const end = HOME.indexOf('async function loadBriefDismissal()');
     const loader = HOME.slice(site, end);
-    expect(loader).toMatch(/const edSuppressed = !!edFlag\s*\n\s*\|\| \(Number\.isFinite\(userProfile\?\.scoffScore\) && userProfile\.scoffScore >= 2\)\s*\n\s*\|\| wellbeing === 'read_failed'\s*\n\s*\|\| isCalm\(wellbeing\);/);
+    // D228 item 2: the four conditions (open flag, SCOFF >= 2, a failed
+    // wellbeing read, calm) now come through the one composition in
+    // src/lib/safetyState.js, whose law is pinned in safetyState.test.js.
+    expect(loader).toMatch(/const safety = deriveSafetyState\(\{ mode: wellbeing, edFlag, scoffScore: userProfile\?\.scoffScore \}\);\s*\n\s*const edSuppressed = safety\.suppressed \|\| safety\.scoffPositive;/);
     // The flag read itself fails CLOSED (truthy sentinel on error).
     expect(loader).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
     // The chain is what the resolver receives - no weaker second path.

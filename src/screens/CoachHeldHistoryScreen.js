@@ -12,10 +12,11 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getCoachOutputHistory, getOpenEdPatternFlag } from '../lib/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 import { pairAppliedWithOutcome, buildScorecard } from '../lib/coachOutcome';
 import { SkeletonCard } from '../components/Skeleton';
 import { logError } from '../lib/errorLog';
+import { deriveSafetyState } from '../lib/safetyState';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -144,7 +145,8 @@ export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
           AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
         ]);
         if (cancelled) return;
-        setSuppress(!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing));
+        // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+        setSuppress(deriveSafetyState({ mode: wellbeing, edFlag }).suppressed);
         setHistoryFull(history);
         const withData = history.filter(w => {
           const hasHeld = Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0;

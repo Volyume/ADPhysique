@@ -94,7 +94,7 @@ import { heroPlanLabel, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey, todayLocalKey } from '../lib/dayKey';
-import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { WELLBEING_KEY } from '../lib/wellbeing';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
@@ -133,6 +133,7 @@ import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { deriveSafetyState } from '../lib/safetyState';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
 // optional scan subline is retired from Home (it moves to the check-in
 // screen it belongs to), so the photo-suppression hook this line fed is no
@@ -649,10 +650,9 @@ export default function HomeScreen({ navigation, route }) {
       // ledger goes neutral -- open ED flag, elevated SCOFF, a failed
       // wellbeing read (fail closed), or calm mode. Same formula, so the
       // two surfaces can never disagree about when counting is allowed.
-      const edSuppressed = !!edFlag
-        || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
-        || wellbeing === 'read_failed'
-        || isCalm(wellbeing);
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      const safety = deriveSafetyState({ mode: wellbeing, edFlag, scoffScore: userProfile?.scoffScore });
+      const edSuppressed = safety.suppressed || safety.scoffPositive;
       setFirstReviewFacts({
         weighIns7d,
         firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
@@ -738,7 +738,8 @@ export default function HomeScreen({ navigation, route }) {
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
-      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setCommunityRowVisible(false); return; }
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      if (deriveSafetyState({ mode: wellbeing, edFlag }).suppressed) { setCommunityRowVisible(false); return; }
 
       setCommunityInviteProfile({ handle: me?.profile?.handle ?? null, gymLabel: me?.profile?.gym_label ?? null });
       setCommunityFollowingNone(me?.profile?.following_count != null && Number(me.profile.following_count) === 0);
@@ -952,7 +953,8 @@ export default function HomeScreen({ navigation, route }) {
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
-      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setActivationNudge(null); return; }
+      // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+      if (deriveSafetyState({ mode: wellbeing, edFlag }).suppressed) { setActivationNudge(null); return; }
       // Account-creation date (install proxy) from the live session.
       const createdIso = useAppStore.getState().session?.user?.created_at ?? null;
       const accountCreatedAtMs = createdIso ? new Date(createdIso).getTime() : null;
