@@ -113,6 +113,10 @@ import { buildRegisteredCoachResponse, resolveRegister, withScience } from '../l
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import {
   cancelMorningNotification,
+  cancelMealReminders,
+  cancelPlannedMealConfirm,
+  relayMealRemindersFromPrefs,
+  schedulePlannedMealConfirm,
   scheduleMorningWeightNotification,
   scheduleEveningWeightReminder,
 } from '../lib/notifications';
@@ -2257,6 +2261,14 @@ export default function CoachOutputScreen({ navigation, route }) {
           // background, where no delivery handler runs, under the open flag.
           // The schedule gate keeps restoreNotifications from re-laying them.
           try { await cancelMorningNotification(); } catch (_) {}
+          // D228 item 4 (founder, 2026-10-15): the food prompts go quiet at
+          // the same moment. The meal run and today's planned-meal confirm
+          // were laid before the flag and would otherwise fire until the next
+          // launch (and the confirm has no foreground gate of its own until
+          // handler.js's D228 branch). Both schedulers refuse to re-lay under
+          // the open flag.
+          try { await cancelMealReminders(); } catch (_) {}
+          try { await cancelPlannedMealConfirm(); } catch (_) {}
           await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
             signals: result.edPatternSignals,
             goalLockAdvanced,
@@ -2276,6 +2288,10 @@ export default function CoachOutputScreen({ navigation, route }) {
               await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
             }
           } catch (_) { /* best-effort re-lay */ }
+          // D228 item 4: the food prompts return as they were set (both
+          // helpers read the preference and self-guard).
+          relayMealRemindersFromPrefs().catch(() => {});
+          schedulePlannedMealConfirm(user.id).catch(() => {});
           await trackEngineEvent(user.id, 'ed_pattern_flag_cleared', null);
         }
       } catch (e) {

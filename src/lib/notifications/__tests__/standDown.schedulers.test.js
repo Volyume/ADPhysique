@@ -5,10 +5,10 @@
  *   - the morning and evening weigh-in prompts drop today's one-shot once the
  *     weigh-in is in (13 laid instead of 14), and every laid prompt names the
  *     local day it fires on;
- *   - a meal slot logged today with its time still ahead is laid as a short
- *     run of dated one-shots from tomorrow (MEAL_STAND_DOWN_RUN_DAYS), not a
- *     daily repeat; a slot whose time has passed, or that holds only planned
- *     rows, keeps the repeat; every meal request names its slot;
+ *   - every meal reminder is a bounded run of MEAL_RUN_DAYS dated one-shots
+ *     (D228 item 4): a slot logged today, or whose time has passed, starts
+ *     its run tomorrow; one still ahead, or holding only planned rows,
+ *     starts today; every meal request names its slot and day;
  *   - relayMealRemindersFromPrefs (the deed path) re-lays from the stored
  *     preference, coalesces concurrent calls into one pass, and lays nothing
  *     without a preference;
@@ -147,8 +147,14 @@ describe('weigh-in prompts: today\'s one-shot is not laid once the weigh-in is i
   });
 });
 
-describe('meal reminders: a slot logged today is not prompted again today', () => {
-  test('logged with the time still ahead: a run of dated one-shots from tomorrow, no repeat; logged with the time passed, or only planned: the repeat', async () => {
+// D228 item 4 (founder, 2026-10-15): every meal reminder is a bounded run of
+// MEAL_RUN_DAYS dated one-shots; there is no daily repeat any more. A slot
+// logged today, or whose time has passed, starts its run tomorrow (d1); a
+// slot still ahead starts today (d0).
+const runIds = (slot, first) => Array.from({ length: scheduler.MEAL_RUN_DAYS }, (_, k) => `volyume_meal_reminder_${slot}_d${first + k}`);
+
+describe('meal reminders: a bounded dated run; a slot logged today is not prompted again today', () => {
+  test('logged with the time still ahead, or the time passed: the run starts tomorrow; only planned: the run starts today', async () => {
     fakeNow(FRIDAY_1000);
     mockGetFoodEntries.mockImplementation(() => Promise.resolve([
       { meal_slot: 'breakfast', is_planned: 0 }, // 08:15 has passed
@@ -157,55 +163,48 @@ describe('meal reminders: a slot logged today is not prompted again today', () =
     ]));
     await scheduler.scheduleMealReminders([BREAKFAST, LUNCH, DINNER]);
     const meals = laid('volyume_meal_reminder_');
-    const ids = meals.map((n) => n.identifier);
-    expect(ids).toEqual([
-      'volyume_meal_reminder_breakfast',
-      'volyume_meal_reminder_lunch_d1', 'volyume_meal_reminder_lunch_d2', 'volyume_meal_reminder_lunch_d3',
-      'volyume_meal_reminder_dinner',
+    expect(scheduler.MEAL_RUN_DAYS).toBe(7);
+    expect(meals.map((n) => n.identifier)).toEqual([
+      ...runIds('breakfast', 1), ...runIds('lunch', 1), ...runIds('dinner', 0),
     ]);
-    expect(scheduler.MEAL_STAND_DOWN_RUN_DAYS).toBe(3);
-
-    const breakfast = meals[0];
-    expect(breakfast.trigger).toMatchObject({ type: 'daily', hour: 8, minute: 15 });
-    expect(breakfast.content.data).toEqual({ type: 'meal_log_reminder', slot: 'breakfast' });
-
-    const run = meals.slice(1, 4);
-    run.forEach((n, i) => {
+    meals.forEach((n) => {
       expect(n.trigger.type).toBe('date');
-      expect(n.trigger.date.getHours()).toBe(13);
-      expect(n.trigger.date.getMinutes()).toBe(0);
-      expect(localDayKey(n.trigger.date.getTime())).toBe(['2026-10-03', '2026-10-04', '2026-10-05'][i]);
-      expect(n.content.data).toEqual({ type: 'meal_log_reminder', slot: 'lunch', dayKey: localDayKey(n.trigger.date.getTime()) });
-      expect(n.content.title).toBe('Lunch');
+      expect(n.content.data).toEqual({ type: 'meal_log_reminder', slot: n.content.data.slot, dayKey: localDayKey(n.trigger.date.getTime()) });
       expect(n.content.body).toBe('A gentle reminder to log it if it helps. No pressure.');
       expect(n.content.sound).toBe(false);
     });
-
-    const dinner = meals[4];
-    expect(dinner.trigger).toMatchObject({ type: 'daily', hour: 19, minute: 30 });
-    expect(dinner.content.data).toEqual({ type: 'meal_log_reminder', slot: 'dinner' });
+    const lunch = meals.slice(7, 14);
+    lunch.forEach((n, i) => {
+      expect(n.trigger.date.getHours()).toBe(13);
+      expect(n.trigger.date.getMinutes()).toBe(0);
+      expect(localDayKey(n.trigger.date.getTime())).toBe(`2026-10-0${3 + i}`.replace('2026-10-010', '2026-10-10'));
+      expect(n.content.title).toBe('Lunch');
+    });
+    expect(localDayKey(meals[14].trigger.date.getTime())).toBe('2026-10-02');
+    expect(meals[14].trigger.date.getHours()).toBe(19);
   });
 
-  test('nothing logged: every slot is the daily repeat, as before', async () => {
+  test('nothing logged: a slot still ahead starts today, one already passed starts tomorrow; never a repeat', async () => {
     fakeNow(FRIDAY_1000);
     await scheduler.scheduleMealReminders([BREAKFAST, LUNCH, DINNER]);
     const meals = laid('volyume_meal_reminder_');
     expect(meals.map((n) => n.identifier)).toEqual([
-      'volyume_meal_reminder_breakfast', 'volyume_meal_reminder_lunch', 'volyume_meal_reminder_dinner',
+      ...runIds('breakfast', 1), ...runIds('lunch', 0), ...runIds('dinner', 0),
     ]);
-    meals.forEach((n) => expect(n.trigger.type).toBe('daily'));
+    meals.forEach((n) => expect(n.trigger.type).toBe('date'));
+    expect(meals.some((n) => n.trigger.type === 'daily')).toBe(false);
   });
 
-  test('the run respects quiet hours like the repeat (a 06:30 slot shifts to 07:00)', async () => {
+  test('the run respects quiet hours (a 06:30 slot shifts to 07:00)', async () => {
     fakeNow(new Date(2026, 9, 2, 5, 0, 0, 0));
     mockGetFoodEntries.mockImplementation(() => Promise.resolve([{ meal_slot: 'early', is_planned: 0 }]));
     await scheduler.scheduleMealReminders([{ id: 'early', label: 'Early', hour: 6, minute: 30, enabled: true }]);
     const run = laid('volyume_meal_reminder_early_d');
-    expect(run).toHaveLength(3);
+    expect(run).toHaveLength(scheduler.MEAL_RUN_DAYS);
     run.forEach((n) => { expect(n.trigger.date.getHours()).toBe(7); expect(n.trigger.date.getMinutes()).toBe(0); });
   });
 
-  test('ED-safety is unchanged: an open flag lays neither shape', async () => {
+  test('ED-safety is unchanged: an open flag lays nothing', async () => {
     fakeNow(FRIDAY_1000);
     const db = require('../../database');
     const spy = jest.spyOn(db, 'getOpenEdPatternFlag').mockImplementation(() => Promise.resolve({ id: 'flag' }));
@@ -223,8 +222,7 @@ describe('relayMealRemindersFromPrefs: the deed path', () => {
     mockGetFoodEntries.mockImplementation(() => Promise.resolve([{ meal_slot: 'lunch', is_planned: 0 }]));
     await scheduler.relayMealRemindersFromPrefs();
     expect(laid('volyume_meal_reminder_').map((n) => n.identifier)).toEqual([
-      'volyume_meal_reminder_lunch_d1', 'volyume_meal_reminder_lunch_d2', 'volyume_meal_reminder_lunch_d3',
-      'volyume_meal_reminder_dinner',
+      ...runIds('lunch', 1), ...runIds('dinner', 0),
     ]);
   });
 
@@ -238,7 +236,7 @@ describe('relayMealRemindersFromPrefs: the deed path', () => {
     ]);
     // cancelMealReminders reads the schedule once per pass.
     expect(mockGetAllScheduled).toHaveBeenCalledTimes(1);
-    expect(laid('volyume_meal_reminder_')).toHaveLength(1);
+    expect(laid('volyume_meal_reminder_')).toHaveLength(scheduler.MEAL_RUN_DAYS);
   });
 
   test('no preference, or every reminder off: lays nothing and never throws', async () => {

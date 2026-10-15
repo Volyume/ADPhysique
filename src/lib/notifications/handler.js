@@ -57,6 +57,13 @@ export function configureNotificationHandler() {
         if (dataType === 'meal_log_reminder' && await _edFlagOpen()) {
           return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
+        // D228 item 4 (founder, 2026-10-15): the planned-meal confirm is a
+        // food push laid for 20:00 that had no delivery gate, so a flag
+        // raised after it was laid still reached a flagged person in the
+        // foreground. Same fail-closed read, suppression consumed here.
+        if (dataType === 'planned_meal_confirm' && await _edFlagOpen()) {
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
         // D215 (founder order 2026-10-02): a meal reminder for a slot the
         // person has already logged today stands down, as the weigh-in prompt
         // does once the weight is in. The ED branch above is unchanged and

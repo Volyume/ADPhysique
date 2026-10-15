@@ -342,3 +342,24 @@ describe('handleNotification, meal_log_reminder: a logged slot stands down (D215
     expect(mockGetFoodEntries).not.toHaveBeenCalled();
   });
 });
+
+// D228 item 4 (founder, 2026-10-15): the planned-meal confirm is a food push
+// laid for 20:00 before a flag could be raised; it had no delivery gate at
+// all, so a flag raised after it was laid still reached a flagged person in
+// the foreground. Written to FAIL without the handler branch.
+describe('planned_meal_confirm: silent under an open ED flag (D228 item 4)', () => {
+  test('no flag -> show', async () => {
+    const h = captureHandler();
+    expect(await h(notif('planned_meal_confirm'))).toEqual(SHOW);
+  });
+  test('open flag -> suppress', async () => {
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1' });
+    const h = captureHandler();
+    expect(await h(notif('planned_meal_confirm'))).toEqual(SUPPRESS);
+  });
+  test('an unreadable flag fails CLOSED -> suppress', async () => {
+    mockGetOpenEdFlag.mockRejectedValue(new Error('db'));
+    const h = captureHandler();
+    expect(await h(notif('planned_meal_confirm'))).toEqual(SUPPRESS);
+  });
+});

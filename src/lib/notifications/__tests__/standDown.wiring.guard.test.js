@@ -118,16 +118,16 @@ describe('scheduler.js and trainingReminders.js: the lay-time skips', () => {
     expect(SCH).toMatch(/data: \{ type: 'evening_weight', dayKey \},/);
   });
 
-  test('meal reminders: the read runs after the ED gate; the run is dated, from tomorrow, bounded', () => {
+  test('meal reminders: the read runs after the ED gate; the run is dated and bounded (D228 item 4), never a repeat', () => {
     const fn = fnBody(SCH, 'export async function scheduleMealReminders(');
     expect(fn.indexOf('getOpenEdPatternFlag')).toBeGreaterThan(-1);
     expect(fn.indexOf('isMealSatisfiedToday(String(r.id), now.getTime())')).toBeGreaterThan(fn.indexOf('getOpenEdPatternFlag'));
-    expect(SCH).toMatch(/export const MEAL_STAND_DOWN_RUN_DAYS = 3;/);
+    expect(SCH).toMatch(/export const MEAL_RUN_DAYS = 7;/);
     const lay = fnBody(SCH, 'async function layMealReminder(');
-    expect(lay).toMatch(/for \(let i = 1; i <= MEAL_STAND_DOWN_RUN_DAYS; i \+= 1\)/);
+    expect(lay).toMatch(/for \(let i = first; i < first \+ MEAL_RUN_DAYS; i \+= 1\)/);
     expect(lay).toMatch(/\$\{NOTIF_ID_MEAL_PREFIX\}\$\{slot\}_d\$\{i\}/);
     expect(lay).toMatch(/data: \{ type: CATEGORY\.MEAL_LOG_REMINDER, slot, dayKey: localDayKey\(when\.getTime\(\)\) \}/);
-    expect(lay).toMatch(/data: \{ type: CATEGORY\.MEAL_LOG_REMINDER, slot \}/);
+    expect(lay).not.toMatch(/SchedulableTriggerInputTypes\.DAILY/);
   });
 
   test('relayMealRemindersFromPrefs reads the one preference key and goes through scheduleMealReminders', () => {
@@ -151,7 +151,7 @@ describe('scheduler.js and trainingReminders.js: the lay-time skips', () => {
 describe('the barrel exports the stand-down surface', () => {
   test('index.js', () => {
     const IX = read('lib/notifications/index.js');
-    for (const name of ['isWeighInSatisfiedToday', 'isTrainingSatisfiedToday', 'isMealSatisfiedToday', 'standDownWeighIn', 'standDownTraining', 'standDownMeal', 'standDownCheckin', 'relayMealRemindersFromPrefs', 'MEAL_STAND_DOWN_RUN_DAYS']) {
+    for (const name of ['isWeighInSatisfiedToday', 'isTrainingSatisfiedToday', 'isMealSatisfiedToday', 'standDownWeighIn', 'standDownTraining', 'standDownMeal', 'standDownCheckin', 'relayMealRemindersFromPrefs', 'MEAL_RUN_DAYS', 'cancelMealReminders']) {
       expect(IX).toContain(name);
     }
     expect(IX).toMatch(/\} from '\.\/standDown';/);

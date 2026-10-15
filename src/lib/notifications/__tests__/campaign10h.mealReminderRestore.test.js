@@ -78,6 +78,17 @@ const PREFS = { morningEnabled: false, checkinEnabled: false };
 const mealCalls = () => mockScheduleAsync.mock.calls
   .map((c) => c[0])
   .filter((n) => typeof n?.identifier === 'string' && n.identifier.startsWith(MEAL_PREFIX));
+// D228 item 4: a reminder is a run of MEAL_RUN_DAYS dated one-shots named
+// `<prefix><slot>_d<n>`; the slots laid, in order, with one entry per slot.
+const slotsLaid = () => {
+  const out = [];
+  for (const n of mealCalls()) {
+    const slot = n.identifier.slice(MEAL_PREFIX.length).replace(/_d\d+$/, '');
+    if (out[out.length - 1] !== slot) out.push(slot);
+  }
+  return out;
+};
+const runOf = (slot) => mealCalls().filter((n) => n.identifier.startsWith(`${MEAL_PREFIX}${slot}_d`));
 
 const storeReminders = (reminders) =>
   AsyncStorage.setItem(MEAL_REMINDERS_KEY, JSON.stringify(reminders));
@@ -101,31 +112,28 @@ describe('F-5: an enabled meal reminder survives launch restore', () => {
     // The wipe still happens (that part was never the defect)...
     expect(mockCancelAllAsync).toHaveBeenCalled();
     // ...and the user's opt-in comes back with it.
-    const laid = mealCalls();
-    expect(laid).toHaveLength(1);
-    expect(laid[0].identifier).toBe(`${MEAL_PREFIX}breakfast`);
+    expect(slotsLaid()).toEqual(['breakfast']);
+    expect(runOf('breakfast')).toHaveLength(scheduler.MEAL_RUN_DAYS);
+    runOf('breakfast').forEach((n) => expect(n.trigger.type).toBe('date'));
   });
 
   test('breakfast, lunch and dinner all return', async () => {
     await storeReminders([BREAKFAST, LUNCH, DINNER]);
     await scheduler.restoreNotifications(PREFS, 'user-1');
-    expect(mealCalls().map((n) => n.identifier)).toEqual([
-      `${MEAL_PREFIX}breakfast`, `${MEAL_PREFIX}lunch`, `${MEAL_PREFIX}dinner`,
-    ]);
+    expect(slotsLaid()).toEqual(['breakfast', 'lunch', 'dinner']);
   });
 
   test('the user\'s chosen times are preserved exactly', async () => {
     await storeReminders([BREAKFAST, DINNER]);
     await scheduler.restoreNotifications(PREFS, 'user-1');
-    const [b, d] = mealCalls();
-    expect(b.trigger).toMatchObject({ type: 'daily', hour: 8, minute: 15 });
-    expect(d.trigger).toMatchObject({ type: 'daily', hour: 19, minute: 30 });
+    runOf('breakfast').forEach((n) => { expect(n.trigger.type).toBe('date'); expect(n.trigger.date.getHours()).toBe(8); expect(n.trigger.date.getMinutes()).toBe(15); });
+    runOf('dinner').forEach((n) => { expect(n.trigger.date.getHours()).toBe(19); expect(n.trigger.date.getMinutes()).toBe(30); });
   });
 
   test('a DISABLED reminder is not scheduled, and default-off restores nothing', async () => {
     await storeReminders([{ ...BREAKFAST, enabled: false }, LUNCH]);
     await scheduler.restoreNotifications(PREFS, 'user-1');
-    expect(mealCalls().map((n) => n.identifier)).toEqual([`${MEAL_PREFIX}lunch`]);
+    expect(slotsLaid()).toEqual(['lunch']);
 
     // No stored preference at all: the default is OFF everywhere.
     jest.clearAllMocks();
@@ -202,8 +210,9 @@ describe('F-5: the restore goes THROUGH the authoritative scheduler, not around 
     await storeReminders([{ id: 'early', label: 'Early', hour: 6, minute: 30, enabled: true }]);
     await scheduler.restoreNotifications(PREFS, 'user-1');
     const [n] = mealCalls();
-    expect(n.trigger.hour).not.toBe(6);
-    expect(n.trigger).toMatchObject({ type: 'daily', hour: 7, minute: 0 });
+    expect(n.trigger.type).toBe('date');
+    expect(n.trigger.date.getHours()).toBe(7);
+    expect(n.trigger.date.getMinutes()).toBe(0);
   });
 
   test('the reminder content is unchanged: no guilt, no streak, silent', async () => {
@@ -214,8 +223,9 @@ describe('F-5: the restore goes THROUGH the authoritative scheduler, not around 
     expect(n.content.body).toBe('A gentle reminder to log it if it helps. No pressure.');
     expect(n.content.sound).toBe(false);
     // D215: the request names its slot so a logged meal can stand it down;
-    // the copy, the silence and the no-guilt body are unchanged.
-    expect(n.content.data).toEqual({ type: 'meal_log_reminder', slot: 'breakfast' });
+    // D228 item 4: and the day it fires on. The copy, the silence and the
+    // no-guilt body are unchanged.
+    expect(n.content.data).toEqual({ type: 'meal_log_reminder', slot: 'breakfast', dayKey: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
   });
 
   test('web: the restore touches nothing', async () => {

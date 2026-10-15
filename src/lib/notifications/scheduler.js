@@ -507,16 +507,18 @@ export async function cancelMealReminders() {
   } catch (_) { /* tolerate */ }
 }
 
-// D215 (founder order 2026-10-02): a slot the person has already logged today
-// must not prompt them again today. A daily repeat cannot skip a day, so a
-// slot logged today with its time still ahead is laid instead as a short run
-// of dated one-shots from tomorrow (MEAL_STAND_DOWN_RUN_DAYS of them, each
-// carrying the day it fires on and its slot so standDown.js can match them).
-// Every launch re-lays the reminders, and the repeat returns as soon as the
-// slot's time today has passed or a new day has begun. The run is short on
-// purpose: iOS keeps at most 64 pending requests and the weigh-in and
-// training horizons already use most of them (see trainingReminders.js).
-export const MEAL_STAND_DOWN_RUN_DAYS = 3;
+// D228 item 4 (founder, 2026-10-15; closes the "noted, not changed" item in
+// docs/NOTIFICATIONS_LOCKED.md): a meal reminder is a bounded run of dated
+// one-shots, never an OS daily repeat. A daily repeat kept firing for ever on
+// a phone that was never opened again, and could not stand down for a day
+// (D215). Each request carries the day it fires on and its slot, so
+// standDown.js and the delivery handler match it by day. Every launch, prefs
+// pull and quiet-hours edit re-lays the run, so a phone in use always holds
+// the next MEAL_RUN_DAYS days. The run is short on purpose: iOS keeps the 64
+// soonest pending requests and the weigh-in and training horizons share the
+// budget (see trainingReminders.js); a phone left closed simply runs out of
+// prompts, which is the point.
+export const MEAL_RUN_DAYS = 7;
 
 async function layMealReminder(r, { quiet, now, loggedToday }) {
   const slot = String(r.id);
@@ -529,23 +531,11 @@ async function layMealReminder(r, { quiet, now, loggedToday }) {
     body: 'A gentle reminder to log it if it helps. No pressure.',
     sound: false,
   };
+  // D215: a slot already logged today, or whose time has passed, starts the
+  // run tomorrow; otherwise today's prompt is the first of the run.
   const todayFire = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
-  if (!(loggedToday && todayFire.getTime() > now.getTime())) {
-    // The usual shape: a daily repeat. Laid after today's time has passed it
-    // first fires tomorrow, which is already right for a slot logged today.
-    await scheduleCheckedNotification({
-      identifier: `${NOTIF_ID_MEAL_PREFIX}${slot}`,
-      content: { ...content, data: { type: CATEGORY.MEAL_LOG_REMINDER, slot } },
-      trigger: {
-        channelId: COACHING_REMINDERS_CHANNEL,
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: h,
-        minute: m,
-      },
-    });
-    return;
-  }
-  for (let i = 1; i <= MEAL_STAND_DOWN_RUN_DAYS; i += 1) {
+  const first = (loggedToday || todayFire.getTime() <= now.getTime()) ? 1 : 0;
+  for (let i = first; i < first + MEAL_RUN_DAYS; i += 1) {
     const when = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, h, m, 0, 0);
     // eslint-disable-next-line no-await-in-loop
     await scheduleCheckedNotification({
@@ -578,7 +568,8 @@ export async function scheduleMealReminders(reminders = []) {
     // scheduler (schedulePlannedMealConfirm): an open flag, or a failed
     // read, schedules nothing (the reminders are already cancelled above,
     // so a flag raised after scheduling also goes quiet on next launch;
-    // the delivery handler is the second line of defence).
+    // the delivery handler is the second line of defence; D228 item 4 also
+    // cancels the run the moment a flag is raised, see CoachOutputScreen).
     try {
       // eslint-disable-next-line global-require
       const store = require('../../store/useAppStore').default;

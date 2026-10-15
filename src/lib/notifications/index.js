@@ -70,7 +70,8 @@ export {
   checkYearOfLiftsUnlock,
   checkMonthlyRecapReady,
   relayMealRemindersFromPrefs,
-  MEAL_STAND_DOWN_RUN_DAYS,
+  cancelMealReminders,
+  MEAL_RUN_DAYS,
 } from './scheduler';
 
 // D215 (founder order 2026-10-02): a reminder never asks for something

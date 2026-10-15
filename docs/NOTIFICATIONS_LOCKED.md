@@ -56,14 +56,14 @@ and it does not resolve FR-5.
 | Morning weigh-in (`morning_weight`) | Push | On (Pro) | Yes. Settings → Coaching reminders has a genuine on/off switch (restored under C14 — the earlier removal turned out to confuse the coaching input with the reminder). (reconciled Campaign 24, shipped-code citation: `CoachingRemindersScreen.js:473-481`, `:104-110`) |
 | Evening weigh-in backstop (`evening_weight`) | Push | On (Pro) | None of its own. It rides the morning weigh-in schedule and self-suppresses once the day's weight is logged and under an open ED flag. |
 | Training reminder (`training_reminder`) | Push | Off until enabled | Yes. Settings → Notifications and reminders → "Remind me to train", with a time picker. D142: laid as a bounded run of dated one-shots (about eight weeks), no longer an indefinite weekly repeat. |
-| Meal-log reminder (`meal_log_reminder`) | Push | Off (opt-in) | Yes. Settings → Notifications and reminders → Meal reminders, one switch per reminder. |
+| Meal-log reminder (`meal_log_reminder`) | Push | Off (opt-in) | Yes. Settings → Notifications and reminders → Meal reminders, one switch per reminder. D228 item 4 (2026-10-15): a bounded run of `MEAL_RUN_DAYS` dated one-shots per slot, re-laid at every launch; cancelled the moment a flag is raised (on the raising device and, by the pull, on any other device) and re-laid when it clears. |
 | Year-of-lifts unlock (`year_of_lifts_unlock`) | Push | On | No dedicated control. Event push, budgeted. |
 | Monthly recap (`monthly_recap`) | Push | On | No dedicated control. Event push, budgeted. |
 | Trial day 3 (`trial_day3`) | Push + in-app | On | No dedicated control. Lifecycle push, budgeted. |
 | Win-back (`winback`) | Push + in-app | On | No dedicated control. Lifecycle push, budgeted. Carried as founder question FR-5. |
 | Partner cheer (`partner_cheer`) | Push + in-app | On | Yes. Settings → Coaching reminders → partner cheers. Downgrades to in-app only under an open ED/wellbeing flag. |
 | Missed check-in follow-up (`checkin_missed`) | Push | On (Pro) | Yes. Settings → Coaching reminders → "Check-in follow-up". |
-| Planned-meal confirm (`planned_meal_confirm`) | Push | On (Pro) | Yes. Settings → Coaching reminders → planned-meal reminders. |
+| Planned-meal confirm (`planned_meal_confirm`) | Push | On (Pro) | Yes. Settings → Coaching reminders → planned-meal reminders. D228 item 4: cancelled when a flag is raised and silent at foreground delivery under an open flag (`handler.js`). |
 | Rest timer (`rest_timer`) | Push | On during a session | Not a scheduled push. A silent ongoing local notification presented directly during a workout; it ends with the set. |
 | Getting-started nudge (`activation_nudge`) | Push + in-app | On | Yes. Settings → Notifications and reminders → "Getting-started nudges". |
 | Welcome-back note (`return_nudge`) | Push | On | Yes. Settings → Notifications and reminders → "Welcome-back note". D142 addendum below. |
@@ -347,9 +347,16 @@ recorded as `notification_failed` with reason `budget_capped` /
 
 ### Global suppression rules (unchanged, restated)
 
-- An open ED/wellbeing flag suppresses every event push at schedule
-  time, and at delivery where the app is foregrounded. Silence is the
-  respectful behaviour. The flag itself never fires via push.
+- An open ED-pattern flag suppresses the weight- and food-adjacent pushes
+  at schedule time (weigh-ins, meal reminders, planned-meal confirm, missed
+  check-in, activation and return nudges) and at delivery where the app is
+  foregrounded (weigh-ins, meal reminders, planned-meal confirm, missed
+  check-in, activation). D228 item 4 (2026-10-15): a raise also CANCELS the
+  weigh-in sets, the meal run and the planned-meal confirm already in the OS
+  queue, on the raising device and on any device that pulls the flag. Calm
+  mode is read only by the return nudge and the monthly recap's copy; it
+  cancels nothing (founder choice, D228). Silence is the respectful
+  behaviour. The flag itself never fires via push.
 - Quiet hours always win, as locked above.
 - One notification per topic per day, as locked above.
 - Every user-facing category keeps a disable path. The new
@@ -611,11 +618,10 @@ ED-flag and calm-mode suppressions, the tier gate (moot while the product is
 free), the 14-day weigh-in and 56-day training horizons, every identifier
 prefix.
 
-**Noted, not changed (outside the order; raised for a decision).** The meal
-reminders stay unbounded daily repeats for a person who stops opening the
-app (the C8 Work 5 restraint was never applied to them, and the iOS pending
-ceiling forbids a 14-day run for three slots); deleting today's weigh-in does
-not re-lay that day's prompts until the next launch.
+**Changed under D228 item 4 (2026-10-15).** The meal reminders were unbounded
+daily repeats for a person who stopped opening the app; they are now a
+bounded dated run (`MEAL_RUN_DAYS`), like the weigh-ins. Deleting today's
+weigh-in still does not re-lay that day's prompts until the next launch.
 
 **Tests.** `src/lib/notifications/__tests__/standDown.test.js` (matching,
 the scoped stand-downs, the reads and their fail-open posture),

@@ -12578,6 +12578,21 @@ export async function upsertEdPatternFlagFromCloud(userId, row) {
       row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
   );
+  // D228 item 4 (founder, 2026-10-15), second-device parity: a pulled row
+  // that OPENS a flag this device did not hold silences the weight and food
+  // prompts here too, as the raising device does in CoachOutputScreen. Best
+  // effort and lazy-required (the scheduler reaches back into this module);
+  // the schedulers refuse to re-lay while the flag is open.
+  const nowOpen = cloudCleared == null && !row.deleted_at;
+  if (nowOpen && !localOpen) {
+    try {
+      // eslint-disable-next-line global-require
+      const sched = require('./notifications/scheduler');
+      await sched.cancelMorningNotification().catch(() => {});
+      await sched.cancelMealReminders().catch(() => {});
+      await sched.cancelPlannedMealConfirm().catch(() => {});
+    } catch (_) { /* best effort: the next launch re-lay applies the gate */ }
+  }
 }
 
 export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
