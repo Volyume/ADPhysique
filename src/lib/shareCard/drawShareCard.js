@@ -230,6 +230,12 @@ let OMIT_PHOTO = false;
 // (frameBand) reads it.
 let SAFE_BAND = null;
 
+// A tone handed in by the caller instead of sampled from BG (D229 addendum
+// 4: a video's scrim is set from the brightest of several sampled frames,
+// lifted to the bright tier, by shareVideo/clipTone.js). Null samples BG
+// as always. Set per render, like BG above.
+let TONE_OVERRIDE = null;
+
 // The chosen photo look and its strength (photoLooks.js), and the share
 // theme ('dark' or 'light') with the dark-lettered wordmark for a light
 // card. Set per render, the same way, at the top of drawShareCard.
@@ -732,7 +738,9 @@ function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
         // untouched photo (a look that brightens must not get a scrim sized
         // for a darker photo): the sampled tone is carried through the SAME
         // colour matrix before the scrim uses it.
-        const tone = applyLookToTone(sampleAverageTone(Skia, BG, W, H, BG_CROP), PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
+        const tone = TONE_OVERRIDE
+          ? applyLookToTone(TONE_OVERRIDE, PHOTO_LOOK, PHOTO_LOOK_STRENGTH)
+          : applyLookToTone(sampleAverageTone(Skia, BG, W, H, BG_CROP), PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
         drawPhotoScrim(canvas, Skia, W, H, tone, bands);
       } finally {
         if (clip) canvas.restore();
@@ -1669,17 +1677,22 @@ function safeBandFor(params) {
  *   translucent, outside the outline): the screen's positioning view, and
  *   the video overlay, lay this over the photo or clip
  * @param deps.photos { before, after } SkImages for the beforeAfter card, or null
+ * @param deps.toneOverride a tone ({ r, g, b, luminance, topLuminance }) to
+ *   draw the scrim from instead of sampling bgPhoto: a video's brightest
+ *   sampled frame (shareVideo/clipTone.js, D229 addendum 4)
  *
  * params (beyond the card's data): aspect 'story' | 'full' | 'portrait' |
  * 'square', with fullAspect and safeTopRatio/safeBottomRatio for 'full'.
  */
 export function drawShareCard(canvas, {
   Skia, width, params, typefaces, wordmark, wordmarkDark = null, bgPhoto = null, photoCrop = null, omitPhoto = false, photos = null,
+  toneOverride = null,
 }) {
   BG = bgPhoto || null; // optional photo background (all card types)
   BG_CROP = photoCrop || null;
   OMIT_PHOTO = !!omitPhoto;
   SAFE_BAND = safeBandFor(params);
+  TONE_OVERRIDE = toneOverride || null;
   // The photo look and its strength (photoLooks.js): 'none'/undefined draws
   // exactly as before.
   PHOTO_LOOK = params.photoLook || 'none';
