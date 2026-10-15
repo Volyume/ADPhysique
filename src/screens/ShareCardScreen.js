@@ -1604,8 +1604,7 @@ export default function ShareCardScreen({ navigation, route }) {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lookStrip}>
                 {workoutClips.map((row) => {
                   const active = !!clip && clip.id === row.id;
-                  const isPrSet = cardType === 'pr' && !!selectedPr?.exerciseName && row.exerciseName === selectedPr.exerciseName
-                    && (selectedPr.setNumber == null || row.setNumber == null || selectedPr.setNumber === row.setNumber);
+                  const isPrSet = cardType === 'pr' && clipMatchesPR(row, selectedPr);
                   const name = clipDisplayName(row);
                   return (
                     <TouchableOpacity
