@@ -12351,3 +12351,9 @@ Queued after the nine lanes, in the order Q6, Q2, Q4, Q5, Q3, Q1.
 **FOUNDER-GATED (Section 2, the dependency rule):** the Android compositor needs Media3 Transformer (`androidx.media3:media3-transformer`, Google, Apache 2.0). iOS needs nothing beyond AVFoundation. The question is in chat; stage 2 on Android waits for the answer.
 
 Research and design: `docs/audit/video-shares-2026-10-15/`.
+
+### D229 addendum (2026-10-15, founder correction): fully in the app, a completed video, inside the photo flow
+
+**Founder, verbatim:** "No it needs to be in the app we are not doing api access or anything else. So the most slick version we can, so it looks really good works great. Built within Volyume itself fully and you share a completed video. Make it work within the area of the photos too so it's still once complete app not a bolt on extra".
+
+SUPERSEDES ruling 1's two stages. RULED: there is no Instagram Stories handoff and no outside service at any stage. Volyume itself renders the finished video (the clip, trimmed, framed, with the chosen look at its strength, and the card drawn on top, as a 1080-wide H.264 MP4 in the chosen format), then offers it exactly as the photo card is offered: Share (the OS share sheet), Save to gallery, Share to Story. The video lives inside the existing share screen: the Background section gains the clip sources beside My photo and Camera; the same looks strip and strength slider, the same drag-and-pinch framer and the same card types and formats apply; the preview plays the filtered clip live inside the card. One stage, both platforms: iOS through AVFoundation; Android through an in-house compositor. Rulings 2 to 7 stand. The Android dependency question (Media3 Transformer as a library compiled into the app, versus the raw MediaCodec and OpenGL route with no library and more native code) stays with the founder; the design pass does not wait on it.

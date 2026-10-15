@@ -7,3 +7,6 @@
 > I needs to look very very slick and a real selling point on the app absolute top effort for this please.
 
 Register: D229. Research and design in this folder; the lead's feasibility answer of the same day is recorded under D229 in the decisions register.
+
+> No it needs to be in the app we are not doing api access or anything else. So the most slick version we can, so it looks really good works great.
+> Built within Volyume itself fully and you share a completed video. Make it work within the area of the photos too so it's still once complete app not a bolt on extra
