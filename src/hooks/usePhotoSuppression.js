@@ -24,6 +24,7 @@ import { NavigationContext } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { getOpenEdPatternFlag } from '../lib/database';
+import { deriveSafetyState } from '../lib/safetyState';
 import useAppStore from '../store/useAppStore';
 
 // The single canonical OR: suppressed when calm mode is on OR an open
@@ -61,11 +62,14 @@ export function derivePhotoSuppression({ mode, edFlag }) {
  * @returns {Promise<boolean>}
  */
 export async function readEdOrCalmSuppressed(userId) {
+  // D228 item 2: the same two raw reads, now made in one place
+  // (src/lib/safetyState.js); the verdict is unchanged. A missing userId
+  // keeps reading as the photo hook always did (SQL NULL finds no row).
   const [mode, edFlag] = await Promise.all([
     AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
     getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
   ]);
-  return derivePhotoSuppression({ mode, edFlag });
+  return deriveSafetyState({ mode, edFlag }).suppressed;
 }
 
 // S7-5 (progress-tab audit second pass, 2026-09-25): a test double that
