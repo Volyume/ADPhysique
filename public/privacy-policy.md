@@ -1,7 +1,7 @@
 # Volyume Privacy Policy
 
 **Effective date:** 26 September 2026
-**Last updated:** 26 September 2026
+**Last updated:** 15 October 2026
 
 This policy explains what Volyume collects, why, how it is stored, and how to delete it. Volyume is a training and nutrition self-coaching tool. Your health data stays private: it is never shown to other people, used for advertising or sold. Community, where you can follow other lifters and share your workouts, is optional, and section 5 explains what it shares.
 
@@ -21,11 +21,12 @@ To run the app and coach you, Volyume may use:
 - Food diary entries, recipes, saved meals, water, calories and macro targets
 - Weekly check-ins, recovery, energy, adherence and eating-habits screening responses
 - Progress photo metadata and Volyume Score analysis metadata, including photo quality, result confidence, leanness band, visual score and progress change
+- Short workout videos you choose to record (up to 15 seconds, no sound), kept on your device only
 - Usage events that tell us which app surfaces are used and where the app is slow
 - Crash and diagnostic events, scrubbed before they leave the device
 - If you join Community: your Community profile, posts, comments, reactions, messages, groups and the people you follow (section 5)
 
-Progress photo image files stay on your device unless you choose to share or export them. Volyume Score is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
+Progress photo image files stay on your device unless you choose to share or export them. Workout video files stay on your device too: they are never uploaded, are not included in backups, and are deleted when you delete the workout or your account. Volyume Score is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
 
 ## 3. Why we collect this data
 
@@ -37,7 +38,7 @@ Under UK and EU GDPR, core account operation is processed under contract, and he
 
 Local data is stored on your device. Auth tokens use secure device storage. Training, nutrition, body metrics, progress metadata and settings live in SQLite.
 
-Cloud-backed account data is stored in Supabase in the EU region, protected by row-level security so only you, and the team supporting your account when needed, can see it. Progress photo and scan image files are not cloud-synced by Volyume.
+Cloud-backed account data is stored in Supabase in the EU region, protected by row-level security so only you, and the team supporting your account when needed, can see it. Progress photo, scan image and workout video files are not cloud-synced by Volyume.
 
 ## 5. Community
 

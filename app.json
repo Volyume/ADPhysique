@@ -9,7 +9,7 @@
       }
     },
     "scheme": "volyume",
-    "version": "2.15.0",
+    "version": "2.16.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },

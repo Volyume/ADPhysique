@@ -5,7 +5,7 @@ import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 
-const LAST_UPDATED = '26 September 2026';
+const LAST_UPDATED = '15 October 2026';
 
 export default function PrivacyPolicyScreen() {
   // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
@@ -33,6 +33,11 @@ export default function PrivacyPolicyScreen() {
             to share or export them. The app may store local metadata and analysis outputs such as photo quality,
             result confidence, leanness band, Volyume Score and progress change. Volyume Score is a simple
             progress read, not a DEXA scan, diagnosis, medical assessment, or medical advice.
+          </Body>
+          <Body>
+            If you record a short video of a set or of a workout, the video stays on this device. It is never
+            uploaded, is not included in backups, and is deleted when you delete that workout or your account.
+            The finished share image or video leaves the device only when you choose to share or save it.
           </Body>
           <Body>
             We do not sell your data. We do not share it with third parties for advertising purposes.

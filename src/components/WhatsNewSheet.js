@@ -155,6 +155,16 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
+  // 2.16.0 (2026-10-15): video shares (register D229 and its addenda):
+  // a short video of a set or of the workout as the share background, the
+  // full-screen share and the pinned preview, the logger keyboard going
+  // away by itself; the policy's new video line and the standing Community
+  // privacy notice ride inside the Community line.
+  '2.16.0': [
+    { icon: 'videocam-outline', text: "Record a short video of a set from an exercise's menu, or after the workout, and use it as the background of your share. Videos stay on your phone, are never uploaded, and are deleted with the workout." },
+    { icon: 'image-outline', text: 'Your share can now fill the whole screen, and the preview stays in view while you choose what goes on it. In the logger, the keyboard goes away by itself after a few seconds.' },
+    { icon: 'people-outline', text: 'Before your first session posts to Community, Volyume asks once who should see them. Our privacy policy now covers Community and your workout videos, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+  ],
   // 2.15.0 (2026-10-15): the coherence survey (register D228 and its
   // addendum): the first-post question, the calm and flag tiers, the plan
   // refusal chooser, style plans at a block boundary; the privacy notice

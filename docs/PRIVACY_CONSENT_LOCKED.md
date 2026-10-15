@@ -66,6 +66,10 @@ Locked copy:
 > - Progress photos you choose to take, plus photo quality, result
 >   confidence, leanness band, Volyume Score and progress change when
 >   you use photo analysis
+> - Short workout videos you choose to record (up to 15 seconds, no
+>   sound), kept on your device only, never uploaded, deleted with the
+>   workout (added 2026-10-15, register D229; the Article 9 consent text
+>   is unchanged: a video of a set is not special-category data)
 >
 > Volyume Score is a simple progress read, not a medical measure,
 > DEXA scan, diagnosis, or medical advice. It may abstain or ask for
@@ -94,7 +98,9 @@ Locked copy:
 > Where it lives:
 >
 > - On your phone, in encrypted local storage. Progress photo image
->   files stay on this device unless you choose to share or export them
+>   files stay on this device unless you choose to share or export them;
+>   workout video files stay on this device, full stop (never uploaded,
+>   not in backups, deleted with the workout or the account)
 > - In Supabase in the EU region for cloud-backed account data, with
 >   row-level security so only you and the team supporting your account
 >   can see it

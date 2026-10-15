@@ -30,7 +30,10 @@ describe('privacy, consent, export and store-copy truth', () => {
     // default. New and existing they can turn it off if they want after.
     // We need that in the privacy policy also"; register D194 addendum 2):
     // the Community section was added, so the date moved with it.
-    expect(privacy).toContain("LAST_UPDATED = '26 September 2026'");
+    // RE-ANCHORED 2026-10-15 (register D229, video shares): the policy gained
+    // its workout-video line (device-only, never uploaded, deleted with the
+    // workout), so the date moved with it.
+    expect(privacy).toContain("LAST_UPDATED = '15 October 2026'");
     expect(privacy).toMatch(/Volyume Score is a simple\s+progress read/);
     expect(privacy).toContain('not a DEXA scan, diagnosis, medical assessment, or medical advice');
     expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
@@ -108,8 +111,8 @@ describe('privacy, consent, export and store-copy truth', () => {
   // sheet shows only the running version's notes, so a person updating
   // straight from 2.5.0 to the running version sees only that entry).
   // 2.8.0 leads with it; 2.9.0 (trimmed to two entries on the founder's
-  // word), 2.10.0, 2.11.0, 2.12.0, 2.13.0, 2.14.0 and 2.15.0 carry it inside the Community line.
-  test.each(['2.8.0', '2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.13.0', '2.14.0', '2.15.0'])('the policy change is announced in the app in %s, as the policy promises', (version) => {
+  // word), 2.10.0, 2.11.0, 2.12.0, 2.13.0, 2.14.0, 2.15.0 and 2.16.0 carry it inside the Community line.
+  test.each(['2.8.0', '2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.13.0', '2.14.0', '2.15.0', '2.16.0'])('the policy change is announced in the app in %s, as the policy promises', (version) => {
     const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
     const start = sheet.indexOf(`'${version}': [`);
     expect(start).toBeGreaterThan(-1);
@@ -117,6 +120,32 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry).toContain('Our privacy policy now covers Community');
     expect(entry).toContain('how to turn sharing off');
     expect(entry).toContain('Settings, under Privacy and legal');
+  });
+  // Register D229 (2026-10-15): workout videos are a new kind of data the
+  // policy must name, with the three promises every copy makes about them
+  // (device only, never uploaded, deleted with the workout), and the 2.16.0
+  // notes announce the change in the app as the policy promises.
+  test('every privacy policy copy discloses workout videos as device-only, never uploaded, deleted with the workout', () => {
+    const copies = {
+      inApp: readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js'),
+      html: readRepoFile('public', 'privacy.html'),
+      htmlIndex: readRepoFile('public', 'privacy', 'index.html'),
+      markdown: readRepoFile('public', 'privacy-policy.md'),
+      docsWeb: readRepoFile('docs', 'web', 'privacy.html'),
+      locked: readRepoFile('docs', 'PRIVACY_CONSENT_LOCKED.md'),
+    };
+    for (const [name, text] of Object.entries(copies)) {
+      const flat = text.replace(/\s+/g, ' ');
+      expect({ name, ok: /video/i.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /never uploaded/.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, ok: /deleted (when you delete (that|the)|with the) workout/.test(flat) }).toEqual({ name, ok: true });
+      expect({ name, bad: /\bclips?\b/i.test(flat) }).toEqual({ name, bad: false });
+    }
+    const sheet = readRepoFile('src', 'components', 'WhatsNewSheet.js');
+    const start = sheet.indexOf("'2.16.0': [");
+    const entry = sheet.slice(start, sheet.indexOf('],', start));
+    expect(entry).toContain('Videos stay on your phone, are never uploaded, and are deleted with the workout.');
+    expect(entry).toContain('Our privacy policy now covers Community and your workout videos');
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));
