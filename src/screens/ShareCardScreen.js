@@ -29,14 +29,13 @@ import Text from '../components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps, letterSpacing } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import BottomSheet from '../components/BottomSheet';
 import SharePhotoFramer from '../components/SharePhotoFramer';
-import AnimatedEntrance from '../components/AnimatedEntrance';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
@@ -66,13 +65,17 @@ import LookStrengthSlider from '../components/share/LookStrengthSlider';
 // the person shares the finished file.
 import useAppStore from '../store/useAppStore';
 import ClipFramer from '../components/share/ClipFramer';
+import useClipRecorder from '../components/clips/useClipRecorder';
+import Animated, {
+  useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, useAnimatedReaction, interpolate, Extrapolation, runOnJS,
+} from 'react-native-reanimated';
 import TrimBar, { mmss } from '../components/share/TrimBar';
 import ProgressRing from '../components/share/ProgressRing';
 import useClipFrames from '../lib/shareVideo/useClipFrames';
 import { extractClipThumbnails } from '../lib/shareVideo/clipThumbnails';
 import { sampleClipTone } from '../lib/shareVideo/clipTone';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
-import { getClip, listClipsForWorkout, clipDisplayName, clipMatchesPR } from '../lib/clips';
+import { getClip, listClipsForWorkout, clipDisplayName, clipMatchesPR, subscribeClips } from '../lib/clips';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -137,12 +140,21 @@ const WORDMARK_DARK = require('../../assets/volyume-wordmark-dark.png');
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
-// The pinned live preview (D229 addendum 5 item 8): once more than this share
-// of the big preview has scrolled off the top, a small copy of the same live
-// preview sits under the header while the controls are worked.
+// The preview's place (D229 addendum 5 item 8): a header above the page holds
+// the live preview at full size and shrinks it, as the page scrolls, to this
+// height, where it stays under the title bar while the controls are worked.
 const MINI_PREVIEW_H = 112;
-const MINI_SHOWS_AFTER = 0.6;
-const noop = () => {};
+// The screen stays awake while a video is made (addendum 5, ruling 16); its
+// own tag, so it can never release a hold another screen owns.
+const SHARE_KEEP_AWAKE_TAG = 'volyume-share-video';
+function keepAwake(on) {
+  try {
+    // eslint-disable-next-line global-require
+    const ka = require('expo-keep-awake');
+    if (on) ka.activateKeepAwakeAsync?.(SHARE_KEEP_AWAKE_TAG)?.catch?.(() => {});
+    else Promise.resolve(ka.deactivateKeepAwake?.(SHARE_KEEP_AWAKE_TAG)).catch(() => {});
+  } catch (_e) { /* the module is optional in tests */ }
+}
 // The photo the positioning view shows: the same pixels the card draws,
 // scaled to at most this edge (enough for a 300dp frame at 4x zoom on a
 // dense screen) and encoded once, so the view and the card cannot disagree
@@ -294,7 +306,8 @@ export default function ShareCardScreen({ navigation, route }) {
   const [clip, setClip] = useState(null);
   const [clipWindow, setClipWindow] = useState({ startMs: 0, endMs: MAX_VIDEO_MS });
   const [clipPaused, setClipPaused] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [osReduceMotion, setOsReduceMotion] = useState(false);
+  const [toneReady, setToneReady] = useState(true);
   const [barThumbs, setBarThumbs] = useState(null);
   const [toneFrames, setToneFrames] = useState(null);
   const [clipTone, setClipTone] = useState(null);
@@ -304,6 +317,13 @@ export default function ShareCardScreen({ navigation, route }) {
   const videoCacheRef = useRef({});
   const cacheFilesRef = useRef([]);
   const handledClipIdRef = useRef(null);
+  // Reduce Motion: the phone's own setting, read once, OR Volyume's own
+  // (Settings), the one AnimatedEntrance and the camera read (fresh-eyes
+  // review 2026-10-15, should-fix 6).
+  const storeReduceMotion = useAppStore((state) => !!state.accessibility?.reduceMotion);
+  const reduceMotion = osReduceMotion || storeReduceMotion;
+  // True while the engine is making the video: leaving is held (ruling 16).
+  const makingVideoRef = useRef(false);
   const clipFrames = useClipFrames(clip?.uri ?? null, {
     startMs: clipWindow.startMs, endMs: clipWindow.endMs, paused: clipPaused || makingVideo,
   });
@@ -312,7 +332,7 @@ export default function ShareCardScreen({ navigation, route }) {
     try {
       const read = AccessibilityInfo?.isReduceMotionEnabled?.();
       if (read && typeof read.then === 'function') {
-        read.then((on) => { if (!cancelled) setReduceMotion(!!on); }).catch(() => {});
+        read.then((on) => { if (!cancelled) setOsReduceMotion(!!on); }).catch(() => {});
       }
     } catch (_e) { /* the preview simply plays */ }
     return () => { cancelled = true; };
@@ -613,13 +633,13 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!isSession || isSticker || !cardReady || typeof sessionLiftsThatFit !== 'function') return null;
     try {
       return sessionLiftsThatFit({
-        Skia, params: buildParams(), typefaces, wordmark, bgPhoto, lifts,
+        Skia, params: buildParams(), typefaces, wordmark, bgPhoto: bgPhoto || layoutFrame, lifts,
       });
     } catch (e) {
       logError('ShareCardScreen.liftsFitting', e, { format });
       return null;
     }
-  }, [isSession, isSticker, cardReady, buildParams, typefaces, wordmark, bgPhoto, format]);
+  }, [isSession, isSticker, cardReady, buildParams, typefaces, wordmark, bgPhoto, layoutFrame, format]);
   const shownLiftCount = useMemo(() => {
     const n = liftsFitting(chosenLifts);
     return n == null ? chosenLifts.length : Math.min(n, chosenLifts.length);
@@ -892,15 +912,24 @@ export default function ShareCardScreen({ navigation, route }) {
     if (suppress && clip) clearPhoto();
   }, [suppress, clip, clearPhoto]);
 
-  // The workout's own videos, for the "From this workout" strip.
+  // The workout's own videos, for the "From this workout" strip: re-read on
+  // every save or delete anywhere (an Undo on the saved toast, a delete in
+  // the videos sheet), and a chosen video that no longer exists goes.
+  const [clipsVersion, setClipsVersion] = useState(0);
+  useEffect(() => subscribeClips(() => setClipsVersion((n) => n + 1)), []);
   useEffect(() => {
     let cancelled = false;
     if (!workoutId || !userId || suppress) { setWorkoutClips([]); return undefined; }
     listClipsForWorkout(userId, workoutId)
-      .then((rows) => { if (!cancelled) setWorkoutClips(Array.isArray(rows) ? rows : []); })
+      .then((rows) => {
+        if (cancelled) return;
+        const list = Array.isArray(rows) ? rows : [];
+        setWorkoutClips(list);
+        setClip((current) => (current?.id && !list.some((row) => row.id === current.id) ? null : current));
+      })
       .catch(() => { if (!cancelled) setWorkoutClips([]); });
     return () => { cancelled = true; };
-  }, [workoutId, userId, suppress, route?.params?.clipId]);
+  }, [workoutId, userId, suppress, route?.params?.clipId, clipsVersion]);
 
   // Arriving with a video chosen (the summary's row, or the camera opened
   // from this screen coming back with `clipId` merged into the route): it
@@ -933,19 +962,32 @@ export default function ShareCardScreen({ navigation, route }) {
   useEffect(() => {
     let cancelled = false;
     if (!clip?.uri || !Skia) { setBarThumbs(null); return undefined; }
+    // No frame at all means the phone cannot open this video: one calm line
+    // and the way forward, never a share button that stays grey with no
+    // word (fresh-eyes review 2026-10-15, should-fix 1).
+    const cannotOpen = () => {
+      if (cancelled) return;
+      setBarThumbs(null);
+      toast.show("Couldn't open that video, try another", { variant: 'error' });
+      clearPhoto();
+    };
     extractClipThumbnails(clip.uri, { count: BAR_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W })
-      .then((out) => { if (!cancelled) setBarThumbs(out && out.images.length ? out : null); })
-      .catch(() => { if (!cancelled) setBarThumbs(null); });
+      .then((out) => { if (cancelled) return; if (out && out.images.length) setBarThumbs(out); else cannotOpen(); })
+      .catch(() => cannotOpen());
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clip?.uri]);
   useEffect(() => {
     let cancelled = false;
-    if (!clip?.uri || !Skia) { setToneFrames(null); return undefined; }
+    if (!clip?.uri || !Skia) { setToneFrames(null); setToneReady(true); return undefined; }
+    // Until the frames of THIS window have arrived the scrim is the last
+    // window's: Share and Save wait (should-fix 2).
+    setToneReady(false);
     extractClipThumbnails(clip.uri, {
       count: TONE_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W, fromMs: clipWindow.startMs, toMs: clipWindow.endMs,
     })
-      .then((out) => { if (!cancelled) setToneFrames(out && out.images.length ? out.images : null); })
-      .catch(() => { if (!cancelled) setToneFrames(null); });
+      .then((out) => { if (!cancelled) { setToneFrames(out && out.images.length ? out.images : null); setToneReady(true); } })
+      .catch(() => { if (!cancelled) { setToneFrames(null); setToneReady(true); } });
     return () => { cancelled = true; };
   }, [clip?.uri, clipWindow.startMs, clipWindow.endMs]);
   // The scrim's tone: the brightest of the window's frames, placed as the
@@ -1072,11 +1114,13 @@ export default function ShareCardScreen({ navigation, route }) {
       const asset = res.assets[0];
       if (isVideoAsset(asset)) {
         if (!videosToo) return;
+        // The picker's copy is deleted with the rest when the screen closes,
+        // whether or not the video can be opened (ruling 13).
+        cacheFilesRef.current.push(asset.uri);
         let probe = null;
         try { probe = await shareVideoEngine.probeVideo(asset.uri); } catch (_e) { probe = null; }
         const durationMs = Number(probe?.durationMs ?? asset.duration) || 0;
         if (!durationMs) { toast.show("Couldn't open that video, try another", { variant: 'error' }); return; }
-        cacheFilesRef.current.push(asset.uri);
         acceptClip({
           id: null, uri: asset.uri, durationMs,
           width: probe?.width ?? asset.width ?? null, height: probe?.height ?? asset.height ?? null,
@@ -1095,22 +1139,23 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }, [toast, acceptPhoto, acceptClip, suppress]);
 
-  // Record a video now (D229 addendum 5 item 4): the in-app camera, which
-  // comes back here with `clipId` merged into this route. Needs a workout
-  // to keep the video with; a share with none offers the gallery only.
+  // Record a video now (D229 addendum 5 item 4): the in-app camera, through
+  // the one recording flow every surface uses (useClipRecorder: the privacy
+  // primer the first time, the videos sheet at three), which comes back here
+  // with `clipId` merged into this route. Needs a workout to keep the video
+  // with; a share with none offers the gallery only.
+  const clipFlow = useClipRecorder({ navigation, userId, workoutId: workoutId || null });
   const recordVideo = useCallback(() => {
     if (!workoutId || suppress) return;
-    navigation.navigate('ClipCamera', { workoutId, source: 'share' });
-  }, [navigation, workoutId, suppress]);
+    clipFlow.openRecorder({ source: 'share' });
+  }, [clipFlow, workoutId, suppress]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
-  // The pinned live preview (addendum 5 item 8): the scroll view, where the
-  // big preview sits in it, and whether the small copy is showing.
+  // The preview's place (addendum 5 item 8): the page's scroll view, and
+  // whether the header's preview is at its small size.
   const scrollRef = useRef(null);
-  const previewTopRef = useRef(0);
-  const miniShownRef = useRef(false);
-  const [miniShown, setMiniShown] = useState(false);
+  const [previewSmall, setPreviewSmall] = useState(false);
   // EP-17/UI-05 (Codex end-user-polish audit): `previewB64 === null` used to
   // mean BOTH "still rendering" and "permanently failed" (missing Skia/
   // typeface, or the offscreen surface/encode failing), so a real render
@@ -1168,6 +1213,8 @@ export default function ShareCardScreen({ navigation, route }) {
   // the one frame handed in.
   const liveClip = !!clip && !isSticker;
   const videoOffered = !suppress && !isSticker && shareVideoEngine.isAvailable();
+  // A photo, or a video from the phone, chosen through Gallery.
+  const galleryChosen = backgroundSource === BACKGROUND_SOURCES.GALLERY && (!!bgPhoto || (!!clip && clip.source === 'gallery'));
   const layoutFrame = toneFrames?.[0] || barThumbs?.images?.[0] || null;
   const clipOverlay = useMemo(() => {
     if (!liveClip || !Skia || !typefaces || !layoutFrame) return null;
@@ -1217,11 +1264,13 @@ export default function ShareCardScreen({ navigation, route }) {
     let H = cardHeight(W, params.isSquare, params.aspect, params.fullAspect);
     if (H % 2) H -= 1; // the video's sides are even
     const signature = JSON.stringify({
-      uri: clip.uri, window: clipWindow, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H,
+      uri: clip.uri, window: clipWindow, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H, tone: clipTone,
     });
     if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
     if (!layoutFrame) { toast.show("Couldn't open that video, try another", { variant: 'error' }); return null; }
     setMakingVideo(true);
+    makingVideoRef.current = true;
+    keepAwake(true);
     setVideoProgress(0);
     try {
       const surface = Skia.Surface.MakeOffscreen(W, H);
@@ -1261,12 +1310,27 @@ export default function ShareCardScreen({ navigation, route }) {
       return null;
     } finally {
       setMakingVideo(false);
+      makingVideoRef.current = false;
+      keepAwake(false);
     }
   }, [clip, typefaces, wordmark, wordmarkDark, buildParams, clipWindow, photoCrop, photoLook, photoLookStrength, layoutFrame, clipTone, clipSize, toast]);
 
   const cancelVideo = useCallback(() => {
     shareVideoEngine.cancelExport().catch(() => {});
   }, []);
+
+  // While the video is made the ring holds the screen (ruling 16): leaving
+  // waits for it or for Cancel; a screen taken away anyway (a reset) cancels
+  // the export so the engine is free and no finished file is left unowned.
+  useEffect(() => {
+    const unsubscribe = navigation?.addListener?.('beforeRemove', (e) => {
+      if (makingVideoRef.current) e.preventDefault();
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (makingVideoRef.current) shareVideoEngine.cancelExport().catch(() => {});
+    };
+  }, [navigation]);
 
   // The page's own scroll, made known to the gesture system so a drag that
   // starts on the photo moves the photo and never the page (the photo's
@@ -1311,7 +1375,7 @@ export default function ShareCardScreen({ navigation, route }) {
         toast.show('Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
         return;
       }
-      if (clip) {
+      if (liveClip) {
         const videoUri = await renderVideoToFile();
         if (!videoUri) return; // the engine's own line, or a cancel, has already spoken
         await MediaLibrary.saveToLibraryAsync(videoUri);
@@ -1357,7 +1421,7 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     setSharingToStories(true);
     try {
-      if (clip) {
+      if (liveClip) {
         // The finished video, through the same door as the image (D229
         // addendum 1: a completed video, shared the way the photo card is).
         const videoUri = await renderVideoToFile();
@@ -1441,106 +1505,49 @@ export default function ShareCardScreen({ navigation, route }) {
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
   const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect, fullAspect);
 
-  // The pinned live preview (D229 addendum 5 item 8). The big preview is the
-  // first thing on the screen; once more than MINI_SHOWS_AFTER of its card
-  // has scrolled off the top, a small copy of the SAME live preview sits
-  // under the header (the same frames, the same photo, the same placement
-  // and overlay, drawn small), so the person sees the card change as they
-  // work the controls below. It takes no gestures; a tap brings the big
-  // preview back. Scroll positions are read by hand here, not animated: the
-  // JS-thread Animated API is a frozen allowlist (motionFitRules.guard).
-  const handlePreviewLayout = useCallback((e) => {
-    previewTopRef.current = e?.nativeEvent?.layout?.y ?? 0;
+  // The preview's place (D229 addendum 5 item 8): a header above the page
+  // holds the live preview at full size and shrinks it, on the UI thread as
+  // the page scrolls, to a small copy that stays under the title bar while
+  // the controls are worked below. One preview, one framer, nothing drawn
+  // twice, and nothing floats over the controls (fresh-eyes review
+  // 2026-10-15, should-fix 7: the first build pinned a second copy over the
+  // trailing edge, where it took the taps of the controls beneath it). A tap
+  // on the small preview scrolls back to the top. Reduce Motion: the shrink
+  // follows the finger (direct manipulation), only the scroll back is
+  // unanimated.
+  const collapseRange = Math.max(1, previewH - MINI_PREVIEW_H);
+  const collapse = useSharedValue(0); // 0 at full size, 1 at the small size
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+
+      const y = e.contentOffset.y;
+      collapse.value = Math.min(1, Math.max(0, y / collapseRange));
+    },
+  }, [collapseRange]);
+  useAnimatedReaction(() => collapse.value > 0.5, (small, prev) => {
+    if (small !== prev) runOnJS(setPreviewSmall)(small);
   }, []);
-  const handleScroll = useCallback((e) => {
-    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
-    const next = y > previewTopRef.current + previewH * MINI_SHOWS_AFTER;
-    if (next !== miniShownRef.current) {
-      miniShownRef.current = next;
-      setMiniShown(next);
-    }
+  const previewHeaderStyle = useAnimatedStyle(() => ({
+    height: interpolate(collapse.value, [0, 1], [previewH, MINI_PREVIEW_H], Extrapolation.CLAMP),
+  }), [previewH]);
+  const previewCardStyle = useAnimatedStyle(() => {
+    const h = interpolate(collapse.value, [0, 1], [previewH, MINI_PREVIEW_H], Extrapolation.CLAMP);
+    const scale = previewH > 0 ? h / previewH : 1;
+    return { transform: [{ translateY: -(previewH - h) / 2 }, { scale }] };
   }, [previewH]);
   const scrollToPreview = useCallback(() => {
     scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });
   }, [reduceMotion]);
-  const miniH = MINI_PREVIEW_H;
-  const miniW = previewH > 0 ? Math.max(1, Math.round((miniH * previewW) / previewH)) : miniH;
-  let miniBody = null;
-  if (liveClip) {
-    miniBody = (
-      <ClipFramer
-        clip={clipFrames}
-        mediaWidth={clipSize.width}
-        mediaHeight={clipSize.height}
-        frameWidth={miniW}
-        frameHeight={miniH}
-        crop={photoCrop}
-        lookKey={photoLook !== 'none' ? photoLook : null}
-        lookStrength={photoLookStrength}
-        overlayUri={clipOverlay}
-        paused={clipPaused || makingVideo}
-        onTogglePause={noop}
-        onChange={noop}
-      />
-    );
-  } else if (livePhoto) {
-    miniBody = (
-      <SharePhotoFramer
-        photoUri={framerPhoto.uri}
-        photoWidth={framerPhoto.width}
-        photoHeight={framerPhoto.height}
-        frameWidth={miniW}
-        frameHeight={miniH}
-        crop={photoCrop}
-        overlayUri={framerOverlay}
-        onChange={noop}
-      />
-    );
-  } else if (previewStatus === 'ready' && previewB64) {
-    miniBody = (
-      <Image
-        source={{ uri: `data:image/png;base64,${previewB64}` }}
-        style={{ width: miniW, height: miniH }}
-        resizeMode="contain"
-      />
-    );
-  }
-  const miniPreview = miniShown && miniBody ? (
-    <AnimatedEntrance style={[styles.miniWrap, { right: t.screenPadding }]}>
-      <TouchableOpacity
-        onPress={scrollToPreview}
-        accessibilityRole="button"
-        accessibilityLabel="Back to the preview"
-        accessibilityHint="Scrolls up to the full-size preview"
-        activeOpacity={0.85}
-        style={[styles.mini, live.mini, { width: miniW, height: miniH }]}
-        testID="share-mini-preview"
-      >
-        <View pointerEvents="none" style={{ width: miniW, height: miniH }}>{miniBody}</View>
-      </TouchableOpacity>
-    </AnimatedEntrance>
-  ) : null;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title="Share image" />
-      <View style={styles.body}>
-      <GestureDetector gesture={scrollGesture}>
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.content, live.content]}
-        onScroll={handleScroll}
-        scrollEventThrottle={32}
-      >
-
-        {/* Preview (addendum 5 item 8: at the top of the screen, and a small
-            pinned copy under the header once it has scrolled away): the exact
-            image that gets shared, scaled down. With a
-            photo it is live: the photo under the card drawn by the same
-            renderer, moved and resized right here. */}
-        <View style={styles.section} onLayout={handlePreviewLayout}>
-          <SectionLabel>Preview</SectionLabel>
-          <View style={styles.previewOuter}>
+      <BackHeader title={liveClip ? 'Share video' : 'Share image'} />
+      {/* The preview's header (addendum 5 item 8): the exact image that gets
+          shared, scaled down, live with a photo or a video under the card;
+          it shrinks as the page scrolls and stays small under the title bar. */}
+      <Animated.View style={[styles.previewHeader, previewHeaderStyle]} testID="share-preview-header">
+        <Animated.View style={[styles.previewCard, { width: previewW, height: previewH }, previewCardStyle]} pointerEvents={previewSmall ? 'none' : 'auto'}>
             {liveClip ? (
               <View>
                 <ClipFramer
@@ -1551,20 +1558,13 @@ export default function ShareCardScreen({ navigation, route }) {
                   frameHeight={previewH}
                   crop={photoCrop}
                   lookKey={photoLook !== 'none' ? photoLook : null}
-                  lookStrength={photoLookStrength}
+                  lookStrength={strengthDisplayPct / 100}
                   overlayUri={clipOverlay}
                   paused={clipPaused || makingVideo}
                   onTogglePause={() => setClipPaused((p) => !p)}
                   onChange={setPhotoCrop}
                   blocksGesture={scrollGesture}
                 />
-                {makingVideo ? (
-                  <View style={[styles.videoScrim, live.videoScrim, { width: previewW, height: previewH }]} pointerEvents="box-none">
-                    <ProgressRing progress={videoProgress} />
-                    <Text style={[styles.videoScrimText, live.videoScrimText]}>Making your video</Text>
-                    <Button title="Cancel" onPress={cancelVideo} variant="secondary" size="sm" fullWidth={false} accessibilityLabel="Stop making the video" />
-                  </View>
-                ) : null}
               </View>
             ) : livePhoto ? (
               <SharePhotoFramer
@@ -1602,10 +1602,43 @@ export default function ShareCardScreen({ navigation, route }) {
                 <ActivityIndicator color={t.colors.primary} />
               </View>
             )}
+        </Animated.View>
+        {/* The ring while the video is made: over the header, never scaled
+            with the card, so Cancel stays readable at any scroll. */}
+        {makingVideo ? (
+          <View style={[styles.videoScrim, live.videoScrim, StyleSheet.absoluteFillObject]} pointerEvents="box-none">
+            <ProgressRing progress={videoProgress} />
+            <Text style={[styles.videoScrimText, live.videoScrimText]}>Making your video</Text>
+            <Button title="Cancel" onPress={cancelVideo} variant="secondary" size="sm" fullWidth={false} accessibilityLabel="Stop making the video" />
           </View>
+        ) : null}
+        {previewSmall && !makingVideo ? (
+          <TouchableOpacity
+            style={styles.previewBack}
+            onPress={scrollToPreview}
+            accessibilityRole="button"
+            accessibilityLabel="Back to the preview"
+            accessibilityHint="Scrolls up to the full-size preview"
+            activeOpacity={0.85}
+            testID="share-mini-preview"
+          />
+        ) : null}
+      </Animated.View>
+      <View style={styles.body}>
+      <GestureDetector gesture={scrollGesture}>
+      <Animated.ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.content, live.content]}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        scrollEnabled={!makingVideo}
+      >
+
+        {liveClip || livePhoto ? (
+        <View style={styles.section}>
           {liveClip ? (
             <View style={styles.clipControls}>
-              <Text style={[styles.photoHint, live.photoHint]}>Drag to move. Pinch to resize. Tap to pause.</Text>
+              <Text style={[styles.photoHint, live.photoHint]}>{clipPaused ? 'Drag to move. Pinch to resize. Tap to play.' : 'Drag to move. Pinch to resize. Tap to pause.'}</Text>
               <TrimBar
                 width={previewW}
                 durationMs={Math.max(clipWindow.endMs, Number(clip.durationMs) || 0)}
@@ -1618,11 +1651,11 @@ export default function ShareCardScreen({ navigation, route }) {
                 onInteractStart={() => setClipPaused(true)}
                 onChange={(next) => { setClipWindow(next); setClipPaused(reduceMotion); }}
               />
-              {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS ? (
-                <Text style={[styles.photoHint, live.photoHint]}>
-                  {`${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide to choose where it starts.`}
-                </Text>
-              ) : null}
+              <Text style={[styles.photoHint, live.photoHint]}>
+                {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS
+                  ? `${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide to choose where it starts. Drag the ends to shorten it.`
+                  : 'Drag the ends to shorten it.'}
+              </Text>
             </View>
           ) : null}
           {livePhoto ? (
@@ -1641,6 +1674,7 @@ export default function ShareCardScreen({ navigation, route }) {
             </View>
           ) : null}
         </View>
+        ) : null}
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -1773,10 +1807,10 @@ export default function ShareCardScreen({ navigation, route }) {
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
               label="Gallery"
-              accessibilityLabel="Gallery, choose a photo"
-              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY}
+              accessibilityLabel={videoOffered ? 'Gallery, choose a photo or video' : 'Gallery, choose a photo'}
+              active={galleryChosen}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={15} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.GALLERY ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={15} color={galleryChosen ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Photo"
@@ -2056,13 +2090,13 @@ export default function ShareCardScreen({ navigation, route }) {
             pinned accessibility label below, so the 2026-06-30 decision (OS
             share sheet, not a direct-composer intent) is unaffected. */}
         <Button
-          title={clip ? 'Share video' : 'Share image'}
+          title={liveClip ? 'Share video' : 'Share image'}
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
-          disabled={sharingToStories || !cardReady || makingVideo || (!!clip && !layoutFrame)}
+          disabled={sharingToStories || !cardReady || makingVideo || (liveClip && (!layoutFrame || !toneReady))}
           loading={sharingToStories}
-          accessibilityLabel={clip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
+          accessibilityLabel={liveClip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
           variant="emphatic"
           size="lg"
           style={styles.secondaryAction}
@@ -2075,7 +2109,7 @@ export default function ShareCardScreen({ navigation, route }) {
           title="Save to gallery"
           icon="download-outline"
           onPress={handleSaveToGallery}
-          disabled={savingToGallery || !cardReady || makingVideo || (!!clip && !layoutFrame)}
+          disabled={savingToGallery || !cardReady || makingVideo || (liveClip && (!layoutFrame || !toneReady))}
           loading={savingToGallery}
           accessibilityLabel="Save to gallery"
           variant="secondary"
@@ -2087,7 +2121,7 @@ export default function ShareCardScreen({ navigation, route }) {
         {/* Set as wallpaper (D229 addendum 6, level-up 2), under Full screen
             only: on Android when the video module can set the lock screen;
             on iOS, where no app can, the line that says how. */}
-        {isFullScreen && Platform.OS === 'android' && wallpaperAvailable ? (
+        {isFullScreen && !liveClip && Platform.OS === 'android' && wallpaperAvailable ? (
           <Button
             title="Set as wallpaper"
             icon="phone-portrait-outline"
@@ -2100,7 +2134,7 @@ export default function ShareCardScreen({ navigation, route }) {
             style={styles.secondaryAction}
           />
         ) : null}
-        {isFullScreen && Platform.OS === 'ios' ? (
+        {isFullScreen && !liveClip && Platform.OS === 'ios' ? (
           <Text style={[styles.wallpaperHint, live.wallpaperHint]}>Save it, then set it from Photos.</Text>
         ) : null}
 
@@ -2125,9 +2159,8 @@ export default function ShareCardScreen({ navigation, route }) {
             style={styles.secondaryAction}
           />
         ) : null}
-      </ScrollView>
+      </Animated.ScrollView>
       </GestureDetector>
-      {miniPreview}
       </View>
 
       {/* The top-lifts list: every lift from the session with its best set,
@@ -2247,6 +2280,8 @@ export default function ShareCardScreen({ navigation, route }) {
           last
         />
       </BottomSheet>
+      {/* The privacy primer and the videos sheet (one recording flow). */}
+      {clipFlow.sheets}
     </SafeAreaView>
   );
 }
@@ -2339,15 +2374,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  // The pinned live preview, under the header at the trailing edge.
-  miniWrap: { position: 'absolute', top: spacing.sm },
-  mini: {
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
+  // The preview's header: the live preview at full size, shrinking to the
+  // small size as the page scrolls; the card scales about its top.
+  previewHeader: { alignItems: 'center', overflow: 'hidden' },
+  previewCard: { alignSelf: 'center' },
+  previewBack: { ...StyleSheet.absoluteFillObject },
   section: { gap: spacing.md },
   // Template strip (Campaign 30 pillar 5): live card thumbnails as the
   // type picker. Tiles are quiet cards; the active tile carries the accent
@@ -2404,8 +2435,8 @@ const styles = StyleSheet.create({
   previewOuter: { alignSelf: 'center' },
   // D229: the video pieces. The strip reuses the look tiles' grammar.
   clipStripWrap: { marginTop: spacing.sm },
-  clipStripLabel: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.6 },
-  clipThumb: { alignItems: 'center', justifyContent: 'center', gap: 2 },
+  clipStripLabel: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
+  clipThumb: { alignItems: 'center', justifyContent: 'center', gap: spacing.xxs },
   clipDuration: { ...type.caption, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   clipControls: { alignSelf: 'center', gap: spacing.sm, marginTop: spacing.sm },
   videoScrim: {
@@ -2488,7 +2519,6 @@ function buildLiveStyles(t) {
   return {
     content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
-    mini: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     templateTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     templateThumbEmpty: { backgroundColor: t.colors.surface2 },

@@ -6,9 +6,11 @@
  * Pins the mechanism in ActiveWorkoutScreen.js: one clock armed while a well
  * is open and re-armed by every keystroke, step, Next and well open; when it
  * fires it does what the bar's OK does (the typed numbers stay, nothing is
- * logged) or, for an edit of a logged set, what leaving the edit does (saved
- * when changed, else closed). After it fires nothing re-arms until the next
- * touch, so a refused edit save is never retried every 5 seconds.
+ * logged) or, for an edit of a logged set, ONLY puts the keyboard away: the
+ * edit stays open and is saved the way leaving it always is, by a tap
+ * elsewhere, never by the clock (which could save a half-typed number or
+ * raise a refusal unasked; fresh-eyes review 2026-10-15). After it fires
+ * nothing re-arms until the next touch.
  */
 const fs = require('fs');
 const path = require('path');
@@ -25,8 +27,12 @@ describe('the logger keyboard idle dismiss', () => {
     expect(SRC).toMatch(/useEffect\(\(\) => \{\s*if \(!inputOpen\) return undefined;\s*const id = setTimeout\(\(\) => \{ idleDismissRef\.current\?\.\(\); \}, LOGGER_IDLE_DISMISS_MS\);\s*return \(\) => clearTimeout\(id\);\s*\}, \[inputOpen, inputActivity\]\);/);
   });
 
-  test("when it fires: the keyboard goes, an entry keeps what was typed (the bar's OK), an edit is left the way leaving it is", () => {
-    expect(SRC).toMatch(/idleDismissRef\.current = \(\) => \{\s*Keyboard\.dismiss\(\);\s*if \(editingSet\) handleInputDone\(\); else handleInputOk\(\);\s*\};/);
+  test("when it fires: the keyboard goes; an entry keeps what was typed (the bar's OK); an edit stays open, never saved by the clock", () => {
+    expect(SRC).toMatch(/idleDismissRef\.current = \(\) => \{\s*Keyboard\.dismiss\(\);\s*if \(!editingSet\) handleInputOk\(\);\s*\};/);
+    const at = SRC.indexOf('idleDismissRef.current = () => {');
+    const fire = SRC.slice(at, SRC.indexOf('};', at));
+    expect(fire).not.toContain('handleInputDone');
+    expect(fire).not.toContain('handleSaveEditedSet');
   });
 
   test('every keystroke, step, Next and well open re-arms it, and nothing else bumps the counter', () => {

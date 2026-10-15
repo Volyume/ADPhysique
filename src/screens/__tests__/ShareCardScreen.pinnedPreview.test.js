@@ -1,21 +1,30 @@
 /**
- * ShareCardScreen: the preview at the top, and the small pinned live preview
- * under the header once it has scrolled away (D229 addendum 5 item 8: "the
- * top of the share screen, collapsing to a small pinned live preview under
- * the header as the person scrolls to the controls, for photos and clips").
+ * ShareCardScreen: the preview's header, which shrinks to a small live
+ * preview as the page scrolls (D229 addendum 5 item 8: "the top of the share
+ * screen, collapsing to a small pinned live preview under the header as the
+ * person scrolls to the controls, for photos and clips").
+ *
+ * Rebuilt after the fresh-eyes review of 2026-10-15 (should-fix 7): the first
+ * build pinned a SECOND copy of the preview over the page's trailing edge,
+ * where it took the taps of the controls beneath it. Now there is one
+ * preview, in a header above the page, scaled down on the UI thread as the
+ * page scrolls; nothing floats over the controls.
  *
  * Pinned, written to FAIL against the screen before this change:
- *   1. Preview is the first section of the screen, before Format;
- *   2. nothing is pinned until more than 60% of the preview's card has
- *      scrolled off; then a small copy appears, showing the SAME preview
- *      (the same rendered image for a plain card), and it goes when the
- *      person scrolls back up;
- *   3. the copy takes no gestures of its own; a tap on it scrolls back to
- *      the preview;
- *   4. (source) with a photo or a video the copy is the same framer fed the
- *      same crop, frames and overlay, so the two can never disagree.
+ *   1. the preview is the header above the page (not a section of it), and
+ *      the page's first section is the Format row;
+ *   2. the header's height and the card's scale follow the scroll on the UI
+ *      thread (a shared value, an animated scroll handler, animated styles),
+ *      from the full height to the small height, and it is the SAME preview
+ *      (the one framer, the one image), never a second copy;
+ *   3. once more than half way, the small preview is a button, "Back to the
+ *      preview", that scrolls to the top, and the card under it takes no
+ *      gestures; the trim bar and the hints stay in the page and scroll;
+ *   4. while a video is being made the page does not scroll and the ring sits
+ *      over the header, unscaled.
  *
- * Mock scaffold mirrors ShareCardScreen.levelUps.test.js.
+ * Mock scaffold mirrors ShareCardScreen.levelUps.test.js; Reanimated's scroll
+ * handler and reaction are made to run here, so the shrink can be driven.
  */
 
 const React = require('react');
@@ -83,6 +92,45 @@ jest.mock('../../components/Toast', () => ({
   ToastProvider: ({ children }) => children,
 }));
 jest.mock('../../lib/shareVideo/engine', () => ({ isAvailable: () => false, setLockScreenWallpaper: jest.fn() }));
+jest.mock('../../lib/clips/store', () => ({
+  getClip: jest.fn(() => Promise.resolve(null)),
+  listClipsForWorkout: jest.fn(() => Promise.resolve([])),
+  countClipsForWorkout: jest.fn(() => Promise.resolve(0)),
+  subscribeClips: () => () => {},
+}));
+// Reanimated, made to run: the scroll handler's worklet is called with the
+// event, shared values are plain boxes, the reaction runs on every render,
+// and interpolate is the real linear map, so the header's shrink can be
+// driven and read here.
+jest.mock('react-native-reanimated', () => {
+  const manual = jest.requireActual('../../../__mocks__/react-native-reanimated');
+  const lerp = (x, [a, b], [p, q]) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return p + (q - p) * t;
+  };
+  return {
+    ...manual,
+    // A shared value keeps its box across renders (the manual mock makes a
+    // new one each render, which would lose the scroll).
+    useSharedValue: (v) => {
+      const mockReact = require('react');
+      return mockReact.useRef({ value: v }).current;
+    },
+    useAnimatedScrollHandler: (handlers) => (e) => handlers.onScroll(e.nativeEvent || e),
+    // The reaction fires after a render, only when its value changed (as on
+    // the UI thread), so a state change it makes never loops the render.
+    useAnimatedReaction: (prepare, react) => {
+      const mockReact = require('react');
+      const prev = mockReact.useRef(undefined);
+      const value = prepare();
+      mockReact.useEffect(() => {
+        if (value !== prev.current) { const was = prev.current; prev.current = value; react(value, was); }
+      });
+    },
+    useAnimatedStyle: (updater) => updater(),
+    interpolate: lerp,
+  };
+});
 
 const ShareCardScreen = require('../ShareCardScreen').default;
 
@@ -94,12 +142,20 @@ async function flush() {
     await new Promise((r) => setImmediate(r));
   });
 }
+function makeNavigation() {
+  return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
+}
+// The screen, with a way to render it again: on the phone the UI thread
+// redraws the header from the shared value as the finger moves; here a scroll
+// sets the value and the next render reads it.
+const rerenders = new WeakMap();
 async function mount(params) {
   let tree = null;
-  await TestRenderer.act(async () => {
-    tree = TestRenderer.create(React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' } }));
-  });
+  const navigation = makeNavigation();
+  const render = () => React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation });
+  await TestRenderer.act(async () => { tree = TestRenderer.create(render()); });
   await flush();
+  rerenders.set(tree, async () => { await TestRenderer.act(async () => { tree.update(render()); }); await flush(); });
   return tree;
 }
 async function waitFor(predicate, rounds = 40) {
@@ -115,78 +171,84 @@ const SESSION = {
   workoutId: 'w1',
 };
 const headings = (tree) => tree.root.findAll((n) => n.type === SectionLabel).map((n) => n.props.children);
-// The page's own scroll view (the only one with a scroll read); its first
-// node is the composite, whose props are the screen's own.
-const scrollView = (tree) => tree.root.findAll((n) => n.props && n.props.scrollEventThrottle === 32 && typeof n.props.onScroll === 'function')[0];
-const previewSection = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'View' && n.props.onLayout
-  && n.props.style && [].concat(n.props.style).some((st) => st && st.gap))[0];
-const minis = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityLabel === 'Back to the preview');
-const bigImages = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Image' && n.props.resizeMode === 'contain');
+const header = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.testID === 'share-preview-header')[0];
+const scrollView = (tree) => tree.root.findAll((n) => n.props && n.props.scrollEventThrottle === 16 && typeof n.props.onScroll === 'function')[0];
+const backButtons = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.props.accessibilityLabel === 'Back to the preview');
+const previewImages = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Image' && n.props.resizeMode === 'contain');
+const flatStyle = (style) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
 async function scrollTo(tree, y) {
   await TestRenderer.act(async () => { scrollView(tree).props.onScroll({ nativeEvent: { contentOffset: { y } } }); });
-  await flush();
+  await rerenders.get(tree)();
 }
 
-describe('the preview at the top', () => {
-  test('Preview is the first section, before Format', async () => {
+describe('the preview is the header above the page', () => {
+  test('it is above the scroll, and the page opens on the Format row', async () => {
     const tree = await mount(SESSION);
-    const h = headings(tree);
-    expect(h[0]).toBe('Preview');
-    expect(h.indexOf('Format')).toBeGreaterThan(0);
+    expect(header(tree)).toBeTruthy();
+    expect(headings(tree)[0]).toBe('Format');
+    // One preview: the image is drawn once, in the header, not again in the page.
+    await waitFor(() => previewImages(tree).length === 1);
+    const inHeader = header(tree).findAll((n) => typeof n.type === 'string' && n.type === 'Image');
+    expect(inHeader.length).toBe(1);
+  });
+
+  test('its height and the card\'s scale follow the scroll, from full size to the small size, on the UI thread', async () => {
+    const tree = await mount(SESSION);
+    await waitFor(() => previewImages(tree).length === 1);
+    // cardHeight is mocked at 1080 for the preview width.
+    expect(flatStyle(header(tree).props.style).height).toBe(1080);
+    const card = () => header(tree).children[0];
+    expect(flatStyle(card().props.style).transform).toEqual([{ translateY: -0 }, { scale: 1 }]);
+
+    await scrollTo(tree, (1080 - 112) / 2);
+    expect(flatStyle(header(tree).props.style).height).toBeCloseTo(596, 0);
+    expect(backButtons(tree).length).toBe(0);
+
+    await scrollTo(tree, 5000);
+    expect(flatStyle(header(tree).props.style).height).toBe(112);
+    const t = flatStyle(card().props.style).transform;
+    expect(t[1].scale).toBeCloseTo(112 / 1080, 5);
+    expect(t[0].translateY).toBeCloseTo(-(1080 - 112) / 2, 5);
+    expect(backButtons(tree).length).toBe(1);
+    expect(card().props.pointerEvents).toBe('none');
+
+    await scrollTo(tree, 0);
+    expect(flatStyle(header(tree).props.style).height).toBe(1080);
+    expect(backButtons(tree).length).toBe(0);
+    expect(card().props.pointerEvents).toBe('auto');
+  });
+
+  test('at the small size a tap goes back to the preview', async () => {
+    const tree = await mount(SESSION);
+    await waitFor(() => previewImages(tree).length === 1);
+    await scrollTo(tree, 5000);
+    const back = backButtons(tree)[0];
+    expect(back.props.accessibilityRole).toBe('button');
+    await TestRenderer.act(async () => { back.props.onPress(); });
   });
 });
 
-describe('the pinned live preview', () => {
-  test('appears once more than 60% of the card has scrolled off, shows the same preview, and goes on the way back up', async () => {
-    const tree = await mount(SESSION);
-    await waitFor(() => bigImages(tree).length === 1);
-    expect(minis(tree).length).toBe(0);
-    // The preview section sits 16 dp into the content; the card is 1080 tall (cardHeight is mocked).
-    await TestRenderer.act(async () => { previewSection(tree).props.onLayout({ nativeEvent: { layout: { y: 16, height: 1140 } } }); });
-
-    await scrollTo(tree, 16 + 1080 * 0.5);
-    expect(minis(tree).length).toBe(0);
-    await scrollTo(tree, 16 + 1080 * 0.6 + 1);
-    expect(minis(tree).length).toBe(1);
-    const images = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Image');
-    expect(images.length).toBe(2);
-    expect(images[1].props.source).toEqual(images[0].props.source);
-    // Small, and never taller than the pinned height.
-    expect(images[1].props.style.height).toBe(112);
-    expect(images[1].props.style.width).toBeLessThan(images[1].props.style.height);
-
-    await scrollTo(tree, 100);
-    expect(minis(tree).length).toBe(0);
+describe('the header is the one live preview (source)', () => {
+  test('the framers live in the header; the trim bar and the hints stay in the page', () => {
+    const headerBlock = SCREEN.slice(SCREEN.indexOf('testID="share-preview-header"'), SCREEN.indexOf('<GestureDetector gesture={scrollGesture}>'));
+    expect(headerBlock).toContain('<ClipFramer');
+    expect(headerBlock).toContain('<SharePhotoFramer');
+    expect(headerBlock).toContain('<ProgressRing');
+    expect(headerBlock).not.toContain('<TrimBar');
+    const page = SCREEN.slice(SCREEN.indexOf('<GestureDetector gesture={scrollGesture}>'));
+    expect(page).toContain('<TrimBar');
+    expect(page).not.toContain('<ClipFramer');
+    expect(page).not.toContain('<SharePhotoFramer');
   });
 
-  test('a tap on it scrolls back to the preview; the copy itself takes no gestures', async () => {
-    const tree = await mount(SESSION);
-    await waitFor(() => bigImages(tree).length === 1);
-    await TestRenderer.act(async () => { previewSection(tree).props.onLayout({ nativeEvent: { layout: { y: 16, height: 1140 } } }); });
-    await scrollTo(tree, 900);
-    const mini = minis(tree)[0];
-    expect(mini.props.accessibilityRole).toBe('button');
-    const inner = mini.findAll((n) => typeof n.type === 'string' && n.props.pointerEvents === 'none');
-    expect(inner.length).toBeGreaterThan(0);
-    await TestRenderer.act(async () => { mini.props.onPress(); });
-  });
-});
-
-describe('the copy is the same live preview (source)', () => {
-  test('with a video: the same frames, placement, look and overlay as the big framer, no gestures', () => {
-    const mini = SCREEN.slice(SCREEN.indexOf('let miniBody = null;'), SCREEN.indexOf('const miniPreview ='));
-    expect(mini).toMatch(/<ClipFramer\s+clip=\{clipFrames\}[\s\S]*?crop=\{photoCrop\}[\s\S]*?lookKey=\{photoLook !== 'none' \? photoLook : null\}[\s\S]*?lookStrength=\{photoLookStrength\}[\s\S]*?overlayUri=\{clipOverlay\}[\s\S]*?paused=\{clipPaused \|\| makingVideo\}[\s\S]*?onTogglePause=\{noop\}\s+onChange=\{noop\}/);
-    expect(mini).toMatch(/<SharePhotoFramer[\s\S]*?photoUri=\{framerPhoto\.uri\}[\s\S]*?crop=\{photoCrop\}[\s\S]*?overlayUri=\{framerOverlay\}[\s\S]*?onChange=\{noop\}/);
-    expect(mini).not.toContain('blocksGesture');
-    expect(SCREEN).toContain('<View pointerEvents="none" style={{ width: miniW, height: miniH }}>{miniBody}</View>');
-  });
-
-  test('the threshold is one named number, and the copy is sized from the big preview', () => {
+  test('the shrink is driven on the UI thread by the scroll, with one named small height', () => {
     expect(SCREEN).toContain('const MINI_PREVIEW_H = 112;');
-    expect(SCREEN).toContain('const MINI_SHOWS_AFTER = 0.6;');
-    expect(SCREEN).toContain('const next = y > previewTopRef.current + previewH * MINI_SHOWS_AFTER;');
-    expect(SCREEN).toContain('const miniW = previewH > 0 ? Math.max(1, Math.round((miniH * previewW) / previewH)) : miniH;');
-    // Scroll positions are read by hand: no JS-thread Animated here (motionFitRules.guard).
+    expect(SCREEN).toMatch(/const collapse = useSharedValue\(0\);/);
+    expect(SCREEN).toMatch(/useAnimatedScrollHandler\(\{\s*onScroll: \(e\) => \{\s*'worklet';/);
+    expect(SCREEN).toMatch(/height: interpolate\(collapse\.value, \[0, 1\], \[previewH, MINI_PREVIEW_H\], Extrapolation\.CLAMP\)/);
+    expect(SCREEN).toContain("<Animated.ScrollView");
+    expect(SCREEN).toContain('scrollEnabled={!makingVideo}');
+    // No JS-thread Animated here (motionFitRules.guard).
     expect(SCREEN).not.toMatch(/import\s*\{[^}]*\bAnimated\b[^}]*\}\s*from\s*['"]react-native['"]/);
   });
 });

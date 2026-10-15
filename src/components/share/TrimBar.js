@@ -19,6 +19,7 @@ import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-nativ
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
 import Text from '../Text';
 import { colors, radius, spacing, fontFamily, fontSize, withAlpha } from '../../styles/theme';
+import { touchTarget } from '../../styles/layout';
 import { CARD_GROUND } from '../../lib/shareCard/drawShareCard';
 import { selection } from '../../lib/haptics';
 
@@ -96,7 +97,9 @@ export default function TrimBar({
 
   const limits = useMemo(() => ({ durationMs, maxWindowMs, minWindowMs }), [durationMs, maxWindowMs, minWindowMs]);
 
-  const makePan = useCallback((which) => Gesture.Pan()
+  // A handle is 12 dp wide on the strip but a full thumb wide to the finger
+  // (the pan's own hit slop; the window's body keeps its own extent).
+  const makePan = useCallback((which) => (which === 'body' ? Gesture.Pan() : Gesture.Pan().hitSlop({ horizontal: (touchTarget.minimum - HANDLE_W) / 2, vertical: spacing.xs }))
     .onStart(() => {
       'worklet';
       savedStart.value = winStart.value;
@@ -155,7 +158,7 @@ export default function TrimBar({
       style={[styles.bar, { width }]}
       accessible
       accessibilityRole="adjustable"
-      accessibilityLabel={`Trim. Start ${mmss(startMs)}, end ${mmss(endMs)}`}
+      accessibilityLabel={`Video window, from ${mmss(startMs)} to ${mmss(endMs)}`}
       accessibilityHint="Moves the window a second at a time."
       accessibilityActions={[{ name: 'increment', label: 'Later' }, { name: 'decrement', label: 'Earlier' }]}
       onAccessibilityAction={(e) => nudge(e.nativeEvent.actionName)}
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
   handleRight: { right: -2, borderTopRightRadius: radius.sm, borderBottomRightRadius: radius.sm },
   playhead: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: colors.textPrimary },
   duration: {
-    position: 'absolute', right: spacing.xs, bottom: spacing.xxs, paddingHorizontal: spacing.xs, paddingVertical: 1,
+    position: 'absolute', right: spacing.xs, bottom: spacing.xxs, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs / 2,
     borderRadius: radius.sm, backgroundColor: withAlpha(CARD_GROUND, 0.6),
   },
   durationText: { color: colors.textPrimary, fontFamily: fontFamily.medium, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },

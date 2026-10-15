@@ -21,7 +21,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage, ColorMatrix, Group } from '@shopify/react-native-skia';
 import { Ionicons } from '@expo/vector-icons';
-import { radius, colors, withAlpha } from '../../styles/theme';
+import { radius, colors, withAlpha, circle, alpha } from '../../styles/theme';
+import { touchTarget } from '../../styles/layout';
 import { CARD_GROUND } from '../../lib/shareCard/drawShareCard';
 import { lookMatrix } from '../../lib/shareCard/photoLooks';
 import useFramingGestures, { framingActions } from './useFramingGestures';
@@ -123,8 +124,9 @@ const styles = StyleSheet.create({
   frame: { overflow: 'hidden', borderRadius: radius.lg, backgroundColor: CARD_GROUND },
   media: { position: 'absolute' },
   guide: { position: 'absolute', top: 0, width: 1, backgroundColor: colors.primary, opacity: 0 },
+  // A full thumb across, the house half-alpha ground.
   playBadge: {
-    position: 'absolute', alignSelf: 'center', top: '46%', width: 56, height: 56, borderRadius: 28,
-    backgroundColor: withAlpha(CARD_GROUND, 0.55), alignItems: 'center', justifyContent: 'center',
+    position: 'absolute', alignSelf: 'center', top: '46%', width: touchTarget.minimum, height: touchTarget.minimum, borderRadius: circle(touchTarget.minimum),
+    backgroundColor: withAlpha(CARD_GROUND, alpha.half), alignItems: 'center', justifyContent: 'center',
   },
 });

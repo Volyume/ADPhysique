@@ -4973,17 +4973,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // The keyboard goes away by itself after 5 seconds with nothing typed or
   // stepped (founder, 2026-10-15: "the keyboard stays up unless you press
   // down. I would like that to go back down after like 5 seconds
-  // inactivity"). The same as pressing the bar's OK: the typed numbers stay,
-  // nothing is logged; an edit of a logged set is left the way leaving it is
-  // (saved when changed, else closed). `inputActivity` is bumped by every
-  // keystroke, step, Next and well open, which re-arms the clock; after it
-  // fires nothing re-arms until the next touch, so a refused edit save
-  // cannot be retried every 5 seconds.
+  // inactivity"). For an entry it is the same as pressing the bar's OK: the
+  // typed numbers stay, nothing is logged. For an edit of a logged set ONLY
+  // the keyboard goes: the edit stays open with what was typed, and is saved
+  // the way leaving it always is (a tap elsewhere), never by the clock,
+  // which could save a half-typed number or raise a refusal with no touch
+  // from the person (fresh-eyes review 2026-10-15, should-fix 19).
+  // `inputActivity` is bumped by every keystroke, step, Next and well open,
+  // which re-arms the clock; after it fires nothing re-arms until the next
+  // touch.
   const [inputActivity, setInputActivity] = useState(0);
   const idleDismissRef = useRef(null);
   idleDismissRef.current = () => {
     Keyboard.dismiss();
-    if (editingSet) handleInputDone(); else handleInputOk();
+    if (!editingSet) handleInputOk();
   };
   useEffect(() => {
     if (!inputOpen) return undefined;

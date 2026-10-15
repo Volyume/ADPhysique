@@ -26,7 +26,13 @@ jest.mock('../../../lib/clips/store', () => ({
   listClipsForWorkout: (...a) => mockList(...a),
   countClipsForWorkout: jest.fn(async () => 0),
   deleteClip: jest.fn(async () => true),
+  // The store's change subscription, fired by tests to play a save or a
+  // delete elsewhere (the listeners live here: an import is hoisted above
+  // any const of this file).
+  subscribeClips: (fn) => { mockStoreListeners.add(fn); return () => mockStoreListeners.delete(fn); },
 }));
+const mockStoreListeners = new Set();
+const fireClipsChanged = () => { mockStoreListeners.forEach((fn) => fn()); };
 
 import useClipRecorder from '../useClipRecorder';
 
@@ -163,6 +169,15 @@ describe('the count', () => {
     await act(async () => { focusHandler(); });
     expect(api.count).toBe(2);
     expect(api.clips).toHaveLength(2);
+  });
+
+  test('a save or a delete anywhere (an Undo on the saved toast, a delete in the sheet) is seen at once, not on the next focus', async () => {
+    mockList.mockResolvedValue(rows(1));
+    await mount();
+    expect(api.count).toBe(1);
+    mockList.mockResolvedValue(rows(0));
+    await act(async () => { fireClipsChanged(); });
+    expect(api.count).toBe(0);
   });
 
   test('without a user or a workout there is nothing to record against', async () => {

@@ -155,10 +155,25 @@ jest.mock('../../lib/shareVideo/clipTone', () => ({
 }));
 const mockGetClip = jest.fn();
 const mockListClips = jest.fn();
-jest.mock('../../lib/clips', () => ({
-  ...jest.requireActual('../../lib/clips/rules'),
+// The store's change subscription: tests fire it to play a save or a delete
+// elsewhere (an Undo on the saved toast, a delete in the videos sheet).
+const mockClipListeners = new Set();
+const mockClipStore = {
   getClip: (...args) => mockGetClip(...args),
   listClipsForWorkout: (...args) => mockListClips(...args),
+  countClipsForWorkout: jest.fn(() => Promise.resolve(0)),
+  subscribeClips: (fn) => { mockClipListeners.add(fn); return () => mockClipListeners.delete(fn); },
+};
+jest.mock('../../lib/clips/store', () => mockClipStore);
+jest.mock('../../lib/clips', () => ({
+  ...jest.requireActual('../../lib/clips/rules'),
+  ...mockClipStore,
+}));
+const mockAsyncStore = {};
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn((k) => Promise.resolve(mockAsyncStore[k] ?? null)),
+  setItem: jest.fn((k, v) => { mockAsyncStore[k] = v; return Promise.resolve(); }),
+  removeItem: jest.fn((k) => { delete mockAsyncStore[k]; return Promise.resolve(); }),
 }));
 jest.mock('../../components/share/ClipFramer', () => {
   const mockReact = require('react');
@@ -255,6 +270,8 @@ const CLIP_LONG = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockClipListeners.clear();
+  Object.keys(mockAsyncStore).forEach((k) => { delete mockAsyncStore[k]; });
   mockSuppress.value = false;
   mockEngine.isAvailable.mockImplementation(() => true);
   mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' }));
@@ -268,13 +285,23 @@ beforeEach(() => {
 });
 
 describe('the Video source', () => {
-  test('offered with the engine and a workout; None then reads "no photo or video"; a tap opens the camera for this workout', async () => {
+  test('offered with the engine and a workout; None then reads "no photo or video"; a tap goes through the one recording flow: the privacy primer first, then the camera for this workout', async () => {
     const { tree, navigation } = await mount(SESSION);
     expect(hostsByLabel(tree, 'Video, record one now').length).toBeGreaterThan(0);
     expect(hostsByLabel(tree, 'None, no photo or video').length).toBeGreaterThan(0);
     expect(hostsByLabel(tree, 'None, no photo').length).toBe(0);
     await press(hostsByLabel(tree, 'Video, record one now')[0]);
-    expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', { workoutId: 'w1', source: 'share' });
+    // Never seen the primer on this phone: it shows before the camera.
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(texts(tree)).toContain('Videos stay on this phone');
+    await press(hostsByLabel(tree, 'Open camera')[0]);
+    expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', {
+      workoutId: 'w1', exerciseId: null, exerciseName: null, setNumber: null, source: 'share',
+    });
+    // Seen now: the next tap goes straight to the camera.
+    navigation.navigate.mockClear();
+    await press(hostsByLabel(tree, 'Video, record one now')[0]);
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
   });
 
   test('without the engine nothing about video is offered and None reads as before', async () => {
@@ -341,7 +368,7 @@ describe('From this workout', () => {
     await press(hostsByLabel(tree, 'After the workout, 22 seconds')[0]);
     await waitFor(() => trimBars(tree).length === 1);
     expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 15000, durationMs: 22000 });
-    expect(texts(tree)).toContain('15 seconds of 22. Slide to choose where it starts.');
+    expect(texts(tree)).toContain('15 seconds of 22. Slide to choose where it starts. Drag the ends to shorten it.');
     // The frames: the trim bar's across the whole video, the scrim's inside the window.
     await waitFor(() => mockThumbs.mock.calls.length >= 2);
     const windows = mockThumbs.mock.calls.map((c) => c[1]);
@@ -523,13 +550,16 @@ describe('a video from the phone', () => {
       canceled: false, assets: [{ uri: 'file:///phone/IMG_1.mov', type: 'video', duration: 9000 }],
     });
     const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Gallery, choose a photo')[0]);
+    expect(hostsByLabel(tree, 'Gallery, choose a photo').length).toBe(0);
+    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => framers(tree).length === 1);
     expect(mockPicker.launchImageLibraryAsync.mock.calls[0][0]).toMatchObject({ mediaTypes: ['images', 'videos'], videoExportPreset: 0 });
     expect(mockEngine.probeVideo).toHaveBeenCalledWith('file:///phone/IMG_1.mov');
     expect(framers(tree)[0].props).toMatchObject({ mediaWidth: 1920, mediaHeight: 1080 });
     expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 9000, durationMs: 9000 });
-    // Picked from the phone: not one of the workout's own, so no tile is selected.
+    // Picked from the phone: Gallery reads as the chosen source, and no tile
+    // of the workout's own videos is selected.
+    expect(hostsByLabel(tree, 'Gallery, choose a photo or video')[0].props.accessibilityState).toEqual({ selected: true });
     await waitFor(() => stripLabels(tree).length === 2);
     expect(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0].props.accessibilityState).toEqual({ selected: false });
   });
@@ -547,7 +577,7 @@ describe('a video from the phone', () => {
     });
     mockEngine.probeVideo.mockImplementation(() => Promise.reject(new Error('bad file')));
     const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Gallery, choose a photo')[0]);
+    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
     await waitFor(() => mockToastShow.mock.calls.length === 1);
     expect(mockToastShow).toHaveBeenCalledWith("Couldn't open that video, try another", { variant: 'error' });
     expect(framers(tree).length).toBe(0);

@@ -17,7 +17,7 @@
  * should mount a bottom sheet to say nothing.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { countClipsForWorkout } from '../../lib/clips/store';
+import { countClipsForWorkout, subscribeClips } from '../../lib/clips/store';
 import { logError } from '../../lib/errorLog';
 
 export default function HistoryClipsRow({ userId, workoutId }) {
@@ -40,7 +40,7 @@ export default function HistoryClipsRow({ userId, workoutId }) {
     }
   }, [userId, workoutId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { refresh(); return subscribeClips(() => { refresh(); }); }, [refresh]);
 
   // Nothing to show and nothing open: draw nothing, load nothing. While the
   // sheet is open the body stays, so deleting the last clip does not cut its

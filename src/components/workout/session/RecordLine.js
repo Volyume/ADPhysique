@@ -188,7 +188,9 @@ export default function RecordLine({
     text: { ...t.type.bodySm, color: quiet ? t.colors.textSecondary : t.colors.textPrimary },
     glyph: quiet ? t.colors.textMuted : t.colors.gold,
     dot: { ...t.type.bodySm, color: t.colors.textMuted },
-    action: { ...t.type.label, color: t.colors.primary },
+    // Text ink, not amber: on the logger amber is the set you are on, a
+    // record, Finish and the drain line, nothing else (D220 addendum 30).
+    action: { ...t.type.label, color: t.colors.textPrimary },
   };
   const glyph = record ? recordGlyph(record.type) : 'flag-outline';
   const label = record && !isFirstLift ? `Personal record. ${text}` : text;

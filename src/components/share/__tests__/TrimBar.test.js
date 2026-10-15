@@ -59,7 +59,7 @@ describe('<TrimBar>', () => {
       );
     });
     const bar = tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable')[0];
-    expect(bar.props.accessibilityLabel).toBe('Trim. Start 0:03, end 0:15');
+    expect(bar.props.accessibilityLabel).toBe('Video window, from 0:03 to 0:15');
     act(() => { bar.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }); });
     expect(onChange).toHaveBeenCalledWith({ startMs: 4000, endMs: 16000 });
     const text = JSON.stringify(tree.toJSON());

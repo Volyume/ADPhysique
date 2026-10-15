@@ -12,22 +12,27 @@
  *
  * Each row reads "Bench press, set 3, 0:12" (the exercise, the set it was
  * recorded for, the length) with the time it was recorded under it; a clip made
- * from the summary reads "After the workout, 0:12". Each has a "Delete"
- * secondary button. The sheet explains nothing beyond that: the privacy line is
- * said once, in the primer, and nowhere else. There are NO thumbnails: no frame-extraction
- * package is installed, and a row of text is honest about what is on the
- * phone. Deleting removes the file and the row at once (the store does both).
+ * from the summary reads "After the workout, 0:12". Each has a "Play" button
+ * that plays the video, silently, under its row (ClipPlayer: the same frames
+ * the share screen draws; fresh-eyes review 2026-10-15), and a "Delete"
+ * button that asks once ("Delete this video?") before the store removes the
+ * file and the row at once. The sheet explains nothing beyond that: the
+ * privacy line is said once, in the primer, and nowhere else. NO thumbnails:
+ * a row of text names what is on the phone, and the video is decoded only
+ * when its Play is tapped.
  *
- * Built from named house parts only: BottomSheet, Card, Text, Button, Toast.
+ * Built from named house parts only: BottomSheet, Card, Text, Button, Toast,
+ * the house alert.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { format } from 'date-fns';
 import Text from '../Text';
 import BottomSheet from '../BottomSheet';
 import Card from '../Card';
 import Button from '../Button';
 import { useToast } from '../Toast';
+import { appAlert } from '../AppAlert';
 import useTheme from '../../hooks/useTheme';
 import { colors, spacing, type } from '../../styles/theme';
 import { logError } from '../../lib/errorLog';
@@ -37,6 +42,15 @@ import {
   clipDisplayName,
   clipRowTitle,
 } from '../../lib/clips/rules';
+
+// The player decodes video through Skia and the worklet runtime: required
+// only when a row is played, so the sheet (and the screens that list it)
+// keep a light import graph, as HistoryClipsRow does for its body.
+function LazyClipPlayer(props) {
+  // eslint-disable-next-line global-require
+  const ClipPlayer = require('./ClipPlayer').default;
+  return <ClipPlayer {...props} />;
+}
 
 function secondsSpoken(ms) {
   const s = Math.round(Math.max(0, Number(ms) || 0) / 1000);
@@ -52,6 +66,9 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
   const [clips, setClips] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  // The one video playing under its row, if any.
+  const [playingId, setPlayingId] = useState(null);
+  const { width: windowWidth } = useWindowDimensions();
   const aliveRef = useRef(true);
 
   useEffect(() => {
@@ -73,8 +90,19 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
     if (visible) load();
   }, [visible, load]);
 
+  // One plain question before a person's own video goes (the house confirms
+  // before deleting a progress photo too).
+  function askDelete(clip) {
+    if (busyId) return;
+    appAlert(CLIP_STRINGS.deleteConfirmTitle, CLIP_STRINGS.deleteConfirmBody, [
+      { text: CLIP_STRINGS.deleteConfirmKeep, style: 'cancel' },
+      { text: CLIP_STRINGS.deleteLabel, style: 'destructive', onPress: () => { handleDelete(clip); } },
+    ]);
+  }
+
   async function handleDelete(clip) {
     if (busyId) return;
+    if (playingId === clip.id) setPlayingId(null);
     setBusyId(clip.id);
     try {
       await deleteClip(clip.id);
@@ -105,29 +133,40 @@ export default function ClipsSheet({ visible, onClose, userId, workoutId, onChan
             const name = clipDisplayName(clip);
             const title = clipRowTitle(clip);
             const when = format(new Date(clip.createdAt), 'HH:mm');
+            const playing = playingId === clip.id;
             return (
-              <View
-                key={clip.id}
-                style={[styles.row, i > 0 && styles.rowDivided, i > 0 && live.rowDivided]}
-              >
-                <View
-                  style={styles.rowText}
-                  accessible
-                  accessibilityLabel={`${name}, ${secondsSpoken(clip.durationMs)}, recorded ${when}`}
-                >
-                  <Text style={[styles.name, live.name]} numberOfLines={2}>{title}</Text>
-                  <Text style={[styles.when, live.when]}>{when}</Text>
+              <View key={clip.id} style={[i > 0 && styles.rowDivided, i > 0 && live.rowDivided]}>
+                <View style={styles.row}>
+                  <View
+                    style={styles.rowText}
+                    accessible
+                    accessibilityLabel={`${name}, ${secondsSpoken(clip.durationMs)}, recorded ${when}`}
+                  >
+                    <Text style={[styles.name, live.name]} numberOfLines={2}>{title}</Text>
+                    <Text style={[styles.when, live.when]}>{when}</Text>
+                  </View>
+                  <Button
+                    icon={playing ? 'stop-outline' : 'play-outline'}
+                    title=""
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    disabled={!!busyId}
+                    onPress={() => setPlayingId(playing ? null : clip.id)}
+                    accessibilityLabel={`${playing ? CLIP_STRINGS.playStopA11y : CLIP_STRINGS.playA11y}, ${name}`}
+                  />
+                  <Button
+                    title={CLIP_STRINGS.deleteLabel}
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    loading={busyId === clip.id}
+                    disabled={!!busyId}
+                    onPress={() => askDelete(clip)}
+                    accessibilityLabel={`Delete video, ${name}, ${secondsSpoken(clip.durationMs)}`}
+                  />
                 </View>
-                <Button
-                  title={CLIP_STRINGS.deleteLabel}
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  loading={busyId === clip.id}
-                  disabled={!!busyId}
-                  onPress={() => handleDelete(clip)}
-                  accessibilityLabel={`Delete video, ${name}, ${secondsSpoken(clip.durationMs)}`}
-                />
+                {playing ? <LazyClipPlayer uri={clip.uri} maxWidth={windowWidth - 2 * spacing.xl} /> : null}
               </View>
             );
           })}

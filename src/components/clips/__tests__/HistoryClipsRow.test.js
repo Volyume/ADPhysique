@@ -24,7 +24,13 @@ jest.mock('../../../lib/clips/store', () => ({
   countClipsForWorkout: (...a) => mockCount(...a),
   listClipsForWorkout: (...a) => mockList(...a),
   deleteClip: jest.fn(async () => true),
+  // The store's change subscription, fired by tests to play a save or a
+  // delete elsewhere (the listeners live here: an import is hoisted above
+  // any const of this file).
+  subscribeClips: (fn) => { mockStoreListeners.add(fn); return () => mockStoreListeners.delete(fn); },
 }));
+const mockStoreListeners = new Set();
+const fireClipsChanged = () => { mockStoreListeners.forEach((fn) => fn()); };
 
 import HistoryClipsRow from '../HistoryClipsRow';
 
@@ -52,6 +58,15 @@ describe('HistoryClipsRow', () => {
     expect(json).toContain('Videos');
     expect(json).toContain('2 videos');
     expect(mockCount).toHaveBeenCalledWith('u1', 'w1');
+  });
+
+  test('a delete elsewhere is seen at once: the count re-reads on the store\'s change signal', async () => {
+    mockCount.mockResolvedValue(2);
+    const tree = await mount();
+    expect(JSON.stringify(tree.toJSON())).toContain('2 videos');
+    mockCount.mockResolvedValue(1);
+    await act(async () => { fireClipsChanged(); });
+    expect(JSON.stringify(tree.toJSON())).toContain('1 video');
   });
 
   test('says "1 clip" for one', async () => {

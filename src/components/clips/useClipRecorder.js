@@ -29,7 +29,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ClipPrimerSheet from './ClipPrimerSheet';
 import ClipsSheet from './ClipsSheet';
-import { listClipsForWorkout } from '../../lib/clips/store';
+import { listClipsForWorkout, subscribeClips } from '../../lib/clips/store';
 import { PRIMER_SEEN_KEY, CLIP_STRINGS, isFull } from '../../lib/clips/rules';
 import { logError } from '../../lib/errorLog';
 
@@ -69,7 +69,10 @@ export default function useClipRecorder({ navigation, userId, workoutId }) {
     const unsubscribe = typeof navigation?.addListener === 'function'
       ? navigation.addListener('focus', () => { refreshCount(); })
       : null;
-    return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
+    // A save or a delete anywhere (an Undo on the saved toast, a delete in
+    // the videos sheet) is seen at once, not on the next focus.
+    const stop = subscribeClips(() => { refreshCount(); });
+    return () => { if (typeof unsubscribe === 'function') unsubscribe(); stop(); };
   }, [refreshCount, navigation]);
 
   const openClips = useCallback(() => {
