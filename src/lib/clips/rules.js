@@ -253,6 +253,51 @@ export function summaryClipRowCopy(clips) {
 }
 
 /**
+ * Whether `clip` was recorded for the set that earned `pr` (D229 addendum 9).
+ * The same exercise (by id when both carry one, else by name), and the same
+ * set number when both carry one; a side that knows no set number matches on
+ * the exercise alone. Used by the logger's PR moment, the summary's
+ * "Use your PR video on the share" and the share screen's PR pairing, so the
+ * three agree by construction.
+ */
+export function clipMatchesPR(clip, pr) {
+  if (!clip || !pr) return false;
+  const clipId = clip.exerciseId ?? null;
+  const prId = pr.exerciseId ?? null;
+  let sameExercise;
+  if (clipId && prId) {
+    sameExercise = clipId === prId;
+  } else {
+    const a = typeof clip.exerciseName === 'string' ? clip.exerciseName.trim().toLowerCase() : '';
+    const b = typeof pr.exerciseName === 'string' ? pr.exerciseName.trim().toLowerCase() : '';
+    sameExercise = !!a && a === b;
+  }
+  if (!sameExercise) return false;
+  const cs = Math.floor(Number(clip.setNumber));
+  const ps = Math.floor(Number(pr.setNumber));
+  if (Number.isFinite(cs) && cs > 0 && Number.isFinite(ps) && ps > 0) return cs === ps;
+  return true;
+}
+
+/**
+ * The newest clip recorded for any of `prs`, with the PR it belongs to and
+ * that PR's index in `prs` (the share screen's `prList` order), or null.
+ */
+export function prVideoFor(clips, prs) {
+  const list = Array.isArray(clips) ? clips.filter(Boolean) : [];
+  const records = Array.isArray(prs) ? prs : [];
+  let best = null;
+  list.forEach((clip) => {
+    const prIndex = records.findIndex((pr) => clipMatchesPR(clip, pr));
+    if (prIndex === -1) return;
+    if (!best || (Number(clip.createdAt) || 0) > (Number(best.clip.createdAt) || 0)) {
+      best = { clip, pr: records[prIndex], prIndex };
+    }
+  });
+  return best;
+}
+
+/**
  * Whether the workout summary shows its clip row (hidden under calm mode or an
  * open ED flag, FAIL CLOSED, and never in the read-only history view). Every
  * input must say yes explicitly:

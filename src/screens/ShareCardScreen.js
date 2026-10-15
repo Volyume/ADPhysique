@@ -71,7 +71,7 @@ import useClipFrames from '../lib/shareVideo/useClipFrames';
 import { extractClipThumbnails } from '../lib/shareVideo/clipThumbnails';
 import { sampleClipTone } from '../lib/shareVideo/clipTone';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
-import { getClip, listClipsForWorkout, clipDisplayName } from '../lib/clips';
+import { getClip, listClipsForWorkout, clipDisplayName, clipMatchesPR } from '../lib/clips';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -909,8 +909,9 @@ export default function ShareCardScreen({ navigation, route }) {
       .then((row) => {
         if (cancelled || !row) return;
         acceptClip(row);
-        const prIndex = prs.findIndex((pr) => pr?.exerciseName && row.exerciseName && pr.exerciseName === row.exerciseName
-          && (pr.setNumber == null || row.setNumber == null || pr.setNumber === row.setNumber));
+        // The one matching rule the logger's PR moment and the summary's
+        // PR row use too (src/lib/clips/rules.js, clipMatchesPR).
+        const prIndex = prs.findIndex((pr) => clipMatchesPR(row, pr));
         if (prIndex >= 0) { setSelectedPrIndex(prIndex); setCardType('pr'); }
       })
       .catch(() => {});

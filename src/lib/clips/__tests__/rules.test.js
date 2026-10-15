@@ -17,7 +17,7 @@ import {
   LEAD_IN_KEY, LENGTH_KEY, PRIMER_SEEN_KEY, clipRowDescription, isFull, summaryClipRowVisible,
   summaryClipRowCopy, formatClipDuration, clipDisplayName, clipRowTitle, clipCountLabel,
   nextLeadIn, nextLength, parseLeadIn, parseLength, leadInLabel, leadInA11yLabel, lengthLabel,
-  lengthA11yLabel, startA11yLabel,
+  lengthA11yLabel, startA11yLabel, clipMatchesPR, prVideoFor,
 } from '../rules';
 
 describe('the rulings, as numbers', () => {
@@ -244,6 +244,47 @@ describe('the summary row gate (calm mode or an open flag hides it, fail closed;
     expect(summaryClipRowVisible({ ...live, workoutId: '' })).toBe(false);
     expect(summaryClipRowVisible({})).toBe(false);
     expect(summaryClipRowVisible()).toBe(false);
+  });
+});
+
+describe('a video and the PR set it was recorded for (addendum 9)', () => {
+  const pr = { exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 3 };
+
+  test('the same exercise by id, and the same set number when both know one', () => {
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 3 }, pr)).toBe(true);
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2 }, pr)).toBe(false);
+    expect(clipMatchesPR({ exerciseId: 'e2', exerciseName: 'Bench press', setNumber: 3 }, pr)).toBe(false);
+  });
+
+  test('a side that knows no set number matches on the exercise alone', () => {
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: null }, pr)).toBe(true);
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2 }, { ...pr, setNumber: null })).toBe(true);
+  });
+
+  test('without ids on both sides the names decide, case and spacing aside', () => {
+    expect(clipMatchesPR({ exerciseName: ' bench press ', setNumber: 3 }, { exerciseName: 'Bench press', setNumber: 3 })).toBe(true);
+    expect(clipMatchesPR({ exerciseName: 'Squat', setNumber: 3 }, { exerciseName: 'Bench press', setNumber: 3 })).toBe(false);
+    expect(clipMatchesPR({ exerciseName: '', setNumber: 3 }, { exerciseName: '', setNumber: 3 })).toBe(false);
+  });
+
+  test('a summary video (no exercise) never matches a PR; missing inputs never match', () => {
+    expect(clipMatchesPR({ source: 'summary', exerciseName: null }, pr)).toBe(false);
+    expect(clipMatchesPR(null, pr)).toBe(false);
+    expect(clipMatchesPR({ exerciseId: 'e1' }, null)).toBe(false);
+  });
+
+  test('prVideoFor: the newest video of any PR set, with its PR and index in the list', () => {
+    const prs = [{ exerciseId: 'e9', exerciseName: 'Squat', setNumber: 1 }, pr];
+    const clips = [
+      { id: 'a', exerciseId: 'e1', setNumber: 3, createdAt: 10 },
+      { id: 'b', exerciseId: 'e1', setNumber: 3, createdAt: 20 },
+      { id: 'c', exerciseId: 'e1', setNumber: 1, createdAt: 30 },
+      { id: 'd', source: 'summary', createdAt: 40 },
+    ];
+    expect(prVideoFor(clips, prs)).toEqual({ clip: clips[1], pr, prIndex: 1 });
+    expect(prVideoFor([clips[3]], prs)).toBeNull();
+    expect(prVideoFor(clips, [])).toBeNull();
+    expect(prVideoFor(null, prs)).toBeNull();
   });
 });
 

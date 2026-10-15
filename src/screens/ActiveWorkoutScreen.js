@@ -192,6 +192,9 @@ const markerForSet = (setType, number) => SET_TYPE_MARKERS[setType ?? 'straight'
 // the info-sheet target line further down), so a freeform/ad-hoc exercise
 // now gets the same target-reached behaviour, not a silently different one.
 const DEFAULT_FREEFORM_TARGET_SETS = 3;
+// The logger keyboard goes away by itself after this long with nothing typed
+// or stepped (founder, 2026-10-15).
+const LOGGER_IDLE_DISMISS_MS = 5000;
 
 // D9 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md): the
 // full unilateral (per-side) walkthrough - modelled on the superset
@@ -4949,6 +4952,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setBarHeight(0);
     }
   }, [inputOpen]);
+  // The keyboard goes away by itself after 5 seconds with nothing typed or
+  // stepped (founder, 2026-10-15: "the keyboard stays up unless you press
+  // down. I would like that to go back down after like 5 seconds
+  // inactivity"). The same as pressing the bar's OK: the typed numbers stay,
+  // nothing is logged; an edit of a logged set is left the way leaving it is
+  // (saved when changed, else closed). `inputActivity` is bumped by every
+  // keystroke, step, Next and well open, which re-arms the clock; after it
+  // fires nothing re-arms until the next touch, so a refused edit save
+  // cannot be retried every 5 seconds.
+  const [inputActivity, setInputActivity] = useState(0);
+  const idleDismissRef = useRef(null);
+  idleDismissRef.current = () => {
+    Keyboard.dismiss();
+    if (editingSet) handleInputDone(); else handleInputOk();
+  };
+  useEffect(() => {
+    if (!inputOpen) return undefined;
+    const id = setTimeout(() => { idleDismissRef.current?.(); }, LOGGER_IDLE_DISMISS_MS);
+    return () => clearTimeout(id);
+  }, [inputOpen, inputActivity]);
   function writeActiveField(field, next) {
     if (editingSet) setEditValue((v) => ({ ...(v || {}), [field]: next, isGhost: false }));
     else handleCurrentSetChange({ ...currentSet, [field]: next, isGhost: false });
@@ -4989,6 +5012,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function openWellNow(field, set = null) {
     hapticsVocab.selection();
+    setInputActivity((n) => n + 1);
     // Typing is staying: a pending auto-advance would carry the pad away.
     cancelAutoAdvance();
     if (set && editingSet && set.id === editingSet.id) {
@@ -5093,6 +5117,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function handleInputStep(delta) {
     if (!activeField) return;
+    setInputActivity((n) => n + 1);
     replaceOnFirstKeyRef.current = false;
     hapticsVocab.selection();
     if (activeIsTime) {
@@ -5111,6 +5136,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
   function handleInputNext() {
     if (activeField !== 'weight') return;
+    setInputActivity((n) => n + 1);
     if (editingSet) setEditField('reps'); else setEntryField('reps');
     replaceOnFirstKeyRef.current = true;
     setTimeDraft(null);
@@ -5147,6 +5173,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the step bar above the keyboard carries the steps, Next and Done.
   function handleInputChange(raw) {
     if (!activeField) return;
+    setInputActivity((n) => n + 1);
     let text = raw;
     if (replaceOnFirstKeyRef.current) {
       replaceOnFirstKeyRef.current = false;
