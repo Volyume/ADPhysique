@@ -12332,3 +12332,22 @@ The founder asked for the items the survey found outside the nine decisions to b
 - **Q5-A.** Onboarding no longer asks the recovery-level question the structure engine never reads; the profile field and the weekly check-in's recovery reads stay.
 - **Q6-A.** The calorie bank write is stamped like the other profile fields so the newer bank wins across devices.
 Queued after the nine lanes, in the order Q6, Q2, Q4, Q5, Q3, Q1.
+
+## D229 (2026-10-15, founder order): video shares, a flagship piece
+
+**Founder, verbatim:** `docs/audit/video-shares-2026-10-15/00-FOUNDER-BRIEF.md` (the research ask, then "I needs to look very very slick and a real selling point on the app absolute top effort for this please").
+
+**Lead's feasibility answer (same day, in chat).** The photo pipeline is Skia drawing a PNG; looks are colour matrices; framing is pure maths; the story share is the OS share sheet. Video reuses all of that except the one missing piece, an encoder: writing a filtered, framed clip with the card on top as an MP4 needs native video composition. Three routes: (1) an Instagram Stories handoff (background video plus our sticker, in-house native, no filters, Instagram only); (2) an in-house compositor the way the Live Activity and rest-timer modules are built: Android Media3 Transformer (overlay, colour-matrix effect, crop and scale, trim), iOS AVFoundation video composition (Core Image colour matrix, transform, the card as a layer), output a 1080 by 1920 MP4 for any target; (3) FFmpeg, not recommended (retired binding, size, licensing). Capture: `expo-camera` records video and `expo-image-picker` picks it (both installed); the installed Skia has `useVideo`, so a live filtered preview inside the card canvas needs no new dependency.
+
+**RULED (D33), the product forks the lead can take:**
+1. **Two stages.** Stage 1: capture in the workout and on the summary, the share screen's clip sources (this workout's clips, the library, record now), the same looks and the same drag-and-pinch framing with a live filtered preview, and export through the Instagram Stories handoff (in-house native, no new dependency). Stage 2: the in-house compositor so the same filtered, framed clip with the card exports as an MP4 for every target and the gallery.
+2. **Clutter rule.** One row in the exercise's More sheet ("Record a clip"), one action on the summary beside the share ("Record a posing clip"), and three sources in the share screen's existing Background section. No new toolbar tool, no new tab, no new screen outside the camera and the share screen.
+3. **Length cap 15 seconds** at capture and at import (a longer library clip is trimmed in the share screen, start point chosen by the person); files stay near 20 MB and exports stay quick.
+4. **Silent by default.** No microphone permission is asked; a posing or lifting clip rarely needs sound, and the Android build already declares no audio. Sound is a later option, not a stage-1 one.
+5. **Clips are private device data**, stored under the app's documents like progress photos, attached to the workout, never synced, never in a Community post (the payload allow-list cannot carry one), deleted with the workout and with the account. Up to three clips per workout; the share screen lists them newest first.
+6. **Calm mode or an open ED flag: no video background is offered** on the share screen (clips are still recorded and kept). A posing clip is body imagery, closer to a progress photo than a gym snapshot; the photo background's existing behaviour is not changed by this ruling.
+7. **Design first.** A design pass with rendered previews before the build, judged against the best video-share flows in the market, not against the photo flow alone. The founder signs the design off before stage 1 starts; stage 2 starts after the coherence programme (D228) has merged.
+
+**FOUNDER-GATED (Section 2, the dependency rule):** the Android compositor needs Media3 Transformer (`androidx.media3:media3-transformer`, Google, Apache 2.0). iOS needs nothing beyond AVFoundation. The question is in chat; stage 2 on Android waits for the answer.
+
+Research and design: `docs/audit/video-shares-2026-10-15/`.
