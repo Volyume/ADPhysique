@@ -82,7 +82,7 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     expect(body).not.toMatch(/catch \(_\) \{\s*return false;\s*\}/);
   });
 
-  test('scheduler: all seven ED-gated push reads use the read_failed sentinel', () => {
+  test('scheduler: all eight ED-gated push reads use the read_failed sentinel', () => {
     // trial-day-3, win-back, missed-checkin, activation-nudge, planned-meal
     // — each gates a weight/food/notification push — plus the meal-log
     // reminders (Campaign 1 adversarial review blocker 2: they were the ONE
@@ -91,11 +91,15 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     // until the partner beats were removed with the Partners feature
     // (SD-03, retired 2026-09-06); that push no longer exists, so its gate
     // does not either. Nothing was weakened: the seven that remain carry
-    // the same fail-closed shape.
+    // the same fail-closed shape. D228 item 4 (fresh-eyes review) added two
+    // post-lay re-reads, in scheduleMealReminders and
+    // schedulePlannedMealConfirm, that take a run back down if a flag
+    // opened while it was being laid; the meal one reuses its gate's
+    // closure, so the literal count is eight.
     const matches = FILES.scheduler.match(
       /getOpenEdPatternFlag\([^)]*\)\.catch\(\(\)\s*=>\s*'read_failed'\)/g,
     ) || [];
-    expect(matches.length).toBe(7);
+    expect(matches.length).toBe(8);
   });
 
   // 3. DiaryScreen — the banking carve-out feed.

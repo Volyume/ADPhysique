@@ -128,7 +128,7 @@ export default function ShareCardScreen({ navigation, route }) {
     // Gym unit label ('kg') for the best lift, and the person's own body
     // weight unit ('st'|'kg'|'lbs') for the weekly progress hero (D228 item 3).
     units = 'kg',
-    bodyWeightUnits = 'kg',
+    bodyWeightUnits = 'st',
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
     // Read `suppressParam` rather than `suppress` -- the effective value is

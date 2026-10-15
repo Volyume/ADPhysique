@@ -24,15 +24,22 @@
 --                    No reader changes; moderation-hidden posts are never
 --                    touched (only 'visible' <-> 'withheld'); hand-written
 --                    posts (auto=false) are the person's own words and
---                    stay. The author sees their own automatic posts
---                    withheld too, which matches the device, where every
---                    sharing surface is already quiet under a flag.
+--                    stay. The feed, discover, the profile and the public
+--                    pages withhold the posts from everyone; the author can
+--                    still open one of their own by id (community_get_post
+--                    lets an author read their own row), and the device's
+--                    sharing surfaces are already quiet under a flag. A post
+--                    made by a device that does not yet know the flag is
+--                    withheld on the next push cycle (the helper runs on
+--                    every ed_flag_push, which the client sends first in
+--                    every sync), not at insert.
 --
 -- Applied locally:   no (nothing local; cloud-only objects)
 -- Applied remotely:  NO. HELD for the founder's exact phrase
 --                    "run against production: 192".
 -- Safe to re-run:    yes. CREATE OR REPLACE for both functions; the CHECK
---                    is dropped and re-added by name; the helper's UPDATEs
+--                    is dropped and re-added by name in one statement; the
+--                    helper takes a per-person advisory lock; its UPDATEs
 --                    are idempotent (they only move rows that are not
 --                    already in the target state).
 -- Rollback:          re-run migrate_182's ed_flag_push definition (the
@@ -48,8 +55,9 @@
 --                    founder's apply runs the acceptance check below.
 
 -- ─── Part 1: the third status ──────────────────────────────────────────
-ALTER TABLE public.community_posts DROP CONSTRAINT IF EXISTS community_posts_status_check;
+-- One statement, so there is no instant without the CHECK.
 ALTER TABLE public.community_posts
+  DROP CONSTRAINT IF EXISTS community_posts_status_check,
   ADD CONSTRAINT community_posts_status_check
   CHECK (status IN ('visible', 'hidden', 'withheld'));
 
@@ -68,6 +76,10 @@ DECLARE
   v_open boolean;
 BEGIN
   IF _uid IS NULL THEN RETURN; END IF;
+  -- One person at a time: two devices racing a raise of one flag against a
+  -- clear of another cannot leave the posts in the wrong state for the
+  -- rest of the cycle.
+  PERFORM pg_advisory_xact_lock(hashtext('community_flag_withhold:' || _uid::text));
   SELECT EXISTS (
     SELECT 1 FROM public.ed_pattern_flags f
     WHERE f.user_id = _uid AND f.cleared_at IS NULL AND f.deleted_at IS NULL
@@ -161,7 +173,15 @@ BEGIN
 
   -- migrate_192 (D228 addendum Q1): the person's automatic posts follow the
   -- flag. Open flag anywhere on the account: withhold; none open: restore.
-  PERFORM public._community_apply_flag_withhold(v_uid);
+  -- Never at the flag's expense: a failure here (a lock or statement
+  -- timeout on community_posts, a partial apply) is logged and swallowed,
+  -- so the safety row above always lands and the server gates learn it;
+  -- the next push cycle runs the helper again.
+  BEGIN
+    PERFORM public._community_apply_flag_withhold(v_uid);
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'community withhold skipped for %: %', v_uid, SQLERRM;
+  END;
 
   SELECT * INTO v_row FROM public.ed_pattern_flags WHERE user_id = v_uid AND id = _id;
   RETURN jsonb_build_object('id', v_row.id, 'state', v_row.flag_state, 'cleared_at', v_row.cleared_at);

@@ -21,9 +21,9 @@
  *      and the planned-meal confirms (the meal slot). The weigh-in, training
  *      and check-in prompts are cancelled by reading the OS's pending requests
  *      and matching on each request's own type and day. The meal reminders
- *      are re-laid through scheduler.scheduleMealReminders, which lays a slot
- *      already logged today as a short run from tomorrow instead of a daily
- *      repeat (a repeat cannot skip a day), through every gate it already has.
+ *      are re-laid through scheduler.scheduleMealReminders, which lays every
+ *      slot as a bounded run of dated one-shots (D228 item 4), a slot already
+ *      logged today starting tomorrow, through every gate it already has.
  *   2. SKIP AT LAY TIME. Every scheduler that lays dated prompts (the morning
  *      and evening weigh-in prompts, the training-day reminders, the meal
  *      reminders) asks the `is...SatisfiedToday` read first and does not lay

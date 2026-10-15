@@ -75,9 +75,10 @@ import { getManualLandmarks, getAdaptedLandmarks, mergeLandmarkPrecedence, isMan
 import { getBlockStatus } from './mesocycle';
 import { VOLUME_LANDMARKS } from './algorithms';
 import { localWeekStartMs } from './dayKey';
-import { isCalm, WELLBEING_KEY } from './wellbeing';
+import { WELLBEING_KEY } from './wellbeing';
 import { logError } from './errorLog';
 import { structureSignature } from './programmeEpoch';
+import { deriveSafetyState } from './safetyState';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 // §3.1 speaks of "the SAME lifts' previous-block bests"; a bounded prior
@@ -214,7 +215,8 @@ async function readSuppression(userId) {
   const edFlag = await getOpenEdPatternFlag(userId).catch(() => 'read_failed');
   const wellbeing = await AsyncStorage.getItem(WELLBEING_KEY)
     .then((v) => v || 'unspecified').catch(() => 'read_failed');
-  return !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
+  // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+  return deriveSafetyState({ mode: wellbeing, edFlag }).suppressed;
 }
 
 /**

@@ -70,14 +70,14 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   });
 
   test('a cut that lost weight on target shows the labelled hero (heading + magnitude + status)', () => {
-    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.8 } }));
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.8 } }), { includeProgress: true });
     // Magnitude only (no bare sign), with an explicit heading so it is never ambiguous.
     expect(p.hero).toEqual({ heading: 'weight lost this week', value: '0.8 kg', context: 'right on target' });
     expect(p.coachLine).toMatch(/lost 0\.8 kg/);
   });
 
   test('the unit follows the user: the body-weight unit, converted from the kg delta (D228 item 3)', () => {
-    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { bodyWeightUnits: 'lbs' });
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { bodyWeightUnits: 'lbs', includeProgress: true });
     expect(p.hero.value).toBe('1.5 lbs');
     expect(p.coachLine).toMatch(/lost 1\.5 lbs/);
   });
@@ -124,7 +124,7 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   });
 
   test('coach line names the real numbers (sessions, PRs, weight) — numbers before narrative', () => {
-    const p = buildWeeklyRecapParams(out({ sessionsPlanned: 6, sessionsCompleted: 5, prsThisWeek: 1, trend: { onTarget: true, delta: -0.5 } }));
+    const p = buildWeeklyRecapParams(out({ sessionsPlanned: 6, sessionsCompleted: 5, prsThisWeek: 1, trend: { onTarget: true, delta: -0.5 } }), { includeProgress: true });
     expect(p.coachLine).toMatch(/5 of your 6 sessions/);
     expect(p.coachLine).toMatch(/1 new PR\b/);
     expect(p.coachLine).toMatch(/lost 0\.5 kg/);
@@ -135,7 +135,7 @@ describe('buildWeeklyRecapParams — best-lift feature', () => {
   const lift = { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' };
 
   test('passes the best lift through when present and not suppressed', () => {
-    const p = buildWeeklyRecapParams(out(), { bestLift: lift });
+    const p = buildWeeklyRecapParams(out(), { bestLift: lift, includeProgress: true });
     expect(p.bestLift).toEqual(lift);
   });
 
@@ -164,17 +164,17 @@ describe('buildWeeklyRecapParams — best-lift feature', () => {
 describe('the weight figure follows the body-weight unit (D228 item 3)', () => {
   const cutWeek = () => ({ ...out(), goalPhase: 'mild cut', trend: { ...out().trend, delta: -0.7, onTarget: true, inBand: true } });
   test('kg prints kg', () => {
-    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'kg' });
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'kg', includeProgress: true });
     expect(p.hero).toMatchObject({ heading: 'weight lost this week', value: '0.7 kg' });
     expect(p.coachLine).toMatch(/lost 0\.7 kg/);
   });
   test('stones print as lbs to one decimal', () => {
-    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'st' });
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'st', includeProgress: true });
     expect(p.hero.value).toBe('1.5 lbs');
     expect(p.coachLine).toMatch(/lost 1\.5 lbs/);
   });
   test('lbs print as lbs', () => {
-    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'lbs' });
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'lbs', includeProgress: true });
     expect(p.hero.value).toBe('1.5 lbs');
   });
   test('the default is kg, and the best lift keeps the gym unit', () => {

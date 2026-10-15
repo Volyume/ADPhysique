@@ -342,7 +342,9 @@ describe('fail-closed neutral wiring in the gatherer (source-pinned)', () => {
   test('a failed read or positive SCOFF forces the neutral variant', () => {
     expect(SRC).toMatch(/bodyProfile === 'read_failed'/);
     expect(SRC).toMatch(/bodyProfile\?\.scoffScore\) && bodyProfile\.scoffScore >= 2/);
-    expect(SRC).toMatch(/!!edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\) \|\| scoffPositive/);
+    // D228 item 2: the calm/flag/failed-read OR through the one composition,
+    // the fail-closed SCOFF arm kept beside it.
+    expect(SRC).toMatch(/deriveSafetyState\(\{ mode: wellbeing, edFlag \}\)\.suppressed \|\| scoffPositive/);
   });
 
   test('the neutral path never reads bodyweight rows', () => {

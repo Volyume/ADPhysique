@@ -578,7 +578,9 @@ describe('where the read lives', () => {
     const src = code(read('load.js'));
     expect(src).toMatch(/getOpenEdPatternFlag\(userId\)/);
     expect(src).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)/);
-    expect(src).toMatch(/isCalm\(wellbeing\)/);
+    // D228 item 2: the OR lives in src/lib/safetyState.js; load.js reads the
+    // raw inputs the same way and derives through it.
+    expect(src).toMatch(/deriveSafetyState\(\{ mode: wellbeing, edFlag \}\)\.suppressed/);
     expect(src).toMatch(/'read_failed'/);
     // And the learner is run only past the pause (re-pinned for lead ruling 6.1: the held reading is
     // now read asynchronously, from the stored copy after a restart).

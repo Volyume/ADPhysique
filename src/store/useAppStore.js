@@ -2359,6 +2359,12 @@ const useAppStore = create((set, get) => ({
     const key = PROFILE_KEY_PFX + user.id;
     const value = JSON.stringify(updated);
     try { await AsyncStorage.setItem(key, value); } catch (_) {}
+    // C6 F4 (D97): a MACHINE-REBUILT blob must not be pushed over the
+    // cloud's fuller one, and a bank write does not restore what the
+    // rebuild lacks (coach tone, the meal-plan prefs). While the rebuilt
+    // flag is set the bank is written locally only and rides the next real
+    // profile write, as before Q6 (fresh-eyes review, should-fix 6).
+    if (get()._profileBlobRebuilt) { set({ userProfile: updated }); return; }
     // D228 addendum Q6 (founder, 2026-10-15): a real user write. Stamp the
     // guarded blob so a stale device's bulk push cannot out-fresh it, and
     // push it now, as the other profile writers do; without the stamp the

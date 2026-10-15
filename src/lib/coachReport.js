@@ -50,8 +50,9 @@ import {
   getUserBodyProfile,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isCalm, WELLBEING_KEY } from './wellbeing';
+import { WELLBEING_KEY } from './wellbeing';
 import { robustEwma } from './robustTrend';
+import { deriveSafetyState } from './safetyState';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -258,8 +259,10 @@ export async function gatherCoachReportData(userId, { weeks = 12, nowMs = Date.n
   const scoffPositive =
     bodyProfile === 'read_failed' ||
     (Number.isFinite(bodyProfile?.scoffScore) && bodyProfile.scoffScore >= 2);
-  const neutral =
-    !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing) || scoffPositive;
+  // D228 item 2: the calm/flag/failed-read OR through the one composition;
+  // the SCOFF arm keeps its own fail-closed read above (a failed profile
+  // read is positive here, stricter than the helper's carried flag).
+  const neutral = deriveSafetyState({ mode: wellbeing, edFlag }).suppressed || scoffPositive;
 
   const [recap, history, weights, targets] = await Promise.all([
     getRecapData(userId, { startMs, endMs }).catch(() => null),

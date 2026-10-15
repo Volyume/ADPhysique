@@ -112,7 +112,7 @@ import {
   getCapabilityConstraints, getOpenEdPatternFlag,
 } from '../database';
 import { buildExerciseLookup } from '../exercise/lookup';
-import { isCalm, WELLBEING_KEY } from '../wellbeing';
+import { WELLBEING_KEY } from '../wellbeing';
 import { logError } from '../errorLog';
 import { localWeekStartMs, localDayKey } from '../dayKey';
 import { allocateExerciseVolume } from '../algorithms';
@@ -124,6 +124,7 @@ import { DEFAULT_TRAINING_START_MINUTE, PERSONAL_FACTOR_MIN, PERSONAL_FACTOR_MAX
 import { learnPersonalRecovery, PERSONAL_HISTORY_DAYS } from './personalRecovery';
 import { plannerLearnedFactor, ownGapsFromHistory } from './planPersonalisation';
 import { ROTATION } from '../plan/science';
+import { deriveSafetyState } from '../safetyState';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -470,7 +471,8 @@ export async function readLearnerPause(userId) {
         logError('recovery.load.learnerPause.wellbeing', e, {});
         return 'read_failed';
       });
-    return !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
+    // D228 item 2: one composition (src/lib/safetyState.js); same verdict.
+    return deriveSafetyState({ mode: wellbeing, edFlag }).suppressed;
   } catch (e) {
     // The read itself could not start (a missing function, a throw before a
     // promise exists): the same answer as a failed read.

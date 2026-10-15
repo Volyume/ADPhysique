@@ -39,10 +39,12 @@ const NOTIF_ID_PREFIX = 'volyume_training_day_';
 // one calm return nudge (scheduler.scheduleReturnNudge) covers that gap
 // deliberately instead of by accident.
 //
-// The one-shot count is capped so the run sits inside iOS's 64-pending
-// ceiling alongside the weigh-in horizon (28), the check-in, meal,
-// coach-ready, block-ready and nudge pushes: 28 covers eight weeks at
-// three or four days a week and shortens gracefully for denser habits.
+// The one-shot count is capped at 28: eight weeks at three or four days a
+// week, shortening gracefully for denser habits. With the weigh-in horizon
+// (28) and the meal run (up to 21, D228 item 4) the dated horizons can
+// exceed iOS's 64-pending ceiling; iOS keeps the soonest-firing 64, so the
+// far training tail is what a full budget loses, and every launch re-lays
+// it (see the budget note above WEIGH_IN_HORIZON_DAYS in scheduler.js).
 export const TRAINING_HORIZON_DAYS = 56;
 export const TRAINING_HORIZON_MAX_ONESHOTS = 28;
 

@@ -87,7 +87,7 @@ export function isGreatWeek(output) {
  * @param {string}  opts.dateFormatted
  * @param {object}  opts.bestLift   { exerciseName, weight, reps, isNewBest } or null.
  */
-export function buildWeeklyRecapParams(output, { suppress = false, includeProgress = true, units = 'kg', bodyWeightUnits = 'kg', isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
+export function buildWeeklyRecapParams(output, { suppress = false, includeProgress = false, units = 'kg', bodyWeightUnits = 'kg', isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
   const o = output || {};
   const planned = Number(o.sessionsPlanned) || 0;
   const completed = Number(o.sessionsCompleted) || 0;
@@ -102,7 +102,8 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   // kg, stones and lbs both as lbs to one decimal (a week's change is too
   // small to read in stones), the same reading the coach screen's chip gives.
   const weightInLbs = bodyWeightUnits !== 'kg';
-  const u = weightInLbs ? 'lbs' : 'kg';
+  // The unit word for a given magnitude: "1 lb", "1.5 lbs", "0.7 kg".
+  const unitWord = (n) => (weightInLbs ? (n === 1 ? 'lb' : 'lbs') : 'kg');
   const magnitude = (kg) => (weightInLbs
     ? Math.round(Math.abs(kg) * 2.2046226218 * 10) / 10
     : Math.round(Math.abs(kg) * 10) / 10);
@@ -128,7 +129,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   let bestLiftBlock = suppress ? null : (bestLift || null);
   let hero = null;
   if (showProgress) {
-    hero = { heading: 'weight lost this week', value: `${abs} ${u}`, context: 'right on target' };
+    hero = { heading: 'weight lost this week', value: `${abs} ${unitWord(abs)}`, context: 'right on target' };
   } else if (bestLiftBlock && bestLiftBlock.weight) {
     // Promote the best lift to the hero on non-cut weeks; don't also render it as
     // the feature block below.
@@ -160,7 +161,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
     stats: stats.slice(0, 4),
     // Name the weight only when the hero shows it (on target, safe, not toggled
     // off) — never on an off-target week.
-    coachLine: buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, magnitude, showWeight: showProgress }),
+    coachLine: buildCoachLine({ completed, planned, prs, recoveryGood, delta, unitWord, magnitude, showWeight: showProgress }),
   };
 }
 
@@ -169,7 +170,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
 // ("You hit all 4 of your sessions", "You set 2 new PRs this week"). Names the
 // real weight change. The tier headline already says "Textbook Week", so the
 // line doesn't repeat it.
-function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, magnitude, showWeight }) {
+function buildCoachLine({ completed, planned, prs, recoveryGood, delta, unitWord, magnitude, showWeight }) {
   const clauses = [];
   clauses.push(
     planned > 0 && completed >= planned
@@ -181,7 +182,7 @@ function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, magni
   // suppressed); never on an off-target week or under calm mode / an ED flag.
   if (showWeight) {
     const a = magnitude(delta);
-    clauses.push(delta < -0.01 ? `lost ${a} ${u}` : delta > 0.01 ? `gained ${a} ${u}` : 'held steady');
+    clauses.push(delta < -0.01 ? `lost ${a} ${unitWord(a)}` : delta > 0.01 ? `gained ${a} ${unitWord(a)}` : 'held steady');
   }
   if (recoveryGood) clauses.push('recovery was strong');
 

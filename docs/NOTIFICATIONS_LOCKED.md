@@ -354,8 +354,8 @@ recorded as `notification_failed` with reason `budget_capped` /
   check-in, activation). D228 item 4 (2026-10-15): a raise also CANCELS the
   weigh-in sets, the meal run and the planned-meal confirm already in the OS
   queue, on the raising device and on any device that pulls the flag. Calm
-  mode is read only by the return nudge and the monthly recap's copy; it
-  cancels nothing (founder choice, D228). Silence is the respectful
+  mode is read only by the return nudge, the dormant win-back and the
+  monthly recap's copy; it cancels nothing (founder choice, D228). Silence is the respectful
   behaviour. The flag itself never fires via push.
 - Quiet hours always win, as locked above.
 - One notification per topic per day, as locked above.
@@ -582,18 +582,18 @@ suppression, quiet hours or the push budget.
   never counts) and the two planned-meal confirms re-lay the meal reminders
   from the stored preference through `scheduleMealReminders`
   (`relayMealRemindersFromPrefs`, serialised and coalesced so several foods
-  logged in quick succession produce one pass). `scheduleMealReminders` now
-  lays a slot already logged today, with its time still ahead, as a run of
-  `MEAL_STAND_DOWN_RUN_DAYS = 3` dated one-shots from tomorrow
-  (`volyume_meal_reminder_<slot>_d1` to `_d3`, each naming its day) instead
-  of the daily repeat, because a repeat cannot skip a day; the repeat returns
-  at the next launch once the slot's time has passed or a new day has begun.
-  A slot whose time has already passed keeps the repeat (it first fires
-  tomorrow, which is already right). The run is short on purpose: iOS keeps
-  at most 64 pending requests and the weigh-in (28) and training (up to 28)
-  horizons already use most of them; the worst case (all three slots logged
-  before their times) adds six pending requests until the next launch
-  re-lays. The foreground handler also stands a meal reminder down once its
+  logged in quick succession produce one pass). `scheduleMealReminders` lays every
+  slot as a bounded run of `MEAL_RUN_DAYS = 7` dated one-shots (D228 item 4,
+  2026-10-15; `volyume_meal_reminder_<slot>_d<n>`, each naming its day): a
+  slot already logged today, or whose time has passed, starts tomorrow; a
+  slot still ahead starts today. There is no daily repeat any more, so a
+  phone left closed runs out of meal prompts after the run, and a flag
+  raised on this device or pulled from another cancels the run at once
+  (with a post-lay re-read in the scheduler, so a flag that opens while the
+  run is being laid takes it back down). The dated horizons (weigh-ins 28,
+  training up to 28, meals up to 21) can total about 77 against iOS's
+  64-pending ceiling; iOS keeps the soonest-firing 64, so the far training
+  tail is what a full budget loses, and every launch re-lays the lot. The foreground handler also stands a meal reminder down once its
   slot holds a real entry today (new branch; the ED branch is unchanged and
   still runs first). The planned-meal confirms also re-run
   `schedulePlannedMealConfirm`, so the 20:00 confirm nudge goes when the

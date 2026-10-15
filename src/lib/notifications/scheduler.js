@@ -122,9 +122,15 @@ function pickMorningCopy(dayOfWeek, name = '') {
 // out.
 //
 // Copy rotation is preserved: each date keeps the weekday's own copy.
-// Pending-notification budget: 14 days x 2 prompts is 28 one-shots,
-// which sits inside iOS's 64-pending ceiling alongside the training,
-// check-in and meal reminders.
+// Pending-notification budget: 14 days x 2 prompts is 28 one-shots. With
+// the training horizon (up to 28) and the meal run (3 slots x MEAL_RUN_DAYS,
+// up to 21, D228 item 4) the dated horizons can total about 77, above
+// iOS's 64-pending ceiling. iOS keeps the SOONEST-firing 64 and discards
+// the rest (Apple's documented rule), so what a full budget loses is the
+// far tail: training days beyond about a fortnight and, for a person who
+// trains every day, the day-21 return nudge. Every launch re-lays the
+// lot, so a phone in use always holds the next fortnight; a phone left
+// closed runs out of prompts, which is the bounded-run intent.
 const WEIGH_IN_HORIZON_DAYS = 14;
 
 function weighInHorizonDates(hour, minute, days = WEIGH_IN_HORIZON_DAYS) {
@@ -570,14 +576,17 @@ export async function scheduleMealReminders(reminders = []) {
     // so a flag raised after scheduling also goes quiet on next launch;
     // the delivery handler is the second line of defence; D228 item 4 also
     // cancels the run the moment a flag is raised, see CoachOutputScreen).
+    let uid = null;
+    let readFlag = null;
     try {
       // eslint-disable-next-line global-require
       const store = require('../../store/useAppStore').default;
-      const uid = store.getState().user?.id ?? null;
+      uid = store.getState().user?.id ?? null;
       if (uid) {
         // eslint-disable-next-line global-require
         const { getOpenEdPatternFlag } = require('../database');
-        const flag = await getOpenEdPatternFlag(uid).catch(() => 'read_failed');
+        readFlag = () => getOpenEdPatternFlag(uid).catch(() => 'read_failed');
+        const flag = await readFlag();
         if (flag) return;
       }
     } catch (_) { return; /* cannot verify the flag: stay silent */ }
@@ -593,6 +602,16 @@ export async function scheduleMealReminders(reminders = []) {
       const loggedToday = await isMealSatisfiedToday(String(r.id), now.getTime());
       // eslint-disable-next-line no-await-in-loop
       await layMealReminder(r, { quiet, now, loggedToday });
+    }
+    // D228 item 4 (fresh-eyes review, should-fix 1): a raise on this device
+    // or a pulled flag that lands while the run is being laid would leave
+    // the run pending under an open flag, because the cancel at the raise
+    // site is not serialised with this lay. Read the flag once more after
+    // the lay and take the run back down if it opened meanwhile; a failed
+    // read reads as open.
+    if (readFlag) {
+      const after = await readFlag();
+      if (after) await cancelMealReminders();
     }
   } catch (e) {
     trackNotificationFailed({
@@ -1550,6 +1569,11 @@ export async function schedulePlannedMealConfirm(userId) {
         date: shifted,
       },
     });
+    // D228 item 4 (fresh-eyes review, should-fix 1): the same post-lay
+    // re-read as the meal run, so a flag that opened during the lay takes
+    // tonight's confirm back down; a failed read reads as open.
+    const edFlagAfter = await db.getOpenEdPatternFlag(uid).catch(() => 'read_failed');
+    if (edFlagAfter) await cancelPlannedMealConfirm();
   } catch (e) {
     trackNotificationFailed({
       category: CATEGORY.PLANNED_MEAL_CONFIRM,

@@ -176,4 +176,16 @@ describe('Q6: setCalorieBank stamps the blob and pushes it', () => {
     await useAppStore.getState().setCalorieBank({ weekStartKey: 'x' });
     expect(mockNotePrefWrite).not.toHaveBeenCalled();
   });
+  test('a machine-rebuilt blob is neither stamped nor pushed by a bank write (C6 F4 kept)', async () => {
+    mockNotePrefWrite.mockClear();
+    const { syncUserPref } = require('../../lib/sync');
+    syncUserPref.mockClear();
+    useAppStore.setState({ user: { id: 'u-rebuilt' }, userProfile: { name: 'B' }, _profileBlobRebuilt: true });
+    await useAppStore.getState().setCalorieBank({ weekStartKey: '2026-10-12' });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(mockNotePrefWrite).not.toHaveBeenCalled();
+    expect(syncUserPref.mock.calls.find((c) => c[1] === '@volyume_user_profile_u-rebuilt')).toBeUndefined();
+    expect(useAppStore.getState().userProfile.calorieBank).toEqual({ weekStartKey: '2026-10-12' });
+    useAppStore.setState({ _profileBlobRebuilt: false });
+  });
 });
