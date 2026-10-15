@@ -1,6 +1,10 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-15 — THE COHERENCE SURVEY: NINE DECISIONS PLUS SIX, BUILDING ON `survey/coherence-2026-10-15` ★
+Founder order: an extremely thorough review of end-user friction and safety coherence across eight areas, proposals as multiple choice, then "Go as recommended" on the nine decisions (register D228) and again on the six further items (D228 addendum). Survey: `docs/audit/coherence-survey-2026-10-15/`. The branch is pushed after every landing; `docs/TASKBOARD.md` section 1 (the COHERENCE SURVEY line) carries the landed commits, the lanes still building, the two migrations held for the phrase (192, 193) and what has not started. Position: lanes landing one by one over the lead's diff review; the full gate runs on the settled tree, then the merge to main and the device checklist in chat.
+
+===============================================================================
 ## ★ 2026-10-12 — PHASE 6 ON MAIN; CALORIE SLIDER ON MAIN; FOUNDER'S OFF-SEASON PLAN IN BUILD ★
 Landed on main: the whole-app plain wording (ed04bd2, D225 addendum); planner phase 6, the engine wired behind STRUCTURE_ENGINE (on since 38fd470, D222 addendum) with its review fixes (8a3b4fa; specs `docs/audit/plan-builder-map-2026-10-11/23-PHASE6-INTEGRATION-SPEC.md`, `24-PHASE7-AFTER-BUILD-SPEC.md`); the calorie slider, private training status and gain-phase settling period with the review fixes (fdbdc08, D226 and addenda; `src/lib/energyChoice.js`, `energyChoiceEnforce.js`, `trainingStatus.js`, `trendInBand.js`). In build on `feat/offseason-library-plan` (worktree /home/user/ADPhysique-os): the founder's own plan (D227; `docs/audit/offseason-allan-2026-10-12/`), lane A on the branch, lane B building. Next after it lands: planner phase 7 (R78a and R83 block the switch), then 8 and 9.
 
