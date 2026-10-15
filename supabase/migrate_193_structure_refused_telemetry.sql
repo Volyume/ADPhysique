@@ -16,10 +16,13 @@
 --                    verbatim from migrate_156 apart from the added line.
 --
 -- Applied locally:   no (cloud-only object)
--- Applied remotely:  NO. HELD for the founder's exact phrase
---                    "run against production: 193". The client emit is
---                    behind STRUCTURE_REFUSED_TELEMETRY = false
---                    (src/lib/sync/featureFlags.js) until this is applied.
+-- Applied remotely:  YES, 2026-10-15 15:37:46 UTC (founder: "against
+--                    production 193.", given in the same breath as the
+--                    phrase for 192, 2026-10-15; Claude-run through the
+--                    Supabase connector under the checksum protocol). The
+--                    client emit (STRUCTURE_REFUSED_TELEMETRY,
+--                    src/lib/sync/featureFlags.js) was turned on in the
+--                    same landing.
 -- Safe to re-run:    yes (CREATE OR REPLACE; GRANT is idempotent).
 -- Rollback:          re-run migrate_156's record_engine_telemetry
 --                    definition (the list without 'structure_refused').

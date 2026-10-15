@@ -35,8 +35,9 @@
 --                    every sync), not at insert.
 --
 -- Applied locally:   no (nothing local; cloud-only objects)
--- Applied remotely:  NO. HELD for the founder's exact phrase
---                    "run against production: 192".
+-- Applied remotely:  YES, 2026-10-15 15:37:42 UTC (founder: "run against
+--                    production 192.", 2026-10-15; Claude-run through the
+--                    Supabase connector under the checksum protocol).
 -- Safe to re-run:    yes. CREATE OR REPLACE for both functions; the CHECK
 --                    is dropped and re-added by name in one statement; the
 --                    helper takes a per-person advisory lock; its UPDATEs
