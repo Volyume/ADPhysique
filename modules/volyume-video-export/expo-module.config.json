@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["expo.modules.volyumevideoexport.VolyumeVideoExportModule"]
+  },
+  "ios": {
+    "modules": ["VolyumeVideoExportModule"]
+  }
+}

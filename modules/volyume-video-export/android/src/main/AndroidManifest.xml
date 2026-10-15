@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- D229 addendum 6, level-up 2: "Set as wallpaper" sets the lock screen
+       through WallpaperManager. SET_WALLPAPER is a normal permission (granted
+       at install, never prompted). -->
+  <uses-permission android:name="android.permission.SET_WALLPAPER" />
+</manifest>

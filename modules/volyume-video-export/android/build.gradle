@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'expo.modules.volyumevideoexport'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+
+android {
+  namespace 'expo.modules.volyumevideoexport'
+  // Media3 1.10.1 and 1.11.1 declare minCompileSdk 36 (01-NATIVE-RESEARCH.md
+  // section 1.1); the app sets 36 through expo-build-properties.
+  compileSdkVersion safeExtGet("compileSdkVersion", 36)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 26)
+  }
+
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // D229 addendum 6: the founder's dependency yes, by name. Google, Apache 2.0,
+  // no native libraries. All Media3 modules must share one version.
+  //
+  // Fallback: Media3 1.11.1 depends on kotlin-stdlib 2.2.10 while React Native
+  // 0.81.5 compiles with Kotlin 2.1.20. If the first EAS build fails on the
+  // Kotlin 2.2.x metadata, set this to "1.10.1" (same Transformer API used
+  // here, kotlin-stdlib 2.0.20; research report section 1.1).
+  def media3 = "1.11.1"
+  implementation "androidx.media3:media3-transformer:$media3"
+  implementation "androidx.media3:media3-effect:$media3"
+  implementation "androidx.media3:media3-common:$media3"
+}

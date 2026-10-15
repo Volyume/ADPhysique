@@ -28,7 +28,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,
-        "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
+        "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, take progress photos, and record short workout clips.",
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture.",
         "NSLocationWhenInUseUsageDescription": "Volyume uses your approximate location only when you tap Use my location, to list gyms near you. It is never stored and never shared.",
         "NSLocationDefaultAccuracyReduced": true,
@@ -254,7 +254,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos. Progress photos stay on this device and are never uploaded.",
+          "cameraPermission": "Volyume uses the camera to scan barcodes, read nutrition labels, take progress photos, and record short workout clips. Progress photos stay on this device and are never uploaded.",
           "recordAudioAndroid": false
         }
       ],

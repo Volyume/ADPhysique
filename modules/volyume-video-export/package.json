@@ -1,0 +1,7 @@
+{
+  "name": "volyume-video-export",
+  "version": "0.1.0",
+  "description": "On-device share video export for Volyume: trim, frame, look, card and outline into an H.264 MP4.",
+  "main": "index.js",
+  "private": true
+}
