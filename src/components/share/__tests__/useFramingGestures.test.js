@@ -56,6 +56,6 @@ describe('useFramingGestures', () => {
     act(() => tree.unmount());
   });
   test('the action list names the media', () => {
-    expect(framingActions('clip').map((a) => a.label)).toEqual(['Zoom in', 'Zoom out', 'Move clip up', 'Move clip down', 'Move clip left', 'Move clip right']);
+    expect(framingActions('video').map((a) => a.label)).toEqual(['Zoom in', 'Zoom out', 'Move video up', 'Move video down', 'Move video left', 'Move video right']);
   });
 });

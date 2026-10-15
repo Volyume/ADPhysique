@@ -70,7 +70,7 @@ describe('<ClipFramer>', () => {
     const onTogglePause = jest.fn();
     const tree = mount({ clip: { ready: true, meta: { rotation: 0 }, currentFrame: { value: {} } }, paused: true, onTogglePause });
     const frame = tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable')[0];
-    expect(frame.props.accessibilityLabel).toBe('Your clip on the share image');
+    expect(frame.props.accessibilityLabel).toBe('Your video on the share image');
     expect(frame.props.accessibilityActions.map((a) => a.name)).toEqual(
       expect.arrayContaining(['increment', 'decrement', 'moveUp', 'moveDown', 'moveLeft', 'moveRight', 'activate']),
     );
@@ -78,11 +78,16 @@ describe('<ClipFramer>', () => {
     expect(onTogglePause).toHaveBeenCalledTimes(1);
     expect(tree.root.findAll((n) => n.type === 'Ionicons' && n.props.name === 'play')).toHaveLength(1);
   });
-  test('source: a clip always fills the card (minimum zoom 1), and the frames are shared, not owned', () => {
+  test('source: a clip always fills the card (minimum zoom 1), the frames are shared, not owned, and a person reads "video", never "clip"', () => {
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '..', 'ClipFramer.js'), 'utf8');
     expect(src).toMatch(/minZoom: 1,/);
     expect(src).not.toMatch(/useClipFrames\(/);
+    // D229 addendum 8: every string a person reads says "video".
+    const spoken = src.match(/accessibility(?:Label|Hint)="([^"]+)"/g) || [];
+    expect(spoken.length).toBeGreaterThan(0);
+    spoken.forEach((line) => expect(line.toLowerCase()).not.toContain('clip'));
+    expect(src).toMatch(/framingActions\('video'\)/);
   });
 });

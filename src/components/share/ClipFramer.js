@@ -80,9 +80,9 @@ export default function ClipFramer({
         style={[styles.frame, { width: fw, height: fh }]}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel="Your clip on the share image"
-        accessibilityHint="Drag to move your clip. Pinch to make it bigger or smaller. Double tap to pause or play."
-        accessibilityActions={[...framingActions('clip'), { name: 'activate', label: paused ? 'Play' : 'Pause' }]}
+        accessibilityLabel="Your video on the share image"
+        accessibilityHint="Drag to move your video. Pinch to make it bigger or smaller. Double tap to pause or play."
+        accessibilityActions={[...framingActions('video'), { name: 'activate', label: paused ? 'Play' : 'Pause' }]}
         onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'activate' ? toggle() : nudge(e.nativeEvent.actionName))}
       >
         <Animated.View
