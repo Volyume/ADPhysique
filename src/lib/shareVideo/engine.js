@@ -23,7 +23,9 @@
  *     same line lineForExportError returns, so nothing technical can reach a
  *     person by accident. The native detail rides on `error.detail` for logs.
  */
-import { requireNativeModule } from 'expo-modules-core';
+// expo-modules-core is required lazily inside getNative(): a test or a
+// build without the native runtime must still be able to import this file
+// (every call then rejects E_UNAVAILABLE and isAvailable() is false).
 
 export const NATIVE_MODULE_NAME = 'VolyumeVideoExport';
 export const PROGRESS_EVENT = 'onExportProgress';
@@ -95,6 +97,8 @@ function getNative() {
   if (resolved) return nativeModule;
   resolved = true;
   try {
+    // eslint-disable-next-line global-require
+    const { requireNativeModule } = require('expo-modules-core');
     nativeModule = requireNativeModule(NATIVE_MODULE_NAME);
   } catch (_e) {
     // Expo Go, an older build without the module, or a test.

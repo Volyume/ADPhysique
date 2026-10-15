@@ -38,7 +38,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     // No separate editing step to open or close.
     expect(SCREEN).not.toMatch(/setFraming|Move and zoom photo|onDone=/);
     expect(SCREEN).toContain('const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;');
-    expect(SCREEN).toMatch(/\{livePhoto \? \(\s*<SharePhotoFramer/);
+    expect(SCREEN).toMatch(/livePhoto \? \(\s*<SharePhotoFramer/);
   });
 
   test('the live preview lays the real card over the photo, drawn with the photo left out', () => {
@@ -78,7 +78,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     // RE-ANCHORED 2026-10-15 (D229 addendum 5 item 4): the row reads
     // Gallery | Photo | None, so "No photo" reads "None", with a spoken
     // name that starts with it; still onPress={clearPhoto}.
-    expect(SCREEN).toMatch(/label="None"[\s\S]{0,120}onPress=\{clearPhoto\}/);
+    expect(SCREEN).toMatch(/label="None"[\s\S]{0,220}onPress=\{clearPhoto\}/);
     expect(SCREEN).not.toMatch(/label="Dark"[\s\S]{0,80}onPress=\{clearPhoto\}/);
   });
 
