@@ -51,7 +51,10 @@ describe('moving and resizing the photo, right on the preview', () => {
   test('a drag on the photo can never scroll the page: the gestures block the page scroll', () => {
     expect(SCREEN).toContain('const scrollGesture = useMemo(() => Gesture.Native(), []);');
     // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
-    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView contentContainerStyle=\{\[styles\.content, live\.content\]\}>/);
+    // RE-ANCHORED 2026-10-15 (D229 addendum 5 item 8, the pinned live
+    // preview): the scroll view now carries a ref and a scroll read; the
+    // gesture detector still wraps it directly.
+    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView\s+ref=\{scrollRef\}\s+contentContainerStyle=\{\[styles\.content, live\.content\]\}/);
     expect(SCREEN).toContain('blocksGesture={scrollGesture}');
     expect(FRAMER).toContain('pinch = pinch.blocksExternalGesture(blocksGesture);');
     expect(FRAMER).toContain('pan = pan.blocksExternalGesture(blocksGesture);');

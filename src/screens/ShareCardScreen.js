@@ -36,6 +36,7 @@ import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import BottomSheet from '../components/BottomSheet';
 import SharePhotoFramer from '../components/SharePhotoFramer';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
@@ -136,6 +137,12 @@ const WORDMARK_DARK = require('../../assets/volyume-wordmark-dark.png');
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
+// The pinned live preview (D229 addendum 5 item 8): once more than this share
+// of the big preview has scrolled off the top, a small copy of the same live
+// preview sits under the header while the controls are worked.
+const MINI_PREVIEW_H = 112;
+const MINI_SHOWS_AFTER = 0.6;
+const noop = () => {};
 // The photo the positioning view shows: the same pixels the card draws,
 // scaled to at most this edge (enough for a 300dp frame at 4x zoom on a
 // dense screen) and encoded once, so the view and the card cannot disagree
@@ -1098,6 +1105,12 @@ export default function ShareCardScreen({ navigation, route }) {
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
+  // The pinned live preview (addendum 5 item 8): the scroll view, where the
+  // big preview sits in it, and whether the small copy is showing.
+  const scrollRef = useRef(null);
+  const previewTopRef = useRef(0);
+  const miniShownRef = useRef(false);
+  const [miniShown, setMiniShown] = useState(false);
   // EP-17/UI-05 (Codex end-user-polish audit): `previewB64 === null` used to
   // mean BOTH "still rendering" and "permanently failed" (missing Skia/
   // typeface, or the offscreen surface/encode failing), so a real render
@@ -1428,11 +1441,206 @@ export default function ShareCardScreen({ navigation, route }) {
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
   const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect, fullAspect);
 
+  // The pinned live preview (D229 addendum 5 item 8). The big preview is the
+  // first thing on the screen; once more than MINI_SHOWS_AFTER of its card
+  // has scrolled off the top, a small copy of the SAME live preview sits
+  // under the header (the same frames, the same photo, the same placement
+  // and overlay, drawn small), so the person sees the card change as they
+  // work the controls below. It takes no gestures; a tap brings the big
+  // preview back. Scroll positions are read by hand here, not animated: the
+  // JS-thread Animated API is a frozen allowlist (motionFitRules.guard).
+  const handlePreviewLayout = useCallback((e) => {
+    previewTopRef.current = e?.nativeEvent?.layout?.y ?? 0;
+  }, []);
+  const handleScroll = useCallback((e) => {
+    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
+    const next = y > previewTopRef.current + previewH * MINI_SHOWS_AFTER;
+    if (next !== miniShownRef.current) {
+      miniShownRef.current = next;
+      setMiniShown(next);
+    }
+  }, [previewH]);
+  const scrollToPreview = useCallback(() => {
+    scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });
+  }, [reduceMotion]);
+  const miniH = MINI_PREVIEW_H;
+  const miniW = previewH > 0 ? Math.max(1, Math.round((miniH * previewW) / previewH)) : miniH;
+  let miniBody = null;
+  if (liveClip) {
+    miniBody = (
+      <ClipFramer
+        clip={clipFrames}
+        mediaWidth={clipSize.width}
+        mediaHeight={clipSize.height}
+        frameWidth={miniW}
+        frameHeight={miniH}
+        crop={photoCrop}
+        lookKey={photoLook !== 'none' ? photoLook : null}
+        lookStrength={photoLookStrength}
+        overlayUri={clipOverlay}
+        paused={clipPaused || makingVideo}
+        onTogglePause={noop}
+        onChange={noop}
+      />
+    );
+  } else if (livePhoto) {
+    miniBody = (
+      <SharePhotoFramer
+        photoUri={framerPhoto.uri}
+        photoWidth={framerPhoto.width}
+        photoHeight={framerPhoto.height}
+        frameWidth={miniW}
+        frameHeight={miniH}
+        crop={photoCrop}
+        overlayUri={framerOverlay}
+        onChange={noop}
+      />
+    );
+  } else if (previewStatus === 'ready' && previewB64) {
+    miniBody = (
+      <Image
+        source={{ uri: `data:image/png;base64,${previewB64}` }}
+        style={{ width: miniW, height: miniH }}
+        resizeMode="contain"
+      />
+    );
+  }
+  const miniPreview = miniShown && miniBody ? (
+    <AnimatedEntrance style={[styles.miniWrap, { right: t.screenPadding }]}>
+      <TouchableOpacity
+        onPress={scrollToPreview}
+        accessibilityRole="button"
+        accessibilityLabel="Back to the preview"
+        accessibilityHint="Scrolls up to the full-size preview"
+        activeOpacity={0.85}
+        style={[styles.mini, live.mini, { width: miniW, height: miniH }]}
+        testID="share-mini-preview"
+      >
+        <View pointerEvents="none" style={{ width: miniW, height: miniH }}>{miniBody}</View>
+      </TouchableOpacity>
+    </AnimatedEntrance>
+  ) : null;
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
+      <View style={styles.body}>
       <GestureDetector gesture={scrollGesture}>
-      <ScrollView contentContainerStyle={[styles.content, live.content]}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.content, live.content]}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
+      >
+
+        {/* Preview (addendum 5 item 8: at the top of the screen, and a small
+            pinned copy under the header once it has scrolled away): the exact
+            image that gets shared, scaled down. With a
+            photo it is live: the photo under the card drawn by the same
+            renderer, moved and resized right here. */}
+        <View style={styles.section} onLayout={handlePreviewLayout}>
+          <SectionLabel>Preview</SectionLabel>
+          <View style={styles.previewOuter}>
+            {liveClip ? (
+              <View>
+                <ClipFramer
+                  clip={clipFrames}
+                  mediaWidth={clipSize.width}
+                  mediaHeight={clipSize.height}
+                  frameWidth={previewW}
+                  frameHeight={previewH}
+                  crop={photoCrop}
+                  lookKey={photoLook !== 'none' ? photoLook : null}
+                  lookStrength={photoLookStrength}
+                  overlayUri={clipOverlay}
+                  paused={clipPaused || makingVideo}
+                  onTogglePause={() => setClipPaused((p) => !p)}
+                  onChange={setPhotoCrop}
+                  blocksGesture={scrollGesture}
+                />
+                {makingVideo ? (
+                  <View style={[styles.videoScrim, live.videoScrim, { width: previewW, height: previewH }]} pointerEvents="box-none">
+                    <ProgressRing progress={videoProgress} />
+                    <Text style={[styles.videoScrimText, live.videoScrimText]}>Making your video</Text>
+                    <Button title="Cancel" onPress={cancelVideo} variant="secondary" size="sm" fullWidth={false} accessibilityLabel="Stop making the video" />
+                  </View>
+                ) : null}
+              </View>
+            ) : livePhoto ? (
+              <SharePhotoFramer
+                photoUri={framerPhoto.uri}
+                photoWidth={framerPhoto.width}
+                photoHeight={framerPhoto.height}
+                frameWidth={previewW}
+                frameHeight={previewH}
+                crop={photoCrop}
+                overlayUri={framerOverlay}
+                onChange={setPhotoCrop}
+                blocksGesture={scrollGesture}
+              />
+            ) : previewStatus === 'ready' && previewB64 ? (
+              <Image
+                source={{ uri: `data:image/png;base64,${previewB64}` }}
+                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
+                resizeMode="contain"
+              />
+            ) : previewStatus === 'error' ? (
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
+                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
+                <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+                <Button
+                  title="Retry"
+                  onPress={renderPreview}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  accessibilityLabel="Retry building the preview"
+                />
+              </View>
+            ) : (
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
+                <ActivityIndicator color={t.colors.primary} />
+              </View>
+            )}
+          </View>
+          {liveClip ? (
+            <View style={styles.clipControls}>
+              <Text style={[styles.photoHint, live.photoHint]}>Drag to move. Pinch to resize. Tap to pause.</Text>
+              <TrimBar
+                width={previewW}
+                durationMs={Math.max(clipWindow.endMs, Number(clip.durationMs) || 0)}
+                startMs={clipWindow.startMs}
+                endMs={clipWindow.endMs}
+                maxWindowMs={MAX_VIDEO_MS}
+                thumbnails={barThumbs}
+                currentTime={clipFrames.currentTime}
+                onPreview={(ms) => clipFrames.scrub(ms)}
+                onInteractStart={() => setClipPaused(true)}
+                onChange={(next) => { setClipWindow(next); setClipPaused(reduceMotion); }}
+              />
+              {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS ? (
+                <Text style={[styles.photoHint, live.photoHint]}>
+                  {`${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide to choose where it starts.`}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+          {livePhoto ? (
+            <View style={styles.photoHintRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>Drag to move your photo. Pinch to resize it.</Text>
+              {!isCentreCrop(photoCrop) ? (
+                <TouchableOpacity
+                  onPress={() => setPhotoCrop(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset the photo to the centre"
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -1697,113 +1905,6 @@ export default function ShareCardScreen({ navigation, route }) {
         </View>
         ) : null}
 
-        {/* Preview: the exact image that gets shared, scaled down. With a
-            photo it is live: the photo under the card drawn by the same
-            renderer, moved and resized right here. */}
-        <View style={styles.section}>
-          <SectionLabel>Preview</SectionLabel>
-          <View style={styles.previewOuter}>
-            {liveClip ? (
-              <View>
-                <ClipFramer
-                  clip={clipFrames}
-                  mediaWidth={clipSize.width}
-                  mediaHeight={clipSize.height}
-                  frameWidth={previewW}
-                  frameHeight={previewH}
-                  crop={photoCrop}
-                  lookKey={photoLook !== 'none' ? photoLook : null}
-                  lookStrength={photoLookStrength}
-                  overlayUri={clipOverlay}
-                  paused={clipPaused || makingVideo}
-                  onTogglePause={() => setClipPaused((p) => !p)}
-                  onChange={setPhotoCrop}
-                  blocksGesture={scrollGesture}
-                />
-                {makingVideo ? (
-                  <View style={[styles.videoScrim, live.videoScrim, { width: previewW, height: previewH }]} pointerEvents="box-none">
-                    <ProgressRing progress={videoProgress} />
-                    <Text style={[styles.videoScrimText, live.videoScrimText]}>Making your video</Text>
-                    <Button title="Cancel" onPress={cancelVideo} variant="secondary" size="sm" fullWidth={false} accessibilityLabel="Stop making the video" />
-                  </View>
-                ) : null}
-              </View>
-            ) : livePhoto ? (
-              <SharePhotoFramer
-                photoUri={framerPhoto.uri}
-                photoWidth={framerPhoto.width}
-                photoHeight={framerPhoto.height}
-                frameWidth={previewW}
-                frameHeight={previewH}
-                crop={photoCrop}
-                overlayUri={framerOverlay}
-                onChange={setPhotoCrop}
-                blocksGesture={scrollGesture}
-              />
-            ) : previewStatus === 'ready' && previewB64 ? (
-              <Image
-                source={{ uri: `data:image/png;base64,${previewB64}` }}
-                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
-                resizeMode="contain"
-              />
-            ) : previewStatus === 'error' ? (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
-                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-                <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
-                <Button
-                  title="Retry"
-                  onPress={renderPreview}
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  accessibilityLabel="Retry building the preview"
-                />
-              </View>
-            ) : (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
-                <ActivityIndicator color={t.colors.primary} />
-              </View>
-            )}
-          </View>
-          {liveClip ? (
-            <View style={styles.clipControls}>
-              <Text style={[styles.photoHint, live.photoHint]}>Drag to move. Pinch to resize. Tap to pause.</Text>
-              <TrimBar
-                width={previewW}
-                durationMs={Math.max(clipWindow.endMs, Number(clip.durationMs) || 0)}
-                startMs={clipWindow.startMs}
-                endMs={clipWindow.endMs}
-                maxWindowMs={MAX_VIDEO_MS}
-                thumbnails={barThumbs}
-                currentTime={clipFrames.currentTime}
-                onPreview={(ms) => clipFrames.scrub(ms)}
-                onInteractStart={() => setClipPaused(true)}
-                onChange={(next) => { setClipWindow(next); setClipPaused(reduceMotion); }}
-              />
-              {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS ? (
-                <Text style={[styles.photoHint, live.photoHint]}>
-                  {`${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide to choose where it starts.`}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-          {livePhoto ? (
-            <View style={styles.photoHintRow}>
-              <Text style={[styles.photoHint, live.photoHint]}>Drag to move your photo. Pinch to resize it.</Text>
-              {!isCentreCrop(photoCrop) ? (
-                <TouchableOpacity
-                  onPress={() => setPhotoCrop(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reset the photo to the centre"
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-
         {/* Top lifts (founder orders 2026-09-26): the athlete picks which
             lifts the session card shows, as many as fit, or none. One row
             that opens the list, the way the app's own pickers work, rather
@@ -2026,6 +2127,8 @@ export default function ShareCardScreen({ navigation, route }) {
         ) : null}
       </ScrollView>
       </GestureDetector>
+      {miniPreview}
+      </View>
 
       {/* The top-lifts list: every lift from the session with its best set,
           a note on the ones that set a new best today, and the option to
@@ -2234,7 +2337,17 @@ function ToggleRow({ label, value, onChange, last, disabled = false }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  body: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  // The pinned live preview, under the header at the trailing edge.
+  miniWrap: { position: 'absolute', top: spacing.sm },
+  mini: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   section: { gap: spacing.md },
   // Template strip (Campaign 30 pillar 5): live card thumbnails as the
   // type picker. Tiles are quiet cards; the active tile carries the accent
@@ -2375,6 +2488,7 @@ function buildLiveStyles(t) {
   return {
     content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
+    mini: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     templateTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     templateThumbEmpty: { backgroundColor: t.colors.surface2 },
