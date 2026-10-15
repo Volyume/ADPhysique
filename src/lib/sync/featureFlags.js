@@ -83,4 +83,7 @@ export const ENTRY_TYPED_PUSH = true;
  * after the apply, as the migration header requires. The event's payload is
  * reason codes and request numbers only, never muscle names or body data.
  */
-export const STRUCTURE_REFUSED_TELEMETRY = false;
+// Turned on 2026-10-15 after migrate_193 was applied to production (the
+// server allow-list carries 'structure_refused'); a build before that
+// migration would have had its row rejected and retried for ever.
+export const STRUCTURE_REFUSED_TELEMETRY = true;

@@ -12,7 +12,11 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_191` (189, 190 and 191 applied 2026-10-08, 10:40, 10:45 and
+> `migrate_193` (192 and 193 applied 2026-10-15, 15:37 UTC, under the
+> founder's "run against production 192." and "against production 193.":
+> automatic Community posts withheld server-side while an ED flag is open
+> and restored at its clear, and the `structure_refused` telemetry event,
+> with STRUCTURE_REFUSED_TELEMETRY now on; 189, 190 and 191 applied 2026-10-08, 10:40, 10:45 and
 > 11:16 UTC, under the founder's "Deploy all and run all migrations
 > remaining against production": `workout_sets.entry_typed` with
 > ENTRY_TYPED_PUSH now on, the Community feed scopes and sort, and the
@@ -67,7 +71,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_193`, applied through 191 except 049 HELD, 192 and 193 written and HELD for the phrase; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_193`, applied through 193 except 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
