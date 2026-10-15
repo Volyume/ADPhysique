@@ -15,7 +15,13 @@
  *     abbreviation a non-technical person would not know (seconds may be "s"
  *     only where the word sits beside it: "Countdown" above "3 s");
  *   - the plain-words pins: "Record a video of this set", the primer body, and
- *     the two forms of the summary row.
+ *     the two forms of the summary row;
+ *   - no string may imply a video belongs to a PR, with ONE named exception:
+ *     the PR-moment keys below (D229 addendum 9, lead ruling 2026-10-15). They
+ *     are the words the founder ruled for sharing one PR set with its video,
+ *     and their "PR" is the set's own record, never a claim about the video.
+ *     They are exempt from the PR ban only: every other check here still
+ *     scans them, and so do the lines the helpers build from them.
  * The existing screens the rows were added to are checked on the lines this
  * work added, by their D229 markers, so older copy there is not in scope.
  */
@@ -65,6 +71,42 @@ const BANNED = [
 // Every word a person is shown, from every function that makes one.
 const ONE_VIDEO = { exerciseName: 'Bench press', setNumber: 3, source: 'workout', durationMs: 12000, createdAt: 5 };
 const OTHER_VIDEO = { exerciseName: null, source: 'summary', durationMs: 9000, createdAt: 9 };
+const BENCH_PR = { exerciseName: 'Bench press', setNumber: 3, type: 'heaviest_weight' };
+const UNNAMED_PR_VIDEO = { exerciseId: 'e1', exerciseName: null, setNumber: null, source: 'workout', createdAt: 7 };
+const UNNAMED_PR = { exerciseId: 'e1', exerciseName: null, setNumber: null, type: '1rm_estimate' };
+
+// D229 addendum 9 (lead ruling 2026-10-15): the words the founder ruled for the
+// PR moment ("A PR if you hit it", "This set would be a PR.", "Share this PR
+// with its video", "Use your PR video on the share", "..., a PR"). Their "PR"
+// is the set's own record, never a claim about the video, so these keys, and
+// only these, are exempt from the PR ban. Every other check scans them.
+const PR_MOMENT_KEYS = Object.freeze([
+  'prOfferText',
+  'rowDescPRLead',
+  'rowDescPRNone',
+  'prShareA11y',
+  'summaryLabelPR',
+  'summarySubPRTail',
+  'summarySubPRUnnamed',
+]);
+const PR_MOMENT_WORDS = PR_MOMENT_KEYS.map((k) => CLIP_STRINGS[k]);
+
+// The lines the helpers build in their PR forms. Each is built from a
+// PR-moment word, and with that word taken out nothing in it says PR.
+const PR_MOMENT_LINES = [
+  clipRowDescription(0, { wouldBePR: true }),
+  clipRowDescription(1, { wouldBePR: true }),
+  clipRowDescription(2, { wouldBePR: true }),
+  ...[
+    [[ONE_VIDEO], [BENCH_PR]],
+    [[ONE_VIDEO, OTHER_VIDEO], [BENCH_PR]],
+    [[UNNAMED_PR_VIDEO], [UNNAMED_PR]],
+  ].flatMap(([list, prs]) => {
+    const copy = summaryClipRowCopy(list, prs);
+    return [copy.label, copy.sub];
+  }),
+];
+
 const SHOWN = [
   ...Object.values(CLIP_STRINGS),
   clipRowDescription(0), clipRowDescription(1), clipRowDescription(2), clipRowDescription(3),
@@ -76,7 +118,12 @@ const SHOWN = [
     const copy = summaryClipRowCopy(list);
     return [copy.label, copy.sub];
   }),
+  ...PR_MOMENT_LINES,
 ];
+
+// The PR ban reads every shown string except the PR-moment words and the
+// lines built from them.
+const NOT_PR_MOMENT = SHOWN.filter((l) => !PR_MOMENT_WORDS.includes(l) && !PR_MOMENT_LINES.includes(l));
 
 describe('the new files', () => {
   test('there are files to scan', () => {
@@ -177,8 +224,35 @@ describe('no jargon, no abbreviation a non-technical person would not know', () 
 describe('a video belongs to the set, not to a record', () => {
   // A video recorded for a set is usable on ANY share (the session card too),
   // so no string may imply it is only for a personal record.
-  test.each(SHOWN.map((l) => [l]))('%s', (line) => {
+  test.each(NOT_PR_MOMENT.map((l) => [l]))('%s', (line) => {
     expect(line).not.toMatch(/\bPRs?\b|personal (record|best)|new best/i);
+  });
+
+  test('the exception is exactly the named PR-moment keys, and each of them exists', () => {
+    for (const key of PR_MOMENT_KEYS) expect({ key, type: typeof CLIP_STRINGS[key] }).toEqual({ key, type: 'string' });
+    const saysPR = Object.entries(CLIP_STRINGS)
+      .filter(([, line]) => /\bPRs?\b|personal (record|best)|new best/i.test(line))
+      .map(([key]) => key)
+      .sort();
+    expect(saysPR).toEqual([...PR_MOMENT_KEYS].sort());
+  });
+
+  test('every line a helper builds in its PR form says PR only through a PR-moment word', () => {
+    expect(PR_MOMENT_LINES.length).toBeGreaterThanOrEqual(9);
+    for (const line of PR_MOMENT_LINES) {
+      const word = PR_MOMENT_WORDS.find((w) => line.includes(w));
+      expect({ line, built: !!word }).toEqual({ line, built: true });
+      const rest = line.split(word).join(' ');
+      expect({ line, rest: /\bPRs?\b|personal (record|best)|new best/i.test(rest) }).toEqual({ line, rest: false });
+    }
+  });
+
+  test('the scan still sees the usual forms (a broken filter must not pass as clean)', () => {
+    expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.rowLabel);
+    expect(NOT_PR_MOMENT).toContain(clipRowDescription(1));
+    expect(NOT_PR_MOMENT).toContain('You recorded Bench press, set 3');
+    expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prOfferAction);
+    expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prShareAction);
   });
 });
 

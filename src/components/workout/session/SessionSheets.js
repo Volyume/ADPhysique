@@ -126,6 +126,7 @@ function SessionSheets({
   handleUseLastSession,
   clipsSuppressed,
   clipCount,
+  nextSetWouldBePR,
   handleRecordClip,
   isLastExercise,
   isPairedWithNext,
@@ -850,7 +851,10 @@ function SessionSheets({
                   usePhotoSuppression (which starts suppressed) shows it, and
                   there is no explanation in its place. At three videos the row
                   opens the workout's videos so one can be deleted (the handler
-                  decides; nothing is replaced silently). */}
+                  decides; nothing is replaced silently). D229 addendum 9: when
+                  the numbers in the next set's box would be a PR (the screen
+                  judges it, only an explicit true) the second line leads with
+                  that; the words are the one rule's. */}
               {clipsSuppressed === false && (
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
@@ -862,7 +866,7 @@ function SessionSheets({
                   <Ionicons name="videocam-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{CLIP_STRINGS.rowLabel}</Text>
-                    <Text style={[sharedStyles.sheetOptionDesc, sharedLive.sheetOptionDesc]}>{clipRowDescription(clipCount)}</Text>
+                    <Text style={[sharedStyles.sheetOptionDesc, sharedLive.sheetOptionDesc]}>{clipRowDescription(clipCount, { wouldBePR: nextSetWouldBePR === true })}</Text>
                   </View>
                 </View>
               </TouchableOpacity>

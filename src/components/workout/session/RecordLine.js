@@ -26,19 +26,39 @@
  * is earned, whatever exercise is on screen then (a superset's log lands on
  * the partner exercise, and the feedback must not wait for the return).
  *
+ * D229 addendum 9 (share one PR set with its video): the same row carries
+ * the PR moment's two video actions, so there is one row and one place.
+ * Before the set, when the numbers already in the next row's box would be a
+ * record (the screen judges it with detectPR over the log's own history), the
+ * row reads "A PR if you hit it" with the text action "Record it". After the
+ * set, an earned record whose set has a saved video gains the text action
+ * "Share". Each action is plain text in the primary ink after a middle dot,
+ * a button with a 48 dp hit area; at the largest text sizes it wraps under
+ * the text rather than clipping. The offer never animates (the enter is for
+ * an earned record only). With an action on it the row is no longer one
+ * accessible element: the words and the action are read and reached apart.
+ * The screen decides whether an action is offered at all (calm mode and an
+ * open ED flag hide both, fail closed); this row only draws what it is given.
+ *
  * Props
  *   record     detectPR's record ({ type, weight, reps, value, label }) plus
  *              units, or { type: 'first_lift', weight, reps, units } for the
- *              honest starting point. Null renders nothing.
+ *              honest starting point.
  *   celebrate  true on the render that first shows this record: animates in.
  *   reduceMotion  the accessibility preference.
+ *   offer      the pre-set form, { text, actionLabel, a11y, onAction }: shown
+ *              only when there is no record. Null (and no record) renders
+ *              nothing.
+ *   action     the earned record's action, { label, a11y, onPress }: shown
+ *              only with a real record, never with the first lift.
  */
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, AccessibilityInfo } from 'react-native';
+import { Animated, Easing, StyleSheet, AccessibilityInfo, Pressable, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Text from '../../Text';
 import useTheme from '../../../hooks/useTheme';
 import { spacing, motion, iconSize, fontScaleCaps } from '../../../styles/theme';
+import { touchTarget } from '../../../styles/layout';
 import * as haptics from '../../../lib/haptics';
 import { getWellbeingMode, isCalm } from '../../../lib/wellbeing';
 
@@ -117,16 +137,35 @@ export function celebrateRecord(record, { reduceMotion = false } = {}) {
 // the moment the first record animated; pre-build review 2026-10-09).
 const EASE_DECELERATE = Easing.bezier(...motion.easeDecelerate);
 
-export default function RecordLine({ record, celebrate = false, reduceMotion = false }) {
+export default function RecordLine({
+  record, celebrate = false, reduceMotion = false, offer = null, action = null,
+}) {
   const t = useTheme();
   const isFirstLift = record?.type === 'first_lift';
-  const opacity = useRef(new Animated.Value(celebrate ? 0 : 1)).current;
-  const shift = useRef(new Animated.Value(celebrate && !reduceMotion ? -SETTLE : 0)).current;
-  const text = recordText(record);
+  // The pre-set form needs its words and a way to take it; it never stands
+  // in for a record.
+  const offerShown = !record && !!offer && !!offer.text && !!offer.actionLabel
+    && typeof offer.onAction === 'function';
+  const recordAction = record && !isFirstLift && action && action.label && typeof action.onPress === 'function'
+    ? action : null;
+  const rowAction = offerShown
+    ? { label: offer.actionLabel, a11y: offer.a11y || offer.actionLabel, onPress: offer.onAction }
+    : recordAction;
+  const animates = !!record && celebrate;
+  const opacity = useRef(new Animated.Value(animates ? 0 : 1)).current;
+  const shift = useRef(new Animated.Value(animates && !reduceMotion ? -SETTLE : 0)).current;
+  const text = record ? recordText(record) : (offerShown ? offer.text : '');
   const key = record ? `${record.type}|${text}` : null;
 
   useEffect(() => {
-    if (!record || !celebrate) return undefined;
+    if (!record) {
+      // The offer never animates, and a record's enter stopped part-way (its
+      // set deleted mid-fade) never leaves the offer half faded.
+      opacity.setValue(1);
+      shift.setValue(0);
+      return undefined;
+    }
+    if (!celebrate) return undefined;
     opacity.setValue(0);
     shift.setValue(reduceMotion ? 0 : -SETTLE);
     const anim = Animated.parallel([
@@ -141,26 +180,62 @@ export default function RecordLine({ record, celebrate = false, reduceMotion = f
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  if (!record) return null;
+  if (!record && !offerShown) return null;
 
+  const quiet = isFirstLift || !record;
   const live = {
     band: { borderBottomColor: t.colors.borderSubtle },
-    text: { ...t.type.bodySm, color: isFirstLift ? t.colors.textSecondary : t.colors.textPrimary },
-    glyph: isFirstLift ? t.colors.textMuted : t.colors.gold,
+    text: { ...t.type.bodySm, color: quiet ? t.colors.textSecondary : t.colors.textPrimary },
+    glyph: quiet ? t.colors.textMuted : t.colors.gold,
+    dot: { ...t.type.bodySm, color: t.colors.textMuted },
+    action: { ...t.type.label, color: t.colors.primary },
   };
+  const glyph = record ? recordGlyph(record.type) : 'flag-outline';
+  const label = record && !isFirstLift ? `Personal record. ${text}` : text;
+  const hasAction = !!rowAction;
 
   return (
     <Animated.View
-      style={[styles.band, live.band, { opacity, transform: [{ translateY: shift }] }]}
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={isFirstLift ? text : `Personal record. ${text}`}
+      style={[styles.band, hasAction && styles.bandWithAction, live.band, { opacity, transform: [{ translateY: shift }] }]}
+      accessible={!hasAction}
+      accessibilityRole={hasAction ? undefined : 'text'}
+      accessibilityLabel={hasAction ? undefined : label}
       testID="volyume-record-line"
     >
-      <Ionicons name={recordGlyph(record.type)} size={iconSize.sm} color={live.glyph} />
-      <Text style={[styles.text, live.text]} maxFontSizeMultiplier={fontScaleCaps.reading}>
-        {text}
-      </Text>
+      <View
+        style={[styles.fact, hasAction && styles.factWithAction]}
+        accessible={hasAction}
+        accessibilityRole={hasAction ? 'text' : undefined}
+        accessibilityLabel={hasAction ? label : undefined}
+      >
+        <Ionicons name={glyph} size={iconSize.sm} color={live.glyph} />
+        <Text style={[styles.text, live.text]} maxFontSizeMultiplier={fontScaleCaps.reading}>
+          {text}
+        </Text>
+      </View>
+      {hasAction ? (
+        <View style={styles.actionGroup}>
+          <Text
+            style={live.dot}
+            maxFontSizeMultiplier={fontScaleCaps.reading}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
+            {MIDDLE_DOT}
+          </Text>
+          <Pressable
+            style={styles.action}
+            onPress={rowAction.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={rowAction.a11y}
+            testID="volyume-record-line-action"
+          >
+            <Text style={live.action} maxFontSizeMultiplier={fontScaleCaps.reading}>
+              {rowAction.label}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -181,6 +256,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderBottomWidth: 1,
   },
+  // With an action the band is exactly the action's 48 dp tall, and wraps:
+  // at the largest text sizes the action moves under the words, centred,
+  // rather than clipping either.
+  bandWithAction: { paddingVertical: 0, flexWrap: 'wrap', rowGap: 0 },
+  // The glyph and the words, centred as a pair.
+  fact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, flexShrink: 1 },
+  factWithAction: { paddingVertical: spacing.xs },
   // Centred as a pair with the glyph; wraps when it must and never truncates.
   text: { flexShrink: 1, textAlign: 'center' },
+  actionGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // A text action, a full thumb tall: the label sits in a 48 dp hit area.
+  action: {
+    minHeight: touchTarget.minimum,
+    minWidth: touchTarget.minimum,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

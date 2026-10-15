@@ -338,6 +338,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // too). The finish flow supplies both on the live path; the history
   // summary itself shows neither, as before.
   const [historyPRs, setHistoryPRs] = useState([]);
+  // A history open's own records and comparison (historyPRs,
+  // shareComparison), so a workout shared later shows what it would have
+  // shown at the finish (founder, 2026-09-27). Worked out once, here: the
+  // share hand-off and the video row (D229 addendum 9: its PR form) read the
+  // same list.
+  const sharePRs = readOnly ? historyPRs : detectedPRs;
   const [shareComparison, setShareComparison] = useState(null);
   // C5-P16-02 (D96): the next planned session in the plan's rotation.
   const [nextSessionName, setNextSessionName] = useState('');
@@ -1257,10 +1263,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // workout's own records worked out again (historyPRs) instead. Same
     // fallback pattern already used for the on-screen exercise list (:1369).
     const shareExerciseData = readOnly ? readOnlyExerciseData : exerciseData;
-    // A history open's own records and comparison (historyPRs,
-    // shareComparison), so a workout shared later shows what it would have
-    // shown at the finish (founder, 2026-09-27).
-    const sharePRs = readOnly ? historyPRs : detectedPRs;
+    // The records are sharePRs (worked out once, beside historyPRs); the
+    // comparison is the history open's own as well.
     const shareComp = readOnly ? shareComparison : comparison;
     // Top set across the whole session, heaviest non-warmup set drives the
     // "best lift" highlight on the share card.
@@ -1448,8 +1452,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
-  // D229: the video row's words, which change with the workout's videos.
-  const clipRowCopy = summaryClipRowCopy(clipFlow.clips);
+  // D229: the video row's words, which change with the workout's videos, and
+  // (addendum 9) name a PR set's video when one was recorded.
+  const clipRowCopy = summaryClipRowCopy(clipFlow.clips, sharePRs);
 
   // CO-3 (cohesion audit 2026-07-09, docs/ux-world-class-audit-2026-07-09/
   // cohesion-01-flow-language.md): quiet onward links so workout completion

@@ -47,6 +47,7 @@ import SessionSheets from '../components/workout/session/SessionSheets';
 // D229 addendum 5 (video shares): "Record a video of this set" in the exercise More sheet.
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useClipRecorder from '../components/clips/useClipRecorder';
+import { CLIP_STRINGS, isFull, prVideoFor } from '../lib/clips/rules';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
 import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
@@ -81,6 +82,7 @@ import {
   detectPR,
   bestPRPerExercise,
   generateDeloadPrescription,
+  isE1rmEligibleRow,
   } from '../lib/algorithms';
 // Campaign 20 Phase 2 (docs/live-prescription-campaign-20-2026-08-16/
 // CAMPAIGN-20-PHASE-1-DESIGN.md, FOUNDER-RULINGS-2026-08-16.md): the single
@@ -387,6 +389,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // announced as "your starting point". An empty list and an unread list
   // are not the same thing, and this ref is what tells them apart.
   const historyLoadedRef = useRef(false);
+  // D229 addendum 9: the exercise the history above was read for. The
+  // exercise-change reset runs after the new exercise's first render, so on
+  // that render historyLoadedRef still says loaded while allTimeSets and
+  // loggedSets still hold the previous exercise's sets; the PR offer reads
+  // all three, so it also asks whose history it is.
+  const historyExerciseRef = useRef(null);
   // CC33 D112 R6 (audit T2-28a): true only while a swap opened from the
   // "Work around this" sheet is in flight - the ONE surface whose meaning
   // is "this movement is a capability problem today", so its swap carries
@@ -2772,6 +2780,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     historyLoadedRef.current = false;
+    historyExerciseRef.current = null;
     setCurrentSet({ ...DEFAULT_SET });
     seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps };
     setGhostSet(null);
@@ -2812,6 +2821,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setPrevSets(prev);
       setAllTimeSets(allTime);
       historyLoadedRef.current = true;
+      historyExerciseRef.current = exercise.id;
 
       // The packet's raw history: up to 3 comparable sessions, each with its
       // own workout row fetched once for its difficulty rating - mirrors
@@ -3213,6 +3223,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Warm-ups get their own 1,2 sequence; set_type distinguishes them.
       const isWarmupSet = (currentSet.setType ?? 'straight') === 'warmup';
       const setNumber = setNumberForKind(loggedSets, isWarmupSet);
+      // D229 addendum 9: the number the rows and the Now card show for this
+      // set (countProgressSets: warm-ups and drop sets never move it), which
+      // is the number a video recorded for it carries. `setNumber` above is
+      // the stored one, numbered within its kind, not the number on screen.
+      const shownSetNumber = countProgressSets(loggedSets) + 1;
 
       const savedSet = await createWorkoutSet({
         userId: user.id,
@@ -3408,7 +3423,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           setId: setData.id,
         });
       } else if (prs.length > 0) {
-        noteRecord(exercise.id, { ...prs[0], units, setId: setData.id });
+        noteRecord(exercise.id, { ...prs[0], units, setId: setData.id, setNumber: shownSetNumber });
         // Keep one PR per exercise (the most significant), so a multi-set,
         // multi-exercise session reports a handful of PRs, not dozens. The
         // per-set celebration above still fires each time a new best lands.
@@ -3418,7 +3433,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // touching detectPR itself.
         setDetectedPRs(prev => bestPRPerExercise([
           ...prev,
-          ...prs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: setData.id })),
+          ...prs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: setData.id, setNumber: shownSetNumber })),
         ]));
       }
 
@@ -3826,8 +3841,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           : (editedType === 'warmup' ? null : currentEvidenceClass);
         const editedPrs = editPrHistory.length > 0 && editedType !== 'warmup'
           ? detectPR({ weight, actualReps, setType: editedType, evidenceClass: editedEvidenceClass }, editPrHistory, exercise, units) : [];
+        // D229 addendum 9: the edited set's own number, as its row shows it.
+        const editedIndex = loggedSets.findIndex((s) => s.id === editingSet.id);
+        const editedSetNumber = editedIndex >= 0 ? countProgressSets(loggedSets.slice(0, editedIndex)) + 1 : undefined;
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
-          noteRecord(exercise.id, { ...editedPrs[0], units, setId: editingSet.id });
+          noteRecord(exercise.id, { ...editedPrs[0], units, setId: editingSet.id, setNumber: editedSetNumber });
         } else {
           // The edited set earned the line and is no longer a record (pre-
           // build review 2026-10-09): a record's line goes; a first lift's
@@ -3846,7 +3864,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           if (editedPrs.length === 0 || editPrHistory.length === 0) return withoutThisSet;
           return bestPRPerExercise([
             ...withoutThisSet,
-            ...editedPrs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: editingSet.id })),
+            ...editedPrs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: editingSet.id, setNumber: editedSetNumber })),
           ]);
         });
       }
@@ -5486,6 +5504,67 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Consumed only once that line has rendered (RecordLine's own effect runs
   // first, as a child's does), never by a render of another exercise.
   useEffect(() => { if (animateRecord) celebrateRef.current = null; }, [animateRecord]);
+  // D229 addendum 9, item 1: "A PR if you hit it", before the set. Only when
+  // the numbers ALREADY in the next row's box would be a record, judged as
+  // handleCompleteSet will judge them on log: the same validation (its
+  // parsing and its weight-and-reps gate), the same history (all-time sets
+  // plus this session's, working sets only), detectPR with the same exercise
+  // argument (load semantics), and the dialled set's own type and evidence
+  // class. No history read yet, a failed read, or a read for another
+  // exercise means no offer: never a guess. It names no number of its own
+  // and never says what would make a record. The row must be free (the
+  // row's own record, which is null once the set that earned it is deleted).
+  const recordOfferHistory = useMemo(() => [
+    ...allTimeSets.filter(isWorkingSetRow),
+    ...loggedSets.filter(isWorkingSetRow),
+  ], [allTimeSets, loggedSets]);
+  // Memoised: detectPR over the whole history is not re-run on renders that
+  // change none of its inputs (the refs it reads only change alongside
+  // allTimeSets, which recordOfferHistory already keys on).
+  const nextSetWouldBePR = useMemo(() => {
+    if (!exercise?.id || exerciseRecord) return false;
+    if (!historyLoadedRef.current || historyExerciseRef.current !== exercise.id) return false;
+    if (!nextRowShown || isWarmupEntry || cluster || perSide) return false;
+    const offerSet = { setType: currentSet.setType, evidenceClass: currentEvidenceClass };
+    if (!isE1rmEligibleRow(offerSet)) return false;
+    const entry = validateSetEntryValue({ value: currentSet, exercise, units });
+    if (!entry.ok || !entry.isWeightReps || recordOfferHistory.length === 0) return false;
+    return detectPR({ ...offerSet, weight: entry.weight, actualReps: entry.actualReps }, recordOfferHistory, exercise, units).length > 0;
+  }, [exercise, exerciseRecord, nextRowShown, isWarmupEntry, cluster, perSide, currentSet, currentEvidenceClass, units, recordOfferHistory]);
+  // The row's two video actions. HIDDEN under calm mode or an open ED flag,
+  // FAIL CLOSED: only an explicit false from usePhotoSuppression shows
+  // either. The offer also needs room for another video.
+  const recordOffer = (nextSetWouldBePR && clipsSuppressed === false && !isFull(clipFlow.count))
+    ? { text: CLIP_STRINGS.prOfferText, actionLabel: CLIP_STRINGS.prOfferAction, a11y: CLIP_STRINGS.rowA11y, onAction: handleRecordClip }
+    : null;
+  // D229 addendum 9, item 2: "Share", after the set. An earned record (never
+  // the first lift) whose set has a saved video, paired by the one rule.
+  const recordShareClip = (clipsSuppressed === false && exerciseRecord && exerciseRecord.type !== 'first_lift' && exercise?.id)
+    ? (prVideoFor(clipFlow.clips, [{ ...exerciseRecord, exerciseId: exercise.id, exerciseName: exercise.name }])?.clip ?? null)
+    : null;
+  // Opens the share screen on the PR card for this record with its video in
+  // place. No sessionData (the session is not finished), so the PR card is
+  // the card; nothing is posted anywhere by this. The session list keeps one
+  // PR per exercise, the most significant, which can be an earlier set of
+  // this exercise than the one this row names, so this exercise's entry in
+  // the list handed over is this record: the share screen's own pairing
+  // (clipMatchesPR over prList) then lands on the record the video is of.
+  function handleShareRecord() {
+    if (!recordShareClip || !exerciseRecord || !activeWorkout?.id || !exercise?.id) return;
+    const prData = {
+      ...exerciseRecord,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      units,
+      setId: exerciseRecord.setId,
+      setNumber: exerciseRecord.setNumber,
+    };
+    const prList = [prData, ...detectedPRs.filter((p) => p?.exerciseId !== exercise.id)];
+    navigation.navigate('ShareCard', { workoutId: activeWorkout.id, prData, prList, clipId: recordShareClip.id, units });
+  }
+  const recordShareAction = recordShareClip
+    ? { label: CLIP_STRINGS.prShareAction, a11y: CLIP_STRINGS.prShareA11y, onPress: handleShareRecord }
+    : null;
   function rowSheetTitleFor(set, warm, progressNum) {
     if (warm) return 'Warm-up';
     const type = set.setType ?? set.set_type ?? 'straight';
@@ -6033,8 +6112,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* D220 addendum 36: the record, as a row of the table under the
               rows it belongs to, centred in its band. No floating surface;
               the card grows by the row and nothing is covered. */}
-          {exerciseRecord ? (
-            <RecordLine record={exerciseRecord} celebrate={animateRecord} reduceMotion={!!reduceMotion} />
+          {/* D229 addendum 9: the same row carries the PR moment's video
+              actions ("A PR if you hit it" with Record it before the set,
+              Share after it), hidden under calm mode or an open ED flag. */}
+          {exerciseRecord || recordOffer ? (
+            <RecordLine record={exerciseRecord} celebrate={animateRecord} reduceMotion={!!reduceMotion} offer={recordOffer} action={recordShareAction} />
           ) : null}
 
           <View style={styles.activeBody}>
@@ -6342,6 +6424,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           handleUseLastSession={handleUseLastSession}
           clipsSuppressed={clipsSuppressed}
           clipCount={clipFlow.count}
+          nextSetWouldBePR={nextSetWouldBePR}
           handleRecordClip={handleRecordClip}
           isLastExercise={isLastExercise}
           isPairedWithNext={isPairedWithNext}

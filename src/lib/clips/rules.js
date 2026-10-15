@@ -16,6 +16,11 @@
  *   - the exercise menu row is "Record a video of this set"; the summary row
  *     changes with the workout ("Record a video", then "Use your video on the
  *     share").
+ * D229 addendum 9 (share one PR set with its video) adds the PR moment's
+ * words: "A PR if you hit it" with "Record it" before the set, "Share" on the
+ * record row after it, "Use your PR video on the share" on the summary. The PR
+ * is the set's own record (detectPR's, on the logger), never a claim about the
+ * video: every video still goes on every card.
  * Every string a clip surface shows lives here, once, so the camera, the
  * primer, the clips sheet, the More row and the summary row cannot drift
  * apart. British English, calm, plain, no em dash, no exclamation mark. The
@@ -67,10 +72,25 @@ export const CLIP_STRINGS = Object.freeze({
   rowDescNone: 'Up to 15 seconds, no sound. Shared from the summary afterwards.',
   rowDescThree: '3 saved, the most for one workout.',
 
+  // D229 addendum 9: the PR moment. Before the set, on the exercise card's
+  // record row (the action opens the primer or the camera for that set) and
+  // as the More row's second line when the numbers in the box would be a PR.
+  prOfferText: 'A PR if you hit it',
+  prOfferAction: 'Record it',
+  rowDescPRLead: 'This set would be a PR.',
+  rowDescPRNone: 'This set would be a PR. Up to 15 seconds, no sound.',
+  // After the set, on the record row, when a video of that set is saved.
+  prShareAction: 'Share',
+  prShareA11y: 'Share this PR with its video',
+
   // The summary row, in its two forms.
   summaryLabelNone: 'Record a video',
   summarySubNone: "Up to 15 seconds, no sound. You can also record a set during a workout from an exercise's menu.",
   summaryLabelUse: 'Use your video on the share',
+  // The third form (D229 addendum 9): a video of a PR set was recorded.
+  summaryLabelPR: 'Use your PR video on the share',
+  summarySubPRTail: ', a PR',
+  summarySubPRUnnamed: 'You recorded a video of a PR set',
 
   // The privacy primer, once per device before the first camera open. It is
   // the only explanation a person is ever given.
@@ -173,12 +193,19 @@ export function parseLength(raw) {
  * none "Up to 15 seconds, no sound. Shared from the summary afterwards.", one
  * or two "1 saved. Up to 3 for each workout.", three "3 saved, the most for one
  * workout.". Anything that is not a count reads as none.
+ * With `wouldBePR` (D229 addendum 9: the numbers in the next set's box would be
+ * a PR, judged by the logger) the line leads with it: none "This set would be
+ * a PR. Up to 15 seconds, no sound.", one or two "This set would be a PR. 1
+ * saved. Up to 3 for each workout."; at three the full line stays, since
+ * another video cannot be recorded. Only an explicit true says PR.
  */
-export function clipRowDescription(count) {
+export function clipRowDescription(count, options) {
+  const wouldBePR = options?.wouldBePR === true;
   const n = Math.floor(Number(count));
-  if (!Number.isFinite(n) || n <= 0) return CLIP_STRINGS.rowDescNone;
+  if (!Number.isFinite(n) || n <= 0) return wouldBePR ? CLIP_STRINGS.rowDescPRNone : CLIP_STRINGS.rowDescNone;
   if (n >= MAX_CLIPS_PER_WORKOUT) return CLIP_STRINGS.rowDescThree;
-  return `${n} saved. Up to ${MAX_CLIPS_PER_WORKOUT} for each workout.`;
+  const saved = `${n} saved. Up to ${MAX_CLIPS_PER_WORKOUT} for each workout.`;
+  return wouldBePR ? `${CLIP_STRINGS.rowDescPRLead} ${saved}` : saved;
 }
 
 /** True when a workout holding `count` clips can take no more. */
@@ -202,6 +229,10 @@ export function formatClipDuration(ms, mode = 'round') {
 function setSuffix(clip) {
   const n = Math.floor(Number(clip?.setNumber));
   return Number.isFinite(n) && n > 0 ? `, set ${n}` : '';
+}
+
+function trimmedName(name) {
+  return typeof name === 'string' ? name.trim() : '';
 }
 
 /**
@@ -229,17 +260,33 @@ export function clipCountLabel(count) {
 
 /**
  * The summary row's words, which change with the workout:
- *   no clips   "Record a clip" / "Up to 15 seconds, no sound. You can also
+ *   no clips   "Record a video" / "Up to 15 seconds, no sound. You can also
  *              record a set during a workout from an exercise's menu."
- *   clips      "Use your clip on the share" / "You recorded Bench press, set 3"
- *              (the newest clip), or "You recorded 2 clips" when there are more.
- * `newest` is the clip a tap on the second form hands to the share screen.
+ *   a PR set's clip (D229 addendum 9: `prVideoFor` finds one in `prs`)
+ *              "Use your PR video on the share" / "You recorded Bench press,
+ *              set 3, a PR" (the newest such clip, which is `newest`, so the
+ *              share screen opens with it and pairs it with its PR card).
+ *   clips      "Use your video on the share" / "You recorded Bench press, set 3"
+ *              (the newest clip), or "You recorded 2 videos" when there are more.
+ * `newest` is the clip a tap on the second or third form hands to the share
+ * screen.
  * @param {Array<object>} clips this workout's clips, any order
+ * @param {Array<object>} [prs] the PRs the summary hands the share screen
+ *   (its `prList`); without them the PR form never shows.
  */
-export function summaryClipRowCopy(clips) {
+export function summaryClipRowCopy(clips, prs) {
   const list = Array.isArray(clips) ? clips.filter(Boolean) : [];
   if (list.length === 0) {
     return { label: CLIP_STRINGS.summaryLabelNone, sub: CLIP_STRINGS.summarySubNone, newest: null };
+  }
+  const prVideo = prVideoFor(list, prs);
+  if (prVideo) {
+    const { clip, pr } = prVideo;
+    const name = trimmedName(clip.exerciseName) || trimmedName(pr.exerciseName);
+    const sub = name
+      ? `You recorded ${name}${setSuffix(clip) || setSuffix(pr)}${CLIP_STRINGS.summarySubPRTail}`
+      : CLIP_STRINGS.summarySubPRUnnamed;
+    return { label: CLIP_STRINGS.summaryLabelPR, sub, newest: clip };
   }
   const newest = list.reduce((a, b) => ((Number(b.createdAt) || 0) > (Number(a.createdAt) || 0) ? b : a));
   let sub;

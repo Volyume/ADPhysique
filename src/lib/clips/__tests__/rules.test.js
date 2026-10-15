@@ -9,7 +9,13 @@
  *   - the exercise-menu row's second line for none, one, two and three videos;
  *   - a video is named by its exercise and set ("Bench press, set 3, 0:12"), or
  *     "After the workout" when it was made on the summary;
- *   - the summary row's two forms, and when it is shown at all.
+ *   - the summary row's two forms, and when it is shown at all;
+ *   - D229 addendum 9, the PR moment: the More row's second line leads with
+ *     "This set would be a PR." only on an explicit wouldBePR (and never at
+ *     three videos, when no video can be recorded); the summary row's third
+ *     form, "Use your PR video on the share", names the newest video of a PR
+ *     set and hands THAT video to the share screen, and only with the PRs the
+ *     summary hands over.
  */
 import {
   MAX_CLIPS_PER_WORKOUT, MAX_CLIP_SECONDS, MAX_CLIP_MS, MIN_CLIP_MS, LEAD_IN_OPTIONS,
@@ -65,6 +71,25 @@ describe('the exercise menu row, by how many videos the workout holds', () => {
       expect(clipRowDescription(bad)).toBe(CLIP_STRINGS.rowDescNone);
     }
     expect(clipRowDescription(7)).toBe(CLIP_STRINGS.rowDescThree);
+  });
+
+  test.each([
+    [0, 'This set would be a PR. Up to 15 seconds, no sound.'],
+    [1, 'This set would be a PR. 1 saved. Up to 3 for each workout.'],
+    [2, 'This set would be a PR. 2 saved. Up to 3 for each workout.'],
+    [3, '3 saved, the most for one workout.'],
+  ])('when the next set would be a PR, %i videos', (count, line) => {
+    expect(clipRowDescription(count, { wouldBePR: true })).toBe(line);
+  });
+
+  test('only an explicit wouldBePR says PR; anything else is the usual line', () => {
+    for (const count of [0, 1, 2, 3]) {
+      for (const options of [undefined, null, {}, { wouldBePR: false }, { wouldBePR: 'true' }, { wouldBePR: 1 }]) {
+        expect(clipRowDescription(count, options)).toBe(clipRowDescription(count));
+      }
+    }
+    expect(clipRowDescription(undefined, { wouldBePR: true })).toBe(CLIP_STRINGS.rowDescPRNone);
+    expect(clipRowDescription(7, { wouldBePR: true })).toBe(CLIP_STRINGS.rowDescThree);
   });
 
   test('isFull is true from three', () => {
@@ -205,6 +230,51 @@ describe('the summary row changes with the workout', () => {
   });
 });
 
+describe('the summary row names a PR set\'s video (addendum 9)', () => {
+  const bench = { exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 3, type: 'heaviest_weight' };
+  const squat = { exerciseId: 'e2', exerciseName: 'Squat', setNumber: 1, type: '1rm_estimate' };
+
+  test('"Use your PR video on the share", naming the PR set, and the tap hands over THAT video', () => {
+    const prVideo = { id: 'pr', exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 3, createdAt: 10 };
+    const newer = { id: 'other', exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 1, createdAt: 50 };
+    const summary = { id: 'after', exerciseName: null, source: 'summary', createdAt: 90 };
+    expect(summaryClipRowCopy([prVideo, newer, summary], [squat, bench])).toEqual({
+      label: 'Use your PR video on the share',
+      sub: 'You recorded Bench press, set 3, a PR',
+      newest: prVideo,
+    });
+  });
+
+  test('of several videos of PR sets, the newest', () => {
+    const a = { id: 'a', exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 3, createdAt: 10 };
+    const b = { id: 'b', exerciseId: 'e2', exerciseName: 'Squat', setNumber: 1, createdAt: 20 };
+    for (const list of [[a, b], [b, a]]) {
+      const copy = summaryClipRowCopy(list, [bench, squat]);
+      expect(copy.newest.id).toBe('b');
+      expect(copy.sub).toBe('You recorded Squat, set 1, a PR');
+    }
+  });
+
+  test('no video of a PR set, or no PRs handed over: the usual form, unchanged', () => {
+    const clip = { id: 'c1', exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2, createdAt: 5 };
+    const usual = { label: 'Use your video on the share', sub: 'You recorded Bench press, set 2', newest: clip };
+    expect(summaryClipRowCopy([clip], [bench])).toEqual(usual);
+    for (const prs of [undefined, null, []]) {
+      expect(summaryClipRowCopy([{ ...clip, setNumber: 3 }], prs).label).toBe('Use your video on the share');
+    }
+    expect(summaryClipRowCopy([], [bench]).label).toBe('Record a video');
+  });
+
+  test('a PR video without a name of its own takes the PR\'s, and with neither says so plainly', () => {
+    const unnamed = { id: 'u', exerciseId: 'e1', exerciseName: null, setNumber: 3, createdAt: 5 };
+    expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('You recorded Bench press, set 3, a PR');
+    const bare = { id: 'x', exerciseId: 'e1', setNumber: null, createdAt: 5 };
+    expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: null }])).toEqual({
+      label: 'Use your PR video on the share', sub: 'You recorded a video of a PR set', newest: bare,
+    });
+  });
+});
+
 describe('the summary row gate (calm mode or an open flag hides it, fail closed; never in history)', () => {
   const live = {
     readOnly: false, workoutId: 'w1', settled: true, suppressed: false, shareable: true,
@@ -308,6 +378,16 @@ describe('the ruled words', () => {
     expect(CLIP_STRINGS.sheetTitle).toBe('Your videos');
     expect(CLIP_STRINGS.historyLabel).toBe('Videos');
     expect(CLIP_STRINGS.afterWorkout).toBe('After the workout');
+  });
+
+  test('the PR moment, as the founder ruled it (addendum 9)', () => {
+    expect(CLIP_STRINGS.prOfferText).toBe('A PR if you hit it');
+    expect(CLIP_STRINGS.prOfferAction).toBe('Record it');
+    expect(CLIP_STRINGS.prShareAction).toBe('Share');
+    expect(CLIP_STRINGS.prShareA11y).toBe('Share this PR with its video');
+    expect(CLIP_STRINGS.summaryLabelPR).toBe('Use your PR video on the share');
+    // The offer's action records a video of this set: the More row's words.
+    expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
   });
 
   test('nothing is replaced silently: no string says a video was replaced', () => {

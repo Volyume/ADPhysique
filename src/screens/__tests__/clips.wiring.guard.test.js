@@ -12,6 +12,9 @@
  *   - the summary row is a NavRow in the scroll body above "Save this workout
  *     to reuse", gated by the fail-closed rule, never in the footer, and its
  *     share hand-off keeps the one pinned ShareCard call;
+ *   - the summary row's PR form (D229 addendum 9) reads the SAME PR list the
+ *     share hand-off sends (sharePRs, worked out once at component scope), so
+ *     the video it names is paired on the share screen with a PR it was given;
  *   - the history row sits in the expanded detail and reads no suppression.
  */
 const fs = require('fs');
@@ -107,9 +110,27 @@ describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
     expect(rowSource()).toContain('sub={clipRowCopy.sub}');
   });
 
-  test("its words come from the one rule, and change with the workout's videos", () => {
-    expect(SUMMARY).toContain('const clipRowCopy = summaryClipRowCopy(clipFlow.clips);');
+  test("its words come from the one rule, and change with the workout's videos and its PRs", () => {
+    expect(SUMMARY).toContain('const clipRowCopy = summaryClipRowCopy(clipFlow.clips, sharePRs);');
     expect(SUMMARY).toContain("import { CLIP_STRINGS, summaryClipRowCopy, summaryClipRowVisible } from '../lib/clips/rules';");
+  });
+
+  test('the PR list it reads is the one the share hand-off sends, worked out once', () => {
+    // Exactly one sharePRs, at component scope (two-space indent), above both
+    // readers; handleShareCard no longer works out its own.
+    const decl = 'const sharePRs = readOnly ? historyPRs : detectedPRs;';
+    expect(SUMMARY.split(decl).length - 1).toBe(1);
+    expect(SUMMARY).toContain(`\n  ${decl}\n`);
+    const declAt = SUMMARY.indexOf(decl);
+    const shareAt = SUMMARY.indexOf('function handleShareCard() {');
+    const shareEnd = SUMMARY.indexOf('\n  }\n', shareAt);
+    expect(declAt).toBeLessThan(shareAt);
+    expect(SUMMARY.slice(shareAt, shareEnd)).not.toMatch(/const sharePRs\b/);
+    expect(SUMMARY.slice(shareAt, shareEnd)).toContain('prList: sharePRs');
+    expect(declAt).toBeLessThan(SUMMARY.indexOf('const clipRowCopy = summaryClipRowCopy(clipFlow.clips, sharePRs);'));
+    // A tap on the PR form hands over the video it names, through the same
+    // pinned hand-off (the share screen pairs it with its PR).
+    expect(SUMMARY).toContain('handleUseClip(clipRowCopy.newest.id)');
   });
 
   test('with no video a tap records on the summary; with one it hands the newest to the share screen', () => {

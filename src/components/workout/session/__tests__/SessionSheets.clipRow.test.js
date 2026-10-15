@@ -10,7 +10,11 @@
  *   - it is HIDDEN unless usePhotoSuppression has answered an explicit false:
  *     calm mode / an open flag (true), the starting state, and any value that is
  *     not false (undefined, null) all hide it, with no explanation in its place;
- *   - tapping it closes the sheet and hands over to the clip handler once.
+ *   - tapping it closes the sheet and hands over to the clip handler once;
+ *   - D229 addendum 9: when the screen says the next set would be a PR (one
+ *     boolean, only an explicit true) the second line leads with "This set
+ *     would be a PR."; at three videos the full line stays; under calm mode or
+ *     an open flag the row, and so the line, is not there at all.
  */
 import fs from 'fs';
 import path from 'path';
@@ -87,6 +91,29 @@ describe('the Record a video of this set row', () => {
     expect(json).not.toContain('saved. Up to 3');
     // The neighbours are untouched.
     expect(labels(tree)).toContain('Use last session');
+  });
+
+  test.each([
+    [0, 'This set would be a PR. Up to 15 seconds, no sound.'],
+    [1, 'This set would be a PR. 1 saved. Up to 3 for each workout.'],
+    [2, 'This set would be a PR. 2 saved. Up to 3 for each workout.'],
+    [3, '3 saved, the most for one workout.'],
+  ])('when the next set would be a PR, with %i saved, the second line reads "%s"', (clipCount, line) => {
+    const json = JSON.stringify(render({ clipsSuppressed: false, clipCount, nextSetWouldBePR: true }).toJSON());
+    expect(json).toContain('Record a video of this set');
+    expect(json).toContain(line);
+  });
+
+  test.each([[false], [undefined], [null], ['true']])('anything but an explicit true (%p) keeps the usual line', (nextSetWouldBePR) => {
+    const json = JSON.stringify(render({ clipsSuppressed: false, clipCount: 1, nextSetWouldBePR }).toJSON());
+    expect(json).toContain('1 saved. Up to 3 for each workout.');
+    expect(json).not.toContain('would be a PR');
+  });
+
+  test('under calm mode or an open flag the PR line is not there either', () => {
+    const json = JSON.stringify(render({ clipsSuppressed: true, clipCount: 0, nextSetWouldBePR: true }).toJSON());
+    expect(json).not.toContain('would be a PR');
+    expect(json).not.toContain('Record a video');
   });
 
   test('tapping it closes the sheet and starts the clip flow once', () => {
