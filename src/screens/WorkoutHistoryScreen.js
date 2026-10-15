@@ -22,6 +22,8 @@ import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SearchBar from '../components/SearchBar';
 import { getRecentCompletedWorkouts, getCompletedWorkoutCount, getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getExerciseLookup, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
+// D229 addendum 5 (video shares): the workout's clips, always viewable and deletable here.
+import HistoryClipsRow from '../components/clips/HistoryClipsRow';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { buildSessionReport, groupSessionExercises } from '../lib/sessionReport';
@@ -698,6 +700,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 <Text style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
               </View>
             )}
+
+            {/* D229 addendum 5: this workout's clips. Shown only when it has
+                any, and in EVERY state: calm mode and an open ED flag hide the
+                places clips are recorded and shared from, never a person's own
+                clips or the way to delete them (so no suppression read here). */}
+            <HistoryClipsRow userId={user?.id} workoutId={workout.id} />
 
             {/* View summary */}
             <Button

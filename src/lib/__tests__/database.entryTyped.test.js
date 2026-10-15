@@ -130,7 +130,10 @@ describe('the local migration', () => {
     )`);
     raw.prepare('INSERT INTO workout_sets (id, user_id, workout_id, exercise_id, weight, actual_reps, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run('s-old', 'u', 'w', 'e', 60, 8, 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    // 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
+    // inert against these fixtures), so every last-N window and user_version reset below moves by one
+    // (a mechanical +1 re-anchor, as LR2 did before it).
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     return raw;
   }
 
@@ -151,7 +154,7 @@ describe('the local migration', () => {
 
     // A second boot that still sees the pre-migration version (a restored
     // snapshot, an interrupted run): the column is already there.
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
 
     const columns = raw.prepare('PRAGMA table_info(workout_sets)').all().filter((c) => c.name === 'entry_typed');

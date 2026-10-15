@@ -64,6 +64,11 @@ describe('the emphatic set is curated: committing actions only', () => {
       'screens/CommunityComposeScreen.js',
       // Accept the rules: the one committing action on the rules screen.
       'screens/CommunityRulesScreen.js',
+      // Video shares (D229, landing ruling 2026-10-15): "Share image" /
+      // "Share video" is the one committing action on the share screen;
+      // Save to gallery, Set as wallpaper and Post to Community are
+      // `secondary` beside it.
+      'screens/ShareCardScreen.js',
     ]);
     for (const [file] of emphatic) expect(allowed.has(file)).toBe(true);
     expect(emphatic.length).toBeGreaterThan(10);

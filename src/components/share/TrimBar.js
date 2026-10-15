@@ -13,10 +13,11 @@
  * canvas; without them the strip is the card's ground.
  */
 import { useMemo, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
+import Text from '../Text';
 import { colors, radius, spacing, fontFamily, fontSize, withAlpha } from '../../styles/theme';
 import { CARD_GROUND } from '../../lib/shareCard/drawShareCard';
 import { selection } from '../../lib/haptics';
@@ -33,8 +34,12 @@ export function mmss(ms) {
 
 /** The next window after a handle or body move, clamped to the clip and
  * to the length limits. Pure, shared by the gestures and the accessible
- * route. `which` is 'start', 'end' or 'body'; `deltaMs` is the move. */
+ * route. `which` is 'start', 'end' or 'body'; `deltaMs` is the move.
+ * Workletised: the pan gestures call it on the UI thread (the VOLYUME-2A
+ * class, workletClosure.guard). */
 export function moveWindow({ startMs, endMs, durationMs, maxWindowMs, minWindowMs }, which, deltaMs) {
+  'worklet';
+
   const dur = Math.max(0, durationMs);
   if (which === 'body') {
     const len = endMs - startMs;

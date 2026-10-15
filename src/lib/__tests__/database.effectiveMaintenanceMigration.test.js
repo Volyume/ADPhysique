@@ -65,10 +65,13 @@ function withExerciseIntent(raw) {
   return raw;
 }
 
+// 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
+// inert against these fixtures), so every last-N window and user_version reset below moves by one
+// (a mechanical +1 re-anchor, as LR2 did before it).
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 13}`);
+  raw.exec(`PRAGMA user_version = ${total - 14}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -93,7 +96,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 12}`);
+  raw.exec(`PRAGMA user_version = ${total - 13}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

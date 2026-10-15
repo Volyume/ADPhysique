@@ -156,6 +156,13 @@ export function restCountdown(stage) {
   ]);
 }
 
+/** Clip camera lead-in tick (D229 addendum 5). One light tick for each
+ *  number of the 3-2-1 (or 10 to 1) before a clip starts. Deliberately NOT
+ *  restCountdown: that ladder (medium, heavy, heavy plus warning) means "rest
+ *  is ending" and would teach the wrong thing here. Reduce Motion silences it
+ *  like every other helper. */
+export function clipCountdown() { return _impact(Haptics.ImpactFeedbackStyle.Light); }
+
 /** Plan generated / setup complete. Single success note (D2). */
 export function planReady() { return _notify(Haptics.NotificationFeedbackType.Success); }
 

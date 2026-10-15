@@ -86,6 +86,9 @@ function freshDb() {
   return raw;
 }
 
+// 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
+// inert against these fixtures), so every last-N window and user_version reset below moves by one
+// (a mechanical +1 re-anchor, as LR2 did before it).
 async function runLast(raw, count) {
   const total = await totalMigrationCount();
   raw.exec(`PRAGMA user_version = ${total - count}`);
@@ -105,7 +108,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 21).then(() => {
+  return runLast(raw, 22).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -120,9 +123,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 21); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
+  await runLast(raw, 22); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 19}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 20}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

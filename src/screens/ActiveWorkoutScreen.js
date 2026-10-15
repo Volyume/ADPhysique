@@ -44,6 +44,9 @@ import SessionNotesSheet from '../components/workout/session/SessionNotesSheet';
 import SetTable from '../components/workout/session/SetTable';
 import KeyboardBar from '../components/workout/session/KeyboardBar';
 import SessionSheets from '../components/workout/session/SessionSheets';
+// D229 addendum 5 (video shares): "Record a video of this set" in the exercise More sheet.
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import useClipRecorder from '../components/clips/useClipRecorder';
 import SetRowSheet from '../components/workout/session/SetRowSheet';
 import ExerciseRestSheet from '../components/workout/session/ExerciseRestSheet';
 import HistorySheet from '../components/workout/session/HistorySheet';
@@ -331,6 +334,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // D229: the More sheet's video row. usePhotoSuppression starts suppressed and
+  // is true under calm mode, an open ED flag or any failed read, so the row is
+  // hidden until BOTH reads confirm it may show (fail closed). clipFlow owns
+  // the count, the primer and the clips sheet; this screen only renders them.
+  const clipsSuppressed = usePhotoSuppression(user?.id);
+  const clipFlow = useClipRecorder({ navigation, userId: user?.id, workoutId: activeWorkout?.id });
   // Single boolean selector (not the per-second remaining count): this flips
   // twice per rest, so it cannot re-introduce the per-tick re-render the
   // shallow selector above exists to prevent.
@@ -5244,6 +5253,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (lc) applyLastSetToEntry(lc);
   }
   useEffect(() => { setUseLastRunId(null); }, [currentExerciseIndex]);
+  // D229: the More sheet's "Record a video of this set" row. Opens the videos
+  // sheet at three, the privacy primer the first time, otherwise the camera.
+  // `setNumber` is the set it is recorded for: the exercise's next pending set,
+  // the same number the Now card shows ("Set 3 of 4").
+  function handleRecordClip() {
+    clipFlow.openRecorder({
+      source: 'workout',
+      exerciseId: exercise?.id ?? null,
+      exerciseName: exercise?.name ?? null,
+      setNumber: workingLogged + 1,
+    });
+  }
   function bandFor(index) {
     const p = prescriptions[index];
     if (p?.repsBand) return p.repsBand;
@@ -6292,6 +6313,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           cluster={cluster}
           canUseLastSession={canUseLastSession}
           handleUseLastSession={handleUseLastSession}
+          clipsSuppressed={clipsSuppressed}
+          clipCount={clipFlow.count}
+          handleRecordClip={handleRecordClip}
           isLastExercise={isLastExercise}
           isPairedWithNext={isPairedWithNext}
           timeCrunchActive={timeCrunchActive}
@@ -6338,6 +6362,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           sharedStyles={styles}
           sharedLive={live}
         />
+        {/* D229: the video primer and the videos sheet (at three videos). */}
+        {clipFlow.sheets}
         {/* The discard confirm is the app's own dialog (confirmDiscard, D220
             addendum 26); the hand-rolled modal that lived here is gone. */}
 

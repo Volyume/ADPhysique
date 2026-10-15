@@ -66,6 +66,9 @@ function freshDb() {
   return raw;
 }
 
+// 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
+// inert against these fixtures), so every last-N window and user_version reset below moves by one
+// (a mechanical +1 re-anchor, as LR2 did before it).
 async function runLast(raw, count) {
   raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - count}`);
   await runMigrations(adapt(raw));
@@ -74,7 +77,7 @@ async function runLast(raw, count) {
 
 test('a pre-migration database upgrades: existing rows read NULL on every new column', async () => {
   const raw = freshDb();
-  await runLast(raw, 4);
+  await runLast(raw, 5);
 
   const re = raw.prepare('SELECT group_kind, round_rest_seconds, updated_at FROM routine_exercises WHERE id = ?').get('re-1');
   expect(re.group_kind).toBeNull();
@@ -88,13 +91,13 @@ test('a pre-migration database upgrades: existing rows read NULL on every new co
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 4);
+  const total = await runLast(raw, 5);
   const before = {
     re: raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1'),
     set: raw.prepare('SELECT * FROM workout_sets WHERE id = ?').get('set-1'),
   };
 
-  raw.exec(`PRAGMA user_version = ${total - 4}`);
+  raw.exec(`PRAGMA user_version = ${total - 5}`);
   await expect(runMigrations(adapt(raw))).resolves.not.toThrow();
 
   expect(raw.prepare('SELECT * FROM routine_exercises WHERE id = ?').get('re-1')).toEqual(before.re);
@@ -103,7 +106,7 @@ test('is idempotent: a second run changes nothing and errors on neither run', as
 
 test('the new columns round-trip a written value (group_kind/round_rest_seconds/evidence_class)', async () => {
   const raw = freshDb();
-  await runLast(raw, 4);
+  await runLast(raw, 5);
 
   raw.prepare('UPDATE routine_exercises SET group_kind = ?, round_rest_seconds = ? WHERE id = ?')
     .run('circuit', 90, 're-1');

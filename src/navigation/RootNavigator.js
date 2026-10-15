@@ -127,6 +127,11 @@ const MesocycleBuilderScreen = lazyScreen(() => require('../screens/MesocycleBui
 // Plan tools.
 const AvoidedMovementsScreen = lazyScreen(() => require('../screens/AvoidedMovementsScreen').default);
 const ShareCardScreen = lazyScreen(() => require('../screens/ShareCardScreen').default);
+// D229 addendum 5 (video shares): the full-screen clip camera, opened from the
+// exercise More sheet and the summary (HomeStack, plus the Progress stack that
+// also hosts the summary) and from the share screen, so it is registered in
+// every stack that registers ShareCard.
+const ClipCameraScreen = lazyScreen(() => require('../screens/ClipCameraScreen').default);
 const ManualBuilderScreen = lazyScreen(() => require('../screens/ManualBuilderScreen').default);
 const PlanLibraryScreen = lazyScreen(() => require('../screens/PlanLibraryScreen').default);
 const Article9ConsentScreen = lazyScreen(() => require('../screens/Article9ConsentScreen').default);
@@ -478,6 +483,8 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      {/* D229: the clip camera. No swipe-back: a slip of the thumb must not end a recording. */}
+      <Stack.Screen name="ClipCamera" component={ClipCameraScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       {/* ProUpgrade and FreeStarter are removed: ProUpgrade is a dormant
           billing surface (fully-free product, no Free/Pro split); FreeStarter
@@ -632,6 +639,8 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      {/* D229: the clip camera. No swipe-back: a slip of the thumb must not end a recording. */}
+      <Stack.Screen name="ClipCamera" component={ClipCameraScreen} options={{ headerShown: false, gestureEnabled: false }} />
       {/* CC33 W3 (audit T2-07): WorkoutSummary's post-workout "How you
           train" link must work on HISTORY reopens too, and this stack
           mounts WorkoutSummary for exactly those. TrainingConsiderations
@@ -702,6 +711,8 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="WeeklyStory" component={WeeklyStoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      {/* D229: the clip camera. No swipe-back: a slip of the thumb must not end a recording. */}
+      <Stack.Screen name="ClipCamera" component={ClipCameraScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={ProGoalSetupScreen} options={{ headerShown: false }} />

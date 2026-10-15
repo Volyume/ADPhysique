@@ -180,6 +180,9 @@ function seedRows(raw) {
   }
 }
 
+// 2026-10-15 (D229 video shares): workout_clips was appended after this file's window (a new table only,
+// inert against these fixtures), so every last-N window and user_version reset below moves by one
+// (a mechanical +1 re-anchor, as LR2 did before it).
 async function runLastMigrations(raw, count) {
   const total = await totalMigrationCount();
   raw.exec(`PRAGMA user_version = ${total - count}`);
@@ -196,7 +199,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('tags long_head, short_head and brachialis exercises correctly', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 28);
+    await runLastMigrations(raw, 29);
 
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
     expect(subregionOf(raw, 'ex-2')).toBe('long_head');
@@ -209,7 +212,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is exactly scoped to biceps rows: a non-biceps exercise, and a same-named exercise on a different muscle, are never touched', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 28);
+    await runLastMigrations(raw, 29);
 
     expect(subregionOf(raw, 'ex-7')).toBeNull(); // Barbell Bench Press / chest
     expect(subregionOf(raw, 'ex-8')).toBeNull(); // Barbell Curl / forearms (name collision, wrong muscle)
@@ -218,9 +221,9 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is idempotent: running the migration a second time leaves the tags unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 28);
+    const total = await runLastMigrations(raw, 29);
 
-    raw.exec(`PRAGMA user_version = ${total - 9}`);
+    raw.exec(`PRAGMA user_version = ${total - 10}`);
     const d = adapt(raw);
     await expect(runMigrations(d)).resolves.not.toThrow();
 
@@ -249,7 +252,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
     const raw = freshExercisesDb();
     raw.prepare('INSERT INTO exercises (id, name, primary_muscle, subregion) VALUES (?, ?, ?, ?)')
       .run('ex-1', 'Incline Dumbbell Curl', 'biceps', 'short_head');
-    await runLastMigrations(raw, 28);
+    await runLastMigrations(raw, 29);
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
   });
 });

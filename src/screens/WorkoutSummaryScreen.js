@@ -78,6 +78,12 @@ import {
 // imports, beside the barrel, because these two modules are new in this lane.
 import { readFirstPostConfirmed, markFirstPostConfirmed } from '../lib/community/firstPost';
 import { saveShareSessions } from '../lib/community/shareSessions';
+// D229 addendum 5 (video shares): the video row ("Record a video", then
+// "Use your video on the share").
+import { NavRow, NavGroup } from '../components/NavRow';
+import useClipRecorder from '../components/clips/useClipRecorder';
+import { CLIP_STRINGS, summaryClipRowCopy, summaryClipRowVisible } from '../lib/clips/rules';
+import { deleteClip } from '../lib/clips/store';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -192,6 +198,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
   const toast = useToast();
+  // D229: the video row's videos, primer and sheet. The camera is opened with
+  // source 'summary'; on a save it comes back here with `clipId` merged into
+  // this route's params (see the effect after handleShareCard).
+  const clipFlow = useClipRecorder({ navigation, userId: user?.id, workoutId });
   // Renamed to feedbackSheet to avoid clashing with the per-set
   // feedback state below (sessionDifficulty, overallPump, etc.).
   // Both live in the same scope, JS doesn't let two consts share a
@@ -1300,8 +1310,56 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // first for back-compat.
     // `workoutId` rides along for Community entry point 7 only: ShareCard's
     // own card build never reads it (social-discovery blueprint section 1).
+    // D229: when a video is chosen for the share (just recorded here, or the
+    // summary row's "Use your video on the share") the share screen opens with
+    // that video as the background. Same params, plus its id, which
+    // handleUseClip parks in a ref (the footer's Share button passes nothing,
+    // so it is unchanged).
+    const clipId = pendingClipIdRef.current;
+    pendingClipIdRef.current = null;
+    if (clipId) {
+      navigation.navigate('ShareCard', { sessionData, workoutId, prData, prList: sharePRs, clipId });
+      return;
+    }
     navigation.navigate('ShareCard', { sessionData, workoutId, prData, prList: sharePRs });
   }
+
+  // D229: open the share screen with a chosen video as its background.
+  function handleUseClip(clipId) {
+    if (!clipId) return;
+    pendingClipIdRef.current = clipId;
+    handleShareCard();
+  }
+
+  // D229: the video camera returns here with `clipId` merged into this route's
+  // params (source 'summary'). Clear it at once, so Back from the share screen
+  // lands here without opening it again, then open the share screen with the
+  // video chosen: the video is on screen there, so the camera shows no toast.
+  // A session with no working sets has no Share offer, so none is opened for
+  // it; the video is kept with the workout and the house saved-with-Undo toast
+  // says so here instead.
+  const returnedClipId = route.params?.clipId ?? null;
+  const pendingClipIdRef = useRef(null);
+  useEffect(() => {
+    if (!returnedClipId) return;
+    navigation.setParams({ clipId: undefined });
+    if (!readOnly && displayWorkingSets > 0) { handleUseClip(returnedClipId); return; }
+    toast.show(CLIP_STRINGS.saved, {
+      variant: 'undo',
+      action: {
+        label: CLIP_STRINGS.undo,
+        onPress: () => {
+          deleteClip(returnedClipId)
+            .then(() => clipFlow.refreshCount())
+            .catch((e) => {
+              logError('WorkoutSummary.clipUndo', e, { clipId: returnedClipId });
+              toast.show(CLIP_STRINGS.undoFailed, { variant: 'error' });
+            });
+        },
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedClipId]);
 
   // CO-3: destination for the quiet "See your progress" link. A PR routes
   // straight to that lift's own trend (the most relevant single number to
@@ -1390,6 +1448,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
+  // D229: the video row's words, which change with the workout's videos.
+  const clipRowCopy = summaryClipRowCopy(clipFlow.clips);
 
   // CO-3 (cohesion audit 2026-07-09, docs/ux-world-class-audit-2026-07-09/
   // cohesion-01-flow-language.md): quiet onward links so workout completion
@@ -2323,6 +2383,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </Card>
         )}
 
+        {/* D229 addendum 5: the video row, a plain NavRow in the scroll body
+            under the stats (no third footer pill: Done would fall to about
+            84 dp). It changes with the workout. No videos: "Record a video".
+            With videos: "Use your video on the share", naming the newest, and
+            a tap opens the share screen with it. HIDDEN under calm mode or an
+            open ED flag, fail closed: it waits for the same raw wellbeing and
+            flag read that gates the share strip (calmKnown), and shows no
+            explanation in its place. Never in the read-only history view, and
+            only for a session that has a Share to use a video on. */}
+        {summaryClipRowVisible({
+          readOnly, workoutId, settled: calmKnown, suppressed: calmSuppressed, shareable: displayWorkingSets > 0,
+        }) ? (
+          <RevealSection delay={1650}>
+            <NavGroup>
+              <NavRow
+                icon="videocam-outline"
+                label={clipRowCopy.label}
+                sub={clipRowCopy.sub}
+                onPress={() => (clipRowCopy.newest
+                  ? handleUseClip(clipRowCopy.newest.id)
+                  : clipFlow.openRecorder({ source: 'summary' }))}
+              />
+            </NavGroup>
+          </RevealSection>
+        ) : null}
+
         {!readOnly && !routineId && exerciseData.length > 0 && (
           <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
@@ -2461,6 +2547,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           only inside the calm/ED-suppressed-free branch; renders nothing
           under reduce-motion; never blocks taps. */}
       {milestoneBurst ? <MilestoneBurst onDone={() => setMilestoneBurst(false)} /> : null}
+      {/* D229: the video primer and the videos sheet (at three videos). */}
+      {clipFlow.sheets}
     </SafeAreaView>
   );
 }

@@ -2918,6 +2918,41 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE workout_sets ADD COLUMN entry_typed INTEGER',
   ],
+  // D229 addendum 5 (video shares): workout_clips, the index of the short
+  // silent clips a person records with a workout. The files live under
+  // documentDirectory + 'clips/' (src/lib/clips/store.js); this table only
+  // names them.
+  //   Purpose: keep up to three clips for each workout, with the exercise they
+  //             were recorded on and the number of the set they were recorded
+  //             for (both nullable: a clip made on the summary belongs to the
+  //             workout), their length and size, and where they were recorded
+  //             ('workout' or 'summary').
+  //   Applied locally: yes, on every device that reaches this migration
+  //             index. New table and one index only; nothing existing moves.
+  //   Applied remotely: NOT APPLICABLE. Clips are private device data, like
+  //             progress photos: this table has NO cloud counterpart, is NOT in
+  //             the sync registry, and is never pushed or pulled (pinned by
+  //             src/lib/clips/__tests__/clips.neverSynced.guard.test.js).
+  //   Safe to re-run: yes (IF NOT EXISTS on the table and the index).
+  //   Rollback: DROP TABLE workout_clips; delete the clips directory. Nothing
+  //             else reads the table, so the rest of the app is unaffected.
+  [
+    `CREATE TABLE IF NOT EXISTS workout_clips (
+      id            TEXT PRIMARY KEY,
+      user_id       TEXT NOT NULL,
+      workout_id    TEXT NOT NULL,
+      exercise_id   TEXT,
+      exercise_name TEXT,
+      set_number    INTEGER,
+      uri           TEXT NOT NULL,
+      duration_ms   INTEGER NOT NULL,
+      width         INTEGER,
+      height        INTEGER,
+      created_at    INTEGER NOT NULL,
+      source        TEXT NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_workout_clips_user_workout ON workout_clips(user_id, workout_id)',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the
@@ -4062,6 +4097,21 @@ export async function updateWorkout(id, data) {
   _standDownTrainingOnCompletion(d, id, data);
 }
 
+// D229 (video shares): a workout's clips are private files kept WITH it, and
+// the primer promises "Deleted when you delete the workout". Each workout-delete
+// path below calls this after its own rows are gone. Best-effort by design: a
+// clip that cannot be removed now must never stop the workout from being
+// deleted, so a failure is logged and the delete still succeeds. Lazy require:
+// the clip store imports this module.
+async function _removeWorkoutClips(workoutId) {
+  try {
+    // eslint-disable-next-line global-require
+    await require('./clips/store').deleteClipsForWorkout(workoutId);
+  } catch (e) {
+    logError('database.removeWorkoutClips', e, { workoutId });
+  }
+}
+
 // Hard-delete an incomplete workout and its sets. Used when the user
 // discards a session mid-way. Incomplete workouts never sync to the
 // cloud (bulkUploadLocalData + pullFromCloud both filter on
@@ -4095,7 +4145,11 @@ export async function deleteIncompleteWorkout(workoutId) {
   // Round 17 (Q2): the tombstone schedules its own push, like every
   // other effects write - it used to wait for whatever unrelated write
   // came next before travelling.
-  if (deleted) _scheduleSync();
+  if (deleted) {
+    _scheduleSync();
+    // D229: clips recorded during a discarded session go with it.
+    await _removeWorkoutClips(workoutId);
+  }
   return deleted;
 }
 
@@ -4135,6 +4189,8 @@ export async function deleteWorkoutAndSets(userId, workoutId) {
   // pairs the WORKOUT's cloud delete directly, but this table travels
   // by the sync queue.
   _scheduleSync();
+  // D229: the workout's clips (device-local files, never synced) go with it.
+  await _removeWorkoutClips(workoutId);
   return true;
 }
 
@@ -7972,6 +8028,14 @@ export async function clearWorkoutHistory(userId) {
   // (this clear, deleteWorkoutAndSets, deleteIncompleteWorkout), so no
   // effects tombstone waits for an unrelated write before travelling.
   _scheduleSync();
+  // D229: every session is gone, so every clip kept with one goes too. Same
+  // best-effort rule as _removeWorkoutClips: it never blocks the clear.
+  try {
+    // eslint-disable-next-line global-require
+    await require('./clips/store').deleteAllClipsForUser(userId);
+  } catch (e) {
+    logError('database.clearWorkoutHistory.clips', e, { userId });
+  }
 }
 
 // ─── Full local wipe (sign out + sign in as different user, or delete account) ─
@@ -8051,10 +8115,17 @@ export const WIPE_DIRECT_TABLES = [
   // CC26: the capability lane wipes on every user boundary for the same
   // ownership reason, and because it is Article 9 data (CAP-20).
   'capability_constraints', 'session_constraint_effects',
+  // D229: the clip index. Private device data (the files are removed by
+  // deleteAllClipsForUser, called before this loop), so it must never survive
+  // sign-out or account deletion onto the next account on a shared phone.
+  'workout_clips',
 ];
 
 export const FATAL_LOCAL_WIPE_TABLES = new Set([
   'progress_photo_meta',
+  // D229: clips are body-adjacent video; a clip row or file that survives a
+  // user boundary is the same ownership leak a progress photo would be.
+  'workout_clips',
   'progress_scan_sessions',
   'progress_scan_assets',
   // Retained for wipe completeness; feature retired 2026-09-06.
@@ -8290,6 +8361,21 @@ export async function wipeAllUserData(userId) {
       logError('database.wipeAllUserData.routine_exercises', e, { userId });
     }
 
+    // 4b. D229: this account's clips. The FILES first, while their rows still
+    // name them (the direct-table loop below then clears whatever rows are
+    // left). Fatal like the progress-photo files: video of a person must not
+    // outlive the account that recorded it.
+    try {
+      // eslint-disable-next-line global-require
+      await require('./clips/store').deleteAllClipsForUser(userId);
+    } catch (e) {
+      if (!isMissingTableError(e)) {
+        logError('database.wipeAllUserData.clip_files', e, { userId });
+        e.wipeStep = 'clip_files';
+        throw e;
+      }
+    }
+
     // 5. Everything else (direct user_id column)
     for (const table of directTables) {
       try {
@@ -8453,6 +8539,22 @@ export async function verifyUserWipeClean(userId) {
     }
   } catch (_) {
     residue.push('photo_files');
+  }
+
+  // D229: the clips directory. The rows are covered by the fatal-table loop
+  // above; this reads the files raw, so a file that lost its row is residue too.
+  try {
+    // eslint-disable-next-line global-require
+    const { CLIPS_DIR } = require('./clips/store');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const info = await FileSystem.getInfoAsync(CLIPS_DIR);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(CLIPS_DIR).catch(() => null);
+      if (names === null || names.length > 0) residue.push('clip_files');
+    }
+  } catch (_) {
+    residue.push('clip_files');
   }
 
   // DB snapshots are byte-for-byte pre-wipe copies; any survivor is residue.
@@ -8632,6 +8734,7 @@ export const BACKUP_TABLE_DISPOSITION = Object.freeze({
     engine_telemetry: 'diagnostic delivery buffer',
     food_frequents: 'derived top-food cache',
     food_slot_recents: 'derived recency cache',
+    workout_clips: 'device-local clip index (D229): its rows name video files the backup does not carry, so a restored row would point at nothing; clips are private to the phone and never exported or restored',
   }),
   preferenceBacked: Object.freeze({
     perday_target_offsets: 'retired values and their clock are restored from namespaced AsyncStorage',
