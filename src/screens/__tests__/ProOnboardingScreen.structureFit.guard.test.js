@@ -37,3 +37,14 @@ test('more or fewer sessions are offered, each in plain words', () => {
   expect(fewer.detail).not.toMatch(/—/);
   expect(fewer.detail).not.toBe(alternativeCopy({ kind: 'more_sessions', daysPerWeek: 4, sessionLengthMinutes: 60 }).detail);
 });
+
+test('D228 item 5: a refused fit review offers equipment (back to step 4) and avoided movements, never the plan builder', () => {
+  expect(SRC).toMatch(/refusalNextSteps\(fitReview\.refusal, \{ avoidedCount: fitAvoidedCount \}\)\s*\.filter\(\(st\) => st\.key === 'equipment' \|\| st\.key === 'avoided'\)/);
+  expect(SRC).toMatch(/if \(st\.key === 'equipment'\) \{ setFitReview\(null\); setStep\(4\); \} else \{ navigation\.navigate\('AvoidedMovements'\); \}/);
+  expect(SRC).not.toMatch(/navigate\('ManualBuilder'/);
+});
+
+test('D228 item 5: the final-build failure alert carries the refusal sentence and one "Open Today" button', () => {
+  expect(SRC).toMatch(/planResult\.error === 'structure_refused' && typeof planResult\.refusal\?\.text === 'string'/);
+  expect(SRC).toMatch(/\$\{planResult\.refusal\.text\} Open Today to choose how to go on\.`,\s*\[\{ text: 'Open Today' \}\]/);
+});

@@ -137,10 +137,30 @@ export function holdLabel(limit) {
 const KIT_HINT = { lats: 'A pulldown machine or a pull-up bar' };
 export const wayForward = (m) => `${KIT_HINT[m] || 'Other equipment'} would give ${plural(m) ? 'them exercises' : 'it an exercise'} of ${plural(m) ? 'their' : 'its'} own.`;
 
+// A list in plain English: "chest", "chest and lats", "chest, lats and calves".
+const plainList = (items) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+/**
+ * The plain muscle shortfall of a `minimum_unreachable` refusal: which
+ * muscles the week cannot reach the weekly minimum for. Names only, no
+ * counts, so it reads the same for every person.
+ * @param {Array<{ muscle: string, own?: boolean }>} muscles
+ * @param {number} days
+ */
+export function shortfallText(muscles, days) {
+  const list = plainList(muscles.map((m) => name(m.muscle)));
+  const their = muscles.length === 1 && !plural(muscles[0].muscle) ? 'its' : 'their';
+  const own = muscles.some((m) => m.own) ? ' from exercises of their own' : '';
+  return `${list} cannot reach ${their} weekly minimum${own} in ${days} sessions`;
+}
+
 // Why a week was not built, in words (round 6 user audit U6-5: "lower_c: 2
 // exercises, 9 sets"; round 7 U7-10: no session name the person has never
 // seen, and no "worth the trip").
 export function refusalText(refusal, days) {
+  if (refusal.reason === 'minimum_unreachable' && Array.isArray(refusal.muscles) && refusal.muscles.length > 0) {
+    return shortfallText(refusal.muscles, days);
+  }
   if (refusal.reason !== 'sense_failed') return refusal.detail;
   const f = refusal.failures[0];
   switch (f.code) {

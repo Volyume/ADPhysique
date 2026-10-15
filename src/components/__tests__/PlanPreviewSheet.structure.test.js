@@ -37,6 +37,12 @@ jest.mock('../../lib/planAutoGen', () => ({
   planShortfallNote: (n) => `${n} moves couldn't be matched to your equipment.`,
 }));
 
+// The avoided-movements count reads SQLite; the sheet only needs the number.
+let mockAvoided = 0;
+jest.mock('../../lib/avoidedMovementsCount', () => ({
+  loadAvoidedMovementsCount: () => Promise.resolve(mockAvoided),
+}));
+
 import PlanPreviewSheet from '../PlanPreviewSheet';
 import { BLOCK_START_SENTENCE } from '../../lib/blockExplain';
 
@@ -145,4 +151,51 @@ test('without the structure engine the sheet is as before', () => {
   expect(text).toContain('75 min');
   expect(text).toContain('Start this plan');
   expect(text).toContain(BLOCK_START_SENTENCE);
+});
+
+describe('D228 item 5: a refusal is never a dead end', () => {
+  const REFUSED = (extra = {}) => ({
+    mode: 'first', plan: null, diff: null, blockStatus: null, sessionLengthMinutes: 60,
+    refusal: { reason: 'minimum_unreachable', text: REFUSAL_TEXT, suggestedDays: null, suggestedLength: null, ...extra },
+  });
+  const rowFor = (tree, label) => tree.root.findAll((n) => typeof n.props.onPress === 'function' && n.props.title === label)[0];
+
+  test('with no suggested day count the equipment and build-it-yourself rows are still there, in order, before Not yet', async () => {
+    const onChooseEquipment = jest.fn();
+    const onChooseManual = jest.fn();
+    const { tree } = render({ preview: REFUSED(), userId: 'u1', onChooseEquipment, onChooseManual, onChooseAvoided: jest.fn() });
+    await act(async () => {});
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Allow more equipment');
+    expect(text).toContain('More kit gives the builder more ways to reach every muscle.');
+    expect(text).toContain('Build it yourself');
+    expect(text).toContain('Pick your own exercises and sets in the plan builder.');
+    expect(text).not.toContain('Review avoided movements');
+    expect(text.indexOf('Allow more equipment')).toBeLessThan(text.indexOf('Build it yourself'));
+    expect(text.indexOf('Build it yourself')).toBeLessThan(text.indexOf('Not yet'));
+    act(() => rowFor(tree, 'Allow more equipment').props.onPress());
+    act(() => rowFor(tree, 'Build it yourself').props.onPress());
+    expect(onChooseEquipment).toHaveBeenCalledTimes(1);
+    expect(onChooseManual).toHaveBeenCalledTimes(1);
+  });
+
+  test('the avoided row shows only when the person has avoided movements', async () => {
+    mockAvoided = 2;
+    const onChooseAvoided = jest.fn();
+    const { tree } = render({ preview: REFUSED(), userId: 'u1', onChooseEquipment: jest.fn(), onChooseManual: jest.fn(), onChooseAvoided });
+    await act(async () => {});
+    expect(flattenText(tree.toJSON())).toContain('Review avoided movements');
+    act(() => rowFor(tree, 'Review avoided movements').props.onPress());
+    expect(onChooseAvoided).toHaveBeenCalledTimes(1);
+    mockAvoided = 0;
+  });
+
+  test('a row shows only where its owner passes the handler, and a built week has none', async () => {
+    const none = render({ preview: REFUSED() });
+    await act(async () => {});
+    expect(flattenText(none.tree.toJSON())).not.toContain('Allow more equipment');
+    const built = render({ onChooseEquipment: jest.fn(), onChooseManual: jest.fn() });
+    await act(async () => {});
+    expect(flattenText(built.tree.toJSON())).not.toContain('Build it yourself');
+  });
 });

@@ -28,10 +28,10 @@ const { PROGRESSION, PATTERNS } = require('../rulebook');
 const {
   focusFromWeakPoints, structureExperience, structureArgs, structureFacts, structureWeeklyTargets,
   structureWorkoutsForWrite, structureCheckIds, structureRefusal, structureFit, structurePreview,
-  appMuscleOf, FOCUS_LABEL_MAP, appLine, appRefusalText, REFUSAL_GENERIC,
+  appMuscleOf, FOCUS_LABEL_MAP, appLine, appRefusalText, REFUSAL_GENERIC, refusalNextSteps,
 } = require('../adapt');
 const { structureServedWeek, isStructureFacts } = require('../serve');
-const { planMessages } = require('../messages');
+const { planMessages, refusalMessage } = require('../messages');
 const { VOLUME_LANDMARKS } = require('../../algorithms');
 const { SELECTION_REASON } = require('../../planEngine');
 const { PLAN_FIT } = require('../../planFit');
@@ -249,7 +249,9 @@ describe('R65: what the person is told', () => {
       suggestedDays: refused.refusal.suggestedDays,
       suggestedLength: refused.refusal.suggestedLength ?? null,
       minimumDays: refused.refusal.minimumDays ?? null,
+      muscles: (refused.refusal.muscles || []).map((m) => m.muscle),
       text: appRefusalText(refused.refusal, REFUSED),
+      nextSteps: refusalNextSteps(refused.refusal),
     });
     expect(r.text).not.toMatch(/^Not built: /);
     expect(r.text).not.toMatch(/—/);
@@ -307,3 +309,45 @@ describe('app copy for the engine\'s questions and refusals', () => {
   });
 });
 const REFUSED_ARGS = { goal: 'bodybuilding', days: 2, lengthMinutes: 60 };
+
+describe('D228 item 5: the plain shortfall and the next steps of a refusal', () => {
+  const SHORT = { reason: 'minimum_unreachable', detail: 'internal', muscles: [{ muscle: 'side_delts', sets: 3, minimum: 6 }, { muscle: 'chest', sets: 2, minimum: 8 }] };
+
+  test('a muscle shortfall is said in plain words, names only, then the day count', () => {
+    const r = structureRefusal({ ...SHORT, suggestedDays: 4, suggestedLength: 75 }, REFUSED_ARGS);
+    expect(r.text).toBe('Side delts and chest cannot reach their weekly minimum in 2 sessions. 4 days a week builds, with sessions of 75 minutes.');
+    expect(r.text).not.toMatch(/—|each session holding|internal/);
+    expect(r.reason).toBe('minimum_unreachable');
+    expect(r.muscles).toEqual(['side_delts', 'chest']);
+  });
+
+  test('one muscle takes its, an own-exercise shortfall says so, and the audit page says the same words', () => {
+    expect(appRefusalText({ reason: 'minimum_unreachable', detail: 'x', muscles: [{ muscle: 'chest', sets: 1, minimum: 4, own: true }] }, REFUSED_ARGS))
+      .toBe('Chest cannot reach its weekly minimum from exercises of their own in 2 sessions.');
+    expect(refusalMessage(SHORT, REFUSED_ARGS)).toBe('Not built: side delts and chest cannot reach their weekly minimum in 2 sessions.');
+  });
+
+  test('a shortfall with no muscles stays on the generic line', () => {
+    expect(structureRefusal({ reason: 'minimum_unreachable', detail: 'x' }, REFUSED_ARGS).text).toBe(REFUSAL_GENERIC);
+  });
+
+  test('nextSteps: equipment and manual always; days and length only when suggested; avoided only with some', () => {
+    const keys = (r, o) => refusalNextSteps(r, o).map((x) => x.key);
+    expect(keys({})).toEqual(['equipment', 'manual']);
+    expect(keys({ suggestedDays: 4 })).toEqual(['days', 'equipment', 'manual']);
+    expect(keys({ suggestedDays: 4, suggestedLength: 75 }, { avoidedCount: 2 })).toEqual(['days', 'length', 'equipment', 'avoided', 'manual']);
+    expect(keys({}, { avoidedCount: 0 })).toEqual(['equipment', 'manual']);
+    const steps = refusalNextSteps({ suggestedDays: 4 }, { avoidedCount: 1 });
+    expect(steps[0].label).toBe('4 days a week builds');
+    const by = Object.fromEntries(steps.map((x) => [x.key, x]));
+    expect(by.equipment).toEqual({ key: 'equipment', label: 'Allow more equipment', detail: 'Your plan uses what you have ticked. More kit gives the builder more ways to reach every muscle.' });
+    expect(by.avoided.label).toBe('Review avoided movements');
+    expect(by.manual).toEqual({ key: 'manual', label: 'Build it yourself', detail: 'Pick your own exercises and sets in the plan builder.' });
+    for (const x of steps) expect(`${x.label}${x.detail}`).not.toMatch(/—|\bwe\b/i);
+  });
+
+  test('structureRefusal carries nextSteps (no avoided step without a count)', () => {
+    expect(structureRefusal(SHORT, REFUSED_ARGS).nextSteps.map((x) => x.key)).toEqual(['equipment', 'manual']);
+    expect(structureRefusal(SHORT, { ...REFUSED_ARGS, avoidedCount: 3 }).nextSteps.map((x) => x.key)).toEqual(['equipment', 'avoided', 'manual']);
+  });
+});

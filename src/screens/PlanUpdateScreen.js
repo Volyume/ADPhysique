@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
@@ -109,6 +109,10 @@ export default function PlanUpdateScreen({ navigation }) {
   const [daysPerWeek, setDaysPerWeek] = useState(userProfile?.daysPerWeek ?? 4);
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(userProfile?.sessionLengthMinutes ?? 60);
   const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
+  // D228 item 5: "Allow more equipment" in a refusal closes the sheet and
+  // brings this screen's own equipment field into view.
+  const scrollRef = useRef(null);
+  const equipmentYRef = useRef(0);
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
   const [saving, setSaving] = useState(false);
   // Plan diff/preview (ULTIMATE-PLANDIFF-01): a pre-commit dry-run + diff sheet.
@@ -504,6 +508,7 @@ export default function PlanUpdateScreen({ navigation }) {
       <BackHeader title="Adjust training" />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.scroll, live.scroll]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -607,6 +612,7 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         {/* ── Equipment ── */}
+        <View onLayout={(e) => { equipmentYRef.current = e.nativeEvent.layout.y; }}>
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
           What you have access to. The exercises adapt to your equipment.
@@ -617,6 +623,7 @@ export default function PlanUpdateScreen({ navigation }) {
           onChange={setEquipment}
           placeholder="Select your equipment"
         />
+        </View>
         {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
             copy at the top of this form and the button below otherwise
             promise a rebuild, and these two answers never rebuild. */}
@@ -672,6 +679,12 @@ export default function PlanUpdateScreen({ navigation }) {
         confirmLabel="Confirm and rebuild"
         onConfirm={handleConfirmRebuild}
         onChooseOption={handleChooseRebuildOption}
+        onChooseEquipment={() => {
+          setDiff(null); setStaged(null);
+          scrollRef.current?.scrollTo?.({ y: Math.max(0, equipmentYRef.current - spacing.md), animated: true });
+        }}
+        onChooseAvoided={() => { setDiff(null); setStaged(null); navigation.navigate('AvoidedMovements'); }}
+        onChooseManual={() => { setDiff(null); setStaged(null); navigation.navigate('ManualBuilder'); }}
         onClose={() => { if (!saving) { setDiff(null); setStaged(null); } }}
         busy={saving || previewing}
       />

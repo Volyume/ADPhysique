@@ -2095,6 +2095,9 @@ export default function PlansScreen({ navigation }) {
         onClose={() => { if (!startingPlan) setPlanPreview(null); }}
         busy={startingPlan}
         onChooseOption={handleChoosePlanOption}
+        onChooseEquipment={() => { setPlanPreview(null); navigation.navigate('PlanUpdate'); }}
+        onChooseAvoided={() => { setPlanPreview(null); navigation.navigate('AvoidedMovements'); }}
+        onChooseManual={() => { setPlanPreview(null); navigation.navigate('ManualBuilder'); }}
       />
 
       {/* FB-24 (D96): the receipt for "Continue with adjustments". Every

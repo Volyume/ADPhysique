@@ -47,11 +47,16 @@
  *   onChooseOption   - D222 phase 7 (R83): called with one of the engine's
  *                      choices other than 'keep'; without it the choices are
  *                      not offered and the sheet behaves as before
+ *   onChooseEquipment / onChooseAvoided / onChooseManual
+ *                    - D228 item 5: under a refusal the sheet offers "Allow
+ *                      more equipment", "Review avoided movements" (only when
+ *                      the person has any) and "Build it yourself"; a row
+ *                      shows only when its handler is passed
  *   onClose          - dismiss handler ("Not yet", backdrop, back button)
  *   busy             - true while the commit runs; locks both controls
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Text from './Text';
 import BottomSheet from './BottomSheet';
@@ -66,6 +71,8 @@ import { splitLabel } from '../lib/planDiff';
 import { BLOCK_START_SENTENCE, blockRestartSentence, blockKeptSentence } from '../lib/blockExplain';
 import { track } from '../lib/telemetry';
 import { OPTIONS_HEADING } from '../lib/structure/messages';
+import { refusalNextSteps } from '../lib/structure/adapt';
+import { loadAvoidedMovementsCount } from '../lib/avoidedMovementsCount';
 
 // D139: the three disclosures every confirm-before-commit moment owes the
 // athlete, in plain words. They are constants so the same sentence reaches
@@ -111,6 +118,9 @@ export default function PlanPreviewSheet({
   confirmLabel = 'Confirm',
   onConfirm,
   onChooseOption = null,
+  onChooseEquipment = null,
+  onChooseAvoided = null,
+  onChooseManual = null,
   onClose,
   busy = false,
   userId = null,
@@ -140,6 +150,17 @@ export default function PlanPreviewSheet({
     onClose?.();
   };
 
+  // D228 item 5: the avoided-movements step shows only when the person has
+  // some; the count is read once per refusal shown, best effort.
+  const [avoidedCount, setAvoidedCount] = useState(0);
+  const refused = visible && typeof preview?.refusal?.text === 'string';
+  useEffect(() => {
+    if (!refused || !userId || typeof onChooseAvoided !== 'function') { setAvoidedCount(0); return undefined; }
+    let live = true;
+    loadAvoidedMovementsCount(userId).then((n) => { if (live) setAvoidedCount(n); }).catch(() => {});
+    return () => { live = false; };
+  }, [refused, userId, onChooseAvoided]);
+
   if (!preview) return null;
 
   const mode = preview.mode ?? 'rebuild';
@@ -166,6 +187,13 @@ export default function PlanPreviewSheet({
   const keepOption = options.find((o) => o?.kind === 'keep') ?? null;
   const changeOptions = options.filter((o) => o && o.kind !== 'keep');
   const choosing = changeOptions.length > 0 || keepOption != null;
+  // D228 item 5: the rest of the way out of a refusal. The day-count button
+  // above already acts on 'days' and 'length', so only the other steps are rows.
+  const stepHandlers = { equipment: onChooseEquipment, avoided: onChooseAvoided, manual: onChooseManual };
+  const nextSteps = refusalText
+    ? refusalNextSteps(preview.refusal, { avoidedCount })
+      .filter((st) => typeof stepHandlers[st.key] === 'function')
+    : [];
 
   return (
     <BottomSheet
@@ -431,6 +459,27 @@ export default function PlanPreviewSheet({
               accessibilityLabel={option.label}
               style={styles.optionBtn}
             />
+          ))}
+        </View>
+      ) : null}
+
+      {nextSteps.length > 0 ? (
+        <View style={styles.diffMoves}>
+          {changeOptions.length === 0 ? (
+            <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>{OPTIONS_HEADING}</Text>
+          ) : null}
+          {nextSteps.map((st) => (
+            <View key={st.key}>
+              <Button
+                variant="secondary"
+                title={st.label}
+                onPress={() => { if (!busy) stepHandlers[st.key](); }}
+                disabled={busy}
+                accessibilityLabel={`${st.label}. ${st.detail}`}
+                style={styles.optionBtn}
+              />
+              <Text style={[styles.diffShortfall, live.diffShortfall]}>{st.detail}</Text>
+            </View>
           ))}
         </View>
       ) : null}

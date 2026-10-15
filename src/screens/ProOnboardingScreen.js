@@ -55,7 +55,8 @@ import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capa
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
 } from '../lib/planFit';
-import { profileWithOption } from '../lib/structure/adapt';
+import { profileWithOption, refusalNextSteps } from '../lib/structure/adapt';
+import { loadAvoidedMovementsCount } from '../lib/avoidedMovementsCount';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -859,6 +860,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // step 4 where three of its four inputs would still be missing. Assessing
   // early and calling the result a recommendation would be fake precision.
   const [fitReview, setFitReview] = useState(null);
+  // D228 item 5: the count behind the fit review's "Review avoided movements"
+  // step, read once when a refused week is shown (best effort, 0 on failure).
+  const [fitAvoidedCount, setFitAvoidedCount] = useState(0);
+  const fitRefused = typeof fitReview?.refusal?.text === 'string';
+  useEffect(() => {
+    if (!fitRefused || !user?.id) { setFitAvoidedCount(0); return undefined; }
+    let alive = true;
+    loadAvoidedMovementsCount(user.id).then((n) => { if (alive) setFitAvoidedCount(n); }).catch(() => {});
+    return () => { alive = false; };
+  }, [fitRefused, user?.id]);
   const [fitBusy, setFitBusy] = useState(false);
   // Set once the athlete has seen the fit panel and made their call. Their
   // decision is then honoured without being asked again - Volyume recommends,
@@ -2130,6 +2141,14 @@ export default function ProOnboardingScreen({ navigation }) {
                 },
               ],
             );
+          } else if (planResult.error === 'structure_refused' && typeof planResult.refusal?.text === 'string') {
+            // D228 item 5: the reason is said, not dropped. The refusal's own
+            // sentence, then the way on; the plan can be set up from Today.
+            appAlert(
+              "Plan setup didn't finish",
+              `Your profile is saved, but your plan was not built. ${planResult.refusal.text} Open Today to choose how to go on.`,
+              [{ text: 'Open Today' }],
+            );
           } else {
             // D88: the caught error is logged just above, never shown. It was
             // being interpolated raw into this alert, so the last thing a new
@@ -3276,6 +3295,35 @@ export default function ProOnboardingScreen({ navigation }) {
                     <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
                   </TouchableOpacity>
                 ))}
+              </View>
+            ) : null}
+
+            {/* D228 item 5: the rest of the way out of a refused week. Days
+                and length have their own rows above; "Build it yourself" is
+                not offered here (the plan builder is not part of setup). */}
+            {refusalText ? (
+              <View style={styles.section}>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>More ways forward</Text>
+                {refusalNextSteps(fitReview.refusal, { avoidedCount: fitAvoidedCount })
+                  .filter((st) => st.key === 'equipment' || st.key === 'avoided')
+                  .map((st) => (
+                    <TouchableOpacity
+                      key={st.key}
+                      style={[styles.proteinOpt, live.proteinOpt]}
+                      onPress={() => {
+                        if (st.key === 'equipment') { setFitReview(null); setStep(4); } else { navigation.navigate('AvoidedMovements'); }
+                      }}
+                      disabled={fitBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${st.label}. ${st.detail}`}
+                    >
+                      <View style={styles.proteinOptionCopy}>
+                        <Text style={[styles.proteinOptLabel, live.proteinOptLabel]}>{st.label}</Text>
+                        <Text style={[styles.proteinOptDesc, live.proteinOptDesc]}>{st.detail}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
+                    </TouchableOpacity>
+                  ))}
               </View>
             ) : null}
 

@@ -1047,6 +1047,9 @@ export default function ProGoalSetupScreen({ navigation }) {
         confirmLabel="Confirm and rebuild"
         onConfirm={() => planPreviewResolveRef.current?.(true)}
         onChooseOption={handleGoalPlanOption}
+        onChooseEquipment={() => { planPreviewResolveRef.current?.(false); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); }}
+        onChooseAvoided={() => { planPreviewResolveRef.current?.(false); navigation.navigate('AvoidedMovements'); }}
+        onChooseManual={() => { planPreviewResolveRef.current?.(false); navigateCrossTab(navigation, 'PlansTab', 'ManualBuilder'); }}
         onClose={() => { if (!planCommitting) planPreviewResolveRef.current?.(false); }}
         busy={planCommitting}
       />

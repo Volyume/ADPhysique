@@ -507,6 +507,7 @@ export const REFUSAL_GENERIC = 'This plan could not be built with these choices.
  * refusal's `detail` is the engine's internal text and is never shown.
  */
 function refusalIsPlain(refusal) {
+  if (refusal?.reason === 'minimum_unreachable') return Array.isArray(refusal.muscles) && refusal.muscles.length > 0;
   return refusal?.reason === 'sense_failed' && Array.isArray(refusal.failures) && refusal.failures.length > 0;
 }
 
@@ -521,6 +522,48 @@ export function appRefusalText(refusal, args) {
   return `${head}${days ? ` ${days} days a week builds${len ? `, with sessions of ${len} minutes` : ''}.` : ''}`;
 }
 
+/**
+ * D228 item 5: what the person can do about a refused week, in order, as rows
+ * a screen can draw. Pure.
+ *   days       only with a suggested day count ("N days a week builds");
+ *   length     only with a suggested session length;
+ *   equipment  always ("Allow more equipment");
+ *   avoided    only when the person has avoided movements (`avoidedCount`);
+ *   manual     always ("Build it yourself").
+ * @param {object} refusal  the engine's refusal (or structureRefusal's)
+ * @param {{ avoidedCount?: number }} [opts]
+ * @returns {Array<{ key: string, label: string, detail: string }>}
+ */
+export function refusalNextSteps(refusal, opts = {}) {
+  const steps = [];
+  const days = refusal?.suggestedDays;
+  const len = refusal?.suggestedLength;
+  if (days) {
+    steps.push({
+      key: 'days',
+      label: `${days} days a week builds`,
+      detail: len ? `With sessions of ${len} minutes.` : 'Use this number of days for your plan.',
+    });
+  }
+  if (len) {
+    steps.push({ key: 'length', label: `Sessions of ${len} minutes`, detail: 'This session length builds.' });
+  }
+  steps.push({
+    key: 'equipment',
+    label: 'Allow more equipment',
+    detail: 'Your plan uses what you have ticked. More kit gives the builder more ways to reach every muscle.',
+  });
+  if (Number(opts.avoidedCount) > 0) {
+    steps.push({
+      key: 'avoided',
+      label: 'Review avoided movements',
+      detail: 'Movements you set aside are left out of your plan. Removing one gives the builder more to use.',
+    });
+  }
+  steps.push({ key: 'manual', label: 'Build it yourself', detail: 'Pick your own exercises and sets in the plan builder.' });
+  return steps;
+}
+
 /** R65: a refusal as the dry run and the fit review carry it. */
 export function structureRefusal(refusal, args) {
   return {
@@ -528,7 +571,10 @@ export function structureRefusal(refusal, args) {
     suggestedDays: refusal.suggestedDays ?? null,
     suggestedLength: refusal.suggestedLength ?? null,
     minimumDays: refusal.minimumDays ?? null,
+    // D228 item 5: the muscles named (engine names, no counts) so a screen can read them.
+    muscles: Array.isArray(refusal.muscles) ? refusal.muscles.map((m) => m.muscle) : [],
     text: appRefusalText(refusal, args),
+    nextSteps: refusalNextSteps(refusal, { avoidedCount: args?.avoidedCount }),
   };
 }
 

@@ -2638,7 +2638,7 @@ export default function HomeScreen({ navigation, route }) {
           <PlanRebuildChoiceCard
             userId={user?.id}
             programmeId={activePlan?.id ?? null}
-            onUpdate={() => { haptics.selection(); navigation.navigate('PlanUpdate'); }}
+            onUpdate={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); }}
           />
         )}
 
@@ -3372,6 +3372,9 @@ export default function HomeScreen({ navigation, route }) {
         confirmLabel="Start this plan"
         onConfirm={handleConfirmStartWithPlan}
         onChooseOption={handleChoosePlanOption}
+        onChooseEquipment={() => { setPlanPreview(null); navigateCrossTab(navigation, 'PlansTab', 'PlanUpdate'); }}
+        onChooseAvoided={() => { setPlanPreview(null); navigation.navigate('AvoidedMovements'); }}
+        onChooseManual={() => { setPlanPreview(null); navigateCrossTab(navigation, 'PlansTab', 'ManualBuilder'); }}
         onClose={() => { if (!startingPlan) setPlanPreview(null); }}
         busy={startingPlan}
       />
