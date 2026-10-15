@@ -77,3 +77,27 @@ export async function readSafetyState(userId, opts = {}) {
   ]);
   return deriveSafetyState({ mode, edFlag, scoffScore: opts.scoffScore });
 }
+
+/**
+ * Tier c, the figure arm (D228 item 2, D228 addendum Q2-A; survey P2 option
+ * c). The weight-change figures (the coach's weekly chip and rate, the
+ * check-in's trend weight, the athlete profile's body-weight tile and
+ * ratios, the lift ratios) are withheld under an OPEN FLAG, a failed read, or
+ * the unknown state. They are NOT withheld under calm alone: calm quiets the
+ * judgement words (`state.suppressed`), an open flag additionally keeps the
+ * figures back. (Two surfaces take the verdict from elsewhere by design: the
+ * Today prefill follows Home's own, broader withhold, which also covers calm
+ * and a SCOFF score; the Analytics body pillar derives it inside
+ * useWeightTrend, where it already did.)
+ *
+ * Fail closed: no state at all, the unknown state and a failed read all
+ * withhold. Pure; it reads the shape deriveSafetyState returns and composes
+ * nothing the ED-safety system does not already read.
+ *
+ * @param {object|null|undefined} state a deriveSafetyState() result
+ * @returns {boolean}
+ */
+export function withholdsWeightFigures(state) {
+  if (!state) return true;
+  return !!state.edFlagOpen || !!state.readFailed || !state.known;
+}

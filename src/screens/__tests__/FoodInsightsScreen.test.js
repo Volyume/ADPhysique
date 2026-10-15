@@ -32,14 +32,34 @@ jest.mock('../../lib/food/db', () => ({
   getRollupsForRange: jest.fn(),
   getFoodEntriesForRange: jest.fn(),
 }));
-jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn() }));
+jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn(), getOpenEdPatternFlag: jest.fn() }));
 jest.mock('../../lib/food/csvExport', () => ({ exportDiaryCsv: jest.fn() }));
+// D228 item 2 (tier c): the screen reads the safety state through the hook.
+// Most tests drive it with a state the real pure derivation produced; one
+// block below runs the real hook end to end over mocked reads.
+const mockSafety = { current: null, real: false };
+jest.mock('../../hooks/useSafetyState', () => {
+  const actual = jest.requireActual('../../hooks/useSafetyState');
+  return { __esModule: true, default: (...a) => (mockSafety.real ? actual.default(...a) : mockSafety.current) };
+});
 
 import useAppStore from '../../store/useAppStore';
 import { getRollupsForRange } from '../../lib/food/db';
-import { getNutritionTargets } from '../../lib/database';
+import { getNutritionTargets, getOpenEdPatternFlag } from '../../lib/database';
 import { localDayKey } from '../../lib/dayKey';
+import { deriveSafetyState, SAFETY_STATE_UNKNOWN } from '../../lib/safetyState';
 import FoodInsightsScreen from '../FoodInsightsScreen';
+
+// The safety states the screen can meet, each from the real derivation.
+const STATES = {
+  normal: deriveSafetyState({ mode: 'normal', edFlag: null }),
+  calm: deriveSafetyState({ mode: 'calm', edFlag: null }),
+  flag: deriveSafetyState({ mode: 'normal', edFlag: { id: 'f1' } }),
+  flagReadFailed: deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+  wellbeingReadFailed: deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+  unknown: SAFETY_STATE_UNKNOWN,
+};
+beforeEach(() => { mockSafety.real = false; mockSafety.current = STATES.normal; });
 
 const nav = { goBack: jest.fn(), navigate: jest.fn() };
 const TARGETS = { targetKcal: 2400, proteinG: 180, carbsG: 250, fatG: 70 };
@@ -266,5 +286,138 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     expect(text).toContain('LAST 30 DAYS');
     expect(text).toContain('2222');
     expect(text).not.toContain('1111');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D228 item 2, tier c (founder 2026-10-15, "Go as recommended"): under calm,
+// an open flag, a failed read or the unknown state, Food Insights keeps every
+// total and average and drops the VALENCE: the on-target colouring and labels,
+// the protein hit count, the macro adherence block, the "vs the period before"
+// comparison and the "close to target on N of M days" insights. Nothing new is
+// said in their place. Nobody who is not calm and not flagged sees any
+// difference.
+// ---------------------------------------------------------------------------
+describe('FoodInsightsScreen - quiet valence under the safety state (D228 item 2, tier c)', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  // 14 logged days at target, so the week-before comparison, the adherence
+  // counts and both insights all have something to say.
+  const fortnight = () => lastN(14).map((d) => rollup(d, true));
+
+  // The colour each per-day bar is drawn in (the bar fill carries height 100%).
+  function barFillColours(tree) {
+    const { StyleSheet } = require('react-native');
+    const rows = tree.root.findAll(
+      (n) => typeof n.type === 'string' && typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(' kcal'),
+    );
+    const fills = rows.flatMap((row) => row.findAll(
+      (n) => typeof n.type === 'string' && n.type === 'View' && StyleSheet.flatten(n.props.style)?.height === '100%',
+    ));
+    return [...new Set(fills.map((n) => StyleSheet.flatten(n.props.style).backgroundColor))];
+  }
+
+  const VALENCE = [
+    'You hit your protein on',
+    'MACRO ADHERENCE',
+    'Hit = within target range',
+    'Out of 7 days logged',
+    'vs the week before',
+    'Same as the week before',
+    'No logged days before that to compare',
+    'close to target',
+    'turn green',
+    'turns green',
+    'to see target colours',
+  ];
+
+  test('not calm and not flagged: every valence element is there, exactly as before', async () => {
+    const tree = await render(fortnight());
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('You hit your protein on 7 of 7 days you logged.');
+    expect(text).toContain('MACRO ADHERENCE');
+    expect(text).toContain('Out of 7 days logged. Hit = within target range.');
+    expect(text).toContain('Same as the week before.');
+    expect(text).toContain('Protein was close to target on 7 of your last 7 logged days.');
+    expect(text).toContain('Calories were close to target on 7 of your last 7 logged days.');
+    expect(text).toContain('Bars within 10% turn green.');
+    expect(tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(', on target')).length).toBeGreaterThan(0);
+    expect(barFillColours(tree)).toHaveLength(1); // every day on target: all drawn in the success colour
+  });
+
+  test.each([
+    ['calm only', 'calm'],
+    ['an open flag', 'flag'],
+    ['a failed flag read', 'flagReadFailed'],
+    ['a failed wellbeing read', 'wellbeingReadFailed'],
+    ['the unknown state, before any read', 'unknown'],
+  ])('%s: totals and averages stay, the valence goes, and nothing replaces it', async (_label, key) => {
+    mockSafety.current = STATES[key];
+    const tree = await render(fortnight());
+    const text = flattenText(tree.toJSON());
+    for (const phrase of VALENCE) expect(text).not.toContain(phrase);
+    expect(tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.includes(', on target'))).toHaveLength(0);
+    // The totals and averages stay.
+    expect(text).toContain('THIS WEEK');
+    expect(text).toMatch(/2,?400 kcal\/day/);
+    expect(text).toContain('Average over 7 days logged this week.');
+    expect(text).toContain('LAST 7 DAYS - CALORIES');
+    expect(barRowCount(tree)).toBe(7);
+    expect(text).toContain('Target: 2400 kcal.'); // the target line stays
+    expect(text).toContain('Faint line is your 2,400 kcal target.');
+    expect(text).toContain('NUTRIENT AVERAGES');
+    expect(text).toContain('You have logged 7 of the last 7 days.'); // what the diary covers is a fact about the diary
+    // The bars are drawn plain: one colour, and not the one an on-target bar wears.
+    const quiet = barFillColours(tree);
+    expect(quiet).toHaveLength(1);
+    mockSafety.current = STATES.normal;
+    expect(quiet[0]).not.toBe(barFillColours(await render(fortnight()))[0]);
+  });
+
+  test('the protein chart stays (grams over time), without its hit count, under the quiet state', async () => {
+    mockSafety.current = STATES.calm;
+    const tree = await render(fortnight());
+    expect(flattenText(tree.toJSON())).toContain('PROTEIN');
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Daily protein trend in grams').length).toBeGreaterThan(0);
+  });
+
+  test('30 and 90 day windows quiet the weekly bars the same way', async () => {
+    mockSafety.current = STATES.flag;
+    const tree = await render(lastN(90).map((d) => rollup(d, true)));
+    await tapWindow(tree, 30);
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Each bar is a weekly average.');
+    expect(text).not.toContain('turns green');
+    expect(text).not.toContain('vs the 30 days before');
+    expect(text).not.toContain('MACRO ADHERENCE');
+    expect(barRowCount(tree)).toBe(5);
+  });
+
+  test('with no calorie target set the colours hint is not offered (there are none to see)', async () => {
+    getNutritionTargets.mockResolvedValue(null);
+    mockSafety.current = STATES.calm;
+    useAppStore.mockImplementation((sel) => sel({ user: { id: 'u1' } }));
+    getRollupsForRange.mockResolvedValue(fortnight());
+    let tree;
+    await act(async () => { tree = create(<FoodInsightsScreen navigation={nav} />); });
+    await flush();
+    expect(flattenText(tree.toJSON())).not.toContain('to see target colours');
+  });
+
+  test('the real hook, end to end: an unreadable flag store reads as quiet; clean reads read as normal', async () => {
+    mockSafety.real = true;
+    getOpenEdPatternFlag.mockRejectedValue(new Error('sqlite'));
+    let text = flattenText((await render(fortnight())).toJSON());
+    expect(text).not.toContain('MACRO ADHERENCE');
+    expect(text).not.toContain('You hit your protein on');
+
+    getOpenEdPatternFlag.mockResolvedValue(null);
+    text = flattenText((await render(fortnight())).toJSON());
+    expect(text).toContain('MACRO ADHERENCE');
+    expect(text).toContain('You hit your protein on 7 of 7 days you logged.');
+
+    getOpenEdPatternFlag.mockResolvedValue({ id: 'f1' });
+    text = flattenText((await render(fortnight())).toJSON());
+    expect(text).not.toContain('MACRO ADHERENCE');
   });
 });

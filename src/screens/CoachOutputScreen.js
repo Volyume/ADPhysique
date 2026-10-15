@@ -175,7 +175,8 @@ import {
   WeekRowsCard,
 } from '../components/coachOutput/CoachOutputCards';
 import { SettingRow } from '../components/SettingsPrimitives';
-import { deriveSafetyState } from '../lib/safetyState';
+import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
+import useSafetyState from '../hooks/useSafetyState';
 
 // D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3 "both" placement):
 // the adherence-why line's one-time seen-flag, same '@volyume_seen_*'
@@ -965,6 +966,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // often across the apply/settle state machine above).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  // D228 item 2, tier c: the one safety read, taken before any early return.
+  // It decides only whether the weekly weight figures print in "Your week"
+  // (below); the decision, its numbers and the apply rows are not read from it.
+  const safety = useSafetyState(user?.id);
 
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10): apply-control
   // mode, read the same local-only way coachTone is read for register
@@ -2834,8 +2839,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // D228 item 3 (founder, 2026-10-15): the offer itself reads calm mode and
   // the open flag. isGreatWeek only sees a flag raised THIS week, so a person
   // with an already-open flag, or calm on, used to be offered a share whose
-  // card then arrived stripped. Now the offer does not appear at all.
-  const greatWeek = isGreatWeek(output).great && !edPatternOpen && !calmMode;
+  // card then arrived stripped. Now the offer does not appear at all. The
+  // hook's verdict (`safety`, re-read on focus) is read as well, so a flag
+  // raised or calm turned on after this screen's own reads cannot leave a
+  // stale offer standing (fresh-eyes review 2026-10-15, item 4).
+  const greatWeek = isGreatWeek(output).great && !edPatternOpen && !calmMode && !safety.suppressed;
 
   // Share the week as the Precision Coaching recap card. The card leads with the
   // real achievement, the weight lost/gained this week and the PRs, built in
@@ -3051,7 +3059,15 @@ export default function CoachOutputScreen({ navigation, route }) {
   // T15 science bracket and its D93 disclosure gloss (ON THIS SURFACE ONLY
   // the gloss says the decision reads the coaching trend, not this number);
   // the coaching trend is the rate the decision was made from (C10F).
+  // D228 item 2, tier c: the 7-day weight chip and the coaching-rate row are
+  // weight-change figures, withheld under an open flag, a failed read or the
+  // unknown state (NOT under calm alone, where the coach's own suppression
+  // already softens the language). `edPatternOpen` above comes from this
+  // week's held decisions and lags the stored flag, so the hook's verdict and
+  // the held decision both withhold: either one is enough.
+  const weightFiguresWithheld = withholdsWeightFigures(safety) || edPatternOpen;
   const weekRows = buildWeekRows({
+    withholdWeight: weightFiguresWithheld,
     sessionsCompleted,
     sessionsPlanned,
     prsThisWeek,

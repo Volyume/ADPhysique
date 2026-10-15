@@ -10,7 +10,8 @@
  * reads live in the useWeightTrend hook. Copy and colour follow COMP-027's
  * Class B body-data rules: a body-weight surface never wears red (the dot caps
  * at 'watch'), the weight numeral is never coloured, and under an open
- * ED/wellbeing flag the card drops to direction-only copy with no rate, no
+ * ED/wellbeing flag the card drops to the one figure-free kept line (D228
+ * addendum Q2-A; it was direction-only copy before) with no rate, no
  * maintenance number and no dot.
  *
  * D214 addendum 4 (Body metrics, 2026-10-02; the spec is
@@ -26,7 +27,14 @@
  * (typicalDailySwingKg) is derived here for Body metrics' noise line. The
  * engine's own smoothers, rates and gates are untouched: these are display
  * readings of the smoothed series the engine already produced.
+ *
+ * D228 addendum Q2-A (founder 2026-10-15): the flag sentence above is now ONE
+ * figure-free line for every rate and for none, the line Body metrics prints
+ * (BODY_METRICS_FLAG_LINE, imported from bodyMetricsPolicy), so the Progress
+ * landing and Body metrics say the same thing under an open flag. Only what is printed changed; no
+ * rate, gate or threshold did.
  */
+import { BODY_METRICS_FLAG_LINE } from './bodyMetricsPolicy';
 
 // State by number of morning-weight entries (matches the blueprint's
 // state ladder). State 0 means the card does not render at all.
@@ -70,10 +78,14 @@ function isDiverging(actual, expected) {
 export const CALM_INSIGHT = 'Your weigh-ins are kept in Body metrics, ready when you want them.';
 // BM-17: with no weigh-in at all, the calm line promises rather than claims.
 export const CALM_INSIGHT_NONE = 'Your weigh-ins will be kept in Body metrics, ready when you want them.';
-// BM-16: under an open flag with no rate to read, the line claims nothing
-// about the trend; the same line serves a lapsed trend under the flag, where
-// "no weigh-in in the last 14 days" would be a nudge.
-export const ED_KEPT_INSIGHT = 'Your weigh-ins are kept in Body metrics.';
+// The one line under an open flag (D228 addendum Q2-A, founder 2026-10-15,
+// "Go as recommended"): the Analytics body pillar reads the same figure-free
+// line Body metrics reads, imported so the two can never say it differently.
+// It claims nothing about the trend, at any rate or none (it replaces BM-16's
+// direction sentences), and it serves a lapsed trend and the too-few-weigh-ins
+// state alike, where "no weigh-in in the last 14 days" or a count would be a
+// nudge. Calm mode keeps its own line (CALM_INSIGHT).
+export const ED_KEPT_INSIGHT = BODY_METRICS_FLAG_LINE;
 
 // D214 (progress audit 2026-10-01, PR-4): the Progress root's Body row prints
 // the weekly coach's OWN verdict on the weight trend, so the row and the
@@ -388,23 +400,13 @@ export function deriveWeightTrend({
     };
   }
 
-  // Open ED/wellbeing flag: direction-only, no rate, no maintenance, no dot.
-  // BM-16: the one steady rule decides "broadly stable"; above it the words
-  // carry no size ("slightly" claimed a size at any rate); with no rate to
-  // read the line claims nothing about the trend; "the past few weeks" only
-  // when the series spans a fortnight.
+  // Open ED/wellbeing flag: no direction word, no rate, no maintenance, no
+  // dot. D228 addendum Q2-A (founder 2026-10-15) replaced the direction
+  // sentences BM-16 had put here with the one line Body metrics prints, so
+  // the Progress landing and Body metrics say the same thing under a flag.
+  // The rate is not read.
   if (edFlagOpen) {
-    const rate = Number.isFinite(weeklyChange) ? weeklyChange : null;
-    let insight;
-    if (rate === null) {
-      insight = ED_KEPT_INSIGHT;
-    } else if (Math.abs(rate) < STEADY_RATE_KG_PER_WEEK) {
-      insight = n >= 14
-        ? 'Your weight has stayed broadly stable over the past few weeks.'
-        : 'Your weight has stayed broadly stable over the past week.';
-    } else {
-      insight = rate > 0 ? 'Your weight trend has been rising.' : 'Your weight trend has been drifting down.';
-    }
+    const insight = ED_KEPT_INSIGHT;
     return {
       render: true,
       state,

@@ -133,7 +133,7 @@ import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { deriveSafetyState } from '../lib/safetyState';
+import { deriveSafetyState, withholdsWeightFigures } from '../lib/safetyState';
 // Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
 // optional scan subline is retired from Home (it moves to the check-in
 // screen it belongs to), so the photo-suppression hook this line fed is no
@@ -658,6 +658,11 @@ export default function HomeScreen({ navigation, route }) {
         firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
         checkinDay,
         edFlagOpen: edSuppressed,
+        // D228 item 2, tier c: the weight FIGURES (here, the last weight the
+        // weigh-in box would carry in) are withheld under an open flag, a
+        // failed read or the unknown state; calm alone leaves them, as the
+        // calm promise about numbers requires. Narrower than edFlagOpen above.
+        weightFiguresWithheld: withholdsWeightFigures(safety),
         completedSessions,
         everCheckedIn,
         sessionsSinceCheckin,
@@ -2512,6 +2517,11 @@ export default function HomeScreen({ navigation, route }) {
             // or more, a failed read or calm mode) the prompt names no figure;
             // with no facts at all (the loader threw) it fails closed too.
             withholdFigures={firstReviewFacts?.edFlagOpen !== false}
+            // D228 item 2, tier c: the flag tier (an open flag, a failed read,
+            // the unknown state; never calm alone), fail closed (no facts is
+            // not "clear"): under it the weigh-in box opens empty instead of
+            // carrying the last weight in.
+            prefillLastWeight={firstReviewFacts?.weightFiguresWithheld === false}
             savingWeight={savingWeight}
             onLogWeight={handleLogWeight}
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links

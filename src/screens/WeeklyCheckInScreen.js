@@ -26,6 +26,13 @@ import {
 // beside the week's data. Fail-closed via usePhotoSuppression(); never
 // persisted; a skipped/absent scan never blocks or delays the check-in.
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
+// D228 item 2, tier c: the one safety read. Under calm, an open flag, a failed
+// read or the unknown state the calorie note drops its "against your target"
+// judgement and the Nutrition summary row drops its verdict word; under an
+// open flag, a failed read or the unknown state (NOT calm alone) the trend
+// weight is dropped too, on the wizard step and on the Fast Check-In row.
+import useSafetyState from '../hooks/useSafetyState';
+import { withholdsWeightFigures } from '../lib/safetyState';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
 import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
@@ -226,6 +233,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // whole evidence block and the prompt card render nothing until a real
   // status is known (see renderStep1 and showScanPrompt below).
   const photoScanSuppressed = usePhotoSuppression(user?.id);
+  // D228 item 2, tier c. `quiet` (calm, an open flag, a failed read, not yet
+  // known) removes the judgement words; `withholdWeight` (an open flag, a
+  // failed read, not yet known; never calm alone) removes the trend weight.
+  const safety = useSafetyState(user?.id);
+  const quiet = safety.suppressed;
+  const withholdWeight = withholdsWeightFigures(safety);
   const [scanEvidencePacket, setScanEvidencePacket] = useState(null);
   // "Not now" dismisses the prompt for this visit only; component state,
   // nothing persisted, no streaks, no guilt copy.
@@ -1150,7 +1163,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                       promises days and the engine credits one weigh-in per
                       local day. */}
                   {weighInsThisWeek} {weighInsThisWeek === 1 ? 'day' : 'days'} logged
-                  {trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
+                  {trendKg && !withholdWeight ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
                 </Text>
                 {!alreadyLoggedToday && (
                   <Text style={[styles.weightSummaryMissed, live.weightSummaryMissed]}>Not yet today</Text>
@@ -1220,11 +1233,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                   From your diary: {autoDerived.calsMeta.daysLogged} of 7 days logged,
                   averaging {formatEnergy(autoDerived.calsMeta.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} a day
-                  against your {formatEnergy(autoDerived.calsMeta.target, energyUnit)} target ({
-                    autoDerived.calsMeta.avgKcal <= autoDerived.calsMeta.target * 0.9 ? 'under target'
-                    : autoDerived.calsMeta.avgKcal >= autoDerived.calsMeta.target * 1.1 ? 'over target'
-                    : 'on target'
-                  }). Adjust below only if your logging was off, for example you tracked in another app.
+                  {quiet ? null : (
+                    <>
+                      {' '}against your {formatEnergy(autoDerived.calsMeta.target, energyUnit)} target ({
+                        autoDerived.calsMeta.avgKcal <= autoDerived.calsMeta.target * 0.9 ? 'under target'
+                        : autoDerived.calsMeta.avgKcal >= autoDerived.calsMeta.target * 1.1 ? 'over target'
+                        : 'on target'
+                      })
+                    </>
+                  )}. Adjust below only if your logging was off, for example you tracked in another app.
                 </Text>
               ) : (
                 <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
@@ -1484,13 +1501,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
         key: 'cals',
         icon: 'restaurant-outline',
         label: 'Nutrition',
-        value: calsAdherence ? CALS_TEXT[calsAdherence] : null,
+        // Quiet: the verdict word ("Off your target") goes and, with no value,
+        // the row is left out below. Nothing is said in its place.
+        value: (calsAdherence && !quiet) ? CALS_TEXT[calsAdherence] : null,
       },
       {
         key: 'weight',
         icon: 'scale-outline',
         label: 'Weight',
-        value: `${weighInsThisWeek} ${weighInsThisWeek === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+        value: `${weighInsThisWeek} ${weighInsThisWeek === 1 ? 'day' : 'days'} logged${trendKg && !withholdWeight ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
       },
       // Progress scan context row (integration-plan.md §5): read-only,
       // shown only when a valid packet exists for this window; absent

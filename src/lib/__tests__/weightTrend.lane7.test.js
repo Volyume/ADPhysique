@@ -5,16 +5,17 @@
  *    7 points over 7 or more days, so a few days of noise never print as a
  *    direction; its rate is normalised to seven days;
  *  - "steady" has ONE definition, STEADY_RATE_KG_PER_WEEK, read by the
- *    direction words and by the flag sentence alike;
+ *    direction words (the flag sentence no longer prints a direction at all,
+ *    D228 addendum Q2-A);
  *  - the Body row's fallback headline is the direction with its window and no
  *    figure, never the maintenance sentence (BM-15);
  *  - an empty series with a weigh-in of any age behind it is a LAPSED trend
  *    (BM-3): the line says when the last was, no figure; under an open flag it
  *    claims only what is kept; under calm mode the calm line;
  *  - with no weigh-in at all the calm line promises rather than claims (BM-17);
- *  - the flag sentence claims no stability when the rate is unknown, says
- *    "broadly stable" only within the steady rule, and carries no "slightly"
- *    and no digit (BM-16);
+ *  - the flag line is ONE figure-free line, the one Body metrics prints, for
+ *    every rate and for none (BM-16, re-pointed by D228 addendum Q2-A: it
+ *    used to be a direction sentence on the steady rule);
  *  - typicalDailySwingKg is the upper quartile of the consecutive-morning
  *    changes over 28 days, from 10 weigh-ins, and agoPhrase never prints a
  *    decimal.
@@ -25,6 +26,7 @@ const {
   deriveWeightTrend, twoWeekTrend, trendDirection, typicalDailySwingKg, agoPhrase, lapsedInsight,
   STEADY_RATE_KG_PER_WEEK, DIRECTION_MIN_POINTS, CALM_INSIGHT, CALM_INSIGHT_NONE, ED_KEPT_INSIGHT,
 } = require('../weightTrend');
+const { BODY_METRICS_FLAG_LINE } = require('../bodyMetricsPolicy');
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 9, 2, 7);
@@ -127,6 +129,7 @@ describe('BM-3: a lapsed trend is not "no weigh-ins"', () => {
     const vm = deriveWeightTrend({ ewmaData: [], lastWeighInMs: last, nowMs: NOW, edFlagOpen: true });
     expect(vm.lapsed).toBe(true);
     expect(vm.insight).toBe(ED_KEPT_INSIGHT);
+    expect(vm.insight).toBe(BODY_METRICS_FLAG_LINE);
     expect(vm.insight).not.toMatch(/\d|weigh in|log/i);
   });
   test('under calm mode the calm line, as for any weigh-in', () => {
@@ -142,27 +145,32 @@ describe('BM-3: a lapsed trend is not "no weigh-ins"', () => {
   });
 });
 
-describe('BM-16: the flag sentence on the one steady rule', () => {
+describe('BM-16 (re-pointed by D228 addendum Q2-A): the flag line is one line for every rate', () => {
   const burn = { confidence: 'high', adjustedTDEE: 2400, weeks: 4, actualKgPerWeek: 0.6, expectedKgPerWeek: -0.5 };
   test.each([
-    ['no rate', 20, undefined, ED_KEPT_INSIGHT],
-    ['within the steady rule, a fortnight of points', 20, 0.1, 'Your weight has stayed broadly stable over the past few weeks.'],
-    ['within the steady rule, under a fortnight of points', 10, -0.15, 'Your weight has stayed broadly stable over the past week.'],
-    ['rising past the steady rule', 20, 0.25, 'Your weight trend has been rising.'],
-    ['falling past the steady rule', 20, -0.25, 'Your weight trend has been drifting down.'],
-  ])('%s', (_label, n, weeklyChange, expected) => {
+    ['no rate', 20, undefined],
+    ['within the steady rule, a fortnight of points', 20, 0.1],
+    ['within the steady rule, under a fortnight of points', 10, -0.15],
+    ['rising past the steady rule', 20, 0.25],
+    ['falling past the steady rule', 20, -0.25],
+  ])('%s', (_label, n, weeklyChange) => {
     const vm = deriveWeightTrend({ ewmaData: daily(n), weeklyChange, adaptiveBurn: burn, edFlagOpen: true, nowMs: NOW });
-    expect(vm.insight).toBe(expected);
-    expect(vm.insight).not.toMatch(/slightly|\d/);
+    expect(vm.insight).toBe(BODY_METRICS_FLAG_LINE);
+    expect(vm.insight).toBe('Your weigh-ins are kept here.');
+    expect(vm.insight).not.toMatch(/slightly|stable|rising|drifting|\d/);
     expect(vm.showRate).toBe(false);
     expect(vm.maintenance).toBeNull();
     expect(vm.pillarFigure).toBe(false);
     expect(vm.twoWeek).toBeUndefined();
   });
-  test('source: one steady threshold in the module, read by the flag branch and the direction words', () => {
+  test('source: one steady threshold in the module, read by the direction words; the flag branch reads no rate and the line is imported, not retyped', () => {
     expect(SOURCE.match(/STEADY_RATE_KG_PER_WEEK = 0\.2;/g)).toHaveLength(1);
-    expect(SOURCE).toMatch(/Math\.abs\(rate\) < STEADY_RATE_KG_PER_WEEK/);
+    expect(SOURCE).not.toMatch(/Math\.abs\(rate\) < STEADY_RATE_KG_PER_WEEK/); // the flag branch no longer prints a direction
     expect(SOURCE).toMatch(/isSteadyMove\(twoWeek\.ratePerWeek, twoWeek\.deltaKg\)/); // the direction words read the one rule (closing review B2)
+    expect(SOURCE).toMatch(/import \{ BODY_METRICS_FLAG_LINE \} from '\.\/bodyMetricsPolicy';/);
+    expect(SOURCE).toMatch(/export const ED_KEPT_INSIGHT = BODY_METRICS_FLAG_LINE;/);
+    expect(SOURCE).not.toMatch(/Your weigh-ins are kept here/);
+    expect(SOURCE).not.toMatch(/has been rising|drifting down|broadly stable/);
     expect(SOURCE).not.toMatch(/< 0\.05/);
     expect(SOURCE).not.toMatch(/rising slightly/);
   });

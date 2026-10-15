@@ -15,6 +15,15 @@
  * button on Diary so the data is visible day one of the food layer.
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
+ *
+ * D228 item 2, tier c (founder 2026-10-15): under calm mode, an open ED flag,
+ * a failed safety read or before any read has resolved (useSafetyState starts
+ * suppressed) the screen keeps every total and average and drops the VALENCE:
+ * the on-target colouring and labels on the bars, the protein hit count, the
+ * macro adherence block, the "vs the period before" comparison and the
+ * "close to target on N of M days" insights. The bars are drawn in one plain
+ * colour, the target is still stated, and nothing is said in place of what
+ * goes. Nobody who is not calm and not flagged sees any difference.
  */
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
@@ -51,6 +60,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
+import useSafetyState from '../hooks/useSafetyState';
 
 function isoDate(d) { return localDayKey(d.getTime()); } // TZ-1: local calendar day
 function shift(d, days) {
@@ -99,6 +109,10 @@ export default function FoodInsightsScreen({ navigation }) {
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const userId = user?.id;
   const toast = useToast();
+  // D228 item 2 (tier c): the one safety read. `quiet` is calm OR an open flag
+  // OR a failed read OR not yet known, so it fails closed.
+  const safety = useSafetyState(userId);
+  const quiet = safety.suppressed;
   // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
   // screen renders its rows via plain .map() inside a ScrollView (no
   // FlatList/FlashList/SectionList), so an unmemoised call matches
@@ -222,7 +236,8 @@ export default function FoodInsightsScreen({ navigation }) {
     coverage,
     rollups: days.map((d) => rollupByDate.get(d)).filter(Boolean),
     targets,
-  }), [coverage, days, rollupByDate, targets]);
+    quiet,
+  }), [coverage, days, rollupByDate, targets, quiet]);
 
   // Calories chart rows. 7/14-day windows render one bar per day; 30/90-day
   // windows aggregate into weekly bars (avg kcal/day of the LOGGED days that
@@ -445,7 +460,7 @@ export default function FoodInsightsScreen({ navigation }) {
               <Text style={[styles.summaryCaption, live.summaryCaption]}>
                 Average over {periodAvg.current.n} {periodAvg.current.n === 1 ? 'day' : 'days'} logged{periodIsWeek ? ' this week' : ` in the last ${windowDays} days`}.
               </Text>
-              {periodAvg.delta != null ? (
+              {quiet ? null : periodAvg.delta != null ? (
                 <Text style={[styles.summaryDelta, live.summaryDelta]}>
                   {periodAvg.delta === 0
                     ? `Same as the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`
@@ -514,7 +529,8 @@ export default function FoodInsightsScreen({ navigation }) {
         <Card style={styles.card}>
           {chartBars.map((b) => {
             const pct = Math.min(1, b.kcal / maxKcal);
-            const targetMet = within(b.kcal, targets?.targetKcal, ADHERENCE_TOLERANCE.kcal);
+            // Quiet: the bar is not judged against the target at all.
+            const targetMet = !quiet && within(b.kcal, targets?.targetKcal, ADHERENCE_TOLERANCE.kcal);
             return (
               <View
                 key={b.key}
@@ -537,11 +553,15 @@ export default function FoodInsightsScreen({ navigation }) {
           })}
           {targets?.targetKcal ? (
             <Text style={[styles.cardFootnote, live.cardFootnote]}>
-              {isWeekly
-                ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
-                : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
+              {quiet
+                ? (isWeekly
+                  ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average.`
+                  : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`)
+                : (isWeekly
+                  ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
+                  : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`)}
             </Text>
-          ) : (
+          ) : quiet ? null : (
             <Text
               style={[styles.cardFootnote, live.cardFootnote, styles.cardFootnoteLink, live.cardFootnoteLink]}
               onPress={goToNutritionTargets}
@@ -558,13 +578,17 @@ export default function FoodInsightsScreen({ navigation }) {
             Derived from the existing protein-hit count (within 10% of target,
             NA-nutrition-8), pDays / logged. Hidden until a day is logged,
             mirroring the macro block's guard. */}
-        {adherence && adherence.logged > 0 ? (
+        {adherence && adherence.logged > 0 && (!quiet || proteinLine.length >= 2) ? (
           <>
             <SectionLabel style={styles.sectionLabelSpacing}>PROTEIN</SectionLabel>
             <Card style={styles.card}>
-              <Text style={[styles.proteinHeadline, live.proteinHeadline]}>
-                You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
-              </Text>
+              {/* Quiet (D228 item 2, tier c): the hit count goes; the grams
+                  over time and the target line stay. */}
+              {quiet ? null : (
+                <Text style={[styles.proteinHeadline, live.proteinHeadline]}>
+                  You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
+                </Text>
+              )}
               {/* Protein grams over time (reuses the calorie-trend chart pattern):
                   one point per logged day, faint flat rule at the protein target. */}
               {proteinLine.length >= 2 ? (
@@ -594,15 +618,29 @@ export default function FoodInsightsScreen({ navigation }) {
                   />
                 </View>
               ) : null}
-              <Text style={[styles.cardFootnote, live.cardFootnote]}>
-                {targets?.proteinG
-                  ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
-                  : 'Hit = within target range.'}
-              </Text>
+              {quiet ? (
+                targets?.proteinG ? (
+                  <Text style={[styles.cardFootnote, live.cardFootnote]}>
+                    {`Faint line is your ${targets.proteinG} g target.`}
+                  </Text>
+                ) : null
+              ) : (
+                <Text style={[styles.cardFootnote, live.cardFootnote]}>
+                  {targets?.proteinG
+                    ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
+                    : 'Hit = within target range.'}
+                </Text>
+              )}
             </Card>
           </>
         ) : null}
 
+        {/* Quiet (D228 item 2, tier c): the macro adherence block is hit counts
+            over target ranges throughout, so the whole block goes (label,
+            rows, footnotes and its empty state). Totals live in the averages
+            below. */}
+        {quiet ? null : (
+        <>
         <SectionLabel style={styles.sectionLabelSpacing}>MACRO ADHERENCE</SectionLabel>
         <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
@@ -638,6 +676,8 @@ export default function FoodInsightsScreen({ navigation }) {
             </View>
           )}
         </Card>
+        </>
+        )}
 
         {/* Nutrient averages (build gap #18): plain mean grams/day per macro
             over the window. Adherence-NEUTRAL by design, value in textPrimary,

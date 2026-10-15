@@ -32,6 +32,8 @@ import {
 import { formatBodyWeightShort } from '../lib/units';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import useSafetyState from '../hooks/useSafetyState';
+import { withholdsWeightFigures } from '../lib/safetyState';
 import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
 import { AVATAR_PRESETS, avatarPresetFor } from '../lib/profileAvatarPresets';
 import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
@@ -83,6 +85,36 @@ function StatTile({ label, value, sub, tooltip = null }) {
       {sub ? <Text style={[styles.statSub, live.statSub]}>{sub}</Text> : null}
     </Card>
   );
+}
+
+// D228 item 2, tier c (founder 2026-10-15): under an open ED flag, a failed
+// safety read or the unknown state (never calm alone) the Body weight tile and
+// the "N x body weight" lift lines print no weight and no ratio. The physique
+// tile keeps its own hook gate (usePhotoSuppression) untouched.
+export const BODY_WEIGHT_TILE_KEPT = 'Kept in Body metrics';
+
+/** The Body weight tile's value and sub line. Pure. */
+export function bodyWeightTile({ withheld, weightText, weightTileSub }) {
+  return withheld
+    ? { value: BODY_WEIGHT_TILE_KEPT, sub: null }
+    : { value: weightText, sub: weightTileSub };
+}
+
+/**
+ * A strength-baseline row's second line: the ratio to body weight, then the
+ * distance to the next level. Withheld, the ratio goes and the distance (a
+ * figure in the lift's own unit) stays, as "N units to Level"; with no next
+ * level there is no line. Not withheld, the text is exactly what it was.
+ * Pure.
+ */
+export function liftBaselineSub({ level, row, units, withheld }) {
+  const hasNext = !!(level.nextLabel && level.nextTarget);
+  const distance = hasNext
+    ? `${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}`
+    : null;
+  if (withheld) return distance;
+  const ratio = level.ratio >= 1 ? `${level.ratio.toFixed(2)}x body weight` : `${Math.round(level.ratio * 100)}% body weight`;
+  return distance ? `${ratio} - ${distance}` : ratio;
 }
 
 function scanConfidenceLabel(confidence) {
@@ -273,6 +305,10 @@ export default function AthleteProfileScreen({ navigation }) {
   // screen's card and the other high-risk photo surfaces (calm mode or an
   // open ED-pattern flag). Before this the tile had no suppression at all.
   const photoSuppressed = usePhotoSuppression(user?.id);
+  // D228 item 2, tier c: the weight figures are withheld under an open flag, a
+  // failed read or the unknown state; calm alone leaves them.
+  const safety = useSafetyState(user?.id);
+  const withholdWeight = withholdsWeightFigures(safety);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -408,6 +444,7 @@ export default function AthleteProfileScreen({ navigation }) {
   const weightTileSub = summary.weight
     ? (summary.weightLoggedAt ? `Logged ${formatDate(summary.weightLoggedAt)}` : 'Current profile weight')
     : 'Open Progress to add body weight';
+  const weightTile = bodyWeightTile({ withheld: withholdWeight, weightText, weightTileSub });
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
   // Suppressed (calm mode or an open ED-pattern flag) means this tile shows no
   // body-composition figure AT ALL: not the Volyume Score, and not the body-fat
@@ -528,7 +565,7 @@ export default function AthleteProfileScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.grid}>
-            <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
+            <StatTile label="Body weight" value={weightTile.value} sub={weightTile.sub} />
             <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} tooltip={showPhysiqueScore ? GLOSSARY.volyumeScore : null} />
             <StatTile label="Strength" value={summary.strength?.overallLabel || 'No level yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
             <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
@@ -542,7 +579,9 @@ export default function AthleteProfileScreen({ navigation }) {
               <SkeletonCard height={64} />
               <SkeletonCard height={64} />
             </>
-          ) : summary.keyLifts.length > 0 ? summary.keyLifts.map(({ row, level }) => (
+          ) : summary.keyLifts.length > 0 ? summary.keyLifts.map(({ row, level }) => {
+            const liftSub = liftBaselineSub({ level, row, units, withheld: withholdWeight });
+            return (
             <Card
               key={row.exerciseId}
               style={styles.liftRow}
@@ -551,16 +590,14 @@ export default function AthleteProfileScreen({ navigation }) {
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.liftName, live.liftName]} numberOfLines={1}>{row.name}</Text>
-                <Text style={[styles.liftSub, live.liftSub]}>
-                  {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x body weight` : `${Math.round(level.ratio * 100)}% body weight`}
-                  {level.nextLabel && level.nextTarget ? ` - ${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}` : ''}
-                </Text>
+                {liftSub ? <Text style={[styles.liftSub, live.liftSub]}>{liftSub}</Text> : null}
               </View>
               <View style={[styles.levelPill, live.levelPill]}>
                 <Text style={[styles.levelPillText, live.levelPillText]}>{level.label}</Text>
               </View>
             </Card>
-          )) : (
+            );
+          }) : (
             <EmptyState
               icon="barbell-outline"
               title="Add lifts for strength standards"

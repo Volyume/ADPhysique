@@ -15,6 +15,8 @@ import path from 'path';
 import {
   buildWeekRows, splitLead, formatCoachingRate, ENERGY_LABELS, SORENESS_LABELS,
 } from '../coachOutput/viewCopy';
+import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
+import { deriveSafetyState, withholdsWeightFigures, SAFETY_STATE_UNKNOWN } from '../safetyState';
 
 const FOUNDER_WEEK = {
   sessionsCompleted: 2,
@@ -162,5 +164,60 @@ describe('formatCoachingRate: signed like the 7-day row, from the engine\'s own 
     expect(formatCoachingRate(null)).toBeNull();
     expect(formatCoachingRate(NaN)).toBeNull();
     expect(formatCoachingRate(undefined)).toBeNull();
+  });
+});
+
+
+// D228 item 2, tier c (founder 2026-10-15): under an OPEN FLAG, a failed read or
+// the unknown state the weight chip and the coaching-rate row print the Body
+// metrics line in the chip's place and no rate value; under calm alone, and for
+// everyone who is neither calm nor flagged, both rows are exactly as before.
+describe('buildWeekRows: the weight figures under the safety state (D228 item 2, tier c)', () => {
+  const STATES = {
+    'neither calm nor flagged': deriveSafetyState({ mode: 'normal', edFlag: null }),
+    'calm alone': deriveSafetyState({ mode: 'calm', edFlag: null }),
+    'an open flag': deriveSafetyState({ mode: 'normal', edFlag: { id: 'f' } }),
+    'a failed flag read': deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+    'a failed wellbeing read': deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+    'the unknown state': SAFETY_STATE_UNKNOWN,
+  };
+  const build = (state) => byKey(buildWeekRows({ ...FOUNDER_WEEK, withholdWeight: withholdsWeightFigures(state) }));
+
+  test.each(['neither calm nor flagged', 'calm alone'])('%s: the chip and the rate are exactly as before', (name) => {
+    const rows = buildWeekRows({ ...FOUNDER_WEEK, withholdWeight: withholdsWeightFigures(STATES[name]) });
+    expect(rows).toEqual(buildWeekRows(FOUNDER_WEEK));
+    const k = byKey(rows);
+    expect(k.weight.value).toBe('+1.1 lbs');
+    expect(k.weight.icon).toBe('arrow-up-outline');
+    expect(k.rate.value).toBe('Gaining 0.28%/wk');
+  });
+
+  test.each([
+    'an open flag', 'a failed flag read', 'a failed wellbeing read', 'the unknown state',
+  ])('%s: the Body metrics line in the chip\'s place, no direction glyph, no rate row', (name) => {
+    const k = build(STATES[name]);
+    expect(k.weight.value).toBe(BODY_METRICS_FLAG_LINE);
+    expect(k.weight.value).toBe('Your weigh-ins are kept here.');
+    expect(k.weight.icon).not.toMatch(/arrow/); // the glyph is the direction, so it goes too
+    expect(k.weight.tooltip).toBeNull(); // the gloss points at the coaching trend, which is gone
+    expect(k.weight.mark).toBeNull();
+    expect(k.weight.wrap).toBe(true); // the sentence wraps at the largest text size instead of clipping
+    expect(k.rate).toBeUndefined();
+    const printed = JSON.stringify(Object.values(k));
+    expect(printed).not.toMatch(/1\.1|0\.28|%\/wk|Gaining|Losing|Steady/);
+  });
+
+  test('every other row is untouched by the withhold', () => {
+    const open = build(STATES['an open flag']);
+    const base = byKey(buildWeekRows(FOUNDER_WEEK));
+    for (const key of ['sessions', 'prs', 'food', 'calories', 'energy', 'soreness']) expect(open[key]).toEqual(base[key]);
+    expect(buildWeekRows({ ...FOUNDER_WEEK, withholdWeight: true }).map((r) => r.key))
+      .toEqual(['sessions', 'prs', 'weight', 'food', 'calories', 'energy', 'soreness']);
+  });
+
+  test('the line is the shared constant, not retyped here', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'coachOutput', 'viewCopy.js'), 'utf8');
+    expect(src).toMatch(/import \{ BODY_METRICS_FLAG_LINE \} from '\.\.\/bodyMetricsPolicy';/);
+    expect(src).not.toMatch(/Your weigh-ins are kept here/);
   });
 });

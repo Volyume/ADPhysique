@@ -50,6 +50,17 @@ describe('WeekRow', () => {
   });
 });
 
+describe('WeekRow wrap (D228 item 2, tier c)', () => {
+  const clamp = (tree) => tree.root.findAll((n) => n.props?.numberOfLines !== undefined || n.props?.children === 'Your weigh-ins are kept here.')
+    .find((n) => n.props?.children === 'Your weigh-ins are kept here.');
+  test('a row marked wrap lets its value run to as many lines as the text size needs; any other row keeps its two-line clamp', () => {
+    const wrapped = render(<WeekRow icon="scale-outline" label="Body weight" value="Your weigh-ins are kept here." wrap first />);
+    expect(clamp(wrapped).props.numberOfLines).toBeUndefined();
+    const plain = render(<WeekRow icon="scale-outline" label="Body weight" value="Your weigh-ins are kept here." first />);
+    expect(clamp(plain).props.numberOfLines).toBe(2);
+  });
+});
+
 describe('WeekRowsCard', () => {
   test('renders nothing for no rows', () => {
     expect(render(<WeekRowsCard rows={[]} />).toJSON()).toBeNull();

@@ -17,7 +17,11 @@ const SHARE = fs.readFileSync(path.resolve(__dirname, '../ShareCardScreen.js'), 
 
 describe('the recap offer and the opt-in (D228 item 3)', () => {
   test('the offer reads calm and the open flag', () => {
-    expect(COACH).toContain('const greatWeek = isGreatWeek(output).great && !edPatternOpen && !calmMode;');
+    // The hook's focus-refreshed verdict is read as well (fresh-eyes review
+    // 2026-10-15, item 4): a flag raised or calm turned on after the screen's
+    // own reads cannot leave a stale offer standing.
+    expect(COACH).toContain('const greatWeek = isGreatWeek(output).great && !edPatternOpen && !calmMode && !safety.suppressed;');
+    expect(COACH).toContain('const safety = useSafetyState(user?.id);');
     expect(COACH).toContain('{greatWeek ? (');
   });
   test('the tap carries the body-weight unit', () => {

@@ -1,3 +1,7 @@
+// D228 item 2, tier c: the line Body metrics prints in the weight's place under
+// an open flag, imported so the two screens can never say it differently.
+import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
+
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -152,6 +156,10 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
  *   the screen's already-formatted 7-day trend (units honoured there)
  * @param {{value: string, label: string, tooltip?: string}|null} [input.rate]
  *   the decision's coaching rate, as the engine labelled it
+ * @param {boolean} [input.withholdWeight] D228 item 2, tier c: true under an
+ *   open ED flag, a failed safety read or the unknown state (never calm alone).
+ *   The weight row then prints the Body metrics line in the chip's place, with
+ *   no direction glyph and no gloss, and the coaching-rate row is left out.
  * @param {object|null} [input.context] the coach context the run decided from
  * @param {object|null} [input.checkin] this week's check-in answers
  * @returns {Array<{key: string, icon: string, label: string, value: string,
@@ -159,11 +167,11 @@ const capitalise = (s) => (typeof s === 'string' && s.length ? s.charAt(0).toUpp
  */
 export function buildWeekRows({
   sessionsCompleted = null, sessionsPlanned = null, prsThisWeek = null,
-  weight = null, rate = null, context = null, checkin = null,
+  weight = null, rate = null, context = null, checkin = null, withholdWeight = false,
 } = {}) {
   const rows = [];
-  const push = (key, icon, label, value, mark = null, tooltip = null) => {
-    rows.push({ key, icon, label, value, mark, tooltip });
+  const push = (key, icon, label, value, mark = null, tooltip = null, wrap = false) => {
+    rows.push({ key, icon, label, value, mark, tooltip, ...(wrap ? { wrap: true } : {}) });
   };
 
   // Training.
@@ -182,8 +190,16 @@ export function buildWeekRows({
   if (prs != null && prs > 0) push('prs', 'flash-outline', 'PRs', String(prs), 'good');
 
   // Body weight: never marked.
-  if (weight?.value) push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
-  if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
+  if (withholdWeight) {
+    // Withheld (D228 item 2, tier c): the weekly change and the coaching rate
+    // are weight-change figures, and the arrow is the direction of one. The
+    // row says only what Body metrics says; `wrap` lets the sentence run to
+    // the lines the largest text size needs instead of clipping at two.
+    push('weight', 'scale-outline', 'Body weight', BODY_METRICS_FLAG_LINE, null, null, true);
+  } else {
+    if (weight?.value) push('weight', weight.icon ?? 'remove-outline', weight.label ?? '7-day trend', weight.value, null, weight.tooltip ?? null);
+    if (rate?.value) push('rate', 'analytics-outline', rate.label ?? 'Coaching trend', capitalise(rate.value), null, rate.tooltip ?? null);
+  }
 
   // Food: never marked.
   const coverage = context?.nutrition?.coverage ?? null;

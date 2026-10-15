@@ -11,7 +11,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({ __esModule: true
 const mockGetFlag = jest.fn();
 jest.mock('../database', () => ({ getOpenEdPatternFlag: (...a) => mockGetFlag(...a) }));
 
-const { deriveSafetyState, readSafetyState, SAFETY_STATE_UNKNOWN } = require('../safetyState');
+const { deriveSafetyState, readSafetyState, withholdsWeightFigures, SAFETY_STATE_UNKNOWN } = require('../safetyState');
 const { readEdOrCalmSuppressed, derivePhotoSuppression } = require('../../hooks/usePhotoSuppression');
 
 describe('deriveSafetyState', () => {
@@ -79,5 +79,42 @@ describe('readSafetyState and readEdOrCalmSuppressed', () => {
     expect(await readSafetyState('u', { scoffScore: 2 })).toMatchObject({ calm: true, suppressed: true, scoffPositive: true });
     mockGetItem.mockResolvedValue('normal'); mockGetFlag.mockResolvedValue({ id: 'f' });
     expect(await readSafetyState('u')).toMatchObject({ edFlagOpen: true, suppressed: true });
+  });
+});
+
+// D228 item 2, tier c: the figures arm. Written to FAIL if calm alone ever
+// withholds the weight figures, or if an open flag, a failed read, the unknown
+// state or no state at all ever stops withholding them.
+describe('withholdsWeightFigures (tier c, the figures arm)', () => {
+  test.each([
+    ['neither calm nor flagged', { mode: 'normal', edFlag: null }, false],
+    ['unspecified, no flag', { mode: 'unspecified', edFlag: null }, false],
+    ['calm alone', { mode: 'calm', edFlag: null }, false],
+    ['an open flag', { mode: 'normal', edFlag: { id: 'f' } }, true],
+    ['calm and an open flag', { mode: 'calm', edFlag: { id: 'f' } }, true],
+    ['a failed flag read', { mode: 'normal', edFlag: 'read_failed' }, true],
+    ['a failed wellbeing read', { mode: 'read_failed', edFlag: null }, true],
+  ])('%s', (_n, input, expected) => {
+    expect(withholdsWeightFigures(deriveSafetyState(input))).toBe(expected);
+  });
+
+  test('the unknown state, no state, and a malformed state all withhold (fail closed)', () => {
+    expect(withholdsWeightFigures(SAFETY_STATE_UNKNOWN)).toBe(true);
+    expect(withholdsWeightFigures(undefined)).toBe(true);
+    expect(withholdsWeightFigures(null)).toBe(true);
+    expect(withholdsWeightFigures({})).toBe(true);
+  });
+
+  test('a SCOFF score on its own does not withhold (it is carried, not OR-ed)', () => {
+    expect(withholdsWeightFigures(deriveSafetyState({ mode: 'normal', edFlag: null, scoffScore: 3 }))).toBe(false);
+  });
+
+  test('figures withheld always implies the quiet state (the figures arm is a subset of suppressed)', () => {
+    for (const mode of ['unspecified', 'normal', 'calm', 'read_failed']) {
+      for (const edFlag of [null, { id: 'f' }, 'read_failed']) {
+        const s = deriveSafetyState({ mode, edFlag });
+        if (withholdsWeightFigures(s)) expect(s.suppressed).toBe(true);
+      }
+    }
   });
 });

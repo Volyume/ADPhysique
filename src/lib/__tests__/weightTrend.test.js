@@ -4,7 +4,8 @@
  * Locks the state ladder, the Class B colour caps (no 'act' on a body-weight
  * surface), the ED-flag neutralisation, and the maintenance-estimate gating.
  */
-import { deriveWeightTrend, trendStateFor } from '../weightTrend';
+import { deriveWeightTrend, trendStateFor, ED_KEPT_INSIGHT } from '../weightTrend';
+import { BODY_METRICS_FLAG_LINE } from '../bodyMetricsPolicy';
 
 // Build n EWMA points spaced one day apart, oldest-first.
 function series(n, startKg = 80) {
@@ -50,7 +51,10 @@ describe('deriveWeightTrend', () => {
   test('state 1 under an open ED flag never prints the weigh-in count', () => {
     const vm = deriveWeightTrend({ ewmaData: series(3), edFlagOpen: true });
     expect(vm.state).toBe(1);
-    expect(vm.insight).toBe('Your weigh-ins are kept in Body metrics.');
+    // RE-POINTED (D228 addendum Q2-A, 2026-10-15): the kept line is the one
+    // Body metrics prints, "Your weigh-ins are kept here.".
+    expect(vm.insight).toBe(BODY_METRICS_FLAG_LINE);
+    expect(vm.insight).toBe('Your weigh-ins are kept here.');
     expect(vm.insight).not.toMatch(/\d of 7|weigh-ins:/);
   });
 
@@ -114,7 +118,11 @@ describe('deriveWeightTrend', () => {
     expect(vm.maintenance.label).toBe('From 7 weeks of weigh-ins, assuming you ate to target');
   });
 
-  test('ED flag open: direction-only copy, no rate, no maintenance, no dot', () => {
+  // RE-POINTED (D228 addendum Q2-A, founder 2026-10-15, "Go as recommended"):
+  // under an open flag the Analytics body pillar no longer prints a direction
+  // word ("rising", "drifting down", "broadly stable"); it reads the same
+  // figure-free line Body metrics reads, whatever the rate.
+  test('ED flag open: the Body metrics line, no direction word, no rate, no maintenance, no dot', () => {
     const base = {
       ewmaData: series(30),
       adaptiveBurn: { confidence: 'high', adjustedTDEE: 2400, weeks: 4, actualKgPerWeek: 0.6, expectedKgPerWeek: -0.5 },
@@ -124,19 +132,19 @@ describe('deriveWeightTrend', () => {
     expect(rising.dot).toBeNull();
     expect(rising.showRate).toBe(false);
     expect(rising.maintenance).toBeNull();
-    // RE-ANCHORED D214 addendum 4 (BM-16): no "slightly" at any size; the
-    // one steady rule (0.2 kg a week) decides "broadly stable".
-    expect(rising.insight).toMatch(/has been rising\.$/i);
-    expect(rising.insight).not.toMatch(/slightly/);
-    expect(deriveWeightTrend({ ...base, weeklyChange: 0.15 }).insight).toMatch(/broadly stable/i);
+    expect(rising.insight).toBe(BODY_METRICS_FLAG_LINE);
+    expect(deriveWeightTrend({ ...base, weeklyChange: 0.15 }).insight).toBe(BODY_METRICS_FLAG_LINE);
 
     const falling = deriveWeightTrend({ ...base, weeklyChange: -0.3 });
-    expect(falling.insight).toMatch(/drifting down/i);
+    expect(falling.insight).toBe(BODY_METRICS_FLAG_LINE);
 
     const stable = deriveWeightTrend({ ...base, weeklyChange: 0.01 });
-    expect(stable.insight).toMatch(/broadly stable/i);
-    // no numbers leak into ED-flag copy
-    expect(stable.insight).not.toMatch(/\d/);
+    expect(stable.insight).toBe(BODY_METRICS_FLAG_LINE);
+    // no numbers and no direction leak into ED-flag copy
+    for (const vm of [rising, falling, stable]) {
+      expect(vm.insight).not.toMatch(/\d|rising|drifting|stable|slightly|down|up/i);
+    }
+    expect(ED_KEPT_INSIGHT).toBe(BODY_METRICS_FLAG_LINE);
   });
 
   // COMP-026 (B): the step-trend line.

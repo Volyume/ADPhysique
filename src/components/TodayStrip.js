@@ -54,6 +54,12 @@ export default function TodayStrip({
   // Under an open flag, calm mode or a failed read (Home's own formula) the
   // plausibility prompt carries no figure and no direction.
   withholdFigures = false,
+  // D228 item 2, tier c (founder 2026-10-15): false under Home's own withhold
+  // (an open flag, calm mode, a SCOFF score of 2 or more, a failed read, or no
+  // facts at all), and the box then opens EMPTY instead of carrying the last
+  // weight in. Defaults to true so every other caller is unchanged. It is the
+  // LAST weight that is held back; editing today's own entry still shows it.
+  prefillLastWeight = true,
   savingWeight = false,
   onLogWeight,
   onOpenTrend,
@@ -107,10 +113,10 @@ export default function TodayStrip({
   useEffect(() => {
     if (editing && !hasDraft && !prefilledRef.current) {
       prefilledRef.current = true;
-      setDraftFromKg(todayWeight || lastWeightKg);
+      setDraftFromKg(todayWeight || (prefillLastWeight ? lastWeightKg : null));
     }
     if (!editing) prefilledRef.current = false;
-  }, [editing, hasDraft, todayWeight, lastWeightKg, setDraftFromKg]);
+  }, [editing, hasDraft, todayWeight, lastWeightKg, prefillLastWeight, setDraftFromKg]);
 
   useEffect(() => {
     if (openWeightSignal) setEditing(true);

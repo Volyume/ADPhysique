@@ -292,3 +292,76 @@ describe('TodayStrip plausibility prompt under a withhold', () => {
     expect(home).toMatch(/withholdFigures=\{firstReviewFacts\?\.edFlagOpen !== false\}/);
   });
 });
+
+// D228 item 2, tier c (founder 2026-10-15): under an open flag the box opens
+// EMPTY instead of carrying the last weight in. Home hands the strip
+// prefillLastWeight; the default is true so any other caller is unchanged.
+describe('TodayStrip prefill of the last weight under the safety state (D228 item 2, tier c)', () => {
+  const { deriveSafetyState, SAFETY_STATE_UNKNOWN, withholdsWeightFigures } = require('../../lib/safetyState');
+
+  async function open(props = {}) {
+    const tree = await render({ todayWeight: null, lastWeightKg: 80, ...props });
+    act(() => findByLabel(tree, 'Log morning weight').props.onPress());
+    return tree;
+  }
+  const kgBox = (tree) => tree.root.findAll((n) => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
+
+  test('the prop is omitted (every other caller): the last weight is in the box, as before', async () => {
+    expect(kgBox(await open()).props.value).toBe('80');
+  });
+
+  test('prefillLastWeight true (Home, not suppressed): the last weight is in the box', async () => {
+    expect(kgBox(await open({ prefillLastWeight: true })).props.value).toBe('80');
+  });
+
+  test('prefillLastWeight false (Home, suppressed): the box opens empty, in every body-weight unit', async () => {
+    expect(kgBox(await open({ prefillLastWeight: false })).props.value).toBe('');
+    act(() => { lastTree.unmount(); lastTree = null; });
+    const lbs = await open({ prefillLastWeight: false, bwu: 'lbs' });
+    expect(lbs.root.findAll((n) => n.props.placeholder === 'lbs' && typeof n.props.onChangeText === 'function')[0].props.value).toBe('');
+    act(() => { lastTree.unmount(); lastTree = null; });
+    const st = await open({ prefillLastWeight: false, bwu: 'st' });
+    const field = (label) => st.root.findAll((n) => n.props.accessibilityLabel === label && typeof n.props.onChangeText === 'function')[0];
+    expect(field('Morning weight in stones').props.value).toBe('');
+    expect(field('Morning weight remaining pounds').props.value).toBe('');
+  });
+
+  test('an empty box still logs what the person types', async () => {
+    const onLogWeight = jest.fn();
+    const tree = await open({ prefillLastWeight: false, onLogWeight });
+    act(() => kgBox(tree).props.onChangeText('81.2'));
+    act(() => findByLabel(tree, 'Log morning weight').props.onPress());
+    expect(onLogWeight).toHaveBeenCalledWith(81.2);
+  });
+
+  test('the withhold is about the LAST weight: editing today\'s own entry still shows it', async () => {
+    const tree = await render({ todayWeight: 82.4, lastWeightKg: 80, prefillLastWeight: false });
+    const cell = tree.root.findAll((n) => n.props.accessibilityLabel?.includes('Tap to edit'))[0];
+    act(() => cell.props.onPress());
+    expect(kgBox(tree).props.value).toBe('82.4');
+  });
+
+  test('Home\'s hand-off: not flagged prefills, calm alone included; an open flag, a failed read, the unknown state and no facts do not', () => {
+    // The FLAG tier (D228 item 2, tier c; the lead's ruling at landing): the
+    // last weight is a figure, and calm keeps its figures, so Home passes
+    // withholdsWeightFigures(safety), not its broader prompt formula.
+    const prop = (facts) => facts?.weightFiguresWithheld === false; // the expression Home passes (source-pinned below)
+    const factsFor = (s) => ({ weightFiguresWithheld: withholdsWeightFigures(s) });
+    expect(prop(factsFor(deriveSafetyState({ mode: 'normal', edFlag: null })))).toBe(true);
+    expect(prop(factsFor(deriveSafetyState({ mode: 'calm', edFlag: null })))).toBe(true);
+    expect(prop(factsFor(deriveSafetyState({ mode: 'normal', edFlag: { id: 'f' } })))).toBe(false);
+    expect(prop(factsFor(deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' })))).toBe(false);
+    expect(prop(factsFor(deriveSafetyState({ mode: 'read_failed', edFlag: null })))).toBe(false);
+    expect(prop(factsFor(SAFETY_STATE_UNKNOWN))).toBe(false);
+    expect(prop(null)).toBe(false); // the loader threw: no facts at all, fail closed
+  });
+
+  test('source: Home passes the prop from the same facts as withholdFigures, failing closed; the strip defaults it to true', () => {
+    const home = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8');
+    expect(home).toMatch(/withholdFigures=\{firstReviewFacts\?\.edFlagOpen !== false\}/);
+    expect(home).toMatch(/weightFiguresWithheld: withholdsWeightFigures\(safety\),/);
+    expect(home).toMatch(/prefillLastWeight=\{firstReviewFacts\?\.weightFiguresWithheld === false\}/);
+    expect(SOURCE).toMatch(/prefillLastWeight = true,/);
+    expect(SOURCE).toMatch(/setDraftFromKg\(todayWeight \|\| \(prefillLastWeight \? lastWeightKg : null\)\);/);
+  });
+});

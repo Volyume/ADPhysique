@@ -38,9 +38,11 @@ jest.mock('../../lib/effectiveMaintenanceService', () => ({
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getMorningWeights } from '../../lib/database';
+import { getMorningWeights, getOpenEdPatternFlag } from '../../lib/database';
 import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { CALM_INSIGHT } from '../../lib/weightTrend';
+import { BODY_METRICS_FLAG_LINE } from '../../lib/bodyMetricsPolicy';
+import { bodyPillarCopy } from '../../lib/progress/pillars';
 import useWeightTrend from '../useWeightTrend';
 
 // Twenty daily weigh-ins ending today: state 3, so a normal-mode user sees a
@@ -115,5 +117,68 @@ describe('S6-1 wiring (source guard)', () => {
     expect(src).not.toMatch(/getWellbeingMode\(/);
     expect(src).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)[\s\S]*?\.catch\(\(\)\s*=>\s*'read_failed'\)/);
     expect(src).toMatch(/isCalm\(wellbeingMode\) \|\| wellbeingMode === 'read_failed'/);
+  });
+});
+
+// D228 addendum Q2-A (founder 2026-10-15): the Analytics body pillar under an
+// open flag reads the same figure-free line as Body metrics. The REAL hook and
+// the REAL pillar copy, over the four states the lane names: neither calm nor
+// flagged (unchanged output), calm alone (unchanged: its own calm line), an
+// open flag (the Body metrics line), and a failed read (suppressed, fail
+// closed, as a flag).
+describe('D228 Q2-A: the Analytics body pillar under the safety state', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getMorningWeights.mockResolvedValue(twentyWeighIns());
+    getOpenEdPatternFlag.mockResolvedValue(null);
+    AsyncStorage.getItem.mockResolvedValue('unspecified');
+  });
+
+  test('neither calm nor flagged: the pillar prints its trend and figure exactly as before', async () => {
+    const vm = await mountAndSettle();
+    const pillar = bodyPillarCopy(vm, 'kg');
+    expect(vm.edFlagOpen).toBe(false);
+    expect(vm.insight).not.toBe(BODY_METRICS_FLAG_LINE);
+    expect(vm.insight).not.toBe(CALM_INSIGHT);
+    expect(pillar.evidence).toMatch(/^Trend \d/); // the figure prints
+  });
+
+  test('calm alone: its own calm line and no figure, unchanged by this lane', async () => {
+    AsyncStorage.getItem.mockResolvedValue('calm');
+    const vm = await mountAndSettle();
+    const pillar = bodyPillarCopy(vm, 'kg');
+    expect(pillar.state).toBe(CALM_INSIGHT.replace(/\.$/, ''));
+    expect(pillar.state).toBe('Your weigh-ins are kept in Body metrics, ready when you want them');
+    expect(pillar.evidence).toBeNull();
+  });
+
+  test('an open flag: the Body metrics line, no direction word, no figure', async () => {
+    getOpenEdPatternFlag.mockResolvedValue({ id: 'flag-1' });
+    const vm = await mountAndSettle();
+    const pillar = bodyPillarCopy(vm, 'kg');
+    expect(vm.edFlagOpen).toBe(true);
+    expect(vm.insight).toBe(BODY_METRICS_FLAG_LINE);
+    expect(pillar.state).toBe('Your weigh-ins are kept here');
+    expect(pillar.state).not.toMatch(/drifting|rising|stable|falling|\d/i);
+    expect(pillar.evidence).toBeNull();
+  });
+
+  test('a failed flag read fails closed, as an open flag', async () => {
+    getOpenEdPatternFlag.mockRejectedValue(new Error('sqlite'));
+    const vm = await mountAndSettle();
+    const pillar = bodyPillarCopy(vm, 'kg');
+    expect(vm.insight).toBe(BODY_METRICS_FLAG_LINE);
+    expect(pillar.state).toBe('Your weigh-ins are kept here');
+    expect(pillar.evidence).toBeNull();
+  });
+
+  test('the same line on every flag path: too few weigh-ins and a lapsed trend', async () => {
+    getOpenEdPatternFlag.mockResolvedValue({ id: 'flag-1' });
+    getMorningWeights.mockResolvedValue(twentyWeighIns().slice(0, 3)); // state 1
+    expect((await mountAndSettle()).insight).toBe(BODY_METRICS_FLAG_LINE);
+    getMorningWeights.mockResolvedValue(twentyWeighIns().map((w) => ({ ...w, loggedAt: w.loggedAt - 40 * 86400000 }))); // lapsed
+    const lapsed = await mountAndSettle();
+    expect(lapsed.lapsed).toBe(true);
+    expect(lapsed.insight).toBe(BODY_METRICS_FLAG_LINE);
   });
 });

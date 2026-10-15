@@ -144,11 +144,19 @@ export function calorieConsistencyInsight({ rollups = [], targetKcal = 0 } = {})
  *
  * The coverage line always leads when it is not reliable, because everything
  * beneath it has to be read in that light.
+ *
+ * `quiet` (D228 item 2, tier c): under calm mode, an open ED flag, a failed
+ * safety read or the unknown state the screen passes quiet = true. The
+ * coverage line is a fact about the diary and stays; the two "close to target
+ * on N of M logged days" counts are adherence counts and are left out. Only
+ * what is PRINTED changes: the counting functions above are untouched, and
+ * nothing is said in their place.
  */
-export function buildInsights({ coverage, rollups = [], targets = null } = {}) {
+export function buildInsights({ coverage, rollups = [], targets = null, quiet = false } = {}) {
   const out = [];
   const cov = coverageInsight(coverage);
   if (cov) out.push({ key: 'coverage', ...cov });
+  if (quiet) return out;
   // A handful of logged days is enough to render the coverage fact, but not
   // to generalise about intake across the window. Nutrient conclusions use
   // the stronger reliability gate.

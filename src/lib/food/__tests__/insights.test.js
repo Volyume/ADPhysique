@@ -240,3 +240,29 @@ describe('the user actually SEES it', () => {
     }
   });
 });
+
+// D228 item 2, tier c: under calm mode, an open flag, a failed read or the
+// unknown state the screen asks for the quiet set. The coverage line is a fact
+// about the diary and stays; the two "close to target on N of M" counts go;
+// the counting functions themselves are untouched.
+describe('buildInsights: the quiet set (D228 item 2, tier c)', () => {
+  const { days, rollups, list } = windowOf(14, 14);
+  const coverage = loggingCoverage(days, rollups);
+
+  test('not quiet (the default): the coverage line and both adherence counts, as before', () => {
+    const out = buildInsights({ coverage, rollups: list, targets: TARGETS });
+    expect(out.map((i) => i.key)).toEqual(['coverage', 'protein', 'calories']);
+    expect(buildInsights({ coverage, rollups: list, targets: TARGETS, quiet: false })).toEqual(out);
+  });
+
+  test('quiet: only the coverage line, and no "close to target" sentence anywhere', () => {
+    const out = buildInsights({ coverage, rollups: list, targets: TARGETS, quiet: true });
+    expect(out.map((i) => i.key)).toEqual(['coverage']);
+    expect(JSON.stringify(out)).not.toMatch(/close to target/);
+  });
+
+  test('quiet changes what is printed, never what is counted', () => {
+    expect(proteinInsight({ rollups: list, targetProteinG: 180 }).close).toBe(14);
+    expect(calorieConsistencyInsight({ rollups: list, targetKcal: 2400 }).close).toBe(14);
+  });
+});

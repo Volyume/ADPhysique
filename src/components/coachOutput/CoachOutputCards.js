@@ -47,7 +47,7 @@ const MARK_WORD = Object.freeze({ good: 'on plan', attention: 'worth a look' });
  * One fact of the week. `mark` is 'good' | 'attention' | null; the rows
  * builder (viewCopy.buildWeekRows) never marks a body-weight or a food row.
  */
-export function WeekRow({ icon, label, value, mark = null, tooltip = null, first = false }) {
+export function WeekRow({ icon, label, value, mark = null, tooltip = null, first = false, wrap = false }) {
   const t = useTheme();
   const live = buildLiveStyles(t);
   const markColour = mark === 'good' ? t.colors.success : t.colors.warning;
@@ -63,7 +63,9 @@ export function WeekRow({ icon, label, value, mark = null, tooltip = null, first
         <Text style={[styles.rowLabel, live.rowLabel]} numberOfLines={1}>{label}</Text>
         {tooltip ? <InfoTooltip text={tooltip} size={13} /> : null}
       </View>
-      <Text style={[styles.rowValue, live.rowValue]} numberOfLines={2}>{value}</Text>
+      {/* `wrap` (D228 item 2): a sentence-length value (the withheld weight
+          line) runs to the lines the text size needs rather than clipping. */}
+      <Text style={[styles.rowValue, live.rowValue]} numberOfLines={wrap ? undefined : 2}>{value}</Text>
       <View style={styles.rowMark}>
         {mark ? <Ionicons name={MARK_ICON[mark]} size={18} color={markColour} /> : null}
       </View>

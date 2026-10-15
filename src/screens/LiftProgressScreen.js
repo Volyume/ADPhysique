@@ -34,6 +34,8 @@ import Sparkline from '../components/Sparkline';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import useSafetyState from '../hooks/useSafetyState';
+import { withholdsWeightFigures } from '../lib/safetyState';
 
 // Lifts, the single home for "am I getting stronger". It leads with where you
 // stand (overall strength standing + relative strength per lift), then lists
@@ -108,6 +110,12 @@ export default function LiftProgressScreen({ navigation }) {
     user: s.user,
     units: s.units,
   })));
+  // D228 item 2, tier c (founder 2026-10-15): under an open ED flag, a failed
+  // read or the unknown state (never calm alone) the relative-strength card
+  // says "Based on your body weight" with no figure, and each lift keeps its
+  // level word and drops its "N x your body weight" line.
+  const safety = useSafetyState(user?.id);
+  const withholdWeight = withholdsWeightFigures(safety);
   const [rows, setRows] = useState([]);
   const [bodyWeight, setBodyWeight] = useState(null);
   const [strengthLevels, setStrengthLevels] = useState({});
@@ -408,7 +416,9 @@ export default function LiftProgressScreen({ navigation }) {
               text={'How your best estimated lifts compare to your own body weight.\n\nEach lift has its own thresholds: pressing movements sit lower, squats and deadlifts higher, so the same ratio can mean different levels on different lifts.\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
             />
           </View>
-          <Text style={[styles.sectionSub, live.sectionSub]}>Based on {bodyWeight} {units} body weight</Text>
+          <Text style={[styles.sectionSub, live.sectionSub]}>
+            {withholdWeight ? 'Based on your body weight' : `Based on ${bodyWeight} ${units} body weight`}
+          </Text>
           {/* B4: one row per matched STANDARD CATEGORY (key), named after
               whichever exercise variant produced that category's best ratio
               -- not one row per exercise name. */}
@@ -416,11 +426,13 @@ export default function LiftProgressScreen({ navigation }) {
             <View key={key} style={[styles.strengthRow, live.strengthRow]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{entry.name}</Text>
-                <Text style={[styles.strengthNarrative, live.strengthNarrative]}>
-                  {entry.level.ratio >= 1
-                    ? `${entry.level.ratio.toFixed(2)}x your body weight`
-                    : `${Math.round(entry.level.ratio * 100)}% of your body weight`}
-                </Text>
+                {withholdWeight ? null : (
+                  <Text style={[styles.strengthNarrative, live.strengthNarrative]}>
+                    {entry.level.ratio >= 1
+                      ? `${entry.level.ratio.toFixed(2)}x your body weight`
+                      : `${Math.round(entry.level.ratio * 100)}% of your body weight`}
+                  </Text>
+                )}
               </View>
               <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(entry.level.label), alpha.tint) }]}>
                 <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(entry.level.label) }]}>{entry.level.label}</Text>

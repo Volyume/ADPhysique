@@ -54,6 +54,10 @@ jest.mock('../../components/PeekMenu', () => {
 });
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+// D228 item 2 (tier c): the screen reads the safety state through the hook;
+// the tests drive it with states the real pure derivation produced.
+const mockSafety = { current: null };
+jest.mock('../../hooks/useSafetyState', () => ({ __esModule: true, default: () => mockSafety.current }));
 
 // FlashList: captured, not rendered. The header (search box lives there) and
 // each row are mounted separately from the captured props, the same idiom
@@ -83,6 +87,7 @@ import {
 } from '../../lib/database';
 import { calculate1RM } from '../../lib/algorithms';
 import { getWeeklyLoadWindow, DEFAULT_LOAD_WEEKS } from '../../lib/progressSeries';
+import { deriveSafetyState, SAFETY_STATE_UNKNOWN } from '../../lib/safetyState';
 import LiftProgressScreen from '../LiftProgressScreen';
 
 const LIFT_PROGRESS_SOURCE = require('fs').readFileSync(
@@ -152,6 +157,7 @@ function findSearchInput(headerTree) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSafety.current = deriveSafetyState({ mode: 'normal', edFlag: null });
   capturedListProps = null;
   useAppStore.mockImplementation((selector) =>
     (typeof selector === 'function' ? selector(store) : store));
@@ -747,5 +753,62 @@ describe('LiftProgressScreen -- strength standing collapses by category, not exe
     expect(text).toContain('overall across 1 main lift');
     expect(text).toContain('Barbell Bench Press');
     expect(text).not.toContain('Close-Grip Bench Press');
+  });
+});
+
+// D228 item 2, tier c (founder 2026-10-15): the relative-strength card is
+// written against body weight. Under an OPEN FLAG, a failed read or the
+// unknown state it says "Based on your body weight" with no figure, and each
+// lift keeps its level word and drops its "N x your body weight" line. Under
+// calm alone, and for everyone who is neither calm nor flagged, nothing
+// differs.
+describe('LiftProgressScreen -- relative strength under the safety state (D228 item 2, tier c)', () => {
+  const STATES = {
+    normal: deriveSafetyState({ mode: 'normal', edFlag: null }),
+    calm: deriveSafetyState({ mode: 'calm', edFlag: null }),
+    flag: deriveSafetyState({ mode: 'normal', edFlag: { id: 'f1' } }),
+    flagReadFailed: deriveSafetyState({ mode: 'normal', edFlag: 'read_failed' }),
+    wellbeingReadFailed: deriveSafetyState({ mode: 'read_failed', edFlag: null }),
+    unknown: SAFETY_STATE_UNKNOWN,
+  };
+
+  async function headerText() {
+    getLatestBodyWeight.mockResolvedValue({ weightKg: 80 });
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'w1', weight: 90, reps: 5, at: 1000 }),
+    ]);
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+    return renderedText(capturedListProps.ListHeaderComponent);
+  }
+
+  test('not calm and not flagged: the body weight and the ratio print, as before', async () => {
+    const text = await headerText();
+    expect(text).toContain('Based on 80 kg body weight');
+    expect(text).toMatch(/\d\.\d\dx your body weight|\d+% of your body weight/);
+  });
+
+  test('calm alone: nothing differs', async () => {
+    mockSafety.current = STATES.calm;
+    const text = await headerText();
+    expect(text).toContain('Based on 80 kg body weight');
+    expect(text).toMatch(/\d\.\d\dx your body weight|\d+% of your body weight/);
+  });
+
+  test.each([
+    ['an open flag', 'flag'],
+    ['a failed flag read', 'flagReadFailed'],
+    ['a failed wellbeing read', 'wellbeingReadFailed'],
+    ['the unknown state', 'unknown'],
+  ])('%s: "Based on your body weight" with no figure, no ratio, and the level word stays', async (_l, key) => {
+    mockSafety.current = STATES[key];
+    const text = await headerText();
+    expect(text).toContain('Based on your body weight');
+    expect(text).not.toMatch(/Based on \d/);
+    expect(text).not.toMatch(/80/);
+    expect(text).not.toMatch(/x your body weight|% of your body weight/);
+    expect(text).toContain('Barbell Bench Press'); // the lift row stays
+    expect(text).toMatch(/(Beginner|Novice|Intermediate|Advanced|Elite)/); // with its level word
+    expect(text).toContain('overall across 1 main lift'); // the standing summary is a level, not a ratio
   });
 });
