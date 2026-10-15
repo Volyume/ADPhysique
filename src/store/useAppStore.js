@@ -2357,8 +2357,19 @@ const useAppStore = create((set, get) => ({
     if (!user?.id) return;
     const updated = { ...(userProfile || {}), calorieBank: bank ?? null };
     const key = PROFILE_KEY_PFX + user.id;
-    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    const value = JSON.stringify(updated);
+    try { await AsyncStorage.setItem(key, value); } catch (_) {}
+    // D228 addendum Q6 (founder, 2026-10-15): a real user write. Stamp the
+    // guarded blob so a stale device's bulk push cannot out-fresh it, and
+    // push it now, as the other profile writers do; without the stamp the
+    // bank rode the next bulk push with the blob's OLD time and the other
+    // phone dropped it as not newer.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/sync').notePrefWrite(key);
+    } catch (_) { /* best effort */ }
     set({ userProfile: updated });
+    pushPrefSoon(user.id, key, value);
   },
 
   // Bar weight, persisted alongside units and hydrated from the synced

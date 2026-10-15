@@ -28,7 +28,8 @@ jest.mock('../../lib/database', () => ({
 // pushPrefSoon defers a syncUserPref call onto a 0ms timer; without this
 // the real (heavy) sync module loads after the test environment is torn
 // down. The push itself is not what this suite pins.
-jest.mock('../../lib/sync', () => ({ syncUserPref: jest.fn(() => Promise.resolve()) }));
+const mockNotePrefWrite = jest.fn();
+jest.mock('../../lib/sync', () => ({ syncUserPref: jest.fn(() => Promise.resolve()), notePrefWrite: (...a) => mockNotePrefWrite(...a) }));
 
 const mockSetTelemetryEnabled = jest.fn();
 jest.mock('../../lib/telemetry/transport', () => ({
@@ -145,5 +146,34 @@ describe('F-3: the Share usage data toggle still controls telemetry on this devi
     await useAppStore.getState().loadPrivacyPrefs();
     expect(useAppStore.getState().privacy.analyticsOptOut).toBe(false);
     expect(mockSetTelemetryEnabled).toHaveBeenLastCalledWith(true);
+  });
+});
+
+// D228 addendum Q6 (founder, 2026-10-15): the calorie bank is a real user
+// write, so it stamps the guarded profile blob and pushes at once; before,
+// it rode the next bulk push with the blob's old time and a second phone
+// dropped it as not newer. Written to FAIL without the stamp and the push.
+describe('Q6: setCalorieBank stamps the blob and pushes it', () => {
+  test('a bank write stamps the profile key and schedules a push of the blob carrying the bank', async () => {
+    mockNotePrefWrite.mockClear();
+    const { syncUserPref } = require('../../lib/sync');
+    syncUserPref.mockClear();
+    useAppStore.setState({ user: { id: 'u-bank' }, userProfile: { name: 'A' } });
+    const bank = { weekStartKey: '2026-10-12', bigDayKey: '2026-10-17', perDayDeltaKcal: 80, appliedAt: 1 };
+    await useAppStore.getState().setCalorieBank(bank);
+    const key = `@volyume_user_profile_u-bank`;
+    expect(mockNotePrefWrite).toHaveBeenCalledWith(key);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(syncUserPref).toHaveBeenCalled();
+    const call = syncUserPref.mock.calls.find((c) => c[1] === key);
+    expect(call).toBeDefined();
+    expect(JSON.parse(call[2]).calorieBank).toEqual(bank);
+    expect(useAppStore.getState().userProfile.calorieBank).toEqual(bank);
+  });
+  test('an unauthenticated store writes nothing', async () => {
+    mockNotePrefWrite.mockClear();
+    useAppStore.setState({ user: null });
+    await useAppStore.getState().setCalorieBank({ weekStartKey: 'x' });
+    expect(mockNotePrefWrite).not.toHaveBeenCalled();
   });
 });
