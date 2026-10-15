@@ -16,6 +16,7 @@
  * shows, not about the RPC.
  */
 
+import { useState } from 'react';
 import { create, act } from 'react-test-renderer';
 
 // GymDetailSheet's BottomSheet reads insets unconditionally on mount (not
@@ -128,6 +129,7 @@ jest.mock('../../lib/community', () => ({
     'Report what breaks this.',
   ],
   suggestHandle: jest.fn(),
+  ensureBodyProfilePushed: jest.fn(),
   readOnboardingChoice: jest.fn(),
   readPendingJoin: jest.fn(),
   clearPendingJoin: jest.fn(),
@@ -136,10 +138,13 @@ jest.mock('../../lib/community', () => ({
 import {
   checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, publishSharingSettings,
   listMyGroups, suggestHandle, readOnboardingChoice, readPendingJoin, clearPendingJoin,
+  ensureBodyProfilePushed,
 } from '../../lib/community';
 import { search as searchGyms, setGyms, get as getGym } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
-import CommunityJoinScreen from '../CommunityJoinScreen';
+import CommunityJoinScreen, {
+  joinAgeState, AGE_WAIT_MS, AGE_LOADING_LINE, AGE_UNKNOWN_LINE,
+} from '../CommunityJoinScreen';
 
 function flattenText(node) {
   if (node == null) return '';
@@ -166,7 +171,9 @@ function button(tree, label) {
 }
 
 async function mount() {
-  const navigation = { navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn() };
+  const navigation = {
+    navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn(), addListener: jest.fn(() => jest.fn()),
+  };
   let tree;
   await act(async () => {
     tree = create(<CommunityJoinScreen navigation={navigation} route={{ params: {} }} />);
@@ -196,6 +203,7 @@ beforeEach(() => {
   readOnboardingChoice.mockResolvedValue(null);
   readPendingJoin.mockResolvedValue(null);
   clearPendingJoin.mockResolvedValue(undefined);
+  ensureBodyProfilePushed.mockResolvedValue(true);
   useCommunityMe.mockReturnValue({
     me: { profile: null, is_minor: false }, loading: false, error: null, refresh: jest.fn(),
   });
@@ -446,9 +454,17 @@ describe('the training profile step (SD-22)', () => {
     );
   });
 
+  // D228 addendum Q3-A re-pointed this pin to the same truth. It used to press
+  // Create while `me` was still loading; Create now WAITS while the age loads
+  // (pinned in the Q3-A block below), so the state in which an age that is not
+  // known yet is created from is the one after the wait: the body profile
+  // could not be confirmed on the cloud, so the server's under-18 answer may
+  // be its fail-closed default for an absent date. That fails closed too:
+  // Create says off unless the person chose on, and followers only.
   test('an age not known yet reads as under 18 (fail closed): Create says off unless the person chose on', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
     useCommunityMe.mockReturnValue({
-      me: { profile: null, is_minor: true }, loading: true, error: null, refresh: jest.fn(),
+      me: { profile: null, is_minor: true }, loading: false, error: null, refresh: jest.fn(),
     });
     const { tree } = await mount();
     await type(tree, 'Username', 'rowan_lifts');
@@ -897,6 +913,347 @@ describe('a pending join pre-fills instead, and supersedes the queue', () => {
     expect(clearPendingJoin).toHaveBeenCalledWith('u1');
   });
 });
+// ─── D228 addendum Q3-A (2026-10-15): the age is awaited, never assumed ───
+//
+// `emptyMe()` fails CLOSED (an unknown age is a minor), which is right and
+// stays. What this block pins is that the unknown is no longer SILENT: while
+// the age loads the screen says so and waits, and when it cannot be read it
+// says that too, and keeps the safe defaults.
+//
+// The screen reads no date of birth (the Community privacy guard forbids
+// it). The server computes `is_minor` from the CLOUD copy of the body
+// profile and answers under 18 for an absent date, so the screen sends that
+// row (ensureBodyProfilePushed, forced) and asks `me` again. The three states:
+//
+//   known    the server answered adult, or answered under 18 after the row
+//            was confirmed on the cloud and the read back did not fail
+//            (nothing new is shown);
+//   loading  `me` has not answered, or the push-then-read has not finished;
+//   unknown  the server says under 18 but the row could not be confirmed on
+//            the cloud, or the read back failed, or the wait ran out.
+describe('D228 addendum Q3-A: Community Join waits for the age', () => {
+  const meHook = (me, extra = {}) => ({
+    me: { profile: null, ...me }, loading: false, error: null, refresh: jest.fn(), ...extra,
+  });
+  const text = (tree) => flattenText(tree.toJSON());
+  const shareSwitch = (tree) => tree.root.findAll(
+    (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+  )[0];
+  const createButton = (tree) => button(tree, 'Create my Community profile');
+  async function fillAndCreate(tree) {
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { createButton(tree).props.onPress(); });
+    await flush();
+  }
+
+  test('the words are the ruled ones', () => {
+    expect(AGE_LOADING_LINE).toBe('Loading your details');
+    expect(AGE_UNKNOWN_LINE).toBe(
+      'Your age has not reached Community yet, so sharing starts off and your profile is followers only. You can change both once it has.',
+    );
+    expect(AGE_WAIT_MS).toBe(8000);
+    expect(`${AGE_LOADING_LINE}${AGE_UNKNOWN_LINE}`).not.toMatch(/—/);
+  });
+
+  describe('the derivation (pure)', () => {
+    const adultMe = { is_minor: false };
+    const minorMe = { is_minor: true };
+    test.each([
+      // [name, input, expected]
+      ['the server read a real adult date of birth', { me: adultMe, meLoading: false, meError: null, settle: null }, 'known'],
+      ['adult from a cached answer, even while a re-read is in flight', { me: adultMe, meLoading: true, meError: null, settle: null }, 'known'],
+      ['me not loaded yet', { me: minorMe, meLoading: true, meError: null, settle: null }, 'loading'],
+      ['loaded, the body profile push-then-read has not finished', { me: minorMe, meLoading: false, meError: null, settle: null }, 'loading'],
+      ['under 18 from a date the server holds: the push landed and the read back worked', { me: minorMe, meLoading: false, meError: null, settle: { pushed: true } }, 'known'],
+      ['the push could not be confirmed: the server may only be failing closed on an absent date', { me: minorMe, meLoading: false, meError: null, settle: { pushed: false } }, 'unknown'],
+      ['the push landed but the read back failed: the answer is not the server\'s', { me: minorMe, meLoading: false, meError: 'offline', settle: { pushed: true } }, 'unknown'],
+      ['nothing could be reached at all', { me: minorMe, meLoading: false, meError: 'offline', settle: { pushed: false } }, 'unknown'],
+    ])('%s -> %s', (_name, input, expected) => {
+      expect(joinAgeState({ expired: false, ...input })).toBe(expected);
+    });
+
+    test('the wait runs out: still loading falls to unknown', () => {
+      expect(joinAgeState({
+        me: minorMe, meLoading: true, meError: null, settle: null, expired: true,
+      })).toBe('unknown');
+      expect(joinAgeState({
+        me: minorMe, meLoading: false, meError: null, settle: null, expired: true,
+      })).toBe('unknown');
+    });
+
+    test('the wait running out never invents an adult, and does not undo a confirmed under-18 answer', () => {
+      expect(joinAgeState({
+        me: minorMe, meLoading: true, meError: null, settle: null, expired: true,
+      })).not.toBe('known');
+      expect(joinAgeState({
+        me: minorMe, meLoading: false, meError: null, settle: { pushed: true }, expired: true,
+      })).toBe('known');
+    });
+  });
+
+  test('an adult whose age the server knows: the layout is unchanged, no new line, nothing re-sent', async () => {
+    useCommunityMe.mockReturnValue(meHook({ is_minor: false }));
+    const { tree } = await mount();
+
+    const out = text(tree);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain('Under 18');
+    expect(out).toContain('Anyone');
+    expect(out).toContain('People I approve');
+    expect(out).toContain('Anyone signed in can follow you and see what you post.');
+    expect(shareSwitch(tree).props.value).toBe(true);
+    expect(ensureBodyProfilePushed).not.toHaveBeenCalled();
+
+    await fillAndCreate(tree);
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({
+      visibility: 'public', share_sessions: true, sessions_audience: 'everyone',
+    }));
+  });
+
+  test('while the details load: the line is shown, the chips and the sharing rows are not, Create is disabled and nothing is sent', async () => {
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { loading: true }));
+    const { tree } = await mount();
+
+    const out = text(tree);
+    expect(out).toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain('Anyone');
+    expect(out).not.toContain('People I approve');
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain('Under 18');
+    expect(shareSwitch(tree)).toBeUndefined();
+    // Nothing is written on the person's behalf while the age is unread.
+    expect(ensureBodyProfilePushed).not.toHaveBeenCalled();
+    expect(upsertProfile).not.toHaveBeenCalled();
+    expect(syncTrainingProfile).not.toHaveBeenCalled();
+    expect(publishSharingSettings).not.toHaveBeenCalled();
+
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    expect(createButton(tree).props.disabled).toBe(true);
+    await act(async () => { createButton(tree).props.onPress(); });
+    await flush();
+    expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  test('a load that never resolves falls to unknown after the wait, says so, and keeps the safe defaults', async () => {
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { loading: true }));
+    const { tree } = await mount();
+    expect(text(tree)).toContain(AGE_LOADING_LINE);
+
+    await act(async () => { jest.advanceTimersByTime(AGE_WAIT_MS); });
+    await flush();
+
+    const out = text(tree);
+    expect(out).toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain('Under 18');
+    await fillAndCreate(tree);
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({
+      share_sessions: false, sessions_audience: 'followers', visibility: 'followers',
+    }));
+  });
+
+  test('the layout arrives when the age does: loading becomes the adult layout with no line left behind', async () => {
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { loading: true }));
+    const { tree, navigation } = await mount();
+    expect(text(tree)).toContain(AGE_LOADING_LINE);
+
+    useCommunityMe.mockReturnValue(meHook({ is_minor: false }));
+    await act(async () => {
+      tree.update(<CommunityJoinScreen navigation={navigation} route={{ params: {} }} />);
+    });
+    await flush();
+
+    const out = text(tree);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).toContain('Anyone');
+    expect(shareSwitch(tree).props.value).toBe(true);
+  });
+
+  test('loaded with a stale under-18 answer: the body profile is pushed (forced), then me is re-read from the server', async () => {
+    let release;
+    ensureBodyProfilePushed.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+    const refresh = jest.fn(async () => {
+      // The server now has the date: the next read answers adult.
+      useCommunityMe.mockReturnValue(meHook({ is_minor: false }, { refresh }));
+    });
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { refresh }));
+    const { tree } = await mount();
+
+    // The push is in flight: still loading, Create waits, the re-read has not happened.
+    expect(ensureBodyProfilePushed).toHaveBeenCalledWith('u1', { force: true });
+    expect(text(tree)).toContain(AGE_LOADING_LINE);
+    expect(refresh).not.toHaveBeenCalled();
+
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    expect(createButton(tree).props.disabled).toBe(true);
+
+    await act(async () => { release(true); });
+    await flush();
+
+    expect(refresh).toHaveBeenCalledWith(true);
+    const out = text(tree);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).toContain('Anyone');
+    expect(createButton(tree).props.disabled).toBe(false);
+  });
+
+  test('unknown (the body profile could not be confirmed): the line, the safe defaults, and a create that never says everyone', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    const refresh = jest.fn();
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { refresh }));
+    const { tree } = await mount();
+
+    const out = text(tree);
+    expect(out).toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    // It does not tell the person they are under 18; it says the age has not arrived.
+    expect(out).not.toContain('Under 18');
+    expect(out).not.toContain('People I approve');
+    expect(out).toContain('You approve every follower before they see what you post.');
+    expect(shareSwitch(tree).props.value).toBe(false);
+    expect(refresh).toHaveBeenCalledWith(true);
+
+    await fillAndCreate(tree);
+    expect(upsertProfile).toHaveBeenCalledTimes(1);
+    const sent = upsertProfile.mock.calls[0][0];
+    expect(sent).toEqual(expect.objectContaining({
+      share_sessions: false, sessions_audience: 'followers', visibility: 'followers',
+    }));
+    expect(JSON.stringify(sent)).not.toContain('everyone');
+    expect(JSON.stringify(sent)).not.toContain('public');
+    expect(publishSharingSettings).not.toHaveBeenCalled();
+  });
+
+  test('unknown: the push landed but the read back failed, which is not the server\'s answer either', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(true);
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { error: 'unavailable' }));
+    const { tree } = await mount();
+
+    expect(text(tree)).toContain(AGE_UNKNOWN_LINE);
+    expect(text(tree)).not.toContain('Under 18');
+  });
+
+  test('unknown: switched on by the person, sharing is on but still to followers only', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }));
+    const { tree } = await mount();
+    await act(async () => { shareSwitch(tree).props.onValueChange(true); });
+    await flush();
+    await fillAndCreate(tree);
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({
+      share_sessions: true, sessions_audience: 'followers', visibility: 'followers',
+    }));
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: true, sessions_audience: 'followers' }),
+    );
+  });
+
+  test('a real minor, online: the server reads under 18 from the row just confirmed, so the screen is exactly what it was, with no new line', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(true);
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }));
+    const { tree } = await mount();
+
+    const out = text(tree);
+    expect(out).toContain('Under 18: your profile is followers-only and does not appear in search.');
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).not.toContain('People I approve');
+    expect(shareSwitch(tree).props.value).toBe(false);
+
+    await fillAndCreate(tree);
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({
+      share_sessions: false, sessions_audience: 'followers', visibility: 'followers',
+    }));
+  });
+
+  // Not a promise about what a minor should see: a statement of what the
+  // screen can honestly say. Offline, "under 18" and "no date on the server"
+  // cannot be told apart without reading the date of birth, which Community
+  // files never do, so both get the same true line and the same safe defaults.
+  test('offline, a minor and a missing age read alike: one true line, the same safe defaults', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    useCommunityMe.mockReturnValue(meHook({ is_minor: true }, { error: 'offline' }));
+    const { tree } = await mount();
+
+    expect(text(tree)).toContain(AGE_UNKNOWN_LINE);
+    expect(text(tree)).not.toContain('Under 18');
+    expect(shareSwitch(tree).props.value).toBe(false);
+  });
+
+  test('coming back to the screen re-reads the age, and an age that has since arrived replaces the line', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    // A hook double with real state, so a re-read re-renders the screen the
+    // way the real hook's setMe does.
+    let serverAge = null;
+    const refresh = jest.fn();
+    useCommunityMe.mockImplementation(() => {
+      const [me, setMe] = useState({ profile: null, is_minor: true });
+      refresh.mockImplementation(async () => {
+        if (serverAge === 'adult') setMe({ profile: null, is_minor: false });
+      });
+      return { me, loading: false, error: null, refresh };
+    });
+    const { tree, navigation } = await mount();
+    expect(text(tree)).toContain(AGE_UNKNOWN_LINE);
+
+    const focusCall = navigation.addListener.mock.calls.find(([event]) => event === 'focus');
+    expect(focusCall).toBeTruthy();
+    const onFocus = focusCall[1];
+
+    ensureBodyProfilePushed.mockClear();
+    refresh.mockClear();
+    ensureBodyProfilePushed.mockResolvedValue(true);
+    serverAge = 'adult';
+    await act(async () => { onFocus(); });
+    await flush();
+
+    expect(ensureBodyProfilePushed).toHaveBeenCalledWith('u1', { force: true });
+    expect(refresh).toHaveBeenCalledWith(true);
+    const out = text(tree);
+    expect(out).not.toContain(AGE_UNKNOWN_LINE);
+    expect(out).not.toContain(AGE_LOADING_LINE);
+    expect(out).toContain('Anyone');
+  });
+
+  test('a re-read on focus never puts a settled screen back into loading, even while the hook reports loading', async () => {
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    // The real hook sets `loading` true for the whole of a refresh.
+    let finishRefresh;
+    const refresh = jest.fn();
+    useCommunityMe.mockImplementation(() => {
+      const [loading, setLoading] = useState(false);
+      refresh.mockImplementation(async () => {
+        setLoading(true);
+        await new Promise((resolve) => { finishRefresh = resolve; });
+        setLoading(false);
+      });
+      return { me: { profile: null, is_minor: true }, loading, error: null, refresh };
+    });
+    const { tree, navigation } = await mount();
+    // The first settle's own refresh is waiting; let it finish.
+    await act(async () => { finishRefresh(); });
+    await flush();
+    expect(text(tree)).toContain(AGE_UNKNOWN_LINE);
+
+    const onFocus = navigation.addListener.mock.calls.find(([event]) => event === 'focus')[1];
+    await act(async () => { onFocus(); });
+    await flush();
+    // The re-read is in flight and the hook says loading: the screen holds still.
+    expect(text(tree)).toContain(AGE_UNKNOWN_LINE);
+    expect(text(tree)).not.toContain(AGE_LOADING_LINE);
+    expect(createButton(tree)).toBeTruthy();
+    await act(async () => { finishRefresh(); });
+    await flush();
+  });
+});
+
 const stripped = (f) => require('fs').readFileSync(require('path').join(__dirname, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 function headerTitles(tree) {

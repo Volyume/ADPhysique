@@ -23,6 +23,24 @@
  * toggles reuse `bandRows` from the Training profile screen, which is
  * also where the SAME preview line is built, so the two screens can never
  * say different things about what would be shared.
+ *
+ * The person's age (D228 addendum Q3-A): an unknown age is treated as under
+ * 18 (D212), and that stays. What changed is that the unknown is no longer
+ * silent. While `me` has not answered, or the body profile (which carries the
+ * date of birth) has not reached the server, the screen says "Loading your
+ * details" in place of the follow choice and the sharing rows and holds
+ * "Create profile". If the age could not be put on the server, or read back
+ * from it (or the wait runs out), the screen says that, in one line, and
+ * keeps the safe defaults: sharing off, followers only. A person the server
+ * has read as under 18 from a date it was just sent sees what they always
+ * did.
+ *
+ * Nothing here reads the date of birth: no Community file may (the privacy
+ * guard names it). The server computes `is_minor` from the cloud copy of the
+ * body profile, so the screen sends that row (`ensureBodyProfilePushed`, the
+ * same push every profile write already makes) and asks `me` again; the push
+ * landing and the read succeeding is what lets an answer of "under 18" be
+ * believed.
  */
 
 import { Fragment, useCallback, useEffect, useRef, useState, useMemo } from 'react';
@@ -60,6 +78,7 @@ import {
   COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
   listMyGroups, COMMUNITY_RULES_SUMMARY,
   suggestHandle, readOnboardingChoice, clearOnboardingChoice, readPendingJoin, clearPendingJoin,
+  ensureBodyProfilePushed,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 import { RESTRICTION_REFUSALS } from '../lib/community/restriction';
@@ -87,6 +106,46 @@ const REFUSALS = {
   invalid_input: 'Check the username and name, then try again.',
 };
 
+// D228 addendum Q3-A. The longest the screen waits for the person's age
+// before it stops saying "Loading" and says it could not read it. The
+// `useCommunityMe` hook has no timeout of its own, so the wait is set here.
+export const AGE_WAIT_MS = 8000;
+export const AGE_LOADING_LINE = 'Loading your details';
+export const AGE_UNKNOWN_LINE = 'Your age has not reached Community yet, so sharing starts off and your profile is followers only. You can change both once it has.';
+
+/**
+ * Which of three states the person's age is in on this screen (D228
+ * addendum Q3-A). Pure. It reads no date of birth: the server's answer
+ * (`is_minor`) is the only age fact, and what this adds is whether that
+ * answer can be believed.
+ *
+ *   'known'    nothing new is shown. Either the server answered adult (it
+ *              only does from a real date of birth), or it answered under
+ *              18 AFTER this screen put the body profile on the cloud and
+ *              read `me` back without a failure, so that answer came from a
+ *              date it holds.
+ *   'loading'  `me` has not answered, or the push-then-read has not finished.
+ *   'unknown'  the server says under 18 but the body profile could not be
+ *              confirmed on the cloud, or the read back failed, or the wait
+ *              ran out: the answer may be the server's fail-closed default
+ *              for an absent date, not a fact about this person. The safe
+ *              defaults stay, and the screen says so.
+ *
+ * It never returns an adult layout without a server answer of adult.
+ *
+ * @param {{me: object, meLoading: boolean, meError: (string|null),
+ *   settle: ({pushed: boolean}|null), expired: boolean}} input `settle` is
+ *   null until the push-then-read has finished, then says whether the body
+ *   profile row was confirmed on the cloud; `expired` once the wait is over.
+ * @returns {'known'|'loading'|'unknown'}
+ */
+export function joinAgeState({ me, meLoading, meError, settle, expired }) {
+  if (me?.is_minor === false) return 'known';
+  if (!expired && (meLoading || !settle)) return 'loading';
+  if (settle?.pushed && !meError) return 'known';
+  return 'unknown';
+}
+
 export default function CommunityJoinScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
@@ -94,7 +153,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
   // below -- `emptyMe()` now defaults `is_minor` to true (unknown means
   // minor until the server says otherwise), so an adult's FIRST render,
   // before this resolves, must not show minor-specific copy about them.
-  const { me, loading: meLoading, refresh } = useCommunityMe();
+  const { me, loading: meLoading, error: meError, refresh } = useCommunityMe();
   const next = route?.params?.next ?? null;
 
   const [handle, setHandle] = useState('');
@@ -156,6 +215,83 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [shareChosen, setShareChosen] = useState(false);
   const [tpLoading, setTpLoading] = useState(true);
   const uid = currentUserId();
+
+  // D228 addendum Q3-A: the age is awaited, never assumed. `ageSettle` is
+  // null until the body profile has been sent and `me` read again (or found
+  // not to need it), then says whether the row was confirmed on the cloud;
+  // `ageWaitOver` caps the wait (AGE_WAIT_MS).
+  const [ageSettle, setAgeSettle] = useState(null);
+  const [ageWaitOver, setAgeWaitOver] = useState(false);
+  const ageState = joinAgeState({
+    me,
+    // Only the first load is waited for: a later re-read (on focus) must not
+    // put a settled screen back into loading.
+    meLoading: meLoading && !ageSettle,
+    meError,
+    settle: ageSettle,
+    expired: ageWaitOver,
+  });
+  const ageLoading = ageState === 'loading';
+  const ageUnknown = ageState === 'unknown';
+  const ageRun = useRef({ started: false, busy: false, mounted: true });
+  const latestMe = useRef(me);
+  latestMe.current = me;
+
+  useEffect(() => {
+    const run = ageRun.current;
+    run.mounted = true;
+    return () => { run.mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAgeWaitOver(true), AGE_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // The server reads the date of birth from the CLOUD copy of the body
+  // profile (D159), so when `me` does not already say adult the row is sent
+  // first and `me` is then read again from the server. Never concurrent with
+  // the hook's own first load (this starts after it), so a slow first answer
+  // cannot land on top of the fresh one. Failures are not errors here: what
+  // the push returned and whether the read failed are the state's inputs.
+  const settleAge = useCallback(async () => {
+    const run = ageRun.current;
+    if (run.busy) return;
+    run.busy = true;
+    let pushed = false;
+    try {
+      if (latestMe.current?.is_minor !== false) {
+        try {
+          pushed = !!(await ensureBodyProfilePushed(uid, { force: true }));
+        } catch (_e) { pushed = false; /* never throws in practice; false is the honest answer */ }
+        await refresh(true);
+      }
+    } catch (_e) { /* the hook reports its own failures as a code; the state copes */ } finally {
+      run.busy = false;
+      // A push that once landed stays landed: a later re-read (on focus,
+      // perhaps offline) cannot turn a confirmed age back into "unknown".
+      if (run.mounted) setAgeSettle((prev) => ({ pushed: pushed || !!prev?.pushed }));
+    }
+  }, [uid, refresh]);
+
+  useEffect(() => {
+    if (meLoading || ageRun.current.started) return;
+    ageRun.current.started = true;
+    settleAge();
+  }, [meLoading, settleAge]);
+
+  // Coming back to this screen (from the rules, the gym finder) asks again,
+  // so an age that has reached the server meanwhile replaces the line without
+  // a retry button. Silent: it never puts a settled screen back to loading.
+  const rereadAge = useRef(null);
+  rereadAge.current = () => {
+    if (!ageRun.current.started) return undefined;
+    return settleAge();
+  };
+  useEffect(() => {
+    const off = navigation?.addListener?.('focus', () => { rereadAge.current?.(); });
+    return typeof off === 'function' ? off : undefined;
+  }, [navigation]);
 
   // F5 fix: same as the Training profile screen -- "My groups" is a
   // doomed, silent choice with no groups to post to. Starts enabled and
@@ -306,7 +442,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
   // `create()` is what knows the truth, and its refusals (REFUSALS.offline,
   // handle_taken) say what actually happened.
   const canCreate = (handleState === 'available' || handleState === 'unknown')
-    && displayName.trim().length > 0 && !busy;
+    && displayName.trim().length > 0 && !busy
+    // D228 addendum Q3-A: nothing is sent while the person's age is still
+    // being read.
+    && !ageLoading;
 
   const create = useCallback(async () => {
     if (!canCreate) return;
@@ -316,7 +455,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
         handle: handle.trim().toLowerCase(),
         display_name: displayName.trim(),
         avatar_preset: preset,
-        visibility,
+        // D228 addendum Q3-A: followers only is what the server makes of a
+        // minor, and of an age it does not hold; it is sent as that, never
+        // as a "public" choice the person was not shown.
+        visibility: isMinor ? 'followers' : visibility,
         discipline_keys: disciplineKeys,
         // Passed explicitly as well as by the client library: creating the
         // profile IS the consent record, so the version being accepted is
@@ -580,38 +722,55 @@ export default function CommunityJoinScreen({ navigation, route }) {
         <Band>
           <SectionHeader title="Who can follow you" />
           <BandBody>
-            {/* An under-18 profile is followers-only, server-side. A control
-                that cannot change anything is not offered: the note carries
-                the reason instead (product review 2026-09-06). */}
-            {isMinor ? null : (
-              <View style={styles.chipRow} accessibilityLabel="Who can follow you">
-                <Chip
-                  label="Anyone"
-                  selected={visibility === 'public'}
-                  onPress={() => setVisibility('public')}
-                  accessibilityRole="radio"
-                />
-                <Chip
-                  label="People I approve"
-                  selected={visibility === 'followers'}
-                  onPress={() => setVisibility('followers')}
-                  accessibilityRole="radio"
-                />
-              </View>
+            {ageLoading ? (
+              /* D228 addendum Q3-A: not the under-18 layout, not the adult
+                 one: the choice appears when the age is known. */
+              <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>{AGE_LOADING_LINE}</Text>
+            ) : (
+              <>
+                {/* An under-18 profile is followers-only, server-side. A control
+                    that cannot change anything is not offered: the note carries
+                    the reason instead (product review 2026-09-06). */}
+                {isMinor ? null : (
+                  <View style={styles.chipRow} accessibilityLabel="Who can follow you">
+                    <Chip
+                      label="Anyone"
+                      selected={visibility === 'public'}
+                      onPress={() => setVisibility('public')}
+                      accessibilityRole="radio"
+                    />
+                    <Chip
+                      label="People I approve"
+                      selected={visibility === 'followers'}
+                      onPress={() => setVisibility('followers')}
+                      accessibilityRole="radio"
+                    />
+                  </View>
+                )}
+                <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
+                  {visibility === 'public' && !isMinor
+                    ? 'Anyone signed in can follow you and see what you post.'
+                    : 'You approve every follower before they see what you post.'}
+                </Text>
+                {ageUnknown ? (
+                  /* D228 addendum Q3-A: the age could not be read, which is
+                     not the same as being under 18, so it is not said as
+                     that. One line, above the sharing rows below. */
+                  <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>{AGE_UNKNOWN_LINE}</Text>
+                ) : (
+                  <>
+                    {/* F12 fix: never shown until `me` has genuinely loaded --
+                        `isMinor` alone defaults true (unknown means minor) and
+                        would otherwise flash this at an adult on first render. */}
+                    {!meLoading && isMinor ? (
+                      <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
+                        Under 18: your profile is followers-only and does not appear in search.
+                      </Text>
+                    ) : null}
+                  </>
+                )}
+              </>
             )}
-            <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>
-              {visibility === 'public' && !isMinor
-                ? 'Anyone signed in can follow you and see what you post.'
-                : 'You approve every follower before they see what you post.'}
-            </Text>
-            {/* F12 fix: never shown until `me` has genuinely loaded --
-                `isMinor` alone defaults true (unknown means minor) and
-                would otherwise flash this at an adult on first render. */}
-            {!meLoading && isMinor ? (
-              <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
-                Under 18: your profile is followers-only and does not appear in search.
-              </Text>
-            ) : null}
           </BandBody>
         </Band>
         <BandGap />
@@ -622,17 +781,21 @@ export default function CommunityJoinScreen({ navigation, route }) {
             <Text style={[t.type.bodySm, { color: t.colors.textSecondary }]}>
               Worked out on your phone from your last twelve weeks of finished sessions. Only the ones you switch on are shared, and never anything more detailed than a band.
             </Text>
-            <View style={styles.preview}>
-              <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
-                What other people would see
-              </Text>
-              <Text style={[t.type.body, { color: t.colors.textPrimary }]}>
-                {tpPreview || NOTHING_SHARED_LINE}
-              </Text>
-            </View>
+            {ageLoading ? (
+              <Text style={[t.type.bodySm, { color: t.colors.textMuted }]}>{AGE_LOADING_LINE}</Text>
+            ) : (
+              <View style={styles.preview}>
+                <Text style={[t.type.caption, { color: t.colors.textMuted }]}>
+                  What other people would see
+                </Text>
+                <Text style={[t.type.body, { color: t.colors.textPrimary }]}>
+                  {tpPreview || NOTHING_SHARED_LINE}
+                </Text>
+              </View>
+            )}
           </BandBody>
 
-          {bandRows(tpBands, me)
+          {(ageLoading ? [] : bandRows(tpBands, me))
             .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
             .map((row) => {
               const isShareSessions = row.key === 'share_sessions';
