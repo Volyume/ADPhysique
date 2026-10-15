@@ -12383,3 +12383,26 @@ RULED (D33), against the photo mechanism as it stands (`src/lib/shareCard/drawSh
 6. **No clip ever overpowers the data by placement.** The framing snaps (centre, fill, fit) and the zoom range are the photo's; the card's text bands are the same measured bands, and the scrim follows them, so a person cannot frame a clip into a state where the numbers sit on an unscrimmed bright region.
 
 UX research decision 10 (`02-UX-RESEARCH.md` section 8) is answered by this addendum as not optional.
+
+### D229 addendum 5 (2026-10-15, lead rulings under the founder's delegation): the design pass
+
+The design pass is published for the founder's look at https://claude.ai/artifact/SrTaCCj8mDa2q3hkfGkPbe (source `docs/audit/video-shares-2026-10-15/03-DESIGN-PASS.html`, a copy of the page). It answers every fork the two research reports put to the lead (`02-UX-RESEARCH.md` section 8, `01-NATIVE-RESEARCH.md` section 10.1), on the one D33 criterion. RULED:
+1. **Label:** "Record a clip" everywhere; "Record a posing clip" (ruling 2's wording) names the body and is dropped.
+2. **Summary placement:** a `NavRow` in the summary's scroll body under the stats, not a third footer pill (Done would fall to about 84 dp); after recording from the summary the share screen opens with the clip chosen.
+3. **Under calm mode or an open flag:** both recording rows hidden, fail closed (unknown means hidden), no explanation, the Clip source and the workout strip never shown; clips already recorded stay viewable and deletable in the workout's history in every state. No age gate on recording, as for photo backgrounds today; nothing in Community can carry a clip.
+4. **Background row:** `Gallery | Photo | Clip | None`, with a "From this workout" strip of the workout's clips beneath it when any exist, instead of a fifth segment. Photo keeps the system camera (the photo path unchanged, the phone's own picture quality kept); Clip is the in-app camera (cap, silence and countdown guaranteed). "Photo look" reads "Look".
+5. **Lead-in:** 3 s by default, one small remembered control cycling to 10 s.
+6. **Clips per workout:** up to three, never replaced silently; at three the row opens the clips so one can be deleted.
+7. **The primary button:** "Share" (image or video) becomes the one amber primary on photos and clips alike, Save to gallery and Post to Community beneath it; Post to Community is not shown for a clip.
+8. **The preview's place:** the top of the share screen, collapsing to a small pinned live preview under the header as the person scrolls to the controls, for photos and clips.
+9. **The scrim over motion:** addendum 4, not optional.
+10. **Android engine:** Media3 Transformer 1.11.1 (fallback 1.10.1 if Kotlin 2.2.x metadata fails against RN's 2.1.20), as delegated in addendum 2; the explicit dependency yes is asked of the founder by name, purpose and licence, with the SDK-only route as the fallback if declined.
+11. **What native receives:** the final 20-number look matrix (`lookMatrix(key, strength)`) and the resolved placement rectangle (`photoCoverRect`), never `strength` and `crop`, so the maths has one copy.
+12. **Zooming out on a clip:** the minimum zoom is fill; a clip always covers the card (no black-versus-ground gap across platforms).
+13. **Long and heavy clips:** the 15 s window is chosen on a frame strip first; a short preview copy of that window (720p or 1080 by 1920 at most, 30 fps, SDR, H.264) is made only for clips the probe flags (HDR, above 1080p, above 30 fps, not 8-bit H.264 or HEVC, or very large); the export always reads the original; every cache copy is deleted when the share screen closes.
+14. **Slow motion and Live Photos:** played as the file plays, no retiming; a Live Photo's clip makes a video of its own length.
+15. **Frame rate:** capped at 30.
+16. **Export in the background:** foreground only on both platforms, screen kept awake, the progress ring blocks navigation, backgrounding cancels with the calm "start again" line.
+17. **Camera purpose strings:** updated to name short workout clips beside barcodes, labels and progress photos.
+18. **Playing thumbnails:** not built; still tiles cut from inside the trim window.
+Build order after the coherence merge, on one branch: the engine module (Opus lane, lead review hunk by hunk), capture and the clip store (Sonnet), the share screen (the lead builds the preview and the scrim sampling hands-on, a Sonnet lane the rest), then the device proof (grey ramp, rotation, HDR, 4K, timings, contrast, a 20-cycle memory soak, maximum text size), the version bump and What's new, and the build handed to the founder. No build is triggered by Claude.

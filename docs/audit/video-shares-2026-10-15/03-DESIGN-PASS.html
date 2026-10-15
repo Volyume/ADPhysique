@@ -1,0 +1,363 @@
+<title>Volyume Video Shares</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one column of reading width, phone mock-ups drawn in CSS from the app's own tokens; dark-first because that is the app. */
+:root {
+  --bg: #0D0D0D; --bg1: #161616; --bg2: #1F1F1F; --line: #2A2A2A;
+  --fg: #FFFFFF; --fg2: #9E9E9E; --fg3: #7A7A7A;
+  --amber: #F5A623; --amber-ink: #1A1200; --amber-dim: rgba(245,166,35,0.16);
+  --good: #4CAF50; --warn: #F0E442;
+  --display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #FAF8F3; --bg1: #FFFFFF; --bg2: #F1EEE6; --line: #E2DDD2;
+  --fg: #141414; --fg2: #5B5751; --fg3: #7E7971;
+  --amber: #C47A08; --amber-ink: #FFFFFF; --amber-dim: rgba(196,122,8,0.12);
+  --good: #2E7D32; --warn: #8A7A00; color-scheme: light;
+} }
+:root[data-theme="light"] {
+  --bg: #FAF8F3; --bg1: #FFFFFF; --bg2: #F1EEE6; --line: #E2DDD2;
+  --fg: #141414; --fg2: #5B5751; --fg3: #7E7971;
+  --amber: #C47A08; --amber-ink: #FFFFFF; --amber-dim: rgba(196,122,8,0.12);
+  --good: #2E7D32; --warn: #8A7A00; color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+main { max-width: 760px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; font-weight: 600; margin-top: 28px; }
+p { margin: 12px 0; max-width: 68ch; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); font-weight: 600; }
+.lede { font-size: 1.1rem; color: var(--fg2); max-width: 62ch; }
+.quote { border-left: 2px solid var(--amber); padding: 4px 16px; color: var(--fg2); font-style: italic; margin: 20px 0; max-width: 62ch; }
+.quote b { color: var(--fg); font-style: normal; }
+ul, ol { padding-left: 20px; max-width: 68ch; } li { margin: 6px 0; }
+.kv { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 16px 0; }
+.kv > div { background: var(--bg1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.kv .k { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg3); font-weight: 600; margin-bottom: 4px; }
+@media (min-width: 640px) { .kv.three { grid-template-columns: 1fr 1fr 1fr; } .kv.two { grid-template-columns: 1fr 1fr; } }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+.tablewrap { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 12px; }
+th, td { text-align: left; padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg3); font-weight: 600; background: var(--bg1); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; background: var(--amber-dim); color: var(--amber); }
+.pill.q { background: rgba(158,158,158,0.16); color: var(--fg2); }
+
+/* Phone mock-ups: the app's own dark ground, drawn to scale (approx 360 dp). Always dark, because the app's share and camera surfaces are. */
+.phones { display: grid; grid-template-columns: 1fr; gap: 24px; margin: 20px 0; }
+@media (min-width: 700px) { .phones.two { grid-template-columns: 1fr 1fr; } }
+.phone { background: #0D0D0D; color: #FFFFFF; border: 1px solid #2A2A2A; border-radius: 22px; padding: 14px 12px; max-width: 100%; font-size: 13px; line-height: 1.35; font-family: var(--body); }
+.phone .cap { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9C9C9C; margin: 0 0 10px; }
+.phone .caption { color: var(--fg2); font-size: 0.85rem; margin-top: 10px; font-family: var(--body); }
+.sheet { background: #161616; border-radius: 16px 16px 0 0; padding: 10px 12px 6px; border: 1px solid #2A2A2A; border-bottom: 0; }
+.row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 4px; border-bottom: 1px solid #222; }
+.row:last-child { border-bottom: 0; }
+.row .ic { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #9E9E9E; flex: 0 0 auto; margin-top: 2px; }
+.row .ic.v { border-radius: 3px; position: relative; } .row .ic.v::after { content: ""; position: absolute; right: -5px; top: 4px; border: 4px solid transparent; border-left: 5px solid #9E9E9E; }
+.row .lbl { font-weight: 600; } .row .desc { color: #9E9E9E; font-size: 12px; }
+.row.hi .lbl { color: #F5A623; }
+.muted { color: #9E9E9E; }
+.cam { position: relative; height: 420px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #2b2b2b 0%, #171717 60%, #101010 100%); }
+.cam .drain { position: absolute; top: 0; left: 0; height: 2px; width: 46%; background: #F5A623; }
+.cam .top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; color: #fff; font-weight: 600; }
+.cam .time { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-variant-numeric: tabular-nums; color: #F5A623; font-weight: 600; }
+.cam .count { position: absolute; top: 40%; left: 0; right: 0; text-align: center; font-size: 72px; font-weight: 800; color: #fff; opacity: 0.9; }
+.cam .rec { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; border: 3px solid #fff; display: grid; place-items: center; }
+.cam .rec i { width: 22px; height: 22px; background: #F5A623; border-radius: 4px; display: block; }
+.cam .lead { position: absolute; bottom: 38px; right: 18px; color: #9E9E9E; font-size: 12px; }
+.card { position: relative; border-radius: 12px; overflow: hidden; height: 400px; background: #0D0D0D; }
+.card .clip { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 45%, #6b6358 0%, #3c3732 55%, #1b1917 100%); }
+.card .clip.bright { background: radial-gradient(120% 80% at 50% 40%, #e6ddd0 0%, #a89f93 55%, #4a453f 100%); }
+.card .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.74) 0%, rgba(10,10,10,0.74) 20%, rgba(10,10,10,0) 32%, rgba(10,10,10,0) 52%, rgba(10,10,10,0.9) 66%, rgba(10,10,10,0.9) 100%); }
+.card .vig { position: absolute; inset: 0; background: radial-gradient(80% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%); }
+.card .t { position: absolute; left: 16px; right: 16px; top: 16px; }
+.card .t .brand { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #F5A623; font-weight: 700; }
+.card .t .h { font-size: 20px; font-weight: 800; line-height: 1.1; margin-top: 4px; }
+.card .t .s { font-size: 11px; color: #cfcfcf; margin-top: 2px; }
+.card .n { position: absolute; left: 16px; right: 16px; bottom: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.card .n div { font-variant-numeric: tabular-nums; }
+.card .n b { display: block; font-size: 20px; font-weight: 800; }
+.card .n span { font-size: 10px; color: #cfcfcf; letter-spacing: 0.06em; text-transform: uppercase; }
+.card .guide { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(245,166,35,0.6); }
+.seg { display: flex; gap: 4px; background: #161616; border: 1px solid #2A2A2A; border-radius: 10px; padding: 3px; margin: 8px 0; }
+.seg span { flex: 1; text-align: center; padding: 6px 4px; border-radius: 8px; font-size: 12px; color: #9E9E9E; }
+.seg span.on { background: #2A2A2A; color: #fff; font-weight: 600; }
+.lbl2 { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #9C9C9C; margin: 10px 0 4px; }
+.strip { display: flex; gap: 8px; overflow: hidden; }
+.tile { width: 60px; flex: 0 0 auto; }
+.tile .th { height: 48px; border-radius: 8px; background: #3a3530; border: 2px solid transparent; position: relative; }
+.tile .th.on { border-color: #F5A623; }
+.tile .th .d { position: absolute; right: 4px; bottom: 3px; font-size: 9px; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.tile .nm { font-size: 10px; color: #9E9E9E; text-align: center; margin-top: 3px; }
+.slider { height: 4px; border-radius: 2px; background: #2A2A2A; position: relative; margin: 14px 0 6px; }
+.slider::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 80%; background: #F5A623; border-radius: 2px; }
+.slider i { position: absolute; left: 80%; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: #F5A623; transform: translate(-50%, -50%); }
+.trim { position: relative; height: 40px; border-radius: 8px; background: repeating-linear-gradient(90deg, #3a3530 0 22px, #2c2823 22px 44px); margin-top: 8px; overflow: hidden; }
+.trim .win { position: absolute; left: 18%; width: 52%; top: 0; bottom: 0; border: 2px solid #F5A623; border-radius: 6px; }
+.trim .win::before, .trim .win::after { content: ""; position: absolute; top: 0; bottom: 0; width: 10px; background: #F5A623; }
+.trim .win::before { left: -2px; border-radius: 6px 0 0 6px; } .trim .win::after { right: -2px; border-radius: 0 6px 6px 0; }
+.trim .ph { position: absolute; left: 36%; top: 0; bottom: 0; width: 2px; background: #fff; }
+.trim .dur { position: absolute; right: 6px; bottom: 4px; font-size: 10px; font-variant-numeric: tabular-nums; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; }
+.btn { display: block; text-align: center; padding: 11px; border-radius: 12px; font-weight: 600; margin-top: 8px; border: 1px solid #2A2A2A; color: #fff; }
+.btn.p { background: #F5A623; color: #1A1200; border-color: #F5A623; }
+.ring { position: absolute; inset: 0; background: rgba(13,13,13,0.72); display: grid; place-items: center; }
+.ring .r { width: 84px; height: 84px; border-radius: 50%; background: conic-gradient(#F5A623 0 62%, #2A2A2A 62% 100%); display: grid; place-items: center; }
+.ring .r i { width: 66px; height: 66px; border-radius: 50%; background: #0D0D0D; display: grid; place-items: center; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 700; }
+.ring .txt { position: absolute; bottom: 60px; left: 0; right: 0; text-align: center; }
+.ring .txt small { display: block; color: #9E9E9E; margin-top: 8px; }
+.navrow { display: flex; align-items: center; gap: 10px; background: #161616; border: 1px solid #2A2A2A; border-radius: 12px; padding: 10px 12px; }
+.navrow .ic { width: 18px; height: 14px; border: 1.5px solid #9E9E9E; border-radius: 3px; position: relative; flex: 0 0 auto; }
+.navrow .ic::after { content: ""; position: absolute; right: -6px; top: 1px; border: 4px solid transparent; border-left: 5px solid #9E9E9E; }
+.navrow .chev { margin-left: auto; color: #9E9E9E; }
+.mini { position: absolute; top: 8px; right: 8px; width: 54px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid #2A2A2A; background: #1b1917; }
+.mini .clip { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 45%, #6b6358 0%, #3c3732 55%, #1b1917 100%); }
+.mini .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.74) 0 22%, rgba(10,10,10,0) 32% 52%, rgba(10,10,10,0.9) 66% 100%); }
+.hint { color: #9E9E9E; font-size: 11px; margin-top: 6px; text-align: center; }
+.decision { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+.decision > div { background: var(--bg1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.decision .q { font-weight: 600; } .decision .a { color: var(--fg2); margin-top: 4px; }
+.decision .a b { color: var(--fg); }
+.ask { border: 1px solid var(--amber); background: var(--amber-dim); border-radius: 14px; padding: 16px 18px; margin: 20px 0; }
+.ask .k { color: var(--amber); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.steps { counter-reset: s; list-style: none; padding: 0; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.steps li::before { content: counter(s); font-weight: 700; color: var(--amber); font-variant-numeric: tabular-nums; }
+.steps li:last-child { border-bottom: 0; }
+.foot { color: var(--fg3); font-size: 0.85rem; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 16px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; background: var(--bg2); padding: 1px 5px; border-radius: 4px; }
+@media (prefers-reduced-motion: no-preference) { .cam .drain { animation: drain 15s linear infinite; } @keyframes drain { from { width: 0 } to { width: 100% } } }
+</style>
+
+<main>
+  <p class="eyebrow">Design pass for sign-off, 15 October 2026, D229</p>
+  <h1>Video shares</h1>
+  <p class="lede">A 15 second clip, recorded in the workout or picked from the phone, with the same looks, the same drag and pinch framing and the same card on top as a photo. Volyume makes the finished video itself and hands it to any app. One flow for photos and clips, a level up on the one you already like.</p>
+
+  <div class="quote">"I needs to look very very slick and a real selling point on the app absolute top effort." <b>and</b> "The data needs to still be visible for the share information."</div>
+
+  <div class="kv three">
+    <div><div class="k">Where it lives</div>One row in the exercise More sheet, one row on the summary, and the share screen's existing Background row. No new tab, no new toolbar tool.</div>
+    <div><div class="k">What it makes</div>A 1080 by 1920 MP4 (Story), or Square or Portrait, silent, about 15 MB, rendered on the phone in roughly 8 to 20 seconds with a ring and a Cancel.</div>
+    <div><div class="k">What it never does</div>Upload a clip, record sound, post a clip to Community, or show a clip background under calm mode or an open flag.</div>
+  </div>
+
+  <h2>1. The flow, screen by screen</h2>
+
+  <h3>In the workout: one row</h3>
+  <p>The exercise More sheet gains a twelfth row after "Use last session". It carries its own promise, so there is nothing else to explain. The first ever tap shows one small sheet ("Clips stay on this phone") before the camera opens; after that it goes straight to the camera.</p>
+  <div class="phones two">
+    <div class="phone">
+      <p class="cap">Exercise More sheet</p>
+      <div class="sheet">
+        <div class="row"><span class="ic"></span><div><div class="lbl">Warm-up sets</div><div class="desc">Add ramp sets before your working sets</div></div></div>
+        <div class="row"><span class="ic"></span><div><div class="lbl">Use last session</div><div class="desc">Fill every pending set from last time</div></div></div>
+        <div class="row hi"><span class="ic v"></span><div><div class="lbl">Record a clip</div><div class="desc">Up to 15 seconds, no sound. Stays on this phone.</div></div></div>
+        <div class="row"><span class="ic"></span><div><div class="lbl">Pair as superset</div><div class="desc">Alternate with the next exercise</div></div></div>
+      </div>
+      <p class="caption">With clips saved the description becomes "1 saved. Up to 3 for each workout." At three it opens the workout's clips so one can be deleted; nothing is ever replaced silently.</p>
+    </div>
+    <div class="phone">
+      <p class="cap">Workout summary</p>
+      <div class="navrow"><span class="ic"></span><div><div style="font-weight:600">Record a clip</div><div class="muted" style="font-size:12px">Up to 15 seconds, no sound. Stays on this phone.</div></div><span class="chev">›</span></div>
+      <p class="caption">A plain row in the summary's scroll body, under the stats. The footer keeps Done and Share as they are. After recording here, the share screen opens with the clip already chosen as the background. Hidden under calm mode or an open flag.</p>
+    </div>
+  </div>
+
+  <h3>The camera: the one new screen</h3>
+  <p>Full screen, portrait, muted. A close glyph and a flip glyph, a record control, and a small "3 s" control that cycles to "10 s" and is remembered, for a phone propped on a bench. Tap record: 3, 2, 1 in the centre with a light tick each, then the amber line along the top edge fills over 15 seconds, the same mark as the rest timer's drain line. It stops itself at 15, or on a tap. No review screen, because a rest timer may be running: the camera closes and a toast says "Clip saved to this workout" with Undo.</p>
+  <div class="phones two">
+    <div class="phone">
+      <p class="cap">Recording, 0:07 of 0:15</p>
+      <div class="cam">
+        <div class="drain"></div>
+        <div class="top"><span>×</span><span>⟲</span></div>
+        <div class="time">0:07</div>
+        <div class="rec"><i></i></div>
+        <div class="lead">3 s</div>
+      </div>
+    </div>
+    <div class="phone">
+      <p class="cap">Countdown</p>
+      <div class="cam">
+        <div class="top"><span>×</span><span>⟲</span></div>
+        <div class="count">2</div>
+        <div class="rec" style="border-color:#9E9E9E"><i style="background:#9E9E9E;border-radius:50%"></i></div>
+        <div class="lead">3 s</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>The share screen: the photo flow, with a clip in it</h3>
+  <p>The Background row becomes <b>Gallery, Photo, Clip, None</b>. Gallery opens the system picker with photos and videos together. Photo is the system camera exactly as today. Clip is the in-app camera above. When this workout has clips, a "From this workout" strip appears under the row with the clips as tiles, newest first, so the clip you just filmed is one tap away. The Look strip and the Strength slider are today's; the preview plays the clip in the chosen look as soon as a tile is tapped, and the slider moves it live. The preview is the framer: drag to move, pinch to resize, tap to pause, with a haptic tick when the clip's centre meets the card's centre and at fill. For a clip there is one more thing, a trim bar under the preview: a 15 second window you slide along a strip of frames, with a playhead, and the loop plays inside it.</p>
+  <div class="phones two">
+    <div class="phone">
+      <p class="cap">Share screen, a clip chosen</p>
+      <div class="card">
+        <div class="clip"></div>
+        <div class="vig"></div>
+        <div class="scrim"></div>
+        <div class="guide"></div>
+        <div class="t"><div class="brand">Volyume</div><div class="h">Push day</div><div class="s">Wednesday 15 October</div></div>
+        <div class="n"><div><b>12,480</b><span>kg lifted</span></div><div><b>24</b><span>sets</span></div><div><b>2</b><span>PRs</span></div></div>
+      </div>
+      <div class="hint">Drag to move. Pinch to resize. Tap to pause.</div>
+      <div class="trim"><div class="win"></div><div class="ph"></div><div class="dur">0:12</div></div>
+      <div class="hint" style="text-align:left">15 seconds of 42. Slide to choose where it starts.</div>
+    </div>
+    <div class="phone">
+      <p class="cap">The controls beneath</p>
+      <div class="lbl2">Background</div>
+      <div class="seg"><span>Gallery</span><span>Photo</span><span class="on">Clip</span><span>None</span></div>
+      <div class="lbl2">From this workout</div>
+      <div class="strip">
+        <div class="tile"><div class="th on"><span class="d">0:12</span></div><div class="nm">Bench</div></div>
+        <div class="tile"><div class="th"><span class="d">0:15</span></div><div class="nm">Incline</div></div>
+      </div>
+      <div class="lbl2">Look</div>
+      <div class="strip">
+        <div class="tile"><div class="th" style="background:#3c3732"></div><div class="nm">None</div></div>
+        <div class="tile"><div class="th on" style="background:#4a3f33"></div><div class="nm">Iron</div></div>
+        <div class="tile"><div class="th" style="background:#2f3338"></div><div class="nm">Steel</div></div>
+        <div class="tile"><div class="th" style="background:#3a3a3a"></div><div class="nm">Mono</div></div>
+      </div>
+      <div class="lbl2">Strength 80%</div>
+      <div class="slider"><i></i></div>
+      <div class="btn p">Share video</div>
+      <div class="btn">Save to gallery</div>
+      <p class="caption">"Share video" is the one primary. Post to Community is not shown for a clip. Thumbnails are cut from inside the trim window, never from frame zero.</p>
+    </div>
+  </div>
+
+  <h3>While the preview is off screen</h3>
+  <p>Today the preview sits below the controls, so changing a look means scrolling away from the thing it changes. Photos tolerate that; a playing clip does not. The preview moves to the top of the screen and collapses as you scroll: full size at the top, shrinking to a small live preview pinned under the header while the controls are in view, and back to full when you scroll up. This helps photos as much as clips and changes no control's order.</p>
+  <div class="phones two">
+    <div class="phone">
+      <p class="cap">Scrolled to the Look strip</p>
+      <div style="position:relative;height:120px;border-bottom:1px solid #2A2A2A">
+        <div style="font-weight:700;padding-top:6px">Share</div>
+        <div class="mini"><div class="clip"></div><div class="scrim"></div></div>
+      </div>
+      <div class="lbl2">Look</div>
+      <div class="strip">
+        <div class="tile"><div class="th" style="background:#3c3732"></div><div class="nm">None</div></div>
+        <div class="tile"><div class="th on" style="background:#4a3f33"></div><div class="nm">Iron</div></div>
+        <div class="tile"><div class="th" style="background:#2f3338"></div><div class="nm">Steel</div></div>
+        <div class="tile"><div class="th" style="background:#3a3a3a"></div><div class="nm">Mono</div></div>
+      </div>
+      <div class="lbl2">Strength 80%</div>
+      <div class="slider"><i></i></div>
+    </div>
+    <div class="phone">
+      <p class="cap">Making the video</p>
+      <div class="card">
+        <div class="clip"></div><div class="vig"></div><div class="scrim"></div>
+        <div class="t"><div class="brand">Volyume</div><div class="h">Push day</div><div class="s">Wednesday 15 October</div></div>
+        <div class="n"><div><b>12,480</b><span>kg lifted</span></div><div><b>24</b><span>sets</span></div><div><b>2</b><span>PRs</span></div></div>
+        <div class="ring"><div class="r"><i>62%</i></div><div class="txt">Making your video<small>Cancel</small></div></div>
+      </div>
+      <p class="caption">The preview freezes on its frame, the ring fills from the encoder's own progress, Cancel is always there. Done: the share sheet opens straight away, as for a photo. The file is cached, so Share then Save renders once.</p>
+    </div>
+  </div>
+
+  <h2>2. The data stays legible over a moving clip</h2>
+  <p>Your order, recorded as D229 addendum 4. The card over a clip is the same layer as over a photo: the text, the darkening scrim behind the title and the numbers, and the look's vignette. The clip goes underneath. Three things make that hold on a moving picture.</p>
+  <div class="phones two">
+    <div class="phone">
+      <p class="cap">A bright frame mid loop, the scrim set from it</p>
+      <div class="card">
+        <div class="clip bright"></div><div class="vig"></div><div class="scrim"></div>
+        <div class="t"><div class="brand">Volyume</div><div class="h">Push day</div><div class="s">Wednesday 15 October</div></div>
+        <div class="n"><div><b>12,480</b><span>kg lifted</span></div><div><b>24</b><span>sets</span></div><div><b>2</b><span>PRs</span></div></div>
+      </div>
+    </div>
+    <div class="phone">
+      <p class="cap">The rules</p>
+      <ol class="steps" style="color:#fff">
+        <li><div><b>Measured across the loop.</b> The scrim is set from the brightest moment under each text band, sampled on at least eight frames through the window, and re-measured when you trim, move, zoom or change the look.</div></li>
+        <li><div><b>Video starts at the strong tier.</b> A clip always gets at least the stronger scrim photos get only when they are bright, because motion pulls the eye.</div></li>
+        <li><div><b>Nothing moves in the text bands.</b> The figures stay still; the clip is the only motion.</div></li>
+        <li><div><b>Tested, not assumed.</b> A bright test clip and a dark one go through every look, and the build fails if text contrast under any band drops below 4.5 to 1 at any point in the loop. The same measurement runs on your phone before it is called done.</div></li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>3. What changes for photos, and what does not</h2>
+  <div class="kv two">
+    <div><div class="k">Unchanged</div>The looks and their strengths, the drag and pinch framing, the card's text and numbers, the share sheet and Save to gallery, the Community post for photo cards, every privacy exclusion on the card (no name, no bodyweight, no measurements, no notes), the system camera for photos.</div>
+    <div><div class="k">Changed, for both</div>The preview moves to the top and collapses while you scroll. "Share" becomes the one amber primary button, with Save to gallery and Post to Community beneath it. The Background row reads Gallery, Photo, Clip, None instead of My photo, Camera, No photo. "Photo look" reads "Look".</div>
+  </div>
+
+  <h2>4. Privacy and safety</h2>
+  <ul>
+    <li><b>Clips never leave the phone unless you share them.</b> No upload, no sync, no Community payload can carry one. The clip, the picker's cache copy, the preview copy and the exported file are all deleted with the workout and with the account; the share screen cleans its cache when it closes.</li>
+    <li><b>Silent by design.</b> Recording passes mute; the microphone is never asked for; a gallery clip's sound is dropped at export.</li>
+    <li><b>Calm mode or an open flag.</b> Both "Record a clip" rows are hidden, the Clip source and the workout strip never appear, and no explanation is shown, matching the progress-photo precedent. Clips already recorded stay private and deletable in the workout's history, in every state. The rows fail closed: unknown means hidden.</li>
+    <li><b>No age gate on recording</b>, the same as photo backgrounds today; the only distribution is the person's own share action, which the app does not police, and nothing in Community can carry a clip.</li>
+    <li><b>The card's exclusions hold on a clip</b> exactly as on a photo.</li>
+  </ul>
+
+  <h2>5. The engine, in plain words</h2>
+  <p>One native module, built the way the live activity and rest timer modules are built. It receives the clip, the chosen 15 second window, the look as the final numbers the photo path already computes, the exact placement rectangle the photo path already computes, and the card as a picture. It gives back an MP4 and reports progress; it can be cancelled.</p>
+  <div class="kv two">
+    <div><div class="k">Android</div>Media3 Transformer (Google's own library, Apache 2.0). Its colour matrix applies the look exactly as the photo path does, bias included; the framing is one crop and one scale in a single GPU pass; the card sits on top; HDR clips are tone mapped on the GPU; 60 fps is capped at 30. About 200 lines of Kotlin.</div>
+    <div><div class="k">iOS</div>AVFoundation and Core Image, no library. The same matrix through CIColorMatrix with colour management turned off, so the look matches the photo path; the card composited per frame; written by AVAssetWriter as H.264 at a set bitrate. Runs in the foreground only; backgrounding cancels with a calm "start again" line.</div>
+  </div>
+  <div class="tablewrap"><table>
+    <tr><th>Quantity</th><th>Target</th><th>How it is settled</th></tr>
+    <tr><td>File, 15 s Story</td><td class="num">about 15 MB at 8 Mbps</td><td>Arithmetic; Google's floor for 1080 by 1920 is 5 Mbps</td></tr>
+    <tr><td>Export time</td><td class="num">8 to 20 s Android, 6 to 15 s iPhone</td><td>Estimate from Google's one published figure; measured on your S22 before sign-off</td></tr>
+    <tr><td>First frame after choosing a clip</td><td class="num">under 1 s</td><td>A poster frame, then decode</td></tr>
+    <tr><td>Look change on a playing clip</td><td class="num">under 100 ms</td><td>A matrix change only, no re-decode</td></tr>
+    <tr><td>Added app size, Android</td><td class="num">about 1 to 3 MB</td><td>Compared across two builds; iOS adds nothing</td></tr>
+  </table></div>
+  <p>Clips from the phone's own camera app are normalised on import: HEVC, HDR and Dolby Vision from an iPhone, 4K and 60 fps, every rotation, long clips trimmed to the chosen window, sound dropped. A clip the phone cannot open (HDR on an old Android, a Dolby Vision profile with no decoder) gets one calm line and the way forward: record a clip in Volyume or choose another. Heavy clips get a short preview copy of the chosen window so the live preview stays smooth; the export always reads the original.</p>
+
+  <h2>6. The rulings</h2>
+  <p>Every fork the two research reports put to the lead, decided under your delegation on one criterion: the best result for the person sharing. Recorded in the register as D229 addendum 5.</p>
+  <div class="decision">
+    <div><div class="q">The label</div><div class="a"><b>"Record a clip"</b> everywhere. "Record a posing clip" names the body, which the voice rules keep out; the summary placement implies the use.</div></div>
+    <div><div class="q">The summary placement</div><div class="a"><b>A row in the scroll body</b>, not a third footer pill. The footer cannot take one without squeezing Done to about 84 dp.</div></div>
+    <div><div class="q">Under calm mode or an open flag</div><div class="a"><b>Both recording rows hidden, fail closed.</b> Existing clips stay viewable and deletable in the workout's history. No age gate on recording, as for photos.</div></div>
+    <div><div class="q">The Background row</div><div class="a"><b>Gallery, Photo, Clip, None</b>, with a "From this workout" strip beneath when clips exist, instead of a fifth "Workout" segment. Photo keeps the system camera, so the photo path you like does not change and keeps the phone's own picture quality; Clip is the in-app camera, where the cap, the silence and the countdown are guaranteed.</div></div>
+    <div><div class="q">Lead-in</div><div class="a"><b>3 seconds, with a remembered 10 second option</b> on one small control. A squat rack needs the walk.</div></div>
+    <div><div class="q">Clips per workout</div><div class="a"><b>Up to three, never replaced silently.</b> At three the row opens the clips so one can be deleted.</div></div>
+    <div><div class="q">The primary button</div><div class="a"><b>"Share" becomes the one amber primary on photos and clips alike.</b> Today's three equal outline buttons have no primary; one piece, one language.</div></div>
+    <div><div class="q">The preview's place</div><div class="a"><b>Top of the screen, collapsing as you scroll</b>, for photos and clips. Live for clips, still for photos.</div></div>
+    <div><div class="q">The scrim over motion</div><div class="a"><b>Your addendum 4</b>, above. Not optional.</div></div>
+    <div><div class="q">Android engine</div><div class="a"><b>Media3 Transformer 1.11.1</b> (fallback 1.10.1 if the Kotlin versions disagree at compile), as delegated. The hand-built route is kept in the report as the fallback if you decline the dependency.</div></div>
+    <div><div class="q">What native receives</div><div class="a"><b>The final look numbers and the resolved placement rectangle</b>, computed by the photo path's own functions, so there is one copy of the maths and nothing can drift.</div></div>
+    <div><div class="q">Zooming out on a clip</div><div class="a"><b>A clip always fills the card</b>; the minimum zoom is fill. A floating clip is not the slick look, and it removes the one place Android and iOS would draw the gap differently.</div></div>
+    <div><div class="q">Long and heavy clips</div><div class="a"><b>Choose the window on a frame strip first, then a short preview copy of that window</b> for clips that are HDR, above 1080p, above 30 fps or very large. The export reads the original; nothing is lost in the file you share.</div></div>
+    <div><div class="q">Slow motion and Live Photos</div><div class="a"><b>Played as the file plays</b>; no retiming. A Live Photo's 3 second clip makes a 3 second video.</div></div>
+    <div><div class="q">Frame rate</div><div class="a"><b>Capped at 30</b>; a 60 fps source drops frames. Half the file, no visible loss on a share.</div></div>
+    <div><div class="q">Export in the background</div><div class="a"><b>Foreground only on both platforms</b>, screen kept awake, the ring blocks navigation, backgrounding cancels with "The video stops if Volyume is closed while it is being made. Keep Volyume open and we will start again."</div></div>
+    <div><div class="q">Camera purpose strings</div><div class="a"><b>Updated to name short workout clips</b> beside barcodes, labels and progress photos, because App Review reads the string against the feature.</div></div>
+    <div><div class="q">Thumbnails that play</div><div class="a"><b>Not built.</b> Still tiles cut from inside the trim window; the live preview does the demonstrating. Eight decoders in a strip is a battery and jank risk for no gain.</div></div>
+  </div>
+
+  <h2>7. What is yours to say</h2>
+  <div class="ask">
+    <div class="k">One yes needed before the build</div>
+    <p style="margin-top:8px"><b>Media3 Transformer is a new dependency</b>, and the rule is that no dependency is added without your yes, by name. The founder delegation recorded it as the Android engine; this is the explicit ask. Name: <code>androidx.media3:media3-transformer</code>, <code>media3-effect</code> and <code>media3-common</code> at 1.11.1, from Google, Apache 2.0, with their own transitive Media3 parts (exoplayer, muxer, container, datasource, extractor, decoder, database) and Guava. Purpose: the on-device video compositor. Cost: about 1 to 3 MB on the Android app, no native libraries, no new permissions beyond the normal ones. Plus one line in package.json for the app's own module, the same as the three native modules already there. iOS adds nothing.</p>
+    <p style="margin-bottom:0">The two photo-flow changes (the primary button, the collapsing preview) are ruled under your delegation; say if you would rather keep either as it is.</p>
+  </div>
+
+  <h2>8. The build</h2>
+  <p>After the coherence work merges to main. Four parts on one branch, each landed green and lead-reviewed, a fresh-eyes review at the end, and nothing built or submitted until you say.</p>
+  <ol class="steps">
+    <li><div><b>The engine module.</b> Android Media3 and iOS AVFoundation, probe, export, progress, cancel, the error classes with their lines, guard tests on the look-matrix contract and the placement rectangle. Opus lane, lead-reviewed hunk by hunk; the parity contract is the safety of this piece.</div></li>
+    <li><div><b>Capture and the clip store.</b> The camera screen, the countdown and drain line, the privacy sheet, the two rows, a local-only clips table deleted with the workout and the account, the clips in the workout's history, cache cleanup. Sonnet lane.</div></li>
+    <li><div><b>The share screen.</b> The Background row and workout strip, the Skia video wrapper and live filtered preview inside the framer, the trim bar, the collapsing preview, the scrim sampled across frames, the ring, the primary button, share and save with video types. The lead builds the preview and scrim hands-on; a Sonnet lane does the rest against this page.</div></li>
+    <li><div><b>Proof on your phone.</b> The grey ramp clip through every look on both platforms, rotation and HDR and 4K cases, the export timings, the contrast measurement, a 20 cycle memory soak, and the maximum text size pass. Then the version bump, the What's new line and the build for you to run.</div></li>
+  </ol>
+
+  <p class="foot">Sources: docs/audit/video-shares-2026-10-15/00-FOUNDER-BRIEF.md, 01-NATIVE-RESEARCH.md, 02-UX-RESEARCH.md; register D229 and addenda 1 to 5. Every figure marked estimate is replaced by a device measurement before sign-off.</p>
+</main>
