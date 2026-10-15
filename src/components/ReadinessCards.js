@@ -461,8 +461,12 @@ export function checkinSummaryLine(checkin, nowMs = Date.now()) {
 // "Recovery"). The recovery reads are skipped when they would not be drawn.
 // `scrollRef` (Recovery screen only): the screen's ScrollView, so a tap on
 // the figure can scroll the list to the muscle's row (D214, RC-12).
+// `afterByMuscle` (Recovery screen only, D228 item 6): a node the screen
+// hands down to sit directly after the Recovery by muscle block, so the
+// weekly volume review door lands there while this component stays
+// navigation-agnostic (it draws the node, it never navigates).
 export default function ReadinessCards({
-  userId, onRateLastSession, sections = 'all', scrollRef = null,
+  userId, onRateLastSession, sections = 'all', scrollRef = null, afterByMuscle = null,
 }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -1022,6 +1026,8 @@ export default function ReadinessCards({
             )}
           </View>
         )}
+
+        {sections === 'recovery' ? afterByMuscle : null}
 
         {/* D210: the personal recovery learning, shown as one thing that
             moves (RecoveryLearningCard). Present whenever the loader

@@ -18,6 +18,11 @@ jest.mock('../../store/useAppStore', () => ({
   default: jest.fn((selector) => selector({ user: { id: 'u1' } })),
 }));
 jest.mock('../../components/BackHeader', () => () => null);
+// D228 item 6: the screen now also draws the weekly volume review NavRow, whose
+// selection haptic pulls in expo-haptics; stubbed here so this suite keeps
+// testing only the rate-last-session wiring (the row is pinned in
+// RecoveryScreen.weeklyVolumeReview.test.js).
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
 
 const RATE_PARAMS = { workoutId: 'w-last', durationMinutes: 30, readOnly: true, allowRating: true };
 let mockCardsProps = null;

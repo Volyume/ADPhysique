@@ -92,7 +92,6 @@ const FORMERLY_CRITICAL_ROUTES = [
   { component: 'MyMealsScreen', routes: ['MyMeals'] },
   { component: 'RecipeBuilderScreen', routes: ['RecipeBuilder'] },
   { component: 'NutritionTargetsScreen', routes: ['NutritionTargets'] },
-  { component: 'MealNamesScreen', routes: ['MealNames'] },
   // BodyMetrics and ProgressPhotos are each registered in more than one tab
   // stack (Home and Progress); the regex below matches every occurrence of
   // the route name across the whole file, so one list entry still checks

@@ -11,6 +11,11 @@
 // The ScrollView ref goes down to the cards so a tap on the body figure can
 // scroll the list to that muscle's row (D214, RC-12), the way the Volume
 // heatmap scrolls to its rows.
+// D228 item 6 (2026-10-15): the weekly volume review (CoachReviewScreen, the
+// sets per muscle this week against the plan) lost its only door when the Today
+// deload card went. It is one row here, directly after Recovery by muscle (the
+// cards draw it through `afterByMuscle`, so they stay navigation-agnostic),
+// and the screen is registered in the Progress stack so Back returns here.
 import { useRef } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +23,7 @@ import { colors, spacing } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import ReadinessCards from '../components/ReadinessCards';
+import { NavRow, NavGroup } from '../components/NavRow';
 import useAppStore from '../store/useAppStore';
 
 export default function RecoveryScreen({ navigation }) {
@@ -33,6 +39,16 @@ export default function RecoveryScreen({ navigation }) {
           sections="recovery"
           scrollRef={scrollRef}
           onRateLastSession={(params) => navigation.navigate('WorkoutSummary', params)}
+          afterByMuscle={(
+            <NavGroup>
+              <NavRow
+                icon="bar-chart-outline"
+                label="Weekly volume review"
+                sub="Sets per muscle this week against your plan"
+                onPress={() => navigation.navigate('CoachReview')}
+              />
+            </NavGroup>
+          )}
         />
       </ScrollView>
     </SafeAreaView>

@@ -352,7 +352,7 @@ export default function CoachReviewScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <BackHeader title="Training review" />
+        <BackHeader title="Weekly volume review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingHorizontal: t.screenPadding, gap: spacing.md }}>
           <SkeletonCard height={96} />
           <SkeletonCard height={180} />
@@ -367,7 +367,7 @@ export default function CoachReviewScreen() {
   if (loadError) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <BackHeader title="Training review" />
+        <BackHeader title="Weekly volume review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingHorizontal: t.screenPadding, gap: spacing.md }}>
           <EmptyState
             icon="warning-outline"
@@ -385,7 +385,7 @@ export default function CoachReviewScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title="Training review" />
+      <BackHeader title="Weekly volume review" />
       <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: t.screenPadding }]} showsVerticalScrollIndicator={false}>
 
         {/* Date range subline, relocated here now the BackHeader carries the

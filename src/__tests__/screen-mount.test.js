@@ -652,7 +652,6 @@ const SCREENS_TO_SWEEP = [
   'SettingsProfileScreen',
   'SettingsCoachingScreen',
   'SettingsDisplayScreen',
-  'SettingsHealthScreen',
   'SettingsDataScreen',
   'SettingsPrivacyScreen',
   'SettingsAboutScreen',

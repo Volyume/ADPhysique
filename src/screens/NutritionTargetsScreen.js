@@ -1586,10 +1586,10 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                         unexplained mismatch. Traced every reader of
                         @volyume_meals_per_day: it is not display-only here.
                         DiaryScreen.js reads it to size the diary's numbered
-                        meal-slot ladder, MealNamesScreen.js reads it for the
-                        same slot count when renaming meals, and
-                        FoodSearchScreen.js reads it to split what is left
-                        today across the Suggested tab. MealPlanScreen's
+                        meal-slot ladder and FoodSearchScreen.js reads it to
+                        split what is left today across the Suggested tab
+                        (the MealNames screen, a third reader, was deleted
+                        under D228 item 6). MealPlanScreen's
                         mealPlanMealsPerDay only sizes the separate
                         auto-generated Meal Plan and is untouched by this
                         fix. Label and sub below name the true, wider

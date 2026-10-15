@@ -176,10 +176,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sessionAdjustments = [],
   } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, units, userProfile, session, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
+  const { user, units, session, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
-    userProfile: s.userProfile,
     session: s.session,
     // CO-3 (cohesion audit 2026-07-09): the SAME unseen-coach-change signal
     // that drives the Coach-tab icon badge (T2), reused here so the summary
@@ -1226,23 +1225,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (supabaseUserId && workoutId) {
       syncWorkout(supabaseUserId, workoutId).catch(() => {});
     }
-
-    // Write the session to Apple Health / Health Connect so the user's
-    // weekly activity stays accurate across their health stack. Silent
-    // no-op if the user hasn't granted the workout write scope.
-    try {
-      const endedAt = Date.now();
-      const startedAt = endedAt - Math.max(1, durationMinutes || 1) * 60_000;
-      // eslint-disable-next-line global-require
-      const { writeWorkoutToHealth } = require('../lib/health');
-      writeWorkoutToHealth({
-        startedAt,
-        endedAt,
-        tonnageKg: tonnage || 0,
-        bodyWeightKg: userProfile?.bodyWeightKg ?? userProfile?.bodyweightKg ?? null,
-        notes: exerciseNames?.length ? exerciseNames.slice(0, 4).join(', ') : null,
-      }).catch(() => {});
-    } catch (_) {}
 
     // Count the completed session and ask for an App Store / Play Store
     // review once the habit gates pass (sessions + days, see storeReview.js).

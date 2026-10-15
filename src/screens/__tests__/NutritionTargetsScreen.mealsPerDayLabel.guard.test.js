@@ -6,10 +6,12 @@
  * keys (@volyume_meals_per_day vs userProfile.mealPlanMealsPerDay) with
  * genuinely different consequences. Tracing every reader of
  * @volyume_meals_per_day found it is NOT display-only on this screen: it
- * also sizes DiaryScreen.js's numbered meal-slot ladder, MealNamesScreen.js's
- * rename-slot list, and FoodSearchScreen.js's Suggested-tab remaining-meals
- * split. MealPlanScreen's separate key only sizes the auto-generated Meal
- * Plan and is untouched here (read-only per this campaign's bounds).
+ * also sizes DiaryScreen.js's numbered meal-slot ladder and
+ * FoodSearchScreen.js's Suggested-tab remaining-meals split (a third reader,
+ * MealNamesScreen.js's rename-slot list, was deleted under D228 item 6, so its
+ * reader pin went with it). MealPlanScreen's separate key only sizes the
+ * auto-generated Meal Plan and is untouched here (read-only per this
+ * campaign's bounds).
  *
  * This is a source-level regression guard, matching this screen's existing
  * convention (mealGuidance.guard.test.js, sectionLabels.guard.test.js) for
@@ -82,14 +84,6 @@ describe('Every surface the new sub-copy claims is affected still reads @volyume
     );
     expect(source).toMatch(/AsyncStorage\.getItem\('@volyume_meals_per_day'\)/);
     expect(source).toMatch(/mealsLeftToday\(mealsPerDay, loggedSlots\)/);
-  });
-
-  test('MealNamesScreen reads it for the same slot count when renaming meals', () => {
-    const source = fs.readFileSync(
-      path.join(__dirname, '..', 'MealNamesScreen.js'),
-      'utf8',
-    );
-    expect(source).toMatch(/AsyncStorage\.getItem\('@volyume_meals_per_day'\)/);
   });
 
   test('MealPlanScreen\'s meal-plan-sizing row writes a DIFFERENT key, now disambiguated on its own side too (Campaign 24 Wave B)', () => {

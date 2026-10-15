@@ -762,28 +762,6 @@ export default function App() {
         // The SDK has its own offline buffer + transport, so we don't
         // need to push from here.
 
-        // Health connections: pull any new weight readings the user
-        // logged on a smart scale or wearable since the last foreground.
-        // Local user id is enough; importNewWeights silently no-ops if
-        // permissions aren't granted yet.
-        if (localUserId) {
-          // eslint-disable-next-line global-require
-          const { importNewWeights } = require('./src/lib/health');
-          importNewWeights(localUserId).catch(() => {});
-
-          // Steps: record today's total from the platform health aggregator
-          // (Apple Health / Health Connect) so the daily_steps store and the
-          // weekly coach average stay current with no visible step card.
-          // Silent: no-op if the user has not granted the steps permission.
-          // eslint-disable-next-line global-require
-          const { recordTodaySteps, backfillDailySteps } = require('./src/lib/activitySteps');
-          recordTodaySteps(localUserId).catch(() => {});
-          // Backfill complete daily totals (last ~14 days) once per launch so the
-          // weekly coach average reflects real end-of-day steps, not the partial
-          // foreground snapshots recordTodaySteps leaves on past days.
-          backfillDailySteps(localUserId).catch(() => {});
-        }
-
         // Flush any feedback rows that were captured offline (the user
         // tapped a sentiment chip while signed-out, etc.). Idempotent;
         // returns 0 quickly when nothing's queued.

@@ -101,7 +101,6 @@ const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccou
 const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
 const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
-const SettingsHealthScreen = lazyScreen(() => require('../screens/SettingsHealthScreen').default);
 // CC26: the capability lane's settings home. UNGUARDED by law (CAP-19,
 // pinned by capabilityGuards.test.js) - core capability accommodation is
 // never Pro-gated.
@@ -270,7 +269,6 @@ function _reconcilePaidEntitlement(userId = null) {
 // like every other screen in this file.
 const WeeklyCheckInScreen = lazyScreen(() => require('../screens/WeeklyCheckInScreen').default);
 const NutritionTargetsScreen = lazyScreen(() => require('../screens/NutritionTargetsScreen').default);
-const MealNamesScreen = lazyScreen(() => require('../screens/MealNamesScreen').default);
 const BodyMetricsScreen      = lazyScreen(() => require('../screens/BodyMetricsScreen').default);
 const ProgressPhotosScreen   = lazyScreen(() => require('../screens/ProgressPhotosScreen').default);
 const CoachOutputScreen      = lazyScreen(() => require('../screens/CoachOutputScreen').default);
@@ -626,6 +624,10 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Recovery" component={RecoveryScreen} options={{ headerShown: false }} />
+      {/* D228 item 6: the Recovery screen's "Weekly volume review" row opens
+          CoachReview, registered here (as well as in HomeStack) so Back
+          returns to Recovery rather than crossing tabs. */}
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
@@ -685,7 +687,6 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsDietary" component={SettingsDietaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ headerShown: false }} />
@@ -693,11 +694,6 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsFaq" component={SettingsFaqScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ headerShown: false }} />
-      {/* Retained by founder order 2026-07-13 and deliberately unreachable:
-          the "Meal names" settings row was removed (SettingsScreen.js:67-70),
-          the screen and route stay registered in case meal renaming returns.
-          Not a stale registration - do not "clean it up" (D95). */}
-      <Stack.Screen name="MealNames" component={MealNamesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />

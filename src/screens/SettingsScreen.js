@@ -5,7 +5,6 @@ import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles }
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
-import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 
 // Settings landing. A short list of categories, each opening its own
 // focused sub-page. The old single 1,500-line screen put every toggle on
@@ -20,7 +19,6 @@ export default function SettingsScreen({ navigation }) {
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
   })));
-  const healthOn = isHealthAvailable();
   // CP-10 stage 3: live theme override appended after the frozen static
   // base, so this row-list card follows a theme change (SettingsPrimitives.js).
   const live = useSettingsStyles();
@@ -81,10 +79,6 @@ export default function SettingsScreen({ navigation }) {
           sub="Your calorie and macro targets"
           onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
         />
-        {/* Founder order (2026-07-13): the "Meal names" settings row is
-            REMOVED - not needed. The MealNames screen and its route stay
-            registered (harmless, unreachable from Settings) in case meal
-            renaming ever returns by founder decision. */}
         <SettingRow
           icon="leaf-outline"
           label="Dietary needs"
@@ -126,14 +120,6 @@ export default function SettingsScreen({ navigation }) {
               'Volyume has two home screen widgets: your next session, and this week\'s consistency. Long-press an empty spot on your home screen, choose Widgets, then find Volyume to add one.',
               [{ text: 'Got it' }],
             ); }}
-          />
-        )}
-        {healthOn && (
-          <SettingRow
-            icon="heart-outline"
-            label={getHealthProviderLabel()}
-            sub="Weight and workouts"
-            onPress={() => { haptics.selection(); navigation.navigate('SettingsHealth'); }}
           />
         )}
         <SettingRow
