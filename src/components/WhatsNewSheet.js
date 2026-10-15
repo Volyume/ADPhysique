@@ -155,6 +155,15 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
+  // 2.15.0 (2026-10-15): the coherence survey (register D228 and its
+  // addendum): the first-post question, the calm and flag tiers, the plan
+  // refusal chooser, style plans at a block boundary; the privacy notice
+  // rides inside the Community line.
+  '2.15.0': [
+    { icon: 'people-outline', text: 'Before your first session posts to Community, Volyume asks once who should see them, and the Community tab tells you who that is. Our privacy policy now covers Community, including how to turn sharing off. Find it in Settings, under Privacy and legal.' },
+    { icon: 'leaf-outline', text: 'Calmer coaching now keeps your totals and averages while the judgement words go quiet, in Food insights and the weekly check-in.' },
+    { icon: 'barbell-outline', text: 'A plan that cannot be built the way you asked now says what is short and offers the ways forward. Kettlebell and circuit plans keep their own workouts from one block to the next. The weekly volume review is one tap from Recovery.' },
+  ],
   '2.14.0': [
     { icon: 'barbell-outline', text: 'Plans are built a new way. Every session is checked so no muscle is trained hard two days running, sessions keep to the length you choose, and if a plan needs more time or more days, it asks you first.' },
     { icon: 'nutrition-outline', text: 'You can now choose your daily calorie target anywhere inside your estimated range, and your macros follow.' },
