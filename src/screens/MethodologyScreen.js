@@ -128,8 +128,10 @@ const SECTIONS = [
 // Wave C item 4 (whole-app coherence campaign 24, 2026-08-17,
 // WAVE-C-FINDINGS.md DEAD-STALE_SURFACE): this map documents only routes
 // that are real. `paywall`/`goal_lock`/`plan_reveal` were deleted: grep-
-// confirmed app-wide, no `navigate('Methodology', ...)` call site anywhere
-// passes those source literals (ProUpgradeScreen and GoalLockConsentScreen
+// confirmed app-wide: two live `navigate('Methodology', ...)` call sites
+// exist (ProSetupCompleteScreen.js:626 with source 'setup_complete',
+// CoachOutputScreen.js:2928 with source 'why_block'), and neither passes
+// those source literals (ProUpgradeScreen and GoalLockConsentScreen
 // carry no "Learn more" link into this screen today, and no "plan reveal
 // moment" screen exists to wire). Wiring a real link for any of them is a
 // net-new UI addition on a screen outside this wave's scope, not a

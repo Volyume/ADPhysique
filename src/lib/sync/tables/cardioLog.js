@@ -1,8 +1,9 @@
 /**
  * cardio_log per-table pull. Push was removed under the cardio-logging
  * product boundary (D92-1/D95 H1, Campaign 4): no local writer remains
- * (LogCardioScreen/CardioHistoryScreen and the passive Health import are
- * gone), so there is never anything new to upload. Pull stays
+ * (no cardio screen exists, and the passive Health import is gone; D92
+ * item 1 keeps cardio logging out of scope, D228 item 7), so there is never
+ * anything new to upload. Pull stays
  * LEGACY-LOAD-BEARING so a user's existing cloud-resident history, and any
  * cross-device history, is never stranded by a sign-out local wipe. The
  * registry entry is `direction: 'pull_only'` (same shape as

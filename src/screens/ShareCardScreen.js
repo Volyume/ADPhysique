@@ -169,7 +169,7 @@ export default function ShareCardScreen({ navigation, route }) {
   // in the share and looks stupid." The list is gone from the card too.
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
-  // Weekly recap: the real weight-progress hero is opt-in. It is force-stripped
+  // Weekly recap: the weight-progress hero starts on. It is force-stripped
   // (and the toggle hidden) under `suppress` so no progress number can leak.
   const [showProgress, setShowProgress] = useState(true);
   // The best-lift feature is opt-in too (also force-stripped under suppress).

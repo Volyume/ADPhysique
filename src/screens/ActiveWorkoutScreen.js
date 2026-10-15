@@ -5954,7 +5954,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               insert, the store, PR detection, the rest timer, auto-advance and
               the per-side and cluster routes are unchanged behind it). A well
               opens the docked keypad; a logged row's well edits it in place;
-              a long-press opens the row sheet (note, edit, delete). The fold
+              the logged row's check opens the row sheet (note, edit, delete). The fold
               of three or more logged rows lives inside the table.
               Warm-ups are no longer auto-suggested (recorded decision, B8):
               a warm-up is chosen on the next row's marker or pulled from

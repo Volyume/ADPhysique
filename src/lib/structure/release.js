@@ -4,10 +4,10 @@
  * `STRUCTURE_ENGINE` decides whether a new plan (planAutoGen's
  * generateAndSavePlan, generatePlanDryRun, assessScheduleFit and
  * planGeneratedRebuildV2) is built by the structure engine in this folder
- * (buildStructurePlan) instead of today's planners. It is OFF on main until
- * the founder signs off the rendered plans (11-BUILD-PLAN.md phase 9; spec
- * docs/audit/plan-builder-map-2026-10-11/23-PHASE6-INTEGRATION-SPEC.md). With
- * it off every path behaves exactly as before phase 6. Tests turn it on with
+ * (buildStructurePlan) instead of today's planners. It is ON on main
+ * (`STRUCTURE_ENGINE = true`), signed off in the D222 addendum of 2026-10-12
+ * (spec docs/audit/plan-builder-map-2026-10-11/23-PHASE6-INTEGRATION-SPEC.md).
+ * With it off every path behaves exactly as before phase 6. Tests turn it on with
  * a module mock:
  *   jest.mock('../structure/release', () => ({
  *     ...jest.requireActual('../structure/release'), STRUCTURE_ENGINE: true,

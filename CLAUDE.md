@@ -53,7 +53,7 @@ are paying. Every change affects them. Work accordingly.
 **Stack.** React Native 0.81.5 + Expo SDK 54 (managed workflow, never eject;
 native modules only via Expo config plugins — see `modules/live-activity`,
 `modules/rest-timer-live`, `modules/progress-scan-image`, and the home-screen
-widget surface `plugins/withVolyumeWidget.js` + `src/widgets/`). React 19.1.
+widget surface `plugins/withVolyumeWidget.js` (the plugin exists but is not wired in app.json; the iOS extension is parked, see liveActivity.wiring.test.js) + `src/widgets/`). React 19.1.
 JavaScript, not TypeScript
 (`tsc --noEmit` runs over JSDoc for checking only).
 
@@ -90,6 +90,7 @@ Article 9 consent, first-run, and tier.
 
 **Deterministic coaching engine** (pure functions, no I/O):
 - `src/lib/planEngine.js` — training volume (MEV/MRV/MAV landmarks)
+- `src/lib/structure/engine.js` — the structure engine, the live plan builder since D222 (with `src/lib/plan/*`)
 - `src/lib/nutritionEngine.js` — Mifflin-St Jeor/Katch-McArdle BMR, TDEE,
   macros, calorie floors, FFM floor, energy-availability caution
 - `src/lib/weeklyCoach.js` — the weekly coaching run (`runWeeklyCoach`)

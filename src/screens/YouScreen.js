@@ -538,7 +538,8 @@ export default function YouScreen({ navigation }) {
         {/* W-8 / C5-P7-07 (D96): this section used to sit inside the isPro
             branch, and YouScreen is the ONLY route to WellbeingCheckScreen in
             the whole app, so a Free user could never take or update the
-            self-report screening, nor reach the Beat UK signpost it shows.
+            self-report screening, nor reach its result guidance (a positive
+            result names a GP or dietitian).
             Both screens are registered ungated (RootNavigator) and both rows
             are guardrail INPUTS, not Pro features: the wellbeing check writes
             the SCOFF score the tier-blind safety system reads, and Goal lock

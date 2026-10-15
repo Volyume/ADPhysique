@@ -84,7 +84,7 @@ export const FAQS = [
   {
     key: 'widgets',
     q: 'Are there home screen widgets?',
-    a: 'Yes. Volyume offers widgets for your next session and this week\'s consistency, plus a lock screen widget on iOS. See Settings > Home screen widget for exact add-to-home-screen steps for your device.',
+    a: 'Yes, on Android: two home screen widgets, your next session and this week\'s consistency. Open Settings, then Home screen widget, for the steps. iOS widgets are not available yet.',
   },
   {
     key: 'app-lock',

@@ -1,7 +1,7 @@
 /**
  * SetRowSheet
  *
- * The overflow of one set row, opened by the row's long-press or the ellipsis
+ * The overflow of one set row, opened by the logged row's check or the ellipsis
  * in its footer (12-BUILD-SPEC section 4: "the row's overflow opens the set
  * note" and "Delete through the row's overflow with the existing confirm",
  * register D220). It is presentational: it owns the note draft while it is open
