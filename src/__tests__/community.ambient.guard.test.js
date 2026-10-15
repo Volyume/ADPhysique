@@ -521,7 +521,10 @@ describe('the Community share strip under the hero (founder order 2026-09-22, so
     // The quiet "Post to Community" button that used to survive for a
     // suppressed summary is gone; the strip never appeared there either.
     expect(SOURCE).not.toMatch(/\{!readOnly && workoutId && calmSuppressed \? \(/);
-    expect(SOURCE).not.toContain("'Post this session to Community'");
+    // The only post offer left is the strip, which itself renders under
+    // `!calmSuppressed` (pinned above); no render branch keys on
+    // `calmSuppressed` being TRUE any more.
+    expect(SOURCE).not.toMatch(/&& calmSuppressed \? \(/);
   });
 
   test('the auto-share effect records every outcome and never sends a doomed create for a device with no cached profile', () => {
