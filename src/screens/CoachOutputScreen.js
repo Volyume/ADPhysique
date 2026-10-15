@@ -2826,7 +2826,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // A "great week" (blueprint docs/blueprint-great-week-share-card-2026-06-22.md
   // §5) is the only time we offer the celebratory recap share, and never while
   // any ED-safety signal is open. The CTA below is gated on this.
-  const greatWeek = isGreatWeek(output).great;
+  // D228 item 3 (founder, 2026-10-15): the offer itself reads calm mode and
+  // the open flag. isGreatWeek only sees a flag raised THIS week, so a person
+  // with an already-open flag, or calm on, used to be offered a share whose
+  // card then arrived stripped. Now the offer does not appear at all.
+  const greatWeek = isGreatWeek(output).great && !edPatternOpen && !calmMode;
 
   // Share the week as the Precision Coaching recap card. The card leads with the
   // real achievement, the weight lost/gained this week and the PRs, built in
@@ -2850,6 +2854,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       weeklyRecapData: output,
       bestLift,
       units: units || 'kg',
+      bodyWeightUnits: bodyWeightUnits || 'st',
       suppress: edPatternOpen || calmMode,
     });
   }

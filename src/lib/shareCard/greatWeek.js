@@ -80,13 +80,14 @@ export function isGreatWeek(output) {
  * @param {boolean} opts.includeProgress  user toggle (default true). When false,
  *   the weight progress hero + progress coach-line are dropped — the best-lift
  *   hero is NOT (independent surfaces).
- * @param {string}  opts.units      'kg' | 'lbs' (gym/body unit label)
+ * @param {string}  opts.units      'kg' | 'lbs' (gym unit, labels the best lift)
+ * @param {string}  opts.bodyWeightUnits 'st' | 'kg' | 'lbs' (the scale figure's unit; st prints as lbs)
  * @param {boolean} opts.isSquare   1:1 (true) vs 9:16 story (false)
  * @param {string}  opts.weekLabel  e.g. "Week 4 · Moderate cut"
  * @param {string}  opts.dateFormatted
  * @param {object}  opts.bestLift   { exerciseName, weight, reps, isNewBest } or null.
  */
-export function buildWeeklyRecapParams(output, { suppress = false, includeProgress = true, units = 'kg', isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
+export function buildWeeklyRecapParams(output, { suppress = false, includeProgress = true, units = 'kg', bodyWeightUnits = 'kg', isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
   const o = output || {};
   const planned = Number(o.sessionsPlanned) || 0;
   const completed = Number(o.sessionsCompleted) || 0;
@@ -95,7 +96,16 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   const onTarget = trendInBand(o.trend);
   const delta = Number(o.trend?.delta);
   const hasWeight = o.trend?.delta != null && Number.isFinite(delta);
-  const u = units === 'lbs' ? 'lbs' : 'kg';
+  // D228 item 3 (founder, 2026-10-15): the weight change prints in the
+  // person's own body-weight unit. `units` is the gym unit (always kg) and
+  // labels the best lift; the scale figure follows bodyWeightUnits: kg as
+  // kg, stones and lbs both as lbs to one decimal (a week's change is too
+  // small to read in stones), the same reading the coach screen's chip gives.
+  const weightInLbs = bodyWeightUnits !== 'kg';
+  const u = weightInLbs ? 'lbs' : 'kg';
+  const magnitude = (kg) => (weightInLbs
+    ? Math.round(Math.abs(kg) * 2.2046226218 * 10) / 10
+    : Math.round(Math.abs(kg) * 10) / 10);
 
   // The real weight achievement is the hero — shown when on target, not
   // safety-suppressed, and not toggled off. (The card only fires on-target, so
@@ -109,7 +119,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   const isCut = /cut/i.test(String(o.goalPhase || ''));
   const lostWeight = delta < -0.01;
   const showProgress = hasWeight && onTarget && isCut && lostWeight && !suppress && includeProgress;
-  const abs = Math.round(Math.abs(delta) * 10) / 10;
+  const abs = magnitude(delta);
 
   // The hero is the single biggest win, always with an explicit heading so the
   // number is never bare. Priority: the cut weight loss (the goal) → otherwise
@@ -124,7 +134,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
     // the feature block below.
     hero = {
       heading: String(bestLiftBlock.exerciseName || 'best lift'),
-      value: `${bestLiftBlock.weight} ${bestLiftBlock.units || 'kg'} × ${bestLiftBlock.reps}`,
+      value: `${bestLiftBlock.weight} ${bestLiftBlock.units || units} × ${bestLiftBlock.reps}`,
       context: bestLiftBlock.isNewBest ? 'new personal record' : 'your best set this week',
     };
     bestLiftBlock = null;
@@ -150,7 +160,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
     stats: stats.slice(0, 4),
     // Name the weight only when the hero shows it (on target, safe, not toggled
     // off) — never on an off-target week.
-    coachLine: buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, showWeight: showProgress }),
+    coachLine: buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, magnitude, showWeight: showProgress }),
   };
 }
 
@@ -159,7 +169,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
 // ("You hit all 4 of your sessions", "You set 2 new PRs this week"). Names the
 // real weight change. The tier headline already says "Textbook Week", so the
 // line doesn't repeat it.
-function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, showWeight }) {
+function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, magnitude, showWeight }) {
   const clauses = [];
   clauses.push(
     planned > 0 && completed >= planned
@@ -170,7 +180,7 @@ function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, showW
   // The real weight change — only when the hero shows it (on target, safe, not
   // suppressed); never on an off-target week or under calm mode / an ED flag.
   if (showWeight) {
-    const a = Math.round(Math.abs(delta) * 10) / 10;
+    const a = magnitude(delta);
     clauses.push(delta < -0.01 ? `lost ${a} ${u}` : delta > 0.01 ? `gained ${a} ${u}` : 'held steady');
   }
   if (recoveryGood) clauses.push('recovery was strong');

@@ -76,10 +76,10 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
     expect(p.coachLine).toMatch(/lost 0\.8 kg/);
   });
 
-  test('the unit follows the user (lbs)', () => {
-    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { units: 'lbs' });
-    expect(p.hero.value).toBe('0.7 lbs');
-    expect(p.coachLine).toMatch(/lost 0\.7 lbs/);
+  test('the unit follows the user: the body-weight unit, converted from the kg delta (D228 item 3)', () => {
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { bodyWeightUnits: 'lbs' });
+    expect(p.hero.value).toBe('1.5 lbs');
+    expect(p.coachLine).toMatch(/lost 1\.5 lbs/);
   });
 
   test('weight is shown ONLY for a cut goal — a bulk never puts a scale number on the card', () => {
@@ -154,5 +154,31 @@ describe('buildWeeklyRecapParams — best-lift feature', () => {
   test('null/missing lift yields null, never undefined', () => {
     expect(buildWeeklyRecapParams(out()).bestLift).toBeNull();
     expect(buildWeeklyRecapParams(out(), { bestLift: null }).bestLift).toBeNull();
+  });
+});
+
+// D228 item 3 (founder, 2026-10-15): the scale figure prints in the person's
+// own body-weight unit. kg stays kg; stones and lbs both print as lbs to one
+// decimal (a week's change is too small to read in stones). The best lift
+// keeps the gym unit. Written to FAIL without the bodyWeightUnits option.
+describe('the weight figure follows the body-weight unit (D228 item 3)', () => {
+  const cutWeek = () => ({ ...out(), goalPhase: 'mild cut', trend: { ...out().trend, delta: -0.7, onTarget: true, inBand: true } });
+  test('kg prints kg', () => {
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'kg' });
+    expect(p.hero).toMatchObject({ heading: 'weight lost this week', value: '0.7 kg' });
+    expect(p.coachLine).toMatch(/lost 0\.7 kg/);
+  });
+  test('stones print as lbs to one decimal', () => {
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'st' });
+    expect(p.hero.value).toBe('1.5 lbs');
+    expect(p.coachLine).toMatch(/lost 1\.5 lbs/);
+  });
+  test('lbs print as lbs', () => {
+    const p = buildWeeklyRecapParams(cutWeek(), { bodyWeightUnits: 'lbs' });
+    expect(p.hero.value).toBe('1.5 lbs');
+  });
+  test('the default is kg, and the best lift keeps the gym unit', () => {
+    const p = buildWeeklyRecapParams({ ...out(), goalPhase: 'lean bulk' }, { bestLift: { exerciseName: 'Squat', weight: 100, reps: 5 } });
+    expect(p.hero.value).toBe('100 kg × 5');
   });
 });

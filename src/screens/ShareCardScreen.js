@@ -125,8 +125,10 @@ export default function ShareCardScreen({ navigation, route }) {
     // The week's standout lift (src/lib/bestLift.js), or null. Featured on the
     // recap card.
     bestLift = null,
-    // Gym/body weight unit label ('kg'|'lbs') for the weekly progress hero.
+    // Gym unit label ('kg') for the best lift, and the person's own body
+    // weight unit ('st'|'kg'|'lbs') for the weekly progress hero (D228 item 3).
     units = 'kg',
+    bodyWeightUnits = 'kg',
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
     // Read `suppressParam` rather than `suppress` -- the effective value is
@@ -169,9 +171,11 @@ export default function ShareCardScreen({ navigation, route }) {
   // in the share and looks stupid." The list is gone from the card too.
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
-  // Weekly recap: the weight-progress hero starts on. It is force-stripped
-  // (and the toggle hidden) under `suppress` so no progress number can leak.
-  const [showProgress, setShowProgress] = useState(true);
+  // Weekly recap: the weight-progress hero is opt-in (D228 item 3, founder
+  // 2026-10-15): it starts OFF and the person switches it on. It is
+  // force-stripped (and the toggle hidden) under `suppress` so no progress
+  // number can leak.
+  const [showProgress, setShowProgress] = useState(false);
   // The best-lift feature is opt-in too (also force-stripped under suppress).
   const [showBestLift, setShowBestLift] = useState(true);
   // Optional gym photo background (SkImage), available on every card type.
@@ -393,8 +397,11 @@ export default function ShareCardScreen({ navigation, route }) {
         suppress,
         includeProgress: showProgress,
         units,
+        bodyWeightUnits,
         isSquare,
-        weekLabel: o.weekLabel || '',
+        // D228 item 3: the phase label ("Mild cut") is progress language too,
+        // so it goes with everything else under suppress.
+        weekLabel: suppress ? '' : (o.weekLabel || ''),
         dateFormatted: showDate ? formatLongDate() : '',
         // The lift hero is independently toggleable; suppress strips it regardless.
         bestLift: showBestLift ? bestLift : null,
@@ -464,7 +471,7 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, bodyWeightUnits, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
 
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect).
