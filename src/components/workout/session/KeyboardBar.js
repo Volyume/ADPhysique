@@ -88,7 +88,11 @@ export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mo
   const t = useTheme();
   const live = useMemo(() => ({
     bar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    label: { ...t.type.w(t.type.num('label'), 'semibold'), color: t.colors.textPrimary },
+    // Founder, 2026-10-15: the bar's words read "quite small and kind of
+    // inconsequential"; one step up for every action, and the last action
+    // (Log set, Done, Finish) bold so it reads as the one that matters.
+    label: { ...t.type.w(t.type.num('body'), 'semibold'), color: t.colors.textPrimary },
+    labelStrong: { ...t.type.w(t.type.num('body'), 'bold'), color: t.colors.textPrimary },
   }), [t]);
   const isTime = mode === 'time';
   const delta = isTime ? TIME_STEP : step;
@@ -168,7 +172,7 @@ export default function KeyboardBar({ step = 1, stepDown = null, unit = 'kg', mo
         spoken={doneLabel}
         onPress={onDone}
         glyphColor={ink}
-        labelStyle={live.label}
+        labelStyle={live.labelStrong}
       />
     </View>
   );
