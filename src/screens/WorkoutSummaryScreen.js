@@ -1737,26 +1737,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             share strip under the hero; this quiet button survives only for
             a summary under calm mode or an open ED flag, where the strip
             never appears and nothing new presses anyone to share. */}
-        {!readOnly && workoutId && calmSuppressed ? (
-          <RevealSection delay={1140}>
-            <Button
-              title={autoSessionPost ? 'Add a note' : 'Post to Community'}
-              icon="people-outline"
-              variant="secondary"
-              onPress={() => {
-                hapticSelection();
-                if (autoSessionPost) {
-                  navigation.navigate('CommunityCompose', {
-                    postId: autoSessionPost.id, kind: 'session', payload: autoSessionPost.payload,
-                  });
-                } else {
-                  navigation.navigate('CommunityCompose', { kind: 'session', workoutId });
-                }
-              }}
-              accessibilityLabel={autoSessionPost ? 'Add a note to this session' : 'Post this session to Community'}
-            />
-          </RevealSection>
-        ) : null}
+        {/* D228 addendum Q1 (founder, 2026-10-15): under calm mode or an open
+            ED flag nothing on this summary offers a post. The quiet button
+            that used to survive here is gone with the strip: a flagged
+            person is not pressed to share, and the server withholds their
+            automatic posts for the flag's duration (migrate_192). */}
 
         {/* D2: programme-arc strip, where this session sits in the block, so
             the work reads as a journey towards the recovery week, not an

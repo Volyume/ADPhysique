@@ -517,8 +517,11 @@ describe('the Community share strip under the hero (founder order 2026-09-22, so
     expect(SOURCE).toMatch(/setCalmSuppressed\(suppressed\);\n\s*setCalmKnown\(true\);/);
   });
 
-  test('the quiet button at the bottom survives only for a suppressed summary', () => {
-    expect(SOURCE).toMatch(/\{!readOnly && workoutId && calmSuppressed \? \(/);
+  test('under calm mode or an open flag nothing on the summary offers a post (D228 addendum Q1)', () => {
+    // The quiet "Post to Community" button that used to survive for a
+    // suppressed summary is gone; the strip never appeared there either.
+    expect(SOURCE).not.toMatch(/\{!readOnly && workoutId && calmSuppressed \? \(/);
+    expect(SOURCE).not.toContain("'Post this session to Community'");
   });
 
   test('the auto-share effect records every outcome and never sends a doomed create for a device with no cached profile', () => {
