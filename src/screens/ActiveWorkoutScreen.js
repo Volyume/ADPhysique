@@ -468,6 +468,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // commit happens on that confirm, never on the arm tap. Disarms after
   // the set logs or when the exercise changes.
   const [extraSetArmed, setExtraSetArmed] = useState(false);
+  // D228 item 9: "Use last session" (the exercise's More sheet). Holds the id
+  // of the exercise whose pending sets follow last session's numbers by
+  // position; null otherwise. Never logs anything.
+  const [useLastRunId, setUseLastRunId] = useState(null);
   // Founder ruling 2026-10-09 (D220 addendum 28, 2a): Add set BEFORE the
   // target is met adds a pending row to this session's target for the
   // exercise (it did nothing visible until the target was met). Reset on
@@ -1565,13 +1569,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onPress: () => {
             tickAllRemainingRef.current = count;
             tickAllRunRef.current = { exerciseId: exercise?.id ?? null, expectedLength: loggedSets.length };
-            handleCompleteSetPress();
+            tickAllStep();
           },
         },
       ],
     );
   }
   const tickAllRunRef = useRef(null);
+  // One tick-all step. A per-side exercise logs each remaining row as ONE set
+  // with both sides (the same single workout_sets row and the same reps for
+  // both sides finishPerSide writes), without the guided side-one/side-two
+  // pause: the person confirmed the count first. Everything else is the
+  // ordinary tap.
+  function tickAllStep() {
+    const uni = exercise ? unilateralExercises.has(exercise.id) : false;
+    if (uni && !perSide) {
+      const reps = parseInt(currentSet.reps, 10);
+      if (!Number.isFinite(reps) || reps < 1) return undefined;
+      return handleCompleteSet({
+        actualReps: reps,
+        perSideCompound: exercise?.compoundIsolation === 'compound',
+      });
+    }
+    return handleCompleteSetPress();
+  }
   function clearTickAll() {
     tickAllRemainingRef.current = 0;
     tickAllRunRef.current = null;
@@ -1587,7 +1608,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
     run.expectedLength = loggedSets.length;
     tickAllRemainingRef.current -= 1;
-    if (tickAllRemainingRef.current > 0 && !saving) handleCompleteSetPress();
+    if (tickAllRemainingRef.current > 0 && !saving) tickAllStep();
     else if (tickAllRemainingRef.current <= 0) clearTickAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedSets.length]);
@@ -3537,6 +3558,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // claim an unlogged set for the whole rest of every session.
           seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
         }
+        // "Use last session" is on for this exercise: the next entry follows
+        // last session's set at its position instead of the resolver's
+        // number. seededEntryRef is left as the resolver wrote it, so the
+        // entry reads as typed, exactly as a tap on the Last cell does.
+        if (useLastRunId != null && useLastRunId === (exercise?.id ?? null) && !isClusterType(currentSet.setType)) {
+          const lc = lastCellFor(seedPosForCompletedSet);
+          if (lc) applyLastSetToEntry(lc);
+        }
       }
 
       // Update last activity timestamp
@@ -3560,6 +3589,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         pairIdx = sgi != null
           ? workoutExercises.findIndex((e, i) => i > currentExerciseIndex && e.supersetGroupId === sgi)
           : -1;
+        // Tick-all on a superset member logs THIS exercise's remaining sets
+        // only: no partner jump and no round-return while the run is on, so
+        // the run stays on the exercise it was confirmed for.
+        if (tickAllRemainingRef.current > 0 && tickAllRunRef.current?.exerciseId === (exercise?.id ?? null)) {
+          sgi = null;
+          pairIdx = -1;
+        }
         if (pairIdx >= 0) {
           setCurrentExerciseIndex(pairIdx);
           scrollToActiveSection(true);
@@ -5244,6 +5280,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const carried = prevWorkingSets[prevWorkingSets.length - 1];
     return { text: shortSetText(carried), stale: true, set: carried };
   }
+  // The single-cell "Use" and "Use last session" share this: last session's
+  // set into the wells, counted as typed (Law A: history, never the target).
+  // No weight for reps-only or timed work (audit P8), as History's Use.
+  function applyLastSetToEntry(lc) {
+    const lastNoWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
+    setCurrentSet((cs) => ({ ...cs, weight: lastNoWeight ? '' : String(lc.set.weight ?? 0), reps: lc.set.actualReps ?? lc.set.reps ?? cs.reps, isGhost: false }));
+  }
+  function handleUseLastSession() {
+    hapticsVocab.setLogged();
+    audit('workout.lastsession.useAll', { exerciseId: exercise?.id, setIndex: workingLogged });
+    if (editingSet) { closeEditSet(); setEditField(null); }
+    setUseLastRunId(exercise?.id ?? null);
+    const lc = lastCellFor(workingLogged);
+    if (lc) applyLastSetToEntry(lc);
+  }
+  useEffect(() => { setUseLastRunId(null); }, [currentExerciseIndex]);
   function bandFor(index) {
     const p = prescriptions[index];
     if (p?.repsBand) return p.repsBand;
@@ -5305,14 +5357,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const nextRowShown = !(targetComplete && !extraSetArmed && !perSide && !cluster && !isWarmupEntry);
   const tickAllCount = (
     nextRowShown && pendingCount > 1
-    && currentSGI == null
+    && (currentSGI == null || !isCircuitGroup)
     && !isWarmupEntry && !cluster && !perSide
     && !isClusterType(currentSet.setType)
     && countProgressSets([{ setType: currentSet.setType }]) > 0
-    && !(exercise && unilateralExercises.has(exercise.id))
     && (setTableKind !== 'weight_reps' || parseDecimalInput(currentSet.weight) > 0)
     && Number(currentSet.reps) > 0
   ) ? pendingCount : 0;
+  // "Use last session" is offered only where a single Last-cell tap is: a
+  // plain straight entry with a last session of working sets and a row still
+  // to come. Never a warm-up, a cluster type, a superset member or a per-side
+  // exercise.
+  const canUseLastSession = prevWorkingSets.length > 0
+    && nextRowShown && pendingCount > 0
+    && currentSGI == null
+    && !isWarmupEntry && !cluster && !perSide
+    && !isClusterType(currentSet.setType)
+    && !(exercise && unilateralExercises.has(exercise.id));
   // The bar's last action on the next row names what it does (audit C11).
   const barLogLabel = cluster ? 'Finish'
     : perSide ? 'Other side'
@@ -5380,9 +5441,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // (Law A: history, never the target).
       hapticsVocab.setLogged();
       audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-      // No weight for reps-only or timed work (audit P8), as History's Use.
-      const lastNoWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
-      setCurrentSet((cs) => ({ ...cs, weight: lastNoWeight ? '' : String(nextLast.set.weight ?? 0), reps: nextLast.set.actualReps ?? nextLast.set.reps ?? cs.reps, isGhost: false }));
+      applyLastSetToEntry(nextLast);
     } : undefined,
     onPressWell: (field) => openWell(field),
     onCheck: cluster ? finishCluster : handleCompleteSetPress,
@@ -5395,13 +5454,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // weight, and the rep range ("6-10") rather than one rep count, so the
     // target reads in the row with no column of its own (D220 addendum 8).
     const range = rangeText(bandFor(n - 1));
+    const followLast = useLastRunId != null && useLastRunId === (exercise?.id ?? null) && lc;
+    const followNoWeight = setTableKind === 'reps_only' || setTableKind === 'duration';
     setTableRows.push({
       id: `pending-${n}`,
       marker: n,
       last: lc ? { text: lc.text, stale: lc.stale } : null,
       wells: {
-        weight: (setTableKind === 'weight_reps') ? (p?.weight ?? '') : '',
-        reps: (setTableKind === 'weight_reps' || setTableKind === 'reps_only') ? (range ?? p?.repsTarget ?? '') : '',
+        weight: followLast
+          ? (followNoWeight ? '' : String(lc.set.weight ?? 0))
+          : ((setTableKind === 'weight_reps') ? (p?.weight ?? '') : ''),
+        reps: followLast
+          ? String(lc.set.actualReps ?? lc.set.reps ?? '')
+          : ((setTableKind === 'weight_reps' || setTableKind === 'reps_only') ? (range ?? p?.repsTarget ?? '') : ''),
         state: 'pending',
       },
       check: 'pending',
@@ -6880,6 +6945,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
                     <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              )}
+              {canUseLastSession && (
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => { setShowOverflow(false); handleUseLastSession(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Use last session"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="time-outline" size={18} color={t.colors.textSecondary} />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Use last session</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Fill the pending sets from last time</Text>
                   </View>
                 </View>
               </TouchableOpacity>

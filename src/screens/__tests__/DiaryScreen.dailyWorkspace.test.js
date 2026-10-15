@@ -435,3 +435,24 @@ describe('D138 items 5 and 6: load cost', () => {
     expect(enriched).toBeTruthy();
   });
 });
+
+describe('D228 item 9: the mark-all toast counts meals, as the banner does', () => {
+  const planned = (id, slot) => entry({ id, entry_date: TODAY, meal_slot: slot, is_planned: 1 });
+
+  test('one meal of three foods toasts "1 planned meal marked as eaten."', async () => {
+    dayWith({ today: [planned('p1', 'meal_1'), planned('p2', 'meal_1'), planned('p3', 'meal_1')] });
+    // The write changes three ROWS; the toast must still say one meal.
+    require('../../lib/food/db').confirmPlannedDay.mockResolvedValueOnce(3);
+    const tree = await mountDiary();
+    await act(async () => { await byLabel(tree, 'Mark planned meals as eaten')[0].props.onPress(); });
+    expect(mockToastShow.mock.calls.at(-1)[0]).toBe('1 planned meal marked as eaten.');
+  });
+
+  test('two meals toast "2 planned meals marked as eaten."', async () => {
+    dayWith({ today: [planned('p1', 'meal_1'), planned('p2', 'meal_1'), planned('p3', 'meal_2')] });
+    require('../../lib/food/db').confirmPlannedDay.mockResolvedValueOnce(3);
+    const tree = await mountDiary();
+    await act(async () => { await byLabel(tree, 'Mark planned meals as eaten')[0].props.onPress(); });
+    expect(mockToastShow.mock.calls.at(-1)[0]).toBe('2 planned meals marked as eaten.');
+  });
+});

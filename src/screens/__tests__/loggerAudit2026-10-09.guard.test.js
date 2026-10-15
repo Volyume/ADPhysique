@@ -105,7 +105,10 @@ describe('the second logger audit stays fixed', () => {
 
   test('D14, P8: Use arms the extra set past the target and never invents a weight', () => {
     expect(SRC).toMatch(/function handleUseHistorySet\(\{ weight, reps \}\) \{[\s\S]{0,600}?if \(targetComplete && !extraSetArmed\) \{ cancelAutoAdvance\(\); setExtraSetArmed\(true\); \}/);
-    expect(SRC).toContain("weight: lastNoWeight ? '' : String(nextLast.set.weight ?? 0)");
+    // D228 item 9: the Last cell's tap and "Use last session" share one writer;
+    // the no-weight rule moved with it, unchanged.
+    expect(SRC).toContain("weight: lastNoWeight ? '' : String(lc.set.weight ?? 0)");
+    expect(SRC).toContain('applyLastSetToEntry(nextLast);');
   });
 
   test('P2, P3: the quiet-line buttons wear the border at the label role; the glyphs are ink', () => {

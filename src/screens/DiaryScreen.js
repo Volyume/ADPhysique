@@ -351,15 +351,19 @@ export default function DiaryScreen({ navigation, route }) {
   const handleConfirmPlanned = useCallback(async () => {
     if (!userId) return;
     try {
+      // The toast counts MEALS (slots), as the banner does, not the rows the
+      // write changed: one meal of three foods is "1 planned meal", not 3.
+      // plannedCount is read before the confirm; n (rows) still gates the rest.
+      const mealsConfirmed = Math.max(1, plannedCount);
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
       if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
       if (n > 0) dismissPlanAddedHint(); // same discovery, plan-added teach's signal
-      toast.show(n > 0 ? `${n} planned ${n === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
+      toast.show(n > 0 ? `${mealsConfirmed} planned ${mealsConfirmed === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [userId, selectedDate, plannedCount, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
   // meal's planned rows, not the whole day, so staging a plan into the diary
