@@ -29,6 +29,9 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'weekly_coach_run',                deferred: false, panel: 2 },
   { name: 'ffm_floor_hold_fired',            deferred: false, panel: 2 },
   { name: 'rapid_loss_compression_triggered',deferred: false, panel: 2 },
+  // D228 item 5: the structure engine refused a week (reason codes and
+  // request numbers only). Emitted behind STRUCTURE_REFUSED_TELEMETRY.
+  { name: 'structure_refused',               deferred: false, panel: 2 },
   // Q4 ruling (2026-08-21, no-outside-party law): the five CC32
   // capability operational counters are RETIRED from the catalogue.
   // Even content-free events land per-user, so their presence alone

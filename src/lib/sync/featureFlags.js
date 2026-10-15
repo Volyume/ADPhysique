@@ -72,3 +72,15 @@ export const PLAN_FACTS_PUSH = true;
  * src/lib/__tests__/sync.entryTypedPush.test.js is re-pinned here).
  */
 export const ENTRY_TYPED_PUSH = true;
+
+/**
+ * D228 item 5 (founder, 2026-10-15): the `structure_refused` engine
+ * telemetry event. OFF until supabase/migrate_193_structure_refused_telemetry.sql
+ * is APPLIED under the founder's exact phrase: the server's
+ * record_engine_telemetry allow-list rejects an unlisted event and the
+ * transport retries a rejected row on every flush, so emitting before the
+ * apply would queue a row that never clears. Flipped to true in the landing
+ * after the apply, as the migration header requires. The event's payload is
+ * reason codes and request numbers only, never muscle names or body data.
+ */
+export const STRUCTURE_REFUSED_TELEMETRY = false;

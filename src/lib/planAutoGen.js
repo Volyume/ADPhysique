@@ -2536,6 +2536,32 @@ function structurePlanForPreview(result, args) {
   };
 }
 
+
+/**
+ * D228 item 5: record that the structure engine refused a week, for the
+ * refusal-rate dashboard. Reason codes and the request's numbers only; no
+ * muscle names, nothing about the person. Behind STRUCTURE_REFUSED_TELEMETRY
+ * until migrate_193 lists the event server-side. Best effort, never throws.
+ */
+export function noteStructureRefusal(userId, surface, refusal, args) {
+  try {
+    // eslint-disable-next-line global-require
+    const { STRUCTURE_REFUSED_TELEMETRY } = require('./sync/featureFlags');
+    if (!STRUCTURE_REFUSED_TELEMETRY || !userId) return;
+    // eslint-disable-next-line global-require
+    const { track } = require('./engineTelemetry');
+    track(userId, 'structure_refused', {
+      surface,
+      reason: refusal?.reason ?? null,
+      days: args?.days ?? null,
+      length: args?.lengthMinutes ?? null,
+      suggestedDays: refusal?.suggestedDays ?? null,
+      suggestedLength: refusal?.suggestedLength ?? null,
+      minimumDays: refusal?.minimumDays ?? null,
+    }).catch?.(() => {});
+  } catch (_) { /* telemetry is never on the person's path */ }
+}
+
 /**
  * generateAndSavePlan's body for the structure engine (R66): one transaction
  * holding the programme, a routine per engine session in the engine's order,
@@ -2551,6 +2577,7 @@ async function saveWithStructureEngine({
   if (built.error) return { ok: false, error: 'plan_engine_error' };
   const { args, result } = built;
   if (!result.ok) {
+    noteStructureRefusal(userId, 'save', result.refusal, args);
     return { ok: false, error: 'structure_refused', refusal: structureRefusal(result.refusal, args) };
   }
   const workouts = structureWorkoutsForWrite(result.plan);
@@ -2647,6 +2674,7 @@ async function previewWithStructureEngine({ userId, inputs, allExercises, genera
   if (built.error) return { ok: false, error: 'plan_engine_error' };
   const { args, result } = built;
   if (!result.ok) {
+    noteStructureRefusal(userId, 'preview', result.refusal, args);
     return {
       ok: false,
       error: 'structure_refused',
@@ -2707,7 +2735,10 @@ async function rebuildWithStructureEngine({ userId, inputs, currentExerciseNames
   });
   if (built.error) return { ok: false, reason: 'error', error: built.error };
   const { args, result } = built;
-  if (!result.ok) return { ok: false, reason: 'structure_refused' };
+  if (!result.ok) {
+    noteStructureRefusal(userId, 'rebuild', result.refusal, args);
+    return { ok: false, reason: 'structure_refused' };
+  }
   if (result.report.needsLengthChoice || result.report.needsFocusChoice) return { ok: false, reason: 'structure_needs_choice' };
   const plan = structurePlanForPreview(result, args);
   const weeklyTargets = structureWeeklyTargets(result.plan);
