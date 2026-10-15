@@ -175,8 +175,12 @@ describe('A2-005 bodyweight import is deduped to the maybeSync effect', () => {
     expect(triggersStart).toBeGreaterThan(callSyncAllStart);
   });
 
-  test('source guard: maybeSync still imports new bodyweight (the single canonical site)', () => {
-    expect(maybeSyncBody).toMatch(/importNewWeights\s*\(/);
+  test('source guard: the bodyweight import is gone from App.js altogether (the health stub went with D228 item 6)', () => {
+    // The health module (isHealthAvailable() false since 2026-06-30) was
+    // deleted on 2026-10-15, so neither effect imports weights now; the
+    // dedupe this suite guarded cannot regress into a duplicate call.
+    expect(maybeSyncBody).not.toMatch(/importNewWeights\s*\(/);
+    expect(APP).not.toMatch(/lib\/health/);
   });
 
   test('source guard: callSyncAll no longer imports bodyweight (dedup, no double read)', () => {

@@ -114,7 +114,9 @@ describe('Athlete Profile uses the noun form "body weight", not compounded "body
   });
 
   test('the Body weight stat tile label is unchanged (already correct two-word noun form)', () => {
-    expect(ATHLETE_PROFILE).toMatch(/<StatTile label="Body weight" value=\{weightText\} sub=\{weightTileSub\} \/>/);
+    // D228 item 2 tier c: the tile's value and sub now come from bodyWeightTile()
+    // (withheld under an open flag); the label is the same two-word noun.
+    expect(ATHLETE_PROFILE).toMatch(/<StatTile label="Body weight" value=\{weightTile\.value\} sub=\{weightTile\.sub\} \/>/);
   });
 });
 

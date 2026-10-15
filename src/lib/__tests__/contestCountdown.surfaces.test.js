@@ -37,7 +37,9 @@ describe('rule 2: the surface fails closed on wellbeing reads', () => {
     // so wellbeing is read raw; a real failure yields 'read_failed', which the
     // calm computation then treats as calm.
     expect(coachOutput).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)[\s\S]*?\.catch\(\(\) => 'read_failed'\)/);
-    expect(coachOutput).toMatch(/wb === 'read_failed'/);
+    // D228 item 2: the composition is the one helper; a 'read_failed' mode
+    // derives as readFailed, which deriveSafetyState counts as suppressed.
+    expect(coachOutput).toMatch(/deriveSafetyState\(\{ mode: wb, edFlag: openFlag \}\)/);
     expect(coachOutput).not.toMatch(/getWellbeingMode\(/);
   });
   test('SCOFF feeds the lib from the profile score', () => {
