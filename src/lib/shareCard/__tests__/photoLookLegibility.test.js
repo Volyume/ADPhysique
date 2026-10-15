@@ -24,9 +24,10 @@
  * aspect/background combination Jest reports it under.
  */
 import {
-  drawShareCard, cardHeight, DARK_PALETTE,
+  drawShareCard, cardHeight, DARK_PALETTE, sampleAverageTone,
 } from '../drawShareCard';
 import { PHOTO_LOOKS, startStrengthFor } from '../photoLooks';
+import { videoTier } from '../../shareVideo/clipTone';
 
 const fs = require('fs');
 const path = require('path');
@@ -146,7 +147,7 @@ describe('a photo look never costs the card its legibility', () => {
     }
   });
 
-  function renderAndSample(aspect, bgPhoto, lookKey, strength) {
+  function renderAndSample(aspect, bgPhoto, lookKey, strength, toneOverride = null) {
     const H = cardHeight(WIDTH, aspect !== 'story', aspect);
     const surf = env.Skia.Surface.MakeOffscreen(WIDTH, H);
     const positions = [];
@@ -155,6 +156,7 @@ describe('a photo look never costs the card its legibility', () => {
       Skia: env.Skia, width: WIDTH, typefaces: env.typefaces, wordmark: null,
       params: { ...SESSION_PARAMS, aspect, photoLook: lookKey, photoLookStrength: strength },
       bgPhoto,
+      ...(toneOverride ? { toneOverride } : {}),
     });
     surf.flush();
     const img = surf.makeImageSnapshot();
@@ -235,5 +237,89 @@ describe('a photo look never costs the card its legibility', () => {
       const titleContrast = contrastRatio(hexToRgb(DARK_PALETTE.text), titleBg);
       expect(titleContrast).toBeGreaterThanOrEqual(4.5);
     });
+  });
+});
+
+// D229 addendum 4, rules 3 and 5 (the fresh-eyes review 2026-10-15, blocker
+// B3: a look recomputed the handed-in tone's luminance from the frame's own
+// colours, so a dark video fell back to the lighter photo tier). The scrim
+// under a VIDEO is drawn from a handed-in tone (`toneOverride`, the brightest
+// frame of the window lifted to the bright tier by videoTier), and that tier
+// must hold under every look at 0.5 and at 1.0: the title and the stat row
+// at 4.5:1 or more, the hero at 3:1 or more, over a dark frame, a mid-grey
+// frame and a near-white one. The frame is drawn here as the photo so the
+// read-back pixels are what a frame of the finished video shows under the
+// card.
+describe('a video frame under every look keeps the card legible (addendum 4, rules 3 and 5)', () => {
+  let env = null;
+  const frames = {};
+  beforeAll(async () => {
+    if (!CAN_TRY) return;
+    try {
+      const ckDir = path.dirname(ckPkg);
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      const CK = await require(path.join(ckDir, 'bin/full/canvaskit.js'))({ locateFile: (f) => path.join(ckDir, 'bin/full', f) });
+      const { JsiSkApi } = require('@shopify/react-native-skia/lib/commonjs/skia/web/JsiSkia.js');
+      const Skia = JsiSkApi(CK);
+      const tf = (p) => Skia.Typeface.MakeFreeTypeFaceFromData(Skia.Data.fromBytes(new Uint8Array(fs.readFileSync(p))));
+      env = { Skia, typefaces: { bold: tf(FONT_BOLD), regular: tf(FONT_REG) } };
+      const fill = (hex) => {
+        const sf = Skia.Surface.MakeOffscreen(900, 1200);
+        const paint = Skia.Paint(); paint.setColor(Skia.Color(hex));
+        sf.getCanvas().drawRect(Skia.XYWHRect(0, 0, 900, 1200), paint);
+        sf.flush();
+        return sf.makeImageSnapshot();
+      };
+      frames.dark = fill('#1A1A1C');
+      frames.mid = fill('#6E6E70');
+      frames.bright = fill('#F2EAD8');
+    } catch (_) {
+      env = null;
+    }
+  });
+  function render(aspect, frame, lookKey, strength) {
+    const H = cardHeight(WIDTH, aspect !== 'story', aspect);
+    const surf = env.Skia.Surface.MakeOffscreen(WIDTH, H);
+    const positions = [];
+    const proxied = backgroundOnlyCanvas(surf.getCanvas(), positions);
+    const toneOverride = videoTier(sampleAverageTone(env.Skia, frame, WIDTH, H, null));
+    drawShareCard(proxied, {
+      Skia: env.Skia, width: WIDTH, typefaces: env.typefaces, wordmark: null,
+      params: { ...SESSION_PARAMS, aspect, photoLook: lookKey, photoLookStrength: strength },
+      bgPhoto: frame,
+      toneOverride,
+    });
+    surf.flush();
+    const img = surf.makeImageSnapshot();
+    const px = img.readPixels(0, 0, { width: WIDTH, height: H, alphaType: 3, colorType: 4 });
+    return { px, H, positions };
+  }
+  const cases = [];
+  PHOTO_LOOKS.filter((l) => l.matrix).forEach((look) => {
+    [0.5, 1].forEach((strength) => {
+      ['dark', 'mid', 'bright'].forEach((frameKind) => {
+        cases.push([`${look.key} @ ${strength} (story, ${frameKind} video)`, { lookKey: look.key, strength, frameKind }]);
+      });
+    });
+  });
+  test('there are looks to sweep', () => {
+    expect(cases.length).toBeGreaterThan(0);
+  });
+  test.each(cases)('%s keeps the title, stat row and hero legible', (_label, c) => {
+    if (!env) return; // CanvasKit/fonts unavailable here -- skip without failing
+    const { px, H, positions } = render('story', frames[c.frameKind], c.lookKey, c.strength);
+    expect(px).toBeTruthy();
+    const heroPos = positions.find((t) => t.str === '9,340');
+    const titlePos = positions.find((t) => t.str === 'Leg Day');
+    const statPos = positions.find((t) => t.str === '18');
+    expect(heroPos).toBeTruthy();
+    expect(titlePos).toBeTruthy();
+    expect(statPos).toBeTruthy();
+    const heroBg = samplePatch(px, WIDTH, H, heroPos.x + 34, heroPos.y - 20, 70, 26);
+    const titleBg = samplePatch(px, WIDTH, H, titlePos.x + 30, titlePos.y - 12, 50, 16);
+    const statBg = samplePatch(px, WIDTH, H, statPos.x + 8, statPos.y - 12, 26, 16);
+    expect(contrastRatio(hexToRgb(DARK_PALETTE.accent), heroBg)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(hexToRgb(DARK_PALETTE.text), titleBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(hexToRgb(DARK_PALETTE.text), statBg)).toBeGreaterThanOrEqual(4.5);
   });
 });

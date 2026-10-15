@@ -72,8 +72,8 @@ const BANNED = [
 const ONE_VIDEO = { exerciseName: 'Bench press', setNumber: 3, source: 'workout', durationMs: 12000, createdAt: 5 };
 const OTHER_VIDEO = { exerciseName: null, source: 'summary', durationMs: 9000, createdAt: 9 };
 const BENCH_PR = { exerciseName: 'Bench press', setNumber: 3, type: 'heaviest_weight' };
-const UNNAMED_PR_VIDEO = { exerciseId: 'e1', exerciseName: null, setNumber: null, source: 'workout', createdAt: 7 };
-const UNNAMED_PR = { exerciseId: 'e1', exerciseName: null, setNumber: null, type: '1rm_estimate' };
+const UNNAMED_PR_VIDEO = { exerciseId: 'e1', exerciseName: null, setNumber: 2, source: 'workout', createdAt: 7 };
+const UNNAMED_PR = { exerciseId: 'e1', exerciseName: null, setNumber: 2, type: '1rm_estimate' };
 
 // D229 addendum 9 (lead ruling 2026-10-15): the words the founder ruled for the
 // PR moment ("A PR if you hit it", "This set would be a PR.", "Share this PR
@@ -260,7 +260,7 @@ describe('the plain-words pins', () => {
   test('the exercise menu row', () => {
     expect(CLIP_STRINGS.rowLabel).toBe('Record a video of this set');
     expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
-    expect(CLIP_STRINGS.rowDescNone).toBe('Up to 15 seconds, no sound. Shared from the summary afterwards.');
+    expect(CLIP_STRINGS.rowDescNone).toBe('Up to 15 seconds, no sound. Stays on this phone.');
   });
 
   test('the primer says it all, once', () => {

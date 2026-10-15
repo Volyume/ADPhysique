@@ -24,12 +24,12 @@ jest.mock('expo-modules-core', () => ({
 
 const FOUNDER_LINES = {
   E_DECODE: 'This phone cannot open that video. Some videos filmed at very high quality are too much for older phones. You could record a video in Volyume instead, or choose a different one.',
-  E_ENCODE: 'The video could not be made on this phone this time. Your photo card is ready to share instead.',
+  E_ENCODE: 'The video could not be made on this phone this time. You can try again, or choose None under Background to share the card as an image.',
   E_FRAME: 'That video was too big for this phone to prepare. A shorter video, or one filmed at a lower quality, should work.',
   E_SOURCE: 'That video could not be opened. It may have been moved or deleted.',
   E_SPACE: 'There is not enough space on your phone to make the video. Once some space is free you can try again.',
   E_ICLOUD: 'That video is still downloading from iCloud. Try again once it has finished.',
-  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and tap Share video again.',
+  E_BACKGROUND: 'The video stops if Volyume is closed while it is being made. Keep Volyume open and try again.',
 };
 
 const AI_WORD = /\bAI\b/; // case-sensitive, as a word: "again" and "said" are fine

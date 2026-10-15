@@ -214,7 +214,7 @@ describe('camera access', () => {
 });
 
 describe('what the screen says, in plain words', () => {
-  test('one line under the button, always shown: before, during the countdown and while recording', async () => {
+  test('one line under the button, always shown: before and during the countdown it says how to start; while recording it says what stops it', async () => {
     const tree = await mount();
     const line = 'Tap to start with a countdown. Hold to record while you hold.';
     expect(text(tree)).toContain(line);
@@ -223,8 +223,8 @@ describe('what the screen says, in plain words', () => {
     expect(text(tree)).toContain(line);
     await advance(3000);
     await flush();
-    expect(text(tree)).toContain(line);
-    expect(hostById(tree, 'clip-camera-hint')).toBeDefined();
+    expect(text(tree)).not.toContain(line);
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Tap the square to stop.');
   });
 
   test('each small control carries a word above its value: "Countdown" above 3 s, "Length" above 15 s', async () => {
@@ -331,19 +331,22 @@ describe('TAP: the countdown, then it records for the chosen length and stops by
     expect(haptics.selection).toHaveBeenCalledTimes(1);
   });
 
-  test('a stop that arrives before the recorder was running is asked for again, twice, while it still runs', async () => {
+  test('a stop that arrives before the recorder was running is asked for again every 300 ms until the recorder ends', async () => {
     mockStopResolves = false;
     const tree = await mount();
     await startTapRecording(tree);
     await advance(2000);
     await press(tree, 'clip-camera-record');
     expect(mockStopRecording).toHaveBeenCalledTimes(1);
-    await advance(400);
+    await advance(300);
     expect(mockStopRecording).toHaveBeenCalledTimes(2);
-    await advance(500);
-    expect(mockStopRecording).toHaveBeenCalledTimes(3);
+    await advance(1200);
+    expect(mockStopRecording).toHaveBeenCalledTimes(6);
+    // The recorder ends: the asking ends with it.
+    await act(async () => { mockResolveRecord({ uri: 'file:///cache/Camera/take.mp4' }); });
+    await flush();
     await advance(5000);
-    expect(mockStopRecording).toHaveBeenCalledTimes(3);
+    expect(mockStopRecording).toHaveBeenCalledTimes(6);
   });
 });
 
@@ -486,13 +489,39 @@ describe('HOLD: records while held, no countdown, stops on release, capped at 15
     expect(mockStopRecording).not.toHaveBeenCalled();
   });
 
-  test('holding on the stop control of a tap recording does not start a second recording', async () => {
+  test('a long press during a tap recording stops it (a press that became a long press reports no tap), and never starts a second recording', async () => {
     const tree = await mount();
     await startTapRecording(tree);
+    await advance(3000);
     const node = hostById(tree, 'clip-camera-record');
     await act(async () => { node.props.onLongPress(); });
     await flush();
     expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    expect(mockStopRecording).toHaveBeenCalledTimes(1);
+  });
+
+  test('while a hold records, the hint says letting go stops it', async () => {
+    const tree = await mount();
+    await startHold(tree);
+    await flush();
+    expect(hostById(tree, 'clip-camera-hint').props.children).toBe('Let go to stop.');
+  });
+
+  test('a hold let go before the recorder has begun keeps asking it to stop until it ends, never a fixed number of times', async () => {
+    mockStopResolves = false; // the recorder is slow to begin: a stop now is ignored
+    const tree = await mount();
+    const node = await startHold(tree);
+    await act(async () => { node.props.onPressOut(); });
+    expect(mockStopRecording).toHaveBeenCalledTimes(1);
+    await advance(300);
+    expect(mockStopRecording).toHaveBeenCalledTimes(2);
+    await advance(1500);
+    expect(mockStopRecording).toHaveBeenCalledTimes(7);
+    // The recorder finally ends: the asking stops with it.
+    await act(async () => { mockResolveRecord({ uri: 'file:///cache/Camera/take.mp4' }); });
+    await flush();
+    await advance(3000);
+    expect(mockStopRecording).toHaveBeenCalledTimes(7);
   });
 
   test('the record control is a hold target: long press after 400 ms', async () => {
@@ -662,11 +691,11 @@ describe('after a save', () => {
     expect(mockSaveClip.mock.calls[0][0]).toMatchObject({ source: 'summary', exerciseId: null, exerciseName: null, setNumber: null });
   });
 
-  test('share: back to the share screen with the id merged in, no toast, saved as a workout-level video', async () => {
+  test('share: back to the share screen with the id merged in, no toast, saved as a share-screen video (it can be mid-workout, so never "after")', async () => {
     await recordFiveSeconds({ source: 'share', exerciseId: null, exerciseName: null, setNumber: null });
     expect(navigation.navigate).toHaveBeenCalledWith({ name: 'ShareCard', params: { clipId: 'clip-1' }, merge: true });
     expect(mockShow).not.toHaveBeenCalled();
-    expect(mockSaveClip.mock.calls[0][0].source).toBe('summary');
+    expect(mockSaveClip.mock.calls[0][0].source).toBe('share');
   });
 
   test('a failed Undo says so calmly', async () => {

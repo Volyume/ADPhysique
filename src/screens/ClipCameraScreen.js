@@ -67,7 +67,7 @@
  * later, in case the first arrived before the recorder was running).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, BackHandler } from 'react-native';
 import Text from '../components/Text';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -117,9 +117,11 @@ const COUNTDOWN_TICK_MS = 1000;
 // A press this long on the record control is a hold (record while held). A
 // shorter press is a tap (countdown). Long enough that a slow tap is a tap.
 const HOLD_DELAY_MS = 400;
-// The stop is asked for again at these delays while the recording is still
-// running, in case the first request reached the recorder before it had begun.
-const STOP_RETRY_MS = [400, 900];
+// Once a stop is wanted it is asked for again this often, for as long as the
+// recording is still running: a stop that reaches CameraX before it has
+// begun is ignored, and the recorder gives no "started" signal, so the ask
+// is repeated until recordAsync resolves (never a fixed number of retries).
+const STOP_ASK_EVERY_MS = 300;
 
 // One of the two small controls beside the record button: a plain word above
 // its value, so nobody has to guess what a bare "3 s" or "15 s" changes.
@@ -162,6 +164,8 @@ export default function ClipCameraScreen({ navigation, route }) {
   const [phase, setPhaseState] = useState('ready');
   const [countdownN, setCountdownN] = useState(0);
   const [recording, setRecording] = useState({ startedAtMs: 0, limitMs: MAX_CLIP_MS });
+  // 'tap' or 'hold', for the hint while recording.
+  const [recordMode, setRecordMode] = useState('tap');
   const [clipsOpen, setClipsOpen] = useState(false);
 
   const cameraRef = useRef(null);
@@ -183,7 +187,7 @@ export default function ClipCameraScreen({ navigation, route }) {
   const startedAtRef = useRef(0);
   const countdownTimer = useRef(null);
   const autoStopTimer = useRef(null);
-  const stopRetryTimers = useRef([]);
+  const stopAskTimer = useRef(null);
 
   const setPhase = useCallback((next) => {
     phaseRef.current = next;
@@ -193,8 +197,7 @@ export default function ClipCameraScreen({ navigation, route }) {
   const clearTimers = useCallback(() => {
     if (countdownTimer.current) { clearInterval(countdownTimer.current); countdownTimer.current = null; }
     if (autoStopTimer.current) { clearTimeout(autoStopTimer.current); autoStopTimer.current = null; }
-    stopRetryTimers.current.forEach((id) => clearTimeout(id));
-    stopRetryTimers.current = [];
+    if (stopAskTimer.current) { clearInterval(stopAskTimer.current); stopAskTimer.current = null; }
   }, []);
 
   const dropCacheFile = useCallback((uri) => {
@@ -240,6 +243,14 @@ export default function ClipCameraScreen({ navigation, route }) {
       lengthRef.current = n;
       setLengthSec(n);
     }).catch((e) => { logError('ClipCamera.lengthRead', e); });
+  }, []);
+
+  // The phone's back button while a finished recording is being saved: the
+  // save takes well under a second, and leaving then would throw the video
+  // away without a word (the close glyph already waits for it).
+  useEffect(() => {
+    const sub = BackHandler?.addEventListener?.('hardwareBackPress', () => phaseRef.current === 'saving');
+    return () => { sub?.remove?.(); };
   }, []);
 
   // ── Leaving, and camera access ─────────────────────────────────────────────
@@ -333,9 +344,9 @@ export default function ClipCameraScreen({ navigation, route }) {
         // engine's probe, so none is claimed here.
         width: null,
         height: null,
-        // A video made from the share screen belongs to the workout as a whole,
-        // like one made on the summary.
-        source: source === 'workout' ? 'workout' : 'summary',
+        // Kept as recorded: a share-screen video can be made mid-workout, so
+        // it is not "after the workout" (the sheet names it "Workout").
+        source,
       });
     } catch (e) {
       logError('ClipCamera.save', e, { workoutId });
@@ -363,8 +374,10 @@ export default function ClipCameraScreen({ navigation, route }) {
     setNumber, source, afterSave, showFull, toast,
   ]);
 
-  // Ask the recorder to stop. Asked again a moment later, twice, while it is
-  // still running: a stop that arrives before CameraX has begun is ignored.
+  // Ask the recorder to stop, and keep asking every STOP_ASK_EVERY_MS until
+  // recordAsync resolves (finishRecording clears the timers): a stop that
+  // arrives before CameraX has begun is ignored, and a hold let go in that
+  // window must still end the recording, never run on to the 15 s cap.
   const stopRecording = useCallback(() => {
     if (phaseRef.current !== 'recording') return;
     stopFeltRef.current = true;
@@ -377,10 +390,11 @@ export default function ClipCameraScreen({ navigation, route }) {
       }
     };
     ask();
-    stopRetryTimers.current.forEach((id) => clearTimeout(id));
-    stopRetryTimers.current = STOP_RETRY_MS.map((ms) => setTimeout(() => {
+    if (stopAskTimer.current) clearInterval(stopAskTimer.current);
+    stopAskTimer.current = setInterval(() => {
       if (phaseRef.current === 'recording') ask();
-    }, ms));
+      else if (stopAskTimer.current) { clearInterval(stopAskTimer.current); stopAskTimer.current = null; }
+    }, STOP_ASK_EVERY_MS);
   }, []);
 
   const startRecording = useCallback(async (mode) => {
@@ -395,6 +409,7 @@ export default function ClipCameraScreen({ navigation, route }) {
     discardRef.current = false;
     stopFeltRef.current = false;
     modeRef.current = mode;
+    setRecordMode(mode);
     limitMsRef.current = limitMs;
     recordingCameraRef.current = camera;
     startedAtRef.current = Date.now();
@@ -456,7 +471,10 @@ export default function ClipCameraScreen({ navigation, route }) {
   }, [ready, setPhase, stopRecording, hasRoom, showFull, beginCountdown]);
 
   // A HOLD: records at once, no countdown, for as long as the press lasts.
+  // A long press DURING a tap recording stops it (the tap's release is not
+  // reported once the press has become a long press).
   const handleHoldStart = useCallback(async () => {
+    if (phaseRef.current === 'recording') { stopRecording(); return; }
     if (phaseRef.current !== 'ready' || !ready) return;
     holdActiveRef.current = true;
     setPhase('starting');
@@ -465,7 +483,7 @@ export default function ClipCameraScreen({ navigation, route }) {
     if (!holdActiveRef.current) { setPhase('ready'); return; } // let go while checking
     if (!room) { holdActiveRef.current = false; showFull(); return; }
     startRecording('hold');
-  }, [ready, setPhase, hasRoom, showFull, startRecording]);
+  }, [ready, setPhase, hasRoom, showFull, startRecording, stopRecording]);
 
   // Letting go ends a hold. (A tap's release does nothing here.)
   const handleRelease = useCallback(() => {
@@ -634,7 +652,9 @@ export default function ClipCameraScreen({ navigation, route }) {
           maxFontSizeMultiplier={fontScaleCaps.chrome}
           testID="clip-camera-hint"
         >
-          {CLIP_STRINGS.recordHint}
+          {isRecording
+            ? (recordMode === 'hold' ? CLIP_STRINGS.recordingHintHold : CLIP_STRINGS.recordingHintTap)
+            : CLIP_STRINGS.recordHint}
         </Text>
       </View>
 
@@ -670,7 +690,7 @@ const styles = StyleSheet.create({
   },
   topSpacer: { flex: 1 },
   glyph: { width: GLYPH, height: GLYPH, alignItems: 'center', justifyContent: 'center' },
-  dimmed: { opacity: 0.4 },
+  dimmed: { opacity: alpha.strong },
   shadow: SHADOW,
   countdownWrap: {
     ...StyleSheet.absoluteFillObject,
@@ -709,7 +729,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recordDot: { width: RECORD - 20, height: RECORD - 20, borderRadius: circle(RECORD - 20) },
-  stopSquare: { width: 24, height: 24, borderRadius: radius.sm },
+  stopSquare: { width: iconSize.lg, height: iconSize.lg, borderRadius: radius.sm },
   valueControl: { minWidth: GLYPH, minHeight: GLYPH, alignItems: 'center', justifyContent: 'center' },
   hint: { ...SHADOW, color: CAM.textPrimary, textAlign: 'center', paddingHorizontal: spacing.lg },
 });

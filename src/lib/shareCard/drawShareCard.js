@@ -562,6 +562,26 @@ export function applyLookToTone(tone, look, strength) {
   return { r: r * 255, g: g * 255, b: b * 255, luminance, topLuminance };
 }
 
+/**
+ * The scrim tone for a VIDEO after the look has been applied to it (D229
+ * addendum 4, rule 3: a clip never gets the lighter photo tier, whatever the
+ * sampled tone). `applyLookToTone` recomputes the luminance from the frame's
+ * own colours, which would drop a dark video back to the photo tier, so the
+ * judged luminance (and the top band's) is held at no less than the handed-in
+ * tone's: a look may brighten the judged tone, never lower it below the tier
+ * it arrived at. With no handed-in tone (a photo) the tone is returned as is.
+ * Pure; pinned by drawShareCard.videoTier.test.js.
+ */
+export function holdVideoTier(tone, override) {
+  if (!override || !tone || tone === override) return tone;
+  const topOf = (t) => (Number.isFinite(t.topLuminance) ? t.topLuminance : t.luminance);
+  return {
+    ...tone,
+    luminance: Math.max(tone.luminance, override.luminance),
+    topLuminance: Math.max(topOf(tone), topOf(override)),
+  };
+}
+
 // A UI-safe minimum: above this sampled luminance, a tone-tinted scrim alone
 // does not give white text a reliable contrast floor, so the scrim deepens
 // toward black instead of just tinting (ELITE-SHARE-SPEC pillar 1).
@@ -738,9 +758,12 @@ function drawBackground(canvas, Skia, W, H, bands, frame = null, s = 1) {
         // untouched photo (a look that brightens must not get a scrim sized
         // for a darker photo): the sampled tone is carried through the SAME
         // colour matrix before the scrim uses it.
-        const tone = TONE_OVERRIDE
+        let tone = TONE_OVERRIDE
           ? applyLookToTone(TONE_OVERRIDE, PHOTO_LOOK, PHOTO_LOOK_STRENGTH)
           : applyLookToTone(sampleAverageTone(Skia, BG, W, H, BG_CROP), PHOTO_LOOK, PHOTO_LOOK_STRENGTH);
+        // A handed-in tone is a VIDEO's, already lifted to the bright tier
+        // (D229 addendum 4, rule 3): the tier is held through the look.
+        tone = holdVideoTier(tone, TONE_OVERRIDE);
         drawPhotoScrim(canvas, Skia, W, H, tone, bands);
       } finally {
         if (clip) canvas.restore();

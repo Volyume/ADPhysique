@@ -191,6 +191,41 @@ describe('saveClip', () => {
     expect(row.set_number).toBe(3);
   });
 
+  test('the clips folder is kept out of the iOS device backup on every save (the policy promises "not in backups")', async () => {
+    const nativeImage = require('progress-scan-image');
+    nativeImage.setExcludedFromBackup.mockClear();
+    await addWorkout('w-backup');
+    const res = await saveClip({
+      userId: U, workoutId: 'w-backup', cacheUri: cacheFile('a.mp4'), durationMs: 5000, source: 'workout',
+    });
+    expect(res.ok).toBe(true);
+    expect(nativeImage.setExcludedFromBackup).toHaveBeenCalledWith(CLIPS_DIR);
+    // A refusal from the native side never blocks the save.
+    nativeImage.setExcludedFromBackup.mockRejectedValueOnce(new Error('no attribute'));
+    const again = await saveClip({
+      userId: U, workoutId: 'w-backup', cacheUri: cacheFile('b.mp4'), durationMs: 5000, source: 'workout',
+    });
+    expect(again.ok).toBe(true);
+  });
+
+  test('a save or a delete tells every subscriber, so a row on screen can re-read at once', async () => {
+    const { subscribeClips } = require('../store');
+    const heard = jest.fn();
+    const stop = subscribeClips(heard);
+    await addWorkout('w-sub');
+    const res = await saveClip({
+      userId: U, workoutId: 'w-sub', cacheUri: cacheFile('s.mp4'), durationMs: 5000, source: 'share',
+    });
+    expect(res.ok).toBe(true);
+    expect(res.clip.source).toBe('share');
+    expect(heard).toHaveBeenCalledTimes(1);
+    await deleteClip(res.clip.id);
+    expect(heard).toHaveBeenCalledTimes(2);
+    stop();
+    await saveClip({ userId: U, workoutId: 'w-sub', cacheUri: cacheFile('t.mp4'), durationMs: 5000, source: 'workout' });
+    expect(heard).toHaveBeenCalledTimes(2);
+  });
+
   test('the set number is kept with the exercise only, and only when it is a real number', async () => {
     await addWorkout('w-setno');
     const kept = await save('w-setno', { setNumber: 2 });
@@ -255,7 +290,7 @@ describe('saveClip', () => {
     const good = { userId: U, workoutId: 'w-x', cacheUri: cacheFile(), durationMs: 5000, source: 'workout' };
     for (const bad of [
       { ...good, userId: '' }, { ...good, workoutId: null }, { ...good, cacheUri: '' },
-      { ...good, source: 'share' }, { ...good, source: undefined },
+      { ...good, source: 'gallery' }, { ...good, source: undefined },
     ]) {
       expect(await saveClip(bad)).toEqual({ ok: false, reason: 'invalid' });
     }

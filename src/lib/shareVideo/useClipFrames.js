@@ -20,7 +20,7 @@
  * Nothing here reads anything but the file. The clip never leaves the
  * device through this hook.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { Skia } from '@shopify/react-native-skia';
 import {
@@ -44,12 +44,24 @@ function runtime() {
 /** Open `source` (a file:// URL) as a Skia Video, or null while it loads. */
 export function useClipVideo(source) {
   const [video, setVideo] = useState(null);
+  // The source the screen wants NOW. A slow open that lands after the
+  // person chose another video, or None, is disposed, never shown (fresh-eyes
+  // review 2026-10-15, should-fix 20).
+  const wantedRef = useRef(source);
+  wantedRef.current = source;
+  const opened = useCallback((src, vid) => {
+    if (wantedRef.current !== src) {
+      try { vid?.dispose?.(); } catch (_e) { /* best effort */ }
+      return;
+    }
+    setVideo(vid);
+  }, []);
   const open = useCallback((src) => {
     'worklet';
     let vid = null;
     try { vid = Skia.Video(src); } catch (_e) { vid = null; }
-    runOnJS(setVideo)(vid);
-  }, []);
+    runOnJS(opened)(src, vid);
+  }, [opened]);
   useEffect(() => {
     setVideo(null);
     if (!source) return undefined;

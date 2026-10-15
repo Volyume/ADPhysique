@@ -51,10 +51,11 @@ export const DEFAULT_LEAD_IN_SECONDS = 3;
 export const LENGTH_OPTIONS = Object.freeze([5, 10, 15]);
 export const DEFAULT_LENGTH_SECONDS = 15;
 
-/** Where a clip was recorded. The table keeps the first two only: a clip made
- *  from the share screen belongs to the workout as a whole, so it is saved as
- *  'summary'. */
-export const CLIP_SOURCES = Object.freeze(['workout', 'summary']);
+/** Where a clip was recorded: for a set ('workout'), on the summary after the
+ *  workout ('summary'), or from the share screen ('share', which can be during
+ *  the workout, so it is not "after"). A clip with no exercise reads "After
+ *  the workout" for 'summary' and "Workout" otherwise. */
+export const CLIP_SOURCES = Object.freeze(['workout', 'summary', 'share']);
 
 /** The routes the camera screen can be opened from. */
 export const CAMERA_SOURCES = Object.freeze(['workout', 'summary', 'share']);
@@ -69,7 +70,7 @@ export const CLIP_STRINGS = Object.freeze({
   // The exercise menu row (it records the set the person is on).
   rowLabel: 'Record a video of this set',
   rowA11y: 'Record a video of this set',
-  rowDescNone: 'Up to 15 seconds, no sound. Shared from the summary afterwards.',
+  rowDescNone: 'Up to 15 seconds, no sound. Stays on this phone.',
   rowDescThree: '3 saved, the most for one workout.',
 
   // D229 addendum 9: the PR moment. Before the set, on the exercise card's
@@ -101,6 +102,10 @@ export const CLIP_STRINGS = Object.freeze({
 
   // The camera.
   recordHint: 'Tap to start with a countdown. Hold to record while you hold.',
+  // The hint while recording: after a tap, the square stops it early; during
+  // a hold, letting go stops it.
+  recordingHintTap: 'Tap the square to stop.',
+  recordingHintHold: 'Let go to stop.',
   // The two small controls each carry a word, so nobody has to guess what a
   // bare "3 s" or "15 s" changes.
   countdownCaption: 'Countdown',
@@ -123,6 +128,13 @@ export const CLIP_STRINGS = Object.freeze({
   sheetWorkoutName: 'Workout',
   sheetEmpty: 'No videos saved for this workout.',
   deleteLabel: 'Delete',
+  // A person's own video goes only after one plain question (the house
+  // confirms before deleting a progress photo too).
+  deleteConfirmTitle: 'Delete this video?',
+  deleteConfirmBody: 'It will be removed from this phone.',
+  deleteConfirmKeep: 'Keep',
+  playA11y: 'Play video',
+  playStopA11y: 'Stop video',
   deleted: 'Video deleted',
   deleteFailed: "Couldn't delete that video. Try again.",
 
@@ -301,11 +313,13 @@ export function summaryClipRowCopy(clips, prs) {
 
 /**
  * Whether `clip` was recorded for the set that earned `pr` (D229 addendum 9).
- * The same exercise (by id when both carry one, else by name), and the same
- * set number when both carry one; a side that knows no set number matches on
- * the exercise alone. Used by the logger's PR moment, the summary's
- * "Use your PR video on the share" and the share screen's PR pairing, so the
- * three agree by construction.
+ * The same exercise (by id when both carry one, else by name) AND the same
+ * set number, both known: a record from a history reopen carries no set
+ * number, and a video of that exercise is then NOT claimed as "your PR set"
+ * (fresh-eyes review 2026-10-15, should-fix 17: the loose match over-claimed).
+ * Used by the logger's PR moment, the summary's "Use your PR video on the
+ * share" and the share screen's PR pairing, so the three agree by
+ * construction.
  */
 export function clipMatchesPR(clip, pr) {
   if (!clip || !pr) return false;
@@ -322,8 +336,8 @@ export function clipMatchesPR(clip, pr) {
   if (!sameExercise) return false;
   const cs = Math.floor(Number(clip.setNumber));
   const ps = Math.floor(Number(pr.setNumber));
-  if (Number.isFinite(cs) && cs > 0 && Number.isFinite(ps) && ps > 0) return cs === ps;
-  return true;
+  if (!Number.isFinite(cs) || cs <= 0 || !Number.isFinite(ps) || ps <= 0) return false;
+  return cs === ps;
 }
 
 /**

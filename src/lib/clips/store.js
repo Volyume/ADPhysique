@@ -39,6 +39,36 @@ import {
 /** Where the clip files live. */
 export const CLIPS_DIR = `${FileSystem.documentDirectory}clips/`;
 
+// Who to tell when a clip is saved or deleted (the logger's row, the history
+// row and the share screen re-read on it, so an Undo or a delete is seen at
+// once, not on the next focus). Listeners never throw past here.
+const listeners = new Set();
+export function subscribeClips(fn) {
+  if (typeof fn !== 'function') return () => {};
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+function emitClipsChanged() {
+  listeners.forEach((fn) => {
+    try { fn(); } catch (e) { logError('clips.store.listener', e); }
+  });
+}
+
+// iOS keeps documentDirectory in the device backup unless a folder opts out.
+// A video of a person's body must not travel to iCloud (the policy promises
+// "never uploaded, not in backups"), so the clips folder is excluded the way
+// the progress-photo folder is (progressPhotos.js, safety-privacy-blueprint
+// section 6.3), re-applied on every save as a healing pass. Android has no
+// such attribute (allowBackup is false app-wide); the native module no-ops.
+// Best effort: this must never block a save.
+async function excludeClipsFromBackup() {
+  try {
+    // eslint-disable-next-line global-require
+    const nativeImage = require('progress-scan-image');
+    await nativeImage.setExcludedFromBackup?.(CLIPS_DIR);
+  } catch (_) { /* best-effort */ }
+}
+
 /** The table name, exported so the guard tests and database.js cannot drift. */
 export const CLIPS_TABLE = 'workout_clips';
 
@@ -176,6 +206,7 @@ async function saveOne(input) {
   } catch (_) {
     // An existing directory is fine; a real failure surfaces on the move.
   }
+  await excludeClipsFromBackup();
   try {
     await FileSystem.moveAsync({ from: cacheUri, to: dest });
   } catch (e) {
@@ -208,15 +239,14 @@ async function saveOne(input) {
     return { ok: false, reason: 'write_failed' };
   }
 
-  return {
-    ok: true,
-    clip: rowToClip({
-      id, user_id: userId, workout_id: workoutId, exercise_id: exerciseId || null,
-      exercise_name: name, set_number: setNo,
-      uri: dest, duration_ms: length, width: intOrNull(width), height: intOrNull(height),
-      created_at: createdAt, source,
-    }),
-  };
+  const clip = rowToClip({
+    id, user_id: userId, workout_id: workoutId, exercise_id: exerciseId || null,
+    exercise_name: name, set_number: setNo,
+    uri: dest, duration_ms: length, width: intOrNull(width), height: intOrNull(height),
+    created_at: createdAt, source,
+  });
+  emitClipsChanged();
+  return { ok: true, clip };
 }
 
 /**
@@ -248,7 +278,11 @@ export async function deleteClip(id) {
   const d = await db();
   const row = await d.getFirstAsync('SELECT * FROM workout_clips WHERE id = ?', [id]);
   if (!row) return false;
-  await deleteRowsAndFiles(d, [row]);
+  try {
+    await deleteRowsAndFiles(d, [row]);
+  } finally {
+    emitClipsChanged();
+  }
   return true;
 }
 
@@ -257,7 +291,11 @@ export async function deleteClipsForWorkout(workoutId) {
   if (!workoutId) return 0;
   const d = await db();
   const rows = await d.getAllAsync('SELECT * FROM workout_clips WHERE workout_id = ?', [workoutId]);
-  return deleteRowsAndFiles(d, Array.isArray(rows) ? rows : []);
+  try {
+    return await deleteRowsAndFiles(d, Array.isArray(rows) ? rows : []);
+  } finally {
+    emitClipsChanged();
+  }
 }
 
 /**
@@ -270,10 +308,15 @@ export async function deleteAllClipsForUser(userId) {
   if (!userId) return 0;
   const d = await db();
   const rows = await d.getAllAsync('SELECT * FROM workout_clips WHERE user_id = ?', [userId]);
-  const removed = await deleteRowsAndFiles(d, Array.isArray(rows) ? rows : []);
-  const left = await d.getFirstAsync('SELECT COUNT(*) AS n FROM workout_clips');
-  if ((Number(left?.n) || 0) === 0) {
-    await FileSystem.deleteAsync(CLIPS_DIR, { idempotent: true });
+  let removed = 0;
+  try {
+    removed = await deleteRowsAndFiles(d, Array.isArray(rows) ? rows : []);
+    const left = await d.getFirstAsync('SELECT COUNT(*) AS n FROM workout_clips');
+    if ((Number(left?.n) || 0) === 0) {
+      await FileSystem.deleteAsync(CLIPS_DIR, { idempotent: true });
+    }
+  } finally {
+    emitClipsChanged();
   }
   return removed;
 }

@@ -45,8 +45,8 @@ describe('the rulings, as numbers', () => {
     expect(Math.max(...LENGTH_OPTIONS)).toBe(MAX_CLIP_SECONDS);
   });
 
-  test('a video is saved as a workout video or a summary video, nothing else', () => {
-    expect(CLIP_SOURCES).toEqual(['workout', 'summary']);
+  test('a video is saved as a workout video, a summary video or a share-screen video, nothing else', () => {
+    expect(CLIP_SOURCES).toEqual(['workout', 'summary', 'share']);
   });
 
   test('the three device flags use the ruled keys', () => {
@@ -58,7 +58,7 @@ describe('the rulings, as numbers', () => {
 
 describe('the exercise menu row, by how many videos the workout holds', () => {
   test.each([
-    [0, 'Up to 15 seconds, no sound. Shared from the summary afterwards.'],
+    [0, 'Up to 15 seconds, no sound. Stays on this phone.'],
     [1, '1 saved. Up to 3 for each workout.'],
     [2, '2 saved. Up to 3 for each workout.'],
     [3, '3 saved, the most for one workout.'],
@@ -268,10 +268,12 @@ describe('the summary row names a PR set\'s video (addendum 9)', () => {
   test('a PR video without a name of its own takes the PR\'s, and with neither says so plainly', () => {
     const unnamed = { id: 'u', exerciseId: 'e1', exerciseName: null, setNumber: 3, createdAt: 5 };
     expect(summaryClipRowCopy([unnamed], [bench]).sub).toBe('You recorded Bench press, set 3, a PR');
-    const bare = { id: 'x', exerciseId: 'e1', setNumber: null, createdAt: 5 };
-    expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: null }])).toEqual({
+    const bare = { id: 'x', exerciseId: 'e1', setNumber: 2, createdAt: 5 };
+    expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: 2 }])).toEqual({
       label: 'Use your PR video on the share', sub: 'You recorded a video of a PR set', newest: bare,
     });
+    // A record with no set number (a history reopen) never claims a video.
+    expect(summaryClipRowCopy([bare], [{ exerciseId: 'e1', setNumber: null }]).label).toBe('Use your video on the share');
   });
 });
 
@@ -326,9 +328,10 @@ describe('a video and the PR set it was recorded for (addendum 9)', () => {
     expect(clipMatchesPR({ exerciseId: 'e2', exerciseName: 'Bench press', setNumber: 3 }, pr)).toBe(false);
   });
 
-  test('a side that knows no set number matches on the exercise alone', () => {
-    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: null }, pr)).toBe(true);
-    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2 }, { ...pr, setNumber: null })).toBe(true);
+  test('a side that knows no set number never matches: a history record carries none, and its exercise\'s videos are not claimed as the PR set', () => {
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: null }, pr)).toBe(false);
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 2 }, { ...pr, setNumber: null })).toBe(false);
+    expect(clipMatchesPR({ exerciseId: 'e1', exerciseName: 'Bench press', setNumber: 0 }, { ...pr, setNumber: 0 })).toBe(false);
   });
 
   test('without ids on both sides the names decide, case and spacing aside', () => {

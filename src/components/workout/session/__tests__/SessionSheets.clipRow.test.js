@@ -69,7 +69,7 @@ describe('the Record a video of this set row', () => {
   });
 
   test.each([
-    [0, 'Up to 15 seconds, no sound. Shared from the summary afterwards.'],
+    [0, 'Up to 15 seconds, no sound. Stays on this phone.'],
     [1, '1 saved. Up to 3 for each workout.'],
     [2, '2 saved. Up to 3 for each workout.'],
     [3, '3 saved, the most for one workout.'],
