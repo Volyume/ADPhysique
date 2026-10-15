@@ -12,3 +12,5 @@ Register: D229. Research and design in this folder; the lead's feasibility answe
 > Built within Volyume itself fully and you share a completed video. Make it work within the area of the photos too so it's still once complete app not a bolt on extra
 
 > I approve the best solution you please decide. I love how we have photos so fit within that with the options but slick and so on. It really needs to look a part of what we have but a level upper
+
+> Need to be able to import videos also recorded natively
