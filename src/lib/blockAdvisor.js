@@ -482,9 +482,17 @@ async function buildProgrammeReview(userId, activeBlock) {
   const { isAutoEligible } = require('./exercise/canonicality');
   // eslint-disable-next-line global-require
   const { proposeNextBlock, verdictCopy } = require('./blockReview');
+  // eslint-disable-next-line global-require
+  const { styleLockFromTags } = require('./exercise/styleLock');
 
   const plan = await getActivePlan(userId);
   if (!plan?.id) return null;
+  // D228 Q4-A: a library style plan (kettlebell, circuit, band) keeps its own
+  // workouts at the block boundary, so there is no structural verdict to give:
+  // a "worth rebuilding" or "changes recommended" card would describe changes
+  // PlansScreen will not make. Null is the existing best-effort answer, and the
+  // card then shows the volume recommendation alone, as before this existed.
+  if (styleLockFromTags(plan.tags)) return null;
   const routines = await getRoutinesForPlan(plan.id);
   // CC33 adversarial review F2: the routine rows' embedded exercise
   // objects carry NO demand columns (database.js:4482-4515), so judging

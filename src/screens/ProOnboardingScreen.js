@@ -155,7 +155,6 @@ const STEP_OUTCOMES = {
     { icon: 'restaurant-outline', label: 'Nutrition target' },
   ],
   8: [
-    { icon: 'pulse-outline', label: 'Recovery guardrails' },
     { icon: 'notifications-outline', label: 'Check-in rhythm' },
   ],
 };
@@ -244,11 +243,16 @@ const SESSION_LENGTH_OPTIONS = [
 // full-body week at two sessions and no longer quietly promotes it to three.
 const DAYS_PER_WEEK_OPTIONS = [2, 3, 4, 5, 6];
 
-const RECOVERY_OPTIONS = [
-  { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
-  { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
-  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
-];
+// D228 Q5-A (2026-10-15): onboarding no longer asks the recovery-level question.
+// The structure engine never reads it (its inputs are goal, days, length,
+// equipment, experience, focus). The profile field stays: the muscle recovery
+// model, the legacy generator, the block ledger and the two edit screens
+// (Adjust training, Update goal and phase) still read `userProfile.recoveryRating`,
+// all of them falling back to 'average' when it is absent. Onboarding therefore
+// keeps writing the key, with the default every one of those readers already
+// uses, so nothing downstream ever sees it missing, and it never overwrites a
+// value the person has already set.
+const DEFAULT_RECOVERY_RATING = 'average';
 
 // Step 5 handle line (CR-15): the Join screen's own states and words.
 const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
@@ -502,7 +506,6 @@ export default function ProOnboardingScreen({ navigation }) {
   const [attempted2, setAttempted2] = useState(false);
   const [attempted4, setAttempted4] = useState(false);
   const [attempted7, setAttempted7] = useState(false);
-  const [attempted8, setAttempted8] = useState(false);
   // ── Step 5, Your gym (CR-15 / D158; 25-ONBOARDING-COMMUNITY-SPEC.md 4.3) ──
   // Two answers: the gym (OPTIONAL, founder ruling 2026-09-11: a venue, an
   // explicit "none", or nothing) and whether to join Community now ("Join
@@ -579,11 +582,6 @@ export default function ProOnboardingScreen({ navigation }) {
   function validateStep7() {
     const errs = {};
     if (!trainingPhase) errs.phase = 'Choose what you are focused on.';
-    return errs;
-  }
-  function validateStep8() {
-    const errs = {};
-    if (!recoveryRating) errs.recovery = 'Choose your recovery level.';
     return errs;
   }
 
@@ -820,8 +818,9 @@ export default function ProOnboardingScreen({ navigation }) {
     });
   }
 
-  // Step 4, recovery + reminders
-  const [recoveryRating, setRecoveryRating] = useState(null);
+  // Step 8, reminders. D228 Q5-A: there is no recovery answer to collect any
+  // more; this is the profile's own value, or the default every reader uses.
+  const recoveryRating = userProfile?.recoveryRating ?? DEFAULT_RECOVERY_RATING;
   const [morningHour, setMorningHour] = useState(7);
   // C5-P28-01 (D96): quiet hours default to 22:00 -> 07:00, so a 5 AM or 6 AM
   // pick is shifted to 07:00 at schedule time while every display kept showing
@@ -855,7 +854,8 @@ export default function ProOnboardingScreen({ navigation }) {
   // The fit answer is computed from the athlete's REAL prescription, which is
   // not fully known until the last question is answered: the division sets
   // which muscles are prioritised, the weak points add volume on top, and the
-  // recovery rating scales the whole week. So the assessment runs at the END
+  // recovery rating (the profile's own since D228 Q5-A; it is no longer asked
+  // here) scales the whole week on the legacy generator. So the assessment runs at the END
   // of the wizard, after step 6, rather than beside the schedule controls in
   // step 4 where three of its four inputs would still be missing. Assessing
   // early and calling the result a recommendation would be fake precision.
@@ -972,7 +972,6 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.trainingPhase, setTrainingPhase);
       if (Array.isArray(a.planWeakPoints)) setPlanWeakPoints(a.planWeakPoints.filter((m) => typeof m === 'string').slice(0, 3));
       str(a.proteinOverride, setProteinOverride);
-      str(a.recoveryRating, setRecoveryRating);
       num(a.morningHour, setMorningHour);
       num(a.checkinDay, setCheckinDay);
       // CR-15: the step 5 answers, restored as typed values only.
@@ -1016,7 +1015,7 @@ export default function ProOnboardingScreen({ navigation }) {
       bodyFat, bfSource, localHeightUnits, sex, age, heightCm, heightFt,
       heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
       trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
-      recoveryRating, morningHour, checkinDay,
+      morningHour, checkinDay,
       gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
     };
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
@@ -1029,7 +1028,7 @@ export default function ProOnboardingScreen({ navigation }) {
     bodyWeight, bodyFat, bfSource, localHeightUnits, sex, age, heightCm,
     heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
     equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
-    recoveryRating, morningHour, checkinDay,
+    morningHour, checkinDay,
     gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
   ]);
 
@@ -1728,11 +1727,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
   async function advanceFrom8() {
     Keyboard.dismiss();
-    const errs8 = validateStep8();
-    if (Object.keys(errs8).length) {
-      surfaceGaps(errs8, ['recovery'], 'group8', null, setAttempted8);
-      return;
-    }
+    // D228 Q5-A: step 8 has no required answer any more (the reminders carry
+    // their own defaults), so there is no gate to surface here.
     // Schedule fit, checked ONCE, with every answer in hand. A schedule that
     // carries the plan is never interrupted; one that does not gets the
     // athlete a real choice instead of a silently shortened plan or a
@@ -3155,10 +3151,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 8, Recovery & reminders ───────────────────────────────────────────
+  // ── Step 8, Reminders ──────────────────────────────────────────────────────
 
   if (step === 8) {
-    const errors8 = attempted8 ? validateStep8() : {};
 
     // ── Plan fit ────────────────────────────────────────────────────────────
     // Shown only when the athlete's schedule cannot carry the plan we would
@@ -3431,18 +3426,14 @@ export default function ProOnboardingScreen({ navigation }) {
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, live.scroll]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step} skipGym={skipGymStep}
-            title="Recovery and reminders"
+            title="Your reminders"
             // C5-P36-02 (D96): this screen stated one idea four times in a
-            // single scroll - this sub, the coach card, the field hint and a
-            // tooltip the source comment below says is deliberately SHARED by
-            // the hint and this sub, because the header has no field label to
-            // anchor one to. That shared anchor was the symptom: two
-            // explanation layers competing for one idea. The volume clause is
-            // deleted here, where it had no anchor, and kept on the field
-            // hint an inch below, which states it more usefully and owns the
-            // tooltip outright. The coach card, the reminder copy and the
-            // tooltip all stay; nothing about the recovery question, what it
-            // drives, or the write-before-prompt reminder ordering changes.
+            // single scroll; the volume clause was deleted from this sub.
+            // D228 Q5-A: the recovery question that owned the volume hint and
+            // tooltip is gone from onboarding, and with it the word
+            // "Recovery" in this title, which named a question that is no
+            // longer here. The coach card, the reminder copy and the
+            // write-before-prompt reminder ordering are unchanged.
             sub="Reminders keep coaching consistent."
             onBack={goBack}
           />
@@ -3457,29 +3448,6 @@ export default function ProOnboardingScreen({ navigation }) {
             <Text style={[styles.coachCardBody, live.coachCardBody]}>
               Volyume uses your morning weigh-ins and weekly check-in to shape coaching. Food logging helps refine it, and the app stays cautious when data is missing.
             </Text>
-          </View>
-
-          <View style={styles.section}>
-            {/* U-E-1/A6: glosses "volume" on this field's hint, per the
-                existing bodyFatMethod/phase/division/proteinTier pattern.
-                C5-P36-02 (D96): the tooltip used to stand in for the Header
-                sub above as well, because that sub also said "volume" with
-                no field label to anchor a tooltip to. That sub's volume
-                clause is now deleted, so this is the only "volume" site on
-                the step and the tooltip anchors to its own field, as
-                everywhere else. */}
-            <View onLayout={markY('recovery')}>
-            <Dropdown
-              label="How's your recovery?"
-              hint="Be honest here. This sets how much volume your plan includes, so it can protect your recovery."
-              tip={GLOSSARY.volume}
-              value={recoveryRating}
-              options={RECOVERY_OPTIONS}
-              onChange={setRecoveryRating}
-              placeholder="Select your recovery"
-              error={errors8.recovery}
-            />
-            </View>
           </View>
 
           <View style={styles.section}>
@@ -3596,10 +3564,6 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </View>
           </View>
-
-          {errors8.recovery ? (
-            <Text style={[styles.continueHint, live.continueHint]}>Still needed: your recovery level.</Text>
-          ) : null}
 
           <Button
             title="Continue"

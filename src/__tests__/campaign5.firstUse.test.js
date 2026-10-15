@@ -1273,13 +1273,16 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
       'Choose your training days.',
       'Choose your equipment.',
       'Enter your best current estimate or a measured value.',
-      'Be honest here. This sets how much volume your plan includes, so it can protect your recovery.',
     ]) {
       expect(src).toContain(hint);
     }
-    // The recovery question, what it drives and the write-before-prompt
-    // reminder ordering are all untouched.
-    expect(src).toContain("label=\"How's your recovery?\"");
+    // D228 Q5-A (2026-10-15): the recovery question (its label and its volume
+    // hint) left onboarding by ruling; the structure engine never read it.
+    // Re-pointed from asserting it exists to asserting it is gone. The
+    // volume tooltip is still anchored on the Training experience field, and
+    // the write-before-prompt reminder ordering is untouched.
+    expect(src).not.toContain("label=\"How's your recovery?\"");
+    expect(src).not.toContain('Be honest here. This sets how much volume your plan includes, so it can protect your recovery.');
     expect(src).toContain('tip={GLOSSARY.volume}');
   });
 });

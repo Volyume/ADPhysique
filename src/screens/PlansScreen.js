@@ -30,6 +30,9 @@ import {
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises,
   getProgrammePlanFacts } from '../lib/database';
 import { isAuthoredFacts } from '../lib/library/authored';
+// D228 Q4-A: the ONE style-lock rule (PlanUpdateScreen and ProGoalSetupScreen
+// read the same module), so a block boundary cannot disagree with them.
+import { styleLockFromTags } from '../lib/exercise/styleLock';
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -727,15 +730,26 @@ export default function PlansScreen({ navigation }) {
     // eslint-disable-next-line global-require
     const { buildChangeReceipt } = require('../lib/planRationale');
 
+    // D228 Q4-A: a library style plan (kettlebell, circuit, band) keeps its
+    // own workouts at the block boundary. The generator builds from gym,
+    // dumbbell, home and bodyweight kit only, so a dry run here would preview
+    // a different kind of plan than the one the person is on. Read the tag
+    // exactly as PlanUpdateScreen does (styleLockFromTags over the active
+    // plan's tags); the review then shows the set targets alone, with the
+    // existing "Your workouts stay exactly as they are" line.
+    const styleLock = styleLockFromTags(activePlan?.tags);
+
     setPreparingReview(true);
     try {
       const seedRanges = await buildSeedRangesForNextBlock(user.id, {
         intent: 'adjust', userProfile, tier,
       }).catch(() => null);
-      const programmeProposal = blockAdvice?.programmeReview ?? null;
-      const dry = await generatePlanDryRun(user.id, userProfile, {
-        continuityProposal: programmeProposal,
-      }).catch(() => null);
+      const programmeProposal = styleLock ? null : (blockAdvice?.programmeReview ?? null);
+      const dry = styleLock
+        ? null
+        : await generatePlanDryRun(user.id, userProfile, {
+          continuityProposal: programmeProposal,
+        }).catch(() => null);
       const decisions = dry?.ok ? (dry.continuity?.decisions ?? []) : [];
       const receipt = decisions.length ? buildChangeReceipt(decisions) : null;
       // Only a genuine exercise change earns a rebuilt programme. When the
@@ -757,8 +771,8 @@ export default function PlansScreen({ navigation }) {
         exerciseChanges,
         prescriptionChanges,
         volume: buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current }),
-        verdictCopy: blockAdvice?.programmeReview?.copy ?? null,
-        dryFailed: !dry?.ok,
+        verdictCopy: styleLock ? null : (blockAdvice?.programmeReview?.copy ?? null),
+        dryFailed: styleLock ? false : !dry?.ok,
       });
     } finally {
       setPreparingReview(false);
@@ -787,7 +801,15 @@ export default function PlansScreen({ navigation }) {
     // generator at a block boundary: its next block is the same plan, and
     // activatePlanWithBlock starts that plan's own next block.
     const authoredPlan = isAuthoredFacts(await getProgrammePlanFacts(activePlan.id).catch(() => null));
-    const mayRefine = refine === true && seedIntent === 'adjust' && !authoredPlan;
+    // D228 Q4-A: a library style plan (kettlebell, circuit, band) is never
+    // rebuilt by the generator at a block boundary either. With the structure
+    // engine on, generateAndSavePlan routes a style-tagged plan to the legacy
+    // generator and saves it with its tags null, so the rebuilt plan loses its
+    // style. The next block is the same plan, reactivated with its own
+    // workouts, exactly as an authored plan's is. Defence in depth: the review
+    // above never asks for a rebuild of it, so refine is false.
+    const styleLock = styleLockFromTags(activePlan?.tags);
+    const mayRefine = refine === true && seedIntent === 'adjust' && !authoredPlan && !styleLock;
     const seedRanges = review?.seedRanges ?? blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
       intent: seedIntent, userProfile, tier,
     }).catch(() => null);
@@ -856,6 +878,13 @@ export default function PlansScreen({ navigation }) {
       if (structurePlan) {
         await afterStructureBlockStart(activePlan.id)
           .catch((e) => logError('PlansScreen.structureNextBlockRows', e, { userId: user?.id }));
+      }
+      // D228 Q4-A: a rebuild was asked for but the plan's style withheld it.
+      // Same words the refine fallback above uses, so the person is told the
+      // plain outcome. The review never asks for one on a style plan, so this
+      // is only reached by a future caller that passes refine for it.
+      if (refine === true && seedIntent === 'adjust' && styleLock) {
+        toast.show('Your next block started with your current workouts', { variant: 'warning' });
       }
     }
 

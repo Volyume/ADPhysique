@@ -36,7 +36,8 @@ describe('every gated step surfaces its gaps the same way', () => {
     ['advanceFrom4', 'validateStep4', "'group4'", 'setAttempted4'],
     ['advanceFrom5', 'validateStep5', "'group5'", 'setAttempted5'],
     ['advanceFrom7', 'validateStep7', "'group7'", 'setAttempted7'],
-    ['advanceFrom8', 'validateStep8', "'group8'", 'setAttempted8'],
+    // D228 Q5-A: step 8 (reminders) is no longer a gated step. Its only
+    // required answer was the recovery level, which onboarding no longer asks.
   ])('%s validates, surfaces and returns before advancing', (fn, validator, group, setter) => {
     const re = new RegExp(`function ${fn}\\([a-z]*\\) \\{[\\s\\S]{0,900}?${validator}\\([^)]*\\);[\\s\\S]{0,400}?surfaceGaps\\([\\s\\S]{0,200}?${group}[\\s\\S]{0,400}?${setter}\\);\\s*return;`);
     expect(SRC).toMatch(re);
@@ -66,7 +67,6 @@ describe('every gated step surfaces its gaps the same way', () => {
     expect(SRC).toMatch(/const errors4 = attempted4 \? validateStep4\(\) : \{\};/);
     expect(SRC).toMatch(/const errors5 = attempted5 \? validateStep5\(\) : \{\};/);
     expect(SRC).toMatch(/const errors7 = attempted7 \? validateStep7\(\) : \{\};/);
-    expect(SRC).toMatch(/const errors8 = attempted8 \? validateStep8\(\) : \{\};/);
   });
 
   test('the late bounce-back to the baseline step highlights the gaps on arrival', () => {

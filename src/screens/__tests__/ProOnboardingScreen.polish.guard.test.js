@@ -12,11 +12,12 @@ describe('ProOnboardingScreen premium polish guards', () => {
     // Same-meaning re-anchor (C5-P36-02, D96): step 6 stated the
     // recovery-drives-volume idea four times in one scroll, and the header
     // sub was the copy with no tooltip anchor of its own. The clause is
-    // deleted there and kept on the recovery field's own hint, which states
-    // it more usefully and owns the tooltip. The reminders half is unchanged.
+    // deleted there; D228 Q5-A (2026-10-15) then removed the recovery field
+    // whose hint carried it, so the hint is re-pointed from "present" to
+    // "gone". The reminders half is unchanged.
     expect(SOURCE).toContain('Reminders keep coaching consistent.');
     expect(SOURCE).not.toContain('Recovery affects your plan volume.');
-    expect(SOURCE).toContain('This sets how much volume your plan includes, so it can protect your recovery.');
+    expect(SOURCE).not.toContain('This sets how much volume your plan includes, so it can protect your recovery.');
   });
 
   test('optional body composition can seed the first plan while staying honest about certainty', () => {
@@ -67,11 +68,16 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toMatch(/hourChip: \{\s*minHeight: 48/);
   });
 
-  test('final step title is clean and the missing-recovery gate is visible', () => {
-    expect(SOURCE).toContain('title="Recovery and reminders"');
-    // D146: the gap is shown on the box itself and named under Continue.
-    expect(SOURCE).toContain("errs.recovery = 'Choose your recovery level.'");
-    expect(SOURCE).toContain('Still needed: your recovery level.');
+  test('final step title is clean and no recovery gate remains', () => {
+    // D228 Q5-A (2026-10-15): the recovery-level question left onboarding, so
+    // the title that named it ("Recovery and reminders"), its box error
+    // (D146) and its line under Continue left with it. Re-pointed from the
+    // old assertions; the new question-free pins live in
+    // ProOnboardingScreen.noRecoveryQuestion.guard.test.js.
+    expect(SOURCE).toContain('title="Your reminders"');
+    expect(SOURCE).not.toContain('title="Recovery and reminders"');
+    expect(SOURCE).not.toContain("errs.recovery = 'Choose your recovery level.'");
+    expect(SOURCE).not.toContain('Still needed: your recovery level.');
   });
 
   test('plan-generation failure copy points to the current Today flow', () => {

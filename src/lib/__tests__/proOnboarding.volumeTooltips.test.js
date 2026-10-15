@@ -8,6 +8,9 @@
  *   - step 3 "Training experience" Dropdown hint
  *   - step 5 "Recovery & reminders" Header sub
  *   - step 5 "How's your recovery?" Dropdown hint
+ * D228 Q5-A (2026-10-15): the last two are gone with the recovery-level
+ * question, which onboarding no longer asks; "Training experience" is the one
+ * "volume" site left, and it still carries the gloss.
  * The Header sub carries no field label of its own to anchor a tooltip to
  * (ProOnboardingHeader takes title/sub/onBack only), so it shares the ONE tooltip wired
  * onto the Recovery Dropdown immediately below it — the nearest label, per
@@ -49,19 +52,19 @@ describe('ProOnboarding: GLOSSARY.volume wired onto the "volume" jargon sites (A
   // sub's volume clause is deleted and the field hint is the only "volume"
   // site on the step. The property this suite pins is unchanged and in fact
   // stronger: no "volume" reaches the user without its gloss attached.
-  test('step 5 "How\'s your recovery?" Dropdown carries the volume tooltip, and is now the step\'s only "volume" site', () => {
-    const site = src.indexOf("label=\"How's your recovery?\"");
-    expect(site).toBeGreaterThan(-1);
-    const window = src.slice(site, site + 300);
-    expect(window).toMatch(/hint="Be honest here\. This sets how much volume your plan includes, so it can protect your recovery\."/);
-    expect(window).toMatch(/tip=\{GLOSSARY\.volume\}/);
-    // The unanchored Header sub that used to borrow this tooltip is gone.
+  test('the recovery-level question is gone (D228 Q5-A), and the one "volume" site left carries the gloss', () => {
+    // Re-pointed from asserting the recovery Dropdown carries the tooltip to
+    // asserting the question, its hint and the old unanchored Header sub are
+    // all gone. The property this suite exists to pin is unchanged: no
+    // "volume" reaches the user without its gloss attached.
+    expect(src).not.toContain("label=\"How's your recovery?\"");
+    expect(src).not.toContain('Be honest here. This sets how much volume your plan includes, so it can protect your recovery.');
     expect(src).not.toContain('sub="Recovery affects your plan volume');
     // Every remaining user-facing "volume" string on this screen sits on a
-    // field that carries the gloss itself (this one and step 4's experience
-    // Dropdown, asserted above).
+    // field that carries the gloss itself (step 4's experience Dropdown,
+    // asserted above).
     const volumeStrings = (src.match(/(hint|sub|label)="[^"\n]*volume[^"\n]*"/g) ?? []);
-    expect(volumeStrings).toHaveLength(2);
+    expect(volumeStrings).toHaveLength(1);
     for (const s of volumeStrings) expect(s.startsWith('hint="')).toBe(true);
   });
 
