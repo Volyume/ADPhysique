@@ -106,7 +106,7 @@ describe('L5: one truthful audience sentence', () => {
     expect(receipt).toContain('shared with everyone on Community unless you change it');
     expect(receipt).not.toContain('Sessions you choose to share');
     const summary = read('screens/WorkoutSummaryScreen.js');
-    expect(summary).toContain('Your sessions are shared with everyone on Community unless you change it.');
+    expect(summary).toContain('sessionsSharingSentence(true, ambientOutcome?.sessionAudience');
     expect(summary).toContain('Off: only you see your sessions.');
     expect(summary).not.toContain('People who train like you can see this session.');
   });

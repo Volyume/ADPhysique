@@ -326,12 +326,11 @@ export default function CommunityJoinScreen({ navigation, route }) {
         // create, on or off (D212). Since migration 184 an omitted value
         // on a new profile is stored as on, so a choice of off that was
         // only ever published when on would have been overridden. The
-        // audience is not sent here: the server's new-profile fallback
-        // already picks everyone for an adult and followers for a minor,
-        // and a stale minor reading on this device must never be able to
-        // block the create; the chosen audience follows through
-        // publishSharingSettings below, best effort as before.
+        // chosen audience travels with it too (D228): followers for a
+        // minor, never everyone, which the server refuses from one; the
+        // follow-up publishSharingSettings below stays as before.
         share_sessions: !!effectiveShare.share_sessions,
+        sessions_audience: isMinor ? 'followers' : effectiveShare.sessions_audience,
       });
       // Best effort: the training profile bands (and, if switched on here,
       // the consistency counters) are sent through the same publish paths

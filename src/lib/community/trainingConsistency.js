@@ -495,6 +495,7 @@ export async function mirrorSharingFromServer(userId, me, { fetchStartedAtMs = 0
   const mark = await readShareSettingsMark(uid);
   if (mark >= fetchStartedAtMs) return { mirrored: false, reason: 'changed_since_fetch' };
   const current = await readShareSettings(uid);
+  if (current.read_failed) return { mirrored: false, reason: 'unreadable' };
   const rowAudience = SESSIONS_AUDIENCE_VALUES.includes(me?.sessions_audience)
     ? me.sessions_audience
     : current.sessions_audience;
@@ -521,6 +522,7 @@ export async function retryPendingSharingPublish(userId) {
     removeShared = !!(parsed && typeof parsed === 'object' && parsed.removeShared);
   } catch (_e) { removeShared = false; }
   const share = await readShareSettings(uid);
+  if (share.read_failed) return { sent: false, reason: 'unreadable' };
   const out = await publishSharingSettings(uid, share, { removeShared });
   if (out?.sent) await setSharingPublishPending(uid, false);
   return out;

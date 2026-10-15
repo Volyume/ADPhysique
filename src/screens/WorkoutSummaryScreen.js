@@ -69,7 +69,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
 import {
-  loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings, refreshMe,
+  loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings, refreshMe, sessionsSharingSentence,
   publishConsistency, publishAmbientItems,
   flushPendingAmbientItems, hasSeenSessionShareOffer, recordSessionShareOfferSeen,
 } from '../lib/community';
@@ -497,7 +497,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     hapticSelection();
     setShowShareOffer(false);
     await recordSessionShareOfferSeen(user.id);
-    const settings = { ...(await readShareSettings(user.id)), consistency: true };
+    const current = await readShareSettings(user.id);
+    // An unreadable store must not be written back as if it were the truth.
+    if (current.read_failed) return;
+    const settings = { ...current, consistency: true };
     await writeShareSettings(user.id, settings);
     publishConsistency(user.id).catch(() => {});
     toast.show('Shown to people who follow you.');
@@ -1403,7 +1406,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (autoSessionPost) {
       return {
         title: 'Shared to Community',
-        sub: 'Your sessions are shared with everyone on Community unless you change it.',
+        sub: sessionsSharingSentence(true, ambientOutcome?.sessionAudience ?? 'followers'),
         action: {
           title: 'Add a note',
           a11y: 'Add a note to this session',

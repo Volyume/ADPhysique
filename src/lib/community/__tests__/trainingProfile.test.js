@@ -481,9 +481,22 @@ describe('only the opted-in bands are sent', () => {
     expect(payload.share_age_band).toBe(true);
   });
 
-  test('an unreadable settings value falls back to the defaults, never to more', async () => {
+  test('a corrupt settings value is unreadable: sharing off with read_failed, never the sharing-on defaults (D228)', async () => {
     mockStore.set('@volyume_community_tp_share_u1', '{not json');
-    expect(await readShareSettings('u1')).toEqual(TP_DEFAULT_SHARE);
+    const out = await readShareSettings('u1');
+    expect(out.share_sessions).toBe(false);
+    expect(out.read_failed).toBe(true);
+    expect(out.sessions_audience).toBe('everyone');
+  });
+
+  test('a THROWN read answers sharing off with read_failed, never the sharing-on defaults (D228)', async () => {
+    const AS = require('@react-native-async-storage/async-storage');
+    const store = AS.default ?? AS;
+    store.getItem.mockRejectedValueOnce(new Error('storage unavailable'));
+    const read = await readShareSettings('u1');
+    expect(read.share_sessions).toBe(false);
+    expect(read.read_failed).toBe(true);
+    expect(read.days).toBe(false);
   });
 
   test('settings round-trip, and an unknown key is dropped', async () => {

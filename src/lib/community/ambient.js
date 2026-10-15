@@ -158,6 +158,8 @@ export async function publishAmbientItems({
   if (!userId || !workoutId) return { ...empty, skipped: 'no_workout' };
 
   const share = await readShareSettings(userId);
+  // An unreadable sharing store is neither on nor off: nothing is sent.
+  if (share.read_failed) return { ...empty, skipped: 'gated' };
   if (!share.share_sessions) return { ...empty, skipped: 'sharing_off' };
 
   // The gate: calm mode / an open ED-pattern flag. Nothing below this
@@ -241,6 +243,9 @@ export async function publishAmbientItems({
     skipped: null,
     sessionPostId,
     sessionPayload: sessionPostId ? sessionPayload : null,
+    // The audience this post actually used, in the SESSIONS_AUDIENCE_VALUES
+    // vocabulary, so the summary strip names the real audience.
+    sessionAudience: visibility === 'public' ? 'everyone' : visibility,
     sessionRefused,
   };
 }
@@ -271,6 +276,8 @@ export async function flushPendingAmbientItems(userId) {
   // nothing is dropped. No account id: fail closed, nothing is sent.
   if (!userId) return { flushed: 0, dropped: 0, remaining: items.length };
   const share = await readShareSettings(userId);
+  // Unreadable store: gated. Keep everything queued, send and drop nothing.
+  if (share.read_failed) return { flushed: 0, dropped: 0, remaining: items.length };
   if (!share.share_sessions) {
     await writePending([]);
     return { flushed: 0, dropped: items.length, remaining: 0 };

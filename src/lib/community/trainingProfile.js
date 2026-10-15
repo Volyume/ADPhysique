@@ -504,9 +504,12 @@ function normaliseShare(raw) {
 }
 
 /**
- * This person's toggles. A missing or unreadable value answers the
- * DEFAULTS, which have the three revealing bands off: an unreadable
- * store must never turn sharing up.
+ * This person's toggles. A missing value answers the DEFAULTS. A store that
+ * THROWS on read answers the normalised defaults with `share_sessions` forced
+ * off and `read_failed: true`: an unreadable store must never turn sharing
+ * up, and a caller that posts or writes back must treat `read_failed` as
+ * "do not act" (ambient.js keeps its queue; the write-back paths skip).
+ * It never throws, so the screens can still render their toggles from it.
  *
  * @param {string} uid
  * @returns {Promise<object>}
@@ -514,9 +517,16 @@ function normaliseShare(raw) {
 export async function readShareSettings(uid) {
   try {
     const raw = await AsyncStorage.getItem(tpShareKey(uid));
-    return normaliseShare(raw ? JSON.parse(raw) : null);
+    try {
+      return normaliseShare(raw ? JSON.parse(raw) : null);
+    } catch (_e) {
+      // D228 item 1 (lead ruling): a value that reads but does not parse is
+      // unreadable in substance; it answers the same as a thrown read, so
+      // nothing posts on a guess.
+      return { ...normaliseShare(null), share_sessions: false, read_failed: true };
+    }
   } catch (_e) {
-    return { ...TP_DEFAULT_SHARE };
+    return { ...normaliseShare(null), share_sessions: false, read_failed: true };
   }
 }
 

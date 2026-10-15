@@ -348,6 +348,29 @@ describe('the training profile step (SD-22)', () => {
   // RE-ANCHORED 2026-09-22 (founder order: "Share what I did" is on by
   // default, to everyone): Create publishes the default without a tap, and
   // only a person who switches it off before Create publishes nothing.
+  test('D228: the audience travels in the create call itself (everyone for an adult by default)', async () => {
+    const { tree } = await mount();
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ sessions_audience: 'everyone' }));
+  });
+
+  test('D228: a minor never sends everyone in the create call, followers only', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: false, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+    await type(tree, 'Username', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ sessions_audience: 'followers' }));
+  });
+
   test('on by default, Create publishes sharing to everyone without a tap', async () => {
     const { tree } = await mount();
     await type(tree, 'Username', 'rowan_lifts');

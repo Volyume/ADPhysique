@@ -256,3 +256,33 @@ describe('3d milestones', () => {
     expect(createPost).not.toHaveBeenCalled();
   });
 });
+
+describe('D228 an unreadable sharing store is gated, not on and not off', () => {
+  const { flushPendingAmbientItems, PENDING_ITEMS_KEY } = require('../ambient');
+  const unreadable = { share_sessions: false, sessions_audience: 'everyone', read_failed: true };
+
+  test('publishAmbientItems sends nothing and says gated', async () => {
+    readShareSettings.mockResolvedValue(unreadable);
+    const out = await publishAmbientItems({ userId: 'u1', workoutId: 'w1', completedCount: 25 });
+    expect(out.skipped).toBe('gated');
+    expect(createPost).not.toHaveBeenCalled();
+  });
+  test('the flush keeps the queue, drops nothing and sends nothing', async () => {
+    const item = { kind: 'session', payload: {}, visibility: 'followers', clientRef: 'w1', groupIds: null };
+    mockStore.set(PENDING_ITEMS_KEY, JSON.stringify([item]));
+    readShareSettings.mockResolvedValue(unreadable);
+    const out = await flushPendingAmbientItems('u1');
+    expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+    expect(createPost).not.toHaveBeenCalled();
+    expect(JSON.parse(mockStore.get(PENDING_ITEMS_KEY))).toHaveLength(1);
+  });
+  test('the result names the audience the post used; a minor is followers', async () => {
+    readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'everyone' });
+    expect((await publishAmbientItems({ userId: 'u1', workoutId: 'w1' })).sessionAudience).toBe('everyone');
+    readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'followers' });
+    expect((await publishAmbientItems({ userId: 'u1', workoutId: 'w1' })).sessionAudience).toBe('followers');
+    readCachedMe.mockResolvedValue({ ...ME, is_minor: true });
+    readShareSettings.mockResolvedValue({ share_sessions: true, sessions_audience: 'everyone' });
+    expect((await publishAmbientItems({ userId: 'u1', workoutId: 'w1' })).sessionAudience).toBe('followers');
+  });
+});
