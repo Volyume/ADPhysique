@@ -12321,3 +12321,14 @@ Asked first (the target lives beside the ED-safety floors, Section 2; the status
 9. **P9 logger: E then A, plus the three small improvements.** Sheets and modals move out first (behaviour-identical, every guard and mount test green), then the rest flow; the planned-meal toast counts meals; "Use last session" fills every pending row; tick-all extends to supersets and per-side exercises.
 
 **Order of lanes:** P4 and the P1 defects; the P2 helper; P5; P9 small items; P8; P6; then P1 B+C, P2 tier c, P3 C, P9 E and A. Every lane: feature branch, full gate, lead diff review, fresh-eyes review for safety-adjacent code, device checklist in chat, merged to main the same session.
+
+### D228 addendum (2026-10-15): six further items from the survey, founder "Go as recommended"
+
+The founder asked for the items the survey found outside the nine decisions to be proposed too ("make the proposal then please. Let's cover everything we can off"), then, after the effects were explained: "Go as recommended". RULED:
+- **Q1-C.** Under an open ED flag the person's automatic posts are withheld server-side for the flag's duration (a read-side withhold on the feed and the public pages, the same helper family as `_community_consistency_withheld`) and return when it clears; calm leaves posts alone. The summary's manual "Post to Community" button is not shown under suppression. The migration is written and HELD for the founder's exact phrase.
+- **Q2-A.** The Analytics body pillar under an open flag reads "Your weigh-ins are kept here.", matching Body metrics; folded into the P2 tier c lane.
+- **Q3-A.** Community Join waits for the person's age with "Loading your details" instead of silently showing the under-18 layout; if the age cannot be read it says so and keeps the safe defaults.
+- **Q4-A.** A style-tagged plan (kettlebell, circuit) keeps its own workouts at a block boundary; the legacy generator is no longer reached from "Continue with adjustments".
+- **Q5-A.** Onboarding no longer asks the recovery-level question the structure engine never reads; the profile field and the weekly check-in's recovery reads stay.
+- **Q6-A.** The calorie bank write is stamped like the other profile fields so the newer bank wins across devices.
+Queued after the nine lanes, in the order Q6, Q2, Q4, Q5, Q3, Q1.
