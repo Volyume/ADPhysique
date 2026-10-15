@@ -12438,3 +12438,13 @@ Build on `video/shares-2026-10-15` from the settled coherence head, in the order
 8. **Device only, reaffirmed:** clips, their cache copies and the finished video never reach Supabase or any service; the `workout_clips` table is never registered with the sync layer and no Community payload can carry a clip (both pinned by guards). The only way a clip leaves the phone is the person's own share action.
 9. **Plain language, reaffirmed for this area:** British English, user-friendly, no AI talk, no slang, no jargon in anything a person reads (no "render", "encode", "export", "compositor", "HDR", "codec", "decoder"); a strings guard over the new share, camera and engine surfaces pins it.
 10. **Builds:** the founder builds once the whole project is clean and ready for one proper test pass, not per piece; the lead tests everything it can itself meanwhile and never waits on a build.
+
+### D229 addendum 8 (2026-10-15, founder order): intuitive for the least technical person
+
+**Founder, verbatim:** "have these brilliant features, but it needs to be very understandable for even the least technical people. People have used iPhones and stuff like that before, but yeah, so it needs to be very intuitive for the end user."
+
+RULED, standing for the video shares area and every surface it touches:
+1. **"Video", never "clip", in anything a person reads.** "Record a video of this set", "Use your video on the share", "Videos stay on this phone", "Making your video", "Share video". "Clip" stays only in code names.
+2. **Every control carries a word.** The camera's countdown and length controls are labelled "Countdown" and "Length" above their values; the record button has its one-line hint ("Tap to start with a countdown. Hold to record while you hold."); the Background row's sources are words (Gallery, Photo, Video, None); the trim bar has its caption ("15 seconds of 42. Slide to choose where it starts."); the preview has its hint ("Drag to move. Pinch to resize. Tap to pause.").
+3. **Nothing hidden behind a gesture without a visible cue, no abbreviation a non-technical person would not know, no technical word** (addendum 7 item 9), and one short explanation at the first moment it is needed, never a wall of text and never twice.
+4. **The fresh-eyes review of the finished feature walks it as a non-technical first-time user** (every new string and control, in order, on the Android device checklist), and anything that needed explaining is a defect to fix, not a note.
