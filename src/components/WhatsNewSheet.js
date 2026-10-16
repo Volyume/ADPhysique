@@ -155,14 +155,13 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
-  // 2.17.0 (2026-10-16): the food level-up (register D230, Waves 1 to 3)
-  // and the video follow-ons (D229 addenda 10 to 15): the two minute cap,
-  // the cues, where a video goes, the keep window; the privacy line rides
-  // inside the videos line, as the policy promises.
+  // 2.17.0 (2026-10-16): the two things this build is about (founder,
+  // 2026-10-16: "the ability to record videos and share them including in
+  // workout PRs and so on. And that Food has been rebuilt"); the privacy
+  // line rides inside the videos line, as the policy promises.
   '2.17.0': [
-    { icon: 'restaurant-outline', text: 'Food has been rebuilt. Every day is the same workspace, the rings say what is planned and what is eaten, and adding food is quicker: a plus on every row, "2 eggs, toast and a tea" typed as one line, meals from yesterday copied with their times, and saved meals you can check and change before they go in.' },
-    { icon: 'videocam-outline', text: 'Videos of a set now run up to two minutes, with countdown sounds and a light for a phone propped away from you. A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
-    { icon: 'trending-up-outline', text: 'Trends is tidier, and every message in the food area now says plainly what happened and what to do next.' },
+    { icon: 'videocam-outline', text: 'Record a video of a set from an exercise\'s menu, or after the workout, and share it the way you share an image: on your session or on a PR, with your top lifts, a quote and the same looks. A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
+    { icon: 'restaurant-outline', text: 'Food has been rebuilt. Every day is one workspace, the rings show what is planned and what is eaten, and adding food is quicker, with saved meals and yesterday\'s meals a tap away.' },
   ],
   // 2.16.0 (2026-10-15): video shares (register D229 and its addenda):
   // a short video of a set or of the workout as the share background, the

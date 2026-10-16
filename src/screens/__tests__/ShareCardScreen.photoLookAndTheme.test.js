@@ -21,7 +21,7 @@
  *      that look's own start (100% for Iron/Chalk, 80% for the rest);
  *   3. the strength slider's COMMITTED value reaches params.photoLookStrength;
  *   4. Dark is the default theme, and choosing Light reaches params.theme;
- *   5. the Background control's third option now reads "None" (renamed
+ *   5. the Background control's third option now reads "No photo" (renamed
  *      because Dark now names a share theme) and still clears the photo.
  *
  * Written to FAIL on the pre-feature screen: none of photoLook,
@@ -176,12 +176,9 @@ async function waitFor(predicate, rounds = 40) {
   expect(predicate()).toBe(true);
 }
 async function addPhoto(tree) {
-  // RE-POINTED 2026-10-15 (D229 addendum 5 item 4): "My photo" reads
-  // "Gallery", spoken "Gallery, choose a photo"; the photo-look heading
-  // reads "Look". The same picker and the same strip.
-  const [btn] = findByA11yLabel(tree, 'Gallery, choose a photo');
+  const [btn] = findByA11yLabel(tree, 'My photo');
   await press(btn);
-  await waitFor(() => heading(tree, 'Look') === 1);
+  await waitFor(() => heading(tree, 'Photo look') === 1);
 }
 
 // The renderer is mocked, so this is the only window onto what the screen
@@ -205,13 +202,13 @@ beforeEach(() => {
 describe('the photo look strip', () => {
   test('is absent with no photo', async () => {
     const tree = await mount(SESSION);
-    expect(heading(tree, 'Look')).toBe(0);
+    expect(heading(tree, 'Photo look')).toBe(0);
   });
 
   test('appears once a photo is chosen, offering all eight looks with role, selection and a full label', async () => {
     const tree = await mount(SESSION);
     await addPhoto(tree);
-    expect(heading(tree, 'Look')).toBe(1);
+    expect(heading(tree, 'Photo look')).toBe(1);
 
     const none = findByA11yLabel(tree, 'None: Your photo as it is')[0];
     expect(none.props.accessibilityRole).toBe('button');
@@ -230,7 +227,7 @@ describe('the photo look strip', () => {
     await addPhoto(tree);
     const [sticker] = findByA11yLabel(tree, 'Sticker');
     await press(sticker);
-    expect(heading(tree, 'Look')).toBe(0);
+    expect(heading(tree, 'Photo look')).toBe(0);
   });
 });
 
@@ -272,7 +269,7 @@ describe('choosing a look', () => {
     await press(iron);
     await waitFor(() => lastParams() && lastParams().photoLook === 'iron');
 
-    await addPhoto(tree); // picking "Gallery" again, a second time
+    await addPhoto(tree); // picking "My photo" again, a second time
     await waitFor(() => lastParams() && lastParams().photoLook === 'none');
   });
 });
@@ -315,19 +312,17 @@ describe('share theme', () => {
 });
 
 describe('the Background control (renamed 2026-09-27)', () => {
-  // RE-POINTED 2026-10-15 (D229 addendum 5 item 4): "No photo" reads "None"
-  // (spoken "None, no photo"); it still clears the photo.
-  test('its third option now reads "None", not "Dark" (Dark now names a share theme), and still clears the photo', async () => {
+  test('its third option now reads "No photo", not "Dark" (Dark now names a share theme), and still clears the photo', async () => {
     const tree = await mount(SESSION);
     // The ONLY "Dark" label left on the screen is the Theme segment.
     expect(findByA11yLabel(tree, 'Dark').length).toBeGreaterThan(0);
 
     await addPhoto(tree);
-    expect(heading(tree, 'Look')).toBe(1);
+    expect(heading(tree, 'Photo look')).toBe(1);
 
-    const [noPhoto] = findByA11yLabel(tree, 'None, no photo');
+    const [noPhoto] = findByA11yLabel(tree, 'No photo');
     expect(noPhoto).toBeTruthy();
     await press(noPhoto);
-    await waitFor(() => heading(tree, 'Look') === 0);
+    await waitFor(() => heading(tree, 'Photo look') === 0);
   });
 });

@@ -10,26 +10,25 @@
  * The "Save as PDF" path is a separate, clean one-page HTML→PDF summary and is
  * unrelated to the image card.
  *
- * D229 addendum 6 (founder: "the share is actually not full screen on most
- * mobiles ... Can we, like, extend it ... not wider, taller"): the formats
- * are Story, Full screen (the phone's own shape, with its own safe areas),
- * Feed (the 4:5 the code still calls 'portrait') and Square, then the
- * Sticker; under Full screen the image can be set as the lock screen
- * wallpaper on Android, and iOS says how to do it from Photos. Share is the
- * one amber action, with Save to gallery and Post to Community beneath it
- * (addendum 5 items 4 and 7: the Background row reads Gallery, Photo, None
- * and "Photo look" reads "Look").
+ * D229 addendum 17 (2026-10-16, the founder): a VIDEO is one more background
+ * beside the photo, on the same screen with every option kept. The frame at
+ * the chosen start is decoded offscreen (src/lib/shareVideo/videoFrame.js)
+ * and becomes `bgPhoto`, so the looks, the framing and the card over it all
+ * work on it unchanged; Share and Save then hand the video, the window, the
+ * look's matrix, the framing rectangle and the card drawn without its photo
+ * to the native engine (src/lib/shareVideo/engine.js). No live Skia view is
+ * mounted anywhere on this screen.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
-  useWindowDimensions, Share, AccessibilityInfo,
+  useWindowDimensions,
 } from 'react-native';
 import Text from '../components/Text';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily, fontScaleCaps, letterSpacing, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -40,14 +39,14 @@ import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import {
-  drawShareCard, cardHeight, drawSticker, stickerHeight, sessionLiftsThatFit, photoCoverRect,
+  drawShareCard, cardHeight, drawSticker, stickerHeight, sessionLiftsThatFit,
 } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
 import { isCentreCrop } from '../lib/shareCard/photoFraming';
 import {
-  PHOTO_LOOKS, DEFAULT_LOOK_STRENGTH, startStrengthFor, lookPaint, clampStrength, lookMatrix,
+  PHOTO_LOOKS, DEFAULT_LOOK_STRENGTH, startStrengthFor, lookPaint, clampStrength,
 } from '../lib/shareCard/photoLooks';
 import {
   SHARE_LINES, SHARE_QUOTES, MAX_CAPTION_LENGTH, cleanCaption,
@@ -56,27 +55,21 @@ import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import LookStrengthSlider from '../components/share/LookStrengthSlider';
-// D229: a video as the background. The frames (useClipFrames), the framer
-// that plays them under the card (ClipFramer), the 15 second window
-// (TrimBar), the frames the window is read from (clipThumbnails), the
-// scrim set from the brightest of them (clipTone), the ring while the video
-// is made (ProgressRing), the engine that makes it (shareVideo/engine) and
-// the workout's own videos (lib/clips). Everything stays on the phone until
-// the person shares the finished file.
-import useAppStore from '../store/useAppStore';
-import ClipFramer from '../components/share/ClipFramer';
-import useClipRecorder from '../components/clips/useClipRecorder';
-import Animated, {
-  useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, useAnimatedReaction, interpolate, Extrapolation, runOnJS,
-} from 'react-native-reanimated';
-import TrimBar, { mmss } from '../components/share/TrimBar';
-import ProgressRing from '../components/share/ProgressRing';
-import useClipFrames from '../lib/shareVideo/useClipFrames';
-import { extractClipThumbnails } from '../lib/shareVideo/clipThumbnails';
-import { sampleClipTone } from '../lib/shareVideo/clipTone';
+import Stepper from '../components/Stepper';
+import { lookMatrix } from '../lib/shareCard/photoLooks';
+import { photoCoverRect } from '../lib/shareCard/drawShareCard';
 import * as shareVideoEngine from '../lib/shareVideo/engine';
-import { getClip, listClipsForWorkout, clipDisplayName, clipMatchesPR, subscribeClips } from '../lib/clips';
-import { CLIP_STRINGS } from '../lib/clips/rules';
+import { grabVideoFrame } from '../lib/shareVideo/videoFrame';
+import { getClip, listClipsForWorkout, subscribeClips } from '../lib/clips/store';
+import { clipDisplayName, clipMatchesPR, CLIP_STRINGS } from '../lib/clips/rules';
+import useClipRecorder from '../components/clips/useClipRecorder';
+import useAppStore from '../store/useAppStore';
+
+// A share's video is this long at the longest (D229 addendum 4); a longer
+// recording offers its start.
+// A share is 15 seconds at the longest (the engine's own ceiling; the
+// number is held here too so the screen never shows a blank length).
+const MAX_VIDEO_MS = Number(shareVideoEngine.MAX_CLIP_MS) > 0 ? Number(shareVideoEngine.MAX_CLIP_MS) : 15000;
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -87,41 +80,6 @@ try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; ImageFormat = S.ImageFormat; } catch (_) { /* optional */ }
-
-// Set as wallpaper (Full screen, Android): the video module's wrapper,
-// loaded only when asked for and treated as absent if it cannot load, so the
-// screen never depends on it.
-function loadWallpaperEngine() {
-  try {
-    // eslint-disable-next-line global-require
-    const engine = require('../lib/shareVideo/engine');
-    return engine && typeof engine.setLockScreenWallpaper === 'function' && typeof engine.isAvailable === 'function'
-      ? engine : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-// The Background row's sources (D229 addendum 5 item 4, its words made
-// plain by the founder's rule of 2026-10-15: a person reads "Video", never
-// "clip"). VIDEO is named here for the lead's video source, which joins the
-// row between Photo and None with the "From this workout" strip beneath it;
-// nothing on this row offers it yet.
-const BACKGROUND_SOURCES = Object.freeze({
-  GALLERY: 'gallery',
-  PHOTO: 'photo',
-  VIDEO: 'video',
-  NONE: 'none',
-});
-
-// A video background (D229): the window is never longer than this (ruling
-// 3), the trim bar reads this many frames across the whole video, and the
-// scrim reads this many across the window (addendum 4: at least eight).
-const MAX_VIDEO_MS = 15000;
-const BAR_FRAME_COUNT = 12;
-const TONE_FRAME_COUNT = 8;
-const VIDEO_FRAME_W = 192;
-const isVideoAsset = (asset) => asset?.type === 'video' || /\.(mp4|mov|m4v|3gp|webm)(\?|$)/i.test(String(asset?.uri || ''));
 
 // "Share to Stories" goes straight to the OS share sheet. The Instagram
 // Stories deep link (instagram-stories://share) cannot carry the rendered
@@ -141,21 +99,6 @@ const WORDMARK_DARK = require('../../assets/volyume-wordmark-dark.png');
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
-// The preview's place (D229 addendum 5 item 8): a header above the page holds
-// the live preview at full size and shrinks it, as the page scrolls, to this
-// height, where it stays under the title bar while the controls are worked.
-const MINI_PREVIEW_H = 112;
-// The screen stays awake while a video is made (addendum 5, ruling 16); its
-// own tag, so it can never release a hold another screen owns.
-const SHARE_KEEP_AWAKE_TAG = 'volyume-share-video';
-function keepAwake(on) {
-  try {
-    // eslint-disable-next-line global-require
-    const ka = require('expo-keep-awake');
-    if (on) ka.activateKeepAwakeAsync?.(SHARE_KEEP_AWAKE_TAG)?.catch?.(() => {});
-    else Promise.resolve(ka.deactivateKeepAwake?.(SHARE_KEEP_AWAKE_TAG)).catch(() => {});
-  } catch (_e) { /* the module is optional in tests */ }
-}
 // The photo the positioning view shows: the same pixels the card draws,
 // scaled to at most this edge (enough for a 300dp frame at 4x zoom on a
 // dense screen) and encoded once, so the view and the card cannot disagree
@@ -206,10 +149,8 @@ export default function ShareCardScreen({ navigation, route }) {
     // The week's standout lift (src/lib/bestLift.js), or null. Featured on the
     // recap card.
     bestLift = null,
-    // Gym unit label ('kg') for the best lift, and the person's own body
-    // weight unit ('st'|'kg'|'lbs') for the weekly progress hero (D228 item 3).
+    // Gym/body weight unit label ('kg'|'lbs') for the weekly progress hero.
     units = 'kg',
-    bodyWeightUnits = 'st',
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
     // Read `suppressParam` rather than `suppress` -- the effective value is
@@ -237,23 +178,12 @@ export default function ShareCardScreen({ navigation, route }) {
   );
   // Story-first default (D109-1, Campaign 30): the story composition is now a
   // first-class layout on every card type (safe zones, balanced content), and
-  // stories are where these cards actually get posted. Full screen ('full',
-  // the phone's own shape, D229 addendum 6), Feed ('portrait', 4:5) and
-  // Square 1:1 stay one tap away; 'sticker' is the transparent stat-panel
+  // stories are where these cards actually get posted. Square 1:1 and
+  // portrait 4:5 stay one tap away; 'sticker' is the transparent stat-panel
   // export (ELITE-SHARE-SPEC pillar 3) for pasting onto the user's own story.
   const [format, setFormat] = useState('story');
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
-  const [settingWallpaper, setSettingWallpaper] = useState(false);
-  // Full screen takes the phone's own shape: the window's height over its
-  // width, and its status bar and home indicator as fractions of that
-  // height, so the card's outline clears them (the renderer holds the shape
-  // between 16:9 and 2.3).
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const fullAspect = windowWidth > 0 && windowHeight > 0 ? windowHeight / windowWidth : null;
-  const safeTopRatio = windowHeight > 0 ? (insets?.top || 0) / windowHeight : 0;
-  const safeBottomRatio = windowHeight > 0 ? (insets?.bottom || 0) / windowHeight : 0;
 
   const [showVolume, setShowVolume] = useState(true);
   const [showDate, setShowDate] = useState(true);
@@ -263,17 +193,29 @@ export default function ShareCardScreen({ navigation, route }) {
   // in the share and looks stupid." The list is gone from the card too.
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
-  // Weekly recap: the weight-progress hero is opt-in (D228 item 3, founder
-  // 2026-10-15): it starts OFF and the person switches it on. It is
-  // force-stripped (and the toggle hidden) under `suppress` so no progress
-  // number can leak.
-  const [showProgress, setShowProgress] = useState(false);
+  // Weekly recap: the real weight-progress hero is opt-in. It is force-stripped
+  // (and the toggle hidden) under `suppress` so no progress number can leak.
+  const [showProgress, setShowProgress] = useState(true);
   // The best-lift feature is opt-in too (also force-stripped under suppress).
   const [showBestLift, setShowBestLift] = useState(true);
-  // Optional gym photo background (SkImage), available on every card type,
-  // and which Background source it came from (BACKGROUND_SOURCES).
+  // Optional gym photo background (SkImage), available on every card type.
   const [bgPhoto, setBgPhoto] = useState(null);
-  const [backgroundSource, setBackgroundSource] = useState(BACKGROUND_SOURCES.NONE);
+  // Addendum 17: the chosen video, when the background is a video. A row of
+  // the clip store ({ id, uri, durationMs, ... }) or a gallery pick
+  // ({ uri, durationMs, source: 'gallery' }). `clipStartMs` is where the
+  // share's window begins; the preview shows that frame.
+  const [clip, setClip] = useState(null);
+  const [clipStartMs, setClipStartMs] = useState(0);
+  const [clipSize, setClipSize] = useState({ width: 0, height: 0 });
+  const [workoutClips, setWorkoutClips] = useState([]);
+  const [clipsVersion, setClipsVersion] = useState(0);
+  const [videoSheetOpen, setVideoSheetOpen] = useState(false);
+  const [makingVideo, setMakingVideo] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const makingVideoRef = useRef(false);
+  const videoCacheRef = useRef({});
+  const handledClipIdRef = useRef(null);
+  const userId = useAppStore((st) => st.user?.id ?? null);
   // Where the athlete placed and sized it ({ zoom, cx, cy }, null = centred)
   // and the same pixels as a data URI for the live preview (founder orders
   // 2026-09-26: the photo should show "best in the background", and camera
@@ -293,51 +235,6 @@ export default function ShareCardScreen({ navigation, route }) {
   // Share theme (founder, 2026-09-27: "different share themes (light and
   // dark)"). Dark is the card's long-standing look, so it stays the default.
   const [shareTheme, setShareTheme] = useState('dark');
-
-  // D229: the video background. `clip` is the chosen video (a row from the
-  // workout's own videos, or a transient record for one picked from the
-  // phone's gallery), `clipWindow` its 15 second window, `clipPaused` the
-  // preview's play state (a person with Reduce Motion on opens it paused),
-  // `barThumbs` the frames the trim bar shows across the whole video,
-  // `toneFrames` the frames inside the window the scrim is read from, and
-  // `clipTone` that reading. Photo and video are exclusive: accepting one
-  // clears the other. Never offered, and cleared, under `suppress`. Every
-  // video of the workout is offered on every card of it (addendum 9).
-  const userId = useAppStore((state) => state.user?.id ?? null);
-  const [clip, setClip] = useState(null);
-  const [clipWindow, setClipWindow] = useState({ startMs: 0, endMs: MAX_VIDEO_MS });
-  const [clipPaused, setClipPaused] = useState(false);
-  const [osReduceMotion, setOsReduceMotion] = useState(false);
-  const [toneReady, setToneReady] = useState(true);
-  const [barThumbs, setBarThumbs] = useState(null);
-  const [toneFrames, setToneFrames] = useState(null);
-  const [clipTone, setClipTone] = useState(null);
-  const [workoutClips, setWorkoutClips] = useState([]);
-  const [makingVideo, setMakingVideo] = useState(false);
-  const [videoProgress, setVideoProgress] = useState(0);
-  const videoCacheRef = useRef({});
-  const cacheFilesRef = useRef([]);
-  const handledClipIdRef = useRef(null);
-  // Reduce Motion: the phone's own setting, read once, OR Volyume's own
-  // (Settings), the one AnimatedEntrance and the camera read (fresh-eyes
-  // review 2026-10-15, should-fix 6).
-  const storeReduceMotion = useAppStore((state) => !!state.accessibility?.reduceMotion);
-  const reduceMotion = osReduceMotion || storeReduceMotion;
-  // True while the engine is making the video: leaving is held (ruling 16).
-  const makingVideoRef = useRef(false);
-  const clipFrames = useClipFrames(clip?.uri ?? null, {
-    startMs: clipWindow.startMs, endMs: clipWindow.endMs, paused: clipPaused || makingVideo,
-  });
-  useEffect(() => {
-    let cancelled = false;
-    try {
-      const read = AccessibilityInfo?.isReduceMotionEnabled?.();
-      if (read && typeof read.then === 'function') {
-        read.then((on) => { if (!cancelled) setOsReduceMotion(!!on); }).catch(() => {});
-      }
-    } catch (_e) { /* the preview simply plays */ }
-    return () => { cancelled = true; };
-  }, []);
 
   // The PRs available to feature on a PR card. A caller can pass a whole
   // session's PRs (prList) so the user picks which one; otherwise it is just the
@@ -434,12 +331,11 @@ export default function ShareCardScreen({ navigation, route }) {
   // Campaign 30: the weekly recap's old square-only restriction is lifted -
   // the rebuilt renderer composes every type against the tall canvas (story
   // safe zones, content balance) instead of leaving it mostly empty. The
-  // card aspect ('square'|'portrait'|'story'|'full') now drives the renderer
-  // via params.aspect; isSquare stays derived for the legacy readers (PDF
-  // path, filenames, preview sizing fallbacks). Full screen is a tall card.
+  // card aspect ('square'|'portrait'|'story') now drives the renderer via
+  // params.aspect; isSquare stays derived for the legacy readers (PDF path,
+  // filenames, preview sizing fallbacks).
   const cardAspect = isSticker ? 'square' : format;
-  const isFullScreen = cardAspect === 'full';
-  const isSquare = cardAspect !== 'story' && !isFullScreen;
+  const isSquare = cardAspect !== 'story';
 
   // System typefaces (regular + bold) for the Skia renderer: the floor the
   // card can always draw with. getTypeface() gives a typeface we can resize
@@ -537,11 +433,8 @@ export default function ShareCardScreen({ navigation, route }) {
         suppress,
         includeProgress: showProgress,
         units,
-        bodyWeightUnits,
         isSquare,
-        // D228 item 3: the phase label ("Mild cut") is progress language too,
-        // so it goes with everything else under suppress.
-        weekLabel: suppress ? '' : (o.weekLabel || ''),
+        weekLabel: o.weekLabel || '',
         dateFormatted: showDate ? formatLongDate() : '',
         // The lift hero is independently toggleable; suppress strips it regardless.
         bestLift: showBestLift ? bestLift : null,
@@ -611,19 +504,13 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, bodyWeightUnits, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLifts, chosenHighlights, photoLook, photoLookStrength, shareTheme]);
 
   // The selected card's params: the per-type build plus the chosen aspect
-  // preset (the renderer's cardHeight/draw both key off params.aspect), and
-  // for Full screen the phone's own shape and safe areas.
+  // preset (the renderer's cardHeight/draw both key off params.aspect).
   const buildParams = useCallback(
-    () => ({
-      ...buildParamsFor(cardType),
-      aspect: cardAspect,
-      quote,
-      ...(isFullScreen ? { fullAspect, safeTopRatio, safeBottomRatio } : {}),
-    }),
-    [buildParamsFor, cardType, cardAspect, quote, isFullScreen, fullAspect, safeTopRatio, safeBottomRatio],
+    () => ({ ...buildParamsFor(cardType), aspect: cardAspect, quote }),
+    [buildParamsFor, cardType, cardAspect, quote],
   );
 
   // How many of a list of lifts the image has room for, laid out exactly as
@@ -634,13 +521,13 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!isSession || isSticker || !cardReady || typeof sessionLiftsThatFit !== 'function') return null;
     try {
       return sessionLiftsThatFit({
-        Skia, params: buildParams(), typefaces, wordmark, bgPhoto: bgPhoto || layoutFrame, lifts,
+        Skia, params: buildParams(), typefaces, wordmark, bgPhoto, lifts,
       });
     } catch (e) {
       logError('ShareCardScreen.liftsFitting', e, { format });
       return null;
     }
-  }, [isSession, isSticker, cardReady, buildParams, typefaces, wordmark, bgPhoto, layoutFrame, format]);
+  }, [isSession, isSticker, cardReady, buildParams, typefaces, wordmark, bgPhoto, format]);
   const shownLiftCount = useMemo(() => {
     const n = liftsFitting(chosenLifts);
     return n == null ? chosenLifts.length : Math.min(n, chosenLifts.length);
@@ -697,7 +584,7 @@ export default function ShareCardScreen({ navigation, route }) {
       // params object the full card would draw from, so every upstream gate
       // (suppress, toggles) applies identically - suppressed content has NO
       // export path here either.
-      const H = isSticker ? stickerHeight(width) : cardHeight(width, params.isSquare, params.aspect, params.fullAspect);
+      const H = isSticker ? stickerHeight(width) : cardHeight(width, params.isSquare, params.aspect);
       const surface = Skia.Surface.MakeOffscreen(width, H);
       if (!surface) {
         logError('ShareCardScreen.renderCard', new Error('MakeOffscreen returned null'), { width, H });
@@ -862,11 +749,6 @@ export default function ShareCardScreen({ navigation, route }) {
   // separate editing step to open or close.
   const acceptPhoto = useCallback((img) => {
     const bounded = boundPhotoForCanvas(img);
-    // A photo and a video never share the card: the video goes.
-    setClip(null);
-    setBarThumbs(null);
-    setToneFrames(null);
-    setClipTone(null);
     setBgPhoto(bounded);
     setPhotoCrop(null);
     setFramerPhoto(makeFramerPhoto(bounded));
@@ -878,49 +760,50 @@ export default function ShareCardScreen({ navigation, route }) {
     setPhotoCrop(null);
     setFramerPhoto(null);
     setClip(null);
-    setBarThumbs(null);
-    setToneFrames(null);
-    setClipTone(null);
-    setBackgroundSource(BACKGROUND_SOURCES.NONE);
+    setClipStartMs(0);
   }, []);
 
-  // A video becomes the background (D229): the photo goes, the framing
-  // starts centred and at fill, the look starts at None, and the window is
-  // the first 15 seconds (the trim bar moves it). `record` is a row from
-  // lib/clips, or { id: null, uri, durationMs, width, height, source:
-  // 'gallery' } for a video picked from the phone.
-  const acceptClip = useCallback((record) => {
-    if (!record?.uri || suppress) return;
-    setBgPhoto(null);
-    setPhotoCrop(null);
-    setFramerPhoto(null);
-    chooseLook('none');
-    setClip(record);
-    const total = Number(record.durationMs) || 0;
-    const end = total > 0 ? Math.min(total, MAX_VIDEO_MS) : MAX_VIDEO_MS;
-    setClipWindow({ startMs: 0, endMs: end });
-    setClipPaused(reduceMotion);
-    setBarThumbs(null);
-    setToneFrames(null);
-    setClipTone(null);
-    setBackgroundSource(BACKGROUND_SOURCES.VIDEO);
-  }, [suppress, chooseLook, reduceMotion]);
+  // ── Video as a background (addendum 17) ─────────────────────────────────
+  // The frame at `ms` becomes the background through the photo path, so the
+  // looks and the framing apply to it; a failed decode says so and leaves the
+  // background as it was.
+  const showVideoFrame = useCallback((row, ms, { fresh = false } = {}) => {
+    if (!Skia || !row?.uri) return false;
+    const frame = grabVideoFrame(Skia, row.uri, ms);
+    if (!frame) {
+      toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
+      return false;
+    }
+    setClipSize({ width: frame.width, height: frame.height });
+    if (fresh) acceptPhoto(frame.image);
+    else setBgPhoto(boundPhotoForCanvas(frame.image));
+    return true;
+  }, [acceptPhoto, boundPhotoForCanvas, toast]);
 
-  // Under calm mode or an open flag no video background is offered, and one
-  // already chosen goes (D229 ruling 6; the read starts suppressed, so a
-  // video is never accepted before the gate has answered).
-  useEffect(() => {
-    if (suppress && clip) clearPhoto();
-  }, [suppress, clip, clearPhoto]);
+  const acceptClip = useCallback((row) => {
+    if (!row?.uri) return;
+    const shown = showVideoFrame(row, 0, { fresh: true });
+    if (!shown) return;
+    setClip(row);
+    setClipStartMs(0);
+    setVideoSheetOpen(false);
+  }, [showVideoFrame]);
 
-  // The workout's own videos, for the "From this workout" strip: re-read on
-  // every save or delete anywhere (an Undo on the saved toast, a delete in
-  // the videos sheet), and a chosen video that no longer exists goes.
-  const [clipsVersion, setClipsVersion] = useState(0);
+  // The start of the share's window, in whole seconds; the preview follows.
+  const clipDurationMs = Number(clip?.durationMs) || 0;
+  const maxStartSec = Math.max(0, Math.floor((clipDurationMs - MAX_VIDEO_MS) / 1000));
+  const changeClipStart = useCallback((sec) => {
+    if (!clip) return;
+    const ms = Math.max(0, Math.min(Number(sec) || 0, maxStartSec)) * 1000;
+    setClipStartMs(ms);
+    showVideoFrame(clip, ms);
+  }, [clip, maxStartSec, showVideoFrame]);
+
+  // This workout's videos, for "From this workout": re-read on every save or
+  // delete anywhere; a chosen video that no longer exists goes.
+  useEffect(() => subscribeClips(() => setClipsVersion((n) => n + 1)), []);
   const clipIdRef = useRef(null);
   clipIdRef.current = clip?.id ?? null;
-  const goneToldRef = useRef(new Set());
-  useEffect(() => subscribeClips(() => setClipsVersion((n) => n + 1)), []);
   useEffect(() => {
     let cancelled = false;
     if (!workoutId || !userId || suppress) { setWorkoutClips([]); return undefined; }
@@ -929,27 +812,20 @@ export default function ShareCardScreen({ navigation, route }) {
         if (cancelled) return;
         const list = Array.isArray(rows) ? rows : [];
         setWorkoutClips(list);
-        // A chosen video deleted while this screen holds it: the share goes
-        // back to an image, and a calm line says so once.
         const heldId = clipIdRef.current;
         if (heldId && !list.some((row) => row.id === heldId)) {
-          setClip((current) => (current?.id === heldId ? null : current));
-          if (!goneToldRef.current.has(heldId)) {
-            goneToldRef.current.add(heldId);
-            toast.show(CLIP_STRINGS.shareVideoGone, { variant: 'info' });
-          }
+          clearPhoto();
+          toast.show(CLIP_STRINGS.shareVideoGone, { variant: 'info' });
         }
       })
       .catch(() => { if (!cancelled) setWorkoutClips([]); });
     return () => { cancelled = true; };
-    // The toast handle is not a trigger: the list is re-read on a video change only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workoutId, userId, suppress, route?.params?.clipId, clipsVersion]);
+  }, [workoutId, userId, suppress, clipsVersion]);
 
-  // Arriving with a video chosen (the summary's row, or the camera opened
-  // from this screen coming back with `clipId` merged into the route): it
-  // becomes the background once, and a PR it was recorded for leads the
-  // card (D229 addendum 9), with the session card one tap away.
+  // Arriving with a video (the summary's row, or the camera opened from here
+  // coming back with `clipId` merged into the route): it becomes the
+  // background once, and a PR it was filmed for leads the card.
   const routeClipId = route?.params?.clipId ?? null;
   useEffect(() => {
     if (!routeClipId || !userId || suppress) return undefined;
@@ -960,75 +836,47 @@ export default function ShareCardScreen({ navigation, route }) {
       .then((row) => {
         if (cancelled || !row) return;
         acceptClip(row);
-        // The one matching rule the logger's PR moment and the summary's
-        // PR row use too (src/lib/clips/rules.js, clipMatchesPR).
         const prIndex = prs.findIndex((pr) => clipMatchesPR(row, pr));
         if (prIndex >= 0) { setSelectedPrIndex(prIndex); setCardType('pr'); }
       })
-      .catch(() => {});
+      .catch((e) => { logError('ShareCardScreen.routeClip', e, { clipId: routeClipId }); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeClipId, userId, suppress]);
 
-  // The frames: twelve across the whole video for the trim bar (once per
-  // video), eight inside the window for the scrim (addendum 4, rule 2),
-  // re-read when the window moves. Best effort: without frames the bar is
-  // plain and the scrim takes the bright tier default.
-  useEffect(() => {
-    let cancelled = false;
-    if (!clip?.uri || !Skia) { setBarThumbs(null); return undefined; }
-    // No frame at all means the phone cannot open this video: one calm line
-    // and the way forward, never a share button that stays grey with no
-    // word (fresh-eyes review 2026-10-15, should-fix 1).
-    const cannotOpen = () => {
-      if (cancelled) return;
-      setBarThumbs(null);
-      toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' });
-      clearPhoto();
-    };
-    extractClipThumbnails(clip.uri, { count: BAR_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W })
-      .then((out) => { if (cancelled) return; if (out && out.images.length) setBarThumbs(out); else cannotOpen(); })
-      .catch(() => cannotOpen());
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clip?.uri]);
-  useEffect(() => {
-    let cancelled = false;
-    if (!clip?.uri || !Skia) { setToneFrames(null); setToneReady(true); return undefined; }
-    // Until the frames of THIS window have arrived the scrim is the last
-    // window's: Share and Save wait (should-fix 2).
-    setToneReady(false);
-    extractClipThumbnails(clip.uri, {
-      count: TONE_FRAME_COUNT, thumbWidth: VIDEO_FRAME_W, fromMs: clipWindow.startMs, toMs: clipWindow.endMs,
-    })
-      .then((out) => { if (!cancelled) { setToneFrames(out && out.images.length ? out.images : null); setToneReady(true); } })
-      .catch(() => { if (!cancelled) { setToneFrames(null); setToneReady(true); } });
-    return () => { cancelled = true; };
-  }, [clip?.uri, clipWindow.startMs, clipWindow.endMs]);
-  // The scrim's tone: the brightest of the window's frames, placed as the
-  // video is framed, lifted to the bright tier (addendum 4, rules 2 and 3).
-  useEffect(() => {
-    if (!clip || !Skia) { setClipTone(null); return; }
-    try {
-      const params = buildParams();
-      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect, params.fullAspect);
-      setClipTone(sampleClipTone(Skia, toneFrames || [], PREVIEW_RENDER_W, H, photoCrop));
-    } catch (_e) {
-      setClipTone(sampleClipTone(Skia, [], 1, 1, null));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clip, toneFrames, photoCrop, format, cardType]);
+  // Film now: the one recording flow (the primer first, the camera, the
+  // videos sheet at three), coming back here with the video chosen.
+  const clipFlow = useClipRecorder({ navigation, userId, workoutId });
+  const filmNow = useCallback(() => {
+    setVideoSheetOpen(false);
+    clipFlow.openRecorder({ source: 'share' });
+  }, [clipFlow]);
 
-  // Everything made here is deleted when the screen closes: the finished
-  // videos and the copies the picker made (D229 ruling 5: nothing lingers
-  // in the cache).
-  useEffect(() => () => {
-    const files = [...Object.values(videoCacheRef.current), ...cacheFilesRef.current];
-    files.forEach((uri) => {
-      if (!uri || !FileSystem?.deleteAsync) return;
-      FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
-    });
-  }, []);
+  // A video from the gallery: the system picker (no broad permission on
+  // Android 13+ and iOS 14+), its length from the engine's probe.
+  const pickGalleryVideo = useCallback(async () => {
+    if (!ImagePicker || !Skia || !FileSystem) {
+      toast.show("Video backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { toast.show('Photo access is needed to choose a video.', { variant: 'warning' }); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const asset = res.assets[0];
+      let durationMs = Number(asset.duration) || 0;
+      try {
+        const probe = await shareVideoEngine.probeVideo(asset.uri);
+        if (probe?.durationMs) durationMs = probe.durationMs;
+      } catch (_e) { /* the decoder's own length is used below */ }
+      acceptClip({ id: null, uri: asset.uri, durationMs, source: 'gallery' });
+    } catch (e) {
+      logError('ShareCardScreen.pickVideo', e);
+      toast.show('That video could not be opened. Try another.', { variant: 'error' });
+    }
+  }, [toast, acceptClip]);
+
 
   // Recompute the live framer photo when the look or its committed strength
   // changes on an EXISTING photo (a fresh photo is handled by acceptPhoto
@@ -1045,15 +893,12 @@ export default function ShareCardScreen({ navigation, route }) {
   // a failed thumbnail simply falls back to the look's name (below), never a
   // crash.
   const LOOK_THUMB_SIZE = 144;
-  // For a video the tiles are cut from the first frame inside the window,
-  // never frame zero of the file (D229, the UX research's P2).
-  const lookSource = bgPhoto || (clip ? (toneFrames?.[0] || barThumbs?.images?.[0] || null) : null);
   const lookThumbs = useMemo(() => {
-    if (!Skia || !lookSource) return {};
+    if (!Skia || !bgPhoto) return {};
     const out = {};
     try {
-      const w = lookSource.width();
-      const h = lookSource.height();
+      const w = bgPhoto.width();
+      const h = bgPhoto.height();
       const side = Math.min(w, h);
       const sx = (w - side) / 2;
       const sy = (h - side) / 2;
@@ -1063,7 +908,7 @@ export default function ShareCardScreen({ navigation, route }) {
           if (!surface) continue;
           const paint = lookPaint(Skia, look.key, startStrengthFor(look.key)) || Skia.Paint();
           surface.getCanvas().drawImageRect(
-            lookSource,
+            bgPhoto,
             Skia.XYWHRect(sx, sy, side, side),
             Skia.XYWHRect(0, 0, LOOK_THUMB_SIZE, LOOK_THUMB_SIZE),
             paint,
@@ -1075,7 +920,7 @@ export default function ShareCardScreen({ navigation, route }) {
       }
     } catch (_) { /* every tile falls back to its name */ }
     return out;
-  }, [lookSource]);
+  }, [bgPhoto]);
 
   // Take a gym photo with the camera to use as the card background (all cards).
   // Camera capture only: uses the CAMERA permission (same as barcode scanning),
@@ -1089,16 +934,15 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) { toast.show('Camera access is needed to add a background.', { variant: 'warning' }); return; }
+      if (!perm.granted) { toast.show('Camera access is needed to add a background', { variant: 'warning' }); return; }
       const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBackgroundSource(BACKGROUND_SOURCES.PHOTO);
       if (img) acceptPhoto(img);
-      else toast.show('That photo could not be loaded. Try again.', { variant: 'error' });
+      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      toast.show('That photo could not be taken. Try again.', { variant: 'error' });
+      toast.show("Couldn't take that photo, try again", { variant: 'error' });
     }
   }, [toast, acceptPhoto]);
 
@@ -1114,63 +958,20 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) { toast.show('Photo access is needed to choose a background.', { variant: 'warning' }); return; }
-      // Photos and, when a video background may be offered, videos too (D229
-      // addendum 3: a video filmed with the phone's own camera comes in here;
-      // its 15 second window is chosen on the trim bar). The picker never
-      // re-encodes a video; the engine reads the original.
-      const videosToo = !suppress && shareVideoEngine.isAvailable();
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: videosToo ? ['images', 'videos'] : ['images'],
-        quality: 0.9,
-        videoExportPreset: ImagePicker.VideoExportPreset ? ImagePicker.VideoExportPreset.Passthrough : undefined,
-      });
+      if (!perm.granted) { toast.show('Photo access is needed to choose a background', { variant: 'warning' }); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (res.canceled || !res.assets?.[0]?.uri) return;
-      const asset = res.assets[0];
-      if (isVideoAsset(asset)) {
-        if (!videosToo) return;
-        // The picker's copy is deleted with the rest when the screen closes,
-        // whether or not the video can be opened (ruling 13).
-        cacheFilesRef.current.push(asset.uri);
-        let probe = null;
-        try { probe = await shareVideoEngine.probeVideo(asset.uri); } catch (_e) { probe = null; }
-        const durationMs = Number(probe?.durationMs ?? asset.duration) || 0;
-        if (!durationMs) { toast.show(CLIP_STRINGS.shareVideoCannotOpen, { variant: 'error' }); return; }
-        acceptClip({
-          id: null, uri: asset.uri, durationMs,
-          width: probe?.width ?? asset.width ?? null, height: probe?.height ?? asset.height ?? null,
-          exerciseName: null, setNumber: null, source: 'gallery',
-        });
-        setBackgroundSource(BACKGROUND_SOURCES.GALLERY);
-        return;
-      }
-      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBackgroundSource(BACKGROUND_SOURCES.GALLERY);
       if (img) acceptPhoto(img);
-      else toast.show('That photo could not be loaded. Try again.', { variant: 'error' });
+      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      toast.show('Your photos could not be opened. Try again.', { variant: 'error' });
+      toast.show("Couldn't open your photos, try again", { variant: 'error' });
     }
-  }, [toast, acceptPhoto, acceptClip, suppress]);
-
-  // Record a video now (D229 addendum 5 item 4): the in-app camera, through
-  // the one recording flow every surface uses (useClipRecorder: the privacy
-  // primer the first time, the videos sheet at three), which comes back here
-  // with `clipId` merged into this route. Needs a workout to keep the video
-  // with; a share with none offers the gallery only.
-  const clipFlow = useClipRecorder({ navigation, userId, workoutId: workoutId || null });
-  const recordVideo = useCallback(() => {
-    if (!workoutId || suppress) return;
-    clipFlow.openRecorder({ source: 'share' });
-  }, [clipFlow, workoutId, suppress]);
+  }, [toast, acceptPhoto]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
-  // The preview's place (addendum 5 item 8): the page's scroll view, and
-  // whether the header's preview is at its small size.
-  const scrollRef = useRef(null);
-  const [previewSmall, setPreviewSmall] = useState(false);
   // EP-17/UI-05 (Codex end-user-polish audit): `previewB64 === null` used to
   // mean BOTH "still rendering" and "permanently failed" (missing Skia/
   // typeface, or the offscreen surface/encode failing), so a real render
@@ -1205,7 +1006,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (!livePhoto || !Skia || !typefaces) return null;
     try {
       const params = buildParams();
-      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect, params.fullAspect);
+      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect);
       const surface = Skia.Surface.MakeOffscreen(PREVIEW_RENDER_W, H);
       if (!surface) return null;
       drawShareCard(surface.getCanvas(), {
@@ -1220,132 +1021,6 @@ export default function ShareCardScreen({ navigation, route }) {
       return null;
     }
   }, [livePhoto, typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop]);
-
-  // The card laid over the VIDEO in the live preview (D229): the same
-  // overlay as for a photo, laid out from a frame of the video (its upright
-  // size is what the layout needs) and with the scrim drawn from the
-  // brightest frame of the window (`toneOverride`, addendum 4), never from
-  // the one frame handed in.
-  const liveClip = !!clip && !isSticker;
-  const videoOffered = !suppress && !isSticker && shareVideoEngine.isAvailable();
-  // A photo, or a video from the phone, chosen through Gallery.
-  const galleryChosen = backgroundSource === BACKGROUND_SOURCES.GALLERY && (!!bgPhoto || (!!clip && clip.source === 'gallery'));
-  const layoutFrame = toneFrames?.[0] || barThumbs?.images?.[0] || null;
-  const clipOverlay = useMemo(() => {
-    if (!liveClip || !Skia || !typefaces || !layoutFrame) return null;
-    try {
-      const params = buildParams();
-      const H = cardHeight(PREVIEW_RENDER_W, params.isSquare, params.aspect, params.fullAspect);
-      const surface = Skia.Surface.MakeOffscreen(PREVIEW_RENDER_W, H);
-      if (!surface) return null;
-      drawShareCard(surface.getCanvas(), {
-        Skia, width: PREVIEW_RENDER_W, params, typefaces, wordmark, wordmarkDark,
-        bgPhoto: layoutFrame, photoCrop, omitPhoto: true, toneOverride: clipTone,
-      });
-      surface.flush();
-      const image = surface.makeImageSnapshot();
-      const b64 = image ? image.encodeToBase64() : null;
-      return b64 ? `data:image/png;base64,${b64}` : null;
-    } catch (e) {
-      logError('ShareCardScreen.clipOverlay', e);
-      return null;
-    }
-  }, [liveClip, typefaces, wordmark, wordmarkDark, buildParams, layoutFrame, photoCrop, clipTone]);
-
-  // The video's upright size for the framer and the placement rectangle:
-  // the probe's or the store's, else the frame's (the frames are upright).
-  const clipSize = useMemo(() => {
-    const w = Number(clip?.width) || 0;
-    const h = Number(clip?.height) || 0;
-    if (w > 0 && h > 0) return { width: w, height: h };
-    if (layoutFrame) return { width: layoutFrame.width(), height: layoutFrame.height() };
-    return { width: 1080, height: 1920 };
-  }, [clip, layoutFrame]);
-
-  // Make the finished video (D229): the card drawn once as a picture at
-  // the output size (the data, the scrim from the window's brightest frame,
-  // the outline, still), the look as its final numbers, the placement as
-  // the renderer's own rectangle, the window, then the engine. The file is
-  // cached by everything that went into it, so Share then Save makes it
-  // once. The preview pauses while it is made; Cancel stops it quietly.
-  const renderVideoToFile = useCallback(async () => {
-    if (!clip || !Skia || !FileSystem || !typefaces) return null;
-    if (!shareVideoEngine.isAvailable()) {
-      toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
-      return null;
-    }
-    const params = buildParams();
-    const W = 1080;
-    let H = cardHeight(W, params.isSquare, params.aspect, params.fullAspect);
-    if (H % 2) H -= 1; // the video's sides are even
-    const signature = JSON.stringify({
-      uri: clip.uri, window: clipWindow, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H, tone: clipTone,
-    });
-    if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
-    if (!layoutFrame) { toast.show(CLIP_STRINGS.shareNotPrepared, { variant: 'error' }); return null; }
-    setMakingVideo(true);
-    makingVideoRef.current = true;
-    keepAwake(true);
-    setVideoProgress(0);
-    try {
-      const surface = Skia.Surface.MakeOffscreen(W, H);
-      if (!surface) return null;
-      drawShareCard(surface.getCanvas(), {
-        Skia, width: W, params, typefaces, wordmark, wordmarkDark,
-        bgPhoto: layoutFrame, photoCrop, omitPhoto: true, toneOverride: clipTone,
-      });
-      surface.flush();
-      const image = surface.makeImageSnapshot();
-      const b64 = image ? image.encodeToBase64() : null;
-      if (!b64) return null;
-      const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
-      cacheFilesRef.current.push(overlayPngUri);
-      const rect = photoCoverRect(clipSize.width, clipSize.height, W, H, photoCrop);
-      const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
-      const result = await shareVideoEngine.exportShareVideo({
-        sourceUri: clip.uri,
-        startMs: Math.round(clipWindow.startMs),
-        durationMs: Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipWindow.endMs - clipWindow.startMs))),
-        matrix: matrix || null,
-        rect,
-        overlayPngUri,
-        outWidth: W,
-        outHeight: H,
-      }, setVideoProgress);
-      videoCacheRef.current[signature] = result.uri;
-      return result.uri;
-    } catch (e) {
-      const code = e?.code;
-      if (code !== shareVideoEngine.EXPORT_ERROR.CANCELLED) {
-        logError('ShareCardScreen.renderVideo', e, { code });
-        const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
-        if (line) toast.show(line, { variant: 'error', duration: 7000 });
-      }
-      return null;
-    } finally {
-      setMakingVideo(false);
-      makingVideoRef.current = false;
-      keepAwake(false);
-    }
-  }, [clip, typefaces, wordmark, wordmarkDark, buildParams, clipWindow, photoCrop, photoLook, photoLookStrength, layoutFrame, clipTone, clipSize, toast]);
-
-  const cancelVideo = useCallback(() => {
-    shareVideoEngine.cancelExport().catch(() => {});
-  }, []);
-
-  // While the video is made the ring holds the screen (ruling 16): leaving
-  // waits for it or for Cancel; a screen taken away anyway (a reset) cancels
-  // the export so the engine is free and no finished file is left unowned.
-  useEffect(() => {
-    const unsubscribe = navigation?.addListener?.('beforeRemove', (e) => {
-      if (makingVideoRef.current) e.preventDefault();
-    });
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-      if (makingVideoRef.current) shareVideoEngine.cancelExport().catch(() => {});
-    };
-  }, [navigation]);
 
   // The page's own scroll, made known to the gesture system so a drag that
   // starts on the photo moves the photo and never the page (the photo's
@@ -1370,6 +1045,72 @@ export default function ShareCardScreen({ navigation, route }) {
     return uri;
   }, [renderCardBase64, cardType, format]);
 
+  // The finished video (addendum 17): the card drawn without its photo as a
+  // PNG over the video, the window from the chosen start, the look's colour
+  // matrix and the framing rectangle, through the native engine. Cached by
+  // everything that went into it, so Share then Save makes it once.
+  const renderVideoToFile = useCallback(async () => {
+    if (!clip || !Skia || !FileSystem || !typefaces) return null;
+    if (!shareVideoEngine.isAvailable()) {
+      toast.show(shareVideoEngine.lineForExportError(shareVideoEngine.EXPORT_ERROR.UNAVAILABLE), { variant: 'error', duration: 6000 });
+      return null;
+    }
+    const params = buildParams();
+    const W = 1080;
+    let H = cardHeight(W, params.isSquare, params.aspect);
+    if (H % 2) H -= 1;
+    const durationMs = Math.min(MAX_VIDEO_MS, Math.max(1, Math.round(clipDurationMs - clipStartMs)));
+    const signature = JSON.stringify({
+      uri: clip.uri, start: clipStartMs, durationMs, crop: photoCrop, look: photoLook, strength: photoLookStrength, params, W, H,
+    });
+    if (videoCacheRef.current[signature]) return videoCacheRef.current[signature];
+    setMakingVideo(true);
+    makingVideoRef.current = true;
+    setVideoProgress(0);
+    try {
+      const surface = Skia.Surface.MakeOffscreen(W, H);
+      if (!surface) return null;
+      drawShareCard(surface.getCanvas(), {
+        Skia, width: W, params, typefaces, wordmark, wordmarkDark, bgPhoto, photoCrop, omitPhoto: true,
+      });
+      surface.flush();
+      const image = surface.makeImageSnapshot();
+      const b64 = image ? image.encodeToBase64() : null;
+      if (!b64) return null;
+      const overlayPngUri = `${FileSystem.cacheDirectory || ''}volyume-overlay-${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(overlayPngUri, b64, { encoding: FileSystem.EncodingType.Base64 });
+      const rect = photoCoverRect(clipSize.width, clipSize.height, W, H, photoCrop);
+      const matrix = photoLook && photoLook !== 'none' ? lookMatrix(photoLook, photoLookStrength) : null;
+      const result = await shareVideoEngine.exportShareVideo({
+        sourceUri: clip.uri,
+        startMs: Math.round(clipStartMs),
+        durationMs,
+        matrix: matrix || null,
+        rect,
+        overlayPngUri,
+        outWidth: W,
+        outHeight: H,
+      }, setVideoProgress);
+      videoCacheRef.current[signature] = result.uri;
+      return result.uri;
+    } catch (e) {
+      const code = e?.code;
+      if (code !== shareVideoEngine.EXPORT_ERROR.CANCELLED) {
+        logError('ShareCardScreen.renderVideo', e, { code });
+        const line = shareVideoEngine.lineForExportError(code, { fromGallery: clip?.source === 'gallery' });
+        if (line) toast.show(line, { variant: 'error', duration: 7000 });
+      }
+      return null;
+    } finally {
+      setMakingVideo(false);
+      makingVideoRef.current = false;
+    }
+  }, [clip, typefaces, wordmark, wordmarkDark, buildParams, clipDurationMs, clipStartMs, photoCrop, photoLook, photoLookStrength, clipSize, bgPhoto, toast]);
+
+  const cancelVideo = useCallback(() => {
+    shareVideoEngine.cancelExport().catch(() => { /* nothing running is fine */ });
+  }, []);
+
   // Save the rendered card straight to the device gallery (expo-media-library).
   // Asks for the add-photos permission; a denial is handled with a calm message,
   // never a crash.
@@ -1380,17 +1121,17 @@ export default function ShareCardScreen({ navigation, route }) {
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
     setSavingToGallery(true);
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (!perm.granted) {
-        toast.show(liveClip ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
+        toast.show(clip ? 'Gallery access is needed to save the video. You can still use Share.' : 'Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
         return;
       }
-      if (liveClip) {
+      if (clip) {
         const videoUri = await renderVideoToFile();
         if (!videoUri) return; // the engine's own line, or a cancel, has already spoken
         await MediaLibrary.saveToLibraryAsync(videoUri);
@@ -1402,7 +1143,7 @@ export default function ShareCardScreen({ navigation, route }) {
       await MediaLibrary.saveToLibraryAsync(uri);
       toast.show('Saved to your gallery.', { variant: 'success' });
     } catch (_e) {
-      toast.show(liveClip ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
+      toast.show(clip ? 'The video could not be saved. Try again.' : 'The image could not be saved. Try again.', { variant: 'error' });
     } finally {
       setSavingToGallery(false);
     }
@@ -1416,37 +1157,23 @@ export default function ShareCardScreen({ navigation, route }) {
   // dependency AND a registered Facebook App ID (mandatory since Jan 2023), so we
   // deliberately keep the zero-dependency share-sheet route and just present it
   // as a Story share with both app icons.
-  //
-  // The text link (D229 addendum 6, level-up 4): on iOS the image goes
-  // through React Native's Share with "volyume.app" as its message, so an
-  // app that takes text beside an image (Messages, WhatsApp, Notes) gets the
-  // address too. Android keeps expo-sharing's file-only share: an Android
-  // target rarely takes an image and text from one share (many drop one of
-  // the two), and the file alone reaches every target reliably.
   async function handleShareToStories() {
-    const isIos = Platform.OS === 'ios';
-    if (!Skia || !FileSystem || (isIos ? !Share : !Sharing)) {
+    if (!Skia || !FileSystem || !Sharing) {
       // P-16: device-specific, not "incomplete build".
       toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
     setSharingToStories(true);
     try {
-      if (liveClip) {
-        // The finished video, through the same door as the image (D229
-        // addendum 1: a completed video, shared the way the photo card is).
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
+      if (clip) {
         const videoUri = await renderVideoToFile();
         if (!videoUri) return;
-        if (isIos) {
-          await Share.share({ url: videoUri, message: 'volyume.app' });
-          return;
-        }
-        const canShareVideo = await Sharing.isAvailableAsync();
-        if (!canShareVideo) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
         await Sharing.shareAsync(videoUri, {
           mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
         });
@@ -1454,12 +1181,6 @@ export default function ShareCardScreen({ navigation, route }) {
       }
       const uri = await renderCardToFile();
       if (!uri) { toast.show('The image could not be made. Try again.', { variant: 'error' }); return; }
-      if (isIos) {
-        await Share.share({ url: uri, message: 'volyume.app' });
-        return;
-      }
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { toast.show('Sharing is not available on this device.', { variant: 'warning', duration: 5000 }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
       });
@@ -1470,227 +1191,20 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }
 
-  // Set as wallpaper (D229 addendum 6, level-up 2): Full screen on Android
-  // only, through the video module's lock screen call, offered only when
-  // that module says it can (an absent module hides the action). iOS has no
-  // way for an app to set a wallpaper, so it shows how instead.
-  const [wallpaperAvailable, setWallpaperAvailable] = useState(false);
-  useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    let cancelled = false;
-    const engine = loadWallpaperEngine();
-    if (!engine) return undefined;
-    Promise.resolve()
-      .then(() => engine.isAvailable())
-      .then((ok) => { if (!cancelled) setWallpaperAvailable(ok === true); })
-      .catch(() => { if (!cancelled) setWallpaperAvailable(false); });
-    return () => { cancelled = true; };
-  }, []);
-
-  async function handleSetWallpaper() {
-    const engine = loadWallpaperEngine();
-    if (!engine || !Skia || !FileSystem) {
-      toast.show("Setting a wallpaper isn't available on your device.", { variant: 'error', duration: 5000 });
-      return;
-    }
-    if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again.', { variant: 'info' });
-      return;
-    }
-    setSettingWallpaper(true);
-    try {
-      const uri = await renderCardToFile();
-      if (!uri) { toast.show('The image could not be made. Try again.', { variant: 'error' }); return; }
-      await engine.setLockScreenWallpaper(uri);
-      toast.show('Set as your lock screen wallpaper.', { variant: 'success' });
-    } catch (e) {
-      logError('ShareCardScreen.setWallpaper', e);
-      toast.show('The wallpaper could not be set. Try again.', { variant: 'error' });
-    } finally {
-      setSettingWallpaper(false);
-    }
-  }
-
   // EP-11/UI-03: the preview used to hard-code a 300dp width inside the
   // screen's 16dp horizontal padding, overflowing a 320dp phone (300 + 2*16
   // > 320). Cap at the design width but never exceed what this screen's own
-  // padding leaves available (windowWidth, read near the top for Full
-  // screen too); height is derived from that so the card's aspect ratio is
-  // preserved.
+  // padding leaves available; height is derived from that so the card's
+  // aspect ratio is preserved.
+  const { width: windowWidth } = useWindowDimensions();
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
-  const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect, fullAspect);
-
-  // The preview's place (D229 addendum 5 item 8): a header above the page
-  // holds the live preview at full size and shrinks it, on the UI thread as
-  // the page scrolls, to a small copy that stays under the title bar while
-  // the controls are worked below. One preview, one framer, nothing drawn
-  // twice, and nothing floats over the controls (fresh-eyes review
-  // 2026-10-15, should-fix 7: the first build pinned a second copy over the
-  // trailing edge, where it took the taps of the controls beneath it). A tap
-  // on the small preview scrolls back to the top. Reduce Motion: the shrink
-  // follows the finger (direct manipulation), only the scroll back is
-  // unanimated.
-  const collapseRange = Math.max(1, previewH - MINI_PREVIEW_H);
-  const collapse = useSharedValue(0); // 0 at full size, 1 at the small size
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      'worklet';
-
-      const y = e.contentOffset.y;
-      collapse.value = Math.min(1, Math.max(0, y / collapseRange));
-    },
-  }, [collapseRange]);
-  useAnimatedReaction(() => collapse.value > 0.5, (small, prev) => {
-    if (small !== prev) runOnJS(setPreviewSmall)(small);
-  }, []);
-  const previewHeaderStyle = useAnimatedStyle(() => ({
-    height: interpolate(collapse.value, [0, 1], [previewH, MINI_PREVIEW_H], Extrapolation.CLAMP),
-  }), [previewH]);
-  const previewCardStyle = useAnimatedStyle(() => {
-    const h = interpolate(collapse.value, [0, 1], [previewH, MINI_PREVIEW_H], Extrapolation.CLAMP);
-    const scale = previewH > 0 ? h / previewH : 1;
-    return { transform: [{ translateY: -(previewH - h) / 2 }, { scale }] };
-  }, [previewH]);
-  const scrollToPreview = useCallback(() => {
-    scrollRef.current?.scrollTo?.({ y: 0, animated: !reduceMotion });
-  }, [reduceMotion]);
+  const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <BackHeader title={liveClip ? 'Share video' : 'Share image'} />
-      {/* The preview's header (addendum 5 item 8): the exact image that gets
-          shared, scaled down, live with a photo or a video under the card;
-          it shrinks as the page scrolls and stays small under the title bar. */}
-      <Animated.View style={[styles.previewHeader, previewHeaderStyle]} testID="share-preview-header">
-        <Animated.View style={[styles.previewCard, { width: previewW, height: previewH }, previewCardStyle]} pointerEvents={previewSmall ? 'none' : 'auto'}>
-            {liveClip ? (
-              <View>
-                <ClipFramer
-                  clip={clipFrames}
-                  mediaWidth={clipSize.width}
-                  mediaHeight={clipSize.height}
-                  frameWidth={previewW}
-                  frameHeight={previewH}
-                  crop={photoCrop}
-                  lookKey={photoLook !== 'none' ? photoLook : null}
-                  lookStrength={strengthDisplayPct / 100}
-                  overlayUri={clipOverlay}
-                  paused={clipPaused || makingVideo}
-                  onTogglePause={() => setClipPaused((p) => !p)}
-                  onChange={setPhotoCrop}
-                  blocksGesture={scrollGesture}
-                />
-              </View>
-            ) : livePhoto ? (
-              <SharePhotoFramer
-                photoUri={framerPhoto.uri}
-                photoWidth={framerPhoto.width}
-                photoHeight={framerPhoto.height}
-                frameWidth={previewW}
-                frameHeight={previewH}
-                crop={photoCrop}
-                overlayUri={framerOverlay}
-                onChange={setPhotoCrop}
-                blocksGesture={scrollGesture}
-              />
-            ) : previewStatus === 'ready' && previewB64 ? (
-              <Image
-                source={{ uri: `data:image/png;base64,${previewB64}` }}
-                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
-                resizeMode="contain"
-              />
-            ) : previewStatus === 'error' ? (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
-                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-                <Text style={[styles.previewErrorText, live.previewErrorText]}>The preview could not be built.</Text>
-                <Button
-                  title="Retry"
-                  onPress={renderPreview}
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  accessibilityLabel="Retry building the preview"
-                />
-              </View>
-            ) : (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
-                <ActivityIndicator color={t.colors.primary} />
-              </View>
-            )}
-        </Animated.View>
-        {/* The ring while the video is made: over the header, never scaled
-            with the card, so Cancel stays readable at any scroll. */}
-        {makingVideo ? (
-          <View style={[styles.videoScrim, live.videoScrim, StyleSheet.absoluteFillObject]} pointerEvents="box-none">
-            <ProgressRing progress={videoProgress} />
-            <Text style={[styles.videoScrimText, live.videoScrimText]}>Making your video</Text>
-            <Button title="Cancel" onPress={cancelVideo} variant="secondary" size="sm" fullWidth={false} accessibilityLabel="Stop making the video" />
-          </View>
-        ) : null}
-        {previewSmall && !makingVideo ? (
-          <TouchableOpacity
-            style={styles.previewBack}
-            onPress={scrollToPreview}
-            accessibilityRole="button"
-            accessibilityLabel="Back to the preview"
-            accessibilityHint="Scrolls up to the full-size preview"
-            activeOpacity={0.85}
-            testID="share-mini-preview"
-          />
-        ) : null}
-      </Animated.View>
-      <View style={styles.body}>
+      <BackHeader title={clip ? 'Share video' : 'Share image'} />
       <GestureDetector gesture={scrollGesture}>
-      <Animated.ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.content, live.content]}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        scrollEnabled={!makingVideo}
-      >
-
-        {liveClip || livePhoto ? (
-        <View style={styles.section}>
-          {liveClip ? (
-            <View style={styles.clipControls}>
-              <Text style={[styles.photoHint, live.photoHint]}>{clipPaused ? 'Drag to move your video, pinch to resize it, and tap it to play.' : 'Drag to move your video, pinch to resize it, and tap it to pause.'}</Text>
-              <TrimBar
-                width={previewW}
-                durationMs={Math.max(clipWindow.endMs, Number(clip.durationMs) || 0)}
-                startMs={clipWindow.startMs}
-                endMs={clipWindow.endMs}
-                maxWindowMs={MAX_VIDEO_MS}
-                thumbnails={barThumbs}
-                currentTime={clipFrames.currentTime}
-                onPreview={(ms) => clipFrames.scrub(ms)}
-                onInteractStart={() => setClipPaused(true)}
-                onChange={(next) => { setClipWindow(next); setClipPaused(reduceMotion); }}
-              />
-              <Text style={[styles.photoHint, live.photoHint]}>
-                {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. `}
-                {(Number(clip.durationMs) || 0) > MAX_VIDEO_MS
-                  ? `${Math.round((clipWindow.endMs - clipWindow.startMs) / 1000)} seconds of ${Math.round((Number(clip.durationMs) || 0) / 1000)}. Slide the strip to choose where it starts, or drag its ends to use less of the video.`
-                  : 'You can drag the ends of the strip to use less of the video.'}
-              </Text>
-            </View>
-          ) : null}
-          {livePhoto ? (
-            <View style={styles.photoHintRow}>
-              <Text style={[styles.photoHint, live.photoHint]}>Drag to move your photo. Pinch to resize it.</Text>
-              {!isCentreCrop(photoCrop) ? (
-                <TouchableOpacity
-                  onPress={() => setPhotoCrop(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reset the photo to the centre"
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-        ) : null}
+      <ScrollView contentContainerStyle={[styles.content, live.content]}>
 
         {/* Card type (pillar 5): live template thumbnails when more than one
             card is available for this moment - the picker shows the actual
@@ -1723,7 +1237,7 @@ export default function ShareCardScreen({ navigation, route }) {
                     />
                   ) : (
                     <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
-                      <Ionicons name="image-outline" size={iconSize.md} color={t.colors.textMuted} />
+                      <Ionicons name="image-outline" size={18} color={t.colors.textMuted} />
                     </View>
                   )}
                   <Text style={[styles.templateLabel, live.templateLabel, active && [styles.templateLabelActive, live.templateLabelActive]]}>{label}</Text>
@@ -1733,48 +1247,34 @@ export default function ShareCardScreen({ navigation, route }) {
           </ScrollView>
         )}
 
-        {/* Format: story 9:16 first (D109-1), Full screen (the phone's own
-            shape, D229 addendum 6), Feed 4:5 ('portrait' in the code),
-            Square 1:1, and the transparent sticker export - all five for
-            every card type. Five fit across a phone with each icon over its
-            word. */}
+        {/* Format: story 9:16 first (D109-1), square 1:1, portrait 4:5, and
+            the transparent sticker export - all four for every card type. */}
         <View style={styles.section}>
           <SectionLabel>Format</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
               label="Story"
-              stacked
               active={format === 'story'}
               onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={iconSize.sm} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              label="Full screen"
-              stacked
-              active={format === 'full'}
-              onPress={() => setFormat('full')}
-              icon={<Ionicons name="expand-outline" size={iconSize.sm} color={format === 'full' ? t.colors.primary : t.colors.textMuted} />}
-            />
-            <SegmentBtn
-              label="Feed"
-              stacked
-              active={format === 'portrait'}
-              onPress={() => setFormat('portrait')}
-              icon={<Ionicons name="tablet-portrait-outline" size={iconSize.sm} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Square"
-              stacked
               active={format === 'square'}
               onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={iconSize.sm} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="4:5"
+              active={format === 'portrait'}
+              onPress={() => setFormat('portrait')}
+              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Sticker"
-              stacked
               active={isSticker}
               onPress={() => setFormat('sticker')}
-              icon={<Ionicons name="pricetag-outline" size={iconSize.sm} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
           {isSticker ? (
@@ -1795,112 +1295,120 @@ export default function ShareCardScreen({ navigation, route }) {
               label="Dark"
               active={shareTheme === 'dark'}
               onPress={() => setShareTheme('dark')}
-              icon={<Ionicons name="moon-outline" size={iconSize.sm} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="moon-outline" size={15} color={shareTheme === 'dark' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Light"
               active={shareTheme === 'light'}
               onPress={() => setShareTheme('light')}
-              icon={<Ionicons name="sunny-outline" size={iconSize.sm} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="sunny-outline" size={15} color={shareTheme === 'light' ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
         </View>
         ) : null}
 
-        {/* Background: the user's own photo as the canvas (Gallery, a pick
-            from the phone's photos, or Photo, the system camera; the
-            tone-sampled scrim keeps it legible), or None, the card's own
-            ground (renamed from "Dark" once Dark named a share THEME above;
-            it still just clears the photo). D229 addendum 5 item 4: the row
-            reads Gallery | Photo | None, and the video source joins it
-            (BACKGROUND_SOURCES.VIDEO): Video between Photo and None, and
-            the "From this workout" strip beneath the row. Hidden for the
-            sticker, which is transparent by design. Only shown when the
+        {/* Background: the user's own photo as the canvas (gallery pick OR
+            camera capture; tone-sampled scrim keeps it legible in the
+            renderer), or the per-type crafted dark background ("No photo" --
+            renamed from "Dark" now that Dark names a share THEME above, not
+            a background choice; it still just clears the photo). Hidden for
+            the sticker, which is transparent by design. Only shown when the
             native image picker is available in the build. */}
         {ImagePicker && !isSticker ? (
         <View style={styles.section}>
           <SectionLabel>Background</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
-              label="Gallery"
-              accessibilityLabel={videoOffered ? 'Gallery, choose a photo or video' : 'Gallery, choose a photo'}
-              active={galleryChosen}
+              label="My photo"
+              active={!!bgPhoto}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={iconSize.sm} color={galleryChosen ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="Photo"
-              accessibilityLabel="Photo, take one with the camera"
-              active={!!bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO}
+              label="Camera"
+              active={false}
               onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={iconSize.sm} color={bgPhoto && backgroundSource === BACKGROUND_SOURCES.PHOTO ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="camera-outline" size={15} color={t.colors.textMuted} />}
             />
-            {videoOffered && workoutId ? (
+            {!suppress ? (
               <SegmentBtn
                 label="Video"
-                accessibilityLabel="Video, record one now"
-                active={!!clip && clip.source !== 'gallery'}
-                onPress={recordVideo}
-                icon={<Ionicons name="videocam-outline" size={iconSize.sm} color={clip && clip.source !== 'gallery' ? t.colors.primary : t.colors.textMuted} />}
+                active={!!clip}
+                onPress={() => setVideoSheetOpen(true)}
+                icon={<Ionicons name="videocam-outline" size={15} color={clip ? t.colors.primary : t.colors.textMuted} />}
               />
             ) : null}
             <SegmentBtn
-              label="None"
-              accessibilityLabel={videoOffered ? 'None, no photo or video' : 'None, no photo'}
-              active={!bgPhoto && !clip}
+              label="No photo"
+              active={!bgPhoto}
               onPress={clearPhoto}
-              icon={<Ionicons name="close-circle-outline" size={iconSize.sm} color={!bgPhoto && !clip ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="close-circle-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
-          {/* From this workout (D229 addendum 5 item 4): the videos recorded
-              during this workout, newest first, one tap from any card of
-              it; a video recorded for the PR on the card is marked (addendum
-              9), never restricted to it. */}
-          {videoOffered && workoutClips.length ? (
-            <View style={styles.clipStripWrap}>
-              <Text style={[styles.clipStripLabel, live.clipStripLabel]}>From this workout</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lookStrip}>
-                {workoutClips.map((row) => {
-                  const active = !!clip && clip.id === row.id;
-                  const isPrSet = cardType === 'pr' && clipMatchesPR(row, selectedPr);
-                  const name = clipDisplayName(row);
-                  return (
-                    <TouchableOpacity
-                      key={row.id}
-                      style={[styles.lookTile, live.lookTile, active && [styles.lookTileActive, live.lookTileActive]]}
-                      onPress={() => acceptClip(row)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`${isPrSet ? 'Your PR set, ' : ''}${name}, ${Math.round((row.durationMs || 0) / 1000)} seconds`}
-                    >
-                      <View style={[styles.lookThumb, styles.clipThumb, live.lookThumbEmpty]}>
-                        <Ionicons name="videocam-outline" size={iconSize.md} color={active ? t.colors.primary : t.colors.textMuted} />
-                        <Text style={[styles.clipDuration, live.clipDuration]}>{mmss(row.durationMs)}</Text>
-                      </View>
-                      <Text
-                        style={[styles.lookName, live.lookName, active && [styles.lookNameActive, live.lookNameActive]]}
-                        numberOfLines={1}
-                      >
-                        {isPrSet ? 'Your PR set' : name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+          {clip ? (
+            <View style={styles.videoStartRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>
+                {`A share is ${MAX_VIDEO_MS / 1000} seconds at the longest. ${clipDurationMs > MAX_VIDEO_MS
+                  ? `This video is ${Math.round(clipDurationMs / 1000)} seconds, so choose where the share starts.`
+                  : 'The whole video goes on the share.'}`}
+              </Text>
+              {clipDurationMs > MAX_VIDEO_MS ? (
+                <Stepper
+                  value={Math.round(clipStartMs / 1000)}
+                  onChange={changeClipStart}
+                  min={0}
+                  max={maxStartSec}
+                  step={1}
+                  label="Start at"
+                  formatValue={(v) => `${v} s`}
+                  valueLabel={`Start at ${Math.round(clipStartMs / 1000)} seconds`}
+                  decreaseLabel="Start earlier"
+                  increaseLabel="Start later"
+                  onDecreaseLongPress={() => changeClipStart(Math.round(clipStartMs / 1000) - 5)}
+                  onIncreaseLongPress={() => changeClipStart(Math.round(clipStartMs / 1000) + 5)}
+                />
+              ) : null}
             </View>
           ) : null}
         </View>
         ) : null}
 
-        {/* Look (founder, 2026-09-27: "a tint or filter to the images
+        {/* Addendum 17: where a video comes from. This workout's own videos,
+            the gallery, or the camera now. */}
+        <BottomSheet visible={videoSheetOpen} onClose={() => setVideoSheetOpen(false)} accessibilityLabel="Choose a video">
+          <Text style={[styles.sheetTitle, live.sheetTitle]} accessibilityRole="header">Choose a video</Text>
+          {workoutClips.length ? (
+            <>
+              <SectionLabel style={styles.sheetGroupLabel}>From this workout</SectionLabel>
+              {workoutClips.map((row) => (
+                <TouchableOpacity
+                  key={row.id}
+                  style={[styles.sheetRow, live.sheetRow]}
+                  onPress={() => acceptClip(row)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: clip?.id === row.id }}
+                  accessibilityLabel={`${clipDisplayName(row)}, ${Math.round((Number(row.durationMs) || 0) / 1000)} seconds`}
+                >
+                  <Ionicons name="videocam-outline" size={18} color={clip?.id === row.id ? t.colors.primary : t.colors.textMuted} />
+                  <Text style={[styles.sheetRowText, live.sheetRowText]} numberOfLines={1}>{clipDisplayName(row)}</Text>
+                  <Text style={[styles.sheetRowMeta, live.sheetRowMeta]}>{`${Math.round((Number(row.durationMs) || 0) / 1000)} s`}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          ) : null}
+          <View style={styles.sheetActions}>
+            <Button title="From your gallery" variant="secondary" icon="images-outline" onPress={pickGalleryVideo} />
+            {workoutId ? <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={filmNow} /> : null}
+          </View>
+        </BottomSheet>
+
+        {/* Photo look (founder, 2026-09-27: "a tint or filter to the images
             ... Almost like Instagram filters but a select group of them that
-            enhance the look ... label them gym like ones"; the heading reads
-            "Look" since D229 addendum 5 item 4, as it will serve videos too).
-            Only once there is a photo to apply it to, and never on the
-            transparent sticker. */}
-        {(bgPhoto || clip) && !isSticker ? (
+            enhance the look ... label them gym like ones"). Only once there
+            is a photo to apply it to, and never on the transparent sticker. */}
+        {bgPhoto && !isSticker ? (
         <View style={styles.section}>
-          <SectionLabel>Look</SectionLabel>
+          <SectionLabel>Photo look</SectionLabel>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1954,6 +1462,66 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : null}
         </View>
         ) : null}
+
+        {/* Preview: the exact image that gets shared, scaled down. With a
+            photo it is live: the photo under the card drawn by the same
+            renderer, moved and resized right here. */}
+        <View style={styles.section}>
+          <SectionLabel>Preview</SectionLabel>
+          <View style={styles.previewOuter}>
+            {livePhoto ? (
+              <SharePhotoFramer
+                photoUri={framerPhoto.uri}
+                photoWidth={framerPhoto.width}
+                photoHeight={framerPhoto.height}
+                frameWidth={previewW}
+                frameHeight={previewH}
+                crop={photoCrop}
+                overlayUri={framerOverlay}
+                onChange={setPhotoCrop}
+                blocksGesture={scrollGesture}
+              />
+            ) : previewStatus === 'ready' && previewB64 ? (
+              <Image
+                source={{ uri: `data:image/png;base64,${previewB64}` }}
+                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
+                resizeMode="contain"
+              />
+            ) : previewStatus === 'error' ? (
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
+                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
+                <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+                <Button
+                  title="Retry"
+                  onPress={renderPreview}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  accessibilityLabel="Retry building the preview"
+                />
+              </View>
+            ) : (
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
+                <ActivityIndicator color={t.colors.primary} />
+              </View>
+            )}
+          </View>
+          {livePhoto ? (
+            <View style={styles.photoHintRow}>
+              <Text style={[styles.photoHint, live.photoHint]}>{clip ? 'Drag to move your video. Pinch to resize it.' : 'Drag to move your photo. Pinch to resize it.'}</Text>
+              {!isCentreCrop(photoCrop) ? (
+                <TouchableOpacity
+                  onPress={() => setPhotoCrop(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset the photo to the centre"
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text style={[styles.pickerAction, live.pickerAction]}>Reset</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
 
         {/* Top lifts (founder orders 2026-09-26): the athlete picks which
             lifts the session card shows, as many as fit, or none. One row
@@ -2092,67 +1660,38 @@ export default function ShareCardScreen({ navigation, route }) {
           </Text>
         </View>
 
-        {/* Share: the ONE amber action on the screen (D229 addendum 5 item
-            7), Save to gallery and Post to Community beneath it. It opens the
-            system share sheet with the image, carrying the Instagram and
-            Facebook icons (founder 2026-06-30: present it as a Story share
-            for Instagram/Facebook, but route through the normal share screen
-            rather than a direct-composer intent, so no extra dependency or
-            Facebook App ID is needed). The user picks Instagram or Facebook
-            from the sheet; both let you post the image to a Story. R9/M9
-            (share-card audit 2026-07-27): the visible label standardises on
-            "Share image" with every other action button in the family; the
-            Instagram/Facebook framing still comes through the icons and the
-            pinned accessibility label below, so the 2026-06-30 decision (OS
-            share sheet, not a direct-composer intent) is unaffected. */}
+        {/* Share to Story: Instagram + Facebook icons, opens the system share
+            sheet with the rendered PNG (founder 2026-06-30: present it as a Story
+            share for Instagram/Facebook, but route through the normal share
+            screen rather than a direct-composer intent, so no extra dependency or
+            Facebook App ID is needed). The user picks Instagram or Facebook from
+            the sheet; both let you post the image to a Story. R9/M9 (share-card
+            audit 2026-07-27): the visible label standardises on "Share image"
+            with every other action button in the family; the Instagram/Facebook
+            framing still comes through the icons and the pinned accessibility
+            label below, so the 2026-06-30 decision (OS share sheet, not a
+            direct-composer intent) is unaffected. */}
+        {makingVideo ? (
+          <View style={styles.makingRow} testID="share-making-video">
+            <ActivityIndicator color={t.colors.primary} />
+            <Text style={[styles.photoHint, live.photoHint, styles.makingText]}>
+              {`Making your video, ${Math.round(Math.max(0, Math.min(1, videoProgress)) * 100)}%. Keep Volyume open.`}
+            </Text>
+            <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={cancelVideo} accessibilityLabel="Cancel making the video" />
+          </View>
+        ) : null}
         <Button
-          title={liveClip ? 'Share video' : 'Share image'}
+          title={clip ? 'Share video' : 'Share image'}
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
-          disabled={sharingToStories || !cardReady || makingVideo || (liveClip && (!layoutFrame || !toneReady))}
+          disabled={sharingToStories || !cardReady || makingVideo}
           loading={sharingToStories}
-          accessibilityLabel={liveClip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
-          variant="emphatic"
+          accessibilityLabel={clip ? 'Share your video to Instagram or Facebook Story' : 'Share to Instagram or Facebook Story'}
+          variant="outline"
           size="lg"
           style={styles.secondaryAction}
         />
-
-        {/* Save to gallery: writes the image straight to the device
-            gallery. Only shown when the media-library package is in the build. */}
-        {MediaLibrary ? (
-        <Button
-          title="Save to gallery"
-          icon="download-outline"
-          onPress={handleSaveToGallery}
-          disabled={savingToGallery || !cardReady || makingVideo || (liveClip && (!layoutFrame || !toneReady))}
-          loading={savingToGallery}
-          accessibilityLabel="Save to gallery"
-          variant="secondary"
-          size="lg"
-          style={styles.secondaryAction}
-        />
-        ) : null}
-
-        {/* Set as wallpaper (D229 addendum 6, level-up 2), under Full screen
-            only: on Android when the video module can set the lock screen;
-            on iOS, where no app can, the line that says how. */}
-        {isFullScreen && !liveClip && Platform.OS === 'android' && wallpaperAvailable ? (
-          <Button
-            title="Set as wallpaper"
-            icon="phone-portrait-outline"
-            onPress={handleSetWallpaper}
-            disabled={settingWallpaper || !cardReady}
-            loading={settingWallpaper}
-            accessibilityLabel="Set as your lock screen wallpaper"
-            variant="secondary"
-            size="lg"
-            style={styles.secondaryAction}
-          />
-        ) : null}
-        {isFullScreen && !liveClip && Platform.OS === 'ios' ? (
-          <Text style={[styles.wallpaperHint, live.wallpaperHint]}>Save it, then set it from Photos.</Text>
-        ) : null}
 
         {/* Community entry point 7 (social-discovery blueprint section 1):
             the same moment, a different destination. PR, milestone and
@@ -2164,20 +1703,35 @@ export default function ShareCardScreen({ navigation, route }) {
             ProfileStack while the Community routes live only in HomeStack,
             so this is a CROSS-TAB jump (F4: a bare navigate() to another
             stack is silently dropped). */}
-        {communityKind && !clip ? (
+        {communityKind ? (
           <Button
             title="Post to Community"
             icon="people-outline"
             onPress={() => navigateCrossTab(navigation, 'HomeTab', 'CommunityCompose', communityComposeParams)}
             accessibilityLabel="Post this to Community"
-            variant="secondary"
+            variant="outline"
             size="lg"
             style={styles.secondaryAction}
           />
         ) : null}
-      </Animated.ScrollView>
+
+        {/* Save to gallery: writes the rendered card straight to the device
+            gallery. Only shown when the media-library package is in the build. */}
+        {MediaLibrary ? (
+        <Button
+          title="Save to gallery"
+          icon="download-outline"
+          onPress={handleSaveToGallery}
+          disabled={savingToGallery || !cardReady || makingVideo}
+          loading={savingToGallery}
+          accessibilityLabel="Save to gallery"
+          variant="outline"
+          size="lg"
+          style={styles.secondaryAction}
+        />
+        ) : null}
+      </ScrollView>
       </GestureDetector>
-      </View>
 
       {/* The top-lifts list: every lift from the session with its best set,
           a note on the ones that set a new best today, and the option to
@@ -2296,8 +1850,6 @@ export default function ShareCardScreen({ navigation, route }) {
           last
         />
       </BottomSheet>
-      {/* The privacy primer and the videos sheet (one recording flow). */}
-      {clipFlow.sheets}
     </SafeAreaView>
   );
 }
@@ -2333,17 +1885,12 @@ function OptionRow({ title, meta, note, selected, onPress, last, disabled = fals
 // prop-drilled `live`/`t` from ShareCardScreen, matching NutritionTargetsScreen's
 // MacroCard/WhySection precedent from batch E), own useTheme() call and the
 // shared buildLiveStyles(t) (same `styles` block this component reads).
-// `stacked`: the icon over the word, for a row of five (the Format row),
-// with the word allowed a second line, and shrunk to fit, at a large text
-// size. Every segment's word is held to the chrome cap, as Chip and Button
-// hold theirs.
-// `accessibilityLabel`: a fuller spoken name that starts with the visible word.
-function SegmentBtn({ label, active, onPress, icon, stacked = false, accessibilityLabel = null }) {
+function SegmentBtn({ label, active, onPress, icon }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.segment, stacked && styles.segmentStacked, active && [styles.segmentActive, live.segmentActive]]}
+      style={[styles.segment, active && [styles.segmentActive, live.segmentActive]]}
       onPress={onPress}
       // AY-6: the segmented control (card type / format / background) never
       // announced which segment was selected to a screen reader. Mirrors the
@@ -2351,17 +1898,10 @@ function SegmentBtn({ label, active, onPress, icon, stacked = false, accessibili
       // (accessibilityState={{ selected }}) and the Settings body-weight-unit
       // segmented control (SettingsWorkoutScreen.js).
       accessibilityState={{ selected: active }}
-      accessibilityLabel={accessibilityLabel || label}
+      accessibilityLabel={label}
     >
       {icon}
-      <Text
-        style={[styles.segmentText, live.segmentText, stacked && styles.segmentTextStacked, active && [styles.segmentTextActive, live.segmentTextActive]]}
-        numberOfLines={stacked ? 2 : undefined}
-        adjustsFontSizeToFit={stacked}
-        maxFontSizeMultiplier={fontScaleCaps.chrome}
-      >
-        {label}
-      </Text>
+      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -2387,14 +1927,19 @@ function ToggleRow({ label, value, onChange, last, disabled = false }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // Addendum 17: the video's start row, the video chooser's rows.
+  videoStartRow: { marginTop: spacing.sm, gap: spacing.sm },
+  sheetRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48,
+    paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
+  },
+  sheetRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
+  sheetRowMeta: { ...type.num('label'), color: colors.textMuted },
+  sheetActions: { marginTop: spacing.md, gap: spacing.sm },
+  makingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  makingText: { flex: 1 },
   safe: { flex: 1, backgroundColor: colors.background },
-  body: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  // The preview's header: the live preview at full size, shrinking to the
-  // small size as the page scrolls; the card scales about its top.
-  previewHeader: { alignItems: 'center', overflow: 'hidden' },
-  previewCard: { alignSelf: 'center' },
-  previewBack: { ...StyleSheet.absoluteFillObject },
   section: { gap: spacing.md },
   // Template strip (Campaign 30 pillar 5): live card thumbnails as the
   // type picker. Tiles are quiet cards; the active tile carries the accent
@@ -2442,24 +1987,10 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
-  // The Format row's five: the icon over the word, centred.
-  segmentStacked: { flexDirection: 'column', gap: spacing.xxs, paddingHorizontal: spacing.xxs },
   segmentActive: { backgroundColor: colors.surface3 },
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
-  segmentTextStacked: { textAlign: 'center' },
   previewOuter: { alignSelf: 'center' },
-  // D229: the video pieces. The strip reuses the look tiles' grammar.
-  clipStripWrap: { marginTop: spacing.sm },
-  clipStripLabel: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
-  clipThumb: { alignItems: 'center', justifyContent: 'center', gap: spacing.xxs },
-  clipDuration: { ...type.caption, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  clipControls: { alignSelf: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  videoScrim: {
-    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: spacing.md, borderRadius: radius.lg,
-    backgroundColor: withAlpha(colors.background, alpha.half),
-  },
-  videoScrimText: { ...type.bodyStrong, color: colors.textPrimary },
   previewPlaceholder: {
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -2518,8 +2049,6 @@ const styles = StyleSheet.create({
   optionMeta: { ...type.caption, color: colors.textMuted },
   optionNote: { ...type.caption, color: colors.primary },
   secondaryAction: { marginTop: spacing.md },
-  // The iOS line under Full screen, where the wallpaper action would sit.
-  wallpaperHint: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -2533,6 +2062,9 @@ const styles = StyleSheet.create({
 // AddCustomFoodScreen.js's buildLiveStyles (batch D).
 function buildLiveStyles(t) {
   return {
+    sheetRow: { borderBottomColor: t.colors.borderSubtle },
+    sheetRowText: { ...t.type.body, color: t.colors.textPrimary },
+    sheetRowMeta: { ...t.type.num('label'), color: t.colors.textMuted },
     content: { paddingHorizontal: t.screenPadding },
     safe: { backgroundColor: t.colors.background },
     templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
@@ -2568,10 +2100,5 @@ function buildLiveStyles(t) {
     optionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     optionMeta: { ...t.type.caption, color: t.colors.textMuted },
     optionNote: { ...t.type.caption, color: t.colors.primary },
-    wallpaperHint: { ...t.type.bodySm, color: t.colors.textSecondary },
-    clipStripLabel: { color: t.colors.textMuted },
-    clipDuration: { color: t.colors.textSecondary },
-    videoScrim: { backgroundColor: withAlpha(t.colors.background, alpha.half) },
-    videoScrimText: { color: t.colors.textPrimary },
   };
 }

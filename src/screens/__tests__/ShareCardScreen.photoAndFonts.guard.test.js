@@ -38,7 +38,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     // No separate editing step to open or close.
     expect(SCREEN).not.toMatch(/setFraming|Move and zoom photo|onDone=/);
     expect(SCREEN).toContain('const livePhoto = !!framerPhoto && !!bgPhoto && !isSticker;');
-    expect(SCREEN).toMatch(/livePhoto \? \(\s*<SharePhotoFramer/);
+    expect(SCREEN).toMatch(/\{livePhoto \? \(\s*<SharePhotoFramer/);
   });
 
   test('the live preview lays the real card over the photo, drawn with the photo left out', () => {
@@ -51,11 +51,7 @@ describe('moving and resizing the photo, right on the preview', () => {
   test('a drag on the photo can never scroll the page: the gestures block the page scroll', () => {
     expect(SCREEN).toContain('const scrollGesture = useMemo(() => Gesture.Native(), []);');
     // D104-2 phase 2c padding sweep (2026-10-09): the page gutter follows t.screenPadding
-    // RE-ANCHORED 2026-10-15 (D229 addendum 5 item 8, the preview's header):
-    // the page scrolls in Reanimated's scroll view, which drives the
-    // header's shrink on the UI thread; the gesture detector still wraps it
-    // directly, and the framers (now in the header) still block its scroll.
-    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<Animated\.ScrollView\s+ref=\{scrollRef\}\s+contentContainerStyle=\{\[styles\.content, live\.content\]\}/);
+    expect(SCREEN).toMatch(/<GestureDetector gesture=\{scrollGesture\}>\s*<ScrollView contentContainerStyle=\{\[styles\.content, live\.content\]\}>/);
     expect(SCREEN).toContain('blocksGesture={scrollGesture}');
     expect(FRAMER).toContain('pinch = pinch.blocksExternalGesture(blocksGesture);');
     expect(FRAMER).toContain('pan = pan.blocksExternalGesture(blocksGesture);');
@@ -70,7 +66,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     expect(SCREEN).toContain('}, [typefaces, wordmark, wordmarkDark, buildParams, bgPhoto, photoCrop, isSticker, cardType, format]);');
   });
 
-  test('Reset appears once the photo has moved, and "None" clears the photo with its framing', () => {
+  test('Reset appears once the photo has moved, and "No photo" clears the photo with its framing', () => {
     expect(SCREEN).toMatch(/!isCentreCrop\(photoCrop\) \? \([\s\S]{0,120}onPress=\{\(\) => setPhotoCrop\(null\)\}/);
     expect(SCREEN).toContain('Drag to move your photo. Pinch to resize it.');
     const clear = SCREEN.slice(SCREEN.indexOf('const clearPhoto = useCallback('), SCREEN.indexOf('}, []);', SCREEN.indexOf('const clearPhoto = useCallback(')));
@@ -79,10 +75,7 @@ describe('moving and resizing the photo, right on the preview', () => {
     // RE-ANCHORED 2026-09-27: renamed from "Dark" now that Dark names a share
     // THEME (the new Theme section) rather than a background choice; the
     // control still just clears the photo, onPress={clearPhoto} unchanged.
-    // RE-ANCHORED 2026-10-15 (D229 addendum 5 item 4): the row reads
-    // Gallery | Photo | None, so "No photo" reads "None", with a spoken
-    // name that starts with it; still onPress={clearPhoto}.
-    expect(SCREEN).toMatch(/label="None"[\s\S]{0,220}onPress=\{clearPhoto\}/);
+    expect(SCREEN).toMatch(/label="No photo"[\s\S]{0,80}onPress=\{clearPhoto\}/);
     expect(SCREEN).not.toMatch(/label="Dark"[\s\S]{0,80}onPress=\{clearPhoto\}/);
   });
 

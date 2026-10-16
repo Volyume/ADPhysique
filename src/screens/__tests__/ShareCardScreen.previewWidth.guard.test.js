@@ -26,10 +26,7 @@ describe('ShareCardScreen EP-11/UI-03 responsive preview width guard', () => {
   });
 
   test('the preview width is capped at the design width but never exceeds the available window width', () => {
-    // RE-POINTED 2026-10-15 (D229 addendum 6, Full screen): the one window
-    // read now takes the height too, for the phone's own shape; the width
-    // is still the real window width.
-    expect(SRC).toMatch(/const \{ width: windowWidth, height: windowHeight \} = useWindowDimensions\(\);/);
+    expect(SRC).toMatch(/const \{ width: windowWidth \} = useWindowDimensions\(\);/);
     expect(SRC).toMatch(/const previewW = Math\.min\(PREVIEW_DISPLAY_W, windowWidth - 2 \* spacing\.lg\);/);
   });
 
@@ -38,9 +35,7 @@ describe('ShareCardScreen EP-11/UI-03 responsive preview width guard', () => {
     // a sticker branch and the aspect preset argument, but the LAW is
     // unchanged - every branch derives from the responsive previewW, never
     // the fixed design constant.
-    // RE-POINTED 2026-10-15 (D229 addendum 6): Full screen's shape is the
-    // fourth argument; the height still derives from previewW.
-    expect(SRC).toMatch(/const previewH = isSticker \? stickerHeight\(previewW\) : cardHeight\(previewW, isSquare, cardAspect, fullAspect\);/);
+    expect(SRC).toMatch(/const previewH = isSticker \? stickerHeight\(previewW\) : cardHeight\(previewW, isSquare, cardAspect\);/);
     expect(SRC).not.toMatch(/cardHeight\(PREVIEW_DISPLAY_W/);
     expect(SRC).not.toMatch(/stickerHeight\(PREVIEW_DISPLAY_W\)/);
   });

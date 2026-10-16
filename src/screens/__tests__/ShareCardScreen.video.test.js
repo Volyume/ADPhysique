@@ -1,38 +1,24 @@
 /**
- * ShareCardScreen: a video as the background (D229, addenda 5, 7, 8 and 9).
- *
- * Authority: register D229 (founder: "a completed video, inside the photo
- * flow"; "videos are only device only"; "Don't reinvent the ball, what we've
- * got with photos is very good"; addendum 9: every video of the workout is
- * offered on every card of it, the PR pairing only chooses the first card).
- *
- * Pinned, all written to FAIL against the screen before the video wiring:
- *   1. the Background row offers "Video" only with the engine, a workout and
- *      no suppression, never for the sticker; None then reads "no photo or
- *      video"; tapping Video opens the in-app camera for this workout;
- *   2. "From this workout" lists the workout's own videos, newest first, by
- *      their plain names; a tap puts the video under the card: the framer,
- *      the 15 second window on the trim bar, the hint, "Share video", and
- *      no Post to Community (a video never enters Community);
- *   3. arriving with a video id it becomes the background once, a video of
- *      a PR set leads with the PR card ("Your PR set"), and an id that no
- *      longer resolves (Undo, a delete) is "no video";
- *   4. None clears the video and the actions read "image" again;
- *   5. Share video draws the card once at the output size, hands the engine
- *      the window, the placement and the overlay, shares the file as
- *      video/mp4, and makes it once for Share then Save; a failed export
- *      shows the engine's own calm line, a cancelled one says nothing;
- *   6. under calm mode or an open flag a chosen video goes and none is
- *      offered (fail closed);
- *   7. a video picked from the phone's gallery is probed and accepted, and
- *      one that cannot be opened says so calmly.
- *
- * Mock scaffold mirrors ShareCardScreen.levelUps.test.js (non-virtual mocks
- * for installed modules; the renderer mocked so what the SCREEN hands it is
- * what is checked). The video pieces (frames, thumbnails, tone, framer, trim
- * bar, ring, engine) are stubbed so the screen's wiring is what is tested.
+ * ShareCardScreen with a VIDEO (D229 addendum 17, the founder's reversal of
+ * 2026-10-16: "I wanted the video as an option within the share screen we
+ * had"). expo modules, the clip store and the engine are mocked; the screen's
+ * own behaviour is what is pinned:
+ *   - the share screen is the one screen with every option, and a video is
+ *     ONE MORE BACKGROUND beside the photo: Format, Theme, Background, the
+ *     looks, Top lifts, Highlights, Quote, Which PR and What to include all
+ *     stay on screen with a video chosen;
+ *   - the preview is the frame at the chosen start, decoded offscreen through
+ *     the photo path (the looks and the framing work on it), and NO live Skia
+ *     view is mounted anywhere (Sentry VOLYUME-3M: the live canvases crashed
+ *     inside RNSkia's redraw);
+ *   - "Video" opens a chooser: this workout's videos, the gallery, Film now;
+ *   - a long video offers where the share starts (a share is 15 s at most);
+ *   - Share and Save hand the video, the window, the look's matrix, the
+ *     framing rectangle and the card drawn without its photo to the engine,
+ *     and share or save the finished mp4;
+ *   - "No photo" drops the video; under calm mode or an open flag the Video
+ *     source is not offered; a PR set's video opens the PR card.
  */
-
 const React = require('react');
 const TestRenderer = require('react-test-renderer');
 const Button = require('../../components/Button').default;
@@ -138,25 +124,13 @@ const mockEngine = {
   EXPORT_ERROR: { UNAVAILABLE: 'unavailable', CANCELLED: 'cancelled', DECODE: 'decode_failed' },
 };
 jest.mock('../../lib/shareVideo/engine', () => mockEngine);
-const mockScrub = jest.fn();
-jest.mock('../../lib/shareVideo/useClipFrames', () => ({
-  __esModule: true,
-  default: () => ({ currentTime: { value: 0 }, scrub: mockScrub, image: null }),
-  useClipVideo: () => null,
-}));
-const mockThumbs = jest.fn(() => Promise.resolve({ images: [FAKE_FRAME], times: [0] }));
-jest.mock('../../lib/shareVideo/clipThumbnails', () => ({
-  extractClipThumbnails: (...args) => mockThumbs(...args),
-  thumbnailTimes: jest.fn(() => [0]),
-}));
-jest.mock('../../lib/shareVideo/clipTone', () => ({
-  VIDEO_SCRIM_TIER_LUMINANCE: 131,
-  sampleClipTone: jest.fn(() => ({ r: 140, g: 140, b: 140 })),
+
+const mockGrab = jest.fn();
+jest.mock('../../lib/shareVideo/videoFrame', () => ({
+  grabVideoFrame: (...args) => mockGrab(...args),
 }));
 const mockGetClip = jest.fn();
 const mockListClips = jest.fn();
-// The store's change subscription: tests fire it to play a save or a delete
-// elsewhere (an Undo on the saved toast, a delete in the videos sheet).
 const mockClipListeners = new Set();
 const mockClipStore = {
   getClip: (...args) => mockGetClip(...args),
@@ -165,9 +139,10 @@ const mockClipStore = {
   subscribeClips: (fn) => { mockClipListeners.add(fn); return () => mockClipListeners.delete(fn); },
 };
 jest.mock('../../lib/clips/store', () => mockClipStore);
-jest.mock('../../lib/clips', () => ({
-  ...jest.requireActual('../../lib/clips/rules'),
-  ...mockClipStore,
+const mockOpenRecorder = jest.fn();
+jest.mock('../../components/clips/useClipRecorder', () => ({
+  __esModule: true,
+  default: () => ({ count: 0, clips: [], refreshCount: jest.fn(), openRecorder: mockOpenRecorder, openClips: jest.fn(), sheets: null }),
 }));
 const mockAsyncStore = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -175,27 +150,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn((k, v) => { mockAsyncStore[k] = v; return Promise.resolve(); }),
   removeItem: jest.fn((k) => { delete mockAsyncStore[k]; return Promise.resolve(); }),
 }));
-jest.mock('../../components/share/ClipFramer', () => {
-  const mockReact = require('react');
-  return { __esModule: true, default: (props) => mockReact.createElement('ClipFramer', props) };
-});
-jest.mock('../../components/share/TrimBar', () => {
-  const mockReact = require('react');
-  return {
-    __esModule: true,
-    default: (props) => mockReact.createElement('TrimBar', props),
-    TRIM_BAR_HEIGHT: 44,
-    mmss: (ms) => {
-      const s = Math.max(0, Math.round((Number(ms) || 0) / 1000));
-      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    },
-  };
-});
-jest.mock('../../components/share/ProgressRing', () => {
-  const mockReact = require('react');
-  return { __esModule: true, default: (props) => mockReact.createElement('ProgressRing', props) };
-});
 
+const fs = require('fs');
+const path = require('path');
 const ShareCardScreen = require('../ShareCardScreen').default;
 const useAppStore = require('../../store/useAppStore').default;
 const { drawShareCard: mockDraw } = require('../../lib/shareCard/drawShareCard');
@@ -207,51 +164,31 @@ async function flush() {
   });
 }
 function makeNavigation() {
-  return {
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-    setParams: jest.fn(),
-    addListener: jest.fn(() => () => {}),
-  };
+  return { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => () => {}) };
 }
 async function mount(params, navigation = makeNavigation()) {
   let tree = null;
-  const render = () => React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation });
-  await TestRenderer.act(async () => { tree = TestRenderer.create(render()); });
+  await TestRenderer.act(async () => {
+    tree = TestRenderer.create(React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' }, navigation }));
+  });
   await flush();
-  // A re-render with the same route and navigation (a fresh element: React
-  // skips an identical one).
-  const rerender = async () => { await TestRenderer.act(async () => { tree.update(render()); }); await flush(); };
-  return { tree, navigation, rerender };
-}
-async function waitFor(predicate, rounds = 40) {
-  for (let i = 0; i < rounds; i++) {
-    if (predicate()) return;
-    // eslint-disable-next-line no-await-in-loop
-    await flush();
-  }
-  expect(predicate()).toBe(true);
+  return { tree, navigation };
 }
 async function press(node) {
   await TestRenderer.act(async () => { node.props.onPress(); });
   await flush();
 }
-// Host nodes only (the passthrough mocks render each pressable twice).
 const hostsByLabel = (tree, label) => tree.root.findAll(
   (n) => typeof n.type === 'string' && n.props && n.props.accessibilityLabel === label,
 );
 const texts = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Text')
   .map((n) => [].concat(n.props.children).join(''));
-const framers = (tree) => tree.root.findAll((n) => n.type === 'ClipFramer');
-const trimBars = (tree) => tree.root.findAll((n) => n.type === 'TrimBar');
 const buttonTitled = (tree, title) => tree.root.findAll((n) => n.type === Button && n.props.title === title);
-const stripLabels = (tree) => tree.root.findAll(
-  (n) => typeof n.type === 'string' && n.props && /seconds$/.test(String(n.props.accessibilityLabel || '')),
-).map((n) => n.props.accessibilityLabel);
 
 const SESSION = {
   sessionData: {
     sessionName: 'Push Day', duration: 60, workingSets: 12, exerciseCount: 5, tonnage: 5400, prCount: 0, units: 'kg',
+    topSet: { exerciseName: 'Bench press', weight: 80, reps: 5 },
   },
   workoutId: 'w1',
 };
@@ -267,6 +204,7 @@ const CLIP_LONG = {
   id: 'c1', uri: 'file:///docs/clips/c1.mp4', exerciseId: null, exerciseName: null, setNumber: null,
   durationMs: 22000, width: null, height: null, createdAt: 10, source: 'summary',
 };
+const frameOf = (row, ms) => ({ image: FAKE_FRAME, width: 1080, height: 1920, durationMs: row.durationMs, ms });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -275,8 +213,7 @@ beforeEach(() => {
   mockSuppress.value = false;
   mockEngine.isAvailable.mockImplementation(() => true);
   mockEngine.exportShareVideo.mockImplementation(() => Promise.resolve({ uri: 'file:///cache/volyume-share.mp4' }));
-  mockEngine.probeVideo.mockImplementation(() => Promise.resolve({ durationMs: 9000, width: 1920, height: 1080 }));
-  mockThumbs.mockImplementation(() => Promise.resolve({ images: [FAKE_FRAME], times: [0] }));
+  mockGrab.mockImplementation((_Skia, uri, ms) => frameOf([CLIP_SET, CLIP_LONG].find((c) => c.uri === uri) || CLIP_SET, ms));
   mockListClips.mockResolvedValue([CLIP_SET, CLIP_LONG]);
   mockGetClip.mockResolvedValue(null);
   mockSharing.isAvailableAsync.mockResolvedValue(true);
@@ -284,336 +221,187 @@ beforeEach(() => {
   useAppStore.setState({ user: { id: 'u1' } });
 });
 
-describe('the Video source', () => {
-  test('offered with the engine and a workout; None then reads "no photo or video"; a tap goes through the one recording flow: the privacy primer first, then the camera for this workout', async () => {
-    const { tree, navigation } = await mount(SESSION);
-    expect(hostsByLabel(tree, 'Video, record one now').length).toBeGreaterThan(0);
-    expect(hostsByLabel(tree, 'None, no photo or video').length).toBeGreaterThan(0);
-    expect(hostsByLabel(tree, 'None, no photo').length).toBe(0);
-    await press(hostsByLabel(tree, 'Video, record one now')[0]);
-    // Never seen the primer on this phone: it shows before the camera.
-    expect(navigation.navigate).not.toHaveBeenCalled();
-    expect(texts(tree)).toContain('Videos stay on this phone');
-    await press(hostsByLabel(tree, 'Open camera')[0]);
-    expect(navigation.navigate).toHaveBeenCalledWith('ClipCamera', {
-      workoutId: 'w1', exerciseId: null, exerciseName: null, setNumber: null, source: 'share',
-      // Addendum 12: the pattern and equipment ride along for the camera's
-      // setup line; the share has no exercise, so null.
-      exercisePattern: null, exerciseEquipment: null,
-    });
-    // Seen now: the next tap goes straight to the camera.
-    navigation.navigate.mockClear();
-    await press(hostsByLabel(tree, 'Video, record one now')[0]);
-    expect(navigation.navigate).toHaveBeenCalledTimes(1);
-  });
+const SECTIONS = ['Format', 'Theme', 'Background', 'Photo look', 'Top lift', 'Quote or caption', 'What to include'];
 
-  test('without the engine nothing about video is offered and None reads as before', async () => {
-    mockEngine.isAvailable.mockImplementation(() => false);
+describe('a video is one more background on the one share screen', () => {
+  test('with no video: the screen is the image screen, with Video offered beside My photo, Camera and No photo', async () => {
     const { tree } = await mount(SESSION);
-    expect(hostsByLabel(tree, 'Video, record one now').length).toBe(0);
-    expect(hostsByLabel(tree, 'None, no photo').length).toBeGreaterThan(0);
-    expect(texts(tree)).not.toContain('From this workout');
+    const all = texts(tree);
+    expect(all).toContain('Share image');
+    for (const label of ['My photo', 'Camera', 'Video', 'No photo']) expect(all).toContain(label);
+    for (const s of ['Format', 'Theme', 'Background', 'Quote or caption', 'What to include']) expect(all).toContain(s);
   });
 
-  test('without a workout to keep a video with, the camera is not offered', async () => {
-    const { tree } = await mount({ sessionData: SESSION.sessionData });
-    expect(hostsByLabel(tree, 'Video, record one now').length).toBe(0);
-    expect(mockListClips).not.toHaveBeenCalled();
-  });
-
-  test('never for the sticker', async () => {
-    const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Sticker')[0]);
-    expect(hostsByLabel(tree, 'Video, record one now').length).toBe(0);
-    expect(texts(tree)).not.toContain('From this workout');
-  });
-});
-
-describe('From this workout', () => {
-  test("lists the workout's videos, newest first, by their plain names", async () => {
-    const { tree } = await mount(SESSION);
-    await waitFor(() => stripLabels(tree).length === 2);
-    expect(mockListClips).toHaveBeenCalledWith('u1', 'w1');
-    expect(texts(tree)).toContain('From this workout');
-    expect(stripLabels(tree)).toEqual(['Bench press, set 3, 12 seconds', 'After the workout, 22 seconds']);
-    expect(texts(tree)).toEqual(expect.arrayContaining(['Bench press, set 3', 'After the workout', '0:12', '0:22']));
-    expect(texts(tree).join(' ')).not.toMatch(/\bclip\b/i);
-  });
-
-  test('a tap puts the video under the card: the framer, the window, the hint, "Share video", no Post to Community', async () => {
-    const { tree } = await mount({ ...SESSION, prData: PR, prList: [PR] });
-    await waitFor(() => stripLabels(tree).length === 2);
-    expect(framers(tree).length).toBe(0);
-    expect(buttonTitled(tree, 'Share image').length).toBe(1);
-    expect(buttonTitled(tree, 'Post to Community').length).toBe(1);
-
-    await press(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0]);
-    await waitFor(() => framers(tree).length === 1);
-    const framer = framers(tree)[0];
-    expect(framer.props.mediaWidth).toBe(1080);
-    expect(framer.props.mediaHeight).toBe(1920);
-    expect(framer.props.lookKey).toBeNull();
-    expect(framer.props.paused).toBe(false);
-    expect(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0].props.accessibilityState).toEqual({ selected: true });
-
-    expect(trimBars(tree).length).toBe(1);
-    expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 12000, maxWindowMs: 15000, durationMs: 12000 });
-    expect(texts(tree)).toContain('Drag to move your video, pinch to resize it, and tap it to pause.');
-    expect(buttonTitled(tree, 'Share video').length).toBe(1);
-    expect(buttonTitled(tree, 'Share image').length).toBe(0);
-    expect(buttonTitled(tree, 'Post to Community').length).toBe(0);
-    expect(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story').length).toBeGreaterThan(0);
-  });
-
-  test('a video longer than 15 seconds opens on its first 15, and says how to choose where it starts', async () => {
-    const { tree } = await mount(SESSION);
-    await waitFor(() => stripLabels(tree).length === 2);
-    await press(hostsByLabel(tree, 'After the workout, 22 seconds')[0]);
-    await waitFor(() => trimBars(tree).length === 1);
-    expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 15000, durationMs: 22000 });
-    expect(texts(tree)).toContain('A share is 15 seconds at the longest. 15 seconds of 22. Slide the strip to choose where it starts, or drag its ends to use less of the video.');
-    // The frames: the trim bar's across the whole video, the scrim's inside the window.
-    await waitFor(() => mockThumbs.mock.calls.length >= 2);
-    const windows = mockThumbs.mock.calls.map((c) => c[1]);
-    expect(windows.some((w) => w.fromMs === undefined)).toBe(true);
-    expect(windows.some((w) => w.fromMs === 0 && w.toMs === 15000)).toBe(true);
-  });
-
-  test('moving the window re-reads the scrim frames inside it and plays from its start', async () => {
-    const { tree } = await mount(SESSION);
-    await waitFor(() => stripLabels(tree).length === 2);
-    await press(hostsByLabel(tree, 'After the workout, 22 seconds')[0]);
-    await waitFor(() => trimBars(tree).length === 1);
-    await TestRenderer.act(async () => { trimBars(tree)[0].props.onPreview(4000); });
-    expect(mockScrub).toHaveBeenCalledWith(4000);
-    await TestRenderer.act(async () => { trimBars(tree)[0].props.onChange({ startMs: 5000, endMs: 20000 }); });
-    await flush();
-    expect(trimBars(tree)[0].props).toMatchObject({ startMs: 5000, endMs: 20000 });
-    await waitFor(() => mockThumbs.mock.calls.some((c) => c[1].fromMs === 5000 && c[1].toMs === 20000));
-  });
-
-  test('None clears the video: the framer goes and the actions read "image" again', async () => {
-    const { tree } = await mount(SESSION);
-    await waitFor(() => stripLabels(tree).length === 2);
-    await press(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0]);
-    await waitFor(() => framers(tree).length === 1);
-    await press(hostsByLabel(tree, 'None, no photo or video')[0]);
-    await waitFor(() => framers(tree).length === 0);
-    expect(trimBars(tree).length).toBe(0);
-    expect(buttonTitled(tree, 'Share image').length).toBe(1);
-    expect(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0].props.accessibilityState).toEqual({ selected: false });
-  });
-});
-
-describe('arriving with a video', () => {
-  test('the id becomes the background once, and a video of a PR set leads with the PR card', async () => {
-    mockGetClip.mockResolvedValue(CLIP_SET);
-    const { tree } = await mount({ ...SESSION, prData: PR, prList: [PR], clipId: 'c2' });
-    await waitFor(() => framers(tree).length === 1);
-    expect(mockGetClip).toHaveBeenCalledWith('u1', 'c2');
-    await waitFor(() => stripLabels(tree).length === 2);
-    // The PR card is up (its tile is marked), the session card one tap away.
-    expect(stripLabels(tree)).toEqual(['Your PR set, Bench press, set 3, 12 seconds', 'After the workout, 22 seconds']);
-    expect(texts(tree)).toContain('Your PR set');
-    expect(hostsByLabel(tree, 'Session').length).toBeGreaterThan(0);
-    expect(hostsByLabel(tree, 'New PR').length).toBeGreaterThan(0);
-  });
-
-  test('a video of a set that is not a PR opens on the session card as before', async () => {
-    mockGetClip.mockResolvedValue({ ...CLIP_SET, setNumber: 2 });
-    const { tree } = await mount({ ...SESSION, prData: PR, prList: [PR], clipId: 'c2' });
-    await waitFor(() => framers(tree).length === 1);
-    expect(texts(tree)).not.toContain('Your PR set');
-  });
-
-  test('an id that no longer resolves (Undo, a delete) is "no video"', async () => {
-    mockGetClip.mockResolvedValue(null);
-    const { tree } = await mount({ ...SESSION, clipId: 'gone' });
-    await flush();
-    await flush();
-    expect(mockGetClip).toHaveBeenCalledWith('u1', 'gone');
-    expect(framers(tree).length).toBe(0);
-    expect(buttonTitled(tree, 'Share image').length).toBe(1);
-  });
-
-  test('the same id is not taken twice on a re-render', async () => {
-    mockGetClip.mockResolvedValue(CLIP_SET);
-    const { tree, rerender } = await mount({ ...SESSION, clipId: 'c2' });
-    await waitFor(() => framers(tree).length === 1);
-    await press(hostsByLabel(tree, 'None, no photo or video')[0]);
-    await waitFor(() => framers(tree).length === 0);
-    await rerender();
-    expect(mockGetClip).toHaveBeenCalledTimes(1);
-    expect(framers(tree).length).toBe(0);
-  });
-});
-
-describe('sharing the video', () => {
-  async function mountWithClip() {
-    mockGetClip.mockResolvedValue(CLIP_SET);
-    const out = await mount({ ...SESSION, clipId: 'c2' });
-    await waitFor(() => framers(out.tree).length === 1);
-    await waitFor(() => !!framers(out.tree)[0].props.overlayUri);
-    return out;
-  }
-
-  test('draws the card once at the output size, hands the engine the window, the placement and the overlay, then shares video/mp4', async () => {
-    const { tree } = await mountWithClip();
-    mockDraw.mockClear();
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await waitFor(() => mockSharing.shareAsync.mock.calls.length === 1);
-
-    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
-    const [job, onProgress] = mockEngine.exportShareVideo.mock.calls[0];
-    expect(job).toMatchObject({
-      sourceUri: 'file:///docs/clips/c2.mp4', startMs: 0, durationMs: 12000, matrix: null, outWidth: 1080, outHeight: 1920,
-    });
-    expect(typeof onProgress).toBe('function');
-    expect(job.overlayPngUri).toMatch(/^file:\/\/\/cache\/volyume-overlay-\d+\.png$/);
-    // The renderer's own placement rectangle (photoCoverRect): four finite numbers.
-    expect(Object.values(job.rect).length).toBe(4);
-    expect(Object.values(job.rect).every((v) => Number.isFinite(v))).toBe(true);
-    // The card for the overlay: the data without the video, at the output size.
-    const overlayDraw = mockDraw.mock.calls.find((c) => c[1].width === 1080);
-    expect(overlayDraw).toBeTruthy();
-    expect(overlayDraw[1].omitPhoto).toBe(true);
-    expect(overlayDraw[1].bgPhoto).toBe(FAKE_FRAME);
-    expect(mockFs.writeAsStringAsync).toHaveBeenCalledWith(job.overlayPngUri, 'AAAA', { encoding: 'base64' });
-    expect(mockSharing.shareAsync).toHaveBeenCalledWith('file:///cache/volyume-share.mp4', {
-      mimeType: 'video/mp4', UTI: 'public.mpeg-4', dialogTitle: 'Share video',
-    });
-  });
-
-  test('made once for Share then Save to gallery', async () => {
-    const { tree } = await mountWithClip();
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await waitFor(() => mockSharing.shareAsync.mock.calls.length === 1);
-    await press(hostsByLabel(tree, 'Save to gallery')[0]);
-    await waitFor(() => mockMediaLibrary.saveToLibraryAsync.mock.calls.length === 1);
-    expect(mockMediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith('file:///cache/volyume-share.mp4');
-    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
-  });
-
-  test("a failed export shows the engine's own calm line; a cancelled one says nothing", async () => {
-    const { tree } = await mountWithClip();
-    mockEngine.exportShareVideo.mockImplementationOnce(() => Promise.reject(Object.assign(new Error('decode'), { code: 'decode_failed' })));
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockToastShow).toHaveBeenCalledWith("Couldn't make the video. Try again.", { variant: 'error', duration: 7000 });
-    expect(mockSharing.shareAsync).not.toHaveBeenCalled();
-
-    mockToastShow.mockClear();
-    mockEngine.exportShareVideo.mockImplementationOnce(() => Promise.reject(Object.assign(new Error('cancelled'), { code: 'cancelled' })));
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await flush();
-    await flush();
-    expect(mockToastShow).not.toHaveBeenCalled();
-    expect(mockSharing.shareAsync).not.toHaveBeenCalled();
-  });
-
-  test('a failed export of a video filmed in Volyume asks the engine for the in-app lines; a gallery video for the gallery lines', async () => {
-    const { tree } = await mountWithClip();
-    mockEngine.exportShareVideo.mockImplementationOnce(() => Promise.reject(Object.assign(new Error('decode'), { code: 'decode_failed' })));
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockEngine.lineForExportError).toHaveBeenLastCalledWith('decode_failed', { fromGallery: false });
-  });
-
-  test('a refused gallery permission names the video, not the image', async () => {
-    const { tree } = await mountWithClip();
-    mockMediaLibrary.requestPermissionsAsync.mockResolvedValueOnce({ granted: false });
-    await press(hostsByLabel(tree, 'Save to gallery')[0]);
-    await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockToastShow).toHaveBeenCalledWith('Gallery access is needed to save the video. You can still use Share.', { variant: 'warning', duration: 5000 });
-    expect(mockMediaLibrary.saveToLibraryAsync).not.toHaveBeenCalled();
-  });
-
-  test('a chosen video deleted while the screen holds it: the share goes back to an image, with one calm line, once', async () => {
-    const { tree } = await mountWithClip();
-    mockToastShow.mockClear();
-    mockListClips.mockResolvedValue([CLIP_LONG]);
-    await TestRenderer.act(async () => { mockClipListeners.forEach((fn) => fn()); });
-    await flush();
-    await waitFor(() => framers(tree).length === 0);
-    expect(mockToastShow).toHaveBeenCalledWith('That video has been deleted, so this share is an image.', { variant: 'info' });
-    await TestRenderer.act(async () => { mockClipListeners.forEach((fn) => fn()); });
-    await flush();
-    expect(mockToastShow.mock.calls.filter((c) => c[0] === 'That video has been deleted, so this share is an image.')).toHaveLength(1);
-    expect(buttonTitled(tree, 'Share image').length).toBe(1);
-  });
-
-  test('the files made here are deleted when the screen closes', async () => {
-    const { tree } = await mountWithClip();
-    await press(hostsByLabel(tree, 'Share your video to Instagram or Facebook Story')[0]);
-    await waitFor(() => mockSharing.shareAsync.mock.calls.length === 1);
-    await TestRenderer.act(async () => { tree.unmount(); });
-    const deleted = mockFs.deleteAsync.mock.calls.map((c) => c[0]);
-    expect(deleted).toContain('file:///cache/volyume-share.mp4');
-    expect(deleted.some((u) => /volyume-overlay-\d+\.png$/.test(u))).toBe(true);
-  });
-});
-
-describe('the ED gate (calm mode or an open flag)', () => {
-  test('nothing about video is offered, and a chosen video goes', async () => {
-    const { tree, rerender } = await mount(SESSION);
-    await waitFor(() => stripLabels(tree).length === 2);
-    await press(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0]);
-    await waitFor(() => framers(tree).length === 1);
-
-    mockSuppress.value = true;
-    await rerender();
-    await waitFor(() => framers(tree).length === 0);
-    expect(hostsByLabel(tree, 'Video, record one now').length).toBe(0);
-    expect(texts(tree)).not.toContain('From this workout');
-    expect(buttonTitled(tree, 'Share image').length).toBe(1);
-  });
-
-  test('an arriving video id is ignored while suppressed', async () => {
-    mockSuppress.value = true;
+  test('arriving with a video (the summary\'s row): the frame at its start is the background, the title reads Share video, and EVERY option stays', async () => {
     mockGetClip.mockResolvedValue(CLIP_SET);
     const { tree } = await mount({ ...SESSION, clipId: 'c2' });
-    await flush();
-    expect(mockGetClip).not.toHaveBeenCalled();
-    expect(framers(tree).length).toBe(0);
+    expect(mockGetClip).toHaveBeenCalledWith('u1', 'c2');
+    expect(mockGrab).toHaveBeenCalledWith(expect.anything(), CLIP_SET.uri, 0);
+    const all = texts(tree);
+    expect(all).toContain('Share video');
+    for (const s of SECTIONS) expect(all.some((x) => x.startsWith(s))).toBe(true);
+    // The preview is drawn through the photo path, with the frame as the photo.
+    const last = mockDraw.mock.calls[mockDraw.mock.calls.length - 1][1];
+    expect(last.bgPhoto).toBe(FAKE_FRAME);
+    expect(all).toContain('Drag to move your video. Pinch to resize it.');
+  });
+
+  test('no live Skia view anywhere on the screen, the player or the videos sheet (Sentry VOLYUME-3M)', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    expect(tree.root.findAll((n) => typeof n.type === 'string' && /Canvas|SkiaView|RNSkia/i.test(n.type))).toHaveLength(0);
+    for (const rel of ['screens/ShareCardScreen.js', 'components/clips/ClipPlayer.js', 'components/clips/ClipsSheet.js', 'components/clips/ClipPrimerSheet.js']) {
+      const src = fs.readFileSync(path.join(__dirname, '..', '..', rel), 'utf8');
+      expect({ rel, canvas: /<Canvas\b/.test(src) || /import \{[^}]*\bCanvas\b[^}]*\} from '@shopify\/react-native-skia'/.test(src) }).toEqual({ rel, canvas: false });
+    }
   });
 });
 
-describe('a video from the phone', () => {
-  test('the gallery offers videos too, probes the one chosen and puts it under the card', async () => {
-    mockPicker.launchImageLibraryAsync.mockResolvedValue({
-      canceled: false, assets: [{ uri: 'file:///phone/IMG_1.mov', type: 'video', duration: 9000 }],
-    });
+describe('choosing a video', () => {
+  test('"Video" opens the chooser with this workout\'s videos, the gallery and Film now; a tap makes that video the background', async () => {
     const { tree } = await mount(SESSION);
-    expect(hostsByLabel(tree, 'Gallery, choose a photo').length).toBe(0);
-    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
-    await waitFor(() => framers(tree).length === 1);
-    expect(mockPicker.launchImageLibraryAsync.mock.calls[0][0]).toMatchObject({ mediaTypes: ['images', 'videos'], videoExportPreset: 0 });
-    expect(mockEngine.probeVideo).toHaveBeenCalledWith('file:///phone/IMG_1.mov');
-    expect(framers(tree)[0].props).toMatchObject({ mediaWidth: 1920, mediaHeight: 1080 });
-    expect(trimBars(tree)[0].props).toMatchObject({ startMs: 0, endMs: 9000, durationMs: 9000 });
-    // Picked from the phone: Gallery reads as the chosen source, and no tile
-    // of the workout's own videos is selected.
-    expect(hostsByLabel(tree, 'Gallery, choose a photo or video')[0].props.accessibilityState).toEqual({ selected: true });
-    await waitFor(() => stripLabels(tree).length === 2);
-    expect(hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0].props.accessibilityState).toEqual({ selected: false });
+    const videoBtn = hostsByLabel(tree, 'Video')[0];
+    expect(videoBtn).toBeDefined();
+    await press(videoBtn);
+    const all = texts(tree);
+    expect(all).toContain('Choose a video');
+    expect(all).toContain('Bench press, set 3');
+    expect(buttonTitled(tree, 'From your gallery').length).toBeGreaterThan(0);
+    expect(buttonTitled(tree, 'Film now').length).toBeGreaterThan(0);
+    const row = hostsByLabel(tree, 'Bench press, set 3, 12 seconds')[0];
+    await press(row);
+    expect(mockGrab).toHaveBeenCalledWith(expect.anything(), CLIP_SET.uri, 0);
+    expect(texts(tree)).toContain('Share video');
   });
 
-  test('without the engine the gallery offers photos only', async () => {
+  test('Film now goes through the one recording flow, from this screen', async () => {
+    const { tree } = await mount(SESSION);
+    await press(hostsByLabel(tree, 'Video')[0]);
+    await press(buttonTitled(tree, 'Film now')[0]);
+    expect(mockOpenRecorder).toHaveBeenCalledWith({ source: 'share' });
+  });
+
+  test('a gallery video is picked with the system picker and its length probed', async () => {
+    mockPicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///gallery/v.mp4', duration: 30000 }] });
+    mockEngine.probeVideo.mockResolvedValue({ durationMs: 30000, width: 1920, height: 1080 });
+    mockGrab.mockImplementation((_S, uri, ms) => ({ image: FAKE_FRAME, width: 1920, height: 1080, durationMs: 30000, ms }));
+    const { tree } = await mount(SESSION);
+    await press(hostsByLabel(tree, 'Video')[0]);
+    await press(buttonTitled(tree, 'From your gallery')[0]);
+    expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith({ mediaTypes: ['videos'] });
+    expect(mockEngine.probeVideo).toHaveBeenCalledWith('file:///gallery/v.mp4');
+    expect(mockGrab).toHaveBeenCalledWith(expect.anything(), 'file:///gallery/v.mp4', 0);
+    expect(texts(tree)).toContain('Share video');
+  });
+
+  test('a long video offers where the share starts; the preview follows the start; a short one says the whole video goes on', async () => {
+    mockGetClip.mockResolvedValue(CLIP_LONG);
+    const { tree } = await mount({ ...SESSION, clipId: 'c1' });
+    expect(texts(tree).some((x) => x.includes('This video is 22 seconds, so choose where the share starts.'))).toBe(true);
+    const later = hostsByLabel(tree, 'Start later')[0];
+    expect(later).toBeDefined();
+    await press(later);
+    expect(mockGrab).toHaveBeenLastCalledWith(expect.anything(), CLIP_LONG.uri, 1000);
+    // A short video: no start control.
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const short = await mount({ ...SESSION, clipId: 'c2' });
+    expect(texts(short.tree).some((x) => x.includes('The whole video goes on the share.'))).toBe(true);
+    expect(hostsByLabel(short.tree, 'Start later')).toHaveLength(0);
+  });
+
+  test('"No photo" drops the video and the screen is the image screen again', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    await press(hostsByLabel(tree, 'No photo')[0]);
+    expect(texts(tree)).toContain('Share image');
+    expect(texts(tree)).not.toContain('Share video');
+  });
+
+  test('a frame that cannot be decoded says so and the background is unchanged', async () => {
+    mockGrab.mockReturnValue(null);
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    expect(mockToastShow).toHaveBeenCalledWith('That video could not be opened. Try another.', { variant: 'error' });
+    expect(texts(tree)).toContain('Share image');
+  });
+
+  test('under calm mode or an open flag the Video source is not offered (fail closed)', async () => {
+    mockSuppress.value = true;
+    const { tree } = await mount(SESSION);
+    expect(hostsByLabel(tree, 'Video')).toHaveLength(0);
+  });
+
+  test('a PR set\'s video opens the PR card with that PR chosen', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    await mount({ ...SESSION, prList: [PR], clipId: 'c2' });
+    const last = mockDraw.mock.calls[mockDraw.mock.calls.length - 1][1];
+    expect(last.params.cardType).toBe('pr');
+  });
+});
+
+describe('sharing and saving the finished video', () => {
+  test('Share video: the card drawn without its photo goes over the video through the engine, and the mp4 is shared', async () => {
+    mockGetClip.mockResolvedValue(CLIP_LONG);
+    const { tree } = await mount({ ...SESSION, clipId: 'c1' });
+    await press(hostsByLabel(tree, 'Start later')[0]);
+    await press(hostsByLabel(tree, 'Start later')[0]);
+    mockDraw.mockClear();
+    await press(buttonTitled(tree, 'Share video')[0]);
+    expect(mockDraw.mock.calls.some((c) => c[1].omitPhoto === true)).toBe(true);
+    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
+    const opts = mockEngine.exportShareVideo.mock.calls[0][0];
+    expect(opts).toMatchObject({ sourceUri: CLIP_LONG.uri, startMs: 2000, durationMs: 15000, outWidth: 1080 });
+    expect(opts.outHeight % 2).toBe(0);
+    expect(opts.overlayPngUri).toMatch(/^file:\/\/\/cache\/volyume-overlay-/);
+    expect(opts.rect).toEqual(expect.objectContaining({ w: expect.any(Number), h: expect.any(Number) }));
+    expect(mockSharing.shareAsync).toHaveBeenCalledWith('file:///cache/volyume-share.mp4', expect.objectContaining({ mimeType: 'video/mp4' }));
+  });
+
+  test('a short video is shared whole; the window never exceeds 15 seconds', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    await press(buttonTitled(tree, 'Share video')[0]);
+    expect(mockEngine.exportShareVideo.mock.calls[0][0]).toMatchObject({ startMs: 0, durationMs: 12000 });
+  });
+
+  test('Save to gallery saves the mp4 and says so; a refused gallery says it is the video', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    await press(buttonTitled(tree, 'Save to gallery')[0]);
+    expect(mockMediaLibrary.saveToLibraryAsync).toHaveBeenCalledWith('file:///cache/volyume-share.mp4');
+    expect(mockToastShow).toHaveBeenCalledWith('Saved to your gallery.', { variant: 'success' });
+    mockMediaLibrary.requestPermissionsAsync.mockResolvedValueOnce({ granted: false });
+    await press(buttonTitled(tree, 'Save to gallery')[0]);
+    expect(mockToastShow).toHaveBeenLastCalledWith('Gallery access is needed to save the video. You can still use Share.', { variant: 'warning', duration: 5000 });
+  });
+
+  test('the look\'s matrix rides with the export when a look is chosen', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    const lookChips = tree.root.findAll((n) => typeof n.type === 'string' && n.props && /^Photo look: /.test(String(n.props.accessibilityLabel || '')));
+    const notNone = lookChips.find((n) => !/None/.test(n.props.accessibilityLabel));
+    if (notNone) {
+      await press(notNone);
+      await press(buttonTitled(tree, 'Share video')[0]);
+      expect(Array.isArray(mockEngine.exportShareVideo.mock.calls[0][0].matrix)).toBe(true);
+    }
+  });
+
+  test('an engine that is not on this device says so, and nothing is shared', async () => {
     mockEngine.isAvailable.mockImplementation(() => false);
-    const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Gallery, choose a photo')[0]);
-    expect(mockPicker.launchImageLibraryAsync.mock.calls[0][0]).toMatchObject({ mediaTypes: ['images'] });
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    await press(buttonTitled(tree, 'Share video')[0]);
+    expect(mockEngine.exportShareVideo).not.toHaveBeenCalled();
+    expect(mockSharing.shareAsync).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalled();
   });
 
-  test('a video that cannot be opened says so calmly', async () => {
-    mockPicker.launchImageLibraryAsync.mockResolvedValue({
-      canceled: false, assets: [{ uri: 'file:///phone/broken.mp4', type: 'video' }],
-    });
-    mockEngine.probeVideo.mockImplementation(() => Promise.reject(new Error('bad file')));
-    const { tree } = await mount(SESSION);
-    await press(hostsByLabel(tree, 'Gallery, choose a photo or video')[0]);
-    await waitFor(() => mockToastShow.mock.calls.length === 1);
-    expect(mockToastShow).toHaveBeenCalledWith("That video could not be opened. Try another.", { variant: 'error' });
-    expect(framers(tree).length).toBe(0);
+  test('the same video, start and look export once: Share then Save reuse the file', async () => {
+    mockGetClip.mockResolvedValue(CLIP_SET);
+    const { tree } = await mount({ ...SESSION, clipId: 'c2' });
+    await press(buttonTitled(tree, 'Share video')[0]);
+    await press(buttonTitled(tree, 'Save to gallery')[0]);
+    expect(mockEngine.exportShareVideo).toHaveBeenCalledTimes(1);
   });
 });
