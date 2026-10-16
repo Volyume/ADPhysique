@@ -166,6 +166,21 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(entry18).toContain('Settings, under Privacy and legal');
     expect(entry18).toContain('Food has been rebuilt.');
     expect({ bad: /\bclips?\b/i.test(entry18) }).toEqual({ bad: false });
+    // 2.19.0 (food audit 2026-10-16): the same videos line with its privacy
+    // line, and the food line naming notes, portions, the history import and
+    // a recipe's cooked weight.
+    const start19 = sheet.indexOf("'2.19.0': [");
+    expect(start19).toBeGreaterThan(-1);
+    const entry19 = sheet.slice(start19, sheet.indexOf('],', start19));
+    expect(entry19).toContain('share it the way you share an image');
+    expect(entry19).toContain('A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data.');
+    expect(entry19).toContain('Videos stay on your phone and are never uploaded');
+    expect(entry19).toContain('Settings, under Privacy and legal');
+    expect(entry19).toContain('Food has been rebuilt.');
+    expect(entry19).toContain('add a note to any food');
+    expect(entry19).toContain('import your food history');
+    expect(entry19).toContain("add a recipe\\'s cooked weight to log it in grams");
+    expect({ bad: /\bclips?\b/i.test(entry19) }).toEqual({ bad: false });
   });
   test('the running version has a What\'s new entry', () => {
     const app = JSON.parse(readRepoFile('app.json'));

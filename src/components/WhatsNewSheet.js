@@ -155,6 +155,15 @@ export const WHATS_NEW = {
   // 2.14.0 (2026-10-12): the new plan builder (register D222) and the
   // calorie choice inside the range (D226); the privacy notice rides inside
   // the Community line.
+  // 2.19.0 (2026-10-16): the same two things, with the food audit (register
+  // D230 landing note): a note on any food, your own portions, the history
+  // import, a recipe's cooked weight, and an edit that keeps an entry's
+  // figures. The privacy line rides inside the videos line, as the policy
+  // promises.
+  '2.19.0': [
+    { icon: 'videocam-outline', text: 'Record a video of a set from an exercise\'s menu, or after the workout, and share it the way you share an image: your videos from the workout are on the share screen, and the looks, framing, top lifts, quotes and PRs all work on a video. Press play to watch it with your look, and slide the trim to the part you want. A video is kept for 7 days unless you tap Keep on it, and you can change that in Settings, under Your data. Videos stay on your phone and are never uploaded; our privacy policy says so, in Settings, under Privacy and legal.' },
+    { icon: 'restaurant-outline', text: 'Food has been rebuilt. Every day is one workspace, the rings show what is planned and what is eaten, and adding food is quicker, with saved meals and yesterday\'s meals a tap away. You can add a note to any food, give your own foods their own portions, import your food history, and add a recipe\'s cooked weight to log it in grams. Changing an entry keeps the figures it was added with.' },
+  ],
   // 2.18.0 (2026-10-16): the same two things, as the share screen now does
   // them (D229 addenda 17 and 18): the share screen kept whole with video
   // added as a background, this workout's videos on it, the preview that
