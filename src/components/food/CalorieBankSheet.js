@@ -32,7 +32,7 @@ import CollapsibleSection from '../CollapsibleSection';
 import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { formatEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { planCalorieBank, maxApplicableBumpKcal, BANK_RULES } from '../../lib/food/calorieBank';
 
@@ -40,8 +40,8 @@ const BUMP_STEP = 50;
 const DEFAULT_BUMP = 150;
 
 const ERROR_COPY = {
-  floor: "That would take one of your days below your safe minimum, so that much can't be moved. Try a smaller amount.",
-  no_room: "This day is already at the top of its range, so there's nothing extra to add.",
+  floor: 'That would take one of your days below your safe minimum, so that much cannot be moved. Try a smaller amount.',
+  no_room: 'This day is already at the top of its range, so there is nothing extra to add.',
   too_small: 'Pick a little more to plan a higher-calorie day.',
   invalid_input: 'That day could not be planned. Try a different day.',
 };
@@ -50,6 +50,7 @@ export default function CalorieBankSheet({
   visible,
   onClose,
   weekDates = [],
+  weekStartKey = null,
   defaultBigDay,
   baseTargetKcal,
   floorKcal,
@@ -115,7 +116,7 @@ export default function CalorieBankSheet({
   const apply = () => {
     if (!plan.ok) return;
     onApply?.({
-      weekStartKey: weekDates[0] ?? bigDay,
+      weekStartKey: weekStartKey ?? weekDates[0] ?? bigDay,
       bigDayKey: bigDay,
       perDayDeltaKcal: plan.perDayDeltaKcal,
       appliedAt: Date.now(),
@@ -152,6 +153,10 @@ export default function CalorieBankSheet({
         </View>
       ) : null}
 
+      {/* Review finding 8: with no other day to make room, the controls are
+          not shown; only the line saying why. */}
+      {weekDates.length >= 2 ? (
+      <>
       <SectionLabel style={styles.sectionLabel}>Higher-calorie day</SectionLabel>
       <View style={styles.dayChips} accessibilityRole="radiogroup" accessibilityLabel="Higher-calorie day">
         {weekDates.map((d) => (
@@ -181,10 +186,26 @@ export default function CalorieBankSheet({
         valueLabel={`${requestedBump} kcal extra`}
         style={styles.stepper}
       />
+      </>
+      ) : null}
 
-      {plan.ok ? (
+      {weekDates.length === 0 ? (
+        // Founder ruling 2026-10-16: only today onwards can be used, so a week
+        // that has already passed has no day left to plan.
+        <Text style={[styles.error, live.error]}>
+          This week has already passed. You can plan one for this week or a later one.
+        </Text>
+      ) : weekDates.length < 2 ? (
+        // Only one day left (today is Sunday): no other day to make room.
+        <Text style={[styles.error, live.error]}>
+          Today is the last day of this week, so there is no other day to make room. You can plan one from Monday.
+        </Text>
+      ) : plan.ok ? (
         <Text style={[styles.preview, live.preview]}>
-          {dayLabel(bigDay)}: {toEnergy(bigNewKcal, energyUnit)} {energyUnitLabel(energyUnit)}. The other {others} days drop by about {toEnergy(perOther, energyUnit)} {energyUnitLabel(energyUnit)} each. Your weekly total stays the same.
+          {/* R15 number grammar (food Diary audit 2026-10-16, item 12): the
+              figures carry thousands grouping ("2,800 kcal"). Display only:
+              every figure is the same plan value it was. */}
+          {dayLabel(bigDay)}: {formatEnergy(bigNewKcal, energyUnit)} {energyUnitLabel(energyUnit)}. {others === 1 ? 'The other day drops' : `The other ${others} days drop`} by about {formatEnergy(perOther, energyUnit)} {energyUnitLabel(energyUnit)}{others === 1 ? '' : ' each'}. Your weekly total stays the same.
         </Text>
       ) : (
         <Text style={[styles.error, live.error]}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>

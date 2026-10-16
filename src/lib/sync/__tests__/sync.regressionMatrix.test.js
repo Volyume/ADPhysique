@@ -68,6 +68,7 @@ jest.mock('../../database', () => ({
   upsertEdPatternFlagFromCloud: jest.fn(),
   upsertTierHistoryFromCloud: jest.fn(),
   getAllRecipeIngredientsForUser: jest.fn(),
+  getTombstonedRecipeIdsForUser: jest.fn().mockResolvedValue([]),
   upsertRecipeIngredientFromCloud: jest.fn(),
   getRecipeIngredientUpdatedAt: jest.fn(),
   getPlanFoldersForPush: jest.fn(),

@@ -97,6 +97,16 @@ export function detectDelimiter(text) {
  * dropped. Each record carries `line`, its 1-based line in the file.
  */
 export function readCsv(text, delimiter = ',') {
+  const reader = _csvReader(text, delimiter);
+  reader.step(Infinity);
+  return reader.finish();
+}
+
+// The one CSV state machine behind readCsv and readCsvAsync. `step(limit)`
+// reads up to character `limit` of the text and can be called again to
+// carry on exactly where it stopped (every piece of state lives in the
+// closure), so reading in slices gives the same records as reading at once.
+function _csvReader(text, delimiter) {
   const src = String(text ?? '').replace(/^\uFEFF/, '');
   const rows = [];
   let row = [];
@@ -104,36 +114,65 @@ export function readCsv(text, delimiter = ',') {
   let quoted = false;
   let line = 1;
   let rowLine = 1;
+  let i = 0;
   const endRow = () => {
     row.push(field);
     if (!(row.length === 1 && row[0].trim() === '')) { row.line = rowLine; rows.push(row); }
     field = '';
     row = [];
   };
-  let i = 0;
-  while (i < src.length) {
-    const c = src[i];
-    if (quoted) {
-      if (c === '"') {
-        if (src[i + 1] === '"') { field += '"'; i += 2; continue; }
-        quoted = false; i += 1; continue;
+  const step = (limit) => {
+    const end = Math.min(limit, src.length);
+    while (i < end) {
+      const c = src[i];
+      if (quoted) {
+        if (c === '"') {
+          if (src[i + 1] === '"') { field += '"'; i += 2; continue; }
+          quoted = false; i += 1; continue;
+        }
+        if (c === '\n') line += 1;
+        field += c; i += 1; continue;
       }
-      if (c === '\n') line += 1;
-      field += c; i += 1; continue;
+      if (c === '"') { quoted = true; i += 1; continue; }
+      if (c === delimiter) { row.push(field); field = ''; i += 1; continue; }
+      if (c === '\r' || c === '\n') {
+        endRow();
+        i += c === '\r' && src[i + 1] === '\n' ? 2 : 1;
+        line += 1;
+        rowLine = line;
+        continue;
+      }
+      field += c; i += 1;
     }
-    if (c === '"') { quoted = true; i += 1; continue; }
-    if (c === delimiter) { row.push(field); field = ''; i += 1; continue; }
-    if (c === '\r' || c === '\n') {
-      endRow();
-      i += c === '\r' && src[i + 1] === '\n' ? 2 : 1;
-      line += 1;
-      rowLine = line;
-      continue;
-    }
-    field += c; i += 1;
+  };
+  const finish = () => {
+    if (field !== '' || row.length) endRow();
+    return rows;
+  };
+  return { step, finish, done: () => i >= src.length, position: () => i };
+}
+
+// How many characters the async reader takes before handing the thread back
+// (food data-layer audit 2026-10-16, item 13): a 10 MB export read in one go
+// held the JavaScript thread for the whole parse.
+export const CSV_YIELD_EVERY = 4000;
+
+/**
+ * readCsv in slices of `yieldEvery` characters, awaiting `yieldFn()` between
+ * slices so a long file never holds the thread. Same records as readCsv for
+ * the same text (pinned by importHistory.test.js). `yieldFn` is the caller's
+ * (this module keeps no clock or timer); by default it awaits a resolved
+ * promise.
+ */
+export async function readCsvAsync(text, delimiter = ',', { yieldEvery = CSV_YIELD_EVERY, yieldFn = () => Promise.resolve() } = {}) {
+  const reader = _csvReader(text, delimiter);
+  const size = Math.max(1, Math.trunc(Number(yieldEvery)) || CSV_YIELD_EVERY);
+  while (!reader.done()) {
+    reader.step(reader.position() + size);
+    // eslint-disable-next-line no-await-in-loop
+    if (!reader.done()) await yieldFn();
   }
-  if (field !== '' || row.length) endRow();
-  return rows;
+  return reader.finish();
 }
 
 // ─── cells ───────────────────────────────────────────────────────────────
@@ -290,8 +329,21 @@ const text = (row, i) => String(cellAt(row, i) ?? '').trim();
  */
 export function parseHistoryCsv(input) {
   const delimiter = detectDelimiter(input);
+  return _parseRecords(readCsv(input, delimiter), delimiter);
+}
+
+/**
+ * parseHistoryCsv with the file read by readCsvAsync, so a long file hands
+ * the thread back every `yieldEvery` characters. Same result as
+ * parseHistoryCsv for the same text.
+ */
+export async function parseHistoryCsvAsync(input, options = {}) {
+  const delimiter = detectDelimiter(input);
+  return _parseRecords(await readCsvAsync(input, delimiter, options), delimiter);
+}
+
+function _parseRecords(all, delimiter) {
   const decimalComma = delimiter !== ',';
-  const all = readCsv(input, delimiter);
   if (all.length === 0) return { format: null };
   const c = columnMap(all[0]);
   const format = formatOf(c);
@@ -398,19 +450,26 @@ const GRAM_UNITS = { g: 1, gram: 1, grams: 1, gr: 1, kg: 1000 };
  *   { format, entries, customFoods, problems, rowsRead, from, to, addedRows,
  *     existingDays, existingDayRows }
  * Options: `existingDays` (days that already hold food: left whole),
- * `existingFoods` (the person's own foods, name to id: reused, never made
- * twice), `mealsPerDay`, `today` (a day key; later rows are left out).
+ * `plannedDays` (days that hold planned meals and no food: left whole too,
+ * food data-layer audit 2026-10-16 item 13, so the weekly check-in's "I ate
+ * as planned" can never count a day twice; reported apart as already
+ * planned), `existingFoods` (the person's own foods, name to id: reused,
+ * never made twice), `mealsPerDay`, `today` (a day key; later rows are left
+ * out).
  * An entry for a food still to be saved carries `customName` and a null
  * `foodRef`; the flow fills `custom:<id>` once it is saved. `eatenAt` is the
  * file's own clock time on the row's day, or null when it has none.
  */
 export function planImport(parsed, {
-  existingDays = [], existingFoods = new Map(), mealsPerDay = 4, today = null,
+  existingDays = [], plannedDays = [], existingFoods = new Map(), mealsPerDay = 4, today = null,
 } = {}) {
   const format = parsed?.format ?? null;
   const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
   const problems = Array.isArray(parsed?.problems) ? [...parsed.problems] : [];
   const existing = existingDays instanceof Set ? existingDays : new Set(existingDays || []);
+  const planned = plannedDays instanceof Set ? plannedDays : new Set(plannedDays || []);
+  const skippedPlannedDays = new Set();
+  let plannedDayRows = 0;
   const ownFoods = new Map();
   for (const [k, v] of (existingFoods instanceof Map ? existingFoods : new Map())) ownFoods.set(nameKey(k), v);
   const entries = [];
@@ -424,6 +483,7 @@ export function planImport(parsed, {
     dates.push(r.date);
     if (today && r.date > today) { problems.push({ row: r.row, reason: PROBLEM.FUTURE }); continue; }
     if (existing.has(r.date)) { skippedDays.add(r.date); existingDayRows += 1; continue; }
+    if (planned.has(r.date)) { skippedPlannedDays.add(r.date); plannedDayRows += 1; continue; }
     const common = {
       row: r.row, entryDate: r.date, eatenAt: eatenAtFor(r.date, r.time), isPlanned: false,
       kcal: Math.round(r.kcal), proteinG: r1(r.proteinG), carbsG: r1(r.carbsG), fatG: r1(r.fatG),
@@ -485,6 +545,8 @@ export function planImport(parsed, {
     addedRows: entries.length,
     existingDays: skippedDays.size,
     existingDayRows,
+    plannedDays: skippedPlannedDays.size,
+    plannedDayRows,
   };
 }
 
@@ -508,7 +570,9 @@ function rangeWords(plan) {
 export function summariseImport(plan) {
   const lines = [`Read ${plural(plan.rowsRead, 'row', 'rows')}${rangeWords(plan)}.`];
   const unread = plan.problems?.length || 0;
-  const allExisting = plan.addedRows === 0 && plan.existingDays > 0 && plan.existingDayRows + unread === plan.rowsRead;
+  const plannedDays = plan.plannedDays || 0;
+  const allExisting = plan.addedRows === 0 && plan.existingDays > 0 && plannedDays === 0
+    && plan.existingDayRows + unread === plan.rowsRead;
   if (allExisting) {
     lines.push('Every day in this file already has food in your diary, so nothing new will be added.');
   } else {
@@ -518,6 +582,10 @@ export function summariseImport(plan) {
   if (plan.existingDays > 0 && !allExisting) {
     lines.push(`${plural(plan.existingDayRows, 'row falls', 'rows fall')} on ${plural(plan.existingDays, 'day', 'days')} that already ${plan.existingDays === 1 ? 'has' : 'have'} food in your diary, and ${plan.existingDays === 1 ? 'that day is' : 'those days are'} left as ${plan.existingDays === 1 ? 'it is' : 'they are'}.`);
   }
+  if (plannedDays > 0) {
+    const rows = plan.plannedDayRows || 0;
+    lines.push(`${plural(rows, 'row falls', 'rows fall')} on ${plural(plannedDays, 'day', 'days')} that already ${plannedDays === 1 ? 'has' : 'have'} meals planned, and ${plannedDays === 1 ? 'that day is' : 'those days are'} left as ${plannedDays === 1 ? 'it is' : 'they are'}.`);
+  }
   if (plan.addedRows > 0 && plan.customFoods?.length > 0) {
     lines.push(`${plural(plan.customFoods.length, 'food', 'foods')} weighed in grams will also be saved to your own foods.`);
   }
@@ -525,12 +593,16 @@ export function summariseImport(plan) {
 }
 
 /** The summary after the write, as lines. */
-export function summariseResult(plan, { added, foodsSaved = 0, daysLeft = 0 }) {
+export function summariseResult(plan, { added, foodsSaved = 0, daysLeft = 0, plannedLeft = 0 }) {
   const unread = plan.problems?.length || 0;
   const lines = [`${added} added.${unread > 0 ? ` ${unread} could not be read.` : ''}`];
   const left = (plan.existingDays || 0) + (daysLeft || 0);
   if (left > 0) {
     lines.push(`${plural(left, 'day', 'days')} that already had food ${left === 1 ? 'was' : 'were'} left as ${left === 1 ? 'it was' : 'they were'}.`);
+  }
+  const plannedLeftAll = (plan.plannedDays || 0) + (plannedLeft || 0);
+  if (plannedLeftAll > 0) {
+    lines.push(`${plural(plannedLeftAll, 'day', 'days')} that already had meals planned ${plannedLeftAll === 1 ? 'was' : 'were'} left as ${plannedLeftAll === 1 ? 'it was' : 'they were'}.`);
   }
   if (foodsSaved > 0) lines.push(`${plural(foodsSaved, 'food was', 'foods were')} saved to your own foods.`);
   return lines;

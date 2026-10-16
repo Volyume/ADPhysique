@@ -151,6 +151,12 @@ describe('applyRecipeToDiary writes a food_slot_recents row (T1: joins the "Add 
 // row's quantity_g; the macros scale by the SAME per-100g formula as servings.
 describe('applyRecipeToDiary by grams (the Grams unit)', () => {
   const inserts = () => runCalls.filter((c) => /INSERT INTO food_entries/.test(c.sql));
+  // Founder ruling "Add cooked weight" (2026-10-16): grams need a weighed
+  // recipe (a recipe with no cooked weight is servings only and refuses
+  // grams). 500 g cooked = the raw total, so the per-100 g profile and every
+  // figure below are as before.
+  beforeAll(() => { RECIPE.cooked_weight_g = 500; });
+  afterAll(() => { delete RECIPE.cooked_weight_g; });
 
   test('quantity_g is the typed grams and the macros scale by the servings formula', async () => {
     await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'dinner', entryDate: '2026-05-29', grams: 125 });

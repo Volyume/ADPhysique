@@ -49,7 +49,7 @@ describe('recipe servings round-trip through sync', () => {
       id: 'r1', name: 'Chicken & rice', servings: 4,
       created_at: new Date(1000).toISOString(), updated_at: new Date(2000).toISOString(),
     });
-    const ins = runCalls.find(c => /INSERT OR REPLACE INTO recipes/.test(c.sql));
+    const ins = runCalls.find(c => /INSERT INTO recipes \(/.test(c.sql));
     expect(ins).toBeTruthy();
     // params: id, user_id, name, total_servings, notes, deleted_at, created_at, updated_at
     expect(ins.params[3]).toBe(4);
@@ -60,7 +60,7 @@ describe('recipe servings round-trip through sync', () => {
       id: 'r2', name: 'x',
       created_at: new Date(1000).toISOString(), updated_at: new Date(2000).toISOString(),
     });
-    const ins = runCalls.find(c => /INSERT OR REPLACE INTO recipes/.test(c.sql));
+    const ins = runCalls.find(c => /INSERT INTO recipes \(/.test(c.sql));
     expect(ins.params[3]).toBe(1);
   });
 });

@@ -1384,7 +1384,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 <Ionicons name="nutrition" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
                   {age && weight && heightFt
-                    ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${formatBodyWeight(Number(weight), bodyWeightUnits)} - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age} · ${heightFt} ft${heightIn ? ` ${heightIn} in` : ''} · ${formatBodyWeight(Number(weight), bodyWeightUnits)} · ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
@@ -1430,7 +1430,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 const kMax = Math.round(Number(results.kcalMax) || tk * 1.1);
                 return (
                   <Card elevated padding="xl" style={styles.heroCard}>
-                    <Text style={[styles.heroLabel, live.heroLabel]}>Daily Energy Target</Text>
+                    <Text style={[styles.heroLabel, live.heroLabel]}>Daily energy target</Text>
                     <Text style={[styles.heroKcal, live.heroKcal]}>
                       {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
@@ -2276,7 +2276,7 @@ const styles = StyleSheet.create({
   },
   heroKcal: {
     ...type.num('display'),
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   heroRange: {
     fontSize: fontSize.sm,
@@ -2895,7 +2895,7 @@ function buildLiveStyles(t) {
     calcBtnText: { ...t.type.title, color: t.colors.onPrimary },
     calcBtnTextDisabled: { color: t.colors.textDisabled },
     heroLabel: { ...t.type.label, color: t.colors.textSecondary },
-    heroKcal: { ...t.type.num('display'), color: t.colors.primary },
+    heroKcal: { ...t.type.num('display'), color: t.colors.textPrimary },
     heroRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     macroGrams: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     macroLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },

@@ -1,11 +1,12 @@
 import { View, StyleSheet, Pressable } from 'react-native';
 import Text from '../Text';
-import { colors, fontSize, fontWeight, spacing, radius, fontFamily, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, fontFamily, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { formatEnergy, formatNumber, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
+import Button from '../Button';
 import { mealSlotLabel, slotOrder } from '../../lib/food/mealSlots';
 
 /**
@@ -58,9 +59,16 @@ function round(s) {
   };
 }
 
-// Atwater factors (kcal per gram): protein 4, carbs 4, fat 9. Used to
-// self-explain the energy total and the descriptive %-of-calories split. This
-// is purely DESCRIPTIVE of what was eaten, no target, no colour judgement.
+// Atwater factors (kcal per gram): protein 4, carbs 4, fat 9. Used for the
+// descriptive %-of-calories split. This is purely DESCRIPTIVE of what was
+// eaten, no target, no colour judgement.
+//
+// Food Diary audit 2026-10-16, item 9: each meal used to carry TWO energy
+// figures ("677 kcal" and "31x4 + 98x4 + 19x9 = 687 kcal"), and the second
+// never matched the ring, because the stored energy of a food is its label's,
+// not its macros times 4, 4 and 9. No ruling (D230 R3, R4, R15) asks for the
+// formula, so it is gone: the meal's figure is the stored energy, the one the
+// ring and the meal card show, with thousands grouping ("2,246 kcal").
 function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -78,15 +86,9 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
     <View style={styles.macroCell}>
       <Text
         style={[styles.rowMacros, live.rowMacros]}
-        accessibilityLabel={`${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}, ${protein} grams protein, ${carbs} carbs, ${fat} fat`}
+        accessibilityLabel={`${formatEnergy(kcal, energyUnit)} ${energyUnit === 'kj' ? 'kilojoules' : 'calories'}, ${formatNumber(protein)} ${protein === 1 ? 'gram' : 'grams'} of protein, ${formatNumber(carbs)} carbs, ${formatNumber(fat)} fat`}
       >
-        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {protein} P · {carbs} C · {fat} F
-      </Text>
-      <Text style={[styles.rowMacroKcal, live.rowMacroKcal]}>
-        {/* D88: this figure was hardcoded to kcal while the line above
-            converts through toEnergy, so a kJ user saw two numbers in two
-            units for one meal. */}
-        {protein}x4 + {carbs}x4 + {fat}x9 = {toEnergy(macroKcal, energyUnit)} {energyUnitLabel(energyUnit)}
+        {formatEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {formatNumber(protein)} P · {formatNumber(carbs)} C · {formatNumber(fat)} F
       </Text>
       {split ? <Text style={[styles.rowMacroSplit, live.rowMacroSplit]}>{split} of calories</Text> : null}
     </View>
@@ -114,7 +116,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
+    <BottomSheet visible={visible} onClose={onClose} scroll accessibilityLabel="Macro breakdown by meal">
       <View style={styles.header}>
         <Text accessibilityRole="header" style={[styles.title, live.title]}>By meal</Text>
         {dateLabel ? <Text style={[styles.subtitle, live.subtitle]}>{dateLabel}</Text> : null}
@@ -152,9 +154,15 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
         </View>
       )}
 
-      <Pressable style={({ pressed }) => [styles.doneBtn, live.doneBtn, pressed && { opacity: 0.7 }]} onPress={() => { haptics.selection(); onClose?.(); }} accessibilityRole="button" accessibilityLabel="Done">
-        <Text style={[styles.doneText, live.doneText]}>Done</Text>
-      </Pressable>
+      {/* Item 13 (food Diary audit 2026-10-16): a large bold "Done" on a plain
+          surface read as a heading; it is the house Button now. */}
+      <Button
+        title="Done"
+        variant="secondary"
+        onPress={() => { haptics.selection(); onClose?.(); }}
+        accessibilityLabel="Done"
+        style={styles.doneBtn}
+      />
     </BottomSheet>
   );
 }
@@ -166,26 +174,23 @@ const styles = StyleSheet.create({
   // R3 (D230): the one quiet line about planned food. A sentence, so it wears
   // a body role and wraps (never clamped), in the muted ink of a fact.
   plannedNote: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
+  // Wraps at the largest text size: the figures go under the meal's name.
   row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center',
+    columnGap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   rowLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  macroCell: { alignItems: 'flex-end' },
+  macroCell: { alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' },
   rowMacros: { color: colors.textMuted, fontSize: fontSize.sm },
-  // Descriptive sub-lines: the per-macro kcal breakdown (so the energy total
-  // self-explains) and the %-of-calories split. Both factual, neutral colour.
-  rowMacroKcal: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
-  rowMacroSplit: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
+  // Descriptive sub-line: the %-of-calories split. Factual, neutral colour.
+  rowMacroSplit: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs, fontVariant: ['tabular-nums'], textAlign: 'right' },
   totalRow: { borderBottomWidth: 0, marginTop: spacing.xs },
   totalLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   empty: { color: colors.textSecondary, fontSize: fontSize.sm, paddingVertical: spacing.lg, textAlign: 'center' },
-  doneBtn: {
-    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.lg,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  doneText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  // Layout only: the house Button owns its look.
+  doneBtn: { marginTop: spacing.lg },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -200,11 +205,8 @@ function buildLiveStyles(t) {
     row: { borderBottomColor: t.colors.borderSubtle },
     rowLabel: { color: t.colors.textPrimary },
     rowMacros: { color: t.colors.textMuted },
-    rowMacroKcal: { color: t.colors.textMuted },
     rowMacroSplit: { color: t.colors.textMuted },
     totalLabel: { color: t.colors.textPrimary },
     empty: { color: t.colors.textSecondary },
-    doneBtn: { backgroundColor: t.colors.surface2 },
-    doneText: { color: t.colors.textPrimary },
   };
 }

@@ -6,7 +6,7 @@ import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
 import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily, fontScaleCaps } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { toEnergy, energyUnitLabel, formatEnergy, formatNumber } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
@@ -142,18 +142,20 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   // adherence-neutral kcal ring). "Ng to go" while under, "Ng over" while over,
   // and nothing exactly on target. A more-is-fine macro never shows "over".
   const remaining = target != null && target > 0 ? target - value : null;
+  // R15 number grammar (food Diary audit 2026-10-16, item 12): a space
+  // before the unit and thousands grouping ("32 g to go", "138 of 170 g").
   let remainingText = null;
   if (remaining != null) {
-    if (remaining > 0) remainingText = `${Math.round(remaining)}g to go`;
-    else if (remaining < 0 && !moreIsFine) remainingText = `${Math.round(Math.abs(remaining))}g over`;
+    if (remaining > 0) remainingText = `${formatNumber(Math.round(remaining))} g to go`;
+    else if (remaining < 0 && !moreIsFine) remainingText = `${formatNumber(Math.round(Math.abs(remaining)))} g over`;
   }
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
         <Text style={[styles.macroBarLabel, live.macroBarLabel, primary && [styles.macroBarLabelPrimary, live.macroBarLabelPrimary]]}>{label}</Text>
-        <Text style={[styles.macroBarValue, live.macroBarValue, primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary]]}>
-          {value}{target != null ? ` / ${target}` : ''}g
-          {planned > 0 ? <Text style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${Math.round(planned)} planned`}</Text> : null}
+        <Text style={[styles.macroBarValue, live.macroBarValue, primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary], styles.macroBarValueWrap]}>
+          {formatNumber(value)}{target != null ? ` of ${formatNumber(target)}` : ''} g
+          {planned > 0 ? <Text style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${formatNumber(Math.round(planned))} planned`}</Text> : null}
         </Text>
       </View>
       <View style={[styles.macroTrack, live.macroTrack]}>
@@ -267,15 +269,15 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   // information the rings show, and hide the inner content from a11y so the
   // card speaks once.
   const macroPart = (label, value, target) =>
-    `${label} ${value}${target != null ? ` of ${target}` : ''} grams`;
+    `${label} ${formatNumber(value)}${target != null ? ` of ${formatNumber(target)}` : ''} grams`;
   const a11ySummary = [
     kcalTarget != null
-      ? `${toEnergy(kcal, energyUnit)} of ${toEnergy(kcalTarget, energyUnit)} ${energyWord}`
-      : `${toEnergy(kcal, energyUnit)} ${energyWord}`,
+      ? `${formatEnergy(kcal, energyUnit)} of ${formatEnergy(kcalTarget, energyUnit)} ${energyWord}`
+      : `${formatEnergy(kcal, energyUnit)} ${energyWord}`,
     macroPart('protein', p, pTarget),
     macroPart('carbs', c, cTarget),
     macroPart('fat', f, fTarget),
-    hasPlanned ? `${toEnergy(plannedKcal, energyUnit)} ${energyWord} planned but not yet confirmed eaten` : null,
+    hasPlanned ? `${formatEnergy(plannedKcal, energyUnit)} ${energyWord} planned but not yet confirmed eaten` : null,
   ].filter(Boolean).join(', ');
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
@@ -326,15 +328,23 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
                 <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
-            {hasPlanned ? (
-              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
+            {/* Item 13 (food Diary audit 2026-10-16): inside the ring's fixed
+                circle this line was cut to "+157..." at large text. With a
+                target it now sits in the eaten column beside the ring (which
+                has the width); with no target that column is absent, so it
+                stays here at the ring's own text cap, as the numerals do. */}
+            {hasPlanned && kcalTarget == null ? (
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE}>{`+${formatEnergy(plannedKcal, energyUnit)} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
-            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+            {hasPlanned ? (
+              <Text style={[styles.kcalPlanned, live.kcalPlanned, styles.kcalPlannedBeside]}>{`+${formatEnergy(plannedKcal, energyUnit)} planned`}</Text>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -421,7 +431,10 @@ const styles = StyleSheet.create({
   // (founder decision 2026-06-29): secondary weight/colour, not a second hero.
   kcalEatenWrap: {
     alignItems: 'flex-end',
+    flexShrink: 1,
+    marginLeft: spacing.md,
   },
+  kcalPlannedBeside: { textAlign: 'right' },
   kcalEatenValue: {
     color: colors.textSecondary,
     fontSize: fontSize.xl,
@@ -449,8 +462,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   macroBar: { gap: spacing.xs2 },
+  // Item 13 (food Diary audit 2026-10-16): at the largest text size the
+  // label, the figures and "+15 planned" ran past the card's edge; the row
+  // wraps, the figures staying on the right.
   macroBarTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center',
+    columnGap: spacing.sm,
   },
   macroBarLabel: {
     color: colors.textMuted,
@@ -466,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontVariant: ['tabular-nums'],
   },
+  macroBarValueWrap: { flexShrink: 1, marginLeft: 'auto', textAlign: 'right' },
   macroBarValuePrimary: {
     color: colors.textPrimary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,

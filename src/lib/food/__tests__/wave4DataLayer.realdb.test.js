@@ -405,7 +405,7 @@ describe('item 9: once per user per device, after a successful pull, never throw
     expect(sb.rpc).toHaveBeenCalledTimes(1);
   });
 
-  test('a fetch error leaves the marker unset, logs with no context, and the next call retries', async () => {
+  test('a fetch error leaves the marker unset, logs with no context, and a call a day later retries', async () => {
     const u = freshUser();
     moved(u, 'r2');
     const sb = { rpc: jest.fn(async () => ({ data: null, error: { message: 'timeout' } })) };
@@ -413,7 +413,15 @@ describe('item 9: once per user per device, after a successful pull, never throw
     expect(await AsyncStorage.getItem(FOOD_DAY_REPAIR_KEY(u))).toBeNull();
     expect(logError).toHaveBeenCalledWith('sync.tables.foodDomain.dayRepair.fetch', { message: 'timeout' });
     logError.mock.calls.forEach((c) => expect(c).toHaveLength(2));
-    await repairPulledEntryDaysOnce(sb, u);
+    // Food data-layer audit 2026-10-16, item 11: at most once a day after a
+    // failure (the attempt stamp beside the marker), so the retry is a day on.
+    const realNow = Date.now();
+    const later = jest.spyOn(Date, 'now').mockReturnValue(realNow + 24 * 60 * 60 * 1000 + 1);
+    try {
+      await repairPulledEntryDaysOnce(sb, u);
+    } finally {
+      later.mockRestore();
+    }
     expect(sb.rpc).toHaveBeenCalledTimes(2);
     expect(entryRow(u, 'r2').entry_date).toBe(TODAY);
   });

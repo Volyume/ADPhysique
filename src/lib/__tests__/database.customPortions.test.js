@@ -72,7 +72,9 @@ describe('upgrading a database that lacks the column', () => {
     raw.exec('CREATE TABLE food_entries (id TEXT PRIMARY KEY)');
     raw.exec('CREATE TABLE custom_foods (id TEXT PRIMARY KEY, name TEXT, serving_g REAL, updated_at INTEGER)');
     raw.prepare('INSERT INTO custom_foods (id, name, serving_g, updated_at) VALUES (?, ?, ?, ?)').run('cf-old', 'Toast', 36, 111);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    // The step after portions_json (recipes.cooked_weight_g) needs its table.
+    raw.exec('CREATE TABLE recipes (id TEXT PRIMARY KEY)');
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     return raw;
   }
 
@@ -91,7 +93,7 @@ describe('upgrading a database that lacks the column', () => {
     await runMigrations(adaptRaw(raw));
     raw.prepare('UPDATE custom_foods SET portions_json = ? WHERE id = ?').run('[{"label":"1 mug","grams":250}]', 'cf-old');
     const before = raw.prepare('SELECT * FROM custom_foods WHERE id = ?').get('cf-old');
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 1}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 2}`);
     await expect(runMigrations(adaptRaw(raw))).resolves.not.toThrow();
     expect(raw.prepare('PRAGMA table_info(custom_foods)').all().filter((c) => c.name === 'portions_json')).toHaveLength(1);
     expect(raw.prepare('SELECT * FROM custom_foods WHERE id = ?').get('cf-old')).toEqual(before);

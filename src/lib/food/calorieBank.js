@@ -180,8 +180,52 @@ export function safeDayFloorKcal({ sex, ffmFloorKcal = null } = {}) {
  * persisted. This stops a stale bank from applying after a carb cycle / refeed
  * starts, the target gets floored, or an ED-pattern flag opens.
  */
-export function displayBankedDelta({ bankingAvailable, calorieBank, dayKey }) {
-  return bankingAvailable ? bankedDeltaForDay(calorieBank, dayKey) : 0;
+export function displayBankedDelta({
+  bankingAvailable, calorieBank, dayKey, baseTargetKcal = null, floorKcal = null,
+}) {
+  if (!bankingAvailable) return 0;
+  // Founder ruling 2026-10-16 (food audit): a bank planned against an older,
+  // higher target must never SHOW a day below the safe floor once the target
+  // has dropped (a coach adjustment or a manual change). planCalorieBank only
+  // checks the floor at plan time; this re-checks it against the CURRENT
+  // target on every read, so the floor holds even before the Diary cancels
+  // the bank (bankBreachesFloor below).
+  if (baseTargetKcal != null && floorKcal != null
+    && bankBreachesFloor({ calorieBank, baseTargetKcal, floorKcal })) return 0;
+  return bankedDeltaForDay(calorieBank, dayKey);
+}
+
+/**
+ * Does a stored bank, applied to the CURRENT daily target, put any of its days
+ * below the safe floor? (Founder ruling 2026-10-16: when it does, the bank is
+ * cancelled and every day goes back to the same target.) The base is the one
+ * daily target (Campaign 17A: one daily truth), the same for every day.
+ * Unknown inputs cannot be judged and read as no breach; the caller's
+ * targetWasFloored gate covers a target that is itself at or under the floor.
+ */
+export function bankBreachesFloor({ calorieBank, baseTargetKcal, floorKcal } = {}) {
+  const map = calorieBank && calorieBank.perDayDeltaKcal;
+  if (!map || typeof map !== 'object') return false;
+  if (baseTargetKcal == null || floorKcal == null) return false;
+  const base = Number(baseTargetKcal);
+  const floor = Number(floorKcal);
+  if (!isNum(base) || !isNum(floor)) return false;
+  return Object.values(map).some((v) => {
+    const delta = Number(v);
+    return isNum(delta) && base + delta < floor;
+  });
+}
+
+/**
+ * The days a new bank may use (founder ruling 2026-10-16): today and the rest
+ * of the week only. A day already gone keeps the target it had, so the bigger
+ * day and the share of the cut are both drawn from the remaining days, and
+ * "your weekly total stays the same" is true of what is still to be eaten.
+ * Day keys are YYYY-MM-DD local days, which compare correctly as strings.
+ */
+export function bankableDays(weekDates = [], todayKey) {
+  if (!Array.isArray(weekDates) || typeof todayKey !== 'string') return [];
+  return weekDates.filter((d) => typeof d === 'string' && d >= todayKey);
 }
 
 /**
@@ -282,4 +326,6 @@ export const BANK_RULES = Object.freeze([
   'It is a one-off for the week you choose, not a new routine.',
   'It does not make that day of the week different from now on.',
   'It has nothing to do with which days you train.',
+  // Founder ruling 2026-10-16 (food audit): today onwards only.
+  'Only today and the days after it change. Days already gone keep their target.',
 ]);

@@ -49,6 +49,7 @@ let mockAddPortionButton = null;
 let mockRemoveButtons = {};
 jest.mock('../../components/Button', () => (props) => {
   if (props.accessibilityLabel === 'Save food and add to diary'
+    || props.accessibilityLabel === 'Add the saved food to the diary'
     || props.accessibilityLabel === 'Save changes to food') mockSaveButton = props;
   if (props.title === 'Save the food') mockSaveOnlyButton = props;
   if (props.title === 'Add another portion') mockAddPortionButton = props;
@@ -61,7 +62,8 @@ jest.mock('../../lib/food/db', () => ({
   insertCustomFood: jest.fn(() => Promise.resolve('custom-1')),
   updateCustomFood: jest.fn(() => Promise.resolve('existing-1')),
   getCustomFoodById: jest.fn(() => Promise.resolve(null)),
-  logFoodEntry: jest.fn(() => Promise.resolve('entry-1')),
+  logFoodEntries: jest.fn(() => Promise.resolve(['entry-1'])),
+  deleteFoodEntries: jest.fn(() => Promise.resolve(1)),
 }));
 jest.mock('../../lib/food/writeback', () => ({
   queueContribution: jest.fn(() => Promise.resolve()),
@@ -71,7 +73,7 @@ jest.mock('../../lib/food/writeback', () => ({
 jest.mock('../../lib/food/sources/localCache', () => ({ findLocalByBarcode: jest.fn(() => Promise.resolve(null)) }));
 
 import useAppStore from '../../store/useAppStore';
-import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntry } from '../../lib/food/db';
+import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntries as logFoodEntry } from '../../lib/food/db';
 import AddCustomFoodScreen from '../AddCustomFoodScreen';
 
 const store = { user: { id: 'u1' } };
@@ -386,8 +388,16 @@ describe('AddCustomFoodScreen eaten-quantity guard (FOOD-001)', () => {
     expect(text).not.toContain('Meal 2');
   });
 
+  // Re-pinned 2026-10-16: a negative amount is an unreadable figure, so it says
+  // why under the field and blocks the save instead of a toast.
+  test('a negative amount blocks the save with a reason under the field', async () => {
+    const nav = await renderAndSave('-50');
+    expect(logFoodEntry).not.toHaveBeenCalled();
+    expect(insertCustomFood).not.toHaveBeenCalled();
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
   test.each([
-    ['a negative amount', '-50'],
     ['zero', '0'],
     ['blank', ''],
     ['an extreme amount over the 5000 g cap', '6000'],
@@ -403,12 +413,15 @@ describe('AddCustomFoodScreen eaten-quantity guard (FOOD-001)', () => {
     const nav = await renderAndSave('150');
     expect(insertCustomFood).toHaveBeenCalledTimes(1);
     expect(logFoodEntry).toHaveBeenCalledTimes(1);
-    expect(logFoodEntry).toHaveBeenCalledWith('u1', expect.objectContaining({
+    // Re-pinned 2026-10-16: the add goes through the batch writer, says it was
+    // added with an Undo, and returns to the Diary.
+    expect(logFoodEntry).toHaveBeenCalledWith('u1', [expect.objectContaining({
       foodRef: 'custom:custom-1',
       quantityG: 150,
-    }));
+    })]);
     expect(mockToastShow).not.toHaveBeenCalledWith(WARNING, expect.anything());
-    expect(nav.goBack).toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith('Test food added to Snacks.', expect.objectContaining({ variant: 'undo' }));
+    expect(nav.navigate).toHaveBeenCalledWith('Diary');
   });
 });
 
@@ -747,8 +760,20 @@ describe('AddCustomFoodScreen "Save the food" (D230 4.11)', () => {
     setInput(tree, 'Eaten (g), grams', '40');
     await act(async () => { await mockSaveButton.onPress(); });
     await flush();
-    expect(logError).toHaveBeenCalledWith('AddCustomFood.save', expect.any(Error), { logged: true, scanned: false });
-    expect(mockToastShow).toHaveBeenCalledWith('That food was not saved. Try again in a moment.', { variant: 'error' });
+    // Re-pinned 2026-10-16: the food saved and only the add failed, so the
+    // screen says exactly that.
+    expect(logError).toHaveBeenCalledWith('AddCustomFood.logAfterSave', expect.any(Error), { scanned: false });
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Home granola was saved, but it was not added to Snacks. You can add it from search.',
+      expect.objectContaining({ variant: 'error' }),
+    );
+    // A retry adds only: it never saves a second food.
+    insertCustomFood.mockClear();
+    expect(mockSaveButton.title).toBe('Add to diary');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).not.toHaveBeenCalled();
+    expect(logFoodEntry).toHaveBeenCalledTimes(2);
 
     jest.clearAllMocks();
     getCustomFoodById.mockResolvedValueOnce({
@@ -956,5 +981,93 @@ describe('AddCustomFoodScreen portion weights (Wave 4 review, item 10)', () => {
     setInput(tree, 'Serving (g), grams', '5000');
     expect(mockSaveButton.disabled).toBe(false);
     expect(errorOf(tree, 'Serving (g), grams')).toBeUndefined();
+  });
+});
+
+
+describe('food audit 2026-10-16: comma decimals, sugars and salt, carried foods', () => {
+  const NEW_FOOD = { params: { mealSlot: 'snack', entryDate: '2026-10-16' } };
+  async function mount(route) {
+    const nav = makeNav();
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={nav} route={route} />); });
+    await flush();
+    return { nav, tree };
+  }
+
+  test('a comma decimal is read, and an unreadable figure says why', async () => {
+    const { tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Bar');
+    setInput(tree, 'Protein, grams', '9,5');
+    expect(mockSaveButton.disabled).toBe(false);
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ protein100g: 9.5 }));
+    setInput(tree, 'Protein, grams', '9x5');
+    expect(mockSaveButton.disabled).toBe(true);
+    expect(allText(tree)).toContain('Enter a number, such as 9.5.');
+  });
+
+  test('a comma in a vitamin is kept, not dropped', async () => {
+    const { MICRONUTRIENTS } = require('../../lib/food/micronutrients');
+    const n = MICRONUTRIENTS[0];
+    getCustomFoodById.mockResolvedValueOnce({
+      id: 'cf-1', name: 'Loaf', brand: null, serving_g: 40, serving_label: null,
+      kcal_100g: 255, protein_100g: 9, carbs_100g: 45, fat_100g: 3, fibre_100g: 3, [n.column]: 1,
+    });
+    const { tree } = await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-1' } });
+    setInput(tree, n.label, '1,2');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(updateCustomFood.mock.calls[0][2].micros[n.key]).toBe(1.2);
+  });
+
+  test('sugars and salt save per 100 g; salt is stored as sodium (salt / 2.5); blank stays null', async () => {
+    const { tree } = await mount(NEW_FOOD);
+    setInput(tree, 'Name', 'Bar');
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+    expect(insertCustomFood.mock.calls[0][1]).toMatchObject({ sugar100g: null, sodium100g: null });
+    insertCustomFood.mockClear();
+    setInput(tree, 'Sugars (optional), grams', '4,5');
+    setInput(tree, 'Salt (optional), grams', '1');
+    await act(async () => { await mockSaveOnlyButton.onPress(); });
+    await flush();
+    expect(insertCustomFood.mock.calls[0][1]).toMatchObject({ sugar100g: 4.5, sodium100g: 0.4 });
+  });
+
+  test('a rename keeps the stored sugar and sodium exactly; changing salt changes sodium', async () => {
+    getCustomFoodById.mockResolvedValue({
+      id: 'cf-1', name: 'Loaf', brand: null, serving_g: 40, serving_label: null,
+      kcal_100g: 255, protein_100g: 9, carbs_100g: 45, fat_100g: 3, fibre_100g: 3,
+      sugar_100g: 3.3, sodium_100g: 0.196,
+    });
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-10-16', editFoodId: 'cf-1' } };
+    const { tree } = await mount(route);
+    setInput(tree, 'Name', 'Loaf renamed');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(updateCustomFood.mock.calls[0][2]).toMatchObject({ sugar100g: 3.3, sodium100g: 0.196 });
+    updateCustomFood.mockClear();
+    const again = await mount(route);
+    setInput(again.tree, 'Salt (optional), grams', '1');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(updateCustomFood.mock.calls[0][2]).toMatchObject({ sugar100g: 3.3, sodium100g: 0.4 });
+    getCustomFoodById.mockResolvedValue(null);
+  });
+
+  test('foods carried from the plate are written with the new food in one call, one Undo', async () => {
+    const carry = [{ foodRef: 'off:egg', name: 'Egg', quantityG: 50, kcal: 70, proteinG: 6, carbsG: 0, fatG: 5, fibreG: null }];
+    const { tree, nav } = await mount({ params: { mealSlot: 'snack', entryDate: '2026-10-16', carryItems: carry } });
+    logFoodEntry.mockResolvedValueOnce(['a', 'b']);
+    setInput(tree, 'Name', 'Bar');
+    setInput(tree, 'Eaten (g), grams', '40');
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+    expect(logFoodEntry).toHaveBeenCalledTimes(1);
+    expect(logFoodEntry.mock.calls[0][1].map((e) => e.foodRef)).toEqual(['off:egg', 'custom:custom-1']);
+    expect(mockToastShow).toHaveBeenCalledWith('2 foods added to Snacks.', expect.objectContaining({ variant: 'undo' }));
+    expect(nav.navigate).toHaveBeenCalledWith('Diary');
   });
 });

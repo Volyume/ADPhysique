@@ -135,6 +135,14 @@ function singularUnit(word) {
   return word.length > 3 && word.endsWith('s') ? word.slice(0, -1) : word;
 }
 
+function personalUnitG(personalG, servingG) {
+  if (servingG > 0) {
+    const n = Math.round(personalG / servingG);
+    if (n >= 2 && Math.abs(personalG - n * servingG) <= 0.15 * personalG) return personalG / n;
+  }
+  return personalG;
+}
+
 /**
  * The grams a part stands for once it has a food.
  *
@@ -151,13 +159,14 @@ function singularUnit(word) {
  * logged amount obeys.
  *
  * `basis` says where the figure came from, so the list can be honest:
- * 'typed_g' (the person typed grams or millilitres), 'serving' (the food's
+ * 'typed_g' (the person typed grams or millilitres), 'personal' (the amount
+ * the person last logged of this food), 'serving' (the food's
  * own serving weight) or 'default' (no portion known, 100 g per count).
  * `unitMatched` is true when a household word was found in the serving label.
  *
- * @returns {{ grams:number, basis:'typed_g'|'serving'|'default', unitMatched:boolean }}
+ * @returns {{ grams:number, basis:'typed_g'|'personal'|'serving'|'default', unitMatched:boolean }}
  */
-export function portionFor(part, food) {
+export function portionFor(part, food, { personalG } = {}) {
   const count = Number.isFinite(Number(part?.count)) && Number(part.count) > 0
     ? Number(part.count) : 1;
   const unit = part?.unitWord ?? null;
@@ -174,7 +183,16 @@ export function portionFor(part, food) {
       const label = String(food?.serving_label ?? '').toLowerCase();
       unitMatched = !!label && (label.includes(unit) || label.includes(singularUnit(unit)));
     }
-    if (servingG > 0) {
+    // The person's own amount for this food comes first for a bare count (or a
+    // "serving"): what they last logged stands for one of it. When it is a
+    // clear whole number of the food's serving (120 g of a 60 g egg), it was
+    // several, and one is the serving.
+    const own = Number(personalG) > 0 && (!unit || /^(serving|portion)s?$/.test(unit))
+      ? personalUnitG(Number(personalG), servingG) : 0;
+    if (own > 0) {
+      raw = count * own;
+      basis = 'personal';
+    } else if (servingG > 0) {
       raw = count * servingG;
       basis = 'serving';
     } else {
@@ -209,6 +227,12 @@ export function describePortion(part, food, portion) {
   const typed = part?.raw ? String(part.raw).trim() : '';
   const count = Number(part?.count) || 1;
   if (p.basis === 'typed_g') return `${typed} · ${p.grams} g`;
+  if (p.basis === 'personal') {
+    const each = Math.round(p.grams / (count > 0 ? count : 1));
+    return count === 1
+      ? `${typed} · ${p.grams} g (your usual amount)`
+      : `${typed} · ${each} g each (your usual amount) = ${p.grams} g`;
+  }
   if (p.basis === 'default') {
     return count === 1
       ? `${typed} · ${p.grams} g (no portion known)`

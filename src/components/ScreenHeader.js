@@ -56,7 +56,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
       <View style={styles.titleRow}>
         <Text
           style={[styles.title, { ...t.type.h1, color: t.colors.textPrimary }]}
-          numberOfLines={1}
+          numberOfLines={2}
           accessibilityRole="header"
         >
           {title}

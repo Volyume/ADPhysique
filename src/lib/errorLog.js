@@ -77,6 +77,10 @@ const PII_KEYS = new Set([
   'notes', 'note', 'message',
   // Names
   'firstName', 'first_name', 'lastName', 'last_name', 'fullName', 'full_name',
+  // What a person ate, by identity (food data-layer audit 2026-10-16, item
+  // 10): a food ref or a scanned barcode names the food itself.
+  'foodRef', 'food_ref', 'foodRefs', 'food_refs',
+  'barcode', 'barcode_ean', 'barcodeEan',
 ]);
 
 function redactPII(value, depth = 0) {

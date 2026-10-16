@@ -1,6 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-10-16 (late): FOOD AUDIT LANDING (D230 food audit landing), 2.19.0 LANDED ON MAIN; migrate_196 WRITTEN, HELD ★
+Founder rulings: "Cancel the bank", "Today onwards only", "Add cooked weight". Source: `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`, D230 food audit landing. Status at writing: uncommitted in the working tree; main is 2.17.0 and does not carry migrate_196. Files: `src/lib/food/calorieBank.js` (cancel on breach, floor refusal), `src/screens/DiaryScreen.js` (bank days from today onwards, planned rows out of subtotals), `src/lib/food/recipeWeight.js` (optional cooked weight, grams against it, servings fallback), `src/lib/food/sources/localCache.js` (entry edits keep their own figures unless grams change; soft deletes; Undo revives the tombstone; favourites carry `kind`), `supabase/migrate_196_food_soft_deletes_and_kind.sql` (written, HELD until the founder's phrase "run against production 196"; behind `RECIPE_COOKED_WEIGHT_PUSH`, off until applied).
+
 ## ★ 2026-10-16 (night) — FOOD WAVE 4 LANDED, LIVE SYNC DAY-MOVE FIXED (D230 Wave 4 landing) ★
 Founder: "Ok proceed and finish off food now". Source: `DECISIONS-2026-07-09.md`, D230 Wave 4 landing; plan `docs/audit/food-levelup-2026-10-16/03-ASSESSMENT-AND-PLAN.md` R20, R21. Branch `food/wave4-2026-10-16`. Cloud 194 and 195 written and NOT applied (flags off). The day-key fix: `src/lib/food/db.js` `isPreTz1UtcKeyedRow`, `applyFoodEntryFromCloud`, `repairPulledEntryDays`; `src/lib/sync/tables/foodDomain.js` `repairPulledEntryDaysOnce`, chunking, `_foodRowBuckets`.
 

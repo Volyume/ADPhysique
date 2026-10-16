@@ -9,8 +9,9 @@
  *   - renders nothing when not visible;
  *   - Android: fires once, closes on both 'set' and 'dismissed', but only
  *     commits a change on 'set';
- *   - iOS: renders a spinner sheet that updates live and stays open until
- *     Done;
+ *   - iOS: renders a spinner sheet that HOLDS the wheel's value and reports
+ *     it once, on Done (food Diary audit 2026-10-16, item 5; it used to
+ *     report every wheel change, which closed the picker mid-choice);
  *   - mode is "time" (not "date") -- the one real difference from
  *     DiaryDatePicker.
  */
@@ -104,7 +105,14 @@ describe('Android (native modal dialog)', () => {
 describe('iOS (inline spinner sheet)', () => {
   beforeEach(() => { Platform.OS = 'ios'; });
 
-  test('renders a Done button and the spinner stays open across a live change', async () => {
+  // Food Diary audit 2026-10-16, item 5: the spinner reports on every wheel
+  // movement and the caller closes the picker on each report, so the first
+  // flick shut it. The wheel's value is held here and reported once, on Done.
+  const doneOf = (tree) => tree.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === 'Done choosing the time' && typeof n.props.onPress === 'function',
+  )[0];
+
+  test('a wheel change is held, not reported, and the sheet stays open', async () => {
     const props = baseProps();
     const tree = await mount(props);
     const p = picker(tree);
@@ -112,18 +120,47 @@ describe('iOS (inline spinner sheet)', () => {
     expect(p.props.display).toBe('spinner');
     expect(p.props.mode).toBe('time');
 
-    const chosen = new Date(2026, 6, 10, 21, 0);
-    await act(async () => { p.props.onChange({ type: 'set' }, chosen); });
+    await act(async () => { p.props.onChange({ type: 'set' }, new Date(2026, 6, 10, 21, 0)); });
+    await act(async () => { picker(tree).props.onChange({ type: 'set' }, new Date(2026, 6, 10, 21, 15)); });
 
-    // Live update: reported immediately, but the sheet is NOT auto-closed.
-    expect(props.onChange).toHaveBeenCalledWith(chosen);
+    expect(props.onChange).not.toHaveBeenCalled();
     expect(props.onClose).not.toHaveBeenCalled();
+    // The wheel shows what is being chosen.
+    expect(picker(tree).props.value.getMinutes()).toBe(15);
+  });
 
-    const done = tree.root.findAll(
-      (n) => n.props && n.props.accessibilityLabel === 'Done choosing the time' && typeof n.props.onPress === 'function',
-    )[0];
-    expect(done).toBeTruthy();
-    await act(async () => { done.props.onPress(); });
+  test('Done reports the last wheel value once, then closes', async () => {
+    const props = baseProps();
+    const tree = await mount(props);
+    await act(async () => { picker(tree).props.onChange({ type: 'set' }, new Date(2026, 6, 10, 21, 0)); });
+    const chosen = new Date(2026, 6, 10, 21, 15);
+    await act(async () => { picker(tree).props.onChange({ type: 'set' }, chosen); });
+    await act(async () => { doneOf(tree).props.onPress(); });
+    expect(props.onChange).toHaveBeenCalledTimes(1);
+    expect(props.onChange).toHaveBeenCalledWith(chosen);
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('Done with the wheel untouched closes without a change', async () => {
+    const props = baseProps();
+    const tree = await mount(props);
+    await act(async () => { doneOf(tree).props.onPress(); });
+    expect(props.onChange).not.toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('closing the sheet (back gesture) never reports the held value', async () => {
+    const props = baseProps();
+    const tree = await mount(props);
+    await act(async () => { picker(tree).props.onChange({ type: 'set' }, new Date(2026, 6, 10, 21, 0)); });
+    const modal = tree.root.findAll((n) => typeof n.props?.onRequestClose === 'function')[0];
+    await act(async () => { modal.props.onRequestClose(); });
+    expect(props.onChange).not.toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('the spinner follows the app theme, not the phone (themeVariant)', async () => {
+    const tree = await mount(baseProps());
+    expect(['dark', 'light']).toContain(picker(tree).props.themeVariant);
   });
 });

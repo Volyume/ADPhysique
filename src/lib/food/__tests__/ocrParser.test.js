@@ -130,3 +130,67 @@ describe('fieldNeedsCheck', () => {
     expect(fieldNeedsCheck('missing', null, '')).toBe(false);
   });
 });
+
+// Food data-layer audit 2026-10-16, item 8, the auditor's cases P5, P5b and
+// P5c plus a normal per-100g-first label. Each failed before the fix: P5 read
+// the per-bar column as per 100 g at high confidence, P5b took the protein
+// figure from the ingredients list, P5c read "1 046 kJ" as 46 kJ (11 kcal).
+describe('parseNutritionLabel: column order, where the table starts, spaced thousands (audit item 8)', () => {
+  test('P5: "Per bar" before "Per 100g" takes the second figure of each nutrient, at high confidence', () => {
+    const text = 'Nutrition Information Per bar (60g) Per 100g Energy 1050kJ 250kcal 1750kJ 417kcal '
+      + 'Fat 9.0g 15g of which saturates 3.0g 5.0g Carbohydrate 30g 50g of which sugars 3.0g 5.0g Protein 12g 20g Salt 0.3g 0.5g';
+    const { fields, confidence } = parseNutritionLabel(text);
+    expect(fields.kcal100g).toBe(417);
+    expect(fields.fat100g).toBe(15);
+    expect(fields.carbs100g).toBe(50);
+    expect(fields.protein100g).toBe(20);
+    expect(confidence.kcal100g).toBe('high');
+    expect(confidence.protein100g).toBe('high');
+  });
+
+  test('"per serving" and "per portion" headers before "per 100g" work the same way', () => {
+    expect(parseNutritionLabel('Typical values per serving (30g) per 100g Energy 105 kcal 350 kcal Protein 3g 10g')
+      .fields).toMatchObject({ kcal100g: 350, protein100g: 10 });
+    expect(parseNutritionLabel('Nutrition per portion per 100g Fat 2g 8g').fields.fat100g).toBe(8);
+  });
+
+  test('P5b: an ingredients list before "Typical values" no longer feeds the protein figure', () => {
+    const r = parseNutritionLabel('Ingredients: oats, milk protein 12%, sugar. Typical values per 100g Energy 1600kJ 380kcal Fat 7g Carbohydrate 60g Protein 13g');
+    expect(r.fields.protein100g).toBe(13);
+    expect(r.fields.kcal100g).toBe(380);
+    expect(r.confidence.protein100g).toBe('high');
+  });
+
+  test('P5c: a kJ-only label with a space thousands separator reads 1046 kJ (250 kcal)', () => {
+    const r = parseNutritionLabel('Energy 1 046 kJ Fat 3g Carbohydrate 40g Protein 8g per 100g');
+    expect(r.fields.kcal100g).toBe(250);
+    expect(r.fields.fat100g).toBe(3);
+  });
+
+  test('two columns side by side without both headers: the figures are kept but every one is low confidence', () => {
+    const r = parseNutritionLabel('Typical values per 100g Energy 1465 kJ / 350 kcal Fat 9.0g 15g Protein 10g 3g');
+    expect(r.fields.fat100g).toBe(9);
+    expect(r.confidence.fat100g).toBe('low');
+    expect(r.confidence.kcal100g).toBe('low');
+  });
+
+  test('a normal per-100g-first label is read exactly as before, at high confidence', () => {
+    const r = parseNutritionLabel('Per 100g Per serving (30g) Energy 350 kcal 105 kcal Fat 12.5g 3.8g Carbohydrate 45g 13.5g Protein 10g 3g');
+    expect(r.fields).toMatchObject({ kcal100g: 350, fat100g: 12.5, carbs100g: 45, protein100g: 10 });
+    expect(r.confidence.kcal100g).toBe('high');
+    expect(r.confidence.carbs100g).toBe('high');
+    // And the single-column label at the top of this file is unchanged.
+    expect(parseNutritionLabel(UK_LABEL).confidence.protein100g).toBe('high');
+  });
+
+  test('a percentage column (reference intake) is not read as a second figure', () => {
+    const r = parseNutritionLabel('Typical values per 100g Fat 9g 13% Protein 10g 20%');
+    expect(r.fields.fat100g).toBe(9);
+    expect(r.confidence.fat100g).toBe('high');
+  });
+
+  test('two separate figures are never merged by the thousands join', () => {
+    expect(parseNutritionLabel('per 100g Fat 9.0g 15g').fields.fat100g).toBe(9);
+    expect(parseNutritionLabel('per 100g Energy 1465 kJ 350 kcal').fields.kcal100g).toBe(350);
+  });
+});

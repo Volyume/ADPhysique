@@ -12644,3 +12644,23 @@ An Opus fresh-eyes pass walked five journeys (first video; from the logger; summ
 **Other review fixes:** quick adds and imported rows keep their figures when edited (they had been saved as 0 kcal); portions reach every custom-food read; pushes go in chunks of 500; a pull that moves a row rebuilds both days; an entry edited before its first sync, and a planned meal confirmed after a sync (created_at now stamped at confirmation), go up as new. Migration 195 now refuses to run before 194, syncs edited and deleted custom foods (never reviving a deleted one), and keeps the diary entry's update a plain UPDATE (an upsert would let a stale device resurrect an entry deleted elsewhere, a hard delete).
 
 **FOUNDER, open:** the apply of 194 then 195 by the phrase (the earlier "run against production 194 195" preceded the stop and these revisions). A sample MyFitnessPal Nutrition Summary file would let the unverified header be confirmed.
+
+### D230 food audit landing (2026-10-16)
+
+**Status at writing.** The food audit's changes sit uncommitted in the working tree of `food/audit-2026-10-16`, at version 2.19.0 (`package.json`, `package-lock.json`, `app.json`). They are NOT yet on main: main is at 2.17.0 and does not carry `supabase/migrate_196_food_soft_deletes_and_kind.sql`. Migration 196 is written and HELD until the founder's phrase.
+
+**Founder rulings.**
+- **Bank floor: "Cancel the bank".** When a target change would put any banked day below the safe floor, the bank is cancelled, every day returns to the same target, and a calm toast says why; the display refuses a breaching bank even before the cancel lands. Rationale: the calorie floors are never lowered, so a bank that would breach them is dropped whole rather than shrunk.
+- **Bank days: "Today onwards only".** Days already gone keep their target; a past week offers no days; Sunday says there is no other day. Rationale: a bank must not rewrite a day the person has already lived through.
+- **Recipes: "Add cooked weight".** Cooked weight is optional; grams eaten are measured against it; without it, the recipe logs by servings only. Rationale: weighing is available to those who want it and never a requirement.
+
+**Lead rulings (D33).**
+- An entry edit keeps the entry's own figures unless the grams change. Rationale: an edit to a name or time must not silently recompute a logged meal from today's food data.
+- Planned food is left out of meal subtotals. Rationale: planned is not eaten, the rule already applied to the rings and the breakdown sheet in Wave 1 (lane 1B).
+- Food deletes for entries, saved meals and recipes become soft deletes in the cloud (migrate_196). Rationale: a hard delete leaves no tombstone, so a second phone still holding the row would push it back on its next sync.
+- Food favourites carry `kind` (migrate_196). Rationale: a favourite must say what it points at so every device reads it the same way.
+- An Undo after a synced delete revives the cloud tombstone. Rationale: Undo has to restore what the person sees on every device, not only on the phone they are holding.
+- Recipe cooked weight rides migrate_196 behind `RECIPE_COOKED_WEIGHT_PUSH`, off until migrate_196 is applied. Rationale: a device must not push a column the cloud does not yet have.
+- Version 2.19.0. Rationale: the standing minor-version rule for a build, with its What's new entry.
+
+**FOUNDER, open:** apply migrate_196 by the phrase "run against production 196". Until then the recipe cooked weight push stays off.

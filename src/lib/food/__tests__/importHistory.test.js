@@ -378,3 +378,71 @@ describe('thousands of rows', () => {
     expect(ms).toBeLessThan(1500);
   });
 });
+
+// Food data-layer audit 2026-10-16, item 13: the file is read in slices that
+// hand the thread back, and the slicing changes NOTHING in the result. Pinned
+// on every fixture, at slice sizes that cut through quoted fields, CRLF pairs
+// and doubled quotes, so a reader that lost its place at a boundary fails.
+describe('parseHistoryCsvAsync: same result as parseHistoryCsv, read in slices (audit item 13)', () => {
+  const {
+    parseHistoryCsv: parseSync, parseHistoryCsvAsync, readCsv: readSync, readCsvAsync,
+  } = require('../importHistory');
+  const names = fs.readdirSync(path.join(__dirname, 'fixtures', 'importHistory')).filter((n) => n.endsWith('.csv'));
+
+  test('there are fixtures to compare', () => {
+    expect(names.length).toBeGreaterThanOrEqual(5);
+  });
+
+  test.each(names)('%s: equal at slice sizes 1, 7, 64 and the default, yielding between slices', async (name) => {
+    const text = fixture(name);
+    const expected = parseSync(text);
+    for (const yieldEvery of [1, 7, 64, undefined]) {
+      let yields = 0;
+      // eslint-disable-next-line no-await-in-loop
+      const got = await parseHistoryCsvAsync(text, { yieldEvery, yieldFn: async () => { yields += 1; } });
+      expect(got).toEqual(expected);
+      if (yieldEvery === 7) expect(yields).toBeGreaterThan(text.length / 7 - 2);
+    }
+  });
+
+  test('awkward CSV (quotes, doubled quotes, CRLF, line breaks in a field) is read the same in slices', async () => {
+    const text = '﻿a,b\r\n"x, ""y""",2\r\n"line\nbreak",3\n\n4,5';
+    const expected = readSync(text, ',');
+    for (const size of [1, 2, 3, 5]) {
+      // eslint-disable-next-line no-await-in-loop
+      expect(await readCsvAsync(text, ',', { yieldEvery: size })).toEqual(expected);
+    }
+    expect(expected.map((r) => [...r])).toEqual([['a', 'b'], ['x, "y"', '2'], ['line\nbreak', '3'], ['4', '5']]);
+  });
+});
+
+// Food data-layer audit 2026-10-16, item 13: a day that holds planned meals is
+// left whole and reported as already planned, never filled under the plan.
+describe('planImport: a day with planned meals is left whole (audit item 13)', () => {
+  const { planImport: plan, summariseImport: review, summariseResult: result } = require('../importHistory');
+  const text = fixture('mfp-nutrition-summary.csv');
+
+  test('rows on a planned day are not planned for writing, and the review says so', () => {
+    const parsed = require('../importHistory').parseHistoryCsv(text);
+    const p = plan(parsed, { plannedDays: new Set(['2026-03-03']), today: TODAY });
+    expect(p.entries.some((e) => e.entryDate === '2026-03-03')).toBe(false);
+    expect(p.plannedDays).toBe(1);
+    expect(p.plannedDayRows).toBe(4);
+    expect(review(p).join(' ')).toMatch(/4 rows fall on 1 day that already has meals planned, and that day is left as it is\./);
+    expect(result(p, { added: p.entries.length }).join(' ')).toMatch(/1 day that already had meals planned was left as it was\./);
+  });
+
+  test('a day with food AND planned meals counts as a day with food', () => {
+    const parsed = require('../importHistory').parseHistoryCsv(text);
+    const p = plan(parsed, { existingDays: new Set(['2026-03-03']), plannedDays: new Set(['2026-03-03']), today: TODAY });
+    expect(p.existingDays).toBe(1);
+    expect(p.plannedDays).toBe(0);
+  });
+
+  test('with no planned days the plan and its words are unchanged', () => {
+    const parsed = require('../importHistory').parseHistoryCsv(text);
+    const a = plan(parsed, { today: TODAY });
+    expect(a.plannedDays).toBe(0);
+    expect(review(a).join(' ')).not.toMatch(/planned/);
+  });
+});

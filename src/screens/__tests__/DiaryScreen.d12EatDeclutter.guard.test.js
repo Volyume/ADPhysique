@@ -108,9 +108,11 @@ describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
     // L08-teach (founder ask 2026-07-09, ux-world-class-audit-2026-07-09):
     // this hint now also stays hidden while the more specific plan-added
     // teach (showPlanAddedHint) is showing, so the two never stack; every
-    // other D12 gate (plannedCount, selectionMode) is unchanged.
+    // other D12 gate (plannedCount, selectionMode) is unchanged. Food Diary
+    // audit 2026-10-16, item 11: not on a future day, where nothing can be
+    // ticked off yet.
     expect(SRC).toMatch(
-      /\{plannedCount > 0 && !selectionMode && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
+      /\{plannedCount > 0 && !selectionMode && !isFutureDay && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
     );
   });
 

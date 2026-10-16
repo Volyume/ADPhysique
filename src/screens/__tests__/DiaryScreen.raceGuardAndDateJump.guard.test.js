@@ -111,9 +111,11 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
 
   test('the date label is wrapped in a labelled pressable that opens the picker', () => {
     expect(SRC).toMatch(/const dateHeading = isViewingToday \? 'Today' : friendlyDate\(selectedDate\);/);
-    expect(SRC).toMatch(/const dateSubCopy = selectedDateDetail;/);
+    // Food Diary audit 2026-10-16, item 12: a day named by its date is not
+    // repeated under itself ("Tue 15 Sept / Tue 15 Sept").
+    expect(SRC).toMatch(/const dateSubCopy = selectedDateDetail === dateHeading \? null : selectedDateDetail;/);
     expect(SRC).toMatch(
-      /onPress=\{openDatePicker\}[\s\S]{0,160}accessibilityLabel=\{`\$\{dateHeading\}, \$\{dateSubCopy\}\. Jump to a date`\}/,
+      /onPress=\{openDatePicker\}[\s\S]{0,160}accessibilityLabel=\{`\$\{dateSubCopy \? `\$\{dateHeading\}, \$\{dateSubCopy\}` : dateHeading\}\. Jump to a date`\}/,
     );
   });
 
@@ -299,21 +301,15 @@ describe('DiaryScreen bottom controls', () => {
   });
 });
 
+// Food Diary audit 2026-10-16, item 14: the meal card never rendered its
+// Saved, Barcode or Quick add buttons (L05-D1/D6), so the chooser they opened,
+// the quick-add sheet and their state could not be reached and are removed.
+// Saved meals and recipes are on the add screen; "Save meal" stays.
 describe('DiaryScreen saved food entry points', () => {
-  test('the meal-card Saved action opens one chooser for saved meals and recipes', () => {
-    expect(SRC).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
-    expect(SRC).toMatch(/const \[savedPickerSlot, setSavedPickerSlot\] = useState\(null\);/);
-    expect(SRC).toMatch(/function addSavedMeal\(slot\) \{\s*setSavedPickerSlot\(slot\);\s*\}/);
-    expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
-    // CP-10 batch E (2026-07-10): live-themed, so each style prop now carries
-    // the style-array form with a live.* override. Same pins, new shape.
-    // D230 R16: the sheet title is a heading (every sheet title is).
-    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\} accessibilityRole="header">Saved meals and recipes<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Saved meals<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Recipes<\/Text>/);
+  test('the unreachable saved-meals chooser, quick-add sheet and scan shortcut are gone', () => {
+    expect(SRC).not.toMatch(/savedPickerSlot|addSavedMeal|openSavedFoodRoute|scanForMeal|setQuickAddSlot|confirmQuickAdd/);
+    expect(SRC).not.toMatch(/<QuickAddSheet/);
+    expect(SRC).not.toMatch(/onSavedMeals=|onScan=|onQuickAdd=/);
     expect(SRC).toMatch(/is in Saved meals/);
-    expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
-    expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);
-    expect(SRC).toMatch(/openSavedFoodRoute\('MyRecipes'\)/);
   });
 });

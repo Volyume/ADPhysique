@@ -200,3 +200,35 @@ describe('matchFoodLineParts', () => {
     expect(out[0].food.food_ref).toBe('off:chicken');
   });
 });
+
+// Food audit 2026-10-16, item 7: the person's own amount comes first.
+describe('portionFor: the person\'s own amount', () => {
+  const { withCuratedServing } = require('../curatedFoods');
+  test('a remembered amount stands for one of the food, ahead of the serving', () => {
+    const banana = { food_ref: 'off:banana', serving_g: 100 };
+    expect(portionFor({ count: 1, unitWord: null }, banana, { personalG: 118 }))
+      .toMatchObject({ grams: 118, basis: 'personal' });
+    expect(portionFor({ count: 2, unitWord: null }, banana, { personalG: 118 }).grams).toBe(236);
+  });
+  test('a remembered amount that is a whole number of servings was several', () => {
+    const egg = { food_ref: 'curated:eggs', serving_g: 60 };
+    expect(portionFor({ count: 2, unitWord: null }, egg, { personalG: 120 }))
+      .toMatchObject({ grams: 120, basis: 'personal' });
+  });
+  test('typed grams and household units ignore it; none given falls back as before', () => {
+    const f = { food_ref: 'x', serving_g: 36 };
+    expect(portionFor({ count: 20, unitWord: 'g' }, f, { personalG: 118 })).toMatchObject({ grams: 20, basis: 'typed_g' });
+    expect(portionFor({ count: 2, unitWord: 'slices' }, f, { personalG: 118 })).toMatchObject({ grams: 72, basis: 'serving' });
+    expect(portionFor({ count: 2, unitWord: null }, f)).toMatchObject({ grams: 72, basis: 'serving' });
+  });
+  test('says where the figure came from', () => {
+    expect(describePortion({ raw: '2 bananas', count: 2, unitWord: null }, {}, { grams: 236, basis: 'personal' }))
+      .toBe('2 bananas · 118 g each (your usual amount) = 236 g');
+  });
+  test('the curated egg has a per-egg serving, so "2 eggs" is not 200 g', () => {
+    const egg = withCuratedServing({ food_ref: 'curated:eggs', serving_g: null });
+    expect(egg.serving_g).toBe(60);
+    expect(portionFor({ count: 2, unitWord: null }, egg)).toMatchObject({ grams: 120, basis: 'serving' });
+    expect(withCuratedServing({ food_ref: 'curated:oats' })).toEqual({ food_ref: 'curated:oats' });
+  });
+});

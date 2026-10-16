@@ -15,8 +15,22 @@ export const MAX_ENTRY_GRAMS = 5000;
 // then each extra custom portion (D230 R20: portions_json, keys 'portion:0',
 // 'portion:1'), then raw grams. Each unit's `grams` is the gram-weight of ONE unit, so
 // grams = amount * unit.grams.
+//
+// Founder ruling 2026-10-16 (food audit, "Add cooked weight"): a recipe with no
+// cooked weight is logged in servings only. Its serving_g is a share of the RAW
+// ingredient weight, which is not what a plate of the cooked dish weighs, so
+// offering grams would price a cooked portion against the raw weight. Such a
+// food (`servings_only`, set by resolveFoodRef) has the one serving unit and
+// no grams. The serving's gram weight stays the internal storage scale.
+export function isServingsOnly(food) {
+  return food?.servings_only === true && Number(food?.serving_g) > 0;
+}
+
 export function buildServingUnits(food) {
   const servingG = Number(food?.serving_g) || 0;
+  if (isServingsOnly(food)) {
+    return [{ key: 'serving', label: food?.serving_label || 'serving', grams: servingG }];
+  }
   const list = [];
   if (servingG > 0) {
     list.push({ key: 'serving', label: food?.serving_label || 'serving', grams: servingG });
@@ -43,8 +57,25 @@ export function buildServingUnits(food) {
 // "Near enough" is within 2% of the nearest half-serving (0.5, 1, 1.5, 2...),
 // so a genuinely rounded-off gram figure (not a real multiple) still opens in
 // grams exactly as before.
+//
+// Edit mode is stricter (food Diary audit 2026-10-16, item 2): an entry being
+// edited reopens in a portion ONLY when that portion reproduces its stored
+// grams exactly (within half a gram, so the rounded save writes the same
+// grams back). Within 2% a 61 g entry opened as "2 x 30 g" and an untouched
+// save wrote 60 g over it; it now opens as 61 g.
+export const EDIT_EXACT_MATCH_G = 0.5;
 export function initialServingState(food, mode, initialQuantityG) {
   const servingG = Number(food?.serving_g) || 0;
+  if (isServingsOnly(food)) {
+    // Servings only: a known amount reopens as servings. Edit mode keeps three
+    // decimals, so an older entry that is not a tenth of a serving still
+    // writes back the grams it has (within half a gram) when left alone.
+    if (initialQuantityG != null && initialQuantityG > 0) {
+      const places = mode === 'edit' ? 1000 : 10;
+      return { unitKey: 'serving', amount: String(Math.round((initialQuantityG / servingG) * places) / places) };
+    }
+    return { unitKey: 'serving', amount: '1' };
+  }
   if (initialQuantityG != null && initialQuantityG > 0) {
     // D230 R20: a half-multiple of ANY of the food's portions reopens in that
     // portion. The nearest match (smallest gram distance) wins; a tie goes to
@@ -57,7 +88,7 @@ export function initialServingState(food, mode, initialQuantityG) {
       const roundedServings = nearestHalves * 0.5;
       const roundedGrams = roundedServings * unit.grams;
       const distance = Math.abs(initialQuantityG - roundedGrams);
-      if (distance > initialQuantityG * 0.02) continue;
+      if (mode === 'edit' ? distance >= EDIT_EXACT_MATCH_G : distance > initialQuantityG * 0.02) continue;
       if (!best || distance < best.distance) {
         best = { distance, unitKey: unit.key, amount: String(roundedServings) };
       }

@@ -9,9 +9,13 @@ jest.mock('../db', () => ({
   saveActiveMealPlan: jest.fn(),
   updateMealPlan: jest.fn(),
   listSavedMeals: jest.fn(),
-  logFoodEntry: jest.fn(() => Promise.resolve('id')),
+  // Food data-layer audit 2026-10-16, item 14: a plan day is ONE batch
+  // write (logFoodEntries, one id per entry) and the banked re-sync ONE
+  // replace (replacePlannedFoodForDays).
+  logFoodEntries: jest.fn((_u, entries) => Promise.resolve(entries.map((_, i) => `id${i}`))),
   getFoodEntriesForDay: jest.fn(() => Promise.resolve([])),
   clearPlannedDay: jest.fn(() => Promise.resolve()),
+  replacePlannedFoodForDays: jest.fn(() => Promise.resolve({ cleared: 1, written: 1 })),
 }));
 
 import {
@@ -25,7 +29,10 @@ import {
   resyncBankedPlannedFood,
   repeatPlanDay,
 } from '../mealPlanService';
-import { logFoodEntry } from '../db';
+import { logFoodEntries } from '../db';
+
+// Every entry a mocked batch write was handed, flattened across calls.
+const batchedEntries = () => logFoodEntries.mock.calls.flatMap((c) => c[1]);
 import { assembleWeekPlan } from '../mealPlanAssembler';
 import { resolveComponent } from '../curatedFoods';
 import { mealTotals } from '../curatedMeals';
@@ -45,14 +52,14 @@ function _day() {
 
 // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
 // NA-nutrition-1: store the basis, no conversion). "Log this day" fans
-// each plan item through logFoodEntry; the per-item label the user set on
+// each plan item through the diary write; the per-item label the user set on
 // the expanded plate (MealPlanScreen) must ride along, and an item nobody
 // touched must default the same way manual logging does (logFoodEntry's own
 // 'as_weighed' fallback), never a silently invented raw/cooked guess here.
 describe('applyPlanDayToDiary: carries the per-item weight-state label (Ultimate-Audit item 12)', () => {
-  beforeEach(() => { logFoodEntry.mockClear(); });
+  beforeEach(() => { logFoodEntries.mockClear(); });
 
-  test('an item with an explicit weightState passes it straight through to logFoodEntry', async () => {
+  test('an item with an explicit weightState passes it straight through to the diary write', async () => {
     const day = {
       slots: [{
         slot: 'meal_1',
@@ -60,7 +67,7 @@ describe('applyPlanDayToDiary: carries the per-item weight-state label (Ultimate
       }],
     };
     await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
-    expect(logFoodEntry).toHaveBeenCalledWith('u1', expect.objectContaining({ weightState: 'cooked' }));
+    expect(batchedEntries()).toEqual([expect.objectContaining({ weightState: 'cooked' })]);
   });
 
   test('an untouched item (no weightState field) forwards undefined, not a guessed label', async () => {
@@ -71,8 +78,8 @@ describe('applyPlanDayToDiary: carries the per-item weight-state label (Ultimate
       }],
     };
     await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
-    const call = logFoodEntry.mock.calls.find((c) => c[1].foodRef === 'curated:white_rice');
-    expect(call[1].weightState).toBeUndefined();
+    const entry = batchedEntries().find((e) => e.foodRef === 'curated:white_rice');
+    expect(entry.weightState).toBeUndefined();
   });
 });
 
@@ -173,7 +180,7 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
   const itemDay = (ref) => ({ slots: [{ slot: 'meal_1', items: [{ foodRef: ref, quantityG: 100, kcal: 100, proteinG: 10, carbsG: 5, fatG: 2 }] }] });
   const plan = { days: [itemDay('curated:x'), itemDay('curated:y')] };
 
-  beforeEach(() => { jest.clearAllMocks(); db.logFoodEntry.mockResolvedValue('id'); db.getFoodEntriesForDay.mockResolvedValue([]); });
+  beforeEach(() => { jest.clearAllMocks(); db.getFoodEntriesForDay.mockResolvedValue([]); });
 
   test('logs empty days, leaves days that already have entries untouched', async () => {
     db.getFoodEntriesForDay
@@ -183,13 +190,14 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
     expect(res.skippedDays).toBe(1);
     expect(res.addedDays).toBe(1);
     expect(res.loggedItems).toBe(1);
-    expect(db.logFoodEntry).toHaveBeenCalledTimes(1); // only the empty day was written
-    expect(db.logFoodEntry.mock.calls[0][1].isPlanned).toBe(true); // written as scaffolding
+    expect(db.logFoodEntries).toHaveBeenCalledTimes(1); // only the empty day was written
+    expect(batchedEntries()).toHaveLength(1);
+    expect(batchedEntries()[0].isPlanned).toBe(true); // written as scaffolding
   });
 
   test('an empty plan does nothing', async () => {
     expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0 });
-    expect(db.logFoodEntry).not.toHaveBeenCalled();
+    expect(db.logFoodEntries).not.toHaveBeenCalled();
   });
 });
 
@@ -198,7 +206,6 @@ describe('resyncBankedPlannedFood (CB-1b — banking moves planned food)', () =>
   const db = require('../db');
   beforeEach(() => {
     jest.clearAllMocks();
-    db.logFoodEntry.mockResolvedValue('id');
     db.clearPlannedDay.mockResolvedValue();
     db.getActiveMealPlan.mockResolvedValue({ id: 'p1', plan: { kind: 'week', days: [_day(), _day()] } });
   });
@@ -212,10 +219,29 @@ describe('resyncBankedPlannedFood (CB-1b — banking moves planned food)', () =>
       floorKcal: 1200,
       startDate: '2026-06-16',
     });
-    expect(db.clearPlannedDay).toHaveBeenCalledTimes(1);
-    expect(db.clearPlannedDay).toHaveBeenCalledWith('u1', '2026-06-16');
-    expect(db.logFoodEntry).toHaveBeenCalled(); // rewrote the adjusted day
+    // ONE atomic replace of the adjusted day (audit item 14), never a
+    // separate clear then a separate write.
+    expect(db.replacePlannedFoodForDays).toHaveBeenCalledTimes(1);
+    const [uid, days, entries] = db.replacePlannedFoodForDays.mock.calls[0];
+    expect(uid).toBe('u1');
+    expect(days).toEqual(['2026-06-16']);
+    expect(entries.length).toBeGreaterThan(0); // rewrote the adjusted day
+    expect(entries.every((e) => e.entryDate === '2026-06-16' && e.isPlanned === true)).toBe(true);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
+    expect(db.logFoodEntries).not.toHaveBeenCalled();
     expect(res.perDayChanges.map((c) => c.dayKey)).toEqual(['2026-06-16']);
+  });
+
+  test('a failed replace throws, so the caller\'s "Nothing has changed" is true (audit item 14)', async () => {
+    db.getFoodEntriesForDay.mockResolvedValue([{ is_planned: 1 }]);
+    db.replacePlannedFoodForDays.mockRejectedValueOnce(new Error('disk'));
+    await expect(resyncBankedPlannedFood('u1', {
+      perDayDeltaKcal: { '2026-06-16': 200, '2026-06-17': -200 }, floorKcal: 1200, startDate: '2026-06-16',
+    })).rejects.toThrow('disk');
+    // Both adjusted days went in the one replace: nothing was written before it.
+    expect(db.replacePlannedFoodForDays.mock.calls[0][1]).toEqual(['2026-06-16', '2026-06-17']);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
+    expect(db.logFoodEntries).not.toHaveBeenCalled();
   });
 
   test('no active plan → no-op', async () => {
@@ -223,6 +249,7 @@ describe('resyncBankedPlannedFood (CB-1b — banking moves planned food)', () =>
     const res = await resyncBankedPlannedFood('u1', { perDayDeltaKcal: { '2026-06-16': 200 }, floorKcal: 1200, startDate: '2026-06-16' });
     expect(res.perDayChanges).toEqual([]);
     expect(db.clearPlannedDay).not.toHaveBeenCalled();
+    expect(db.replacePlannedFoodForDays).not.toHaveBeenCalled();
   });
 });
 

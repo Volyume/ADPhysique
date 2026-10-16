@@ -283,3 +283,50 @@ describe('lookupBarcodeOff — micronutrient mapping on real OFF fixtures', () =
     expect(r.iron_100g).toBeNull();
   });
 });
+
+// Food data-layer audit 2026-10-16, item 9: a live hit carries sodium and
+// sugars, in the app's own units. sodium_100g is GRAMS per 100 g, exactly as
+// the curated data stores it (scripts/seed/buildOffSnapshot.js copies OFF's
+// sodium_100g, itself grams, unchanged); sugar_100g is OFF's sugars_100g.
+describe('lookupBarcodeOff: sodium and sugars (audit item 9)', () => {
+  afterEach(() => { global.fetch = undefined; });
+  const hit = (nutriments) => _mockFetch(async () => ({
+    ok: true,
+    json: async () => ({
+      status: 1,
+      product: {
+        code: '5000000000001',
+        product_name: 'Oat bar',
+        nutriments: { 'energy-kcal_100g': 417, proteins_100g: 20, carbohydrates_100g: 50, fat_100g: 15, ...nutriments },
+      },
+    }),
+  }));
+
+  test('sodium_100g (grams) and sugars_100g are mapped as they are', async () => {
+    hit({ sodium_100g: 0.2, salt_100g: 0.5, sugars_100g: 5 });
+    const r = await lookupBarcodeOff('5000000000001');
+    expect(r.sodium_100g).toBe(0.2);
+    expect(r.sugar_100g).toBe(5);
+  });
+
+  test('with no sodium, salt (grams) gives sodium as salt / 2.5', async () => {
+    hit({ salt_100g: 0.5 });
+    expect((await lookupBarcodeOff('5000000000001')).sodium_100g).toBe(0.2);
+  });
+
+  test('a literal 0 sodium beside a real salt figure takes the salt figure (the inconsistent OFF row in the file header)', async () => {
+    hit({ sodium_100g: 0, salt_100g: 0.4 });
+    expect((await lookupBarcodeOff('5000000000001')).sodium_100g).toBe(0.16);
+  });
+
+  test('strings are read as numbers; absent readings are null, never invented', async () => {
+    hit({ sodium_100g: '0.3', sugars_100g: '12.5' });
+    const r = await lookupBarcodeOff('5000000000001');
+    expect(r.sodium_100g).toBe(0.3);
+    expect(r.sugar_100g).toBe(12.5);
+    hit({});
+    const none = await lookupBarcodeOff('5000000000001');
+    expect(none.sodium_100g).toBeNull();
+    expect(none.sugar_100g).toBeNull();
+  });
+});

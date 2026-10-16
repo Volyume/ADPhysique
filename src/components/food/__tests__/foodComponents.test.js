@@ -192,8 +192,9 @@ describe('EntryRow', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     // RE-POINTED (D230 R16, 4.3): the spoken label now also says the
-    // macros in words, so the caption's letters are never read out.
-    expect(txt).toContain('Greek yoghurt, 143 kcal, 10 grams protein, 4 carbs, 10 fat. Tap to edit.');
+    // macros in words, so the caption's letters are never read out. Food
+    // Diary audit 2026-10-16, item 12: energy as a word, "grams of protein".
+    expect(txt).toContain('Greek yoghurt, 143 calories, 10 grams of protein, 4 carbs, 10 fat. Tap to edit.');
   });
 
   test('the macro caption reads "10 P · 4 C · 10 F" (D230 R15, 4.3)', () => {
@@ -574,7 +575,8 @@ describe('FoodRow three-line grammar (D230 R6)', () => {
     const row = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string'
       && n.props.accessibilityLabel.startsWith('Wholemeal bread'))[0];
     expect(row.props.accessibilityLabel).toBe(
-      'Wholemeal bread, Hovis, 1 slice, 36 grams, 89 calories, 3 grams protein, 17 carbs, 1 fat.',
+      // Re-pinned 2026-10-16: spoken energy says kilocalories and protein reads "N grams of protein".
+      'Wholemeal bread, Hovis, 1 slice, 36 grams, 89 kilocalories, 3 grams of protein, 17 carbs, 1 fat.',
     );
     expect(row.props.accessibilityLabel).not.toMatch(/\b\d+ ?[PCF]\b/);
   });

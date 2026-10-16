@@ -206,7 +206,7 @@ describe('applySavedMealFromCloud', () => {
 });
 
 describe('applyFavouriteFromCloud', () => {
-  test('gates the conflict update on a newer-or-equal cloud row so a stale row never overwrites a fresher local one (food review D-M2)', async () => {
+  test('gates the conflict update on a STRICTLY newer cloud row so a stale row, or the device\'s own push coming back, never overwrites the local one (food review D-M2; data-layer audit 2026-10-16 item 3)', async () => {
     const { applyFavouriteFromCloud } = require('../food/db');
     await applyFavouriteFromCloud(UID, {
       food_ref: 'global:chicken',
@@ -214,8 +214,11 @@ describe('applyFavouriteFromCloud', () => {
     });
     const { sql } = writes[0];
     // LWW on BOTH columns: the whole update is gated, so a stale cloud row is a
-    // no-op (the old MAX(last_used_at) form left `kind` overwritable).
-    expect(sql).toMatch(/WHERE excluded\.last_used_at >= food_favourites\.last_used_at/);
+    // no-op (the old MAX(last_used_at) form left `kind` overwritable). Strict
+    // since 2026-10-16: with `>=` the tie (this device's own push, which the
+    // cloud stored as 'fav' until migrate_196) flipped a dislike back.
+    expect(sql).toMatch(/WHERE excluded\.last_used_at > food_favourites\.last_used_at/);
+    expect(sql).not.toMatch(/>=\s*food_favourites\.last_used_at/);
   });
 
   test('skips write when food_ref is missing', async () => {

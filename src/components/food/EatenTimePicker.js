@@ -13,7 +13,16 @@
  * renders the platform picker when asked to open, and reports back a plain
  * ms-epoch time-of-day is resolved by the caller (it hands back a Date, the
  * caller keeps only hours/minutes against the entry's existing day).
+ *
+ * Food Diary audit 2026-10-16, item 5 (broken on iOS): the iOS spinner fires
+ * on every wheel movement, and the caller closes the picker on each report,
+ * so the first flick of the wheel shut it with a half-chosen time. On iOS the
+ * wheel's value is now held here and reported once, on Done; closing the
+ * sheet any other way changes nothing. Android is unchanged (its dialog
+ * reports once, on "set"). The spinner follows the app's theme
+ * (`themeVariant`), not the phone's, so it is readable on the sheet behind it.
  */
+import { useEffect, useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { View, StyleSheet, Modal, Platform } from 'react-native';
 import Text from '../Text';
@@ -34,10 +43,16 @@ export default function EatenTimePicker({ visible, value, onChange, onClose }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const valueMs = value instanceof Date ? value.getTime() : NaN;
+  // iOS: the wheel's value, held until Done. Re-seeded each time it opens.
+  const [pending, setPending] = useState(null);
+  useEffect(() => {
+    if (visible) setPending(null);
+  }, [visible, valueMs]);
 
   if (!visible) return null;
 
-  const current = value instanceof Date && !Number.isNaN(value.getTime()) ? value : new Date();
+  const current = Number.isFinite(valueMs) ? value : new Date();
 
   const commit = (d) => { if (d) onChange?.(d); };
 
@@ -46,20 +61,34 @@ export default function EatenTimePicker({ visible, value, onChange, onClose }) {
       onClose?.();
       if (event?.type === 'set' && selected) commit(selected);
     } else if (selected) {
-      commit(selected);
+      setPending(selected);
     }
   };
 
+  const onDone = () => {
+    if (pending) commit(pending);
+    setPending(null);
+    onClose?.();
+  };
+  // Closing without Done drops the half-chosen time, so a reopen never
+  // flashes it (review finding 7).
+  const onCancel = () => {
+    setPending(null);
+    onClose?.();
+  };
+  const themeVariant = t.resolvedTheme === 'light' ? 'light' : 'dark';
+
   if (Platform.OS === 'ios') {
     return (
-      <Modal transparent visible animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={onClose}>
+      <Modal transparent visible animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={onCancel}>
         <View style={[styles.backdrop, live.backdrop]}>
           <View style={[styles.sheet, live.sheet]}>
             <Text style={[styles.title, live.title]}>What time did you eat this?</Text>
             <DateTimePicker
-              value={current}
+              value={pending ?? current}
               mode="time"
               display="spinner"
+              themeVariant={themeVariant}
               onChange={onNativeChange}
             />
             <View style={styles.actions}>
@@ -67,7 +96,7 @@ export default function EatenTimePicker({ visible, value, onChange, onClose }) {
                 title="Done"
                 size="sm"
                 fullWidth={false}
-                onPress={onClose}
+                onPress={onDone}
                 accessibilityLabel="Done choosing the time"
               />
             </View>

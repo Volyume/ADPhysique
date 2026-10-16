@@ -38,6 +38,8 @@ jest.mock('../../database', () => ({
   getNutritionTargets: jest.fn(),
   insertNutritionTargetsFromCloud: jest.fn(),
   getAllRecipeIngredientsForUser: jest.fn(),
+  // Food data-layer audit 2026-10-16, item 4: no recipe tombstoned here.
+  getTombstonedRecipeIdsForUser: jest.fn().mockResolvedValue([]),
   upsertRecipeIngredientFromCloud: jest.fn(),
   getRecipeIngredientUpdatedAt: jest.fn(),
 }));
@@ -863,7 +865,9 @@ describe('recipe_ingredients push (soft-delete)', () => {
 
   test('retry succeeds after the first upsert fails', async () => {
     dbModule.getAllRecipeIngredientsForUser.mockResolvedValue([
-      { id: 'ri-retry', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
+      // updatedAt past any push watermark an earlier test in this file left
+      // (the push is by watermark since the 2026-10-16 audit, item 4).
+      { id: 'ri-retry', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 1, updatedAt: 4102444800000, deletedAt: null },
     ]);
     const outcomes = [new Error('temporary network failure'), null];
     const upserts = [];

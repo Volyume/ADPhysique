@@ -20,7 +20,11 @@
  */
 
 // per 100 g: [kcal, protein, carbs, fat]
-const F = (name, kcal, protein, carbs, fat) => ({ name, kcal, protein, carbs, fat });
+// Optional servingG/servingLabel: one natural unit of the food, for foods people
+// count ("2 eggs"). Absent for foods weighed by the gram.
+const F = (name, kcal, protein, carbs, fat, servingG, servingLabel) => (
+  servingG ? { name, kcal, protein, carbs, fat, servingG, servingLabel } : { name, kcal, protein, carbs, fat }
+);
 
 export const CURATED_FOODS = Object.freeze({
   // Carbs / grains
@@ -76,7 +80,9 @@ export const CURATED_FOODS = Object.freeze({
   smoked_salmon:   F('Smoked salmon', 146, 25, 0, 4.5),
   tuna_water:      F('Tuna chunks in spring water (drained)', 100, 25, 0, 1),
   prawns:          F('King prawns, cooked & peeled', 85, 20, 0, 0.7),
-  eggs:            F('Whole eggs (medium/large)', 131, 12.5, 0.8, 9),
+  // 60 g: one large egg, edible part (food audit 2026-10-16, item 7). The
+  // curated meals below use 50 g steps (lines citing 'eggs', g: 50/100/150).
+  eggs:            F('Whole eggs (medium/large)', 131, 12.5, 0.8, 9, 60, 'egg'),
   egg_whites:      F('Egg whites', 52, 11, 0.7, 0.2),
   bacon_medallions: F('Back bacon medallions (cooked)', 125, 21, 0.5, 4),
 
@@ -150,4 +156,21 @@ export function resolveComponent(foodKey, grams) {
     carbsG: r1(f.carbs * factor),
     fatG: r1(f.fat * factor),
   };
+}
+
+
+/**
+ * A curated food row with its natural serving added when the table has one.
+ * Rows resolved from a `curated:<key>` ref carry no serving (serving_g null);
+ * this fills it in so a row, its "+", its sheet and a typed "2 eggs" all use
+ * the same unit. Any other food, or one that already has a serving, is
+ * returned as it is.
+ */
+export function withCuratedServing(food) {
+  const ref = food?.food_ref;
+  if (typeof ref !== 'string' || !ref.startsWith('curated:')) return food;
+  if (Number(food.serving_g) > 0) return food;
+  const c = CURATED_FOODS[ref.slice('curated:'.length)];
+  if (!c?.servingG) return food;
+  return { ...food, serving_g: c.servingG, serving_label: c.servingLabel ?? null };
 }

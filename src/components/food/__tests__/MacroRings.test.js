@@ -109,7 +109,7 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     expect(numerals).toContain('260');
     expect(numerals).toContain('1,840');
     expect(texts).toContain('left');
-    expect(texts).toContain('of 2100 kcal');
+    expect(texts).toContain('of 2,100 kcal'); // R15 grouping (food Diary audit 2026-10-16, item 12)
   });
 
   test('over target reads "over" with the magnitude, never a separate alarm', () => {
@@ -133,7 +133,7 @@ describe('MacroRings accessibility summary', () => {
     const tree = create(<MacroRings rollup={rollup} targets={targets} />);
     const node = tree.root.findByProps({ accessible: true });
     const label = node.props.accessibilityLabel;
-    expect(label).toContain('1840 of 2100 calories');
+    expect(label).toContain('1,840 of 2,100 calories');
     expect(label).toContain('protein 120 of 160 grams');
     expect(label).toContain('carbs 180 of 220 grams');
     expect(label).toContain('fat 60 of 70 grams');
@@ -154,8 +154,8 @@ describe('MacroRings accessibility summary', () => {
   test('omits "of target" when no targets are set', () => {
     const tree = create(<MacroRings rollup={rollup} targets={null} />);
     const label = tree.root.findByProps({ accessible: true }).props.accessibilityLabel;
-    expect(label).toContain('1840 calories');
-    expect(label).not.toContain('of 2100');
+    expect(label).toContain('1,840 calories');
+    expect(label).not.toContain('of 2,100');
   });
 
   // Food audit F-7: the summary is a polite live region so a screen reader

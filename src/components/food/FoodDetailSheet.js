@@ -19,11 +19,12 @@ import Stepper from '../Stepper';
 import TextField from '../TextField';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
-import { pickerMealSlots, mealSlotLabel } from '../../lib/food/mealSlots';
+import { mealSlotLabel } from '../../lib/food/mealSlots';
+import useMealSlotChoices from './useMealSlotChoices';
 import { FOOD_NOTE_MAX_LENGTH, displayFoodNote } from '../../lib/food/entryNote';
 import { scaleMacros, scaleSugarG, scaleSodiumMg, saltGFromSodiumMg } from '../../lib/food/macros';
 import {
-  buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams, MAX_ENTRY_GRAMS,
+  buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams, MAX_ENTRY_GRAMS, isServingsOnly,
 } from '../../lib/food/servingEntry';
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
@@ -130,6 +131,11 @@ export function portionNoun(label) {
  *                    changing an amount for a caller that writes later (the
  *                    typed line's review, D230 R13: "Use this amount"), so
  *                    it never says "Add to Breakfast" when nothing is added.
+ *   mealSlots        optional: the meals the caller shows ({ key, label }[]), so
+ *                    the meal chips match them (the Diary passes its own list,
+ *                    food Diary audit 2026-10-16, item 7). Without it the sheet
+ *                    reads the person's meals per day. The entry's own meal is
+ *                    always kept as a chip.
  *   fixedMacros      optional, edit mode: { kcal, protein, carbs, fat, fibre }
  *                    for an entry with no food behind it (a quick add or an
  *                    imported day, food_ref 'quick:*'). Such an entry has no
@@ -143,7 +149,7 @@ export function portionNoun(label) {
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null, initialNote = null,
-  onSave, onDelete, onSelectEntries, onClose, saveTitle = null, fixedMacros = null,
+  onSave, onDelete, onSelectEntries, onClose, saveTitle = null, fixedMacros = null, mealSlots = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -173,9 +179,9 @@ export default function FoodDetailSheet({
   // Primitive deps (not the `food` object identity) so these don't re-memo on
   // every parent render; the helpers only read serving_g/serving_label.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const units = useMemo(() => buildServingUnits(food), [food?.serving_g, food?.serving_label, food?.portions_json]);
+  const units = useMemo(() => buildServingUnits(food), [food?.serving_g, food?.serving_label, food?.portions_json, food?.servings_only]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initial = useMemo(() => initialServingState(food, mode, initialQuantityG), [mode, initialQuantityG, food?.serving_g, food?.portions_json]);
+  const initial = useMemo(() => initialServingState(food, mode, initialQuantityG), [mode, initialQuantityG, food?.serving_g, food?.portions_json, food?.servings_only]);
 
   const [unitKey, setUnitKey] = useState(initial.unitKey);
   const [amount, setAmount] = useState(initial.amount);
@@ -214,11 +220,13 @@ export default function FoodDetailSheet({
   // back to null if they realise they do not know it either.
   const [eatenAt, setEatenAt] = useState(mode === 'edit' ? (Number.isFinite(initialEatenAt) ? initialEatenAt : null) : null);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const mealChoices = useMealSlotChoices({ visible, current: mealSlot, slots: mealSlots, periWorkoutSlots });
 
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
   // Any unit but grams is a counted unit: the named serving or, D230 R20, one
   // of the food's own custom portions ('portion:<index>').
   const isServing = unitKey !== 'g';
+  const servingsOnly = isServingsOnly(food);
   // D230 R8 (inventory section 6, decimal comma): the typed amount is read
   // through the app's one number parser, so "1,5" from a comma-decimal
   // keyboard means 1.5, never 15. resolveGrams takes the parsed number as it
@@ -268,11 +276,14 @@ export default function FoodDetailSheet({
   // threshold triggers a silent, best-effort refresh from its source. Fire
   // and forget: never awaited, never blocks the sheet, and any failure
   // leaves the cached row (and this render) exactly as it was.
+  // Food Diary audit 2026-10-16, item 1: add mode only. The edit sheet works
+  // from the entry's own figures (DiaryScreen.editFoodFromEntry), so a
+  // refreshed library row has nothing to give an entry being edited.
   useEffect(() => {
-    if (!visible || !food?.food_ref) return;
+    if (!visible || mode === 'edit' || !food?.food_ref) return;
     refetchStaleFood(userId, food).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, food?.food_ref, food?.fetched_at]);
+  }, [visible, mode, food?.food_ref, food?.fetched_at]);
 
   // Switching unit keeps the gram total roughly constant (so the macros don't
   // jump), just re-expressed in the new unit.
@@ -354,7 +365,17 @@ export default function FoodDetailSheet({
             // Haptics completion pass (2026-07-10): data-first, mirrors
             // DiaryScreen.requestDelete -- the commit beat fires only after
             // the delete actually succeeds, never on a swallowed failure.
-            try { await onDelete?.(); haptics.commit(); } catch (_) {}
+            // Food Diary audit 2026-10-16, item 6: a failed remove used to be
+            // swallowed and the sheet closed as if the entry had gone. Now
+            // the person is told, and the sheet stays open to try again (the
+            // caller logs the cause).
+            try {
+              await onDelete?.();
+            } catch (_e) {
+              toast.show('That entry was not removed. Try again in a moment.', { variant: 'error' });
+              return;
+            }
+            haptics.commit();
             onClose?.();
           },
         },
@@ -447,7 +468,7 @@ export default function FoodDetailSheet({
                 {units.map(u => (
                   <Chip
                     key={u.key}
-                    label={u.key !== 'g' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
+                    label={u.key !== 'g' ? `${u.label} (${Math.round(u.grams)}${NBSP}g)` : 'Grams'}
                     selected={unitKey === u.key}
                     onPress={() => { haptics.selection(); selectUnit(u.key); }}
                     style={[styles.unitBtn, styles.unitBtnWrap]}
@@ -490,7 +511,10 @@ export default function FoodDetailSheet({
                 )}
               />
             </View>
-            {isServing ? (
+            {/* A recipe with no cooked weight (servings only, founder ruling
+                2026-10-16) has no true gram figure to show: its serving
+                weight is a share of the raw ingredients. */}
+            {isServing && !servingsOnly ? (
               <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
             ) : null}
           </View>
@@ -581,8 +605,8 @@ export default function FoodDetailSheet({
           <View style={styles.block} testID="food-sheet-meal">
             {dateLine ? <Text style={[styles.dateLine, live.dateLine]}>{dateLine}</Text> : null}
             <SectionLabel>Meal</SectionLabel>
-            <View style={styles.mealRow}>
-              {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
+            <View style={styles.mealRow} accessibilityRole="radiogroup" accessibilityLabel="Meal">
+              {mealChoices.map(s => (
                 <Chip
                   key={s.key}
                   label={s.label}
@@ -596,9 +620,11 @@ export default function FoodDetailSheet({
                 />
               ))}
             </View>
-            {/* D230 R20: the note. One line, optional, saved as NULL when blank. */}
+            {/* D230 R20: the note. One line, optional, saved as NULL when blank.
+                Its label is the house SectionLabel, as Meal and Eaten at are
+                (food Diary audit 2026-10-16, item 13). */}
+            <SectionLabel>Note</SectionLabel>
             <TextField
-              label="Note"
               size="sm"
               value={note}
               onChangeText={setNote}
@@ -747,9 +773,11 @@ const styles = StyleSheet.create({
   dateLine: { ...type.bodySm, color: colors.textSecondary },
   nutrientLine: { ...type.num('bodySm'), color: colors.textPrimary },
   nutrientLabel: { color: colors.textMuted },
-  mealRow: { flexDirection: 'row', gap: spacing.xs },
+  // Food Diary audit 2026-10-16, item 7: the meal chips wrap, so six meals,
+  // a 24-character meal name or the largest text size never clip a chip.
+  mealRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   mealBtn: {
-    flex: 1,
+    flexGrow: 1, flexShrink: 1, maxWidth: '100%',
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
     alignSelf: 'stretch',
     alignItems: 'center', justifyContent: 'center', minHeight: touchTarget.minimum,
