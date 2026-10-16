@@ -13,9 +13,9 @@
  *     during recording stopping it early. PRESS AND HOLD: records while held,
  *     no countdown, stops on release, capped at 15 seconds;
  *   - a clip recorded for a set remembers the exercise and the set's number;
- *   - the exercise menu row is "Record a video of this set"; the summary row
- *     changes with the workout ("Record a video", then "Use your video on the
- *     share").
+ *   - the exercise card's footer carries "Film" for every set (addendum 11);
+ *     the summary row changes with the workout ("Record a video", then "Use
+ *     your video on the share").
  * D229 addendum 9 (share one PR set with its video) adds the PR moment's
  * words: "A PR if you hit it" with "Record it" before the set, "Share" on the
  * record row after it, "Use your PR video on the share" on the summary. The PR
@@ -69,20 +69,17 @@ export const PRIMER_SEEN_KEY = '@volyume_clip_primer_seen';
 export const GUIDES_KEY = '@volyume_clip_guides';
 
 export const CLIP_STRINGS = Object.freeze({
-  // The exercise menu row (it records the set the person is on).
+  // The exercise card's footer action, for every set (addendum 11): the
+  // word on the card, and what a screen reader says.
+  filmLabel: 'Film',
   rowLabel: 'Record a video of this set',
   rowA11y: 'Record a video of this set',
-  rowDescNone: 'Up to 15 seconds, with no sound.',
-  rowDescThree: 'You have 3 saved, the most one workout can hold.',
 
-  // D229 addendum 9 (words corrected in addendum 10): the PR moment. Before
-  // the set, on the exercise card's record row (the action opens the primer
-  // or the camera for that set) and as the More row's second line when the
-  // numbers in the box would be a PR.
+  // D229 addendum 9 (words corrected in addendum 10): the PR moment, on the
+  // exercise card's record row before the set (the action opens the primer
+  // or the camera for that set).
   prOfferText: 'This set would be a new PR',
   prOfferAction: 'Film it',
-  rowDescPRLead: 'This set would be a new PR.',
-  rowDescPRNone: 'This set would be a new PR. Up to 15 seconds, with no sound.',
   // After the set, on the record row, when a video of that set is saved.
   prShareAction: 'Share',
   prShareA11y: 'Share this PR with its video',
@@ -218,25 +215,6 @@ export function parseLeadIn(raw) {
 export function parseLength(raw) {
   const n = Number(raw);
   return LENGTH_OPTIONS.includes(n) ? n : DEFAULT_LENGTH_SECONDS;
-}
-
-/**
- * The More-sheet row's second line for a workout holding `count` clips:
- * none "Up to 15 seconds, with no sound.", one or two "You have 1 saved. A
- * workout can hold up to 3.", three "You have 3 saved, the most one workout
- * can hold.". Anything that is not a count reads as none.
- * With `wouldBePR` (D229 addendum 9: the numbers in the next set's box would be
- * a PR, judged by the logger) the line leads with it: "This set would be a
- * new PR. Up to 15 seconds, with no sound."; at three the full line stays,
- * since another video cannot be recorded. Only an explicit true says PR.
- */
-export function clipRowDescription(count, options) {
-  const wouldBePR = options?.wouldBePR === true;
-  const n = Math.floor(Number(count));
-  if (!Number.isFinite(n) || n <= 0) return wouldBePR ? CLIP_STRINGS.rowDescPRNone : CLIP_STRINGS.rowDescNone;
-  if (n >= MAX_CLIPS_PER_WORKOUT) return CLIP_STRINGS.rowDescThree;
-  const saved = `You have ${n} saved. A workout can hold up to ${MAX_CLIPS_PER_WORKOUT}.`;
-  return wouldBePR ? `${CLIP_STRINGS.rowDescPRLead} ${saved}` : saved;
 }
 
 /** True when a workout holding `count` clips can take no more. */

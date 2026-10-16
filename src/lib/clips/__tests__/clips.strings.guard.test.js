@@ -28,7 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  CLIP_STRINGS, clipRowDescription, clipRowTitle, clipDisplayName, clipCountLabel,
+  CLIP_STRINGS, clipRowTitle, clipDisplayName, clipCountLabel,
   summaryClipRowCopy, startA11yLabel, leadInLabel, leadInA11yLabel, lengthLabel,
   lengthA11yLabel, formatClipDuration,
 } = require('../rules');
@@ -82,8 +82,6 @@ const UNNAMED_PR = { exerciseId: 'e1', exerciseName: null, setNumber: 2, type: '
 // only these, are exempt from the PR ban. Every other check scans them.
 const PR_MOMENT_KEYS = Object.freeze([
   'prOfferText',
-  'rowDescPRLead',
-  'rowDescPRNone',
   'prShareA11y',
   'summaryLabelPR',
   'summarySubPRTail',
@@ -94,9 +92,6 @@ const PR_MOMENT_WORDS = PR_MOMENT_KEYS.map((k) => CLIP_STRINGS[k]);
 // The lines the helpers build in their PR forms. Each is built from a
 // PR-moment word, and with that word taken out nothing in it says PR.
 const PR_MOMENT_LINES = [
-  clipRowDescription(0, { wouldBePR: true }),
-  clipRowDescription(1, { wouldBePR: true }),
-  clipRowDescription(2, { wouldBePR: true }),
   ...[
     [[ONE_VIDEO], [BENCH_PR]],
     [[ONE_VIDEO, OTHER_VIDEO], [BENCH_PR]],
@@ -109,7 +104,6 @@ const PR_MOMENT_LINES = [
 
 const SHOWN = [
   ...Object.values(CLIP_STRINGS),
-  clipRowDescription(0), clipRowDescription(1), clipRowDescription(2), clipRowDescription(3),
   clipRowTitle(ONE_VIDEO), clipRowTitle(OTHER_VIDEO), clipDisplayName(ONE_VIDEO), clipDisplayName(OTHER_VIDEO),
   clipCountLabel(1), clipCountLabel(2),
   startA11yLabel(3), startA11yLabel(10), leadInLabel(5), leadInA11yLabel(5), lengthLabel(10), lengthA11yLabel(10),
@@ -238,7 +232,7 @@ describe('a video belongs to the set, not to a record', () => {
   });
 
   test('every line a helper builds in its PR form says PR only through a PR-moment word', () => {
-    expect(PR_MOMENT_LINES.length).toBeGreaterThanOrEqual(9);
+    expect(PR_MOMENT_LINES.length).toBeGreaterThanOrEqual(6);
     for (const line of PR_MOMENT_LINES) {
       const word = PR_MOMENT_WORDS.find((w) => line.includes(w));
       expect({ line, built: !!word }).toEqual({ line, built: true });
@@ -249,7 +243,6 @@ describe('a video belongs to the set, not to a record', () => {
 
   test('the scan still sees the usual forms (a broken filter must not pass as clean)', () => {
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.rowLabel);
-    expect(NOT_PR_MOMENT).toContain(clipRowDescription(1));
     expect(NOT_PR_MOMENT).toContain('You recorded Bench press, set 3');
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prOfferAction);
     expect(NOT_PR_MOMENT).toContain(CLIP_STRINGS.prShareAction);
@@ -260,7 +253,6 @@ describe('the plain-words pins', () => {
   test('the exercise menu row', () => {
     expect(CLIP_STRINGS.rowLabel).toBe('Record a video of this set');
     expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
-    expect(CLIP_STRINGS.rowDescNone).toBe('Up to 15 seconds, with no sound.');
   });
 
   test('the primer says it all, once', () => {

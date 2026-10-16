@@ -20,7 +20,7 @@
 import {
   MAX_CLIPS_PER_WORKOUT, MAX_CLIP_SECONDS, MAX_CLIP_MS, MIN_CLIP_MS, LEAD_IN_OPTIONS,
   LENGTH_OPTIONS, DEFAULT_LEAD_IN_SECONDS, DEFAULT_LENGTH_SECONDS, CLIP_SOURCES, CLIP_STRINGS,
-  LEAD_IN_KEY, LENGTH_KEY, PRIMER_SEEN_KEY, clipRowDescription, isFull, summaryClipRowVisible,
+  LEAD_IN_KEY, LENGTH_KEY, PRIMER_SEEN_KEY, summaryClipRowVisible,
   summaryClipRowCopy, formatClipDuration, clipDisplayName, clipRowTitle, clipCountLabel,
   nextLeadIn, nextLength, parseLeadIn, parseLength, leadInLabel, leadInA11yLabel, lengthLabel,
   lengthA11yLabel, startA11yLabel, clipMatchesPR, prVideoFor,
@@ -53,54 +53,6 @@ describe('the rulings, as numbers', () => {
     expect(LEAD_IN_KEY).toBe('@volyume_clip_leadin');
     expect(LENGTH_KEY).toBe('@volyume_clip_length');
     expect(PRIMER_SEEN_KEY).toBe('@volyume_clip_primer_seen');
-  });
-});
-
-describe('the exercise menu row, by how many videos the workout holds', () => {
-  test.each([
-    [0, 'Up to 15 seconds, with no sound.'],
-    [1, 'You have 1 saved. A workout can hold up to 3.'],
-    [2, 'You have 2 saved. A workout can hold up to 3.'],
-    [3, 'You have 3 saved, the most one workout can hold.'],
-  ])('%i videos', (count, line) => {
-    expect(clipRowDescription(count)).toBe(line);
-  });
-
-  test('anything that is not a count reads as none; more than three reads as three', () => {
-    for (const bad of [undefined, null, NaN, -1, 'x']) {
-      expect(clipRowDescription(bad)).toBe(CLIP_STRINGS.rowDescNone);
-    }
-    expect(clipRowDescription(7)).toBe(CLIP_STRINGS.rowDescThree);
-  });
-
-  test.each([
-    [0, 'This set would be a new PR. Up to 15 seconds, with no sound.'],
-    [1, 'This set would be a new PR. You have 1 saved. A workout can hold up to 3.'],
-    [2, 'This set would be a new PR. You have 2 saved. A workout can hold up to 3.'],
-    [3, 'You have 3 saved, the most one workout can hold.'],
-  ])('when the next set would be a PR, %i videos', (count, line) => {
-    expect(clipRowDescription(count, { wouldBePR: true })).toBe(line);
-  });
-
-  test('only an explicit wouldBePR says PR; anything else is the usual line', () => {
-    for (const count of [0, 1, 2, 3]) {
-      for (const options of [undefined, null, {}, { wouldBePR: false }, { wouldBePR: 'true' }, { wouldBePR: 1 }]) {
-        expect(clipRowDescription(count, options)).toBe(clipRowDescription(count));
-      }
-    }
-    expect(clipRowDescription(undefined, { wouldBePR: true })).toBe(CLIP_STRINGS.rowDescPRNone);
-    expect(clipRowDescription(7, { wouldBePR: true })).toBe(CLIP_STRINGS.rowDescThree);
-  });
-
-  test('isFull is true from three', () => {
-    expect([0, 1, 2].map(isFull)).toEqual([false, false, false]);
-    expect([3, 4].map(isFull)).toEqual([true, true]);
-    expect(isFull(undefined)).toBe(false);
-  });
-
-  test('the row is labelled in plain words', () => {
-    expect(CLIP_STRINGS.rowLabel).toBe('Record a video of this set');
-    expect(CLIP_STRINGS.rowA11y).toBe('Record a video of this set');
   });
 });
 

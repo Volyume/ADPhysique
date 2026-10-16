@@ -5301,10 +5301,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (lc) applyLastSetToEntry(lc);
   }
   useEffect(() => { setUseLastRunId(null); }, [currentExerciseIndex]);
-  // D229: the More sheet's "Record a video of this set" row. Opens the videos
-  // sheet at three, the privacy primer the first time, otherwise the camera.
-  // `setNumber` is the set it is recorded for: the exercise's next pending set,
-  // the same number the Now card shows ("Set 3 of 4").
+  // D229 addendum 11 (founder, 2026-10-16: "I want to be able to record a
+  // set not just when it's a PR attempt"): "Film" is a footer action on the
+  // exercise card, for every set, beside Add set and Swap (the quiet form);
+  // the record row's "This set would be a new PR · Film it" stays the
+  // highlighted one. Opens the videos sheet at three, the privacy primer the
+  // first time, otherwise the camera. `setNumber` is the set it is recorded
+  // for: the exercise's next pending set, the number the Now card shows.
   function handleRecordClip() {
     clipFlow.openRecorder({
       source: 'workout',
@@ -5795,6 +5798,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             onAddSet={armExtraSet}
             onSwap={handleOpenSwap}
             onMore={handleOpenOverflow}
+            onFilm={clipsSuppressed === false ? handleRecordClip : null}
             moreHint={showInfoTipPulse ? 'Help' : null}
             countdown={{ active: !!(autoAdvanceArmed && targetComplete && !extraSetArmed), ms: 1800, reduceMotion: !!reduceMotion }}
           >
@@ -6425,10 +6429,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           cluster={cluster}
           canUseLastSession={canUseLastSession}
           handleUseLastSession={handleUseLastSession}
-          clipsSuppressed={clipsSuppressed}
-          clipCount={clipFlow.count}
-          nextSetWouldBePR={nextSetWouldBePR}
-          handleRecordClip={handleRecordClip}
           isLastExercise={isLastExercise}
           isPairedWithNext={isPairedWithNext}
           timeCrunchActive={timeCrunchActive}

@@ -121,11 +121,9 @@ describe('both video actions are hidden under calm mode or an open ED flag, fail
     expect(SRC.split('<RecordLine ').length - 1).toBe(1);
   });
 
-  test('the More row hears the same verdict as one boolean, inside its own fail-closed gate', () => {
-    expect(SRC).toContain('nextSetWouldBePR={nextSetWouldBePR}');
-    expect(SHEETS).toMatch(/^\s*nextSetWouldBePR,$/m);
-    const row = SHEETS.slice(SHEETS.indexOf('{clipsSuppressed === false && ('), SHEETS.indexOf('{!isLastExercise && ('));
-    expect(row).toContain('{clipRowDescription(clipCount, { wouldBePR: nextSetWouldBePR === true })}');
+  test('the footer\'s Film hears the same verdict: the card gets onFilm only on an explicit false, and the sheet carries no clip prop', () => {
+    expect(SRC).toContain('onFilm={clipsSuppressed === false ? handleRecordClip : null}');
+    expect(SHEETS).not.toMatch(/nextSetWouldBePR|clipsSuppressed|handleRecordClip/);
   });
 });
 

@@ -70,31 +70,29 @@ describe('RootNavigator: the ClipCamera route', () => {
   });
 });
 
-describe('ActiveWorkoutScreen: the More sheet row is only wired, not built', () => {
-  test('reads usePhotoSuppression for the signed-in user and hands the verdict to the sheet', () => {
+describe('ActiveWorkoutScreen: "Film" is a footer action on the exercise card, for every set (addendum 11)', () => {
+  const CARD = read('components/workout/session/ExerciseSection.js');
+  const SHEETS = read('components/workout/session/SessionSheets.js');
+
+  test('the screen reads usePhotoSuppression for the signed-in user and hands the card onFilm only on an explicit false (fail closed)', () => {
     expect(ACTIVE).toContain("import usePhotoSuppression from '../hooks/usePhotoSuppression';");
     expect(ACTIVE).toContain('const clipsSuppressed = usePhotoSuppression(user?.id);');
-    expect(ACTIVE).toContain('clipsSuppressed={clipsSuppressed}');
-    expect(ACTIVE).toContain('clipCount={clipFlow.count}');
-    expect(ACTIVE).toContain('handleRecordClip={handleRecordClip}');
+    expect(ACTIVE).toContain('onFilm={clipsSuppressed === false ? handleRecordClip : null}');
   });
 
-  test('the handler opens the recorder as a workout video on this exercise, for its next pending set', () => {
-    expect(ACTIVE).toMatch(/function handleRecordClip\(\) \{\s*clipFlow\.openRecorder\(\{\s*source: 'workout',\s*exerciseId: exercise\?\.id \?\? null,\s*exerciseName: exercise\?\.name \?\? null,\s*setNumber: workingLogged \+ 1,\s*\}\);\s*\}/);
-    // The same number the Now card shows ("Set 3 of 4").
-    expect(ACTIVE).toContain('`Set ${workingLogged + 1} of ${targetSets}`');
+  test('the card draws Film beside Add set and Swap with the words from the one rule, and nothing when onFilm is withheld', () => {
+    expect(CARD).toMatch(/\{onFilm \? \(\s*<FooterAction\s+testID="volyume-btn-film-set"\s+icon="videocam-outline"\s+label=\{CLIP_STRINGS\.filmLabel\}\s+accessibilityLabel=\{CLIP_STRINGS\.rowA11y\}\s+onPress=\{onFilm\}/);
+    expect(CARD).toContain("import { CLIP_STRINGS } from '../../../lib/clips/rules';");
   });
 
-  test('the recorder is keyed to the active workout and its sheets are rendered once', () => {
-    expect(ACTIVE).toContain('useClipRecorder({ navigation, userId: user?.id, workoutId: activeWorkout?.id })');
-    expect(ACTIVE.split('{clipFlow.sheets}').length - 1).toBe(1);
+  test('the More sheet carries no video row any more: one quiet place, the footer', () => {
+    expect(SHEETS).not.toMatch(/clips\/rules|handleRecordClip|clipsSuppressed|videocam-outline/);
   });
 
-  test('the logger never imports the camera or the clip store directly', () => {
-    expect(ACTIVE).not.toMatch(/expo-camera|lib\/clips\/store|recordAsync/);
+  test('the handler films the next pending set, the number the Now card shows', () => {
+    expect(ACTIVE).toMatch(/function handleRecordClip\(\) \{\s*clipFlow\.openRecorder\(\{\s*source: 'workout',\s*exerciseId: exercise\?\.id \?\? null,\s*exerciseName: exercise\?\.name \?\? null,\s*setNumber: workingLogged \+ 1,/);
   });
 });
-
 describe('WorkoutSummaryScreen: the video row, in its two forms', () => {
   const rowAt = SUMMARY.indexOf('label={clipRowCopy.label}');
   const saveAt = SUMMARY.indexOf('title="Save this workout to reuse"');

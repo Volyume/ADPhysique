@@ -6,8 +6,10 @@
  * on the founder's device verdict, D220 addendum 7; the header redrawn on the
  * render verdicts, addenda 9 and 10). Three states:
  *   active    the 56 dp header, the children (the set table and any banners
- *             the screen passes), then the 52 dp footer: Add set, Swap and
- *             the overflow
+ *             the screen passes), then the 52 dp footer: Add set, Swap, Film
+ *             (a video of the next set, D229 addendum 11; rendered only when
+ *             the screen passes onFilm, which it withholds under calm mode or
+ *             an open flag) and the overflow
  *   done      the header with the green check; nothing else
  *   upcoming  the header alone (with "{done} of {total}" once partly done)
  * Only the active section mounts its children, so a session of six exercises
@@ -56,6 +58,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../../../hooks/useTheme';
 import { circle, iconSize, radius, spacing, fontScaleCaps } from '../../../styles/theme';
 import { SET_COLUMNS } from './SetRow';
+import { CLIP_STRINGS } from '../../../lib/clips/rules';
 import { touchTarget } from '../../../styles/layout';
 
 // Section header 56, footer 52; the done mark 16 (the list's small glyph);
@@ -134,6 +137,7 @@ export default function ExerciseSection({
   onPressHeader,
   onAddSet,
   onSwap,
+  onFilm = null,
   onMore,
   groupLabel = null,
   skipped = false,
@@ -227,6 +231,17 @@ export default function ExerciseSection({
               label="Swap"
               accessibilityLabel="Swap exercise"
               onPress={onSwap}
+              glyphColor={t.colors.textPrimary}
+              labelStyle={live.action}
+            />
+          ) : null}
+          {onFilm ? (
+            <FooterAction
+              testID="volyume-btn-film-set"
+              icon="videocam-outline"
+              label={CLIP_STRINGS.filmLabel}
+              accessibilityLabel={CLIP_STRINGS.rowA11y}
+              onPress={onFilm}
               glyphColor={t.colors.textPrimary}
               labelStyle={live.action}
             />

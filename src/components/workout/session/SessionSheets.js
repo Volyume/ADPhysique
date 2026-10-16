@@ -25,7 +25,6 @@ import { GLOSSARY } from '../../../lib/coachGlossary';
 import { DEFAULT_BAR_KG } from '../../../lib/warmupRamp';
 import { warmupRamp } from '../../../lib/warmupRamp';
 import { parseDecimalInput } from '../../../lib/parseDecimalInput';
-import { CLIP_STRINGS, clipRowDescription } from '../../../lib/clips/rules';
 
 // D228 item 9, monolith first cut (option E): the raw Modals and bottom
 // sheets that sat after the keyboard bar in ActiveWorkoutScreen.js, moved
@@ -124,10 +123,6 @@ function SessionSheets({
   cluster,
   canUseLastSession,
   handleUseLastSession,
-  clipsSuppressed,
-  clipCount,
-  nextSetWouldBePR,
-  handleRecordClip,
   isLastExercise,
   isPairedWithNext,
   timeCrunchActive,
@@ -840,33 +835,6 @@ function SessionSheets({
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Use last session</Text>
                     <Text style={[sharedStyles.sheetOptionDesc, sharedLive.sheetOptionDesc]}>Fill the pending sets from last time</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              )}
-              {/* D229 addendum 5 (video shares): "Record a video of this set",
-                  the same sheet-option row as its neighbours, after the pre-set helpers
-                  and before the plan edits. HIDDEN under calm mode or an open
-                  ED flag, FAIL CLOSED: only an explicit `false` from
-                  usePhotoSuppression (which starts suppressed) shows it, and
-                  there is no explanation in its place. At three videos the row
-                  opens the workout's videos so one can be deleted (the handler
-                  decides; nothing is replaced silently). D229 addendum 9: when
-                  the numbers in the next set's box would be a PR (the screen
-                  judges it, only an explicit true) the second line leads with
-                  that; the words are the one rule's. */}
-              {clipsSuppressed === false && (
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); handleRecordClip(); }}
-                accessibilityRole="button"
-                accessibilityLabel={CLIP_STRINGS.rowA11y}
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="videocam-outline" size={18} color={t.colors.textSecondary} />
-                  <View style={styles.sheetOptionText}>
-                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{CLIP_STRINGS.rowLabel}</Text>
-                    <Text style={[sharedStyles.sheetOptionDesc, sharedLive.sheetOptionDesc]}>{clipRowDescription(clipCount, { wouldBePR: nextSetWouldBePR === true })}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
