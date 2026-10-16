@@ -1327,6 +1327,37 @@ export default function ShareCardScreen({ navigation, route }) {
     }
   }, [toast, acceptClip]);
 
+  // Film now with no workout to keep a video with (a PR from a lift's
+  // history, a milestone, the weekly recap). Founder: "recording one in the
+  // share screen after the same as you do with photos". Volyume's own
+  // camera, the same countdown, cues and lengths, muted (no microphone), in
+  // its share-only mode: the video comes straight back here as `sharedVideo`
+  // (below) for this share alone, and is never saved to the workout videos
+  // store, as there is no workout to keep it with. No primer: its lines say
+  // where a workout's videos are kept, which is not true of this one. With
+  // a workout, Film now stays filmNow (above), which keeps the video with it.
+  const filmShareOnly = useCallback(() => {
+    setVideoSheetOpen(false);
+    if (suppressRef.current) return; // the safety gate (item 8)
+    navigation.navigate('ClipCamera', { mode: 'share', returnTo: route?.key });
+  }, [navigation, route?.key]);
+
+  // The camera's share-only video coming back: used ONCE, as a gallery
+  // video is (probe, first frame, window), then cleared from the route so
+  // it never comes back. Under calm mode or an open flag it is ignored.
+  const routeSharedVideo = route?.params?.sharedVideo ?? null;
+  const handledSharedUriRef = useRef(null);
+  useEffect(() => {
+    const uri = routeSharedVideo?.uri;
+    if (!uri || handledSharedUriRef.current === uri) return;
+    handledSharedUriRef.current = uri;
+    navigation.setParams?.({ sharedVideo: undefined });
+    if (suppressRef.current) return; // the safety gate: never shown
+    acceptClip({ id: null, uri, durationMs: Number(routeSharedVideo.durationMs) || 0, source: 'camera' })
+      .catch((e) => { logError('ShareCardScreen.sharedVideo', e); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeSharedVideo]);
+
 
   // Recompute the live framer photo when the look or its committed strength
   // changes on an EXISTING photo (a fresh photo is handled by acceptPhoto
@@ -2420,7 +2451,10 @@ export default function ShareCardScreen({ navigation, route }) {
           ) : null}
           <View style={styles.sheetActions}>
             <Button title="From your gallery" variant="secondary" icon="images-outline" onPress={pickGalleryVideo} disabled={locked} />
-            {workoutId ? <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={filmNow} disabled={locked} /> : null}
+            {/* Film now everywhere: Volyume's camera, keeping the video with
+                the workout when there is one (filmNow), else for this share
+                alone (filmShareOnly). */}
+            <Button title="Film now" variant="secondary" icon="videocam-outline" onPress={workoutId ? filmNow : filmShareOnly} disabled={locked} />
           </View>
         </BottomSheet>
 

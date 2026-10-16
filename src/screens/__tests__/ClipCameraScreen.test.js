@@ -38,7 +38,13 @@
  *     from the summary or the share screen: no toast (the video is about to
  *     be on screen), back there with clipId; a full workout shows the sheet
  *     instead;
- *   - the screen stays awake while open.
+ *   - the screen stays awake while open;
+ *   - SHARE-ONLY MODE ({ mode: 'share', returnTo? }, no workout; the share
+ *     screen's Film now on a share with no workout, lead ruling 2026-10-16):
+ *     records the same way, muted, but never touches the clip store (no
+ *     save, no three-video check, no toast, no Undo) and hands the file
+ *     back to the share screen as `sharedVideo`; the workout mode is
+ *     unchanged.
  */
 import fs from 'fs';
 import path from 'path';
@@ -1347,5 +1353,118 @@ describe('free space (addendum 15)', () => {
     await startTapRecording(tree);
     expect(mockRecordAsync).toHaveBeenCalledTimes(1);
     expect(mockShow).not.toHaveBeenCalled();
+  });
+});
+
+describe('share-only mode: the video goes back to the share screen and is never saved', () => {
+  const SHARE_ONLY = { mode: 'share', workoutId: undefined, exerciseId: undefined, exerciseName: undefined, setNumber: undefined, source: undefined };
+  async function recordFiveSecondsShareOnly(extra = {}) {
+    const tree = await mount({ ...SHARE_ONLY, ...extra });
+    await startTapRecording(tree);
+    await advance(5000);
+    await press(tree, 'clip-camera-record');
+    await flush();
+    return tree;
+  }
+
+  test('with no workout it opens, muted, instead of closing', async () => {
+    await mount(SHARE_ONLY);
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    expect(mockCameraProps).not.toBeNull();
+    expect(mockCameraProps.mute).toBe(true);
+    expect(mockCameraProps.mode).toBe('video');
+  });
+
+  test('a recording goes straight back to the share screen as sharedVideo: no save, no count, no toast, the file kept', async () => {
+    await recordFiveSecondsShareOnly();
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    const arg = navigation.navigate.mock.calls[0][0];
+    expect(arg).toEqual({
+      name: 'ShareCard',
+      params: { sharedVideo: { uri: 'file:///cache/Camera/take.mp4', durationMs: expect.any(Number), width: null, height: null } },
+      merge: true,
+    });
+    expect(arg.params.sharedVideo.durationMs).toBeGreaterThanOrEqual(1000);
+    expect(mockSaveClip).not.toHaveBeenCalled();
+    expect(mockCount).not.toHaveBeenCalled();
+    expect(mockDeleteClip).not.toHaveBeenCalled();
+    expect(mockShow).not.toHaveBeenCalled();
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    expect(FileSystem.deleteAsync).not.toHaveBeenCalledWith('file:///cache/Camera/take.mp4', expect.anything());
+  });
+
+  test('with returnTo, it goes back to that very share screen by its route key', async () => {
+    await recordFiveSecondsShareOnly({ returnTo: 'ShareCard-abc' });
+    expect(navigation.navigate).toHaveBeenCalledWith({
+      key: 'ShareCard-abc',
+      params: { sharedVideo: expect.objectContaining({ uri: 'file:///cache/Camera/take.mp4' }) },
+      merge: true,
+    });
+  });
+
+  test('no workout means no three-video limit: it records even when a count would say full', async () => {
+    mockCount.mockResolvedValue(3);
+    const tree = await recordFiveSecondsShareOnly();
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    expect(tree.root.findAll((n) => n.type === 'ClipsSheetStub' && n.props.visible)).toHaveLength(0);
+    expect(navigation.navigate).toHaveBeenCalledWith(expect.objectContaining({ name: 'ShareCard' }));
+  });
+
+  test('a hold records too, and its release hands the video back', async () => {
+    const tree = await mount(SHARE_ONLY);
+    const node = await startHold(tree);
+    expect(mockRecordAsync).toHaveBeenCalledTimes(1);
+    await advance(4000);
+    await release(node);
+    await flush();
+    expect(mockSaveClip).not.toHaveBeenCalled();
+    expect(navigation.navigate).toHaveBeenCalledWith(expect.objectContaining({ name: 'ShareCard', merge: true }));
+  });
+
+  test('closing mid-recording discards the file and hands nothing back', async () => {
+    const tree = await mount(SHARE_ONLY);
+    await startTapRecording(tree);
+    await advance(3000);
+    await press(tree, 'clip-camera-close');
+    await flush();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockSaveClip).not.toHaveBeenCalled();
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/Camera/take.mp4', { idempotent: true });
+  });
+
+  test('a stray tap under a second is dropped and the camera stays ready', async () => {
+    const tree = await mount(SHARE_ONLY);
+    await startTapRecording(tree);
+    await advance(300);
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///cache/Camera/take.mp4', { idempotent: true });
+    expect(hostById(tree, 'clip-camera-record').props.accessibilityLabel).toBe('Start recording in 3 seconds');
+  });
+
+  test('the workout mode is untouched: no mode and no workout still closes without a word; with a workout it saves', async () => {
+    await mount({ workoutId: undefined });
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(mockShow).not.toHaveBeenCalled();
+    navigation.goBack.mockClear();
+    const tree = await mount({ source: 'share', exerciseId: null, exerciseName: null, setNumber: null });
+    await startTapRecording(tree);
+    await advance(5000);
+    await press(tree, 'clip-camera-record');
+    await flush();
+    expect(mockSaveClip).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledWith({ name: 'ShareCard', params: { clipId: 'clip-1' }, merge: true });
+  });
+
+  test('source: the share-only path never reaches the clip store and never shows the saved toast', () => {
+    const start = SOURCE.indexOf('const handBackToShare');
+    const end = SOURCE.indexOf('const finishRecording');
+    expect(start).toBeGreaterThan(-1);
+    const block = SOURCE.slice(start, end);
+    expect(block).not.toMatch(/saveClip|deleteClip|countClipsForWorkout|savedLine|toast\.show/);
+    expect(SOURCE).toMatch(/if \(shareOnly\) \{\s*handBackToShare\(uri, durationMs\);\s*return;\s*\}\s*let result;/);
   });
 });
